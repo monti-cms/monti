@@ -164,6 +164,56 @@ export function changeCount(base: Obj, draft: Obj): number {
 	return count + settingChanges(base, draft).length;
 }
 
+/** Which of a collection's editor tabs hold a change against the saved file. */
+export interface CollectionChange {
+	readonly basics: boolean;
+	readonly fields: boolean;
+	readonly editor: boolean;
+}
+
+/** Where the draft differs from the saved file: per Settings tab, and per collection with the tab of its editor. */
+export interface ChangedAreas {
+	readonly tabs: Readonly<Record<"site" | "locales" | "collections" | "admin", boolean>>;
+	/** Only the collections that changed (added ones included). */
+	readonly collections: Readonly<Record<string, CollectionChange>>;
+}
+
+/** How one collection differs from its saved self; a collection that is not saved yet is changed all through. */
+export function collectionChange(saved: Obj | undefined, draft: Obj): CollectionChange | null {
+	if (saved === undefined) return { basics: true, fields: true, editor: true };
+	const fields = !sameJson(saved.fields, draft.fields) || !sameJson(saved.layout, draft.layout);
+	const editor = !sameJson(saved.body, draft.body);
+	const rest = (collection: Obj) =>
+		Object.fromEntries(Object.entries(collection).filter(([key]) => !["fields", "layout", "body"].includes(key)));
+	// A different kind turns the body on or off, so it shows on the basics tab where the kind is chosen.
+	const basics = !sameJson(rest(saved), rest(draft)) || (saved.kind !== draft.kind && editor);
+	return basics || fields || editor ? { basics, fields, editor } : null;
+}
+
+/** The areas of the Settings page that hold draft changes, derived the same way `changeCount` counts them. */
+export function changedAreas(base: Obj, draft: Obj): ChangedAreas {
+	const before = collectionsOf(base);
+	const after = collectionsOf(draft);
+	const collections: Record<string, CollectionChange> = {};
+	for (const name of Object.keys(after)) {
+		const change = collectionChange(before[name], after[name] ?? {});
+		if (change) collections[name] = change;
+	}
+	const beforeNames = Object.keys(before);
+	const afterNames = Object.keys(after);
+	const orderChanged = !sameJson(beforeNames, afterNames);
+	const settings = settingChanges(base, draft);
+	return {
+		tabs: {
+			site: settings.some((change) => change.path.startsWith("site.")),
+			admin: settings.some((change) => change.path.startsWith("admin.")),
+			locales: ["locales", "defaultLocale", "timeZone"].some((key) => !sameJson(base[key], draft[key])),
+			collections: orderChanged || Object.keys(collections).length > 0,
+		},
+		collections,
+	};
+}
+
 /** `record` with the key `from` named `to`, in the same place. */
 export function renameKey<T>(record: Record<string, T>, from: string, to: string): Record<string, T> {
 	return Object.fromEntries(Object.entries(record).map(([key, value]) => [key === from ? to : key, value]));

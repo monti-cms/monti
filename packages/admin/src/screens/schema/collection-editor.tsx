@@ -11,7 +11,17 @@ import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
-import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
+import {
+	ChangeDot,
+	FlagSwitch,
+	IssueList,
+	orUndefined,
+	Pick,
+	RevertMark,
+	TextInput,
+	useIssuesUnder,
+	useSchemaEdit,
+} from "./controls";
 import { FieldsCard } from "./fields-tree";
 import { IconPicker } from "./icon-picker";
 import { schemaMessages } from "./messages";
@@ -20,12 +30,15 @@ import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
+	type CollectionChange,
+	collectionsOf,
 	defaultPath,
 	fieldsOf,
 	hasBody,
 	localesOf,
 	type Obj,
 	type Rename,
+	sameJson,
 	setProp,
 	withBody,
 	withPublicPath,
@@ -64,8 +77,11 @@ function LimitList<T extends string | number>({
 	value,
 	onChange,
 	nameOf,
+	revert,
 }: {
 	label: string;
+	/** Puts the saved list back; given only while the list differs from the saved file. */
+	revert?: () => void;
 	all: readonly T[];
 	value: readonly T[] | undefined;
 	onChange: (value: T[] | undefined) => void;
@@ -81,7 +97,10 @@ function LimitList<T extends string | number>({
 		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
 			<legend className="sr-only">{label}</legend>
 			<div className="flex items-center justify-between">
-				<span className="font-medium text-sm">{label}</span>
+				<span className="flex items-center gap-1.5 font-medium text-sm">
+					{label}
+					{revert && <RevertMark name={label} onRevert={revert} />}
+				</span>
 				<div className="flex items-center gap-2">
 					<Checkbox
 						id={allId}
@@ -128,9 +147,12 @@ function LimitList<T extends string | number>({
 /** Which blocks and text styles the body allows: everything unless the writer limits a list. */
 function AllowedEditor({
 	collection,
+	saved: savedCollection,
 	update,
 }: {
 	collection: Obj;
+	/** The collection as saved; none for a new one, whose lists cannot be reverted. */
+	saved: Obj | undefined;
 	update: (change: (collection: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaCollectionMessages);
@@ -138,6 +160,9 @@ function AllowedEditor({
 	const site = useSite();
 	const { vocabulary } = useSchemaEdit();
 	const allowed = allowedOf(collection);
+	const savedAllowed = savedCollection ? allowedOf(savedCollection) : undefined;
+	const revertOf = (key: keyof Allowed) =>
+		savedAllowed && !sameJson(savedAllowed[key], allowed[key]) ? () => setAllowed(key, savedAllowed[key]) : undefined;
 	// Core blocks and text styles are named by the editor's dictionary; ones a plugin adds use the label of their definition.
 	const nameLabel = (id: string): string => {
 		const key = EDITOR_NAME[id];
@@ -153,11 +178,17 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
+		<Section
+			band
+			title={t("allowed.title")}
+			description={t("allowed.help")}
+			note={limited ? t("allowed.note") : undefined}
+		>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
 				value={allowed.headings}
+				revert={revertOf("headings")}
 				nameOf={(level) => te("toolbar.heading", { level })}
 				onChange={(value) => setAllowed("headings", value)}
 			/>
@@ -166,6 +197,7 @@ function AllowedEditor({
 				all={vocabulary.marks}
 				nameOf={nameLabel}
 				value={allowed.marks}
+				revert={revertOf("marks")}
 				onChange={(value) => setAllowed("marks", value)}
 			/>
 			<LimitList
@@ -173,6 +205,7 @@ function AllowedEditor({
 				all={vocabulary.blocks}
 				nameOf={nameLabel}
 				value={allowed.blocks}
+				revert={revertOf("blocks")}
 				onChange={(value) => setAllowed("blocks", value)}
 			/>
 		</Section>
@@ -189,8 +222,11 @@ export function CollectionEditor({
 	onRemove,
 	onRename,
 	onFileChange,
+	changes,
 }: {
 	name: string;
+	/** Which of its tabs hold a change against the saved file. */
+	changes?: CollectionChange;
 	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
 	section: string | undefined;
 	onSection: (section: string) => void;
@@ -205,7 +241,8 @@ export function CollectionEditor({
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const ts = useTranslator(schemaMessages);
-	const { disabled, file } = useSchemaEdit();
+	const { disabled, file, saved } = useSchemaEdit();
+	const savedCollection = collectionsOf(saved)[name];
 	const chosenTab = section ?? "basics";
 	const isEditorAvailable = kindDefaults(collection.kind as CollectionKind | undefined).body && hasBody(collection);
 	// The editor tab only exists for a document collection with a body.
@@ -214,6 +251,21 @@ export function CollectionEditor({
 	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
+	// A saved collection's setting that differs from the file: the function that puts the saved value back (a collection that is not saved has none).
+	const revert = (key: string) =>
+		savedCollection && !sameJson(savedCollection[key], collection[key])
+			? () => set(key, savedCollection[key])
+			: undefined;
+	const changeKind = (value: string) =>
+		onChange((current) => {
+			let next = setProp(current, "kind", value, COLLECTION_KEY_ORDER);
+			if (value === "item" && hasBody(next)) {
+				next = withBody(next, false, {});
+			} else if (value === "document" && !hasBody(next)) {
+				next = withBody(next, true, {});
+			}
+			return next;
+		});
 	const editing = { collectionName: name, collection, update: onChange, onRename, updateFile: onFileChange };
 	const label = typeof collection.label === "string" ? collection.label : name;
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
@@ -233,70 +285,88 @@ export function CollectionEditor({
 						</p>
 					</div>
 					<TabsList className="w-fit justify-start">
-						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
-						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-						{isEditorAvailable && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
+						<TabsTrigger value="basics">
+							{t("collection.tabs.basics")}
+							{changes?.basics && <ChangeDot />}
+						</TabsTrigger>
+						<TabsTrigger value="fields">
+							{t("collection.tabs.fields")}
+							{changes?.fields && <ChangeDot />}
+						</TabsTrigger>
+						{isEditorAvailable && (
+							<TabsTrigger value="editor">
+								{t("collection.tabs.editor")}
+								{changes?.editor && <ChangeDot />}
+							</TabsTrigger>
+						)}
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
-					<Section title={t("collection.basicsTitle")}>
-						<div className="flex flex-col gap-6">
-							<TextInput
-								label={t("collection.label")}
-								value={collection.label as string | undefined}
-								onChange={(value) => set("label", value)}
-							/>
-							<Pick
-								label={t("collection.kind")}
-								value={String(collection.kind)}
-								items={[
-									{ value: "document", label: ts("collection.kindDocument") },
-									{ value: "item", label: ts("collection.kindItem") },
-								]}
-								onChange={(value) => {
-									onChange((current) => {
-										let next = setProp(current, "kind", value, COLLECTION_KEY_ORDER);
-										if (value === "item" && hasBody(next)) {
-											next = withBody(next, false, {});
-										} else if (value === "document" && !hasBody(next)) {
-											next = withBody(next, true, {});
-										}
-										return next;
-									});
-								}}
-							/>
-							<IconPicker
-								label={t("collection.icon")}
-								value={typeof collection.icon === "string" ? collection.icon : undefined}
-								kind={typeof collection.kind === "string" ? collection.kind : undefined}
-								onChange={(value) => set("icon", value)}
-							/>
-						</div>
+					<Section band title={t("collection.basicsTitle")} description={t("collection.basicsHelp")}>
+						<TextInput
+							label={t("collection.label")}
+							revert={revert("label")}
+							value={collection.label as string | undefined}
+							onChange={(value) => set("label", value)}
+						/>
+						<Pick
+							label={t("collection.kind")}
+							revert={
+								savedCollection && savedCollection.kind !== collection.kind
+									? () => changeKind(String(savedCollection.kind))
+									: undefined
+							}
+							value={String(collection.kind)}
+							items={[
+								{ value: "document", label: ts("collection.kindDocument") },
+								{ value: "item", label: ts("collection.kindItem") },
+							]}
+							onChange={changeKind}
+						/>
+						<IconPicker
+							label={t("collection.icon")}
+							revert={revert("icon")}
+							value={typeof collection.icon === "string" ? collection.icon : undefined}
+							kind={typeof collection.kind === "string" ? collection.kind : undefined}
+							onChange={(value) => set("icon", value)}
+						/>
 					</Section>
-					<Section title={t("collection.featuresTitle")}>
-						<div className="flex flex-col gap-6">
-							<FlagSwitch
-								label={t("collection.folders")}
-								checked={
-									typeof collection.folders === "boolean"
-										? collection.folders
-										: kindDefaults(collection.kind as CollectionKind | undefined).folders
-								}
-								onChange={(on) => {
-									const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
-									set("folders", isDefault ? undefined : on);
-								}}
-							/>
-							<PublicPathField
-								path={typeof collection.path === "string" ? collection.path : ""}
-								suggested={defaultPath(name)}
-								onChange={(value) =>
-									onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
-								}
-							/>
-						</div>
+					<Section band title={t("collection.featuresTitle")} description={t("collection.featuresHelp")}>
+						<FlagSwitch
+							label={t("collection.folders")}
+							revert={revert("folders")}
+							checked={
+								typeof collection.folders === "boolean"
+									? collection.folders
+									: kindDefaults(collection.kind as CollectionKind | undefined).folders
+							}
+							onChange={(on) => {
+								const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
+								set("folders", isDefault ? undefined : on);
+							}}
+						/>
+						<PublicPathField
+							revert={
+								savedCollection && !sameJson(savedCollection.path, collection.path)
+									? () =>
+											onChange((current) =>
+												withPublicPath(
+													current,
+													typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
+													localesOf(file).length > 1,
+												),
+											)
+									: undefined
+							}
+							path={typeof collection.path === "string" ? collection.path : ""}
+							suggested={defaultPath(name)}
+							onChange={(value) =>
+								onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+							}
+						/>
 					</Section>
 					<Section
+						band
 						title={t("collection.dangerTitle")}
 						description={isNew ? undefined : t("collection.dangerDescription")}
 						card={false}
@@ -321,7 +391,7 @@ export function CollectionEditor({
 				</TabsContent>
 				{isEditorAvailable && (
 					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-12">
-						<AllowedEditor collection={collection} update={onChange} />
+						<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
 					</TabsContent>
 				)}
 			</Tabs>

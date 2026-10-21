@@ -158,11 +158,11 @@ const renderScreen = () =>
 		</AdminQueryProvider>,
 	);
 
-/** The review button: it reads "No changes" (and is off) until something is edited. */
-const review = () =>
-	screen.getByRole("button", {
-		name: new RegExp(`^(${t("actions.review")}|${t("actions.noChanges")})$`),
-	}) as HTMLButtonElement;
+/** The save bar: it shows only while the draft differs from the saved file. */
+const saveBar = () => screen.getByTestId("save-bar");
+const queryBar = () => screen.queryByTestId("save-bar");
+/** The bar's Review button (it opens the review dialog). */
+const review = () => within(saveBar()).getByRole("button", { name: t("bar.review") }) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
 /** Opens the dialog of the "Add field" button and picks the kind (text when none is given). */
 async function openAddField(kindName?: string) {
@@ -188,7 +188,7 @@ const applySheet = async (sheet: HTMLElement) => {
 	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 };
 const openTab = (name: "basics" | "fields" | "editor") =>
-	fireEvent.click(screen.getByRole("tab", { name: tCollection(`collection.tabs.${name}`) }));
+	fireEvent.click(screen.getByRole("tab", { name: new RegExp(`^${tCollection(`collection.tabs.${name}`)}`) }));
 /** The name of the action that adds the SEO plugin's fields (the plugin's tab name differs between the site configs). */
 const addSetName = () =>
 	tFields("fields.addSet", { name: fieldSetsOf(testSite.plugins).find((set) => set.id === "seo")?.label ?? "SEO" });
@@ -205,7 +205,7 @@ describe("SchemaScreen", () => {
 			"Settings are saved to monti.schema.ts. Change them on your computer (pnpm dev), then commit and deploy.",
 		);
 		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).disabled).toBe(true);
-		expect(review().disabled).toBe(true);
+		expect(queryBar()).toBeNull();
 		expect(screen.queryByRole("button", { name: t("collection.create") })).toBeNull();
 		expect(requests.every((request) => request.method === "GET")).toBe(true);
 	});
@@ -230,7 +230,7 @@ describe("SchemaScreen", () => {
 		);
 		expect(t("readonly.hasCode")).toContain("monti.schema.ts");
 		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).disabled).toBe(true);
-		expect(review().disabled).toBe(true);
+		expect(queryBar()).toBeNull();
 	});
 
 	it("names the schema file alone in the header line, with the reason when it is read-only", async () => {
@@ -309,7 +309,7 @@ describe("SchemaScreen", () => {
 		expect((screen.getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value).toBe(
 			"posts",
 		);
-		expect(review().disabled).toBe(true);
+		expect(queryBar()).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: /^Tag/ }));
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
 	});
@@ -563,7 +563,7 @@ describe("SchemaScreen", () => {
 		type(within(sheet).getByLabelText(tFields("sheet.label")), "Teaser");
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
-		expect(review().disabled).toBe(true);
+		expect(queryBar()).toBeNull();
 	});
 
 	it("writes the edits of the sheet to the file only on Apply", async () => {
@@ -1410,7 +1410,7 @@ describe("SchemaScreen", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
 		expect(screen.queryByTestId("field-postId")).toBeNull();
-		expect(review().disabled).toBe(true);
+		expect(queryBar()).toBeNull();
 
 		// Again, and add it: the first collection is the target, and it names the field and its label.
 		confirmAdd(await openAddField(tFields("kind.relation")));
@@ -1455,7 +1455,7 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		const label = await screen.findByLabelText(tCollection("collection.label"));
 		type(label, "Article");
-		fireEvent.click(screen.getByRole("button", { name: t("actions.discard") }));
+		fireEvent.click(within(saveBar()).getByRole("button", { name: t("bar.discard") }));
 		await act(async () => {
 			fireEvent.click(await screen.findByRole("button", { name: tc("discard.confirm") }));
 		});
@@ -1475,14 +1475,152 @@ describe("SchemaScreen", () => {
 		return lastPreview()?.body?.schema as Obj;
 	};
 
-	it("counts the unsaved changes next to the review button, which reads No changes until there is one", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		expect(review().textContent).toBe(t("actions.noChanges"));
-		expect(screen.queryByText(t("header.pending", { count: 1 }))).toBeNull();
-		type(screen.getByLabelText(tCollection("collection.label")), "Article");
-		expect(review().textContent).toBe(t("actions.review"));
-		expect(screen.getByText(t("header.pending", { count: 1 }))).toBeTruthy();
+	describe("change marks and the save bar", () => {
+		const dotsIn = (element: HTMLElement) => within(element).queryAllByTestId("change-dot");
+		const revertName = (name: string) => t("revert.named", { name });
+		const subTab = (name: "basics" | "fields" | "editor") =>
+			screen.getByRole("tab", { name: new RegExp(`^${tCollection(`collection.tabs.${name}`)}`) });
+
+		it("shows the bar only while the draft differs, counts the changes, and hides it when they are reverted", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			expect(queryBar()).toBeNull();
+			fireEvent.click(screen.getByRole("tab", { name: "site" }));
+			type(await screen.findByLabelText(t("site.name")), "Blog");
+			expect(within(saveBar()).getByText(t("bar.count", { count: 1 }))).toBeTruthy();
+			type(screen.getByLabelText(tSite("site.home")), "/start");
+			expect(within(saveBar()).getByText(t("bar.count", { count: 2 }))).toBeTruthy();
+			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
+			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.home")) }));
+			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("");
+			expect(queryBar()).toBeNull();
+		});
+
+		it("marks a field that differs from the saved file, and its revert puts back that field only", async () => {
+			state = screenState({ schema: { ...schema(), site: { name: "Blog", home: "/" } } });
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			fireEvent.click(screen.getByRole("tab", { name: "site" }));
+			const site = await screen.findByTestId("site-settings");
+			expect(within(site).queryByTestId("field-changed")).toBeNull();
+			type(screen.getByLabelText(t("site.name")), "Journal");
+			type(screen.getByLabelText(tSite("site.home")), "/start");
+			expect(within(site).getAllByTestId("field-changed")).toHaveLength(2);
+			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
+			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("Blog");
+			expect((screen.getByLabelText(tSite("site.home")) as HTMLInputElement).value).toBe("/start");
+			expect(within(site).getAllByTestId("field-changed")).toHaveLength(1);
+		});
+
+		it("reverts a switch to the saved value", async () => {
+			state = screenState({ schema: { ...schema(), admin: { templates: false } } });
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			fireEvent.click(screen.getByRole("tab", { name: "admin" }));
+			fireEvent.click(await screen.findByRole("switch", { name: tAdmin("admin.templates") }));
+			expect(screen.getByRole("switch", { name: tAdmin("admin.templates") }).getAttribute("aria-checked")).toBe("true");
+			fireEvent.click(screen.getByRole("button", { name: revertName(tAdmin("admin.templates")) }));
+			expect(screen.getByRole("switch", { name: tAdmin("admin.templates") }).getAttribute("aria-checked")).toBe(
+				"false",
+			);
+			expect(queryBar()).toBeNull();
+		});
+
+		it("marks a collection and its Basics tab when its basics change, and leaves the others unmarked", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			expect(dotsIn(screen.getByTestId("collection-nav-post"))).toHaveLength(0);
+			type(screen.getByLabelText(tCollection("collection.label")), "Article");
+			expect(dotsIn(screen.getByTestId("collection-nav-post"))).toHaveLength(1);
+			expect(dotsIn(screen.getByTestId("collection-nav-tag"))).toHaveLength(0);
+			expect(dotsIn(subTab("basics"))).toHaveLength(1);
+			expect(dotsIn(subTab("fields"))).toHaveLength(0);
+			fireEvent.click(screen.getByRole("button", { name: revertName(tCollection("collection.label")) }));
+			expect(dotsIn(screen.getByTestId("collection-nav-post"))).toHaveLength(0);
+			expect(queryBar()).toBeNull();
+		});
+
+		it("marks a field row that differs from the saved file, with a revert for the row", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			openTab("fields");
+			expect(within(await screen.findByTestId("field-summary")).queryAllByTestId("change-dot")).toHaveLength(0);
+			const sheet = await openFieldSheet("summary");
+			type(within(sheet).getByLabelText(tFields("field.label")), "Teaser");
+			await applySheet(sheet);
+			expect(within(screen.getByTestId("field-summary")).getAllByTestId("change-dot")).toHaveLength(1);
+			expect(dotsIn(subTab("fields"))).toHaveLength(1);
+			expect(dotsIn(subTab("basics"))).toHaveLength(0);
+			fireEvent.click(
+				within(screen.getByTestId("field-summary")).getByRole("button", {
+					name: tFields("field.revert", { name: "summary" }),
+				}),
+			);
+			expect(queryBar()).toBeNull();
+		});
+
+		it("asks before Discard all, then puts the saved file back and hides the bar", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			const label = () => screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement;
+			type(label(), "Article");
+			fireEvent.click(within(saveBar()).getByRole("button", { name: t("bar.discard") }));
+			// Nothing is thrown away before the answer.
+			expect(label().value).toBe("Article");
+			await act(async () => {
+				fireEvent.click(await screen.findByRole("button", { name: tc("cancel") }));
+			});
+			expect(label().value).toBe("Article");
+			fireEvent.click(within(saveBar()).getByRole("button", { name: t("bar.discard") }));
+			await act(async () => {
+				fireEvent.click(await screen.findByRole("button", { name: tc("discard.confirm") }));
+			});
+			await waitFor(() => expect(queryBar()).toBeNull());
+			expect(label().value).toBe("Post");
+		});
+
+		it("saves through the review dialog: Save and apply opens it, and the dialog's own button writes the file", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			type(screen.getByLabelText(tCollection("collection.label")), "Article");
+			fireEvent.click(within(saveBar()).getByRole("button", { name: t("bar.save") }));
+			const dialog = await screen.findByRole("dialog");
+			await screen.findByTestId("review-summary");
+			fireEvent.click(within(dialog).getByRole("button", { name: tReview("review.save") }));
+			await waitFor(() => expect(requests.some((request) => request.method === "PUT")).toBe(true));
+			const put = requests.find((request) => request.method === "PUT");
+			const saved = put?.body?.schema as { collections: Record<string, { label: string }> };
+			expect(saved.collections.post?.label).toBe("Article");
+		});
+
+		it("asks before a link inside the admin leaves the page with changes, and not without them", async () => {
+			const link = document.createElement("a");
+			link.href = "/admin/entries";
+			link.textContent = "away";
+			document.body.append(link);
+			try {
+				renderScreen();
+				await screen.findByTestId("collection-post");
+				expect(fireEvent.click(link)).toBe(true);
+				type(screen.getByLabelText(tCollection("collection.label")), "Article");
+				expect(fireEvent.click(link)).toBe(false);
+				expect(await screen.findByRole("button", { name: tc("discard.confirm") })).toBeTruthy();
+			} finally {
+				link.remove();
+			}
+		});
+
+		it("asks the browser before the tab closes while the draft differs", async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			const quiet = new Event("beforeunload", { cancelable: true });
+			window.dispatchEvent(quiet);
+			expect(quiet.defaultPrevented).toBe(false);
+			type(screen.getByLabelText(tCollection("collection.label")), "Article");
+			const guarded = new Event("beforeunload", { cancelable: true });
+			window.dispatchEvent(guarded);
+			expect(guarded.defaultPrevented).toBe(true);
+		});
 	});
 
 	describe("languages tab", () => {

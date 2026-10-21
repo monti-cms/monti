@@ -6,19 +6,30 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { type ArrowUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
+import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { IconButton } from "../../ui/icon-button";
-import { useIssuesUnder, useSchemaEdit } from "./controls";
+import { ChangeDot, useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
 import { SortableList } from "./fields-tree-dnd";
 import { schemaMessages } from "./messages";
-import { type FieldPlace, type Obj, optionsOf, removeBlock, removeField, reorderField } from "./schema-model";
+import {
+	collectionsOf,
+	type FieldPlace,
+	fieldAt,
+	type Obj,
+	optionsOf,
+	removeBlock,
+	removeField,
+	reorderField,
+	sameJson,
+	setField,
+} from "./schema-model";
 
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export const TONE: Record<KindTone, string> = {
@@ -159,8 +170,12 @@ export function Row({
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const ts = useTranslator(schemaMessages);
-	const { disabled, file } = useSchemaEdit();
+	const { disabled, file, saved } = useSchemaEdit();
 	const { editing } = ctx;
+	// The field as saved, when it is saved under this name: a field that differs from it can be put back.
+	const savedCollection = collectionsOf(saved)[editing.collectionName];
+	const savedField = savedCollection ? fieldAt(savedCollection, place, name) : undefined;
+	const changed = savedField !== undefined && !sameJson(savedField, field);
 	const summary = summarizeField(t, name, field, editing.collection, file, !place.branch);
 	const path = place.branch
 		? `collections.${editing.collectionName}.fields.${place.branch.field}.values.${place.branch.option}.${name}`
@@ -185,6 +200,16 @@ export function Row({
 	};
 	const [moving, setMoving] = useState(false);
 	const buttons: RowButton[] = [
+		...(changed && savedField
+			? [
+					{
+						label: t("field.revert", { name }),
+						icon: Undo2,
+						disabled,
+						onClick: () => editing.update((collection) => setField(collection, place, name, () => savedField)),
+					},
+				]
+			: []),
 		...(top && !locked
 			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
 			: []),
@@ -230,6 +255,7 @@ export function Row({
 								{label}
 							</span>
 						)}
+						{changed && <ChangeDot className="ml-2" />}
 						{locked?.kind === "panel" && (
 							<span
 								className="ml-2 shrink-0 text-monti-muted-foreground/80 text-xs"

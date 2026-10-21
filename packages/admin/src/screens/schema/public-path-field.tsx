@@ -31,10 +31,13 @@ export function PublicPathField({
 	path,
 	suggested,
 	onChange,
+	revert,
 }: {
 	path: string;
 	suggested: string;
 	onChange: (path: string) => void;
+	/** Puts the saved address back; given only while the address differs from the saved file. */
+	revert?: () => void;
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const { disabled } = useSchemaEdit();
@@ -49,6 +52,7 @@ export function PublicPathField({
 		<div className="flex flex-col gap-4">
 			<FlagSwitch
 				label={t("collection.path")}
+				revert={revert}
 				checked={hasPage}
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>

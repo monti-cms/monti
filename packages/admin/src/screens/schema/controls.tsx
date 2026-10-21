@@ -2,7 +2,7 @@
 
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
@@ -14,7 +14,7 @@ import { Switch } from "../../ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { type CONTROL_WIDTH, HELP, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
-import { nameProblem, type Obj } from "./schema-model";
+import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */
 export interface SchemaEditContext {
@@ -26,6 +26,8 @@ export interface SchemaEditContext {
 	readonly codeCollections: readonly string[];
 	/** The file as edited, for editors that look at another collection (a relation's target, a backlink's relation). */
 	readonly file: Obj;
+	/** The file as saved on disk: what a field is reverted to. */
+	readonly saved: Obj;
 }
 
 const Context = createContext<SchemaEditContext>({
@@ -35,6 +37,7 @@ const Context = createContext<SchemaEditContext>({
 	collectionNames: [],
 	codeCollections: [],
 	file: {},
+	saved: {},
 });
 export const SchemaEditProvider = Context.Provider;
 export const useSchemaEdit = () => useContext(Context);
@@ -46,6 +49,52 @@ export function useIssuesUnder(path: string, exclude?: string): readonly ConfigI
 		(issue) =>
 			(issue.path === path || issue.path.startsWith(`${path}.`) || issue.path.startsWith(`${path}[`)) &&
 			!(exclude && issue.path.startsWith(`${path}${exclude}`)),
+	);
+}
+
+/**
+ * For one setting of `site` or `admin`: the function that puts the saved value back while the draft differs from it, `undefined` while it does not.
+ * `set` writes one key of the section (a value of `undefined` removes it).
+ */
+export function useSettingRevert(
+	section: "site" | "admin",
+	set: (key: string, value: unknown) => void,
+): (key: string) => (() => void) | undefined {
+	const { saved, file } = useSchemaEdit();
+	return (key) => {
+		const before = sectionOf(saved, section)[key];
+		return sameJson(before, sectionOf(file, section)[key]) ? undefined : () => set(key, before);
+	};
+}
+
+/** A small dot that says "this has changes": the accent colour, with the word for a screen reader. */
+export function ChangeDot({ className }: { className?: string }) {
+	const t = useTranslator(schemaMessages);
+	return (
+		<span className={cn("inline-flex shrink-0 items-center", className)} data-testid="change-dot">
+			<span aria-hidden className="size-1.5 rounded-full bg-monti-highlight" />
+			<span className="sr-only">{t("changed")}</span>
+		</span>
+	);
+}
+
+/** The marker of a field that differs from the saved file, with the button that puts the saved value back. Shown only while the field is changed. */
+export function RevertMark({ name, onRevert }: { name: string; onRevert: () => void }) {
+	const t = useTranslator(schemaMessages);
+	const { disabled } = useSchemaEdit();
+	return (
+		<span className="inline-flex items-center gap-0.5" data-testid="field-changed">
+			<ChangeDot />
+			<IconButton
+				label={t("revert.named", { name })}
+				size="icon-xs"
+				disabled={disabled}
+				className="size-5 text-monti-muted-foreground"
+				onClick={onRevert}
+			>
+				<Undo2 aria-hidden className="size-3" />
+			</IconButton>
+		</span>
 	);
 }
 
@@ -73,8 +122,11 @@ export function TextInput({
 	className,
 	optional,
 	disabled: customDisabled,
+	revert,
 }: {
 	label: string;
+	/** Puts the saved value back; given only while the field differs from the saved file. */
+	revert?: () => void;
 	value: string | number | undefined;
 	onChange: (value: string) => void;
 	placeholder?: string;
@@ -105,6 +157,7 @@ export function TextInput({
 			hint={hint}
 			htmlFor={id}
 			className={className}
+			aside={revert && <RevertMark name={label} onRevert={revert} />}
 		>
 			<Input
 				id={id}
@@ -134,8 +187,11 @@ export function FlagSwitch({
 	hint,
 	className,
 	locked,
+	revert,
 }: {
 	label: string;
+	/** Puts the saved value back; given only while the switch differs from the saved file. */
+	revert?: () => void;
 	checked: boolean;
 	onChange: (value: boolean) => void;
 	description?: ReactNode;
@@ -156,14 +212,17 @@ export function FlagSwitch({
 				</FormFieldLabel>
 				{desc && <FormFieldDescription className={HELP}>{desc}</FormFieldDescription>}
 			</div>
-			<Switch
-				id={id}
-				size="sm"
-				checked={checked}
-				disabled={disabled}
-				className="mt-0.5 shrink-0"
-				onCheckedChange={(next) => onChange(next === true)}
-			/>
+			<div className="flex shrink-0 items-center gap-1.5">
+				{revert && <RevertMark name={label} onRevert={revert} />}
+				<Switch
+					id={id}
+					size="sm"
+					checked={checked}
+					disabled={disabled}
+					className="mt-0.5 shrink-0"
+					onCheckedChange={(next) => onChange(next === true)}
+				/>
+			</div>
 		</UiField>
 	);
 }
@@ -238,8 +297,11 @@ export function Pick({
 	disabled: customDisabled,
 	control = "narrow",
 	size = "default",
+	revert,
 }: {
 	label: string;
+	/** Puts the saved value back; given only while the choice differs from the saved file. */
+	revert?: () => void;
 	value: string;
 	items: readonly PickItem[];
 	onChange: (value: string) => void;
@@ -254,7 +316,15 @@ export function Pick({
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
 	return (
-		<Labeled label={label} description={description} hint={hint} htmlFor={id} className={className} control={control}>
+		<Labeled
+			label={label}
+			description={description}
+			hint={hint}
+			htmlFor={id}
+			className={className}
+			control={control}
+			aside={revert && <RevertMark name={label} onRevert={revert} />}
+		>
 			<Select
 				value={value}
 				items={items as PickItem[]}

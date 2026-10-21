@@ -18,12 +18,12 @@ import { Input } from "../../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
-import { Pick, useSchemaEdit } from "./controls";
+import { Pick, RevertMark, useSchemaEdit } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { type RowButton, RowButtons } from "./fields-tree-rows";
 import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
-import { type Locale, localesOf, type Obj, setProp } from "./schema-model";
+import { type Locale, localesOf, type Obj, sameJson, setProp } from "./schema-model";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
 const zonesWith = (current: string | undefined): string[] => {
@@ -54,16 +54,22 @@ function offsetOf(zone: string): string {
 function TimeZonePick({
 	value,
 	onChange,
+	revert,
 }: {
 	value: string | undefined;
 	onChange: (value: string | undefined) => void;
+	revert?: () => void;
 }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
 	return (
-		<Labeled label={t("locales.timeZone")} htmlFor={id}>
+		<Labeled
+			label={t("locales.timeZone")}
+			htmlFor={id}
+			aside={revert && <RevertMark name={t("locales.timeZone")} onRevert={revert} />}
+		>
 			<Combobox
 				items={zones}
 				autoHighlight
@@ -392,12 +398,22 @@ function LocaleRow({
 	);
 }
 
+/** Where the language keys are written when they are new. */
+const FILE_ORDER = ["collections", "migrations", "locales", "defaultLocale", "timeZone"];
+
 /** The content languages (code, name, admin name) as one list, the default one, and the time zone. A saved language's code is a stored value, so it is not editable; add a new language instead. */
 export function LocalesEditor({ file, update }: { file: Obj; update: (change: (file: Obj) => Obj) => void }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const ts = useTranslator(schemaMessages);
-	const { disabled } = useSchemaEdit();
+	const { disabled, saved } = useSchemaEdit();
 	const locales = localesOf(file);
+	const revertKey = (key: "locales" | "defaultLocale" | "timeZone") =>
+		sameJson(saved[key], file[key])
+			? undefined
+			: () =>
+					update((current) =>
+						key === "locales" ? { ...current, locales: saved.locales } : setProp(current, key, saved[key], FILE_ORDER),
+					);
 	const [dialog, setDialog] = useState<{ code: string | null } | null>(null);
 	const change = (next: Locale[]) => update((current) => ({ ...current, locales: next }));
 	const defaultLocale = typeof file.defaultLocale === "string" ? file.defaultLocale : "";
@@ -425,10 +441,22 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
 		<div className="flex flex-col gap-12">
-			<Section wide card={false} title={t("locales.contentTitle")} testId="locales-content">
+			<Section
+				wide
+				band
+				card={false}
+				title={t("locales.contentTitle")}
+				description={t("locales.contentHelp")}
+				testId="locales-content"
+			>
 				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-						<span className="text-monti-muted-foreground text-sm">{t("locales.count", { count: locales.length })}</span>
+						<span className="flex items-center gap-1.5 text-monti-muted-foreground text-sm">
+							{t("locales.count", { count: locales.length })}
+							{revertKey("locales") && (
+								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />
+							)}
+						</span>
 						<Button
 							type="button"
 							variant="outline"
@@ -455,26 +483,28 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 					</ul>
 				</Panel>
 			</Section>
-			<Section wide title={t("locales.defaultTitle")} testId="locales-default">
-				<div className="flex flex-col gap-6">
-					<Pick
-						label={t("locales.default")}
-						value={defaultLocale}
-						items={locales.map((locale) => ({
-							value: locale.code,
-							label: `${locale.label ?? locale.name} (${locale.code})`,
-						}))}
-						onChange={(value) => update((current) => ({ ...current, defaultLocale: value }))}
-					/>
-					<TimeZonePick
-						value={typeof file.timeZone === "string" ? file.timeZone : undefined}
-						onChange={(value) =>
-							update((current) =>
-								setProp(current, "timeZone", value, ["collections", "migrations", "locales", "defaultLocale"]),
-							)
-						}
-					/>
-				</div>
+			<Section
+				wide
+				band
+				title={t("locales.defaultTitle")}
+				description={t("locales.defaultHelp")}
+				testId="locales-default"
+			>
+				<Pick
+					label={t("locales.default")}
+					revert={revertKey("defaultLocale")}
+					value={defaultLocale}
+					items={locales.map((locale) => ({
+						value: locale.code,
+						label: `${locale.label ?? locale.name} (${locale.code})`,
+					}))}
+					onChange={(value) => update((current) => ({ ...current, defaultLocale: value }))}
+				/>
+				<TimeZonePick
+					revert={revertKey("timeZone")}
+					value={typeof file.timeZone === "string" ? file.timeZone : undefined}
+					onChange={(value) => update((current) => setProp(current, "timeZone", value, FILE_ORDER))}
+				/>
 			</Section>
 			{dialog && (
 				<LocaleDialog

@@ -6,6 +6,10 @@ export const schemaSiteMessages = defineMessages("cms-admin.schema.site", {
 		"site.identityTitle": "Name and link",
 		"site.previewTitle": "Preview",
 		"site.addressTitle": "Public addresses",
+		"site.identityHelp": "The name and home link your site shows to visitors.",
+		"site.previewHelp": "Where editors open a draft of a page, and how the preview picks its language.",
+		"site.addressHelp":
+			"Language in addresses: whether URLs carry the language, like /ko/post. Also other host names for this site.",
 		"site.home": "Home link",
 		"site.previewPath": "Preview path",
 		"site.previewParam": "Preview language query",
@@ -32,6 +36,10 @@ export const schemaSiteMessages = defineMessages("cms-admin.schema.site", {
 		"site.identityTitle": "이름과 링크",
 		"site.previewTitle": "미리보기",
 		"site.addressTitle": "공개 주소",
+		"site.identityHelp": "방문자에게 보이는 사이트 이름과 홈 링크예요.",
+		"site.previewHelp": "편집자가 글 초안을 여는 경로와, 미리보기가 언어를 고르는 방식이에요.",
+		"site.addressHelp":
+			"주소의 언어 표시: /ko/글처럼 주소에 언어를 넣을지 정해요. 이 사이트의 다른 호스트 이름도 여기서 정해요.",
 		"site.home": "홈 링크",
 		"site.previewPath": "미리보기 경로",
 		"site.previewParam": "미리보기 언어 쿼리",

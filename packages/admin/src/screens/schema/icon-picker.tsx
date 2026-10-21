@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
-import { useSchemaEdit } from "./controls";
+import { RevertMark, useSchemaEdit } from "./controls";
 
 /**
  * Picker for collection icons. Shows a button with the current icon and opens a popover with
@@ -21,11 +21,14 @@ export function IconPicker({
 	value,
 	kind,
 	onChange,
+	revert,
 }: {
 	label: string;
 	value: string | undefined;
 	kind?: string;
 	onChange: (value: string | undefined) => void;
+	/** Puts the saved icon back; given only while the icon differs from the saved file. */
+	revert?: () => void;
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const { disabled } = useSchemaEdit();
@@ -44,7 +47,7 @@ export function IconPicker({
 	}, [query]);
 
 	return (
-		<Labeled label={label} htmlFor={id}>
+		<Labeled label={label} htmlFor={id} aside={revert && <RevertMark name={label} onRevert={revert} />}>
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger
 					render={

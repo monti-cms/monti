@@ -5,6 +5,7 @@ import {
 	addOption,
 	allowedOf,
 	changeCount,
+	changedAreas,
 	collectionNameProblem,
 	collectionsOf,
 	FIELD_KEY_ORDER,
@@ -287,6 +288,43 @@ describe("changeCount", () => {
 		edited.site = { name: "Mine", home: "/" };
 		// post edited, memo added, time zone, two site settings
 		expect(changeCount(file(), edited)).toBe(5);
+	});
+});
+
+describe("changedAreas", () => {
+	const file = (): Obj => ({
+		collections: { post: post(), tag: post() },
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+	});
+	it("marks nothing for an untouched draft", () => {
+		const areas = changedAreas(file(), file());
+		expect(Object.values(areas.tabs).some(Boolean)).toBe(false);
+		expect(areas.collections).toEqual({});
+	});
+	it("marks the tab and the collection part that changed, and only those", () => {
+		const edited = file();
+		edited.collections = { post: { ...post(), label: "Article" }, tag: post() };
+		const areas = changedAreas(file(), edited);
+		expect(areas.tabs.collections).toBe(true);
+		expect(areas.tabs.site || areas.tabs.admin || areas.tabs.locales).toBe(false);
+		expect(Object.keys(areas.collections)).toEqual(["post"]);
+		expect(areas.collections.post).toEqual({ basics: true, fields: false, editor: false });
+	});
+	it("marks each settings tab by its own settings", () => {
+		const edited = file();
+		edited.site = { name: "Mine" };
+		edited.timeZone = "Asia/Seoul";
+		const { tabs } = changedAreas(file(), edited);
+		expect(tabs).toEqual({ site: true, locales: true, collections: false, admin: false });
+	});
+	it("marks the collections tab when a collection is removed or the order changes", () => {
+		const removed = file();
+		removed.collections = { post: post() };
+		expect(changedAreas(file(), removed).tabs.collections).toBe(true);
+		const swapped = file();
+		swapped.collections = { tag: post(), post: post() };
+		expect(changedAreas(file(), swapped).tabs.collections).toBe(true);
 	});
 });
 

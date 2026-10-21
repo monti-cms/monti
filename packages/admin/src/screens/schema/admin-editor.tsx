@@ -4,7 +4,7 @@ import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { schemaAdminMessages } from "./admin.messages";
-import { FlagSwitch, Pick } from "./controls";
+import { FlagSwitch, Pick, useSettingRevert } from "./controls";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
 
 const DEFAULT_CHOICE = "__default";
@@ -23,6 +23,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	const t = useTranslator(schemaAdminMessages);
 	const admin = sectionOf(file, "admin");
 	const set = (key: string, value: unknown) => update((current) => setSetting(current, "admin", key, value));
+	const revert = useSettingRevert("admin", set);
 	const locale = typeof admin.locale === "string" ? admin.locale : undefined;
 	const defaultCode = typeof file.defaultLocale === "string" ? file.defaultLocale : "en";
 	const languages =
@@ -30,10 +31,11 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
 		<div className="flex flex-col gap-12" data-testid="admin-settings">
-			<Section wide title={t("admin.languageTitle")}>
+			<Section wide band title={t("admin.languageTitle")} description={t("admin.languageHelp")}>
 				<div>
 					<Pick
 						label={t("admin.locale")}
+						revert={revert("locale")}
 						value={locale ?? DEFAULT_CHOICE}
 						items={[
 							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
@@ -43,21 +45,23 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("admin.featuresTitle")}>
+			<Section wide band title={t("admin.featuresTitle")} description={t("admin.featuresHelp")}>
 				<FlagSwitch
 					label={t("admin.templates")}
+					revert={revert("templates")}
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
 				<div className="border-t pt-6">
 					<FlagSwitch
 						label={t("admin.translations")}
+						revert={revert("translations")}
 						checked={admin.translations !== false}
 						onChange={(on) => set("translations", on ? undefined : false)}
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("admin.addressTitle")}>
+			<Section wide band title={t("admin.addressTitle")} description={t("admin.addressHelp")}>
 				<div>
 					<Labeled label={t("admin.path")} description={t("admin.pathNote")}>
 						<code className="w-fit rounded-md bg-monti-muted px-3 py-2 text-sm" data-testid="admin-path">
