@@ -158,11 +158,17 @@ export function AdminShell({
 	count,
 	sidebar,
 	bare,
+	description,
+	large,
 	children,
 }: {
 	title: ReactNode;
 	/** Item count shown dimmed next to the title. */
 	count?: number;
+	/** The big page header of the list screens: a large title with the count in mono, this one-line description under it, and the page actions bottom-aligned on the right. */
+	large?: boolean;
+	/** The muted line under a large title. */
+	description?: ReactNode;
 	sidebar: AdminSidebarProps;
 	/** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
 	bare?: boolean;
@@ -174,7 +180,7 @@ export function AdminShell({
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} bare={bare}>
+				<AdminShell title={title} count={count} sidebar={sidebar} bare={bare} large={large} description={description}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -190,7 +196,27 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset className="min-w-0 overflow-hidden">
-				{!bare && (
+				{!bare && large && (
+					<header className="flex shrink-0 items-end gap-3 px-8 pt-7 pb-5">
+						<SidebarTrigger
+							aria-label={t("shell.openSidebar")}
+							className="-ml-1 self-start text-monti-muted-foreground md:hidden"
+						/>
+						<div className="min-w-0 flex-1">
+							<h1 className="flex min-w-0 items-baseline gap-2.5 font-semibold text-monti-heading tracking-tight">
+								<span className="truncate">{title}</span>
+								{count !== undefined && (
+									<span className="tabular font-mono font-normal text-monti-caption text-monti-muted-foreground">
+										{count}
+									</span>
+								)}
+							</h1>
+							{description && <p className="mt-1 text-monti-body text-monti-muted-foreground">{description}</p>}
+						</div>
+						<div ref={setActionsSlot} className="flex flex-wrap items-center justify-end gap-2" />
+					</header>
+				)}
+				{!bare && !large && (
 					<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
 						<SidebarTrigger
 							aria-label={t("shell.openSidebar")}

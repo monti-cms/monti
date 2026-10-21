@@ -177,7 +177,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 						href={issue.url}
 						target="_blank"
 						rel="noreferrer noopener"
-						className="text-monti-primary text-xs underline-offset-2 hover:underline"
+						className="text-monti-primary text-xs underline underline-offset-2"
 					>
 						{t("explain")}
 					</a>

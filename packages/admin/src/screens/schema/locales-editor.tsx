@@ -376,7 +376,7 @@ function LocaleRow({
 				<div className="flex items-center gap-2">
 					<span className="truncate font-medium text-sm">{displayName}</span>
 					{isDefault && (
-						<span className="rounded-sm bg-monti-primary/10 px-1.5 py-px text-monti-primary text-xs">
+						<span className="rounded-sm bg-monti-accent px-1.5 py-px text-monti-foreground text-xs">
 							{t("locales.defaultBadge")}
 						</span>
 					)}

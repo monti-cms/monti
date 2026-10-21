@@ -180,7 +180,7 @@ export function AddFieldDialog({
 									className={cn(
 										"flex flex-col items-center gap-1.5 rounded-md border px-2 py-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50",
 										item === kind
-											? "border-monti-primary bg-monti-primary/5 font-medium text-monti-foreground"
+											? "border-monti-primary bg-monti-accent font-medium text-monti-foreground"
 											: "text-monti-muted-foreground hover:bg-monti-muted",
 									)}
 								>

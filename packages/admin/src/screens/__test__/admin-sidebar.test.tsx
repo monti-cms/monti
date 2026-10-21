@@ -11,7 +11,10 @@ import { SidebarProvider } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	window.localStorage.clear();
+});
 
 const t = testSite.createTranslator(screensMessages);
 const tc = testSite.createTranslator(commonMessages);
@@ -23,7 +26,8 @@ const site = createSite({
 			options: {},
 			nav: [
 				{ path: "tools", label: "Tools page", icon: "plug" },
-				{ path: "more", label: "More page" },
+				{ path: "more", label: "More page", group: "site" },
+				{ path: "draft", label: "Draft helper", group: "writing" },
 			],
 		}),
 	],
@@ -43,6 +47,11 @@ const labels = (container: HTMLElement) =>
 		.getAllByRole("link")
 		.map((link) => link.textContent?.trim());
 const menu = (name: string) => screen.getByRole("list", { name });
+const siteGroup = () => screen.getByRole("button", { name: new RegExp(t("sidebar.site")) });
+/** The Site group starts collapsed; opens it the way a person does. */
+const openSite = () => {
+	if (siteGroup().getAttribute("aria-expanded") !== "true") fireEvent.click(siteGroup());
+};
 
 const folder = (id: string, name: string, parentId: string | null = null): Folder => ({
 	id,
@@ -71,29 +80,46 @@ const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {})
 });
 
 describe("sidebar structure", () => {
-	it("has Content (each collection, Media), Tools (Templates, plugin pages, Data, API keys, Event log), then Trash", () => {
+	it("has Content (each collection, Media), Writing, Site, then Trash, with Settings after them", () => {
 		renderSidebar();
+		openSite();
 		const collections = site.COLLECTIONS.map((collection) => site.COLLECTION_DEFINITIONS[collection].label);
 		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media")]);
-		expect(labels(menu(t("sidebar.tools")))).toEqual([
-			t("sidebar.templates"),
-			"Tools page",
-			"More page",
-			t("sidebar.data"),
-			t("sidebar.apiKeys"),
-			t("sidebar.events"),
-		]);
 		expect(labels(menu(t("sidebar.trash")))).toEqual([t("sidebar.trash")]);
-		// Order on the page: content, tools, trash, then Settings in the footer.
 		const all = screen.getAllByRole("link").map((link) => link.textContent?.trim());
 		const at = (label: string) => all.indexOf(label);
 		expect(at(t("sidebar.media"))).toBeLessThan(at(t("sidebar.templates")));
-		expect(at(t("sidebar.templates"))).toBeLessThan(at("Tools page"));
-		expect(at("More page")).toBeLessThan(at(t("sidebar.data")));
+		expect(at(t("sidebar.templates"))).toBeLessThan(at("Draft helper"));
+		expect(at("Draft helper")).toBeLessThan(at(t("sidebar.data")));
 		expect(at(t("sidebar.data"))).toBeLessThan(at(t("sidebar.apiKeys")));
 		expect(at(t("sidebar.apiKeys"))).toBeLessThan(at(t("sidebar.events")));
 		expect(at(t("sidebar.events"))).toBeLessThan(at(t("sidebar.trash")));
 		expect(at(t("sidebar.trash"))).toBeLessThan(at(t("sidebar.settings")));
+	});
+
+	it("puts a plugin page in Writing when its nav item says so, and in Site otherwise", () => {
+		renderSidebar();
+		openSite();
+		const writing = labels(menu(t("sidebar.writing")));
+		const siteItems = labels(menu(t("sidebar.site")));
+		expect(writing).toContain("Draft helper");
+		expect(writing).toContain(t("sidebar.templates"));
+		expect(writing).not.toContain("Tools page");
+		// No `group` and an explicit `group: "site"` both land in Site.
+		expect(siteItems).toEqual(expect.arrayContaining(["Tools page", "More page", t("sidebar.data")]));
+		expect(siteItems).not.toContain("Draft helper");
+	});
+
+	it("keeps the Site group collapsed until opened, and opens it when one of its screens is active", () => {
+		renderSidebar();
+		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
+		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
+		fireEvent.click(siteGroup());
+		expect(screen.getByRole("link", { name: t("sidebar.apiKeys") })).toBeTruthy();
+		cleanup();
+		window.localStorage.clear();
+		renderSidebar({ activeNav: "api-keys" });
+		expect(siteGroup().getAttribute("aria-expanded")).toBe("true");
 	});
 
 	it("keeps Settings and the theme toggle in the footer, and Trash out of it", () => {
@@ -111,6 +137,7 @@ describe("sidebar structure", () => {
 
 	it("links each item to its own address", () => {
 		renderSidebar();
+		openSite();
 		const href = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
 		expect(href(t("sidebar.templates"))).toBe(site.adminHref("/templates"));
 		expect(href(t("sidebar.events"))).toBe(site.adminHref("/events"));
@@ -128,6 +155,7 @@ describe("sidebar structure", () => {
 	});
 
 	it("marks the screen that is open", () => {
+		window.localStorage.clear();
 		renderSidebar({ activeNav: "tools:more" });
 		const current = screen
 			.getAllByRole("link")
@@ -141,13 +169,25 @@ describe("sidebar structure", () => {
 
 	it("puts the failed-delivery badge on the Event log, not on Settings, only when there are failures", () => {
 		renderSidebar({ eventsCount: 4 });
+		openSite();
 		const badge = t("sidebar.eventsBadge", { count: 4 });
-		expect(within(menu(t("sidebar.tools"))).getByLabelText(badge)).toBeTruthy();
+		expect(within(menu(t("sidebar.site"))).getByLabelText(badge)).toBeTruthy();
 		expect(within(menu(t("sidebar.settings"))).queryByLabelText(badge)).toBeNull();
 		expect(screen.getAllByLabelText(badge)).toHaveLength(1);
 		cleanup();
 		renderSidebar({ eventsCount: 0 });
 		expect(screen.queryByLabelText(/failed event deliveries/)).toBeNull();
+	});
+
+	it("shows the failure count on the collapsed Site header so problems stay visible", () => {
+		window.localStorage.clear();
+		renderSidebar({ eventsCount: 4 });
+		const badge = t("sidebar.eventsBadge", { count: 4 });
+		expect(within(siteGroup()).getByLabelText(badge)).toBeTruthy();
+		fireEvent.click(siteGroup());
+		// Open, the count moves onto the Event log item itself.
+		expect(within(siteGroup()).queryByLabelText(badge)).toBeNull();
+		expect(screen.getAllByLabelText(badge)).toHaveLength(1);
 	});
 
 	it("keeps the trash count badge on Trash", () => {

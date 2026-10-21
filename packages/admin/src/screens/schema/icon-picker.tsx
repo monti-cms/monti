@@ -106,7 +106,7 @@ export function IconPicker({
 										}}
 										className={cn(
 											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-accent",
-											isSelected && "bg-monti-primary/10 text-monti-primary ring-1 ring-monti-primary",
+											isSelected && "bg-monti-accent text-monti-foreground ring-1 ring-monti-primary",
 										)}
 									>
 										<Icon className="size-4" />

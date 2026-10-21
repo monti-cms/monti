@@ -69,7 +69,7 @@ function StateHeader({
 						size="sm"
 						className={cn(
 							"-ml-2 h-7 gap-1 px-2 font-normal text-monti-muted-foreground text-xs",
-							filtered && "text-monti-primary",
+							filtered && "text-monti-foreground",
 						)}
 						aria-label={`${t("column.state")}${filtered ? t("filter.activeSuffix") : ""}`}
 					/>

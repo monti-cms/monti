@@ -17,7 +17,7 @@ const badgeVariants = cva(
 				outline:
 					"border-monti-border text-monti-foreground [a]:hover:bg-monti-muted [a]:hover:text-monti-muted-foreground",
 				ghost: "hover:bg-monti-muted hover:text-monti-muted-foreground monti-dark:hover:bg-monti-muted/50",
-				link: "text-monti-primary underline-offset-4 hover:underline",
+				link: "text-monti-primary underline underline-offset-4",
 			},
 		},
 		defaultVariants: {

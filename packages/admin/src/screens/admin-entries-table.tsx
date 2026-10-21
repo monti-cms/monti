@@ -169,13 +169,13 @@ export function AdminEntriesTable({
 				}
 			/>
 			{aboveTable}
-			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-5 mt-3" />}
+			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-8 mt-3" />}
 
 			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
 				<Table
 					containerClassName="overflow-visible"
 					style={tableWidth ? { width: tableWidth } : undefined}
-					className="table-fixed [&_td:first-child]:pl-5 [&_td:last-child]:pr-4 [&_th:first-child]:pl-5 [&_th:last-child]:pr-4"
+					className="table-fixed [&_td:first-child]:pl-8 [&_td:last-child]:pr-6 [&_th:first-child]:pl-8 [&_th:last-child]:pr-6"
 				>
 					<TableHeader className="sticky top-0 z-10 bg-monti-background [&_tr]:border-b">
 						{table.getHeaderGroups().map((group) => (
@@ -191,7 +191,7 @@ export function AdminEntriesTable({
 												<TableHead
 													style={{ width: header.getSize() }}
 													className={cn(
-														"group/th relative h-9 font-normal text-monti-caption text-monti-muted-foreground",
+														"group/th relative h-10 font-normal text-monti-caption text-monti-muted-foreground",
 														header.column.id === "select" && "w-10",
 													)}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
@@ -262,7 +262,7 @@ export function AdminEntriesTable({
 											trigger={
 												<TableRow
 													className={cn(
-														"h-10 data-[state=selected]:bg-monti-primary/5",
+														"h-11 hover:bg-monti-muted/60 data-[state=selected]:bg-monti-accent",
 														row.original.id === openRecordId && OPEN_ITEM,
 													)}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}

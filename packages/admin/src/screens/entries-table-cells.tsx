@@ -103,8 +103,19 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const gone = item.status === "archived" || item.status === "trashed";
 	return (
 		<StatusIndicator
-			tone={published ? (item.hasUnpublishedChanges ? "warning" : "success") : "neutral"}
-			shape={published ? (item.hasUnpublishedChanges ? "half" : "dot") : gone ? "minus" : "dashed"}
+			// Monochrome: published is a filled dot, draft a hollow ring, archived a muted filled dot. Color is kept for unpublished changes.
+			tone={published ? (item.hasUnpublishedChanges ? "warning" : "strong") : gone ? "neutral" : "strong"}
+			shape={
+				published
+					? item.hasUnpublishedChanges
+						? "half"
+						: "dot"
+					: item.status === "archived"
+						? "dot"
+						: gone
+							? "minus"
+							: "ring"
+			}
 			label={label}
 		/>
 	);
@@ -176,7 +187,7 @@ function DefaultEntryCell({
 						variant="link"
 						size="sm"
 						onClick={() => onOpenRecord(item)}
-						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:text-monti-primary"
+						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:underline"
 					>
 						<span className="truncate">{title}</span>
 					</Button>
@@ -186,7 +197,7 @@ function DefaultEntryCell({
 				<span className="flex min-w-0 items-baseline gap-2">
 					<Link
 						href={site.adminEntryEditHref(item.id)}
-						className={cn(titleClass, "text-monti-foreground hover:text-monti-primary")}
+						className={cn(titleClass, "text-monti-foreground hover:underline")}
 					>
 						{title}
 					</Link>

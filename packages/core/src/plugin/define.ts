@@ -33,7 +33,7 @@ export interface Plugin<
 	readonly options: Options;
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
-	/** Pages to add to the Tools group of the admin sidebar. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
+	/** Pages to add to the Writing or Site group of the admin sidebar (`group`, default Site). `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/**
 	 * The API keys this plugin needs, one slot each. Tools > API keys lists every slot of the installed plugins: assigned (the key's "in use" line names it) or empty
@@ -120,6 +120,8 @@ export interface PluginNavItem {
 	readonly label: PluginLabel;
 	/** lucide icon name (e.g. `sparkles`). */
 	readonly icon?: string;
+	/** The sidebar group the page belongs to: `writing` (next to Templates, for tools used while writing) or `site` (site administration, collapsed by default). Default `site`. */
+	readonly group?: "writing" | "site";
 }
 
 /** Site config as seen by plugin validation. */

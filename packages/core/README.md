@@ -887,7 +887,7 @@ export const myPlugin = () =>
 		name: "my-plugin",
 		options: {}, // JSON value. Read by both the server and the browser
 		blocks: [], // body blocks the plugin adds (`defineBlock`, "Body blocks")
-		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the Tools group of the admin sidebar: <admin path>/tools/my (`label` may be `(site) => text` to follow the admin language)
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the admin sidebar: <admin path>/tools/my (`label` may be `(site) => text` to follow the admin language; `group: "writing"` puts it next to Templates, the default `"site"` puts it in the collapsed Site group)
 		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // an API key the plugin needs ("API key store")
 		checkConfig: ({ collections }) => {}, // called when the site config is built
 		// The server side, in one place: a module of its own, read only on the server. Its default export is `defineServerPlugin({ ... })`.
