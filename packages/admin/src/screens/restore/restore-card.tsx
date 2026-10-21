@@ -18,7 +18,6 @@ import {
 } from "../../ui/alert-dialog";
 import { Button } from "../../ui/button";
 import { Spinner } from "../../ui/spinner";
-import { useExportForm } from "../export/use-export-form";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { restoreMessages } from "./messages";
 import { type RestoreForm, useRestoreBackup } from "./use-restore-backup";
@@ -212,9 +211,7 @@ export function RestoreBackupFields() {
 	const site = useSite();
 	const form = useRestoreBackup();
 	const tc = useTranslator(commonMessages);
-	const backup = useExportForm();
 	const [confirming, setConfirming] = useState(false);
-	const [backedUp, setBackedUp] = useState(false);
 	const input = useRef<HTMLInputElement>(null);
 	const { preview, previewQuery, result } = form;
 	const running = form.isRunning;
@@ -233,10 +230,6 @@ export function RestoreBackupFields() {
 			</div>
 		);
 	}
-
-	const backUpFirst = async () => {
-		if (await backup.run()) setBackedUp(true);
-	};
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -305,7 +298,6 @@ export function RestoreBackupFields() {
 								type="button"
 								disabled={running || !preview.ready}
 								onClick={() => {
-									setBackedUp(false);
 									setConfirming(true);
 								}}
 								data-testid="restore-run"
@@ -329,27 +321,9 @@ export function RestoreBackupFields() {
 							{t("confirm.description", { count: preview?.counts.entries ?? 0 })}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					{backedUp && (
-						<output className="text-monti-muted-foreground text-xs" data-testid="restore-backed-up">
-							{t("confirm.backedUp")}
-						</output>
-					)}
 					<AlertDialogFooter>
 						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
-						<Button
-							type="button"
-							disabled={backup.isExporting}
-							onClick={() => void backUpFirst()}
-							data-testid="restore-backup-first"
-						>
-							{t("confirm.backupFirst")}
-						</Button>
-						<AlertDialogAction
-							type="button"
-							variant="destructive"
-							disabled={backup.isExporting}
-							onClick={() => form.start()}
-						>
+						<AlertDialogAction type="button" variant="destructive" onClick={() => form.start()}>
 							{t("confirm.confirm")}
 						</AlertDialogAction>
 					</AlertDialogFooter>

@@ -13,9 +13,6 @@ import { restoreMessages } from "../messages";
 const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success, error } }));
 
-const { saveBlob } = vi.hoisted(() => ({ saveBlob: vi.fn() }));
-vi.mock("../../../api/export", async (original) => ({ ...(await original<object>()), saveBlob }));
-
 const t = testSite.createTranslator(restoreMessages);
 
 const COUNTS: RestoreCounts = {
@@ -74,12 +71,6 @@ function serve(options: { empty?: boolean; preview?: RestorePreview; runStatus?:
 				folders: 0,
 				addresses: 0,
 				media: 0,
-			});
-		}
-		if (url === "/api/monti/v1/export") {
-			return new Response(new Blob(["zip"]), {
-				status: 200,
-				headers: { "content-disposition": 'attachment; filename="site.zip"', "content-type": "application/zip" },
 			});
 		}
 		if (url === "/api/monti/v1/import/restore") {
@@ -230,22 +221,6 @@ describe("the Restore backup card", () => {
 		expect(within(result).getByTestId("restore-not-restored")).toBeTruthy();
 		expect(within(result).getByTestId("restore-open").getAttribute("href")).toBe(testSite.adminHref());
 		expect(success).toHaveBeenCalledWith(t("toast.done", { count: 6 }));
-	});
-
-	it("offers a backup of the current site first, which exports, and keeps the dialog open", async () => {
-		const fetchMock = serve();
-		renderData();
-		choose();
-		await screen.findByTestId("restore-preview");
-		fireEvent.click(screen.getByTestId("restore-run"));
-		const dialog = await screen.findByRole("alertdialog");
-		fireEvent.click(within(dialog).getByRole("button", { name: t("confirm.backupFirst") }));
-		await waitFor(() => expect(saveBlob).toHaveBeenCalled());
-		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/api/monti/v1/export")).toBe(true);
-		expect(await within(dialog).findByTestId("restore-backed-up")).toBeTruthy();
-		// Nothing was restored by it.
-		expect(forms(fetchMock).map((form) => form.get("mode"))).toEqual(["preview"]);
-		expect(screen.queryByRole("alertdialog")).toBeTruthy();
 	});
 
 	it("does not restore when the confirmation is cancelled", async () => {
