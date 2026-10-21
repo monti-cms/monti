@@ -117,6 +117,7 @@ export function ListPagination({
 	leading,
 	showPageSize = true,
 	hidePagerWhenSingle = false,
+	showRange = true,
 }: {
 	total: number;
 	/** Rows on the current page. */
@@ -133,17 +134,23 @@ export function ListPagination({
 	showPageSize?: boolean;
 	/** Draw no pager when everything fits on one page. */
 	hidePagerWhenSingle?: boolean;
+	/** `false` when the screen shows the total elsewhere (the status bar): the footer then holds only the controls, and is left out when there are none. */
+	showRange?: boolean;
 }) {
 	const t = useTranslator(screensMessages);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
+	const showPager = !(hidePagerWhenSingle && totalPages === 1);
+	if (!showRange && !showPager && !leading && !showPageSize) return null;
 	return (
-		<ListFooter>
-			<span className="tabular">
-				{t("list.range", {
-					total,
-					range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
-				})}
-			</span>
+		<ListFooter className={cn(!showRange && "justify-end")}>
+			{showRange && (
+				<span className="tabular">
+					{t("list.range", {
+						total,
+						range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
+					})}
+				</span>
+			)}
 			<div className="flex items-center gap-2">
 				{leading}
 				{showPageSize && (
@@ -168,9 +175,7 @@ export function ListPagination({
 						</SelectContent>
 					</Select>
 				)}
-				{!(hidePagerWhenSingle && totalPages === 1) && (
-					<ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />
-				)}
+				{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
 			</div>
 		</ListFooter>
 	);

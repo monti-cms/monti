@@ -16,7 +16,7 @@ const buttonVariants = cva(
 					"hover:bg-monti-muted hover:text-monti-foreground aria-expanded:bg-monti-muted aria-expanded:text-monti-foreground monti-dark:hover:bg-monti-muted/50",
 				destructive:
 					"bg-monti-destructive/10 text-monti-destructive hover:bg-monti-destructive/20 focus-visible:border-monti-destructive/40 focus-visible:ring-monti-destructive/20 monti-dark:bg-monti-destructive/20 monti-dark:hover:bg-monti-destructive/30 monti-dark:focus-visible:ring-monti-destructive/40",
-				link: "text-monti-primary underline-offset-4 hover:underline",
+				link: "text-monti-highlight underline-offset-4 hover:underline",
 			},
 			size: {
 				default:

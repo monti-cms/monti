@@ -25,6 +25,8 @@ import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
+import { type EditorStatus, StatusBar } from "../shared/status-bar";
+import { bodyStats } from "./body-stats";
 import { EntryEditorBanners } from "./entry-editor-banners";
 import { EntryEditorHeader } from "./entry-editor-header";
 import { EntryEditorRecoveryDialogs } from "./entry-editor-recovery";
@@ -219,7 +221,7 @@ export function EntryEditorShell({
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
 					<Link
 						href={site.adminEntryEditHref(entry.source.id)}
-						className="text-monti-primary underline underline-offset-2"
+						className="text-monti-highlight underline underline-offset-2"
 					>
 						{te("inspector.sourceLink")}
 					</Link>
@@ -290,10 +292,52 @@ export function EntryEditorShell({
 	// Cmd/Ctrl+S saves immediately.
 	useSaveShortcut(() => void commands.handleSaveNow());
 
+	// What the status bar shows of the entry: when the server last confirmed it (read from the entry on load, stamped when a save finishes), and the body's size.
+	const { saveStatus } = editor;
+	const [savedAt, setSavedAt] = useState<number | null>(null);
+	const wasSaving = useRef(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a finished save (the version moves) stamps the time again
+	useEffect(() => {
+		if (saveStatus === "saved") {
+			const loaded = !wasSaving.current && entry?.changedAt ? Date.parse(entry.changedAt) : Number.NaN;
+			setSavedAt(Number.isNaN(loaded) ? Date.now() : loaded);
+		}
+		wasSaving.current = saveStatus === "saving";
+	}, [saveStatus, entry?.version]);
+	const stats = useMemo(() => bodyStats(form.doc), [form.doc]);
+
 	if (isLoading) return <EntryEditorLoading />;
 	if (loadError) return <EntryEditorLoadError message={loadError} />;
 
 	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry", nounVars(site, collection));
+	const barStatus: EditorStatus = {
+		saveStatus,
+		savedAt,
+		statusLabel,
+		charCount: stats.chars,
+		readingMinutes: stats.minutes,
+		bodyStats: {
+			charsWithSpaces: stats.charsWithSpaces,
+			words: stats.words,
+			paragraphs: stats.paragraphs,
+			headings: stats.headings,
+		},
+		backupAvailable: editor.recoveryCopyAvailable,
+		recovery: editor.recovery
+			? { restore: editor.restoreRecovery, discard: () => void editor.discardRecovery() }
+			: null,
+		translations:
+			site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection)
+				? (entry.translations ?? []).map((member) => ({
+						id: member.id,
+						locale: member.locale,
+						status: member.status,
+						current: member.id === entry.id,
+					}))
+				: null,
+		save: () => void commands.handleSaveNow(),
+		textIssues: extensions.textIssues,
+	};
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === titleKey);
 	const languageTabs =
@@ -375,7 +419,6 @@ export function EntryEditorShell({
 				<EntryEditorHeader
 					editor={editor}
 					commands={commands}
-					statusLabel={statusLabel}
 					isInspectorOpen={isInspectorOpen}
 					onToggleInspector={() => setIsInspectorOpen((open) => !open)}
 				/>
@@ -451,6 +494,16 @@ export function EntryEditorShell({
 						/>
 					)}
 				</div>
+
+				<StatusBar
+					context={{
+						screen: "entry",
+						collection,
+						...(entry?.id ? { entryId: entry.id } : {}),
+						locale: entry?.locale ?? site.DEFAULT_LOCALE,
+						editor: barStatus,
+					}}
+				/>
 
 				<EntryEditorRecoveryDialogs editor={editor} />
 

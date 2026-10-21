@@ -2,6 +2,7 @@ import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 import type { AdminComponents } from "./admin-components";
 import type { AdminEvents } from "./events";
+import type { StatusItems } from "./screens/shared/status-bar";
 import type { SlotSource } from "./slots/registry";
 
 /**
@@ -23,6 +24,13 @@ export interface AdminPlugin {
 	readonly components?: AdminComponents | ((site: Site) => AdminComponents);
 	/** Actions attached to the screen slots (the button next to a field, a menu in the editor), as `SlotSource`s. */
 	readonly slots?: readonly SlotSource[];
+	/**
+	 * Items the plugin adds to the status bar at the bottom of every screen, by name: `{ align: "start" | "end", order, Component }`. The component renders a
+	 * `StatusBarItem` (from `@monti-cms/admin/kit`), or `null` to hide, and reads where it is shown with `useStatusBarContext`. An item shows only changing
+	 * state that leads somewhere when clicked, and hides when there is nothing to say. Give a function of the site when the items depend on the site config.
+	 * The components are client components, so give them from a `"use client"` module.
+	 */
+	readonly statusItems?: StatusItems | ((site: Site) => StatusItems);
 	/**
 	 * A provider around the admin, for a plugin that needs a React context of its own (state shared between its parts, a query it keeps). Most plugins
 	 * declare `components` and `slots` and need none.

@@ -120,7 +120,7 @@ function Sample({
 						{index > 0 && ", "}
 						<AdminLink
 							href={entryHref(site, entry.collection, entry.id)}
-							className="underline underline-offset-2"
+							className="text-monti-highlight underline underline-offset-2"
 							target="_blank"
 						>
 							{entry.title ?? entry.id.slice(0, 8)}

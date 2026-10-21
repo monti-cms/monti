@@ -1,6 +1,6 @@
 "use client";
 
-// The header of the entry editor screen: back link, status, save status, save/preview/publish actions and the properties and "more" menus.
+// The header of the entry editor screen: back link, the slug, the preview and publish actions and the properties and "more" menus. The save state lives in the status bar.
 
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
@@ -13,7 +13,6 @@ import {
 	Eye,
 	MoreHorizontal,
 	PanelRight,
-	Save,
 	SunMoon,
 	Trash,
 	Trash2,
@@ -37,50 +36,31 @@ import { ExportDialog } from "../export/export-dialog";
 import { exportMessages } from "../export/messages";
 import { collectionNoun } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
-import { SaveStatusIndicator, ToolbarAction } from "./entry-editor-toolbar";
 import type { EntryEditor } from "./entry-editor-types";
 import { isTranslationEntry } from "./entry-form";
 import { lifecycleLabel } from "./lifecycle-confirm";
-import { entriesMessages } from "./messages";
 import type { EntryLifecycleCommands } from "./use-entry-lifecycle-commands";
 
 interface EntryEditorHeaderProps {
 	editor: EntryEditor;
 	commands: EntryLifecycleCommands;
-	statusLabel: string;
 	isInspectorOpen: boolean;
 	onToggleInspector: () => void;
 }
 
-export function EntryEditorHeader({
-	editor,
-	commands,
-	statusLabel,
-	isInspectorOpen,
-	onToggleInspector,
-}: EntryEditorHeaderProps) {
+export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleInspector }: EntryEditorHeaderProps) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
-	const te = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	const tx = useTranslator(exportMessages);
 	const [isExporting, setIsExporting] = useState(false);
 	const { resolvedTheme, setTheme } = useTheme();
-	const { entry, collection, busy, saveStatus } = editor;
-	const isReadOnly = editor.readOnly;
+	const { entry, collection, busy } = editor;
 	const { isPublishing, isSubmitting } = commands;
-	const {
-		handleSaveNow,
-		handlePreview,
-		handlePublish,
-		runLifecycle,
-		confirmLifecycle,
-		confirmPermanentDelete,
-		handleDuplicate,
-	} = commands;
+	const { handlePreview, handlePublish, runLifecycle, confirmLifecycle, confirmPermanentDelete, handleDuplicate } =
+		commands;
 	const isTrashed = entry?.status === "trashed";
 	const canResetPublishedAt = Boolean(entry?.publishedAt);
-	const canRetry = ["failed", "local-only", "session-expired"].includes(saveStatus);
 	// A translation can share a slug with the original, so the language is passed along.
 	const previewPath = entry ? site.previewHref(collection, entry.workingSlug, entry.locale) : null;
 	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
@@ -108,48 +88,55 @@ export function EntryEditorHeader({
 					/>
 					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
 				</Tooltip>
-				<span className="hidden rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs sm:inline-flex">
-					{statusLabel}
-				</span>
+				{entry?.workingSlug && (
+					<span className="hidden min-w-0 truncate font-mono text-monti-caption text-monti-muted-foreground sm:block">
+						{entry.workingSlug}
+					</span>
+				)}
 			</div>
 
 			<div className="flex w-full items-center justify-end gap-1 whitespace-nowrap sm:w-auto">
-				<SaveStatusIndicator status={saveStatus} backupAvailable={editor.recoveryCopyAvailable} />
-				{canRetry && (
+				{/* There is no server autosave, so unsaved changes get a visible save button (⌘S does the same); the status bar says the rest. */}
+				{editor.hasUnsavedChanges && !isTrashed && (
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									disabled={busy !== null || isSubmitting}
+									onClick={() => void commands.handleSaveNow()}
+								>
+									{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
+								</Button>
+							}
+						/>
+						<TooltipContent side="bottom">⌘S</TooltipContent>
+					</Tooltip>
+				)}
+				{previewHref && !editor.hasUnsavedChanges ? (
+					// A link stays a link (open in new tab, copy URL).
+					<a
+						href={previewHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+					>
+						<Eye aria-hidden className="size-4" />
+						{t("preview")}
+					</a>
+				) : previewHref ? (
 					<Button
 						type="button"
+						variant="outline"
 						size="sm"
-						variant="ghost"
-						className="text-monti-muted-foreground"
-						onClick={() => void editor.retry()}
-					>
-						{te("retry")}
-					</Button>
-				)}
-				{saveStatus === "session-expired" && (
-					<a
-						href={site.adminHref("/login")}
-						target="_blank"
-						rel="noreferrer"
-						className={buttonVariants({ variant: "link", size: "xs" })}
-					>
-						{t("signInNewWindow")}
-					</a>
-				)}
-
-				<ToolbarAction
-					label={tc("save")}
-					icon={Save}
-					disabled={isReadOnly || isSubmitting || saveStatus === "saving"}
-					onClick={() => void handleSaveNow()}
-				/>
-				{previewHref ? (
-					<ToolbarAction
-						label={t("preview")}
-						icon={Eye}
-						href={editor.hasUnsavedChanges ? undefined : previewHref}
+						className="gap-1.5"
 						onClick={() => void handlePreview(previewHref)}
-					/>
+					>
+						<Eye aria-hidden className="size-4" />
+						{t("preview")}
+					</Button>
 				) : (
 					<Tooltip>
 						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
@@ -157,13 +144,13 @@ export function EntryEditorHeader({
 							render={
 								<Button
 									type="button"
-									variant="ghost"
-									size="icon-sm"
+									variant="outline"
+									size="sm"
 									aria-disabled
-									aria-label={t("preview")}
-									className="size-8 cursor-not-allowed text-monti-muted-foreground opacity-50 hover:bg-transparent"
+									className="cursor-not-allowed gap-1.5 opacity-50 hover:bg-transparent"
 								>
 									<Eye aria-hidden className="size-4" />
+									{t("preview")}
 								</Button>
 							}
 						/>

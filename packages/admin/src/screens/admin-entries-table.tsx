@@ -352,6 +352,7 @@ export function AdminEntriesTable({
 				hrefFor={pageHref}
 				showPageSize={false}
 				hidePagerWhenSingle
+				showRange={false}
 			/>
 		</section>
 	);

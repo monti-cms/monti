@@ -356,13 +356,61 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
 | `/slots` | Attaching actions to screen slots |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
+
+### Status bar
+
+Every admin screen ends with a plain status bar (24px, the sidebar's background, a hairline on top). Core and plugins contribute items; the rule is that an item shows only changing state that leads somewhere when clicked, and renders nothing when there is nothing to say. Core ships the save state of the editor ("Draft · Saved 2 min ago", click to save), the language, the character count and reading time of the body (characters without whitespace, about 500 a minute, at least 1), failed event deliveries (links to the event log) and the entry count of lists.
+
+A plugin adds items with `statusItems` of `defineAdminPlugin`, by name. Each item declares its group (`align: "start"` is the left group, `"end"` the right one) and its `order` (ascending; the core items use 10 to 80 on the left and 10 on the right), and a component that renders a `StatusBarItem` or `null`:
+
+```tsx
+"use client";
+import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+
+function DraftsStatus() {
+	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
+	const drafts = useDrafts(collection); // your own query
+	if (screen !== "list" || !drafts) return null; // null hides the item, with no gap
+	return <StatusBarItem tone="warning" href="/admin?status=draft" title="Open the drafts">{drafts} drafts</StatusBarItem>;
+}
+
+export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
+```
+
+`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), at most one of `href` (a link inside the admin), `onClick` (a button) or `popover` (a popup), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, the size of the body, the browser copy on offer, the translations, and the findings of the text checkers with a way to each). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
+
+With `popover`, clicking the item (or Enter and Space) opens a popup above it, lined up with the item's left edge in the `start` group and its right edge in the `end` group; Escape closes it and the focus returns to the item. The popup is 320px wide and scrolls when the screen is short. Build its content from `StatusPopoverHeader` (a title and an optional action on the right, `{ label, onClick }` or `{ label, href, newTab }`) and `StatusPopoverRow` (a `label` on the left and a `value` in mono on the right; `href` makes it a link, `onClick` a button, and both close the popup). Core uses popups for the save state (status, last save, Save now, Retry, Sign in, restoring the browser copy), the language (the translations and where each stands), the body counts, and the latest failed deliveries (Retry all, the event log):
+
+```tsx
+function DraftsStatus() {
+	const { collection } = useStatusBarContext();
+	const drafts = useDrafts(collection); // your own query: [{ id, title }]
+	if (!drafts.length) return null;
+	return (
+		<StatusBarItem
+			tone="warning"
+			title="Show the drafts"
+			popover={
+				<>
+					<StatusPopoverHeader title="Drafts" action={{ label: "Open all", href: "/admin?status=draft" }} />
+					{drafts.map((draft) => (
+						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
+					))}
+				</>
+			}
+		>
+			{drafts.length} drafts
+		</StatusBarItem>
+	);
+}
+```
 
 ### Router adapter
 
@@ -538,10 +586,11 @@ one only to break away. Tokens by role:
 | Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
 | Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
 | Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
+| Highlight | `--monti-highlight`, `--monti-highlight-soft` | The one accent color, for interactive states only: links, the focus ring, the current tab and sidebar item, checked controls, the editor selection. Light `#2f54eb`, dark `#7b93ff` (at least 4.5:1 text contrast on the page background in both). Buttons stay `--monti-primary`. `-soft` is the tinted fill for selections (follows `--monti-highlight` unless set) |
 | Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
 | | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
 | | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
-| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring |
+| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring (`--monti-ring` follows `--monti-highlight` unless set) |
 | Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |

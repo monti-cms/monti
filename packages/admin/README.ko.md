@@ -354,13 +354,61 @@ export function StatsPage() {
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
+| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusItems`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
+
+### 상태 표시줄
+
+모든 관리자 화면의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 항목은 코어와 플러그인이 채운다. 규칙은 하나다. 항목은 바뀌는 상태 가운데 눌렀을 때 갈 곳이 있는 것만 보여 주고, 할 말이 없으면 아무것도 그리지 않는다. 코어는 편집기의 저장 상태("초안 · 저장됨 2분 전", 누르면 저장), 언어, 본문 글자 수와 읽는 시간(공백을 뺀 글자 수, 분당 약 500자, 최소 1분), 실패한 이벤트 전달(이벤트 로그로 연결), 목록의 항목 수를 낸다.
+
+플러그인은 `defineAdminPlugin`의 `statusItems`로 이름을 붙여 항목을 더한다. 항목마다 그룹(`align: "start"`는 왼쪽, `"end"`는 오른쪽)과 `order`(오름차순, 코어 항목은 왼쪽 10~80, 오른쪽 10), 그리고 `StatusBarItem` 또는 `null`을 그리는 컴포넌트를 밝힌다.
+
+```tsx
+"use client";
+import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+
+function DraftsStatus() {
+	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
+	const drafts = useDrafts(collection); // 직접 만든 쿼리
+	if (screen !== "list" || !drafts) return null; // null이면 항목이 빠지고 빈틈도 남지 않는다
+	return <StatusBarItem tone="warning" href="/admin?status=draft" title="초안 열기">초안 {drafts}건</StatusBarItem>;
+}
+
+export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
+```
+
+`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크)·`onClick`(버튼)·`popover`(팝업) 중 하나 이하, `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 본문의 크기, 복원을 권하는 브라우저 사본, 번역 목록, 텍스트 검사기가 찾은 항목과 각 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
+
+`popover`를 주면 항목을 누르거나(Enter, Space도 같다) 항목 위에 팝업이 열린다. 팝업은 `start` 그룹에서는 항목의 왼쪽 끝에, `end` 그룹에서는 오른쪽 끝에 맞춘다. Esc로 닫으면 포커스가 항목으로 돌아온다. 팝업은 너비 320px이고 화면이 낮으면 안에서 스크롤한다. 내용은 `StatusPopoverHeader`(제목과 오른쪽의 선택 동작, `{ label, onClick }` 또는 `{ label, href, newTab }`)와 `StatusPopoverRow`(왼쪽 `label`, 오른쪽 mono `value`, `href`를 주면 링크, `onClick`을 주면 버튼이며 둘 다 팝업을 닫는다)로 짠다. 코어는 저장 상태(상태, 마지막 저장, 지금 저장·다시 시도·로그인, 브라우저 사본 복원), 언어(번역 목록과 각 상태), 본문 수치, 최근 실패한 전달(모두 다시 시도, 이벤트 로그)에 팝업을 쓴다.
+
+```tsx
+function DraftsStatus() {
+	const { collection } = useStatusBarContext();
+	const drafts = useDrafts(collection); // 직접 만든 쿼리: [{ id, title }]
+	if (!drafts.length) return null;
+	return (
+		<StatusBarItem
+			tone="warning"
+			title="초안 보기"
+			popover={
+				<>
+					<StatusPopoverHeader title="초안" action={{ label: "모두 열기", href: "/admin?status=draft" }} />
+					{drafts.map((draft) => (
+						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
+					))}
+				</>
+			}
+		>
+			초안 {drafts.length}건
+		</StatusBarItem>
+	);
+}
+```
 
 ### 라우터 어댑터
 
@@ -523,10 +571,11 @@ import "@monti-cms/admin/styles.css";
 | 주색 | `--monti-primary`, `--monti-primary-foreground` | 주 버튼, 체크된 컨트롤, 선택 영역 |
 | 보조색 | `--monti-secondary`, `--monti-secondary-foreground` | 보조 버튼과 칩(`--monti-secondary`는 정하지 않으면 `--monti-muted`를, `-foreground`는 `--monti-foreground`를 따른다) |
 | 흐린 면과 강조 | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | 조용한 배경(코드, 비활성 영역)과 행·메뉴 항목의 호버·강조 배경(`--monti-accent-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
+| 강조 | `--monti-highlight`, `--monti-highlight-soft` | 상호작용 상태에만 쓰는 단 하나의 강조색: 링크, 포커스 링, 현재 탭과 사이드바 항목, 체크된 컨트롤, 에디터 선택 영역. 라이트 `#2f54eb`, 다크 `#7b93ff`(두 모드 모두 배경 위 글자 대비 4.5:1 이상). 버튼은 `--monti-primary`를 유지한다. `-soft`는 선택 영역의 옅은 배경(정하지 않으면 `--monti-highlight`를 따른다) |
 | 상태 | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | 오류와 삭제 동작. `-soft`는 옅게 물든 배경(정하지 않으면 `--monti-destructive`를 따른다) |
 | | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | 경고(`-soft`는 정하지 않으면 `--monti-warning`을 따른다) |
 | | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | 성공과 발행된 상태(`-soft`는 정하지 않으면 `--monti-success`를 따른다) |
-| 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링 |
+| 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링(`--monti-ring`은 정하지 않으면 `--monti-highlight`를 따른다) |
 | 사이드바 | `--monti-sidebar`, `--monti-sidebar-foreground` | 내비게이션 사이드바와 그 글자 |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |

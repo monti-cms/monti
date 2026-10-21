@@ -182,7 +182,7 @@ function ResultView({ form }: { form: RestoreForm }) {
 			<div>
 				<a
 					href={site.adminHref()}
-					className={"text-monti-primary text-sm underline underline-offset-4"}
+					className={"text-monti-highlight text-sm underline underline-offset-4"}
 					data-testid="restore-open"
 				>
 					{t("result.open")}

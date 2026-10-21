@@ -327,7 +327,7 @@ export function InlineBubble({
 							title={href}
 							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 							onMouseDown={(event) => event.preventDefault()}
-							className="max-w-56 truncate px-1 text-monti-primary text-xs underline underline-offset-2"
+							className="max-w-56 truncate px-1 text-monti-highlight text-xs underline underline-offset-2"
 						>
 							{href}
 						</a>

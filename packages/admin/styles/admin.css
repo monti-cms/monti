@@ -34,7 +34,10 @@
 	--monti-success-foreground: #15803d;
 	--monti-border: #ececec;
 	--monti-input: #e3e3e3;
-	--monti-ring: #0a0a0a;
+	/* The one accent, for interactive states only (links, focus, the current tab and sidebar item, checked controls, the editor's selection). Buttons stay `--monti-primary`. */
+	--monti-highlight: #2f54eb;
+	--monti-highlight-soft: color-mix(in srgb, var(--monti-highlight) 16%, transparent);
+	--monti-ring: var(--monti-highlight);
 	--monti-sidebar: #fafafa;
 	--monti-sidebar-foreground: #3d3d3d;
 	--monti-sidebar-primary: #0a0a0a;
@@ -79,7 +82,9 @@
 	--monti-success-foreground: #34d399;
 	--monti-border: #232323;
 	--monti-input: #2a2a2a;
-	--monti-ring: #ededed;
+	--monti-highlight: #7b93ff;
+	--monti-highlight-soft: color-mix(in srgb, var(--monti-highlight) 24%, transparent);
+	--monti-ring: var(--monti-highlight);
 	--monti-sidebar: #0d0d0d;
 	--monti-sidebar-foreground: #b4b4b4;
 	--monti-sidebar-primary: #ededed;
@@ -164,4 +169,10 @@ html:has(.monti-admin) body {
 }
 .monti-admin .monti-text-issue[data-severity="info"] {
 	text-decoration-color: var(--monti-primary);
+}
+
+/* The text selection in the editor body takes the accent's tint. */
+.monti-admin .ProseMirror ::selection,
+.monti-admin .ProseMirror::selection {
+	background: var(--monti-highlight-soft);
 }

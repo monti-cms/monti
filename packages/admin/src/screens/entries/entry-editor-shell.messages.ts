@@ -44,7 +44,6 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		backToList: "Back to list",
 		newEntry: (vars) => `New ${enNoun(vars)}`,
 		title: "Title",
-		signInNewWindow: "Sign in in a new window",
 		preview: "Preview",
 		"preview.no-preview-path": "Preview isn't set up. Set previewPath in monti.schema.ts (site section).",
 		"preview.no-public-page":
@@ -89,7 +88,6 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		backToList: "목록으로",
 		newEntry: (vars) => `새 ${koNoun(vars)}`,
 		title: "제목",
-		signInNewWindow: "새 창에서 로그인",
 		preview: "미리보기",
 		"preview.no-preview-path": "미리보기가 설정되지 않았습니다. monti.schema.ts의 site에 previewPath를 지정하세요.",
 		"preview.no-public-page":
