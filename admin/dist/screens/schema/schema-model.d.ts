@@ -53,7 +53,10 @@ export declare const defaultPath: (id: string) => string;
 export declare const idFromName: (name: string) => string;
 /** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
 export declare function pathProblem(path: string): "slash" | "slug" | null;
-/** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
+/**
+ * A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place.
+ * On a site with several locales the title is per locale, and a document's slug starts from the source locale's, as init writes them.
+ */
 export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
 /** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */

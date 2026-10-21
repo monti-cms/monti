@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs.js";
 import { EMPTY_FORM, formFromEntry, formTitle, metadataFromForm, recordTranslationKey, titlePatch, } from "./entries/entry-form.js";
 import { RecordLocaleFields, SchemaFields } from "./entries/schema-fields.js";
 import { EntryFormProvider } from "./entries/use-field.js";
+import { collectionTranslated } from "./list-columns.js";
 import { screensMessages } from "./messages.js";
 import { useConfirm } from "./shared/confirm-dialog.js";
 import { EditorFooter } from "./shared/editor-footer.js";
@@ -71,6 +72,8 @@ export function RecordPanel({ target, onClose, onSaved, onDirtyChange, initial, 
     const label = site.COLLECTION_DEFINITIONS[collection].label;
     const heading = id ? t("record.edit", { label }) : t("list.add", { label });
     const title = formTitle(site, collection, form);
+    // Locale tabs only when the collection has a per-locale field; otherwise the other locale tabs would be empty.
+    const translated = collectionTranslated(site, collection);
     /** Hint for the value that will be generated when the slug is empty. If the slug field has no `from`, uses the field's hint text as is. */
     const slugFrom = site.slugFieldOf(collection)?.from;
     const slugHint = slugFrom
@@ -123,13 +126,13 @@ export function RecordPanel({ target, onClose, onSaved, onDirtyChange, initial, 
     return (_jsxs("aside", { "aria-label": heading, className: cn("flex h-full flex-col border-l bg-monti-background text-sm", className), children: [_jsx(SidePanelHeader, { title: heading, onClose: () => void close() }), _jsxs("form", { className: "flex min-h-0 flex-1 flex-col", onSubmit: (event) => {
                     event.preventDefault();
                     save();
-                }, children: [_jsx(EntryFormProvider, { value: { collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }, children: _jsxs(Tabs, { value: locale, onValueChange: (value) => setLocale(value), className: "min-h-0 flex-1 gap-0 overflow-hidden", children: [site.ADMIN_TRANSLATIONS && (_jsx(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: site.LOCALES.map((option) => {
+                }, children: [_jsx(EntryFormProvider, { value: { collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }, children: _jsxs(Tabs, { value: locale, onValueChange: (value) => setLocale(value), className: "min-h-0 flex-1 gap-0 overflow-hidden", children: [translated && (_jsx(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: site.LOCALES.map((option) => {
                                         const filled = hasLocaleValues(site, collection, form, option);
                                         const name = site.localeLabel(option);
                                         return (_jsxs(TabsTrigger, { value: option, "aria-label": option === site.DEFAULT_LOCALE
                                                 ? name
                                                 : t(filled ? "record.translationOn" : "record.translationOff", { name }), className: "flex-none gap-1.5 px-0 text-xs", children: [name, option !== site.DEFAULT_LOCALE && (_jsx(StatusIndicator, { size: "xs", tone: filled ? "success" : "neutral", shape: filled ? "dot" : "ring" }))] }, option));
-                                    }) })), _jsxs("div", { className: "min-h-0 flex-1 overflow-y-auto px-4 py-4", children: [_jsxs(TabsContent, { value: site.DEFAULT_LOCALE, className: "space-y-4", children: [_jsx(SchemaFields, { slugPlaceholder: site.slugFromValues(collection, form) || slugHint }), id && _jsx("p", { className: "text-monti-muted-foreground text-xs", children: t("record.slugChange") })] }), (site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (_jsxs(TabsContent, { value: option, className: "space-y-4", children: [_jsx("p", { className: "text-monti-muted-foreground text-xs leading-relaxed", children: t("record.localeEmpty", { name: site.localeLabel(option) }) }), _jsx(RecordLocaleFields, { collection: collection, locale: option })] }, option)))] })] }) }), _jsx(EditorFooter, { className: "shrink-0 border-t px-4 py-3", 
+                                    }) })), _jsxs("div", { className: "min-h-0 flex-1 overflow-y-auto px-4 py-4", children: [_jsxs(TabsContent, { value: site.DEFAULT_LOCALE, className: "space-y-4", children: [_jsx(SchemaFields, { slugPlaceholder: site.slugFromValues(collection, form) || slugHint }), id && _jsx("p", { className: "text-monti-muted-foreground text-xs", children: t("record.slugChange") })] }), (translated ? site.PREFIXED_LOCALES : []).map((option) => (_jsxs(TabsContent, { value: option, className: "space-y-4", children: [_jsx("p", { className: "text-monti-muted-foreground text-xs leading-relaxed", children: t("record.localeEmpty", { name: site.localeLabel(option) }) }), _jsx(RecordLocaleFields, { collection: collection, locale: option })] }, option)))] })] }) }), _jsx(EditorFooter, { className: "shrink-0 border-t px-4 py-3", 
                         // A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
                         dirty: dirty || isNew, saving: isSaving, canSave: Boolean(title.trim()) && !(id && !loaded), error: error ?? loadError, align: "end", onCancel: () => void close() })] }), dialog] }));
 }

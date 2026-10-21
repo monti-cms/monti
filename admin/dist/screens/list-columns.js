@@ -83,16 +83,25 @@ export function columnConfig(site, collection, column) {
         ...(stored.field.kind === "relation" && stored.field.many ? { many: true } : {}),
     };
 }
+/**
+ * Whether the collection is translated per locale in the admin. A document always has a per-locale body; an item only has per-locale values when
+ * one of its text fields is `localized: true`, so an item without one shows no locale column or locale tabs.
+ */
+export function collectionTranslated(site, collection) {
+    if (!site.ADMIN_TRANSLATIONS || !site.isCollection(collection))
+        return false;
+    return !site.isItemCollection(collection) || site.recordLocalizedFields(collection).length > 0;
+}
 export const columnLabel = (site, collection, column) => columnConfig(site, collection, column).label;
 /**
  * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`, and for an item collection a `localized` field), the slug column only when there is a slug field.
  */
 export function defaultListColumns(site, collection) {
     if (!site.isCollection(collection))
         return ["title", "status"];
     const schema = site.schemaOf(collection);
-    const locale = site.ADMIN_TRANSLATIONS ? ["locale"] : [];
+    const locale = collectionTranslated(site, collection) ? ["locale"] : [];
     if (schema.kind === "item") {
         const slug = Object.values(schema.fields).some((field) => field.kind === "slug") ? ["slug"] : [];
         return ["title", ...slug, ...locale, "status", "updatedAt"];
@@ -116,9 +125,9 @@ export function columnsFor(site, collection) {
             return schema.kind === "document";
         if (column === "slug")
             return slugField !== undefined;
-        // A site with one locale, or one that turned the translation UI off, has no locale column.
+        // A site with one locale, one that turned the translation UI off, or an item collection with no per-locale field has no locale column.
         if (column === "locale")
-            return site.ADMIN_TRANSLATIONS;
+            return collectionTranslated(site, collection);
         return true;
     });
     const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);

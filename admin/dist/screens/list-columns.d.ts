@@ -46,10 +46,15 @@ export declare function fieldColumnOf(site: Site, collection: string, column: Ad
  * Other field columns also use the field label as the label and are not filterable.
  */
 export declare function columnConfig(site: Site, collection: string, column: AdminListColumn): ColumnConfig;
+/**
+ * Whether the collection is translated per locale in the admin. A document always has a per-locale body; an item only has per-locale values when
+ * one of its text fields is `localized: true`, so an item without one shows no locale column or locale tabs.
+ */
+export declare function collectionTranslated(site: Site, collection: string): boolean;
 export declare const columnLabel: (site: Site, collection: string, column: AdminListColumn) => string;
 /**
  * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`, and for an item collection a `localized` field), the slug column only when there is a slug field.
  */
 export declare function defaultListColumns(site: Site, collection: string): AdminListColumn[];
 /**
