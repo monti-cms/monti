@@ -278,7 +278,7 @@ describe("any site: entry editor", () => {
 		}
 
 		fireEvent.change(title, { target: { value: "Changed title" } });
-		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
+		fireEvent.keyDown(window, { key: "s", metaKey: true });
 		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/entries/entry-1")).toHaveLength(1));
 		const body = bodyOf(calls("PATCH", "/api/monti/v1/entries/entry-1")[0]);
 		expect(body.metadata.title).toBe("Changed title");

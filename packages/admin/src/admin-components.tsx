@@ -321,13 +321,14 @@ export function useSourceFormat(): BrowserFormat | undefined {
 const NO_CHECKERS: readonly TextChecker[] = [];
 
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
-export function useEditorExtensions(context: EditorExtensionContext): Required<EditorExtensionResult> {
+export function useEditorExtensions(
+	context: EditorExtensionContext,
+): Required<EditorExtensionResult> & { readonly textIssues: { count: number; jumpToFirst: () => void } | null } {
 	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
-	const results = [
-		...editorExtensions.map((extension) => extension(context)),
-		useTextCheckEditor(textCheckers, context),
-	];
+	const extensionResults = editorExtensions.map((extension) => extension(context));
+	const textCheck = useTextCheckEditor(textCheckers, context);
+	const results = [...extensionResults, textCheck];
 	const editorCallbacks = results.flatMap((result) => (result.onEditor ? [result.onEditor] : []));
 	const callbacksRef = useRef(editorCallbacks);
 	callbacksRef.current = editorCallbacks;
@@ -343,5 +344,6 @@ export function useEditorExtensions(context: EditorExtensionContext): Required<E
 		selectionActions: results.flatMap((result) => result.selectionActions ?? []),
 		insertActions: results.flatMap((result) => result.insertActions ?? []),
 		onEditor,
+		textIssues: textCheck.textIssues,
 	};
 }

@@ -16,7 +16,7 @@ import { useTextCheck } from "./use-text-check";
 export function useTextCheckEditor(
 	checkers: readonly TextChecker[],
 	context: EditorExtensionContext,
-): EditorExtensionResult {
+): EditorExtensionResult & { readonly textIssues: { count: number; jumpToFirst: () => void } | null } {
 	const site = useSite();
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const locale = context.getEntry?.().locale ?? site.DEFAULT_LOCALE;
@@ -25,5 +25,15 @@ export function useTextCheckEditor(
 		onEditor: setEditor,
 		toolbar: controller ? <TextCheckToolbar controller={controller} /> : null,
 		overlay: controller ? <TextIssuePopover controller={controller} /> : null,
+		// What the status bar shows: how many findings there are, and a way to the first one.
+		textIssues: controller
+			? {
+					count: controller.issues.length,
+					jumpToFirst: () => {
+						const first = controller.issues[0];
+						if (first) controller.jump(first);
+					},
+				}
+			: null,
 	};
 }

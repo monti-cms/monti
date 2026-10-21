@@ -178,6 +178,8 @@ const renderShell = (ui: React.ReactElement, sourcePanels: SourcePanelRegistrati
 	render(withSite(<AdminComponentsProvider components={{ sourcePanels }}>{ui}</AdminComponentsProvider>));
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
+/** Saves the way the header no longer offers a button for: the keyboard shortcut. */
+const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 
 beforeEach(() => {
 	asked.length = 0;
@@ -220,15 +222,43 @@ describe("entry editor shell", () => {
 		await waitFor(() =>
 			expect(saveLocalBackup).toHaveBeenCalledWith(expect.objectContaining({ key: `${ADMIN}:entry-1` })),
 		);
-		expect(screen.getByLabelText("저장 전 변경사항")).toBeTruthy();
+		expect(screen.getByTitle("저장 전 변경사항")).toBeTruthy();
 		vi.useFakeTimers();
 		await act(async () => vi.advanceTimersByTimeAsync(11_000));
 		vi.useRealTimers();
 		expect(methodCalls("PATCH")).toHaveLength(0);
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-		await waitFor(() => expect(screen.getByLabelText("서버에 저장됨")).toBeTruthy());
+		await waitFor(() => expect(screen.getByTitle("서버에 저장됨")).toBeTruthy());
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).metadata.title).toBe("로컬에서 수정");
+	});
+
+	it("publishes the save state to the status bar: saved, then unsaved, saving and saved again", async () => {
+		let finish: (() => void) | undefined;
+		serve(async (_input, init) => {
+			if (init?.method !== "PATCH") return undefined;
+			const body = JSON.parse(String(init.body));
+			await new Promise<void>((resolve) => {
+				finish = resolve;
+			});
+			return json({
+				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+				warnings: [],
+			});
+		});
+		renderEdit();
+		const bar = within(await screen.findByRole("region", { name: "상태" }));
+		await waitFor(() => expect(bar.getByText(/^초안 · 저장됨/)).toBeTruthy());
+		// The language and the size of the body (whitespace not counted) are there too.
+		expect(bar.getByText("ko")).toBeTruthy();
+		expect(bar.getByText("6자 · 1분")).toBeTruthy();
+		fireEvent.change(await editorTitle(), { target: { value: "수정" } });
+		expect(bar.getByRole("button", { name: "초안 · 저장 전 변경사항" })).toBeTruthy();
+		pressSave();
+		await waitFor(() => expect(bar.getByText("저장 중…")).toBeTruthy());
+		finish?.();
+		await waitFor(() => expect(bar.getByText(/^초안 · 저장됨/)).toBeTruthy());
+		expect(bar.queryByText("저장 중…")).toBeNull();
 	});
 
 	it("writes the waiting browser backup right away when the page is left", async () => {
@@ -262,7 +292,7 @@ describe("entry editor shell", () => {
 		fireEvent.change(title, { target: { value: "조합 중 수정" } });
 		// The input that started composition vanished without an end signal.
 		fireEvent.compositionStart(title);
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1), { timeout: 3000 });
 		await waitFor(() => expect(success).toHaveBeenCalledWith("저장했습니다."));
 	});
@@ -274,7 +304,7 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 깁니다.")));
 	});
 
@@ -333,7 +363,7 @@ describe("entry editor shell", () => {
 		await act(async () => vi.advanceTimersByTimeAsync(11_000));
 		vi.useRealTimers();
 		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1));
 		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:new:post`));
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
@@ -623,8 +653,8 @@ describe("entry editor shell", () => {
 			await screen.findByLabelText("시각 본문");
 			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
 			fireEvent.click(await screen.findByRole("button", { name: "패널에서 고침" }));
-			expect(screen.getByLabelText("저장 전 변경사항")).toBeTruthy();
-			fireEvent.click(screen.getByRole("button", { name: "저장" }));
+			expect(screen.getByTitle("저장 전 변경사항")).toBeTruthy();
+			pressSave();
 			await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 			const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)) as { doc: StoredDocument };
 			expect(sent.doc.content.map((block) => block.type)).toEqual(["paragraph", "paragraph"]);
@@ -800,7 +830,7 @@ describe("entry editor shell", () => {
 			renderEdit();
 			fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
 			server = latest;
-			fireEvent.click(screen.getByRole("button", { name: "저장" }));
+			pressSave();
 			return { dialog: await screen.findByRole("dialog", { name: /편집 충돌/ }), server: () => server };
 		}
 
@@ -826,11 +856,11 @@ describe("entry editor shell", () => {
 
 		it("loads the server version without reloading the page", async () => {
 			const { dialog } = await conflicted();
-			expect(screen.getByLabelText("충돌")).toBeTruthy();
+			expect(screen.getByTitle("충돌")).toBeTruthy();
 			fireEvent.click(within(dialog).getByRole("button", { name: "다시 불러오기" }));
 			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
 			await waitFor(async () => expect(((await editorTitle()) as HTMLInputElement).value).toBe("서버 최신 제목"));
-			expect(screen.getByLabelText("서버에 저장됨")).toBeTruthy();
+			expect(screen.getByTitle("서버에 저장됨")).toBeTruthy();
 			// The local copy was dropped with the local changes, so a reopen does not offer it again.
 			expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
 			expect(methodCalls("PATCH")).toHaveLength(1);
@@ -846,7 +876,7 @@ describe("entry editor shell", () => {
 				metadata: expect.objectContaining({ title: "로컬 수정" }),
 			});
 			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
-			await waitFor(() => expect(screen.getByLabelText("서버에 저장됨")).toBeTruthy());
+			await waitFor(() => expect(screen.getByTitle("서버에 저장됨")).toBeTruthy());
 			expect(server().version).toBe(10);
 		});
 
@@ -854,7 +884,7 @@ describe("entry editor shell", () => {
 			const { dialog } = await conflicted();
 			fireEvent.click(within(dialog).getAllByRole("button", { name: "닫기" })[0] as HTMLElement);
 			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
-			expect(screen.getByLabelText("충돌")).toBeTruthy();
+			expect(screen.getByTitle("충돌")).toBeTruthy();
 			expect(((await editorTitle()) as HTMLInputElement).value).toBe("로컬 수정");
 		});
 	});
@@ -873,15 +903,14 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		const title = await editorTitle();
-		const expected = ["브라우저에만 임시 저장됨", "브라우저에만 임시 저장됨", "세션 만료 — 다시 로그인하세요"];
+		const expected = ["브라우저에만 임시 저장됨", "브라우저에만 임시 저장됨", "세션 만료 · 로그인"];
 		for (const [index, value] of ["오프라인 수정", "서버 오류 수정", "세션 만료 수정"].entries()) {
 			fireEvent.change(title, { target: { value } });
 			fireEvent.keyDown(window, { key: "s", metaKey: true });
 			await waitFor(() => expect(methodCalls("PATCH").length).toBeGreaterThanOrEqual(index + 1), { timeout: 4000 });
-			await waitFor(() => expect(screen.getByText(expected[index] as string)).toBeTruthy());
+			await waitFor(() => expect(screen.getAllByText(expected[index] as string).length).toBeGreaterThan(0));
 		}
-		expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
-		expect(screen.getByRole("link", { name: "새 창에서 로그인" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "세션 만료 · 로그인" }).getAttribute("href")).toContain("/login");
 		expect(saveLocalBackup).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				key: `${ADMIN}:entry-1`,
@@ -1062,11 +1091,15 @@ describe("entry editor shell", () => {
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
-	it("offers save once, in the header, not again in the more menu", async () => {
+	it("keeps the header to back, slug, preview, publish, properties and more; saving is Cmd+S and the status bar", async () => {
 		renderEdit();
 		await editorTitle();
-		expect(within(screen.getByRole("banner")).getByRole("button", { name: "저장" })).toBeTruthy();
-		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+		const header = within(screen.getByRole("banner"));
+		expect(header.queryByRole("button", { name: "저장" })).toBeNull();
+		expect(header.getByText("test")).toBeTruthy();
+		expect(header.getByRole("link", { name: "미리보기" })).toBeTruthy();
+		for (const name of ["발행", "속성", "더보기"]) expect(header.getByRole("button", { name })).toBeTruthy();
+		fireEvent.click(header.getByRole("button", { name: "더보기" }));
 		expect(screen.getByRole("menuitem", { name: "복제" })).toBeTruthy();
 		expect(screen.queryByRole("menuitem", { name: /저장/ })).toBeNull();
 	});
@@ -1405,7 +1438,7 @@ describe("translation source pane", () => {
 		expect(await screen.findByText("원문이 바뀌었습니다")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "확인" }));
 		expect(screen.queryByText("원문이 바뀌었습니다")).toBeNull();
-		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 		// The confirmed source is the document of the source.
 		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation;
@@ -1427,7 +1460,7 @@ describe("translation source pane", () => {
 		renderEdit();
 		expect(await screen.findByText("원문이 바뀌었습니다")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "확인" }));
-		fireEvent.click(await screen.findByRole("button", { name: "저장" }));
+		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
 			version: 4,
