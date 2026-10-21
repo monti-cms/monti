@@ -6,6 +6,7 @@ import {
 	Activity,
 	ChevronDown,
 	ChevronRight,
+	Database,
 	ExternalLink,
 	FileImage,
 	Folder as FolderIcon,
@@ -53,6 +54,7 @@ export type AdminNavId =
 	| "media"
 	| "templates"
 	| "api-keys"
+	| "data"
 	| "events"
 	| "settings"
 	| "trash"
@@ -537,6 +539,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 							{toolsPages(site).map((page) =>
 								navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />),
 							)}
+							{navLink(site.adminHref("/data"), "data", t("sidebar.data"), <Database />)}
 							{navLink(site.adminHref("/api-keys"), "api-keys", t("sidebar.apiKeys"), <KeyRound />)}
 							{navLink(
 								site.adminHref("/events"),

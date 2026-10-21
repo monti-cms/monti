@@ -5,23 +5,19 @@ import { useEffect, useRef } from "react";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { settingsMessages } from "./messages";
-import { DATA_TAB, type SchemaTab, settingsTabs } from "./tabs";
+import { type SchemaTab, settingsTabs } from "./tabs";
 
 const linkClass =
 	"flex shrink-0 items-center whitespace-nowrap border-transparent border-b-2 py-2.5 text-monti-muted-foreground text-sm outline-hidden transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-[current=page]:border-monti-foreground aria-[current=page]:font-semibold aria-[current=page]:text-monti-foreground";
 
-/**
- * The row of tabs under the Settings header: the schema file's tabs, then Data. The schema tabs change the address in place when `onSchemaTab` is given (the
- * schema screen keeps its draft that way); Data is a page of its own, so the link to it is a real navigation and leaving unsaved schema changes asks first.
- * From the Data page every tab is a plain link.
- */
+/** The row of tabs under the Settings header. A tab changes the address in place when `onSchemaTab` is given, so the schema screen keeps its draft. */
 export function SettingsTabBar({
 	site,
 	active,
 	onSchemaTab,
 }: {
 	site: Pick<Site, "adminHref">;
-	active: SchemaTab | typeof DATA_TAB;
+	active: SchemaTab;
 	onSchemaTab?: (tab: SchemaTab) => void;
 }) {
 	const t = useTranslator(settingsMessages);
@@ -58,14 +54,6 @@ export function SettingsTabBar({
 					</Link>
 				);
 			})}
-			<Link
-				ref={active === DATA_TAB ? activeLink : undefined}
-				href={site.adminHref(`/settings/${DATA_TAB}`)}
-				aria-current={active === DATA_TAB ? "page" : undefined}
-				className={cn(linkClass)}
-			>
-				{t("tab.data")}
-			</Link>
 		</nav>
 	);
 }

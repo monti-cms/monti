@@ -314,31 +314,13 @@ describe("SchemaScreen", () => {
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
 	});
 
-	it("reorders collections with row buttons and sends the new order on save", async () => {
+	it("reorders collections by dragging a handle on each row, with no arrow buttons", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(review().disabled).toBe(true);
-
-		// Post is first (index 0), Tag is second (index 1).
-		// Move Tag up.
-		const tagUp = screen.getByRole("button", { name: t("collection.moveUp", { name: "Tag" }) });
-		expect((tagUp as HTMLButtonElement).disabled).toBe(false);
-		fireEvent.click(tagUp);
-
-		// Now Tag should be first. review button is enabled.
-		expect(review().disabled).toBe(false);
-		fireEvent.click(review());
-
-		await screen.findByTestId("review-summary");
-		const previewBody = lastPreview()?.body as { schema?: { collections?: Record<string, unknown> } };
-		expect(Object.keys(previewBody?.schema?.collections ?? {})).toEqual(["tag", "post"]);
-
-		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
-		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
-		const put = requests.find((request) => request.method === "PUT");
-		expect(
-			Object.keys((put?.body as { schema?: { collections?: Record<string, unknown> } })?.schema?.collections ?? {}),
-		).toEqual(["tag", "post"]);
+		const row = screen.getByTestId("collection-nav-tag");
+		expect(within(row).getByRole("button", { name: t("collection.drag", { name: "Tag" }) })).toBeTruthy();
+		// The handle and the row itself are the only buttons.
+		expect(within(row).getAllByRole("button")).toHaveLength(2);
 	});
 
 	it("checks an edit before saving: the request carries the edited file, and the save sends the hash it started from", async () => {
@@ -585,19 +567,6 @@ describe("SchemaScreen", () => {
 		await applySheet(sheet);
 		expect(within(screen.getByTestId("field-summary")).getByTestId("title-badge")).toBeTruthy();
 		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
-	});
-
-	it("changes the order from the row buttons", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		openTab("fields");
-		await screen.findByTestId("fields-card");
-		fireEvent.click(screen.getByRole("button", { name: t("row.up", { name: "summary" }) }));
-		fireEvent.click(review());
-		await screen.findByTestId("review-summary");
-		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
-			.collections.post.fields;
-		expect(Object.keys(fields)).toEqual(["title", "summary", "slug", "status"]);
 	});
 
 	it("tells the server about a rename, and shows the choice of what happens to the stored values", async () => {
@@ -1029,27 +998,21 @@ describe("SchemaScreen", () => {
 			await screen.findByTestId("fields-card");
 		};
 
-		it("moves, reorders and deletes with buttons on every row, named after the row, and keeps no menu", async () => {
+		it("deletes with a button on every row, named after the row, reorders by dragging, and keeps no menu", async () => {
 			await openFields();
 			expect(screen.queryByRole("button", { name: /^(Actions for|.* 작업$)/ })).toBeNull();
-			// The ends of the run are disabled.
-			const first = screen.getByRole("button", { name: t("row.up", { name: "slug" }) }) as HTMLButtonElement;
-			expect(first.disabled).toBe(true);
-			expect(
-				(screen.getByRole("button", { name: t("row.down", { name: "slug" }) }) as HTMLButtonElement).disabled,
-			).toBe(false);
+			expect(screen.getByRole("button", { name: tFields("fields.drag", { name: "slug" }) })).toBeTruthy();
 
 			// Delete is a staged change: the row goes and the review has it.
 			fireEvent.click(screen.getByRole("button", { name: t("row.remove", { name: "summary" }) }));
 			await waitFor(() => expect(screen.queryByTestId("field-summary")).toBeNull());
 
-			// A group and a tab have the same buttons.
+			// A group has its handle and delete; a tab, which cannot be dragged, keeps its arrows.
 			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
 			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addTab") }));
 			await screen.findByTestId("tab-1");
 			for (const label of [
-				tFields("layout.upGroup", { name: tFields("layout.newGroup") }),
-				tFields("layout.downGroup", { name: tFields("layout.newGroup") }),
+				tFields("layout.dragGroup", { name: tFields("layout.newGroup") }),
 				tFields("layout.removeGroup", { name: tFields("layout.newGroup") }),
 				tFields("layout.upTab", { name: tFields("layout.newTab") }),
 				tFields("layout.downTab", { name: tFields("layout.newTab") }),
@@ -1174,7 +1137,8 @@ describe("SchemaScreen", () => {
 			// The plugin places it: it cannot be moved, only removed.
 			expect(within(seo).queryByRole("button", { name: tFields("layout.move", { name: "seoTitle" }) })).toBeNull();
 			expect(
-				(within(seo).getByRole("button", { name: t("row.up", { name: "seoTitle" }) }) as HTMLButtonElement).disabled,
+				(within(seo).getByRole("button", { name: tFields("fields.drag", { name: "seoTitle" }) }) as HTMLButtonElement)
+					.disabled,
 			).toBe(true);
 		});
 
@@ -1562,7 +1526,7 @@ describe("SchemaScreen", () => {
 			await waitFor(() => expect(screen.queryByTestId("locale-en")).toBeNull());
 		});
 
-		it("reorders languages with the row buttons, and has a handle to drag each one", async () => {
+		it("has a handle to drag each language, and no arrow buttons", async () => {
 			const content = await openLocales();
 			fireEvent.click(within(content).getByRole("button", { name: tLocales("locales.add") }));
 			const dialog = await screen.findByTestId("locale-dialog");
@@ -1571,11 +1535,7 @@ describe("SchemaScreen", () => {
 			fireEvent.click(within(dialog).getByRole("button", { name: tLocales("locales.add") }));
 			const ko = await screen.findByTestId("locale-ko");
 			expect(within(ko).getByRole("button", { name: tLocales("locales.drag", { name: "한국어" }) })).toBeTruthy();
-			fireEvent.click(within(ko).getByRole("button", { name: t("row.up", { name: "ko" }) }));
-			await waitFor(() => {
-				const order = screen.getAllByTestId(/^locale-[a-z]/).map((row) => row.getAttribute("data-testid"));
-				expect(order).toEqual(["locale-ko", "locale-en"]);
-			});
+			expect(within(ko).queryByRole("button", { name: t("row.up", { name: "ko" }) })).toBeNull();
 		});
 	});
 

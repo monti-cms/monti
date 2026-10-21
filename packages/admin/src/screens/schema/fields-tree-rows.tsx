@@ -6,7 +6,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
+import { type ArrowUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
@@ -18,15 +18,7 @@ import { branchFields, type KindTone, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
 import { SortableList } from "./fields-tree-dnd";
 import { schemaMessages } from "./messages";
-import {
-	type FieldPlace,
-	moveField,
-	type Obj,
-	optionsOf,
-	removeBlock,
-	removeField,
-	reorderField,
-} from "./schema-model";
+import { type FieldPlace, type Obj, optionsOf, removeBlock, removeField, reorderField } from "./schema-model";
 
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export const TONE: Record<KindTone, string> = {
@@ -142,10 +134,6 @@ export interface TopRow {
 	readonly member: boolean;
 	/** Places the row can be moved to without dragging. */
 	readonly destinations: Destination[];
-	readonly up: () => void;
-	readonly down: () => void;
-	readonly canUp: boolean;
-	readonly canDown: boolean;
 }
 
 export function Row({
@@ -156,7 +144,6 @@ export function Row({
 	prefix,
 	childLead,
 	nested,
-	index,
 	count,
 	top,
 }: {
@@ -167,7 +154,6 @@ export function Row({
 	prefix: string;
 	childLead: string;
 	nested: boolean;
-	index: number;
 	count: number;
 	top?: TopRow;
 }) {
@@ -199,18 +185,6 @@ export function Row({
 	};
 	const [moving, setMoving] = useState(false);
 	const buttons: RowButton[] = [
-		{
-			label: ts("row.up", { name }),
-			icon: ArrowUp,
-			disabled: disabled || (top ? !top.canUp || locked !== null : index === 0),
-			onClick: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
-		},
-		{
-			label: ts("row.down", { name }),
-			icon: ArrowDown,
-			disabled: disabled || (top ? !top.canDown || locked !== null : index === count - 1),
-			onClick: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
-		},
 		...(top && !locked
 			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
 			: []),
@@ -394,7 +368,6 @@ export function FieldGroup({
 						prefix={prefix}
 						childLead={childLead}
 						nested={nested}
-						index={index}
 						count={names.length}
 					/>
 				);
