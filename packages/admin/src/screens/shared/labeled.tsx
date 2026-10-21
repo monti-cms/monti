@@ -15,6 +15,7 @@ export function Labeled({
 	htmlFor,
 	className,
 	control = "normal",
+	aside,
 }: {
 	label: ReactNode;
 	/** A field description explaining what the setting is, placed between label and control. */
@@ -25,12 +26,23 @@ export function Labeled({
 	children: ReactNode;
 	className?: string;
 	control?: keyof typeof CONTROL_WIDTH;
+	/** Next to the label on the same line (a change marker, a revert button). */
+	aside?: ReactNode;
 }) {
 	return (
 		<UiField className={cn("gap-2", className)}>
-			<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
-				{label}
-			</FormFieldLabel>
+			{aside ? (
+				<div className="flex items-center gap-1.5">
+					<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
+						{label}
+					</FormFieldLabel>
+					{aside}
+				</div>
+			) : (
+				<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
+					{label}
+				</FormFieldLabel>
+			)}
 			{description && (
 				<FormFieldDescription className={cn(HELP, "nth-last-2:mt-0")}>{description}</FormFieldDescription>
 			)}

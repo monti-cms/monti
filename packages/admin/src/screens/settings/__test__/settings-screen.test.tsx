@@ -10,11 +10,29 @@ import { SettingsScreen } from "../settings-screen";
 import { SCHEMA_TABS, type SchemaTab } from "../tabs";
 
 vi.mock("../../schema/schema-screen", () => ({
-	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
-		<p>
-			schema editor: {tab}
-			{actionsSlot ? " (actions slot)" : ""}
-		</p>
+	SchemaSettings: ({
+		tab,
+		actionsSlot,
+		onChanged,
+	}: {
+		tab: string;
+		actionsSlot?: HTMLElement | null;
+		onChanged?: (areas: unknown) => void;
+	}) => (
+		<div>
+			<p>
+				schema editor: {tab}
+				{actionsSlot ? " (actions slot)" : ""}
+			</p>
+			<button
+				type="button"
+				onClick={() =>
+					onChanged?.({ tabs: { site: true, locales: false, collections: false, admin: false }, collections: {} })
+				}
+			>
+				report changes
+			</button>
+		</div>
 	),
 }));
 
@@ -83,6 +101,15 @@ describe("settings tabs", () => {
 		).toBe("page");
 	});
 
+	it("puts a dot, named for a screen reader, on the tabs that hold draft changes", () => {
+		renderSettings("collections");
+		expect(within(tabBar()).queryAllByText(t("changed"))).toHaveLength(0);
+		fireEvent.click(screen.getByRole("button", { name: "report changes" }));
+		const site = within(tabBar()).getByRole("link", { name: new RegExp(t("tab.site")) });
+		expect(within(site).getByText(t("changed"))).toBeTruthy();
+		expect(within(tabBar()).getAllByText(t("changed"))).toHaveLength(1);
+	});
+
 	it("shows the schema editor for the open tab", () => {
 		renderSettings("locales");
 		expect(screen.getByText(/schema editor: locales/)).toBeTruthy();
@@ -95,7 +122,7 @@ describe("settings tabs", () => {
 		expect(screen.getByText(/schema editor: site/)).toBe(editor);
 	});
 
-	it("has its own page header: title, a line about where it is saved, and a slot for the editor's review button", () => {
+	it("has its own page header: title, a line about where it is saved, and a slot for the editor's badge", () => {
 		renderSettings("collections");
 		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
 		expect(screen.getByText(t("description"))).toBeTruthy();

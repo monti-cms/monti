@@ -13,6 +13,7 @@ export function Section({
 	children,
 	wide,
 	card = true,
+	band,
 	className,
 	testId,
 	id,
@@ -26,6 +27,8 @@ export function Section({
 	wide?: boolean;
 	/** `false` when the content is a card of its own (a list of rows with its own header). */
 	card?: boolean;
+	/** A band instead of a card: the content sits on the page, and a hairline above the section separates it from the one before. */
+	band?: boolean;
 	className?: string;
 	testId?: string;
 	/** Anchor of the section, so a link can land on it (`#id`). */
@@ -38,6 +41,7 @@ export function Section({
 			className={cn(
 				"grid scroll-mt-6 gap-x-8 gap-y-3 lg:items-start",
 				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
+				band && "border-t pt-8 first:border-t-0 first:pt-0",
 				className,
 			)}
 		>
@@ -46,7 +50,9 @@ export function Section({
 				{description && <p className="mt-1.5 text-monti-muted-foreground text-sm leading-relaxed">{description}</p>}
 				{note && <p className="mt-2.5 text-monti-muted-foreground text-xs leading-relaxed">{note}</p>}
 			</div>
-			{card ? (
+			{band ? (
+				<div className="flex min-w-0 flex-col gap-6">{children}</div>
+			) : card ? (
 				<Panel className="flex min-w-0 flex-col gap-6 p-5">{children}</Panel>
 			) : (
 				<div className="min-w-0">{children}</div>

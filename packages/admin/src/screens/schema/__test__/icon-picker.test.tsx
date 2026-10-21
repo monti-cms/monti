@@ -18,6 +18,7 @@ const renderPicker = (ui: ReactElement) =>
 					collectionNames: [],
 					codeCollections: [],
 					file: {},
+					saved: {},
 				}}
 			>
 				{ui}

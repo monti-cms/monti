@@ -7,7 +7,16 @@ import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
-import { FlagSwitch, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
+import {
+	FlagSwitch,
+	orUndefined,
+	Pick,
+	RevertMark,
+	RowActions,
+	TextInput,
+	useSchemaEdit,
+	useSettingRevert,
+} from "./controls";
 import { schemaMessages } from "./messages";
 import { localesOf, moveItem, type Obj, sectionOf, setSetting } from "./schema-model";
 import { schemaSiteMessages } from "./site.messages";
@@ -37,6 +46,7 @@ export function SiteEditor({
 	const { disabled } = useSchemaEdit();
 	const site = sectionOf(file, "site");
 	const set = (key: string, value: unknown) => update((current) => setSetting(current, "site", key, value));
+	const revert = useSettingRevert("site", set);
 	const [host, setHost] = useState("");
 	const aliases = Array.isArray(site.aliases) ? (site.aliases as string[]) : [];
 	const locales = localesOf(file);
@@ -50,46 +60,48 @@ export function SiteEditor({
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
 		<div className="flex flex-col gap-12" data-testid="site-settings">
-			<Section wide title={t("site.identityTitle")}>
-				<div className="flex flex-col gap-6">
-					<TextInput
-						label={ts("site.name")}
-						value={site.name as string | undefined}
-						onChange={(value) => set("name", orUndefined(value))}
-					/>
-					<TextInput
-						label={t("site.home")}
-						placeholder="/"
-						value={site.home as string | undefined}
-						onChange={(value) => set("home", orUndefined(value))}
-					/>
-				</div>
+			<Section wide band title={t("site.identityTitle")} description={t("site.identityHelp")}>
+				<TextInput
+					label={ts("site.name")}
+					revert={revert("name")}
+					value={site.name as string | undefined}
+					onChange={(value) => set("name", orUndefined(value))}
+				/>
+				<TextInput
+					label={t("site.home")}
+					revert={revert("home")}
+					placeholder="/"
+					value={site.home as string | undefined}
+					onChange={(value) => set("home", orUndefined(value))}
+				/>
 			</Section>
-			<Section wide title={t("site.previewTitle")}>
-				<div className="flex flex-col gap-6">
-					<TextInput
-						label={t("site.previewPath")}
-						placeholder="/preview"
-						value={site.previewPath as string | undefined}
-						onChange={(value) => set("previewPath", orUndefined(value))}
-					/>
-					<TextInput
-						label={t("site.previewParam")}
-						placeholder="locale"
-						value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
-						onChange={(value) => set("previewLocaleParam", orUndefined(value))}
-					/>
-					<FlagSwitch
-						label={t("site.previewInPath")}
-						checked={inPath}
-						onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
-					/>
-				</div>
+			<Section wide band title={t("site.previewTitle")} description={t("site.previewHelp")}>
+				<TextInput
+					label={t("site.previewPath")}
+					revert={revert("previewPath")}
+					placeholder="/preview"
+					value={site.previewPath as string | undefined}
+					onChange={(value) => set("previewPath", orUndefined(value))}
+				/>
+				<TextInput
+					label={t("site.previewParam")}
+					revert={revert("previewLocaleParam")}
+					placeholder="locale"
+					value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
+					onChange={(value) => set("previewLocaleParam", orUndefined(value))}
+				/>
+				<FlagSwitch
+					label={t("site.previewInPath")}
+					revert={revert("previewLocaleParam")}
+					checked={inPath}
+					onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
+				/>
 			</Section>
-			<Section wide title={t("site.addressTitle")}>
+			<Section wide band title={t("site.addressTitle")} description={t("site.addressHelp")}>
 				<div className="flex flex-col gap-2">
 					<Pick
 						label={t("site.localePrefix")}
+						revert={revert("localePrefix")}
 						control="wide"
 						value={mode}
 						items={PREFIX_MODES.map((value) => ({
@@ -101,7 +113,11 @@ export function SiteEditor({
 					/>
 				</div>
 				<div className="flex flex-col gap-2 border-t pt-6">
-					<Labeled label={t("site.aliases")} control="normal">
+					<Labeled
+						label={t("site.aliases")}
+						control="normal"
+						aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
+					>
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
 								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>

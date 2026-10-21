@@ -17,7 +17,6 @@ import { cn } from "../../lib/utils/cn";
 import { moveWithin } from "../../lib/utils/move-within";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place";
@@ -29,7 +28,7 @@ import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
-import { IssueList, SchemaEditProvider } from "./controls";
+import { ChangeDot, IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
@@ -37,9 +36,12 @@ import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
 import { ReviewDialog } from "./review-dialog";
+import { SaveBar } from "./save-bar";
 import {
 	addCollection,
+	type ChangedAreas,
 	changeCount,
+	changedAreas,
 	collectionsOf,
 	isObj,
 	type Obj,
@@ -120,6 +122,7 @@ function CollectionNavItem({
 	collection,
 	active,
 	isNew,
+	changed,
 	writable,
 	onSelect,
 }: {
@@ -127,6 +130,8 @@ function CollectionNavItem({
 	collection: Obj | undefined;
 	active: boolean;
 	isNew: boolean;
+	/** The collection holds draft changes. */
+	changed: boolean;
 	writable: boolean;
 	onSelect: () => void;
 }) {
@@ -168,7 +173,7 @@ function CollectionNavItem({
 				onClick={onSelect}
 			>
 				<span className="flex-1 truncate">{label}</span>
-				{isNew && <Badge variant="outline">{t("collection.new")}</Badge>}
+				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangeDot />}
 				<span className="font-normal text-monti-muted-foreground text-xs">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</span>
@@ -183,12 +188,14 @@ function SchemaEditor({
 	actionsSlot,
 	fileSlot,
 	onTab,
+	onChanged,
 }: {
 	state: SchemaScreenState;
 	tab: SchemaTab;
 	actionsSlot?: HTMLElement | null;
 	fileSlot?: HTMLElement | null;
 	onTab?: (tab: SchemaTab) => void;
+	onChanged?: (areas: ChangedAreas | null) => void;
 }) {
 	const t = useTranslator(schemaMessages);
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
@@ -215,8 +222,14 @@ function SchemaEditor({
 	const dirty = !sameJson(draft, base);
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
 	const pending = changeCount(base, draft);
+	const areas = useMemo(() => changedAreas(base, draft), [base, draft]);
 	const savedNames = Object.keys(collectionsOf(base));
 
+	// The page draws the marks of its tabs, so it is told where the draft differs.
+	useEffect(() => {
+		onChanged?.(areas);
+		return () => onChanged?.(null);
+	}, [areas, onChanged]);
 	useEffect(() => {
 		const message = takeSavedMessage();
 		if (message) toast.success(message);
@@ -236,8 +249,9 @@ function SchemaEditor({
 			collectionNames: names,
 			codeCollections: state.codeCollections,
 			file: draft,
+			saved: base,
 		}),
-		[writable, state.vocabulary, issues, names, state.codeCollections, draft],
+		[writable, state.vocabulary, issues, names, state.codeCollections, draft, base],
 	);
 
 	const discard = async () => {
@@ -248,35 +262,12 @@ function SchemaEditor({
 		setIssues([]);
 	};
 
-	const actions = (
-		<>
-			{!writable && (
-				<Badge variant="outline" className="gap-1">
-					<Lock aria-hidden />
-					{t("status.readOnly")}
-				</Badge>
-			)}
-			{dirty && writable && (
-				<>
-					<Button type="button" variant="ghost" size="sm" onClick={() => void discard()}>
-						{t("actions.discard")}
-					</Button>
-					<span className="hidden text-monti-muted-foreground text-xs sm:inline">
-						{t("header.pending", { count: pending })}
-					</span>
-				</>
-			)}
-			<Button
-				type="button"
-				variant={dirty && writable ? "default" : "outline"}
-				size="sm"
-				disabled={!writable || !dirty}
-				onClick={() => setReviewing(true)}
-			>
-				{dirty && writable ? t("actions.review") : t("actions.noChanges")}
-			</Button>
-		</>
-	);
+	const actions = !writable ? (
+		<Badge variant="outline" className="gap-1">
+			<Lock aria-hidden />
+			{t("status.readOnly")}
+		</Badge>
+	) : null;
 
 	const reason = state.access.writable
 		? null
@@ -379,6 +370,7 @@ function SchemaEditor({
 															collection={collections[name]}
 															active={name === selected}
 															isNew={!savedNames.includes(name)}
+															changed={name in areas.collections}
 															writable={writable}
 															onSelect={() => setSelected(name)}
 														/>
@@ -394,6 +386,7 @@ function SchemaEditor({
 													section={section}
 													onSection={setSection}
 													collection={collections[selected]}
+													changes={areas.collections[selected]}
 													isNew={!savedNames.includes(selected)}
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
@@ -429,6 +422,15 @@ function SchemaEditor({
 						)}
 					</PageBody>
 				</div>
+				{dirty && writable && (
+					<SaveBar
+						count={pending}
+						disabled={state.hash === null}
+						onReview={() => setReviewing(true)}
+						onSave={() => setReviewing(true)}
+						onDiscard={() => void discard()}
+					/>
+				)}
 			</div>
 			{dialog}
 			{guardDialog}
@@ -475,12 +477,15 @@ export function SchemaSettings({
 	actionsSlot,
 	fileSlot,
 	onTab,
+	onChanged,
 }: {
 	tab: SchemaTab;
 	actionsSlot?: HTMLElement | null;
 	fileSlot?: HTMLElement | null;
 	/** Moves the Settings page to another tab (the page owns the tabs). */
 	onTab?: (tab: SchemaTab) => void;
+	/** Tells the page where the draft differs from the saved file (`null` when there is no draft), for the marks on its tabs. */
+	onChanged?: (areas: ChangedAreas | null) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
@@ -501,6 +506,7 @@ export function SchemaSettings({
 				actionsSlot={actionsSlot}
 				fileSlot={fileSlot}
 				onTab={onTab}
+				onChanged={onChanged}
 			/>
 		);
 	return (
