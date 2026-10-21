@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { pressOption } from "../../test/base-ui";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
@@ -12,6 +13,8 @@ import { filterChips } from "../list-toolbar";
 import { screensMessages } from "../messages";
 
 afterEach(cleanup);
+
+const t = testSite.createTranslator(screensMessages);
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
@@ -96,7 +99,7 @@ describe("admin entry list", () => {
 		fireEvent.click(header);
 		fireEvent.click(await screen.findByRole("checkbox", { name: "초안" }));
 		expect(props.onStateChange).toHaveBeenCalledWith({ statuses: ["draft"] });
-		fireEvent.click(screen.getByRole("button", { name: "필터 해제" }));
+		fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "필터 해제" }));
 		expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
 	});
 
@@ -112,7 +115,7 @@ describe("admin entry list", () => {
 
 	it("persists column visibility and order", async () => {
 		const props = renderTable();
-		fireEvent.click(screen.getByRole("button", { name: "컬럼 설정" }));
+		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
 		fireEvent.click(await screen.findByRole("checkbox", { name: "생성일" }));
 		expect(props.onColumnSettingsChange).toHaveBeenLastCalledWith(
 			expect.objectContaining({ visibility: expect.objectContaining({ createdAt: true }) }),
@@ -284,11 +287,28 @@ describe("admin entry list", () => {
 		const t = testSite.createTranslator(screensMessages);
 		const emptyTitle = () => document.querySelector('[data-slot="empty-title"]')?.textContent;
 
-		it("offers to add the first item when nothing exists yet", () => {
+		it("welcomes a document collection with no entries, offering to write and to import Markdown", () => {
 			const run = vi.fn();
-			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run } });
+			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run }, collectionLabel: "글" });
+			expect(emptyTitle()).toBe(t("list.welcomeTitle"));
+			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew", { label: "글" }) }));
+			expect(run).toHaveBeenCalled();
+			const link = screen.getByRole("link", { name: t("list.importMarkdown") });
+			expect(link.getAttribute("href")).toMatch(/\/data#import-entries$/);
+		});
+
+		it("keeps the plain empty state with an add button for an item collection", () => {
+			const run = vi.fn();
+			renderTable({
+				collection: "tag",
+				state: parseListState(testSite, new URLSearchParams("collection=tag")),
+				items: [],
+				total: 0,
+				addAction: { label: "태그 추가", run },
+			});
 			expect(emptyTitle()).toBe(t("list.emptyYet"));
-			fireEvent.click(screen.getByRole("button", { name: "글 추가" }));
+			expect(screen.queryByRole("link", { name: t("list.importMarkdown") })).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: "태그 추가" }));
 			expect(run).toHaveBeenCalled();
 		});
 
@@ -296,7 +316,8 @@ describe("admin entry list", () => {
 			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
 			const props = renderTable({ items: [], total: 0, state });
 			expect(emptyTitle()).toBe(t("list.emptyNoMatch"));
-			fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
+			const empty = document.querySelector<HTMLElement>('[data-slot="empty"]') as HTMLElement;
+			fireEvent.click(within(empty).getByRole("button", { name: t("list.clearFilters") }));
 			expect(props.onStateChange).toHaveBeenCalledWith(expect.objectContaining({ search: "", statuses: [] }));
 			const patch = vi.mocked(props.onStateChange).mock.calls[0]?.[0] ?? {};
 			expect(patch).not.toHaveProperty("collection");
@@ -307,6 +328,56 @@ describe("admin entry list", () => {
 			renderTable({ items: [], total: 0, mode: "trash" });
 			expect(emptyTitle()).toBe(t("list.emptyTrash"));
 			expect(screen.queryByRole("button", { name: t("list.clearFilters") })).toBeNull();
+		});
+	});
+	describe("status segments", () => {
+		const statusGroup = () => within(screen.getByRole("group", { name: t("list.statusFilter") }));
+		const seg = (name: string) => statusGroup().getByRole("button", { name });
+
+		it("sets exactly the picked status and clears the editing filter", () => {
+			const props = renderTable();
+			fireEvent.click(seg("초안"));
+			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: ["draft"], hasChanges: false });
+			fireEvent.click(seg(t("list.statusAll")));
+			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
+		});
+
+		it("highlights All with no status filter and the one status when it is the single filter", () => {
+			renderTable();
+			expect(seg(t("list.statusAll")).getAttribute("aria-pressed")).toBe("true");
+			cleanup();
+			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")) });
+			expect(seg("초안").getAttribute("aria-pressed")).toBe("true");
+			expect(seg(t("list.statusAll")).getAttribute("aria-pressed")).toBe("false");
+			// The segment already says it, so there is no chip.
+			expect(screen.queryByRole("list", { name: t("toolbar.chips") })).toBeNull();
+		});
+
+		it("highlights nothing for a status set the segments cannot show, and explains it with a chip", () => {
+			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft&changes=1")) });
+			for (const button of statusGroup().getAllByRole("button"))
+				expect(button.getAttribute("aria-pressed")).toBe("false");
+			expect(within(screen.getByRole("list", { name: t("toolbar.chips") })).getByText(/상태/)).toBeTruthy();
+		});
+
+		it("is not drawn for an item collection", () => {
+			renderTable({ collection: "tag", state: parseListState(testSite, new URLSearchParams("collection=tag")) });
+			expect(screen.queryByRole("group", { name: t("list.statusFilter") })).toBeNull();
+		});
+	});
+
+	describe("view popover", () => {
+		it("holds the column, page size and sort controls and uses the same handlers as before", async () => {
+			const props = renderTable();
+			fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
+			const view = within(await screen.findByRole("dialog"));
+			expect(view.getAllByRole("checkbox").length).toBeGreaterThan(1);
+			expect(view.getByRole("combobox", { name: t("view.sortField") })).toBeTruthy();
+			fireEvent.click(view.getByRole("button", { name: t("filter.sortAsc") }));
+			expect(props.onStateChange).toHaveBeenLastCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
+			fireEvent.click(view.getByRole("combobox", { name: t("list.pageSize") }));
+			pressOption(await screen.findByRole("option", { name: t("list.pageSizeOption", { size: 50 }) }));
+			expect(props.onPageSizeChange).toHaveBeenCalledWith(50);
 		});
 	});
 });

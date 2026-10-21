@@ -93,7 +93,7 @@ export function ListFooter({ children, className }: { children: React.ReactNode;
 	return (
 		<div
 			className={cn(
-				"flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-monti-muted-foreground text-xs",
+				"flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-monti-caption text-monti-muted-foreground",
 				className,
 			)}
 		>
@@ -115,6 +115,8 @@ export function ListPagination({
 	onPageSizeChange,
 	hrefFor,
 	leading,
+	showPageSize = true,
+	hidePagerWhenSingle = false,
 }: {
 	total: number;
 	/** Rows on the current page. */
@@ -122,10 +124,15 @@ export function ListPagination({
 	page: number;
 	pageSize: PageSize;
 	onPageChange: (page: number) => void;
-	onPageSizeChange: (size: PageSize) => void;
+	/** Needed only with the page size control. */
+	onPageSizeChange?: (size: PageSize) => void;
 	hrefFor?: (page: number) => string;
 	/** Screen-specific controls placed before the page size. */
 	leading?: React.ReactNode;
+	/** `false` when the screen offers the page size somewhere else. */
+	showPageSize?: boolean;
+	/** Draw no pager when everything fits on one page. */
+	hidePagerWhenSingle?: boolean;
 }) {
 	const t = useTranslator(screensMessages);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -139,23 +146,31 @@ export function ListPagination({
 			</span>
 			<div className="flex items-center gap-2">
 				{leading}
-				<Select
-					value={String(pageSize)}
-					items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-					onValueChange={(value) => value && onPageSizeChange(Number(value) as PageSize)}
-				>
-					<SelectTrigger size="sm" aria-label={t("list.pageSize")} className="h-7 border-0 text-xs shadow-none">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{PAGE_SIZES.map((size) => (
-							<SelectItem key={size} value={String(size)}>
-								{t("list.pageSizeOption", { size })}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />
+				{showPageSize && (
+					<Select
+						value={String(pageSize)}
+						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
+						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
+					>
+						<SelectTrigger
+							size="sm"
+							aria-label={t("list.pageSize")}
+							className="h-7 border-0 text-monti-caption shadow-none"
+						>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{PAGE_SIZES.map((size) => (
+								<SelectItem key={size} value={String(size)}>
+									{t("list.pageSizeOption", { size })}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				)}
+				{!(hidePagerWhenSingle && totalPages === 1) && (
+					<ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />
+				)}
 			</div>
 		</ListFooter>
 	);

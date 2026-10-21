@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
-import { AdminClientDashboard, AdminTrashDashboard } from "../admin-dashboard";
+import { EntryListScreen, TrashScreen } from "../entry-list-screen";
 import { AdminQueryProvider } from "../shared/query-provider";
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
@@ -95,13 +95,13 @@ afterEach(() => {
 const renderList = () =>
 	render(
 		<AdminQueryProvider>
-			<AdminClientDashboard />
+			<EntryListScreen />
 		</AdminQueryProvider>,
 	);
 const renderTrash = () =>
 	render(
 		<AdminQueryProvider>
-			<AdminTrashDashboard />
+			<TrashScreen />
 		</AdminQueryProvider>,
 	);
 const row = (title: string) => screen.getByRole("row", { name: new RegExp(title) });
@@ -354,7 +354,7 @@ describe("list screen — a collection without folders", () => {
 		offNav.setSearch("collection=post");
 		return offNav.render(
 			<AdminQueryProvider>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 	};
@@ -389,7 +389,7 @@ describe("list screen — a collection without folders", () => {
 		offNav.setSearch("collection=post&folder=f1");
 		offNav.render(
 			<AdminQueryProvider>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 		await screen.findByRole("row", { name: /가/ });
@@ -499,7 +499,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		render(
 			<AdminQueryProvider>
 				<a href="/studio/events">elsewhere</a>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));

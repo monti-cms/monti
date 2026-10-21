@@ -102,6 +102,8 @@ export function useEntriesTable({
 		available.map((column) => [column, column === "title" || (savedVisibility?.[column] ?? defaults.includes(column))]),
 	);
 	// When viewed flat without folder separation (search, filters, include subfolders) and the folder column is off, append the folder path small next to the title.
+	// With the slug column off, the slug rides small beside the title instead.
+	const showSlugBesideTitle = visibility.slug === false;
 	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
 
 	// TanStack Table expects column definitions not to be recreated every render. Rebuild only when the values the cells read change.
@@ -154,6 +156,7 @@ export function useEntriesTable({
 							isTrash={isTrash}
 							isRecord={isRecord}
 							showFolderBesideTitle={showFolderBesideTitle}
+							showSlugBesideTitle={showSlugBesideTitle}
 							onOpenRecord={onOpenRecord}
 						/>
 					),
@@ -205,6 +208,7 @@ export function useEntriesTable({
 		onRestore,
 		onPermanentDelete,
 		showFolderBesideTitle,
+		showSlugBesideTitle,
 	]);
 
 	const rowSelection: RowSelectionState = Object.fromEntries([...selectedIds].map((id) => [id, true]));

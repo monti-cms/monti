@@ -72,7 +72,7 @@ describe("list columns", () => {
 		expect(available).toContain("title");
 	});
 
-	it("until the writer chooses columns the default ones are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, slug, locale, status, updated date", () => {
+	it("until the writer chooses columns the default ones are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, locale, status, updated date and keep the slug beside the title", () => {
 		for (const collection of ["story", "topic"]) {
 			const defaults = defaultListColumns(site, collection);
 			expect(defaults[0]).toBe("title");
@@ -83,7 +83,9 @@ describe("list columns", () => {
 		}
 		expect(defaultListColumns(site, "story")).toContain("topicId");
 		expect(defaultListColumns(site, "story")).toContain("publishedAt");
-		expect(defaultListColumns(site, "topic")).toContain("slug");
+		// The slug column exists but is off until the writer turns it on.
+		expect(defaultListColumns(site, "topic")).not.toContain("slug");
+		expect(columnsFor(site, "topic").available).toContain("slug");
 	});
 });
 

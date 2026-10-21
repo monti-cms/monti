@@ -6,7 +6,7 @@ import NewEntryPage from "../screens/entries/new/page";
 import EventsPage from "../screens/events/page";
 import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
-import DashboardPage from "../screens/page";
+import EntryListPage from "../screens/page";
 import SettingsPage from "../screens/settings/page";
 import TemplatesPage from "../screens/templates/page";
 import ToolsPage from "../screens/tools/page";
@@ -36,7 +36,7 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 	const path = (await params).path ?? [];
 	const [first, second, third, ...rest] = path;
 	if (rest.length > 0) server.notFound();
-	if (path.length === 0) return <DashboardPage cms={cms} server={server} />;
+	if (path.length === 0) return <EntryListPage cms={cms} server={server} />;
 	if (path.length === 1) {
 		switch (first) {
 			case "trash":
