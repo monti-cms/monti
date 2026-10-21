@@ -139,6 +139,8 @@ const json = (data: unknown, status = 200) => ({
 });
 type Handler = (input: string, init?: RequestInit) => unknown;
 let fetchMock: ReturnType<typeof vi.fn>;
+/** What the publish check answers (`POST …/check`); a test changes it to put problems in the readiness item. */
+let checkAnswer: { issues: unknown[]; warnings: unknown[] } = { issues: [], warnings: [] };
 
 /** Adds per-test handling to the common responses (lists, usages). */
 function serve(handler: Handler, current: unknown = entry) {
@@ -148,6 +150,7 @@ function serve(handler: Handler, current: unknown = entry) {
 		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
 		if (input.startsWith("/api/monti/v1/entries/search?")) return json({ items: [] });
 		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
+		if (input.endsWith("/check") && init?.method === "POST") return json(checkAnswer);
 		if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(current);
 		throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${input}`);
 	});
@@ -178,6 +181,13 @@ const renderShell = (ui: React.ReactElement, sourcePanels: SourcePanelRegistrati
 	render(withSite(<AdminComponentsProvider components={{ sourcePanels }}>{ui}</AdminComponentsProvider>));
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
+/** The popup a refused publish opens by itself. */
+const readinessPopup = async () => within(await screen.findByRole("dialog"));
+/** The popup opened from the readiness item in the status bar, which names how many problems there are. */
+const reopenReadinessPopup = async () => {
+	fireEvent.click(await screen.findByRole("button", { name: /^발행 전 \d/ }));
+	return within(await screen.findByRole("dialog"));
+};
 /** Saves the way the header no longer offers a button for: the keyboard shortcut. */
 const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 
@@ -188,6 +198,7 @@ beforeEach(() => {
 	deleteLocalBackup.mockResolvedValue(undefined);
 	saveLocalBackup.mockResolvedValue(true);
 	fetchMock = vi.fn();
+	checkAnswer = { issues: [], warnings: [] };
 	serve(() => undefined);
 	vi.stubGlobal("fetch", fetchMock);
 });
@@ -397,6 +408,134 @@ describe("entry editor shell", () => {
 		expect(await screen.findByText(/먼저 저장해/)).toBeTruthy();
 	});
 
+	describe("publish readiness in the status bar", () => {
+		const checkCalls = () => methodCalls("POST", "/check");
+		const bar = async () => within(await screen.findByRole("region", { name: "상태" }));
+		const missingTitle = told({ code: "missing_field", path: "title", message: "제목" });
+		const missingAlt = told({ code: "missing_image_alt", path: "body", position: { blockId: "b1" } });
+
+		it("says the entry is ready when the check finds nothing, and checks once after loading", async () => {
+			renderEdit();
+			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+			expect(checkCalls()).toHaveLength(1);
+			expect(String(checkCalls()[0]?.[0])).toContain("/entries/entry-1/check");
+		});
+
+		it("counts what to fix and, quietly, the warnings", async () => {
+			checkAnswer = { issues: [missingTitle, missingAlt], warnings: [told({ code: "footnote_definition_unused" })] };
+			renderEdit();
+			expect(await (await bar()).findByRole("button", { name: "발행 전 2 · 경고 1" })).toBeTruthy();
+		});
+
+		it("says it is checking while the check runs", async () => {
+			let answer: (() => void) | undefined;
+			serve(async (input, init) => {
+				if (!(input.endsWith("/check") && init?.method === "POST")) return undefined;
+				await new Promise<void>((resolve) => {
+					answer = resolve;
+				});
+				return json(checkAnswer);
+			});
+			renderEdit();
+			expect(await (await bar()).findByRole("button", { name: "검사 중…" })).toBeTruthy();
+			answer?.();
+			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+		});
+
+		it("rechecks after a save, not on a keystroke, and keeps the last answer with a hint meanwhile", async () => {
+			checkAnswer = { issues: [missingTitle], warnings: [] };
+			serve(async (_input, init) => {
+				if (init?.method !== "PATCH") return undefined;
+				const body = JSON.parse(String(init.body));
+				return json({
+					entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+					warnings: [],
+				});
+			});
+			renderEdit();
+			await (await bar()).findByRole("button", { name: "발행 전 1" });
+			expect(checkCalls()).toHaveLength(1);
+
+			fireEvent.change(await editorTitle(), { target: { value: "수정 중" } });
+			fireEvent.change(await editorTitle(), { target: { value: "수정 중 2" } });
+			// The last answer stays, with the note that it is about the saved version.
+			const popup = await screen.findByRole("button", { name: "발행 전 1" }).then(async (button) => {
+				fireEvent.click(button);
+				return within(await screen.findByRole("dialog"));
+			});
+			expect(popup.getByText("(저장 후 다시 검사)")).toBeTruthy();
+			expect(checkCalls()).toHaveLength(1);
+
+			checkAnswer = { issues: [], warnings: [] };
+			pressSave();
+			await waitFor(() => expect(checkCalls()).toHaveLength(2));
+			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+		});
+
+		it("lists each problem as a to-do with its place, and clicking one goes to its field", async () => {
+			checkAnswer = { issues: [missingTitle], warnings: [told({ code: "footnote_definition_unused" })] };
+			renderEdit();
+			fireEvent.click(await (await bar()).findByRole("button", { name: /^발행 전 1/ }));
+			const popup = within(await screen.findByRole("dialog"));
+			expect(popup.getByRole("heading", { name: "발행 전 확인" })).toBeTruthy();
+			expect(popup.getByRole("button", { name: "다시 검사" })).toBeTruthy();
+			// The to-do is in plain words, and the place is next to it.
+			const row = popup.getByRole("button", { name: /제목을 입력해 주세요/ });
+			expect(row.textContent).toContain("title");
+			// A warning is listed after the problems, and it has no place to go to.
+			expect(popup.getByText("어디에도 쓰이지 않는 각주 내용이 있어요")).toBeTruthy();
+			expect(popup.queryByRole("button", { name: /각주/ })).toBeNull();
+			fireEvent.click(row);
+			await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "제목" })));
+		});
+
+		it("checks again from the popup and keeps it open to show the answer", async () => {
+			checkAnswer = { issues: [missingTitle], warnings: [] };
+			renderEdit();
+			fireEvent.click(await (await bar()).findByRole("button", { name: /^발행 전 1/ }));
+			const popup = within(await screen.findByRole("dialog"));
+			checkAnswer = { issues: [], warnings: [] };
+			fireEvent.click(popup.getByRole("button", { name: "다시 검사" }));
+			await waitFor(() => expect(checkCalls()).toHaveLength(2));
+			expect(await popup.findByText("고칠 곳이 없어요. 바로 발행할 수 있어요.")).toBeTruthy();
+			expect(screen.queryByRole("dialog")).not.toBeNull();
+		});
+
+		it("is not there for an entry in the trash, and makes no check for it", async () => {
+			serve(() => undefined, { ...entry, status: "trashed" });
+			renderEdit();
+			await editorTitle();
+			await screen.findByRole("region", { name: "상태" });
+			expect(screen.queryByRole("button", { name: /발행 (준비됨|전)/ })).toBeNull();
+			expect(checkCalls()).toHaveLength(0);
+		});
+
+		it("is not there for a new entry before its first save", async () => {
+			renderShell(<EntryEditorShell mode="new" collection="memo" adminId={ADMIN} />);
+			await editorTitle();
+			await screen.findByRole("region", { name: "상태" });
+			expect(screen.queryByRole("button", { name: /발행 (준비됨|전)/ })).toBeNull();
+			expect(checkCalls()).toHaveLength(0);
+		});
+
+		it("opens the popup with the fresh problems when a publish is refused, and keeps the toast", async () => {
+			serve((input) =>
+				input.endsWith("/publish")
+					? json({ code: "publish_validation_failed", issues: [missingTitle] }, 422)
+					: undefined,
+			);
+			renderEdit();
+			await (await bar()).findByRole("button", { name: "발행 준비됨" });
+			fireEvent.click(screen.getByRole("button", { name: "발행" }));
+			const popup = within(await screen.findByRole("dialog"));
+			expect(popup.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
+			expect(error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
+			expect(await (await bar()).findByRole("button", { name: "발행 전 1" })).toBeTruthy();
+			// The list under the header is gone: the popup is where the problems are.
+			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
+		});
+	});
+
 	it("creates and publishes a local new entry when Publish is clicked", async () => {
 		serve((input, init) => {
 			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
@@ -529,17 +668,18 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByDisplayValue("요약");
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await screen.findByRole("list", { name: "발행 검증 문제" });
+		// A refused publish opens the readiness popup with what it found.
+		const popup = await readinessPopup();
 		const title = await editorTitle();
 		expect(title.getAttribute("aria-invalid")).toBe("true");
 		expect(title.getAttribute("aria-describedby")).toBe("cms-title-error");
 		expect(screen.getAllByRole("textbox", { name: "제목" })).toHaveLength(1);
-		fireEvent.click(screen.getByRole("button", { name: /제목을 입력하세요/ }));
+		fireEvent.click(popup.getByRole("button", { name: /제목을 입력해 주세요/ }));
 		await waitFor(() => expect(document.activeElement).toBe(title));
 		// In source mode, the panel is asked to focus the block the issue is in.
 		fireEvent.click(screen.getByRole("button", { name: SOURCE_LABEL }));
 		await screen.findByLabelText("패널 본문");
-		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		fireEvent.click((await reopenReadinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		await waitFor(() => expect(asked).toContain(body.content[1]?.id));
 	});
 
@@ -564,17 +704,17 @@ describe("entry editor shell", () => {
 		await screen.findByDisplayValue("요약");
 		await screen.findByLabelText("시각 본문");
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await screen.findByRole("list", { name: "발행 검증 문제" });
+		const popup = await readinessPopup();
 
 		await waitFor(() => expect(mockEditor.current).not.toBeNull());
-		fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		fireEvent.click(popup.getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		await waitFor(() => expect(mockEditor.current?.state.selection.$from.parent.textContent).toBe("둘째 문단"));
 		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 
 		blockId = "zzzzzzzz";
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(methodCalls("POST").length).toBeGreaterThanOrEqual(2));
-		fireEvent.click(await screen.findByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+		await waitFor(() => expect(methodCalls("POST", "/publish").length).toBeGreaterThanOrEqual(2));
+		fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		expect(await screen.findByLabelText("패널 본문")).toBeTruthy();
 	});
 
@@ -723,8 +863,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
 			await screen.findByLabelText("블록 수");
 			fireEvent.click(screen.getByRole("button", { name: "발행" }));
-			await screen.findByRole("list", { name: "발행 검증 문제" });
-			fireEvent.click(screen.getByRole("button", { name: /MDX 본문 구문을 확인하세요/ }));
+			fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 			// The panel is asked for that block, once; the screen does not keep asking.
 			await waitFor(() => expect(focused).toEqual([body.content[1]?.id]));
 			await waitFor(() => expect(screen.getByLabelText("포커스").textContent).toBe("-"));
@@ -742,7 +881,7 @@ describe("entry editor shell", () => {
 		await screen.findByRole("button", { name: "발행" });
 		expect(await editorTitle()).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		fireEvent.click(await screen.findByRole("button", { name: /카테고리를 입력하세요/ }));
+		fireEvent.click((await readinessPopup()).getByRole("button", { name: /카테고리를 입력해 주세요/ }));
 		const category = await screen.findByRole("combobox", { name: /카테고리/ });
 		await waitFor(() => expect(document.activeElement).toBe(category));
 		expect(screen.getByLabelText("시각 본문").closest("[inert]")).toBeTruthy();

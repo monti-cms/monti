@@ -88,6 +88,7 @@ describe("MDX with front matter", () => {
 			unarchiveEntry: vi.fn(),
 			trashEntry: vi.fn(),
 			publishEntry: vi.fn(),
+			checkPublishEntry: vi.fn(),
 			getWorking: vi.fn(),
 			createEntryWithReferences: vi.fn().mockResolvedValue(undefined),
 			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),

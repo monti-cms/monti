@@ -36,6 +36,8 @@ interface EntryLifecycleCommandsInput {
 	focusIssue: (issue: CmsIssue) => void;
 	/** Whether the translation source changed since the translator last confirmed it. */
 	sourceChanged: boolean;
+	/** Called with the problems a publish was refused with, so the screen can show them. */
+	onPublishBlocked: (issues: readonly CmsIssue[]) => void;
 }
 
 export type EntryLifecycleCommands = ReturnType<typeof useEntryLifecycleCommands>;
@@ -46,6 +48,7 @@ export function useEntryLifecycleCommands({
 	refreshIncoming,
 	focusIssue,
 	sourceChanged,
+	onPublishBlocked,
 }: EntryLifecycleCommandsInput) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
@@ -130,8 +133,10 @@ export function useEntryLifecycleCommands({
 			if (!published.ok) {
 				// A conflict opens its own conflict dialog.
 				if (published.error.code === "conflict") return;
-				if (published.error.issues?.length) toast.error(t("publishBlocked"));
-				else toast.error(published.error.message);
+				if (published.error.issues?.length) {
+					toast.error(t("publishBlocked"));
+					onPublishBlocked(published.error.issues);
+				} else toast.error(published.error.message);
 				return;
 			}
 			void refreshIncoming(id);

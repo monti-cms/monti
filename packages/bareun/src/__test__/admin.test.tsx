@@ -53,6 +53,7 @@ describe("Bareun checker admin side", () => {
 			recovery: null,
 			translations: null,
 			save: () => {},
+			publishReadiness: null,
 			textIssues,
 		});
 		const showBar = (textIssues: EditorStatus["textIssues"]) => {

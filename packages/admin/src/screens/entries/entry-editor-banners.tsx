@@ -1,10 +1,10 @@
 "use client";
 
-// The banners under the header of the entry editor screen: trash notice, unreadable body, save error, publish problems and "source changed".
+// The banners under the header of the entry editor screen: trash notice, unreadable body, save error and "source changed".
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { type CmsIssue, issueLine } from "../../api/error-message";
+import { issueLine } from "../../api/error-message";
 import { Button } from "../../ui/button";
 import { FormFieldError } from "../../ui/field";
 import { nounVars } from "../shared/noun.messages";
@@ -17,7 +17,6 @@ interface EntryEditorBannersProps {
 	visualUnavailable: boolean;
 	/** The first thing the source panel found wrong with the text, shown beside the unavailable notice. */
 	sourceProblem?: FormatIssue;
-	onFocusIssue: (issue: CmsIssue) => void;
 	/** Whether to show the "source changed" bar, with its two actions. */
 	sourceChanged: boolean;
 	onCompareSource: () => void;
@@ -27,13 +26,12 @@ export function EntryEditorBanners({
 	editor,
 	visualUnavailable,
 	sourceProblem,
-	onFocusIssue,
 	sourceChanged,
 	onCompareSource,
 }: EntryEditorBannersProps) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
-	const { entry, collection, saveStatus, publishIssues } = editor;
+	const { entry, collection, saveStatus } = editor;
 	const isReadOnly = editor.readOnly;
 	const isTrashed = entry?.status === "trashed";
 	return (
@@ -53,23 +51,6 @@ export function EntryEditorBanners({
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
 				<FormFieldError className="border-b px-4 py-2 text-sm">{editor.saveError.message}</FormFieldError>
-			)}
-			{publishIssues.length > 0 && (
-				<ul className="max-h-36 overflow-y-auto border-b px-4 py-2 text-sm" aria-label={t("publishProblems")}>
-					{publishIssues.map((issue) => (
-						<li key={JSON.stringify(issue)}>
-							<Button
-								type="button"
-								variant="link"
-								size="xs"
-								className="h-auto whitespace-normal px-0 text-left"
-								onClick={() => onFocusIssue(issue)}
-							>
-								{issueLine(issue)}
-							</Button>
-						</li>
-					))}
-				</ul>
 			)}
 
 			{sourceChanged && (
