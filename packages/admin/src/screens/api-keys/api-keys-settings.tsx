@@ -165,11 +165,7 @@ function KeyRows({
 	if (!list) {
 		if (query.error) {
 			return (
-				<LoadErrorAlert
-					message={errorText(site, query.error, t("load.failed"))}
-					onRetry={onRetry}
-					className="m-3 w-auto"
-				/>
+				<LoadErrorAlert message={errorText(site, query.error, t("load.failed"))} onRetry={onRetry} className="m-3" />
 			);
 		}
 		return <Skeleton className="m-4 h-12" />;
