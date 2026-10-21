@@ -9,10 +9,10 @@ import { jsonResponse as json } from "../../test/fetch";
 import { docOf } from "../../test/mdx";
 import { createTestRouter } from "../../test/router";
 import { withSite } from "../../test/site";
-import { AdminClientDashboard } from "../admin-dashboard";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { copyTitle } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
+import { EntryListScreen } from "../entry-list-screen";
 import { columnLabel, columnsFor, fieldColumnOf } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
@@ -121,7 +121,7 @@ describe("any site: list screen", () => {
 		listed = [item("e1", "Alpha"), item("e2", "Beta")];
 		render(
 			<AdminQueryProvider>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 		await screen.findByRole("row", { name: /Alpha/ });
@@ -150,7 +150,7 @@ describe("any site: list screen", () => {
 		listed = [{ ...item("e1", "Alpha"), values: { [column]: value } }, item("e2", "Beta")];
 		render(
 			<AdminQueryProvider>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 		const row = await screen.findByRole("row", { name: /Alpha/ });
@@ -173,7 +173,7 @@ describe("any site: list screen", () => {
 				: undefined;
 		render(
 			<AdminQueryProvider>
-				<AdminClientDashboard />
+				<EntryListScreen />
 			</AdminQueryProvider>,
 		);
 		const row = await screen.findByRole("row", { name: /Alpha/ });

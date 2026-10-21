@@ -145,14 +145,14 @@ function EntryListBody({ list }: { list: EntryList }) {
 }
 
 // The admin list fetches data in the browser. Render after hydration so Base UI's auto IDs do not mismatch the server HTML.
-function useDashboardMounted() {
+function useMounted() {
 	const [mounted, setMounted] = useState(false);
 	useEffect(() => setMounted(true), []);
 	return mounted;
 }
 
 /** Placeholder before the first render. Mimics the shape of the sidebar, header and list rows. */
-function DashboardLoading() {
+function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
 		<div aria-busy="true" className="flex h-svh overflow-hidden">
@@ -181,9 +181,9 @@ function DashboardLoading() {
 }
 
 /** List screen. Opens the collection list, with no separate stats dashboard. */
-export function AdminClientDashboard() {
-	const mounted = useDashboardMounted();
-	if (!mounted) return <DashboardLoading />;
+export function EntryListScreen() {
+	const mounted = useMounted();
+	if (!mounted) return <ListLoading />;
 
 	return (
 		<AdminNavProvider>
@@ -193,9 +193,9 @@ export function AdminClientDashboard() {
 }
 
 /** Trash-only screen. Split by collection tabs, offering only restore and permanent delete. */
-export function AdminTrashDashboard() {
-	const mounted = useDashboardMounted();
-	if (!mounted) return <DashboardLoading />;
+export function TrashScreen() {
+	const mounted = useMounted();
+	if (!mounted) return <ListLoading />;
 
 	return (
 		<AdminNavProvider>
