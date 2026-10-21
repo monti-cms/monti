@@ -30,11 +30,20 @@ const story = defineCollection({
 const topic = defineCollection({
 	label: "Topic",
 	kind: "item",
-	fields: { title: fields.text({ label: "Title" }), key: fields.slug({ label: "Key", from: "title" }) },
+	fields: {
+		title: fields.text({ label: "Title", localized: true }),
+		key: fields.slug({ label: "Key", from: "title" }),
+	},
+});
+// An item collection with no per-locale field: its values are the same in every locale.
+const label = defineCollection({
+	label: "Label",
+	kind: "item",
+	fields: { title: fields.text({ label: "Title" }) },
 });
 const site = createSite(
 	defineSite({
-		collections: { article, note, story, topic },
+		collections: { article, note, story, topic, label },
 		locales: [
 			{ code: "en", name: "English" },
 			{ code: "ko", name: "Korean" },
@@ -82,7 +91,7 @@ describe("locale column and the translation UI option", () => {
 	const make = (locales: { code: string; name: string }[], admin?: { translations?: boolean }) =>
 		createSite(
 			defineSite({
-				collections: { article, note, story, topic },
+				collections: { article, note, story, topic, label },
 				locales,
 				defaultLocale: "en",
 				...(admin ? { admin } : {}),
@@ -107,5 +116,12 @@ describe("locale column and the translation UI option", () => {
 		const site = make(two, { translations: false });
 		expect(columnsFor(site, "story").available).not.toContain("locale");
 		expect(columnsFor(site, "topic").defaults).not.toContain("locale");
+	});
+
+	it("has no locale column on an item collection without a per-locale field", () => {
+		const site = make(two);
+		expect(columnsFor(site, "label").available).not.toContain("locale");
+		expect(columnsFor(site, "label").defaults).not.toContain("locale");
+		expect(columnsFor(site, "topic").defaults).toContain("locale");
 	});
 });

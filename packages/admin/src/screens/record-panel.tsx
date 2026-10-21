@@ -32,6 +32,7 @@ import {
 } from "./entries/entry-form";
 import { RecordLocaleFields, SchemaFields } from "./entries/schema-fields";
 import { EntryFormProvider } from "./entries/use-field";
+import { collectionTranslated } from "./list-columns";
 import { screensMessages } from "./messages";
 import { useConfirm } from "./shared/confirm-dialog";
 import { EditorFooter } from "./shared/editor-footer";
@@ -127,6 +128,8 @@ export function RecordPanel({
 	const label = site.COLLECTION_DEFINITIONS[collection].label;
 	const heading = id ? t("record.edit", { label }) : t("list.add", { label });
 	const title = formTitle(site, collection, form);
+	// Locale tabs only when the collection has a per-locale field; otherwise the other locale tabs would be empty.
+	const translated = collectionTranslated(site, collection);
 	/** Hint for the value that will be generated when the slug is empty. If the slug field has no `from`, uses the field's hint text as is. */
 	const slugFrom = site.slugFieldOf(collection)?.from;
 	const slugHint = slugFrom
@@ -200,7 +203,7 @@ export function RecordPanel({
 						onValueChange={(value) => setLocale(value as Locale)}
 						className="min-h-0 flex-1 gap-0 overflow-hidden"
 					>
-						{site.ADMIN_TRANSLATIONS && (
+						{translated && (
 							<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
 								{site.LOCALES.map((option) => {
 									const filled = hasLocaleValues(site, collection, form, option);
@@ -234,7 +237,7 @@ export function RecordPanel({
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
 								{id && <p className="text-monti-muted-foreground text-xs">{t("record.slugChange")}</p>}
 							</TabsContent>
-							{(site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (
+							{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
 								<TabsContent key={option} value={option} className="space-y-4">
 									<p className="text-monti-muted-foreground text-xs leading-relaxed">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
