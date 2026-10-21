@@ -378,7 +378,7 @@ export function BulkBar({
 			];
 
 	return (
-		<section aria-label={t("bar")} className="border-b bg-monti-accent px-5 py-2">
+		<section aria-label={t("bar")} className="border-b bg-monti-accent px-8 py-2">
 			<div className="flex min-h-7 flex-wrap items-center gap-2 text-sm">
 				<span className="font-medium text-monti-foreground">{t("count", { count: selected.length })}</span>
 				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>

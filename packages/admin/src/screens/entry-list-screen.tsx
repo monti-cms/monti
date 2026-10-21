@@ -37,6 +37,16 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 	);
 }
 
+/** The line under the list title: where the collection is public (`Public at /posts/:slug`). */
+function RouteDescription({ path }: { path: string }) {
+	const t = useTranslator(screensMessages);
+	return (
+		<>
+			{t("list.publicAt")} <code className="font-mono text-monti-caption text-monti-foreground">{path}</code>
+		</>
+	);
+}
+
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
@@ -212,7 +222,7 @@ function TrashPage() {
 	const list = useEntryList("trash");
 	const { state } = list;
 	return (
-		<AdminShell title={t("dashboard.trash")} count={list.data.total} sidebar={{ activeNav: "trash" }}>
+		<AdminShell title={t("dashboard.trash")} count={list.data.total} sidebar={{ activeNav: "trash" }} large>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
 				<nav
@@ -240,8 +250,10 @@ function TrashPage() {
 }
 
 function ListPage() {
+	const site = useSite();
 	const list = useEntryList("list");
 	const { state, update, folders } = list;
+	const routePath = site.schemaOf(state.collection).path;
 	const folderLabel =
 		folders && state.folder !== "all"
 			? ` · ${folders.list.find((folder) => folder.id === state.folder)?.name ?? ""}`
@@ -250,6 +262,8 @@ function ListPage() {
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
 			count={list.data.total}
+			large
+			description={routePath ? <RouteDescription path={routePath} /> : undefined}
 			sidebar={{
 				activeNav: state.collection,
 				folderNav: folders

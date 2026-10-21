@@ -10,6 +10,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
 	en: {
 		"dashboard.trash": "Trash",
 		"dashboard.trashCollections": "Trash collections",
+		"list.publicAt": "Public at",
 		"list.add": "Add {label}",
 		"list.label": "Item list",
 		"list.loadFailed": "Couldn't load the list.",
@@ -131,6 +132,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
 	ko: {
 		"dashboard.trash": "휴지통",
 		"dashboard.trashCollections": "휴지통 컬렉션",
+		"list.publicAt": "공개 주소",
 		"list.add": "{label} 추가",
 		"list.label": "항목 목록",
 		"list.loadFailed": "목록을 불러오지 못했습니다.",

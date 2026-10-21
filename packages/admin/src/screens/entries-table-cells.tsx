@@ -103,8 +103,19 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const gone = item.status === "archived" || item.status === "trashed";
 	return (
 		<StatusIndicator
-			tone={published ? (item.hasUnpublishedChanges ? "warning" : "success") : "neutral"}
-			shape={published ? (item.hasUnpublishedChanges ? "half" : "dot") : gone ? "minus" : "dashed"}
+			// Monochrome: published is a filled dot, draft a hollow ring, archived a muted filled dot. Color is kept for unpublished changes.
+			tone={published ? (item.hasUnpublishedChanges ? "warning" : "strong") : gone ? "neutral" : "strong"}
+			shape={
+				published
+					? item.hasUnpublishedChanges
+						? "half"
+						: "dot"
+					: item.status === "archived"
+						? "dot"
+						: gone
+							? "minus"
+							: "ring"
+			}
 			label={label}
 		/>
 	);

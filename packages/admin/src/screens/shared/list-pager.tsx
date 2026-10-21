@@ -93,7 +93,7 @@ export function ListFooter({ children, className }: { children: React.ReactNode;
 	return (
 		<div
 			className={cn(
-				"flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-monti-caption text-monti-muted-foreground",
+				"flex h-12 shrink-0 items-center justify-between gap-3 border-t px-8 text-monti-caption text-monti-muted-foreground",
 				className,
 			)}
 		>

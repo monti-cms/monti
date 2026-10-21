@@ -1,10 +1,12 @@
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../core/test/site";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
+import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
@@ -112,6 +114,31 @@ const openRowMenu = async (title: string) => {
 	return screen.findAllByRole("menuitem");
 };
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
+
+describe("list screen — page header", () => {
+	const publicAt = testSite.createTranslator(screensMessages)("list.publicAt");
+
+	it("shows the title with the count and, for a collection with a public route, where it is public", async () => {
+		renderList();
+		await screen.findByRole("row", { name: /가/ });
+
+		const heading = screen.getByRole("heading", { level: 1 });
+		expect(heading.textContent).toContain(testSite.COLLECTION_DEFINITIONS.post.label);
+		expect(heading.textContent).toContain(String(server.posts.length));
+		const route = screen.getByText(testSite.schemaOf("post").path as string);
+		expect(route.tagName).toBe("CODE");
+		expect(route.parentElement?.textContent).toContain(publicAt);
+	});
+
+	it("shows no description for a collection without a public route", async () => {
+		nav.setSearch("collection=tag");
+		renderList();
+		await screen.findByRole("heading", { level: 1 });
+
+		expect(testSite.schemaOf("tag").path).toBeUndefined();
+		expect(screen.queryByText(publicAt, { exact: false })).toBeNull();
+	});
+});
 
 describe("list screen — list settings", () => {
 	it("with no page size or sort in the address, requests with the saved settings", async () => {

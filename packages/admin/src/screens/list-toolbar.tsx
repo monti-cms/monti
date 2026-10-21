@@ -93,7 +93,7 @@ export function ListSearch({
 
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
-		<InputGroup className="h-8 w-64">
+		<InputGroup className="h-[34px] w-64">
 			<InputGroupAddon>
 				<Search aria-hidden />
 			</InputGroupAddon>
@@ -129,7 +129,7 @@ export function activeStatusSegment(state: Pick<ListState, "statuses" | "hasChan
 	return state.statuses.length === 1 ? (state.statuses[0] ?? null) : null;
 }
 
-/** All / Draft / Published / Archived. Picking one sets exactly that status; "All" clears the status filter. */
+/** All / Draft / Published / Archived as underline tabs. Picking one sets exactly that status; "All" clears the status filter. */
 function StatusSegments({ state, onChange }: { state: ListState; onChange: (patch: Partial<ListState>) => void }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -139,20 +139,18 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 		...LIST_STATUSES.map((status) => ({ key: status, label: statusLabels(site)[status] })),
 	];
 	return (
-		<fieldset className="flex items-center gap-0.5">
+		<fieldset className="-mb-px flex items-stretch gap-5">
 			<legend className="sr-only">{t("list.statusFilter")}</legend>
 			{segments.map(({ key, label }) => (
-				<Button
+				<button
 					key={key}
 					type="button"
-					size="xs"
-					variant="ghost"
 					aria-pressed={active === key}
-					className="text-monti-label text-monti-muted-foreground aria-pressed:bg-monti-muted aria-pressed:text-monti-foreground"
+					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-foreground aria-pressed:font-medium aria-pressed:text-monti-foreground"
 					onClick={() => onChange({ statuses: key === "all" ? [] : [key], hasChanges: false })}
 				>
 					{label}
-				</Button>
+				</button>
 			))}
 		</fieldset>
 	);
@@ -182,12 +180,12 @@ export function ListSubToolbar({
 		(chip) => !(hasSegments && chip.key === "status" && activeStatusSegment(state) !== null),
 	);
 	return (
-		<div className="flex min-h-10 shrink-0 items-center gap-3 border-b px-5 py-1">
+		<div className="flex min-h-11 shrink-0 items-stretch gap-4 border-b px-8">
 			{hasSegments && <StatusSegments state={state} onChange={onChange} />}
 			{chips.length === 0 ? (
 				<div className="flex-1" />
 			) : (
-				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-1.5">
 					{chips.map((chip) => (
 						<li key={chip.key}>
 							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-accent pr-0.5 pl-2 font-medium text-monti-caption text-monti-foreground">
@@ -218,7 +216,7 @@ export function ListSubToolbar({
 					)}
 				</ul>
 			)}
-			{trailing}
+			{trailing && <div className="flex items-center">{trailing}</div>}
 		</div>
 	);
 }
