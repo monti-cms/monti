@@ -15,6 +15,7 @@ export function Section({
 	card = true,
 	className,
 	testId,
+	id,
 }: {
 	title: ReactNode;
 	description?: ReactNode;
@@ -27,12 +28,15 @@ export function Section({
 	card?: boolean;
 	className?: string;
 	testId?: string;
+	/** Anchor of the section, so a link can land on it (`#id`). */
+	id?: string;
 }) {
 	return (
 		<section
+			id={id}
 			data-testid={testId}
 			className={cn(
-				"grid gap-x-8 gap-y-3 lg:items-start",
+				"grid scroll-mt-6 gap-x-8 gap-y-3 lg:items-start",
 				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
 				className,
 			)}

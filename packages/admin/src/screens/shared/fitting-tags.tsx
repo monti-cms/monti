@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages";
 
 const GAP = 4;
-const CHIP = "shrink-0 rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs";
+const CHIP = "shrink-0 rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-caption text-monti-muted-foreground";
 
 /**
  * Shows as many tags as fit the cell width and shortens the rest to `+N`. Remeasures when the column width changes.
@@ -63,7 +63,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 				</span>
 			))}
 			{hidden > 0 && (
-				<span className="shrink-0 text-monti-muted-foreground text-xs">
+				<span className="shrink-0 text-monti-caption text-monti-muted-foreground">
 					<span aria-hidden>+{hidden}</span>
 					<span className="sr-only">{t("tags.more", { count: hidden })}</span>
 				</span>
@@ -74,7 +74,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 						{tag.title}
 					</span>
 				))}
-				<span className="text-xs">+{tags.length}</span>
+				<span className="text-monti-caption">+{tags.length}</span>
 			</span>
 		</span>
 	);

@@ -2,18 +2,19 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Inbox, Plus, SearchX, Trash2 } from "lucide-react";
-import { Fragment, type KeyboardEvent } from "react";
+import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
+import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { Skeleton } from "../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { ColumnResizeHandle } from "./column-resize-handle";
-import { ColumnSettingsPopover } from "./entries-table-column-settings";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
 import { columnConfig, columnLabel } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
+import { ListSubToolbar } from "./list-toolbar";
+import { ListViewPopover } from "./list-view-popover";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
 import { EmptyState } from "./shared/empty-state";
@@ -63,6 +64,10 @@ interface TableProps {
 	onRetry: () => void;
 	/** Adds an item. Shown in the empty list as the way to start. */
 	addAction?: { label: string; run: () => void };
+	/** Drawn between the sub-toolbar and the table (the bulk action row). */
+	aboveTable?: ReactNode;
+	/** Name of the collection, for "Write a new …" in the welcome state. */
+	collectionLabel?: string;
 }
 
 export function AdminEntriesTable({
@@ -95,6 +100,8 @@ export function AdminEntriesTable({
 	onPageSizeChange,
 	onRetry,
 	addAction,
+	aboveTable,
+	collectionLabel,
 }: TableProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -143,6 +150,25 @@ export function AdminEntriesTable({
 
 	return (
 		<section aria-label={t("list.label")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<ListSubToolbar
+				state={state}
+				options={options}
+				mode={mode}
+				onChange={onStateChange}
+				trailing={
+					<ListViewPopover
+						collection={collection}
+						state={state}
+						order={order}
+						visibility={visibility}
+						onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
+						onMove={moveColumn}
+						onStateChange={onStateChange}
+						onPageSizeChange={onPageSizeChange}
+					/>
+				}
+			/>
+			{aboveTable}
 			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-5 mt-3" />}
 
 			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
@@ -165,7 +191,7 @@ export function AdminEntriesTable({
 												<TableHead
 													style={{ width: header.getSize() }}
 													className={cn(
-														"group/th relative h-9 font-normal text-monti-muted-foreground text-xs",
+														"group/th relative h-9 font-normal text-monti-caption text-monti-muted-foreground",
 														header.column.id === "select" && "w-10",
 													)}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
@@ -236,7 +262,7 @@ export function AdminEntriesTable({
 											trigger={
 												<TableRow
 													className={cn(
-														"h-11 data-[state=selected]:bg-monti-primary/5",
+														"h-10 data-[state=selected]:bg-monti-primary/5",
 														row.original.id === openRecordId && OPEN_ITEM,
 													)}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}
@@ -287,6 +313,23 @@ export function AdminEntriesTable({
 							description={t("list.emptyNoMatchHint")}
 							action={{ label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) }}
 						/>
+					) : site.isDocumentCollection(collection) && addAction && folders.length === 0 ? (
+						<EmptyState
+							icon={PenLine}
+							title={t("list.welcomeTitle")}
+							description={t("list.welcomeHint")}
+							action={{
+								label: t("list.writeNew", { label: collectionLabel ?? collection }),
+								icon: Plus,
+								onClick: addAction.run,
+								emphasis: "primary",
+							}}
+							secondaryAction={{
+								label: t("list.importMarkdown"),
+								icon: FileUp,
+								href: `${site.adminHref("/data")}#import-entries`,
+							}}
+						/>
 					) : (
 						<EmptyState
 							icon={Inbox}
@@ -306,17 +349,9 @@ export function AdminEntriesTable({
 				page={state.page}
 				pageSize={state.pageSize}
 				onPageChange={onPageChange}
-				onPageSizeChange={onPageSizeChange}
 				hrefFor={pageHref}
-				leading={
-					<ColumnSettingsPopover
-						collection={collection}
-						order={order}
-						visibility={visibility}
-						onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
-						onMove={moveColumn}
-					/>
-				}
+				showPageSize={false}
+				hidePagerWhenSingle
 			/>
 		</section>
 	);

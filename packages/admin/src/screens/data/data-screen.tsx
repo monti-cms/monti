@@ -33,7 +33,7 @@ export function DataScreen() {
 						<ExportButton form={form} label={te("action.all")} />
 					</div>
 				</Section>
-				<Section wide title={ti("title")} description={ti("description")} testId="import-entries">
+				<Section wide title={ti("title")} description={ti("description")} testId="import-entries" id="import-entries">
 					<ImportEntriesFields />
 				</Section>
 				<Section wide title={tr("title")} description={tr("description")} testId="restore-backup">

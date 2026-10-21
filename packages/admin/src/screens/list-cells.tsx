@@ -43,6 +43,7 @@ export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
 	const value = entry.values[column];
 	if (!value) return EMPTY;
 	if (field.kind === "select") return Object.hasOwn(field.options, value) ? field.options[value] : value;
-	if (field.kind === "media") return <span className="font-mono text-monti-muted-foreground text-xs">{value}</span>;
+	if (field.kind === "media")
+		return <span className="font-mono text-monti-caption text-monti-muted-foreground">{value}</span>;
 	return value;
 }

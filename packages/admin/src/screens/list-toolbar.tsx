@@ -1,17 +1,17 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Search, X } from "lucide-react";
+import { AlignLeft, Search, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { Toggle } from "../ui/toggle";
 import { clearPatchFor } from "./column-header";
 import { type ColumnFilter, columnLabel, columnsFor, filterFor, isColumnFiltered } from "./list-columns";
-import { clearFiltersPatch, type ListState } from "./list-state";
+import { clearFiltersPatch, LIST_STATUSES, type ListState, type ListStatus } from "./list-state";
 import { screensMessages } from "./messages";
 import { statusLabels } from "./shared/entry-status";
 import { useDebouncedInput } from "./shared/use-debounced";
@@ -74,7 +74,10 @@ export function filterChips(site: Site, state: ListState, options: TaxonomyOptio
 	return chips;
 }
 
-/** Search box in the header. Sends a server search when typing pauses. Document collections can turn on body search. */
+/**
+ * Search box in the header. Sends a server search when typing pauses. Document collections get a small toggle inside the box
+ * that widens the search to the body.
+ */
 export function ListSearch({
 	state,
 	onChange,
@@ -88,79 +91,134 @@ export function ListSearch({
 	const t = useTranslator(screensMessages);
 	const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
 
-	const isContent = site.isDocumentCollection(state.collection);
+	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
-		<div className="flex items-center gap-3">
-			<InputGroup className="h-8 w-64">
-				<InputGroupAddon>
-					<Search aria-hidden />
-				</InputGroupAddon>
-				<InputGroupInput
-					type="search"
-					aria-label={t("toolbar.searchLabel")}
-					value={search}
-					onChange={(event) => setSearch(event.target.value)}
-					placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
-				/>
-			</InputGroup>
-			{isContent && allowBody && (
-				<Label className="font-normal text-monti-muted-foreground text-xs">
-					<Switch
+		<InputGroup className="h-8 w-64">
+			<InputGroupAddon>
+				<Search aria-hidden />
+			</InputGroupAddon>
+			<InputGroupInput
+				type="search"
+				aria-label={t("toolbar.searchLabel")}
+				value={search}
+				onChange={(event) => setSearch(event.target.value)}
+				placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
+			/>
+			{withBody && (
+				<InputGroupAddon align="inline-end">
+					<Toggle
 						size="sm"
-						checked={state.includeBody}
-						onCheckedChange={(checked) => onChange({ includeBody: checked === true })}
-					/>
-					{t("toolbar.includeBody")}
-				</Label>
+						aria-label={t("toolbar.includeBody")}
+						title={t("toolbar.includeBody")}
+						pressed={state.includeBody}
+						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
+						className="h-6 min-w-6 px-1 text-monti-muted-foreground aria-pressed:bg-monti-primary/10 aria-pressed:text-monti-primary"
+					>
+						<AlignLeft aria-hidden />
+					</Toggle>
+				</InputGroupAddon>
 			)}
-		</div>
+		</InputGroup>
 	);
 }
 
-/** Row of applied filter chips. Not drawn when there are no filters. */
-export function FilterChipBar({
+/** The status the segments show for this state, `"all"` for no status filter, or `null` for what only the column header can set. */
+export function activeStatusSegment(state: Pick<ListState, "statuses" | "hasChanges">): ListStatus | "all" | null {
+	if (state.hasChanges) return null;
+	if (state.statuses.length === 0) return "all";
+	return state.statuses.length === 1 ? (state.statuses[0] ?? null) : null;
+}
+
+/** All / Draft / Published / Archived. Picking one sets exactly that status; "All" clears the status filter. */
+function StatusSegments({ state, onChange }: { state: ListState; onChange: (patch: Partial<ListState>) => void }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const active = activeStatusSegment(state);
+	const segments: { key: ListStatus | "all"; label: string }[] = [
+		{ key: "all", label: t("list.statusAll") },
+		...LIST_STATUSES.map((status) => ({ key: status, label: statusLabels(site)[status] })),
+	];
+	return (
+		<fieldset className="flex items-center gap-0.5">
+			<legend className="sr-only">{t("list.statusFilter")}</legend>
+			{segments.map(({ key, label }) => (
+				<Button
+					key={key}
+					type="button"
+					size="xs"
+					variant="ghost"
+					aria-pressed={active === key}
+					className="text-monti-label text-monti-muted-foreground aria-pressed:bg-monti-muted aria-pressed:text-monti-foreground"
+					onClick={() => onChange({ statuses: key === "all" ? [] : [key], hasChanges: false })}
+				>
+					{label}
+				</Button>
+			))}
+		</fieldset>
+	);
+}
+
+/**
+ * The one row under the header: status segments (list mode), the applied filter chips, and the screen's own controls on the right.
+ * The status chip shows only when the status filter is something the segments cannot show.
+ */
+export function ListSubToolbar({
 	state,
 	options,
+	mode,
 	onChange,
+	trailing,
 }: {
 	state: ListState;
 	options: TaxonomyOptions;
+	mode: "list" | "trash";
 	onChange: (patch: Partial<ListState>) => void;
+	trailing?: ReactNode;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const chips = filterChips(site, state, options);
-	if (chips.length === 0) return null;
+	const hasSegments = mode === "list" && filterFor(site, state.collection, "status", mode).kind === "status";
+	const chips = filterChips(site, state, options).filter(
+		(chip) => !(hasSegments && chip.key === "status" && activeStatusSegment(state) !== null),
+	);
 	return (
-		<ul aria-label={t("toolbar.chips")} className="flex min-h-11 flex-wrap items-center gap-1.5 border-b px-5 py-2">
-			{chips.map((chip) => (
-				<li key={chip.key}>
-					<span className="inline-flex h-6 items-center gap-1 rounded-md bg-monti-primary/10 pr-0.5 pl-2 font-medium text-monti-primary text-xs">
-						<span className="max-w-72 truncate">{chip.label}</span>
-						<IconButton
-							size="icon-xs"
-							className="size-5 text-monti-primary hover:bg-monti-primary/15 hover:text-monti-primary"
-							label={t("filter.clear")}
-							onClick={() => onChange(chip.clear)}
-						>
-							<X aria-hidden />
-						</IconButton>
-					</span>
-				</li>
-			))}
-			<li>
-				<Button
-					type="button"
-					variant="ghost"
-					size="xs"
-					className="text-monti-muted-foreground"
-					onClick={() => {
-						onChange(clearFiltersPatch(state));
-					}}
-				>
-					{t("filter.clearAll")}
-				</Button>
-			</li>
-		</ul>
+		<div className="flex min-h-10 shrink-0 items-center gap-3 border-b px-5 py-1">
+			{hasSegments && <StatusSegments state={state} onChange={onChange} />}
+			{chips.length === 0 ? (
+				<div className="flex-1" />
+			) : (
+				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+					{chips.map((chip) => (
+						<li key={chip.key}>
+							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-primary/10 pr-0.5 pl-2 font-medium text-monti-caption text-monti-primary">
+								<span className="max-w-72 truncate">{chip.label}</span>
+								<IconButton
+									size="icon-xs"
+									className="size-5 text-monti-primary hover:bg-monti-primary/15 hover:text-monti-primary"
+									label={t("filter.clear")}
+									onClick={() => onChange(chip.clear)}
+								>
+									<X aria-hidden />
+								</IconButton>
+							</span>
+						</li>
+					))}
+					{chips.length >= 2 && (
+						<li>
+							<Button
+								type="button"
+								variant="ghost"
+								size="xs"
+								className="text-monti-caption text-monti-muted-foreground"
+								onClick={() => onChange(clearFiltersPatch(state))}
+							>
+								{t("filter.clearAll")}
+							</Button>
+						</li>
+					)}
+				</ul>
+			)}
+			{trailing}
+		</div>
 	);
 }

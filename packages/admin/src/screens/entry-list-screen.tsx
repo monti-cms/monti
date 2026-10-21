@@ -13,7 +13,7 @@ import { Skeleton } from "../ui/skeleton";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
 import { toSelection } from "./list-row-menu";
-import { FilterChipBar, ListSearch } from "./list-toolbar";
+import { ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
@@ -49,16 +49,18 @@ function EntryListBody({ list }: { list: EntryList }) {
 		<>
 			<div className="relative flex min-h-0 flex-1 overflow-hidden">
 				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-					<FilterChipBar state={state} options={list.options} onChange={list.update} />
-					<BulkBar
-						collection={state.collection}
-						mode={mode}
-						selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
-						folders={folders?.list ?? null}
-						onClearSelection={() => list.setSelectedIds(new Set())}
-						onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
-					/>
 					<AdminEntriesTable
+						aboveTable={
+							<BulkBar
+								collection={state.collection}
+								mode={mode}
+								selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
+								folders={folders?.list ?? null}
+								onClearSelection={() => list.setSelectedIds(new Set())}
+								onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
+							/>
+						}
+						collectionLabel={list.label}
 						collection={state.collection}
 						items={items}
 						folders={data.folders}
