@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createSite } from "@monti-cms/core/site";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../../../admin/src/test/fetch";
 import { createTestRouter } from "../../../../admin/src/test/router";
@@ -54,27 +54,34 @@ afterEach(() => {
 describe("Git sync status bar item", () => {
 	it("says there are conflicts, linking to the Git sync page", async () => {
 		await show([target({ conflicts: 2, queued: 3 })]);
-		const link = await screen.findByRole("link", { name: /Git: 2 conflicts|Git 충돌 2건/ });
-		expect(link.getAttribute("href")).toMatch(/\/tools\/git-sync$/);
+		fireEvent.click(await screen.findByRole("button", { name: /Git: 2 conflicts|Git 충돌 2건/ }));
+		const popup = within(await screen.findByRole("dialog"));
+		expect(popup.getByText("acme/site")).toBeTruthy();
+		expect(popup.getByText("main")).toBeTruthy();
+		expect(popup.getByText(/2 conflicts|충돌 2개/)).toBeTruthy();
+		expect(popup.getByText(/3 waiting|3개 커밋 대기/)).toBeTruthy();
+		expect(popup.getByRole("link", { name: /Open Git sync|Git 동기화 열기/ }).getAttribute("href")).toMatch(
+			/\/tools\/git-sync$/,
+		);
 	});
 
 	it("says how many commits wait when nothing conflicts", async () => {
 		await show([target({ queued: 3 })]);
-		expect(await screen.findByRole("link", { name: /Git: 3 waiting|Git 커밋 대기 3건/ })).toBeTruthy();
+		expect(await screen.findByRole("button", { name: /Git: 3 waiting|Git 커밋 대기 3건/ })).toBeTruthy();
 	});
 
 	it("says when the last sync was, and hides when nothing is set up or nothing has happened", async () => {
 		vi.spyOn(Date, "now").mockReturnValue(NOW);
 		await show([target({ lastPull: { at: "2026-10-07T09:07:00.000Z" } })]);
-		expect(await screen.findByRole("link", { name: /Git synced|Git 동기화됨/ })).toBeTruthy();
+		expect(await screen.findByRole("button", { name: /Git synced|Git 동기화됨/ })).toBeTruthy();
 		cleanup();
 		await show([target({})]);
 		await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-		expect(screen.queryByRole("link")).toBeNull();
+		expect(screen.queryByRole("button")).toBeNull();
 		cleanup();
 		await show([]);
 		await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-		expect(screen.queryByRole("link")).toBeNull();
+		expect(screen.queryByRole("button")).toBeNull();
 	});
 
 	it("sums the targets: conflicts and queued commits, and the latest of the pulls and commits", () => {

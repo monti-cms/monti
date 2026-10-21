@@ -1,6 +1,6 @@
 import { AdminComponentsProvider, useAdminComponents } from "@monti-cms/admin";
 import { SiteProvider } from "@monti-cms/core/site";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type EditorStatus, StatusBar, StatusItemsProvider } from "../../../admin/src/screens/shared/status-bar";
 import { SiteWrapper } from "../../../admin/src/test/site";
@@ -48,7 +48,10 @@ describe("Bareun checker admin side", () => {
 			statusLabel: "Draft",
 			charCount: 0,
 			readingMinutes: 1,
+			bodyStats: { charsWithSpaces: 0, words: 0, paragraphs: 0, headings: 0 },
 			backupAvailable: true,
+			recovery: null,
+			translations: null,
 			save: () => {},
 			textIssues,
 		});
@@ -68,15 +71,47 @@ describe("Bareun checker admin side", () => {
 			);
 		};
 
-		it("counts the findings of the body, and goes to the first one when clicked", () => {
-			const jumpToFirst = vi.fn();
-			showBar({ count: 3, jumpToFirst });
-			fireEvent.click(screen.getByRole("button", { name: "맞춤법 3건" }));
-			expect(jumpToFirst).toHaveBeenCalledTimes(1);
+		const issues = (over: Partial<NonNullable<EditorStatus["textIssues"]>> = {}) => ({
+			count: 2,
+			jumpToFirst: () => {},
+			items: [],
+			recheck: null,
+			checking: false,
+			...over,
+		});
+
+		it("counts the findings of the body, and lists them with the suggestion when opened", async () => {
+			showBar(
+				issues({
+					items: [
+						{ text: "됬다", suggestion: "됐다", jump: () => {} },
+						{ text: "안되", suggestion: null, jump: () => {} },
+					],
+				}),
+			);
+			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
+			const popup = within(await screen.findByRole("dialog"));
+			expect(popup.getByText("됬다")).toBeTruthy();
+			expect(popup.getByText("→ 됐다")).toBeTruthy();
+			expect(popup.getByText("안되")).toBeTruthy();
+			expect(popup.queryByRole("button", { name: "다시 검사" })).toBeNull();
+		});
+
+		it("goes to the finding that is clicked, and checks again from the header", async () => {
+			const jump = vi.fn();
+			const recheck = vi.fn();
+			showBar(issues({ items: [{ text: "됬다", suggestion: "됐다", jump }], recheck }));
+			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
+			const popup = within(await screen.findByRole("dialog"));
+			fireEvent.click(popup.getByRole("button", { name: /됬다/ }));
+			expect(jump).toHaveBeenCalledTimes(1);
+			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
+			fireEvent.click(await screen.findByRole("button", { name: "다시 검사" }));
+			expect(recheck).toHaveBeenCalledTimes(1);
 		});
 
 		it("is hidden when there is nothing to fix or no checker covers the text", () => {
-			showBar({ count: 0, jumpToFirst: () => {} });
+			showBar(issues({ count: 0 }));
 			expect(screen.queryByRole("button", { name: /맞춤법/ })).toBeNull();
 			cleanup();
 			showBar(null);
