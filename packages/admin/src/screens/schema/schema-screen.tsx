@@ -424,6 +424,7 @@ function SchemaEditor({
 													isNew={!savedNames.includes(selected)}
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
+													onFileChange={updateFile}
 													onRemove={async () => {
 														if (savedNames.includes(selected)) {
 															const ok = await confirm({
