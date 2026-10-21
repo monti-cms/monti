@@ -188,6 +188,21 @@ describe("schema model", () => {
 		expect(Object.keys(withPath)).toEqual(["label", "kind", "path", "fields"]);
 	});
 
+	it("on a site with several locales, a new collection's title is per locale, and a document's slug starts from the source locale's", () => {
+		const locales = [
+			{ code: "ko", name: "한국어" },
+			{ code: "en", name: "English" },
+		];
+		const item = collectionsOf(addCollection({ locales }, "category", "item")).category as Obj;
+		expect(fieldsOf(item).title?.localized).toBe(true);
+		expect(fieldsOf(item).slug?.localized).toBeUndefined();
+		const document = collectionsOf(addCollection({ locales }, "memo", "document")).memo as Obj;
+		expect(fieldsOf(document).title?.localized).toBe(true);
+		expect(fieldsOf(document).slug?.localized).toBe("inherit");
+		const single = collectionsOf(addCollection({ locales: locales.slice(0, 1) }, "tag", "item")).tag as Obj;
+		expect(fieldsOf(single).title?.localized).toBeUndefined();
+	});
+
 	it("says what a field still needs before it can be added", () => {
 		const names = ["post", "tag"];
 		expect(fieldProblems(newField("text", "A"), post(), names)).toEqual([]);
