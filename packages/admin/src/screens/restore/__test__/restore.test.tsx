@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import type { RestoreCounts, RestorePreview, RestoreRun } from "../../../api/restore";
+import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -254,7 +255,7 @@ describe("the Restore backup card", () => {
 		await screen.findByTestId("restore-preview");
 		fireEvent.click(screen.getByTestId("restore-run"));
 		const dialog = await screen.findByRole("alertdialog");
-		fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+		fireEvent.click(within(dialog).getByRole("button", { name: testSite.createTranslator(commonMessages)("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(forms(fetchMock).map((form) => form.get("mode"))).toEqual(["preview"]);
 	});
