@@ -47,7 +47,12 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"confirm.title": "Restore this backup?",
 		"confirm.description": ({ count }) =>
 			`${count} ${one(count) ? "entry" : "entries"}, with their folders, media records and addresses, are written to this site in one step. Either all of it is written or none of it is. Afterwards the site is no longer empty, so a backup can't be restored into it again.`,
-		"confirm.confirm": "Restore",
+		"confirm.backupFirst": "Back up the current site first",
+		"confirm.backedUp": "The backup of the current site was saved. You can restore now.",
+		"confirm.confirm": "Restore the backup",
+		"danger.title": "Danger zone",
+		"danger.description":
+			"A restore writes the whole backup into the site in one step: entries with their ids, drafts and published versions, translations, folders, media records and old addresses. It only works while the site has no entries, folders or media records, so nothing that is here now is replaced. It can't be undone or run again.",
 		"progress.running": ({ count }) => `Restoring ${count} ${one(count) ? "entry" : "entries"}…`,
 		"progress.hint": "Everything is written in one step. Keep this page open.",
 		"result.title": "Backup restored",
@@ -96,7 +101,12 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"confirm.title": "이 백업을 복원할까요?",
 		"confirm.description": ({ count }) =>
 			`글 ${count}개와 폴더, 미디어 기록, 주소를 한 번에 이 사이트에 써요. 전부 쓰거나 전혀 쓰지 않아요. 복원하고 나면 사이트가 비어 있지 않으니 같은 백업을 다시 복원할 수 없어요.`,
-		"confirm.confirm": "복원",
+		"confirm.backupFirst": "먼저 지금 상태를 백업",
+		"confirm.backedUp": "지금 사이트의 백업을 저장했어요. 이제 복원해도 돼요.",
+		"confirm.confirm": "백업 복원하기",
+		"danger.title": "위험 구역",
+		"danger.description":
+			"복원은 백업 전체를 한 번에 사이트에 써요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 기록, 이전 주소가 들어가요. 글, 폴더, 미디어 기록이 하나도 없을 때만 되므로 지금 있는 내용을 덮어쓰지는 않아요. 되돌리거나 다시 실행할 수 없어요.",
 		"progress.running": ({ count }) => `글 ${count}개를 복원하는 중…`,
 		"progress.hint": "모두 한 번에 써요. 이 페이지를 닫지 마세요.",
 		"result.title": "백업을 복원했어요",

@@ -47,6 +47,8 @@ export function ShellPage({
 	nav,
 	count,
 	bare,
+	large,
+	description,
 	children,
 }: {
 	title: ReactNode;
@@ -54,10 +56,20 @@ export function ShellPage({
 	nav: AdminSidebarProps["activeNav"];
 	count?: number;
 	bare?: boolean;
+	/** The big page header with a one-line `description` under the title. */
+	large?: boolean;
+	description?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
-		<AdminShell title={title} count={count} sidebar={{ activeNav: nav }} bare={bare}>
+		<AdminShell
+			title={title}
+			count={count}
+			sidebar={{ activeNav: nav }}
+			bare={bare}
+			large={large}
+			description={description}
+		>
 			{children}
 		</AdminShell>
 	);

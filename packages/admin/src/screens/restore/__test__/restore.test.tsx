@@ -12,6 +12,9 @@ import { restoreMessages } from "../messages";
 const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success, error } }));
 
+const { saveBlob } = vi.hoisted(() => ({ saveBlob: vi.fn() }));
+vi.mock("../../../api/export", async (original) => ({ ...(await original<object>()), saveBlob }));
+
 const t = testSite.createTranslator(restoreMessages);
 
 const COUNTS: RestoreCounts = {
@@ -72,6 +75,12 @@ function serve(options: { empty?: boolean; preview?: RestorePreview; runStatus?:
 				media: 0,
 			});
 		}
+		if (url === "/api/monti/v1/export") {
+			return new Response(new Blob(["zip"]), {
+				status: 200,
+				headers: { "content-disposition": 'attachment; filename="site.zip"', "content-type": "application/zip" },
+			});
+		}
 		if (url === "/api/monti/v1/import/restore") {
 			if (init?.method !== "POST") return jsonResponse({ empty, entries: empty ? 0 : 3, folders: 0, media: 0 });
 			const form = init.body as FormData;
@@ -115,13 +124,18 @@ afterEach(() => {
 });
 
 describe("the Restore backup card", () => {
-	it("sits after Import entries on the Data page", async () => {
+	it("sits after the backup and the import, in a danger zone", async () => {
 		serve();
 		renderData();
+		const backup = await screen.findByTestId("site-backup");
 		const imports = await screen.findByTestId("import-entries");
-		const card = await screen.findByTestId("restore-backup");
-		expect(imports.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(within(card).getByRole("heading", { name: t("title") })).toBeTruthy();
+		const zone = await screen.findByTestId("restore-backup");
+		expect(backup.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(imports.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(within(zone).getByRole("heading", { name: t("danger.title") })).toBeTruthy();
+		expect(zone.className).toContain("border-monti-destructive/40");
+		expect(within(zone).getByTestId("restore-file")).toBeTruthy();
+		expect(imports.id).toBe("import-entries");
 	});
 
 	it("is disabled on a site that is not empty and says it works only on an empty site", async () => {
@@ -217,6 +231,22 @@ describe("the Restore backup card", () => {
 		expect(success).toHaveBeenCalledWith(t("toast.done", { count: 6 }));
 	});
 
+	it("offers a backup of the current site first, which exports, and keeps the dialog open", async () => {
+		const fetchMock = serve();
+		renderData();
+		choose();
+		await screen.findByTestId("restore-preview");
+		fireEvent.click(screen.getByTestId("restore-run"));
+		const dialog = await screen.findByRole("alertdialog");
+		fireEvent.click(within(dialog).getByRole("button", { name: t("confirm.backupFirst") }));
+		await waitFor(() => expect(saveBlob).toHaveBeenCalled());
+		expect(fetchMock.mock.calls.some(([input]) => String(input) === "/api/monti/v1/export")).toBe(true);
+		expect(await within(dialog).findByTestId("restore-backed-up")).toBeTruthy();
+		// Nothing was restored by it.
+		expect(forms(fetchMock).map((form) => form.get("mode"))).toEqual(["preview"]);
+		expect(screen.queryByRole("alertdialog")).toBeTruthy();
+	});
+
 	it("does not restore when the confirmation is cancelled", async () => {
 		const fetchMock = serve();
 		renderData();
@@ -224,7 +254,7 @@ describe("the Restore backup card", () => {
 		await screen.findByTestId("restore-preview");
 		fireEvent.click(screen.getByTestId("restore-run"));
 		const dialog = await screen.findByRole("alertdialog");
-		fireEvent.click(within(dialog).getAllByRole("button")[0] as HTMLElement);
+		fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(forms(fetchMock).map((form) => form.get("mode"))).toEqual(["preview"]);
 	});
