@@ -350,7 +350,7 @@ function SidebarGroupLabel({
 		props: mergeProps<"div">(
 			{
 				className: cn(
-					"flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-monti-sidebar-foreground/70 ring-monti-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+					"flex h-8 shrink-0 items-center rounded-md px-2 font-mono text-monti-micro uppercase tracking-[0.06em] text-monti-muted-foreground ring-monti-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
 					className,
 				),
 			},
@@ -398,7 +398,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-	"peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-monti-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground focus-visible:ring-2 active:bg-monti-sidebar-accent active:text-monti-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-sidebar-accent data-open:hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+	"peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-monti-body text-monti-sidebar-foreground ring-monti-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground focus-visible:ring-2 active:bg-monti-sidebar-accent active:text-monti-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-sidebar-accent data-open:hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
 	{
 		variants: {
 			variant: {
@@ -407,7 +407,7 @@ const sidebarMenuButtonVariants = cva(
 					"bg-monti-background shadow-[0_0_0_1px_var(--monti-sidebar-border)] hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--monti-sidebar-accent)]",
 			},
 			size: {
-				default: "h-8 text-sm",
+				default: "h-8 text-monti-body",
 				sm: "h-7 text-xs",
 				lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
 			},

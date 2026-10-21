@@ -884,7 +884,7 @@ export const myPlugin = () =>
 		name: "my-plugin",
 		options: {}, // JSON 값. 서버·브라우저가 함께 읽는다
 		blocks: [], // 플러그인이 더하는 본문 블록(`defineBlock`, "본문 블록")
-		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my (`label`은 `(site) => 글`이어도 되며 관리자 언어를 따른다)
+		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바의 페이지: <관리자 경로>/tools/my (`label`은 `(site) => 글`이어도 되며 관리자 언어를 따른다. `group: "writing"`이면 템플릿 옆 글쓰기 묶음에, 기본값 `"site"`이면 접혀 있는 사이트 관리 묶음에 놓인다)
 		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // 플러그인에 필요한 API 키("API 키 저장소")
 		checkConfig: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
 		// 서버 쪽은 한곳에: 서버에서만 읽는 자기 모듈. 기본 내보내기가 `defineServerPlugin({ ... })`이다.

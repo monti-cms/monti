@@ -138,7 +138,7 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has four parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (Templates, one item per plugin page, then API keys, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+The sidebar has five parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Writing** (Templates, then the plugin pages whose `nav` item has `group: "writing"`, such as AI), **Site** (Data, API keys, the Event log, then the other plugin pages, e.g. Git sync; collapsed by default, remembered per browser, and open whenever one of its screens is; while collapsed its header carries the failed-delivery count), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|
@@ -328,7 +328,7 @@ export default defineAdminPlugin({
 });
 ```
 
-A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `useAdminFetch()` (`@monti-cms/admin`): `adminFetch("/v1/<plugin>/<route>", init)` takes the path after `/api/monti` and throws a `CmsApiError` whose `message` is the text to show. The site of the admin gives the language of that text and stops a write from the settings screen's preview. Outside a component, `adminFetch(site, path, init)` takes the site itself:
+A page is a client component and shows as an item of the sidebar's Site group (or Writing, per `group`): the plugin definition's `nav` item (`{ path: "my", label, icon, group }`; `group` is `"writing"` or `"site"`, default `"site"`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `useAdminFetch()` (`@monti-cms/admin`): `adminFetch("/v1/<plugin>/<route>", init)` takes the path after `/api/monti` and throws a `CmsApiError` whose `message` is the text to show. The site of the admin gives the language of that text and stops a write from the settings screen's preview. Outside a component, `adminFetch(site, path, init)` takes the site itself:
 
 ```tsx
 "use client";

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
+import { booleanCodec, usePreference } from "../lib/hooks/use-preference";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { buttonVariants } from "../ui/button";
@@ -46,7 +47,7 @@ import { useAdminFeatures } from "./shared/admin-features";
 import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
 import type { FolderActions } from "./shared/use-folder-actions";
-import { toolsPages } from "./tools/tools-pages";
+import { type ToolsPage, toolsPages } from "./tools/tools-pages";
 
 /** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
 export type AdminNavId =
@@ -378,7 +379,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	);
 }
 
-/** Left navigation area: Content (collections with their folders, media), Tools (templates, plugin pages, API keys, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
+/** Left navigation area: Content (collections with their folders, media), Writing (templates, writing plugin pages), Site (data, API keys, event log, site plugin pages; collapsed by default), Trash, and Settings with the theme toggle pinned at the bottom. */
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, folderCounts }: AdminSidebarProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -471,6 +472,21 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 			<CollectionIcon collection={collection} />,
 		);
 
+	const pages = toolsPages(site);
+	const writingPages = pages.filter((page) => page.group === "writing");
+	const sitePages = pages.filter((page) => page.group === "site");
+	const pageLink = (page: ToolsPage) =>
+		navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />);
+	// The Site group starts collapsed (remembered per browser) but is open whenever the screen shown belongs to it, so the active item is never hidden.
+	const [siteOpenChoice, setSiteOpen] = usePreference("sidebar-site-open", booleanCodec, false);
+	const siteNavIds: AdminNavId[] = [
+		"data",
+		"api-keys",
+		"events",
+		...sitePages.map((page): AdminNavId => `tools:${page.path}`),
+	];
+	const siteOpen = siteOpenChoice || siteNavIds.includes(activeNav);
+
 	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <FileImage />);
 
 	return (
@@ -531,14 +547,45 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					</SidebarGroupContent>
 				</SidebarGroup>
 				<SidebarGroup className="pt-0">
-					<SidebarGroupLabel>{t("sidebar.tools")}</SidebarGroupLabel>
+					<SidebarGroupLabel>{t("sidebar.writing")}</SidebarGroupLabel>
 					<SidebarGroupContent>
-						<SidebarMenu aria-label={t("sidebar.tools")}>
+						<SidebarMenu aria-label={t("sidebar.writing")}>
 							{site.ADMIN_TEMPLATES &&
 								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
-							{toolsPages(site).map((page) =>
-								navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />),
-							)}
+							{writingPages.map(pageLink)}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+				<SidebarGroup className="pt-0">
+					<SidebarGroupLabel
+						render={
+							<button
+								type="button"
+								aria-expanded={siteOpen}
+								aria-controls="monti-sidebar-site"
+								onClick={() => setSiteOpen(!siteOpen)}
+								className="w-full cursor-pointer gap-1 text-left hover:text-monti-foreground"
+							/>
+						}
+					>
+						<ChevronRight aria-hidden className={cn("size-3! transition-transform", siteOpen && "rotate-90")} />
+						<span className="flex-1">{t("sidebar.site")}</span>
+						{!siteOpen && eventsCount ? (
+							<output
+								aria-label={t("sidebar.eventsBadge", { count: eventsCount })}
+								className="text-monti-destructive normal-case tracking-normal"
+							>
+								{eventsCount}
+							</output>
+						) : null}
+					</SidebarGroupLabel>
+					{/* Kept in the icon rail: collapsing only tidies the expanded sidebar. */}
+					<SidebarGroupContent
+						id="monti-sidebar-site"
+						hidden={!siteOpen}
+						className="group-data-[collapsible=icon]:block!"
+					>
+						<SidebarMenu aria-label={t("sidebar.site")}>
 							{navLink(site.adminHref("/data"), "data", t("sidebar.data"), <Database />)}
 							{navLink(site.adminHref("/api-keys"), "api-keys", t("sidebar.apiKeys"), <KeyRound />)}
 							{navLink(
@@ -555,6 +602,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 									</SidebarMenuBadge>
 								) : null,
 							)}
+							{sitePages.map(pageLink)}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
