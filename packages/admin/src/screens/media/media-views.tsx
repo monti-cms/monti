@@ -101,12 +101,14 @@ export function MediaGrid({
 						variant="outline"
 						type="button"
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
-						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
+						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-border bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
 					>
 						<span className="relative flex aspect-square items-center justify-center bg-monti-muted/50 text-monti-muted-foreground hover:text-monti-foreground">
 							<FolderUp className="size-10" aria-hidden />
 						</span>
-						<span className="truncate p-2 font-medium text-monti-muted-foreground text-xs">{ts("list.folderUp")}</span>
+						<span className="truncate p-2 font-medium text-monti-caption text-monti-muted-foreground">
+							{ts("list.folderUp")}
+						</span>
 					</Button>
 				</li>
 			)}
@@ -119,12 +121,12 @@ export function MediaGrid({
 							type="button"
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
+							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-border bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
 						>
 							<span className="relative flex aspect-square items-center justify-center bg-monti-muted/50 text-monti-muted-foreground">
 								<FolderIcon className="size-10 text-monti-muted-foreground" aria-hidden />
 							</span>
-							<span className="truncate p-2 font-medium text-xs">{folder.name}</span>
+							<span className="truncate p-2 font-medium text-monti-caption">{folder.name}</span>
 						</Button>
 						<MoreActionsButton
 							actions={actions}
@@ -145,7 +147,7 @@ export function MediaGrid({
 						onClick={() => onSelect(media)}
 						onKeyDown={deleteKey(media, onDeleteKey)}
 						className={cn(
-							"h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal",
+							"h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-border bg-monti-card p-0 text-left font-normal",
 							selectedId === media.id
 								? cn(OPEN_ITEM, "border-monti-foreground/40 hover:bg-monti-accent")
 								: "hover:border-monti-foreground/30",
@@ -160,11 +162,11 @@ export function MediaGrid({
 									<span className="font-medium text-monti-micro">{fileTypeLabel(media.filename, media.mimeType)}</span>
 								</span>
 							)}
-							<Badge variant="secondary" className="absolute top-1.5 left-1.5 text-monti-micro">
+							<Badge variant="secondary" className="absolute top-1.5 left-1.5 rounded-sm text-monti-micro">
 								{usageLabel(t, media)}
 							</Badge>
 						</span>
-						<span className="truncate p-2 text-xs">{media.filename}</span>
+						<span className="truncate p-2 font-mono text-monti-caption">{media.filename}</span>
 					</Button>
 					<MoreActionsButton
 						actions={menuFor(media)}
@@ -197,7 +199,7 @@ export function MediaTable({
 			aria-label={t("views.table")}
 			containerClassName="overflow-visible"
 			className={cn(
-				"table-fixed text-xs transition-opacity [&_td:first-child]:pl-4 lg:[&_td:first-child]:pl-6 [&_td:last-child]:pr-4 lg:[&_td:last-child]:pr-6 [&_th:first-child]:pl-4 lg:[&_th:first-child]:pl-6 [&_th:last-child]:pr-4 lg:[&_th:last-child]:pr-6",
+				"table-fixed text-monti-caption transition-opacity [&_td:first-child]:pl-8 [&_td:last-child]:pr-8 [&_th:first-child]:pl-8 [&_th:last-child]:pr-8",
 				dimmed && "opacity-60",
 			)}
 		>
@@ -246,7 +248,7 @@ export function MediaTable({
 							}
 						>
 							<TableCell className="py-1.5">
-								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-monti-muted">
+								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border border-monti-border bg-monti-muted">
 									<MediaThumb media={media} iconClassName="size-4" />
 								</span>
 							</TableCell>
@@ -259,7 +261,7 @@ export function MediaTable({
 										onSelect(media);
 									}}
 									onKeyDown={deleteKey(media, onDeleteKey)}
-									className="block w-full truncate text-left font-medium outline-none hover:underline focus-visible:underline"
+									className="block w-full truncate text-left font-medium font-mono outline-none hover:underline focus-visible:underline"
 								>
 									{media.filename}
 								</button>
