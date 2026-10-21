@@ -1,13 +1,23 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import type { RestoreCounts, RestoreNotRestored, RestorePreview, RestoreWarning } from "../../api/restore";
+import { commonMessages } from "../../lib/common.messages";
 import { Alert, AlertDescription } from "../../ui/alert";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "../../ui/alert-dialog";
 import { Button } from "../../ui/button";
 import { Spinner } from "../../ui/spinner";
-import { useConfirm } from "../shared/confirm-dialog";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { restoreMessages } from "./messages";
 import { type RestoreForm, useRestoreBackup } from "./use-restore-backup";
@@ -200,7 +210,8 @@ export function RestoreBackupFields() {
 	const t = useTranslator(restoreMessages);
 	const site = useSite();
 	const form = useRestoreBackup();
-	const { confirm, dialog } = useConfirm();
+	const tc = useTranslator(commonMessages);
+	const [confirming, setConfirming] = useState(false);
 	const input = useRef<HTMLInputElement>(null);
 	const { preview, previewQuery, result } = form;
 	const running = form.isRunning;
@@ -219,17 +230,6 @@ export function RestoreBackupFields() {
 			</div>
 		);
 	}
-
-	const restore = async () => {
-		if (!preview) return;
-		const ok = await confirm({
-			title: t("confirm.title"),
-			description: t("confirm.description", { count: preview.counts.entries }),
-			confirmLabel: t("confirm.confirm"),
-			destructive: true,
-		});
-		if (ok) form.start();
-	};
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -297,7 +297,9 @@ export function RestoreBackupFields() {
 							<Button
 								type="button"
 								disabled={running || !preview.ready}
-								onClick={() => void restore()}
+								onClick={() => {
+									setConfirming(true);
+								}}
 								data-testid="restore-run"
 							>
 								{t("action.restore")}
@@ -311,7 +313,22 @@ export function RestoreBackupFields() {
 			)}
 
 			{result && <ResultView form={form} />}
-			{dialog}
+			<AlertDialog open={confirming} onOpenChange={setConfirming}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("confirm.title")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("confirm.description", { count: preview?.counts.entries ?? 0 })}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
+						<AlertDialogAction type="button" variant="destructive" onClick={() => form.start()}>
+							{t("confirm.confirm")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

@@ -104,6 +104,8 @@ describe("AI Manager UI", () => {
 	let fetchMock: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
+		// The Advanced choice is remembered in the browser; every test starts without one.
+		window.localStorage.clear();
 		actions = structuredClone(SAMPLE_ACTIONS);
 		fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 			if (input === "/api/monti/v1/ai/actions" && !init?.method) {
@@ -217,5 +219,65 @@ describe("AI Manager UI", () => {
 				}),
 			);
 		});
+	});
+
+	const renderManager = () =>
+		render(
+			<SiteWrapper site={testSite}>
+				<AiManager />
+			</SiteWrapper>,
+		);
+
+	it("shows the essentials of an action and keeps the advanced fields behind Advanced", async () => {
+		renderManager();
+		fireEvent.click(await screen.findByText("Suggest slug"));
+
+		expect(await screen.findByRole("button", { name: tManager("test.run") })).toBeInTheDocument();
+		expect(screen.getByLabelText(tManager("field.model"))).toBeInTheDocument();
+		expect(screen.getByText(tManager("about.candidates"))).toBeInTheDocument();
+		expect(screen.queryByLabelText(tManager("field.prompt"))).not.toBeInTheDocument();
+		expect(screen.queryByText(tManager("toggle.ask"))).not.toBeInTheDocument();
+		expect(screen.queryByText(tManager("status.modified"))).not.toBeInTheDocument();
+
+		fireEvent.click(screen.getByTestId("ai-advanced-toggle"));
+		expect(await screen.findByLabelText(tManager("field.prompt"))).toBeInTheDocument();
+		expect(screen.getByText(tManager("toggle.ask"))).toBeInTheDocument();
+		expect(screen.getByText(tManager("field.send"))).toBeInTheDocument();
+		expect(screen.getByText(tManager("field.checks"))).toBeInTheDocument();
+	});
+
+	it("marks an action with an edited instruction as modified and opens Advanced for it", async () => {
+		// The fixture is a fresh clone per test (beforeEach), so replacing the item here touches nothing else.
+		actions[0] = { ...(actions[0] as AiActionView), prompt: "Write a very different slug", overridden: ["prompt"] };
+		renderManager();
+		await screen.findByText("Suggest slug");
+		expect(screen.getAllByText(tManager("status.modified"))).toHaveLength(1);
+
+		fireEvent.click(screen.getByText("Suggest slug"));
+		const prompt = await screen.findByLabelText(tManager("field.prompt"));
+		expect((prompt as HTMLTextAreaElement).value).toBe("Write a very different slug");
+	});
+
+	it("resets an edited instruction to the default", async () => {
+		actions[0] = { ...(actions[0] as AiActionView), prompt: "Write a very different slug" };
+		renderManager();
+		fireEvent.click(await screen.findByText("Suggest slug"));
+		const prompt = (await screen.findByLabelText(tManager("field.prompt"))) as HTMLTextAreaElement;
+
+		fireEvent.click(screen.getByRole("button", { name: tManager("button.reset") }));
+		await waitFor(() => expect(prompt.value).toBe("Generate slug"));
+		expect(screen.queryAllByText(tManager("status.modified")).length).toBeLessThanOrEqual(1);
+	});
+
+	it("remembers that Advanced was opened for the next action", async () => {
+		actions[1] = { ...(actions[1] as AiActionView), hidden: false };
+		renderManager();
+		fireEvent.click(await screen.findByText("Suggest slug"));
+		fireEvent.click(await screen.findByTestId("ai-advanced-toggle"));
+		await screen.findByLabelText(tManager("field.prompt"));
+
+		fireEvent.click(screen.getByText("Write summary"));
+		await screen.findByRole("heading", { name: "Write summary" });
+		expect(await screen.findByLabelText(tManager("field.prompt"))).toBeInTheDocument();
 	});
 });

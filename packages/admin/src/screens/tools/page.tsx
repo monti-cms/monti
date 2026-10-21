@@ -16,7 +16,7 @@ export default async function AdminToolsPage({ cms, server, path }: { cms: Cms; 
 	if (!entry) return server.notFound();
 	const owner = (await loadAdminPlugins(cms.site)).find((plugin) => plugin.name === entry.plugin);
 	return (
-		<ShellPage title={entry.label} nav={`tools:${path}`}>
+		<ShellPage title={entry.label} description={entry.description} nav={`tools:${path}`} large>
 			<PluginToolPage plugin={owner?.plugin} name={entry.plugin} path={path} />
 		</ShellPage>
 	);

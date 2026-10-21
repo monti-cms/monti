@@ -6,6 +6,7 @@
 export { apiKeysKeys } from "./api/api-keys";
 export { commonMessages } from "./lib/common.messages";
 export { useHydratedQuery } from "./lib/hooks/use-hydrated-query";
+export { booleanCodec, usePreference } from "./lib/hooks/use-preference";
 export { isComposingKey } from "./lib/keyboard";
 export { cn } from "./lib/utils/cn";
 export { type ApiKeyChoice, ApiKeyField, choiceReady } from "./screens/api-keys/api-key-field";
@@ -41,6 +42,7 @@ export { Badge } from "./ui/badge";
 export { Button } from "./ui/button";
 export { Panel } from "./ui/card";
 export { Checkbox } from "./ui/checkbox";
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 export { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "./ui/combobox";
 export { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 export {
@@ -55,7 +57,14 @@ export {
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 export { ErrorNoticeView } from "./ui/error-notice";
-export { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldTitle } from "./ui/field";
+export {
+	FormField,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldGroup,
+	FormFieldLabel,
+	FormFieldTitle,
+} from "./ui/field";
 export { IconButton } from "./ui/icon-button";
 export { Input } from "./ui/input";
 export { Label } from "./ui/label";

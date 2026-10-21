@@ -11,6 +11,7 @@ import {
 	EditorFooter,
 	EmptyState,
 	FormField,
+	FormFieldDescription,
 	FormFieldError,
 	FormFieldGroup,
 	FormFieldLabel,
@@ -313,6 +314,7 @@ function ProviderEditor({
 						onChange={(event) => set({ name: event.target.value })}
 						className="h-8 text-xs md:text-xs"
 					/>
+					<FormFieldDescription>{t("field.name.hint")}</FormFieldDescription>
 				</FormField>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.kind}>{t("field.kind")}</FormFieldLabel>
@@ -323,6 +325,7 @@ function ProviderEditor({
 						options={AI_PROVIDER_KINDS.map((kind) => ({ value: kind, label: providerKindLabel(kind) }))}
 						onChange={(kind) => set({ kind: kind as AiProviderKind })}
 					/>
+					<FormFieldDescription>{t("field.kind.hint")}</FormFieldDescription>
 				</FormField>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.url}>{t("field.url")}</FormFieldLabel>
@@ -333,13 +336,17 @@ function ProviderEditor({
 						onChange={(event) => set({ url: event.target.value.trim() })}
 						className="h-8 font-mono text-xs md:text-xs"
 					/>
+					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<ApiKeyField
-					label={t("field.key")}
-					baseName={draft.name.trim() || "API"}
-					value={draft.key}
-					onChange={(key) => set({ key })}
-				/>
+				<div className="flex flex-col gap-1.5">
+					<ApiKeyField
+						label={t("field.key")}
+						baseName={draft.name.trim() || "API"}
+						value={draft.key}
+						onChange={(key) => set({ key })}
+					/>
+					<p className="text-monti-muted-foreground text-xs">{t("field.key.hint")}</p>
+				</div>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.model}>{t("field.model")}</FormFieldLabel>
 					<ModelCombobox
@@ -351,6 +358,7 @@ function ProviderEditor({
 						placeholder={example.model}
 						onChange={(defaultModel) => set({ defaultModel })}
 					/>
+					<FormFieldDescription>{t("field.model.hint")}</FormFieldDescription>
 				</FormField>
 			</FormFieldGroup>
 

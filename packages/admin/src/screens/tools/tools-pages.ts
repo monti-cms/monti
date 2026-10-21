@@ -8,6 +8,8 @@ export interface ToolsPage {
 	readonly path: string;
 	readonly href: string;
 	readonly label: string;
+	/** The line under the page title. */
+	readonly description?: string;
 	/** Icon name (lucide). */
 	readonly icon?: string;
 	readonly group: "writing" | "site";
@@ -22,6 +24,9 @@ export function toolsPages(site: Pick<Site, "adminHref" | "plugins" | "createTra
 				path: item.path.replace(/^\/+|\/+$/g, ""),
 				href: site.adminHref(`/tools/${item.path.replace(/^\/+|\/+$/g, "")}`),
 				label: typeof item.label === "function" ? item.label(site) : item.label,
+				...(item.description
+					? { description: typeof item.description === "function" ? item.description(site) : item.description }
+					: {}),
 				icon: item.icon,
 				group: item.group === "writing" ? "writing" : "site",
 			}),

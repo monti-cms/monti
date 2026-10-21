@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import type { RestoreCounts, RestorePreview, RestoreRun } from "../../../api/restore";
+import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -115,13 +116,18 @@ afterEach(() => {
 });
 
 describe("the Restore backup card", () => {
-	it("sits after Import entries on the Data page", async () => {
+	it("sits after the backup and the import, in a danger zone", async () => {
 		serve();
 		renderData();
+		const backup = await screen.findByTestId("site-backup");
 		const imports = await screen.findByTestId("import-entries");
-		const card = await screen.findByTestId("restore-backup");
-		expect(imports.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(within(card).getByRole("heading", { name: t("title") })).toBeTruthy();
+		const zone = await screen.findByTestId("restore-backup");
+		expect(backup.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(imports.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(within(zone).getByRole("heading", { name: t("danger.title") })).toBeTruthy();
+		expect(zone.className).toContain("border-monti-destructive/40");
+		expect(within(zone).getByTestId("restore-file")).toBeTruthy();
+		expect(imports.id).toBe("import-entries");
 	});
 
 	it("is disabled on a site that is not empty and says it works only on an empty site", async () => {
@@ -224,7 +230,7 @@ describe("the Restore backup card", () => {
 		await screen.findByTestId("restore-preview");
 		fireEvent.click(screen.getByTestId("restore-run"));
 		const dialog = await screen.findByRole("alertdialog");
-		fireEvent.click(within(dialog).getAllByRole("button")[0] as HTMLElement);
+		fireEvent.click(within(dialog).getByRole("button", { name: testSite.createTranslator(commonMessages)("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(forms(fetchMock).map((form) => form.get("mode"))).toEqual(["preview"]);
 	});
