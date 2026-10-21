@@ -399,19 +399,37 @@ describe("SchemaScreen", () => {
 		openTab("fields");
 		await screen.findByTestId("fields-card");
 		const dialog = await openAddField();
-		const kinds = within(dialog)
-			.getAllByRole("radio")
-			.map((radio) => radio.textContent);
-		for (const kind of ["text", "select", "media", "relation"] as const)
-			expect(kinds).toContain(tFields(`kind.${kind}`));
+		for (const kind of ["text", "select", "media", "relation"] as const) {
+			const radio = within(dialog).getByRole("radio", { name: tFields(`kind.${kind}`) });
+			// Each kind is a row with a one-line description.
+			expect(radio.textContent).toContain(tFields(`kind.${kind}.hint`));
+		}
 		for (const kind of ["slug", "conditional", "backlink", "view"] as const)
-			expect(kinds).not.toContain(tFields(`kind.${kind}`));
+			expect(within(dialog).queryByRole("radio", { name: tFields(`kind.${kind}`) })).toBeNull();
 		// Picking another kind swaps the settings below without leaving the dialog.
 		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("kind.select") }));
 		expect(within(dialog).getByText(tFields("options.title"))).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("kind.relation") }));
 		expect(within(dialog).queryByText(tFields("options.title"))).toBeNull();
 		expect(within(dialog).getByTestId("relation-preview")).toBeTruthy();
+	});
+
+	it("adds a field of the picked kind with the settings shown beside the kind list", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		const dialog = await openAddField(tFields("kind.select"));
+		type(within(dialog).getByLabelText(tFields("field.label")), "Mood");
+		type(within(dialog).getByLabelText(tFields("options.label")), "Happy");
+		confirmAdd(dialog);
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
+		expect(await screen.findByTestId("field-mood")).toBeTruthy();
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
+			.collections.post.fields;
+		expect(fields.mood).toEqual({ kind: "select", label: "Mood", options: { first: "Happy" }, defaultValue: "first" });
 	});
 
 	it("offers the SEO plugin's fields on the Fields tab until the collection has them, and adds them to the draft as plain fields", async () => {

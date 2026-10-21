@@ -4,9 +4,8 @@ import { useTranslator } from "@monti-cms/core/site";
 import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
@@ -43,7 +42,7 @@ const KIND_ICONS: Readonly<Record<AddableKind, LucideIcon>> = {
 };
 
 /**
- * Adds a field in one step: picking a kind shows its settings right below, so a wrong pick is fixed by picking another. The identifier follows the label (a
+ * Adds a field in one step: the kinds are a list on the left and the settings of the picked kind sit beside it, so a wrong pick is fixed by picking another. The identifier follows the label (a
  * relation's follows its target, and so does its label) until the writer changes it. `onAdded` gets the name of the new field.
  */
 export function AddFieldDialog({
@@ -142,8 +141,8 @@ export function AddFieldDialog({
 						onChange={(event) => setTypedName(event.target.value)}
 					/>
 				) : (
-					<div className="flex items-center gap-2 text-sm">
-						<code>{name}</code>
+					<div className="flex items-center gap-2 text-monti-label">
+						<code className="font-mono">{name}</code>
 						<Button type="button" variant="link" size="xs" className="h-auto p-0" onClick={() => setIsNaming(true)}>
 							{t("field.identifierChange")}
 						</Button>
@@ -155,9 +154,10 @@ export function AddFieldDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" data-testid="add-field-dialog">
+			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl" data-testid="add-field-dialog">
 				<DialogHeader>
 					<DialogTitle>{t("field.addTitle")}</DialogTitle>
+					<DialogDescription>{t("field.addDescription")}</DialogDescription>
 				</DialogHeader>
 				<form
 					className="flex flex-col gap-6"
@@ -166,48 +166,62 @@ export function AddFieldDialog({
 						add();
 					}}
 				>
-					<div role="radiogroup" aria-label={t("field.kind")} className="grid grid-cols-4 gap-2">
-						{ADDABLE_KINDS.map((item) => {
-							const Icon = KIND_ICONS[item];
-							return (
-								// biome-ignore lint/a11y/useSemanticElements: the kinds are drawn as cards; a native radio cannot be styled as one
-								<button
-									key={item}
-									type="button"
-									role="radio"
-									aria-checked={item === kind}
-									onClick={() => pickKind(item)}
-									className={cn(
-										"flex flex-col items-center gap-1.5 rounded-md border px-2 py-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50",
-										item === kind
-											? "border-monti-primary bg-monti-accent font-medium text-monti-foreground"
-											: "text-monti-muted-foreground hover:bg-monti-muted",
-									)}
+					<div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)]">
+						<div role="radiogroup" aria-label={t("field.kind")} className="flex flex-col gap-1 self-start">
+							{ADDABLE_KINDS.map((item) => {
+								const Icon = KIND_ICONS[item];
+								const nameId = `add-field-kind-${item}`;
+								return (
+									// biome-ignore lint/a11y/useSemanticElements: the kinds are drawn as rows; a native radio cannot be styled as one
+									<button
+										key={item}
+										type="button"
+										role="radio"
+										aria-checked={item === kind}
+										aria-labelledby={nameId}
+										aria-describedby={`${nameId}-hint`}
+										onClick={() => pickKind(item)}
+										className="flex items-start gap-3 rounded-md border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-checked:border-monti-highlight aria-checked:bg-monti-highlight-soft"
+									>
+										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-border bg-monti-background text-monti-muted-foreground">
+											<Icon aria-hidden className="size-4" />
+										</span>
+										<span className="flex min-w-0 flex-col">
+											<span id={nameId} className="font-medium text-monti-body">
+												{t(`kind.${item}`)}
+											</span>
+											<span id={`${nameId}-hint`} className="text-monti-caption text-monti-muted-foreground">
+												{t(`kind.${item}.hint`)}
+											</span>
+										</span>
+									</button>
+								);
+							})}
+						</div>
+						<div className="flex min-w-0 flex-col gap-6 md:border-monti-border md:border-l md:pl-6">
+							{kind !== "relation" && naming}
+							<KindOptions
+								name={name}
+								field={field}
+								editing={draftEditing}
+								set={set}
+								change={change}
+								place={place}
+								opposite={!place.branch && editing.updateFile ? { on: opposite, onChange: setOpposite } : undefined}
+								more={kind === "relation" ? naming : undefined}
+							/>
+							{problems.length > 0 && (
+								<ul
+									className="flex flex-col gap-0.5 text-monti-caption text-monti-muted-foreground"
+									data-testid="new-field-problems"
 								>
-									<Icon aria-hidden className="size-4" />
-									{t(`kind.${item}`)}
-								</button>
-							);
-						})}
+									{problems.map((item) => (
+										<li key={item}>{t(`field.needs.${item}`)}</li>
+									))}
+								</ul>
+							)}
+						</div>
 					</div>
-					{kind !== "relation" && naming}
-					<KindOptions
-						name={name}
-						field={field}
-						editing={draftEditing}
-						set={set}
-						change={change}
-						place={place}
-						opposite={!place.branch && editing.updateFile ? { on: opposite, onChange: setOpposite } : undefined}
-						more={kind === "relation" ? naming : undefined}
-					/>
-					{problems.length > 0 && (
-						<ul className="flex flex-col gap-0.5 text-monti-muted-foreground text-xs" data-testid="new-field-problems">
-							{problems.map((item) => (
-								<li key={item}>{t(`field.needs.${item}`)}</li>
-							))}
-						</ul>
-					)}
 					<DialogFormFooter
 						onCancel={onClose}
 						cancelLabel={tc("cancel")}
