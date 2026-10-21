@@ -78,6 +78,32 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 			links: linkResolverOf(site, storePort),
 		});
 
+	/**
+	 * Prepares the saved draft of an entry for publishing: the write pipeline as a publish runs it, and the notices of the prepared draft (core's and the
+	 * image ones). A publish and a check of a publish share it, so they cannot differ.
+	 */
+	const preparePublish = async (id: string) => {
+		const previousReferences = await storePort.getWorkingReferences({ entryId: id });
+		const working = await storePort.getWorking({ entryId: id });
+		const { snapshot, warnings, transformed } = await pipeline.run({
+			operation: "publish",
+			entryId: id,
+			locale: working.locale ?? site.DEFAULT_LOCALE,
+			input: {
+				collection: working.collection,
+				slug: working.slug,
+				metadata: working.metadata,
+				doc: working.doc,
+			} as ServiceInput,
+			prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
+		});
+		const noticed = [
+			...(snapshot.warnings ?? []),
+			...(options.imageChecks ? await imageWarningsForSnapshot(snapshot, options.imageChecks) : []),
+		];
+		return { snapshot, warnings, transformed, noticed };
+	};
+
 	return {
 		/**
 		 * Creates new content. A record collection is published right away by default (when `publishImmediately` is omitted).
@@ -232,24 +258,7 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 			resetPublishedAt?: boolean;
 			publishedAt?: Date;
 		}): Promise<WriteResult> => {
-			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
-			const working = await storePort.getWorking({ entryId: params.id });
-			const { snapshot, warnings, transformed } = await pipeline.run({
-				operation: "publish",
-				entryId: params.id,
-				locale: working.locale ?? site.DEFAULT_LOCALE,
-				input: {
-					collection: working.collection,
-					slug: working.slug,
-					metadata: working.metadata,
-					doc: working.doc,
-				} as ServiceInput,
-				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
-			});
-			const noticed = [
-				...(snapshot.warnings ?? []),
-				...(options.imageChecks ? await imageWarningsForSnapshot(snapshot, options.imageChecks) : []),
-			];
+			const { snapshot, warnings, transformed, noticed } = await preparePublish(params.id);
 			// Notices found while the targets are locked (a link to an entry that is not published) join the ones found before the transaction.
 			const locked: Issue[] = [];
 			const onWarnings = (found: readonly Issue[]) => locked.push(...found);
@@ -273,6 +282,25 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 						onWarnings,
 					});
 			return { entry, warnings: [...noticed, ...locked, ...warnings] };
+		},
+
+		/**
+		 * What publishing the latest saved draft would find, without publishing: the blocking `issues` and the non-blocking `warnings`, the same ones a
+		 * publish reports (its 422 `issues`, its result `warnings`). Nothing is written or changed; a hook that changes the draft changes nothing here, and
+		 * an entry that cannot be published (trashed, archived) is refused as a publish refuses it.
+		 */
+		checkPublish: async (params: { id: string }): Promise<{ issues: readonly Issue[]; warnings: readonly Issue[] }> => {
+			try {
+				const { snapshot, warnings, noticed } = await preparePublish(params.id);
+				const checked = await storePort.checkPublishEntry({ id: params.id, snapshot });
+				return { issues: checked.issues, warnings: [...noticed, ...checked.warnings, ...warnings] };
+			} catch (error) {
+				// The pipeline refuses a draft its hooks or core preparation reject, as a publish does; the check reports the same issues.
+				if (error instanceof ServiceError && error.issues && error.code === "publish_validation_failed") {
+					return { issues: error.issues, warnings: [] };
+				}
+				throw error;
+			}
 		},
 
 		/**

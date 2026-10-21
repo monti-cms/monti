@@ -8,6 +8,7 @@ import * as rApiKeys from "./v1/api-keys/route";
 import * as rApiKeySlots from "./v1/api-keys/slots/route";
 import * as rBulk from "./v1/bulk/route";
 import * as rEntryArchive from "./v1/entries/[id]/archive/route";
+import * as rEntryCheck from "./v1/entries/[id]/check/route";
 import * as rEntryDuplicate from "./v1/entries/[id]/duplicate/route";
 import * as rEntryPublish from "./v1/entries/[id]/publish/route";
 import * as rEntryRelations from "./v1/entries/[id]/relations/route";
@@ -81,6 +82,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/entries/search", module: rEntrySearch },
 	{ pattern: "v1/entries/[id]", module: rEntry },
 	{ pattern: "v1/entries/[id]/archive", module: rEntryArchive },
+	{ pattern: "v1/entries/[id]/check", module: rEntryCheck },
 	{ pattern: "v1/entries/[id]/duplicate", module: rEntryDuplicate },
 	{ pattern: "v1/entries/[id]/publish", module: rEntryPublish },
 	{ pattern: "v1/entries/[id]/relations", module: rEntryRelations },

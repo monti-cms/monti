@@ -51,7 +51,7 @@ const groupOf = (alias: string) =>
 export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { qSchema, site } = ctx;
 	const db = ctx.db();
-	const { publishWithinTransaction, lockDraftReferenceTargets } = publishing;
+	const { publishWithinTransaction, checkWithinTransaction, lockDraftReferenceTargets } = publishing;
 
 	/**
 	 * Reserves the draft's slug (the rule is `reservationFor`). Releases a previous reservation that was never published.
@@ -407,6 +407,12 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				},
 				{ mapError: mapEntryWriteError },
 			),
+
+		/** What a publish of the saved draft would find (see `EntryStore.checkPublishEntry`). Writes nothing. */
+		checkPublishEntry: async (params: { id: string; snapshot: PreparedSnapshot }) =>
+			withTrx(ctx, async (_trx, client) => checkWithinTransaction(client, params.id, params.snapshot), {
+				mapError: mapEntryWriteError,
+			}),
 
 		slugsInUse: async (params: {
 			collection: string;

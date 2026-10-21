@@ -92,6 +92,14 @@ export interface EntryStore {
 		onWarnings?: (warnings: readonly Issue[]) => void;
 	}): Promise<Entry>;
 	/**
+	 * What a publish of the saved draft would find, without publishing: `issues` are the blockers, `warnings` the notices the checks against
+	 * locked rows found. Runs the same status rule and checks as `publishEntry` and writes nothing, so it needs no version.
+	 */
+	checkPublishEntry(params: {
+		id: string;
+		snapshot: PreparedSnapshot;
+	}): Promise<{ issues: readonly Issue[]; warnings: readonly Issue[] }>;
+	/**
 	 * The entries the addresses of internal body links point to (default language, `/posts/slug`), as translation group ids. An address no entry holds,
 	 * and one held by a trashed entry, is not in the result.
 	 */
