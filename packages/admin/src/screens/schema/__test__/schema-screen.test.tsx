@@ -164,17 +164,17 @@ const review = () =>
 		name: new RegExp(`^(${t("actions.review")}|${t("actions.noChanges")})$`),
 	}) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
-/** Picks the kind in the dialog that adds a field (the last "Kind" box on the screen). */
-async function pickNewFieldKind(optionName: string) {
-	fireEvent.click(screen.getAllByRole("combobox", { name: tFields("field.kind") }).at(-1) as HTMLElement);
-	pressOption(await screen.findByRole("option", { name: optionName }));
-}
-/** Opens the dialog of the "Add field" button and fills the name (and kind). */
-async function startAddingField(name: string, kindName?: string) {
+/** Opens the dialog of the "Add field" button and picks the kind (text when none is given). */
+async function openAddField(kindName?: string) {
 	fireEvent.click(screen.getByRole("button", { name: tFields("field.add") }));
 	const dialog = await screen.findByTestId("add-field-dialog");
-	type(within(dialog).getByLabelText(tFields("field.newName")), name);
-	if (kindName) await pickNewFieldKind(kindName);
+	if (kindName) fireEvent.click(within(dialog).getByRole("radio", { name: kindName }));
+	return dialog;
+}
+/** Opens the dialog, picks the kind and types the label the field is named after. */
+async function startAddingField(label: string, kindName?: string) {
+	const dialog = await openAddField(kindName);
+	type(within(dialog).getByLabelText(tFields("field.label")), label);
 	return dialog;
 }
 const confirmAdd = (dialog: HTMLElement) => fireEvent.click(within(dialog).getByRole("button", { name: tc("add") }));
@@ -377,15 +377,13 @@ describe("SchemaScreen", () => {
 		expect(lastPreview()?.body).toMatchObject({ schema: { collections: { post: { folders: false } } } });
 	});
 
-	it("adds a field in the file's format, after the others, and opens its sheet", async () => {
+	it("adds a field in the file's format, after the others, named after its label", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		confirmAdd(await startAddingField("rating"));
-		const sheet = await screen.findByTestId("field-sheet");
-		expect(within(sheet).getAllByText("rating").length).toBeGreaterThan(0);
-		await applySheet(sheet);
+		confirmAdd(await startAddingField("Rating"));
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
 		expect(await screen.findByTestId("field-rating")).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
@@ -393,6 +391,27 @@ describe("SchemaScreen", () => {
 			.collections.post.fields;
 		expect(Object.keys(fields)).toEqual(["title", "slug", "summary", "status", "rating"]);
 		expect(fields.rating).toEqual({ kind: "text", label: "Rating" });
+	});
+
+	it("offers only the kinds a writer adds by hand, and shows the settings of the picked one at once", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		const dialog = await openAddField();
+		const kinds = within(dialog)
+			.getAllByRole("radio")
+			.map((radio) => radio.textContent);
+		for (const kind of ["text", "select", "media", "relation"] as const)
+			expect(kinds).toContain(tFields(`kind.${kind}`));
+		for (const kind of ["slug", "conditional", "backlink", "view"] as const)
+			expect(kinds).not.toContain(tFields(`kind.${kind}`));
+		// Picking another kind swaps the settings below without leaving the dialog.
+		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("kind.select") }));
+		expect(within(dialog).getByText(tFields("options.title"))).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("kind.relation") }));
+		expect(within(dialog).queryByText(tFields("options.title"))).toBeNull();
+		expect(within(dialog).getByTestId("relation-preview")).toBeTruthy();
 	});
 
 	it("offers the SEO plugin's fields on the Fields tab until the collection has them, and adds them to the draft as plain fields", async () => {
@@ -438,15 +457,20 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByRole("button", { name: addSetName() })).toBeNull();
 	});
 
-	it("refuses a field name that is taken or malformed", async () => {
+	it("names a field so it does not clash, and refuses an identifier that is taken or malformed", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		const dialog = await startAddingField("summary");
-		expect((within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement).disabled).toBe(true);
-		type(within(dialog).getByLabelText(tFields("field.newName")), "1bad");
-		expect((within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement).disabled).toBe(true);
+		const dialog = await startAddingField("Summary");
+		expect(within(dialog).getByText("summary2")).toBeTruthy();
+		const add = within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement;
+		expect(add.disabled).toBe(false);
+		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.identifierChange") }));
+		type(within(dialog).getByLabelText(tFields("field.identifier")), "summary");
+		expect(add.disabled).toBe(true);
+		type(within(dialog).getByLabelText(tFields("field.identifier")), "1bad");
+		expect(add.disabled).toBe(true);
 	});
 
 	it("lists the fields as one tree: kind, required mark and settings per line, the title marked", async () => {
@@ -1339,70 +1363,92 @@ describe("SchemaScreen", () => {
 		});
 	});
 
-	it("adds a conditional field only once its options and a field are set", async () => {
+	it("turns a choice into one with fields per option, added only once an option has a field", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		confirmAdd(await startAddingField("extra", tFields("kind.conditional")));
-
-		const dialog = await screen.findByTestId("new-field-dialog");
-		// Nothing is in the collection yet.
-		expect(screen.queryByTestId("field-extra")).toBeNull();
+		const dialog = await startAddingField("Extra", tFields("kind.select"));
+		fireEvent.click(within(dialog).getByRole("switch", { name: tFields("field.optionFields") }));
 		expect(within(dialog).getByText(tFields("field.needs.branches"))).toBeTruthy();
 		const add = within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement;
 		expect(add.disabled).toBe(true);
 
-		// Add a field to the first option.
-		const inputs = within(dialog).getAllByLabelText(tFields("field.newName"));
-		type(inputs[0] as HTMLElement, "detail");
+		// A field for the first option, added from a dialog of its own.
 		fireEvent.click(within(dialog).getAllByRole("button", { name: tFields("field.add") })[0] as HTMLElement);
+		await waitFor(() => expect(screen.getAllByTestId("add-field-dialog")).toHaveLength(2));
+		const inner = screen.getAllByTestId("add-field-dialog").find((item) => item !== dialog) as HTMLElement;
+		type(within(inner).getByLabelText(tFields("field.label")), "Detail");
+		confirmAdd(inner);
 		await waitFor(() => expect(within(dialog).queryByText(tFields("field.needs.branches"))).toBeNull());
 		expect(add.disabled).toBe(false);
 		fireEvent.click(add);
 
-		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
-		// The field exists, and its sheet is open; the tree lists the option and its field as a branch.
-		await applySheet(await screen.findByTestId("field-sheet"));
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
 		const row = await screen.findByTestId("field-extra");
-		expect(within(row).getByText('= "a"')).toBeTruthy();
+		expect(within(row).getByText('= "first"')).toBeTruthy();
 		expect(within(row).getByTestId("field-detail")).toBeTruthy();
-		expect(within(row).getByText(tFields("fields.noExtra"))).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
 			.collections.post.fields;
-		expect(fields.extra).toMatchObject({ kind: "conditional", values: { a: { detail: { kind: "text" } } } });
+		expect(fields.extra).toMatchObject({
+			kind: "conditional",
+			label: "Extra",
+			discriminant: { kind: "select", options: { first: "First" } },
+			values: { first: { detail: { kind: "text", label: "Detail" } } },
+		});
 	});
 
-	it("adds a relation only once a target collection is chosen, and drops nothing in the file when the dialog is cancelled", async () => {
+	it("adds a link named after its target, and drops nothing in the file when the dialog is cancelled", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		confirmAdd(await startAddingField("related", tFields("kind.relation")));
-
-		const dialog = await screen.findByTestId("new-field-dialog");
+		const dialog = await openAddField(tFields("kind.relation"));
 		expect(within(dialog).getByLabelText(tFields("field.relationTo"))).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
-		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
-		expect(screen.queryByTestId("field-related")).toBeNull();
-		expect(screen.queryByTestId("field-sheet")).toBeNull();
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
+		expect(screen.queryByTestId("field-postId")).toBeNull();
 		expect(review().disabled).toBe(true);
 
-		// Do it again and add it: the first collection is the target.
-		confirmAdd(await startAddingField("related", tFields("kind.relation")));
-		const again = await screen.findByTestId("new-field-dialog");
-		fireEvent.click(within(again).getByRole("button", { name: tc("add") }));
-		await applySheet(await screen.findByTestId("field-sheet"));
-		expect(await screen.findByTestId("field-related")).toBeTruthy();
-		// The tree names the collection it points to.
-		expect(within(screen.getByTestId("field-related")).getByText("→ Post")).toBeTruthy();
+		// Again, and add it: the first collection is the target, and it names the field and its label.
+		confirmAdd(await openAddField(tFields("kind.relation")));
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
+		expect(within(await screen.findByTestId("field-postId")).getByText("→ Post")).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
 			.collections.post.fields;
-		expect(fields.related).toMatchObject({ kind: "relation", to: "post" });
+		expect(fields.postId).toEqual({ kind: "relation", label: "Post", to: "post" });
+	});
+
+	it("links several items, lets the input create them, and shows the link on the target too", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		const dialog = await openAddField(tFields("kind.relation"));
+		fireEvent.click(within(dialog).getByRole("combobox", { name: tFields("field.relationTo") }));
+		pressOption(await screen.findByRole("option", { name: "Tag" }));
+		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("field.many") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.more") }));
+		fireEvent.click(await within(dialog).findByRole("switch", { name: tFields("field.opposite") }));
+		confirmAdd(dialog);
+		await waitFor(() => expect(screen.queryByTestId("add-field-dialog")).toBeNull());
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const collections = (
+			lastPreview()?.body?.schema as { collections: Record<string, { fields: Record<string, Obj> }> }
+		).collections;
+		expect(collections.post?.fields.tagIds).toMatchObject({
+			kind: "relation",
+			label: "Tag",
+			to: "tag",
+			many: true,
+			createInline: true,
+		});
+		expect(collections.tag?.fields.posts).toEqual({ kind: "backlink", label: "Post", from: "post", via: "tagIds" });
 	});
 
 	it("discards the edits after a confirmation", async () => {

@@ -2,7 +2,7 @@
 
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
@@ -408,23 +408,5 @@ export function RowActions({
 				</IconButton>
 			)}
 		</div>
-	);
-}
-
-export function AddButton({
-	children,
-	onClick,
-	disabled: off,
-}: {
-	children: ReactNode;
-	onClick: () => void;
-	disabled?: boolean;
-}) {
-	const { disabled } = useSchemaEdit();
-	return (
-		<Button type="button" variant="outline" size="sm" disabled={disabled || off} onClick={onClick}>
-			<Plus aria-hidden />
-			{children}
-		</Button>
 	);
 }

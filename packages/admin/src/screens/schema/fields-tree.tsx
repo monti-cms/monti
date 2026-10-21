@@ -364,10 +364,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					editing={editing}
 					place={{}}
 					onClose={() => setAdding(false)}
-					onAdded={(name) => {
-						setAdding(false);
-						setSheet({ place: {}, name });
-					}}
+					onAdded={() => setAdding(false)}
 				/>
 			)}
 			{sheet && (
