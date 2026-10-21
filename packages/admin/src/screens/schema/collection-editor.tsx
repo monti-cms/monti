@@ -23,10 +23,12 @@ import {
 	defaultPath,
 	fieldsOf,
 	hasBody,
+	localesOf,
 	type Obj,
 	type Rename,
 	setProp,
 	withBody,
+	withPublicPath,
 } from "./schema-model";
 
 const HEADINGS = [1, 2, 3, 4, 5, 6] as const;
@@ -186,6 +188,7 @@ export function CollectionEditor({
 	onChange,
 	onRemove,
 	onRename,
+	onFileChange,
 }: {
 	name: string;
 	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
@@ -197,10 +200,12 @@ export function CollectionEditor({
 	onChange: (change: (collection: Obj) => Obj) => void;
 	onRemove: () => void;
 	onRename: (rename: Rename) => void;
+	/** Changes the whole file, for an edit that reaches another collection. */
+	onFileChange: (change: (file: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const ts = useTranslator(schemaMessages);
-	const { disabled } = useSchemaEdit();
+	const { disabled, file } = useSchemaEdit();
 	const chosenTab = section ?? "basics";
 	const isEditorAvailable = kindDefaults(collection.kind as CollectionKind | undefined).body && hasBody(collection);
 	// The editor tab only exists for a document collection with a body.
@@ -209,7 +214,7 @@ export function CollectionEditor({
 	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
-	const editing = { collectionName: name, collection, update: onChange, onRename };
+	const editing = { collectionName: name, collection, update: onChange, onRename, updateFile: onFileChange };
 	const label = typeof collection.label === "string" ? collection.label : name;
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
@@ -285,7 +290,9 @@ export function CollectionEditor({
 							<PublicPathField
 								path={typeof collection.path === "string" ? collection.path : ""}
 								suggested={defaultPath(name)}
-								onChange={(value) => set("path", orUndefined(value))}
+								onChange={(value) =>
+									onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+								}
 							/>
 						</div>
 					</Section>

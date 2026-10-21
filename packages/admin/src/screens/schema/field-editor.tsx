@@ -1,19 +1,18 @@
 "use client";
 
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
-import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { ChevronRight, Plus } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
-import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { Input } from "../../ui/input";
+import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
 import { Labeled } from "../shared/labeled";
+import { AddFieldDialog } from "./add-field";
 import {
-	AddButton,
 	countOrUndefined,
 	FlagSwitch,
 	IssueList,
@@ -21,6 +20,7 @@ import {
 	orUndefined,
 	Pick,
 	RowActions,
+	Segmented,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -29,23 +29,18 @@ import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 
 import { schemaFieldsMessages } from "./fields.messages";
 import {
-	addField,
+	ADDABLE_KINDS,
 	addOption,
 	allFieldNames,
+	collectionLabel,
 	FIELD_KEY_ORDER,
-	FIELD_KINDS,
 	type FieldKindName,
 	type FieldPlace,
-	fieldAt,
-	fieldProblems,
 	fieldsOf,
 	hasBody,
 	isObj,
-	KINDS_WITH_SETTINGS,
 	moveField,
 	moveOption,
-	nameProblem,
-	newField,
 	type Obj,
 	optionsOf,
 	type Rename,
@@ -60,8 +55,11 @@ import {
 	setProp,
 	setTitleField,
 	titleFieldName,
-	VALUE_KINDS,
+	type UnpublishedTargets,
+	unpublishedTargetsOf,
 	withKind,
+	withOptionFields,
+	withUnpublishedTargets,
 } from "./schema-model";
 
 export interface CollectionEditing {
@@ -71,6 +69,128 @@ export interface CollectionEditing {
 	readonly update: (change: (collection: Obj) => Obj) => void;
 	/** A field or option was renamed: the review offers it as a rename. */
 	readonly onRename: (rename: Rename) => void;
+	/** Changes the whole file, for an edit that reaches another collection (the other side of a relation). */
+	readonly updateFile?: (change: (file: Obj) => Obj) => void;
+}
+
+/** The kinds a field can be switched to in its editor: the ones offered for a new field, and the kind it has now. */
+export const kindChoices = (kind: FieldKindName): readonly FieldKindName[] =>
+	(ADDABLE_KINDS as readonly FieldKindName[]).includes(kind) ? ADDABLE_KINDS : [...ADDABLE_KINDS, kind];
+
+/** Whether a many relation is also shown on its target, and the switch that changes it. Absent where the other side cannot be edited. */
+export interface OppositeSwitch {
+	readonly on: boolean;
+	readonly onChange: (on: boolean) => void;
+}
+
+/** A few names that stand for the target's entries in the preview of a relation input. */
+const previewOptions = (label: string): RelationOption[] =>
+	[1, 2, 3].map((number) => ({ value: `preview-${number}`, label: `${label} ${number}` }));
+
+/**
+ * The settings of a relation: what it links to and how many, the input as the entry editor will draw it, and the rest under "More". The preview is the real input
+ * with stand-in entries, so a setting shows what it does instead of being described.
+ */
+function RelationOptions({
+	field,
+	set,
+	change,
+	opposite,
+	more,
+}: {
+	field: Obj;
+	set: (key: string, value: unknown) => void;
+	change: (update: (field: Obj) => Obj) => void;
+	opposite?: OppositeSwitch;
+	more?: ReactNode;
+}) {
+	const t = useTranslator(schemaFieldsMessages);
+	const { collectionNames, file } = useSchemaEdit();
+	const target = typeof field.to === "string" ? field.to : "";
+	const many = field.many === true;
+	// Entries made with "Add" in the preview, on top of the stand-ins; they go when the target changes.
+	const [created, setCreated] = useState<RelationOption[]>([]);
+	const [value, setValue] = useState<string[]>([]);
+	const options = [...previewOptions(collectionLabel(file, target)), ...created];
+	return (
+		<div className="flex flex-col gap-5">
+			<Pick
+				label={t("field.relationTo")}
+				value={target}
+				items={collectionNames.map((name) => ({ value: name, label: collectionLabel(file, name) }))}
+				onChange={(next) => {
+					set("to", next);
+					setCreated([]);
+					setValue([]);
+				}}
+			/>
+			<Segmented
+				label={t("field.count")}
+				value={many ? "many" : "one"}
+				items={[
+					{ value: "one", label: t("field.one") },
+					{ value: "many", label: t("field.many") },
+				]}
+				onChange={(next) => {
+					set("many", next === "many" ? true : undefined);
+					setValue((current) => (next === "many" ? current : current.slice(0, 1)));
+				}}
+			/>
+			<div className="flex flex-col gap-2 rounded-md bg-monti-muted/60 p-3" data-testid="relation-preview">
+				<span className="text-monti-muted-foreground text-xs">{t("field.preview")}</span>
+				<span className="font-medium text-sm">{typeof field.label === "string" ? field.label : ""}</span>
+				<RelationCombobox
+					key={`${target}-${many}`}
+					aria-label={t("field.preview")}
+					options={options}
+					multiple={many}
+					value={value}
+					onValueChange={setValue}
+					placeholder={typeof field.placeholder === "string" ? field.placeholder : undefined}
+					onCreate={
+						field.createInline === true
+							? async (label) => {
+									const option = { value: `preview-${label}`, label };
+									setCreated((current) => [...current, option]);
+									return option.value;
+								}
+							: undefined
+					}
+				/>
+			</div>
+			<Collapsible className="flex flex-col gap-5">
+				<CollapsibleTrigger className="group/more flex w-fit items-center gap-1 text-monti-muted-foreground text-sm outline-none hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring">
+					<ChevronRight aria-hidden className="size-4 transition-transform group-data-[panel-open]/more:rotate-90" />
+					{t("field.more")}
+				</CollapsibleTrigger>
+				<CollapsibleContent className="flex flex-col gap-5">
+					<FlagSwitch
+						label={t("field.createInline")}
+						checked={field.createInline === true}
+						onChange={(on) => set("createInline", on ? true : undefined)}
+					/>
+					{many && opposite && (
+						<FlagSwitch label={t("field.opposite")} checked={opposite.on} onChange={opposite.onChange} />
+					)}
+					<Pick
+						label={t("field.unpublished")}
+						value={unpublishedTargetsOf(field)}
+						items={(["hidden", "blocking", "allowed"] as const).map((choice) => ({
+							value: choice,
+							label: t(`field.unpublished.${choice}`),
+						}))}
+						onChange={(choice) => change((current) => withUnpublishedTargets(current, choice as UnpublishedTargets))}
+					/>
+					<TextInput
+						label={t("field.placeholder")}
+						value={field.placeholder as string | undefined}
+						onChange={(text) => set("placeholder", orUndefined(text))}
+					/>
+					{more}
+				</CollapsibleContent>
+			</Collapsible>
+		</div>
+	);
 }
 
 /** The options of a select (or of the select a conditional field shows): value, label, default, order. */
@@ -173,15 +293,31 @@ export function KindOptions({
 	editing,
 	set,
 	change,
+	place = {},
+	opposite,
+	more,
 }: {
 	name: string;
 	field: Obj;
 	editing: CollectionEditing;
 	set: (key: string, value: unknown) => void;
 	change: (update: (field: Obj) => Obj) => void;
+	/** Where the field is: per-option fields exist only at the top level. */
+	place?: FieldPlace;
+	/** The switch that shows a many relation on its target too. */
+	opposite?: OppositeSwitch;
+	/** More settings to put under a relation's "More" (the add dialog's identifier). */
+	more?: ReactNode;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const { collectionNames, file } = useSchemaEdit();
+	const optionFields = !place.branch && (
+		<FlagSwitch
+			label={t("field.optionFields")}
+			checked={field.kind === "conditional"}
+			onChange={(on) => change((current) => withOptionFields(current, on))}
+		/>
+	);
 	const placeholder = (
 		<TextInput
 			label={t("field.placeholder")}
@@ -258,47 +394,14 @@ export function KindOptions({
 			);
 		}
 		case "relation":
+			return <RelationOptions field={field} set={set} change={change} opposite={opposite} more={more} />;
+		case "select":
 			return (
 				<div className="flex flex-col gap-5">
-					<Pick
-						label={t("field.relationTo")}
-						value={typeof field.to === "string" ? field.to : ""}
-						items={collections}
-						onChange={(value) => set("to", value)}
-					/>
-					{placeholder}
-					<FlagSwitch
-						label={t("field.many")}
-						checked={field.many === true}
-						onChange={(on) => set("many", on ? true : undefined)}
-					/>
-					{field.many === true && (
-						<FlagSwitch
-							label={t("field.ordered")}
-							description={t("field.orderedHint")}
-							checked={field.ordered === true}
-							onChange={(on) => set("ordered", on ? true : undefined)}
-						/>
-					)}
-					<FlagSwitch
-						label={t("field.createInline")}
-						checked={field.createInline === true}
-						onChange={(on) => set("createInline", on ? true : undefined)}
-					/>
-					<FlagSwitch
-						label={t("field.publishedOnly")}
-						checked={field.publishedOnly === true}
-						onChange={(on) => set("publishedOnly", on ? true : undefined)}
-					/>
-					<FlagSwitch
-						label={t("field.allowUnpublished")}
-						checked={field.allowUnpublished === true}
-						onChange={(on) => set("allowUnpublished", on ? true : undefined)}
-					/>
+					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
+					{optionFields}
 				</div>
 			);
-		case "select":
-			return <OptionsEditor field={field} fieldName={name} editing={editing} change={change} />;
 		case "media":
 			return (
 				<div className="flex flex-col gap-5">
@@ -359,6 +462,7 @@ export function KindOptions({
 			return (
 				<div className="flex flex-col gap-3">
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
+					{optionFields}
 					<div className="flex flex-col gap-2">
 						{Object.keys(options).map((option) => (
 							<div key={option} className="flex flex-col gap-2 rounded-md border border-dashed p-2">
@@ -369,7 +473,6 @@ export function KindOptions({
 									editing={editing}
 									place={{ branch: { field: name, option } }}
 									fields={values[option] ?? {}}
-									kinds={VALUE_KINDS}
 								/>
 							</div>
 						))}
@@ -407,7 +510,6 @@ export function FieldEditor({
 		: `collections.${editing.collectionName}.fields.${name}`;
 	const issues = useIssuesUnder(path);
 	const kind = String(field.kind) as FieldKindName;
-	const branchKinds = place.branch ? VALUE_KINDS : FIELD_KINDS;
 
 	const change = (update: (field: Obj) => Obj) =>
 		editing.update((collection) => setField(collection, place, name, update));
@@ -493,7 +595,7 @@ export function FieldEditor({
 							description={isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined}
 							value={kind}
 							disabled={isFixed}
-							items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
+							items={kindChoices(kind).map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 							onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
 						/>
 						<TextInput label={t("field.label")} value={label} onChange={(value) => setBoth("label", value)} />
@@ -539,7 +641,7 @@ export function FieldEditor({
 							)}
 						</div>
 					)}
-					<KindOptions name={name} field={field} editing={editing} set={set} change={change} />
+					<KindOptions name={name} field={field} editing={editing} set={set} change={change} place={place} />
 					<details className="rounded-md border border-dashed px-2.5 py-1.5 text-sm">
 						<summary className="cursor-pointer text-monti-muted-foreground text-xs">{t("field.advanced")}</summary>
 						<div className="mt-3 flex flex-col gap-4">
@@ -568,114 +670,20 @@ export function FieldEditor({
 	);
 }
 
-/**
- * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required
- * settings are complete, so there is never a half-made field in the file.
- */
-export function NewFieldDialog({
-	editing,
-	place,
-	name,
-	kind,
-	onClose,
-}: {
-	editing: CollectionEditing;
-	place: FieldPlace;
-	name: string;
-	kind: FieldKindName;
-	onClose: (added: boolean) => void;
-}) {
-	const t = useTranslator(schemaFieldsMessages);
-	const tc = useTranslator(commonMessages);
-	const { collectionNames } = useSchemaEdit();
-	const [draft, setDraft] = useState<Obj>(() =>
-		addField(
-			editing.collection,
-			place,
-			name,
-			newField(kind, name.charAt(0).toUpperCase() + name.slice(1), collectionNames),
-		),
-	);
-	const field = fieldAt(draft, place, name) ?? {};
-	const change = (update: (field: Obj) => Obj) => setDraft((current) => setField(current, place, name, update));
-	const set = (key: string, value: unknown) => change((current) => setProp(current, key, value, FIELD_KEY_ORDER));
-	// Edits inside the dialog (the fields of a branch of a conditional field) go to the copy; renames of a field that is not stored yet need no record.
-	const draftEditing: CollectionEditing = {
-		collectionName: editing.collectionName,
-		collection: draft,
-		update: (apply) => setDraft((current) => apply(current)),
-		onRename: () => undefined,
-	};
-	const problems = fieldProblems(field, draft, collectionNames);
-	return (
-		<Dialog open onOpenChange={(open) => !open && onClose(false)}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl" data-testid="new-field-dialog">
-				<DialogHeader>
-					<DialogTitle>{t("field.newTitle", { kind: t(`kind.${kind}`) })}</DialogTitle>
-					<DialogDescription>{t("field.newDescription", { name })}</DialogDescription>
-				</DialogHeader>
-				<div className="flex flex-col gap-3">
-					<TextInput
-						label={t("field.label")}
-						value={typeof field.label === "string" ? field.label : ""}
-						onChange={(value) =>
-							change((current) => {
-								const next = setProp(current, "label", value, FIELD_KEY_ORDER);
-								return current.kind === "conditional" && isObj(next.discriminant)
-									? { ...next, discriminant: setProp(next.discriminant, "label", value, FIELD_KEY_ORDER) }
-									: next;
-							})
-						}
-					/>
-					<KindOptions name={name} field={field} editing={draftEditing} set={set} change={change} />
-					{problems.length > 0 && (
-						<ul className="flex flex-col gap-0.5 text-monti-muted-foreground text-xs" data-testid="new-field-problems">
-							{problems.map((problem) => (
-								<li key={problem}>{t(`field.needs.${problem}`)}</li>
-							))}
-						</ul>
-					)}
-				</div>
-				<DialogFooter>
-					<Button type="button" variant="outline" onClick={() => onClose(false)}>
-						{tc("cancel")}
-					</Button>
-					<Button
-						type="button"
-						disabled={problems.length > 0}
-						onClick={() => {
-							editing.update(() => draft);
-							onClose(true);
-						}}
-					>
-						{tc("add")}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	);
-}
-
-/** The fields of a collection (or of one branch of a conditional field), each editable, with a row to add one. */
+/** The fields of one branch of a conditional field, each editable, with a button that adds one. */
 export function FieldList({
 	editing,
 	place,
 	fields,
-	kinds,
 }: {
 	editing: CollectionEditing;
 	place: FieldPlace;
 	fields: Record<string, Obj>;
-	kinds: readonly FieldKindName[];
 }) {
 	const t = useTranslator(schemaFieldsMessages);
-	const { collectionNames, disabled } = useSchemaEdit();
+	const { disabled } = useSchemaEdit();
 	const names = Object.keys(fields);
-	const [name, setName] = useState("");
-	const [kind, setKind] = useState<FieldKindName>("text");
-	const [pending, setPending] = useState<{ name: string; kind: FieldKindName } | null>(null);
-	const taken = allFieldNames(editing.collection);
-	const problem = nameProblem(name, taken);
+	const [adding, setAdding] = useState(false);
 	return (
 		<div className="flex flex-col gap-2">
 			{names.length === 0 && <p className="text-monti-muted-foreground text-xs">{t("field.none")}</p>}
@@ -691,57 +699,17 @@ export function FieldList({
 				/>
 			))}
 			{!disabled && (
-				<div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2">
-					<Labeled label={t("field.newName")} className="min-w-36 flex-1">
-						<Input
-							value={name}
-							aria-label={t("field.newName")}
-							placeholder="fieldName"
-							aria-invalid={name !== "" && problem ? true : undefined}
-							onChange={(event) => setName(event.target.value)}
-						/>
-					</Labeled>
-					<Pick
-						label={t("field.kind")}
-						className="w-40"
-						value={kind}
-						items={kinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
-						onChange={(next) => setKind(next as FieldKindName)}
-					/>
-					<AddButton
-						disabled={Boolean(problem)}
-						onClick={() => {
-							if (problem) return;
-							if (KINDS_WITH_SETTINGS.includes(kind)) {
-								setPending({ name, kind });
-								return;
-							}
-							editing.update((collection) =>
-								addField(
-									collection,
-									place,
-									name,
-									newField(kind, name.charAt(0).toUpperCase() + name.slice(1), collectionNames),
-								),
-							);
-							setName("");
-						}}
-					>
-						{t("field.add")}
-					</AddButton>
-				</div>
+				<Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setAdding(true)}>
+					<Plus aria-hidden />
+					{t("field.add")}
+				</Button>
 			)}
-			{pending && (
-				<NewFieldDialog
-					key={pending.name}
+			{adding && (
+				<AddFieldDialog
 					editing={editing}
 					place={place}
-					name={pending.name}
-					kind={pending.kind}
-					onClose={(added) => {
-						setPending(null);
-						if (added) setName("");
-					}}
+					onClose={() => setAdding(false)}
+					onAdded={() => setAdding(false)}
 				/>
 			)}
 		</div>

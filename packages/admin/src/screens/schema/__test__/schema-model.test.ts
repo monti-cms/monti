@@ -26,9 +26,15 @@ import {
 	reorderField,
 	setProp,
 	setTitleField,
+	suggestedFieldName,
 	titleFieldName,
+	unpublishedTargetsOf,
 	withBody,
 	withKind,
+	withOpposite,
+	withOptionFields,
+	withPublicPath,
+	withUnpublishedTargets,
 } from "../schema-model";
 
 const withPath = (): Obj => ({ ...post(), path: "/posts/:slug" });
@@ -306,5 +312,79 @@ describe("collection reordering", () => {
 	it("counts collection order change as one pending change", () => {
 		const reordered = reorderCollections(file(), ["memo", "post", "tag"]);
 		expect(changeCount(file(), reordered)).toBe(1);
+	});
+});
+
+describe("adding a field", () => {
+	it("names a link after its target and any other field after its label, never with a taken name", () => {
+		expect(suggestedFieldName({ kind: "relation", to: "category" }, [])).toBe("categoryId");
+		expect(suggestedFieldName({ kind: "relation", to: "tag", many: true }, [])).toBe("tagIds");
+		expect(suggestedFieldName({ kind: "text", label: "Reading time" }, [])).toBe("readingTime");
+		expect(suggestedFieldName({ kind: "text", label: "읽는 시간" }, [])).toBe("text");
+		expect(suggestedFieldName({ kind: "text", label: "Summary" }, ["summary"])).toBe("summary2");
+		expect(suggestedFieldName({ kind: "conditional", label: "" }, [])).toBe("select");
+	});
+
+	it("keeps whether unpublished targets can be picked and hold back publishing as one choice", () => {
+		for (const choice of ["hidden", "blocking", "allowed"] as const) {
+			expect(unpublishedTargetsOf(withUnpublishedTargets({ kind: "relation", to: "tag" }, choice))).toBe(choice);
+		}
+		// The default writes nothing.
+		expect(withUnpublishedTargets({ kind: "relation", to: "tag", publishedOnly: true }, "blocking")).toEqual({
+			kind: "relation",
+			to: "tag",
+		});
+	});
+
+	it("shows a many link on its target as a backlink, and takes it away again", () => {
+		const start = {
+			collections: {
+				post: { label: "Post", kind: "document", fields: { tagIds: { kind: "relation", to: "tag", many: true } } },
+				tag: { label: "Tag", kind: "item", fields: { title: { kind: "text", label: "Name" } } },
+			},
+		};
+		const shown = withOpposite(start, "post", "tagIds", "tag", true);
+		expect(fieldsOf(collectionsOf(shown).tag as Obj).posts).toEqual({
+			kind: "backlink",
+			label: "Post",
+			from: "post",
+			via: "tagIds",
+		});
+		expect(withOpposite(shown, "post", "tagIds", "tag", true)).toBe(shown);
+		expect(withOpposite(shown, "post", "tagIds", "tag", false)).toEqual(start);
+	});
+
+	it("turns a choice into one with fields per option and back, keeping its options", () => {
+		const select = {
+			kind: "select",
+			label: "Format",
+			required: true,
+			options: { news: "News", guide: "Guide" },
+			defaultValue: "news",
+		};
+		const withFields = withOptionFields(select, true);
+		expect(withFields).toMatchObject({
+			kind: "conditional",
+			label: "Format",
+			discriminant: { kind: "select", label: "Format", required: true, options: select.options, defaultValue: "news" },
+			values: {},
+		});
+		expect(withOptionFields(withFields, false)).toEqual(select);
+	});
+
+	it("brings a slug along with a public address when the collection has none", () => {
+		const item = { kind: "item", fields: { title: { kind: "text", label: "Name" } } };
+		expect(fieldsOf(withPublicPath(item, "/tags/:slug", true)).slug).toEqual({
+			kind: "slug",
+			label: "Slug",
+			required: true,
+			from: "title",
+		});
+		const document = { kind: "document", fields: { title: { kind: "text", label: "Title" } } };
+		expect(fieldsOf(withPublicPath(document, "/posts/:slug", true)).slug?.localized).toBe("inherit");
+		// No address, or a slug already there: only the address changes.
+		expect(withPublicPath(item, undefined, true)).toEqual(item);
+		const withSlug = { ...item, fields: { ...item.fields, key: { kind: "slug", label: "Key", from: "title" } } };
+		expect(Object.keys(fieldsOf(withPublicPath(withSlug, "/tags/:slug", false)))).toEqual(["title", "key"]);
 	});
 });

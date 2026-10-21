@@ -18,17 +18,17 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
-import { type CollectionEditing, KindOptions, LOCALIZED_KINDS } from "./field-editor";
+import { type CollectionEditing, KindOptions, kindChoices, LOCALIZED_KINDS } from "./field-editor";
 import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 import { schemaFieldsMessages } from "./fields.messages";
 import {
 	FIELD_KEY_ORDER,
-	FIELD_KINDS,
 	type FieldKindName,
 	type FieldPlace,
 	fieldAt,
 	isObj,
 	type Obj,
+	oppositeOf,
 	type Rename,
 	removeBlock,
 	removeField,
@@ -36,8 +36,8 @@ import {
 	setProp,
 	setTitleField,
 	titleFieldName,
-	VALUE_KINDS,
 	withKind,
+	withOpposite,
 } from "./schema-model";
 
 /**
@@ -57,7 +57,7 @@ export function FieldSheet({
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const tc = useTranslator(commonMessages);
-	const { disabled, collectionNames } = useSchemaEdit();
+	const { disabled, collectionNames, file } = useSchemaEdit();
 	const [draft, setDraft] = useState<Obj>(editing.collection);
 	// Renames of options made in the copy are recorded for the review only when the copy is applied.
 	const renames = useRef<Rename[]>([]);
@@ -95,10 +95,17 @@ export function FieldSheet({
 	const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
 	const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
 	const blocked = removeBlock(editing.collection, place, name);
-	const branchKinds = place.branch ? VALUE_KINDS : FIELD_KINDS;
+	// Whether the relation shows on its target too, as the file has it and as the switch is now; the target's backlink changes on Apply.
+	const target = typeof field.to === "string" ? field.to : "";
+	const savedOpposite =
+		!place.branch && kind === "relation" && oppositeOf(file, editing.collectionName, name, target) !== undefined;
+	const [opposite, setOpposite] = useState(savedOpposite);
 
 	const apply = () => {
 		editing.update(() => draft);
+		const shown = opposite && field.kind === "relation" && field.many === true;
+		if (shown !== savedOpposite)
+			editing.updateFile?.((current) => withOpposite(current, editing.collectionName, name, target, shown));
 		for (const rename of renames.current) editing.onRename(rename);
 		onClose();
 	};
@@ -154,7 +161,15 @@ export function FieldSheet({
 										onChange={(on) => on && draftEditing.update((collection) => setTitleField(collection, name))}
 									/>
 								)}
-								<KindOptions name={name} field={field} editing={draftEditing} set={set} change={change} />
+								<KindOptions
+									name={name}
+									field={field}
+									editing={draftEditing}
+									set={set}
+									change={change}
+									place={place}
+									opposite={!place.branch && editing.updateFile ? { on: opposite, onChange: setOpposite } : undefined}
+								/>
 							</section>
 							{valueKind && (
 								<section className="flex flex-col gap-5 border-t pt-8">
@@ -195,7 +210,7 @@ export function FieldSheet({
 								}
 								value={kind}
 								disabled={isFixed}
-								items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
+								items={kindChoices(kind).map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 								onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
 							/>
 							{!isSlug && valueKind && (
