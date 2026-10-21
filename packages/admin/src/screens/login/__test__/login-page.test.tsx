@@ -79,3 +79,24 @@ describe("the login screen of the email and password login", () => {
 		expect(container.querySelector("input")).toBeNull();
 	});
 });
+
+describe("the header of the login screen", () => {
+	const github = { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] };
+
+	it("titles the screen with the site name and says it is managed with Monti, on sign-in and on first-admin", async () => {
+		const name = testConfig.site?.name ?? "";
+		expect(name).not.toBe("");
+		for (const cms of [passwordCms(true), passwordCms(false)]) {
+			await show(cms);
+			expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(name);
+			expect(screen.getByText(t("managedWith"))).toBeTruthy();
+			cleanup();
+		}
+	});
+
+	it("falls back to Monti when the site has no name", async () => {
+		const cms = fakeCms({ config: { ...testConfig, site: { ...testConfig.site, name: undefined } }, auth: github });
+		await show(cms as never);
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Monti");
+	});
+});
