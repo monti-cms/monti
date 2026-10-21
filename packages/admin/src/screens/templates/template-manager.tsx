@@ -117,7 +117,7 @@ function TemplateEditPanel({
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
 			className="flex h-full flex-1 flex-col overflow-hidden"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+			<div className="flex flex-wrap items-center justify-between gap-3 border-monti-border border-b px-6 py-3">
 				<Input
 					type="text"
 					aria-label={t("edit.nameLabel")}
@@ -130,12 +130,14 @@ function TemplateEditPanel({
 						handleSave();
 					}}
 					placeholder={t("edit.nameLabel")}
-					className="h-8 min-w-0 max-w-2xl flex-1"
+					className="h-8 min-w-0 max-w-2xl flex-1 rounded-md"
 				/>
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
 			{saveError && (
-				<FormFieldError className="border-b bg-monti-destructive-soft px-6 py-2">{saveError}</FormFieldError>
+				<FormFieldError className="border-monti-border border-b bg-monti-destructive-soft px-6 py-2">
+					{saveError}
+				</FormFieldError>
 			)}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
@@ -245,14 +247,14 @@ export function TemplateManager() {
 	];
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-monti-border border-t">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
 					{t("add")}
 				</Button>
 			</PageActions>
-			{error && <LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-5 mt-3" />}
+			{error && <LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-8 my-3" />}
 			<MasterDetail
 				list={
 					<ListPane

@@ -1,4 +1,5 @@
 import { definePlugin } from "@monti-cms/core";
+import { gitSyncMessages } from "./admin/page.messages";
 import {
 	GIT_SYNC_PLUGIN_NAME,
 	GIT_SYNC_TOKEN_SLOT,
@@ -53,7 +54,14 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 							label: (site) => site.createTranslator(settingsMessages)("webhookLabel"),
 						},
 					],
-					nav: [{ path: "git-sync", label: "Git sync", icon: "git-branch" }],
+					nav: [
+						{
+							path: "git-sync",
+							label: "Git sync",
+							description: (site) => site.createTranslator(gitSyncMessages)("page.description"),
+							icon: "git-branch",
+						},
+					],
 					// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
 					server: () => import("@monti-cms/git-sync/server"),
 					admin: () => import("@monti-cms/git-sync/admin"),

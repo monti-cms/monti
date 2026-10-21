@@ -1,7 +1,7 @@
 import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../../host/server";
 import { requireAdminPage } from "../require-admin";
-import { ShellPage } from "../shared/admin-shell";
+import { AdminShell } from "../shared/admin-shell";
 import { templatesMessages } from "./messages";
 import { TemplateManager } from "./template-manager";
 
@@ -11,8 +11,8 @@ export default async function AdminTemplatesPage({ cms, server }: { cms: Cms; se
 	await requireAdminPage(cms, server);
 	if (!cms.site.ADMIN_TEMPLATES) return server.notFound();
 	return (
-		<ShellPage title={t("title")} nav="templates">
+		<AdminShell title={t("title")} large description={t("description")} sidebar={{ activeNav: "templates" }}>
 			<TemplateManager />
-		</ShellPage>
+		</AdminShell>
 	);
 }

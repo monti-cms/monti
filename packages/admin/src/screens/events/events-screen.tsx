@@ -2,7 +2,7 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
+import { BellRing, RotateCw, SearchX } from "lucide-react";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
@@ -19,10 +19,8 @@ import {
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
-import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { Button } from "../../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Skeleton } from "../../ui/skeleton";
 import { StatusIndicator } from "../../ui/status-indicator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
@@ -47,8 +45,8 @@ const EVENTS_PARAMS = {
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
 
-/** Status column header; its popup filters deliveries by status, like the entries list column headers. */
-function StateHeader({
+/** All / Failed / Pending / Delivered as underline tabs, the same look as the status tabs of the entry list. */
+function FilterTabs({
 	filter,
 	options,
 	onChange,
@@ -58,49 +56,23 @@ function StateHeader({
 	onChange: (next: EventsFilter) => void;
 }) {
 	const t = useTranslator(eventsMessages);
-	const filtered = filter !== "all";
 	return (
-		<Popover>
-			<PopoverTrigger
-				render={
-					<Button
+		<div className="flex min-h-11 shrink-0 items-stretch border-monti-border border-b px-8">
+			<fieldset className="-mb-px flex items-stretch gap-5">
+				<legend className="sr-only">{t("filter.label")}</legend>
+				{options.map((option) => (
+					<button
+						key={option.value}
 						type="button"
-						variant="ghost"
-						size="sm"
-						className={cn(
-							"-ml-2 h-7 gap-1 px-2 font-normal text-monti-muted-foreground text-xs",
-							filtered && "text-monti-foreground",
-						)}
-						aria-label={`${t("column.state")}${filtered ? t("filter.activeSuffix") : ""}`}
-					/>
-				}
-			>
-				{t("column.state")}
-				{filtered ? (
-					<ListFilter aria-hidden className="size-3.5 fill-current" data-filtered="" />
-				) : (
-					<ChevronDown aria-hidden className="size-3.5 opacity-60" />
-				)}
-			</PopoverTrigger>
-			<PopoverContent align="start" className="w-56 p-3">
-				<fieldset className="flex flex-col gap-1">
-					<legend className="sr-only">{t("filter.label")}</legend>
-					{options.map((option) => (
-						<Button
-							key={option.value}
-							type="button"
-							variant={filter === option.value ? "secondary" : "ghost"}
-							size="sm"
-							aria-pressed={filter === option.value}
-							className="justify-start"
-							onClick={() => onChange(option.value)}
-						>
-							{option.label}
-						</Button>
-					))}
-				</fieldset>
-			</PopoverContent>
-		</Popover>
+						aria-pressed={filter === option.value}
+						className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
+						onClick={() => onChange(option.value)}
+					>
+						{option.label}
+					</button>
+				))}
+			</fieldset>
+		</div>
 	);
 }
 
@@ -174,10 +146,11 @@ export function EventsScreen() {
 					</Button>
 				</PageActions>
 			)}
-			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-5 mt-3" />}
+			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
+			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-8 mt-3" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
-					<div className="space-y-2 p-5" aria-hidden>
+					<div className="space-y-2 px-8 py-5" aria-hidden>
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
@@ -195,12 +168,13 @@ export function EventsScreen() {
 						/>
 					))
 				) : (
-					<Table aria-label={t("list.label")}>
+					<Table
+						aria-label={t("list.label")}
+						className="[&_td:first-child]:pl-8 [&_td:last-child]:pr-8 [&_th:first-child]:pl-8 [&_th:last-child]:pr-8"
+					>
 						<TableHeader>
 							<TableRow>
-								<TableHead>
-									<StateHeader filter={filter} options={filterOptions} onChange={changeFilter} />
-								</TableHead>
+								<TableHead>{t("column.state")}</TableHead>
 								<TableHead>{t("column.when")}</TableHead>
 								<TableHead>{t("column.subscriber")}</TableHead>
 								<TableHead>{t("column.kind")}</TableHead>
@@ -224,11 +198,11 @@ export function EventsScreen() {
 											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
 										</TableCell>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
-										<TableCell>{item.subscriber ?? ""}</TableCell>
+										<TableCell className="font-mono text-monti-caption">{item.subscriber ?? ""}</TableCell>
 										<TableCell>
 											<button
 												type="button"
-												className="text-left underline-offset-2 hover:underline"
+												className="text-left font-mono text-monti-caption underline-offset-2 hover:underline"
 												aria-label={t("detail.open", {
 													kind: t(`kind.${change.kind}`),
 													entry: eventEntryLabel(change),
@@ -242,7 +216,9 @@ export function EventsScreen() {
 											</button>
 										</TableCell>
 										<TableCell>
-											<span className="text-monti-muted-foreground">{change.collection} </span>
+											<span className="font-mono text-monti-caption text-monti-muted-foreground">
+												{change.collection}{" "}
+											</span>
 											{change.kind === "deleted" ? (
 												<span>{eventEntryLabel(change)}</span>
 											) : (

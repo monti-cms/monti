@@ -7,6 +7,7 @@ import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
+import { MediaNotConfigured } from "../media-not-configured";
 import { mediaMessages } from "../messages";
 
 const t = testSite.createTranslator(mediaMessages);
@@ -387,5 +388,17 @@ describe("media library", () => {
 			await waitFor(() => expect(emptyTitle()).toBe(t("library.emptyYet")));
 			expect((screen.getByRole("searchbox", { name: t("library.search") }) as HTMLInputElement).value).toBe("");
 		});
+	});
+});
+
+describe("media library without storage", () => {
+	it("shows what is missing and the next step", async () => {
+		createTestRouter().render(
+			<AdminQueryProvider>
+				<MediaNotConfigured />
+			</AdminQueryProvider>,
+		);
+		expect(await screen.findByRole("heading", { name: t("title") })).toBeTruthy();
+		expect(screen.getByText(t("notConfigured.hint"))).toBeTruthy();
 	});
 });

@@ -88,7 +88,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 					type="button"
 					size="sm"
 					variant="outline"
-					className="h-7 flex-1 text-xs"
+					className="h-7 flex-1 text-monti-label"
 					disabled={context.disabled || !media}
 					title={media ? undefined : mediaNotConfiguredMessage(site)}
 					aria-invalid={invalid || undefined}
@@ -102,7 +102,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 						type="button"
 						size="sm"
 						variant="ghost"
-						className="h-7 text-xs"
+						className="h-7 text-monti-label"
 						disabled={context.disabled}
 						onClick={() => onChange("")}
 					>
@@ -165,7 +165,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 		<>
 			<div className="flex items-center gap-1.5">
 				{mediaId && (
-					<span className="flex min-w-0 flex-1 items-center gap-1 text-xs">
+					<span className="flex min-w-0 flex-1 items-center gap-1 text-monti-caption">
 						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted-foreground" />
 						<span className="truncate">{filename ?? mediaId}</span>
 					</span>
@@ -175,7 +175,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 					type="button"
 					size="sm"
 					variant="outline"
-					className={cn("h-7 text-xs", !mediaId && "flex-1")}
+					className={cn("h-7 text-monti-label", !mediaId && "flex-1")}
 					disabled={context.disabled || progress !== null || !media}
 					title={media ? undefined : mediaNotConfiguredMessage(site)}
 					aria-invalid={invalid || undefined}
@@ -189,7 +189,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 						type="button"
 						size="sm"
 						variant="ghost"
-						className="h-7 text-xs"
+						className="h-7 text-monti-label"
 						disabled={context.disabled}
 						onClick={() => onChange("")}
 					>

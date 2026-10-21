@@ -205,7 +205,7 @@ export function RelationCombobox({
 							aria-invalid={invalid || undefined}
 							aria-describedby={describedBy}
 							placeholder={selected.length === 0 || !showChips ? placeholder : undefined}
-							className="text-xs"
+							className="text-monti-caption"
 						/>
 					</ComboboxChips>
 					{list}
@@ -238,7 +238,7 @@ export function RelationCombobox({
 					placeholder={placeholder}
 					showClear={selected.length > 0}
 					disabled={disabled || isCreating}
-					className="h-8 w-full text-xs [&_input]:text-xs"
+					className="h-8 w-full rounded-md text-monti-label [&_input]:text-monti-label"
 				/>
 				{list}
 			</Combobox>

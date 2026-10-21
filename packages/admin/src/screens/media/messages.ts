@@ -4,6 +4,8 @@ import { defineMessages } from "@monti-cms/core";
 export const mediaMessages = defineMessages("cms-admin.media", {
 	en: {
 		title: "Media",
+		description: "The images and files you use in your content.",
+		"notConfigured.hint": "Add a storage adapter as `storage` in monti.config.ts, then upload images and files here.",
 		"usage.note.beforePublish": "Before publishing",
 		"usage.note.publishedOnly": "Published content only",
 		"usage.deleting": "Deleting",
@@ -81,6 +83,7 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"detail.folder.none": "Top level (unfiled)",
 		"detail.row.uploadedAt": "Uploaded",
 		"detail.row.id": "Media ID",
+		"detail.row.url": "Address",
 		"detail.section.defaults": "Default text",
 		"detail.defaultsHelp":
 			"These values are copied when you insert the image into a body. Bodies already written don't change.",
@@ -93,6 +96,9 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 	},
 	ko: {
 		title: "미디어",
+		description: "콘텐츠에 쓰는 이미지와 파일입니다.",
+		"notConfigured.hint":
+			"monti.config.ts의 `storage`에 저장소 어댑터를 추가하면 여기서 이미지와 파일을 올릴 수 있습니다.",
 		"usage.note.beforePublish": "발행 전",
 		"usage.note.publishedOnly": "공개 콘텐츠에만",
 		"usage.deleting": "삭제 중",
@@ -170,6 +176,7 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"detail.folder.none": "최상위 (미분류)",
 		"detail.row.uploadedAt": "올린 날짜",
 		"detail.row.id": "미디어 ID",
+		"detail.row.url": "주소",
 		"detail.section.defaults": "기본 설명",
 		"detail.defaultsHelp": "본문에 넣을 때 복사되는 값입니다. 이미 쓴 본문은 바뀌지 않습니다.",
 		"detail.defaultAlt": "기본 대체 텍스트",

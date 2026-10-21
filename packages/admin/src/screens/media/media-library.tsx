@@ -427,6 +427,8 @@ export function MediaLibrary() {
 		<AdminShell
 			title={`${t("title")}${folderTitle}`}
 			count={mediaQuery.data ? total : undefined}
+			large
+			description={t("description")}
 			sidebar={{
 				activeNav: "media",
 				folderNav: {
@@ -441,7 +443,7 @@ export function MediaLibrary() {
 		>
 			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
-					<Label className="font-normal text-monti-muted-foreground text-xs">
+					<Label className="font-normal text-monti-caption text-monti-muted-foreground">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>
@@ -476,72 +478,71 @@ export function MediaLibrary() {
 					</IconButton>
 				</div>
 			</PageActions>
-			<div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6">
-				<Input
-					type="search"
-					aria-label={t("library.search")}
-					value={searchText}
-					placeholder={t("library.search")}
-					onChange={(event) => setSearchText(event.target.value)}
-					className="h-8 w-56"
-				/>
-				<Select
-					value={kind}
-					items={kindOptions(t)}
-					onValueChange={(value) => value && update({ kind: value as typeof kind })}
-				>
-					<SelectTrigger size="sm" aria-label={t("library.kindLabel")}>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{kindOptions(t).map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Select
-					value={used}
-					items={usedOptions(t)}
-					onValueChange={(value) => value && update({ used: value as typeof used })}
-				>
-					<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{usedOptions(t).map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<DateRangePicker
-					label={t("library.uploadedDate")}
-					from={uploadedFrom}
-					to={uploadedTo}
-					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
-				/>
-				<ToggleGroup
-					aria-label={t("library.view")}
-					variant="outline"
-					size="sm"
-					spacing={0}
-					value={[view]}
-					onValueChange={(next: unknown[]) => {
-						const picked = next[0];
-						if (picked === "grid" || picked === "list") setView(picked);
-					}}
-					className="ml-auto"
-				>
-					<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
-						<LayoutGrid aria-hidden />
-					</ToggleGroupItem>
-					<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
-						<List aria-hidden />
-					</ToggleGroupItem>
-				</ToggleGroup>
+			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-4 border-monti-border border-b px-8">
+				<fieldset className="-mb-px flex items-stretch gap-5">
+					<legend className="sr-only">{t("library.kindLabel")}</legend>
+					{kindOptions(t).map((option) => (
+						<button
+							key={option.value}
+							type="button"
+							aria-pressed={kind === option.value}
+							className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
+							onClick={() => update({ kind: option.value as typeof kind })}
+						>
+							{option.label}
+						</button>
+					))}
+				</fieldset>
+				<div className="ml-auto flex flex-wrap items-center gap-2 py-1.5">
+					<Input
+						type="search"
+						aria-label={t("library.search")}
+						value={searchText}
+						placeholder={t("library.search")}
+						onChange={(event) => setSearchText(event.target.value)}
+						className="h-8 w-56 rounded-md"
+					/>
+					<Select
+						value={used}
+						items={usedOptions(t)}
+						onValueChange={(value) => value && update({ used: value as typeof used })}
+					>
+						<SelectTrigger size="sm" aria-label={t("library.usedLabel")} className="rounded-md">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{usedOptions(t).map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<DateRangePicker
+						label={t("library.uploadedDate")}
+						from={uploadedFrom}
+						to={uploadedTo}
+						onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
+					/>
+					<ToggleGroup
+						aria-label={t("library.view")}
+						variant="outline"
+						size="sm"
+						spacing={0}
+						value={[view]}
+						onValueChange={(next: unknown[]) => {
+							const picked = next[0];
+							if (picked === "grid" || picked === "list") setView(picked);
+						}}
+					>
+						<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
+							<LayoutGrid aria-hidden />
+						</ToggleGroupItem>
+						<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
+							<List aria-hidden />
+						</ToggleGroupItem>
+					</ToggleGroup>
+				</div>
 			</div>
 
 			<div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -549,7 +550,7 @@ export function MediaLibrary() {
 					<div
 						className={cn(
 							"flex min-h-0 flex-1 flex-col overflow-y-auto",
-							(items.length === 0 && !hasFolders) || view === "grid" ? "p-4 lg:p-6" : "p-0",
+							(items.length === 0 && !hasFolders) || view === "grid" ? "px-8 py-5" : "p-0",
 						)}
 					>
 						{loadError && (
@@ -565,7 +566,7 @@ export function MediaLibrary() {
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>
-											<Skeleton className="aspect-square w-full rounded-lg" />
+											<Skeleton className="aspect-square w-full rounded-md" />
 										</li>
 									))}
 								</ul>

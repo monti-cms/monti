@@ -68,7 +68,7 @@ export interface FieldInputProps {
 	onChange: (value: FormValue) => void;
 }
 
-export const inputClass = "h-8 text-xs md:text-xs";
+export const inputClass = "h-8 rounded-md text-monti-label md:text-monti-label";
 
 /** Row count of a multi-line text input (`rows`, 2 if absent) and the minimum height that shows that many rows (text lines + vertical padding). */
 export function multilineProps(field: { readonly rows?: number }): { rows: number; style: { minHeight: string } } {
@@ -167,7 +167,7 @@ function SortableEntryRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"flex items-center gap-1 rounded-md border bg-monti-background px-1 py-1 text-xs",
+				"flex items-center gap-1 rounded-md border border-monti-border bg-monti-background px-1 py-1 text-monti-caption",
 				isDragging && "relative z-10 shadow-monti-pop",
 			)}
 		>
@@ -271,7 +271,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			/>
 			<SearchError failed={search.error} />
 			{ids.length === 0 ? (
-				<p className="text-monti-muted-foreground text-xs">{t("entry.empty", { target })}</p>
+				<p className="text-monti-caption text-monti-muted-foreground">{t("entry.empty", { target })}</p>
 			) : (
 				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
 					<SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
@@ -487,7 +487,11 @@ export function BacklinkInput({
 	};
 
 	if (!targetId) {
-		return <p className="text-monti-muted-foreground text-xs">{t("backlink.saveDraft", { label: field.label })}</p>;
+		return (
+			<p className="text-monti-caption text-monti-muted-foreground">
+				{t("backlink.saveDraft", { label: field.label })}
+			</p>
+		);
 	}
 
 	const shown = optimistic ?? serverIds;

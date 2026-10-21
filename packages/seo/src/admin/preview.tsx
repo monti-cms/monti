@@ -71,10 +71,15 @@ export function SeoPreview({
 						.filter(Boolean)
 						.map((part) => ` › ${decodeURIComponent(part)}`)}
 				</p>
-				<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-sm leading-snug">
+				<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-monti-body leading-snug">
 					{title || tc("untitled")}
 				</p>
-				<p className={cn("line-clamp-2 text-xs leading-relaxed", !description && "text-monti-muted-foreground italic")}>
+				<p
+					className={cn(
+						"line-clamp-2 text-monti-caption leading-relaxed",
+						!description && "text-monti-muted-foreground italic",
+					)}
+				>
 					{description || t("preview.noDescription")}
 				</p>
 				{noindex && (
@@ -87,9 +92,11 @@ export function SeoPreview({
 					{imageId && <MediaThumbnail mediaId={imageId} className="aspect-[1.91/1] w-full border-b" />}
 					<div className="space-y-0.5 p-3">
 						<p className="truncate text-monti-caption text-monti-muted-foreground">{site.SITE_NAME}</p>
-						<p className="line-clamp-2 font-medium text-sm leading-snug">{title || tc("untitled")}</p>
+						<p className="line-clamp-2 font-medium text-monti-body leading-snug">{title || tc("untitled")}</p>
 						{description && (
-							<p className="line-clamp-2 text-monti-muted-foreground text-xs leading-relaxed">{description}</p>
+							<p className="line-clamp-2 text-monti-caption text-monti-muted-foreground leading-relaxed">
+								{description}
+							</p>
 						)}
 					</div>
 				</Panel>

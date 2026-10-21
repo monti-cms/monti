@@ -1,7 +1,7 @@
 import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../../host/server";
 import { requireAdminPage } from "../require-admin";
-import { ShellPage } from "../shared/admin-shell";
+import { AdminShell } from "../shared/admin-shell";
 import { ApiKeysSettings } from "./api-keys-settings";
 import { apiKeysMessages } from "./messages";
 
@@ -10,8 +10,8 @@ export default async function AdminApiKeysPage({ cms, server }: { cms: Cms; serv
 	const t = cms.site.createTranslator(apiKeysMessages);
 	await requireAdminPage(cms, server);
 	return (
-		<ShellPage title={t("title")} nav="api-keys">
+		<AdminShell title={t("title")} large description={t("description")} sidebar={{ activeNav: "api-keys" }}>
 			<ApiKeysSettings />
-		</ShellPage>
+		</AdminShell>
 	);
 }

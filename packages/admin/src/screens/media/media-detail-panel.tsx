@@ -36,8 +36,8 @@ import { mediaMessages } from "./messages";
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="space-y-3 border-t px-4 py-4">
-			<h3 className="font-medium text-monti-caption text-monti-muted-foreground uppercase tracking-wide">{title}</h3>
+		<section className="space-y-3 border-monti-border border-t px-4 py-4">
+			<h3 className="font-medium text-monti-label">{title}</h3>
 			{children}
 		</section>
 	);
@@ -180,13 +180,16 @@ export function MediaDetailPanel({
 	return (
 		<aside
 			aria-label={t("detail.label")}
-			className={cn("flex h-full flex-col border-l bg-monti-background text-xs", className)}
+			className={cn(
+				"flex h-full flex-col border-monti-border border-l bg-monti-background text-monti-label",
+				className,
+			)}
 		>
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="space-y-3 p-4">
-					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border bg-monti-muted/50">
+					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-border bg-monti-muted/50">
 						{isImage && media.publicUrl ? (
 							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
 						) : (
@@ -266,7 +269,7 @@ export function MediaDetailPanel({
 													setStem(event.target.value);
 													setRenameError(null);
 												}}
-												className="h-8 min-w-0 flex-1 text-xs md:text-xs"
+												className="h-8 min-w-0 flex-1 rounded-md font-mono text-monti-label md:text-monti-label"
 											/>
 											{extension && (
 												<span
@@ -327,7 +330,7 @@ export function MediaDetailPanel({
 										void onMoveFolder(nextId).finally(() => setMovingFolder(false));
 									}}
 								>
-									<SelectTrigger className="h-8 text-xs">
+									<SelectTrigger className="h-8 rounded-md text-monti-label">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -340,9 +343,14 @@ export function MediaDetailPanel({
 								</Select>
 							</Row>
 						)}
+						{media.publicUrl && (
+							<Row label={t("detail.row.url")}>
+								<code className="font-mono text-monti-caption">{media.publicUrl}</code>
+							</Row>
+						)}
 						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(site, media.createdAt)}</Row>
 						<Row label={t("detail.row.id")}>
-							<code className="text-monti-caption">{media.id}</code>
+							<code className="font-mono text-monti-caption">{media.id}</code>
 						</Row>
 					</dl>
 				</Section>
@@ -370,7 +378,7 @@ export function MediaDetailPanel({
 											value={draft.alt}
 											disabled={isSaving}
 											onChange={(event) => setDraft({ alt: event.target.value })}
-											className="min-h-14 text-xs md:text-xs"
+											className="min-h-14 rounded-md text-monti-label md:text-monti-label"
 										/>
 										{panel}
 									</FormField>
@@ -392,7 +400,7 @@ export function MediaDetailPanel({
 											value={draft.caption}
 											disabled={isSaving}
 											onChange={(event) => setDraft({ caption: event.target.value })}
-											className="min-h-14 text-xs md:text-xs"
+											className="min-h-14 rounded-md text-monti-label md:text-monti-label"
 										/>
 										{panel}
 									</FormField>
@@ -422,7 +430,7 @@ export function MediaDetailPanel({
 									>
 										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
 										{usage.note && (
-											<span className="shrink-0 text-monti-muted-foreground text-xs">
+											<span className="shrink-0 text-monti-caption text-monti-muted-foreground">
 												{usageNoteLabel(t, usage.note)}
 											</span>
 										)}
@@ -434,7 +442,7 @@ export function MediaDetailPanel({
 				</Section>
 			</div>
 
-			<div className="shrink-0 space-y-1.5 border-t px-4 py-3">
+			<div className="shrink-0 space-y-1.5 border-monti-border border-t px-4 py-3">
 				<Button
 					type="button"
 					variant="destructive"

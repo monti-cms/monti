@@ -220,8 +220,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 		await screen.findByText("search-index");
 
-		fireEvent.click(screen.getByRole("button", { name: t("column.state") }));
-		fireEvent.click(await screen.findByRole("button", { name: t("filter.failed") }));
+		fireEvent.click(screen.getByRole("button", { name: t("filter.failed") }));
 		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeTruthy();
 		expect(requested().at(-1)?.sort()).toEqual(["dead", "failed"]);
 
@@ -230,18 +229,20 @@ describe("EventsScreen", () => {
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
 	});
 
-	it("shows the status as the first column and marks the header once filtered", async () => {
+	it("shows the status as the first column and marks the picked status tab", async () => {
 		renderScreen();
 		const row = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
 
 		const headers = screen.getAllByRole("columnheader");
-		expect(within(headers[0] as HTMLElement).getByRole("button", { name: t("column.state") })).toBeTruthy();
+		expect(headers[0]?.textContent).toBe(t("column.state"));
 		expect(within(row).getAllByRole("cell")[0]?.textContent).toBe(t("state.failed"));
-		expect(screen.queryByRole("combobox", { name: t("filter.label") })).toBeNull();
+		expect(screen.getByRole("button", { name: t("filter.all") }).getAttribute("aria-pressed")).toBe("true");
 
-		fireEvent.click(screen.getByRole("button", { name: t("column.state") }));
-		fireEvent.click(await screen.findByRole("button", { name: t("filter.delivered") }));
-		expect(await screen.findByRole("button", { name: `${t("column.state")}${t("filter.activeSuffix")}` })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: t("filter.delivered") }));
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: t("filter.delivered") }).getAttribute("aria-pressed")).toBe("true"),
+		);
+		expect(screen.getByRole("button", { name: t("filter.all") }).getAttribute("aria-pressed")).toBe("false");
 	});
 
 	it("pages through the events", async () => {

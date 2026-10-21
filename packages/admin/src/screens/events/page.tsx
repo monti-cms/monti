@@ -1,7 +1,7 @@
 import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../../host/server";
 import { requireAdminPage } from "../require-admin";
-import { ShellPage } from "../shared/admin-shell";
+import { AdminShell } from "../shared/admin-shell";
 import { EventsScreen } from "./events-screen";
 import { eventsMessages } from "./messages";
 
@@ -10,8 +10,8 @@ export default async function AdminEventsPage({ cms, server }: { cms: Cms; serve
 	const t = cms.site.createTranslator(eventsMessages);
 	await requireAdminPage(cms, server);
 	return (
-		<ShellPage title={t("title")} nav="events">
+		<AdminShell title={t("title")} large description={t("description")} sidebar={{ activeNav: "events" }}>
 			<EventsScreen />
-		</ShellPage>
+		</AdminShell>
 	);
 }
