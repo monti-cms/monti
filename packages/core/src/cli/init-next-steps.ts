@@ -2,6 +2,7 @@ import { isLocalUrl } from "../config/rules";
 import type { InitAnswers } from "./init-answers";
 import type { PackageManager } from "./init-detect";
 import { ADMIN_PEER_PACKAGES, addCommand, commandText, exec, script } from "./init-install";
+import { manualSetupSteps } from "./init-setup";
 import type { InstallCommand } from "./init-types";
 import { githubCallbackUrl } from "./templates";
 
@@ -21,6 +22,8 @@ export interface NextStepsInput {
 	readonly willInstall: boolean;
 	/** Steps for the files init could not edit safely. */
 	readonly manual: readonly string[];
+	/** The machine steps (`.env.local`, the database, the doctor): `ran` when init did them, and then what is left of them. Otherwise the person does them. */
+	readonly setup: { readonly ran: boolean; readonly leftover: readonly string[] };
 }
 
 /** What is left to do after init, in order. */
@@ -48,21 +51,10 @@ export function nextSteps(input: NextStepsInput): string[] {
 		);
 	}
 	todo.push(...input.manual);
-	todo.push(
-		[
-			"Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
-			"cp .env.example .env.local",
-			"MONTI_SECRET is a long random value. Generate one with:",
-			"openssl rand -base64 32",
-			"or, without openssl:",
-			`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`,
-		].join("\n"),
-	);
-	todo.push(
-		`Create Monti's tables in your database (once): ${exec(manager, "db:setup")}`,
-		`Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`,
-		`Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`,
-	);
+	// Init did the machine steps (its list holds what did not work), or it did not and the person does all three.
+	if (input.setup.ran) todo.push(...input.setup.leftover);
+	else todo.push(...manualSetupSteps(manager));
+	todo.push(`Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
 	if (answers.gitSync) {
 		todo.push(
 			`Name the repo to sync: add a target to gitSync() in ${input.configFile}, then open ${answers.adminPath}/tools/git-sync to save the GitHub token.`,

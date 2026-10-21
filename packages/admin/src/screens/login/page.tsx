@@ -61,12 +61,18 @@ export default async function AdminLoginPage({
 	// With a single login method, use its name in the guidance text (e.g. "GitHub admin account").
 	const provider = providers.length === 1 ? (providers[0]?.name ?? "") : "";
 
+	const siteName = site.config.site?.name?.trim() || "Monti";
+
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center p-4">
+		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+			<header className="flex flex-col items-center gap-1 text-center">
+				<h1 className="font-semibold text-monti-foreground text-monti-heading tracking-tight">{siteName}</h1>
+				<p className="text-monti-caption text-monti-muted-foreground">{t("managedWith")}</p>
+			</header>
 			<Card className="w-full max-w-sm">
 				<CardHeader className="text-center">
-					<CardTitle className="text-2xl">{firstAdmin ? t("firstAdminTitle") : t("title")}</CardTitle>
-					<CardDescription>
+					{firstAdmin ? <CardTitle className="text-monti-title">{t("firstAdminTitle")}</CardTitle> : null}
+					<CardDescription className="text-monti-body">
 						{firstAdmin
 							? t("firstAdminDescription")
 							: formProviders.length > 0 && buttonProviders.length === 0

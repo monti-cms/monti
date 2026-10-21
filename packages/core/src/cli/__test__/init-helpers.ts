@@ -3,8 +3,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, vi } from "vitest";
 import { parseSchemaLiteral } from "../../schema-file/literal";
+import { QUESTIONS } from "../init-prompts";
 import type { InitHost } from "../init-types";
-import { Cancelled, type Prompter } from "../prompt";
+import { Cancelled, type Prompter, type TaskOutcome } from "../prompt";
 
 /** Shared by the tests of `monti init`: fixture Next apps in temp folders, a host that touches nothing, and a prompter that answers from a script. */
 
@@ -110,6 +111,8 @@ export function listFiles(dir: string, prefix = ""): string[] {
 
 export interface FakeHost extends InitHost {
 	install: ReturnType<typeof vi.fn<InitHost["install"]>>;
+	setupDatabase: ReturnType<typeof vi.fn<InitHost["setupDatabase"]>>;
+	runDoctor: ReturnType<typeof vi.fn<InitHost["runDoctor"]>>;
 }
 
 /** A host that installs nothing, and records the calls. */
@@ -118,6 +121,15 @@ export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 		install: vi.fn<InitHost["install"]>(),
 		// a fixed computer time zone, so a test does not depend on the machine it runs on
 		systemTimeZone: () => "UTC",
+		// no database URL from the machine the test runs on
+		environment: () => ({}),
+		setupDatabase: vi.fn<InitHost["setupDatabase"]>(async () => undefined),
+		runDoctor: vi.fn<InitHost["runDoctor"]>(async (cwd) => ({
+			ok: true,
+			cwd,
+			summary: { ok: 3, warn: 0, fail: 0, skip: 0 },
+			checks: [],
+		})),
 		...overrides,
 	} as unknown as FakeHost;
 }
@@ -126,15 +138,26 @@ export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 export interface ScriptedPrompter extends Prompter {
 	readonly asked: string[];
 	readonly notes: { title?: string; body: string }[];
+	/** How each progress step ended, in order. */
+	readonly steps: TaskOutcome[];
 }
 
 /**
  * A prompter that answers from a script: for each question, the first entry whose key is contained in the message is used (an array answer is used once,
  * then the next call to the same key is an error). A `"cancel"` answer cancels like Ctrl+C.
  */
-export function scriptedPrompter(script: Record<string, string | boolean | string[] | "cancel">): ScriptedPrompter {
+export function scriptedPrompter(
+	scriptGiven: Record<string, string | boolean | string[] | "cancel">,
+): ScriptedPrompter {
+	// The two questions that came with the recommended setup are answered the way the full sequence ran before them, unless a test says otherwise.
+	const script: Record<string, string | boolean | string[] | "cancel"> = {
+		[QUESTIONS.setup]: "custom",
+		[QUESTIONS.setupNow]: true,
+		...scriptGiven,
+	};
 	const asked: string[] = [];
 	const notes: { title?: string; body: string }[] = [];
+	const steps: TaskOutcome[] = [];
 	const answer = (message: string): unknown => {
 		asked.push(message);
 		const key = Object.keys(script).find((candidate) => message.includes(candidate));
@@ -146,6 +169,7 @@ export function scriptedPrompter(script: Record<string, string | boolean | strin
 	return {
 		asked,
 		notes,
+		steps,
 		intro: () => undefined,
 		outro: () => undefined,
 		note: (body, title) => void notes.push({ body, title }),
@@ -159,5 +183,11 @@ export function scriptedPrompter(script: Record<string, string | boolean | strin
 		},
 		password: async (question) => answer(question.message) as string,
 		confirm: async (question) => answer(question.message) as never,
+		task: async (title, work) => {
+			asked.push(`task: ${title}`);
+			const outcome = await work();
+			steps.push(outcome);
+			return outcome;
+		},
 	};
 }

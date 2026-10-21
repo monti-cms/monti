@@ -105,10 +105,10 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 	});
 
-	it("edits only next.config and the root layout, says so, and writes no .env.local", async () => {
+	it("edits only next.config and the root layout, says so, and never touches the .env.local that is there", async () => {
 		const dir = fixtureApp({ ".gitignore": "node_modules\n.next\n", "tsconfig.json": '{ "compilerOptions": {} }' });
 		const before = snapshot(dir);
-		const report = await initProject({ cwd: dir, host: fakeHost() });
+		const report = await initProject({ cwd: dir, host: fakeHost(), setup: false });
 		const after = snapshot(dir);
 
 		const edited = Object.keys(before).filter((file) => after[file] !== before[file]);
@@ -266,39 +266,94 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(example).toContain("MinIO");
 	});
 
-	it("lists what is left in order, each step with exact content", async () => {
-		const report = await initProject({ cwd: fixtureApp(), host: fakeHost() });
+	it("lists only the human steps after the machine steps worked, each with exact content", async () => {
+		const dir = fixtureApp();
+		const report = await initProject({ cwd: dir, host: fakeHost() });
 		const next = report.next;
 
-		// The install ran and init edited next.config and the layout, so neither is in the list. The order is: .env.local, db:setup, doctor, dev, then the notes.
+		// The install ran, init edited next.config and the layout, and made .env.local, so none of them is in the list. The database has no URL yet: its human step is.
+		expect(next.map((step) => step.split("\n")[0])).toEqual([
+			expect.stringContaining("Put your Postgres URL in DATABASE_URL in .env.local"),
+			"Start the app: pnpm dev, then open http://localhost:3000/studio",
+			expect.stringContaining("Right after you deploy, open <your site>/studio and create the first admin"),
+		]);
+		expect(next.join("\n")).not.toMatch(/cp \.env\.example|openssl|Check the setup/);
+		expect(next[0]).toContain("pnpm exec monti db:setup");
+		expect(next[2]).toContain("That screen closes as soon as one admin exists");
+		expect(next[2]).toContain("monti admin:reset-password");
+		expect(next[2]).not.toMatch(/GitHub|OAuth/);
+		expect(next.join("\n")).not.toContain("monti import");
+
+		const text = formatInitReport(report);
+		expect(text).toContain("What is left");
+		expect(text).toMatch(/\n {2}2\. Start the app/);
+	});
+
+	it("with a database URL and everything working, what is left is the dev server and the first admin", async () => {
+		const dir = fixtureApp({ ".env.local": "DATABASE_URL=postgres://localhost/mine\n" });
+		const host = fakeHost();
+		const report = await initProject({ cwd: dir, host });
+		expect(host.setupDatabase).toHaveBeenCalledWith(dir);
+		expect(report.next.map((step) => step.split("\n")[0])).toEqual([
+			"Start the app: pnpm dev, then open http://localhost:3000/studio",
+			expect.stringContaining("create the first admin"),
+		]);
+		expect(report.ok).toBe(true);
+	});
+
+	it("keeps the by-hand steps when the machine steps are turned off", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost();
+		const report = await initProject({ cwd: dir, host, setup: false });
+		expect(listFiles(dir)).not.toContain(".env.local");
+		expect(host.setupDatabase).not.toHaveBeenCalled();
+		expect(host.runDoctor).not.toHaveBeenCalled();
+		expect(report.steps).toContainEqual(
+			expect.objectContaining({
+				name: "Set up .env.local, the secret and the database",
+				status: "skipped",
+				detail: "--no-setup",
+			}),
+		);
+		const next = report.next;
 		expect(next.map((step) => step.split("\n")[0])).toEqual([
 			"Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
 			"Create Monti's tables in your database (once): pnpm exec monti db:setup",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
-			expect.stringContaining("Right after you deploy, open <your site>/studio and create the first admin"),
+			expect.stringContaining("Right after you deploy"),
 		]);
 		expect(next[0]).toContain("cp .env.example .env.local");
 		expect(next[0]).toContain("openssl rand -base64 32");
-		expect(next[0]).toContain("randomBytes(32).toString('base64')");
 		expect(next[2]).toContain("`monti doctor` will tell you if any of the steps above is missing");
-		expect(next[4]).toContain("That screen closes as soon as one admin exists");
-		expect(next[4]).toContain("monti admin:reset-password");
-		expect(next[4]).not.toMatch(/GitHub|OAuth/);
-		expect(next.join("\n")).not.toContain("monti import");
-
-		const text = formatInitReport(report);
-		expect(text).toContain("What is left");
-		expect(text).toMatch(/\n {2}1\. Create \.env\.local/);
-		expect(text).toMatch(/\n {2}5\. Right after you deploy/);
 	});
 
-	it("does not touch the database or list the removed steps", async () => {
+	it("ends with what was chosen and where to change each", async () => {
+		const text = formatInitReport(await initProject({ cwd: fixtureApp(), host: fakeHost(), login: "github" }));
+		const chosen = text.slice(text.indexOf("You chose:"), text.indexOf("Created:"));
+		for (const label of [
+			"Languages",
+			"Sign-in",
+			"Image storage",
+			"Extra features",
+			"Body blocks",
+			"Admin path",
+			"Block syntax",
+		]) {
+			expect(chosen).toContain(`${label}:`);
+		}
+		expect(chosen).toContain("GitHub");
+		expect(chosen).toContain("monti.config.ts");
+		expect(chosen).toContain("monti.schema.ts");
+		expect(chosen).toContain("Settings");
+	});
+
+	it("skips the database without a URL and lists no removed steps", async () => {
 		const report = await initProject({ cwd: fixtureApp(), ...quiet() });
 		const text = report.next.join("\n");
-		expect(text).not.toContain("DATABASE_URL in .env.local");
 		expect(text).not.toContain("MONTI_ADMIN_GITHUB_ID in .env.local");
-		expect(report.steps.map((step) => step.name)).toEqual(["Install packages"]);
+		// No database URL: the setup is skipped, not run, and the step that is left says where the URL goes.
+		expect(report.steps.find((step) => step.name === "Set up the database")?.status).toBe("skipped");
 	});
 
 	it("never writes a docker compose file, a proxy or theme files", async () => {
@@ -317,7 +372,7 @@ describe("monti init and the package install", () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
-		expect(Object.keys(host)).toEqual(["install", "systemTimeZone"]);
+		expect(host.install).toHaveBeenCalled();
 		expect(host.install).toHaveBeenCalledTimes(1);
 		const command = host.install.mock.calls[0]?.[0];
 		expect(command?.command).toBe("pnpm");
@@ -335,7 +390,7 @@ describe("monti init and the package install", () => {
 		expect(command?.args).toContain("@monti-cms/auth");
 		expect(command?.args).not.toContain("mermaid");
 		expect(command?.cwd).toBe(dir);
-		expect(report.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
+		expect(report.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "done"]);
 		expect(report.next.join("\n")).not.toContain("Install the packages");
 	});
 
@@ -361,7 +416,7 @@ describe("monti init and the package install", () => {
 		const host = fakeHost();
 		const report = await initProject({ cwd: fixtureApp(), host, prompter, ...ANSWERED });
 		expect(host.install).not.toHaveBeenCalled();
-		expect(report.steps).toEqual([{ name: "Install packages", status: "skipped", detail: "you answered no" }]);
+		expect(report.steps[0]).toEqual({ name: "Install packages", status: "skipped", detail: "you answered no" });
 		expect(report.ok).toBe(true);
 		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core /);
 	});
@@ -369,10 +424,10 @@ describe("monti init and the package install", () => {
 	it("--no-install asks nothing, runs nothing and prints the command first in the list", async () => {
 		const prompter = scriptedPrompter({});
 		const host = fakeHost();
-		const report = await initProject({ cwd: fixtureApp(), host, prompter, install: false, ...ANSWERED });
+		const report = await initProject({ cwd: fixtureApp(), host, prompter, install: false, setup: false, ...ANSWERED });
 		expect(prompter.asked).toEqual([]);
 		expect(host.install).not.toHaveBeenCalled();
-		expect(report.steps).toEqual([{ name: "Install packages", status: "skipped", detail: "--no-install" }]);
+		expect(report.steps[0]).toEqual({ name: "Install packages", status: "skipped", detail: "--no-install" });
 		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core /);
 		expect(index(report.next, "Install the packages")).toBeLessThan(index(report.next, "Create .env.local"));
 	});
@@ -399,10 +454,10 @@ describe("monti init and the package install", () => {
 		const dir = fixtureApp({ "package.json": JSON.stringify({ name: "x", dependencies }) });
 		const prompter = scriptedPrompter({});
 		const host = fakeHost();
-		const report = await initProject({ cwd: dir, host, prompter, ...ANSWERED });
+		const report = await initProject({ cwd: dir, host, prompter, setup: false, ...ANSWERED });
 		expect(prompter.asked).toEqual([]);
 		expect(host.install).not.toHaveBeenCalled();
-		expect(report.steps).toEqual([]);
+		expect(report.steps.map((step) => step.name)).not.toContain("Install packages");
 	});
 });
 
@@ -674,7 +729,7 @@ describe("monti init tailors what is left to the app", () => {
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
 		expect(host.install.mock.calls[0]?.[0].command).toBe("yarn");
-		expect(report.next.join("\n")).toContain("Create Monti's tables in your database (once): yarn monti db:setup");
+		expect(report.next.join("\n")).toContain("then create Monti's tables (once): yarn monti db:setup");
 		expect(report.next.join("\n")).toContain("Start the app: yarn dev");
 		const bun = await initProject({
 			cwd: fixtureApp({ "pnpm-lock.yaml": null }),

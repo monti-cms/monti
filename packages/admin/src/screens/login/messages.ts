@@ -3,7 +3,7 @@ import { defineMessages } from "@monti-cms/core";
 /** Login screen text. `provider` carries the name (e.g. GitHub) only when there is a single login method. */
 export const loginMessages = defineMessages("cms-admin.login", {
 	en: {
-		title: "CMS Admin",
+		managedWith: "Managed with Monti",
 		description: ({ provider }) => `Sign in with an approved ${provider ? `${provider} ` : ""}admin account.`,
 		forbiddenTitle: "No access",
 		forbidden: ({ provider, accountId }) =>
@@ -30,7 +30,7 @@ export const loginMessages = defineMessages("cms-admin.login", {
 		errorOther: "Signing in did not work. Try again.",
 	},
 	ko: {
-		title: "CMS 관리자",
+		managedWith: "Monti로 관리",
 		description: ({ provider }) => `승인된 ${provider ? `${provider} ` : ""}관리자 계정으로 로그인해 주세요.`,
 		forbiddenTitle: "접근 권한이 없습니다",
 		forbidden: ({ provider, accountId }) =>

@@ -13,7 +13,10 @@ describe("monti init when the install fails", () => {
 		const text = formatInitReport(report);
 
 		expect(report.ok).toBe(false);
-		expect(report.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "failed"]]);
+		expect(report.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "failed"]);
+		// Without the packages the database and the check cannot run: they are skipped, and the list says to run them later.
+		expect(report.steps.find((step) => step.name === "Set up the database")?.status).toBe("skipped");
+		expect(report.steps.find((step) => step.name === "Check the setup")?.status).toBe("skipped");
 		expect(text).not.toContain("Monti is added to your app");
 		expect(text).toContain("Install packages: FAILED");
 		expect(report.next.some((line) => /^Install the packages:\npnpm add @monti-cms\/core /.test(line))).toBe(true);
@@ -50,7 +53,7 @@ describe("monti init when the install fails", () => {
 		const online = fakeHost();
 		const second = await initProject({ cwd: dir, host: online });
 		expect(second.ok).toBe(true);
-		expect(second.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
+		expect(second.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "done"]);
 		expect(online.install).toHaveBeenCalled();
 		expect(second.overwritten).toEqual([]);
 		expect(second.skipped).toContain("monti.config.ts");
