@@ -582,6 +582,7 @@ import "@monti-cms/admin/styles.css";
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링(`--monti-sidebar-ring`은 정하지 않으면 `--monti-ring`을 따른다) |
 | 글꼴 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴. `--monti-font-sans`는 화면 구성(기본값: Pretendard, 이어서 한글 대체 글꼴을 포함한 시스템 스택), `--monti-font-mono`는 코드와 소스 화면(기본값: IBM Plex Mono, 이어서 시스템 고정폭 스택) |
 | | `--monti-content-font` | 글 쓰는 영역(글 제목, 편집기 본문, 번역 원문)의 글꼴. 기본값은 없다. 관리자가 열릴 때 사이트 `body`의 계산된 글꼴을 복사하므로 글 쓰는 영역이 사이트처럼 보인다. 다른 글꼴을 쓰려면 `:root`에 정한다 |
+| | `--monti-content-mono-font` | 글 쓰는 영역의 코드 글꼴(편집기 본문의 코드 블록과 인라인 코드). 기본값은 없다. 관리자가 사이트에서 `code` 요소가 받는 글꼴을 복사하므로 편집기 속 코드가 사이트의 코드처럼 보인다. 다른 글꼴을 쓰려면 `:root`에 정한다 |
 | 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `6px`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
 
 ### 글자 크기 체계
