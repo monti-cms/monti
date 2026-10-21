@@ -252,9 +252,7 @@ export function TemplateManager() {
 					{t("add")}
 				</Button>
 			</PageActions>
-			{error && (
-				<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-5 mt-3 w-auto" />
-			)}
+			{error && <LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-5 mt-3" />}
 			<MasterDetail
 				list={
 					<ListPane
