@@ -278,11 +278,6 @@ export function removeCollection(file: Obj, name: string): Obj {
 	return { ...file, collections: rest };
 }
 
-/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
-export function moveCollection(file: Obj, name: string, delta: number): Obj {
-	return { ...file, collections: moveKey(collectionsOf(file), name, delta) };
-}
-
 /** `file` with its `collections` keys arranged in `newOrder`. */
 export function reorderCollections(file: Obj, newOrder: readonly string[]): Obj {
 	const collections = collectionsOf(file);

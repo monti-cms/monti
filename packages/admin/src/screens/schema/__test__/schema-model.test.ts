@@ -11,7 +11,6 @@ import {
 	fieldProblems,
 	fieldsOf,
 	hasBody,
-	moveCollection,
 	moveField,
 	nameProblem,
 	newField,
@@ -294,14 +293,6 @@ describe("changeCount", () => {
 describe("collection reordering", () => {
 	const file = (): Obj => ({
 		collections: { post: post(), memo: post(), tag: post() },
-	});
-
-	it("moves a collection up or down", () => {
-		const movedUp = moveCollection(file(), "memo", -1);
-		expect(Object.keys(collectionsOf(movedUp))).toEqual(["memo", "post", "tag"]);
-
-		const movedDown = moveCollection(file(), "memo", 1);
-		expect(Object.keys(collectionsOf(movedDown))).toEqual(["post", "tag", "memo"]);
 	});
 
 	it("reorders collections to a specified order", () => {

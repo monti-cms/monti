@@ -4,7 +4,7 @@ import { testSite } from "../../../../../core/test/site";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { renderWithSite as render, withSite } from "../../../test/site";
-import { DataScreen } from "../../settings/data-screen";
+import { DataScreen } from "../../data/data-screen";
 import { settingsMessages } from "../../settings/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { ExportDialog } from "../export-dialog";
@@ -168,16 +168,10 @@ describe("the Data page", () => {
 			),
 		);
 
-	it("sits beside the schema tabs as a tab of its own, with no schema save bar", async () => {
+	it("is a page of its own, apart from the Settings tabs and their save bar", async () => {
 		serve({ summaries: { admin: { entries: 12, templates: 2 } } });
 		renderData();
-		const tabs = screen.getByRole("navigation", { name: ts("tabs.label") });
-		const current = within(tabs)
-			.getAllByRole("link")
-			.filter((link) => link.getAttribute("aria-current") === "page");
-		expect(current.map((link) => link.textContent)).toEqual([ts("tab.data")]);
-		expect(within(tabs).getAllByRole("link").length).toBeGreaterThan(1);
-		// The schema editor's pending-changes slot and review button do not exist here.
+		expect(screen.queryByRole("navigation", { name: ts("tabs.label") })).toBeNull();
 		expect(screen.queryByTestId("settings-actions")).toBeNull();
 		await screen.findByTestId("site-backup");
 	});

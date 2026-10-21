@@ -6,7 +6,7 @@ import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, GripVertical, Lock, Plus } from "lucide-react";
+import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
@@ -31,7 +31,6 @@ import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
-import { type RowButton, RowButtons } from "./fields-tree-rows";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
@@ -43,7 +42,6 @@ import {
 	changeCount,
 	collectionsOf,
 	isObj,
-	moveCollection,
 	type Obj,
 	type Rename,
 	recordRename,
@@ -123,20 +121,14 @@ function CollectionNavItem({
 	active,
 	isNew,
 	writable,
-	index,
-	total,
 	onSelect,
-	onMove,
 }: {
 	name: string;
 	collection: Obj | undefined;
 	active: boolean;
 	isNew: boolean;
 	writable: boolean;
-	index: number;
-	total: number;
 	onSelect: () => void;
-	onMove: (delta: number) => void;
 }) {
 	const t = useTranslator(schemaMessages);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -145,20 +137,6 @@ function CollectionNavItem({
 	});
 
 	const label = String(collection?.label ?? name);
-	const buttons: RowButton[] = [
-		{
-			label: t("collection.moveUp", { name: label }),
-			icon: ArrowUp,
-			disabled: !writable || index === 0,
-			onClick: () => onMove(-1),
-		},
-		{
-			label: t("collection.moveDown", { name: label }),
-			icon: ArrowDown,
-			disabled: !writable || index === total - 1,
-			onClick: () => onMove(1),
-		},
-	];
 
 	return (
 		<div
@@ -184,8 +162,7 @@ function CollectionNavItem({
 				aria-current={active ? "true" : undefined}
 				className={cn(
 					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50",
-					writable &&
-						"group-focus-within/row:pr-14 group-focus-within/row:pl-7 group-hover/row:pr-14 group-hover/row:pl-7",
+					writable && "group-focus-within/row:pl-7 group-hover/row:pl-7",
 					active && "border-monti-border bg-monti-card font-medium hover:bg-monti-card",
 				)}
 				onClick={onSelect}
@@ -196,7 +173,6 @@ function CollectionNavItem({
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</span>
 			</button>
-			{writable && <RowButtons buttons={buttons} />}
 		</div>
 	);
 }
@@ -396,7 +372,7 @@ function SchemaEditor({
 														}
 													}}
 												>
-													{names.map((name, index) => (
+													{names.map((name) => (
 														<CollectionNavItem
 															key={name}
 															name={name}
@@ -404,10 +380,7 @@ function SchemaEditor({
 															active={name === selected}
 															isNew={!savedNames.includes(name)}
 															writable={writable}
-															index={index}
-															total={names.length}
 															onSelect={() => setSelected(name)}
-															onMove={(delta) => updateFile((file) => moveCollection(file, name, delta))}
 														/>
 													))}
 												</SortableList>

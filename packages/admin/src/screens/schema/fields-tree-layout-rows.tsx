@@ -15,7 +15,6 @@ import { groupId, tabId } from "./fields-tree-dnd";
 import { type Destination, MoveDialog, type RowButton, RowButtons } from "./fields-tree-rows";
 import {
 	editGroup,
-	moveGroupBy,
 	moveGroupToTab,
 	moveTab,
 	removeGroup,
@@ -157,7 +156,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 	const [moving, setMoving] = useState(false);
 	if (!group || group.title === null) return null;
 	const ref = { tab, block };
-	const count = ops.tree.tabs[tab]?.blocks.length ?? 0;
+	const _count = ops.tree.tabs[tab]?.blocks.length ?? 0;
 	const buttons: RowButton[] = [
 		{
 			label: t("layout.collapseToggle", { name: group.title }),
@@ -165,18 +164,6 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			pressed: group.collapsed === true,
 			disabled: ops.disabled,
 			onClick: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
-		},
-		{
-			label: t("layout.upGroup", { name: group.title }),
-			icon: ArrowUp,
-			disabled: ops.disabled || block === 0,
-			onClick: () => ops.change((tree) => moveGroupBy(tree, ref, -1)),
-		},
-		{
-			label: t("layout.downGroup", { name: group.title }),
-			icon: ArrowDown,
-			disabled: ops.disabled || block === count - 1,
-			onClick: () => ops.change((tree) => moveGroupBy(tree, ref, 1)),
 		},
 		...(ops.showTabs
 			? [

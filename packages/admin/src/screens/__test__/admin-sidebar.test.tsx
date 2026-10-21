@@ -71,7 +71,7 @@ const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {})
 });
 
 describe("sidebar structure", () => {
-	it("has Content (each collection, Media), Tools (Templates, plugin pages, API keys, Event log), then Trash", () => {
+	it("has Content (each collection, Media), Tools (Templates, plugin pages, Data, API keys, Event log), then Trash", () => {
 		renderSidebar();
 		const collections = site.COLLECTIONS.map((collection) => site.COLLECTION_DEFINITIONS[collection].label);
 		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media")]);
@@ -79,6 +79,7 @@ describe("sidebar structure", () => {
 			t("sidebar.templates"),
 			"Tools page",
 			"More page",
+			t("sidebar.data"),
 			t("sidebar.apiKeys"),
 			t("sidebar.events"),
 		]);
@@ -88,7 +89,8 @@ describe("sidebar structure", () => {
 		const at = (label: string) => all.indexOf(label);
 		expect(at(t("sidebar.media"))).toBeLessThan(at(t("sidebar.templates")));
 		expect(at(t("sidebar.templates"))).toBeLessThan(at("Tools page"));
-		expect(at("More page")).toBeLessThan(at(t("sidebar.apiKeys")));
+		expect(at("More page")).toBeLessThan(at(t("sidebar.data")));
+		expect(at(t("sidebar.data"))).toBeLessThan(at(t("sidebar.apiKeys")));
 		expect(at(t("sidebar.apiKeys"))).toBeLessThan(at(t("sidebar.events")));
 		expect(at(t("sidebar.events"))).toBeLessThan(at(t("sidebar.trash")));
 		expect(at(t("sidebar.trash"))).toBeLessThan(at(t("sidebar.settings")));

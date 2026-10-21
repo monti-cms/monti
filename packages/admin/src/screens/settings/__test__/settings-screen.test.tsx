@@ -7,7 +7,7 @@ import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { settingsMessages } from "../messages";
 import { SettingsScreen } from "../settings-screen";
-import { DATA_TAB, SCHEMA_TABS, type SchemaTab } from "../tabs";
+import { SCHEMA_TABS, type SchemaTab } from "../tabs";
 
 vi.mock("../../schema/schema-screen", () => ({
 	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
@@ -40,8 +40,7 @@ describe("settings tabs", () => {
 	it("lists the tabs in order, each with its own address", () => {
 		renderSettings("collections");
 		const links = within(tabBar()).getAllByRole("link");
-		// The schema file's tabs, then Data: a page of its own beside them.
-		const ids = [...SCHEMA_TABS, DATA_TAB] as const;
+		const ids = SCHEMA_TABS;
 		expect(links.map((link) => link.textContent)).toEqual(ids.map((id) => t(`tab.${id}`)));
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(
 			ids.map((id) => testSite.adminHref(`/settings/${id}`)),
@@ -56,13 +55,14 @@ describe("settings tabs", () => {
 		expect(current.map((link) => link.textContent)).toEqual([t("tab.site")]);
 	});
 
-	it("has no tab for templates, the event log or a plugin page: they are in the sidebar", () => {
+	it("has no tab for Data, templates, the event log or a plugin page: they are in the sidebar", () => {
 		renderSettings("collections");
 		const names = within(tabBar())
 			.getAllByRole("link")
 			.map((link) => link.textContent);
 		expect(names).not.toContain(sidebarText("sidebar.templates"));
 		expect(names).not.toContain(sidebarText("sidebar.events"));
+		expect(names).not.toContain(sidebarText("sidebar.data"));
 	});
 
 	it("moves between tabs in place: the address changes, the editor and its draft stay, and no navigation is asked of the router", () => {

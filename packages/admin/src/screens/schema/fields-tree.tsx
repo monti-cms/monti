@@ -33,7 +33,6 @@ import {
 	addGroup,
 	addTab,
 	hasTabLevel,
-	moveFieldBy,
 	moveOutOfGroup,
 	placeField,
 	placeOf,
@@ -67,9 +66,6 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const fieldRow = (name: string, member: boolean, locked: Locked | null) => {
 		const here = placeOf(tree, name);
 		const inGroup = here !== null && tree.tabs[here.tab]?.blocks[here.block]?.title !== null;
-		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
-		const moveDown = locked ? tree : moveFieldBy(tree, name, 1);
-		const same = (other: Tree) => JSON.stringify(other) === JSON.stringify(tree);
 		const destinations: Destination[] = locked
 			? []
 			: [
@@ -109,16 +105,11 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 					prefix=""
 					childLead="  "
 					nested={false}
-					index={0}
 					count={1}
 					top={{
 						member,
 						locked,
 						destinations,
-						up: () => change((current) => moveFieldBy(current, name, -1)),
-						down: () => change((current) => moveFieldBy(current, name, 1)),
-						canUp: !same(moveUp),
-						canDown: !same(moveDown),
 					}}
 				/>
 			),

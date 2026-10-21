@@ -41,7 +41,7 @@ export function SortableList({
 }) {
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-		useSensor(KeyboardSensor),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
 	);
 	return (
 		<DndContext

@@ -6,13 +6,12 @@ import {
 	dropFieldOnField,
 	editGroup,
 	hasTabLevel,
-	moveFieldBy,
 	moveGroup,
-	moveGroupBy,
 	moveGroupToTab,
 	moveOutOfGroup,
 	moveTab,
 	placeField,
+	placeOf,
 	placeUngrouped,
 	removeGroup,
 	removeTab,
@@ -138,7 +137,9 @@ describe("layout tree", () => {
 	it("leaves everything else where it is when one field moves", () => {
 		const collection = post(LEADING_RUN);
 		const before = panel(collection);
-		const saved = withTree(collection, moveFieldBy(read(collection), "body", -1));
+		const tree = read(collection);
+		const media = placeOf(tree, "cover");
+		const saved = withTree(collection, media ? placeField(tree, "body", media.tab, media.block) : tree);
 		const after = panel(saved);
 		// `body` joined the group above it; the run before the groups is untouched.
 		expect(after[0]).toEqual(before[0]);
@@ -208,23 +209,6 @@ describe("layout tree", () => {
 		expect(shape(tree)[0]?.blocks.at(-1)).toEqual(["body", "summary"]);
 	});
 
-	it("moves a field one step, into the neighbouring group at the edge, and across tabs", () => {
-		const collection = post([
-			{ group: "A", fields: ["summary"] },
-			{ group: "B", fields: ["cover"], tab: "More" },
-		]);
-		const tree = read(collection);
-		// Down from the last field of A: A is the first block, the run of the rest is next.
-		expect(shape(moveFieldBy(tree, "summary", 1))[0]?.blocks).toEqual([
-			["A", []],
-			["summary", "slug", "body"],
-		]);
-		expect(shape(moveFieldBy(tree, "summary", -1))).toEqual(shape(tree));
-		// Past the end of a tab it goes on to the next one.
-		const last = moveFieldBy(moveFieldBy(moveFieldBy(moveFieldBy(tree, "body", 1), "body", 1), "body", 1), "body", 1);
-		expect(placeUp(last, "body")).toBe(true);
-	});
-
 	it("adds, renames, collapses and deletes a group; deleting leaves its fields in place, in no group", () => {
 		let tree = addGroup(read(post()), 0, "New");
 		tree = editGroup(tree, { tab: 0, block: 1 }, { title: "Renamed", collapsed: true });
@@ -252,7 +236,6 @@ describe("layout tree", () => {
 			["B", ["cover"]],
 			["A", ["summary"]],
 		]);
-		expect(shape(moveGroupBy(tree, { tab: 0, block: 1 }, -1))[0]?.blocks[0]).toEqual(["B", ["cover"]]);
 		const moved = moveGroupToTab(tree, { tab: 0, block: 0 }, 1);
 		expect(shape(moved)[0]?.blocks).toEqual([["B", ["cover"]], ["body"]]);
 		expect(shape(moved)[1]?.blocks).toEqual([
@@ -296,7 +279,7 @@ describe("layout tree", () => {
 });
 
 /** Whether the field sits in a tab after the first one. */
-const placeUp = (tree: Tree, name: string) =>
+const _placeUp = (tree: Tree, name: string) =>
 	tree.tabs.slice(1).some((tab) => tab.blocks.some((block) => block.fields.includes(name)));
 
 describe("the tree, the schema and the panel agree", () => {
@@ -319,7 +302,7 @@ describe("the tree, the schema and the panel agree", () => {
 			case 1:
 				return placeUngrouped(tree, name, tab, Math.floor(next() * 3));
 			case 2:
-				return moveFieldBy(tree, name, next() < 0.5 ? -1 : 1);
+				return dropFieldOnField(tree, name, pick(NAMES));
 			case 3:
 				return addGroup(tree, tab, `G${Math.floor(next() * 4)}`);
 			case 4:

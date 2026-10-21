@@ -5,7 +5,7 @@ import type { RestoreCounts, RestorePreview, RestoreRun } from "../../../api/res
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
-import { DataScreen } from "../../settings/data-screen";
+import { DataScreen } from "../../data/data-screen";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { restoreMessages } from "../messages";
 
