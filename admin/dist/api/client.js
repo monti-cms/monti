@@ -54,7 +54,7 @@ export function apiErrorOf(site, status, payload, fallback) {
  * A network error rethrows the original `TypeError` so callers can tell it apart from being offline. In a component, `useAdminFetch()` gives the site.
  */
 export async function adminFetch(site, path, init = {}) {
-    const { json, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
+    const { json, form, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
     // A preview runs on a draft site and must not write.
     if (isSandboxSite(site) && isWrite(rest.method)) {
         throw new CmsApiError(0, "preview", site.createTranslator(apiErrorMessages)("previewNoWrite"), [], {});
@@ -62,7 +62,7 @@ export async function adminFetch(site, path, init = {}) {
     const response = await fetch(adminApiUrl(path), {
         ...rest,
         headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
-        body: json === undefined ? undefined : JSON.stringify(json),
+        body: form ?? (json === undefined ? undefined : JSON.stringify(json)),
     });
     if (response.status === 204)
         return undefined;

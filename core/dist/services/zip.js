@@ -99,11 +99,12 @@ export function createZipArchive(entries, options) {
     return output;
 }
 /**
- * Minimal ZIP reader for tests and verification. Reads only the central directory and inflates deflate entries.
- * Not used for anything other than verifying export archives.
- * @internal For tests, which read the archives the export writes.
+ * Minimal ZIP reader: the central directory, with stored and deflate entries (what the export writes, and what common tools write). It does not handle
+ * encryption, ZIP64 or multi-part archives. `maxTotalBytes` bounds what the entries inflate to, so a small archive cannot expand without limit; an archive
+ * over it throws.
  */
-export function readZipArchive(buffer) {
+export function readZipArchive(buffer, options = {}) {
+    let budget = options.maxTotalBytes ?? Number.MAX_SAFE_INTEGER;
     const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     const decoder = new TextDecoder();
     let endOffset = -1;
@@ -132,7 +133,24 @@ export function readZipArchive(buffer) {
         const localExtraLength = view.getUint16(localOffset + 28, true);
         const dataStart = localOffset + 30 + localNameLength + localExtraLength;
         const compressed = buffer.subarray(dataStart, dataStart + compressedSize);
-        const data = method === 0 ? compressed : new Uint8Array(inflateRawSync(compressed));
+        let data;
+        if (method === 0)
+            data = compressed;
+        else if (method === 8) {
+            try {
+                data = new Uint8Array(inflateRawSync(compressed, { maxOutputLength: Math.max(1, budget) }));
+            }
+            catch (error) {
+                if (error.code === "ERR_BUFFER_TOO_LARGE")
+                    throw new Error("ZIP expands beyond the limit");
+                throw error;
+            }
+        }
+        else
+            throw new Error(`ZIP entry uses an unsupported compression method (${method})`);
+        budget -= data.length;
+        if (budget < 0)
+            throw new Error("ZIP expands beyond the limit");
         entries.push({ path, data });
         cursor += 46 + nameLength + extraLength + commentLength;
     }

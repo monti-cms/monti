@@ -105,12 +105,15 @@ export declare const collectionPreferencesSchema: z.ZodObject<{
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export type CollectionPreferences = z.infer<typeof collectionPreferencesSchema>;
-export declare const exportScopeSchema: z.ZodObject<{
+/** The most entries one export can be limited to by id. */
+export declare const MAX_EXPORT_IDS = 1000;
+export declare const exportOptionsSchema: z.ZodObject<{
     scope: z.ZodDefault<z.ZodEnum<{
         admin: "admin";
         public: "public";
     }>>;
     format: z.ZodOptional<z.ZodString>;
+    ids: z.ZodOptional<z.ZodPreprocess<z.ZodArray<z.ZodString>, unknown>>;
 }, z.core.$strip>;
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
 export declare const createTemplateBodySchema: z.ZodObject<{

@@ -28,9 +28,13 @@ export declare class NoticeError extends Error {
 }
 /** The error of a failed answer, from its status and JSON body (`{ error: { code, message, fix?, detail?, issues? } }`). */
 export declare function apiErrorOf(site: Pick<Site, "createTranslator">, status: number, payload: unknown, fallback: string): CmsApiError;
-/** What `adminFetch` takes besides the path: `fetch`'s options, `json` for a JSON body, and the `fallback` message of a failure the server does not explain. */
+/**
+ * What `adminFetch` takes besides the path: `fetch`'s options, `json` for a JSON body, `form` for a multipart upload (the browser sets its content type), and the
+ * `fallback` message of a failure the server does not explain.
+ */
 export type AdminFetchInit = Omit<RequestInit, "body"> & {
     json?: unknown;
+    form?: FormData;
     fallback?: string;
 };
 /**

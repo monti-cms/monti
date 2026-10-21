@@ -22,6 +22,9 @@ export function createTransferOps(ctx) {
                 "e.created_at",
                 "e.updated_at",
                 "e.published_at",
+                "e.trashed_at",
+                "e.changed_by",
+                "e.changed_at",
                 eb
                     .selectFrom("content_addresses")
                     .select("slug")
@@ -109,6 +112,9 @@ export function createTransferOps(ctx) {
                     createdAt: row.created_at,
                     updatedAt: row.updated_at,
                     publishedAt: row.published_at,
+                    trashedAt: row.trashed_at,
+                    changedBy: row.changed_by,
+                    changedAt: row.changed_at,
                     working,
                     ...(bodiesByEntryPublished.has(row.id) ? { published: bodiesByEntryPublished.get(row.id) } : {}),
                 });

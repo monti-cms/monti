@@ -1,0 +1,5 @@
+/**
+ * The text of what a backup restore tells: the problems that stop it (a key per `RestoreProblemCode`), the warnings (`RestoreWarningCode`), the data it does not
+ * bring back (`NotRestoredCode`) and the templates it skips. Sites override the text with `admin.messages["cms.core.restore"]` in the config.
+ */
+export declare const restoreMessages: import("../../../../index.js").MessageBundle<"address_collection_unknown" | "address_entry_missing" | "address_repeated" | "body_invalid" | "collection_unknown" | "files_not_checked" | "files_unreadable" | "folder_cycle" | "folder_missing" | "folder_other_collection" | "id_invalid" | "id_repeated" | "locale_unknown" | "media_file_missing" | "media_missing" | "not_restored_accounts" | "not_restored_ai_connections" | "not_restored_api_keys" | "not_restored_event_logs" | "not_restored_plugins" | "not_restored_preferences" | "publish_invalid" | "published_body_missing" | "reference_missing" | "source_missing" | "source_other_collection" | "template_skipped_id" | "template_skipped_name" | "translation_invalid" | "translation_repeated">;

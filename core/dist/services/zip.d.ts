@@ -20,8 +20,10 @@ export interface ZipReadEntry {
     data: Uint8Array;
 }
 /**
- * Minimal ZIP reader for tests and verification. Reads only the central directory and inflates deflate entries.
- * Not used for anything other than verifying export archives.
- * @internal For tests, which read the archives the export writes.
+ * Minimal ZIP reader: the central directory, with stored and deflate entries (what the export writes, and what common tools write). It does not handle
+ * encryption, ZIP64 or multi-part archives. `maxTotalBytes` bounds what the entries inflate to, so a small archive cannot expand without limit; an archive
+ * over it throws.
  */
-export declare function readZipArchive(buffer: Uint8Array): ZipReadEntry[];
+export declare function readZipArchive(buffer: Uint8Array, options?: {
+    maxTotalBytes?: number;
+}): ZipReadEntry[];

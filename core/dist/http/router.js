@@ -23,9 +23,12 @@ import * as rEventRetry from "./v1/events/[id]/retry/route.js";
 import * as rEventsRetry from "./v1/events/retry/route.js";
 import * as rEvents from "./v1/events/route.js";
 import * as rExport from "./v1/export/route.js";
+import * as rExportSummary from "./v1/export/summary/route.js";
 import * as rFolder from "./v1/folders/[id]/route.js";
 import * as rFolders from "./v1/folders/route.js";
 import { runRoute } from "./v1/handler.js";
+import * as rImportEntries from "./v1/import/entries/route.js";
+import * as rImportRestore from "./v1/import/restore/route.js";
 import * as rMediaComplete from "./v1/media/[id]/complete/route.js";
 import * as rMediaItem from "./v1/media/[id]/route.js";
 import * as rMediaCleanup from "./v1/media/cleanup/route.js";
@@ -71,6 +74,9 @@ const ROUTES = [
     { pattern: "v1/events/[id]/retry", module: rEventRetry },
     { pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
     { pattern: "v1/export", module: rExport },
+    { pattern: "v1/export/summary", module: rExportSummary },
+    { pattern: "v1/import/entries", access: "admin-upload", module: rImportEntries },
+    { pattern: "v1/import/restore", access: "admin-upload", module: rImportRestore },
     { pattern: "v1/folders", module: rFolders },
     { pattern: "v1/folders/[id]", module: rFolder },
     { pattern: "v1/media", module: rMedia },

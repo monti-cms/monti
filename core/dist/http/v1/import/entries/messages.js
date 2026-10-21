@@ -1,0 +1,51 @@
+import { defineMessages } from "../../../../i18n/define.js";
+/**
+ * The text of the reasons an entry import gives for what it skipped, changed or could not do, in the admin language. A key is a reason code
+ * (`ImportReasonCode`). Sites override the text with `admin.messages["cms.core.import"]` in the config.
+ */
+export const importMessages = defineMessages("cms.core.import", {
+    en: {
+        item_collection: ({ collection }) => `${collection} is an item collection (records such as categories and tags). An import does not bring those in.`,
+        no_collection: ({ collection }) => `This site has no collection called ${collection}. Pick one to import into.`,
+        skipped_by_choice: "You chose to skip this collection.",
+        no_title: "It has neither a title nor a slug.",
+        slug_exists: ({ slug }) => `An entry with the address ${slug} already exists here, so this one is not imported.`,
+        slug_repeated: ({ slug }) => `Another entry of the archive has the address ${slug} in the same collection and language.`,
+        locale_unknown: ({ locale }) => `The language ${locale} isn't set up on this site.`,
+        locale_not_default: ({ locale }) => `It is written in ${locale}, but a new entry starts in the site's default language. Its translations are skipped too.`,
+        source_missing: "Its original entry is not in the archive.",
+        source_skipped: "Its original entry was not imported.",
+        no_body: "The archive holds no readable body for it.",
+        unreadable: "Its files in the archive could not be read.",
+        front_matter_invalid: ({ message, line }) => (line === undefined ? `${message}.` : `${message} (line ${line}).`),
+        title_from_slug: "It has no title, so its slug is used as the title.",
+        body_unparsed: ({ format }) => `The ${format} text could not be read, so the body is kept as unparsed text. Fix it in the editor before publishing.`,
+        links_kept: ({ count }) => `${count} ${Number(count) === 1 ? "link points" : "links point"} to an entry that is not imported and stays as it was.`,
+        images_left_out: ({ count }) => `${count} ${Number(count) === 1 ? "image uses a media file" : "images use media files"} that ${Number(count) === 1 ? "is" : "are"} not in this site's library, so ${Number(count) === 1 ? "it is" : "they are"} left out of the body.`,
+        draft_missing: "Its draft was not made, so this step did not run.",
+        write_failed: "The write failed.",
+        unexpected: "Something went wrong while writing it. The server log has the details.",
+    },
+    ko: {
+        item_collection: ({ collection }) => `${collection}은(는) 카테고리·태그 같은 항목 컬렉션이라 가져오지 않아요.`,
+        no_collection: ({ collection }) => `이 사이트에는 ${collection} 컬렉션이 없어요. 가져올 컬렉션을 골라 주세요.`,
+        skipped_by_choice: "이 컬렉션은 건너뛰기로 했어요.",
+        no_title: "제목도 주소도 없어요.",
+        slug_exists: ({ slug }) => `주소가 ${slug}인 글이 이미 있어서 가져오지 않아요.`,
+        slug_repeated: ({ slug }) => `보관 파일의 다른 글이 같은 컬렉션과 언어에서 같은 주소(${slug})를 써요.`,
+        locale_unknown: ({ locale }) => `이 사이트에 설정되지 않은 언어(${locale})예요.`,
+        locale_not_default: ({ locale }) => `${locale}로 쓰인 글이지만 새 글은 사이트의 기본 언어로 시작해요. 이 글의 번역도 함께 건너뛰어요.`,
+        source_missing: "원문 글이 보관 파일에 없어요.",
+        source_skipped: "원문 글을 가져오지 않았어요.",
+        no_body: "보관 파일에서 읽을 수 있는 본문이 없어요.",
+        unreadable: "보관 파일에서 이 글의 파일을 읽지 못했어요.",
+        front_matter_invalid: ({ message, line }) => (line === undefined ? `${message}.` : `${message} (${line}번째 줄).`),
+        title_from_slug: "제목이 없어서 주소를 제목으로 써요.",
+        body_unparsed: ({ format }) => `${format} 본문을 읽지 못해서 읽지 못한 글 그대로 보관해요. 발행하기 전에 편집기에서 고쳐 주세요.`,
+        links_kept: ({ count }) => `가져오지 않는 글을 가리키는 링크 ${count}개는 그대로 남아요.`,
+        images_left_out: ({ count }) => `이 사이트의 미디어에 없는 파일을 쓰는 이미지 ${count}개는 본문에서 빠져요.`,
+        draft_missing: "초안이 만들어지지 않아서 이 단계는 실행하지 않았어요.",
+        write_failed: "쓰지 못했어요.",
+        unexpected: "쓰는 중에 문제가 생겼어요. 서버 로그에 자세한 내용이 있어요.",
+    },
+});

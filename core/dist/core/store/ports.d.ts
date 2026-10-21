@@ -1,7 +1,7 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types.js";
 import type { ClaimedDelivery, ContentChangeKind, EventDelivery, EventDeliveryCounts, EventLogState } from "./events.js";
 import type { AppliedSchemaChange, ApplySchemaChangeParams, BodyCursor, ScannedBody, SchemaState } from "./schema-change.js";
-import type { BodyTemplate, CompleteMediaAssetInput, CreateMediaAssetInput, Entry, EntrySearchHit, ExportSnapshot, Folder, IncomingReferenceItem, JsonObject, ListEntriesParams, ListEntriesResult, ListMediaParams, ListMediaResult, MediaAssetRecord, PublishedEntryLookup, PublishedEntryRecord, PublishedPageParams, SearchEntriesParams, TranslationGroup } from "./types.js";
+import type { BodyTemplate, CompleteMediaAssetInput, CreateMediaAssetInput, Entry, EntrySearchHit, ExportSnapshot, Folder, IncomingReferenceItem, JsonObject, ListEntriesParams, ListEntriesResult, ListMediaParams, ListMediaResult, MediaAssetRecord, PublishedEntryLookup, PublishedEntryRecord, PublishedPageParams, RestorePlan, RestoreResult, SearchEntriesParams, SiteContentCounts, TranslationGroup } from "./types.js";
 /**
  * Store ports: what the services, the HTTP layer and the plugins ask of a database. `ContentStore` is the union of the sub-ports below;
  * an adapter (`adapters/postgres`) implements all of them, and nothing outside an adapter knows which database is behind it.
@@ -271,6 +271,15 @@ export interface PreferenceStore {
 export interface TransferStore {
     /** A consistent read-only snapshot of everything the export holds. Entry order is fixed so the same data yields the same result. */
     readExportSnapshot(): Promise<ExportSnapshot>;
+    /** How many entries, folders and media records the site holds (a restore needs all three to be none). */
+    countSiteContent(): Promise<SiteContentCounts>;
+    /**
+     * Puts a backup into an empty site, exactly as it was: ids, versions, statuses, dates, both bodies of every entry, folders, media records, addresses and
+     * references, and the templates whose id and name the site does not have yet (the others are skipped and listed). It is one transaction, so it is all or nothing,
+     * and it checks the site is empty again inside it (`conflict` when it is not). It writes no events, so subscribers are not told. It trusts the plan: the
+     * service has checked it against the schema.
+     */
+    restoreArchive(plan: RestorePlan): Promise<RestoreResult>;
 }
 /**
  * Schema changes (`schema-change/`): what the store knows about the schema it was last applied under, a read-only look at the stored bodies for the impact

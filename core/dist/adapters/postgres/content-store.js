@@ -9,6 +9,7 @@ import { createMediaOps } from "./store/media.js";
 import { createPreferenceOps } from "./store/preferences.js";
 import { createPublicReadOps } from "./store/public-read.js";
 import { createPublishing } from "./store/publish.js";
+import { createRestoreOps } from "./store/restore.js";
 import { createSchemaChangeOps } from "./store/schema-change.js";
 import { createTemplateOps } from "./store/templates.js";
 import { createTransferOps } from "./store/transfer.js";
@@ -33,6 +34,7 @@ export function createContentStore(pool, options) {
         ...createPublicReadOps(ctx),
         ...createPreferenceOps(ctx),
         ...createTransferOps(ctx),
+        ...createRestoreOps(ctx),
         ...createMediaOps(ctx),
         ...createTemplateOps(ctx),
         ...createSchemaChangeOps(ctx),

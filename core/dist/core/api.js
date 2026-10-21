@@ -133,10 +133,19 @@ export const collectionPreferencesSchema = z.object({
     pageSize: pageSizeSchema.optional(),
     sort: z.object({ field: listSortFieldSchema, direction: sortDirectionSchema }).optional(),
 });
-export const exportScopeSchema = z.object({
+/** The most entries one export can be limited to by id. */
+export const MAX_EXPORT_IDS = 1000;
+export const exportOptionsSchema = z.object({
     scope: z.enum(["admin", "public"]).default("admin"),
     /** Also write every body as a text file in this format (`working.<ext>`, `published.<ext>`). Without it the archive holds the documents only. */
     format: formatNameSchema.optional(),
+    /**
+     * Limits the export to these entries (a comma list in the query, an array in a `POST` body). The export always holds their whole translation groups.
+     * Without it the export is the whole site.
+     */
+    ids: z
+        .preprocess((value) => (typeof value === "string" ? value.split(",") : value), z.array(z.string().uuid()).min(1).max(MAX_EXPORT_IDS))
+        .optional(),
 });
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
 export const createTemplateBodySchema = z

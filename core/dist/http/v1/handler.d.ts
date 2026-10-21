@@ -38,9 +38,10 @@ export type PublicHandler<P extends Params = Params> = (input: PublicRequest<P>)
  * - `public-read`: no login, and nothing but `GET`/`HEAD` (any other method is a 405). For the public JSON API.
  * - `same-origin-form`: no login, the same-origin check where a browser form post is accepted too. For the sign-in, sign-out and first-admin forms.
  * - `signed`: no login and no check of the router: the request proves itself (a webhook signature). The handler must verify it, and that is the only kind that leaves a check to the handler.
+ * - `admin-upload`: the same as `admin`, and the request may be a file upload (`multipart/form-data`). For the routes that take a file (the entry import).
  * - `admin-or-bearer`: a request with a `Bearer` token reaches the handler, which verifies the token (a cron job, no cookie, so no same-origin check). A request without one is guarded as `admin`.
  */
-export type RouteAccess = "admin" | "public-read" | "same-origin-form" | "signed" | "admin-or-bearer";
+export type RouteAccess = "admin" | "admin-upload" | "public-read" | "same-origin-form" | "signed" | "admin-or-bearer";
 /** What a handler of an `admin-or-bearer` route gets: the admin guard has run when `auth` is set, and a request without `auth` carries a `Bearer` token that the handler must verify. */
 export interface BearerRequest<P extends Params = Params> extends Omit<AdminRequest<P>, "auth"> {
     auth: AuthContext | null;
@@ -51,7 +52,9 @@ export declare const bearerTokenOf: (request: Request) => string | null;
  * Runs an admin route: the same-origin check of a state-changing request, the admin check, the `[id]` shape, and the actor for the change record. Errors become the
  * one error answer. The router does this for every route of access `admin`, so a handler holds no auth code.
  */
-export declare function runAdminRoute<P extends Params>(cms: Cms, request: Request, params: P, handler: AdminHandler<P>, plugin?: PluginContext): Promise<Response>;
+export declare function runAdminRoute<P extends Params>(cms: Cms, request: Request, params: P, handler: AdminHandler<P>, plugin?: PluginContext, options?: {
+    readonly upload?: boolean;
+}): Promise<Response>;
 /**
  * Runs a route of the given access kind (see {@link RouteAccess}): the guard of the kind, then the handler. Errors become the one error answer. A login connection may redirect
  * by throwing (Next.js does); that signal must reach the host framework, so a route that needs no login offers the error to the connection first.

@@ -7,8 +7,8 @@ import { CmsError, deleted, handleApiError, ok } from "./error-handler.js";
 import { validateSameOrigin } from "./security.js";
 export const bearerTokenOf = (request) => /^Bearer\s+(.+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] ?? null;
 /** Runs the handler of an admin request: the same-origin check, the admin check, the `[id]` shape, and the actor for the change record. */
-async function guardedAdmin(cms, request, params, run) {
-    validateSameOrigin(hostOf(cms), request);
+async function guardedAdmin(cms, request, params, run, options = {}) {
+    validateSameOrigin(hostOf(cms), request, options);
     const auth = await hostOf(cms).authGateway.verifyAdmin();
     // Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
     // would reject it as a malformed value (an internal error), so it is a missing item here.
@@ -22,9 +22,9 @@ async function guardedAdmin(cms, request, params, run) {
  * Runs an admin route: the same-origin check of a state-changing request, the admin check, the `[id]` shape, and the actor for the change record. Errors become the
  * one error answer. The router does this for every route of access `admin`, so a handler holds no auth code.
  */
-export async function runAdminRoute(cms, request, params, handler, plugin) {
+export async function runAdminRoute(cms, request, params, handler, plugin, options = {}) {
     try {
-        return await guardedAdmin(cms, request, params, (auth) => handler({ request, params, auth, cms, plugin: plugin }));
+        return await guardedAdmin(cms, request, params, (auth) => handler({ request, params, auth, cms, plugin: plugin }), options);
     }
     catch (error) {
         return handleApiError(error, cms.site);
@@ -37,8 +37,11 @@ export async function runAdminRoute(cms, request, params, handler, plugin) {
 export async function runRoute(cms, request, params, handler, access = "admin", 
 /** The plugin that owns the route. A core route has none, and its handler never reads `plugin`. */
 plugin) {
-    if (access === "admin")
-        return runAdminRoute(cms, request, params, handler, plugin);
+    if (access === "admin" || access === "admin-upload") {
+        return runAdminRoute(cms, request, params, handler, plugin, {
+            upload: access === "admin-upload",
+        });
+    }
     const owner = plugin;
     try {
         switch (access) {

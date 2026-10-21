@@ -6,7 +6,7 @@ type RelationOp = Extract<BulkOp, `relation.${string}`>;
  * Actions on screen. A category action pairs a relation-field bulk action with a field name, like `relation.add:tagIds`.
  * It is sent to the server as a relation-field bulk action (`relation.*`).
  */
-type ListAction = Exclude<BulkOp, RelationOp> | `${RelationOp}:${string}`;
+type ListAction = Exclude<BulkOp, RelationOp> | `${RelationOp}:${string}` | "export";
 type ActionDef = {
     value: ListAction;
     label: string;

@@ -12,4 +12,6 @@ export declare function validateSameOrigin(
 cms: Pick<CmsHost, "isHostTrusted" | "site">, request: Request, options?: {
     /** Also accept a browser form post (`application/x-www-form-urlencoded`), for the sign-in and sign-out forms. */
     readonly form?: boolean;
+    /** Also accept a file upload (`multipart/form-data`). The origin check above still has to pass, so another site cannot send one. */
+    readonly upload?: boolean;
 }): void;

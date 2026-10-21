@@ -46,7 +46,11 @@ cms, request, options = {}) {
     }
     if (["POST", "PATCH", "PUT"].includes(method)) {
         const contentType = request.headers.get("content-type");
-        const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
+        const accepted = [
+            "application/json",
+            ...(options.form ? ["application/x-www-form-urlencoded"] : []),
+            ...(options.upload ? ["multipart/form-data"] : []),
+        ];
         if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
             throw new CmsError(`Content-Type must be ${accepted.join(" or ")}`, "unsupported_media_type");
         }
