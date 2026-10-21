@@ -42,6 +42,7 @@ import { ACTIVE_BLOCK_STYLE, useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
+import { usePublishReadiness } from "./use-publish-readiness";
 
 interface EntryEditorShellProps {
 	mode: "new" | "edit";
@@ -85,6 +86,14 @@ export function EntryEditorShell({
 		},
 	});
 	const { entry, collection, form, load, publishIssues, translation } = editor;
+	// What the server's publish check finds in the saved draft: when the entry loads and after each save that changed it. An entry that cannot be
+	// published (in the trash, archived) and one not saved yet have nothing to check.
+	const readiness = usePublishReadiness({
+		entryId: entry?.id,
+		version: entry?.version,
+		enabled: load.status === "ready" && Boolean(entry) && entry?.status !== "trashed" && entry?.status !== "archived",
+	});
+	const [isReadinessOpen, setIsReadinessOpen] = useState(false);
 	// The form keeps the title under the name of the collection's title field.
 	const titleKey = site.isCollection(collection) ? titleKeyOf(site, collection) : undefined;
 	const isReadOnly = editor.readOnly;
@@ -287,6 +296,11 @@ export function EntryEditorShell({
 		refreshIncoming,
 		focusIssue,
 		sourceChanged,
+		// A refused publish shows what it found in the readiness popup, which lists each problem and goes to its place.
+		onPublishBlocked: (issues) => {
+			readiness.setBlocked(issues);
+			setIsReadinessOpen(true);
+		},
 	});
 
 	// Cmd/Ctrl+S saves immediately.
@@ -336,6 +350,18 @@ export function EntryEditorShell({
 					}))
 				: null,
 		save: () => void commands.handleSaveNow(),
+		publishReadiness:
+			entry && (readiness.result || readiness.checking)
+				? {
+						result: readiness.result,
+						checking: readiness.checking,
+						stale: saveStatus !== "saved",
+						recheck: readiness.recheck,
+						focus: focusIssue,
+						open: isReadinessOpen,
+						onOpenChange: setIsReadinessOpen,
+					}
+				: null,
 		textIssues: extensions.textIssues,
 	};
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
@@ -427,7 +453,6 @@ export function EntryEditorShell({
 					editor={editor}
 					visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
 					sourceProblem={sourceProblems[0]}
-					onFocusIssue={focusIssue}
 					sourceChanged={sourceChanged && Boolean(translationSource)}
 					onCompareSource={() => setIsSourceCompareOpen(true)}
 				/>

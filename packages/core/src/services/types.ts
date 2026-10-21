@@ -8,7 +8,12 @@ import type { EntryStore, LifecycleStore } from "../core/store/ports";
  */
 export type StorePort = Pick<
 	EntryStore,
-	"getWorkingReferences" | "getWorking" | "publishEntry" | "createEntryWithReferences" | "saveWorkingWithReferences"
+	| "getWorkingReferences"
+	| "getWorking"
+	| "publishEntry"
+	| "checkPublishEntry"
+	| "createEntryWithReferences"
+	| "saveWorkingWithReferences"
 > &
 	Pick<LifecycleStore, "archiveEntry" | "unarchiveEntry" | "trashEntry"> &
 	Partial<Pick<EntryStore, "resolveLinkTargets">>;

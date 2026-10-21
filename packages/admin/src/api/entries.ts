@@ -104,6 +104,14 @@ export const publishEntry = (
 	fallback?: string,
 ) => adminFetch<EntryWriteResult>(site, `${entryUrl(id)}/publish`, { method: "POST", json: input, fallback });
 
+/** `POST /v1/entries/:id/check`: what publishing the saved draft would find, without publishing. */
+export const checkEntryPublish = (site: Site, id: string, fallback?: string) =>
+	adminFetch<{ issues: CmsIssue[]; warnings: CmsIssue[] }>(site, `${entryUrl(id)}/check`, {
+		method: "POST",
+		json: {},
+		fallback,
+	});
+
 /** `POST /v1/entries/:id/{archive,unarchive,trash,restore}` */
 export const changeEntryStatus = async (
 	site: Site,

@@ -37,7 +37,7 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 			`Published. ${count} ${Number(count) === 1 ? "warning" : "warnings"} to review`,
 		go: "Go",
 		published: "Published.",
-		publishBlocked: "Can't publish. Fix the problems below.",
+		publishBlocked: "Can't publish. See what to fix in the status bar.",
 		permanentDeleteAsk: (vars) =>
 			`Permanently delete this ${enNoun(vars)}? This can't be undone. Addresses that were ever public are only recorded so other entries can't reuse them.`,
 		loadingDocument: "Loading document…",
@@ -61,7 +61,6 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		trashNotice: (vars) => `This ${enNoun(vars)} is in the trash. Restore it before editing.`,
 		visualUnavailable:
 			"Part of the body can't be parsed, so you can only edit in source mode. You can save, but publishing is blocked —",
-		publishProblems: "Publish check problems",
 		sourceChanged: "The source changed",
 		compare: "Compare",
 		confirm: "Confirm",
@@ -81,7 +80,7 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		publishedWithWarnings: "발행되었습니다. 확인할 경고 {count}건",
 		go: "이동",
 		published: "발행되었습니다.",
-		publishBlocked: "발행할 수 없습니다. 아래 문제를 수정하세요.",
+		publishBlocked: "발행할 수 없어요. 아래 상태 표시줄에서 고칠 곳을 확인하세요.",
 		permanentDeleteAsk: (vars) =>
 			`이 ${koObject(vars)} 영구 삭제할까요? 되돌릴 수 없습니다. 공개된 적 있는 주소는 다른 항목이 다시 쓸 수 없도록 기록만 남습니다.`,
 		loadingDocument: "문서를 불러오는 중…",
@@ -104,7 +103,6 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		trash: "휴지통",
 		trashNotice: (vars) => `휴지통에 있는 ${koNoun(vars)}입니다. 복원하기 전에는 편집할 수 없습니다.`,
 		visualUnavailable: "해석할 수 없는 본문이 있어 원문 모드로만 편집합니다. 저장은 되지만 발행은 막힙니다 —",
-		publishProblems: "발행 검증 문제",
 		sourceChanged: "원문이 바뀌었습니다",
 		compare: "비교",
 		confirm: "확인",

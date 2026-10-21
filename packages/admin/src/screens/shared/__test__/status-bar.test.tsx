@@ -230,6 +230,7 @@ describe("status bar", () => {
 			recovery: null,
 			translations: null,
 			save: () => {},
+			publishReadiness: null,
 			textIssues: null,
 			...over,
 		});
@@ -314,6 +315,67 @@ describe("status bar", () => {
 				expect(within(row).getByText(value)).toBeTruthy();
 			}
 			expect(popup.getByText(/분당 약 500자/)).toBeTruthy();
+		});
+
+		describe("publish readiness item", () => {
+			const readiness = (over: Partial<NonNullable<EditorStatus["publishReadiness"]>> = {}) => ({
+				result: { issues: [], warnings: [] },
+				checking: false,
+				stale: false,
+				recheck: () => {},
+				focus: () => {},
+				...over,
+			});
+
+			it("is absent when the editor has no readiness (trashed, unsaved) or no answer yet", () => {
+				showEditor({ publishReadiness: null });
+				expect(bar().queryByRole("button", { name: /발행/ })).toBeNull();
+				cleanup();
+				showEditor({ publishReadiness: readiness({ result: null }) });
+				expect(bar().queryByRole("button", { name: /발행/ })).toBeNull();
+			});
+
+			it("words a problem the dictionary knows as a to-do and one it does not know with the server's text", async () => {
+				const focus = vi.fn();
+				showEditor({
+					publishReadiness: readiness({
+						focus,
+						result: {
+							issues: [
+								{ code: "missing_image_alt", text: "서버 문구", path: "body", position: { blockId: "b1" } },
+								{ code: "plugin_rule", text: "플러그인이 막았어요", path: "summary", where: "summary" },
+							],
+							warnings: [],
+						},
+					}),
+				});
+				const popup = await open(/^발행 전 2/);
+				fireEvent.click(popup.getByRole("button", { name: /플러그인이 막았어요/ }));
+				expect(focus).toHaveBeenCalledWith(expect.objectContaining({ code: "plugin_rule" }));
+				await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+				const again = await open(/^발행 전 2/);
+				expect(again.getByRole("button", { name: "이미지에 설명(alt)이 필요해요" })).toBeTruthy();
+				expect(again.queryByText("서버 문구")).toBeNull();
+			});
+
+			it("names the thing a problem is about", async () => {
+				showEditor({
+					publishReadiness: readiness({
+						result: { issues: [{ code: "code_ref_broken", text: "x", message: "foo", path: "body" }], warnings: [] },
+					}),
+				});
+				const popup = await open(/^발행 전 1/);
+				expect(popup.getByRole("button", { name: /코드 링크 `foo`/ })).toBeTruthy();
+			});
+
+			it("shows the checking state with no to-do rows, and the stale hint beside an old answer", async () => {
+				showEditor({ publishReadiness: readiness({ checking: true, result: null }) });
+				expect(bar().getByRole("button", { name: "검사 중…" })).toBeTruthy();
+				cleanup();
+				showEditor({ publishReadiness: readiness({ stale: true }) });
+				const popup = await open(/^발행 준비됨/);
+				expect(popup.getByText("(저장 후 다시 검사)")).toBeTruthy();
+			});
 		});
 	});
 });

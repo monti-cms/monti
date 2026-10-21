@@ -44,8 +44,11 @@ const holderOf = (row: Pick<AddressRow, "entry_id" | "type">) => ({ entryId: row
 export function createPublishing(ctx: StoreContext) {
 	const { hooks, site } = ctx;
 
-	/** Checks the prepared snapshot of the draft inside the transaction. Locks reference targets and internal link slugs. */
-	const validatePreparedForPublish = async (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => {
+	/**
+	 * Runs the checks of a publish on the prepared snapshot of the draft inside the transaction, and returns what they found without judging it.
+	 * Locks reference targets and internal link slugs.
+	 */
+	const checkPreparedForPublish = async (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => {
 		const trx = ctx.db(client);
 		const entry = await trx
 			.selectFrom("entries")
@@ -158,8 +161,28 @@ export function createPublishing(ctx: StoreContext) {
 			}),
 			...(translation ? { translation } : {}),
 		});
-		if (!validation.ready) throw new ServiceError("publish_validation_failed", validation.issues);
-		return { snapshot, warnings: validation.warnings.filter((issue) => issue.code === "unpublished_internal_link") };
+		return {
+			issues: validation.issues,
+			warnings: validation.warnings.filter((issue) => issue.code === "unpublished_internal_link"),
+		};
+	};
+
+	/** Checks the prepared snapshot of the draft for publishing: the issues block it (`publish_validation_failed`), the warnings never do. */
+	const validatePreparedForPublish = async (client: PoolClient, entryId: string, snapshot: PreparedSnapshot) => {
+		const checked = await checkPreparedForPublish(client, entryId, snapshot);
+		if (checked.issues.length > 0) throw new ServiceError("publish_validation_failed", checked.issues);
+		return { snapshot, warnings: checked.warnings };
+	};
+
+	/**
+	 * What a publish of the draft would find, without publishing: the same status rule and the same checks against the locked rows, and nothing is
+	 * written. An entry that cannot be published (trashed, archived) is refused as a publish refuses it.
+	 */
+	const checkWithinTransaction = async (client: PoolClient, id: string, snapshot: PreparedSnapshot) => {
+		const row = await ctx.db(client).selectFrom("entries").select("status").where("id", "=", id).executeTakeFirst();
+		if (!row) throw new CmsError("Entry not found", "not_found");
+		assertPublishableStatus(row.status);
+		return checkPreparedForPublish(client, id, snapshot);
 	};
 
 	/**
@@ -385,7 +408,13 @@ export function createPublishing(ctx: StoreContext) {
 		}
 	};
 
-	return { validatePreparedForPublish, publishWithinTransaction, lockDraftReferenceTargets, assertNotReferenced };
+	return {
+		validatePreparedForPublish,
+		checkWithinTransaction,
+		publishWithinTransaction,
+		lockDraftReferenceTargets,
+		assertNotReferenced,
+	};
 }
 
 export type Publishing = ReturnType<typeof createPublishing>;

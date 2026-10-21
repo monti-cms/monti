@@ -5,8 +5,9 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
-import { Languages, TriangleAlert } from "lucide-react";
+import { Check, Languages, LoaderCircle, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import type { CmsIssue } from "../../api/error-message";
 import { countFailedEvents, eventsKeys, listEvents, retryAllEvents } from "../../api/events";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { cn } from "../../lib/utils/cn";
@@ -20,6 +21,8 @@ import { eventsMessages } from "../events/messages";
 import { statusLabels } from "./entry-status";
 import { formatAgo, formatDateTime } from "./format-date";
 import { useNavQueriesReady } from "./nav-queries";
+import { issueHasPlace, type PublishCheckResult, readinessText } from "./publish-readiness";
+import { publishReadinessMessages } from "./publish-readiness.messages";
 import { statusBarMessages } from "./status-bar.messages";
 
 /** The screen the bar is shown on. */
@@ -81,6 +84,24 @@ export interface EditorStatus {
 	readonly translations: readonly EditorTranslation[] | null;
 	/** Saves the changes now (the same as Cmd/Ctrl+S); also tries a failed save again. */
 	readonly save: () => void;
+	/**
+	 * What the server's publish check found in the saved draft. `null` for an entry that cannot be published (trashed, archived), for one not saved
+	 * yet, and while there is no answer; the item then shows nothing.
+	 */
+	readonly publishReadiness: {
+		/** The latest answer, `null` while the first one is on its way. */
+		readonly result: PublishCheckResult | null;
+		/** Whether a check is running. */
+		readonly checking: boolean;
+		/** Whether the draft has changes the answer does not cover; it is rechecked after they are saved. */
+		readonly stale: boolean;
+		readonly recheck: () => void;
+		/** Brings the writer to the field or block of a problem. */
+		readonly focus: (issue: CmsIssue) => void;
+		/** Whether the popup is open, so a refused publish can open it. Without `open` and `onOpenChange` the item keeps that state itself. */
+		readonly open?: boolean;
+		readonly onOpenChange?: (open: boolean) => void;
+	} | null;
 	/** What the text checkers found in the body, when a checker covers its language. */
 	readonly textIssues: {
 		readonly count: number;
@@ -153,15 +174,42 @@ interface StatusBarItemBase {
 	readonly children: ReactNode;
 }
 
+type NoPopupState = { readonly open?: never; readonly onOpenChange?: never };
+
 /** What an item leads to: nothing, a link (`href`), an action (`onClick`) or a popup (`popover`). At most one. */
 export type StatusBarItemProps = StatusBarItemBase &
 	(
-		| { readonly href?: never; readonly newTab?: never; readonly onClick?: never; readonly popover?: never }
+		| (NoPopupState & {
+				readonly href?: never;
+				readonly newTab?: never;
+				readonly onClick?: never;
+				readonly popover?: never;
+		  })
 		/** A link inside the admin (or an address). Opens in a new tab when `newTab` is set. */
-		| { readonly href: string; readonly newTab?: boolean; readonly onClick?: never; readonly popover?: never }
-		| { readonly href?: never; readonly newTab?: never; readonly onClick: () => void; readonly popover?: never }
-		/** Opens a popup above the item (Enter and Space open it, Escape closes it). Build it from `StatusPopoverHeader` and `StatusPopoverRow`. */
-		| { readonly href?: never; readonly newTab?: never; readonly onClick?: never; readonly popover: ReactNode }
+		| (NoPopupState & {
+				readonly href: string;
+				readonly newTab?: boolean;
+				readonly onClick?: never;
+				readonly popover?: never;
+		  })
+		| (NoPopupState & {
+				readonly href?: never;
+				readonly newTab?: never;
+				readonly onClick: () => void;
+				readonly popover?: never;
+		  })
+		/**
+		 * Opens a popup above the item (Enter and Space open it, Escape closes it). Build it from `StatusPopoverHeader` and `StatusPopoverRow`.
+		 * With `open` and `onOpenChange` the item does not keep the state itself, so something else can open the popup.
+		 */
+		| {
+				readonly href?: never;
+				readonly newTab?: never;
+				readonly onClick?: never;
+				readonly popover: ReactNode;
+				readonly open?: boolean;
+				readonly onOpenChange?: (open: boolean) => void;
+		  }
 	);
 
 const itemClass =
@@ -182,12 +230,16 @@ export function StatusBarItem({
 	newTab,
 	onClick,
 	popover,
+	open: controlledOpen,
+	onOpenChange,
 	title,
 	className,
 	children,
 }: StatusBarItemProps) {
 	const align = useContext(AlignContext);
-	const [open, setOpen] = useState(false);
+	const [ownOpen, setOwnOpen] = useState(false);
+	const open = controlledOpen ?? ownOpen;
+	const setOpen = onOpenChange ?? setOwnOpen;
 	const classes = cn(itemClass, toneClass[tone], (href || onClick || popover) && interactiveClass, className);
 	const content = (
 		<>
@@ -250,7 +302,14 @@ export function StatusPopoverHeader({
 	action,
 }: {
 	title: ReactNode;
-	action?: { readonly label: string; readonly onClick?: () => void; readonly href?: string; readonly newTab?: boolean };
+	action?: {
+		readonly label: string;
+		readonly onClick?: () => void;
+		readonly href?: string;
+		readonly newTab?: boolean;
+		/** Leaves the popup open after the action, for one whose answer is shown in it. */
+		readonly keepOpen?: boolean;
+	};
 }) {
 	const close = useContext(PopoverCloseContext);
 	const buttonClass =
@@ -274,7 +333,7 @@ export function StatusPopoverHeader({
 					className={buttonClass}
 					onClick={() => {
 						action.onClick?.();
-						close();
+						if (!action.keepOpen) close();
 					}}
 				>
 					{action.label}
@@ -433,6 +492,74 @@ function SaveStateItem() {
 				{text}
 			</StatusBarItem>
 			{/* The time moves every half minute, so only the state is announced. */}
+			<output aria-live="polite" className="sr-only">
+				{word}
+			</output>
+		</>
+	);
+}
+
+/** The popup of the publish readiness: each problem as a to-do that goes to its place, then the warnings, and the way to check again. */
+function PublishReadinessPopover({ readiness }: { readiness: NonNullable<EditorStatus["publishReadiness"]> }) {
+	const t = useTranslator(publishReadinessMessages);
+	const { result, checking, stale } = readiness;
+	const row = (issue: CmsIssue, tone: "warning" | "default") => (
+		<StatusPopoverRow
+			key={JSON.stringify(issue)}
+			label={readinessText(t, issue)}
+			value={issue.where}
+			tone={tone}
+			onClick={issueHasPlace(issue) ? () => readiness.focus(issue) : undefined}
+		/>
+	);
+	return (
+		<>
+			<StatusPopoverHeader
+				title={t("title")}
+				action={{ label: t("recheck"), onClick: readiness.recheck, keepOpen: true }}
+			/>
+			{stale && <p className="px-3 py-1 text-monti-muted-foreground">{t("staleHint")}</p>}
+			{checking && <StatusPopoverRow label={<span className="text-monti-muted-foreground">{t("checking")}</span>} />}
+			{!checking && result && result.issues.length === 0 && <StatusPopoverRow label={t("nothingToFix")} />}
+			{result?.issues.map((issue) => row(issue, "warning"))}
+			{result && result.warnings.length > 0 && (
+				<>
+					<p className="px-3 pt-2 pb-0.5 text-monti-muted-foreground">{t("warningsHeading")}</p>
+					{result.warnings.map((issue) => row(issue, "default"))}
+				</>
+			)}
+		</>
+	);
+}
+
+/**
+ * Editor: whether the saved draft is ready to publish ("Ready to publish", "2 to fix before publishing", "Checking…"), from the server's publish check.
+ * Its popup lists what to fix and goes to each place. It is not there for an entry that cannot be published or has not been saved yet.
+ */
+function PublishReadinessItem() {
+	const t = useTranslator(publishReadinessMessages);
+	const { editor } = useStatusBarContext();
+	const readiness = editor?.publishReadiness;
+	if (!readiness) return null;
+	const { result, checking } = readiness;
+	if (!checking && !result) return null;
+	const blocking = result?.issues.length ?? 0;
+	const warnings = result?.warnings.length ?? 0;
+	const word = checking ? t("checking") : blocking > 0 ? t("blocked", { count: blocking }) : t("ready");
+	const text = checking || warnings === 0 ? word : `${word} · ${t("warningsSuffix", { count: warnings })}`;
+	return (
+		<>
+			<StatusBarItem
+				tone={!checking && blocking > 0 ? "warning" : "default"}
+				icon={checking ? <LoaderCircle className="animate-spin" /> : blocking > 0 ? <TriangleAlert /> : <Check />}
+				title={t("itemTitle")}
+				{...(readiness.open !== undefined && readiness.onOpenChange
+					? { open: readiness.open, onOpenChange: readiness.onOpenChange }
+					: {})}
+				popover={<PublishReadinessPopover readiness={readiness} />}
+			>
+				{text}
+			</StatusBarItem>
 			<output aria-live="polite" className="sr-only">
 				{word}
 			</output>
@@ -604,6 +731,7 @@ const CORE_ITEMS: StatusItems = {
 	"core:save": { align: "start", order: 10, Component: SaveStateItem },
 	"core:locale": { align: "start", order: 20, Component: LocaleItem },
 	"core:body": { align: "start", order: 30, Component: BodyStatsItem },
+	"core:publish-readiness": { align: "start", order: 40, Component: PublishReadinessItem },
 	"core:deliveries": { align: "start", order: 80, Component: FailedDeliveriesItem },
 	"core:count": { align: "end", order: 10, Component: EntryCountItem },
 };

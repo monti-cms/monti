@@ -364,7 +364,7 @@ export function StatsPage() {
 
 ### 상태 표시줄
 
-모든 관리자 화면의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 항목은 코어와 플러그인이 채운다. 규칙은 하나다. 항목은 바뀌는 상태 가운데 눌렀을 때 갈 곳이 있는 것만 보여 주고, 할 말이 없으면 아무것도 그리지 않는다. 코어는 편집기의 저장 상태("초안 · 저장됨 2분 전", 누르면 저장), 언어, 본문 글자 수와 읽는 시간(공백을 뺀 글자 수, 분당 약 500자, 최소 1분), 실패한 이벤트 전달(이벤트 로그로 연결), 목록의 항목 수를 낸다.
+모든 관리자 화면의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 항목은 코어와 플러그인이 채운다. 규칙은 하나다. 항목은 바뀌는 상태 가운데 눌렀을 때 갈 곳이 있는 것만 보여 주고, 할 말이 없으면 아무것도 그리지 않는다. 코어는 편집기의 저장 상태("초안 · 저장됨 2분 전", 누르면 저장), 언어, 본문 글자 수와 읽는 시간(공백을 뺀 글자 수, 분당 약 500자, 최소 1분), 저장된 초안이 발행할 준비가 됐는지("발행 준비됨", "발행 전 2". `POST /api/monti/v1/entries/:id/check`로 알아내며, 글을 열 때와 저장할 때마다 다시 검사하고 발행이 거절되면 이 팝업이 열린다), 실패한 이벤트 전달(이벤트 로그로 연결), 목록의 항목 수를 낸다.
 
 플러그인은 `defineAdminPlugin`의 `statusItems`로 이름을 붙여 항목을 더한다. 항목마다 그룹(`align: "start"`는 왼쪽, `"end"`는 오른쪽)과 `order`(오름차순, 코어 항목은 왼쪽 10~80, 오른쪽 10), 그리고 `StatusBarItem` 또는 `null`을 그리는 컴포넌트를 밝힌다.
 
@@ -382,9 +382,9 @@ function DraftsStatus() {
 export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
 ```
 
-`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크)·`onClick`(버튼)·`popover`(팝업) 중 하나 이하, `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 본문의 크기, 복원을 권하는 브라우저 사본, 번역 목록, 텍스트 검사기가 찾은 항목과 각 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
+`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크)·`onClick`(버튼)·`popover`(팝업. `open`과 `onOpenChange`를 주면 호출하는 쪽이 열고 닫는다) 중 하나 이하, `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 본문의 크기, 복원을 권하는 브라우저 사본, 번역 목록, 텍스트 검사기가 찾은 항목과 각 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
 
-`popover`를 주면 항목을 누르거나(Enter, Space도 같다) 항목 위에 팝업이 열린다. 팝업은 `start` 그룹에서는 항목의 왼쪽 끝에, `end` 그룹에서는 오른쪽 끝에 맞춘다. Esc로 닫으면 포커스가 항목으로 돌아온다. 팝업은 너비 320px이고 화면이 낮으면 안에서 스크롤한다. 내용은 `StatusPopoverHeader`(제목과 오른쪽의 선택 동작, `{ label, onClick }` 또는 `{ label, href, newTab }`)와 `StatusPopoverRow`(왼쪽 `label`, 오른쪽 mono `value`, `href`를 주면 링크, `onClick`을 주면 버튼이며 둘 다 팝업을 닫는다)로 짠다. 코어는 저장 상태(상태, 마지막 저장, 지금 저장·다시 시도·로그인, 브라우저 사본 복원), 언어(번역 목록과 각 상태), 본문 수치, 최근 실패한 전달(모두 다시 시도, 이벤트 로그)에 팝업을 쓴다.
+`popover`를 주면 항목을 누르거나(Enter, Space도 같다) 항목 위에 팝업이 열린다. 팝업은 `start` 그룹에서는 항목의 왼쪽 끝에, `end` 그룹에서는 오른쪽 끝에 맞춘다. Esc로 닫으면 포커스가 항목으로 돌아온다. 팝업은 너비 320px이고 화면이 낮으면 안에서 스크롤한다. 내용은 `StatusPopoverHeader`(제목과 오른쪽의 선택 동작, `{ label, onClick, keepOpen? }` 또는 `{ label, href, newTab }`. `keepOpen`은 동작 뒤에도 팝업을 닫지 않는다)와 `StatusPopoverRow`(왼쪽 `label`, 오른쪽 mono `value`, `href`를 주면 링크, `onClick`을 주면 버튼이며 둘 다 팝업을 닫는다)로 짠다. 코어는 저장 상태(상태, 마지막 저장, 지금 저장·다시 시도·로그인, 브라우저 사본 복원), 언어(번역 목록과 각 상태), 본문 수치, 발행 전 확인(문제마다 해당 필드나 블록으로 가는 쉬운 할 일 한 줄, 다시 검사), 최근 실패한 전달(모두 다시 시도, 이벤트 로그)에 팝업을 쓴다.
 
 ```tsx
 function DraftsStatus() {
