@@ -62,7 +62,6 @@ export function GitSyncPage() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<p className="shrink-0 px-8 pt-5 pb-3 text-monti-body text-monti-muted-foreground">{t("page.description")}</p>
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
 				<PageTabs className="border-monti-border px-8">
 					<TabsTrigger value="sync" className="flex-none px-0 text-monti-body">

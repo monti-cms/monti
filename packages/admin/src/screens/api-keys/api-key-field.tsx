@@ -58,7 +58,7 @@ export function ApiKeyField({
 	const mask = (key: ApiKeyView) => (key.tail ? `••••${key.tail}` : "••••");
 	return (
 		<fieldset className={cn("flex flex-col gap-1", className)} disabled={disabled} data-testid="api-key-field">
-			<legend className="mb-1.5 font-medium text-sm" id={groupId}>
+			<legend className="mb-1.5 font-medium text-monti-body" id={groupId}>
 				{label ?? t("field.keyLabel")}
 			</legend>
 			<div role="radiogroup" aria-labelledby={groupId} className="flex max-w-xl flex-col gap-1">
@@ -78,9 +78,9 @@ export function ApiKeyField({
 						onChange={() => onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" })}
 					/>
 					<span className="flex min-w-0 flex-1 flex-col gap-1.5">
-						<span className={cn("text-sm", saved && "font-medium")}>{t("field.useSaved")}</span>
+						<span className={cn("text-monti-body", saved && "font-medium")}>{t("field.useSaved")}</span>
 						{keys.length === 0 ? (
-							<span className="text-monti-muted-foreground text-xs">
+							<span className="text-monti-caption text-monti-muted-foreground">
 								{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
 							</span>
 						) : saved ? (
@@ -97,7 +97,7 @@ export function ApiKeyField({
 										{keys.map((key) => (
 											<SelectItem key={key.id} value={key.id}>
 												<span>{key.name}</span>
-												<span className="ml-2 font-mono text-monti-muted-foreground text-xs">
+												<span className="ml-2 font-mono text-monti-caption text-monti-muted-foreground">
 													{key.readable ? mask(key) : t("field.unreadable")}
 												</span>
 											</SelectItem>
@@ -105,7 +105,7 @@ export function ApiKeyField({
 									</SelectContent>
 								</Select>
 								{chosen && chosen.uses.length > 0 && (
-									<span className="text-monti-muted-foreground text-xs">
+									<span className="text-monti-caption text-monti-muted-foreground">
 										{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
 									</span>
 								)}
@@ -129,23 +129,25 @@ export function ApiKeyField({
 						onChange={() => onChange({ use: "new", value: "" })}
 					/>
 					<span className="flex min-w-0 flex-1 flex-col gap-1.5">
-						<span className={cn("text-sm", value.use === "new" && "font-medium")}>{t("field.useNew")}</span>
+						<span className={cn("text-monti-body", value.use === "new" && "font-medium")}>{t("field.useNew")}</span>
 						{value.use === "new" && (
 							<>
 								<Input
 									type="password"
 									autoComplete="off"
 									aria-label={t("field.newInput")}
-									className="h-9 max-w-sm font-mono text-sm"
+									className="h-9 max-w-sm font-mono text-monti-body"
 									value={value.value}
 									onChange={(event) => onChange({ use: "new", value: event.target.value })}
 								/>
-								<span className="text-monti-muted-foreground text-xs">
+								<span className="text-monti-caption text-monti-muted-foreground">
 									{t("field.newHelp", { name: freeName(baseName, keys) })}
 								</span>
 							</>
 						)}
-						{!canSave && <span className="text-monti-muted-foreground text-xs">{t("field.secretMissing")}</span>}
+						{!canSave && (
+							<span className="text-monti-caption text-monti-muted-foreground">{t("field.secretMissing")}</span>
+						)}
 					</span>
 				</label>
 			</div>
