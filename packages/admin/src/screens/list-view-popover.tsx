@@ -2,6 +2,7 @@
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { IconButton } from "../ui/icon-button";
@@ -69,11 +70,12 @@ export function ColumnSettingsPanel({
 	);
 }
 
-function ViewSection({ title, children }: { title: string; children: ReactNode }) {
+/** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
+function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<section className="space-y-1.5">
+		<section className={cn("space-y-1.5", scroll && "flex min-h-0 flex-col")}>
 			<h4 className="font-medium text-monti-caption text-monti-muted-foreground">{title}</h4>
-			{children}
+			{scroll ? <div className="-mx-1 min-h-0 overflow-y-auto px-1">{children}</div> : children}
 		</section>
 	);
 }
@@ -124,7 +126,8 @@ export function ListViewPopover({
 				<SlidersHorizontal aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>
-			<PopoverContent align="end" className="w-72 gap-4 p-3">
+			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}
+			<PopoverContent side="bottom" align="end" className="max-h-(--available-height) w-72 gap-4 p-3">
 				<ViewSection title={t("view.sort")}>
 					<div className="flex items-center gap-2">
 						<Select
@@ -152,15 +155,6 @@ export function ListViewPopover({
 						</fieldset>
 					</div>
 				</ViewSection>
-				<ViewSection title={t("list.columnSettings")}>
-					<ColumnSettingsPanel
-						collection={collection}
-						order={order}
-						visibility={visibility}
-						onToggle={onToggle}
-						onMove={onMove}
-					/>
-				</ViewSection>
 				<ViewSection title={t("list.pageSize")}>
 					<Select
 						value={String(state.pageSize)}
@@ -178,6 +172,15 @@ export function ListViewPopover({
 							))}
 						</SelectContent>
 					</Select>
+				</ViewSection>
+				<ViewSection title={t("list.columnSettings")} scroll>
+					<ColumnSettingsPanel
+						collection={collection}
+						order={order}
+						visibility={visibility}
+						onToggle={onToggle}
+						onMove={onMove}
+					/>
 				</ViewSection>
 			</PopoverContent>
 		</Popover>

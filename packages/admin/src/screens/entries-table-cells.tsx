@@ -160,7 +160,8 @@ function DefaultEntryCell({
 						{item.slug}
 					</span>
 				) : null;
-			const titleClass = "min-w-0 truncate font-medium text-monti-body";
+			// The title does not shrink (it truncates only at the full width), so the slug beside it gives way first.
+			const titleClass = "max-w-full shrink-0 truncate font-medium text-monti-body";
 			if (isTrash)
 				return (
 					<span className="flex min-w-0 items-baseline gap-2">
@@ -175,7 +176,7 @@ function DefaultEntryCell({
 						variant="link"
 						size="sm"
 						onClick={() => onOpenRecord(item)}
-						className="h-auto min-w-0 p-0 font-medium text-monti-body text-monti-foreground hover:text-monti-primary"
+						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:text-monti-primary"
 					>
 						<span className="truncate">{title}</span>
 					</Button>
