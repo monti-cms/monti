@@ -9,8 +9,6 @@ export const settingsMessages = defineMessages("cms-admin.settings", {
         "tab.locales": "Languages",
         "tab.site": "Site",
         "tab.admin": "Admin",
-        "tab.data": "Data",
-        "data.description": "What the site holds, apart from its schema file. Nothing here needs saving.",
     },
     ko: {
         title: "설정",
@@ -20,7 +18,5 @@ export const settingsMessages = defineMessages("cms-admin.settings", {
         "tab.locales": "언어",
         "tab.site": "사이트",
         "tab.admin": "관리자",
-        "tab.data": "데이터",
-        "data.description": "스키마 파일과 별개로 사이트가 담고 있는 내용이에요. 여기서는 저장할 것이 없어요.",
     },
 });

@@ -1,8 +1,8 @@
 import { type CollectionEditing } from "./field-editor.js";
 import { type FieldPlace } from "./schema-model.js";
 /**
- * Adds a field in two steps: a name and a kind first; a kind that cannot exist without settings (a choice, a relation, a conditional field...) then asks for them in
- * a second dialog before the field is made. `onAdded` gets the name of the new field so the caller can open its editor.
+ * Adds a field in one step: picking a kind shows its settings right below, so a wrong pick is fixed by picking another. The identifier follows the label (a
+ * relation's follows its target, and so does its label) until the writer changes it. `onAdded` gets the name of the new field.
  */
 export declare function AddFieldDialog({ editing, place, onClose, onAdded, }: {
     editing: CollectionEditing;

@@ -15,7 +15,7 @@ import { FieldsCard } from "./fields-tree.js";
 import { IconPicker } from "./icon-picker.js";
 import { schemaMessages } from "./messages.js";
 import { PublicPathField } from "./public-path-field.js";
-import { allowedOf, COLLECTION_KEY_ORDER, defaultPath, fieldsOf, hasBody, setProp, withBody, } from "./schema-model.js";
+import { allowedOf, COLLECTION_KEY_ORDER, defaultPath, fieldsOf, hasBody, localesOf, setProp, withBody, withPublicPath, } from "./schema-model.js";
 const HEADINGS = [1, 2, 3, 4, 5, 6];
 /** The editor dictionary key that names each core block and text style in the allowed-blocks picker. */
 const EDITOR_NAME = {
@@ -83,10 +83,10 @@ function AllowedEditor({ collection, update, }) {
     });
     return (_jsxs(Section, { title: t("allowed.title"), note: limited ? t("allowed.note") : undefined, children: [_jsx(LimitList, { label: t("allowed.headings"), all: HEADINGS, value: allowed.headings, nameOf: (level) => te("toolbar.heading", { level }), onChange: (value) => setAllowed("headings", value) }), _jsx(LimitList, { label: t("allowed.marks"), all: vocabulary.marks, nameOf: nameLabel, value: allowed.marks, onChange: (value) => setAllowed("marks", value) }), _jsx(LimitList, { label: t("allowed.blocks"), all: vocabulary.blocks, nameOf: nameLabel, value: allowed.blocks, onChange: (value) => setAllowed("blocks", value) })] }));
 }
-export function CollectionEditor({ name, section, onSection, collection, isNew, onChange, onRemove, onRename, }) {
+export function CollectionEditor({ name, section, onSection, collection, isNew, onChange, onRemove, onRename, onFileChange, }) {
     const t = useTranslator(schemaCollectionMessages);
     const ts = useTranslator(schemaMessages);
-    const { disabled } = useSchemaEdit();
+    const { disabled, file } = useSchemaEdit();
     const chosenTab = section ?? "basics";
     const isEditorAvailable = kindDefaults(collection.kind).body && hasBody(collection);
     // The editor tab only exists for a document collection with a body.
@@ -94,7 +94,7 @@ export function CollectionEditor({ name, section, onSection, collection, isNew, 
     const issues = useIssuesUnder(`collections.${name}`, ".fields");
     const _fields = fieldsOf(collection);
     const set = (key, value) => onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
-    const editing = { collectionName: name, collection, update: onChange, onRename };
+    const editing = { collectionName: name, collection, update: onChange, onRename, updateFile: onFileChange };
     const label = typeof collection.label === "string" ? collection.label : name;
     const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
     const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
@@ -117,5 +117,5 @@ export function CollectionEditor({ name, section, onSection, collection, isNew, 
                                                 : kindDefaults(collection.kind).folders, onChange: (on) => {
                                                 const isDefault = on === kindDefaults(collection.kind).folders;
                                                 set("folders", isDefault ? undefined : on);
-                                            } }), _jsx(PublicPathField, { path: typeof collection.path === "string" ? collection.path : "", suggested: defaultPath(name), onChange: (value) => set("path", orUndefined(value)) })] }) }), _jsx(Section, { title: t("collection.dangerTitle"), description: isNew ? undefined : t("collection.dangerDescription"), card: false, children: _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, className: "border-monti-destructive/50 text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive", onClick: onRemove, children: [_jsx(Trash2, { "aria-hidden": true }), ts("collection.remove")] }) }) })] }), _jsx(TabsContent, { value: "fields", className: "flex flex-col gap-12", children: _jsx(FieldsCard, { editing: editing }) }), isEditorAvailable && (_jsx(TabsContent, { value: "editor", className: "flex max-w-[1160px] flex-col gap-12", children: _jsx(AllowedEditor, { collection: collection, update: onChange }) }))] })] }));
+                                            } }), _jsx(PublicPathField, { path: typeof collection.path === "string" ? collection.path : "", suggested: defaultPath(name), onChange: (value) => onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1)) })] }) }), _jsx(Section, { title: t("collection.dangerTitle"), description: isNew ? undefined : t("collection.dangerDescription"), card: false, children: _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, className: "border-monti-destructive/50 text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive", onClick: onRemove, children: [_jsx(Trash2, { "aria-hidden": true }), ts("collection.remove")] }) }) })] }), _jsx(TabsContent, { value: "fields", className: "flex flex-col gap-12", children: _jsx(FieldsCard, { editing: editing }) }), isEditorAvailable && (_jsx(TabsContent, { value: "editor", className: "flex max-w-[1160px] flex-col gap-12", children: _jsx(AllowedEditor, { collection: collection, update: onChange }) }))] })] }));
 }

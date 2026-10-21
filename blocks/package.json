@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/blocks",
-  "version": "0.2.0-next.15",
+  "version": "0.2.0-next.16",
   "private": true,
   "description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, code explorer, Mermaid, chart, and inline marks (tooltip, code link, text color)",
   "license": "MIT",
@@ -121,9 +121,9 @@
     "mermaid": ">=11",
     "recharts": ">=3",
     "lucide-react": ">=0.562.0",
-    "@monti-cms/core": "^0.2.0-next.15",
-    "@monti-cms/admin": "^0.2.0-next.15",
-    "@monti-cms/ai": "^0.2.0-next.15"
+    "@monti-cms/core": "^0.2.0-next.16",
+    "@monti-cms/ai": "^0.2.0-next.16",
+    "@monti-cms/admin": "^0.2.0-next.16"
   },
   "peerDependenciesMeta": {
     "@monti-cms/ai": {
@@ -160,11 +160,11 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/admin": "0.2.0-next.15",
-    "@monti-cms/ai": "0.2.0-next.15",
-    "@monti-cms/mdx": "0.2.0-next.15",
-    "@monti-cms/core": "0.2.0-next.15",
-    "@monti-cms/syntax-directive": "0.2.0-next.15"
+    "@monti-cms/admin": "0.2.0-next.16",
+    "@monti-cms/ai": "0.2.0-next.16",
+    "@monti-cms/core": "0.2.0-next.16",
+    "@monti-cms/syntax-directive": "0.2.0-next.16",
+    "@monti-cms/mdx": "0.2.0-next.16"
   },
   "files": [
     "dist",

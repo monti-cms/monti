@@ -1,5 +1,6 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import ApiKeysPage from "../screens/api-keys/page.js";
+import DataPage from "../screens/data/page.js";
 import EditEntryPage from "../screens/entries/[id]/edit/page.js";
 import NewEntryPage from "../screens/entries/new/page.js";
 import EventsPage from "../screens/events/page.js";
@@ -14,8 +15,9 @@ import TrashPage from "../screens/trash/page.js";
  * A single admin screen, framework-neutral. A host package renders it from the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log · `/admin/api-keys` API keys
- * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file) and `data` (the site backup, not part of the schema file)
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/data` backup, import and restore · `/admin/events` event log ·
+ *   `/admin/api-keys` API keys
+ * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file)
  * - `/admin/tools/<path>` Tools: one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */
@@ -38,6 +40,8 @@ export async function AdminPage({ cms, server, params, searchParams }) {
                 return _jsx(EventsPage, { cms: cms, server: server });
             case "api-keys":
                 return _jsx(ApiKeysPage, { cms: cms, server: server });
+            case "data":
+                return _jsx(DataPage, { cms: cms, server: server });
             case "settings":
                 return _jsx(SettingsPage, { cms: cms, server: server, tab: undefined });
             case "login":

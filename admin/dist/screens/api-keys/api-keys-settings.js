@@ -84,7 +84,7 @@ function KeyRows({ query, menu, onAssign, onRetry, onAdd, }) {
     const list = query.data;
     if (!list) {
         if (query.error) {
-            return (_jsx(LoadErrorAlert, { message: errorText(site, query.error, t("load.failed")), onRetry: onRetry, className: "m-3 w-auto" }));
+            return (_jsx(LoadErrorAlert, { message: errorText(site, query.error, t("load.failed")), onRetry: onRetry, className: "m-3" }));
         }
         return _jsx(Skeleton, { className: "m-4 h-12" });
     }

@@ -149,25 +149,6 @@ export function dropFieldOnField(tree, name, over) {
         return copy(tree);
     return placeField(tree, name, at.tab, at.block, at.index);
 }
-/** The blocks of the tab with the fields of each, as the tree draws them top to bottom: one step of a field is one step along this list. */
-export function moveFieldBy(tree, name, delta) {
-    const from = placeOf(tree, name);
-    if (!from)
-        return copy(tree);
-    const list = tree.tabs[from.tab].blocks[from.block]?.fields ?? [];
-    const to = from.index + delta;
-    if (to >= 0 && to < list.length)
-        return placeField(tree, name, from.tab, from.block, to);
-    const tab = tree.tabs[from.tab];
-    const neighbour = tab.blocks[from.block + delta];
-    if (neighbour)
-        return placeField(tree, name, from.tab, from.block + delta, delta < 0 ? undefined : 0);
-    // The edge of the tab: on to the next tab.
-    const nextTab = tree.tabs[from.tab + delta];
-    if (!nextTab)
-        return copy(tree);
-    return delta < 0 ? placeUngrouped(tree, name, from.tab + delta) : placeUngrouped(tree, name, from.tab + delta, 0);
-}
 /** Takes the field out of its group, to just after it (or into the run that follows). A field already in no group stays. */
 export function moveOutOfGroup(tree, name) {
     const at = placeOf(tree, name);
@@ -221,12 +202,6 @@ export function moveGroup(tree, from, to) {
         return copy(tree);
     target.blocks.splice(Math.min(to.block, target.blocks.length), 0, moved);
     return tidied(next);
-}
-/** One step among the blocks of the tab: a group passes the run of fields in no group beside it. */
-export function moveGroupBy(tree, ref, delta) {
-    const count = tree.tabs[ref.tab]?.blocks.length ?? 0;
-    const to = ref.block + delta;
-    return to < 0 || to >= count ? copy(tree) : moveGroup(tree, ref, { tab: ref.tab, block: to });
 }
 /** Moves a group to the end of another tab. */
 export const moveGroupToTab = (tree, from, tab) => moveGroup(tree, from, { tab, block: Number.MAX_SAFE_INTEGER });

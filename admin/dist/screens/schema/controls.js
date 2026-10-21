@@ -1,7 +1,7 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { createContext, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
@@ -103,8 +103,4 @@ export function RowActions({ index, count, onMove, onRemove, name, removeBlocked
     const t = useTranslator(schemaMessages);
     const { disabled } = useSchemaEdit();
     return (_jsxs("div", { className: "flex shrink-0 items-center", children: [_jsx(IconButton, { label: t("row.up", { name }), size: "icon-xs", disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { label: t("row.down", { name }), size: "icon-xs", disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, { "aria-hidden": true }) }), removeBlocked ? (_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: _jsx("span", { tabIndex: 0, "data-testid": "remove-blocked" }), children: _jsx(Button, { type: "button", variant: "ghost", size: "icon-xs", disabled: true, "aria-label": t("row.remove", { name }), "aria-description": removeBlocked, className: "pointer-events-none text-monti-destructive", children: _jsx(X, { "aria-hidden": true }) }) }), _jsx(TooltipContent, { side: "top", children: removeBlocked })] })) : (_jsx(IconButton, { label: t("row.remove", { name }), size: "icon-xs", destructive: true, disabled: disabled, onClick: onRemove, children: _jsx(X, { "aria-hidden": true }) }))] }));
-}
-export function AddButton({ children, onClick, disabled: off, }) {
-    const { disabled } = useSchemaEdit();
-    return (_jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled || off, onClick: onClick, children: [_jsx(Plus, { "aria-hidden": true }), children] }));
 }

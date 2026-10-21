@@ -58,8 +58,6 @@ export declare function placeField(tree: Tree, name: string, tab: number, block:
 export declare function placeUngrouped(tree: Tree, name: string, tab: number, at?: number): Tree;
 /** Drops a field on another field: it takes that field's place, in that field's group or run. */
 export declare function dropFieldOnField(tree: Tree, name: string, over: string): Tree;
-/** The blocks of the tab with the fields of each, as the tree draws them top to bottom: one step of a field is one step along this list. */
-export declare function moveFieldBy(tree: Tree, name: string, delta: -1 | 1): Tree;
 /** Takes the field out of its group, to just after it (or into the run that follows). A field already in no group stays. */
 export declare function moveOutOfGroup(tree: Tree, name: string): Tree;
 /** A new group at the end of a tab. */
@@ -72,8 +70,6 @@ export declare function editGroup(tree: Tree, ref: BlockRef, patch: {
 export declare function removeGroup(tree: Tree, ref: BlockRef): Tree;
 /** Moves a block (with its fields) to the place of another block, in its tab or in another one; `to.block` past the last block means the end. */
 export declare function moveGroup(tree: Tree, from: BlockRef, to: BlockRef): Tree;
-/** One step among the blocks of the tab: a group passes the run of fields in no group beside it. */
-export declare function moveGroupBy(tree: Tree, ref: BlockRef, delta: -1 | 1): Tree;
 /** Moves a group to the end of another tab. */
 export declare const moveGroupToTab: (tree: Tree, from: BlockRef, tab: number) => Tree;
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */

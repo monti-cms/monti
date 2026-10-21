@@ -1,5 +1,5 @@
 import { type Obj, type Rename } from "./schema-model.js";
-export declare function CollectionEditor({ name, section, onSection, collection, isNew, onChange, onRemove, onRename, }: {
+export declare function CollectionEditor({ name, section, onSection, collection, isNew, onChange, onRemove, onRename, onFileChange, }: {
     name: string;
     /** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
     section: string | undefined;
@@ -10,4 +10,6 @@ export declare function CollectionEditor({ name, section, onSection, collection,
     onChange: (change: (collection: Obj) => Obj) => void;
     onRemove: () => void;
     onRename: (rename: Rename) => void;
+    /** Changes the whole file, for an edit that reaches another collection. */
+    onFileChange: (change: (file: Obj) => Obj) => void;
 }): import("react").JSX.Element;

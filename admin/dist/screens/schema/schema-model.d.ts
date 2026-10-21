@@ -7,8 +7,12 @@ export type Obj = Record<string, unknown>;
 export declare const isObj: (value: unknown) => value is Obj;
 export declare const FIELD_KINDS: readonly ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
 export type FieldKindName = (typeof FIELD_KINDS)[number];
-/** The kinds a conditional field can show (the ones that store one value). */
-export declare const VALUE_KINDS: readonly ["text", "relation", "select", "media"];
+/**
+ * The kinds the admin offers for a new field, in the order it shows them; a conditional field shows only these too (the ones that store one value). The others
+ * come another way: a conditional field is a select with per-option fields,
+ * a backlink is the other side of a many relation, a slug comes with the public address, and a view is placed by an extension.
+ */
+export declare const ADDABLE_KINDS: readonly ["text", "select", "media", "relation"];
 /** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "role", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
 export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "folders", "body", "defaultTab", "fields", "layout"];
@@ -59,8 +63,6 @@ export declare function pathProblem(path: string): "slash" | "slug" | null;
  */
 export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
-/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
-export declare function moveCollection(file: Obj, name: string, delta: number): Obj;
 /** `file` with its `collections` keys arranged in `newOrder`. */
 export declare function reorderCollections(file: Obj, newOrder: readonly string[]): Obj;
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */
@@ -144,8 +146,6 @@ export interface Locale {
 export declare const localesOf: (file: Obj) => Locale[];
 /** The field `name` at `place`, or `undefined`. */
 export declare function fieldAt(collection: Obj, place: FieldPlace, name: string): Obj | undefined;
-/** The kinds that cannot be added with a name alone: they open their settings first. */
-export declare const KINDS_WITH_SETTINGS: readonly FieldKindName[];
 export type FieldProblem = "options" | "optionLabel" | "branches" | "target" | "slugFrom" | "backlink" | "view";
 /**
  * What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. The rules are
@@ -157,4 +157,32 @@ export declare function fieldProblems(field: Obj, collection: Obj, collectionNam
  * Only top-level fields: the file does not take either of them inside a conditional field.
  */
 export declare function removeBlock(collection: Obj, place: FieldPlace, name: string): "title" | "slug" | null;
+/**
+ * The identifier a new field gets when the writer does not type one: a relation is named after its target (`categoryId`, `tagIds`, as init names them), any other
+ * field after its label (`Reading time` -> `readingTime`), and a label with no ASCII letters falls back to the kind (`text`, `text2`...).
+ */
+export declare function suggestedFieldName(field: Obj, taken: readonly string[]): string;
+/** The display name of a collection: its label, else its identifier (a collection defined in code is not in the file). */
+export declare function collectionLabel(file: Obj, name: string): string;
+/** Whether a relation's unpublished targets can be picked, and whether they hold back publishing (`publishedOnly` and `allowUnpublished`, as one choice). */
+export type UnpublishedTargets = "hidden" | "blocking" | "allowed";
+export declare function unpublishedTargetsOf(field: Obj): UnpublishedTargets;
+export declare function withUnpublishedTargets(field: Obj, choice: UnpublishedTargets): Obj;
+/** The backlink of collection `target` that shows the many relation `field` of collection `collection` from the other side, or `undefined`. */
+export declare function oppositeOf(file: Obj, collection: string, field: string, target: string): string | undefined;
+/**
+ * The file with the other side of a many relation shown, or no longer shown, in its target: a backlink named after this collection (`post` -> `posts`) and
+ * labelled with its name. A relation to its own collection is shown on that same collection.
+ */
+export declare function withOpposite(file: Obj, collection: string, field: string, target: string, on: boolean): Obj;
+/**
+ * A select with fields shown per option (a conditional field), or back to a plain select. The options, the default and the names stay; turning it off drops the
+ * per-option fields.
+ */
+export declare function withOptionFields(field: Obj, on: boolean): Obj;
+/**
+ * The collection with its public address set (or removed when `path` is empty). An address needs a slug, so one comes with it when the collection has none,
+ * made from the title like the slug a new collection starts with.
+ */
+export declare function withPublicPath(collection: Obj, path: string | undefined, multiLocale: boolean): Obj;
 export {};

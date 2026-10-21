@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, GripVertical, Lock, Plus } from "lucide-react";
+import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
@@ -28,14 +28,13 @@ import { AdminEditor } from "./admin-editor.js";
 import { CollectionEditor } from "./collection-editor.js";
 import { IssueList, SchemaEditProvider } from "./controls.js";
 import { SortableList } from "./fields-tree-dnd.js";
-import { RowButtons } from "./fields-tree-rows.js";
 import { describeLiteralIssue } from "./literal-issue.js";
 import { LocalesEditor } from "./locales-editor.js";
 import { schemaMessages } from "./messages.js";
 import { NewCollectionDialog } from "./new-collection-dialog.js";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload.js";
 import { ReviewDialog } from "./review-dialog.js";
-import { addCollection, changeCount, collectionsOf, isObj, moveCollection, recordRename, removeCollection, reorderCollections, sameJson, setCollection, settingChanges, } from "./schema-model.js";
+import { addCollection, changeCount, collectionsOf, isObj, recordRename, removeCollection, reorderCollections, sameJson, setCollection, settingChanges, } from "./schema-model.js";
 import { SiteEditor } from "./site-editor.js";
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
 const READ_ONLY_KEY = {
@@ -69,29 +68,14 @@ function FileLine({ state, reason }) {
     const t = useTranslator(schemaMessages);
     return (_jsxs("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-monti-border bg-monti-muted/40 px-2.5 py-0.5 font-mono text-monti-muted-foreground text-xs", children: [state.file ?? t("status.noFile"), reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`] }));
 }
-function CollectionNavItem({ name, collection, active, isNew, writable, index, total, onSelect, onMove, }) {
+function CollectionNavItem({ name, collection, active, isNew, writable, onSelect, }) {
     const t = useTranslator(schemaMessages);
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
         id: name,
         disabled: !writable,
     });
     const label = String(collection?.label ?? name);
-    const buttons = [
-        {
-            label: t("collection.moveUp", { name: label }),
-            icon: ArrowUp,
-            disabled: !writable || index === 0,
-            onClick: () => onMove(-1),
-        },
-        {
-            label: t("collection.moveDown", { name: label }),
-            icon: ArrowDown,
-            disabled: !writable || index === total - 1,
-            onClick: () => onMove(1),
-        },
-    ];
-    return (_jsxs("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("group/row relative flex items-center", isDragging && "z-10 opacity-80"), "data-testid": `collection-nav-${name}`, children: [writable && (_jsx("button", { type: "button", ref: setActivatorNodeRef, ...attributes, ...listeners, "aria-label": t("collection.drag", { name: label }), className: "absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 group-hover/row:opacity-100", children: _jsx(GripVertical, { "aria-hidden": true, className: "size-3.5" }) })), _jsxs("button", { type: "button", "aria-current": active ? "true" : undefined, className: cn("flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50", writable &&
-                    "group-focus-within/row:pr-14 group-focus-within/row:pl-7 group-hover/row:pr-14 group-hover/row:pl-7", active && "border-monti-border bg-monti-card font-medium hover:bg-monti-card"), onClick: onSelect, children: [_jsx("span", { className: "flex-1 truncate", children: label }), isNew && _jsx(Badge, { variant: "outline", children: t("collection.new") }), _jsx("span", { className: "font-normal text-monti-muted-foreground text-xs", children: t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument") })] }), writable && _jsx(RowButtons, { buttons: buttons })] }));
+    return (_jsxs("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("group/row relative flex items-center", isDragging && "z-10 opacity-80"), "data-testid": `collection-nav-${name}`, children: [writable && (_jsx("button", { type: "button", ref: setActivatorNodeRef, ...attributes, ...listeners, "aria-label": t("collection.drag", { name: label }), className: "absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 group-hover/row:opacity-100", children: _jsx(GripVertical, { "aria-hidden": true, className: "size-3.5" }) })), _jsxs("button", { type: "button", "aria-current": active ? "true" : undefined, className: cn("flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50", writable && "group-focus-within/row:pl-7 group-hover/row:pl-7", active && "border-monti-border bg-monti-card font-medium hover:bg-monti-card"), onClick: onSelect, children: [_jsx("span", { className: "flex-1 truncate", children: label }), isNew && _jsx(Badge, { variant: "outline", children: t("collection.new") }), _jsx("span", { className: "font-normal text-monti-muted-foreground text-xs", children: t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument") })] })] }));
 }
 function SchemaEditor({ state, tab, actionsSlot, fileSlot, onTab, }) {
     const t = useTranslator(schemaMessages);
@@ -162,7 +146,7 @@ function SchemaEditor({ state, tab, actionsSlot, fileSlot, onTab, }) {
                                                                     if (fromIndex !== -1 && toIndex !== -1) {
                                                                         updateFile((file) => reorderCollections(file, moveWithin(names, fromIndex, toIndex)));
                                                                     }
-                                                                }, children: names.map((name, index) => (_jsx(CollectionNavItem, { name: name, collection: collections[name], active: name === selected, isNew: !savedNames.includes(name), writable: writable, index: index, total: names.length, onSelect: () => setSelected(name), onMove: (delta) => updateFile((file) => moveCollection(file, name, delta)) }, name))) }) })] }), _jsx("div", { className: "min-w-0 flex-1", children: selected && collections[selected] ? (_jsx(CollectionEditor, { name: selected, section: section, onSection: setSection, collection: collections[selected], isNew: !savedNames.includes(selected), onChange: (change) => updateFile((file) => setCollection(file, selected, change)), onRename: (rename) => setRenames((current) => recordRename(current, rename)), onRemove: async () => {
+                                                                }, children: names.map((name) => (_jsx(CollectionNavItem, { name: name, collection: collections[name], active: name === selected, isNew: !savedNames.includes(name), writable: writable, onSelect: () => setSelected(name) }, name))) }) })] }), _jsx("div", { className: "min-w-0 flex-1", children: selected && collections[selected] ? (_jsx(CollectionEditor, { name: selected, section: section, onSection: setSection, collection: collections[selected], isNew: !savedNames.includes(selected), onChange: (change) => updateFile((file) => setCollection(file, selected, change)), onRename: (rename) => setRenames((current) => recordRename(current, rename)), onFileChange: updateFile, onRemove: async () => {
                                                             if (savedNames.includes(selected)) {
                                                                 const ok = await confirm({
                                                                     title: t("collection.removeTitle", { name: selected }),

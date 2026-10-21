@@ -4,7 +4,7 @@ import { type KeyboardEvent } from "react";
 import { type DraggedEntry } from "./shared/entry-drag.js";
 import type { FolderActions } from "./shared/use-folder-actions.js";
 /** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
-export type AdminNavId = Collection | "media" | "templates" | "api-keys" | "events" | "settings" | "trash" | `tools:${string}`;
+export type AdminNavId = Collection | "media" | "templates" | "api-keys" | "data" | "events" | "settings" | "trash" | `tools:${string}`;
 /** Folder navigation, passed by the list screen. The sidebar draws it as a tree under the collection it belongs to. */
 export interface FolderNavigation {
     collection: Collection | "media";

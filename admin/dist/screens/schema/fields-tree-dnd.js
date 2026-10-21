@@ -19,7 +19,7 @@ const parseTabId = (id) => {
 };
 /** Rows that can be dragged within one list (the fields of one option): a drop reports which id went onto which. */
 export function SortableList({ items, onDragEnd, children, }) {
-    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor));
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     return (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: ({ active, over }) => {
             if (!over || active.id === over.id)
                 return;

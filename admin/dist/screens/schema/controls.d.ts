@@ -101,8 +101,3 @@ export declare function RowActions({ index, count, onMove, onRemove, name, remov
     /** Why the row cannot be removed: the remove button is disabled and the reason is its tooltip. */
     removeBlocked?: string;
 }): import("react").JSX.Element;
-export declare function AddButton({ children, onClick, disabled: off, }: {
-    children: ReactNode;
-    onClick: () => void;
-    disabled?: boolean;
-}): import("react").JSX.Element;

@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
@@ -23,7 +23,7 @@ import { SortableList } from "./fields-tree-dnd.js";
 import { RowButtons } from "./fields-tree-rows.js";
 import { schemaLocalesMessages } from "./locales.messages.js";
 import { schemaMessages } from "./messages.js";
-import { localesOf, moveItem, setProp } from "./schema-model.js";
+import { localesOf, setProp } from "./schema-model.js";
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
 const zonesWith = (current) => {
     let known = [];
@@ -178,18 +178,6 @@ export function LocalesEditor({ file, update }) {
                 icon: Pencil,
                 disabled,
                 onClick: () => setDialog({ code: locale.code }),
-            },
-            {
-                label: ts("row.up", { name: locale.code }),
-                icon: ArrowUp,
-                disabled: disabled || index === 0,
-                onClick: () => change(moveItem(locales, index, -1)),
-            },
-            {
-                label: ts("row.down", { name: locale.code }),
-                icon: ArrowDown,
-                disabled: disabled || index === locales.length - 1,
-                onClick: () => change(moveItem(locales, index, 1)),
             },
             {
                 label: ts("row.remove", { name: locale.code }),

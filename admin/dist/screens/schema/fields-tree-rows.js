@@ -5,7 +5,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
+import { GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
@@ -16,7 +16,7 @@ import { branchFields, summarizeField } from "./field-summary.js";
 import { schemaFieldsMessages } from "./fields.messages.js";
 import { SortableList } from "./fields-tree-dnd.js";
 import { schemaMessages } from "./messages.js";
-import { moveField, optionsOf, removeBlock, removeField, reorderField, } from "./schema-model.js";
+import { optionsOf, removeBlock, removeField, reorderField } from "./schema-model.js";
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export const TONE = {
     text: "text-monti-muted-foreground",
@@ -44,7 +44,7 @@ export function MoveDialog({ title, destinations, onClose, }) {
                                 onClose();
                             }, children: destination.label }) }, destination.label))) })] }) }));
 }
-export function Row({ ctx, place, name, field, prefix, childLead, nested, index, count, top, }) {
+export function Row({ ctx, place, name, field, prefix, childLead, nested, count, top, }) {
     const t = useTranslator(schemaFieldsMessages);
     const ts = useTranslator(schemaMessages);
     const { disabled, file } = useSchemaEdit();
@@ -74,18 +74,6 @@ export function Row({ ctx, place, name, field, prefix, childLead, nested, index,
     };
     const [moving, setMoving] = useState(false);
     const buttons = [
-        {
-            label: ts("row.up", { name }),
-            icon: ArrowUp,
-            disabled: disabled || (top ? !top.canUp || locked !== null : index === 0),
-            onClick: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
-        },
-        {
-            label: ts("row.down", { name }),
-            icon: ArrowDown,
-            disabled: disabled || (top ? !top.canDown || locked !== null : index === count - 1),
-            onClick: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
-        },
         ...(top && !locked
             ? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
             : []),
@@ -112,6 +100,6 @@ export function FieldGroup({ ctx, place, fields, lead, nested, }) {
             const last = index === names.length - 1;
             const prefix = lead === null ? "" : lead + (last ? "└ " : "├ ");
             const childLead = lead === null ? "  " : lead + (last ? "   " : "│  ");
-            return (_jsx(Row, { ctx: ctx, place: place, name: name, field: fields[name] ?? {}, prefix: prefix, childLead: childLead, nested: nested, index: index, count: names.length }, name));
+            return (_jsx(Row, { ctx: ctx, place: place, name: name, field: fields[name] ?? {}, prefix: prefix, childLead: childLead, nested: nested, count: names.length }, name));
         }) }));
 }

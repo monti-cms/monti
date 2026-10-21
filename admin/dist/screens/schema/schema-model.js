@@ -7,8 +7,12 @@ import { checkField, checkPathPattern, DEFAULT_TITLE_FIELD, defaultCollectionPat
 import { moveWithin } from "../../lib/utils/move-within.js";
 export const isObj = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 export const FIELD_KINDS = ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
-/** The kinds a conditional field can show (the ones that store one value). */
-export const VALUE_KINDS = ["text", "relation", "select", "media"];
+/**
+ * The kinds the admin offers for a new field, in the order it shows them; a conditional field shows only these too (the ones that store one value). The others
+ * come another way: a conditional field is a select with per-option fields,
+ * a backlink is the other side of a many relation, a slug comes with the public address, and a view is placed by an extension.
+ */
+export const ADDABLE_KINDS = ["text", "select", "media", "relation"];
 /** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export const FIELD_KEY_ORDER = [
     "kind",
@@ -231,10 +235,6 @@ export function addCollection(file, name, kind, path, label) {
 export function removeCollection(file, name) {
     const { [name]: _removed, ...rest } = collectionsOf(file);
     return { ...file, collections: rest };
-}
-/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
-export function moveCollection(file, name, delta) {
-    return { ...file, collections: moveKey(collectionsOf(file), name, delta) };
 }
 /** `file` with its `collections` keys arranged in `newOrder`. */
 export function reorderCollections(file, newOrder) {
@@ -506,15 +506,6 @@ export function fieldAt(collection, place, name) {
     const values = holder && isObj(holder.values) ? holder.values : {};
     return values[place.branch.option]?.[name];
 }
-/** The kinds that cannot be added with a name alone: they open their settings first. */
-export const KINDS_WITH_SETTINGS = [
-    "conditional",
-    "relation",
-    "select",
-    "slug",
-    "backlink",
-    "view",
-];
 /** The rule codes of core that mean the form still lacks a setting, and the problem the form names for each. */
 const PROBLEM_OF_CODE = {
     "options-empty": "options",
@@ -559,4 +550,108 @@ export function removeBlock(collection, place, name) {
     if (slugName === name && typeof collection.path === "string" && collection.path.includes(":slug"))
         return "slug";
     return null;
+}
+// ----- adding a field -----
+/** `words` in camel case (`["blog", "posts"]` -> `blogPosts`), from the ASCII letters and digits of a text. Empty when it has none (Korean). */
+function camelOf(text) {
+    const words = text.match(/[A-Za-z0-9]+/g) ?? [];
+    return words
+        .map((word, index) => index === 0 ? word.charAt(0).toLowerCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1))
+        .join("")
+        .replace(/^[0-9]+/, "");
+}
+/** `base`, or `base2`, `base3`... the first that is not taken. */
+function freeName(base, taken) {
+    if (nameProblem(base, taken) === null)
+        return base;
+    for (let index = 2;; index++)
+        if (nameProblem(`${base}${index}`, taken) === null)
+            return `${base}${index}`;
+}
+/**
+ * The identifier a new field gets when the writer does not type one: a relation is named after its target (`categoryId`, `tagIds`, as init names them), any other
+ * field after its label (`Reading time` -> `readingTime`), and a label with no ASCII letters falls back to the kind (`text`, `text2`...).
+ */
+export function suggestedFieldName(field, taken) {
+    if (field.kind === "relation" && typeof field.to === "string" && field.to !== "") {
+        return freeName(`${camelOf(field.to) || "item"}${field.many === true ? "Ids" : "Id"}`, taken);
+    }
+    const fromLabel = typeof field.label === "string" ? camelOf(field.label) : "";
+    // A select with per-option fields is still a select to the writer.
+    return freeName(fromLabel || (field.kind === "conditional" ? "select" : String(field.kind)), taken);
+}
+/** The display name of a collection: its label, else its identifier (a collection defined in code is not in the file). */
+export function collectionLabel(file, name) {
+    const label = collectionsOf(file)[name]?.label;
+    return typeof label === "string" && label !== "" ? label : name;
+}
+export function unpublishedTargetsOf(field) {
+    if (field.publishedOnly === true)
+        return "hidden";
+    return field.allowUnpublished === true ? "allowed" : "blocking";
+}
+export function withUnpublishedTargets(field, choice) {
+    const only = setProp(field, "publishedOnly", choice === "hidden" ? true : undefined, FIELD_KEY_ORDER);
+    return setProp(only, "allowUnpublished", choice === "allowed" ? true : undefined, FIELD_KEY_ORDER);
+}
+/** The backlink of collection `target` that shows the many relation `field` of collection `collection` from the other side, or `undefined`. */
+export function oppositeOf(file, collection, field, target) {
+    const fields = fieldsOf(collectionsOf(file)[target] ?? {});
+    return Object.keys(fields).find((name) => fields[name]?.kind === "backlink" && fields[name]?.from === collection && fields[name]?.via === field);
+}
+/**
+ * The file with the other side of a many relation shown, or no longer shown, in its target: a backlink named after this collection (`post` -> `posts`) and
+ * labelled with its name. A relation to its own collection is shown on that same collection.
+ */
+export function withOpposite(file, collection, field, target, on) {
+    const existing = oppositeOf(file, collection, field, target);
+    if (on === (existing !== undefined) || !(target in collectionsOf(file)))
+        return file;
+    return setCollection(file, target, (current) => {
+        if (existing)
+            return removeField(current, {}, existing);
+        const base = `${camelOf(collection) || "item"}s`;
+        const name = freeName(base, allFieldNames(current));
+        return addField(current, {}, name, {
+            kind: "backlink",
+            label: collectionLabel(file, collection),
+            from: collection,
+            via: field,
+        });
+    });
+}
+/**
+ * A select with fields shown per option (a conditional field), or back to a plain select. The options, the default and the names stay; turning it off drops the
+ * per-option fields.
+ */
+export function withOptionFields(field, on) {
+    if (on && field.kind === "select") {
+        const { label, description, required, localized, ...select } = field;
+        const discriminant = setProp(setProp({ ...select, label }, "description", description, FIELD_KEY_ORDER), "required", required, FIELD_KEY_ORDER);
+        const holder = { kind: "conditional", label, discriminant, values: {} };
+        return setProp(setProp(holder, "description", description, FIELD_KEY_ORDER), "localized", localized, FIELD_KEY_ORDER);
+    }
+    if (!on && field.kind === "conditional" && isObj(field.discriminant)) {
+        return setProp(field.discriminant, "localized", field.localized, FIELD_KEY_ORDER);
+    }
+    return field;
+}
+/**
+ * The collection with its public address set (or removed when `path` is empty). An address needs a slug, so one comes with it when the collection has none,
+ * made from the title like the slug a new collection starts with.
+ */
+export function withPublicPath(collection, path, multiLocale) {
+    const next = setProp(collection, "path", path, COLLECTION_KEY_ORDER);
+    const fields = fieldsOf(next);
+    if (!path || Object.values(fields).some((field) => field.kind === "slug"))
+        return next;
+    const from = titleFieldName(next);
+    const slug = {
+        kind: "slug",
+        label: "Slug",
+        required: true,
+        ...(multiLocale && next.kind !== "item" ? { localized: "inherit" } : {}),
+        ...(from ? { from } : {}),
+    };
+    return addField(next, {}, freeName("slug", allFieldNames(next)), slug);
 }

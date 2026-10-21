@@ -1,4 +1,4 @@
-import { ArrowUp } from "lucide-react";
+import { type ArrowUp } from "lucide-react";
 import type { CollectionEditing } from "./field-editor.js";
 import { type KindTone } from "./field-summary.js";
 import { type FieldPlace, type Obj } from "./schema-model.js";
@@ -52,12 +52,8 @@ export interface TopRow {
     readonly member: boolean;
     /** Places the row can be moved to without dragging. */
     readonly destinations: Destination[];
-    readonly up: () => void;
-    readonly down: () => void;
-    readonly canUp: boolean;
-    readonly canDown: boolean;
 }
-export declare function Row({ ctx, place, name, field, prefix, childLead, nested, index, count, top, }: {
+export declare function Row({ ctx, place, name, field, prefix, childLead, nested, count, top, }: {
     ctx: TreeContext;
     place: FieldPlace;
     name: string;
@@ -65,7 +61,6 @@ export declare function Row({ ctx, place, name, field, prefix, childLead, nested
     prefix: string;
     childLead: string;
     nested: boolean;
-    index: number;
     count: number;
     top?: TopRow;
 }): import("react").JSX.Element;
