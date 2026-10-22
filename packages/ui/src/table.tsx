@@ -100,7 +100,7 @@ function TableRow({
  * Where a column's content sits, whether long content ends in "…" instead of widening the column, a fixed column width, top alignment for
  * rows of uneven height, and a muted tone for secondary columns.
  */
-interface CellOptions {
+export interface CellOptions {
 	align?: "start" | "center" | "end";
 	truncate?: boolean;
 	width?: keyof typeof COLUMN_WIDTH;

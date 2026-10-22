@@ -3,7 +3,7 @@
  * Tokens are in `styles/` (`theme.css` names, `tokens.css` values). The open versions are in `@monti-cms/ui/internal`.
  */
 
-import { close } from "./closed";
+import { type Closed, close } from "./closed";
 import * as open from "./internal";
 
 export const Alert = close(open.Alert);
@@ -139,7 +139,7 @@ export const PopoverContent = close(open.PopoverContent);
 export const PopoverDescription = close(open.PopoverDescription);
 export const PopoverHeader = close(open.PopoverHeader);
 export const PopoverTitle = close(open.PopoverTitle);
-export const PopoverTrigger = close(open.PopoverTrigger);
+export const PopoverTrigger: Closed<typeof open.PopoverTrigger> = close(open.PopoverTrigger);
 export const SelectContent = close(open.SelectContent);
 export const SelectGroup = close(open.SelectGroup);
 export const SelectItem = close(open.SelectItem);
