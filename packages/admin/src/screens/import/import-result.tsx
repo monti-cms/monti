@@ -9,7 +9,7 @@ const OUTCOME_VARIANT = {
 	imported: "success",
 	draft: "warning",
 	skipped: "secondary",
-	failed: "destructive",
+	failed: "danger",
 } as const;
 
 /** One step that did not go as asked, with its reason. */

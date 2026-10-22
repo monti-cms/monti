@@ -98,7 +98,7 @@ function ComboboxContent({
 					data-slot="combobox-content"
 					data-chips={!!anchor}
 					className={cn(
-						"group/combobox-content data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative max-h-(--available-height) w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-monti-overlay text-monti-default shadow-monti-floating ring-1 ring-monti-muted duration-100 data-[chips=true]:min-w-(--anchor-width) data-closed:animate-out data-open:animate-in *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-monti-default *:data-[slot=input-group]:shadow-none",
+						"group/combobox-content data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative max-h-(--available-height) w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg border border-monti-muted bg-monti-overlay text-monti-default shadow-monti-floating duration-100 data-[chips=true]:min-w-(--anchor-width) data-closed:animate-out data-open:animate-in *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-monti-default *:data-[slot=input-group]:shadow-none",
 						className,
 					)}
 					{...props}
@@ -126,7 +126,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
 		<ComboboxPrimitive.Item
 			data-slot="combobox-item"
 			className={cn(
-				"relative flex w-full cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden data-disabled:pointer-events-none data-highlighted:bg-monti-hover data-highlighted:text-monti-default data-disabled:opacity-50 not-data-[variant=destructive]:data-highlighted:**:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex w-full cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden data-disabled:pointer-events-none data-highlighted:bg-monti-hover data-highlighted:text-monti-default data-disabled:opacity-50 not-data-[variant=danger]:data-highlighted:**:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -190,7 +190,7 @@ function ComboboxChips({
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
 			className={cn(
-				"flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-monti-default bg-transparent bg-clip-padding px-2.5 py-1.5 text-monti-body transition-[color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft has-aria-invalid:border-monti-danger monti-dark:has-aria-invalid:border-monti-danger-muted has-data-[slot=combobox-chip]:px-1.5 has-aria-invalid:ring-3 has-aria-invalid:ring-monti-danger monti-dark:has-aria-invalid:ring-monti-danger",
+				"flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-monti-default bg-transparent bg-clip-padding px-2.5 py-1.5 text-monti-body transition-[color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft has-aria-invalid:border-monti-danger monti-dark:has-aria-invalid:border-monti-danger has-data-[slot=combobox-chip]:px-1.5 has-aria-invalid:ring-3 has-aria-invalid:ring-monti-danger-soft monti-dark:has-aria-invalid:ring-monti-danger-soft",
 				className,
 			)}
 			{...props}

@@ -4,8 +4,8 @@ import type { EventDeliveryItem } from "../../api/events";
 
 export const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
 	delivered: "success",
-	failed: "destructive",
-	dead: "destructive",
+	failed: "danger",
+	dead: "danger",
 	pending: "warning",
 	delivering: "warning",
 	dismissed: "neutral",

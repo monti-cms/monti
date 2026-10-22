@@ -113,3 +113,17 @@ export const LongContent: Story = {
 		</Dialog>
 	),
 };
+
+/** A wide dialog (`size="lg"`): a form with a preview. `sm` is for a question, `xl` for a review of many changes. */
+export const Large: Story = {
+	render: () => (
+		<Dialog open>
+			<DialogContent size="lg">
+				<DialogHeader>
+					<DialogTitle>이미지 넣기</DialogTitle>
+					<DialogDescription>파일을 고르거나 주소를 붙여 넣어요.</DialogDescription>
+				</DialogHeader>
+			</DialogContent>
+		</Dialog>
+	),
+};

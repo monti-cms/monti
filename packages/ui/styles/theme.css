@@ -53,6 +53,7 @@
 	--background-color-monti-accent-emphasis: var(--monti-bg-accent-emphasis);
 	--background-color-monti-danger-muted: var(--monti-bg-danger-muted);
 	--background-color-monti-danger-emphasis: var(--monti-bg-danger-emphasis);
+	--background-color-monti-danger-emphasis-hover: var(--monti-bg-danger-emphasis-hover);
 	--background-color-monti-warning-muted: var(--monti-bg-warning-muted);
 	--background-color-monti-warning-emphasis: var(--monti-bg-warning-emphasis);
 	--background-color-monti-success-muted: var(--monti-bg-success-muted);
@@ -81,6 +82,7 @@
 	--ring-color-monti-focus: var(--monti-border-focus);
 	--ring-color-monti-focus-soft: var(--monti-focus-soft);
 	--ring-color-monti-danger: var(--monti-border-danger);
+	--ring-color-monti-danger-soft: var(--monti-danger-soft);
 	--ring-color-monti-muted: var(--monti-border-muted);
 	--ring-color-monti-default: var(--monti-border-default);
 	--outline-color-monti-focus: var(--monti-border-focus);

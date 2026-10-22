@@ -448,7 +448,8 @@ export function MediaDetailPanel({
 			<div className="shrink-0 space-y-2 border-monti-muted border-t px-4 py-3">
 				<Button
 					type="button"
-					variant="destructive"
+					variant="secondary"
+					tone="danger"
 					size="sm"
 					className="w-full"
 					disabled={media.referencesCount > 0}

@@ -445,7 +445,8 @@ export function BulkBar({
 				<Button
 					type="button"
 					size="sm"
-					variant={activeAction?.destructive ? "destructive" : "default"}
+					variant={activeAction?.destructive ? "secondary" : "default"}
+					tone={activeAction?.destructive ? "danger" : "neutral"}
 					disabled={!canRun}
 					onClick={start}
 				>

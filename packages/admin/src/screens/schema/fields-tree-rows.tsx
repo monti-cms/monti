@@ -82,7 +82,7 @@ export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 					key={button.label}
 					label={button.label}
 					size="icon-xs"
-					destructive={button.destructive}
+					tone={button.destructive ? "danger" : undefined}
 					pressed={button.pressed}
 					disabled={button.disabled}
 					title={button.title}

@@ -322,7 +322,7 @@ export function RestoreBackupFields() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
-						<AlertDialogAction type="button" variant="destructive" onClick={() => form.start()}>
+						<AlertDialogAction type="button" variant="secondary" tone="danger" onClick={() => form.start()}>
 							{t("confirm.confirm")}
 						</AlertDialogAction>
 					</AlertDialogFooter>

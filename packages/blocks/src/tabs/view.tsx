@@ -139,7 +139,7 @@ export function TabsNodeView() {
 					</ToolbarButton>
 					<ToolbarButton
 						label={t("delete")}
-						destructive
+						tone="danger"
 						disabled={!block.canRemoveChild(current)}
 						onClick={() => removeTab(current)}
 					>

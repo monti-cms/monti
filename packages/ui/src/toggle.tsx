@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./cn";
 
 const toggleVariants = cva(
-	"group/toggle inline-flex items-center justify-center gap-1 rounded-md text-monti-label whitespace-nowrap transition-[color,box-shadow] outline-none hover:bg-monti-hover hover:text-monti-default focus-visible:border-monti-focus focus-visible:ring-[3px] focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-monti-danger aria-pressed:bg-monti-accent-muted aria-pressed:text-monti-accent monti-dark:aria-invalid:ring-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/toggle inline-flex items-center justify-center gap-1 rounded-md text-monti-label whitespace-nowrap transition-[color,box-shadow] outline-none hover:bg-monti-hover hover:text-monti-default focus-visible:border-monti-focus focus-visible:ring-[3px] focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-monti-danger-soft aria-pressed:bg-monti-accent-muted aria-pressed:text-monti-accent [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {

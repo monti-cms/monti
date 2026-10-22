@@ -7,16 +7,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /**
  * An icon-only button. `label` is both the screen reader name and the tooltip shown on hover (the two are always the same).
- * With `pressed` it becomes a toggle button and has a background while on.
+ * With `pressed` it becomes a toggle button and has a background while on. Grey by default (`quiet`); `tone="danger"` for a remove button.
  * For a button that opens a menu or popover, wrap it with `trigger`: `trigger={(button) => <PopoverTrigger render={button} />}`.
  */
 export function IconButton({
 	label,
 	pressed,
-	destructive,
 	side = "top",
 	size = "icon-sm",
-	variant = "ghost",
+	variant = "quiet",
 	className,
 	trigger,
 	children,
@@ -24,7 +23,6 @@ export function IconButton({
 }: Omit<ComponentProps<typeof Button>, "aria-label" | "aria-pressed" | "children"> & {
 	label: string;
 	pressed?: boolean;
-	destructive?: boolean;
 	side?: "top" | "bottom" | "left" | "right";
 	trigger?: (button: ReactElement) => ReactElement;
 	children: ReactNode;
@@ -36,11 +34,7 @@ export function IconButton({
 			size={size}
 			aria-label={label}
 			aria-pressed={pressed}
-			className={cn(
-				"aria-pressed:bg-monti-selected aria-pressed:text-monti-default",
-				destructive && "text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger",
-				className,
-			)}
+			className={cn("aria-pressed:bg-monti-selected aria-pressed:text-monti-default", className)}
 			{...props}
 		/>
 	);

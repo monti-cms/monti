@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const VARIANTS = ["default", "secondary", "destructive", "success", "warning", "outline", "ghost", "link"] as const;
+const VARIANTS = ["default", "secondary", "danger", "success", "warning", "outline", "ghost", "link"] as const;
 
 export const AllVariants: Story = {
 	render: () => (

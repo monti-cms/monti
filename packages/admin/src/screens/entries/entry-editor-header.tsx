@@ -288,12 +288,12 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 							<>
 								{!isTrashed && <DropdownMenuSeparator />}
 								{isTrashed ? (
-									<DropdownMenuItem variant="destructive" onClick={confirmPermanentDelete}>
+									<DropdownMenuItem variant="danger" onClick={confirmPermanentDelete}>
 										<Trash aria-hidden />
 										{tc("lifecycle.deletePermanently")}
 									</DropdownMenuItem>
 								) : (
-									<DropdownMenuItem variant="destructive" onClick={() => confirmLifecycle("trash")}>
+									<DropdownMenuItem variant="danger" onClick={() => confirmLifecycle("trash")}>
 										<Trash2 aria-hidden />
 										{lifecycleLabel(site).trash}
 									</DropdownMenuItem>

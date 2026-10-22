@@ -71,3 +71,19 @@ export const LongText: Story = {
 		</Popover>
 	),
 };
+
+/** The widths: `sm`, `md` (default), `lg`, `auto`; `padding="none"` for content that brings its own rows. */
+export const Widths: Story = {
+	render: () => (
+		<Stack direction="row" gap="spacious" align="start">
+			{(["sm", "md", "lg"] as const).map((width) => (
+				<Popover key={width} open>
+					<PopoverTrigger render={<Button variant="outline" />}>{width}</PopoverTrigger>
+					<PopoverContent width={width} side="bottom" align="start">
+						{width} 너비의 팝오버
+					</PopoverContent>
+				</Popover>
+			))}
+		</Stack>
+	),
+};

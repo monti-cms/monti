@@ -55,6 +55,7 @@
 	--monti-fg-on-emphasis: #ffffff;
 	--monti-bg-backdrop: rgb(0 0 0 / 0.4);
 	--monti-focus-soft: rgb(47 84 235 / 0.3);
+	--monti-danger-soft: rgb(220 38 38 / 0.25);
 	--monti-shadow-floating: 0 1px 2px rgb(0 0 0 / 0.1), 0 4px 12px rgb(0 0 0 / 0.06);
 	--monti-bg-inset: var(--monti-gray-2);
 	--monti-bg-emphasis: var(--monti-gray-12);
@@ -77,6 +78,7 @@
 	--monti-border-accent-muted: var(--monti-accent-6);
 	--monti-bg-danger-muted: var(--monti-danger-3);
 	--monti-bg-danger-emphasis: var(--monti-danger-9);
+	--monti-bg-danger-emphasis-hover: var(--monti-danger-10);
 	--monti-fg-danger: var(--monti-danger-11);
 	--monti-border-danger-muted: var(--monti-danger-6);
 	--monti-bg-warning-muted: var(--monti-warning-3);
@@ -142,5 +144,6 @@
 	--monti-fg-on-emphasis: #0a0a0a;
 	--monti-bg-backdrop: rgb(0 0 0 / 0.6);
 	--monti-focus-soft: rgb(123 147 255 / 0.35);
+	--monti-danger-soft: rgb(248 113 113 / 0.3);
 	--monti-shadow-floating: 0 1px 2px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.4);
 }

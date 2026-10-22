@@ -69,3 +69,15 @@ export const States: Story = {
 		</Stack>
 	),
 };
+
+/** The two shared sizes and fixed-width letters: `sm` beside 32px buttons, `default` in forms; `mono` for slugs and paths. */
+export const SizesAndMono: Story = {
+	render: () => (
+		<Stack gap="normal" className="max-w-sm">
+			<Input size="sm" placeholder="작게: 필터, 표, 도구 모음" />
+			<Input placeholder="기본: 폼" />
+			<Input mono defaultValue="cms-elements-details" />
+			<Input size="sm" mono defaultValue="/posts/:slug" />
+		</Stack>
+	),
+};

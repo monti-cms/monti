@@ -11,6 +11,7 @@ export interface UiLabels {
 	cancel: string;
 	save: string;
 	saving: string;
+	loading: string;
 	clear: string;
 	deselect: string;
 	paginationLabel: string;
@@ -29,6 +30,7 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	cancel: "Cancel",
 	save: "Save",
 	saving: "Saving…",
+	loading: "Loading",
 	clear: "Clear",
 	deselect: "Remove",
 	paginationLabel: "Pagination",

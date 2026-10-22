@@ -142,7 +142,7 @@ function RuleRow({
 						className="h-7 w-14 px-2 text-monti-caption"
 					/>
 				)}
-				<IconButton label={t("rulesPanel.remove")} size="icon-xs" destructive onClick={onRemove} className="ml-auto">
+				<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove} className="ml-auto">
 					<Trash2 aria-hidden />
 				</IconButton>
 			</div>

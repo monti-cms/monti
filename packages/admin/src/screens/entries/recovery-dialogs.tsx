@@ -127,7 +127,7 @@ export function ConflictDialog({
 					<Button type="button" variant="outline" onClick={onReload}>
 						{t("conflict.reload")}
 					</Button>
-					<Button type="button" variant="destructive" onClick={() => void overwrite()}>
+					<Button type="button" variant="secondary" tone="danger" onClick={() => void overwrite()}>
 						{t("conflict.overwriteMine")}
 					</Button>
 				</DialogFooter>

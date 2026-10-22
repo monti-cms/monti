@@ -2,8 +2,8 @@ import { cva } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "./cn";
 
-/** What a status means; the color follows from it (`--monti-success`, `--monti-warning`, `--monti-destructive`, muted). */
-export type StatusTone = "success" | "warning" | "destructive" | "neutral" | "strong";
+/** What a status means; the color follows from it (success, warning, danger, muted). */
+export type StatusTone = "success" | "warning" | "danger" | "neutral" | "strong";
 
 /** The marker's form. The meaning never rests on color alone: pair the shape with a `label`, or give the marker a name some other way. */
 export type StatusShape = "dot" | "ring" | "dashed" | "half" | "minus";
@@ -13,7 +13,7 @@ const toneClass = cva("shrink-0", {
 		tone: {
 			success: "text-monti-success",
 			warning: "text-monti-warning",
-			destructive: "text-monti-danger",
+			danger: "text-monti-danger",
 			neutral: "text-monti-muted",
 			/** The page text color: the monochrome "published" and "draft" markers. */
 			strong: "text-monti-default",

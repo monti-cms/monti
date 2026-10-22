@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const TONES: StatusTone[] = ["success", "warning", "destructive", "neutral", "strong"];
+const TONES: StatusTone[] = ["success", "warning", "danger", "neutral", "strong"];
 const SHAPES: StatusShape[] = ["dot", "ring", "dashed", "half", "minus"];
 const SIZES = ["xs", "sm", "md"] as const;
 
@@ -58,7 +58,7 @@ export const Pulse: Story = {
 		<Stack direction="row" gap="spacious" align="center">
 			<StatusIndicator tone="warning" shape="dot" size="sm" pulse label="저장 중" />
 			<StatusIndicator tone="success" shape="dot" size="sm" label="저장됨" />
-			<StatusIndicator tone="destructive" shape="dot" size="sm" label="저장하지 못했어요" />
+			<StatusIndicator tone="danger" shape="dot" size="sm" label="저장하지 못했어요" />
 		</Stack>
 	),
 };

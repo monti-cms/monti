@@ -95,7 +95,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 				return (
 					<ContextMenuItem
 						key={key}
-						variant={action.destructive ? "destructive" : "default"}
+						variant={action.destructive ? "danger" : "default"}
 						disabled={action.disabled}
 						onClick={action.onSelect}
 					>
@@ -143,7 +143,7 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 				return (
 					<DropdownMenuItem
 						key={key}
-						variant={action.destructive ? "destructive" : "default"}
+						variant={action.destructive ? "danger" : "default"}
 						disabled={action.disabled}
 						onClick={action.onSelect}
 					>

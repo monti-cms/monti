@@ -71,7 +71,7 @@ export function GitSyncPage() {
 					<TabsTrigger value="conflicts" className="flex-none px-0 text-monti-body">
 						<TriangleAlert aria-hidden />
 						{t("tab.conflicts")}
-						{conflictCount > 0 && <Badge variant="destructive">{conflictCount}</Badge>}
+						{conflictCount > 0 && <Badge variant="danger">{conflictCount}</Badge>}
 					</TabsTrigger>
 					<TabsTrigger value="settings" className="flex-none px-0 text-monti-body">
 						<KeyRound aria-hidden />
@@ -253,7 +253,7 @@ function SyncTab({
 						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
 						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
 						{target.conflicts > 0 && (
-							<Badge variant="destructive">{t("target.conflicts", { count: target.conflicts })}</Badge>
+							<Badge variant="danger">{t("target.conflicts", { count: target.conflicts })}</Badge>
 						)}
 					</div>
 					{target.lastPull && target.lastPull.errors.length > 0 && (

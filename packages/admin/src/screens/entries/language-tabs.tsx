@@ -157,7 +157,7 @@ export function LanguageTabs({
 									<MoreHorizontal aria-hidden className="size-3.5" />
 								</IconButton>
 								<DropdownMenuContent align="start">
-									<DropdownMenuItem variant="destructive" onClick={onTrashTranslation}>
+									<DropdownMenuItem variant="danger" onClick={onTrashTranslation}>
 										<Trash2 aria-hidden />
 										{tc("lifecycle.trash")}
 									</DropdownMenuItem>

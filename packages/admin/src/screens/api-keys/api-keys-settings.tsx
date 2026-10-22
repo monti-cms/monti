@@ -193,7 +193,7 @@ function KeyRows({
 						<div className="flex items-center gap-2">
 							<span className="truncate font-medium text-monti-body">{key.name}</span>
 							{!key.readable && (
-								<Badge variant="destructive" title={t("row.unreadableHint")}>
+								<Badge variant="danger" title={t("row.unreadableHint")}>
 									{t("row.unreadable")}
 								</Badge>
 							)}

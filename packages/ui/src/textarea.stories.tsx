@@ -54,3 +54,13 @@ export const States: Story = {
 		</Stack>
 	),
 };
+
+/** `sm` writes at the label size for compact panels; `mono` for code and source text. */
+export const SizesAndMono: Story = {
+	render: () => (
+		<Stack gap="normal" className="max-w-sm">
+			<Textarea size="sm" placeholder="작게: 패널 안의 메모" />
+			<Textarea mono defaultValue={"export const a = 1;\nexport const b = 2;"} />
+		</Stack>
+	),
+};

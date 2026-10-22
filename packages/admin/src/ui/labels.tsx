@@ -17,6 +17,7 @@ export function AdminUiLabels({ children }: { children: ReactNode }) {
 				cancel: tc("cancel"),
 				save: tc("save"),
 				saving: tc("saving"),
+				loading: t("loading"),
 				clear: t("clear"),
 				deselect: t("deselect"),
 				paginationLabel: t("pagination.label"),

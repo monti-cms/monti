@@ -44,7 +44,7 @@ function ContextMenuContent({
 				<ContextMenuPrimitive.Popup
 					data-slot="context-menu-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-36 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none ring-1 ring-monti-muted duration-100 data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
 						className,
 					)}
 					{...props}
@@ -82,7 +82,7 @@ function ContextMenuItem({
 	...props
 }: ContextMenuPrimitive.Item.Props & {
 	inset?: boolean;
-	variant?: "default" | "destructive";
+	variant?: "default" | "danger";
 }) {
 	return (
 		<ContextMenuPrimitive.Item
@@ -90,7 +90,7 @@ function ContextMenuItem({
 			data-inset={inset}
 			data-variant={variant}
 			className={cn(
-				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=destructive]:text-monti-danger data-disabled:opacity-50 data-[variant=destructive]:focus:bg-monti-danger-muted monti-dark:data-[variant=destructive]:focus:bg-monti-danger-muted data-[variant=destructive]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-monti-default data-[variant=destructive]:*:[svg]:text-monti-danger",
+				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-monti-default data-[variant=danger]:*:[svg]:text-monti-danger",
 				className,
 			)}
 			{...props}

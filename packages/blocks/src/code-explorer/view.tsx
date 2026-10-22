@@ -148,7 +148,7 @@ export function CodeExplorerNodeView() {
 							<p className="text-monti-caption text-monti-muted">{t("open.hint")}</p>
 						</BlockSettingsField>
 					</BlockSettings>
-					<ToolbarButton label={t("delete")} destructive onClick={removeBlock}>
+					<ToolbarButton label={t("delete")} tone="danger" onClick={removeBlock}>
 						<Trash2 aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
