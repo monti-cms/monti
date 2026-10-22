@@ -7,7 +7,6 @@ import { AdminQueryProvider } from "../screens/shared/query-provider";
 import { Toaster } from "../ui/sonner";
 import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
-import { ContentFont } from "./content-font";
 import { layoutMessages } from "./messages";
 import { AdminPluginScope } from "./plugin-scope";
 import { SetupProblemScreen, setupProblemOf } from "./setup-problem";
@@ -66,7 +65,6 @@ export async function AdminLayout({
 		<AdminPluginScope plugins={plugins}>
 			<TooltipProvider>
 				<div className="monti-admin min-h-screen bg-monti-background text-monti-foreground">{children}</div>
-				<ContentFont />
 				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
 			</TooltipProvider>
 		</AdminPluginScope>
