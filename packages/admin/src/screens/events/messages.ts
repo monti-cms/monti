@@ -12,8 +12,6 @@ export const eventsMessages = defineMessages("cms-admin.events", {
 		"list.loadFailed": "Couldn't load the event deliveries.",
 		"list.emptyYet": "No events yet",
 		"list.emptyYetHint": "Changes to your content show up here with how they were delivered.",
-		"list.noSubscribers":
-			"No webhooks are connected, so only the change history is kept. Connect a webhook and its delivery results show up here too.",
 		"list.emptyNoMatch": "No matches",
 		"list.emptyNoMatchHint": "No events with this delivery status.",
 		"list.clearFilters": "Show all events",
@@ -85,7 +83,6 @@ export const eventsMessages = defineMessages("cms-admin.events", {
 		"list.loadFailed": "이벤트 전달 목록을 불러오지 못했어요.",
 		"list.emptyYet": "아직 이벤트가 없어요",
 		"list.emptyYetHint": "콘텐츠가 바뀌면 전달 상태와 함께 여기에 표시돼요.",
-		"list.noSubscribers": "연결된 웹훅이 없어서 변경 기록만 남아요. 웹훅을 연결하면 전달 결과도 여기서 볼 수 있어요.",
 		"list.emptyNoMatch": "일치하는 이벤트가 없어요",
 		"list.emptyNoMatchHint": "이 전달 상태의 이벤트가 없어요.",
 		"list.clearFilters": "모든 이벤트 보기",

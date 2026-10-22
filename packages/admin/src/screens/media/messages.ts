@@ -37,15 +37,11 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"library.menu.moveToFolder": "Move to folder",
 		"library.moved": "Moved '{name}' to {destination}.",
 		"library.moveFailed": "Couldn't move '{name}'.",
-		"library.optimize": "Optimize for web",
-		"library.optimize.help":
-			"Converts JPEG, PNG and WebP images to WebP and shrinks the long edge to 2560px before upload. The original is kept too.",
+		"library.optimize": "Shrink to WebP on upload",
 		"library.count": ({ count }) => `${count} ${Number(count) === 1 ? "file" : "files"}`,
 		"library.uploadProgress": "Uploading {current}/{total} · {percent}%",
 		"library.upload": "Upload files",
 		"library.cleanup": "Clean up interrupted uploads",
-		"library.cleanup.help":
-			"Deletes the leftovers of uploads that never finished or failed more than 24 hours ago. Files in the library are not touched.",
 		"library.search": "Search file names",
 		"library.kindLabel": "Type",
 		"library.usedLabel": "Usage",
@@ -135,15 +131,11 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"library.menu.moveToFolder": "폴더 이동",
 		"library.moved": "'{name}'을(를) {destination}(으)로 이동했어요.",
 		"library.moveFailed": "'{name}'을(를) 이동하지 못했어요.",
-		"library.optimize": "웹용 최적화",
-		"library.optimize.help":
-			"JPEG·PNG·WebP 이미지를 WebP로 바꾸고 긴 변을 2560px 이하로 줄여서 올려요. 원본도 함께 보관해요.",
+		"library.optimize": "WebP로 줄여 올리기",
 		"library.count": ({ count }) => `파일 ${count}개`,
 		"library.uploadProgress": "업로드 중 {current}/{total} · {percent}%",
 		"library.upload": "파일 업로드",
 		"library.cleanup": "중단된 업로드 정리",
-		"library.cleanup.help":
-			"올리다가 끝나지 않았거나 실패한 지 24시간이 지난 파일 찌꺼기를 저장소에서 지워요. 라이브러리에 있는 파일은 건드리지 않아요.",
 		"library.search": "파일명 검색",
 		"library.kindLabel": "형식",
 		"library.usedLabel": "사용 여부",

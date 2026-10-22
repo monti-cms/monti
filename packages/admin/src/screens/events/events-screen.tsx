@@ -20,7 +20,6 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { AdminLink as Link } from "../../router";
-import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
 import { StatusIndicator } from "../../ui/status-indicator";
@@ -150,11 +149,6 @@ export function EventsScreen() {
 				</PageActions>
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
-			{recordedOnly && (
-				<Alert layout="inline" className="mx-8 mt-3 w-auto">
-					<AlertDescription className="col-start-auto min-w-0">{t("list.noSubscribers")}</AlertDescription>
-				</Alert>
-			)}
 			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-8 mt-3" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (

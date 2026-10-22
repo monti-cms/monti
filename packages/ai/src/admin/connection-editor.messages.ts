@@ -15,8 +15,6 @@ export const connectionMessages = defineMessages("cms-ai.admin.connection", {
 		"model.none": "No model",
 		"empty.title": "Select a connection or add one",
 		"empty.none": "No AI connection yet",
-		"empty.description":
-			"A connection is the address of an AI service, its key and a default model. Any OpenAI-compatible service works, such as OpenRouter, Gemini or xAI.",
 		"new.title": "New connection",
 		"field.name": "Name",
 		"field.name.hint": "Only for you. It shows up in the lists of connections.",
@@ -46,8 +44,6 @@ export const connectionMessages = defineMessages("cms-ai.admin.connection", {
 		"model.none": "모델 없음",
 		"empty.title": "연결을 고르거나 새로 추가하세요",
 		"empty.none": "아직 AI 연결이 없어요",
-		"empty.description":
-			"연결은 AI 서비스의 주소, 키, 기본 모델을 묶어 둔 설정이에요. OpenRouter, Gemini, xAI처럼 OpenAI 방식을 지원하는 서비스를 쓸 수 있어요.",
 		"new.title": "새 연결",
 		"field.name": "이름",
 		"field.name.hint": "나만 보는 이름이에요. 연결 목록에 이 이름으로 나와요.",

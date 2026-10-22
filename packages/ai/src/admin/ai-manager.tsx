@@ -205,6 +205,8 @@ export function AiManager() {
 	const _snippetsQuery = useAiSnippets();
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
+	/** Without a usable connection no feature runs, so the switches show as off and cannot be turned on. */
+	const connected = usable.size > 0;
 	const [tab, setTab] = useState<AiTab>("features");
 	/** The action opened for editing, as it was at open time. If `isNew`, it is a new screen action not yet saved (saving creates it). */
 	const [opened, setOpened] = useState<{ saved: FeatureDraft; isNew: boolean } | null>(null);
@@ -592,7 +594,8 @@ export function AiManager() {
 														trailing={
 															<Switch
 																size="sm"
-																checked={feature.enabled}
+																checked={feature.enabled && connected}
+																disabled={!connected}
 																aria-label={t("toggle.enableAction", { label: feature.label })}
 																onClick={(e) => e.stopPropagation()}
 																onCheckedChange={(checked) => handleToggle(feature, checked)}
@@ -621,7 +624,8 @@ export function AiManager() {
 												trailing={
 													<Switch
 														size="sm"
-														checked={feature.enabled}
+														checked={feature.enabled && connected}
+														disabled={!connected}
 														aria-label={t("toggle.enableAction", { label: feature.label })}
 														onClick={(e) => e.stopPropagation()}
 														onCheckedChange={(checked) => handleToggle(feature, checked)}
@@ -703,9 +707,6 @@ export function AiManager() {
 					</MasterDetail>
 				</TabsContent>
 				<TabsContent value="snippets" className="flex min-h-0 flex-1 flex-col">
-					<p className="border-b px-8 py-2.5 text-monti-label text-monti-muted-foreground">
-						{t("snippets.description")}
-					</p>
 					<SnippetManager
 						selected={snippet}
 						onOpen={(key) => void openSnippet(key)}

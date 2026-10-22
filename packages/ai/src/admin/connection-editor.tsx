@@ -173,7 +173,6 @@ export function ConnectionManager({
 						<EmptyState
 							icon={Plug}
 							title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
-							description={t("empty.description")}
 							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
 						/>
 					)
