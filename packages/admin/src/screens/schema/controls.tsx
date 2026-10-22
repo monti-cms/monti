@@ -84,8 +84,7 @@ export function ChangeDot() {
 	const t = useTranslator(schemaMessages);
 	return (
 		<Inline as="span" shrink={false} data-testid="change-dot">
-			{/* design-system: needs an accent tone for StatusIndicator (the dot was the accent colour) */}
-			<StatusIndicator tone="strong" size="xs" />
+			<StatusIndicator tone="accent" size="xs" />
 			<Text srOnly>{t("changed")}</Text>
 		</Inline>
 	);

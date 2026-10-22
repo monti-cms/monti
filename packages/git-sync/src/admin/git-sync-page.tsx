@@ -14,6 +14,7 @@ import {
 	commonMessages,
 	DescriptionItem,
 	DescriptionList,
+	DiffView,
 	EmptyState,
 	Heading,
 	Inline,
@@ -34,7 +35,7 @@ import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { type DiffLine, lineDiff } from "../diff";
+import { lineDiff } from "../diff";
 import {
 	assignGitSyncKey,
 	type ConflictView,
@@ -69,8 +70,7 @@ export function GitSyncPage() {
 
 	return (
 		<Stack gap="none" grow minHeight={0} overflow="hidden">
-			{/* design-system: needs Tabs to fill the page height (grow, no gap) */}
-			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
 				<PageTabs>
 					<TabsTrigger value="sync">
 						<GitBranch aria-hidden />
@@ -184,13 +184,13 @@ function SyncTab({
 					</Alert>
 				</Box>
 			)}
-			{status.targets.map((target) => (
+			{status.targets.map((target, index) => (
 				<Stack
 					as="section"
 					key={target.id}
 					aria-label={target.id}
 					gap="normal"
-					border="bottom"
+					border={index === 0 ? "y" : "bottom"}
 					paddingX="wide"
 					paddingY="comfortable"
 				>
@@ -335,13 +335,6 @@ function SyncTab({
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
 // Conflicts tab
 
-const LINE_STYLE: Record<DiffLine["type"], string> = {
-	same: "text-monti-muted",
-	remove: "bg-monti-danger-muted text-monti-danger",
-	add: "bg-monti-success-muted text-monti-success",
-};
-const LINE_MARK: Record<DiffLine["type"], string> = { same: " ", remove: "-", add: "+" };
-
 /** The server text against the git text as a line diff: `-` lines are only on the server, `+` lines only in git. */
 export function ConflictDiff({ serverText, gitText }: { serverText: string | null; gitText: string }) {
 	const t = useTranslator(gitSyncMessages);
@@ -363,22 +356,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 					{t("conflicts.same")}
 				</Text>
 			) : (
-				// design-system: needs a diff view part (a scrolling mono box whose lines are marked as removed / added / same)
-				<fieldset
-					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-monti-muted p-0 font-mono text-monti-caption"
-					aria-label={`${t("conflicts.server")} / ${t("conflicts.git")}`}
-				>
-					{lines.map((line, index) => (
-						<div
-							// biome-ignore lint/suspicious/noArrayIndexKey: a diff is a fixed list of lines; the index is its identity
-							key={index}
-							data-diff={line.type}
-							className={`whitespace-pre-wrap px-condensed ${LINE_STYLE[line.type]}`}
-						>
-							{LINE_MARK[line.type]} {line.text}
-						</div>
-					))}
-				</fieldset>
+				<DiffView lines={lines} />
 			)}
 			<Text as="p" variant="caption" tone="muted">
 				{t("conflicts.legend")}
@@ -430,13 +408,13 @@ function ConflictsTab({
 	}
 	return (
 		<Stack gap="none">
-			{items.map((conflict) => (
+			{items.map((conflict, index) => (
 				<Stack
 					as="section"
 					key={conflict.id}
 					aria-label={conflict.label}
 					gap="normal"
-					border="bottom"
+					border={index === 0 ? "y" : "bottom"}
 					paddingX="wide"
 					paddingY="comfortable"
 				>

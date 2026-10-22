@@ -104,6 +104,8 @@ export const layoutVariants = cva("", {
 			prose: "max-w-prose",
 			content: "max-w-content",
 			page: "max-w-page",
+			/** A detail pane's readable column (768px). */
+			detail: "max-w-3xl",
 		},
 		/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
 		minWidth: { 0: "min-w-0" },
@@ -126,6 +128,8 @@ export const layoutVariants = cva("", {
 		},
 		/** A row or item that reacts to the pointer. */
 		hover: { true: "transition-colors hover:bg-monti-hover" },
+		/** Inside a `Grid`: spans every column (a wide field in a two-column form). */
+		span: { all: "col-span-full" },
 		/** Out of date while new content loads, or not available: shown, but quieter. */
 		dimmed: { true: "opacity-50 transition-opacity" },
 	},
@@ -158,6 +162,7 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 		position,
 		place,
 		hover,
+		span,
 		dimmed,
 		...rest
 	} = props;
@@ -185,6 +190,7 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 			position,
 			place,
 			hover,
+			span,
 			dimmed,
 		},
 		rest,

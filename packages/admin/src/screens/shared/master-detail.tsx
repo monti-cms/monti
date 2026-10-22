@@ -1,7 +1,6 @@
 "use client";
 
 import { Box, Inline, Skeleton, Stack, Text, TextLink } from "@monti-cms/ui";
-import { Stack as OpenStack } from "@monti-cms/ui/internal";
 import type { ReactNode } from "react";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
 
@@ -29,7 +28,6 @@ export function ListPane({
 	skeletonRows = 3,
 	empty,
 	header,
-	className,
 	children,
 }: {
 	label: string;
@@ -38,14 +36,11 @@ export function ListPane({
 	/** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
 	empty?: ReactNode;
 	header?: ReactNode;
-	/** @deprecated Kept for callers that still set a width; the pane has one width now. */
-	className?: string;
 	children?: ReactNode;
 }) {
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
-		// transitional: className kept for callers that have not moved yet (the open Stack merges it over the default width)
-		<OpenStack gap="none" shrink={false} border="right" width="panel" className={className}>
+		<Stack gap="none" shrink={false} border="right" width="panel">
 			{header}
 			<Stack as="ul" gap="none" grow minHeight={0} overflow="y" aria-label={label}>
 				{loading
@@ -63,7 +58,7 @@ export function ListPane({
 								</Stack>
 							)}
 			</Stack>
-		</OpenStack>
+		</Stack>
 	);
 }
 
@@ -127,7 +122,6 @@ export function ListRow({
 			</TextLink>
 		</Stack>
 	);
-	// design-system: needs a hover surface on Box/Stack (the row's hover background)
 	const rowProps = {
 		as: "li",
 		gap: "condensed",
@@ -135,6 +129,7 @@ export function ListRow({
 		paddingX: "comfortable",
 		paddingY: "condensed",
 		background: current ? "selected" : undefined,
+		hover: !current,
 	} as const;
 	if (!actions || actions.length === 0) {
 		return (

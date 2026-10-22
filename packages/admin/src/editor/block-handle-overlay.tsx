@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the handle floats beside the block at measured coordinates
+
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	DropdownMenu,
@@ -47,7 +49,6 @@ export function BlockHandleOverlay({
 	if (typeof window === "undefined") return null;
 
 	return createPortal(
-		// design-system: drawing — the handle floats beside the block at measured coordinates (fixed position, z-index)
 		<div
 			style={{
 				position: "fixed",

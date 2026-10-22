@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together
+
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -223,8 +225,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	const collapseAt = (line: number): FoldRegion | undefined => collapses.find((region) => region.startLine === line);
 
-	// design-system: drawing — the code block drawn in the document: the frame, the line number gutter, the effect backgrounds and the code text
-	// are positioned together line by line; only the header row above them is laid out from components
 	return (
 		<NodeViewWrapper
 			className="not-prose group/code relative my-comfortable flex w-full flex-col rounded-md border bg-monti-inset text-monti-body"
@@ -331,7 +331,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 							<TooltipTrigger
 								render={
 									<Toggle
-										size="sm"
+										size="icon-sm"
 										pressed={parsedMeta.showLineNumbers}
 										onPressedChange={(pressed) => setMeta({ showLineNumbers: pressed })}
 										aria-label={t("view.lineNumbers")}

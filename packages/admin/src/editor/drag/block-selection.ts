@@ -1,3 +1,4 @@
+// design-system: drawing — the selection rectangle is drawn over the document while dragging
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { type EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
@@ -240,7 +241,6 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 			box = document.createElement("div");
 			box.setAttribute("aria-hidden", "true");
 			box.dataset.montiMarquee = "";
-			// design-system: drawing — the selection rectangle is drawn over the document while dragging
 			box.className = "pointer-events-none fixed z-50 rounded-sm border border-monti-accent bg-monti-accent-muted";
 			document.body.appendChild(box);
 		}

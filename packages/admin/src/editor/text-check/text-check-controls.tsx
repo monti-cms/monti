@@ -5,11 +5,11 @@ import { useTranslator } from "@monti-cms/core/site";
 import {
 	Badge,
 	Button,
-	cn,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Icon,
 	IconButton,
 	Inline,
 	Popover,
@@ -29,23 +29,23 @@ import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";
 import type { TextCheckController } from "./use-text-check";
 
-const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; className: string }>> = {
-	error: { icon: CircleAlert, className: "text-monti-danger" },
-	warning: { icon: TriangleAlert, className: "text-monti-warning" },
-	info: { icon: Info, className: "text-monti-default" },
-};
+const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; tone: "danger" | "warning" | "inherit" }>> =
+	{
+		error: { icon: CircleAlert, tone: "danger" },
+		warning: { icon: TriangleAlert, tone: "warning" },
+		info: { icon: Info, tone: "inherit" },
+	};
 
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
-	const { icon: Icon, className } = SEVERITY_ICON[severity];
-	// design-system: needs an Icon part (size and tone for an icon outside a button)
-	return <Icon aria-hidden className={cn("size-4 shrink-0", className)} />;
+	const { icon, tone } = SEVERITY_ICON[severity];
+	return <Icon icon={icon} tone={tone} />;
 }
 
 /** One checker button. Its name and icon come from the checker definition (`label`, `icon`). */
 function CheckerButton({ checker, controller }: { checker: TextChecker; controller: TextCheckController }) {
 	const t = useTranslator(textCheckMessages);
 	const iconByName = useIconByName();
-	const Icon = (typeof checker.icon === "string" ? iconByName(checker.icon) : checker.icon) ?? SpellCheck;
+	const Glyph = (typeof checker.icon === "string" ? iconByName(checker.icon) : checker.icon) ?? SpellCheck;
 	const running = controller.running === checker.id;
 	return (
 		<IconButton
@@ -56,7 +56,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={() => void controller.run(checker.id)}
 		>
-			{running ? <Spinner /> : <Icon aria-hidden />}
+			{running ? <Spinner /> : <Glyph aria-hidden />}
 		</IconButton>
 	);
 }

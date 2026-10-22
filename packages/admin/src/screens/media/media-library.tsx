@@ -4,6 +4,7 @@ import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	Grid,
 	IconButton,
 	Inline,
 	Input,
@@ -571,18 +572,14 @@ export function MediaLibrary() {
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								// design-system: needs Grid columns 2/3/4/6 by screen width
-								<ul
-									aria-hidden
-									className="grid grid-cols-2 gap-comfortable sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
-								>
+								<Grid as="ul" columns="tiles" gap="comfortable" aria-hidden>
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>
 											<Skeleton shape="block" />
 										</li>
 									))}
-								</ul>
+								</Grid>
 							) : filtered ? (
 								<EmptyState
 									icon={SearchX}

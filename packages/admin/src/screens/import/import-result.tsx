@@ -108,8 +108,7 @@ export function ResultView({ result }: { result: ImportRun }) {
 					.filter(Boolean)
 					.join(" · ")}
 			</Text>
-			{/* design-system: needs a maximum height for a scrolling list (about 28rem) */}
-			<Box radius="md" border="all" paddingX="normal" overflow="y">
+			<Box radius="md" border="all" paddingX="normal" maxHeight="list" overflow="y">
 				<Stack as="ul" gap="none">
 					{result.results.map((entry) => (
 						<ResultRow key={entry.key} entry={entry} />

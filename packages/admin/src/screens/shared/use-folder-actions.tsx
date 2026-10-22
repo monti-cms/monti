@@ -21,9 +21,10 @@ import {
 	FormFieldError,
 	Input,
 	Label,
+	List,
+	ListItem,
 	Skeleton,
 	Stack,
-	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
@@ -336,15 +337,14 @@ export function useFolderActions({
 						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
 					</AlertDialogHeader>
 					{contents ? (
-						// design-system: needs a bulleted list option (the two lines of what the folder holds)
-						<Stack as="ul" gap="tight">
-							<Text as="li">{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</Text>
-							<Text as="li">
+						<List>
+							<ListItem>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</ListItem>
+							<ListItem>
 								{t("folder.childCount", { count: contents.childFolders.length })}
 								{contents.childFolders.length > 0 &&
 									`: ${contents.childFolders.map((folder) => folder.name).join(", ")}`}
-							</Text>
-						</Stack>
+							</ListItem>
+						</List>
 					) : (
 						!shownError && (
 							<Stack gap="condensed" aria-hidden>

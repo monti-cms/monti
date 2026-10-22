@@ -2,6 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	ChoiceCard,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -185,32 +186,18 @@ export function AddFieldDialog({
 						<Stack role="radiogroup" aria-label={t("field.kind")} gap="tight">
 							{ADDABLE_KINDS.map((item) => {
 								const Icon = KIND_ICONS[item];
-								const nameId = `add-field-kind-${item}`;
 								return (
-									// design-system: needs a choice-card control (icon, name and hint in one selectable row)
-									// biome-ignore lint/a11y/useSemanticElements: the kinds are drawn as rows; a native radio cannot be styled as one
-									<button
+									<ChoiceCard
 										key={item}
-										type="button"
 										role="radio"
 										aria-checked={item === kind}
-										aria-labelledby={nameId}
-										aria-describedby={`${nameId}-hint`}
+										aria-label={t(`kind.${item}`)}
+										icon={<Icon aria-hidden />}
+										title={t(`kind.${item}`)}
+										hint={t(`kind.${item}.hint`)}
+										selected={item === kind}
 										onClick={() => pickKind(item)}
-										className="flex items-start gap-normal rounded-md border border-transparent px-normal py-condensed text-left outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-checked:border-monti-accent aria-checked:bg-monti-accent-muted"
-									>
-										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-muted bg-monti-page text-monti-muted">
-											<Icon aria-hidden className="size-4" />
-										</span>
-										<Stack gap="none" minWidth={0}>
-											<Text id={nameId} weight="medium">
-												{t(`kind.${item}`)}
-											</Text>
-											<Text id={`${nameId}-hint`} variant="caption" tone="muted">
-												{t(`kind.${item}.hint`)}
-											</Text>
-										</Stack>
-									</button>
+									/>
 								);
 							})}
 						</Stack>

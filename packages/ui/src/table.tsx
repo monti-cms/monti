@@ -5,14 +5,14 @@ import { cn } from "./cn";
 
 function Table({
 	className,
-	containerClassName,
+	container = "scroll",
 	inset = "none",
 	layout = "auto",
 	stickyHeader = false,
 	...props
 }: React.ComponentProps<"table"> & {
-	/** Scroll area wrapping the table. If the outside handles scrolling, set `overflow-visible` so the sticky header works. */
-	containerClassName?: string;
+	/** `scroll`: the table scrolls sideways in its own box. `none`: the page or a parent scrolls it (needed for a sticky header under an outer scroll). */
+	container?: "scroll" | "none";
 	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
 	inset?: "none" | "page";
 	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
@@ -21,7 +21,7 @@ function Table({
 	stickyHeader?: boolean;
 }) {
 	return (
-		<div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
+		<div data-slot="table-container" className={cn("relative w-full", container === "scroll" && "overflow-x-auto")}>
 			<table
 				data-slot="table"
 				className={cn(
@@ -90,6 +90,8 @@ interface CellOptions {
 	/** A column width in px that the screen computes (a column the writer resized); takes over from `width`. */
 	size?: number;
 	valign?: "top";
+	/** Long content wraps onto more lines instead of widening the column. */
+	wrap?: boolean;
 	tone?: "muted";
 }
 const COLUMN_WIDTH = { xs: "w-14", sm: "w-24", md: "w-28", lg: "w-40" } as const;
@@ -131,6 +133,7 @@ function TableCell({
 	width,
 	size,
 	valign,
+	wrap,
 	tone,
 	style,
 	...props
@@ -144,6 +147,7 @@ function TableCell({
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top",
+				wrap && "whitespace-normal break-words",
 				tone === "muted" && "text-monti-muted",
 				className,
 			)}

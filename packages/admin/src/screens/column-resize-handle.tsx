@@ -1,4 +1,5 @@
 // Column width resize handle of the entries table header.
+// design-system: drawing — a draggable, keyboard-operable separator positioned on a column edge
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
@@ -43,14 +44,12 @@ export function ColumnResizeHandle({
 					onNudge(event.key === "ArrowLeft" ? -16 : 16);
 				}
 			}}
-			// design-system: needs a resize-handle part (a draggable, keyboard-operable separator on a column edge)
-			className="absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
+			className="group/handle absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
 		>
-			{/* design-system: needs a resize-handle part (the line of the handle) */}
 			<span
 				className={cn(
-					"h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-divider",
-					resizing && "bg-monti-emphasis group-hover/th:bg-monti-emphasis",
+					"h-full w-px bg-transparent transition-colors group-hover/handle:bg-monti-divider",
+					resizing && "bg-monti-emphasis group-hover/handle:bg-monti-emphasis",
 					"[div:focus-visible>&]:bg-monti-accent-emphasis",
 				)}
 			/>

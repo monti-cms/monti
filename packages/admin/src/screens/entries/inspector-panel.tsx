@@ -75,7 +75,6 @@ export function InspectorPanel({
 	);
 	const fields = (include: (group: PanelGroup) => boolean) =>
 		site.isCollection(collection) && (
-			// design-system: needs a fieldset tag on Box/Stack (no min-width, comfortable gap, dimmed while disabled)
 			<FormFieldSet disabled={disabled}>
 				<SchemaFields
 					showDescriptions={false}
@@ -89,31 +88,28 @@ export function InspectorPanel({
 		);
 
 	return (
-		<Tabs
-			value={tab}
-			onValueChange={(value) => setTab(String(value))}
-			aria-label={t("tab.default")}
-			render={<Stack gap="none" height="full" width="full" overflow="hidden" background="page" border="left" />}
-		>
-			<SidePanelHeader onClose={onClose}>
-				<TabsList variant="line">
-					{tabs.map((name) => (
-						<TabsTrigger key={name} value={name}>
-							{tabLabel(site, name, collection)}
-							{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="danger" />}
-						</TabsTrigger>
-					))}
-				</TabsList>
-			</SidePanelHeader>
+		<Stack gap="none" height="full" width="full" overflow="hidden" background="page" border="left">
+			<Tabs fill value={tab} onValueChange={(value) => setTab(String(value))} aria-label={t("tab.default")}>
+				<SidePanelHeader onClose={onClose}>
+					<TabsList variant="line">
+						{tabs.map((name) => (
+							<TabsTrigger key={name} value={name}>
+								{tabLabel(site, name, collection)}
+								{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="danger" />}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</SidePanelHeader>
 
-			<Box grow minHeight={0} overflow="y" paddingX="comfortable" paddingY="comfortable">
-				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
-				{tabs.map((name) => (
-					<TabsContent key={name} value={name}>
-						{fields((group) => group.tab === name)}
-					</TabsContent>
-				))}
-			</Box>
-		</Tabs>
+				<Box grow minHeight={0} overflow="y" paddingX="comfortable" paddingY="comfortable">
+					<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
+					{tabs.map((name) => (
+						<TabsContent key={name} value={name}>
+							{fields((group) => group.tab === name)}
+						</TabsContent>
+					))}
+				</Box>
+			</Tabs>
+		</Stack>
 	);
 }

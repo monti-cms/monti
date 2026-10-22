@@ -91,12 +91,13 @@ export function ModelCombobox({
 			itemToStringLabel={(item: Item) => item.label}
 			isItemEqualToValue={(a: Item, b: Item) => a.value === b.value}
 		>
-			{/* design-system: needs size="sm" and mono on ComboboxInput (a compact monospace model field) */}
 			<ComboboxInput
 				id={id}
 				aria-label={ariaLabel}
 				placeholder={loading ? t("modelsLoading") : placeholder}
 				showClear={Boolean(value)}
+				size="sm"
+				mono
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{error ?? (loading ? t("modelsLoading") : t("modelsHint"))}</ComboboxEmpty>

@@ -11,8 +11,8 @@ import {
 	AlertTitle,
 	Badge,
 	Box,
+	CodeBlock,
 	cn,
-	Grid,
 	Heading,
 	IconButton,
 	Inline,
@@ -101,10 +101,7 @@ function FileRest({ file }: { file: Obj }) {
 							<Heading as="h4" variant="label">
 								{title}
 							</Heading>
-							{/* design-system: needs a code block (scrolling, maximum height, inset background) */}
-							<pre className="max-h-64 overflow-auto rounded-md bg-monti-inset p-normal text-monti-caption">
-								{JSON.stringify(value, null, 2)}
-							</pre>
+							<CodeBlock wrap={false}>{JSON.stringify(value, null, 2)}</CodeBlock>
 						</Stack>
 					))}
 				</Section>
@@ -251,7 +248,7 @@ function SchemaEditor({
 		setSelectedName(name);
 		setSection(undefined);
 	};
-	const scroller = useRef<HTMLDivElement>(null);
+	const scroller = useRef<HTMLElement>(null);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
@@ -328,8 +325,7 @@ function SchemaEditor({
 								{actions}
 							</Inline>
 						)}
-				{/* design-system: needs a ref on Box/Stack (the scroll position is restored after a save) */}
-				<div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+				<Stack ref={scroller} gap="none" grow minHeight={0} overflow="y">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
@@ -385,8 +381,8 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<Grid columns="sidebar" gap="wide" align="start">
-										<Stack gap="hair">
+									<Inline wrap align="start" gap="wide">
+										<Stack gap="hair" width="panel-sm" shrink={false}>
 											<Inline justify="between" paddingBottom="condensed" paddingX="normal">
 												<Text variant="caption" weight="medium" tone="muted">
 													{t("collection.railTitle")} {names.length}
@@ -423,7 +419,7 @@ function SchemaEditor({
 												</SortableList>
 											</Stack>
 										</Stack>
-										<Box minWidth={0}>
+										<Box grow minWidth={0}>
 											{selected && collections[selected] ? (
 												<CollectionEditor
 													key={selected}
@@ -454,7 +450,7 @@ function SchemaEditor({
 												</Text>
 											)}
 										</Box>
-									</Grid>
+									</Inline>
 								)}
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
@@ -467,7 +463,7 @@ function SchemaEditor({
 							</>
 						)}
 					</PageBody>
-				</div>
+				</Stack>
 				{dirty && writable && (
 					<SaveBar
 						count={pending}

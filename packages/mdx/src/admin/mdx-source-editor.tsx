@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — a textarea laid over a syntax-highlighted layer
+
 import { useDebounced } from "@monti-cms/admin/kit";
 import { type ComponentProps, type CSSProperties, useEffect, useMemo, useState } from "react";
 
@@ -42,8 +44,6 @@ const styleOf = (token: Token): CSSProperties | undefined =>
 /**
  * MDX source edit field. Text is written into an invisible input, and an overlaid layer in the same spot shows MDX syntax colors.
  * Colors are re-applied after typing pauses briefly. Until then only the changed line shows without color (so the text does not look misaligned).
- *
- * design-system: drawing — a textarea laid over a syntax-highlighted layer; its classes and `className` prop stay raw (the file's elements and `style` on the tokens are its own geometry).
  */
 export function MdxSourceEditor({
 	value,

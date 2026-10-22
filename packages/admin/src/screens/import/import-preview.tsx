@@ -63,8 +63,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 										{t("collections.count", { count: collection.entries })}
 									</Text>
 								</TableCell>
-								{/* design-system: needs TableCell wrap (long cell content wraps instead of staying on one line) */}
-								<TableCell>
+								<TableCell wrap>
 									<Select
 										value={collection.target ?? SKIP}
 										items={items}
@@ -141,9 +140,8 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 			<Heading as="h4" variant="label">
 				{t("entries.title")}
 			</Heading>
-			{/* design-system: needs a maximum height for a scrolling list (about 24rem) and a sticky table header */}
-			<Box radius="md" border="all" overflow="y">
-				<Table>
+			<Box radius="md" border="all" maxHeight="list" overflow="y">
+				<Table container="none" stickyHeader>
 					<TableHeader>
 						<TableRow>
 							<TableHead>{t("entries.title.column")}</TableHead>
@@ -155,8 +153,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 					<TableBody>
 						{rows.map((entry) => (
 							<TableRow key={entry.key} data-testid="import-entry" data-status={entry.skipped ? "skipped" : "import"}>
-								{/* design-system: needs TableCell wrap (long titles, slugs and reasons wrap instead of staying on one line) */}
-								<TableCell valign="top">
+								<TableCell valign="top" wrap>
 									<Inline gap="condensed" wrap>
 										<Text weight="medium">{entry.title ?? t("entries.noTitle")}</Text>
 										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}

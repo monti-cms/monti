@@ -1,7 +1,9 @@
 "use client";
 
+// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)
+
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, Inline, Stack, Text } from "@monti-cms/ui";
+import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -20,8 +22,8 @@ interface SlashMenuPopupProps {
 /** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
-	const Icon = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
-	return <Icon aria-hidden />;
+	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
+	return <Icon icon={Glyph} tone="muted" />;
 }
 
 /**
@@ -46,7 +48,6 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 	if (!mounted || items.length === 0) return null;
 
 	return createPortal(
-		// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, scrolls the highlighted row into view); needs a floating list part
 		<div
 			ref={listRef}
 			role="listbox"
@@ -73,7 +74,6 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 					onKeyDown={(event) => {
 						if (event.key === "Enter") onSelect(item);
 					}}
-					// design-system: needs a selectable list option (highlighted row, hover) for a listbox
 					className={cn(
 						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",

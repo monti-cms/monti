@@ -12,6 +12,7 @@ import {
 	FormFieldLabel,
 	Heading,
 	IconButton,
+	Image,
 	Inline,
 	Input,
 	Select,
@@ -45,7 +46,7 @@ import {
 	usageNoteLabel,
 	withExtension,
 } from "./media-item";
-import { MediaThumb } from "./media-views";
+import { fallbackFor } from "./media-views";
 import { mediaMessages } from "./messages";
 
 /** One group in the detail. A small title, with the content below it. */
@@ -193,19 +194,14 @@ export function MediaDetailPanel({
 
 			<Stack gap="none" grow minHeight={0} overflow="y">
 				<Stack gap="normal" padding="comfortable">
-					{/* design-system: needs a preview frame (4:3 aspect ratio, content contained) and an Image part (contained, not cropped) */}
-					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-inset">
-						{isImage && media.publicUrl ? (
-							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
-						) : (
-							<Stack align="center" gap="condensed">
-								<MediaThumb media={media} iconSize={48} />
-								<Text tone="muted" weight="medium">
-									{fileTypeLabel(media.filename, media.mimeType)}
-								</Text>
-							</Stack>
-						)}
-					</div>
+					<Image
+						src={isImage ? media.publicUrl : undefined}
+						alt=""
+						ratio="photo"
+						fit="contain"
+						border
+						fallback={fallbackFor(media, isImage)}
+					/>
 					<Inline gap="condensed" wrap>
 						{media.publicUrl && (
 							<>

@@ -1,12 +1,13 @@
 "use client";
 
+// design-system: drawing — rendered previews (diagram, formula) are drawn inside the document in the block's own look
+
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { useAdminComponents } from "../../../admin-components";
 import { blocksMessages } from "../messages";
 
-// design-system: drawing — these draw the rendered preview (a diagram, a formula) inside the document, in the block's own look
 interface ErrorBoundaryProps {
 	children: ReactNode;
 	fallback?: (error: Error) => ReactNode;

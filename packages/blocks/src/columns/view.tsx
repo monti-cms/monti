@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — measured column layout with boundary handles and drag
+
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
 import { Box, cn, Text } from "@monti-cms/admin/kit";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
@@ -129,7 +131,6 @@ export function ColumnsNodeView() {
 	};
 
 	return (
-		// design-system: drawing — the columns as the public post lays them out (grid on the content, column boundaries and resize handles)
 		<BlockFrame ref={wrapperRef} className="my-spacious rounded-md">
 			<Content
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
@@ -208,7 +209,6 @@ export function ColumnsNodeView() {
 /** One column. The boundary shows as a dotted line only on hover or when the cursor is inside. */
 export function ColumnNodeView() {
 	return (
-		// design-system: drawing — one column cell with its hover outline
 		<BlockFrame
 			framed={false}
 			selectedRing={false}

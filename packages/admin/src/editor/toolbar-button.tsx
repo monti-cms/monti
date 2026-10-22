@@ -41,7 +41,7 @@ export function ToolbarButton({
 			<TooltipTrigger
 				render={
 					item.isActive ? (
-						<Toggle size="sm" pressed={active} onPressedChange={() => item.run(editor)} {...common} />
+						<Toggle size="icon-sm" pressed={active} onPressedChange={() => item.run(editor)} {...common} />
 					) : (
 						<Button
 							type="button"

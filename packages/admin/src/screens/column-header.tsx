@@ -79,8 +79,7 @@ function CheckRow({
 	onChange: (next: boolean) => void;
 }) {
 	return (
-		// design-system: needs a hover surface on Box/Stack (the row's hover background)
-		<Box radius="sm" padding="condensed">
+		<Box radius="sm" padding="condensed" hover>
 			<Label>
 				<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
 				{label}

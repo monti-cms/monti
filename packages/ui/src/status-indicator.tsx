@@ -65,7 +65,8 @@ export function StatusIndicator({
 	shape = "dot",
 	size = "md",
 	label,
-	labelClassName,
+	hideLabelBelow,
+	chip = false,
 	pulse = false,
 	className,
 	...props
@@ -75,8 +76,10 @@ export function StatusIndicator({
 	size?: "xs" | "sm" | "md";
 	/** The status name next to the marker. Without it the marker is decorative (`aria-hidden`). */
 	label?: string;
-	/** Classes of the label, e.g. `hidden lg:inline` to keep it for wide screens (it stays readable to screen readers only when it is not `hidden`: set `aria-label` on the parent then). */
-	labelClassName?: string;
+	/** Shows the label only from this width up (the marker stays); set `aria-label` on the parent so screen readers still get the name. */
+	hideLabelBelow?: "sm" | "md" | "lg";
+	/** A pill with a hairline border around marker and label (the entry status beside the address in the editor). */
+	chip?: boolean;
 	/** Breathes while the status is in progress. */
 	pulse?: boolean;
 }) {
@@ -87,6 +90,7 @@ export function StatusIndicator({
 			className={cn(
 				"inline-flex items-center gap-1.5 whitespace-nowrap",
 				label && "text-monti-default text-monti-label",
+				chip && "rounded-full border border-monti-muted px-condensed py-hair",
 				className,
 			)}
 			{...props}
@@ -102,7 +106,17 @@ export function StatusIndicator({
 			>
 				<Marker shape={shape} />
 			</svg>
-			{label && <span className={labelClassName}>{label}</span>}
+			{label && (
+				<span
+					className={cn(
+						hideLabelBelow === "sm" && "max-sm:hidden",
+						hideLabelBelow === "md" && "max-md:hidden",
+						hideLabelBelow === "lg" && "max-lg:hidden",
+					)}
+				>
+					{label}
+				</span>
+			)}
 		</span>
 	);
 }

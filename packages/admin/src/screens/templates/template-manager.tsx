@@ -122,6 +122,7 @@ function TemplateEditPanel({
 			<Inline gap="normal" wrap justify="between" border="bottom" paddingX="spacious" paddingY="normal">
 				<Input
 					type="text"
+					size="sm"
 					aria-label={t("edit.nameLabel")}
 					value={draft.name}
 					onChange={(e) => update({ name: e.target.value })}

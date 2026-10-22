@@ -1,7 +1,20 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Alert, AlertDescription, Box, Button, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
+import {
+	Alert,
+	AlertDescription,
+	Box,
+	Button,
+	Inline,
+	Input,
+	List,
+	ListItem,
+	Progress,
+	Spinner,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { useRef } from "react";
 import { errorText } from "../../api/client";
 import { LoadErrorAlert } from "../shared/load-error-alert";
@@ -23,10 +36,7 @@ function RunProgress({ count }: { count: number }) {
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">{t("progress.running", { count })}</Text>
 				</Inline>
-				{/* design-system: needs a Progress part (an indeterminate bar) */}
-				<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
-					<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis" />
-				</div>
+				<Progress value={null} label={t("progress.running", { count })} />
 				<Text as="p" variant="caption" tone="muted">
 					{t("progress.hint")}
 				</Text>
@@ -53,24 +63,26 @@ export function ImportEntriesFields() {
 				<Text as="p" weight="medium">
 					{t("kinds.label")}
 				</Text>
-				{/* design-system: needs a bulleted list style (the bullets were list-disc) */}
-				<Stack as="ul" gap="tight" paddingX="comfortable">
-					<Text as="li" variant="caption" tone="muted">
-						{t("kinds.export")}
-					</Text>
-					<Text as="li" variant="caption" tone="muted">
-						{t("kinds.markdown")}
-					</Text>
-				</Stack>
+				<List>
+					<ListItem>
+						<Text variant="caption" tone="muted">
+							{t("kinds.export")}
+						</Text>
+					</ListItem>
+					<ListItem>
+						<Text variant="caption" tone="muted">
+							{t("kinds.markdown")}
+						</Text>
+					</ListItem>
+				</List>
 			</Stack>
 
 			<Inline gap="normal" wrap>
-				{/* design-system: needs a visually hidden file input (it was sr-only, opened by the button) */}
-				<input
+				<Input
 					ref={input}
 					type="file"
 					accept=".zip,application/zip"
-					className="sr-only"
+					srOnly
 					aria-label={t("file.choose")}
 					data-testid="import-file"
 					disabled={running}
@@ -110,13 +122,9 @@ export function ImportEntriesFields() {
 			)}
 
 			{preview && !result && (
-				// design-system: needs a dimmed (opacity) state for content that is out of date while it reloads
-				<div
-					aria-busy={previewQuery.isPlaceholderData}
-					className={previewQuery.isPlaceholderData ? "opacity-50 transition-opacity" : "transition-opacity"}
-				>
+				<Box dimmed={previewQuery.isPlaceholderData} aria-busy={previewQuery.isPlaceholderData}>
 					<PreviewView preview={preview} form={form} />
-				</div>
+				</Box>
 			)}
 
 			{Boolean(form.runError) && (

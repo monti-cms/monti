@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the toolbar floats over the table at a position measured from it
+
 import { useTranslator } from "@monti-cms/core/site";
 import { Inline, Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
@@ -196,7 +198,6 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 	if (!tableKey || typeof window === "undefined") return null;
 
 	return createPortal(
-		// design-system: drawing — a toolbar floating over the table at a position measured from it (fixed coordinates, z-index); needs a floating toolbar part
 		<div
 			ref={toolbarRef}
 			role="toolbar"
@@ -206,7 +207,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 		>
 			{TABLE_TOOL_GROUPS(t).map((group, index) => (
 				<Inline key={group[0]?.label} gap="hair">
-					{index > 0 && <Separator orientation="vertical" />}
+					{index > 0 && <Separator orientation="vertical" length="control" />}
 					{group.map((item) => (
 						<ToolbarButton key={item.label} editor={editor} item={item} />
 					))}

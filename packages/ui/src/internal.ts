@@ -24,6 +24,7 @@ export {
 export { Badge, badgeVariants } from "./badge";
 export { Box } from "./box";
 export { Button, buttonVariants } from "./button";
+export { ButtonGroup } from "./button-group";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
 export { Checkbox } from "./checkbox";

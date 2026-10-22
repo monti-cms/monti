@@ -9,8 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { Box, PageTabs, Stack, StatusIndicator, TabsContent, TabsTrigger, Text } from "@monti-cms/ui";
-import { Tabs as OpenTabs } from "@monti-cms/ui/internal";
+import { Box, PageTabs, Stack, StatusIndicator, Tabs, TabsContent, TabsTrigger, Text } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -198,12 +197,7 @@ export function RecordPanel({
 				}}
 			>
 				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
-					{/* design-system: needs a fill option on Tabs (take the height left under the header, as a column) */}
-					<OpenTabs
-						value={locale}
-						onValueChange={(value) => setLocale(value as Locale)}
-						className="min-h-0 flex-1 gap-0 overflow-hidden"
-					>
+					<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
 						{translated && (
 							<PageTabs inset="panel">
 								{site.LOCALES.map((option) => {
@@ -252,7 +246,7 @@ export function RecordPanel({
 								</Stack>
 							</TabsContent>
 						))}
-					</OpenTabs>
+					</Tabs>
 				</EntryFormProvider>
 				<Box shrink={false} border="top" paddingX="comfortable" paddingY="normal">
 					<EditorFooter

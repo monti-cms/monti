@@ -20,6 +20,8 @@ import {
 	Heading,
 	Inline,
 	Input,
+	List,
+	ListItem,
 	Skeleton,
 	Stack,
 	Text,
@@ -347,12 +349,12 @@ export function ReviewDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent size="xl" scroll>
+			<DialogContent size="xl">
 				<DialogHeader>
 					<DialogTitle>{t("review.title")}</DialogTitle>
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
-				<Stack gap="comfortable" data-testid="review-body">
+				<Stack gap="comfortable" maxHeight="half" overflow="y" data-testid="review-body">
 					{error && (
 						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
@@ -371,13 +373,11 @@ export function ReviewDialog({
 						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
-								<Stack as="ul" gap="hair">
+								<List>
 									{problems.map((problem) => (
-										<Text as="li" key={`${problem.id}:${problem.message}`}>
-											{problem.message}
-										</Text>
+										<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
 									))}
-								</Stack>
+								</List>
 							</AlertDescription>
 						</Alert>
 					)}

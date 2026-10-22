@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — hosts the diagram SVG
+
 import { cn } from "@monti-cms/admin/kit";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { drawMermaid } from "./draw";
@@ -8,8 +10,6 @@ import { drawMermaid } from "./draw";
  * Default editor preview of the Mermaid block (optional dependency `mermaid`). The Mermaid block extension's admin provider registers it as `fencePreviews.mermaid`,
  * and it is loaded only when a preview is opened. A site can replace it by registering its own renderer under the same name.
  * The theme follows the `dark` class on the document (`html`) and is redrawn when it changes.
- *
- * design-system: drawing — hosts the diagram SVG; the wrapper classes below size and center it and stay raw.
  */
 
 const isDark = (element: Element | null) =>

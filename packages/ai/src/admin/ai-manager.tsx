@@ -8,6 +8,7 @@ import {
 	Button,
 	booleanCodec,
 	Checkbox,
+	CodeBlock,
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
@@ -512,8 +513,7 @@ export function AiManager() {
 	return (
 		<Stack gap="none" grow minHeight={0} overflow="hidden">
 			<PageActions>{headerActions}</PageActions>
-			{/* design-system: needs Tabs to fill the page height (grow, no gap) */}
-			<Tabs value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
+			<Tabs fill value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
 				<PageTabs>
 					<TabsTrigger value="features">
 						<Sparkles aria-hidden />
@@ -847,21 +847,19 @@ function CheckRow({
 				)}
 				{check.kind === "maxLength" && (
 					<Inline gap="condensed">
-						{/* design-system: needs an Input width option (a narrow number field); panel-sm is the closest */}
-						<Box width="panel-sm">
-							<Input
-								type="number"
-								aria-label={t("check.maxChars")}
-								min={1}
-								max={5000}
-								value={check.max}
-								disabled={!check.enabled}
-								onChange={(event) =>
-									onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
-								}
-								size="sm"
-							/>
-						</Box>
+						<Input
+							type="number"
+							width="number"
+							aria-label={t("check.maxChars")}
+							min={1}
+							max={5000}
+							value={check.max}
+							disabled={!check.enabled}
+							onChange={(event) =>
+								onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
+							}
+							size="sm"
+						/>
 						<Text variant="caption" tone="muted">
 							{t("check.charsOrLess")}
 						</Text>
@@ -1116,8 +1114,7 @@ function FeatureEditor({
 							</Inline>
 						)
 					) : (
-						// design-system: needs a preformatted text part (wrapped text that keeps its line breaks)
-						<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-condensed">{test.result.text}</p>
+						<CodeBlock>{test.result.text}</CodeBlock>
 					))}
 			</Stack>
 
@@ -1197,36 +1194,33 @@ function FeatureEditor({
 									<FormField>
 										<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
 										<Inline gap="condensed">
-											{/* design-system: needs an Input width option (a narrow number field); panel-sm is the closest */}
-											<Box width="panel-sm">
-												<Input
-													id={ids.threshold}
-													type="number"
-													min={1}
-													max={99}
-													value={Math.round(spec.threshold * 100)}
-													onChange={(event) =>
-														set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
-													}
-													size="sm"
-												/>
-											</Box>
+											<Input
+												id={ids.threshold}
+												type="number"
+												width="number"
+												min={1}
+												max={99}
+												value={Math.round(spec.threshold * 100)}
+												onChange={(event) =>
+													set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
+												}
+												size="sm"
+											/>
 											<Text variant="caption" tone="muted">
 												{t("field.percentOrMore")}
 											</Text>
-											<Box width="panel-sm">
-												<Input
-													type="number"
-													aria-label={t("field.maxCount")}
-													min={1}
-													max={20}
-													value={spec.maxCount}
-													onChange={(event) =>
-														set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })
-													}
-													size="sm"
-												/>
-											</Box>
+											<Input
+												type="number"
+												width="number"
+												aria-label={t("field.maxCount")}
+												min={1}
+												max={20}
+												value={spec.maxCount}
+												onChange={(event) =>
+													set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })
+												}
+												size="sm"
+											/>
 											<Text variant="caption" tone="muted">
 												{t("field.countUpTo")}
 											</Text>

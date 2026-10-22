@@ -35,6 +35,7 @@ export function Section({
 }) {
 	const titleId = testId ? `${testId}-title` : undefined;
 	return (
+		// design-system: needs Grid columns rail / rail-wide (the 220 / 260px label column, tokens w-rail / w-rail-wide) and a band separator that skips the first section
 		<Grid
 			as="section"
 			id={id}

@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the field list frame: column grid, resizable side panel and preview column
+
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Heading, IconButton, Inline, Panel, Stack, Text } from "@monti-cms/ui";
 import { Eye, Plus, X } from "lucide-react";
@@ -7,7 +9,6 @@ import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
-import { TREE_MAX_WIDTH } from "../shared/layout";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useSchemaEdit } from "./controls";
@@ -16,7 +17,7 @@ import { FieldSheet } from "./field-sheet";
 import { schemaFieldsMessages } from "./fields.messages";
 import { emptyId, endId, groupId, LayoutDnd, tabId } from "./fields-tree-dnd";
 import { DropRow, GroupRow, type LayoutOps, TabRow } from "./fields-tree-layout-rows";
-import { columnsOf, type Destination, type Locked, OPTION, Row, TONE, type TreeContext } from "./fields-tree-rows";
+import { columnsOf, type Destination, type Locked, Row, type TreeContext } from "./fields-tree-rows";
 import {
 	addGroup,
 	addTab,
@@ -187,7 +188,6 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
-			// design-system: drawing — field list frame (column grid, resizable side panel)
 			style={resize.style}
 			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-overlay sm:w-[var(--panel-width)]"
 			data-testid="layout-preview-drawer"
@@ -275,8 +275,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name, undefined, defaultName) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		// design-system: needs a 1000px maximum width option on Box/Panel (the tree's width)
-		<div className={cn("min-w-0", TREE_MAX_WIDTH)}>
+		<Box maxWidth="content" minWidth={0}>
 			<Panel ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
 				<Inline wrap justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
 					<Box minWidth={0}>
@@ -324,7 +323,6 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Inline>
 				</Inline>
 				<div
-					// design-system: drawing — the tree's column grid (the same columns as its rows)
 					className={cn(
 						columnsOf(ctx.compact),
 						"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
@@ -354,16 +352,22 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						{t("fields.legendRequired")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						{/* design-system: needs kind colours (the tones of relation, backlink and option tokens) as a Text tone */}
-						<span className={cn("font-mono", TONE.relation)}>→</span> {t("fields.legendRelation")}
+						<Text mono tone="kind-blue">
+							→
+						</Text>{" "}
+						{t("fields.legendRelation")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						{/* design-system: needs kind colours (see above) */}
-						<span className={cn("font-mono", TONE.backlink)}>←</span> {t("fields.legendBacklink")}
+						<Text mono tone="kind-teal">
+							←
+						</Text>{" "}
+						{t("fields.legendBacklink")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						{/* design-system: needs kind colours (see above) */}
-						<span className={cn("font-mono", OPTION)}>= "…"</span> {t("fields.legendOption")}
+						<Text mono tone="kind-orange">
+							= "…"
+						</Text>{" "}
+						{t("fields.legendOption")}
 					</Text>
 					<Box as="span" grow />
 					<Text variant="caption" tone="muted">
@@ -388,7 +392,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					/>
 				)}
 			</Panel>
-		</div>
+		</Box>
 	);
 	const preview = (
 		<LayoutPreview
@@ -402,15 +406,11 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		<>
 			{wide && previewOpen ? (
 				<div
-					// design-system: drawing — field list frame (column grid, resizable side panel)
 					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-spacious"
-					// design-system: drawing — field list frame (column grid, resizable side panel)
 					style={sideResize.style}
 				>
 					{card}
-					{/* design-system: drawing — field list frame (column grid, resizable side panel) */}
 					<div className="sticky top-4 flex h-[min(48rem,calc(100vh-6rem))] flex-col" data-testid="layout-preview-side">
-						{/* design-system: drawing — field list frame (column grid, resizable side panel) */}
 						<PanelResizeHandle resize={sideResize} className="-left-3.5" />
 						{preview}
 					</div>

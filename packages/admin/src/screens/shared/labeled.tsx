@@ -1,5 +1,4 @@
 import { Box, FormFieldDescription, FormFieldLabel, Inline, Stack, Text, FormField as UiField } from "@monti-cms/ui";
-import { Box as OpenBox } from "@monti-cms/ui/internal";
 import type { ReactNode } from "react";
 
 /** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
@@ -16,7 +15,6 @@ export function Labeled({
 	hint,
 	children,
 	htmlFor,
-	className,
 	control = "normal",
 	aside,
 }: {
@@ -27,8 +25,6 @@ export function Labeled({
 	hint?: ReactNode;
 	htmlFor?: string;
 	children: ReactNode;
-	/** @deprecated Wrap the field in a layout part instead; kept for callers that have not moved yet. */
-	className?: string;
 	control?: keyof typeof CONTROL_WIDTH;
 	/** Next to the label on the same line (a change marker, a revert button). */
 	aside?: ReactNode;
@@ -40,7 +36,7 @@ export function Labeled({
 			</Text>
 		</FormFieldLabel>
 	);
-	const field = (
+	return (
 		<UiField>
 			<Stack gap="condensed">
 				{aside ? (
@@ -67,6 +63,4 @@ export function Labeled({
 			</Stack>
 		</UiField>
 	);
-	// transitional: className kept for callers that have not moved yet
-	return className ? <OpenBox className={className}>{field}</OpenBox> : field;
 }

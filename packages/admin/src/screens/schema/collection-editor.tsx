@@ -20,7 +20,6 @@ import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
-import { PAGE_MAX_WIDTH } from "../shared/layout";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {
@@ -319,99 +318,88 @@ export function CollectionEditor({
 					</TabsList>
 				</Stack>
 				<TabsContent value="basics">
-					{/* design-system: needs a page-width option on Stack (the 1160px maximum of a form-like page) */}
-					<div className={PAGE_MAX_WIDTH}>
-						<Stack gap="section">
-							<Section band title={t("collection.basicsTitle")}>
-								<TextInput
-									label={t("collection.label")}
-									revert={revert("label")}
-									value={collection.label as string | undefined}
-									onChange={(value) => set("label", value)}
-								/>
-								<Pick
-									label={t("collection.kind")}
-									revert={
-										savedCollection && savedCollection.kind !== collection.kind
-											? () => changeKind(String(savedCollection.kind))
-											: undefined
-									}
-									value={String(collection.kind)}
-									items={[
-										{ value: "document", label: ts("collection.kindDocument") },
-										{ value: "item", label: ts("collection.kindItem") },
-									]}
-									onChange={changeKind}
-								/>
-								<IconPicker
-									label={t("collection.icon")}
-									revert={revert("icon")}
-									value={typeof collection.icon === "string" ? collection.icon : undefined}
-									kind={typeof collection.kind === "string" ? collection.kind : undefined}
-									onChange={(value) => set("icon", value)}
-								/>
-							</Section>
-							<Section band title={t("collection.featuresTitle")}>
-								<FlagSwitch
-									label={t("collection.folders")}
-									revert={revert("folders")}
-									checked={
-										typeof collection.folders === "boolean"
-											? collection.folders
-											: kindDefaults(collection.kind as CollectionKind | undefined).folders
-									}
-									onChange={(on) => {
-										const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
-										set("folders", isDefault ? undefined : on);
-									}}
-								/>
-								<PublicPathField
-									revert={
-										savedCollection && !sameJson(savedCollection.path, collection.path)
-											? () =>
-													onChange((current) =>
-														withPublicPath(
-															current,
-															typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
-															localesOf(file).length > 1,
-														),
-													)
-											: undefined
-									}
-									path={typeof collection.path === "string" ? collection.path : ""}
-									suggested={defaultPath(name)}
-									onChange={(value) =>
-										onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
-									}
-								/>
-							</Section>
-							<Section band title={t("collection.dangerTitle")} card={false}>
-								<Inline justify="end">
-									<Button
-										type="button"
-										variant="outline"
-										tone="danger"
-										size="sm"
-										disabled={disabled}
-										onClick={onRemove}
-									>
-										<Trash2 aria-hidden />
-										{ts("collection.remove")}
-									</Button>
-								</Inline>
-							</Section>
-						</Stack>
-					</div>
+					<Stack gap="section" maxWidth="page">
+						<Section band title={t("collection.basicsTitle")}>
+							<TextInput
+								label={t("collection.label")}
+								revert={revert("label")}
+								value={collection.label as string | undefined}
+								onChange={(value) => set("label", value)}
+							/>
+							<Pick
+								label={t("collection.kind")}
+								revert={
+									savedCollection && savedCollection.kind !== collection.kind
+										? () => changeKind(String(savedCollection.kind))
+										: undefined
+								}
+								value={String(collection.kind)}
+								items={[
+									{ value: "document", label: ts("collection.kindDocument") },
+									{ value: "item", label: ts("collection.kindItem") },
+								]}
+								onChange={changeKind}
+							/>
+							<IconPicker
+								label={t("collection.icon")}
+								revert={revert("icon")}
+								value={typeof collection.icon === "string" ? collection.icon : undefined}
+								kind={typeof collection.kind === "string" ? collection.kind : undefined}
+								onChange={(value) => set("icon", value)}
+							/>
+						</Section>
+						<Section band title={t("collection.featuresTitle")}>
+							<FlagSwitch
+								label={t("collection.folders")}
+								revert={revert("folders")}
+								checked={
+									typeof collection.folders === "boolean"
+										? collection.folders
+										: kindDefaults(collection.kind as CollectionKind | undefined).folders
+								}
+								onChange={(on) => {
+									const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
+									set("folders", isDefault ? undefined : on);
+								}}
+							/>
+							<PublicPathField
+								revert={
+									savedCollection && !sameJson(savedCollection.path, collection.path)
+										? () =>
+												onChange((current) =>
+													withPublicPath(
+														current,
+														typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
+														localesOf(file).length > 1,
+													),
+												)
+										: undefined
+								}
+								path={typeof collection.path === "string" ? collection.path : ""}
+								suggested={defaultPath(name)}
+								onChange={(value) =>
+									onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+								}
+							/>
+						</Section>
+						<Section band title={t("collection.dangerTitle")} card={false}>
+							<Inline justify="end">
+								<Button type="button" variant="outline" tone="danger" size="sm" disabled={disabled} onClick={onRemove}>
+									<Trash2 aria-hidden />
+									{ts("collection.remove")}
+								</Button>
+							</Inline>
+						</Section>
+					</Stack>
 				</TabsContent>
 				<TabsContent value="fields">
 					<FieldsCard editing={editing} />
 				</TabsContent>
 				{isEditorAvailable && (
 					<TabsContent value="editor">
-						{/* design-system: needs a page-width option on Stack (the 1160px maximum of a form-like page) */}
-						<div className={PAGE_MAX_WIDTH}>
+						<Box maxWidth="page">
 							<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
-						</div>
+						</Box>
 					</TabsContent>
 				)}
 			</Tabs>

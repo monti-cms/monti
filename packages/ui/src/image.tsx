@@ -24,6 +24,8 @@ const frameVariants = cva(
 				fill: "w-full",
 				thumb: "size-control-sm",
 				"thumb-lg": "size-control-lg",
+			/** As big as an icon, no fill: a logo inside a button. */
+			icon: "size-icon bg-transparent",
 			},
 			radius: { none: "", sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg" },
 			border: { true: "border border-monti-muted" },
@@ -53,7 +55,7 @@ function Image({
 }) {
 	const [failed, setFailed] = useState(false);
 	const show = src && !failed;
-	const thumb = size === "thumb" || size === "thumb-lg";
+	const thumb = size === "thumb" || size === "thumb-lg" || size === "icon";
 	return (
 		<span
 			data-slot="image"

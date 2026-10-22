@@ -6,6 +6,7 @@ import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -118,6 +119,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						data-testid="entry-status-chip"
 						{...entryStatusMarker(entry.status)}
 						label={statusLabels(site)[entry.status]}
+						chip
 					/>
 				)}
 			</Inline>
@@ -167,13 +169,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
 						<TooltipTrigger
 							render={
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									// design-system: needs a dimmed aria-disabled look on Button (it dims on `disabled` only)
-									aria-disabled
-								>
+								<Button type="button" variant="outline" size="sm" aria-disabled>
 									<Eye aria-hidden />
 									{t("preview")}
 								</Button>
@@ -197,7 +193,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					</Button>
 				) : (
 					// For an already published post, publish and "republish with today's date" sit side by side as one group.
-					<Inline gap="hair">
+					<ButtonGroup>
 						<Button
 							id="cms-publish"
 							type="button"
@@ -227,7 +223,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								)}
 							</DropdownMenuContent>
 						</DropdownMenu>
-					</Inline>
+					</ButtonGroup>
 				)}
 				<Inline height="control-sm" paddingX="tight">
 					<Separator orientation="vertical" aria-hidden />

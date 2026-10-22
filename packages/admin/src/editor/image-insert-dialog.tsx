@@ -5,7 +5,6 @@ import {
 	Alert,
 	AlertDescription,
 	Button,
-	cn,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -15,6 +14,7 @@ import {
 	DialogTitle,
 	FormFieldError,
 	Grid,
+	Image,
 	Inline,
 	Input,
 	Label,
@@ -27,8 +27,10 @@ import {
 	TabsTrigger,
 	Text,
 	Textarea,
+	Tile,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ImageIcon } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
@@ -311,26 +313,22 @@ export function ImageInsertDialog({
 								)}
 								<Grid columns={3} responsive={false} gap="condensed">
 									{library.map((item) => (
-										// design-system: needs a selectable image tile (thumbnail over a filename, a ring when picked)
-										<button
+										<Tile
 											key={item.id}
-											type="button"
-											aria-pressed={picked?.id === item.id}
+											selected={picked?.id === item.id}
 											onClick={() => pick(item)}
-											className={cn(
-												"flex flex-col overflow-hidden rounded-md border border-monti-muted bg-monti-page text-left text-monti-caption outline-none focus-visible:ring-3 focus-visible:ring-monti-focus-soft",
-												picked?.id === item.id && "ring-2 ring-monti-focus",
-											)}
-										>
-											{item.publicUrl ? (
-												<img src={item.publicUrl} alt="" className="h-20 w-full object-cover" />
-											) : (
-												<span className="flex h-20 items-center justify-center bg-monti-neutral">
-													{t("imageDialog.noPreview")}
-												</span>
-											)}
-											<span className="block truncate px-tight py-hair">{item.filename}</span>
-										</button>
+											title={item.filename}
+											detail={item.publicUrl ? undefined : t("imageDialog.noPreview")}
+											preview={
+												<Image
+													src={item.publicUrl ?? undefined}
+													alt=""
+													ratio="photo"
+													radius="none"
+													fallback={ImageIcon}
+												/>
+											}
+										/>
 									))}
 								</Grid>
 							</Stack>

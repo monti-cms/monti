@@ -16,6 +16,10 @@ import {
 	Button,
 	Heading,
 	Inline,
+	Input,
+	List,
+	ListItem,
+	Progress,
 	Spinner,
 	Stack,
 	Text,
@@ -47,31 +51,32 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 			<Text as="p" variant="title">
 				{t("summary.entries", { count: counts.entries })}
 			</Text>
-			{/* design-system: needs a bulleted list style (the bullets were list-disc) */}
-			<Stack as="ul" gap="tight" paddingX="comfortable">
+			<List>
 				{statuses.length > 0 && (
-					<Text as="li" tone="muted">
-						{statuses.join(" · ")}
-					</Text>
+					<ListItem>
+						<Text tone="muted">{statuses.join(" · ")}</Text>
+					</ListItem>
 				)}
 				{counts.translations > 0 && (
-					<Text as="li" tone="muted">
-						{t("summary.translations", { count: counts.translations })}
-					</Text>
+					<ListItem>
+						<Text tone="muted">{t("summary.translations", { count: counts.translations })}</Text>
+					</ListItem>
 				)}
-				<Text as="li" tone="muted">
-					{t("summary.folders", { count: counts.folders })}
-				</Text>
-				<Text as="li" tone="muted">
-					{t("summary.media", { count: counts.media })}
-				</Text>
-				<Text as="li" tone="muted">
-					{t("summary.addresses", { count: counts.addresses, aliases: counts.aliases })}
-				</Text>
-				<Text as="li" tone="muted">
-					{t("summary.templates", { added: counts.templatesAdded, skipped: counts.templatesSkipped.length })}
-				</Text>
-			</Stack>
+				<ListItem>
+					<Text tone="muted">{t("summary.folders", { count: counts.folders })}</Text>
+				</ListItem>
+				<ListItem>
+					<Text tone="muted">{t("summary.media", { count: counts.media })}</Text>
+				</ListItem>
+				<ListItem>
+					<Text tone="muted">{t("summary.addresses", { count: counts.addresses, aliases: counts.aliases })}</Text>
+				</ListItem>
+				<ListItem>
+					<Text tone="muted">
+						{t("summary.templates", { added: counts.templatesAdded, skipped: counts.templatesSkipped.length })}
+					</Text>
+				</ListItem>
+			</List>
 			{counts.templatesSkipped.length > 0 && (
 				<Stack gap="tight" paddingTop="tight" data-testid="restore-templates">
 					<Text as="p" weight="medium">
@@ -102,8 +107,7 @@ function Problems({ preview }: { preview: RestorePreview }) {
 			<Text as="p" variant="caption" tone="muted">
 				{t("problems.hint")}
 			</Text>
-			{/* design-system: needs a maximum height for a scrolling list (about 24rem) */}
-			<Box radius="md" border="all" paddingX="normal" paddingY="condensed" overflow="y">
+			<Box radius="md" border="all" paddingX="normal" paddingY="condensed" maxHeight="list" overflow="y">
 				<Stack as="ul" gap="condensed">
 					{shown.map((problem, index) => (
 						<Stack
@@ -173,14 +177,15 @@ function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 			<Text as="p" variant="caption" tone="muted">
 				{t("notRestored.hint")}
 			</Text>
-			{/* design-system: needs a bulleted list style (the bullets were list-disc) */}
-			<Stack as="ul" gap="tight" paddingX="comfortable">
+			<List>
 				{items.map((item) => (
-					<Text as="li" variant="caption" tone="muted" key={item.code}>
-						{item.text}
-					</Text>
+					<ListItem key={item.code}>
+						<Text variant="caption" tone="muted">
+							{item.text}
+						</Text>
+					</ListItem>
 				))}
-			</Stack>
+			</List>
 		</Stack>
 	);
 }
@@ -195,10 +200,7 @@ function RunProgress({ count }: { count: number }) {
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">{t("progress.running", { count })}</Text>
 				</Inline>
-				{/* design-system: needs a Progress part (an indeterminate bar) */}
-				<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
-					<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis" />
-				</div>
+				<Progress value={null} label={t("progress.running", { count })} />
 				<Text as="p" variant="caption" tone="muted">
 					{t("progress.hint")}
 				</Text>
@@ -295,21 +297,21 @@ export function RestoreBackupFields() {
 						<Text as="p" weight="medium">
 							{t("kinds.label")}
 						</Text>
-						{/* design-system: needs a bulleted list style (the bullets were list-disc) */}
-						<Stack as="ul" gap="tight" paddingX="comfortable">
-							<Text as="li" variant="caption" tone="muted">
-								{t("kinds.backup")}
-							</Text>
-						</Stack>
+						<List>
+							<ListItem>
+								<Text variant="caption" tone="muted">
+									{t("kinds.backup")}
+								</Text>
+							</ListItem>
+						</List>
 					</Stack>
 
 					<Inline gap="normal" wrap>
-						{/* design-system: needs a visually hidden file input (it was sr-only, opened by the button) */}
-						<input
+						<Input
 							ref={input}
 							type="file"
 							accept=".zip,application/zip"
-							className="sr-only"
+							srOnly
 							aria-label={t("file.choose")}
 							data-testid="restore-file"
 							disabled={running}

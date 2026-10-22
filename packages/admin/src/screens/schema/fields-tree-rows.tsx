@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the field list rows: column grid, hover-revealed handle and buttons, kind colours, drag transform
+
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
@@ -76,7 +78,6 @@ export interface RowButton {
 
 export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 	return (
-		// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-hair rounded-md bg-monti-surface opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
 			{buttons.map((button) => (
 				<IconButton
@@ -223,12 +224,10 @@ export function Row({
 	return (
 		<div
 			ref={setNodeRef}
-			// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("relative", isDragging && "z-10 bg-monti-surface opacity-80")}
 			data-testid={`field-${name}`}
 		>
-			{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 			<div className="group/row relative">
 				{/* biome-ignore lint/a11y/useSemanticElements: a row holds a grid of cells and is operated like a button; real buttons (handle, menu) sit beside it */}
 				<div
@@ -237,25 +236,20 @@ export function Row({
 					aria-label={t("field.toggle", { name })}
 					onClick={open}
 					onKeyDown={onKeyDown}
-					// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 					className={cn(
 						columnsOf(ctx.compact),
 						"min-h-[30px] cursor-pointer py-condensed pr-comfortable pl-wide outline-none hover:bg-monti-hover focus-visible:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft focus-visible:ring-inset",
 						nested && "bg-monti-inset",
 					)}
 				>
-					{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 					<div className="flex min-w-0 items-center">
-						{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 						<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 							{prefix}
 						</span>
-						{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 						<span className="max-w-[70%] shrink-0 truncate font-mono text-monti-label" title={name}>
 							{name}
 						</span>
 						{label && (
-							// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 							<span className="ml-condensed min-w-0 truncate text-monti-caption text-monti-muted" title={label}>
 								{label}
 							</span>
@@ -267,7 +261,6 @@ export function Row({
 						)}
 						{locked?.kind === "panel" && (
 							<span
-								// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
 								title={t("layout.notInPanel.title")}
 							>
@@ -276,7 +269,6 @@ export function Row({
 						)}
 						{locked?.kind === "plugin" && (
 							<span
-								// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
 								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
 							>
@@ -287,17 +279,13 @@ export function Row({
 							<span
 								role="img"
 								aria-label={t("field.problems", { count: issues.length })}
-								// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 								className="ml-condensed size-1.5 shrink-0 rounded-full bg-monti-danger-emphasis"
 							/>
 						)}
 					</div>
-					{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 					<div className="whitespace-nowrap font-mono text-monti-caption">
-						{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 						<span className={TONE[summary.tone]}>{summary.token}</span>
 						{summary.required && (
-							// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 							<span className={REQUIRED} title={t("field.requiredBadge")}>
 								{" "}
 								!
@@ -305,7 +293,6 @@ export function Row({
 						)}
 					</div>
 					<div
-						// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 						className={cn(
 							"hidden min-w-0 truncate pr-wide font-mono text-monti-caption text-monti-muted",
 							!ctx.compact && "block",
@@ -327,10 +314,8 @@ export function Row({
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
 					disabled={noDrag}
-					// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 				>
-					{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 					<GripVertical aria-hidden className="size-4" />
 				</button>
 				<RowButtons buttons={buttons} />
@@ -347,21 +332,16 @@ export function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-condensed pr-comfortable pl-wide")}>
-							{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 							<div className="flex min-w-0 items-center">
-								{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 									{childLead}
 									{last ? "└ " : "├ "}
 								</span>
-								{/* design-system: drawing — field list row (column grid, hover reveal, kind colours, drag) */}
 								<span className={cn("font-mono text-monti-label", OPTION)}>= "{option}"</span>
 							</div>
 							<div />
 							<div
-								// design-system: drawing — field list row (column grid, hover reveal, kind colours, drag)
 								className={cn("hidden truncate font-mono text-monti-caption text-monti-muted", !ctx.compact && "block")}
 							>
 								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}

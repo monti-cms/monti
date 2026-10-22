@@ -5,6 +5,8 @@ import {
 	Box,
 	Inline,
 	Input,
+	RadioGroup,
+	RadioItem,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -69,111 +71,92 @@ export function ApiKeyField({
 				<Text weight="medium">{label ?? t("field.keyLabel")}</Text>
 			</legend>
 			<Box paddingTop="condensed" maxWidth="prose">
-				{/* design-system: needs a dimmed (opacity) state for a choice that is not available */}
-				<Stack role="radiogroup" aria-labelledby={groupId} gap="tight">
-					<Box
-						as="label"
-						paddingX="normal"
-						paddingY="condensed"
-						radius="md"
-						background={saved ? "selected" : undefined}
-						border={saved ? "all" : undefined}
-					>
-						<Inline gap="condensed" align="start">
-							{/* design-system: needs a Radio part (the native radio takes the browser's accent color) */}
-							<input
-								type="radio"
-								name={`${groupId}-use`}
-								checked={saved}
-								disabled={keys.length === 0}
-								onChange={() => onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" })}
-							/>
-							<Stack gap="condensed" grow minWidth={0}>
-								<Text weight={saved ? "medium" : undefined}>{t("field.useSaved")}</Text>
-								{keys.length === 0 ? (
-									<Text variant="caption" tone="muted">
-										{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
-									</Text>
-								) : saved ? (
-									<>
-										<Box maxWidth="panel-lg">
-											<Select
-												value={value.keyId}
-												onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
-												items={keys.map((key) => ({ value: key.id, label: key.name }))}
-											>
-												<SelectTrigger aria-label={t("field.savedPick")} width="full">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{keys.map((key) => (
-														<SelectItem key={key.id} value={key.id}>
-															<Inline gap="condensed">
-																<Text>{key.name}</Text>
-																<Text variant="caption" tone="muted" mono>
-																	{key.readable ? mask(key) : t("field.unreadable")}
-																</Text>
-															</Inline>
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</Box>
-										{chosen && chosen.uses.length > 0 && (
-											<Text variant="caption" tone="muted">
-												{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
-											</Text>
-										)}
-									</>
-								) : null}
-							</Stack>
-						</Inline>
-					</Box>
-					<Box
-						as="label"
-						paddingX="normal"
-						paddingY="condensed"
-						radius="md"
-						background={value.use === "new" ? "selected" : undefined}
-						border={value.use === "new" ? "all" : undefined}
-					>
-						<Inline gap="condensed" align="start">
-							{/* design-system: needs a Radio part (the native radio takes the browser's accent color) */}
-							<input
-								type="radio"
-								name={`${groupId}-use`}
-								checked={value.use === "new"}
-								disabled={!canSave}
-								onChange={() => onChange({ use: "new", value: "" })}
-							/>
-							<Stack gap="condensed" grow minWidth={0}>
-								<Text weight={value.use === "new" ? "medium" : undefined}>{t("field.useNew")}</Text>
-								{value.use === "new" && (
-									<>
-										<Box maxWidth="panel-lg">
-											<Input
-												type="password"
-												autoComplete="off"
-												aria-label={t("field.newInput")}
-												mono
-												value={value.value}
-												onChange={(event) => onChange({ use: "new", value: event.target.value })}
-											/>
-										</Box>
+				<RadioGroup
+					variant="card"
+					aria-labelledby={groupId}
+					value={value.use === "none" ? "" : value.use}
+					onValueChange={(next) => {
+						if (next === "saved") onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" });
+						else if (next === "new") onChange({ use: "new", value: "" });
+					}}
+				>
+					<RadioItem
+						value="saved"
+						disabled={keys.length === 0}
+						label={<Text weight={saved ? "medium" : undefined}>{t("field.useSaved")}</Text>}
+						hint={
+							keys.length === 0 ? (
+								<Text variant="caption" tone="muted">
+									{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
+								</Text>
+							) : saved ? (
+								<Stack gap="condensed">
+									<Box maxWidth="panel-lg">
+										<Select
+											value={value.keyId}
+											onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
+											items={keys.map((key) => ({ value: key.id, label: key.name }))}
+										>
+											<SelectTrigger aria-label={t("field.savedPick")} width="full">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{keys.map((key) => (
+													<SelectItem key={key.id} value={key.id}>
+														<Inline gap="condensed">
+															<Text>{key.name}</Text>
+															<Text variant="caption" tone="muted" mono>
+																{key.readable ? mask(key) : t("field.unreadable")}
+															</Text>
+														</Inline>
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</Box>
+									{chosen && chosen.uses.length > 0 && (
 										<Text variant="caption" tone="muted">
-											{t("field.newHelp", { name: freeName(baseName, keys) })}
+											{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
 										</Text>
-									</>
-								)}
-								{!canSave && (
-									<Text variant="caption" tone="muted">
-										{t("field.secretMissing")}
-									</Text>
-								)}
-							</Stack>
-						</Inline>
-					</Box>
-				</Stack>
+									)}
+								</Stack>
+							) : undefined
+						}
+					/>
+					<RadioItem
+						value="new"
+						disabled={!canSave}
+						label={<Text weight={value.use === "new" ? "medium" : undefined}>{t("field.useNew")}</Text>}
+						hint={
+							value.use === "new" || !canSave ? (
+								<Stack gap="condensed">
+									{value.use === "new" && (
+										<>
+											<Box maxWidth="panel-lg">
+												<Input
+													type="password"
+													autoComplete="off"
+													aria-label={t("field.newInput")}
+													mono
+													value={value.value}
+													onChange={(event) => onChange({ use: "new", value: event.target.value })}
+												/>
+											</Box>
+											<Text variant="caption" tone="muted">
+												{t("field.newHelp", { name: freeName(baseName, keys) })}
+											</Text>
+										</>
+									)}
+									{!canSave && (
+										<Text variant="caption" tone="muted">
+											{t("field.secretMissing")}
+										</Text>
+									)}
+								</Stack>
+							) : undefined
+						}
+					/>
+				</RadioGroup>
 			</Box>
 		</fieldset>
 	);

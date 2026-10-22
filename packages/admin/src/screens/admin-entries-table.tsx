@@ -2,10 +2,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Skeleton, Stack } from "@monti-cms/ui";
-// design-system: needs table options: fixed layout with pixel column widths, a sticky header, resizable columns, row hover / selected / open states, edge padding.
-// Until they exist the table keeps the open parts and its classes.
-import { cn, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui/internal";
+import { Box, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -22,7 +19,6 @@ import { EmptyState } from "./shared/empty-state";
 import { writeDraggedEntries } from "./shared/entry-drag";
 import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
-import { OPEN_ITEM } from "./shared/side-panel";
 import type { FolderActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntriesTable } from "./use-entries-table";
@@ -114,7 +110,6 @@ export function AdminEntriesTable({
 		visibility,
 		scrollRef,
 		isShown,
-		tableWidth,
 		visibleCount,
 		tableSizing,
 		freezeTitle,
@@ -176,14 +171,9 @@ export function AdminEntriesTable({
 				</Box>
 			)}
 
-			{/* design-system: needs ref support on Stack (the table scroller is measured) */}
-			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
-				<Table
-					containerClassName="overflow-visible"
-					style={tableWidth ? { width: tableWidth } : undefined}
-					className="table-fixed [&_td:first-child]:pl-wide [&_td:last-child]:pr-spacious [&_th:first-child]:pl-wide [&_th:last-child]:pr-spacious"
-				>
-					<TableHeader className="sticky top-0 z-10 bg-monti-page [&_tr]:border-b">
+			<Stack ref={scrollRef} gap="none" grow minHeight={0} overflow="auto">
+				<Table layout="fixed" container="none" stickyHeader inset="page">
+					<TableHeader>
 						{table.getHeaderGroups().map((group) => (
 							<TableRow key={group.id}>
 								{group.headers
@@ -193,13 +183,9 @@ export function AdminEntriesTable({
 										const active = sortField !== undefined && sortField === state.sortField;
 										return (
 											<Fragment key={header.id}>
-												{header.column.id === "actions" && <TableHead aria-hidden className="p-0" />}
+												{header.column.id === "actions" && <TableHead aria-hidden size={0} />}
 												<TableHead
-													style={{ width: header.getSize() }}
-													className={cn(
-														"group/th relative h-10 text-monti-caption text-monti-muted",
-														header.column.id === "select" && "w-10",
-													)}
+													size={header.getSize()}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
 												>
 													{header.isPlaceholder ? null : <table.FlexRender header={header} />}
@@ -237,10 +223,7 @@ export function AdminEntriesTable({
 							</TableRow>
 						))}
 					</TableHeader>
-					<TableBody
-						aria-busy={isRefreshing || undefined}
-						className={cn("transition-opacity", isRefreshing && "opacity-60")}
-					>
+					<TableBody aria-busy={isRefreshing || undefined}>
 						{explorer && (
 							<EntriesTableFolderRows
 								explorer={explorer}
@@ -267,10 +250,7 @@ export function AdminEntriesTable({
 											actions={rowMenu(row.original)}
 											trigger={
 												<TableRow
-													className={cn(
-														"h-11 hover:bg-monti-hover data-[state=selected]:bg-monti-selected",
-														row.original.id === openRecordId && OPEN_ITEM,
-													)}
+													selected={row.getIsSelected() || row.original.id === openRecordId}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}
 													data-state={row.getIsSelected() ? "selected" : undefined}
 													draggable={!isTrash}
@@ -296,8 +276,8 @@ export function AdminEntriesTable({
 												.filter((cell) => isShown(cell.column.id))
 												.map((cell) => (
 													<Fragment key={cell.id}>
-														{cell.column.id === "actions" && <TableCell aria-hidden className="p-0" />}
-														<TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+														{cell.column.id === "actions" && <TableCell aria-hidden size={0} />}
+														<TableCell truncate>
 															<table.FlexRender cell={cell} />
 														</TableCell>
 													</Fragment>
@@ -350,7 +330,7 @@ export function AdminEntriesTable({
 						trigger={<Box grow paddingY="comfortable" aria-hidden data-testid="list-blank-area" />}
 					/>
 				)}
-			</div>
+			</Stack>
 
 			<ListPagination
 				total={total}

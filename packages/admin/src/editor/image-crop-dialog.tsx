@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the crop area is the image with a rectangle, mask and handles positioned by percent and pointer drag
+
 import {
 	type CropBox,
 	formatCrop,
@@ -220,7 +222,6 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
 					<Stack gap="condensed" align="center">
-						{/* design-system: drawing — the image with the crop rectangle, its mask and handles over it (percent positions, pointer drag) */}
 						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-monti-inset p-tight">
 							<div
 								ref={containerRef}

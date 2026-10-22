@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the app frame locks the viewport (no page scroll, panes scroll on their own); SidebarProvider and SidebarInset have no height or overflow options
+
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, Inline, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
 import { SidebarInset as OpenSidebarInset, SidebarProvider as OpenSidebarProvider } from "@monti-cms/ui/internal";
@@ -190,7 +192,6 @@ export function AdminShell({
 	}
 
 	return (
-		// design-system: needs a viewport-height, no-page-scroll option on SidebarProvider (and min-w-0 + overflow hidden on SidebarInset)
 		<OpenSidebarProvider className="h-svh overflow-hidden">
 			<AdminSidebar
 				{...sidebar}

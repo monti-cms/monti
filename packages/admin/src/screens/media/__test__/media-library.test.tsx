@@ -96,9 +96,11 @@ const openDetail = async (name: RegExp) => {
 describe("media library", () => {
 	it("loads the list and shows it with usage state", async () => {
 		await renderLibrary();
-		expect(screen.getByRole("button", { name: /cat\.png$/ }).textContent).toContain(t("usage.count", { count: 1 }));
-		expect(screen.getByRole("button", { name: /dog\.png$/ }).textContent).toContain(t("usage.none"));
-		expect(screen.getByRole("button", { name: /guide\.pdf$/ }).textContent).toContain("PDF");
+		// The usage badge sits on the tile, beside the button that opens the file.
+		const tile = (name: RegExp) => screen.getByRole("button", { name }).parentElement?.textContent;
+		expect(tile(/cat\.png$/)).toContain(t("usage.count", { count: 1 }));
+		expect(tile(/dog\.png$/)).toContain(t("usage.none"));
+		expect(tile(/guide\.pdf\s*PDF$/)).toContain("PDF");
 	});
 
 	it("names what the header counts, and keeps the footer free of a range line when one page holds everything", async () => {
@@ -265,7 +267,7 @@ describe("media library", () => {
 
 	it("a file shows its size without a default description field", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/guide\.pdf$/);
+		const detail = await openDetail(/guide\.pdf\s*PDF$/);
 		expect(within(detail).queryByRole("textbox", { name: t("detail.defaultAlt") })).toBeNull();
 		expect(within(detail).getByText(/1\.4 ?MB|1\.5 ?MB/)).toBeTruthy();
 	});

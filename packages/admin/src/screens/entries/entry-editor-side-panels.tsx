@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow, a width the writer drags).
+
 // The two side panels of the entry editor screen: the translation source pane (left) and the properties inspector (right).
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
@@ -24,15 +26,9 @@ export function TranslationSourcePanel({
 	onClose: () => void;
 }) {
 	return (
-		// design-system: needs the overlay position on SourcePane's container (see source-pane.tsx)
-		<SourcePane
-			ref={paneRef}
-			doc={source.doc}
-			title={source.title}
-			locale={source.locale}
-			onClose={onClose}
-			className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-floating lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
-		/>
+		<div className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-floating lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none">
+			<SourcePane ref={paneRef} doc={source.doc} title={source.title} locale={source.locale} onClose={onClose} />
+		</div>
 	);
 }
 
@@ -61,7 +57,6 @@ export function InspectorSidePanel({
 	const { entry, collection } = editor;
 	return (
 		// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
-		// design-system: needs a docked side-panel part (overlay position, shadow, resize width) on Box
 		<div
 			className={cn(
 				"absolute inset-y-0 right-0 z-20 max-w-full shadow-monti-floating lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",

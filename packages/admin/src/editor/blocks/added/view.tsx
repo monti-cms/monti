@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the default custom block is drawn in the document: a frame with the component name above its body
+
 import type { BlockDefinition } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import {
@@ -112,7 +114,6 @@ export function DefaultBlockView() {
 	const { definition, values, editable } = block;
 	const names = Object.keys(definition.attributes);
 	const container = isContainer(definition);
-	// design-system: drawing — the block drawn in the document: a frame with the component name above its body
 	return (
 		<BlockFrame data-monti-custom-block={definition.name} className="my-spacious rounded-md border">
 			{editable && names.length > 0 && (

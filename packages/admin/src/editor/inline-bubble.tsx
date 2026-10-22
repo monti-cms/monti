@@ -1,8 +1,10 @@
 "use client";
 
+// design-system: drawing — the bubble floats at the selection (fixed coordinates, z-index, measured by ref)
+
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, cn, IconButton, Inline, Separator, Text, TextLink } from "@monti-cms/ui";
+import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextLink } from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -11,6 +13,7 @@ import {
 	Eye,
 	EyeOff,
 	Link2,
+	type LucideIcon,
 	MessageSquareMore,
 	Pencil,
 	Regex,
@@ -112,11 +115,10 @@ export function BubbleButton({
 }
 
 /** A decorative icon at the start of a bubble row (what the row is about). */
-function BubbleIcon({ children }: { children: ReactNode }) {
+function BubbleIcon({ icon }: { icon: LucideIcon }) {
 	return (
 		<Box as="span" paddingX="tight" shrink={false}>
-			{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
-			<span className="text-monti-muted [&_svg]:size-4">{children}</span>
+			<Icon icon={icon} tone="muted" />
 		</Box>
 	);
 }
@@ -321,9 +323,7 @@ export function InlineBubble({
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
 				<Inline key={mark.name} gap="hair">
-					<BubbleIcon>
-						<Link2 aria-hidden />
-					</BubbleIcon>
+					<BubbleIcon icon={Link2} />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
@@ -359,9 +359,7 @@ export function InlineBubble({
 			const content = String(mark.attrs.content ?? "");
 			return (
 				<Inline key={mark.name} gap="hair">
-					<BubbleIcon>
-						<MessageSquareMore aria-hidden />
-					</BubbleIcon>
+					<BubbleIcon icon={MessageSquareMore} />
 					<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
 						<Text as="div" variant="caption" tone="muted" truncate title={content}>
 							{content}
@@ -398,9 +396,7 @@ export function InlineBubble({
 			const type = editor.schema.marks.codeFold;
 			return (
 				<Inline key={mark.name} gap="hair">
-					<BubbleIcon>
-						<ChevronsLeftRightEllipsis aria-hidden />
-					</BubbleIcon>
+					<BubbleIcon icon={ChevronsLeftRightEllipsis} />
 					<Box as="span" paddingX="tight">
 						<Text variant="caption" tone="muted">
 							{t("inlineBubble.fold")}
@@ -456,9 +452,7 @@ export function InlineBubble({
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
 			<Inline key={rule.id} gap="hair">
-				<BubbleIcon>
-					<Regex aria-hidden />
-				</BubbleIcon>
+				<BubbleIcon icon={Regex} />
 				<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
 					<Text as="div" variant="caption" tone="muted" truncate title={`/${rule.pattern}/${rule.flags}`}>
 						{t("inlineBubble.ruleSummary", { label, count })}
@@ -499,7 +493,7 @@ export function InlineBubble({
 		];
 		return groups.map((group, index) => (
 			<Inline key={group.key} gap="hair">
-				{index > 0 && <Separator orientation="vertical" />}
+				{index > 0 && <Separator orientation="vertical" length="control" />}
 				{group}
 			</Inline>
 		));
@@ -555,14 +549,14 @@ export function InlineBubble({
 							{action.icon}
 						</BubbleButton>
 					))}
-					<Separator orientation="vertical" />
+					<Separator orientation="vertical" length="control" />
 				</>
 			)}
 			{allowedMarkTools(site, editor.state).map((item) => (
 				<ToolbarButton key={item.mark} editor={editor} item={item} tooltipSide="top" />
 			))}
 			{bubbleTools("format").map(renderTool)}
-			<Separator orientation="vertical" />
+			<Separator orientation="vertical" length="control" />
 			{inCode &&
 				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
 				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (
@@ -597,7 +591,6 @@ export function InlineBubble({
 		</>
 	);
 
-	// design-system: drawing — the bubble floats at the selection (fixed coordinates, z-index, measured by ref); needs a floating toolbar/panel part
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
 	const surface = "rounded-md border bg-monti-overlay text-monti-default backdrop-blur";
 

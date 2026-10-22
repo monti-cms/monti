@@ -178,6 +178,7 @@ export const Spinner = close(open.Spinner);
 export const Stack = close(open.Stack);
 export const Inline = close(open.Inline);
 export const Box = close(open.Box);
+export const ButtonGroup = close(open.ButtonGroup);
 export const CodeBlock = close(open.CodeBlock);
 export const DiffMark = close(open.DiffMark);
 export const DiffView = close(open.DiffView);

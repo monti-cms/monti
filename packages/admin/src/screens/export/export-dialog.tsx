@@ -69,7 +69,7 @@ function ExportDialogBody({
 export function ExportDialog({ open, onOpenChange, ...body }: ExportDialogProps) {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent size="md" scroll>
+			<DialogContent size="lg" scroll>
 				<ExportDialogBody {...body} onClose={() => onOpenChange(false)} />
 			</DialogContent>
 		</Dialog>

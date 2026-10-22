@@ -2,9 +2,9 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Badge,
 	Box,
 	Button,
-	cn,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -46,10 +46,6 @@ export {
 
 /** Icon used when an action does not provide one. */
 const defaultIcon = <Zap aria-hidden />;
-
-/** Shape of one result candidate. */
-// design-system: needs a candidate chip (a pressable pill with a label and a detail)
-const SLOT_CHIP = "inline-flex max-w-full items-center gap-tight rounded-sm border bg-monti-page px-condensed py-hair";
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -191,15 +187,19 @@ function SlotResult({
 			<Inline as="ul" wrap gap="tight">
 				{result.items.map((item) => (
 					<Box as="li" key={item.value} maxWidth="full">
-						<button
-							type="button"
+						<Badge
+							variant="outline"
+							render={<button type="button" />}
 							onClick={() => onApply(item.value)}
 							title={item.label}
-							className={cn(SLOT_CHIP, "text-left hover:bg-monti-hover")}
 						>
-							<span className="truncate">{item.label}</span>
-							{item.detail && <span className="shrink-0 text-monti-muted">{item.detail}</span>}
-						</button>
+							<Text truncate>{item.label}</Text>
+							{item.detail && (
+								<Text tone="muted" variant="caption">
+									{item.detail}
+								</Text>
+							)}
+						</Badge>
 					</Box>
 				))}
 			</Inline>

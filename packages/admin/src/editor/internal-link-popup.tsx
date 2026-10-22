@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)
+
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, cn, FormFieldError, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
@@ -67,7 +69,6 @@ export function InternalLinkPopup({
 	if (!mounted) return null;
 
 	return createPortal(
-		// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, scrolls the highlighted row into view); needs a floating list part
 		<div
 			ref={listRef}
 			role="listbox"
@@ -95,7 +96,6 @@ export function InternalLinkPopup({
 					onKeyDown={(event) => {
 						if (event.key === "Enter") onSelect(item);
 					}}
-					// design-system: needs a selectable list option (highlighted row, hover) for a listbox
 					className={cn(
 						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",

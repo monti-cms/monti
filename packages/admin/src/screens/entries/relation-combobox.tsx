@@ -237,6 +237,7 @@ export function RelationCombobox({
 					placeholder={placeholder}
 					showClear={selected.length > 0}
 					disabled={disabled || isCreating}
+					size="sm"
 				/>
 				{list}
 			</Combobox>

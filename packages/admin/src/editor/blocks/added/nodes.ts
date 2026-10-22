@@ -1,3 +1,4 @@
+// design-system: drawing — the class names the node view wrapper inside the document
 import type { BlockDefinition } from "@monti-cms/core";
 import { perSite, type Site } from "@monti-cms/core/site";
 import { mergeAttributes, Node } from "@tiptap/core";
@@ -94,7 +95,6 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 				: ["div", mergeAttributes(HTMLAttributes, { "data-monti-block": block.name })];
 		},
 		addNodeView() {
-			// design-system: drawing — the class names the node view's wrapper element inside the document
 			return ReactNodeViewRenderer(BlockNodeView, block.parent ? { className: PARENT_ONLY_VIEW_CLASS } : undefined);
 		},
 	});

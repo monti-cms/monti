@@ -2,7 +2,7 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, Heading, IconButton, Inline } from "@monti-cms/ui";
+import { Box, Heading, IconButton, Inline, Stack } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
+import { ScrollRoom } from "./scroll-room";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 
 const PROSE =
@@ -50,7 +51,6 @@ export function SourcePane({
 	locale,
 	title,
 	onClose,
-	className,
 	ref,
 }: {
 	doc: StoredDocument;
@@ -58,18 +58,22 @@ export function SourcePane({
 	/** Source title. Shown large above the body, matching the title slot of the translation editor. */
 	title: string;
 	onClose: () => void;
-	className?: string;
 	/** The scrolling element. Used to link scrolling with the editor. */
 	ref?: Ref<HTMLElement>;
 }) {
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	return (
-		// design-system: needs a ref and an overlay position (absolute on narrow screens) on Box; the side panel passes the position classes
-		<aside
+		<Stack
+			as="aside"
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-page", className)}
+			gap="none"
+			height="full"
+			minWidth={0}
+			overflow="y"
+			border="right"
+			background="page"
 		>
 			<Inline
 				data-source-header
@@ -95,11 +99,10 @@ export function SourcePane({
 				</Heading>
 			</Box>
 			<Box paddingX="spacious" paddingTop="spacious">
-				{/* design-system: needs end-of-document scroll room (35vh) on Box */}
-				<div className="pb-[35vh]">
+				<ScrollRoom>
 					<DocPreview doc={doc} label={t("sourcePane.body")} />
-				</div>
+				</ScrollRoom>
 			</Box>
-		</aside>
+		</Stack>
 	);
 }

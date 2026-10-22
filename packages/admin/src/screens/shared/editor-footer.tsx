@@ -1,5 +1,5 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Inline, Stack } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 
@@ -41,8 +41,11 @@ export function EditorFooter({
 	const busy = saving || deleting;
 	return (
 		<Stack gap="condensed">
-			{/* design-system: needs a preserve-line-breaks option on FormFieldError (multi-line error text) */}
-			{error && <FormFieldError>{error}</FormFieldError>}
+			{error && (
+				<FormFieldError>
+					<Text preserveLines>{error}</Text>
+				</FormFieldError>
+			)}
 			<Inline wrap gap="condensed" justify={align === "end" ? "end" : "between"}>
 				<Inline wrap gap="condensed">
 					<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>

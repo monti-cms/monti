@@ -5,6 +5,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	CodeBlock,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -185,8 +186,7 @@ function ComparePanes({
 						{t("conflict.copyBody")}
 					</Button>
 				</Box>
-				{/* design-system: needs a preformatted text block part (wrapped, scrolls past a height) */}
-				<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-monti-caption">{body}</pre>
+				<CodeBlock>{body}</CodeBlock>
 			</Stack>
 		);
 	};

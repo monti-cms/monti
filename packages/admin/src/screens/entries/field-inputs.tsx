@@ -9,19 +9,12 @@ import {
 	useSensor,
 	useSensors,
 } from "@dnd-kit/core";
-import {
-	SortableContext,
-	sortableKeyboardCoordinates,
-	useSortable,
-	verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { BacklinkField, RelationField, ValueField } from "@monti-cms/core";
 import type { Collection } from "@monti-cms/core/site";
 import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, IconButton, Stack, Text } from "@monti-cms/ui";
+import { FormFieldError, Stack, Text } from "@monti-cms/ui";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { errorText, isConflict } from "../../api/client";
 import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries";
@@ -32,6 +25,7 @@ import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
+import { SortableEntryRow } from "./sortable-entry-row";
 import { type RelationEntry, useRelationSearch } from "./use-relation-search";
 
 /** Values an input needs from outside the field. The edit screen fills them. */
@@ -130,83 +124,6 @@ export function EntryPicker({ field, id, value, invalid, describedBy, context, o
 			/>
 			<SearchError failed={search.error} />
 		</>
-	);
-}
-
-/** One row of an ordered list. Move it by dragging the handle or with the up/down buttons. */
-function SortableEntryRow({
-	sortableId,
-	index,
-	count,
-	option,
-	disabled,
-	onMove,
-	onRemove,
-}: {
-	sortableId: string;
-	index: number;
-	count: number;
-	option: EntryOption | undefined;
-	disabled: boolean;
-	onMove: (direction: -1 | 1) => void;
-	onRemove: () => void;
-}) {
-	const t = useTranslator(entriesMessages);
-	const tc = useTranslator(commonMessages);
-	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
-		id: sortableId,
-		disabled,
-	});
-	const title = option?.title ?? tc("loading");
-	return (
-		// design-system: needs a sortable row part (dnd-kit's transform style, a lifted look while dragging, a drag handle cursor)
-		<li
-			ref={setNodeRef}
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"flex items-center gap-tight rounded-md border border-monti-muted bg-monti-page px-tight py-tight text-monti-caption",
-				isDragging && "relative z-10 shadow-monti-floating",
-			)}
-		>
-			<IconButton
-				ref={setActivatorNodeRef}
-				size="icon-xs"
-				label={t("entry.drag", { title })}
-				disabled={disabled}
-				// design-system: needs a drag-handle option on IconButton (grab cursor, no touch scrolling)
-				className="cursor-grab touch-none active:cursor-grabbing"
-				{...attributes}
-				{...listeners}
-			>
-				<GripVertical />
-			</IconButton>
-			<Text variant="caption" truncate>
-				{index + 1}. {title}
-				{/* Unpublished posts are missing from the collection's public list. */}
-				{option && option.status !== "published" && option.status !== "missing" && (
-					<Text tone="warning"> {t("entry.unpublished")}</Text>
-				)}
-			</Text>
-			<IconButton
-				size="icon-xs"
-				label={t("entry.up", { title })}
-				disabled={disabled || index === 0}
-				onClick={() => onMove(-1)}
-			>
-				<ArrowUp />
-			</IconButton>
-			<IconButton
-				size="icon-xs"
-				label={t("entry.down", { title })}
-				disabled={disabled || index === count - 1}
-				onClick={() => onMove(1)}
-			>
-				<ArrowDown />
-			</IconButton>
-			<IconButton size="icon-xs" label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
-				<X />
-			</IconButton>
-		</li>
 	);
 }
 

@@ -43,8 +43,16 @@ export function ColumnSettingsPanel({
 	return (
 		<Stack as="ul" gap="hair">
 			{order.map((column, index) => (
-				// design-system: needs a hover surface on Box/Stack (the row's hover background)
-				<Inline as="li" key={column} justify="between" gap="condensed" radius="md" paddingX="tight" paddingY="hair">
+				<Inline
+					as="li"
+					key={column}
+					justify="between"
+					gap="condensed"
+					radius="md"
+					paddingX="tight"
+					paddingY="hair"
+					hover
+				>
 					<Label>
 						<Checkbox
 							checked={visibility[column] ?? false}

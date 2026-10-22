@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, cn, FormFieldError, Inline, Text } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Text } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -49,24 +49,25 @@ export function useMediaUrl(mediaId: string): string | null {
 	return mediaId ? (url ?? null) : null;
 }
 
-/** The size of the small preview in an input row. */
-const INLINE_THUMBNAIL = "aspect-[1.91/1] h-7 shrink-0 rounded-md border";
-
 /**
- * Image preview. Shows an icon if the URL is unknown. `size="inline"` is the small preview beside an input; `className` stays for plugins
- * (`@monti-cms/admin/kit`) that size it themselves.
+ * Image preview. Shows an icon if the URL is unknown. `size="inline"` is the small preview beside an input;
  */
-export function MediaThumbnail({ mediaId, size, className }: { mediaId: string; size?: "inline"; className?: string }) {
+export function MediaThumbnail({ mediaId, size }: { mediaId: string; size?: "inline" | "share" }) {
 	const url = useMediaUrl(mediaId);
-	const sized = cn(size === "inline" && INLINE_THUMBNAIL, className);
-	// design-system: needs an image thumbnail part (fixed ratio, cover, an icon while the URL is unknown)
-	return url ? (
-		<img src={url} alt="" className={cn("object-cover", sized)} />
-	) : (
-		<div className={cn("flex items-center justify-center bg-monti-neutral text-monti-muted", sized)}>
-			<ImageIcon aria-hidden className="size-4" />
-		</div>
+	const inline = size === "inline";
+	const image = (
+		<Image
+			src={url}
+			alt=""
+			fallback={ImageIcon}
+			ratio={inline ? "square" : "share"}
+			size={inline ? "thumb" : "fill"}
+			radius={inline ? "md" : "none"}
+			border={inline}
+		/>
 	);
+	// A share card shows the image full width with a line under it, as the platforms draw it.
+	return size === "share" ? <Box border="bottom">{image}</Box> : image;
 }
 
 /** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */

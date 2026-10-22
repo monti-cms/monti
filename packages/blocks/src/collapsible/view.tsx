@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — draws the collapsible as the public post does
+
 import {
 	AttributeInput,
 	BlockFrame,
@@ -43,7 +45,6 @@ export function CollapsibleNodeView() {
 	};
 
 	return (
-		// design-system: drawing — the collapsible as the public post draws it (framed box, title bar and body spacing)
 		<BlockFrame className="my-spacious rounded-md border bg-monti-page">
 			<div
 				contentEditable={false}

@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — imitates a search result (Google's link blue, two-line clamps, share card thumbnail)
+
 import { type FieldViewProps, type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
 import { cn, commonMessages, MediaThumbnail, Panel, Stack, Text } from "@monti-cms/admin/kit";
@@ -72,11 +74,9 @@ export function SeoPreview({
 							.filter(Boolean)
 							.map((part) => ` › ${decodeURIComponent(part)}`)}
 					</Text>
-					{/* design-system: drawing — imitates a search result (Google's link blue and two-line clamps) */}
 					<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-monti-body">
 						{title || tc("untitled")}
 					</p>
-					{/* design-system: drawing — imitates a search result (two-line clamp) */}
 					<p className={cn("line-clamp-2 text-monti-caption", !description && "text-monti-muted italic")}>
 						{description || t("preview.noDescription")}
 					</p>
@@ -90,18 +90,16 @@ export function SeoPreview({
 
 			{hasImageField && (
 				<Panel role="region" aria-label={t("preview.share")} overflow="hidden">
-					{/* design-system: needs a MediaThumbnail aspect option (1.91:1 share card, full width, bottom border) */}
-					{imageId && <MediaThumbnail mediaId={imageId} className="aspect-[1.91/1] w-full border-b" />}
+					{imageId && <MediaThumbnail mediaId={imageId} size="share" />}
 					<Stack gap="hair" padding="normal">
 						<Text as="p" variant="caption" tone="muted" truncate>
 							{site.SITE_NAME}
 						</Text>
-						{/* design-system: needs a Text line clamp (two lines) */}
-						<Text as="p" weight="medium" truncate>
+						<Text as="p" weight="medium" lines={2}>
 							{title || tc("untitled")}
 						</Text>
 						{description && (
-							<Text as="p" variant="caption" tone="muted" truncate>
+							<Text as="p" variant="caption" tone="muted" lines={2}>
 								{description}
 							</Text>
 						)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, Input, Popover, PopoverContent, PopoverTrigger, Stack, Text } from "@monti-cms/ui";
+import { Box, Button, Grid, Inline, Input, Popover, PopoverContent, PopoverTrigger, Stack, Text } from "@monti-cms/ui";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
@@ -90,32 +90,33 @@ export function IconPicker({
 								{t("collection.iconClear")} ({defaultIconName})
 							</Button>
 						)}
-						{/* design-system: needs a scrolling icon grid (6 columns, a maximum height) */}
-						<div className="grid max-h-56 grid-cols-6 gap-tight overflow-y-auto p-hair" role="listbox">
-							{filtered.map((name) => {
-								const Icon = ICONS[name];
-								if (!Icon) return null;
-								const isSelected = value === name;
-								return (
-									<Button
-										key={name}
-										type="button"
-										role="option"
-										variant={isSelected ? "secondary" : "ghost"}
-										size="icon"
-										aria-selected={isSelected}
-										title={name}
-										aria-label={name}
-										onClick={() => {
-											onChange(name);
-											setOpen(false);
-										}}
-									>
-										<Icon aria-hidden />
-									</Button>
-								);
-							})}
-						</div>
+						<Box maxHeight="list" overflow="y" padding="hair">
+							<Grid columns={6} responsive={false} gap="tight" role="listbox">
+								{filtered.map((name) => {
+									const Icon = ICONS[name];
+									if (!Icon) return null;
+									const isSelected = value === name;
+									return (
+										<Button
+											key={name}
+											type="button"
+											role="option"
+											variant={isSelected ? "secondary" : "ghost"}
+											size="icon"
+											aria-selected={isSelected}
+											title={name}
+											aria-label={name}
+											onClick={() => {
+												onChange(name);
+												setOpen(false);
+											}}
+										>
+											<Icon aria-hidden />
+										</Button>
+									);
+								})}
+							</Grid>
+						</Box>
 						{filtered.length === 0 && (
 							<Box paddingY="comfortable">
 								<Text as="p" variant="caption" tone="muted">

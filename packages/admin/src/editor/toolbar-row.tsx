@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the toolbar measures its own tools (refs, an invisible row, exact widths) to decide which move into "More"
+
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -50,7 +52,7 @@ const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
 
 export function ToolbarDivider() {
-	return <Separator orientation="vertical" aria-hidden />;
+	return <Separator orientation="vertical" length="control" aria-hidden />;
 }
 
 /** Where a tool sits in the "More" menu, so a group knows whether it is first (no divider above the first one). */
@@ -186,7 +188,6 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 	const hiddenSlots = slots.filter((slot) => hiddenSet.has(slot.key));
 
 	return (
-		// design-system: drawing — the toolbar measures its own tools (refs, invisible row, exact widths) to decide which move into "More"
 		<div ref={areaRef} className="relative min-w-0 flex-1">
 			{/* For measuring widths. Render every tool once and keep it invisible (confined to height 0 so it does not widen the scroll width). */}
 			<div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden">

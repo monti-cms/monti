@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the editor canvas: the writing column is sized by `--editor-width`, with a measured padding on the toolbar row
+
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/site";
 import { Stack } from "@monti-cms/ui";
@@ -299,8 +301,6 @@ export function CmsEditor({
 		openFilePicker: () => fileInputRef.current?.click(),
 	});
 
-	// design-system: drawing — the editor canvas: the writing column is sized by `--editor-width`, the text sits at the bottom margin and the ProseMirror
-	// element is stretched; only the toolbar row above it is laid out from components
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: editor shell tracks IME and block hover state
 		<div

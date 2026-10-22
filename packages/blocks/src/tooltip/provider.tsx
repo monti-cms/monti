@@ -13,7 +13,7 @@ import {
 	MarkTextPopover,
 	removeInlineMark,
 } from "@monti-cms/admin/editor";
-import { Box, Text } from "@monti-cms/admin/kit";
+import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
 import { keywordList } from "../shared/text";
@@ -93,10 +93,7 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	return (
 		<>
 			<Box as="span" paddingX="tight" shrink={false}>
-				<Text tone="muted">
-					{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
-					<MessageSquareMore aria-hidden size={16} />
-				</Text>
+				<Icon icon={MessageSquareMore} size="sm" tone="muted" />
 			</Box>
 			<Box paddingX="tight" maxWidth="panel-sm">
 				<Text as="div" variant="caption" tone="muted" truncate title={content}>

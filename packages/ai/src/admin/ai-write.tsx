@@ -15,12 +15,14 @@ import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/ed
 import {
 	Box,
 	Button,
+	CodeBlock,
 	commonMessages,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	DiffMark,
 	ErrorNoticeView,
 	FormFieldError,
 	Grid,
@@ -251,10 +253,7 @@ function WriteDialog({
 							{view === "preview" ? (
 								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
-								// design-system: needs a preformatted text part (wrapped mono text with a max height)
-								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-inset p-normal font-mono text-monti-caption">
-									{diff ? <DiffText parts={diff} /> : result || t("running")}
-								</pre>
+								<CodeBlock maxHeight="half">{diff ? <DiffText parts={diff} /> : result || t("running")}</CodeBlock>
 							)}
 						</Box>
 					</Tabs>
@@ -299,26 +298,23 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
-			// design-system: needs a diff mark part (removed / added text in danger / success colors)
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<del key={index} className="bg-monti-danger-muted text-monti-danger line-through">
+			<DiffMark key={index} type="remove">
 				{part.text}
-			</del>
+			</DiffMark>
 		) : (
-			// design-system: needs a diff mark part (removed / added text in danger / success colors)
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<ins key={index} className="bg-monti-success-muted text-monti-success no-underline">
+			<DiffMark key={index} type="add">
 				{part.text}
-			</ins>
+			</DiffMark>
 		),
 	);
 }
 
 /** The inset box a rendered text sits in. */
 function ResultPanel({ children }: { children: ReactNode }) {
-	// design-system: needs a height limit for a scrolling box (max 50vh, min 12rem)
 	return (
-		<Box overflow="y" radius="md" background="inset" padding="normal">
+		<Box maxHeight="half" overflow="y" radius="md" background="inset" padding="normal">
 			{children}
 		</Box>
 	);
@@ -327,12 +323,7 @@ function ResultPanel({ children }: { children: ReactNode }) {
 /** A text as the rendered post. A text the format cannot read is shown as it is. */
 function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
 	const doc = useMemo(() => documentOfText(format, text), [format, text]);
-	return doc ? (
-		<DocPreview doc={doc} label={label} />
-	) : (
-		// design-system: needs a preformatted text part (wrapped mono text)
-		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text}</pre>
-	);
+	return doc ? <DocPreview doc={doc} label={label} /> : <CodeBlock maxHeight="none">{text}</CodeBlock>;
 }
 
 /**
@@ -344,8 +335,7 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	const after = done ? (
 		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
-		// design-system: needs a preformatted text part (wrapped mono text)
-		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text || t("running")}</pre>
+		<CodeBlock maxHeight="none">{text || t("running")}</CodeBlock>
 	);
 	if (job.mode === "insert") return <ResultPanel>{after}</ResultPanel>;
 	return (

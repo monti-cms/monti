@@ -35,8 +35,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						// design-system: needs a dashed variant on Badge (a locale that does not exist yet)
-						<Badge key={locale} variant="outline" mono>
+						<Badge key={locale} variant="dashed" mono>
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<Text srOnly>{t("locale.hasNot", { name })}</Text>
 						</Badge>
@@ -70,8 +69,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					// design-system: needs a dashed variant on Badge (a locale that does not exist yet)
-					<Badge key={locale} variant={named ? "success" : "outline"} mono>
+					<Badge key={locale} variant={named ? "success" : "dashed"} mono>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
 					</Badge>
@@ -131,7 +129,11 @@ function DefaultEntryCell({
 	const tc = useTranslator(commonMessages);
 	switch (column) {
 		case "title": {
-			const title = item.title || <Text tone="muted">{tc("untitled")}</Text>;
+			const title = item.title || (
+				<Text tone="muted" italic>
+					{tc("untitled")}
+				</Text>
+			);
 			// Like the code names of the field list: the slug in mono, small and muted beside the title. It truncates first.
 			const slug =
 				showSlugBesideTitle && item.slug ? (

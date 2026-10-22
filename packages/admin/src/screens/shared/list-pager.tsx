@@ -183,7 +183,7 @@ export function ListPagination({
 						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
 						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
 					>
-						<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
+						<SelectTrigger size="sm" variant="ghost" aria-label={t("list.pageSize")}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

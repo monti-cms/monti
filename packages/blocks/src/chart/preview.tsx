@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — chart geometry inside the post's rhythm
+
 import { useTranslator } from "@monti-cms/admin";
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
 import { AlertOctagon } from "lucide-react";
@@ -37,8 +39,6 @@ import {
  * Default editor preview for the chart block. Draws the chart syntax (`./dsl`) with recharts (optional dependency `recharts`). Loaded only
  * when the chart block extension's admin provider opens a preview via `fencePreviews.chart`. A site can replace it by registering its own
  * renderer under the same name. Colors are the series' theme variables (`--chart-1` to `--chart-5`).
- *
- * design-system: drawing — chart geometry; the wrapper classes below stay raw (`not-prose` and the post's vertical rhythm).
  */
 
 function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {

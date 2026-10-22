@@ -1,15 +1,13 @@
 import {
 	Button,
+	Empty,
 	EmptyContent,
 	EmptyDescription,
 	EmptyHeader,
 	EmptyMedia,
 	EmptyTitle,
 	Inline,
-	Stack,
-	Text,
 } from "@monti-cms/ui";
-import { cn, Empty as OpenEmpty } from "@monti-cms/ui/internal";
 import type { LucideIcon } from "lucide-react";
 import { AdminLink as Link } from "../../router";
 
@@ -39,7 +37,6 @@ export function EmptyState({
 	action,
 	secondaryAction,
 	compact = false,
-	className,
 }: {
 	icon?: LucideIcon;
 	title: string;
@@ -47,35 +44,27 @@ export function EmptyState({
 	action?: EmptyStateAction;
 	secondaryAction?: EmptyStateSecondaryAction;
 	compact?: boolean;
-	className?: string;
 }) {
 	const ActionIcon = action?.icon;
 	const SecondaryIcon = secondaryAction?.icon;
 	if (compact) {
 		return (
-			<Stack gap="tight" align="center" padding="condensed" data-variant="compact">
-				<Stack gap="hair" align="center">
-					<Text variant="label" tone="muted">
-						{title}
-					</Text>
-					{description && (
-						<Text variant="caption" tone="muted">
-							{description}
-						</Text>
-					)}
-				</Stack>
+			<Empty size="compact" data-variant="compact">
+				<EmptyHeader>
+					<EmptyTitle>{title}</EmptyTitle>
+					{description && <EmptyDescription>{description}</EmptyDescription>}
+				</EmptyHeader>
 				{action && (
 					<Button type="button" size="xs" variant="outline" onClick={action.onClick}>
 						{ActionIcon && <ActionIcon aria-hidden />}
 						{action.label}
 					</Button>
 				)}
-			</Stack>
+			</Empty>
 		);
 	}
 	return (
-		// design-system: needs a min-height option on Empty (the full form fills its space, at least 16rem); className is kept for callers that size it
-		<OpenEmpty data-variant="full" className={cn("min-h-64 flex-1", className)}>
+		<Empty data-variant="full">
 			<EmptyHeader>
 				{Icon && (
 					<EmptyMedia variant="icon">
@@ -120,6 +109,6 @@ export function EmptyState({
 					</Inline>
 				</EmptyContent>
 			)}
-		</OpenEmpty>
+		</Empty>
 	);
 }

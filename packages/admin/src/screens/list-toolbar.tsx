@@ -9,8 +9,9 @@ import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupInput,
+	PageTabs,
+	Stack,
 	Tabs,
-	TabsList,
 	TabsTrigger,
 	Text,
 	Toggle,
@@ -155,13 +156,13 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 			value={active ?? ""}
 			onValueChange={(key) => onChange({ statuses: key === "all" ? [] : [key as ListStatus], hasChanges: false })}
 		>
-			<TabsList variant="line" aria-label={t("list.statusFilter")}>
+			<PageTabs aria-label={t("list.statusFilter")}>
 				{segments.map(({ key, label }) => (
 					<TabsTrigger key={key} value={key}>
 						{label}
 					</TabsTrigger>
 				))}
-			</TabsList>
+			</PageTabs>
 		</Tabs>
 	);
 }
@@ -189,36 +190,57 @@ export function ListSubToolbar({
 	const chips = filterChips(site, state, options).filter(
 		(chip) => !(hasSegments && chip.key === "status" && activeStatusSegment(state) !== null),
 	);
-	return (
-		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="tight">
-			{hasSegments && <StatusSegments state={state} onChange={onChange} />}
-			{chips.length === 0 ? (
-				<Box grow />
-			) : (
-				<Inline as="ul" wrap gap="condensed" grow minWidth={0} paddingY="condensed" aria-label={t("toolbar.chips")}>
-					{chips.map((chip) => (
-						<Box as="li" key={chip.key}>
-							<Inline as="span" gap="tight" background="selected" radius="sm" paddingX="condensed">
-								<Box as="span" minWidth={0} maxWidth="panel-lg">
-									<Text variant="caption" weight="medium" tone="default" truncate>
-										{chip.label}
-									</Text>
-								</Box>
-								<IconButton size="icon-xs" label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
-									<X aria-hidden />
-								</IconButton>
-							</Inline>
-						</Box>
-					))}
-					{chips.length >= 2 && (
-						<Box as="li">
-							<Button type="button" variant="quiet" size="xs" onClick={() => onChange(clearFiltersPatch(state))}>
-								{t("filter.clearAll")}
-							</Button>
-						</Box>
+	const chipList =
+		chips.length === 0 ? null : (
+			<Inline as="ul" wrap gap="condensed" grow minWidth={0} paddingY="condensed" aria-label={t("toolbar.chips")}>
+				{chips.map((chip) => (
+					<Box as="li" key={chip.key}>
+						<Inline as="span" gap="tight" background="selected" radius="sm" paddingX="condensed">
+							<Box as="span" minWidth={0} maxWidth="panel-lg">
+								<Text variant="caption" weight="medium" tone="default" truncate>
+									{chip.label}
+								</Text>
+							</Box>
+							<IconButton size="icon-xs" label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
+								<X aria-hidden />
+							</IconButton>
+						</Inline>
+					</Box>
+				))}
+				{chips.length >= 2 && (
+					<Box as="li">
+						<Button type="button" variant="quiet" size="xs" onClick={() => onChange(clearFiltersPatch(state))}>
+							{t("filter.clearAll")}
+						</Button>
+					</Box>
+				)}
+			</Inline>
+		);
+	if (hasSegments) {
+		// The status tabs draw the line under the row; the chips, when there are any, get a row of their own below.
+		return (
+			<Stack gap="none" shrink={false}>
+				<Inline align="stretch" gap="none">
+					<Box grow minWidth={0}>
+						<StatusSegments state={state} onChange={onChange} />
+					</Box>
+					{trailing && (
+						<Inline border="bottom" paddingX="wide">
+							{trailing}
+						</Inline>
 					)}
 				</Inline>
-			)}
+				{chipList && (
+					<Inline border="bottom" paddingX="wide">
+						{chipList}
+					</Inline>
+				)}
+			</Stack>
+		);
+	}
+	return (
+		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="tight">
+			{chipList ?? <Box grow />}
 			{trailing && <Inline>{trailing}</Inline>}
 		</Inline>
 	);

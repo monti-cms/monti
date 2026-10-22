@@ -17,6 +17,8 @@ import {
 	FormFieldError,
 	Inline,
 	Input,
+	List,
+	ListItem,
 	Skeleton,
 	Stack,
 	Text,
@@ -67,12 +69,11 @@ export function ApiKeysSettings() {
 			description: used ? (
 				<Stack gap="condensed">
 					<Text as="p">{t("delete.usedDescription", { count: key.uses.length })}</Text>
-					{/* design-system: needs a bulleted list style (the bullets were list-disc) */}
-					<Stack as="ul" gap="none" paddingX="comfortable" data-testid="delete-dependents">
+					<List data-testid="delete-dependents">
 						{key.uses.map((use) => (
-							<li key={`${use.plugin}:${use.ref}`}>{use.label}</li>
+							<ListItem key={`${use.plugin}:${use.ref}`}>{use.label}</ListItem>
 						))}
-					</Stack>
+					</List>
 				</Stack>
 			) : (
 				t("delete.unusedDescription")

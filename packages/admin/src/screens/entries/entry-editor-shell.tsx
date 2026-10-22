@@ -4,7 +4,7 @@ import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { cn, FormFieldLabel, Inline, Input, Stack, Text, TextLink } from "@monti-cms/ui";
+import { FormFieldLabel, Inline, Input, Stack, Text, TextLink } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +25,7 @@ import { nounVars } from "../shared/noun.messages";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { type EditorStatus, StatusBar } from "../shared/status-bar";
 import { bodyStats } from "./body-stats";
+import { EditorScroller } from "./editor-scroller";
 import { EntryEditorBanners } from "./entry-editor-banners";
 import { EntryEditorHeader } from "./entry-editor-header";
 import { EntryEditorRecoveryDialogs } from "./entry-editor-recovery";
@@ -36,7 +37,7 @@ import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { SourceChangeDialog } from "./source-change-dialog";
-import { ACTIVE_BLOCK_STYLE, useSourceSync } from "./source-sync";
+import { useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
@@ -380,7 +381,6 @@ export function EntryEditorShell({
 			<FormFieldLabel htmlFor="cms-title-canvas" hidden>
 				{titleLabel}
 			</FormFieldLabel>
-			{/* design-system: needs a borderless display-size title input (the post title written on the page) */}
 			<Input
 				id="cms-title-canvas"
 				value={titleKey ? formText(form, titleKey) : ""}
@@ -389,7 +389,8 @@ export function EntryEditorShell({
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
 				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
-				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-spacious py-tight text-monti-display shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-display"
+				size="display"
+				appearance="inline"
 			/>
 			{titleIssue && (
 				<Text as="p" id="cms-title-error" tone="danger">
@@ -439,111 +440,106 @@ export function EntryEditorShell({
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
-			{/* design-system: needs a screen-height option on Box/Stack (the editor fills the viewport) */}
-			<div className="h-screen w-full">
-				<Stack gap="none" height="full" overflow="hidden" background="page">
-					<EntryEditorHeader
-						editor={editor}
-						commands={commands}
-						isInspectorOpen={isInspectorOpen}
-						onToggleInspector={() => setIsInspectorOpen((open) => !open)}
-					/>
+			<Stack gap="none" height="screen" overflow="hidden" background="page">
+				<EntryEditorHeader
+					editor={editor}
+					commands={commands}
+					isInspectorOpen={isInspectorOpen}
+					onToggleInspector={() => setIsInspectorOpen((open) => !open)}
+				/>
 
-					<EntryEditorBanners
-						editor={editor}
-						visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
-						sourceProblem={sourceProblems[0]}
-						sourceChanged={sourceChanged && Boolean(translationSource)}
-						onCompareSource={() => setIsSourceCompareOpen(true)}
-					/>
+				<EntryEditorBanners
+					editor={editor}
+					visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
+					sourceProblem={sourceProblems[0]}
+					sourceChanged={sourceChanged && Boolean(translationSource)}
+					onCompareSource={() => setIsSourceCompareOpen(true)}
+				/>
 
-					<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
-						{translationSource && isSourcePaneOpen && (
-							<TranslationSourcePanel
-								source={translationSource}
-								paneRef={setSourcePane}
-								onClose={() => toggleSourcePane(false)}
-							/>
-						)}
-						{/* design-system: needs a ref on Box, and a way to style the active source block inside it */}
-						<div
-							ref={setEditorScroller}
-							// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
-							className={cn("h-full min-w-0 flex-1 overflow-y-auto", translationSource && ACTIVE_BLOCK_STYLE)}
-							inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
-						>
-							<CmsEditor
-								doc={form.doc}
-								allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
-								titleField={
-									<>
-										{languageTabs}
-										{titleInput}
-									</>
-								}
-								toolbarAside={
-									<Inline gap="tight">
-										{site.ADMIN_TEMPLATES && (
-											<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
-										)}
-										{extensions.toolbar}
-										{sourcePaneToggle}
-										{sourceModeToggle}
-									</Inline>
-								}
-								sourceView={isSourceMode ? sourceEditor : undefined}
-								editable={!isReadOnly}
-								onChange={editor.setBody}
-								blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
-								selectionActions={extensions.selectionActions}
-								insertActions={extensions.insertActions}
-								onEditor={(editor) => {
-									visualEditorRef.current = editor;
-									extensions.onEditor?.(editor);
-								}}
-								onCompositionStart={() => editor.setComposing(true)}
-								onCompositionEnd={() => editor.setComposing(false)}
-							/>
-							{extensions.overlay}
-						</div>
-
-						{isInspectorOpen && (
-							<InspectorSidePanel
-								editor={editor}
-								resize={inspectorResize}
-								incomingItems={incoming.items}
-								isLoadingIncoming={incoming.loading}
-								onRefreshIncoming={(id) => void refreshIncoming(id)}
-								onClose={() => setIsInspectorOpen(false)}
-								focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
-								onFocused={() => setPendingFieldPath(null)}
-							/>
-						)}
-					</Inline>
-
-					<StatusBar
-						context={{
-							screen: "entry",
-							collection,
-							...(entry?.id ? { entryId: entry.id } : {}),
-							locale: entry?.locale ?? site.DEFAULT_LOCALE,
-							editor: barStatus,
-						}}
-					/>
-
-					<EntryEditorRecoveryDialogs editor={editor} />
-
-					{commands.confirmDialog}
-					{translationSource && (
-						<SourceChangeDialog
-							open={isSourceCompareOpen}
-							onOpenChange={setIsSourceCompareOpen}
-							before={confirmed?.baseDoc}
-							after={translationSource.doc}
+				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+					{translationSource && isSourcePaneOpen && (
+						<TranslationSourcePanel
+							source={translationSource}
+							paneRef={setSourcePane}
+							onClose={() => toggleSourcePane(false)}
 						/>
 					)}
-				</Stack>
-			</div>
+					<EditorScroller
+						scrollerRef={setEditorScroller}
+						highlightActive={Boolean(translationSource)}
+						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+					>
+						<CmsEditor
+							doc={form.doc}
+							allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
+							titleField={
+								<>
+									{languageTabs}
+									{titleInput}
+								</>
+							}
+							toolbarAside={
+								<Inline gap="tight">
+									{site.ADMIN_TEMPLATES && (
+										<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
+									)}
+									{extensions.toolbar}
+									{sourcePaneToggle}
+									{sourceModeToggle}
+								</Inline>
+							}
+							sourceView={isSourceMode ? sourceEditor : undefined}
+							editable={!isReadOnly}
+							onChange={editor.setBody}
+							blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
+							selectionActions={extensions.selectionActions}
+							insertActions={extensions.insertActions}
+							onEditor={(editor) => {
+								visualEditorRef.current = editor;
+								extensions.onEditor?.(editor);
+							}}
+							onCompositionStart={() => editor.setComposing(true)}
+							onCompositionEnd={() => editor.setComposing(false)}
+						/>
+						{extensions.overlay}
+					</EditorScroller>
+
+					{isInspectorOpen && (
+						<InspectorSidePanel
+							editor={editor}
+							resize={inspectorResize}
+							incomingItems={incoming.items}
+							isLoadingIncoming={incoming.loading}
+							onRefreshIncoming={(id) => void refreshIncoming(id)}
+							onClose={() => setIsInspectorOpen(false)}
+							focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
+							onFocused={() => setPendingFieldPath(null)}
+						/>
+					)}
+				</Inline>
+
+				<StatusBar
+					context={{
+						screen: "entry",
+						collection,
+						...(entry?.id ? { entryId: entry.id } : {}),
+						locale: entry?.locale ?? site.DEFAULT_LOCALE,
+						editor: barStatus,
+					}}
+				/>
+
+				<EntryEditorRecoveryDialogs editor={editor} />
+
+				{commands.confirmDialog}
+				{translationSource && (
+					<SourceChangeDialog
+						open={isSourceCompareOpen}
+						onOpenChange={setIsSourceCompareOpen}
+						before={confirmed?.baseDoc}
+						after={translationSource.doc}
+					/>
+				)}
+			</Stack>
 		</EntryEditorProvider>
 	);
 }

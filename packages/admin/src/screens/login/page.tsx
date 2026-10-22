@@ -1,7 +1,7 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
-import {
+import { Image,
 	Alert,
 	AlertDescription,
 	AlertTitle,
@@ -76,8 +76,7 @@ export default async function AdminLoginPage({
 	const siteName = site.config.site?.name?.trim() || "Monti";
 
 	return (
-		// design-system: needs a full-screen page height (the login page is centered in the window)
-		<Stack align="center" justify="center" gap="spacious" padding="comfortable" minHeight="full">
+		<Stack align="center" justify="center" gap="spacious" padding="comfortable" minHeight="screen">
 			<Stack as="header" align="center" gap="tight">
 				<Heading as="h1" variant="heading">
 					{siteName}
@@ -89,20 +88,36 @@ export default async function AdminLoginPage({
 			<Box width="full" maxWidth="panel-lg">
 				<Card>
 					<CardHeader>
-						{firstAdmin ? <CardTitle>{t("firstAdminTitle")}</CardTitle> : null}
+						{firstAdmin ? (
+							<CardTitle>
+								<Text as="div" align="center" variant="title">
+									{t("firstAdminTitle")}
+								</Text>
+							</CardTitle>
+						) : null}
 						<CardDescription>
-							{firstAdmin
-								? t("firstAdminDescription")
-								: formProviders.length > 0 && buttonProviders.length === 0
-									? t("passwordDescription")
-									: t("description", { provider })}
+							<Text as="div" align="center" tone="muted">
+								{firstAdmin
+									? t("firstAdminDescription")
+									: formProviders.length > 0 && buttonProviders.length === 0
+										? t("passwordDescription")
+										: t("description", { provider })}
+							</Text>
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{isUnauthorizedUser ? (
 							<Alert tone="danger" layout="stack">
-								<AlertTitle>{t("forbiddenTitle")}</AlertTitle>
-								<AlertDescription>{t("forbidden", { provider, accountId: accountId ?? "" })}</AlertDescription>
+								<AlertTitle>
+									<Text as="div" align="center" variant="caption">
+										{t("forbiddenTitle")}
+									</Text>
+								</AlertTitle>
+								<AlertDescription>
+									<Text as="div" align="center" variant="caption">
+										{t("forbidden", { provider, accountId: accountId ?? "" })}
+									</Text>
+								</AlertDescription>
 								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
 									<Box paddingTop="normal">
 										<Button type="submit" variant="link" size="xs">
@@ -140,8 +155,16 @@ export default async function AdminLoginPage({
 							</form>
 						) : providers.length === 0 ? (
 							<Alert tone="danger" layout="stack">
-								<AlertTitle>{t("noLoginTitle")}</AlertTitle>
-								<AlertDescription>{t("noLogin")}</AlertDescription>
+								<AlertTitle>
+									<Text as="div" align="center" variant="caption">
+										{t("noLoginTitle")}
+									</Text>
+								</AlertTitle>
+								<AlertDescription>
+									<Text as="div" align="center" variant="caption">
+										{t("noLogin")}
+									</Text>
+								</AlertDescription>
 							</Alert>
 						) : (
 							<Stack gap="comfortable">
@@ -176,8 +199,7 @@ export default async function AdminLoginPage({
 										>
 											<Button type="submit" width="full">
 												{authProvider.icon ? (
-													// design-system: needs an Icon/Image part with a fixed size (16px)
-													<img src={authProvider.icon} alt="" aria-hidden="true" className="size-4" />
+													<Image src={authProvider.icon} alt="" size="icon" radius="none" />
 												) : null}
 												{t("signIn", { provider: authProvider.name })}
 											</Button>
@@ -196,7 +218,11 @@ export default async function AdminLoginPage({
 function ErrorAlert({ text }: { text: string }) {
 	return (
 		<Alert tone="danger" layout="stack">
-			<AlertDescription>{text}</AlertDescription>
+			<AlertDescription>
+				<Text as="div" align="center" variant="caption">
+					{text}
+				</Text>
+			</AlertDescription>
 		</Alert>
 	);
 }

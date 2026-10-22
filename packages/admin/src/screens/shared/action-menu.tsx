@@ -24,8 +24,8 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@monti-cms/ui";
-import { IconButton as OpenIconButton } from "@monti-cms/ui/internal";
 import { type LucideIcon, MoreHorizontal } from "lucide-react";
 import { cloneElement, type ReactElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
@@ -181,8 +181,7 @@ export function ActionContextMenu({
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
 			<ContextMenuTrigger render={trigger}>{children}</ContextMenuTrigger>
-			{/* design-system: needs a width option on ContextMenuContent (min width 192px, as DropdownMenuContent width="md") */}
-			<ContextMenuContent>
+			<ContextMenuContent width="md">
 				<ContextItems actions={items} />
 			</ContextMenuContent>
 		</ContextMenu>
@@ -193,22 +192,18 @@ export function ActionContextMenu({
 export function MoreActionsButton({
 	actions,
 	label,
-	className,
 }: {
 	actions: MenuAction[];
 	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
-	/** @deprecated Only the sidebar's folder tree still sets it (a button shown on row hover). */
-	className?: string;
 }) {
 	const items = tidy(actions);
 	if (items.length === 0) return null;
 	return (
 		<DropdownMenu>
-			{/* transitional: className kept for the sidebar's folder tree, which has no part for a button shown on row hover */}
-			<OpenIconButton label={label} className={className} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				<MoreHorizontal aria-hidden />
-			</OpenIconButton>
+			</IconButton>
 			<DropdownMenuContent align="end" width="md">
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>

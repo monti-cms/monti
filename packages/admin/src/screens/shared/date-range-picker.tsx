@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Calendar, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
+import { Button, Calendar, Panel, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { CalendarRange } from "lucide-react";
 import { adminCalendarLocale } from "../../ui/calendar-locale";
 import { dateRangeMessages } from "./date-range.messages";
@@ -30,13 +30,15 @@ export function DateRangeCalendar({
 }) {
 	const site = useSite();
 	return (
-		<Calendar
-			mode="range"
-			numberOfMonths={1}
-			selected={{ from: dayToDate(from), to: dayToDate(to) }}
-			onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
-			locale={adminCalendarLocale(site)}
-		/>
+		<Panel>
+			<Calendar
+				mode="range"
+				numberOfMonths={1}
+				selected={{ from: dayToDate(from), to: dayToDate(to) }}
+				onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
+				locale={adminCalendarLocale(site)}
+			/>
+		</Panel>
 	);
 }
 

@@ -19,6 +19,7 @@ function Input({
 	width = "full",
 	appearance = "boxed",
 	srOnly = false,
+	align = "start",
 	...props
 }: Omit<React.ComponentProps<"input">, "size" | "width"> & {
 	/** `sm` (32px) beside small buttons in toolbars, filters and tables; `default` (36px) in forms. */
@@ -34,6 +35,8 @@ function Input({
 	appearance?: "boxed" | "inline";
 	/** Hidden but usable (a file input behind a button that opens it). */
 	srOnly?: boolean;
+	/** Where the text sits in the field (a caption that follows its image's alignment). */
+	align?: "start" | "center" | "end";
 }) {
 	return (
 		<InputPrimitive
@@ -50,6 +53,8 @@ function Input({
 				width === "number" && "w-24",
 				mono && "font-mono",
 				srOnly && "sr-only",
+				align === "center" && "text-center",
+				align === "end" && "text-right",
 				className,
 			)}
 			{...props}

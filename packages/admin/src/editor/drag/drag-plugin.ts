@@ -1,3 +1,4 @@
+// design-system: drawing — the drop line is drawn between blocks while dragging
 import { Extension } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
@@ -48,7 +49,6 @@ function createDropIndicatorView(editorView: EditorView) {
 			element = document.createElement("div");
 			element.setAttribute("aria-hidden", "true");
 			element.dataset.montiDropIndicator = "";
-			// design-system: drawing — the drop line is drawn between blocks while dragging
 			element.className = "pointer-events-none absolute z-50 h-0.5 -translate-y-1/2 rounded-sm bg-monti-emphasis";
 			parent.appendChild(element);
 		}

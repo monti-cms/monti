@@ -1,3 +1,4 @@
+// design-system: drawing — the admin root: `monti-admin` scopes the tokens and the page fills the window
 import type { Cms } from "@monti-cms/core/server";
 import { SiteProvider } from "@monti-cms/core/site";
 import { TooltipProvider } from "@monti-cms/ui";
@@ -66,7 +67,6 @@ export async function AdminLayout({
 		<AdminPluginScope plugins={plugins}>
 			<AdminUiLabels>
 				<TooltipProvider>
-					{/* design-system: drawing — the admin's root: `monti-admin` scopes the tokens and the page fills the window */}
 					<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
 					{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
 				</TooltipProvider>

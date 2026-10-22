@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the preview block is drawn inside the document
+
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
@@ -162,7 +164,6 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 
 	const renderPreview = () => meta.preview(previewValue);
 
-	// design-system: drawing — the preview block inside the document: the frame, the rendered preview and its source field are drawn in place
 	return (
 		<BlockFrame
 			ref={containerRef}

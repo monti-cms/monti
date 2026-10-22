@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the status bar is a dense strip with its own item, popup row and header look that no other screen shares
+
 // The status bar at the bottom of every admin screen. Core and plugins contribute items; an item shows changing state that leads somewhere when clicked,
 // and renders nothing when there is nothing to say.
 
@@ -210,7 +212,6 @@ export type StatusBarItemProps = StatusBarItemBase &
 		  }
 	);
 
-// design-system: needs a StatusBar part (bar, item, popup row and header): the classes in this file are its own look, kept until the part exists
 const itemClass =
 	"flex h-5 shrink-0 items-center gap-tight rounded-sm px-condensed text-monti-caption whitespace-nowrap tabular-nums";
 const interactiveClass =
@@ -253,7 +254,6 @@ export function StatusBarItem({
 	if (popover) {
 		return (
 			<Popover open={open} onOpenChange={setOpen}>
-				{/* design-system: needs a StatusBar part (the item chrome below is the status bar's own look) */}
 				<PopoverTrigger title={title} render={<button type="button" className={classes} />}>
 					{content}
 				</PopoverTrigger>

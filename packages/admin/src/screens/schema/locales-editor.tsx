@@ -238,10 +238,9 @@ function LocaleDialog({
 							<Input id={codeId} value={code} disabled aria-label={t("locales.code")} />
 						) : (
 							<Box position="relative">
-								{/* design-system: needs a visually hidden input option (a field for typing the code, kept beside the picker) */}
-								<input
+								<Input
 									id={codeId}
-									className="sr-only"
+									srOnly
 									aria-label={t("locales.code")}
 									tabIndex={-1}
 									value={code}

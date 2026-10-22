@@ -166,7 +166,7 @@ export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEve
 						<PopoverTrigger
 							render={
 								<Toggle
-									size="sm"
+									size="icon-sm"
 									pressed={isActive}
 									disabled={disabled}
 									aria-label={labels.name}

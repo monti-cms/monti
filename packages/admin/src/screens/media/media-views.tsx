@@ -5,7 +5,8 @@ import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useT
 import {
 	Badge,
 	Box,
-	Stack,
+	Grid,
+	Image,
 	Table,
 	TableBody,
 	TableCell,
@@ -14,6 +15,7 @@ import {
 	TableRow,
 	Text,
 	TextLink,
+	Tile,
 } from "@monti-cms/ui";
 import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
@@ -31,26 +33,9 @@ import { mediaMessages } from "./messages";
 
 const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
-/** Thumbnail for images, a type icon for other files. */
-export function MediaThumb({ media, iconSize }: { media: MediaItem; iconSize: number }) {
-	const site = useSite();
-	if (!site.api.isImageType(media.mimeType)) {
-		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
-		return (
-			<Text tone="muted">
-				<Icon size={iconSize} aria-hidden />
-			</Text>
-		);
-	}
-	if (!media.publicUrl)
-		return (
-			<Text tone="muted">
-				<File size={iconSize} aria-hidden />
-			</Text>
-		);
-	// design-system: needs an Image part (fills its frame, cropped to cover)
-	return <img src={media.publicUrl} alt="" loading="lazy" className="h-full w-full object-cover" />;
-}
+/** The icon an image frame shows in place of a picture: the type of a file, or a plain file when an image has no address yet. */
+export const fallbackFor = (media: MediaItem, isImage: boolean) =>
+	isImage ? File : FILE_ICONS[fileKindOf(media.mimeType)];
 
 export interface MediaViewProps {
 	items: readonly MediaItem[];
@@ -107,107 +92,63 @@ export function MediaGrid({
 				]
 			: [];
 	return (
-		// design-system: needs Grid columns 2/3/4/6 by screen width, and a dimmed (opacity) state for rows that are reloading
-		<ul
-			className={
-				dimmed
-					? "grid grid-cols-2 gap-comfortable opacity-60 transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
-					: "grid grid-cols-2 gap-comfortable transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
-			}
-		>
+		<Grid as="ul" columns="tiles" gap="comfortable" dimmed={dimmed}>
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
-				<Box as="li" position="relative">
-					{/* design-system: needs a Tile part (a card button: square preview on top, name under it) */}
-					<button
-						type="button"
+				<li>
+					<Tile
+						preview={<Image alt="" ratio="square" radius="none" fallback={FolderUp} />}
+						title={ts("list.folderUp")}
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
-						className="flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
-					>
-						<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted hover:text-monti-default">
-							<FolderUp size={40} aria-hidden />
-						</span>
-						<Box padding="condensed">
-							<Text as="div" variant="caption" tone="muted" weight="medium" truncate>
-								{ts("list.folderUp")}
-							</Text>
-						</Box>
-					</button>
-				</Box>
+					/>
+				</li>
 			)}
 			{explorer?.folders.map((folder) => {
 				const actions = folderRowMenu(folder);
 				return (
-					<ActionContextMenu
-						key={`folder-${folder.id}`}
-						actions={actions}
-						trigger={<Box as="li" position="relative" />}
-					>
-						{/* design-system: needs a Tile part (a card button: square preview on top, name under it) */}
-						<button
-							type="button"
+					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li />}>
+						<Tile
+							preview={<Image alt="" ratio="square" radius="none" fallback={FolderIcon} />}
+							title={folder.name}
+							action={<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />}
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
-						>
-							<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted">
-								<FolderIcon size={40} aria-hidden />
-							</span>
-							<Box padding="condensed">
-								<Text as="div" variant="caption" weight="medium" truncate>
-									{folder.name}
-								</Text>
-							</Box>
-						</button>
-						{/* design-system: needs a corner overlay position (the actions button sits on the tile's top right) */}
-						<span className="absolute top-1 right-1">
-							<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />
-						</span>
+						/>
 					</ActionContextMenu>
 				);
 			})}
-			{items.map((media) => (
-				<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<Box as="li" position="relative" />}>
-					{/* design-system: needs a Tile part (a card button: square preview on top, name under it; a selected look) */}
-					<button
-						type="button"
-						draggable
-						onDragStart={(event) => writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)}
-						aria-current={selectedId === media.id ? "true" : undefined}
-						onClick={() => onSelect(media)}
-						onKeyDown={deleteKey(media, onDeleteKey)}
-						className={`flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft ${
-							selectedId === media.id ? "border-monti-emphasis bg-monti-selected hover:bg-monti-hover" : ""
-						}`}
-					>
-						<span className="relative flex aspect-square items-center justify-center bg-monti-neutral">
-							{site.api.isImageType(media.mimeType) ? (
-								<MediaThumb media={media} iconSize={40} />
-							) : (
-								<Stack align="center" gap="condensed">
-									<MediaThumb media={media} iconSize={40} />
-									<Text variant="micro" tone="muted" weight="medium">
-										{fileTypeLabel(media.filename, media.mimeType)}
-									</Text>
-								</Stack>
-							)}
-							{/* design-system: needs a corner overlay position (the usage badge sits on the preview's top left) */}
-							<span className="absolute top-1.5 left-1.5">
-								<Badge variant="secondary">{usageLabel(t, media)}</Badge>
-							</span>
-						</span>
-						<Box padding="condensed">
-							<Text as="div" variant="caption" mono truncate>
-								{media.filename}
-							</Text>
-						</Box>
-					</button>
-					{/* design-system: needs a corner overlay position (the actions button sits on the tile's top right) */}
-					<span className="absolute top-1 right-1">
-						<MoreActionsButton actions={menuFor(media)} label={t("views.itemActions", { name: media.filename })} />
-					</span>
-				</ActionContextMenu>
-			))}
-		</ul>
+			{items.map((media) => {
+				const isImage = site.api.isImageType(media.mimeType);
+				return (
+					<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<li />}>
+						<Tile
+							draggable
+							onDragStart={(event) =>
+								writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
+							}
+							aria-current={selectedId === media.id ? "true" : undefined}
+							selected={selectedId === media.id}
+							preview={
+								<Image
+									src={isImage ? media.publicUrl : undefined}
+									alt=""
+									ratio="square"
+									radius="none"
+									fallback={fallbackFor(media, isImage)}
+								/>
+							}
+							title={media.filename}
+							detail={isImage ? undefined : fileTypeLabel(media.filename, media.mimeType)}
+							badge={<Badge variant="secondary">{usageLabel(t, media)}</Badge>}
+							action={
+								<MoreActionsButton actions={menuFor(media)} label={t("views.itemActions", { name: media.filename })} />
+							}
+							onClick={() => onSelect(media)}
+							onKeyDown={deleteKey(media, onDeleteKey)}
+						/>
+					</ActionContextMenu>
+				);
+			})}
+		</Grid>
 	);
 }
 
@@ -227,10 +168,8 @@ export function MediaTable({
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	return (
-		// design-system: needs a dimmed (opacity) state for rows that are reloading
-		<div className={dimmed ? "opacity-60 transition-opacity" : "transition-opacity"}>
-			{/* design-system: needs a sticky table header and fixed column layout */}
-			<Table aria-label={t("views.table")} inset="page">
+		<Box dimmed={dimmed}>
+			<Table aria-label={t("views.table")} inset="page" layout="fixed" stickyHeader container="none">
 				<TableHeader>
 					<TableRow>
 						<TableHead width="xs">
@@ -276,10 +215,13 @@ export function MediaTable({
 								}
 							>
 								<TableCell>
-									{/* design-system: needs a Thumbnail part (a small square frame for a preview image or file icon) */}
-									<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-neutral">
-										<MediaThumb media={media} iconSize={16} />
-									</span>
+									<Image
+										src={site.api.isImageType(media.mimeType) ? media.publicUrl : undefined}
+										alt=""
+										size="thumb"
+										border
+										fallback={fallbackFor(media, site.api.isImageType(media.mimeType))}
+									/>
 								</TableCell>
 								<TableCell truncate>
 									<TextLink
@@ -320,6 +262,6 @@ export function MediaTable({
 					})}
 				</TableBody>
 			</Table>
-		</div>
+		</Box>
 	);
 }

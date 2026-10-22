@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — draws the explorer as the public post does
+
 import {
 	AttributeInput,
 	BlockFrame,
@@ -71,7 +73,6 @@ export function CodeExplorerNodeView() {
 	];
 
 	return (
-		// design-system: drawing — the explorer as the public post draws it (framed box, file header with file chips, body spacing)
 		<BlockFrame className="my-spacious rounded-md border bg-monti-page">
 			<div
 				contentEditable={false}

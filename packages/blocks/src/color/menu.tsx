@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — color samples painted by the mark's own classes and variables
+
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import {
@@ -76,7 +78,6 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 		? textColorProps(kind === "fg" ? { fg: color.light, fgDark: color.dark } : { bg: color.light, bgDark: color.dark })
 		: null;
 	return (
-		// design-system: drawing — a color sample painted by the mark's own classes and variables (the real body color rule)
 		<span
 			aria-hidden
 			{...(props ?? {})}
@@ -112,7 +113,6 @@ function SwatchRow({
 		...palette.map((color) => ({ name: color.name, color: color[kind] })),
 	];
 	return (
-		// design-system: drawing — the swatch grid (9 columns of color samples); the picker items and the check badge below keep their raw classes with it
 		<div className="grid grid-cols-9 gap-tight px-tight pb-tight">
 			{options.map(({ name, color }) => {
 				const selected = (color?.light.toLowerCase() ?? null) === current;
@@ -203,7 +203,6 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 	const current = currentColor(editor);
 	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
 	return (
-		// design-system: drawing — the icon painted with the selection's text and background colors
 		<span {...underline} className={cn(underline.className, "rounded-sm p-hair")}>
 			<Baseline aria-hidden className="size-4" />
 		</span>
@@ -224,8 +223,7 @@ export function TextColorMenu({ editor }: { editor: Editor }) {
 			>
 				<TextColorIcon editor={editor} />
 			</IconButton>
-			{/* design-system: needs DropdownMenuContent width="auto" (a menu as wide as its swatch grid) */}
-			<DropdownMenuContent align="start" className="w-auto">
+			<DropdownMenuContent align="start" width="auto">
 				<TextColorMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

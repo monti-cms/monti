@@ -12,7 +12,7 @@ import {
 	startLinkFromText,
 	unlinkRef,
 } from "@monti-cms/admin/editor";
-import { Box, Text } from "@monti-cms/admin/kit";
+import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import { Code2, Unlink } from "lucide-react";
 import { codeRefBlock } from "./definition";
@@ -61,10 +61,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 	return (
 		<>
 			<Box as="span" paddingX="tight" shrink={false}>
-				<Text tone="muted">
-					{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
-					<Code2 aria-hidden size={16} />
-				</Text>
+				<Icon icon={Code2} size="sm" tone="muted" />
 			</Box>
 			<Box paddingX="tight" maxWidth="panel-sm">
 				<Text as="div" variant="caption" tone={where ? "muted" : "danger"} truncate>

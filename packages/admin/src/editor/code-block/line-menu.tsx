@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — a menu beside the picked lines (absolute position inside the block, never takes focus from the code)
+
 import {
 	COLLAPSE,
 	type CodeLineEffect,
@@ -135,8 +137,6 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 			),
 		);
 
-	// design-system: drawing — a menu that sits beside the picked lines of the code (absolute position inside the block, closes on outside press,
-	// never takes focus from the code); needs a menu part that opens at a point in the document
 	return (
 		<div
 			ref={ref}

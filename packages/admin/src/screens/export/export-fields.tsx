@@ -1,7 +1,20 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Checkbox, DescriptionItem, DescriptionList, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
+import {
+	Box,
+	Button,
+	Checkbox,
+	DescriptionItem,
+	DescriptionList,
+	Inline,
+	Progress,
+	RadioGroup,
+	RadioItem,
+	Spinner,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { type ReactNode, useId } from "react";
 import { errorText } from "../../api/client";
 import type { ExportScope, ExportSummary } from "../../api/export";
@@ -97,15 +110,18 @@ export function ExportFields({
 }) {
 	const t = useTranslator(exportMessages);
 	const site = useSite();
-	const scopeName = useId();
 	const formatId = useId();
 	const { summary, summaryQuery, formats, formatsQuery } = form;
 	const busy = form.isExporting;
 	return (
 		<Stack gap="spacious">
-			{/* While the counts of another scope are being fetched, the old ones stay in view but are marked as out of date. */}
-			{/* design-system: needs a dimmed (opacity) state for content that is out of date while it reloads */}
-			<Stack as="section" gap="normal" aria-label={t("summary.includes")} aria-busy={summaryQuery.isPlaceholderData}>
+			<Stack
+				as="section"
+				gap="normal"
+				dimmed={summaryQuery.isPlaceholderData}
+				aria-label={t("summary.includes")}
+				aria-busy={summaryQuery.isPlaceholderData}
+			>
 				{summary ? (
 					<SummaryView summary={summary} selection={selection} noun={noun} />
 				) : summaryQuery.isError ? (
@@ -124,30 +140,24 @@ export function ExportFields({
 				<legend>
 					<Text weight="medium">{t("scope.label")}</Text>
 				</legend>
-				<Stack gap="condensed" paddingTop="tight">
-					{SCOPES.map((scope) => (
-						<Box
-							as="label"
-							key={scope}
-							border={form.scope === scope ? "default" : "all"}
-							background={form.scope === scope ? "selected" : undefined}
-							radius="md"
-							padding="normal"
-						>
-							<Inline gap="normal" align="start">
-								{/* design-system: needs a Radio part (the native radio takes the browser's accent color) */}
-								<input
-									type="radio"
-									name={scopeName}
-									value={scope}
-									checked={form.scope === scope}
-									onChange={() => form.setScope(scope)}
-								/>
-								<ChoiceText name={t(`scope.${scope}`)} hint={t(`scope.${scope}.hint`)} />
-							</Inline>
-						</Box>
-					))}
-				</Stack>
+				<Box paddingTop="tight">
+					<RadioGroup
+						variant="card"
+						aria-label={t("scope.label")}
+						value={form.scope}
+						onValueChange={(value) => form.setScope(value as ExportScope)}
+					>
+						{SCOPES.map((scope) => (
+							<RadioItem
+								key={scope}
+								value={scope}
+								disabled={busy}
+								label={<Text weight="medium">{t(`scope.${scope}`)}</Text>}
+								hint={t(`scope.${scope}.hint`)}
+							/>
+						))}
+					</RadioGroup>
+				</Box>
 			</fieldset>
 
 			<fieldset disabled={busy}>
@@ -214,17 +224,7 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 								: t("progress.downloading", { percent })}
 					</Text>
 				</Inline>
-				{/* design-system: needs a Progress part (a bar with a known percent or an indeterminate one) */}
-				<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
-					<div
-						className={
-							percent === null
-								? "h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis"
-								: "h-full rounded-sm bg-monti-emphasis transition-[width]"
-						}
-						style={percent === null ? undefined : { width: `${percent}%` }}
-					/>
-				</div>
+				<Progress value={percent} label={t("progress.building")} />
 			</Stack>
 		</output>
 	);

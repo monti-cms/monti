@@ -1,3 +1,4 @@
+// design-system: drawing — the admin root: `monti-admin` scopes the tokens and the screen is centered in the window
 import type { Cms } from "@monti-cms/core/server";
 import { Alert, AlertDescription, AlertTitle, Box } from "@monti-cms/ui";
 import { layoutMessages } from "./messages";
@@ -31,7 +32,6 @@ export function setupProblemOf(cms: Pick<Cms, "auth">): string | undefined {
 export function SetupProblemScreen({ cms }: { cms: Pick<Cms, "site"> }) {
 	const t = cms.site.createTranslator(layoutMessages);
 	return (
-		// design-system: drawing — the admin's root: `monti-admin` scopes the tokens, and the screen is centered in the window
 		<div className="monti-admin flex min-h-screen items-center justify-center bg-monti-page p-comfortable text-monti-default">
 			<Box maxWidth="panel">
 				<Alert tone="danger" layout="stack">

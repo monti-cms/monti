@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the file card is a block inside the document, with its name written in place
+
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +42,6 @@ export function FileBlockView() {
 						.join(" · ")
 				: tc("loading");
 
-	// design-system: drawing — the file card is a block inside the document, with its name written in place
 	return (
 		<BlockFrame
 			framed={false}

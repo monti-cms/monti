@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the field list tab and group rows: drag transform, hover-revealed handle
+
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
 import { useSortable } from "@dnd-kit/sortable";
@@ -47,9 +49,9 @@ function InlineName({
 		else onCommit(draft.trim());
 	};
 	return (
-		// design-system: needs a borderless inline-edit Input (the name looks like text until it is focused)
 		<Input
 			ref={inputRef}
+			appearance="inline"
 			size="sm"
 			value={draft}
 			aria-label={label}
@@ -114,10 +116,8 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	return (
 		<div
 			ref={setNodeRef}
-			// design-system: drawing — field list tab and group row (drag, hover reveal)
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			// design-system: drawing — field list tab and group row (drag, hover reveal)
 			className="group/row relative mt-normal flex items-center gap-tight border-y bg-monti-neutral py-condensed pr-comfortable pl-wide first:mt-0"
 		>
 			<InlineName
@@ -182,7 +182,6 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 	return (
 		<div
 			ref={setNodeRef}
-			// design-system: drawing — field list tab and group row (drag, hover reveal)
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"group/row relative mt-normal border-y bg-monti-inset first:mt-0",
@@ -190,7 +189,6 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			)}
 			data-testid={`group-${tab}-${block}`}
 		>
-			{/* design-system: drawing — field list tab and group row (drag, hover reveal) */}
 			<div className="flex items-center gap-tight py-condensed pr-comfortable pl-wide">
 				<InlineName
 					value={group.title}
@@ -230,10 +228,8 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 				{...listeners}
 				aria-label={t("layout.dragGroup", { name: group.title })}
 				disabled={ops.disabled}
-				// design-system: drawing — field list tab and group row (drag, hover reveal)
 				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 			>
-				{/* design-system: drawing — field list tab and group row (drag, hover reveal) */}
 				<GripVertical aria-hidden className="size-4" />
 			</button>
 		</div>
@@ -246,7 +242,6 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 	return (
 		<div
 			ref={setNodeRef}
-			// design-system: drawing — field list tab and group row (drag, hover reveal)
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"pr-comfortable pl-wide text-monti-caption text-monti-muted",

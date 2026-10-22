@@ -1,10 +1,10 @@
 "use client";
 
+// design-system: drawing — the sidebar composition: its header, footer and group chrome follow the icon-rail states, and the folder tree is indented by depth with row actions shown on hover
+
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
-// design-system: needs a Sidebar composition for the admin (header, footer and group chrome with the icon-rail states) and a folder-tree part.
-// Until they exist this file keeps the open sidebar parts and its classes.
 import {
 	buttonVariants,
 	cn,
@@ -322,11 +322,9 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 							{folder.name}
 						</button>
 					)}
-					<MoreActionsButton
-						actions={actions}
-						label={t("list.folderActions", { name: folder.name })}
-						className="size-5 shrink-0 text-monti-muted opacity-0 focus-visible:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
-					/>
+					<span className="shrink-0 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+						<MoreActionsButton actions={actions} label={t("list.folderActions", { name: folder.name })} />
+					</span>
 				</ActionContextMenu>
 				{isExpanded && (children.length > 0 || isCreatingChild) && (
 					<ul className="flex flex-col gap-hair">

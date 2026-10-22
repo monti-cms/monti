@@ -224,7 +224,7 @@ export const buildToolbarEntries = ({
 											<PopoverTrigger
 												render={
 													<Toggle
-														size="sm"
+														size="icon-sm"
 														pressed={editor.isActive("link")}
 														disabled={!canEdit}
 														aria-label={t("toolbar.link")}

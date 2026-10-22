@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — draws the tab bar and body as the public post does
+
 import {
 	AttributeInput,
 	BlockFrame,
@@ -78,7 +80,6 @@ export function TabsNodeView() {
 	};
 
 	return (
-		// design-system: drawing — the tab bar and body box as the public post draws them (editor tab triggers, rename input, body frame)
 		<BlockFrame className="my-spacious rounded-lg">
 			<div contentEditable={false} className="not-prose">
 				<div

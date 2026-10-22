@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — draws the callout as the public post does
+
 import {
 	AttributeInput,
 	BlockFrame,
@@ -39,7 +41,6 @@ export function CalloutNodeView() {
 	const Icon = CALLOUT_ICON_BY_VARIANT[variant];
 
 	return (
-		// design-system: drawing — the callout as the public post draws it (box classes shared with the render, frame and content spacing)
 		<BlockFrame className="my-spacious rounded-lg">
 			<div data-slot="callout" data-variant={variant} role="note" className={cn(CALLOUT_BOX_CLASS, "not-prose w-full")}>
 				<Inline gap="condensed" contentEditable={false}>

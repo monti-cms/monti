@@ -2,7 +2,7 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, Skeleton, Stack, Tabs, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
+import { Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -168,7 +168,7 @@ function useMounted() {
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline align="stretch" gap="none" height="full" overflow="hidden" aria-busy="true">
+		<Inline align="stretch" gap="none" height="screen" overflow="hidden" aria-busy="true">
 			<Text srOnly>{tc("loading")}</Text>
 			<Stack gap="condensed" width="panel-sm" shrink={false} border="right" padding="normal" hideBelow="md" aria-hidden>
 				<Skeleton shape="control-sm" width="third" />
@@ -231,16 +231,21 @@ function TrashPage() {
 		>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
-				<Tabs value={state.collection}>
-					<TabsList aria-label={t("dashboard.trashCollections")}>
-						{site.COLLECTIONS.map((item) => (
-							<TabsTrigger key={item} value={item} render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}>
-								{site.COLLECTION_DEFINITIONS[item].label}
-							</TabsTrigger>
-						))}
-					</TabsList>
-				</Tabs>
 			</PageActions>
+			<Tabs value={state.collection}>
+				<PageTabs aria-label={t("dashboard.trashCollections")}>
+					{site.COLLECTIONS.map((item) => (
+						<TabsTrigger
+							key={item}
+							value={item}
+							nativeButton={false}
+							render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}
+						>
+							{site.COLLECTION_DEFINITIONS[item].label}
+						</TabsTrigger>
+					))}
+				</PageTabs>
+			</Tabs>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);

@@ -1,5 +1,7 @@
 "use client";
 
+// design-system: drawing — the block toolbar floats over the block corner and attributes are written in place inside the block
+
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { Settings2 } from "lucide-react";
@@ -58,7 +60,6 @@ export function AttributeInput({
 	};
 
 	return (
-		// design-system: drawing — an attribute written in place inside the block (no border, no fill), like text of the document
 		<input
 			{...props}
 			value={draft}
@@ -120,7 +121,6 @@ export function ContainerToolbar({
 	label: string;
 }) {
 	return (
-		// design-system: drawing — the toolbar floats over the block's corner and shows on hover or focus; needs a floating toolbar part
 		<div
 			role="toolbar"
 			aria-label={label}

@@ -223,7 +223,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 	return (
 		<MenuPrimitive.Separator
 			data-slot="dropdown-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("first:hidden last:hidden -mx-1 my-1 h-px bg-monti-divider", className)}
 			{...props}
 		/>
 	);

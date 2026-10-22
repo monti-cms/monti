@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, Text } from "@monti-cms/ui";
+import { Button, Icon, Inline, Text } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Code2 } from "lucide-react";
@@ -56,8 +56,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 			paddingX="comfortable"
 			paddingY="condensed"
 		>
-			{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
-			<Code2 aria-hidden className="size-4 shrink-0 text-monti-default" />
+			<Icon icon={Code2} />
 			<Text variant="caption">
 				{status.kind === "text" ? (
 					<>

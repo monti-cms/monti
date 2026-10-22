@@ -1,8 +1,10 @@
 "use client";
 
+// design-system: drawing — the image block is drawn inside the document: frame, crop, width, caption in place, resize handles
+
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Switch, Textarea } from "@monti-cms/ui";
+import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Stack, Switch, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
@@ -241,8 +243,6 @@ export function ImageBlockView() {
 	// TipTap v3 requires the first child of a node view to have `data-node-view-wrapper`.
 	// `NodeViewWrapper` adds that attribute, and omitting it crashes at runtime with "Please use the NodeViewWrapper
 	// component for your node view" (seen in posts that contain images).
-	// design-system: drawing — the image block lives inside the document: its frame, the image with its crop and width, the caption written in place
-	// and the resize handles are drawn here, not laid out from components
 	return (
 		<BlockFrame
 			as="figure"
@@ -268,7 +268,7 @@ export function ImageBlockView() {
 							<tool.icon aria-hidden />
 						</ToolbarButton>
 					))}
-					<Separator orientation="vertical" />
+					<Separator orientation="vertical" length="control" />
 					<BlockSettings open={isEditing} onOpenChange={setIsEditing}>
 						<BlockSettingsField label={t("imageNode.width")} htmlFor={widthInputId}>
 							<Input
@@ -368,7 +368,10 @@ export function ImageBlockView() {
 					</div>
 				)
 			) : isChecking ? (
-				<Skeleton role="status" aria-label={t("imageNode.loading")} shape="block" />
+				<Stack gap="none" role="status" aria-label={t("imageNode.loading")}>
+					<Skeleton shape="block" />
+					<Skeleton shape="block" />
+				</Stack>
 			) : (
 				<div className="flex h-48 w-full items-center justify-center rounded-md bg-monti-neutral text-monti-body text-monti-muted">
 					{t("imageNode.unavailable")}
@@ -382,18 +385,16 @@ export function ImageBlockView() {
 			<figcaption className={cn("mt-condensed flex items-center gap-tight", captionAlignClass)}>
 				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
 				<div className="relative w-full">
-					{/* design-system: needs a borderless Input (a caption written in place, without box) */}
-					<input
+					<Input
+						appearance="inline"
+						size="sm"
+						align={align === "left" ? "start" : align === "right" ? "end" : "center"}
 						type="text"
 						value={caption || ""}
 						placeholder={generating && !caption ? "" : t("imageDialog.caption")}
 						aria-label={t("imageNode.caption")}
 						readOnly={!isEditable}
 						onChange={(e) => block.setValues({ caption: e.target.value })}
-						className={cn(
-							"h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-0 py-0 text-monti-caption text-monti-muted shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-caption",
-							captionAlignClass,
-						)}
 					/>
 					{generating && (
 						<output
