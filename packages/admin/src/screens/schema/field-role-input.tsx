@@ -1,11 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { FormFieldError, Textarea } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import type { TranslatorFor } from "../../translator";
-import { FormFieldError } from "../../ui/field";
-import { Textarea } from "../../ui/textarea";
 import { Labeled } from "../shared/labeled";
 import { orUndefined, Pick, type PickItem, TextInput, useSchemaEdit } from "./controls";
 import { schemaFieldsMessages } from "./fields.messages";

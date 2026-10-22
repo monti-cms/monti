@@ -2,9 +2,8 @@
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
 import { HOST_PATTERN, useTranslator } from "@monti-cms/core/site";
+import { Button, Input } from "@monti-cms/ui";
 import { useState } from "react";
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import {

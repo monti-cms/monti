@@ -2,16 +2,22 @@
 
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	cn,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Popover,
+	PopoverContent,
+} from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
 import { CircleAlert, EyeOff, Info, Loader2, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import { useIconByName } from "../../screens/shared/collection-icon";
-import { Button } from "../../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
-import { IconButton } from "../../ui/icon-button";
-import { Popover, PopoverContent } from "../../ui/popover";
 import { textCheckMessages } from "./messages";
 import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";

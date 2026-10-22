@@ -2,18 +2,18 @@
 
 import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { MoveHorizontal } from "lucide-react";
-import { useMemo } from "react";
-import { stringCodec, usePreference } from "../lib/hooks/use-preference";
-import type { TranslatorFor } from "../translator";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { IconButton } from "../ui/icon-button";
+	IconButton,
+} from "@monti-cms/ui";
+import { MoveHorizontal } from "lucide-react";
+import { useMemo } from "react";
+import { stringCodec, usePreference } from "../lib/hooks/use-preference";
+import type { TranslatorFor } from "../translator";
 import { editorMessages } from "./messages";
 
 /** One width step of the editor: `key` is what the browser remembers, `width` the CSS value of the body's `max-width`. */

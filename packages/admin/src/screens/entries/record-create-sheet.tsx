@@ -1,8 +1,9 @@
 "use client";
 
 import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { Sheet, SheetContent, SheetTitle } from "@monti-cms/ui";
 import { useCallback, useRef, useState } from "react";
-import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet";
+import { useResizableSheet } from "../../ui/panel-resize";
 import { RecordPanel } from "../record-panel";
 import { useConfirm } from "../shared/confirm-dialog";
 import { RECORD_PANEL_RESIZE } from "../shared/side-panel";
@@ -49,6 +50,7 @@ export function useRecordCreator() {
 		[site],
 	);
 
+	const panel = useResizableSheet(RECORD_PANEL_RESIZE);
 	const sheet = (
 		<>
 			<Sheet
@@ -58,7 +60,7 @@ export function useRecordCreator() {
 					if (!open) void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
 				}}
 			>
-				<SheetContent showCloseButton={false} resize={RECORD_PANEL_RESIZE} className="gap-0 p-0">
+				<SheetContent showCloseButton={false} resizable={panel} className="gap-0 p-0">
 					<SheetTitle className="sr-only">{t("record.add")}</SheetTitle>
 					{request && (
 						<RecordPanel

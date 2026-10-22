@@ -1,0 +1,19 @@
+/* What the admin bundle compiles (see packages/admin/styles/index.css), without its build-time confinement: Storybook is the whole page. */
+@import "../styles/theme.css";
+@import "tailwindcss/preflight.css";
+@import "tailwindcss/utilities.css" source(none);
+@import "../styles/tokens.css";
+
+@source "../src";
+@source "../../admin/src";
+@source not "../src/**/__test__";
+@source not "../../admin/src/**/__test__";
+
+html:has(.monti-admin) body {
+	background-color: var(--monti-bg-page);
+}
+.monti-admin {
+	font-family: var(--monti-font-sans);
+	font-size: 14px;
+	-webkit-font-smoothing: antialiased;
+}

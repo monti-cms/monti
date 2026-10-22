@@ -3,6 +3,7 @@
 import type { BlockDefinition } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { Fragment, type NodeType, type Node as PmNode } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
@@ -21,7 +22,6 @@ import {
 	useRef,
 } from "react";
 import { type EditorError, type EditorResult, editorFailure } from "../../hooks/result";
-import { cn } from "../../lib/utils/cn";
 import { allowanceOfState } from "../allowed-extension";
 import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { blockNodeName } from "./added/shared";

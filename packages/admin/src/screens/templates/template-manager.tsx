@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, FormFieldError, Input } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -21,9 +22,6 @@ import { commonMessages } from "../../lib/common.messages";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { isComposingKey } from "../../lib/keyboard";
 import type { TranslatorFor } from "../../translator";
-import { Button } from "../../ui/button";
-import { FormFieldError } from "../../ui/field";
-import { Input } from "../../ui/input";
 import type { MenuAction } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";

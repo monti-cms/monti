@@ -1,9 +1,7 @@
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, cn, FormFieldError } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { FormFieldError } from "../../ui/field";
 
 /**
  * The action row under an edit form: the error of the last attempt, Save (enabled while there are unsaved changes), Cancel (when `onCancel` is

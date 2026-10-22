@@ -1,12 +1,9 @@
 "use client";
 
+import { Button, cn, Toggle, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
-import { cn } from "../lib/utils/cn";
-import { Button } from "../ui/button";
-import { Toggle } from "../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export interface ToolbarItem {
 	label: string;

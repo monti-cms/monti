@@ -1,13 +1,19 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Textarea,
+	Toggle,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Textarea } from "../ui/textarea";
-import { Toggle } from "../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
 

@@ -1,8 +1,8 @@
+import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { renderWithSite as render } from "../../../test/site";
-import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM } from "../entry-form";
 import { entriesMessages } from "../messages";
 import { RemovedFieldsNotice } from "../removed-fields-notice";

@@ -1,10 +1,9 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
 import { CalendarRange } from "lucide-react";
-import { Button } from "../../ui/button";
-import { Calendar } from "../../ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { adminCalendarLocale } from "../../ui/calendar-locale";
 import { dateRangeMessages } from "./date-range.messages";
 
 /** `YYYY-MM-DD` ↔ calendar date. The admin filter takes dates in the configured time zone and sends them to the server as day boundaries. */
@@ -29,12 +28,14 @@ export function DateRangeCalendar({
 	to: string;
 	onChange: (from: string, to: string) => void;
 }) {
+	const site = useSite();
 	return (
 		<Calendar
 			mode="range"
 			numberOfMonths={1}
 			selected={{ from: dayToDate(from), to: dayToDate(to) }}
 			onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
+			locale={adminCalendarLocale(site)}
 			className="rounded-md border"
 		/>
 	);

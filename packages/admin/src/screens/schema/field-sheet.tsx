@@ -1,12 +1,23 @@
 "use client";
 
 import { fieldTraits, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	LineTabs,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	Tabs,
+	TabsContent,
+	TabsTrigger,
+} from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
-import { Button } from "../../ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
-import { LineTabs, Tabs, TabsContent, TabsTrigger } from "../../ui/tabs";
+import { useResizableSheet } from "../../ui/panel-resize";
 import { Labeled } from "../shared/labeled";
 import {
 	FlagSwitch,
@@ -44,6 +55,8 @@ import {
  * The editor of one field, in a sheet on the right. Edits go to a copy of the collection: Apply puts the copy into the file, Cancel (or closing the sheet)
  * drops it. Deleting a field is the one thing that acts at once, as a change of the file that the review still shows.
  */
+const FIELD_SHEET_RESIZE = { name: "field-sheet", defaultWidth: 520, minWidth: 420 };
+
 export function FieldSheet({
 	editing,
 	place,
@@ -114,14 +127,10 @@ export function FieldSheet({
 		onClose();
 	};
 
+	const resizable = useResizableSheet(FIELD_SHEET_RESIZE);
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent
-				resize={{ name: "field-sheet", defaultWidth: 520, minWidth: 420 }}
-				className="gap-0"
-				data-testid="field-sheet"
-				showCloseButton
-			>
+			<SheetContent resizable={resizable} className="gap-0" data-testid="field-sheet" showCloseButton>
 				<Tabs defaultValue="basic" className="min-h-0 flex-1 gap-0">
 					<SheetHeader className="gap-0 px-6 pt-4 pb-0">
 						<SheetTitle className="pr-8 text-monti-title">{label || name}</SheetTitle>

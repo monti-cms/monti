@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "../lib/utils/cn";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { editorMessages } from "./messages";
 import type { SlashCommandItem } from "./slash-command";

@@ -2,16 +2,27 @@
 
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	cn,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldLabel,
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+	FormField as UiField,
+} from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { FormFieldDescription, FormFieldError, FormFieldLabel, FormField as UiField } from "../../ui/field";
-import { IconButton } from "../../ui/icon-button";
-import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Switch } from "../../ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { type CONTROL_WIDTH, HELP, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";

@@ -2,8 +2,8 @@
 
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { diffSources, type SourceChange, useSite, useTranslator } from "@monti-cms/core/site";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@monti-cms/ui";
 import type { TranslatorFor } from "../../translator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { entriesMessages } from "./messages";
 import { DocPreview } from "./source-pane";
 

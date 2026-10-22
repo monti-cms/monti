@@ -1,14 +1,22 @@
 // "View" popover of the entry list: which columns show and in what order, how many rows a page holds, and how the list is sorted.
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Checkbox,
+	cn,
+	IconButton,
+	Label,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "../lib/utils/cn";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import { IconButton } from "../ui/icon-button";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { type AdminListColumn, columnConfig, columnLabel, columnsFor } from "./list-columns";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";

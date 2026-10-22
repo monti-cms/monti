@@ -1,12 +1,9 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { useRef, useState } from "react";
-import { errorText } from "../../api/client";
-import type { RestoreCounts, RestoreNotRestored, RestorePreview, RestoreWarning } from "../../api/restore";
-import { commonMessages } from "../../lib/common.messages";
-import { Alert, AlertDescription } from "../../ui/alert";
 import {
+	Alert,
+	AlertDescription,
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -15,9 +12,13 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from "../../ui/alert-dialog";
-import { Button } from "../../ui/button";
-import { Spinner } from "../../ui/spinner";
+	Button,
+	Spinner,
+} from "@monti-cms/ui";
+import { useRef, useState } from "react";
+import { errorText } from "../../api/client";
+import type { RestoreCounts, RestoreNotRestored, RestorePreview, RestoreWarning } from "../../api/restore";
+import { commonMessages } from "../../lib/common.messages";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { restoreMessages } from "./messages";
 import { type RestoreForm, useRestoreBackup } from "./use-restore-backup";

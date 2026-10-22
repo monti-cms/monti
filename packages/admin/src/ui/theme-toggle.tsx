@@ -1,12 +1,11 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, buttonVariants, cn } from "@monti-cms/ui";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ComponentProps } from "react";
 import { useHydrated } from "../lib/hooks/use-hydrated";
-import { cn } from "../lib/utils/cn";
-import { Button, buttonVariants } from "./button";
 import { uiMessages } from "./messages";
 
 /**

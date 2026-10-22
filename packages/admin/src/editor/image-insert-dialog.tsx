@@ -1,28 +1,38 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Alert,
+	AlertDescription,
+	Button,
+	cn,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	FormFieldError,
+	Input,
+	Label,
+	Skeleton,
+	Spinner,
+	Switch,
+	Tabs,
+	TabsList,
+	TabsTrigger,
+	Textarea,
+} from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
-import { Alert, AlertDescription } from "../ui/alert";
-import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { DialogFormFooter } from "../ui/dialog-form-footer";
-import { FormFieldError } from "../ui/field";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Skeleton } from "../ui/skeleton";
-import { Spinner } from "../ui/spinner";
-import { Switch } from "../ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { Textarea } from "../ui/textarea";
 import { submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
 import { formatBytes, imageAccept, type PreparedUpload, prepareUpload, uploadImageFile } from "./upload-helper";

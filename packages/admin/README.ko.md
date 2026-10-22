@@ -532,7 +532,7 @@ import "@monti-cms/admin/styles.css";
 
 ## 관리자 테마
 
-관리자는 디자인 시스템 하나로 만든다(`styles/theme.css`, 값은 `styles/admin.css`). 사이트는 그 CSS 사용자 정의 속성을 덮어써서 테마를 바꾼다. 아래 이름이 공개 계약이다.
+관리자는 디자인 시스템 하나, `@monti-cms/ui`로 만든다(이름은 그 패키지의 `styles/theme.css`, 값은 `styles/tokens.css`). 사이트는 그 CSS 사용자 정의 속성을 덮어써서 테마를 바꾼다. 아래 이름이 공개 계약이다.
 
 기본값은 우선순위가 0이다(`:where(...)`). 그래서 사이트의 평범한 `:root { ... }` 규칙이 스타일시트를 어떤 순서로 불러오든 이긴다. 관리자는 `color-scheme`도 정한다(`light`, 그리고 `html`의
 `.dark` 또는 `[data-theme="dark"]` 아래에서는 `dark`. 관리자가 어두운 테마를 알아보는 두 방식이다). 그래서 `light-dark()`가 모드마다 알맞은 값을 고르고, 두 모드를 한 줄에 쓸 수 있다.

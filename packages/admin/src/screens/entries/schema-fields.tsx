@@ -18,6 +18,33 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
+import {
+	Button,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldLabel,
+	FormFieldLegend,
+	FormFieldSet,
+	IconButton,
+	Input,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Textarea,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+	FormField as UiField,
+} from "@monti-cms/ui";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
@@ -29,22 +56,6 @@ import {
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { type SlotRequest, useSlot } from "../../slots/slots";
-import { Button } from "../../ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
-import {
-	FormFieldDescription,
-	FormFieldError,
-	FormFieldLabel,
-	FormFieldLegend,
-	FormFieldSet,
-	FormField as UiField,
-} from "../../ui/field";
-import { IconButton } from "../../ui/icon-button";
-import { Input } from "../../ui/input";
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../../ui/input-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Textarea } from "../../ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import {
 	BacklinkInput,

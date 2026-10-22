@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -19,7 +20,6 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TranslatorFor } from "../translator";
-import { Separator } from "../ui/separator";
 import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { editorMessages } from "./messages";
 import { ToolbarButton, type ToolbarItem } from "./toolbar-button";

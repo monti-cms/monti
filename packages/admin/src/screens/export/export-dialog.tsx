@@ -1,8 +1,15 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@monti-cms/ui";
 import { ExportButton, ExportFields, ExportProgressLine } from "./export-fields";
 import { exportMessages } from "./messages";
 import { useExportForm } from "./use-export-form";

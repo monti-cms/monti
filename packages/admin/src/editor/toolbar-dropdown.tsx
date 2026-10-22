@@ -1,10 +1,8 @@
 /** The dropdown button used by the toolbar for grouped tools (block shape, alignment, lists, ...). */
 
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, IconButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { ChevronDown, type LucideIcon } from "lucide-react";
-import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { IconButton } from "../ui/icon-button";
 import type { ToolbarItem } from "./toolbar-button";
 import { ToolbarMenuItem } from "./toolbar-row";
 

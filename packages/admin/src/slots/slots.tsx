@@ -1,17 +1,22 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	cn,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Spinner,
+	Textarea,
+} from "@monti-cms/ui";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
-import { cn } from "../lib/utils/cn";
-import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { ErrorNoticeView } from "../ui/error-notice";
-import { IconButton } from "../ui/icon-button";
-import { Spinner } from "../ui/spinner";
-import { Textarea } from "../ui/textarea";
 import { slotsMessages } from "./messages";
 import type { SlotRequest } from "./registry";
 import { type SlotRunState, useSlotActions } from "./use-slot-actions";

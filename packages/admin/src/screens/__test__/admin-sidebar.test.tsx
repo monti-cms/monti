@@ -1,13 +1,13 @@
 import { type CmsConfig, definePlugin } from "@monti-cms/core";
 import type { Folder } from "@monti-cms/core/site";
 import { createSite } from "@monti-cms/core/site";
+import { SidebarProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { renderInRouter } from "../../test/router";
 import { siteWithFolders, withSite } from "../../test/site";
-import { SidebarProvider } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
 

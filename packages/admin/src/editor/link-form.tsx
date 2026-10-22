@@ -1,15 +1,13 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, FormFieldError, Input } from "@monti-cms/ui";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
-import { Button } from "../ui/button";
-import { FormFieldError } from "../ui/field";
-import { Input } from "../ui/input";
 import { LinkTargetSummary } from "./link-target-view";
 import { editorMessages } from "./messages";
 

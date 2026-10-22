@@ -1,5 +1,6 @@
 import type { Folder } from "@monti-cms/core/site";
 import { image } from "@monti-cms/core/site";
+import { SidebarProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
@@ -9,7 +10,6 @@ import { AdminSidebar } from "../../screens/admin-sidebar";
 import { type FolderActions, useFolderActions } from "../../screens/shared/use-folder-actions";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderInRouter as render } from "../../test/router";
-import { SidebarProvider } from "../../ui/sidebar";
 import { BlockHandleOverlay } from "../block-handle-overlay";
 import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";

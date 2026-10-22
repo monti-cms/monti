@@ -1,8 +1,6 @@
 import { useTranslator } from "@monti-cms/core/site";
+import { Alert, AlertDescription, Button, cn } from "@monti-cms/ui";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
-import { Alert, AlertDescription } from "../../ui/alert";
-import { Button } from "../../ui/button";
 
 /**
  * The one load-failure notice of a screen: what went wrong and a retry button. Give it margins through `className`: its width is `auto`, so margins

@@ -4,9 +4,8 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, FormFieldError } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
-import { Button } from "../../ui/button";
-import { FormFieldError } from "../../ui/field";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";

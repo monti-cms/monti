@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { useAdminComponents } from "../../../admin-components";
-import { cn } from "../../../lib/utils/cn";
 import { blocksMessages } from "../messages";
 
 interface ErrorBoundaryProps {

@@ -1,13 +1,13 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@monti-cms/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { entriesKeys, listEntries } from "../../api/entries";
 import { countFailedEvents, eventsKeys } from "../../api/events";
 import { foldersKeys, listFolders } from "../../api/folders";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useAdminFeatures } from "./admin-features";
 import { sharedMessages } from "./messages";

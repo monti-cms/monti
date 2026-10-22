@@ -1,8 +1,8 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { SidebarTrigger } from "@monti-cms/ui";
 import { useState } from "react";
-import { SidebarTrigger } from "../../ui/sidebar";
 import type { ChangedAreas } from "../schema/schema-model";
 import { SchemaSettings } from "../schema/schema-screen";
 import { ShellPage } from "../shared/admin-shell";

@@ -2,9 +2,8 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
-import { StatusIndicator } from "../../ui/status-indicator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { SidePanelHeader } from "../shared/side-panel";
 import { tabLabel } from "./layout-groups";
 import { entriesMessages } from "./messages";

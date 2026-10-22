@@ -1,6 +1,17 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	cn,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	StatusIndicator,
+	type StatusTone,
+} from "@monti-cms/ui";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,12 +19,7 @@ import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
-import { Button } from "../../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
-import { IconButton } from "../../ui/icon-button";
-import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
 import { statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";

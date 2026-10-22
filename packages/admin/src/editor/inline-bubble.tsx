@@ -2,6 +2,7 @@
 
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, IconButton, Separator } from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -27,10 +28,7 @@ import {
 	useAdminComponents,
 } from "../admin-components";
 import { isComposingKey } from "../lib/keyboard";
-import { cn } from "../lib/utils/cn";
 import type { TranslatorFor } from "../translator";
-import { IconButton } from "../ui/icon-button";
-import { Separator } from "../ui/separator";
 import { addedMarkName } from "./added-marks";
 import { allowanceOfState } from "./allowed-extension";
 import { BLOCK_TOOLBAR } from "./blocks/shared";

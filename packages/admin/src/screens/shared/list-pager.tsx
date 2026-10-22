@@ -1,12 +1,22 @@
 "use client";
 
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+	PaginationNext,
+	PaginationPrevious,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@monti-cms/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { Button } from "../../ui/button";
 import { uiMessages } from "../../ui/messages";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "../../ui/pagination";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { screensMessages } from "../messages";
 
 /** Previous / page of pages / next, as used at the bottom of every paged list. */

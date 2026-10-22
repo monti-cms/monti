@@ -547,7 +547,7 @@ The cost is that the admin file carries the classes of first-party plugins an ap
 
 ## Admin theme
 
-The admin is built from one design system (`styles/theme.css`, values in `styles/admin.css`). A site themes it by overriding its CSS custom properties; the names below are the public contract.
+The admin is built from one design system, `@monti-cms/ui` (names in its `styles/theme.css`, values in `styles/tokens.css`). A site themes it by overriding its CSS custom properties; the names below are the public contract.
 
 The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
 `.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line.

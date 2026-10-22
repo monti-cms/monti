@@ -1,12 +1,10 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, FormFieldError, Spinner } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "../lib/utils/cn";
 import { CollectionIcon } from "../screens/shared/collection-icon";
-import { FormFieldError } from "../ui/field";
-import { Spinner } from "../ui/spinner";
 import { type InternalLinkItem, internalLinkHref } from "./internal-link";
 import { editorMessages } from "./messages";
 

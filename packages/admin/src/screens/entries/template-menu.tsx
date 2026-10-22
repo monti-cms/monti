@@ -3,19 +3,19 @@
 import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { useQuery } from "@tanstack/react-query";
-import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
-import { useState } from "react";
-import { listTemplates, templatesKeys } from "../../api/templates";
-import { commonMessages } from "../../lib/common.messages";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { IconButton } from "../../ui/icon-button";
+	IconButton,
+} from "@monti-cms/ui";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
+import { useState } from "react";
+import { listTemplates, templatesKeys } from "../../api/templates";
+import { commonMessages } from "../../lib/common.messages";
 import { useConfirm } from "../shared/confirm-dialog";
 import { entriesMessages } from "./messages";
 

@@ -1,14 +1,11 @@
 "use client";
 
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, Checkbox, Label, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
-import { Button } from "../../ui/button";
-import { Checkbox } from "../../ui/checkbox";
-import { Label } from "../../ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {

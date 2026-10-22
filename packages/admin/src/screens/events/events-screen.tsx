@@ -1,6 +1,17 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Skeleton,
+	StatusIndicator,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, RotateCw, SearchX } from "lucide-react";
 import { useState } from "react";
@@ -20,10 +31,6 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { AdminLink as Link } from "../../router";
-import { Button } from "../../ui/button";
-import { Skeleton } from "../../ui/skeleton";
-import { StatusIndicator } from "../../ui/status-indicator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";

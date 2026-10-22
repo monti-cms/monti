@@ -1,9 +1,7 @@
 "use client";
 
+import { Button, cn, Skeleton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { Skeleton } from "../../ui/skeleton";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
 import { LIST_PANE_WIDTH } from "./layout";
 import { OPEN_ITEM } from "./side-panel";

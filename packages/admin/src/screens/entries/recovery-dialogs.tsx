@@ -2,11 +2,18 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@monti-cms/ui";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { useConfirm } from "../shared/confirm-dialog";
 import { formatDateTime } from "../shared/format-date";
 import type { ConflictInfo, RecoveryOffer } from "./entry-editor-types";

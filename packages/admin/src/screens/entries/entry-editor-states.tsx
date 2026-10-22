@@ -3,9 +3,8 @@
 // The loading and load-error states of the entry editor screen.
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { buttonVariants, Skeleton } from "@monti-cms/ui";
 import { AdminLink as Link } from "../../router";
-import { buttonVariants } from "../../ui/button";
-import { Skeleton } from "../../ui/skeleton";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 

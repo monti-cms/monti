@@ -1,9 +1,6 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { type LucideIcon, MoreHorizontal } from "lucide-react";
-import { cloneElement, type ReactElement } from "react";
-import { useHydrated } from "../../lib/hooks/use-hydrated";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -16,8 +13,6 @@ import {
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
-} from "../../ui/context-menu";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -29,8 +24,11 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { IconButton } from "../../ui/icon-button";
+	IconButton,
+} from "@monti-cms/ui";
+import { type LucideIcon, MoreHorizontal } from "lucide-react";
+import { cloneElement, type ReactElement } from "react";
+import { useHydrated } from "../../lib/hooks/use-hydrated";
 import { sharedMessages } from "./messages";
 
 /**

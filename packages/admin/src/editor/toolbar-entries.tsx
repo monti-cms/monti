@@ -4,15 +4,24 @@
  */
 
 import type { Site } from "@monti-cms/core/site";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Toggle,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { AlignLeft, ImageIcon, Link2, List, type LucideIcon, Paperclip, Superscript, Upload } from "lucide-react";
 import type { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { IconButton } from "../ui/icon-button";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Toggle } from "../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import type { EditorAllowance } from "./allowed";
 import { CustomBlockMenu, CustomBlockMenuItems, offeredBlocks } from "./custom-block-menu";
 import type { useMarkExtensions } from "./inline-bubble";

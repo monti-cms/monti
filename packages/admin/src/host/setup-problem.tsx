@@ -1,5 +1,5 @@
 import type { Cms } from "@monti-cms/core/server";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@monti-cms/ui";
 import { layoutMessages } from "./messages";
 
 const REPORTED = Symbol.for("monti.admin.setup-problem.reported");

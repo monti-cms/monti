@@ -10,14 +10,11 @@ import {
 	roundCropBox,
 } from "@monti-cms/core/document";
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label } from "@monti-cms/ui";
 import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
-import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 import { editorMessages } from "./messages";
 
 export interface ImageCropDialogProps {

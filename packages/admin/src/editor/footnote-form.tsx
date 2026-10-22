@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
-import { Textarea } from "../ui/textarea";
 import { FOOTNOTE_DEFINITION_NAME, FOOTNOTE_REFERENCE_NAME, footnoteKey, labelOf } from "./footnote-nodes";
 import type { InlineBubbleTarget } from "./inline-marks";
 import { PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";

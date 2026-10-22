@@ -4,13 +4,14 @@
  */
 @layer theme, base, components, utilities;
 
-@import "./theme.css";
+@import "../../ui/styles/theme.css";
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 
 /* KaTeX styles and fonts for the math preview in the editor. Sites do not import KaTeX CSS themselves. */
 @import "katex/dist/katex.min.css";
 
+@import "../../ui/styles/tokens.css";
 @import "./admin.css";
 
 /*
@@ -19,6 +20,7 @@
  * the admin's dark variant). A third-party plugin ships its own CSS with only classes of its own.
  */
 @source "../src";
+@source "../../ui/src";
 @source not "../src/**/__test__";
 @source not "../src/test";
 @source "../../ai/src";

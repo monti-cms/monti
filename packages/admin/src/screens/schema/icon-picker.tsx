@@ -1,12 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, Input, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { cn } from "../../lib/utils";
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";

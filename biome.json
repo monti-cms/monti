@@ -57,7 +57,7 @@
 			}
 		},
 		{
-			"includes": ["packages/admin/src/ui/**"],
+			"includes": ["packages/admin/src/ui/**", "packages/ui/src/**"],
 			"linter": {
 				"rules": {
 					"a11y": {

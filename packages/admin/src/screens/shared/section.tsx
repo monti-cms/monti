@@ -1,7 +1,5 @@
+import { cn, Heading, Panel, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
-import { cn } from "../../lib/utils/cn";
-import { Panel } from "../../ui/card";
-import { Heading, Text } from "../../ui/text";
 
 /**
  * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card on the right (stacked on a narrow

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button } from "../../ui/button";
+import { Button } from "@monti-cms/ui";
 import { schemaMessages } from "./messages";
 
 /**

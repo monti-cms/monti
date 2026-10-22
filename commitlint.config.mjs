@@ -26,6 +26,7 @@ export default {
 				"auth",
 				"storage-s3",
 				"admin",
+				"ui",
 				"nextjs",
 				"ai",
 				"blocks",
