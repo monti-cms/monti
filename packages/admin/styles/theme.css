@@ -93,15 +93,6 @@
 	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
 	--font-sans: var(--monti-font-sans);
 	--font-mono: var(--monti-font-mono);
-	/*
-	 * The reset's document-level fonts (`html`, `code`, `pre`) keep Tailwind's stock stacks: the reset is unlayered, so following the admin tokens here
-	 * would beat the site's own layered base font and the writing area (`--monti-content-font`, read from `body`) would lose the blog's font.
-	 */
-	--default-font-family:
-		ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-	--default-mono-font-family:
-		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
 	/* The one shadow of a popover or a small raised control: a hairline lift beside its border, never a soft glow. Use `shadow-monti-pop`. */
 	--shadow-monti-pop: 0 1px 2px rgb(0 0 0 / 0.1);
 }

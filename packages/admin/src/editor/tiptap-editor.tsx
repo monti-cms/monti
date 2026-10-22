@@ -161,7 +161,7 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"monti-content-font prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-monti-foreground text-base leading-relaxed selection:bg-monti-primary/20 " +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-monti-foreground text-base leading-relaxed selection:bg-monti-primary/20 " +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-primary " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
