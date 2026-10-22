@@ -36,6 +36,7 @@ function Table({
 						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
 					className,
 				)}
+				style={width === undefined ? style : { ...style, width }}
 				{...props}
 			/>
 		</div>
