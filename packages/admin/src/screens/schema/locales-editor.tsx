@@ -441,14 +441,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
 		<div className="flex flex-col gap-12">
-			<Section
-				wide
-				band
-				card={false}
-				title={t("locales.contentTitle")}
-				description={t("locales.contentHelp")}
-				testId="locales-content"
-			>
+			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
 				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
 						<span className="flex items-center gap-1.5 text-monti-muted-foreground text-sm">
@@ -483,13 +476,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 					</ul>
 				</Panel>
 			</Section>
-			<Section
-				wide
-				band
-				title={t("locales.defaultTitle")}
-				description={t("locales.defaultHelp")}
-				testId="locales-default"
-			>
+			<Section wide band title={t("locales.defaultTitle")} testId="locales-default">
 				<Pick
 					label={t("locales.default")}
 					revert={revertKey("defaultLocale")}

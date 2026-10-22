@@ -4,8 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 	en: {
 		title: "API keys",
-		description:
-			"Keys for the outside services Monti connects to. They are encrypted before they are saved in the database.",
 		note: "A key you enter in an AI connection is saved here too. Whichever screen you change it from, it is the same key.",
 		"count.keys": ({ count }) => `${count} ${Number(count) === 1 ? "key" : "keys"}`,
 		"count.needed": ({ count }) => `${count} ${Number(count) === 1 ? "key" : "keys"} still needed`,
@@ -75,7 +73,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 	},
 	ko: {
 		title: "API 키",
-		description: "외부 서비스에 연결할 때 쓰는 키예요. 키는 암호화해서 데이터베이스에 저장해요.",
 		note: "AI 연결 화면에서 넣은 키도 여기에 모여요. 어디서 고쳐도 같은 키가 바뀌어요.",
 		"count.keys": ({ count }) => `키 ${count}개`,
 		"count.needed": ({ count }) => `필요한 키 ${count}개`,

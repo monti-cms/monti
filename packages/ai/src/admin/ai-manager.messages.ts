@@ -3,7 +3,6 @@ import { defineMessages } from "@monti-cms/core";
 /** Texts of the admin AI screen (Actions tab). */
 export const aiManagerMessages = defineMessages("cms-ai.admin.manager", {
 	en: {
-		"page.description": "Choose which AI actions are on, and which connection and model each one uses.",
 		"about.candidates": "Suggests options for you to pick from.",
 		"about.text": "Writes text for you to review before it is used.",
 		"about.mdx": "Writes body content for you to review before it is used.",
@@ -81,7 +80,6 @@ export const aiManagerMessages = defineMessages("cms-ai.admin.manager", {
 		"group.custom": "Custom actions",
 	},
 	ko: {
-		"page.description": "어떤 AI 기능을 켤지, 기능마다 어떤 연결과 모델을 쓸지 정해요.",
 		"about.candidates": "고를 수 있는 후보를 제안해요.",
 		"about.text": "글을 써 주고, 쓰기 전에 확인할 수 있어요.",
 		"about.mdx": "본문을 써 주고, 쓰기 전에 확인할 수 있어요.",

@@ -85,8 +85,9 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.removeDescription":
 			"Removes the collection from the schema. Data handling options are chosen in the review step.",
 		"sheet.optional": "optional",
-		"file.hint": "Configured in monti.schema.ts and not edited on this screen.",
+		"file.title": "Edited in monti.schema.ts",
 		"file.messages": "Admin text overrides (admin.messages)",
+		"file.seed": "Starting data (seed)",
 		"site.name": "Site name",
 		"file.migrations": "Recorded data transforms",
 		"save.done": ({ transforms, entries: rewritten }) =>
@@ -173,8 +174,9 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.removeDescription":
 			"컬렉션을 스키마에서 삭제해요. 저장된 데이터 처리 방식은 변경 검토 단계에서 선택해요.",
 		"sheet.optional": "선택",
-		"file.hint": "이 화면에서 편집하지 않는 설정이에요. monti.schema.ts에서 직접 수정하세요.",
+		"file.title": "monti.schema.ts에서 고치는 설정",
 		"file.messages": "관리자 문구 덮어쓰기 (admin.messages)",
+		"file.seed": "초기 데이터 (seed)",
 		"site.name": "사이트 이름",
 		"file.migrations": "기록된 데이터 변환",
 		"save.done": ({ transforms, entries: rewritten }) =>

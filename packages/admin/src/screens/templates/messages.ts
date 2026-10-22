@@ -4,7 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const templatesMessages = defineMessages("cms-admin.templates", {
 	en: {
 		title: "Body templates",
-		description: "Starting outlines you can pick when you write a new entry.",
 		"newBody.introduction": "Introduction",
 		"newBody.enterContent": "Enter your content.",
 		"newBody.body": "Body",
@@ -28,7 +27,6 @@ export const templatesMessages = defineMessages("cms-admin.templates", {
 	},
 	ko: {
 		title: "본문 템플릿",
-		description: "새 글을 쓸 때 골라 시작할 수 있는 본문 틀이에요.",
 		"newBody.introduction": "서론",
 		"newBody.enterContent": "내용을 입력하세요.",
 		"newBody.body": "본론",

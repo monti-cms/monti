@@ -24,7 +24,7 @@ function Band({
 	children,
 }: {
 	title: ReactNode;
-	description: ReactNode;
+	description?: ReactNode;
 	danger?: boolean;
 	id?: string;
 	testId: string;
@@ -47,7 +47,9 @@ function Band({
 				>
 					{title}
 				</h2>
-				<p className="mt-1 max-w-prose text-monti-body text-monti-muted-foreground leading-relaxed">{description}</p>
+				{description && (
+					<p className="mt-1.5 max-w-prose text-monti-label text-monti-muted-foreground">{description}</p>
+				)}
 			</div>
 			{children}
 		</section>
@@ -65,10 +67,10 @@ export function DataScreen() {
 	const tr = useTranslator(restoreMessages);
 	const form = useExportForm();
 	return (
-		<ShellPage title={t("title")} description={t("description")} nav="data" large>
+		<ShellPage title={t("title")} nav="data" large>
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<PageBody data-testid="data-screen" className="gap-8">
-					<Band title={te("data.title")} description={te("data.description")} testId="site-backup">
+					<Band title={te("data.title")} testId="site-backup">
 						<ExportFields form={form} />
 						<ExportProgressLine phase={form.phase} />
 						<div>

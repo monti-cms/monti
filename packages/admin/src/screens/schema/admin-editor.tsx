@@ -1,7 +1,8 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
-import { Labeled } from "../shared/labeled";
+import { cn } from "../../lib/utils/cn";
+import { HELP } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { schemaAdminMessages } from "./admin.messages";
 import { FlagSwitch, Pick, useSettingRevert } from "./controls";
@@ -31,7 +32,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
 		<div className="flex flex-col gap-12" data-testid="admin-settings">
-			<Section wide band title={t("admin.languageTitle")} description={t("admin.languageHelp")}>
+			<Section wide band title={t("admin.languageTitle")}>
 				<div>
 					<Pick
 						label={t("admin.locale")}
@@ -45,7 +46,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					/>
 				</div>
 			</Section>
-			<Section wide band title={t("admin.featuresTitle")} description={t("admin.featuresHelp")}>
+			<Section wide band title={t("admin.featuresTitle")}>
 				<FlagSwitch
 					label={t("admin.templates")}
 					revert={revert("templates")}
@@ -61,13 +62,12 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					/>
 				</div>
 			</Section>
-			<Section wide band title={t("admin.addressTitle")} description={t("admin.addressHelp")}>
-				<div>
-					<Labeled label={t("admin.path")} description={t("admin.pathNote")}>
-						<code className="w-fit rounded-md bg-monti-muted px-3 py-2 text-sm" data-testid="admin-path">
-							{path}
-						</code>
-					</Labeled>
+			<Section wide band title={t("admin.addressTitle")}>
+				<div className="flex flex-col gap-2">
+					<code className="w-fit rounded-md bg-monti-muted px-3 py-2 text-monti-body" data-testid="admin-path">
+						{path}
+					</code>
+					<p className={cn(HELP, "text-monti-muted-foreground")}>{t("admin.pathNote")}</p>
 				</div>
 			</Section>
 		</div>

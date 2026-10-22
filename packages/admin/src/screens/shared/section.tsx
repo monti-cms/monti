@@ -20,7 +20,7 @@ export function Section({
 }: {
 	title: ReactNode;
 	description?: ReactNode;
-	/** A quieter line under the description (what cannot be changed, a warning about the file). */
+	/** A second line under the description, in the same style (what cannot be changed, a warning about the file). */
 	note?: ReactNode;
 	children: ReactNode;
 	/** The left column is 260px (a page of its own) instead of 220px (inside a collection). */
@@ -46,9 +46,9 @@ export function Section({
 			)}
 		>
 			<div>
-				<h3 className="font-semibold text-base">{title}</h3>
-				{description && <p className="mt-1.5 text-monti-muted-foreground text-sm leading-relaxed">{description}</p>}
-				{note && <p className="mt-2.5 text-monti-muted-foreground text-xs leading-relaxed">{note}</p>}
+				<h3 className="font-semibold text-monti-title">{title}</h3>
+				{description && <p className="mt-1.5 text-monti-label text-monti-muted-foreground">{description}</p>}
+				{note && <p className="mt-1.5 text-monti-label text-monti-muted-foreground">{note}</p>}
 			</div>
 			{band ? (
 				<div className="flex min-w-0 flex-col gap-6">{children}</div>

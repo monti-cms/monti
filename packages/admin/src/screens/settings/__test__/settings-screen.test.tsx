@@ -122,10 +122,9 @@ describe("settings tabs", () => {
 		expect(screen.getByText(/schema editor: site/)).toBe(editor);
 	});
 
-	it("has its own page header: title, a line about where it is saved, and a slot for the editor's badge", () => {
+	it("has its own page header: title and a slot for the editor's badge", () => {
 		renderSettings("collections");
 		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
-		expect(screen.getByText(t("description"))).toBeTruthy();
 		expect(screen.getByText(/actions slot/)).toBeTruthy();
 		// One title only: the shell draws no title bar of its own here.
 		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);

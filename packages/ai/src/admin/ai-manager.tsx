@@ -2,8 +2,6 @@
 
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Alert,
-	AlertDescription,
 	Button,
 	booleanCodec,
 	Checkbox,
@@ -521,8 +519,9 @@ export function AiManager() {
 				</PageTabs>
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
 					{featuresQuery.data && usable.size === 0 && (
-						<Alert variant="warning" layout="inline" className="mx-8 mt-3 w-auto">
-							<AlertDescription className="col-start-auto min-w-0">{t("banner.needsConnection")}</AlertDescription>
+						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
+						<output className="flex items-center gap-3 border-monti-warning/30 border-b bg-monti-warning-soft px-8 py-2 text-monti-label text-monti-warning-foreground">
+							<span className="min-w-0 flex-1">{t("banner.needsConnection")}</span>
 							<Button
 								type="button"
 								size="xs"
@@ -532,7 +531,7 @@ export function AiManager() {
 							>
 								{t("banner.goToConnections")}
 							</Button>
-						</Alert>
+						</output>
 					)}
 					{featuresQuery.error && !featuresQuery.data && (
 						<LoadErrorAlert

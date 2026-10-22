@@ -6,8 +6,7 @@ const one = (count: unknown) => Number(count) === 1;
 export const importMessages = defineMessages("cms-admin.import", {
 	en: {
 		title: "Import entries",
-		description:
-			"Bring entries into this site as new entries. Only the title, address and body of document collections come in; nothing that is already here is changed.",
+		description: "Files come in as new entries. Existing entries are not changed.",
 		"kinds.label": "What you can choose",
 		"kinds.export": "A Monti export: the .zip from Site backup above, or from another site.",
 		"kinds.markdown":
@@ -82,8 +81,7 @@ export const importMessages = defineMessages("cms-admin.import", {
 	},
 	ko: {
 		title: "글 가져오기",
-		description:
-			"글을 이 사이트에 새 글로 가져와요. 문서 컬렉션의 제목, 주소, 본문만 들어오고 이미 있는 글은 바뀌지 않아요.",
+		description: "파일은 새 글로 들어오고, 이미 있는 글은 바뀌지 않아요.",
 		"kinds.label": "고를 수 있는 파일",
 		"kinds.export": "Monti 내보내기 파일: 위의 사이트 백업에서 받은 .zip이나 다른 사이트에서 받은 .zip.",
 		"kinds.markdown":

@@ -4,7 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const mediaMessages = defineMessages("cms-admin.media", {
 	en: {
 		title: "Media",
-		description: "The images and files you use in your content.",
 		"notConfigured.hint": "Add a storage adapter as `storage` in monti.config.ts, then upload images and files here.",
 		"usage.note.beforePublish": "Before publishing",
 		"usage.note.publishedOnly": "Published content only",
@@ -97,7 +96,6 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 	},
 	ko: {
 		title: "미디어",
-		description: "콘텐츠에 쓰는 이미지와 파일이에요.",
 		"notConfigured.hint":
 			"monti.config.ts의 `storage`에 저장소 어댑터를 추가하면 여기서 이미지와 파일을 올릴 수 있어요.",
 		"usage.note.beforePublish": "발행 전",

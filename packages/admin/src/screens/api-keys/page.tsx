@@ -10,7 +10,7 @@ export default async function AdminApiKeysPage({ cms, server }: { cms: Cms; serv
 	const t = cms.site.createTranslator(apiKeysMessages);
 	await requireAdminPage(cms, server);
 	return (
-		<AdminShell title={t("title")} large description={t("description")} sidebar={{ activeNav: "api-keys" }}>
+		<AdminShell title={t("title")} large sidebar={{ activeNav: "api-keys" }}>
 			<ApiKeysSettings />
 		</AdminShell>
 	);

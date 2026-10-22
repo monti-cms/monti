@@ -428,7 +428,6 @@ export function MediaLibrary() {
 			title={`${t("title")}${folderTitle}`}
 			count={mediaQuery.data ? t("library.count", { count: total }) : undefined}
 			large
-			description={t("description")}
 			sidebar={{
 				activeNav: "media",
 				folderNav: {

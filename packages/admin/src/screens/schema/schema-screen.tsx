@@ -78,18 +78,24 @@ function FileRest({ file }: { file: Obj }) {
 	const messages = isObj(file.admin) ? file.admin.messages : undefined;
 	const rest = [
 		...(messages !== undefined ? ([[t("file.messages"), messages]] as const) : []),
-		...(file.seed !== undefined ? ([["seed", file.seed]] as const) : []),
+		...(file.seed !== undefined ? ([[t("file.seed"), file.seed]] as const) : []),
 	];
 	if (rest.length === 0 && migrations.length === 0) return null;
 	return (
 		<>
-			{rest.map(([title, value]) => (
-				<Section wide key={title} title={title} note={t("file.hint")}>
-					<pre className="max-h-64 overflow-auto rounded-md bg-monti-muted/60 p-3 text-xs">
-						{JSON.stringify(value, null, 2)}
-					</pre>
+			{/* One section whose title says these are edited in the file, rather than the same note under each of them. */}
+			{rest.length > 0 && (
+				<Section wide title={t("file.title")}>
+					{rest.map(([title, value]) => (
+						<div key={title} className="flex flex-col gap-2">
+							<h4 className="font-medium text-monti-label">{title}</h4>
+							<pre className="max-h-64 overflow-auto rounded-md bg-monti-muted/60 p-3 text-monti-caption">
+								{JSON.stringify(value, null, 2)}
+							</pre>
+						</div>
+					))}
 				</Section>
-			))}
+			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
 					<ul className="-my-2 flex flex-col divide-y text-sm">
@@ -387,7 +393,6 @@ function SchemaEditor({
 													onSection={setSection}
 													collection={collections[selected]}
 													changes={areas.collections[selected]}
-													isNew={!savedNames.includes(selected)}
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
 													onFileChange={updateFile}

@@ -4,8 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const schemaLocalesMessages = defineMessages("cms-admin.schema.locales", {
 	en: {
 		"locales.contentTitle": "Content languages",
-		"locales.contentHelp": "The languages your entries are written in. Codes cannot change once added.",
-		"locales.defaultHelp": "Which language shows without a prefix, and the time zone used for dates and scheduling.",
 		"locales.contentNote": "Language codes are stored with entries and cannot be changed after creation.",
 		"locales.count": "Languages: {count}",
 		"locales.defaultBadge": "Default",
@@ -30,8 +28,6 @@ export const schemaLocalesMessages = defineMessages("cms-admin.schema.locales", 
 	},
 	ko: {
 		"locales.contentTitle": "콘텐츠 언어",
-		"locales.contentHelp": "항목을 작성하는 언어예요. 코드는 추가한 뒤에 바꿀 수 없어요.",
-		"locales.defaultHelp": "접두사 없이 보이는 언어와, 날짜와 예약에 쓰는 시간대를 정해요.",
 		"locales.contentNote": "언어 코드는 항목 데이터에 저장되므로 추가 후 변경할 수 없어요.",
 		"locales.count": "언어 {count}개",
 		"locales.defaultBadge": "기본",
