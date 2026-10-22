@@ -120,7 +120,7 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 		<p
 			data-slot="field-description"
 			className={cn(
-				"text-left text-monti-body text-monti-muted group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
+				"text-left text-monti-label text-monti-muted group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
 				"nth-last-2:-mt-1 last:mt-0",
 				"[&>a]:text-monti-accent [&>a]:underline [&>a]:underline-offset-4",
 				className,
@@ -195,7 +195,7 @@ function FormFieldError({
 		<div
 			role="alert"
 			data-slot="field-error"
-			className={cn("whitespace-pre-wrap text-monti-caption text-monti-danger", className)}
+			className={cn("whitespace-pre-wrap text-monti-danger text-monti-label", className)}
 			{...props}
 		>
 			{content}

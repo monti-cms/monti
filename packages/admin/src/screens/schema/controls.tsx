@@ -484,7 +484,13 @@ export function RowActions({
 					<TooltipContent side="top">{removeBlocked}</TooltipContent>
 				</Tooltip>
 			) : (
-				<IconButton label={t("row.remove", { name })} size="icon-xs" destructive disabled={disabled} onClick={onRemove}>
+				<IconButton
+					label={t("row.remove", { name })}
+					size="icon-xs"
+					tone="danger"
+					disabled={disabled}
+					onClick={onRemove}
+				>
 					<X aria-hidden />
 				</IconButton>
 			)}

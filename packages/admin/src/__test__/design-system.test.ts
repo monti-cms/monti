@@ -84,7 +84,7 @@ function utilityOf(word: string): string {
 /** Why a utility is outside the system, or null. */
 function problem(utility: string, inUi: boolean, ownColors: boolean): string | null {
 	const color = utility.match(
-		/^-?(bg|text|border(?:-[xytblrse])?|divide|ring-offset|ring|outline|fill|stroke|decoration|caret|accent|shadow|from|via|to)-([a-z][\w-]*?)(\/\d+)?$/,
+		/^-?(bg|text|border(?:-[xytblrse])?|divide|ring-offset|ring|outline|fill|stroke|decoration|caret|accent|shadow|from|via|to)-([a-z][\w-]*?)(\/[\w.]+)?$/,
 	);
 	if (color) {
 		const [, rawKind, name, alpha] = color;
@@ -141,6 +141,7 @@ describe("design system", () => {
 		expect(problem("bg-monti-surface", false, false)).toBeNull();
 		expect(problem("text-monti-caption", false, false)).toBeNull();
 		expect(problem("text-xs", false, false)).toMatch(/text size/);
+		expect(problem("text-sm/relaxed", false, false)).toMatch(/text size/);
 		expect(problem("bg-monti-muted/50", false, false)).toMatch(/unknown role/);
 		expect(problem("bg-monti-hover/50", false, false)).toMatch(/opacity/);
 		expect(problem("bg-red-500", false, false)).toMatch(/palette/);

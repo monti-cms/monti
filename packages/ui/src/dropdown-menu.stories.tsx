@@ -39,7 +39,7 @@ const meta = {
 					<DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="destructive">
+				<DropdownMenuItem variant="danger">
 					<Trash2 aria-hidden />
 					휴지통으로 이동
 				</DropdownMenuItem>
@@ -61,7 +61,7 @@ export const DisabledItems: Story = {
 			<DropdownMenuContent>
 				<DropdownMenuItem>미리보기</DropdownMenuItem>
 				<DropdownMenuItem disabled>발행 취소</DropdownMenuItem>
-				<DropdownMenuItem variant="destructive" disabled>
+				<DropdownMenuItem variant="danger" disabled>
 					휴지통으로 이동
 				</DropdownMenuItem>
 			</DropdownMenuContent>
@@ -85,7 +85,7 @@ export const GroupsAndLabels: Story = {
 					<DropdownMenuItem inset>들여쓴 항목</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="destructive">로그아웃</DropdownMenuItem>
+				<DropdownMenuItem variant="danger">로그아웃</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	),

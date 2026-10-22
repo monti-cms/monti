@@ -74,7 +74,9 @@ export const WithDividers: Story = {
 				<Text tone="muted">삭제한 글은 30일 동안 휴지통에 남아요.</Text>
 			</CardContent>
 			<CardFooter className="border-t">
-				<Button variant="destructive">휴지통으로 이동</Button>
+				<Button variant="secondary" tone="danger">
+					휴지통으로 이동
+				</Button>
 			</CardFooter>
 		</Card>
 	),

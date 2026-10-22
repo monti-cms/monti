@@ -5,6 +5,7 @@ export const uiMessages = defineMessages("cms-admin.ui", {
 	en: {
 		"panel.resize": "Resize panel",
 		clear: "Clear",
+		loading: "Loading",
 		deselect: "Remove",
 		"pagination.label": "Pagination",
 		"pagination.previous": "Previous",
@@ -22,6 +23,7 @@ export const uiMessages = defineMessages("cms-admin.ui", {
 	ko: {
 		"panel.resize": "패널 너비 조절",
 		clear: "지우기",
+		loading: "불러오는 중",
 		deselect: "선택 해제",
 		"pagination.label": "페이지 이동",
 		"pagination.previous": "이전",

@@ -20,7 +20,7 @@ const meta = {
 	args: {},
 	render: (args) => (
 		<AlertDialog {...args}>
-			<AlertDialogTrigger render={<Button variant="destructive" />}>휴지통으로 이동</AlertDialogTrigger>
+			<AlertDialogTrigger render={<Button tone="danger" />}>휴지통으로 이동</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>이 글을 휴지통으로 옮길까요?</AlertDialogTitle>
@@ -28,7 +28,7 @@ const meta = {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction variant="destructive">이동</AlertDialogAction>
+					<AlertDialogAction tone="danger">이동</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -71,7 +71,7 @@ export const WithMedia: Story = {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction variant="destructive">완전히 삭제</AlertDialogAction>
+					<AlertDialogAction tone="danger">완전히 삭제</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -91,7 +91,7 @@ export const SmallWithMedia: Story = {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction variant="destructive">삭제</AlertDialogAction>
+					<AlertDialogAction tone="danger">삭제</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -111,7 +111,7 @@ export const LongText: Story = {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction variant="destructive">이동</AlertDialogAction>
+					<AlertDialogAction tone="danger">이동</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

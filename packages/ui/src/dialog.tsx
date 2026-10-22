@@ -36,13 +36,18 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 	);
 }
 
+const DIALOG_WIDTH = { sm: "sm:max-w-sm", md: "sm:max-w-md", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" } as const;
+
 function DialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	size = "md",
 	...props
 }: DialogPrimitive.Popup.Props & {
 	showCloseButton?: boolean;
+	/** Width on a wide screen: `sm` a question, `md` a short form (default), `lg` a form with a preview, `xl` a review of many changes. */
+	size?: keyof typeof DIALOG_WIDTH;
 }) {
 	const labels = useUiLabels();
 	return (
@@ -51,7 +56,8 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl bg-monti-overlay p-6 text-monti-body text-monti-default outline-none ring-1 ring-monti-muted duration-100 data-closed:animate-out data-open:animate-in sm:max-w-md",
+					"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl border border-monti-muted bg-monti-overlay p-6 text-monti-body text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
+					DIALOG_WIDTH[size],
 					className,
 				)}
 				{...props}
@@ -83,6 +89,7 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
 	showCloseButton?: boolean;
 }) {
+	const labels = useUiLabels();
 	return (
 		<div
 			data-slot="dialog-footer"
@@ -90,15 +97,15 @@ function DialogFooter({
 			{...props}
 		>
 			{children}
-			{showCloseButton && <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close>}
+			{showCloseButton && (
+				<DialogPrimitive.Close render={<Button variant="outline" />}>{labels.close}</DialogPrimitive.Close>
+			)}
 		</div>
 	);
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-	return (
-		<DialogPrimitive.Title data-slot="dialog-title" className={cn("font-medium leading-none", className)} {...props} />
-	);
+	return <DialogPrimitive.Title data-slot="dialog-title" className={cn("text-monti-title", className)} {...props} />;
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {

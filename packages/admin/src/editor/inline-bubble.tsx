@@ -87,14 +87,14 @@ export function BubbleButton({
 	label,
 	onClick,
 	pressed,
-	destructive,
+	tone,
 	className,
 	children,
 }: {
 	label: string;
 	onClick: () => void;
 	pressed?: boolean;
-	destructive?: boolean;
+	tone?: "danger";
 	className?: string;
 	children: ReactNode;
 }) {
@@ -102,7 +102,7 @@ export function BubbleButton({
 		<IconButton
 			label={label}
 			pressed={pressed}
-			destructive={destructive}
+			tone={tone}
 			size="sm"
 			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
@@ -459,7 +459,7 @@ export function InlineBubble({
 				</BubbleButton>
 				<BubbleButton
 					label={t("inlineBubble.ruleDelete")}
-					destructive
+					tone="danger"
 					onClick={act(() => removeRule(editor.view, blockPos, rule.id))}
 				>
 					<Trash2 aria-hidden className="size-4" />

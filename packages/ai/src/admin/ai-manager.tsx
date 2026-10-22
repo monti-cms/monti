@@ -870,7 +870,7 @@ function CheckRow({
 				<IconButton
 					label={t("check.remove", { label })}
 					size="icon-xs"
-					destructive
+					tone="danger"
 					onClick={onRemove}
 					className={cn(multiline && "mt-1")}
 				>

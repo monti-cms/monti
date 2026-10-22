@@ -45,7 +45,7 @@ const meta = {
 					<ContextMenuShortcut>⌘D</ContextMenuShortcut>
 				</ContextMenuItem>
 				<ContextMenuSeparator />
-				<ContextMenuItem variant="destructive">
+				<ContextMenuItem variant="danger">
 					<Trash2 aria-hidden />
 					휴지통으로 이동
 				</ContextMenuItem>
@@ -67,7 +67,7 @@ export const DisabledItems: Story = {
 			<ContextMenuContent>
 				<ContextMenuItem>미리보기</ContextMenuItem>
 				<ContextMenuItem disabled>발행 취소</ContextMenuItem>
-				<ContextMenuItem variant="destructive" disabled>
+				<ContextMenuItem variant="danger" disabled>
 					휴지통으로 이동
 				</ContextMenuItem>
 			</ContextMenuContent>

@@ -7,7 +7,7 @@ function Card({ className, size = "default", ...props }: React.ComponentProps<"d
 			data-slot="card"
 			data-size={size}
 			className={cn(
-				"group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg bg-monti-surface py-(--card-spacing) text-monti-body text-monti-default ring-1 ring-monti-muted [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
+				"group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-lg border border-monti-muted bg-monti-surface py-(--card-spacing) text-monti-body text-monti-default [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
 				className,
 			)}
 			{...props}
@@ -29,13 +29,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="card-title"
-			className={cn("text-monti-title group-data-[size=sm]/card:text-monti-body", className)}
-			{...props}
-		/>
-	);
+	return <div data-slot="card-title" className={cn("text-monti-title", className)} {...props} />;
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {

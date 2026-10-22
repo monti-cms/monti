@@ -156,7 +156,7 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 			<div className="flex flex-wrap items-center gap-2">
 				<span className="text-monti-body">{describeChange(impact.change, t)}</span>
 				{impact.entries > 0 && (
-					<Badge variant={impact.consequence === "deleted" ? "destructive" : "secondary"}>
+					<Badge variant={impact.consequence === "deleted" ? "danger" : "secondary"}>
 						{t("review.entriesCount", { count: impact.entries })}
 					</Badge>
 				)}

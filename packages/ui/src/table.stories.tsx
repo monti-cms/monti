@@ -207,3 +207,27 @@ export const WideScrolls: Story = {
 		</div>
 	),
 };
+
+/** Column alignment (numbers to the end) and long text that ends in "…". */
+export const AlignAndTruncate: Story = {
+	render: () => (
+		<Panel className="max-w-lg">
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead>제목</TableHead>
+						<TableHead align="end">조회수</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					<TableRow>
+						<TableCell truncate>
+							아주 긴 글 제목은 칸을 넓히지 않고 말줄임표로 끝나요. 끝까지 보려면 열어 보세요
+						</TableCell>
+						<TableCell align="end">1,204</TableCell>
+					</TableRow>
+				</TableBody>
+			</Table>
+		</Panel>
+	),
+};

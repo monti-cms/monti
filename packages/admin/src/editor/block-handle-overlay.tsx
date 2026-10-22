@@ -105,7 +105,7 @@ export function BlockHandleOverlay({
 						<DropdownMenuShortcut>⇧⌘D</DropdownMenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={onDelete}>
+					<DropdownMenuItem variant="danger" onClick={onDelete}>
 						<Trash2 aria-hidden />
 						{tc("delete")}
 						<DropdownMenuShortcut>⇧⌘⌫</DropdownMenuShortcut>

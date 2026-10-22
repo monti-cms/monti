@@ -12,6 +12,8 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 	return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+const POPOVER_WIDTH = { sm: "w-56", md: "w-72", lg: "w-96", auto: "w-auto" } as const;
+
 function PopoverContent({
 	className,
 	align = "center",
@@ -19,9 +21,16 @@ function PopoverContent({
 	side = "bottom",
 	sideOffset = 4,
 	anchor,
+	width = "md",
+	padding = "default",
 	...props
 }: PopoverPrimitive.Popup.Props &
-	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor">) {
+	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
+		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content. */
+		width?: keyof typeof POPOVER_WIDTH;
+		/** `none` when the content brings its own rows (a list, a calendar) and runs to the edge. */
+		padding?: "default" | "none";
+	}) {
 	return (
 		<PopoverPrimitive.Portal>
 			<PopoverPrimitive.Positioner
@@ -35,7 +44,9 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-lg bg-monti-overlay p-4 text-monti-body text-monti-default shadow-monti-floating outline-hidden ring-1 ring-monti-muted duration-100 data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-lg border border-monti-muted bg-monti-overlay text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
+						POPOVER_WIDTH[width],
+						padding === "default" && "p-4",
 						className,
 					)}
 					{...props}

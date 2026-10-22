@@ -113,12 +113,21 @@ function CommandSeparator({ className, ...props }: React.ComponentProps<typeof C
 	);
 }
 
-function CommandItem({ className, children, ...props }: React.ComponentProps<typeof CommandPrimitive.Item>) {
+function CommandItem({
+	className,
+	children,
+	checked,
+	...props
+}: React.ComponentProps<typeof CommandPrimitive.Item> & {
+	/** Shows the check mark: the item is the current choice (cmdk itself only tracks the highlighted item). */
+	checked?: boolean;
+}) {
 	return (
 		<CommandPrimitive.Item
 			data-slot="command-item"
+			data-checked={checked ? "true" : undefined}
 			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
+				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-hover data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
 				className,
 			)}
 			{...props}

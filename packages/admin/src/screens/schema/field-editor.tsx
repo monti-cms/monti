@@ -558,7 +558,7 @@ export function FieldEditor({
 						</Badge>
 					)}
 					{issues.length > 0 && (
-						<Badge variant="destructive" className="shrink-0">
+						<Badge variant="danger" className="shrink-0">
 							{t("field.problems", { count: issues.length })}
 						</Badge>
 					)}

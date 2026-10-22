@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 const SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
-const VARIANTS = ["ghost", "outline", "secondary", "default", "destructive"] as const;
+const VARIANTS = ["quiet", "ghost", "outline", "secondary", "default"] as const;
 
 /** Every variant at every size. */
 export const AllVariants: Story = {
@@ -36,7 +36,7 @@ export const AllVariants: Story = {
 	),
 };
 
-/** Pressed (toggle) on and off, destructive, invalid. */
+/** Pressed (toggle) on and off, danger, invalid. */
 export const States: Story = {
 	render: () => (
 		<Stack direction="row" gap="condensed" align="center">
@@ -46,7 +46,7 @@ export const States: Story = {
 			<IconButton label="고정됨" pressed>
 				<Pencil aria-hidden />
 			</IconButton>
-			<IconButton label="삭제" destructive>
+			<IconButton label="삭제" tone="danger">
 				<Trash2 aria-hidden />
 			</IconButton>
 			<IconButton label="유효하지 않음" aria-invalid>

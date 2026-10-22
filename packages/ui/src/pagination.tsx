@@ -29,18 +29,27 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
 	isActive?: boolean;
+	/** The first page's "previous" and the last page's "next": shown, not followed. */
+	disabled?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
 	React.ComponentProps<"a">;
 
-function PaginationLink({ className, isActive, size = "icon", ...props }: PaginationLinkProps) {
+function PaginationLink({ className, isActive, disabled, size = "icon", ...props }: PaginationLinkProps) {
 	return (
 		<Button
 			variant={isActive ? "outline" : "ghost"}
 			size={size}
-			className={cn(className)}
+			className={cn(disabled && "pointer-events-none opacity-50", className)}
 			nativeButton={false}
 			render={
-				<a aria-current={isActive ? "page" : undefined} data-slot="pagination-link" data-active={isActive} {...props} />
+				<a
+					aria-current={isActive ? "page" : undefined}
+					aria-disabled={disabled || undefined}
+					tabIndex={disabled ? -1 : undefined}
+					data-slot="pagination-link"
+					data-active={isActive}
+					{...props}
+				/>
 			}
 		/>
 	);
