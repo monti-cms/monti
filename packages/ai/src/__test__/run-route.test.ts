@@ -68,7 +68,7 @@ describe("AI run API", () => {
 		});
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({
-			results: [{ result: { kind: "mdx", text: "안녕 **세계**" } }, { error: "원문이 없습니다." }],
+			results: [{ result: { kind: "mdx", text: "안녕 **세계**" } }, { error: "원문이 없어요." }],
 		});
 	});
 

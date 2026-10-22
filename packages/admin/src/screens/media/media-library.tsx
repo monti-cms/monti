@@ -426,9 +426,8 @@ export function MediaLibrary() {
 	return (
 		<AdminShell
 			title={`${t("title")}${folderTitle}`}
-			count={mediaQuery.data ? total : undefined}
+			count={mediaQuery.data ? t("library.count", { count: total }) : undefined}
 			large
-			description={t("description")}
 			sidebar={{
 				activeNav: "media",
 				folderNav: {
@@ -603,6 +602,8 @@ export function MediaLibrary() {
 						pageSize={pageSize}
 						onPageChange={(next) => update({ page: next })}
 						onPageSizeChange={(size) => update({ pageSize: size })}
+						hidePagerWhenSingle
+						showRange={total > pageSize}
 					/>
 				</div>
 

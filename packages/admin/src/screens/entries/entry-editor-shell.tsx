@@ -98,7 +98,9 @@ export function EntryEditorShell({
 	const titleKey = site.isCollection(collection) ? titleKeyOf(site, collection) : undefined;
 	const isReadOnly = editor.readOnly;
 	const isLoading = load.status === "loading";
-	const loadError = load.status === "error" ? load.error.message : null;
+	// A missing entry gets its own wording (the server's fix, "refresh the page", would not help); other failures keep the server's text.
+	const loadError =
+		load.status === "error" ? (load.error.code === "not_found" ? t("loadNotFound") : load.error.message) : null;
 	const [editorMode, setEditorMode] = useState<"visual" | "source">("visual");
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 	const inspectorResize = usePanelResize(INSPECTOR_PANEL_RESIZE);

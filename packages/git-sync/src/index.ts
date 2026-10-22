@@ -1,5 +1,4 @@
 import { definePlugin } from "@monti-cms/core";
-import { gitSyncMessages } from "./admin/page.messages";
 import {
 	GIT_SYNC_PLUGIN_NAME,
 	GIT_SYNC_TOKEN_SLOT,
@@ -58,7 +57,6 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 						{
 							path: "git-sync",
 							label: "Git sync",
-							description: (site) => site.createTranslator(gitSyncMessages)("page.description"),
 							icon: "git-branch",
 						},
 					],

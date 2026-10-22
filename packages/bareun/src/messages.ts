@@ -39,7 +39,7 @@ export const bareunMessages = defineMessages("cms-bareun", {
 		"category.THINKING": "다시 생각해 볼 곳",
 		"category.UNKNOWN": "확인 필요",
 		"issue.message": "{label}: {comment}",
-		"error.keyMissing": "바른 API 키가 없습니다. 관리자의 도구 > API 키에서 맞춤법 검사 키를 추가하세요.",
+		"error.keyMissing": "바른 API 키가 없어요. 관리자의 도구 > API 키에서 맞춤법 검사 키를 추가하세요.",
 		keyLabel: "맞춤법 검사",
 		"status.issues": ({ count }) => `맞춤법 ${count}건`,
 		"status.title": "맞춤법 문제 보기",

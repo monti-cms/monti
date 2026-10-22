@@ -31,9 +31,12 @@ import {
 	DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
+import { StatusIndicator } from "../../ui/status-indicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { ExportDialog } from "../export/export-dialog";
 import { exportMessages } from "../export/messages";
+import { statusLabels } from "../shared/entry-status";
+import { entryStatusMarker } from "../shared/entry-status-marker";
 import { collectionNoun } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
@@ -92,6 +95,14 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<span className="hidden min-w-0 truncate font-mono text-monti-caption text-monti-muted-foreground sm:block">
 						{entry.workingSlug}
 					</span>
+				)}
+				{entry && (
+					<StatusIndicator
+						data-testid="entry-status-chip"
+						{...entryStatusMarker(entry.status)}
+						label={statusLabels(site)[entry.status]}
+						className="shrink-0 rounded-full border px-2 py-0.5"
+					/>
 				)}
 			</div>
 

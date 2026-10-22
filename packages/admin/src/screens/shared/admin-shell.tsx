@@ -54,7 +54,7 @@ export function ShellPage({
 	title: ReactNode;
 	/** The sidebar item to mark as current (`events`, `tools:<path>`, ...). */
 	nav: AdminSidebarProps["activeNav"];
-	count?: number;
+	count?: number | string;
 	bare?: boolean;
 	/** The big page header with a one-line `description` under the title. */
 	large?: boolean;
@@ -86,21 +86,13 @@ async function countTrash(site: Site): Promise<number> {
 	return totals.reduce((sum, total) => sum + total, 0);
 }
 
-/** The screens whose `count` is a number of entries (the status bar shows it on the right). */
-const COUNTED_SCREENS: readonly StatusBarScreen[] = ["list", "trash", "media"];
-
-/** What the status bar's items read for a shell page: the screen kind from the current sidebar item, and the entry count a list passes. */
-function shellStatusContext(
-	site: Site,
-	activeNav: AdminSidebarProps["activeNav"],
-	count: number | undefined,
-): StatusBarContextValue {
+/** What the status bar's items read for a shell page: the screen kind from the current sidebar item, and and the collection of a list. */
+function shellStatusContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): StatusBarContextValue {
 	const isCollection = site.COLLECTIONS.includes(activeNav);
 	const screen: StatusBarScreen = isCollection ? "list" : activeNav.startsWith("tools:") ? "tools" : activeNav;
 	return {
 		screen,
 		...(isCollection ? { collection: activeNav } : {}),
-		...(count !== undefined && COUNTED_SCREENS.includes(screen) ? { count } : {}),
 	};
 }
 
@@ -164,8 +156,8 @@ export function AdminShell({
 	children,
 }: {
 	title: ReactNode;
-	/** Item count shown dimmed next to the title. */
-	count?: number;
+	/** Item count shown dimmed next to the title. Leave it out (undefined) while the first load runs, so it never shows a false 0. */
+	count?: number | string;
 	/** The big page header of the list screens: a large title with the count in mono, this one-line description under it, and the page actions bottom-aligned on the right. */
 	large?: boolean;
 	/** The muted line under a large title. */
@@ -236,7 +228,7 @@ export function AdminShell({
 				<ActionsSlotContext.Provider value={actionsSlot}>
 					<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
 				</ActionsSlotContext.Provider>
-				<StatusBar context={shellStatusContext(site, sidebar.activeNav, count)} />
+				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
 			</SidebarInset>
 		</SidebarProvider>
 	);

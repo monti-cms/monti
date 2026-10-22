@@ -122,6 +122,35 @@ describe("EventsScreen", () => {
 		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 	});
 
+	it("with no subscriber on any row, leaves out the delivery columns", async () => {
+		fetchMock.mockImplementation(async () =>
+			json({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }),
+		);
+		renderScreen();
+
+		await screen.findByText("slug-e3");
+		for (const column of ["column.subscriber", "column.attempts", "column.lastError", "column.nextAttempt"] as const) {
+			expect(screen.queryByRole("columnheader", { name: t(column) })).toBeNull();
+		}
+		expect(screen.getByRole("columnheader", { name: t("column.when") })).toBeTruthy();
+	});
+
+	it("keeps the delivery columns while some row has a subscriber", async () => {
+		renderScreen();
+
+		await screen.findByText("search-index");
+		for (const column of ["column.subscriber", "column.attempts", "column.lastError", "column.nextAttempt"] as const) {
+			expect(screen.getByRole("columnheader", { name: t(column) })).toBeTruthy();
+		}
+	});
+
+	it("names the collection of an event by its label, not its key", async () => {
+		renderScreen();
+
+		const row = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
+		expect(within(row).getByText(testSite.COLLECTION_DEFINITIONS.post.label, { exact: false })).toBeTruthy();
+	});
+
 	it("retries one delivery with its subscriber", async () => {
 		renderScreen();
 		fireEvent.click(

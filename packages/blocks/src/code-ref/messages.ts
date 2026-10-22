@@ -22,7 +22,7 @@ export const codeRefMessages = defineMessages("monti-blocks.code-ref", {
 		"line.one": "{line}줄",
 		"line.range": "{from}–{to}줄",
 		where: "코드 {where}",
-		none: "연결된 코드 줄이 없습니다",
+		none: "연결된 코드 줄이 없어요",
 		relink: "코드 다시 연결",
 		"relink.text": "다시 연결",
 		unlink: "코드 연결 해제",

@@ -54,7 +54,6 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 								data-testid="settings-file-line"
 							/>
 						</div>
-						<p className="mt-1 text-monti-body text-monti-muted-foreground">{t("description")}</p>
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>

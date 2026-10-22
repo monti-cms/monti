@@ -6,7 +6,7 @@ import type { EventDeliveryItem } from "../../api/events";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../ui/sheet";
 import { StatusIndicator } from "../../ui/status-indicator";
 import { formatDateTime } from "../shared/format-date";
-import { eventEntryLabel, STATE_TONE } from "./event-display";
+import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
 import { eventsMessages } from "./messages";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -72,9 +72,7 @@ export function EventDetailSheet({
 							<Row label={t("detail.entryId")}>
 								<Mono>{change.entryId}</Mono>
 							</Row>
-							<Row label={t("detail.collection")}>
-								<Mono>{change.collection}</Mono>
-							</Row>
+							<Row label={t("detail.collection")}>{eventCollectionLabel(site, change.collection)}</Row>
 							<Row label={t("detail.locale")}>{change.locale ?? "—"}</Row>
 							<Row label={t("detail.workingSlug")}>{change.workingSlug ? <Mono>{change.workingSlug}</Mono> : "—"}</Row>
 							<Row label={t("detail.publishedSlug")}>

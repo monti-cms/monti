@@ -13,9 +13,9 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		network: "Check your network connection.",
 	},
 	ko: {
-		mediaNotConfigured: "미디어 저장소가 설정되지 않았습니다.",
+		mediaNotConfigured: "미디어 저장소가 설정되지 않았어요.",
 		validationFailedList: "검증 실패:",
-		fallback: "요청을 처리하지 못했습니다.",
+		fallback: "요청을 처리하지 못했어요.",
 		previewNoWrite: "미리보기라서 저장되지 않아요.",
 		network: "네트워크 연결을 확인하세요.",
 	},

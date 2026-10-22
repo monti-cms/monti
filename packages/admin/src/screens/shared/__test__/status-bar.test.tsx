@@ -159,12 +159,10 @@ describe("status bar", () => {
 		expect(bar().queryByText(/실패/)).toBeNull();
 	});
 
-	it("shows the entry count of a list on the right, and nothing on screens without one", () => {
-		show({ screen: "list", collection: "post", count: 8 });
-		expect(bar().getByText("8개")).toBeTruthy();
-		cleanup();
-		show({ screen: "tools" });
-		expect(bar().queryByText(/개$/)).toBeNull();
+	it("shows no entry count on a list (the page header already has it)", () => {
+		show({ screen: "list", collection: "post" });
+		expect(bar().queryByText(/^\d+개$/)).toBeNull();
+		expect(bar().queryAllByRole("button")).toHaveLength(0);
 	});
 
 	describe("popover", () => {

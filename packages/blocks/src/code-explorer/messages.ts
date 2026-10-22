@@ -26,6 +26,6 @@ export const codeExplorerMessages = defineMessages("monti-blocks.code-explorer",
 		"add.file": "파일 추가",
 		delete: "코드 탐색기 삭제",
 		"open.first": "첫 파일",
-		"open.hint": "비우면 첫 파일을 보여 준다",
+		"open.hint": "비우면 첫 파일을 보여 줘요",
 	},
 });

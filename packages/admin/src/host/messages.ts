@@ -12,8 +12,8 @@ export const layoutMessages = defineMessages("cms-admin.layout", {
 	ko: {
 		title: "CMS 관리자",
 		titleWithSite: "CMS 관리자 | {site}",
-		setupTitle: "아직 설정되지 않았습니다",
+		setupTitle: "아직 설정되지 않았어요",
 		setupBody:
-			"이 서버에는 로그인이 설정되어 있지 않아 관리자를 시작할 수 없습니다. 내 사이트라면 서버 로그에 빠진 설정이 나오고, `monti doctor`가 고쳐야 할 것과 방법을 모두 보여 줍니다.",
+			"이 서버에는 로그인이 설정되어 있지 않아 관리자를 시작할 수 없어요. 내 사이트라면 서버 로그에 빠진 설정이 나오고, `monti doctor`가 고쳐야 할 것과 방법을 모두 보여 줘요.",
 	},
 });

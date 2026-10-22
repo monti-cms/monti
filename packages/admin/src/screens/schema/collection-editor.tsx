@@ -178,12 +178,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section
-			band
-			title={t("allowed.title")}
-			description={t("allowed.help")}
-			note={limited ? t("allowed.note") : undefined}
-		>
+		<Section band title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
@@ -217,7 +212,6 @@ export function CollectionEditor({
 	section,
 	onSection,
 	collection,
-	isNew,
 	onChange,
 	onRemove,
 	onRename,
@@ -232,7 +226,6 @@ export function CollectionEditor({
 	onSection: (section: string) => void;
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
-	isNew: boolean;
 	onChange: (change: (collection: Obj) => Obj) => void;
 	onRemove: () => void;
 	onRename: (rename: Rename) => void;
@@ -302,7 +295,7 @@ export function CollectionEditor({
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
-					<Section band title={t("collection.basicsTitle")} description={t("collection.basicsHelp")}>
+					<Section band title={t("collection.basicsTitle")}>
 						<TextInput
 							label={t("collection.label")}
 							revert={revert("label")}
@@ -331,7 +324,7 @@ export function CollectionEditor({
 							onChange={(value) => set("icon", value)}
 						/>
 					</Section>
-					<Section band title={t("collection.featuresTitle")} description={t("collection.featuresHelp")}>
+					<Section band title={t("collection.featuresTitle")}>
 						<FlagSwitch
 							label={t("collection.folders")}
 							revert={revert("folders")}
@@ -365,12 +358,7 @@ export function CollectionEditor({
 							}
 						/>
 					</Section>
-					<Section
-						band
-						title={t("collection.dangerTitle")}
-						description={isNew ? undefined : t("collection.dangerDescription")}
-						card={false}
-					>
+					<Section band title={t("collection.dangerTitle")} card={false}>
 						<div className="flex justify-end">
 							<Button
 								type="button"

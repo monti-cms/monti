@@ -16,8 +16,8 @@ export const textCheckMessages = defineMessages("cms-admin.text-check", {
 		results: "검사 결과",
 		explain: "설명",
 		ignore: "무시",
-		nothingToCheck: "검사할 글이 없습니다.",
-		failed: "{label}: 검사하지 못했습니다.",
-		nothingToFix: "고칠 곳이 없습니다.",
+		nothingToCheck: "검사할 글이 없어요.",
+		failed: "{label}: 검사하지 못했어요.",
+		nothingToFix: "고칠 곳이 없어요.",
 	},
 });

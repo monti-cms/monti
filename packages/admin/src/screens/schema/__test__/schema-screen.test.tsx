@@ -292,7 +292,8 @@ describe("SchemaScreen", () => {
 		fireEvent.click(screen.getByRole("tab", { name: "admin" }));
 		expect(await screen.findByText("m1")).toBeTruthy();
 		expect(screen.getByText(t("file.migrations"))).toBeTruthy();
-		expect(screen.getByText("seed")).toBeTruthy();
+		expect(screen.getByText(t("file.title"))).toBeTruthy();
+		expect(screen.getByText(t("file.seed"))).toBeTruthy();
 	});
 
 	it("tells that saving drops the comments of a file that has them", async () => {
@@ -728,10 +729,9 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
-	it("ends the basics tab with the remove section, which says what removing does", async () => {
+	it("ends the basics tab with the remove section", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(screen.getByText(tCollection("collection.dangerDescription"))).toBeTruthy();
 		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
 		const button = screen.getByRole("button", { name: t("collection.remove") });
@@ -1849,9 +1849,9 @@ describe("SchemaScreen", () => {
 		expect((await screen.findByTestId("admin-path")).textContent).toBe("/studio");
 		expect(screen.getByText(tAdmin("admin.pathNote"))).toBeTruthy();
 		expect(schemaAdminMessages.messages.en["admin.pathNote"]).toBe(
-			"Change it in monti.schema.ts and move the admin route folder.",
+			"Changed in monti.schema.ts, together with the admin route folder.",
 		);
-		expect(screen.queryByLabelText(tAdmin("admin.path"), { selector: "input" })).toBeNull();
+		expect(screen.queryByRole("textbox", { name: /\/studio/ })).toBeNull();
 	});
 
 	it("keeps the site and admin controls disabled when the screen is read-only", async () => {

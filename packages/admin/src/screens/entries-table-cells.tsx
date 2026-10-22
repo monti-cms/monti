@@ -14,6 +14,7 @@ import { customListCell, DefaultFieldCell } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { screensMessages } from "./messages";
 import { describeEntryStatus, statusLabels } from "./shared/entry-status";
+import { entryStatusMarker } from "./shared/entry-status-marker";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 
 /** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
@@ -99,26 +100,7 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	const published = item.status === "published";
-	const gone = item.status === "archived" || item.status === "trashed";
-	return (
-		<StatusIndicator
-			// Monochrome: published is a filled dot, draft a hollow ring, archived a muted filled dot. Color is kept for unpublished changes.
-			tone={published ? (item.hasUnpublishedChanges ? "warning" : "strong") : gone ? "neutral" : "strong"}
-			shape={
-				published
-					? item.hasUnpublishedChanges
-						? "half"
-						: "dot"
-					: item.status === "archived"
-						? "dot"
-						: gone
-							? "minus"
-							: "ring"
-			}
-			label={label}
-		/>
-	);
+	return <StatusIndicator {...entryStatusMarker(item.status, item.hasUnpublishedChanges)} label={label} />;
 }
 
 /** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */

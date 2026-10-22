@@ -60,7 +60,7 @@ export function SiteEditor({
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
 		<div className="flex flex-col gap-12" data-testid="site-settings">
-			<Section wide band title={t("site.identityTitle")} description={t("site.identityHelp")}>
+			<Section wide band title={t("site.identityTitle")}>
 				<TextInput
 					label={ts("site.name")}
 					revert={revert("name")}
@@ -75,7 +75,7 @@ export function SiteEditor({
 					onChange={(value) => set("home", orUndefined(value))}
 				/>
 			</Section>
-			<Section wide band title={t("site.previewTitle")} description={t("site.previewHelp")}>
+			<Section wide band title={t("site.previewTitle")}>
 				<TextInput
 					label={t("site.previewPath")}
 					revert={revert("previewPath")}
@@ -97,7 +97,7 @@ export function SiteEditor({
 					onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
 				/>
 			</Section>
-			<Section wide band title={t("site.addressTitle")} description={t("site.addressHelp")}>
+			<Section wide band title={t("site.addressTitle")}>
 				<div className="flex flex-col gap-2">
 					<Pick
 						label={t("site.localePrefix")}

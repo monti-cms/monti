@@ -6,8 +6,7 @@ const one = (count: unknown) => Number(count) === 1;
 export const importMessages = defineMessages("cms-admin.import", {
 	en: {
 		title: "Import entries",
-		description:
-			"Bring entries into this site as new entries. Only the title, address and body of document collections come in; nothing that is already here is changed.",
+		description: "Files come in as new entries. Existing entries are not changed.",
 		"kinds.label": "What you can choose",
 		"kinds.export": "A Monti export: the .zip from Site backup above, or from another site.",
 		"kinds.markdown":
@@ -82,8 +81,7 @@ export const importMessages = defineMessages("cms-admin.import", {
 	},
 	ko: {
 		title: "글 가져오기",
-		description:
-			"글을 이 사이트에 새 글로 가져와요. 문서 컬렉션의 제목, 주소, 본문만 들어오고 이미 있는 글은 바뀌지 않아요.",
+		description: "파일은 새 글로 들어오고, 이미 있는 글은 바뀌지 않아요.",
 		"kinds.label": "고를 수 있는 파일",
 		"kinds.export": "Monti 내보내기 파일: 위의 사이트 백업에서 받은 .zip이나 다른 사이트에서 받은 .zip.",
 		"kinds.markdown":
@@ -119,7 +117,7 @@ export const importMessages = defineMessages("cms-admin.import", {
 		"body.json": "JSON 문서",
 		"fields.title": "가져오지 않는 필드",
 		"fields.only": "제목, 주소, 본문만 가져와요. 보관 파일에 있는 나머지 값은 두고 와요.",
-		"fields.shared": "보관 파일에 든 폴더, 템플릿, 주소, 환경설정, 미디어 기록은 가져오지 않아요.",
+		"fields.shared": "보관 파일에 든 폴더, 템플릿, 주소, 환경설정, 미디어 정보은 가져오지 않아요.",
 		"fields.line": ({ collection, fields }) => `${collection}: ${fields}`,
 		"fields.required": ({ collection, fields }) =>
 			`${collection}은(는) 발행하려면 ${fields} 값이 필요해요. 가져온 글에는 이 값이 비어 있어요.`,

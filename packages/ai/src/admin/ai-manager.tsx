@@ -61,12 +61,12 @@ import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
 import { PROMPT_ROWS, PROMPT_TEXTAREA, SnippetManager, useAiSnippets } from "./snippet-editor";
 
-/** Visible name of the attach target. For a field, it is the name in the collection definition. */
+/** Visible name of the attach target, read as where the action shows up ("Shows in: Selected text menu"). For a field, it is the name in the collection definition. */
 function usePlaceLabel() {
 	const site = useSite();
 	const t = useTranslator(aiManagerMessages);
 	const { slotLabel, slotTargetLabel } = useLabels();
-	return (action: Pick<AiActionView, "attach">): string => {
+	const where = (action: Pick<AiActionView, "attach">): string => {
 		const attach = action.attach[0];
 		if (!attach) return t("place.direct");
 		switch (attach.slot) {
@@ -88,6 +88,9 @@ function usePlaceLabel() {
 			}
 		}
 	};
+	// An action with no place is called directly, so it shows nowhere to name.
+	return (action: Pick<AiActionView, "attach">): string =>
+		action.attach[0] ? t("place.label", { place: where(action) }) : where(action);
 }
 
 type FeatureGroup = "editor" | "fields" | "media" | "custom";
@@ -200,6 +203,8 @@ export function AiManager() {
 	const _snippetsQuery = useAiSnippets();
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
+	/** Without a usable connection no feature runs, so the switches show as off and cannot be turned on. */
+	const connected = usable.size > 0;
 	const [tab, setTab] = useState<AiTab>("features");
 	/** The action opened for editing, as it was at open time. If `isNew`, it is a new screen action not yet saved (saving creates it). */
 	const [opened, setOpened] = useState<{ saved: FeatureDraft; isNew: boolean } | null>(null);
@@ -513,6 +518,21 @@ export function AiManager() {
 					</TabsTrigger>
 				</PageTabs>
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
+					{featuresQuery.data && usable.size === 0 && (
+						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
+						<output className="flex items-center gap-3 border-monti-warning/30 border-b bg-monti-warning-soft px-8 py-2 text-monti-label text-monti-warning-foreground">
+							<span className="min-w-0 flex-1">{t("banner.needsConnection")}</span>
+							<Button
+								type="button"
+								size="xs"
+								variant="outline"
+								className="shrink-0"
+								onClick={() => void changeTab("connections")}
+							>
+								{t("banner.goToConnections")}
+							</Button>
+						</output>
+					)}
 					{featuresQuery.error && !featuresQuery.data && (
 						<LoadErrorAlert
 							className="m-3"
@@ -527,16 +547,6 @@ export function AiManager() {
 								loading={featuresQuery.isPending}
 								skeletonRows={4}
 								className="w-80 lg:w-88"
-								header={
-									featuresQuery.data && usable.size === 0 ? (
-										<div className="flex items-center justify-between gap-2 border-b bg-monti-muted/40 p-2.5 text-xs">
-											<span className="text-monti-muted-foreground">{t("banner.needsConnection")}</span>
-											<Button type="button" size="xs" variant="outline" onClick={() => void changeTab("connections")}>
-												{t("banner.goToConnections")}
-											</Button>
-										</div>
-									) : null
-								}
 								empty={
 									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
 										<EmptyState compact title={t("list.empty")} />
@@ -583,7 +593,8 @@ export function AiManager() {
 														trailing={
 															<Switch
 																size="sm"
-																checked={feature.enabled}
+																checked={feature.enabled && connected}
+																disabled={!connected}
 																aria-label={t("toggle.enableAction", { label: feature.label })}
 																onClick={(e) => e.stopPropagation()}
 																onCheckedChange={(checked) => handleToggle(feature, checked)}
@@ -612,7 +623,8 @@ export function AiManager() {
 												trailing={
 													<Switch
 														size="sm"
-														checked={feature.enabled}
+														checked={feature.enabled && connected}
+														disabled={!connected}
 														aria-label={t("toggle.enableAction", { label: feature.label })}
 														onClick={(e) => e.stopPropagation()}
 														onCheckedChange={(checked) => handleToggle(feature, checked)}

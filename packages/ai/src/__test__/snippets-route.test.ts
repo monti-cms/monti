@@ -96,7 +96,7 @@ describe("prompt snippets API", () => {
 		const res = await call(DELETE, "DELETE", undefined, "?key=tone&expectedVersion=1");
 		expect(res.status).toBe(400);
 		expect(await res.json()).toMatchObject({
-			error: { message: "이 조각을 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" },
+			error: { message: "이 공용 문구를 쓰는 기능이 있어 삭제할 수 없어요: 요약 만들기" },
 		});
 	});
 });

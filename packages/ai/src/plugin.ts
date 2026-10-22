@@ -1,6 +1,5 @@
 import { createActiveTranslator, definePlugin } from "@monti-cms/core";
 import { type AiConfig, checkAiConfig } from "./action";
-import { aiManagerMessages } from "./admin/ai-manager.messages";
 import { AI_PLUGIN_NAME } from "./name";
 import { resolveAiConfig } from "./resolve";
 
@@ -23,7 +22,6 @@ export function ai<const Config extends AiConfig>(config: Config = {} as Config)
 			{
 				path: "ai",
 				label: "AI",
-				description: (site) => site.createTranslator(aiManagerMessages)("page.description"),
 				icon: "sparkles",
 				group: "writing",
 			},

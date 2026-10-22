@@ -70,16 +70,16 @@ describe("collection label in admin messages", () => {
 		const noun = nounVars(withFinal.site, withFinal.name);
 		const tc = withFinal.site.createTranslator(entriesMessages);
 		// "메모" has no final consonant: 를 and 가; "글" has one: 을.
-		expect(tc("lifecycle.archive.ask", { translation: 0, ...noun })).toBe("이 메모를 보관할까요? 공개가 종료됩니다.");
+		expect(tc("lifecycle.archive.ask", { translation: 0, ...noun })).toBe("이 메모를 보관할까요? 공개가 종료돼요.");
 		expect(withFinal.site.createTranslator(entryEditorShellMessages)("newEntry", noun)).toBe("새 메모");
 
 		const withBatchim = siteLabeled("글", "ko");
 		const batchim = nounVars(withBatchim.site, withBatchim.name);
 		expect(
 			withBatchim.site.createTranslator(entriesMessages)("lifecycle.trash.ask", { translation: 0, ...batchim }),
-		).toBe("이 글을 휴지통으로 이동할까요? 공개가 종료됩니다.");
+		).toBe("이 글을 휴지통으로 이동할까요? 공개가 종료돼요.");
 		expect(withBatchim.site.createTranslator(screensMessages)("archive.askMany", { count: 2, ...batchim })).toBe(
-			"선택한 글 2개를 보관할까요? 공개가 종료됩니다.",
+			"선택한 글 2개를 보관할까요? 공개가 종료돼요.",
 		);
 	});
 
