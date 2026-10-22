@@ -335,7 +335,7 @@ describe("media library", () => {
 				throw new Error(`Unexpected fetch ${input}`);
 			});
 
-		it("offers an upload when there is no media yet, and keeps the pager in the footer", async () => {
+		it("offers an upload when there is no media yet, and keeps the footer below the empty message", async () => {
 			mockEmpty();
 			render(
 				<AdminQueryProvider>
@@ -344,11 +344,11 @@ describe("media library", () => {
 			);
 			expect(await screen.findByText(t("library.emptyYet"))).toBeTruthy();
 			expect(screen.getAllByRole("button", { name: t("library.upload") }).length).toBeGreaterThan(1);
-			// The pager is not inside the scrolling content next to the empty message.
-			const pager = screen.getByRole("navigation", { name: /페이지 이동/ });
-			expect(pager.closest('[data-slot="empty"]')).toBeNull();
+			// Everything fits on one page, so there is no pager and no range line; the footer keeps the page size control.
+			expect(screen.queryByRole("navigation", { name: /페이지 이동/ })).toBeNull();
+			const footer = screen.getByRole("combobox", { name: "페이지당 행 수" }).closest("div.border-t");
+			expect(footer?.closest('[data-slot="empty"]')).toBeNull();
 			// The footer is the last child of the content column; the empty message sits in the area above it.
-			const footer = pager.parentElement?.parentElement;
 			expect(footer?.nextElementSibling).toBeNull();
 			expect(footer?.previousElementSibling?.querySelector('[data-slot="empty"]')).not.toBeNull();
 		});

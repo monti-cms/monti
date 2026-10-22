@@ -50,7 +50,6 @@ export const statusBarMessages = defineMessages("cms-admin.statusBar", {
 			`Reading time assumes about ${rate} characters (no spaces) a minute, at least 1 minute.`,
 		"popover.deliveries.title": "Failed deliveries",
 		"popover.deliveries.open": "Open the event log",
-		count: ({ count }) => `${count} ${Number(count) === 1 ? "entry" : "entries"}`,
 	},
 	ko: {
 		label: "상태",
@@ -100,6 +99,5 @@ export const statusBarMessages = defineMessages("cms-admin.statusBar", {
 			`읽는 시간은 공백을 뺀 글자 수를 분당 약 ${rate}자로 나눈 값이며, 최소 1분이에요.`,
 		"popover.deliveries.title": "실패한 전달",
 		"popover.deliveries.open": "이벤트 로그 열기",
-		count: ({ count }) => `${count}개`,
 	},
 });

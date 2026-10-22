@@ -130,6 +130,23 @@ describe("list screen — page header", () => {
 		expect(route.parentElement?.textContent).toContain(publicAt);
 	});
 
+	it("shows no count in the header until the first load finishes, never a false 0", async () => {
+		let release: (() => void) | undefined;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		server.handle = async (url) => {
+			if (url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "post") await gate;
+			return undefined;
+		};
+		renderList();
+		const heading = await screen.findByRole("heading", { level: 1 });
+		expect(heading.textContent).not.toMatch(/\d/);
+		release?.();
+		await screen.findByRole("row", { name: /가/ });
+		expect(heading.textContent).toContain(String(server.posts.length));
+	});
+
 	it("shows no description for a collection without a public route", async () => {
 		nav.setSearch("collection=tag");
 		renderList();

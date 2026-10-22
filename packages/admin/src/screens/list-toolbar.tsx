@@ -112,9 +112,10 @@ export function ListSearch({
 						title={t("toolbar.includeBody")}
 						pressed={state.includeBody}
 						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						className="h-6 min-w-6 px-1 text-monti-muted-foreground aria-pressed:bg-monti-accent aria-pressed:text-monti-foreground"
+						className="h-6 min-w-6 gap-1 px-1.5 text-monti-caption text-monti-muted-foreground aria-pressed:bg-monti-accent aria-pressed:text-monti-foreground"
 					>
 						<AlignLeft aria-hidden />
+						{t("toolbar.includeBodyShort")}
 					</Toggle>
 				</InputGroupAddon>
 			)}

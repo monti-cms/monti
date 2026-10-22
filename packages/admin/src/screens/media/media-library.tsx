@@ -603,6 +603,8 @@ export function MediaLibrary() {
 						pageSize={pageSize}
 						onPageChange={(next) => update({ page: next })}
 						onPageSizeChange={(size) => update({ pageSize: size })}
+						hidePagerWhenSingle
+						showRange={total > pageSize}
 					/>
 				</div>
 

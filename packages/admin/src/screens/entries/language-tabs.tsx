@@ -18,6 +18,9 @@ import { statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
 
+/** Stands in for the locale code while the "add translation" text is split around it. */
+const CODE_MARK = "\u0000";
+
 const STATUS_TONE: Record<string, StatusTone> = {
 	published: "success",
 	draft: "warning",
@@ -90,12 +93,21 @@ export function LanguageTabs({
 							size="sm"
 							variant="ghost"
 							disabled={createDisabled}
-							aria-label={t("lang.add", { lang: site.localeLabel(target) })}
 							className="h-7 gap-1 border border-dashed px-2 text-monti-muted-foreground text-xs"
 							onClick={() => void create(target)}
 						>
 							<Plus aria-hidden className="size-3" />
-							{target.toUpperCase()}
+							{/* The visible text is the button's name; the locale code stays in mono. */}
+							{t("lang.addTab", { code: CODE_MARK })
+								.split(CODE_MARK)
+								.flatMap((part, index) => [
+									index > 0 ? (
+										<span key={`code-${target}`} className="font-mono">
+											{target.toUpperCase()}
+										</span>
+									) : null,
+									part,
+								])}
 						</Button>
 					);
 				}

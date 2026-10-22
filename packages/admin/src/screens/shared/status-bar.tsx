@@ -123,8 +123,6 @@ export interface StatusBarContextValue {
 	/** The entry being edited, and its language. */
 	readonly entryId?: string;
 	readonly locale?: string;
-	/** How many entries a list screen has in all (the whole result, not the page). */
-	readonly count?: number;
 	/** The state of the entry being edited, on the editor screen only. */
 	readonly editor?: EditorStatus;
 }
@@ -213,7 +211,7 @@ export type StatusBarItemProps = StatusBarItemBase &
 	);
 
 const itemClass =
-	"flex h-5 shrink-0 items-center gap-1 rounded-sm px-1.5 text-monti-micro whitespace-nowrap tabular-nums";
+	"flex h-5 shrink-0 items-center gap-1 rounded-sm px-1.5 text-monti-caption whitespace-nowrap tabular-nums";
 const interactiveClass =
 	"cursor-pointer outline-none hover:bg-monti-sidebar-accent hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring data-popup-open:bg-monti-sidebar-accent data-popup-open:text-monti-foreground";
 
@@ -718,14 +716,6 @@ function FailedDeliveriesItem() {
 	);
 }
 
-/** Lists, trash and media: how many entries there are in all, on the right. */
-function EntryCountItem() {
-	const t = useTranslator(statusBarMessages);
-	const { count } = useStatusBarContext();
-	if (count === undefined) return null;
-	return <StatusBarItem title={t("count", { count })}>{t("count", { count: count.toLocaleString() })}</StatusBarItem>;
-}
-
 /** The core's own items, built with the same declaration a plugin uses. */
 const CORE_ITEMS: StatusItems = {
 	"core:save": { align: "start", order: 10, Component: SaveStateItem },
@@ -733,7 +723,6 @@ const CORE_ITEMS: StatusItems = {
 	"core:body": { align: "start", order: 30, Component: BodyStatsItem },
 	"core:publish-readiness": { align: "start", order: 40, Component: PublishReadinessItem },
 	"core:deliveries": { align: "start", order: 80, Component: FailedDeliveriesItem },
-	"core:count": { align: "end", order: 10, Component: EntryCountItem },
 };
 
 const byPosition = ([nameA, a]: [string, StatusItemDefinition], [nameB, b]: [string, StatusItemDefinition]) =>

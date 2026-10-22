@@ -222,7 +222,12 @@ function TrashPage() {
 	const list = useEntryList("trash");
 	const { state } = list;
 	return (
-		<AdminShell title={t("dashboard.trash")} count={list.data.total} sidebar={{ activeNav: "trash" }} large>
+		<AdminShell
+			title={t("dashboard.trash")}
+			count={list.data.isLoading ? undefined : list.data.total}
+			sidebar={{ activeNav: "trash" }}
+			large
+		>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
 				<nav
@@ -261,7 +266,7 @@ function ListPage() {
 	return (
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
-			count={list.data.total}
+			count={list.data.isLoading ? undefined : list.data.total}
 			large
 			description={routePath ? <RouteDescription path={routePath} /> : undefined}
 			sidebar={{

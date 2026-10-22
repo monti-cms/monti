@@ -13,8 +13,10 @@ import { preferenceKey } from "../../../lib/utils/site-storage";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { statusLabels } from "../../shared/entry-status";
 import { formatDateTime } from "../../shared/format-date";
 import { EntryEditorShell } from "../entry-editor-shell";
+import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
 const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, message, error } = vi.hoisted(() => ({
@@ -329,12 +331,12 @@ describe("entry editor shell", () => {
 	it("shows why an explicit save failed instead of doing nothing", async () => {
 		serve((_input, init) => {
 			if (init?.method === "PATCH")
-				return json({ error: { code: "invalid_input", message: "제목이 너무 겨요." } }, 400);
+				return json({ error: { code: "invalid_input", message: "제목이 너무 길어요." } }, 400);
 		});
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
 		pressSave();
-		await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 겨요.")));
+		await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
 	});
 
 	it("saves pending changes before opening the preview", async () => {
@@ -406,6 +408,33 @@ describe("entry editor shell", () => {
 		expect(button.getAttribute("aria-disabled")).toBe("true");
 		fireEvent.focus(button);
 		expect(await screen.findByText(/먼저 저장해/)).toBeTruthy();
+	});
+
+	it("shows the entry's status as a chip next to the slug in the header", async () => {
+		const labels = statusLabels(testSite);
+		serve(() => undefined, { ...entry, status: "draft" });
+		const draft = renderEdit();
+		await editorTitle();
+		const chip = within(screen.getByRole("banner")).getByTestId("entry-status-chip");
+		expect(chip.textContent).toBe(labels.draft);
+		draft.unmount();
+		cleanup();
+		serve(() => undefined, { ...entry, status: "published" });
+		renderEdit();
+		await editorTitle();
+		expect(within(screen.getByRole("banner")).getByTestId("entry-status-chip").textContent).toBe(labels.published);
+	});
+
+	it("tells a missing entry how to find it again instead of asking for a refresh", async () => {
+		serve((input, init) =>
+			input === "/api/monti/v1/entries/entry-1" && !init?.method
+				? json({ code: "not_found", message: "not found", fix: "refresh" }, 404)
+				: undefined,
+		);
+		renderEdit();
+		const text = testSite.createTranslator(entryEditorShellMessages)("loadNotFound");
+		expect(await screen.findByText(text)).toBeTruthy();
+		expect(screen.queryByText(/새로고침/)).toBeNull();
 	});
 
 	describe("publish readiness in the status bar", () => {
@@ -1385,7 +1414,7 @@ describe("language tabs", () => {
 		expect(current.getAttribute("aria-current")).toBe("page");
 		const other = within(nav).getByRole("button", { name: "영어 · 초안" });
 		expect(other.getAttribute("aria-current")).toBeNull();
-		expect(within(nav).getByRole("button", { name: "일본어 번역본 추가" })).toBeTruthy();
+		expect(within(nav).getByRole("button", { name: "JA 번역 추가" })).toBeTruthy();
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
 		const title = await editorTitle();
 		expect(nav.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1405,7 +1434,7 @@ describe("language tabs", () => {
 			}
 		}, source);
 		renderEdit();
-		fireEvent.click(await screen.findByRole("button", { name: "일본어 번역본 추가" }));
+		fireEvent.click(await screen.findByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
 		expect(JSON.parse(String(methodCalls("POST", "/translations")[0]?.[1]?.body))).toEqual({ locale: "ja" });
 		expect(success).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
@@ -1415,7 +1444,7 @@ describe("language tabs", () => {
 		serve(() => undefined, source);
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
-		fireEvent.click(screen.getByRole("button", { name: "일본어 번역본 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(error).toHaveBeenCalled());
 		expect(methodCalls("POST", "/translations")).toHaveLength(0);
 	});
