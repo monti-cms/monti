@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Runtime code Hangul check. Korean strings in package runtime code (`packages/*\/src`) live only in the message dictionary files
- * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`) and test helpers (`src/test`) are not checked.
+ * (`messages.ts`, `*.messages.ts`). Comments are English too (a UI label is named in English there); tests (`__test__`, `*.test.*`), test helpers (`src/test`) and Storybook stories (`*.stories.*`, sample screens) are not checked.
  *
  *   node scripts/check-korean.mjs            # list what remains; fails if any
  *   node scripts/check-korean.mjs packages/admin/src/screens/media   # only part of the tree
@@ -29,7 +29,7 @@ const roots = targets.length
 
 const SKIP_DIRS = new Set(["__test__", "node_modules", "dist", "test"]);
 const isMessages = (file) => /(^|[./])messages\.tsx?$/.test(path.basename(file));
-const isTest = (file) => /\.test\.tsx?$/.test(file);
+const isTest = (file) => /\.(test|stories)\.tsx?$/.test(file);
 
 const files = [];
 const walk = (dir) => {

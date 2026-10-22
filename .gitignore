@@ -24,3 +24,4 @@ examples/**/AGENTS.md
 npm-debug.log*
 pnpm-debug.log*
 .vercel
+storybook-static

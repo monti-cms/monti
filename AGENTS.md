@@ -4,6 +4,6 @@ Commit messages must be written in English and follow Conventional Commits (`typ
 
 Pull request titles and descriptions must also be written in English. PR titles follow the same Conventional Commits format.
 
-All documentation, code comments, test titles and developer-facing text are written in English. Korean appears only in the `ko` message dictionaries, in test data, and in the `README.ko.md` translations.
+All documentation, code comments, test titles and developer-facing text are written in English. Korean appears only in the `ko` message dictionaries, in test data and Storybook stories (sample screens), and in the `README.ko.md` translations.
 
 When a `README.md` changes, update the matching `README.ko.md` in the same change.
