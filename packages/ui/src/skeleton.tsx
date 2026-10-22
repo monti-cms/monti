@@ -7,13 +7,26 @@ const skeletonVariants = cva("animate-pulse bg-monti-neutral", {
 		shape: {
 			line: "h-4 rounded-sm",
 			title: "h-6 rounded-sm",
+			/** The large title at the top of a document (the editor's title line). */
+			heading: "h-9 rounded-md",
 			control: "h-control rounded-md",
 			"control-sm": "h-control-sm rounded-md",
 			block: "h-24 rounded-lg",
 			icon: "size-control-sm rounded-md",
 			avatar: "size-control rounded-full",
 		},
-		width: { full: "w-full", half: "w-1/2", third: "w-1/3", quarter: "w-1/4", "panel-sm": "w-panel-sm" },
+		/** Fractions follow the box; `chip`, `short` and `medium` are fixed, for a tab, a button or a short label. */
+		width: {
+			full: "w-full",
+			"three-quarters": "w-3/4",
+			half: "w-1/2",
+			third: "w-1/3",
+			quarter: "w-1/4",
+			chip: "w-14",
+			short: "w-20",
+			medium: "w-32",
+			"panel-sm": "w-panel-sm",
+		},
 	},
 	compoundVariants: [{ shape: ["icon", "avatar"], class: "shrink-0" }],
 	defaultVariants: { shape: "line", width: "full" },

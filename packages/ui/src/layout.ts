@@ -94,6 +94,7 @@ export const LAYOUT = {
 		"panel-sm": "w-panel-sm",
 		panel: "w-panel",
 		"panel-lg": "w-panel-lg",
+		sidebar: "w-sidebar",
 	},
 	maxWidth: {
 		full: "max-w-full",
