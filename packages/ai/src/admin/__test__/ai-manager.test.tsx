@@ -101,15 +101,17 @@ const SAMPLE_ACTIONS: AiActionView[] = [
 
 describe("AI Manager UI", () => {
 	let actions: AiActionView[];
+	let usable: string[];
 	let fetchMock: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
 		// The Advanced choice is remembered in the browser; every test starts without one.
 		window.localStorage.clear();
 		actions = structuredClone(SAMPLE_ACTIONS);
+		usable = ["slug", "summary"];
 		fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 			if (input === "/api/monti/v1/ai/actions" && !init?.method) {
-				return json({ usable: ["slug", "summary"], items: actions });
+				return json({ usable, items: actions });
 			}
 			if (input === "/api/monti/v1/ai/settings" && !init?.method) {
 				return json({ version: 1, providers: [], fake: true });
@@ -149,6 +151,38 @@ describe("AI Manager UI", () => {
 		expect(labelsEn.slotLabel("insert")).toBe("Slash menu");
 		expect(labelsEn.checkLabel("oneOf")).toBe("Allowed values list");
 		expect(labelsEn.checkLabel("exists")).toBe("Existing values only");
+	});
+
+	it("warns that no feature runs while no connection is usable, and not otherwise", async () => {
+		usable = [];
+		const { unmount } = render(
+			<SiteWrapper site={testSite}>
+				<AiManager />
+			</SiteWrapper>,
+		);
+		const notice = await screen.findByText(tManager("banner.needsConnection"));
+		expect(notice.closest('[data-slot="alert"]')).not.toBeNull();
+		expect(screen.getByRole("button", { name: tManager("banner.goToConnections") })).toBeInTheDocument();
+		unmount();
+
+		usable = ["slug"];
+		render(
+			<SiteWrapper site={testSite}>
+				<AiManager />
+			</SiteWrapper>,
+		);
+		await screen.findByText("Suggest slug");
+		expect(screen.queryByText(tManager("banner.needsConnection"))).not.toBeInTheDocument();
+	});
+
+	it("labels the grey line under a feature as where it shows up", async () => {
+		render(
+			<SiteWrapper site={testSite}>
+				<AiManager />
+			</SiteWrapper>,
+		);
+		await screen.findByText("Suggest slug");
+		expect(screen.getAllByText(/^표시 위치: |^Shows in: /).length).toBeGreaterThan(0);
 	});
 
 	it("renders action list with direct toggle switch on rows and hides hidden built-ins by default", async () => {

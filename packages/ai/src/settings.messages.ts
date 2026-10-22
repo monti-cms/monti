@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Error messages for AI connection settings and prompt snippets. */
+/** Error messages for AI connection settings and shared texts. */
 export const settingsMessages = defineMessages("cms-ai.settings", {
 	en: {
 		keyUse: "AI connection “{name}”",
@@ -12,12 +12,12 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
 		"snippet.labelRequired": "Enter a name.",
 		"snippet.labelTooLong": "The name can be up to {max} characters.",
 		"snippet.keyFormat": "The key must start with a letter and use only letters, digits and _.",
-		"snippet.unknown": "This prompt snippet doesn't exist: {key}",
-		"snippet.invalid": "The prompt snippet is not in the right format.",
+		"snippet.unknown": "This shared text doesn't exist: {key}",
+		"snippet.invalid": "The shared text is not in the right format.",
 		"snippet.keyTaken": "This key is already used: {key}",
-		"snippet.tooMany": "You can add up to {max} prompt snippets.",
-		"snippet.configCannotDelete": "A prompt snippet written in the config can't be deleted.",
-		"snippet.inUse": "Actions use this snippet, so it can't be deleted: {users}",
+		"snippet.tooMany": "You can add up to {max} shared texts.",
+		"snippet.configCannotDelete": "A shared text written in the config can't be deleted.",
+		"snippet.inUse": "Actions use this shared text, so it can't be deleted: {users}",
 	},
 	ko: {
 		keyUse: "AI 연결 “{name}”",
@@ -29,11 +29,11 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
 		"snippet.labelRequired": "이름을 넣으세요.",
 		"snippet.labelTooLong": "이름은 {max}자까지 쓸 수 있어요.",
 		"snippet.keyFormat": "키는 영문자로 시작하고 영문자·숫자·_만 쓸 수 있어요.",
-		"snippet.unknown": "없는 프롬프트 조각이에요: {key}",
-		"snippet.invalid": "프롬프트 조각 형식이 맞지 않아요.",
+		"snippet.unknown": "없는 공용 문구예요: {key}",
+		"snippet.invalid": "공용 문구 형식이 맞지 않아요.",
 		"snippet.keyTaken": "이미 있는 키예요: {key}",
-		"snippet.tooMany": "프롬프트 조각은 {max}개까지 더할 수 있어요.",
-		"snippet.configCannotDelete": "설정에 적은 프롬프트 조각은 삭제할 수 없어요.",
-		"snippet.inUse": "이 조각을 쓰는 기능이 있어 삭제할 수 없어요: {users}",
+		"snippet.tooMany": "공용 문구는 {max}개까지 더할 수 있어요.",
+		"snippet.configCannotDelete": "설정에 적은 공용 문구는 삭제할 수 없어요.",
+		"snippet.inUse": "이 공용 문구를 쓰는 기능이 있어 삭제할 수 없어요: {users}",
 	},
 });

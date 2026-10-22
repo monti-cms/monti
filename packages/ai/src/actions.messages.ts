@@ -5,8 +5,7 @@ export const actionsMessages = defineMessages("cms-ai.actions", {
 	en: {
 		unknownAction: "This AI action doesn't exist.",
 		invalidValue: "The value is not valid.",
-		unknownPlaceholder: ({ name }) =>
-			`The prompt can only use locale inputs and prompt snippets as {{name}}: {{${name}}}`,
+		unknownPlaceholder: ({ name }) => `The prompt can only use locale inputs and shared texts as {{name}}: {{${name}}}`,
 		invalidBase: "The basic information is not valid.",
 		cannotDeleteCoded: "An action defined in code can't be deleted.",
 		noDefaultForCustom: "An action you made has no default to go back to.",
@@ -21,7 +20,7 @@ export const actionsMessages = defineMessages("cms-ai.actions", {
 	ko: {
 		unknownAction: "알 수 없는 AI 기능이에요.",
 		invalidValue: "값이 올바르지 않아요.",
-		unknownPlaceholder: ({ name }) => `지시문에는 언어 입력과 프롬프트 조각만 {{이름}}으로 넣을 수 있어요: {{${name}}}`,
+		unknownPlaceholder: ({ name }) => `지시문에는 언어 입력과 공용 문구만 {{이름}}으로 넣을 수 있어요: {{${name}}}`,
 		invalidBase: "기본 정보가 올바르지 않아요.",
 		cannotDeleteCoded: "코드로 정한 기능은 지울 수 없어요.",
 		noDefaultForCustom: "직접 만든 기능은 되돌릴 기본값이 없어요.",
