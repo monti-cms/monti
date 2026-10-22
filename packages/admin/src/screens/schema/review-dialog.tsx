@@ -306,13 +306,13 @@ export function ReviewDialog({
 				</DialogHeader>
 				<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1" data-testid="review-body">
 					{error && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
 					{loading && !preview && <Skeleton className="h-24 w-full" />}
 					{preview && !preview.valid && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.invalid")}</AlertTitle>
 							<AlertDescription>
 								<IssueList issues={preview.issues} />
@@ -320,7 +320,7 @@ export function ReviewDialog({
 						</Alert>
 					)}
 					{problems.length > 0 && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
 								<ul className="list-disc pl-4">
@@ -409,7 +409,7 @@ export function ReviewDialog({
 						</>
 					)}
 					{saveError && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<TriangleAlert aria-hidden />
 							<AlertDescription>{saveError.message}</AlertDescription>
 						</Alert>

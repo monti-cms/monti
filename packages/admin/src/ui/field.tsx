@@ -28,10 +28,7 @@ function FormFieldLegend({
 		<legend
 			data-slot="field-legend"
 			data-variant={variant}
-			className={cn(
-				"mb-3 font-medium data-[variant=label]:text-monti-body data-[variant=legend]:text-monti-title",
-				className,
-			)}
+			className={cn("mb-3 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title", className)}
 			{...props}
 		/>
 	);
@@ -110,7 +107,7 @@ function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				"flex w-fit items-center gap-2 font-medium text-monti-body group-data-[disabled=true]/field:opacity-50",
+				"flex w-fit items-center gap-2 text-monti-label group-data-[disabled=true]/field:opacity-50",
 				className,
 			)}
 			{...props}

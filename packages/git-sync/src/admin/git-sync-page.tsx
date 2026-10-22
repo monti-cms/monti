@@ -461,7 +461,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	return (
 		<div className="max-w-3xl divide-y divide-monti-muted px-8 [&>*]:py-6">
 			{!keys.secretsAvailable && (
-				<Alert variant="destructive" layout="stack" className="my-4 w-auto">
+				<Alert tone="danger" layout="stack" className="my-4 w-auto">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
 			)}

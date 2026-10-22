@@ -82,7 +82,7 @@ export default async function AdminLoginPage({
 				</CardHeader>
 				<CardContent>
 					{isUnauthorizedUser ? (
-						<Alert variant="destructive" layout="stack" className="text-center">
+						<Alert tone="danger" layout="stack" className="text-center">
 							<AlertTitle className="text-monti-caption">{t("forbiddenTitle")}</AlertTitle>
 							<AlertDescription className="mt-1 text-monti-caption">
 								{t("forbidden", { provider, accountId: accountId ?? "" })}
@@ -119,7 +119,7 @@ export default async function AdminLoginPage({
 							</Button>
 						</form>
 					) : providers.length === 0 ? (
-						<Alert variant="destructive" layout="stack" className="text-center">
+						<Alert tone="danger" layout="stack" className="text-center">
 							<AlertTitle className="text-monti-caption">{t("noLoginTitle")}</AlertTitle>
 							<AlertDescription className="mt-1 text-monti-caption">{t("noLogin")}</AlertDescription>
 						</Alert>
@@ -172,7 +172,7 @@ export default async function AdminLoginPage({
 
 function ErrorAlert({ text }: { text: string }) {
 	return (
-		<Alert variant="destructive" layout="stack" className="text-center">
+		<Alert tone="danger" layout="stack" className="text-center">
 			<AlertDescription className="text-monti-caption">{text}</AlertDescription>
 		</Alert>
 	);

@@ -276,7 +276,7 @@ export function ImageInsertDialog({
 									library.length === 0 &&
 									["a", "b", "c"].map((key) => <Skeleton key={key} className="h-[6.25rem] w-full rounded-md" />)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert variant="destructive" className="col-span-3">
+									<Alert tone="danger" className="col-span-3">
 										<AlertDescription className="flex items-center justify-between gap-2">
 											{t("imageDialog.libraryFailed")}
 											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>

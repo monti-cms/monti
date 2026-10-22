@@ -19,7 +19,7 @@ export function LoadErrorAlert({
 }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<Alert variant="destructive" layout="inline" className={cn("w-auto", className)}>
+		<Alert tone="danger" layout="inline" className={cn("w-auto", className)}>
 			<AlertDescription className="col-start-auto min-w-0">{message}</AlertDescription>
 			{onRetry && (
 				<Button type="button" variant="outline" size="xs" onClick={onRetry} className="shrink-0">

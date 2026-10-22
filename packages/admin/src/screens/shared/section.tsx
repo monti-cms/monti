@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Panel } from "../../ui/card";
+import { Heading, Text } from "../../ui/text";
 
 /**
  * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card on the right (stacked on a narrow
@@ -14,6 +15,7 @@ export function Section({
 	wide,
 	card = true,
 	band,
+	danger,
 	className,
 	testId,
 	id,
@@ -29,6 +31,8 @@ export function Section({
 	card?: boolean;
 	/** A band instead of a card: the content sits on the page, and a hairline above the section separates it from the one before. */
 	band?: boolean;
+	/** A step that cannot be undone: the title in the danger color and the content in a box with a danger border. */
+	danger?: boolean;
 	className?: string;
 	testId?: string;
 	/** Anchor of the section, so a link can land on it (`#id`). */
@@ -38,6 +42,7 @@ export function Section({
 		<section
 			id={id}
 			data-testid={testId}
+			aria-labelledby={testId ? `${testId}-title` : undefined}
 			className={cn(
 				"grid scroll-mt-6 gap-x-8 gap-y-3 lg:items-start",
 				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
@@ -46,11 +51,23 @@ export function Section({
 			)}
 		>
 			<div>
-				<h3 className="text-monti-title">{title}</h3>
-				{description && <p className="mt-2 text-monti-label text-monti-muted">{description}</p>}
-				{note && <p className="mt-2 text-monti-label text-monti-muted">{note}</p>}
+				<Heading as="h3" id={testId ? `${testId}-title` : undefined} tone={danger ? "danger" : undefined}>
+					{title}
+				</Heading>
+				{description && (
+					<Text as="p" variant="label" tone="muted" className="mt-2">
+						{description}
+					</Text>
+				)}
+				{note && (
+					<Text as="p" variant="label" tone="muted" className="mt-2">
+						{note}
+					</Text>
+				)}
 			</div>
-			{band ? (
+			{danger ? (
+				<div className="flex min-w-0 flex-col gap-4 rounded-lg border border-monti-danger-muted p-4">{children}</div>
+			) : band ? (
 				<div className="flex min-w-0 flex-col gap-6">{children}</div>
 			) : card ? (
 				<Panel className="flex min-w-0 flex-col gap-6 p-4">{children}</Panel>

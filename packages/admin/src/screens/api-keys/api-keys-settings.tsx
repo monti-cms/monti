@@ -11,13 +11,13 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { FormFieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { EmptyState } from "../shared/empty-state";
 import { Labeled } from "../shared/labeled";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
@@ -95,7 +95,7 @@ export function ApiKeysSettings() {
 				</Button>
 			</PageActions>
 			{list && !list.secretsAvailable && (
-				<Alert variant="destructive" layout="stack" className="mx-8 mb-4 w-auto">
+				<Alert tone="danger" layout="stack" className="mx-8 mb-4 w-auto">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
 					<AlertDescription>{t("secret.description")}</AlertDescription>
 				</Alert>
@@ -169,21 +169,12 @@ function KeyRows({
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
 		return (
-			<Empty className="min-h-64">
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<KeyRound aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle>{t("empty.title")}</EmptyTitle>
-					<EmptyDescription>{t("empty.description")}</EmptyDescription>
-				</EmptyHeader>
-				<EmptyContent>
-					<Button type="button" size="sm" variant="outline" disabled={!list.secretsAvailable} onClick={onAdd}>
-						<Plus aria-hidden />
-						{t("add")}
-					</Button>
-				</EmptyContent>
-			</Empty>
+			<EmptyState
+				icon={KeyRound}
+				title={t("empty.title")}
+				description={t("empty.description")}
+				action={{ label: t("add"), icon: Plus, onClick: onAdd, disabled: !list.secretsAvailable }}
+			/>
 		);
 	}
 	return (

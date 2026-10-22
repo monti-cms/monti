@@ -164,7 +164,7 @@ function PreviewView({ preview }: { preview: RestorePreview }) {
 					<NotRestored items={preview.notRestored} />
 				</>
 			) : (
-				<Alert variant="destructive" layout="stack" data-testid="restore-refusal">
+				<Alert tone="danger" layout="stack" data-testid="restore-refusal">
 					<AlertDescription>
 						{preview.refusal?.text}
 						{preview.refusal?.fix ? ` ${preview.refusal.fix}` : ""}
@@ -265,7 +265,7 @@ export function RestoreBackupFields() {
 					</div>
 
 					{form.tooLarge && form.limit !== undefined && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertDescription>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</AlertDescription>
 						</Alert>
 					)}
@@ -283,7 +283,7 @@ export function RestoreBackupFields() {
 					{preview && <PreviewView preview={preview} />}
 
 					{Boolean(form.runError) && (
-						<Alert variant="destructive" layout="stack" data-testid="restore-error">
+						<Alert tone="danger" layout="stack" data-testid="restore-error">
 							<AlertDescription>{errorText(site, form.runError, t("error.run"))}</AlertDescription>
 						</Alert>
 					)}

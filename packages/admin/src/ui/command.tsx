@@ -57,7 +57,7 @@ function CommandInput({ className, ...props }: React.ComponentProps<typeof Comma
 				<CommandPrimitive.Input
 					data-slot="command-input"
 					className={cn(
-						"w-full text-monti-body outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+						"w-full text-monti-label outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
 						className,
 					)}
 					{...props}
@@ -118,7 +118,7 @@ function CommandItem({ className, children, ...props }: React.ComponentProps<typ
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-body outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
+				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
 				className,
 			)}
 			{...props}

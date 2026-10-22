@@ -312,12 +312,12 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{applyFailed && (
-							<Alert variant="destructive" layout="stack">
+							<Alert tone="danger" layout="stack">
 								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
 							</Alert>
 						)}
 						{state.issues.length > 0 && (
-							<Alert variant="destructive" layout="stack" data-testid="schema-file-invalid">
+							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-2">
 									<span>{t("invalid.description")}</span>
@@ -326,7 +326,7 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert variant="destructive" layout="stack">
+							<Alert tone="danger" layout="stack">
 								<AlertTitle>{t("issues.title")}</AlertTitle>
 								<AlertDescription>
 									<IssueList issues={issues} />

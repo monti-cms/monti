@@ -10,6 +10,7 @@ export interface EmptyStateAction {
 	icon?: LucideIcon;
 	/** `primary` for the one action that starts the screen's job. Default is the quiet outline look. */
 	emphasis?: "primary";
+	disabled?: boolean;
 }
 
 /** A second way forward beside the action: a link to another screen, or a button. */
@@ -75,6 +76,7 @@ export function EmptyState({
 							type="button"
 							size="sm"
 							variant={action.emphasis === "primary" ? "default" : "outline"}
+							disabled={action.disabled}
 							onClick={action.onClick}
 						>
 							{ActionIcon && <ActionIcon aria-hidden />}

@@ -77,7 +77,7 @@ export function ImportEntriesFields() {
 			</div>
 
 			{form.tooLarge && form.limit !== undefined && (
-				<Alert variant="destructive" layout="stack">
+				<Alert tone="danger" layout="stack">
 					<AlertDescription>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</AlertDescription>
 				</Alert>
 			)}
@@ -102,7 +102,7 @@ export function ImportEntriesFields() {
 			)}
 
 			{Boolean(form.runError) && (
-				<Alert variant="destructive" layout="stack">
+				<Alert tone="danger" layout="stack">
 					<AlertDescription>{errorText(site, form.runError, t("error.run"))}</AlertDescription>
 				</Alert>
 			)}

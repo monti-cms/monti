@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-monti-body font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger monti-dark:aria-invalid:border-monti-danger-muted monti-dark:aria-invalid:ring-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-monti-label whitespace-nowrap transition-all outline-none select-none focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger monti-dark:aria-invalid:border-monti-danger-muted monti-dark:aria-invalid:ring-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
