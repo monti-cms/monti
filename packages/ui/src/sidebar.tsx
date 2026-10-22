@@ -15,6 +15,7 @@ import { useIsMobile } from "./use-mobile";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+/** Also the `--container-sidebar` token (`width="sidebar"`), so a loading placeholder takes the same room. */
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";

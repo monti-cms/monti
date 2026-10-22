@@ -145,6 +145,8 @@
 	--container-rail-wide: 260px;
 	--container-content: 1000px;
 	--container-page: 1160px;
+	/* The admin sidebar (the same 16rem as `SIDEBAR_WIDTH` in sidebar.tsx), for a placeholder in its place. */
+	--container-sidebar: 16rem;
 
 	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
 	--radius-*: initial;

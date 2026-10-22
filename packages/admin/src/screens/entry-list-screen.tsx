@@ -164,34 +164,78 @@ function useMounted() {
 	return mounted;
 }
 
-/** Placeholder before the first render. Mimics the shape of the sidebar, header and list rows. */
+/** Placeholder before the first render, in the places and sizes of the sidebar, the list header, its tabs and table, so nothing jumps. */
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
 		<Inline align="stretch" gap="none" height="screen" overflow="clip" aria-busy="true">
 			<Text srOnly>{tc("loading")}</Text>
-			<Stack gap="condensed" width="panel-sm" shrink={false} border="right" padding="normal" hideBelow="md" aria-hidden>
-				<Skeleton shape="control-sm" width="third" />
-				{Array.from({ length: 6 }, (_, index) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-					<Skeleton key={index} shape="control-sm" />
-				))}
+			<Stack
+				gap="condensed"
+				width="sidebar"
+				shrink={false}
+				border="right"
+				background="inset"
+				padding="condensed"
+				hideBelow="md"
+				aria-hidden
+			>
+				<Skeleton shape="control-sm" width="medium" />
+				<Stack gap="tight" paddingTop="normal">
+					{PLACEHOLDER_ROWS.map((row) => (
+						<Skeleton key={row} shape="control-sm" />
+					))}
+				</Stack>
 			</Stack>
 			<Stack gap="none" grow minWidth={0} aria-hidden>
-				<Inline justify="between" shrink={false} border="bottom" paddingX="comfortable" paddingY="normal">
-					<Skeleton width="third" />
-					<Skeleton shape="control-sm" width="panel-sm" />
+				{/* Title and address on the left, search and the add button on the right. */}
+				<Inline
+					justify="between"
+					gap="normal"
+					shrink={false}
+					paddingX="wide"
+					paddingTop="wide"
+					paddingBottom="comfortable"
+				>
+					<Stack gap="tight">
+						<Skeleton shape="title" width="short" />
+						<Skeleton shape="line" width="medium" />
+					</Stack>
+					<Inline gap="condensed">
+						<Skeleton shape="control-sm" width="medium" />
+						<Skeleton shape="control-sm" width="short" />
+					</Inline>
 				</Inline>
-				<Stack gap="normal" paddingX="comfortable" paddingY="comfortable">
-					{Array.from({ length: 8 }, (_, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-						<Skeleton key={index} shape="control-sm" />
+				{/* Status tabs. */}
+				<Inline gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="condensed">
+					<Skeleton shape="line" width="chip" />
+					<Skeleton shape="line" width="chip" />
+					<Skeleton shape="line" width="chip" />
+					<Skeleton shape="line" width="chip" />
+				</Inline>
+				{/* Table header and rows. */}
+				<Stack gap="none">
+					{[-1, ...PLACEHOLDER_ROWS.slice(0, 6)].map((row) => (
+						<Inline
+							key={row}
+							gap="spacious"
+							border="bottom"
+							paddingX="wide"
+							paddingY={row < 0 ? "normal" : "comfortable"}
+						>
+							<Skeleton shape="line" width={row < 0 ? "short" : "third"} />
+							<Skeleton shape="line" width="chip" />
+							<Skeleton shape="line" width="short" />
+							<Skeleton shape="line" width="short" />
+						</Inline>
 					))}
 				</Stack>
 			</Stack>
 		</Inline>
 	);
 }
+
+const PLACEHOLDER_ROWS = Array.from({ length: 8 }, (_, index) => index);
 
 /** List screen. Opens the collection list, with no separate stats dashboard. */
 export function EntryListScreen() {
