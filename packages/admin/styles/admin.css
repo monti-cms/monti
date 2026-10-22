@@ -124,6 +124,10 @@ html:has(.monti-admin) body {
 .monti-admin .monti-content-font {
 	font-family: var(--monti-content-font, var(--monti-font-sans));
 }
+/* Code inside the writing area keeps the site's code font too (`--monti-content-mono-font`), not the admin's mono. */
+.monti-admin .monti-content-font :is(pre, code, kbd, samp) {
+	font-family: var(--monti-content-mono-font, var(--monti-font-mono));
+}
 
 /* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */
 .monti-admin,

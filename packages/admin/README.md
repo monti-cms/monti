@@ -597,6 +597,7 @@ one only to break away. Tokens by role:
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
 | Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: Pretendard, then a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: IBM Plex Mono, then a system monospace stack) |
 | | `--monti-content-font` | The font of the writing area (post title, editor body, translation source). Not set by default: the admin copies the font your `body` computes to when it opens, so the writing area keeps looking like the site. Set it in `:root` to use another |
+| | `--monti-content-mono-font` | The code font of the writing area (code blocks and inline code in the editor body). Not set by default: the admin copies the font a `code` element gets on your site, so code in the editor looks like code on the site. Set it in `:root` to use another |
 | Radius | `--monti-radius` | Base corner radius (default `6px`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
 
 ### Type scale
