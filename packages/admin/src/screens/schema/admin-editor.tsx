@@ -31,7 +31,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 		locale && !dictionaryLanguages.includes(locale) ? [...dictionaryLanguages, locale] : dictionaryLanguages;
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
-		<div className="flex flex-col gap-12" data-testid="admin-settings">
+		<div className="flex flex-col gap-section" data-testid="admin-settings">
 			<Section wide band title={t("admin.languageTitle")}>
 				<div>
 					<Pick
@@ -53,7 +53,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
-				<div className="border-t pt-6">
+				<div className="border-t pt-spacious">
 					<FlagSwitch
 						label={t("admin.translations")}
 						revert={revert("translations")}
@@ -63,8 +63,11 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 				</div>
 			</Section>
 			<Section wide band title={t("admin.addressTitle")}>
-				<div className="flex flex-col gap-2">
-					<code className="w-fit rounded-md bg-monti-neutral px-3 py-2 text-monti-body" data-testid="admin-path">
+				<div className="flex flex-col gap-condensed">
+					<code
+						className="w-fit rounded-md bg-monti-neutral px-normal py-condensed text-monti-body"
+						data-testid="admin-path"
+					>
 						{path}
 					</code>
 					<p className={cn(HELP, "text-monti-muted")}>{t("admin.pathNote")}</p>

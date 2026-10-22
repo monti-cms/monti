@@ -34,7 +34,11 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 		...preview.targets.map((target) => ({ value: target.name, label: target.label })),
 	];
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("collections.title")} data-testid="import-collections">
+		<section
+			className="flex flex-col gap-condensed"
+			aria-label={t("collections.title")}
+			data-testid="import-collections"
+		>
 			<h4 className="font-medium text-monti-body">{t("collections.title")}</h4>
 			<Table>
 				<TableHeader>
@@ -72,7 +76,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 										</SelectContent>
 									</Select>
 									{collection.skipped && (
-										<p className="mt-1 text-monti-caption text-monti-muted">{collection.skipped.text}</p>
+										<p className="mt-tight text-monti-caption text-monti-muted">{collection.skipped.text}</p>
 									)}
 								</TableCell>
 							</TableRow>
@@ -88,7 +92,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	const t = useTranslator(importMessages);
 	if (!entry.skipped) {
 		return (
-			<div className="flex flex-col gap-1">
+			<div className="flex flex-col gap-tight">
 				<Badge variant="success">{t("entries.willImport")}</Badge>
 				{entry.notes.map((note) => (
 					<span key={note.code} className="text-monti-caption text-monti-muted">
@@ -100,7 +104,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	}
 	const conflict = entry.skipped.code === "slug_exists";
 	return (
-		<div className="flex flex-col gap-1">
+		<div className="flex flex-col gap-tight">
 			<Badge variant={conflict ? "warning" : "secondary"}>
 				{conflict ? t("entries.conflict") : t("entries.skipped")}
 			</Badge>
@@ -121,7 +125,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 				: entry.collection
 			: (preview.targets.find((target) => target.name === entry.target)?.label ?? entry.target);
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("entries.title")} data-testid="import-entries">
+		<section className="flex flex-col gap-condensed" aria-label={t("entries.title")} data-testid="import-entries">
 			<h4 className="font-medium text-monti-body">{t("entries.title")}</h4>
 			<div className="max-h-96 overflow-y-auto rounded-md border">
 				<Table containerClassName="overflow-visible">
@@ -137,7 +141,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 						{rows.map((entry) => (
 							<TableRow key={entry.key} data-testid="import-entry" data-status={entry.skipped ? "skipped" : "import"}>
 								<TableCell className="max-w-64 whitespace-normal align-top">
-									<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+									<div className="flex flex-wrap items-center gap-x-condensed gap-y-tight">
 										<span className="break-words font-medium">{entry.title ?? t("entries.noTitle")}</span>
 										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}
 									</div>
@@ -172,9 +176,9 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 	const t = useTranslator(importMessages);
 	const { counts } = preview;
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("fields.title")} data-testid="import-leftovers">
+		<section className="flex flex-col gap-condensed" aria-label={t("fields.title")} data-testid="import-leftovers">
 			<h4 className="font-medium text-monti-body">{t("fields.title")}</h4>
-			<ul className="flex flex-col gap-2 text-monti-body text-monti-muted">
+			<ul className="flex flex-col gap-condensed text-monti-body text-monti-muted">
 				<li>{t("fields.only")}</li>
 				{preview.kind === "export" && <li>{t("fields.shared")}</li>}
 				{preview.fieldsNotImported.map((item) => (
@@ -205,8 +209,11 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 	const publishId = useId();
 	const { counts } = preview;
 	return (
-		<div className="flex flex-col gap-6" data-testid="import-preview">
-			<p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-monti-body" data-testid="import-summary">
+		<div className="flex flex-col gap-spacious" data-testid="import-preview">
+			<p
+				className="flex flex-wrap items-baseline gap-x-normal gap-y-tight text-monti-body"
+				data-testid="import-summary"
+			>
 				<span className="text-monti-title">{t("summary.found", { count: counts.entries })}</span>
 				<span className="text-monti-muted">
 					{[
@@ -225,14 +232,14 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 			<EntryRows preview={preview} />
 			<Leftovers preview={preview} />
 			{counts.publishable > 0 && (
-				<label htmlFor={publishId} className="flex cursor-pointer items-start gap-3 text-monti-body">
+				<label htmlFor={publishId} className="flex cursor-pointer items-start gap-normal text-monti-body">
 					<Checkbox
 						id={publishId}
 						checked={form.publish}
 						onCheckedChange={(checked) => form.setPublish(checked === true)}
-						className="mt-0.5"
+						className="mt-hair"
 					/>
-					<span className="flex flex-col gap-0.5">
+					<span className="flex flex-col gap-hair">
 						<span className="font-medium">{t("publish.label")}</span>
 						<span className="text-monti-caption text-monti-muted">
 							{t("publish.hint", { count: counts.publishable })}

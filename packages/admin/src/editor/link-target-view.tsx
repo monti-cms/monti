@@ -18,16 +18,20 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 	const tc = useTranslator(commonMessages);
 	const state = useLinkTarget(entryId);
 	if (!state || state.status === "loading") {
-		return <span className={cn("px-1 text-monti-caption text-monti-muted", className)}>{t("link.targetLoading")}</span>;
+		return (
+			<span className={cn("px-tight text-monti-caption text-monti-muted", className)}>{t("link.targetLoading")}</span>
+		);
 	}
 	if (state.status === "missing") {
 		return (
-			<span className={cn("px-1 text-monti-caption text-monti-danger", className)}>{t("link.targetMissing")}</span>
+			<span className={cn("px-tight text-monti-caption text-monti-danger", className)}>{t("link.targetMissing")}</span>
 		);
 	}
 	if (state.status === "error") {
 		return (
-			<span className={cn("px-1 text-monti-caption text-monti-muted", className)}>{t("link.targetUnavailable")}</span>
+			<span className={cn("px-tight text-monti-caption text-monti-muted", className)}>
+				{t("link.targetUnavailable")}
+			</span>
 		);
 	}
 	const { target } = state;
@@ -43,7 +47,7 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 			aria-label={label}
 			// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 			onMouseDown={(event) => event.preventDefault()}
-			className={cn("flex min-w-0 max-w-64 flex-col px-1 text-monti-caption", className)}
+			className={cn("flex min-w-0 max-w-64 flex-col px-tight text-monti-caption", className)}
 		>
 			<span className="truncate text-monti-accent underline underline-offset-2">{nameOf(tc, target)}</span>
 			<span className="truncate text-monti-muted">
@@ -66,7 +70,7 @@ export function LinkTargetSummary({ entryId }: { entryId: string }) {
 	else text = t("link.target", { title: nameOf(tc, state.target) });
 	const path = state?.status === "ready" ? state.target.path : null;
 	return (
-		<div className="grid gap-0.5 text-monti-caption">
+		<div className="grid gap-hair text-monti-caption">
 			<p className={cn(state?.status === "missing" && "text-monti-danger")}>{text}</p>
 			{path && <p className="text-monti-muted">{path}</p>}
 			<p className="text-monti-muted">{t("link.replaceHint")}</p>

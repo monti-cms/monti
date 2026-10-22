@@ -248,7 +248,7 @@ export function ImageBlockView() {
 			data-image-block
 			className={cn(
 				// Keep the 2em top/bottom margin of img in the editor body (prose) from showing as an empty strip inside the gray box.
-				"group group/container relative my-6 flex flex-col rounded-lg transition-all [&_img]:m-0",
+				"group group/container relative my-spacious flex flex-col rounded-lg transition-all [&_img]:m-0",
 				alignClasses,
 			)}
 			style={{ width: previewWidth || width || "100%", maxWidth: "100%" }}
@@ -266,7 +266,7 @@ export function ImageBlockView() {
 							<tool.icon aria-hidden />
 						</ToolbarButton>
 					))}
-					<Separator orientation="vertical" className="mx-0.5 monti-vertical:h-4" />
+					<Separator orientation="vertical" className="mx-hair monti-vertical:h-4" />
 					<BlockSettings open={isEditing} onOpenChange={setIsEditing}>
 						<BlockSettingsField label={t("imageNode.width")} htmlFor={widthInputId}>
 							<Input
@@ -303,7 +303,7 @@ export function ImageBlockView() {
 							{altMissing && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
-						<label htmlFor={decorativeId} className="flex items-center justify-between gap-2">
+						<label htmlFor={decorativeId} className="flex items-center justify-between gap-condensed">
 							<span className="text-monti-muted">{t("imageDialog.decorative")}</span>
 							<Switch
 								id={decorativeId}
@@ -370,10 +370,12 @@ export function ImageBlockView() {
 					{t("imageNode.unavailable")}
 				</div>
 			)}
-			{resolveReason ? <p className="mt-1 text-center text-monti-caption text-monti-danger">{resolveReason}</p> : null}
+			{resolveReason ? (
+				<p className="mt-tight text-center text-monti-caption text-monti-danger">{resolveReason}</p>
+			) : null}
 
 			{/* Caption Input / Display */}
-			<figcaption className={cn("mt-2 flex items-center gap-1", captionAlignClass)}>
+			<figcaption className={cn("mt-condensed flex items-center gap-tight", captionAlignClass)}>
 				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
 				<div className="relative w-full">
 					<Input
@@ -391,7 +393,7 @@ export function ImageBlockView() {
 					{generating && (
 						<output
 							className={cn(
-								"pointer-events-none absolute inset-0 flex items-center gap-2 text-monti-caption text-monti-subtle",
+								"pointer-events-none absolute inset-0 flex items-center gap-condensed text-monti-caption text-monti-subtle",
 								caption ? "sr-only" : captionJustifyClass,
 							)}
 						>
@@ -402,7 +404,7 @@ export function ImageBlockView() {
 				</div>
 				{isEditable && captionSlot.trigger}
 			</figcaption>
-			{captionSlot.panel && <div className="mt-1 text-left">{captionSlot.panel}</div>}
+			{captionSlot.panel && <div className="mt-tight text-left">{captionSlot.panel}</div>}
 
 			{/* Corner (bottom left/right) width resize handles */}
 			{isEditable && (

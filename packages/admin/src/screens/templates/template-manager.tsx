@@ -115,7 +115,7 @@ function TemplateEditPanel({
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
 			className="flex h-full flex-1 flex-col overflow-hidden"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-3 border-monti-muted border-b px-6 py-3">
+			<div className="flex flex-wrap items-center justify-between gap-normal border-monti-muted border-b px-spacious py-normal">
 				<Input
 					type="text"
 					aria-label={t("edit.nameLabel")}
@@ -133,7 +133,7 @@ function TemplateEditPanel({
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
 			{saveError && (
-				<FormFieldError className="border-monti-muted border-b bg-monti-danger-muted px-6 py-2">
+				<FormFieldError className="border-monti-muted border-b bg-monti-danger-muted px-spacious py-condensed">
 					{saveError}
 				</FormFieldError>
 			)}
@@ -252,7 +252,9 @@ export function TemplateManager() {
 					{t("add")}
 				</Button>
 			</PageActions>
-			{error && <LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-8 my-3" />}
+			{error && (
+				<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-wide my-normal" />
+			)}
 			<MasterDetail
 				list={
 					<ListPane

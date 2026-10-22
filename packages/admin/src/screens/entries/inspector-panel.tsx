@@ -75,7 +75,7 @@ export function InspectorPanel({
 	);
 	const fields = (include: (group: PanelGroup) => boolean) =>
 		site.isCollection(collection) && (
-			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
+			<fieldset disabled={disabled} className="min-w-0 space-y-comfortable disabled:opacity-70">
 				<SchemaFields
 					showDescriptions={false}
 					include={include}
@@ -95,7 +95,7 @@ export function InspectorPanel({
 			className="h-full w-full gap-0 overflow-hidden border-monti-muted border-l bg-monti-page text-monti-body"
 		>
 			<SidePanelHeader onClose={onClose}>
-				<TabsList variant="line" className="h-full flex-1 justify-start gap-3">
+				<TabsList variant="line" className="h-full flex-1 justify-start gap-normal">
 					{tabs.map((name) => (
 						<TabsTrigger key={name} value={name} className="flex-none px-0 text-monti-label">
 							{tabLabel(site, name, collection)}
@@ -105,7 +105,7 @@ export function InspectorPanel({
 				</TabsList>
 			</SidePanelHeader>
 
-			<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
+			<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-comfortable py-comfortable">
 				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 				{tabs.map((name) => (
 					<TabsContent key={name} value={name}>

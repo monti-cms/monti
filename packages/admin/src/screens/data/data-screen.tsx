@@ -26,7 +26,7 @@ export function DataScreen() {
 	return (
 		<ShellPage title={t("title")} nav="data" large>
 			<div className="min-h-0 flex-1 overflow-y-auto">
-				<PageBody data-testid="data-screen" className="gap-12">
+				<PageBody data-testid="data-screen" className="gap-section">
 					<Section wide band title={te("data.title")} testId="site-backup">
 						<ExportFields form={form} />
 						<ExportProgressLine phase={form.phase} />

@@ -448,7 +448,7 @@ export function MediaLibrary() {
 			}}
 		>
 			<PageActions>
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="flex flex-wrap items-center gap-condensed">
 					<Label className="text-monti-caption text-monti-muted">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
@@ -484,8 +484,8 @@ export function MediaLibrary() {
 					</IconButton>
 				</div>
 			</PageActions>
-			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-4 border-monti-muted border-b px-8">
-				<fieldset className="-mb-px flex items-stretch gap-4">
+			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-comfortable border-monti-muted border-b px-wide">
+				<fieldset className="-mb-px flex items-stretch gap-comfortable">
 					<legend className="sr-only">{t("library.kindLabel")}</legend>
 					{kindOptions(t).map((option) => (
 						<button
@@ -499,7 +499,7 @@ export function MediaLibrary() {
 						</button>
 					))}
 				</fieldset>
-				<div className="ml-auto flex flex-wrap items-center gap-2 py-2">
+				<div className="ml-auto flex flex-wrap items-center gap-condensed py-condensed">
 					<Input
 						type="search"
 						aria-label={t("library.search")}
@@ -556,19 +556,22 @@ export function MediaLibrary() {
 					<div
 						className={cn(
 							"flex min-h-0 flex-1 flex-col overflow-y-auto",
-							(items.length === 0 && !hasFolders) || view === "grid" ? "px-8 py-4" : "p-0",
+							(items.length === 0 && !hasFolders) || view === "grid" ? "px-wide py-comfortable" : "p-0",
 						)}
 					>
 						{loadError && (
 							<LoadErrorAlert
 								message={loadError}
 								onRetry={() => void mediaQuery.refetch()}
-								className={(items.length === 0 && !hasFolders) || view === "grid" ? "mb-4" : "m-4"}
+								className={(items.length === 0 && !hasFolders) || view === "grid" ? "mb-comfortable" : "m-comfortable"}
 							/>
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								<ul aria-hidden className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+								<ul
+									aria-hidden
+									className="grid grid-cols-2 gap-comfortable sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+								>
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>

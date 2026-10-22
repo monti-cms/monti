@@ -142,7 +142,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 			onCompositionStart={() => onComposing?.(true)}
 			onCompositionEnd={() => onComposing?.(false)}
 			placeholder={t("placeholder")}
-			className="min-h-[calc(100vh-240px)] w-full flex-1 px-4"
+			className="min-h-[calc(100vh-240px)] w-full flex-1 px-comfortable"
 		/>
 	);
 }

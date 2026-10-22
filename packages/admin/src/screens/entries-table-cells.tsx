@@ -28,7 +28,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<span className="flex items-center gap-1">
+		<span className="flex items-center gap-tight">
 			{site.LOCALES.map((locale) => {
 				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
@@ -72,7 +72,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<span className="flex items-center gap-1">
+		<span className="flex items-center gap-tight">
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
@@ -152,13 +152,13 @@ function DefaultEntryCell({
 			const titleClass = "max-w-full shrink-0 truncate font-medium text-monti-body";
 			if (isTrash)
 				return (
-					<span className="flex min-w-0 items-baseline gap-2">
+					<span className="flex min-w-0 items-baseline gap-condensed">
 						<span className={titleClass}>{title}</span>
 						{slug}
 					</span>
 				);
 			return isRecord ? (
-				<span className="flex min-w-0 items-baseline gap-2">
+				<span className="flex min-w-0 items-baseline gap-condensed">
 					<Button
 						type="button"
 						variant="link"
@@ -171,7 +171,7 @@ function DefaultEntryCell({
 					{slug}
 				</span>
 			) : (
-				<span className="flex min-w-0 items-baseline gap-2">
+				<span className="flex min-w-0 items-baseline gap-condensed">
 					<Link
 						href={site.adminEntryEditHref(item.id)}
 						className={cn(titleClass, "text-monti-default hover:underline")}
@@ -180,7 +180,7 @@ function DefaultEntryCell({
 					</Link>
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
-						<span className="flex min-w-0 shrink items-center gap-1 text-monti-caption text-monti-muted">
+						<span className="flex min-w-0 shrink items-center gap-tight text-monti-caption text-monti-muted">
 							<FolderIcon aria-hidden className="size-3 shrink-0 self-center" />
 							<span className="truncate">
 								<span className="sr-only">{t("list.folderSr")}</span>
@@ -203,7 +203,7 @@ function DefaultEntryCell({
 					<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
 						{item.locale.toUpperCase()}
 					</abbr>
-					{item.translationGroupId !== item.id && <span className="ml-1">{t("list.translation")}</span>}
+					{item.translationGroupId !== item.id && <span className="ml-tight">{t("list.translation")}</span>}
 				</span>
 			);
 		case "updatedAt":

@@ -58,7 +58,7 @@ export function SiteEditor({
 	const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
-		<div className="flex flex-col gap-12" data-testid="site-settings">
+		<div className="flex flex-col gap-section" data-testid="site-settings">
 			<Section wide band title={t("site.identityTitle")}>
 				<TextInput
 					label={ts("site.name")}
@@ -97,7 +97,7 @@ export function SiteEditor({
 				/>
 			</Section>
 			<Section wide band title={t("site.addressTitle")}>
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-condensed">
 					<Pick
 						label={t("site.localePrefix")}
 						revert={revert("localePrefix")}
@@ -111,7 +111,7 @@ export function SiteEditor({
 						onChange={(value) => set("localePrefix", value)}
 					/>
 				</div>
-				<div className="flex flex-col gap-2 border-t pt-6">
+				<div className="flex flex-col gap-condensed border-t pt-spacious">
 					<Labeled
 						label={t("site.aliases")}
 						control="normal"
@@ -119,7 +119,11 @@ export function SiteEditor({
 					>
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
-								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>
+								<li
+									key={alias}
+									className="flex items-center gap-condensed px-normal py-tight"
+									data-testid={`alias-${alias}`}
+								>
 									<code className="flex-1 text-monti-caption">{alias}</code>
 									<RowActions
 										index={index}
@@ -133,7 +137,7 @@ export function SiteEditor({
 						</ul>
 					</Labeled>
 					{!disabled && (
-						<div className="flex max-w-xl items-end gap-2">
+						<div className="flex max-w-xl items-end gap-condensed">
 							<Input
 								className="flex-1"
 								value={host}
@@ -156,10 +160,12 @@ export function SiteEditor({
 						</div>
 					)}
 				</div>
-				<div className="border-t pt-6" data-testid="site-url">
+				<div className="border-t pt-spacious" data-testid="site-url">
 					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
 						{siteUrl.url ? (
-							<code className="block rounded-md bg-monti-neutral px-3 py-2 text-monti-caption">{siteUrl.url}</code>
+							<code className="block rounded-md bg-monti-neutral px-normal py-condensed text-monti-caption">
+								{siteUrl.url}
+							</code>
 						) : null}
 					</Labeled>
 				</div>

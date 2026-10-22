@@ -85,7 +85,7 @@ export function PopoverFormFooter({
 }) {
 	const tc = useTranslator(commonMessages);
 	return (
-		<div className="flex items-center gap-2">
+		<div className="flex items-center gap-condensed">
 			{onRemove && (
 				<Button
 					type="button"
@@ -98,7 +98,7 @@ export function PopoverFormFooter({
 					{removeLabel}
 				</Button>
 			)}
-			<div className="ml-auto flex items-center gap-2">
+			<div className="ml-auto flex items-center gap-condensed">
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					{tc("cancel")}
 				</Button>
@@ -173,11 +173,11 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	};
 
 	return (
-		<form onSubmit={submit} onKeyDown={submitOnEnter} className="grid gap-3">
+		<form onSubmit={submit} onKeyDown={submitOnEnter} className="grid gap-normal">
 			<p className="font-medium">{draft.existing ? t("link.edit") : t("link.add")}</p>
 			{draft.entryId && <LinkTargetSummary entryId={draft.entryId} />}
 			{needsText && (
-				<label htmlFor={`${id}-text`} className="grid gap-2 text-monti-caption">
+				<label htmlFor={`${id}-text`} className="grid gap-condensed text-monti-caption">
 					{t("link.text")}
 					<Input
 						id={`${id}-text`}
@@ -187,7 +187,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 					/>
 				</label>
 			)}
-			<label htmlFor={`${id}-href`} className="grid gap-2 text-monti-caption">
+			<label htmlFor={`${id}-href`} className="grid gap-condensed text-monti-caption">
 				{t("link.href")}
 				<Input
 					id={`${id}-href`}

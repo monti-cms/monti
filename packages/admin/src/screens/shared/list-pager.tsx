@@ -36,7 +36,7 @@ export function ListPager({
 	if (!hrefFor) {
 		// Without addresses the controls are buttons, not anchors that go nowhere.
 		return (
-			<nav aria-label={t("pagination.label")} className="flex items-center gap-1">
+			<nav aria-label={t("pagination.label")} className="flex items-center gap-tight">
 				<Button
 					type="button"
 					variant="ghost"
@@ -47,7 +47,7 @@ export function ListPager({
 					<ChevronLeftIcon data-icon="inline-start" />
 					<span className="hidden sm:block">{t("pagination.previous")}</span>
 				</Button>
-				<span className="px-2 tabular-nums">
+				<span className="px-condensed tabular-nums">
 					{page} / {totalPages}
 				</span>
 				<Button
@@ -78,7 +78,7 @@ export function ListPager({
 					/>
 				</PaginationItem>
 				<PaginationItem>
-					<span className="px-2 tabular-nums">
+					<span className="px-condensed tabular-nums">
 						{page} / {totalPages}
 					</span>
 				</PaginationItem>
@@ -103,7 +103,7 @@ export function ListFooter({ children, className }: { children: React.ReactNode;
 	return (
 		<div
 			className={cn(
-				"flex h-12 shrink-0 items-center justify-between gap-3 border-t px-8 text-monti-caption text-monti-muted",
+				"flex h-12 shrink-0 items-center justify-between gap-normal border-t px-wide text-monti-caption text-monti-muted",
 				className,
 			)}
 		>
@@ -161,7 +161,7 @@ export function ListPagination({
 					})}
 				</span>
 			)}
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-condensed">
 				{leading}
 				{showPageSize && (
 					<Select

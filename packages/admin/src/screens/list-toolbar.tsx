@@ -109,7 +109,7 @@ export function ListSearch({
 						title={t("toolbar.includeBody")}
 						pressed={state.includeBody}
 						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						className="h-6 min-w-6 gap-1 px-2 text-monti-caption text-monti-muted aria-pressed:bg-monti-selected aria-pressed:text-monti-default"
+						className="h-6 min-w-6 gap-tight px-condensed text-monti-caption text-monti-muted aria-pressed:bg-monti-selected aria-pressed:text-monti-default"
 					>
 						<AlignLeft aria-hidden />
 						{t("toolbar.includeBodyShort")}
@@ -137,7 +137,7 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 		...LIST_STATUSES.map((status) => ({ key: status, label: statusLabels(site)[status] })),
 	];
 	return (
-		<fieldset className="-mb-px flex items-stretch gap-4">
+		<fieldset className="-mb-px flex items-stretch gap-comfortable">
 			<legend className="sr-only">{t("list.statusFilter")}</legend>
 			{segments.map(({ key, label }) => (
 				<button
@@ -178,15 +178,18 @@ export function ListSubToolbar({
 		(chip) => !(hasSegments && chip.key === "status" && activeStatusSegment(state) !== null),
 	);
 	return (
-		<div className="flex min-h-11 shrink-0 items-stretch gap-4 border-b px-8">
+		<div className="flex min-h-11 shrink-0 items-stretch gap-comfortable border-b px-wide">
 			{hasSegments && <StatusSegments state={state} onChange={onChange} />}
 			{chips.length === 0 ? (
 				<div className="flex-1" />
 			) : (
-				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-2 py-2">
+				<ul
+					aria-label={t("toolbar.chips")}
+					className="flex min-w-0 flex-1 flex-wrap items-center gap-condensed py-condensed"
+				>
 					{chips.map((chip) => (
 						<li key={chip.key}>
-							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-selected pr-0.5 pl-2 font-medium text-monti-caption text-monti-default">
+							<span className="inline-flex h-6 items-center gap-tight rounded-sm bg-monti-selected pr-hair pl-condensed font-medium text-monti-caption text-monti-default">
 								<span className="max-w-72 truncate">{chip.label}</span>
 								<IconButton
 									size="icon-xs"

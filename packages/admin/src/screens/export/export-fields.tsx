@@ -28,7 +28,7 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 		["count.media", summary.media],
 	];
 	return (
-		<div className="flex flex-col gap-3" data-testid="export-summary">
+		<div className="flex flex-col gap-normal" data-testid="export-summary">
 			{selection && (
 				<p className="text-monti-title" data-testid="export-headline">
 					{summary.entries === 0
@@ -43,15 +43,18 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 								.join(" + ")}
 				</p>
 			)}
-			<dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
+			<dl className="grid grid-cols-2 gap-x-spacious gap-y-condensed sm:grid-cols-3">
 				{stats.map(([key, count]) => (
-					<div key={key} className="flex items-baseline justify-between gap-3 border-b py-2 text-monti-body">
+					<div
+						key={key}
+						className="flex items-baseline justify-between gap-normal border-b py-condensed text-monti-body"
+					>
 						<dt className="text-monti-muted">{t(key as "count.entries")}</dt>
 						<dd className="font-medium tabular-nums">{count}</dd>
 					</div>
 				))}
 			</dl>
-			<ul className="flex flex-col gap-1 text-monti-caption text-monti-muted">
+			<ul className="flex flex-col gap-tight text-monti-caption text-monti-muted">
 				{selection && summary.addedByTranslations > 0 && <li>{t("note.translations")}</li>}
 				{selection && summary.scope === "admin" && <li>{t("note.selection")}</li>}
 				{summary.notPublished > 0 && <li>{t("note.notPublished", { count: summary.notPublished })}</li>}
@@ -82,12 +85,12 @@ export function ExportFields({
 	const { summary, summaryQuery, formats, formatsQuery } = form;
 	const busy = form.isExporting;
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-spacious">
 			<section
 				aria-label={t("summary.includes")}
 				// While the counts of another scope are being fetched, the old ones stay in view but are marked as out of date.
 				aria-busy={summaryQuery.isPlaceholderData}
-				className={cn("flex flex-col gap-3 transition-opacity", summaryQuery.isPlaceholderData && "opacity-50")}
+				className={cn("flex flex-col gap-normal transition-opacity", summaryQuery.isPlaceholderData && "opacity-50")}
 			>
 				{summary ? (
 					<SummaryView summary={summary} selection={selection} noun={noun} />
@@ -101,12 +104,12 @@ export function ExportFields({
 				)}
 			</section>
 
-			<fieldset className="flex flex-col gap-2" disabled={busy}>
-				<legend className="mb-1 font-medium text-monti-body">{t("scope.label")}</legend>
+			<fieldset className="flex flex-col gap-condensed" disabled={busy}>
+				<legend className="mb-tight font-medium text-monti-body">{t("scope.label")}</legend>
 				{SCOPES.map((scope) => (
 					<label
 						key={scope}
-						className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-monti-body has-disabled:cursor-not-allowed has-checked:border-monti-emphasis has-checked:bg-monti-selected has-disabled:opacity-60"
+						className="flex cursor-pointer items-start gap-normal rounded-md border p-normal text-monti-body has-disabled:cursor-not-allowed has-checked:border-monti-emphasis has-checked:bg-monti-selected has-disabled:opacity-60"
 					>
 						<input
 							type="radio"
@@ -114,9 +117,9 @@ export function ExportFields({
 							value={scope}
 							checked={form.scope === scope}
 							onChange={() => form.setScope(scope)}
-							className="mt-0.5 accent-monti-emphasis"
+							className="mt-hair accent-monti-emphasis"
 						/>
-						<span className="flex flex-col gap-0.5">
+						<span className="flex flex-col gap-hair">
 							<span className="font-medium">{t(`scope.${scope}`)}</span>
 							<span className="text-monti-caption text-monti-muted">{t(`scope.${scope}.hint`)}</span>
 						</span>
@@ -124,11 +127,11 @@ export function ExportFields({
 				))}
 			</fieldset>
 
-			<fieldset className="flex flex-col gap-2" disabled={busy}>
-				<legend className="mb-1 font-medium text-monti-body">{t("formats.label")}</legend>
-				<div className="flex items-start gap-3 text-monti-body">
-					<Checkbox checked disabled aria-label={t("formats.json")} className="mt-0.5" />
-					<span className="flex flex-col gap-0.5">
+			<fieldset className="flex flex-col gap-condensed" disabled={busy}>
+				<legend className="mb-tight font-medium text-monti-body">{t("formats.label")}</legend>
+				<div className="flex items-start gap-normal text-monti-body">
+					<Checkbox checked disabled aria-label={t("formats.json")} className="mt-hair" />
+					<span className="flex flex-col gap-hair">
 						<span className="font-medium">{t("formats.json")}</span>
 						<span className="text-monti-caption text-monti-muted">{t("formats.json.hint")}</span>
 					</span>
@@ -137,16 +140,16 @@ export function ExportFields({
 					<label
 						key={format.name}
 						htmlFor={`${formatId}-${format.name}`}
-						className="flex cursor-pointer items-start gap-3 text-monti-body"
+						className="flex cursor-pointer items-start gap-normal text-monti-body"
 					>
 						<Checkbox
 							id={`${formatId}-${format.name}`}
 							checked={form.format === format.name}
 							onCheckedChange={() => form.toggleFormat(format.name)}
 							aria-label={t("formats.text", { label: format.label, extension: format.extension })}
-							className="mt-0.5"
+							className="mt-hair"
 						/>
-						<span className="flex flex-col gap-0.5">
+						<span className="flex flex-col gap-hair">
 							<span className="font-medium">
 								{t("formats.text", { label: format.label, extension: format.extension })}
 							</span>
@@ -172,8 +175,8 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 	if (!phase) return null;
 	const percent = phase.kind === "downloading" ? phase.percent : null;
 	return (
-		<output className="flex flex-col gap-2" data-testid="export-progress">
-			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
+		<output className="flex flex-col gap-condensed" data-testid="export-progress">
+			<div className="flex items-center gap-condensed text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{phase.kind === "building"
 					? t("progress.building")

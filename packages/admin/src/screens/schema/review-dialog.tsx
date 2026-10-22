@@ -72,32 +72,41 @@ function Decision({
 		decision.suggestions[0]?.op === "setDefault" &&
 		decision.suggestions[0].value === "";
 	return (
-		<fieldset className="flex flex-col gap-2 rounded-lg border p-3" data-testid={`decision-${decision.key}`}>
-			<legend className="px-1 font-medium text-monti-body">{describeChange(decision.change, t)}</legend>
+		<fieldset
+			className="flex flex-col gap-condensed rounded-lg border p-normal"
+			data-testid={`decision-${decision.key}`}
+		>
+			<legend className="px-tight font-medium text-monti-body">{describeChange(decision.change, t)}</legend>
 			<p className="text-monti-caption text-monti-muted">
 				{decision.entries === 0 ? t("review.noEntries") : t("review.entriesCount", { count: decision.entries })}
 			</p>
-			<label className="flex items-start gap-2 text-monti-body">
-				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} className="mt-1" />
+			<label className="flex items-start gap-condensed text-monti-body">
+				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} className="mt-tight" />
 				<span>{describeNoTransform(decision.change, t)}</span>
 			</label>
 			{decision.suggestions.map((suggestion) => {
 				const checked = sameTransform(picked, suggestion);
 				return (
-					<label key={JSON.stringify(suggestion)} className="flex flex-col gap-1 text-monti-body">
-						<span className="flex items-start gap-2">
-							<input type="radio" name={name} checked={checked} onChange={() => onPick(suggestion)} className="mt-1" />
+					<label key={JSON.stringify(suggestion)} className="flex flex-col gap-tight text-monti-body">
+						<span className="flex items-start gap-condensed">
+							<input
+								type="radio"
+								name={name}
+								checked={checked}
+								onChange={() => onPick(suggestion)}
+								className="mt-tight"
+							/>
 							<span>
 								{describeTransform(suggestion, t)}
 								{suggestion.op === "dropField" && (
-									<span className="ml-1 text-monti-caption text-monti-danger">{t("transform.dropWarning")}</span>
+									<span className="ml-tight text-monti-caption text-monti-danger">{t("transform.dropWarning")}</span>
 								)}
 							</span>
 						</span>
 						{checked && freeText && picked?.op === "setDefault" && (
 							<Input
 								aria-label={t("transform.defaultValue")}
-								className="ml-6 w-auto"
+								className="ml-spacious w-auto"
 								value={picked.value}
 								onChange={(event) => onPick({ ...picked, value: event.target.value })}
 							/>
@@ -152,8 +161,11 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	return (
-		<li className="flex flex-col gap-1 rounded-md border px-3 py-2" data-testid={`impact-${impact.key}`}>
-			<div className="flex flex-wrap items-center gap-2">
+		<li
+			className="flex flex-col gap-tight rounded-md border px-normal py-condensed"
+			data-testid={`impact-${impact.key}`}
+		>
+			<div className="flex flex-wrap items-center gap-condensed">
 				<span className="text-monti-body">{describeChange(impact.change, t)}</span>
 				{impact.entries > 0 && (
 					<Badge variant={impact.consequence === "deleted" ? "danger" : "secondary"}>
@@ -308,12 +320,15 @@ export function ReviewDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[85vh] w-[min(44rem,calc(100%-2rem))] max-w-none flex-col gap-4 sm:max-w-none">
+			<DialogContent className="flex max-h-[85vh] w-[min(44rem,calc(100%-2rem))] max-w-none flex-col gap-comfortable sm:max-w-none">
 				<DialogHeader>
 					<DialogTitle>{t("review.title")}</DialogTitle>
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
-				<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1" data-testid="review-body">
+				<div
+					className="flex min-h-0 flex-1 flex-col gap-comfortable overflow-y-auto pr-tight"
+					data-testid="review-body"
+				>
 					{error && (
 						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
@@ -332,7 +347,7 @@ export function ReviewDialog({
 						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
-								<ul className="list-disc pl-4">
+								<ul className="list-disc pl-comfortable">
 									{problems.map((problem) => (
 										<li key={`${problem.id}:${problem.message}`}>{problem.message}</li>
 									))}
@@ -343,7 +358,7 @@ export function ReviewDialog({
 					{preview?.valid && (
 						<>
 							<div
-								className="flex items-center gap-2 rounded-lg border border-monti-muted bg-monti-inset px-3 py-2 text-monti-body"
+								className="flex items-center gap-condensed rounded-lg border border-monti-muted bg-monti-inset px-normal py-condensed text-monti-body"
 								data-testid="review-summary"
 							>
 								{dataChanges === 0 ? (
@@ -357,7 +372,7 @@ export function ReviewDialog({
 								<p className="text-monti-caption text-monti-muted">{t("review.baselineFile")}</p>
 							)}
 							{preview.decisions.length > 0 && (
-								<section className="flex flex-col gap-2" aria-label={t("review.decisions")}>
+								<section className="flex flex-col gap-condensed" aria-label={t("review.decisions")}>
 									<h3 className="font-medium text-monti-body">{t("review.decisions")}</h3>
 									<p className="text-monti-caption text-monti-muted">{t("review.decisionsHint")}</p>
 									{preview.decisions.map((decision) => (
@@ -372,26 +387,26 @@ export function ReviewDialog({
 							)}
 							{settings.length > 0 && (
 								<section
-									className="flex flex-col gap-2"
+									className="flex flex-col gap-condensed"
 									aria-label={t("review.settings")}
 									data-testid="review-settings"
 								>
 									<h3 className="font-medium text-monti-body">{t("review.settings")}</h3>
-									<ul className="flex flex-col gap-2">
+									<ul className="flex flex-col gap-condensed">
 										{settings.map((setting) => (
 											<li
 												key={setting.path}
-												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-monti-muted bg-monti-inset px-3 py-2 font-mono text-monti-caption"
+												className="flex flex-wrap items-center justify-between gap-condensed rounded-md border border-monti-muted bg-monti-inset px-normal py-condensed font-mono text-monti-caption"
 											>
 												<div>
 													<code className="font-semibold text-monti-default">{setting.path}</code>:{" "}
 												</div>
-												<div className="flex items-center gap-2">
+												<div className="flex items-center gap-condensed">
 													<span className="text-monti-muted line-through decoration-monti-muted">
 														{settingText(setting.from, t("review.unset"))}
 													</span>
 													{" -> "}
-													<span className="rounded-sm bg-monti-selected px-2 py-0.5 font-medium text-monti-default">
+													<span className="rounded-sm bg-monti-selected px-condensed py-hair font-medium text-monti-default">
 														{settingText(setting.to, t("review.unset"))}
 													</span>
 												</div>
@@ -401,9 +416,9 @@ export function ReviewDialog({
 								</section>
 							)}
 							{preview.impacts.length > 0 && (
-								<section className="flex flex-col gap-2" aria-label={t("review.changes")}>
+								<section className="flex flex-col gap-condensed" aria-label={t("review.changes")}>
 									<h3 className="font-medium text-monti-body">{t("review.changes")}</h3>
-									<ul className="flex flex-col gap-2">
+									<ul className="flex flex-col gap-condensed">
 										{preview.impacts.map((impact) => (
 											<Impact key={impact.key} impact={impact} />
 										))}

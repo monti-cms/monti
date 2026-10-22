@@ -32,8 +32,8 @@ function AttributeField({
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
-			<div className="flex flex-col gap-1">
-				<label htmlFor={id} className="flex items-center justify-between gap-2">
+			<div className="flex flex-col gap-tight">
+				<label htmlFor={id} className="flex items-center justify-between gap-condensed">
 					<span className="text-monti-muted">{attribute.label}</span>
 					<Switch
 						id={id}
@@ -79,7 +79,7 @@ function AttributeField({
 				value={String(value)}
 				readOnly={!editable}
 				onCommit={(next) => setValue(name, next)}
-				className="h-7 w-full rounded-md border border-monti-default px-2 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
+				className="h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
 			/>
 			{description}
 		</BlockSettingsField>
@@ -97,7 +97,7 @@ export function DefaultBlockView() {
 	const names = Object.keys(definition.attributes);
 	const container = isContainer(definition);
 	return (
-		<BlockFrame data-monti-custom-block={definition.name} className="my-6 rounded-md border">
+		<BlockFrame data-monti-custom-block={definition.name} className="my-spacious rounded-md border">
 			{editable && names.length > 0 && (
 				<ContainerToolbar label={t("added.toolbar", { label: definition.label })}>
 					<BlockSettings>
@@ -116,12 +116,15 @@ export function DefaultBlockView() {
 			)}
 			<div
 				contentEditable={false}
-				className={cn("not-prose px-3 py-2 font-medium text-monti-caption text-monti-muted", container && "border-b")}
+				className={cn(
+					"not-prose px-normal py-condensed font-medium text-monti-caption text-monti-muted",
+					container && "border-b",
+				)}
 			>
 				{definition.label}
 			</div>
 			{container && (
-				<div className="px-3">
+				<div className="px-normal">
 					<Content />
 				</div>
 			)}

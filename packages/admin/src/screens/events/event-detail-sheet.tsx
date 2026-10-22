@@ -10,7 +10,7 @@ import { eventsMessages } from "./messages";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<div className="grid grid-cols-[8rem_1fr] gap-3 py-2 text-monti-label">
+		<div className="grid grid-cols-[8rem_1fr] gap-normal py-condensed text-monti-label">
 			<dt className="text-monti-muted">{label}</dt>
 			<dd className="min-w-0 break-words">{children}</dd>
 		</div>
@@ -20,8 +20,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /** One group of the detail: a small caption, with its rows below, separated from the group before by a hairline. */
 function Band({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="border-monti-muted border-t px-4 py-4 first:border-t-0">
-			<h3 className="mb-2 text-monti-label">{title}</h3>
+		<section className="border-monti-muted border-t px-comfortable py-comfortable first:border-t-0">
+			<h3 className="mb-condensed text-monti-label">{title}</h3>
 			<dl>{children}</dl>
 		</section>
 	);
@@ -85,10 +85,10 @@ export function EventDetailSheet({
 						<Band title={t("detail.section.delivery")}>
 							<Row label={t("detail.subscribers")}>
 								{deliveries.some((delivery) => delivery.subscriber !== null) ? (
-									<ul className="space-y-2">
+									<ul className="space-y-condensed">
 										{deliveries.map((delivery) => (
-											<li key={delivery.subscriber ?? ""} className="space-y-0.5">
-												<div className="flex items-center gap-2">
+											<li key={delivery.subscriber ?? ""} className="space-y-hair">
+												<div className="flex items-center gap-condensed">
 													<Mono>{delivery.subscriber ?? ""}</Mono>
 													<StatusIndicator tone={STATE_TONE[delivery.state]} label={t(`state.${delivery.state}`)} />
 												</div>

@@ -72,7 +72,7 @@ export function SourcePane({
 		>
 			<div
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-monti-page px-4 backdrop-blur"
+				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-condensed border-b bg-monti-page px-comfortable backdrop-blur"
 			>
 				<h2 className="flex-1 font-medium text-monti-body">
 					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
@@ -81,10 +81,10 @@ export function SourcePane({
 					<X aria-hidden className="size-4" />
 				</IconButton>
 			</div>
-			<h1 className={cn("px-6 pt-12 pb-4 text-monti-display", !title && "text-monti-subtle")}>
+			<h1 className={cn("px-spacious pt-section pb-comfortable text-monti-display", !title && "text-monti-subtle")}>
 				{title || tc("untitled")}
 			</h1>
-			<div className="px-6 pt-6 pb-[35vh]">
+			<div className="px-spacious pt-spacious pb-[35vh]">
 				<DocPreview doc={doc} label={t("sourcePane.body")} />
 			</div>
 		</aside>

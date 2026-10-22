@@ -42,9 +42,9 @@ export function Section({
 			data-testid={testId}
 			aria-labelledby={testId ? `${testId}-title` : undefined}
 			className={cn(
-				"grid scroll-mt-6 gap-x-8 gap-y-3 lg:items-start",
+				"grid scroll-mt-6 gap-x-wide gap-y-normal lg:items-start",
 				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
-				band && "border-t pt-8 first:border-t-0 first:pt-0",
+				band && "border-t pt-wide first:border-t-0 first:pt-0",
 				className,
 			)}
 		>
@@ -53,22 +53,24 @@ export function Section({
 					{title}
 				</Heading>
 				{description && (
-					<Text as="p" variant="label" tone="muted" className="mt-2">
+					<Text as="p" variant="label" tone="muted" className="mt-condensed">
 						{description}
 					</Text>
 				)}
 				{note && (
-					<Text as="p" variant="label" tone="muted" className="mt-2">
+					<Text as="p" variant="label" tone="muted" className="mt-condensed">
 						{note}
 					</Text>
 				)}
 			</div>
 			{danger ? (
-				<div className="flex min-w-0 flex-col gap-4 rounded-lg border border-monti-danger-muted p-4">{children}</div>
+				<div className="flex min-w-0 flex-col gap-comfortable rounded-lg border border-monti-danger-muted p-comfortable">
+					{children}
+				</div>
 			) : band ? (
-				<div className="flex min-w-0 flex-col gap-6">{children}</div>
+				<div className="flex min-w-0 flex-col gap-spacious">{children}</div>
 			) : card ? (
-				<Panel className="flex min-w-0 flex-col gap-6 p-4">{children}</Panel>
+				<Panel className="flex min-w-0 flex-col gap-spacious p-comfortable">{children}</Panel>
 			) : (
 				<div className="min-w-0">{children}</div>
 			)}

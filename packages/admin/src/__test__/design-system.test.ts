@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 /**
  * The admin uses the design system only. `@monti-cms/ui`'s `styles/theme.css` clears Tailwind's palette, text sizes, weights, shadows, tracking and line heights,
  * so a class outside the system compiles to nothing; this test names each such class with its file and line instead of letting it vanish.
- * Spacing keeps Tailwind's 4px numbers, limited to the system's steps on screens; the components of `@monti-cms/ui` may use in-between steps of their own.
+ * Spacing on screens takes the theme's names (`gap-condensed`); the components of `@monti-cms/ui` may use in-between numbers of their own.
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const themeCss = readFileSync(path.resolve(__dirname, "../../../ui/styles/theme.css"), "utf8");
@@ -39,8 +39,8 @@ const ROLES: Record<string, Set<string>> = {
 	shadow: roles("shadow"),
 };
 const KEYWORDS = new Set(["transparent", "current", "inherit"]);
-/** Spacing steps in Tailwind numbers (×4px): 0, 2, 4, 8, 12, 16, 24, 32, 48px. */
-const SPACING = new Set(["0", "px", "0.5", "1", "2", "3", "4", "6", "8", "12"]);
+/** Named spacing (`--spacing-*` in the theme): gaps, padding and margins use these, plus `0` and `px`. */
+const SPACING = new Set([...themeCss.matchAll(/--spacing-([a-z]+):/g)].map((m) => m[1]));
 /** Files that draw something other than the admin and keep its colors on purpose. */
 const OWN_COLORS = new Set([
 	// Imitates a search result page, so it uses that page's link colors.
@@ -121,9 +121,9 @@ function problem(utility: string, inUi: boolean, ownColors: boolean): string | n
 	if (/^tracking-(?!caps$)/.test(utility)) return "letter spacing: only tracking-caps";
 	if (/^rounded(-[a-z]+)?-(xs|2xl|3xl|4xl|dialog)$/.test(utility) || utility === "rounded")
 		return "radius outside sm, md, lg, xl, full";
-	const space = utility.match(/^-?(?:p[xytblrse]?|m[xytblrse]?|gap(?:-[xy])?|space-[xy])-(\d+(?:\.\d+)?|px)$/);
-	if (space && !inUi && !SPACING.has(space[1]))
-		return `spacing step ${space[1]} is off the scale (0, 0.5, 1, 2, 3, 4, 6, 8, 12)`;
+	const space = utility.match(/^-?(?:p[xytblrse]?|m[xytblrse]?|gap(?:-[xy])?|space-[xy])-([a-z0-9.]+)$/);
+	if (space && !inUi && !["0", "px", "auto"].includes(space[1]) && !SPACING.has(space[1]))
+		return `spacing "${space[1]}": use a name (${[...SPACING].join(", ")})`;
 	return null;
 }
 
@@ -135,6 +135,7 @@ describe("design system", () => {
 		expect(ROLES.text.has("caption")).toBe(true);
 		expect(ROLES.border.has("default")).toBe(true);
 		expect(ROLES.shadow.has("floating")).toBe(true);
+		expect(SPACING.has("condensed")).toBe(true);
 	});
 
 	it("tells an off-system class from a system one", () => {
@@ -146,7 +147,10 @@ describe("design system", () => {
 		expect(problem("bg-monti-hover/50", false, false)).toMatch(/opacity/);
 		expect(problem("bg-red-500", false, false)).toMatch(/palette/);
 		expect(problem("text-[#fff]", false, false)).toMatch(/arbitrary color/);
-		expect(problem("gap-1.5", false, false)).toMatch(/off the scale/);
+		expect(problem("gap-condensed", false, false)).toBeNull();
+		expect(problem("gap-2", false, false)).toMatch(/use a name/);
+		expect(problem("-mt-tight", false, false)).toBeNull();
+		expect(problem("mx-auto", false, false)).toBeNull();
 		expect(problem("gap-1.5", true, false)).toBeNull();
 		expect(problem("leading-relaxed", false, false)).toMatch(/line height/);
 	});

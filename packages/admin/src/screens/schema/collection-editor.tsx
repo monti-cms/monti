@@ -91,14 +91,14 @@ function LimitList<T extends string | number>({
 	const allAllowed = allowedCount === all.length;
 	const someAllowed = allowedCount > 0 && !allAllowed;
 	return (
-		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
+		<fieldset className="flex flex-col gap-normal border-t pt-spacious first:border-t-0 first:pt-0">
 			<legend className="sr-only">{label}</legend>
 			<div className="flex items-center justify-between">
-				<span className="flex items-center gap-2 font-medium text-monti-body">
+				<span className="flex items-center gap-condensed font-medium text-monti-body">
 					{label}
 					{revert && <RevertMark name={label} onRevert={revert} />}
 				</span>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-condensed">
 					<Checkbox
 						id={allId}
 						checked={allAllowed}
@@ -111,12 +111,12 @@ function LimitList<T extends string | number>({
 					</Label>
 				</div>
 			</div>
-			<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+			<ul className="grid grid-cols-2 gap-x-normal gap-y-condensed sm:grid-cols-3">
 				{all.map((item) => {
 					const id = `allowed-${label}-${item}`;
 					const checked = value === undefined || value.includes(item);
 					return (
-						<li key={String(item)} className="flex items-center gap-2">
+						<li key={String(item)} className="flex items-center gap-condensed">
 							<Checkbox
 								id={id}
 								checked={checked}
@@ -261,16 +261,20 @@ export function CollectionEditor({
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
+		<div className="flex min-w-0 flex-col gap-spacious" data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)} className="gap-6">
-				<div className="flex flex-col items-start gap-3">
+			<Tabs
+				value={tab}
+				onValueChange={(value) => typeof value === "string" && onSection(value)}
+				className="gap-spacious"
+			>
+				<div className="flex flex-col items-start gap-normal">
 					<div className="min-w-0">
-						<div className="flex items-baseline gap-2">
+						<div className="flex items-baseline gap-condensed">
 							<h3 className="text-monti-title">{label}</h3>
 							<code className="text-monti-caption text-monti-muted">{name}</code>
 						</div>
-						<p className="mt-1 text-monti-body text-monti-muted">
+						<p className="mt-tight text-monti-body text-monti-muted">
 							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
 						</p>
 					</div>
@@ -291,7 +295,7 @@ export function CollectionEditor({
 						)}
 					</TabsList>
 				</div>
-				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
+				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-section">
 					<Section band title={t("collection.basicsTitle")}>
 						<TextInput
 							label={t("collection.label")}
@@ -371,11 +375,11 @@ export function CollectionEditor({
 						</div>
 					</Section>
 				</TabsContent>
-				<TabsContent value="fields" className="flex flex-col gap-12">
+				<TabsContent value="fields" className="flex flex-col gap-section">
 					<FieldsCard editing={editing} />
 				</TabsContent>
 				{isEditorAvailable && (
-					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-12">
+					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-section">
 						<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
 					</TabsContent>
 				)}

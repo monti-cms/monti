@@ -79,7 +79,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	const mediaId = typeof value === "string" ? value : "";
 	return (
 		<>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-condensed">
 				{mediaId && <MediaThumbnail mediaId={mediaId} className="aspect-[1.91/1] h-7 shrink-0 rounded-md border" />}
 				<Button
 					id={id}
@@ -161,9 +161,9 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 	};
 	return (
 		<>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-condensed">
 				{mediaId && (
-					<span className="flex min-w-0 flex-1 items-center gap-1 text-monti-caption">
+					<span className="flex min-w-0 flex-1 items-center gap-tight text-monti-caption">
 						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
 						<span className="truncate">{filename ?? mediaId}</span>
 					</span>

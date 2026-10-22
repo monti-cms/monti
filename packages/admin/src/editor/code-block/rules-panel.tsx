@@ -85,10 +85,10 @@ function RuleRow({
 	const options = effectOptions(site, rule.name);
 	return (
 		<li
-			className="flex flex-col gap-2 rounded-md border p-2"
+			className="flex flex-col gap-condensed rounded-md border p-condensed"
 			aria-label={t("rulesPanel.rule", { pattern: rule.pattern })}
 		>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-condensed">
 				<Select
 					value={rule.name}
 					items={options}
@@ -139,21 +139,21 @@ function RuleRow({
 							const line = Math.min(lineCount, Math.max(1, Number(event.target.value) || 1)) - 1;
 							onChange({ ...rule, line });
 						}}
-						className="h-7 w-14 px-2 text-monti-caption"
+						className="h-7 w-14 px-condensed text-monti-caption"
 					/>
 				)}
 				<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove} className="ml-auto">
 					<Trash2 aria-hidden />
 				</IconButton>
 			</div>
-			<div className="flex items-center gap-1 font-mono text-monti-caption">
+			<div className="flex items-center gap-tight font-mono text-monti-caption">
 				<span className="text-monti-muted">/</span>
 				<Input
 					aria-label={t("rulesPanel.pattern")}
 					value={rule.pattern}
 					placeholder={t("rulesPanel.patternPlaceholder")}
 					onChange={(event) => onChange({ ...rule, pattern: event.target.value })}
-					className="h-7 flex-1 px-2 font-mono text-monti-caption"
+					className="h-7 flex-1 px-condensed font-mono text-monti-caption"
 					aria-invalid={!!problem && rule.pattern.length > 0}
 				/>
 				<span className="text-monti-muted">/</span>
@@ -161,7 +161,7 @@ function RuleRow({
 					aria-label={t("rulesPanel.flags")}
 					value={rule.flags}
 					onChange={(event) => onChange({ ...rule, flags: event.target.value.replace(/[^a-z]/gi, "") })}
-					className="h-7 w-10 px-2 font-mono text-monti-caption"
+					className="h-7 w-10 px-condensed font-mono text-monti-caption"
 				/>
 			</div>
 			{rule.name === "Tooltip" && (
@@ -171,11 +171,11 @@ function RuleRow({
 					placeholder={t("rulesPanel.tooltipContent")}
 					rows={1}
 					onChange={(event) => onChange({ ...rule, attrs: { ...rule.attrs, content: event.target.value } })}
-					className="min-h-7 px-2 py-1 text-monti-caption md:text-monti-caption"
+					className="min-h-7 px-condensed py-tight text-monti-caption md:text-monti-caption"
 				/>
 			)}
 			{rule.name === "fold" && (
-				<label htmlFor={`${rule.id}-open`} className="flex items-center gap-2 text-monti-caption">
+				<label htmlFor={`${rule.id}-open`} className="flex items-center gap-condensed text-monti-caption">
 					<Switch
 						id={`${rule.id}-open`}
 						size="sm"
@@ -230,20 +230,23 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 			<IconButton
 				label={t("rulesPanel.title")}
 				size="sm"
-				className={cn("h-7 min-w-7 gap-1 px-2 text-monti-caption", rules.length > 0 && "text-monti-default")}
+				className={cn(
+					"h-7 min-w-7 gap-tight px-condensed text-monti-caption",
+					rules.length > 0 && "text-monti-default",
+				)}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			>
 				<Regex aria-hidden className="size-3.5" />
 				{rules.length > 0 && <span className="tabular-nums">{rules.length}</span>}
 			</IconButton>
-			<PopoverContent align="end" className="w-96 gap-2 p-3 text-monti-caption" data-code-ui="">
-				<div className="flex items-center justify-between gap-2">
+			<PopoverContent align="end" className="w-96 gap-condensed p-normal text-monti-caption" data-code-ui="">
+				<div className="flex items-center justify-between gap-condensed">
 					<p className="font-semibold">{t("rulesPanel.title")}</p>
 					{canAdd && site.offersCharEffect("fold") && foldSlot.trigger}
 				</div>
 				{canAdd && site.offersCharEffect("fold") && foldSlot.panel}
 				{rules.length > 0 && (
-					<ul className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+					<ul className="flex max-h-80 flex-col gap-condensed overflow-y-auto">
 						{rules.map((rule) => (
 							<RuleRow
 								key={rule.id}

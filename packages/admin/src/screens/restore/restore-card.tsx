@@ -37,9 +37,9 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 		t(`summary.${status}`, { count: counts.byStatus[status] ?? 0 }),
 	);
 	return (
-		<div className="flex flex-col gap-2 text-monti-body" data-testid="restore-counts">
+		<div className="flex flex-col gap-condensed text-monti-body" data-testid="restore-counts">
 			<p className="text-monti-title">{t("summary.entries", { count: counts.entries })}</p>
-			<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-muted">
+			<ul className="flex list-disc flex-col gap-tight pl-comfortable text-monti-muted">
 				{statuses.length > 0 && <li>{statuses.join(" · ")}</li>}
 				{counts.translations > 0 && <li>{t("summary.translations", { count: counts.translations })}</li>}
 				<li>{t("summary.folders", { count: counts.folders })}</li>
@@ -48,9 +48,9 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 				<li>{t("summary.templates", { added: counts.templatesAdded, skipped: counts.templatesSkipped.length })}</li>
 			</ul>
 			{counts.templatesSkipped.length > 0 && (
-				<div className="mt-1 flex flex-col gap-1" data-testid="restore-templates">
+				<div className="mt-tight flex flex-col gap-tight" data-testid="restore-templates">
 					<p className="font-medium">{t("templates.title")}</p>
-					<ul className="flex flex-col gap-0.5 text-monti-caption text-monti-muted">
+					<ul className="flex flex-col gap-hair text-monti-caption text-monti-muted">
 						{counts.templatesSkipped.slice(0, LIST_LIMIT).map((template) => (
 							<li key={template.id}>
 								<span className="font-medium">{template.name}</span>: {template.text}
@@ -68,15 +68,15 @@ function Problems({ preview }: { preview: RestorePreview }) {
 	const t = useTranslator(restoreMessages);
 	const shown = preview.problems.slice(0, LIST_LIMIT);
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("problems.title")} data-testid="restore-problems">
+		<section className="flex flex-col gap-condensed" aria-label={t("problems.title")} data-testid="restore-problems">
 			<h4 className="font-medium text-monti-body text-monti-danger">{t("problems.title")}</h4>
 			<p className="text-monti-caption text-monti-muted">{t("problems.hint")}</p>
-			<ul className="flex max-h-96 flex-col gap-2 overflow-y-auto rounded-md border px-3 py-2">
+			<ul className="flex max-h-96 flex-col gap-condensed overflow-y-auto rounded-md border px-normal py-condensed">
 				{shown.map((problem, index) => (
 					<li
 						// biome-ignore lint/suspicious/noArrayIndexKey: a problem has no id of its own; the list does not change while it is shown.
 						key={index}
-						className="flex flex-col gap-0.5 border-b pb-2 text-monti-body last:border-b-0 last:pb-0"
+						className="flex flex-col gap-hair border-b pb-condensed text-monti-body last:border-b-0 last:pb-0"
 						data-testid="restore-problem"
 						data-code={problem.code}
 					>
@@ -103,9 +103,9 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 	const t = useTranslator(restoreMessages);
 	if (warnings.length === 0) return null;
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("warnings.title")} data-testid="restore-warnings">
+		<section className="flex flex-col gap-condensed" aria-label={t("warnings.title")} data-testid="restore-warnings">
 			<h4 className="font-medium text-monti-body">{t("warnings.title")}</h4>
-			<ul className="flex flex-col gap-1 text-monti-caption text-monti-muted">
+			<ul className="flex flex-col gap-tight text-monti-caption text-monti-muted">
 				{warnings.slice(0, LIST_LIMIT).map((warning) => (
 					<li key={`${warning.code}:${warning.id ?? ""}`}>
 						{warning.label && <span className="font-medium">{warning.label} </span>}
@@ -125,10 +125,14 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 	const t = useTranslator(restoreMessages);
 	return (
-		<section className="flex flex-col gap-2" aria-label={t("notRestored.title")} data-testid="restore-not-restored">
+		<section
+			className="flex flex-col gap-condensed"
+			aria-label={t("notRestored.title")}
+			data-testid="restore-not-restored"
+		>
 			<h4 className="font-medium text-monti-body">{t("notRestored.title")}</h4>
 			<p className="text-monti-caption text-monti-muted">{t("notRestored.hint")}</p>
-			<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
+			<ul className="flex list-disc flex-col gap-tight pl-comfortable text-monti-caption text-monti-muted">
 				{items.map((item) => (
 					<li key={item.code}>{item.text}</li>
 				))}
@@ -141,8 +145,8 @@ function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(restoreMessages);
 	return (
-		<output className="flex flex-col gap-2" data-testid="restore-progress">
-			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
+		<output className="flex flex-col gap-condensed" data-testid="restore-progress">
+			<div className="flex items-center gap-condensed text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{t("progress.running", { count })}
 			</div>
@@ -156,7 +160,7 @@ function RunProgress({ count }: { count: number }) {
 
 function PreviewView({ preview }: { preview: RestorePreview }) {
 	return (
-		<div className="flex flex-col gap-6" data-testid="restore-preview">
+		<div className="flex flex-col gap-spacious" data-testid="restore-preview">
 			{preview.isBackup ? (
 				<>
 					<CountLines counts={preview.counts} />
@@ -182,8 +186,8 @@ function ResultView({ form }: { form: RestoreForm }) {
 	const result = form.result;
 	if (!result) return null;
 	return (
-		<div className="flex flex-col gap-6" data-testid="restore-result">
-			<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-spacious" data-testid="restore-result">
+			<div className="flex flex-col gap-condensed">
 				<h4 className="text-monti-title">{t("result.title")}</h4>
 				<p className="text-monti-body text-monti-muted">{t("result.summary", { count: result.counts.entries })}</p>
 			</div>
@@ -220,7 +224,7 @@ export function RestoreBackupFields() {
 
 	if (disabled) {
 		return (
-			<div className="flex flex-col gap-2" data-testid="restore-disabled">
+			<div className="flex flex-col gap-condensed" data-testid="restore-disabled">
 				<p className="font-medium text-monti-body">{t("notEmpty.title")}</p>
 				<p className="text-monti-caption text-monti-muted">{t("notEmpty.description")}</p>
 				<div>
@@ -233,17 +237,17 @@ export function RestoreBackupFields() {
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-spacious">
 			{!result && (
 				<>
-					<div className="flex flex-col gap-2">
+					<div className="flex flex-col gap-condensed">
 						<p className="font-medium text-monti-body">{t("kinds.label")}</p>
-						<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
+						<ul className="flex list-disc flex-col gap-tight pl-comfortable text-monti-caption text-monti-muted">
 							<li>{t("kinds.backup")}</li>
 						</ul>
 					</div>
 
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-wrap items-center gap-normal">
 						<input
 							ref={input}
 							type="file"
@@ -292,7 +296,7 @@ export function RestoreBackupFields() {
 					{running && preview && <RunProgress count={preview.counts.entries} />}
 
 					{preview && (
-						<div className="flex flex-wrap items-center gap-2">
+						<div className="flex flex-wrap items-center gap-condensed">
 							<Button
 								type="button"
 								disabled={running || !preview.ready}

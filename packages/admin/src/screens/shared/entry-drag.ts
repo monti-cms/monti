@@ -13,7 +13,7 @@ export function writeDraggedEntries(event: React.DragEvent, entries: DraggedEntr
 	const image = document.createElement("div");
 	image.textContent = label;
 	image.className =
-		"pointer-events-none fixed -top-96 left-0 max-w-64 truncate rounded-md border bg-monti-overlay px-3 py-1 text-monti-default text-monti-caption shadow-monti-floating";
+		"pointer-events-none fixed -top-96 left-0 max-w-64 truncate rounded-md border bg-monti-overlay px-normal py-tight text-monti-default text-monti-caption shadow-monti-floating";
 	document.body.append(image);
 	event.dataTransfer.setDragImage?.(image, 12, 12);
 	// The browser snapshots the image when the drag starts, so it can be removed right away.

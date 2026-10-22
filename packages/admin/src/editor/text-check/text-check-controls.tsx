@@ -60,7 +60,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 	const { issues } = controller;
 	const count = issues.length;
 	return (
-		<div className="flex items-center gap-0.5">
+		<div className="flex items-center gap-hair">
 			{controller.checkers.map((checker) => (
 				<CheckerButton key={checker.id} checker={checker} controller={controller} />
 			))}
@@ -70,11 +70,11 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						label={t("results")}
 						side="bottom"
 						size="sm"
-						className="h-8 min-w-8 px-2"
+						className="h-8 min-w-8 px-condensed"
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<span className="tabular rounded-sm bg-monti-neutral px-2 font-medium text-monti-caption">
+						<span className="tabular rounded-sm bg-monti-neutral px-condensed font-medium text-monti-caption">
 							{count > 99 ? "99+" : count}
 						</span>
 					</IconButton>
@@ -138,7 +138,7 @@ export function TextIssuePopover({ controller }: { controller: TextCheckControll
 				initialFocus={open?.focus ?? false}
 				finalFocus={() => (returnFocusRef.current ? (editor.view.dom as HTMLElement) : false)}
 				aria-label={t("results")}
-				className="w-72 gap-3 p-3"
+				className="w-72 gap-normal p-normal"
 			>
 				{issue && <IssueCard controller={controller} issue={issue} />}
 			</PopoverContent>
@@ -153,12 +153,12 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 	const editable = controller.editor.isEditable;
 	return (
 		<>
-			<div className="flex items-start gap-2">
+			<div className="flex items-start gap-condensed">
 				<SeverityIcon severity={issue.severity} />
 				<p className="min-w-0 flex-1 text-monti-body">{issue.message || issue.text}</p>
 			</div>
 			{issue.suggestions.length > 0 && (
-				<div className="flex flex-wrap gap-1">
+				<div className="flex flex-wrap gap-tight">
 					{issue.suggestions.slice(0, 6).map((suggestion) => (
 						<Button
 							key={suggestion}
@@ -174,7 +174,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					))}
 				</div>
 			)}
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-condensed">
 				<span className="min-w-0 flex-1 truncate text-monti-caption text-monti-muted">
 					{checker?.label ?? issue.source}
 				</span>

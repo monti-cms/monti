@@ -17,8 +17,8 @@ const formatBytes = (bytes: number): string =>
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(importMessages);
 	return (
-		<output className="flex flex-col gap-2" data-testid="import-progress">
-			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
+		<output className="flex flex-col gap-condensed" data-testid="import-progress">
+			<div className="flex items-center gap-condensed text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{t("progress.running", { count })}
 			</div>
@@ -43,16 +43,16 @@ export function ImportEntriesFields() {
 	const running = form.isRunning;
 
 	return (
-		<div className="flex flex-col gap-6">
-			<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-spacious">
+			<div className="flex flex-col gap-condensed">
 				<p className="font-medium text-monti-body">{t("kinds.label")}</p>
-				<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
+				<ul className="flex list-disc flex-col gap-tight pl-comfortable text-monti-caption text-monti-muted">
 					<li>{t("kinds.export")}</li>
 					<li>{t("kinds.markdown")}</li>
 				</ul>
 			</div>
 
-			<div className="flex flex-wrap items-center gap-3">
+			<div className="flex flex-wrap items-center gap-normal">
 				<input
 					ref={input}
 					type="file"
@@ -108,7 +108,7 @@ export function ImportEntriesFields() {
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 
 			{preview && !result && (
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="flex flex-wrap items-center gap-condensed">
 					<Button
 						type="button"
 						disabled={running || previewQuery.isPlaceholderData || preview.counts.imported === 0}

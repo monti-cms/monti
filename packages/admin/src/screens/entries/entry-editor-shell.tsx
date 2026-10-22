@@ -391,7 +391,7 @@ export function EntryEditorShell({
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
 				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
-				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-6 py-1 text-monti-display shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-display"
+				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-spacious py-tight text-monti-display shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-display"
 			/>
 			{titleIssue && (
 				<p id="cms-title-error" className="text-monti-body text-monti-danger">
@@ -432,7 +432,7 @@ export function EntryEditorShell({
 				onComposing={editor.setComposing}
 			/>
 			{bodyIssue && (
-				<p id={SOURCE_ERROR_ID} className="mt-2 text-monti-body text-monti-danger">
+				<p id={SOURCE_ERROR_ID} className="mt-condensed text-monti-body text-monti-danger">
 					{issueLine(bodyIssue)}
 				</p>
 			)}
@@ -481,7 +481,7 @@ export function EntryEditorShell({
 								</>
 							}
 							toolbarAside={
-								<span className="flex items-center gap-1">
+								<span className="flex items-center gap-tight">
 									{site.ADMIN_TEMPLATES && (
 										<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
 									)}

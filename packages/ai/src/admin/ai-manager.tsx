@@ -116,7 +116,9 @@ const advancedEdited = (
 
 /** The small muted chip that marks an action whose advanced values were edited. */
 function ModifiedChip({ label }: { label: string }) {
-	return <span className="rounded-sm bg-monti-neutral px-2 py-0.5 text-monti-micro text-monti-muted">{label}</span>;
+	return (
+		<span className="rounded-sm bg-monti-neutral px-condensed py-hair text-monti-micro text-monti-muted">{label}</span>
+	);
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -500,7 +502,7 @@ export function AiManager() {
 				onValueChange={(value) => void changeTab(value as AiTab)}
 				className="flex min-h-0 flex-1 flex-col gap-0"
 			>
-				<PageTabs className="px-8">
+				<PageTabs className="px-wide">
 					<TabsTrigger value="features" className="flex-none px-0 text-monti-caption">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
@@ -532,7 +534,7 @@ export function AiManager() {
 					)}
 					{featuresQuery.error && !featuresQuery.data && (
 						<LoadErrorAlert
-							className="m-3"
+							className="m-normal"
 							message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
 							onRetry={() => void featuresQuery.refetch()}
 						/>
@@ -562,7 +564,7 @@ export function AiManager() {
 											<button
 												type="button"
 												onClick={() => toggleGroup(group)}
-												className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-monti-hover"
+												className="flex w-full items-center gap-condensed px-normal py-condensed text-left transition-colors hover:bg-monti-hover"
 											>
 												<ChevronDown
 													className={cn(
@@ -642,7 +644,7 @@ export function AiManager() {
 									/>
 								)}
 								{features.some((feature) => feature.hidden) && (
-									<li key="hidden-toggle" className="flex items-center justify-between border-t p-2">
+									<li key="hidden-toggle" className="flex items-center justify-between border-t p-condensed">
 										<Button
 											type="button"
 											size="xs"
@@ -765,14 +767,14 @@ function OneOfInput({
 	return (
 		<div
 			className={cn(
-				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-2 rounded-md border border-monti-default bg-monti-page p-1 text-monti-caption transition-colors focus-within:ring-1 focus-within:ring-monti-focus",
+				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-condensed rounded-md border border-monti-default bg-monti-page p-tight text-monti-caption transition-colors focus-within:ring-1 focus-within:ring-monti-focus",
 				disabled && "cursor-not-allowed opacity-50",
 			)}
 		>
 			{items.map((item, index) => (
 				<span
 					key={item}
-					className="inline-flex items-center gap-1 rounded-sm bg-monti-neutral px-2 py-0.5 font-mono text-monti-caption text-monti-default"
+					className="inline-flex items-center gap-tight rounded-sm bg-monti-neutral px-condensed py-hair font-mono text-monti-caption text-monti-default"
 				>
 					<span className="max-w-40 truncate">{item}</span>
 					{!disabled && (
@@ -797,7 +799,7 @@ function OneOfInput({
 					onBlur={() => {
 						if (input.trim()) addItem(input);
 					}}
-					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-1 font-mono text-monti-caption shadow-none outline-none placeholder:text-monti-subtle focus:ring-0"
+					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-tight font-mono text-monti-caption shadow-none outline-none placeholder:text-monti-subtle focus:ring-0"
 				/>
 			)}
 		</div>
@@ -820,18 +822,18 @@ function CheckRow({
 	const id = useId();
 	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
-		<li className={cn("flex min-h-8 gap-2", multiline ? "items-start pt-1" : "items-center")}>
+		<li className={cn("flex min-h-8 gap-condensed", multiline ? "items-start pt-tight" : "items-center")}>
 			<Switch
 				id={id}
 				size="sm"
 				checked={check.enabled}
 				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
-				className={cn(multiline && "mt-1")}
+				className={cn(multiline && "mt-tight")}
 			/>
-			<Label htmlFor={id} className={cn("w-28 shrink-0 text-monti-caption", multiline && "pt-2")}>
+			<Label htmlFor={id} className={cn("w-28 shrink-0 text-monti-caption", multiline && "pt-condensed")}>
 				{label}
 			</Label>
-			<div className="flex min-w-0 max-w-md flex-1 items-center gap-2">
+			<div className="flex min-w-0 max-w-md flex-1 items-center gap-condensed">
 				{check.kind === "pattern" && (
 					<Input
 						aria-label={t("check.pattern")}
@@ -842,7 +844,7 @@ function CheckRow({
 					/>
 				)}
 				{check.kind === "maxLength" && (
-					<span className="flex items-center gap-2">
+					<span className="flex items-center gap-condensed">
 						<Input
 							type="number"
 							aria-label={t("check.maxChars")}
@@ -872,7 +874,7 @@ function CheckRow({
 					size="icon-xs"
 					tone="danger"
 					onClick={onRemove}
-					className={cn(multiline && "mt-1")}
+					className={cn(multiline && "mt-tight")}
 				>
 					<Trash2 aria-hidden />
 				</IconButton>
@@ -995,7 +997,7 @@ function FeatureEditor({
 
 	return (
 		<div className={DETAIL_PANE_FRAME}>
-			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+			<div className="flex flex-wrap items-center gap-x-comfortable gap-y-condensed">
 				<div className="min-w-0 flex-1">
 					<h2 className="truncate text-monti-title">
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
@@ -1003,7 +1005,7 @@ function FeatureEditor({
 					<p className="text-monti-caption text-monti-muted">
 						{deciding ? t("about.decide") : t(`about.${feature.result}`)}
 					</p>
-					<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{placeLabel(feature)}</p>
+					<p className="mt-hair truncate text-monti-caption text-monti-muted">{placeLabel(feature)}</p>
 				</div>
 				<Label className="text-monti-caption">
 					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
@@ -1012,14 +1014,14 @@ function FeatureEditor({
 			</div>
 
 			{custom && (
-				<section aria-label={t("section.basics")} className="border-y py-4">
+				<section aria-label={t("section.basics")} className="border-y py-comfortable">
 					<CustomBaseFields base={custom.base} onChange={custom.onBaseChange} />
 				</section>
 			)}
 
 			<FormField>
 				<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
-				<div className="flex min-w-0 items-center gap-2">
+				<div className="flex min-w-0 items-center gap-condensed">
 					<OptionSelect
 						id={ids.provider}
 						value={spec.providerId ?? ""}
@@ -1039,11 +1041,11 @@ function FeatureEditor({
 			</FormField>
 
 			<section
-				className="flex flex-col gap-2 rounded-md bg-monti-inset p-3 text-monti-caption"
+				className="flex flex-col gap-condensed rounded-md bg-monti-inset p-normal text-monti-caption"
 				aria-label={t("test.title")}
 				data-testid="ai-try"
 			>
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-normal">
 					<p className="min-w-0 flex-1 text-monti-muted">{t("test.hint")}</p>
 					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
 						<Sparkles aria-hidden />
@@ -1079,7 +1081,7 @@ function FeatureEditor({
 						test.result.items.length === 0 ? (
 							<p className="text-monti-muted">{t("test.noResults")}</p>
 						) : (
-							<ul className="flex flex-wrap gap-1">
+							<ul className="flex flex-wrap gap-tight">
 								{test.result.items.map((item) => (
 									<li key={item.value} className={SLOT_CHIP}>
 										<span className="truncate">{item.label}</span>
@@ -1089,13 +1091,13 @@ function FeatureEditor({
 							</ul>
 						)
 					) : (
-						<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-2">{test.result.text}</p>
+						<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-condensed">{test.result.text}</p>
 					))}
 			</section>
 
-			<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced} className="border-t pt-4">
+			<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced} className="border-t pt-comfortable">
 				<CollapsibleTrigger
-					className="group/advanced flex w-full items-center gap-2 text-left font-medium text-monti-body"
+					className="group/advanced flex w-full items-center gap-condensed text-left font-medium text-monti-body"
 					data-testid="ai-advanced-toggle"
 				>
 					<ChevronDown
@@ -1107,7 +1109,7 @@ function FeatureEditor({
 					<span className="text-monti-caption text-monti-muted">{t("advanced.hint")}</span>
 				</CollapsibleTrigger>
 				<CollapsibleContent data-testid="ai-advanced">
-					<FormFieldGroup className="gap-4 pt-4">
+					<FormFieldGroup className="gap-comfortable pt-comfortable">
 						{!custom && (
 							<FormField>
 								<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
@@ -1122,7 +1124,7 @@ function FeatureEditor({
 							</FormField>
 						)}
 
-						<div className="flex flex-wrap gap-x-6 gap-y-3">
+						<div className="flex flex-wrap gap-x-spacious gap-y-normal">
 							<Label className="text-monti-caption">
 								<Switch
 									size="sm"
@@ -1142,7 +1144,7 @@ function FeatureEditor({
 						{inputs.length > 0 && (
 							<FormField role="group" aria-labelledby={ids.sendTitle}>
 								<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
-								<div className="flex flex-wrap gap-3">
+								<div className="flex flex-wrap gap-normal">
 									{inputs.map(([name, input]) => (
 										<Label key={name} className="text-monti-caption">
 											<Checkbox
@@ -1164,7 +1166,7 @@ function FeatureEditor({
 						{deciding && (
 							<FormField>
 								<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
-								<div className="flex items-center gap-2 text-monti-caption">
+								<div className="flex items-center gap-condensed text-monti-caption">
 									<Input
 										id={ids.threshold}
 										type="number"
@@ -1184,7 +1186,7 @@ function FeatureEditor({
 										max={20}
 										value={spec.maxCount}
 										onChange={(event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })}
-										className="ml-3 h-8 w-16 text-monti-caption md:text-monti-caption"
+										className="ml-normal h-8 w-16 text-monti-caption md:text-monti-caption"
 									/>
 									<span className="text-monti-muted">{t("field.countUpTo")}</span>
 								</div>
@@ -1193,8 +1195,8 @@ function FeatureEditor({
 
 						<FormField role="group" aria-labelledby={ids.checksTitle}>
 							<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
-							<div className="flex flex-col gap-2 text-monti-caption">
-								<ul className="flex flex-col gap-2" aria-label={t("field.checks")}>
+							<div className="flex flex-col gap-condensed text-monti-caption">
+								<ul className="flex flex-col gap-condensed" aria-label={t("field.checks")}>
 									{spec.checks.map((check, index) => (
 										<CheckRow
 											key={checkKey(check)}

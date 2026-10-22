@@ -78,7 +78,7 @@ export function SnippetManager({
 		<div className="flex min-h-0 flex-1 flex-col">
 			{query.error && !view && (
 				<LoadErrorAlert
-					className="m-3"
+					className="m-normal"
 					message={errorText(site, query.error, t("error.load"))}
 					onRetry={() => void query.refetch()}
 				/>
@@ -157,8 +157,10 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 		}
 	};
 	return (
-		<div className="flex items-center gap-1">
-			<code className="rounded-md border bg-monti-neutral px-2 py-1 font-mono text-monti-caption">{text}</code>
+		<div className="flex items-center gap-tight">
+			<code className="rounded-md border bg-monti-neutral px-condensed py-tight font-mono text-monti-caption">
+				{text}
+			</code>
 			<IconButton label={copied ? t("copy.done") : t("copy.label")} size="icon-xs" onClick={() => void copy()}>
 				{copied ? <Check aria-hidden className="text-monti-default" /> : <Copy aria-hidden />}
 			</IconButton>
@@ -276,7 +278,7 @@ function SnippetEditor({
 				)}
 			</div>
 
-			<FormFieldGroup className="gap-4">
+			<FormFieldGroup className="gap-comfortable">
 				<FormField>
 					<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 					<Input

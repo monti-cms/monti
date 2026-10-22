@@ -161,7 +161,7 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-accent-muted" +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-spacious focus:outline-none text-monti-default text-monti-reading selection:bg-monti-accent-muted" +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
@@ -334,9 +334,9 @@ export function CmsEditor({
 			>
 				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
 				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
-				<div className="relative flex min-h-12 items-center py-2" style={{ paddingInline: asideWidth + 24 }}>
+				<div className="relative flex min-h-12 items-center py-condensed" style={{ paddingInline: asideWidth + 24 }}>
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
-					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-1">
+					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-tight">
 						{toolbarAside}
 						<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
 					</div>
@@ -345,7 +345,7 @@ export function CmsEditor({
 			</div>
 
 			{titleField && (
-				<div className="mx-auto w-full max-w-(--editor-width) border-monti-muted border-b px-4 pt-12 pb-4">
+				<div className="mx-auto w-full max-w-(--editor-width) border-monti-muted border-b px-comfortable pt-section pb-comfortable">
 					{titleField}
 				</div>
 			)}
@@ -374,7 +374,7 @@ export function CmsEditor({
 			/>
 
 			{isSourceMode && (
-				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-4 pt-6 pb-[35vh]">
+				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-comfortable pt-spacious pb-[35vh]">
 					{sourceView}
 				</div>
 			)}
@@ -384,7 +384,7 @@ export function CmsEditor({
 			<div
 				hidden={isSourceMode}
 				// Leave bottom margin (35% of screen height) so the last line does not stick to the bottom of the screen.
-				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-4 pt-6 pb-[35vh]"
+				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-comfortable pt-spacious pb-[35vh]"
 				onClick={(event) => {
 					// Move to the end only when the empty canvas outside the body is clicked. Clicks on NodeView buttons and popovers (portals)
 					// also bubble up here through the React tree, so leave the body DOM and anything outside the canvas (portals) alone.

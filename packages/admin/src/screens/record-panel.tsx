@@ -207,7 +207,7 @@ export function RecordPanel({
 						{translated && (
 							<TabsList
 								variant="line"
-								className="h-10 w-full shrink-0 justify-start gap-4 border-monti-muted border-b px-4"
+								className="h-10 w-full shrink-0 justify-start gap-comfortable border-monti-muted border-b px-comfortable"
 							>
 								{site.LOCALES.map((option) => {
 									const filled = hasLocaleValues(site, collection, form, option);
@@ -221,7 +221,7 @@ export function RecordPanel({
 													? name
 													: t(filled ? "record.translationOn" : "record.translationOff", { name })
 											}
-											className="flex-none gap-2 px-0 text-monti-label"
+											className="flex-none gap-condensed px-0 text-monti-label"
 										>
 											{name}
 											{option !== site.DEFAULT_LOCALE && (
@@ -236,13 +236,13 @@ export function RecordPanel({
 								})}
 							</TabsList>
 						)}
-						<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-							<TabsContent value={site.DEFAULT_LOCALE} className="space-y-4">
+						<div className="min-h-0 flex-1 overflow-y-auto px-comfortable py-comfortable">
+							<TabsContent value={site.DEFAULT_LOCALE} className="space-y-comfortable">
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
 								{id && <p className="text-monti-caption text-monti-muted">{t("record.slugChange")}</p>}
 							</TabsContent>
 							{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
-								<TabsContent key={option} value={option} className="space-y-4">
+								<TabsContent key={option} value={option} className="space-y-comfortable">
 									<p className="text-monti-caption text-monti-muted">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
 									</p>
@@ -253,7 +253,7 @@ export function RecordPanel({
 					</Tabs>
 				</EntryFormProvider>
 				<EditorFooter
-					className="shrink-0 border-monti-muted border-t px-4 py-3"
+					className="shrink-0 border-monti-muted border-t px-comfortable py-normal"
 					// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
 					dirty={dirty || isNew}
 					saving={isSaving}

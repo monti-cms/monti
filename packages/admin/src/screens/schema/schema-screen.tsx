@@ -83,9 +83,9 @@ function FileRest({ file }: { file: Obj }) {
 			{rest.length > 0 && (
 				<Section wide title={t("file.title")}>
 					{rest.map(([title, value]) => (
-						<div key={title} className="flex flex-col gap-2">
+						<div key={title} className="flex flex-col gap-condensed">
 							<h4 className="text-monti-label">{title}</h4>
-							<pre className="max-h-64 overflow-auto rounded-md bg-monti-inset p-3 text-monti-caption">
+							<pre className="max-h-64 overflow-auto rounded-md bg-monti-inset p-normal text-monti-caption">
 								{JSON.stringify(value, null, 2)}
 							</pre>
 						</div>
@@ -94,9 +94,9 @@ function FileRest({ file }: { file: Obj }) {
 			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
-					<ul className="-my-2 flex flex-col divide-y text-monti-body">
+					<ul className="-my-condensed flex flex-col divide-y text-monti-body">
 						{migrations.map((migration) => (
-							<li key={String(migration.id)} className="flex items-center gap-2 py-2">
+							<li key={String(migration.id)} className="flex items-center gap-condensed py-condensed">
 								<code className="text-monti-caption">{String(migration.id)}</code>{" "}
 								<span className="text-monti-caption text-monti-muted">{String(migration.op)}</span>
 							</li>
@@ -112,7 +112,7 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<span className="inline-flex items-center gap-2 rounded-sm border border-monti-muted bg-monti-inset px-3 py-0.5 font-mono text-monti-caption text-monti-muted">
+		<span className="inline-flex items-center gap-condensed rounded-sm border border-monti-muted bg-monti-inset px-normal py-hair font-mono text-monti-caption text-monti-muted">
 			{state.file ?? t("status.noFile")}
 			{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
 		</span>
@@ -168,8 +168,8 @@ function CollectionNavItem({
 				type="button"
 				aria-current={active ? "true" : undefined}
 				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-3 text-left text-monti-body outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
-					writable && "group-focus-within/row:pl-8 group-hover/row:pl-8",
+					"flex h-8 w-full shrink-0 items-center gap-condensed rounded-md border border-transparent px-normal text-left text-monti-body outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
+					writable && "group-focus-within/row:pl-wide group-hover/row:pl-wide",
 					active && "border-monti-muted bg-monti-surface font-medium hover:bg-monti-surface",
 				)}
 				onClick={onSelect}
@@ -265,7 +265,7 @@ function SchemaEditor({
 	};
 
 	const actions = !writable ? (
-		<Badge variant="outline" className="gap-1">
+		<Badge variant="outline" className="gap-tight">
 			<Lock aria-hidden />
 			{t("status.readOnly")}
 		</Badge>
@@ -283,7 +283,7 @@ function SchemaEditor({
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<div className="flex items-center justify-end gap-2 border-b bg-monti-page px-4 py-2 lg:px-8">
+							<div className="flex items-center justify-end gap-condensed border-b bg-monti-page px-comfortable py-condensed lg:px-wide">
 								{actions}
 							</div>
 						)}
@@ -292,7 +292,7 @@ function SchemaEditor({
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
-								<AlertDescription className="flex flex-col gap-1">
+								<AlertDescription className="flex flex-col gap-tight">
 									<span>{t(READ_ONLY_KEY[reason])}</span>
 									{reason === "has_code" && (state.access.issue || state.access.detail) && (
 										<code className="text-monti-caption" data-testid="schema-code-detail">
@@ -315,7 +315,7 @@ function SchemaEditor({
 						{state.issues.length > 0 && (
 							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
-								<AlertDescription className="flex flex-col gap-2">
+								<AlertDescription className="flex flex-col gap-condensed">
 									<span>{t("invalid.description")}</span>
 									<IssueList issues={state.issues} />
 								</AlertDescription>
@@ -339,9 +339,9 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-										<div className="flex shrink-0 flex-col gap-0.5 lg:w-56">
-											<div className="flex items-center justify-between pb-2 pl-3">
+									<div className="flex flex-col gap-spacious lg:flex-row lg:gap-wide">
+										<div className="flex shrink-0 flex-col gap-hair lg:w-56">
+											<div className="flex items-center justify-between pb-condensed pl-normal">
 												<span className="font-medium text-monti-caption text-monti-muted">
 													{t("collection.railTitle")} {names.length}
 												</span>
@@ -353,7 +353,7 @@ function SchemaEditor({
 											</div>
 											<nav
 												aria-label={t("tabs.collections")}
-												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0"
+												className="flex gap-tight overflow-x-auto pb-tight lg:flex-col lg:gap-hair lg:overflow-visible lg:pb-0"
 											>
 												<SortableList
 													items={names}
@@ -414,7 +414,7 @@ function SchemaEditor({
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && (
-									<div className="flex flex-col gap-12">
+									<div className="flex flex-col gap-section">
 										<AdminEditor file={draft} update={updateFile} />
 										<FileRest file={draft} />
 									</div>
@@ -511,7 +511,7 @@ export function SchemaSettings({
 			/>
 		);
 	return (
-		<div className="flex flex-col gap-3 p-4 lg:p-8">
+		<div className="flex flex-col gap-normal p-comfortable lg:p-wide">
 			{error ? (
 				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
 			) : (

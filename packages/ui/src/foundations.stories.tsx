@@ -159,30 +159,24 @@ export const Typography: Story = {
 	},
 };
 
-const SPACING = [
-	{ step: "0.5", px: 2, name: "" },
-	{ step: "1", px: 4, name: "tight" },
-	{ step: "2", px: 8, name: "condensed" },
-	{ step: "3", px: 12, name: "normal" },
-	{ step: "4", px: 16, name: "comfortable" },
-	{ step: "6", px: 24, name: "spacious" },
-	{ step: "8", px: 32, name: "" },
-	{ step: "12", px: 48, name: "section" },
-];
+/** The named spacing from the theme (`--spacing-<name>: <px>`), in file order. */
+const SPACING = [...themeCss.matchAll(/--spacing-([a-z]+):\s*(\d+)px;/g)].map(([, name, px]) => ({
+	name,
+	px: Number(px),
+}));
 
-/** The spacing steps screens may use (gap, padding, margin), with the Stack gap name where there is one. */
+/** The spacing screens use for gaps, padding and margins: a name, never a number (`gap-condensed`, `px-comfortable`, `-mt-tight`). */
 export const Spacing: Story = {
 	render: () => (
 		<Stack gap="normal">
-			{SPACING.map(({ step, px, name }) => (
-				<Stack key={step} direction="row" gap="spacious" align="center">
+			{SPACING.map(({ name, px }) => (
+				<Stack key={name} direction="row" gap="spacious" align="center">
 					<Text variant="label" mono className="w-24 shrink-0">
-						{px}px
+						{name}
 					</Text>
 					<div className="h-4 rounded-sm bg-monti-accent-emphasis" style={{ width: px }} />
 					<Text variant="caption" tone="muted" mono>
-						gap-{step}
-						{name && ` · Stack gap="${name}"`}
+						{px}px · gap-{name} · p-{name} · m-{name}
 					</Text>
 				</Stack>
 			))}

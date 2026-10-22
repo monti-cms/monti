@@ -30,7 +30,7 @@ function GitSyncPopover({ status }: { status: StatusView }) {
 			{status.targets.map((target) => {
 				const { lastAt } = syncSummary({ ...status, targets: [target] });
 				return (
-					<div key={target.id} className="py-1">
+					<div key={target.id} className="py-tight">
 						<StatusPopoverRow label={target.repo} value={target.branch} />
 						<StatusPopoverRow
 							label={t("status.popover.lastSync")}

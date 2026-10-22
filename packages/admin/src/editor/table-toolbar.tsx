@@ -204,8 +204,8 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 			className={BLOCK_TOOLBAR}
 		>
 			{TABLE_TOOL_GROUPS(t).map((group, index) => (
-				<div key={group[0]?.label} className="flex items-center gap-0.5">
-					{index > 0 && <Separator orientation="vertical" className="mx-0.5 h-4" />}
+				<div key={group[0]?.label} className="flex items-center gap-hair">
+					{index > 0 && <Separator orientation="vertical" className="mx-hair h-4" />}
 					{group.map((item) => (
 						<ToolbarButton key={item.label} editor={editor} item={item} />
 					))}

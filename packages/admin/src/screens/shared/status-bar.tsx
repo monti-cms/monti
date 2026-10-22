@@ -211,7 +211,7 @@ export type StatusBarItemProps = StatusBarItemBase &
 	);
 
 const itemClass =
-	"flex h-5 shrink-0 items-center gap-1 rounded-sm px-2 text-monti-caption whitespace-nowrap tabular-nums";
+	"flex h-5 shrink-0 items-center gap-tight rounded-sm px-condensed text-monti-caption whitespace-nowrap tabular-nums";
 const interactiveClass =
 	"cursor-pointer outline-none hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus data-popup-open:bg-monti-selected data-popup-open:text-monti-default";
 
@@ -262,7 +262,7 @@ export function StatusBarItem({
 					className="max-h-(--available-height) w-80 gap-0 overflow-hidden p-0 text-monti-label"
 				>
 					<PopoverCloseContext.Provider value={() => setOpen(false)}>
-						<div className="min-h-0 overflow-y-auto py-1">{popover}</div>
+						<div className="min-h-0 overflow-y-auto py-tight">{popover}</div>
 					</PopoverCloseContext.Provider>
 				</PopoverContent>
 			</Popover>
@@ -311,9 +311,9 @@ export function StatusPopoverHeader({
 }) {
 	const close = useContext(PopoverCloseContext);
 	const buttonClass =
-		"h-6 shrink-0 rounded-sm px-2 font-medium text-monti-accent outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus";
+		"h-6 shrink-0 rounded-sm px-condensed font-medium text-monti-accent outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus";
 	return (
-		<div className="flex items-center justify-between gap-3 px-3 py-2">
+		<div className="flex items-center justify-between gap-normal px-normal py-condensed">
 			<h2 className="min-w-0 truncate font-medium">{title}</h2>
 			{action?.href ? (
 				<a
@@ -363,7 +363,7 @@ export function StatusPopoverRow({
 }) {
 	const close = useContext(PopoverCloseContext);
 	const classes = cn(
-		"flex w-full items-baseline justify-between gap-3 px-3 py-1 text-left",
+		"flex w-full items-baseline justify-between gap-normal px-normal py-tight text-left",
 		(href || onClick) && "cursor-pointer outline-none hover:bg-monti-hover focus-visible:bg-monti-hover",
 	);
 	const body = (
@@ -514,13 +514,13 @@ function PublishReadinessPopover({ readiness }: { readiness: NonNullable<EditorS
 				title={t("title")}
 				action={{ label: t("recheck"), onClick: readiness.recheck, keepOpen: true }}
 			/>
-			{stale && <p className="px-3 py-1 text-monti-muted">{t("staleHint")}</p>}
+			{stale && <p className="px-normal py-tight text-monti-muted">{t("staleHint")}</p>}
 			{checking && <StatusPopoverRow label={<span className="text-monti-muted">{t("checking")}</span>} />}
 			{!checking && result && result.issues.length === 0 && <StatusPopoverRow label={t("nothingToFix")} />}
 			{result?.issues.map((issue) => row(issue, "warning"))}
 			{result && result.warnings.length > 0 && (
 				<>
-					<p className="px-3 pt-2 pb-0.5 text-monti-muted">{t("warningsHeading")}</p>
+					<p className="px-normal pt-condensed pb-hair text-monti-muted">{t("warningsHeading")}</p>
 					{result.warnings.map((issue) => row(issue, "default"))}
 				</>
 			)}
@@ -631,7 +631,9 @@ function BodyStatsItem() {
 					<StatusPopoverRow label={t("popover.body.paragraphs")} value={bodyStats.paragraphs.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.headings")} value={bodyStats.headings.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.reading", { minutes: editor.readingMinutes })} />
-					<p className="px-3 py-1 text-monti-muted">{t("popover.body.rule", { rate: READING_CHARS_PER_MINUTE })}</p>
+					<p className="px-normal py-tight text-monti-muted">
+						{t("popover.body.rule", { rate: READING_CHARS_PER_MINUTE })}
+					</p>
 				</>
 			}
 		>
@@ -743,16 +745,16 @@ export function StatusBar({ context }: { context: StatusBarContextValue }) {
 			<section
 				aria-label={t("label")}
 				data-slot="status-bar"
-				className="flex h-6 shrink-0 items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-t bg-monti-inset px-2"
+				className="flex h-6 shrink-0 items-center justify-between gap-condensed overflow-hidden whitespace-nowrap border-t bg-monti-inset px-condensed"
 			>
-				<div className="flex min-w-0 items-center gap-1 overflow-hidden">
+				<div className="flex min-w-0 items-center gap-tight overflow-hidden">
 					<AlignContext.Provider value="start">
 						{start.map(([name, { Component }]) => (
 							<Component key={name} />
 						))}
 					</AlignContext.Provider>
 				</div>
-				<div className="flex shrink-0 items-center gap-1 max-sm:hidden">
+				<div className="flex shrink-0 items-center gap-tight max-sm:hidden">
 					<AlignContext.Provider value="end">
 						{end.map(([name, { Component }]) => (
 							<Component key={name} />

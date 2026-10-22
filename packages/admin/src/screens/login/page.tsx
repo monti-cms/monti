@@ -72,8 +72,8 @@ export default async function AdminLoginPage({
 	const siteName = site.config.site?.name?.trim() || "Monti";
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
-			<header className="flex flex-col items-center gap-1 text-center">
+		<div className="flex min-h-screen flex-col items-center justify-center gap-spacious p-comfortable">
+			<header className="flex flex-col items-center gap-tight text-center">
 				<h1 className="text-monti-default text-monti-heading">{siteName}</h1>
 				<p className="text-monti-caption text-monti-muted">{t("managedWith")}</p>
 			</header>
@@ -92,17 +92,21 @@ export default async function AdminLoginPage({
 					{isUnauthorizedUser ? (
 						<Alert tone="danger" layout="stack" className="text-center">
 							<AlertTitle className="text-monti-caption">{t("forbiddenTitle")}</AlertTitle>
-							<AlertDescription className="mt-1 text-monti-caption">
+							<AlertDescription className="mt-tight text-monti-caption">
 								{t("forbidden", { provider, accountId: accountId ?? "" })}
 							</AlertDescription>
-							<form method="post" action={adminApiUrl("/v1/session/sign-out")} className="mt-3">
+							<form method="post" action={adminApiUrl("/v1/session/sign-out")} className="mt-normal">
 								<Button type="submit" variant="link" size="xs">
 									{t("signOut")}
 								</Button>
 							</form>
 						</Alert>
 					) : firstAdmin ? (
-						<form method="post" action={adminApiUrl("/v1/session/first-admin")} className="flex flex-col gap-4">
+						<form
+							method="post"
+							action={adminApiUrl("/v1/session/first-admin")}
+							className="flex flex-col gap-comfortable"
+						>
 							{errorText ? <ErrorAlert text={errorText} /> : null}
 							<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 							<TextField
@@ -129,17 +133,17 @@ export default async function AdminLoginPage({
 					) : providers.length === 0 ? (
 						<Alert tone="danger" layout="stack" className="text-center">
 							<AlertTitle className="text-monti-caption">{t("noLoginTitle")}</AlertTitle>
-							<AlertDescription className="mt-1 text-monti-caption">{t("noLogin")}</AlertDescription>
+							<AlertDescription className="mt-tight text-monti-caption">{t("noLogin")}</AlertDescription>
 						</Alert>
 					) : (
-						<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-comfortable">
 							{errorText ? <ErrorAlert text={errorText} /> : null}
 							{formProviders.map((authProvider) => (
 								<form
 									key={authProvider.id}
 									method="post"
 									action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
-									className="flex flex-col gap-4"
+									className="flex flex-col gap-comfortable"
 								>
 									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 									<TextField
@@ -154,7 +158,7 @@ export default async function AdminLoginPage({
 									</Button>
 								</form>
 							))}
-							<div className="flex flex-col gap-2">
+							<div className="flex flex-col gap-condensed">
 								{buttonProviders.map((authProvider) => (
 									<form
 										key={authProvider.id}
@@ -194,7 +198,7 @@ function TextField({
 	...props
 }: { id: string; label: string; hint?: string } & Omit<React.ComponentProps<typeof Input>, "id">) {
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-condensed">
 			<Label htmlFor={id}>{label}</Label>
 			{hint ? <p className="text-monti-caption text-monti-muted">{hint}</p> : null}
 			<Input id={id} required {...props} />

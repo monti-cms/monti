@@ -105,6 +105,19 @@
 	--text-color-monti-kind-orange: var(--monti-kind-orange);
 	--text-color-monti-kind-green: var(--monti-kind-green);
 
+	/*
+	 * Spacing: gaps, padding and margins take a name, never a number (`gap-condensed`, `px-comfortable`, `-mt-tight`). Tailwind's 4px numbers stay
+	 * for sizes (`h-8`, `size-4`), which share its base, so the design-system test is what keeps numbers out of spacing on screens.
+	 */
+	--spacing-hair: 2px;
+	--spacing-tight: 4px;
+	--spacing-condensed: 8px;
+	--spacing-normal: 12px;
+	--spacing-comfortable: 16px;
+	--spacing-spacious: 24px;
+	--spacing-wide: 32px;
+	--spacing-section: 48px;
+
 	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
 	--radius-*: initial;
 	--radius-sm: calc(var(--monti-radius) - 4px);

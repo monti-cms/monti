@@ -124,12 +124,12 @@ export const ChartTooltipContent = ({
 	return (
 		<div
 			className={cn(
-				"grid min-w-[8rem] gap-2 rounded-lg border border-monti-muted bg-monti-page px-3 py-2 text-monti-caption shadow-monti-floating",
+				"grid min-w-[8rem] gap-condensed rounded-lg border border-monti-muted bg-monti-page px-normal py-condensed text-monti-caption shadow-monti-floating",
 				className,
 			)}
 		>
 			{!hideLabel && label ? <div className="font-medium">{String(config[String(label)]?.label ?? label)}</div> : null}
-			<div className="grid gap-2">
+			<div className="grid gap-condensed">
 				{payload
 					.filter((item) => item.type !== "none")
 					.map((item) => {
@@ -138,9 +138,9 @@ export const ChartTooltipContent = ({
 						const itemKey = `${key}-${String(item.value ?? item.color ?? "")}`;
 
 						return (
-							<div key={itemKey} className="flex items-center gap-2">
+							<div key={itemKey} className="flex items-center gap-condensed">
 								<div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color ?? item.payload?.fill }} />
-								<div className="flex flex-1 items-center justify-between gap-3">
+								<div className="flex flex-1 items-center justify-between gap-normal">
 									<span className="text-monti-muted">{itemConfig?.label ?? key}</span>
 									<span className="font-medium font-mono text-monti-default tabular-nums">
 										{typeof item.value === "number" ? item.value.toLocaleString() : String(item.value)}
@@ -202,7 +202,10 @@ export const ChartLegendContent = ({
 	}
 
 	return (
-		<div ref={legendRef} className={cn("flex flex-wrap items-center justify-center gap-4 pt-3", className)}>
+		<div
+			ref={legendRef}
+			className={cn("flex flex-wrap items-center justify-center gap-comfortable pt-normal", className)}
+		>
 			{legendPayload
 				.filter((item) => item.type !== "none")
 				.map((item) => {
@@ -212,7 +215,7 @@ export const ChartLegendContent = ({
 					const itemKey = `${lookupKey}-${String(item.color ?? "")}`;
 
 					return (
-						<div key={itemKey} className="flex items-center gap-2">
+						<div key={itemKey} className="flex items-center gap-condensed">
 							<div className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
 							<span>{itemConfig?.label ?? lookupKey}</span>
 						</div>

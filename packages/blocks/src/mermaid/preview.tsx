@@ -55,7 +55,11 @@ export function MermaidPreview({ source, className }: { readonly source: string;
 	}, [source, dark]);
 
 	return (
-		<div ref={wrapper} className={cn("flex justify-center overflow-x-auto p-4", className)} data-error={!!error}>
+		<div
+			ref={wrapper}
+			className={cn("flex justify-center overflow-x-auto p-comfortable", className)}
+			data-error={!!error}
+		>
 			<div ref={target} className="flex w-full justify-center [&_svg]:h-auto [&_svg]:max-w-full" />
 			{error && <span className="text-monti-body">ERROR : {error}</span>}
 		</div>

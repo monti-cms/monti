@@ -88,7 +88,7 @@ export function MediaGrid({
 	return (
 		<ul
 			className={cn(
-				"grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6",
+				"grid grid-cols-2 gap-comfortable transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6",
 				dimmed && "opacity-60",
 			)}
 		>
@@ -103,7 +103,9 @@ export function MediaGrid({
 						<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted hover:text-monti-default">
 							<FolderUp className="size-10" aria-hidden />
 						</span>
-						<span className="truncate p-2 font-medium text-monti-caption text-monti-muted">{ts("list.folderUp")}</span>
+						<span className="truncate p-condensed font-medium text-monti-caption text-monti-muted">
+							{ts("list.folderUp")}
+						</span>
 					</Button>
 				</li>
 			)}
@@ -121,7 +123,7 @@ export function MediaGrid({
 							<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted">
 								<FolderIcon className="size-10 text-monti-muted" aria-hidden />
 							</span>
-							<span className="truncate p-2 font-medium text-monti-caption">{folder.name}</span>
+							<span className="truncate p-condensed font-medium text-monti-caption">{folder.name}</span>
 						</Button>
 						<MoreActionsButton
 							actions={actions}
@@ -152,7 +154,7 @@ export function MediaGrid({
 							{site.api.isImageType(media.mimeType) ? (
 								<MediaThumb media={media} iconClassName="size-10" />
 							) : (
-								<span className="flex flex-col items-center gap-2 text-monti-muted">
+								<span className="flex flex-col items-center gap-condensed text-monti-muted">
 									<MediaThumb media={media} iconClassName="size-10" />
 									<span className="font-medium text-monti-micro">{fileTypeLabel(media.filename, media.mimeType)}</span>
 								</span>
@@ -161,7 +163,7 @@ export function MediaGrid({
 								{usageLabel(t, media)}
 							</Badge>
 						</span>
-						<span className="truncate p-2 font-mono text-monti-caption">{media.filename}</span>
+						<span className="truncate p-condensed font-mono text-monti-caption">{media.filename}</span>
 					</Button>
 					<MoreActionsButton
 						actions={menuFor(media)}
@@ -194,7 +196,7 @@ export function MediaTable({
 			aria-label={t("views.table")}
 			containerClassName="overflow-visible"
 			className={cn(
-				"table-fixed text-monti-caption transition-opacity [&_td:first-child]:pl-8 [&_td:last-child]:pr-8 [&_th:first-child]:pl-8 [&_th:last-child]:pr-8",
+				"table-fixed text-monti-caption transition-opacity [&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
 				dimmed && "opacity-60",
 			)}
 		>
@@ -242,7 +244,7 @@ export function MediaTable({
 								/>
 							}
 						>
-							<TableCell className="py-2">
+							<TableCell className="py-condensed">
 								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-neutral">
 									<MediaThumb media={media} iconClassName="size-4" />
 								</span>

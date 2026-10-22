@@ -218,7 +218,7 @@ function LocaleDialog({
 					{!locale && <DialogDescription>{t("locales.contentNote")}</DialogDescription>}
 				</DialogHeader>
 				<form
-					className="flex flex-col gap-6"
+					className="flex flex-col gap-spacious"
 					onSubmit={(event) => {
 						event.preventDefault();
 						if (!ok) return;
@@ -262,7 +262,7 @@ function LocaleDialog({
 										}
 									>
 										{code ? (
-											<span className="flex items-center gap-2 truncate">
+											<span className="flex items-center gap-condensed truncate">
 												<span className="font-mono font-semibold text-monti-caption">{code}</span>
 												{nativeNameOf(code) && (
 													<span className="text-monti-caption text-monti-muted">{nativeNameOf(code)}</span>
@@ -298,7 +298,9 @@ function LocaleDialog({
 																}}
 															>
 																<span className="font-mono font-semibold text-monti-caption">{known}</span>
-																{native && <span className="ml-1 text-monti-caption text-monti-muted">{native}</span>}
+																{native && (
+																	<span className="ml-tight text-monti-caption text-monti-muted">{native}</span>
+																)}
 															</CommandItem>
 														);
 													})}
@@ -377,7 +379,7 @@ function LocaleRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative flex min-h-14 items-center gap-3 bg-monti-surface py-2 pr-4 pl-8",
+				"group/row relative flex min-h-14 items-center gap-normal bg-monti-surface py-condensed pr-comfortable pl-wide",
 				isDragging && "z-10 opacity-80 shadow-monti-floating",
 			)}
 			data-testid={`locale-${locale.code}`}
@@ -393,14 +395,14 @@ function LocaleRow({
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
-			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-neutral px-2 font-mono text-monti-caption">
+			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-neutral px-condensed font-mono text-monti-caption">
 				{locale.code}
 			</span>
 			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-condensed">
 					<span className="truncate font-medium text-monti-body">{displayName}</span>
 					{isDefault && (
-						<span className="rounded-sm bg-monti-selected px-2 py-px text-monti-caption text-monti-default">
+						<span className="rounded-sm bg-monti-selected px-condensed py-px text-monti-caption text-monti-default">
 							{t("locales.defaultBadge")}
 						</span>
 					)}
@@ -458,11 +460,11 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	};
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
-		<div className="flex flex-col gap-12">
+		<div className="flex flex-col gap-section">
 			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
 				<Panel className="overflow-hidden">
-					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-						<span className="flex items-center gap-2 text-monti-body text-monti-muted">
+					<div className="flex items-center justify-between gap-comfortable border-b px-comfortable py-normal">
+						<span className="flex items-center gap-condensed text-monti-body text-monti-muted">
 							{t("locales.count", { count: locales.length })}
 							{revertKey("locales") && (
 								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />

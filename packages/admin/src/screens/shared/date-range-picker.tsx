@@ -61,7 +61,7 @@ export function DateRangePicker({
 				<CalendarRange aria-hidden />
 				{label}: {summary}
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-auto space-y-2 p-2">
+			<PopoverContent align="start" className="w-auto space-y-condensed p-condensed">
 				<DateRangeCalendar from={from} to={to} onChange={onChange} />
 				{(from || to) && (
 					<Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange("", "")}>

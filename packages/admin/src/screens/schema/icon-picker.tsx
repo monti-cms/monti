@@ -55,7 +55,7 @@ export function IconPicker({
 							variant="outline"
 							disabled={disabled}
 							aria-label={`${label}: ${value || t("collection.iconDefault")}`}
-							className="h-9 w-full max-w-sm justify-start gap-2 font-normal"
+							className="h-9 w-full max-w-sm justify-start gap-condensed font-normal"
 						/>
 					}
 				>
@@ -65,8 +65,8 @@ export function IconPicker({
 					<span className="truncate">{value || t("collection.iconDefault")}</span>
 					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-monti-muted" />
 				</PopoverTrigger>
-				<PopoverContent align="start" className="w-72 p-3">
-					<div className="flex flex-col gap-2">
+				<PopoverContent align="start" className="w-72 p-normal">
+					<div className="flex flex-col gap-condensed">
 						<Input
 							value={query}
 							placeholder={t("collection.iconSearch")}
@@ -88,7 +88,7 @@ export function IconPicker({
 								{t("collection.iconClear")} ({defaultIconName})
 							</Button>
 						)}
-						<div className="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto p-0.5" role="listbox">
+						<div className="grid max-h-56 grid-cols-6 gap-tight overflow-y-auto p-hair" role="listbox">
 							{filtered.map((name) => {
 								const Icon = ICONS[name];
 								if (!Icon) return null;
@@ -116,7 +116,9 @@ export function IconPicker({
 							})}
 						</div>
 						{filtered.length === 0 && (
-							<p className="py-4 text-center text-monti-caption text-monti-muted">{t("collection.iconNone")}</p>
+							<p className="py-comfortable text-center text-monti-caption text-monti-muted">
+								{t("collection.iconNone")}
+							</p>
 						)}
 					</div>
 				</PopoverContent>

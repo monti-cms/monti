@@ -167,13 +167,13 @@ export function AdminEntriesTable({
 				}
 			/>
 			{aboveTable}
-			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-8 mt-3" />}
+			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-wide mt-normal" />}
 
 			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
 				<Table
 					containerClassName="overflow-visible"
 					style={tableWidth ? { width: tableWidth } : undefined}
-					className="table-fixed [&_td:first-child]:pl-8 [&_td:last-child]:pr-6 [&_th:first-child]:pl-8 [&_th:last-child]:pr-6"
+					className="table-fixed [&_td:first-child]:pl-wide [&_td:last-child]:pr-spacious [&_th:first-child]:pl-wide [&_th:last-child]:pr-spacious"
 				>
 					<TableHeader className="sticky top-0 z-10 bg-monti-page [&_tr]:border-b">
 						{table.getHeaderGroups().map((group) => (

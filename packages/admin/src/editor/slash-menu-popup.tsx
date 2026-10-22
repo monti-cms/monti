@@ -58,7 +58,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-1 text-monti-default shadow-monti-floating"
+			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-tight text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -73,7 +73,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 outline-none",
+						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>

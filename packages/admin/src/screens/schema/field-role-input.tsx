@@ -126,7 +126,7 @@ export function FieldRolePicker({
 	];
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-normal">
 			<Pick
 				label={t("field.role")}
 				description={t("field.roleHint")}
@@ -243,7 +243,7 @@ export function FieldCustomInputPicker({
 	];
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-comfortable">
 			{registered.length > 0 ? (
 				<Pick
 					label={t("field.input")}

@@ -63,7 +63,7 @@ export function GitSyncPage() {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
-				<PageTabs className="border-monti-muted px-8">
+				<PageTabs className="border-monti-muted px-wide">
 					<TabsTrigger value="sync" className="flex-none px-0 text-monti-body">
 						<GitBranch aria-hidden />
 						{t("tab.sync")}
@@ -105,7 +105,7 @@ export function GitSyncPage() {
 
 function ListSkeleton() {
 	return (
-		<div className="space-y-3 px-8 py-4" aria-hidden>
+		<div className="space-y-normal px-wide py-comfortable" aria-hidden>
 			<Skeleton className="h-24 w-full" />
 			<Skeleton className="h-24 w-full" />
 		</div>
@@ -155,7 +155,7 @@ function SyncTab({
 	});
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-8 my-4" message={error} onRetry={onRetry} />;
+	if (error) return <LoadErrorAlert className="mx-wide my-comfortable" message={error} onRetry={onRetry} />;
 	if (!status) return null;
 	if (status.targets.length === 0) {
 		return <EmptyState className="h-full" icon={GitBranch} title={t("sync.empty")} />;
@@ -164,7 +164,7 @@ function SyncTab({
 	return (
 		<div>
 			{!status.keys.token && (
-				<Alert layout="stack" className="mx-8 mt-4 w-auto">
+				<Alert layout="stack" className="mx-wide mt-comfortable w-auto">
 					<AlertDescription className="col-start-auto">{t("sync.noToken")}</AlertDescription>
 				</Alert>
 			)}
@@ -172,9 +172,9 @@ function SyncTab({
 				<section
 					key={target.id}
 					aria-label={target.id}
-					className="space-y-3 border-monti-muted border-b px-8 py-4 first:border-t"
+					className="space-y-normal border-monti-muted border-b px-wide py-comfortable first:border-t"
 				>
-					<div className="flex flex-wrap items-center gap-2">
+					<div className="flex flex-wrap items-center gap-condensed">
 						<h2 className="min-w-0 flex-1 truncate font-medium font-mono text-monti-body">
 							{target.repo}
 							<span className="text-monti-muted">@{target.branch}</span>
@@ -205,7 +205,7 @@ function SyncTab({
 							</Button>
 						)}
 					</div>
-					<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-monti-caption">
+					<dl className="grid grid-cols-[auto_1fr] gap-x-comfortable gap-y-tight text-monti-caption">
 						<dt className="text-monti-muted">{t("target.folder")}</dt>
 						<dd className="font-mono">{target.folder || t("target.wholeRepo")}</dd>
 						<dt className="text-monti-muted">{t("target.path")}</dt>
@@ -249,7 +249,7 @@ function SyncTab({
 							)}
 						</dd>
 					</dl>
-					<div className="flex flex-wrap gap-2 text-monti-caption">
+					<div className="flex flex-wrap gap-condensed text-monti-caption">
 						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
 						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
 						{target.conflicts > 0 && (
@@ -257,9 +257,9 @@ function SyncTab({
 						)}
 					</div>
 					{target.lastPull && target.lastPull.errors.length > 0 && (
-						<div className="space-y-1 text-monti-caption">
+						<div className="space-y-tight text-monti-caption">
 							<h3 className="font-medium">{t("summary.errors")}</h3>
-							<ul className="space-y-0.5">
+							<ul className="space-y-hair">
 								{target.lastPull.errors.map((item) => (
 									<li key={item.path} className="text-monti-danger">
 										<span className="font-mono">{item.path}</span>: {item.message}
@@ -269,9 +269,9 @@ function SyncTab({
 						</div>
 					)}
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
-						<div className="space-y-1 text-monti-caption">
+						<div className="space-y-tight text-monti-caption">
 							<h3 className="font-medium">{t("summary.skipped")}</h3>
-							<ul className="space-y-0.5 text-monti-muted">
+							<ul className="space-y-hair text-monti-muted">
 								{target.lastPull.skipped.map((item) => (
 									<li key={item.path}>
 										<span className="font-mono">{item.path}</span>: {item.reason}
@@ -302,8 +302,8 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 	const lines = useMemo(() => lineDiff(serverText ?? "", gitText), [serverText, gitText]);
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
-		<div className="space-y-1">
-			<div className="flex gap-4 text-monti-caption text-monti-muted">
+		<div className="space-y-tight">
+			<div className="flex gap-comfortable text-monti-caption text-monti-muted">
 				<span>
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
@@ -322,7 +322,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 							// biome-ignore lint/suspicious/noArrayIndexKey: a diff is a fixed list of lines; the index is its identity
 							key={index}
 							data-diff={line.type}
-							className={`whitespace-pre-wrap px-2 ${LINE_STYLE[line.type]}`}
+							className={`whitespace-pre-wrap px-condensed ${LINE_STYLE[line.type]}`}
 						>
 							{LINE_MARK[line.type]} {line.text}
 						</div>
@@ -365,7 +365,7 @@ function ConflictsTab({
 	};
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-8 my-4" message={error} />;
+	if (error) return <LoadErrorAlert className="mx-wide my-comfortable" message={error} />;
 	if (!items || items.length === 0) {
 		return <EmptyState className="h-full" icon={GitBranch} title={t("conflicts.empty")} />;
 	}
@@ -375,9 +375,9 @@ function ConflictsTab({
 				<section
 					key={conflict.id}
 					aria-label={conflict.label}
-					className="space-y-3 border-monti-muted border-b px-8 py-4 first:border-t"
+					className="space-y-normal border-monti-muted border-b px-wide py-comfortable first:border-t"
 				>
-					<div className="space-y-1">
+					<div className="space-y-tight">
 						<h2 className="font-medium text-monti-body">{conflict.label}</h2>
 						<p className="text-monti-caption text-monti-muted">
 							<span className="font-mono">{conflict.path}</span> · {conflict.repo}
@@ -385,7 +385,7 @@ function ConflictsTab({
 						<p className="text-monti-caption">{t(`conflicts.reason.${conflict.reason}`)}</p>
 					</div>
 					<ConflictDiff serverText={conflict.serverText} gitText={conflict.gitText} />
-					<div className="flex flex-wrap gap-2">
+					<div className="flex flex-wrap gap-condensed">
 						<Button
 							type="button"
 							size="sm"
@@ -459,15 +459,15 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const secretKey = keys.webhookSecret;
 
 	return (
-		<div className="max-w-3xl divide-y divide-monti-muted px-8 [&>*]:py-6">
+		<div className="max-w-3xl divide-y divide-monti-muted px-wide [&>*]:py-spacious">
 			{!keys.secretsAvailable && (
-				<Alert tone="danger" layout="stack" className="my-4 w-auto">
+				<Alert tone="danger" layout="stack" className="my-comfortable w-auto">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
 			)}
 
 			<form
-				className="space-y-2"
+				className="space-y-condensed"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (tokenChanged && choiceReady(choice)) assign.mutate({ slot: "token", key: choice });
@@ -479,7 +479,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
 				</p>
 				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
-				<div className="flex gap-2">
+				<div className="flex gap-condensed">
 					<Button
 						type="submit"
 						size="sm"
@@ -502,7 +502,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 			</form>
 
 			<form
-				className="space-y-2"
+				className="space-y-condensed"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
@@ -514,14 +514,14 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				<p className="text-monti-caption">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</p>
-				<FormField className="gap-1">
+				<FormField className="gap-tight">
 					<FormFieldLabel htmlFor="git-sync-url" className="text-monti-caption text-monti-muted">
 						{t("settings.webhook.url")}
 					</FormFieldLabel>
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-monti-caption" />
 				</FormField>
 				<p className="text-monti-caption text-monti-muted">{t("settings.webhook.help")}</p>
-				<div className="flex flex-wrap gap-2">
+				<div className="flex flex-wrap gap-condensed">
 					<Input
 						id="git-sync-secret"
 						type={revealed ? "text" : "password"}
@@ -562,7 +562,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						{t("settings.copy")}
 					</Button>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex gap-condensed">
 					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
 						{tc("save")}
 					</Button>

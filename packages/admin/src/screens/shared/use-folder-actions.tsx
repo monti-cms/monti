@@ -292,7 +292,7 @@ export function useFolderActions({
 							event.preventDefault();
 							void submitName();
 						}}
-						className="space-y-4"
+						className="space-y-comfortable"
 					>
 						<FormField data-invalid={Boolean(shownError) || undefined}>
 							<FormFieldLabel htmlFor="folder-name" className="sr-only">
@@ -333,7 +333,7 @@ export function useFolderActions({
 						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
 					</AlertDialogHeader>
 					{contents ? (
-						<ul className="list-disc space-y-1 pl-4 text-monti-body">
+						<ul className="list-disc space-y-tight pl-comfortable text-monti-body">
 							<li>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</li>
 							<li>
 								{t("folder.childCount", { count: contents.childFolders.length })}
@@ -343,7 +343,7 @@ export function useFolderActions({
 						</ul>
 					) : (
 						!shownError && (
-							<div aria-hidden className="space-y-2">
+							<div aria-hidden className="space-y-condensed">
 								<Skeleton className="h-4 w-40" />
 								<Skeleton className="h-4 w-56" />
 							</div>

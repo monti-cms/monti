@@ -12,7 +12,7 @@ export const SELECTED_RING = "ring-2 ring-monti-focus ring-offset-2 ring-offset-
 
 /** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables). */
 export const BLOCK_TOOLBAR =
-	"z-10 flex items-center gap-0.5 rounded-md border bg-monti-overlay p-0.5 text-monti-default backdrop-blur";
+	"z-10 flex items-center gap-hair rounded-md border bg-monti-overlay p-hair text-monti-default backdrop-blur";
 
 export type ContainerValues = Record<string, string | boolean>;
 

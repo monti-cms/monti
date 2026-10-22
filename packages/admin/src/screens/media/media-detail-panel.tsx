@@ -45,7 +45,7 @@ import { mediaMessages } from "./messages";
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="space-y-3 border-monti-muted border-t px-4 py-4">
+		<section className="space-y-normal border-monti-muted border-t px-comfortable py-comfortable">
 			<h3 className="text-monti-label">{title}</h3>
 			{children}
 		</section>
@@ -55,7 +55,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 /** Item name on top, value below. Long values (ID, file name) do not push out the name column. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<div className="space-y-0.5">
+		<div className="space-y-hair">
 			<dt className="text-monti-caption text-monti-muted">{label}</dt>
 			<dd className="break-all">{children}</dd>
 		</div>
@@ -194,18 +194,18 @@ export function MediaDetailPanel({
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
 			<div className="min-h-0 flex-1 overflow-y-auto">
-				<div className="space-y-3 p-4">
+				<div className="space-y-normal p-comfortable">
 					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-inset">
 						{isImage && media.publicUrl ? (
 							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
 						) : (
-							<span className="flex flex-col items-center gap-2 text-monti-muted">
+							<span className="flex flex-col items-center gap-condensed text-monti-muted">
 								<MediaThumb media={media} iconClassName="size-12" />
 								<span className="font-medium">{fileTypeLabel(media.filename, media.mimeType)}</span>
 							</span>
 						)}
 					</div>
-					<div className="flex flex-wrap gap-2">
+					<div className="flex flex-wrap gap-condensed">
 						{media.publicUrl && (
 							<>
 								<Button
@@ -242,7 +242,7 @@ export function MediaDetailPanel({
 				</div>
 
 				<Section title={t("detail.section.info")}>
-					<dl className="space-y-3">
+					<dl className="space-y-normal">
 						<SlotScope
 							key={`filename-${media.id}`}
 							request={slot("filename", (suggestion) => {
@@ -253,18 +253,18 @@ export function MediaDetailPanel({
 						>
 							{({ trigger, panel }) => (
 								<form
-									className="space-y-1"
+									className="space-y-tight"
 									onSubmit={(event) => {
 										event.preventDefault();
 										void saveName();
 									}}
 								>
 									<FormField data-invalid={problem && nameDirty ? true : undefined}>
-										<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center justify-between gap-condensed">
 											<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
 											{isImage && trigger}
 										</div>
-										<div className="flex items-center gap-2">
+										<div className="flex items-center gap-condensed">
 											<Input
 												id={nameFieldId}
 												value={stem}
@@ -362,7 +362,7 @@ export function MediaDetailPanel({
 					<Section title={t("detail.section.defaults")}>
 						<p className="text-monti-muted">{t("detail.defaultsHelp")}</p>
 						<form
-							className="space-y-3"
+							className="space-y-normal"
 							onSubmit={(event) => {
 								event.preventDefault();
 								void saveDefaults();
@@ -371,7 +371,7 @@ export function MediaDetailPanel({
 							<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
 								{({ trigger, panel }) => (
 									<FormField>
-										<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center justify-between gap-condensed">
 											<FormFieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FormFieldLabel>
 											{trigger}
 										</div>
@@ -393,7 +393,7 @@ export function MediaDetailPanel({
 							>
 								{({ trigger, panel }) => (
 									<FormField>
-										<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center justify-between gap-condensed">
 											<FormFieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FormFieldLabel>
 											{trigger}
 										</div>
@@ -424,12 +424,12 @@ export function MediaDetailPanel({
 					{media.referencesCount === 0 ? (
 						<p className="text-monti-muted">{t("detail.noUsage")}</p>
 					) : (
-						<ul className="space-y-1">
+						<ul className="space-y-tight">
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
 									<a
 										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
-										className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-monti-hover"
+										className="flex items-center gap-condensed rounded-md px-condensed py-condensed hover:bg-monti-hover"
 									>
 										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
 										{usage.note && (
@@ -445,7 +445,7 @@ export function MediaDetailPanel({
 				</Section>
 			</div>
 
-			<div className="shrink-0 space-y-2 border-monti-muted border-t px-4 py-3">
+			<div className="shrink-0 space-y-condensed border-monti-muted border-t px-comfortable py-normal">
 				<Button
 					type="button"
 					variant="secondary"

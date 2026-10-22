@@ -55,14 +55,14 @@ export function ApiKeyField({
 	const chosen = saved ? keys.find((key) => key.id === value.keyId) : undefined;
 	const mask = (key: ApiKeyView) => (key.tail ? `••••${key.tail}` : "••••");
 	return (
-		<fieldset className={cn("flex flex-col gap-1", className)} disabled={disabled} data-testid="api-key-field">
-			<legend className="mb-2 font-medium text-monti-body" id={groupId}>
+		<fieldset className={cn("flex flex-col gap-tight", className)} disabled={disabled} data-testid="api-key-field">
+			<legend className="mb-condensed font-medium text-monti-body" id={groupId}>
 				{label ?? t("field.keyLabel")}
 			</legend>
-			<div role="radiogroup" aria-labelledby={groupId} className="flex max-w-xl flex-col gap-1">
+			<div role="radiogroup" aria-labelledby={groupId} className="flex max-w-xl flex-col gap-tight">
 				<label
 					className={cn(
-						"flex items-start gap-2 rounded-md px-3 py-2",
+						"flex items-start gap-condensed rounded-md px-normal py-condensed",
 						keys.length === 0 ? "opacity-60" : "cursor-pointer",
 						saved && "bg-monti-hover ring-1 ring-monti-muted",
 					)}
@@ -70,12 +70,12 @@ export function ApiKeyField({
 					<input
 						type="radio"
 						name={`${groupId}-use`}
-						className="mt-1"
+						className="mt-tight"
 						checked={saved}
 						disabled={keys.length === 0}
 						onChange={() => onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" })}
 					/>
-					<span className="flex min-w-0 flex-1 flex-col gap-2">
+					<span className="flex min-w-0 flex-1 flex-col gap-condensed">
 						<span className={cn("text-monti-body", saved && "font-medium")}>{t("field.useSaved")}</span>
 						{keys.length === 0 ? (
 							<span className="text-monti-caption text-monti-muted">
@@ -95,7 +95,7 @@ export function ApiKeyField({
 										{keys.map((key) => (
 											<SelectItem key={key.id} value={key.id}>
 												<span>{key.name}</span>
-												<span className="ml-2 font-mono text-monti-caption text-monti-muted">
+												<span className="ml-condensed font-mono text-monti-caption text-monti-muted">
 													{key.readable ? mask(key) : t("field.unreadable")}
 												</span>
 											</SelectItem>
@@ -113,7 +113,7 @@ export function ApiKeyField({
 				</label>
 				<label
 					className={cn(
-						"flex items-start gap-2 rounded-md px-3 py-2",
+						"flex items-start gap-condensed rounded-md px-normal py-condensed",
 						canSave ? "cursor-pointer" : "opacity-60",
 						value.use === "new" && "bg-monti-hover ring-1 ring-monti-muted",
 					)}
@@ -121,12 +121,12 @@ export function ApiKeyField({
 					<input
 						type="radio"
 						name={`${groupId}-use`}
-						className="mt-1"
+						className="mt-tight"
 						checked={value.use === "new"}
 						disabled={!canSave}
 						onChange={() => onChange({ use: "new", value: "" })}
 					/>
-					<span className="flex min-w-0 flex-1 flex-col gap-2">
+					<span className="flex min-w-0 flex-1 flex-col gap-condensed">
 						<span className={cn("text-monti-body", value.use === "new" && "font-medium")}>{t("field.useNew")}</span>
 						{value.use === "new" && (
 							<>

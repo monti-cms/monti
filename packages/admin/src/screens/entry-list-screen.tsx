@@ -167,19 +167,19 @@ function ListLoading() {
 	return (
 		<div aria-busy="true" className="flex h-svh overflow-hidden">
 			<span className="sr-only">{tc("loading")}</span>
-			<div aria-hidden className="hidden w-64 shrink-0 space-y-2 border-r p-3 md:block">
-				<Skeleton className="mb-4 h-7 w-32" />
+			<div aria-hidden className="hidden w-64 shrink-0 space-y-condensed border-r p-normal md:block">
+				<Skeleton className="mb-comfortable h-7 w-32" />
 				{Array.from({ length: 6 }, (_, index) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 					<Skeleton key={index} className="h-7 w-full" />
 				))}
 			</div>
 			<div aria-hidden className="flex min-w-0 flex-1 flex-col">
-				<div className="flex h-13 shrink-0 items-center justify-between border-b px-4 lg:px-4">
+				<div className="flex h-13 shrink-0 items-center justify-between border-b px-comfortable lg:px-comfortable">
 					<Skeleton className="h-5 w-32" />
 					<Skeleton className="h-8 w-64" />
 				</div>
-				<div className="space-y-3 px-4 py-4">
+				<div className="space-y-normal px-comfortable py-comfortable">
 					{Array.from({ length: 8 }, (_, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 						<Skeleton key={index} className="h-7 w-full" />
@@ -230,7 +230,7 @@ function TrashPage() {
 				<EntryListHeaderActions list={list} />
 				<nav
 					aria-label={t("dashboard.trashCollections")}
-					className="flex items-center gap-1 rounded-lg bg-monti-neutral p-[3px]"
+					className="flex items-center gap-tight rounded-lg bg-monti-neutral p-[3px]"
 				>
 					{site.COLLECTIONS.map((item) => (
 						<Link

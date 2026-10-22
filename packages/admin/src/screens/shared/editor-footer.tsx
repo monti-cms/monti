@@ -42,9 +42,9 @@ export function EditorFooter({
 	const t = useTranslator(commonMessages);
 	const busy = saving || deleting;
 	return (
-		<div className={cn("space-y-2", className)}>
+		<div className={cn("space-y-condensed", className)}>
 			{error && <FormFieldError className="whitespace-pre-wrap">{error}</FormFieldError>}
-			<div className={cn("flex flex-wrap items-center gap-2", align === "end" && "justify-end")}>
+			<div className={cn("flex flex-wrap items-center gap-condensed", align === "end" && "justify-end")}>
 				<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>
 					{saveIcon}
 					{saving ? t("saving") : (saveLabel ?? t("save"))}

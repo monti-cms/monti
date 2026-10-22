@@ -109,7 +109,7 @@ function RelationOptions({
 	const [value, setValue] = useState<string[]>([]);
 	const options = [...previewOptions(collectionLabel(file, target)), ...created];
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-comfortable">
 			<Pick
 				label={t("field.relationTo")}
 				value={target}
@@ -132,7 +132,7 @@ function RelationOptions({
 					setValue((current) => (next === "many" ? current : current.slice(0, 1)));
 				}}
 			/>
-			<div className="flex flex-col gap-2 rounded-md bg-monti-inset p-3" data-testid="relation-preview">
+			<div className="flex flex-col gap-condensed rounded-md bg-monti-inset p-normal" data-testid="relation-preview">
 				<span className="text-monti-caption text-monti-muted">{t("field.preview")}</span>
 				<span className="font-medium text-monti-body">{typeof field.label === "string" ? field.label : ""}</span>
 				<RelationCombobox
@@ -154,12 +154,12 @@ function RelationOptions({
 					}
 				/>
 			</div>
-			<Collapsible className="flex flex-col gap-4">
-				<CollapsibleTrigger className="group/more flex w-fit items-center gap-1 text-monti-body text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus">
+			<Collapsible className="flex flex-col gap-comfortable">
+				<CollapsibleTrigger className="group/more flex w-fit items-center gap-tight text-monti-body text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus">
 					<ChevronRight aria-hidden className="size-4 transition-transform group-data-[panel-open]/more:rotate-90" />
 					{t("field.more")}
 				</CollapsibleTrigger>
-				<CollapsibleContent className="flex flex-col gap-4">
+				<CollapsibleContent className="flex flex-col gap-comfortable">
 					<FlagSwitch
 						label={t("field.createInline")}
 						checked={field.createInline === true}
@@ -210,11 +210,14 @@ function OptionsEditor({
 	const taken = (value: string) => values.filter((item) => item !== value);
 	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
 	return (
-		<fieldset className="flex flex-col gap-2">
+		<fieldset className="flex flex-col gap-condensed">
 			<legend className="font-medium text-monti-caption">{t("options.title")}</legend>
-			<ul className="flex flex-col gap-2">
+			<ul className="flex flex-col gap-condensed">
 				{values.map((value, index) => (
-					<li key={value} className="flex flex-wrap items-end gap-2 rounded-md border bg-monti-page p-2">
+					<li
+						key={value}
+						className="flex flex-wrap items-end gap-condensed rounded-md border bg-monti-page p-condensed"
+					>
 						<NameInput
 							label={t("options.value")}
 							value={value}
@@ -237,7 +240,7 @@ function OptionsEditor({
 							className="min-w-32 flex-1"
 							onChange={(label) => change((current) => setOptionLabel(current, value, label))}
 						/>
-						<label className="flex items-center gap-2 pb-2 text-monti-caption">
+						<label className="flex items-center gap-condensed pb-condensed text-monti-caption">
 							<input
 								type="radio"
 								name={`default-${fieldName}`}
@@ -258,7 +261,7 @@ function OptionsEditor({
 				))}
 			</ul>
 			{!disabled && (
-				<div className="flex items-end gap-2">
+				<div className="flex items-end gap-condensed">
 					<Labeled label={t("options.newValue")} className="w-40">
 						<Input value={draftValue} placeholder="value" onChange={(event) => setDraftValue(event.target.value)} />
 					</Labeled>
@@ -326,7 +329,7 @@ export function KindOptions({
 		case "text": {
 			const fill = field.fillFromBody;
 			return (
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-comfortable">
 					<FlagSwitch
 						label={t("field.multiline")}
 						checked={field.multiline === true}
@@ -377,7 +380,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "text")
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-comfortable">
 					<Pick
 						label={t("field.slugFrom")}
 						description={t("field.slugFromHint")}
@@ -393,14 +396,14 @@ export function KindOptions({
 			return <RelationOptions field={field} set={set} change={change} opposite={opposite} more={more} />;
 		case "select":
 			return (
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-comfortable">
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
 				</div>
 			);
 		case "media":
 			return (
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-comfortable">
 					<Pick
 						label={t("field.accept")}
 						value={(field.accept as string | undefined) ?? "image"}
@@ -420,7 +423,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "relation" && item.many === true)
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-comfortable">
 					<Pick
 						label={t("field.backlinkFrom")}
 						value={from}
@@ -456,12 +459,12 @@ export function KindOptions({
 			const options = optionsOf(field);
 			const values = isObj(field.values) ? (field.values as Record<string, Record<string, Obj>>) : {};
 			return (
-				<div className="flex flex-col gap-3">
+				<div className="flex flex-col gap-normal">
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
-					<div className="flex flex-col gap-2">
+					<div className="flex flex-col gap-condensed">
 						{Object.keys(options).map((option) => (
-							<div key={option} className="flex flex-col gap-2 rounded-md border border-dashed p-2">
+							<div key={option} className="flex flex-col gap-condensed rounded-md border border-dashed p-condensed">
 								<span className="font-medium text-monti-caption">
 									{t("field.whenOption", { option: options[option] ?? option })}
 								</span>
@@ -536,10 +539,10 @@ export function FieldEditor({
 			className="rounded-lg border bg-monti-surface"
 			data-testid={`field-${name}`}
 		>
-			<div className="flex items-center gap-1 pr-1">
+			<div className="flex items-center gap-tight pr-tight">
 				<CollapsibleTrigger
 					aria-label={t("field.toggle", { name })}
-					className="group/field flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-focus"
+					className="group/field flex min-w-0 flex-1 items-center gap-condensed rounded-lg px-normal py-condensed text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-focus"
 				>
 					<ChevronRight aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-90")} />
 					<code className="shrink-0 font-medium text-monti-body">{name}</code>
@@ -573,9 +576,9 @@ export function FieldEditor({
 				/>
 			</div>
 			<CollapsibleContent>
-				<div className="flex flex-col gap-3 border-t px-3 py-3">
+				<div className="flex flex-col gap-normal border-t px-normal py-normal">
 					<IssueList issues={issues} />
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="grid gap-normal sm:grid-cols-2">
 						<NameInput
 							label={t("field.name")}
 							value={name}
@@ -602,7 +605,7 @@ export function FieldEditor({
 						/>
 					</div>
 					{valueKind && (
-						<div className="grid gap-3 sm:grid-cols-2">
+						<div className="grid gap-normal sm:grid-cols-2">
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
@@ -638,9 +641,9 @@ export function FieldEditor({
 						</div>
 					)}
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} place={place} />
-					<details className="rounded-md border border-dashed px-3 py-2 text-monti-body">
+					<details className="rounded-md border border-dashed px-normal py-condensed text-monti-body">
 						<summary className="cursor-pointer text-monti-caption text-monti-muted">{t("field.advanced")}</summary>
-						<div className="mt-3 flex flex-col gap-4">
+						<div className="mt-normal flex flex-col gap-comfortable">
 							{!isSlug && valueKind && (
 								<FieldRolePicker
 									role={field.role as string | undefined}
@@ -681,7 +684,7 @@ export function FieldList({
 	const names = Object.keys(fields);
 	const [adding, setAdding] = useState(false);
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-condensed">
 			{names.length === 0 && <p className="text-monti-caption text-monti-muted">{t("field.none")}</p>}
 			{names.map((fieldName, index) => (
 				<FieldEditor

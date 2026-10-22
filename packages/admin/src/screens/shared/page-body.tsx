@@ -11,7 +11,7 @@ export function PageBody({ className, wide, ...props }: ComponentProps<"div"> & 
 	return (
 		<div
 			className={cn(
-				"flex w-full flex-col gap-6 px-4 py-6 lg:px-8 lg:py-8",
+				"flex w-full flex-col gap-spacious px-comfortable py-spacious lg:px-wide lg:py-wide",
 				wide ? "max-w-none" : PAGE_MAX_WIDTH,
 				className,
 			)}

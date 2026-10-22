@@ -39,20 +39,23 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	return (
 		<>
-			<header className="shrink-0 border-b bg-monti-page px-4 pt-6 lg:px-8 lg:pt-8">
-				<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+			<header className="shrink-0 border-b bg-monti-page px-comfortable pt-spacious lg:px-wide lg:pt-wide">
+				<div className="flex flex-wrap items-end justify-between gap-x-spacious gap-y-normal">
 					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2">
-							<SidebarTrigger aria-label={shared("shell.openSidebar")} className="-ml-1 text-monti-muted md:hidden" />
+						<div className="flex flex-wrap items-center gap-condensed">
+							<SidebarTrigger
+								aria-label={shared("shell.openSidebar")}
+								className="-ml-tight text-monti-muted md:hidden"
+							/>
 							<h1 className="text-monti-heading">{t("title")}</h1>
 							<div
 								ref={setFileLine}
-								className="flex items-center gap-2 empty:hidden"
+								className="flex items-center gap-condensed empty:hidden"
 								data-testid="settings-file-line"
 							/>
 						</div>
 					</div>
-					<div ref={setActions} className="flex items-center gap-2" data-testid="settings-actions" />
+					<div ref={setActions} className="flex items-center gap-condensed" data-testid="settings-actions" />
 				</div>
 				<SettingsTabBar site={site} active={tab} onSchemaTab={go} changed={changed?.tabs} />
 			</header>

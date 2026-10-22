@@ -165,7 +165,7 @@ function SortableEntryRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"flex items-center gap-1 rounded-md border border-monti-muted bg-monti-page px-1 py-1 text-monti-caption",
+				"flex items-center gap-tight rounded-md border border-monti-muted bg-monti-page px-tight py-tight text-monti-caption",
 				isDragging && "relative z-10 shadow-monti-floating",
 			)}
 		>
@@ -184,7 +184,7 @@ function SortableEntryRow({
 				{index + 1}. {title}
 				{/* Unpublished posts are missing from the collection's public list. */}
 				{option && option.status !== "published" && option.status !== "missing" && (
-					<span className="ml-1 text-monti-warning">{t("entry.unpublished")}</span>
+					<span className="ml-tight text-monti-warning">{t("entry.unpublished")}</span>
 				)}
 			</span>
 			<IconButton
@@ -253,7 +253,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			: undefined);
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-condensed">
 			<RelationCombobox
 				id={id}
 				aria-label={t("entry.editList", { target })}
@@ -273,7 +273,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			) : (
 				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
 					<SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-						<ol aria-label={t("entry.listAria", { target })} className="space-y-1">
+						<ol aria-label={t("entry.listAria", { target })} className="space-y-tight">
 							{ids.map((itemId, index) => (
 								<SortableEntryRow
 									key={sortableIds[index]}

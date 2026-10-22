@@ -234,26 +234,28 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const running = progress !== null || busyBlocks.size > 0;
 	const toolbar = feature ? (
 		running ? (
-			<span className="flex items-center gap-1">
+			<span className="flex items-center gap-tight">
 				{progress && (
 					<span className="text-monti-caption text-monti-muted tabular-nums">
 						{t("progress", { done: progress.done, total: progress.total })}
 					</span>
 				)}
-				<Button type="button" size="sm" variant="ghost" className="gap-2 text-monti-muted" onClick={stop}>
+				<Button type="button" size="sm" variant="ghost" className="gap-condensed text-monti-muted" onClick={stop}>
 					<Square aria-hidden className="size-4" />
 					{t("stop")}
 				</Button>
 			</span>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className="gap-2 text-monti-muted" />}>
+				<PopoverTrigger
+					render={<Button type="button" size="sm" variant="ghost" className="gap-condensed text-monti-muted" />}
+				>
 					<Languages aria-hidden className="size-4" />
 					{t("all")}
 				</PopoverTrigger>
-				<PopoverContent align="end" className="w-72 gap-2 p-3 text-monti-caption">
+				<PopoverContent align="end" className="w-72 gap-condensed p-normal text-monti-caption">
 					<form
-						className="flex flex-col gap-2"
+						className="flex flex-col gap-condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							void translateAll();
