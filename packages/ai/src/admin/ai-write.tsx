@@ -223,7 +223,7 @@ function WriteDialog({
 								}
 							}}
 							placeholder={job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request")}
-							className="max-h-48 min-h-20 resize-y text-sm"
+							className="max-h-48 min-h-20 resize-y text-monti-body"
 							autoFocus={!fixed}
 						/>
 						<div className="flex justify-end">
@@ -248,7 +248,7 @@ function WriteDialog({
 							{view === "preview" ? (
 								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
-								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-muted/40 p-3 font-mono text-xs leading-relaxed">
+								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-inset p-3 font-mono text-monti-caption">
 									{diff ? <DiffText parts={diff} /> : result || t("running")}
 								</pre>
 							)}
@@ -299,19 +299,19 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<del key={index} className="bg-monti-destructive-soft text-monti-destructive-foreground line-through">
+			<del key={index} className="bg-monti-danger-muted text-monti-danger line-through">
 				{part.text}
 			</del>
 		) : (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<ins key={index} className="bg-monti-success-soft text-monti-success-foreground no-underline">
+			<ins key={index} className="bg-monti-success-muted text-monti-success no-underline">
 				{part.text}
 			</ins>
 		),
 	);
 }
 
-const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-muted/40 p-3";
+const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-inset p-3";
 
 /** A text as the rendered post. A text the format cannot read is shown as it is. */
 function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
@@ -319,7 +319,7 @@ function TextPreview({ format, text, label }: { format: BrowserFormat; text: str
 	return doc ? (
 		<DocPreview doc={doc} label={label} />
 	) : (
-		<pre className="whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs">{text}</pre>
+		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text}</pre>
 	);
 }
 
@@ -332,19 +332,19 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	const after = done ? (
 		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
-		<pre className="whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs">{text || t("running")}</pre>
+		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text || t("running")}</pre>
 	);
 	if (job.mode === "insert") return <div className={PANEL}>{after}</div>;
 	return (
 		<div className="grid min-w-0 gap-3 sm:grid-cols-2">
-			<section className="min-w-0 space-y-1.5">
-				<h3 className="font-medium text-monti-muted-foreground text-xs">{t("now")}</h3>
+			<section className="min-w-0 space-y-2">
+				<h3 className="font-medium text-monti-caption text-monti-muted">{t("now")}</h3>
 				<div className={PANEL}>
 					<TextPreview format={format} text={job.source} label={t("now")} />
 				</div>
 			</section>
-			<section className="min-w-0 space-y-1.5">
-				<h3 className="font-medium text-monti-muted-foreground text-xs">{t("after")}</h3>
+			<section className="min-w-0 space-y-2">
+				<h3 className="font-medium text-monti-caption text-monti-muted">{t("after")}</h3>
 				<div className={PANEL}>{after}</div>
 			</section>
 		</div>
@@ -465,7 +465,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 						type="button"
 						variant="ghost"
 						size="sm"
-						className="gap-1.5 text-monti-muted-foreground"
+						className="gap-2 text-monti-muted"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });

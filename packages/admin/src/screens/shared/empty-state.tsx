@@ -45,7 +45,7 @@ export function EmptyState({
 		return (
 			<Empty data-variant="compact" className={cn("flex-none gap-1 p-2", className)}>
 				<EmptyHeader className="gap-0.5">
-					<EmptyTitle className="font-normal text-monti-label text-monti-muted-foreground">{title}</EmptyTitle>
+					<EmptyTitle className="font-normal text-monti-label text-monti-muted">{title}</EmptyTitle>
 					{description && <EmptyDescription className="text-monti-caption">{description}</EmptyDescription>}
 				</EmptyHeader>
 				{action && (

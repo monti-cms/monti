@@ -47,7 +47,7 @@ export const CmsUntranslatedMark = Mark.create({
 				"data-untranslated": "",
 				// This is source text, so do not show the spellcheck underline for the translation language.
 				spellcheck: "false",
-				class: "text-monti-muted-foreground/70",
+				class: "text-monti-subtle",
 			}),
 			0,
 		];

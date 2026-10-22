@@ -200,12 +200,12 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 		<aside
 			aria-label={t("layout.previewTitle")}
 			style={resize.style}
-			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-popover sm:w-[var(--panel-width)]"
+			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-overlay sm:w-[var(--panel-width)]"
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
 			<div className="flex h-11 shrink-0 items-center justify-between border-b pr-2 pl-4">
-				<h2 className="font-medium text-sm">{t("layout.preview")}</h2>
+				<h2 className="font-medium text-monti-body">{t("layout.preview")}</h2>
 				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
 					<X aria-hidden />
 				</Button>
@@ -283,12 +283,12 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5">
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3">
 				<div className="min-w-0">
-					<h4 className="font-semibold text-sm">
-						{t("field.title")} <span className="font-medium text-monti-muted-foreground">{names.length}</span>
+					<h4 className="font-semibold text-monti-body">
+						{t("field.title")} <span className="font-medium text-monti-muted">{names.length}</span>
 					</h4>
-					<p className="mt-0.5 truncate text-monti-muted-foreground text-xs" title={t("fields.hint")}>
+					<p className="mt-0.5 truncate text-monti-caption text-monti-muted" title={t("fields.hint")}>
 						{t("fields.hint")}
 					</p>
 				</div>
@@ -329,21 +329,21 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				</div>
 			</div>
 			<div
-				className={cn(columnsOf(ctx.compact), "border-b py-2 pr-5 pl-9 text-monti-muted-foreground text-xs")}
+				className={cn(columnsOf(ctx.compact), "border-b py-2 pr-4 pl-8 text-monti-caption text-monti-muted")}
 				aria-hidden
 			>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
 				<span className={cn("hidden", !ctx.compact && "block")}>{t("fields.colSettings")}</span>
 			</div>
-			<div className="py-1.5 pb-2.5">
+			<div className="py-2 pb-2">
 				{names.length === 0 ? (
-					<p className="px-5 py-3 text-monti-muted-foreground text-xs">{t("field.none")}</p>
+					<p className="px-4 py-3 text-monti-caption text-monti-muted">{t("field.none")}</p>
 				) : (
 					<LayoutTree editing={editing} ctx={ctx} />
 				)}
 			</div>
-			<div className="flex flex-wrap gap-x-5 gap-y-1 border-t px-5 py-2.5 text-monti-muted-foreground text-xs">
+			<div className="flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2 text-monti-caption text-monti-muted">
 				<span>
 					<span className={cn("font-mono", REQUIRED)}>!</span> {t("fields.legendRequired")}
 				</span>

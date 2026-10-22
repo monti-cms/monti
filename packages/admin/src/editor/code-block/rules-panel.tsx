@@ -77,16 +77,16 @@ function RuleRow({
 	const options = effectOptions(site, rule.name);
 	return (
 		<li
-			className="flex flex-col gap-1.5 rounded-md border p-2"
+			className="flex flex-col gap-2 rounded-md border p-2"
 			aria-label={t("rulesPanel.rule", { pattern: rule.pattern })}
 		>
-			<div className="flex items-center gap-1.5">
+			<div className="flex items-center gap-2">
 				<Select
 					value={rule.name}
 					items={options}
 					onValueChange={(value) => value && onChange({ ...rule, name: value as CodeCharEffectName, attrs: {} })}
 				>
-					<SelectTrigger size="sm" className="h-7 text-xs" aria-label={t("rulesPanel.effect")}>
+					<SelectTrigger size="sm" className="h-7 text-monti-caption" aria-label={t("rulesPanel.effect")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -109,7 +109,7 @@ function RuleRow({
 						)
 					}
 				>
-					<SelectTrigger size="sm" className="h-7 text-xs" aria-label={t("rulesPanel.scope")}>
+					<SelectTrigger size="sm" className="h-7 text-monti-caption" aria-label={t("rulesPanel.scope")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -131,29 +131,29 @@ function RuleRow({
 							const line = Math.min(lineCount, Math.max(1, Number(event.target.value) || 1)) - 1;
 							onChange({ ...rule, line });
 						}}
-						className="h-7 w-14 px-1.5 text-xs"
+						className="h-7 w-14 px-2 text-monti-caption"
 					/>
 				)}
 				<IconButton label={t("rulesPanel.remove")} size="icon-xs" destructive onClick={onRemove} className="ml-auto">
 					<Trash2 aria-hidden />
 				</IconButton>
 			</div>
-			<div className="flex items-center gap-1 font-mono text-xs">
-				<span className="text-monti-muted-foreground">/</span>
+			<div className="flex items-center gap-1 font-mono text-monti-caption">
+				<span className="text-monti-muted">/</span>
 				<Input
 					aria-label={t("rulesPanel.pattern")}
 					value={rule.pattern}
 					placeholder={t("rulesPanel.patternPlaceholder")}
 					onChange={(event) => onChange({ ...rule, pattern: event.target.value })}
-					className="h-7 flex-1 px-1.5 font-mono text-xs"
+					className="h-7 flex-1 px-2 font-mono text-monti-caption"
 					aria-invalid={!!problem && rule.pattern.length > 0}
 				/>
-				<span className="text-monti-muted-foreground">/</span>
+				<span className="text-monti-muted">/</span>
 				<Input
 					aria-label={t("rulesPanel.flags")}
 					value={rule.flags}
 					onChange={(event) => onChange({ ...rule, flags: event.target.value.replace(/[^a-z]/gi, "") })}
-					className="h-7 w-10 px-1.5 font-mono text-xs"
+					className="h-7 w-10 px-2 font-mono text-monti-caption"
 				/>
 			</div>
 			{rule.name === "Tooltip" && (
@@ -163,11 +163,11 @@ function RuleRow({
 					placeholder={t("rulesPanel.tooltipContent")}
 					rows={1}
 					onChange={(event) => onChange({ ...rule, attrs: { ...rule.attrs, content: event.target.value } })}
-					className="min-h-7 px-1.5 py-1 text-xs md:text-xs"
+					className="min-h-7 px-2 py-1 text-monti-caption md:text-monti-caption"
 				/>
 			)}
 			{rule.name === "fold" && (
-				<label htmlFor={`${rule.id}-open`} className="flex items-center gap-2 text-xs">
+				<label htmlFor={`${rule.id}-open`} className="flex items-center gap-2 text-monti-caption">
 					<Switch
 						id={`${rule.id}-open`}
 						size="sm"
@@ -177,12 +177,7 @@ function RuleRow({
 					{t("rulesPanel.openFromStart")}
 				</label>
 			)}
-			<p
-				className={cn(
-					"text-monti-caption",
-					problem && rule.pattern ? "text-monti-destructive" : "text-monti-muted-foreground",
-				)}
-			>
+			<p className={cn("text-monti-caption", problem && rule.pattern ? "text-monti-danger" : "text-monti-muted")}>
 				{problem ? (rule.pattern ? problem : t("rulesPanel.enterPattern")) : t("rulesPanel.matches", { count })}
 			</p>
 		</li>
@@ -227,13 +222,13 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 			<IconButton
 				label={t("rulesPanel.title")}
 				size="sm"
-				className={cn("h-7 min-w-7 gap-1 px-1.5 text-xs", rules.length > 0 && "text-monti-foreground")}
+				className={cn("h-7 min-w-7 gap-1 px-2 text-monti-caption", rules.length > 0 && "text-monti-default")}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			>
 				<Regex aria-hidden className="size-3.5" />
 				{rules.length > 0 && <span className="tabular-nums">{rules.length}</span>}
 			</IconButton>
-			<PopoverContent align="end" className="w-96 gap-2 p-3 text-xs" data-code-ui="">
+			<PopoverContent align="end" className="w-96 gap-2 p-3 text-monti-caption" data-code-ui="">
 				<div className="flex items-center justify-between gap-2">
 					<p className="font-semibold">{t("rulesPanel.title")}</p>
 					{canAdd && site.offersCharEffect("fold") && foldSlot.trigger}

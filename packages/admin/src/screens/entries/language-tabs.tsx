@@ -82,7 +82,7 @@ export function LanguageTabs({
 	};
 
 	return (
-		<nav aria-label={t("lang.nav")} className={cn("mb-3.5 flex flex-wrap items-center gap-1 px-4 pt-2", className)}>
+		<nav aria-label={t("lang.nav")} className={cn("mb-3 flex flex-wrap items-center gap-1 px-4 pt-2", className)}>
 			{site.LOCALES.map((target) => {
 				const member = members.find((item) => item.locale === target);
 				if (!member) {
@@ -93,7 +93,7 @@ export function LanguageTabs({
 							size="sm"
 							variant="ghost"
 							disabled={createDisabled}
-							className="h-7 gap-1 border border-dashed px-2 text-monti-muted-foreground text-xs"
+							className="h-7 gap-1 border border-dashed px-2 text-monti-caption text-monti-muted"
 							onClick={() => void create(target)}
 						>
 							<Plus aria-hidden className="size-3" />
@@ -124,8 +124,8 @@ export function LanguageTabs({
 								status: statusLabels(site)[member.status],
 							})}
 							className={cn(
-								"h-7 gap-1.5 px-2 text-xs",
-								current ? "bg-monti-muted text-monti-foreground" : "text-monti-muted-foreground",
+								"h-7 gap-2 px-2 text-monti-caption",
+								current ? "bg-monti-neutral text-monti-default" : "text-monti-muted",
 							)}
 							onClick={() => {
 								if (!current) router.navigate(site.adminEntryEditHref(member.id));
@@ -136,7 +136,7 @@ export function LanguageTabs({
 								{target.toUpperCase()}
 							</span>
 							{member.isSource && (
-								<span aria-hidden className="font-normal text-monti-muted-foreground">
+								<span aria-hidden className="font-normal text-monti-muted">
 									{t("source")}
 								</span>
 							)}
@@ -145,7 +145,7 @@ export function LanguageTabs({
 							<DropdownMenu>
 								<IconButton
 									label={t("lang.menu")}
-									className="size-7 text-monti-muted-foreground"
+									className="size-7 text-monti-muted"
 									trigger={(button) => <DropdownMenuTrigger render={button} />}
 								>
 									<MoreHorizontal aria-hidden className="size-3.5" />

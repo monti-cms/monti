@@ -70,7 +70,7 @@ function NewCollectionForm({
 	};
 	return (
 		<form
-			className="grid gap-5"
+			className="grid gap-4"
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
@@ -97,14 +97,14 @@ function NewCollectionForm({
 					aria-invalid={idIssue ? true : undefined}
 					onChange={(event) => setTypedId(event.target.value)}
 				/>
-				{idIssue && <FormFieldError className="text-xs">{ts(`name.${idIssue}`)}</FormFieldError>}
+				{idIssue && <FormFieldError className="text-monti-caption">{ts(`name.${idIssue}`)}</FormFieldError>}
 			</Labeled>
 			<fieldset className="flex flex-col gap-2">
-				<legend className="mb-1.5 font-medium text-xs">{t("collection.kind")}</legend>
+				<legend className="mb-2 font-medium text-monti-caption">{t("collection.kind")}</legend>
 				{kinds.map((item) => (
 					<label
 						key={item.value}
-						className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 has-checked:border-monti-primary has-checked:bg-monti-accent/40"
+						className="flex cursor-pointer items-start gap-2 rounded-lg border p-2 has-checked:border-monti-emphasis has-checked:bg-monti-selected"
 					>
 						<input
 							type="radio"
@@ -115,8 +115,8 @@ function NewCollectionForm({
 							className="mt-0.5"
 						/>
 						<span className="flex flex-col gap-0.5">
-							<span className="font-medium text-sm">{item.label}</span>
-							<span className="text-monti-muted-foreground text-xs">{item.explain}</span>
+							<span className="font-medium text-monti-body">{item.label}</span>
+							<span className="text-monti-caption text-monti-muted">{item.explain}</span>
 						</span>
 					</label>
 				))}

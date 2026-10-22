@@ -66,8 +66,8 @@ export default async function AdminLoginPage({
 	return (
 		<div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
 			<header className="flex flex-col items-center gap-1 text-center">
-				<h1 className="font-semibold text-monti-foreground text-monti-heading tracking-tight">{siteName}</h1>
-				<p className="text-monti-caption text-monti-muted-foreground">{t("managedWith")}</p>
+				<h1 className="text-monti-default text-monti-heading">{siteName}</h1>
+				<p className="text-monti-caption text-monti-muted">{t("managedWith")}</p>
 			</header>
 			<Card className="w-full max-w-sm">
 				<CardHeader className="text-center">
@@ -83,8 +83,8 @@ export default async function AdminLoginPage({
 				<CardContent>
 					{isUnauthorizedUser ? (
 						<Alert variant="destructive" layout="stack" className="text-center">
-							<AlertTitle className="text-xs">{t("forbiddenTitle")}</AlertTitle>
-							<AlertDescription className="mt-1 text-xs">
+							<AlertTitle className="text-monti-caption">{t("forbiddenTitle")}</AlertTitle>
+							<AlertDescription className="mt-1 text-monti-caption">
 								{t("forbidden", { provider, accountId: accountId ?? "" })}
 							</AlertDescription>
 							<form method="post" action={adminApiUrl("/v1/session/sign-out")} className="mt-3">
@@ -120,8 +120,8 @@ export default async function AdminLoginPage({
 						</form>
 					) : providers.length === 0 ? (
 						<Alert variant="destructive" layout="stack" className="text-center">
-							<AlertTitle className="text-xs">{t("noLoginTitle")}</AlertTitle>
-							<AlertDescription className="mt-1 text-xs">{t("noLogin")}</AlertDescription>
+							<AlertTitle className="text-monti-caption">{t("noLoginTitle")}</AlertTitle>
+							<AlertDescription className="mt-1 text-monti-caption">{t("noLogin")}</AlertDescription>
 						</Alert>
 					) : (
 						<div className="flex flex-col gap-4">
@@ -173,7 +173,7 @@ export default async function AdminLoginPage({
 function ErrorAlert({ text }: { text: string }) {
 	return (
 		<Alert variant="destructive" layout="stack" className="text-center">
-			<AlertDescription className="text-xs">{text}</AlertDescription>
+			<AlertDescription className="text-monti-caption">{text}</AlertDescription>
 		</Alert>
 	);
 }
@@ -186,9 +186,9 @@ function TextField({
 	...props
 }: { id: string; label: string; hint?: string } & Omit<React.ComponentProps<typeof Input>, "id">) {
 	return (
-		<div className="flex flex-col gap-1.5">
+		<div className="flex flex-col gap-2">
 			<Label htmlFor={id}>{label}</Label>
-			{hint ? <p className="text-monti-muted-foreground text-xs">{hint}</p> : null}
+			{hint ? <p className="text-monti-caption text-monti-muted">{hint}</p> : null}
 			<Input id={id} required {...props} />
 		</div>
 	);

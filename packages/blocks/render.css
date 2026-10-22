@@ -10,11 +10,11 @@
 
 /* Defaults: accent colors per callout variant and chart series colors (`chart-1` to `chart-5`). */
 :where(:root) {
-	--monti-callout-note: var(--monti-muted-foreground, var(--muted-foreground));
+	--monti-callout-note: var(--monti-fg-muted, var(--muted-foreground));
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
-	--monti-callout-warning: var(--monti-warning, var(--warning, oklch(0.7 0.16 70)));
-	--monti-callout-danger: var(--monti-destructive, var(--destructive, oklch(0.58 0.22 27)));
+	--monti-callout-warning: var(--monti-warning-9, var(--warning, oklch(0.7 0.16 70)));
+	--monti-callout-danger: var(--monti-danger-9, var(--destructive, oklch(0.58 0.22 27)));
 	--chart-1: oklch(0.65 0.17 265);
 	--chart-2: oklch(0.7 0.14 160);
 	--chart-3: oklch(0.75 0.15 70);

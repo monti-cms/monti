@@ -109,7 +109,7 @@ export function BubbleButton({
 			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={onClick}
-			className={cn("h-8 min-w-8 px-1.5", className)}
+			className={cn("h-8 min-w-8 px-2", className)}
 		>
 			{children}
 		</IconButton>
@@ -316,7 +316,7 @@ export function InlineBubble({
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
+					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
@@ -327,7 +327,7 @@ export function InlineBubble({
 							title={href}
 							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 							onMouseDown={(event) => event.preventDefault()}
-							className="max-w-56 truncate px-1 text-monti-highlight text-xs underline underline-offset-2"
+							className="max-w-56 truncate px-1 text-monti-accent text-monti-caption underline underline-offset-2"
 						>
 							{href}
 						</a>
@@ -348,8 +348,8 @@ export function InlineBubble({
 			const content = String(mark.attrs.content ?? "");
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
-					<span className="max-w-48 truncate px-1 text-monti-muted-foreground text-xs" title={content}>
+					<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
+					<span className="max-w-48 truncate px-1 text-monti-caption text-monti-muted" title={content}>
 						{content}
 					</span>
 					<BubbleButton label={t("inlineBubble.tooltipEdit")} onClick={() => openCodeTooltip(mark)}>
@@ -383,8 +383,8 @@ export function InlineBubble({
 			const type = editor.schema.marks.codeFold;
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<ChevronsLeftRightEllipsis aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
-					<span className="px-1 text-monti-muted-foreground text-xs">{t("inlineBubble.fold")}</span>
+					<ChevronsLeftRightEllipsis aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
+					<span className="px-1 text-monti-caption text-monti-muted">{t("inlineBubble.fold")}</span>
 					<BubbleButton
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
@@ -394,7 +394,7 @@ export function InlineBubble({
 					<BubbleButton
 						label={t("inlineBubble.openByDefault")}
 						pressed={publicOpen}
-						className="text-xs"
+						className="text-monti-caption"
 						onClick={act(() => {
 							if (!type) return;
 							editor
@@ -425,7 +425,7 @@ export function InlineBubble({
 				className="gap-0.5"
 			>
 				<tool.icon aria-hidden className="size-4" />
-				<X aria-hidden className="size-3 text-monti-muted-foreground" />
+				<X aria-hidden className="size-3 text-monti-muted" />
 			</BubbleButton>
 		);
 	};
@@ -437,9 +437,9 @@ export function InlineBubble({
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
 			<div key={rule.id} className="flex items-center gap-0.5">
-				<Regex aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
+				<Regex aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
 				<span
-					className="max-w-48 truncate px-1 text-monti-muted-foreground text-xs"
+					className="max-w-48 truncate px-1 text-monti-caption text-monti-muted"
 					title={`/${rule.pattern}/${rule.flags}`}
 				>
 					{t("inlineBubble.ruleSummary", { label, count })}
@@ -454,7 +454,7 @@ export function InlineBubble({
 				)}
 				<BubbleButton
 					label={t("inlineBubble.ruleExpand")}
-					className="text-xs"
+					className="text-monti-caption"
 					onClick={act(() => expandRule(editor.view, blockPos, rule.id))}
 				>
 					{t("inlineBubble.ruleExpandShort")}
@@ -488,13 +488,13 @@ export function InlineBubble({
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
 		<div className="flex items-center gap-1">
-			<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
+			<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-selected font-medium text-monti-caption text-monti-default leading-none">
 				{target.badge}
 			</span>
 			<button
 				type="button"
 				onClick={() => setPanel({ kind: "footnote", target })}
-				className="max-w-48 truncate px-1 text-left text-monti-muted-foreground text-xs hover:text-monti-foreground"
+				className="max-w-48 truncate px-1 text-left text-monti-caption text-monti-muted hover:text-monti-default"
 				title={target.defText || t("inlineBubble.footnoteEmpty")}
 			>
 				{target.defText || t("inlineBubble.footnoteEmpty")}
@@ -576,7 +576,7 @@ export function InlineBubble({
 	);
 
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
-	const surface = "rounded-md border bg-monti-popover/95 text-monti-popover-foreground shadow-sm backdrop-blur";
+	const surface = "rounded-md border bg-monti-overlay text-monti-default backdrop-blur";
 
 	return createPortal(
 		panel ? (
@@ -596,7 +596,7 @@ export function InlineBubble({
 				style={style}
 				className={cn(
 					surface,
-					"flex flex-col gap-3 p-3 text-xs",
+					"flex flex-col gap-3 p-3 text-monti-caption",
 					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80",
 				)}
 				onKeyDown={(event) => {

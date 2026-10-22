@@ -50,11 +50,11 @@ export function CalloutNodeView() {
 						onCommit={(title) => setValue("title", title)}
 						onEnter={() => block.focus()}
 						onEscape={() => block.focus()}
-						className="w-full flex-1 font-medium tracking-tight"
+						className="w-full flex-1 font-medium"
 					/>
 				</div>
 				{/* Set the first and last child margins to 0 so the vertical margins of inner blocks (custom blocks wrapped by react-renderer) do not add to the box padding. */}
-				<Content className="mt-2 text-current text-sm [&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0 [&_p]:leading-relaxed" />
+				<Content className="mt-2 text-current text-monti-body [&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0" />
 			</div>
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>

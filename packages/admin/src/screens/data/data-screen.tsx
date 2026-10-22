@@ -36,20 +36,15 @@ function Band({
 			data-testid={testId}
 			aria-labelledby={`${testId}-title`}
 			className={cn(
-				"flex scroll-mt-6 flex-col gap-5",
-				danger ? "rounded-lg border border-monti-destructive/40 p-5" : "not-first:border-t not-first:pt-8",
+				"flex scroll-mt-6 flex-col gap-4",
+				danger ? "rounded-lg border border-monti-danger-muted p-4" : "not-first:border-t not-first:pt-8",
 			)}
 		>
 			<div>
-				<h2
-					id={`${testId}-title`}
-					className={cn("font-semibold text-monti-title", danger && "text-monti-destructive-foreground")}
-				>
+				<h2 id={`${testId}-title`} className={cn("text-monti-title", danger && "text-monti-danger")}>
 					{title}
 				</h2>
-				{description && (
-					<p className="mt-1.5 max-w-prose text-monti-label text-monti-muted-foreground">{description}</p>
-				)}
+				{description && <p className="mt-2 max-w-prose text-monti-label text-monti-muted">{description}</p>}
 			</div>
 			{children}
 		</section>

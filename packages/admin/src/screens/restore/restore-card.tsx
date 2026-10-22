@@ -36,9 +36,9 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 		t(`summary.${status}`, { count: counts.byStatus[status] ?? 0 }),
 	);
 	return (
-		<div className="flex flex-col gap-1.5 text-sm" data-testid="restore-counts">
-			<p className="font-medium text-base">{t("summary.entries", { count: counts.entries })}</p>
-			<ul className="flex list-disc flex-col gap-1 pl-5 text-monti-muted-foreground">
+		<div className="flex flex-col gap-2 text-monti-body" data-testid="restore-counts">
+			<p className="text-monti-title">{t("summary.entries", { count: counts.entries })}</p>
+			<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-muted">
 				{statuses.length > 0 && <li>{statuses.join(" · ")}</li>}
 				{counts.translations > 0 && <li>{t("summary.translations", { count: counts.translations })}</li>}
 				<li>{t("summary.folders", { count: counts.folders })}</li>
@@ -49,7 +49,7 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 			{counts.templatesSkipped.length > 0 && (
 				<div className="mt-1 flex flex-col gap-1" data-testid="restore-templates">
 					<p className="font-medium">{t("templates.title")}</p>
-					<ul className="flex flex-col gap-0.5 text-monti-muted-foreground text-xs leading-relaxed">
+					<ul className="flex flex-col gap-0.5 text-monti-caption text-monti-muted">
 						{counts.templatesSkipped.slice(0, LIST_LIMIT).map((template) => (
 							<li key={template.id}>
 								<span className="font-medium">{template.name}</span>: {template.text}
@@ -68,21 +68,21 @@ function Problems({ preview }: { preview: RestorePreview }) {
 	const shown = preview.problems.slice(0, LIST_LIMIT);
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("problems.title")} data-testid="restore-problems">
-			<h4 className="font-medium text-monti-destructive text-sm">{t("problems.title")}</h4>
-			<p className="text-monti-muted-foreground text-xs">{t("problems.hint")}</p>
+			<h4 className="font-medium text-monti-body text-monti-danger">{t("problems.title")}</h4>
+			<p className="text-monti-caption text-monti-muted">{t("problems.hint")}</p>
 			<ul className="flex max-h-96 flex-col gap-2 overflow-y-auto rounded-md border px-3 py-2">
 				{shown.map((problem, index) => (
 					<li
 						// biome-ignore lint/suspicious/noArrayIndexKey: a problem has no id of its own; the list does not change while it is shown.
 						key={index}
-						className="flex flex-col gap-0.5 border-b pb-2 text-sm last:border-b-0 last:pb-0"
+						className="flex flex-col gap-0.5 border-b pb-2 text-monti-body last:border-b-0 last:pb-0"
 						data-testid="restore-problem"
 						data-code={problem.code}
 					>
 						<span className="font-medium">{problem.label ?? problem.id ?? t("problems.archive")}</span>
-						<span className="text-monti-muted-foreground text-xs leading-relaxed">{problem.text}</span>
+						<span className="text-monti-caption text-monti-muted">{problem.text}</span>
 						{problem.found.map((line) => (
-							<span key={line} className="text-monti-muted-foreground text-xs leading-relaxed">
+							<span key={line} className="text-monti-caption text-monti-muted">
 								{line}
 							</span>
 						))}
@@ -90,7 +90,7 @@ function Problems({ preview }: { preview: RestorePreview }) {
 				))}
 			</ul>
 			{preview.problems.length > LIST_LIMIT && (
-				<p className="text-monti-muted-foreground text-xs">
+				<p className="text-monti-caption text-monti-muted">
 					{t("problems.more", { count: preview.problems.length - LIST_LIMIT })}
 				</p>
 			)}
@@ -103,8 +103,8 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 	if (warnings.length === 0) return null;
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("warnings.title")} data-testid="restore-warnings">
-			<h4 className="font-medium text-sm">{t("warnings.title")}</h4>
-			<ul className="flex flex-col gap-1 text-monti-muted-foreground text-xs leading-relaxed">
+			<h4 className="font-medium text-monti-body">{t("warnings.title")}</h4>
+			<ul className="flex flex-col gap-1 text-monti-caption text-monti-muted">
 				{warnings.slice(0, LIST_LIMIT).map((warning) => (
 					<li key={`${warning.code}:${warning.id ?? ""}`}>
 						{warning.label && <span className="font-medium">{warning.label} </span>}
@@ -113,7 +113,7 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 				))}
 			</ul>
 			{warnings.length > LIST_LIMIT && (
-				<p className="text-monti-muted-foreground text-xs">
+				<p className="text-monti-caption text-monti-muted">
 					{t("warnings.more", { count: warnings.length - LIST_LIMIT })}
 				</p>
 			)}
@@ -125,9 +125,9 @@ function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 	const t = useTranslator(restoreMessages);
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("notRestored.title")} data-testid="restore-not-restored">
-			<h4 className="font-medium text-sm">{t("notRestored.title")}</h4>
-			<p className="text-monti-muted-foreground text-xs">{t("notRestored.hint")}</p>
-			<ul className="flex list-disc flex-col gap-1 pl-5 text-monti-muted-foreground text-xs leading-relaxed">
+			<h4 className="font-medium text-monti-body">{t("notRestored.title")}</h4>
+			<p className="text-monti-caption text-monti-muted">{t("notRestored.hint")}</p>
+			<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
 				{items.map((item) => (
 					<li key={item.code}>{item.text}</li>
 				))}
@@ -140,15 +140,15 @@ function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(restoreMessages);
 	return (
-		<output className="flex flex-col gap-1.5" data-testid="restore-progress">
-			<div className="flex items-center gap-2 text-monti-muted-foreground text-sm">
+		<output className="flex flex-col gap-2" data-testid="restore-progress">
+			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{t("progress.running", { count })}
 			</div>
-			<div className="h-1 overflow-hidden rounded-sm bg-monti-muted">
-				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-primary" />
+			<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
+				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis" />
 			</div>
-			<p className="text-monti-muted-foreground text-xs">{t("progress.hint")}</p>
+			<p className="text-monti-caption text-monti-muted">{t("progress.hint")}</p>
 		</output>
 	);
 }
@@ -183,8 +183,8 @@ function ResultView({ form }: { form: RestoreForm }) {
 	return (
 		<div className="flex flex-col gap-6" data-testid="restore-result">
 			<div className="flex flex-col gap-2">
-				<h4 className="font-medium text-base">{t("result.title")}</h4>
-				<p className="text-monti-muted-foreground text-sm">{t("result.summary", { count: result.counts.entries })}</p>
+				<h4 className="text-monti-title">{t("result.title")}</h4>
+				<p className="text-monti-body text-monti-muted">{t("result.summary", { count: result.counts.entries })}</p>
 			</div>
 			<CountLines counts={result.counts} />
 			<Warnings warnings={result.warnings} />
@@ -192,7 +192,7 @@ function ResultView({ form }: { form: RestoreForm }) {
 			<div>
 				<a
 					href={site.adminHref()}
-					className={"text-monti-highlight text-sm underline underline-offset-4"}
+					className={"text-monti-accent text-monti-body underline underline-offset-4"}
 					data-testid="restore-open"
 				>
 					{t("result.open")}
@@ -219,9 +219,9 @@ export function RestoreBackupFields() {
 
 	if (disabled) {
 		return (
-			<div className="flex flex-col gap-1.5" data-testid="restore-disabled">
-				<p className="font-medium text-sm">{t("notEmpty.title")}</p>
-				<p className="text-monti-muted-foreground text-xs leading-relaxed">{t("notEmpty.description")}</p>
+			<div className="flex flex-col gap-2" data-testid="restore-disabled">
+				<p className="font-medium text-monti-body">{t("notEmpty.title")}</p>
+				<p className="text-monti-caption text-monti-muted">{t("notEmpty.description")}</p>
 				<div>
 					<Button type="button" variant="outline" disabled aria-disabled>
 						{t("file.choose")}
@@ -236,8 +236,8 @@ export function RestoreBackupFields() {
 			{!result && (
 				<>
 					<div className="flex flex-col gap-2">
-						<p className="font-medium text-sm">{t("kinds.label")}</p>
-						<ul className="flex list-disc flex-col gap-1 pl-5 text-monti-muted-foreground text-xs leading-relaxed">
+						<p className="font-medium text-monti-body">{t("kinds.label")}</p>
+						<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
 							<li>{t("kinds.backup")}</li>
 						</ul>
 					</div>
@@ -261,9 +261,7 @@ export function RestoreBackupFields() {
 						<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
 							{form.file ? t("file.change") : t("file.choose")}
 						</Button>
-						{form.file && (
-							<span className="min-w-0 truncate text-monti-muted-foreground text-sm">{form.file.name}</span>
-						)}
+						{form.file && <span className="min-w-0 truncate text-monti-body text-monti-muted">{form.file.name}</span>}
 					</div>
 
 					{form.tooLarge && form.limit !== undefined && (
@@ -273,7 +271,7 @@ export function RestoreBackupFields() {
 					)}
 
 					{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
-						<p className="text-monti-muted-foreground text-sm">{t("preview.loading")}</p>
+						<p className="text-monti-body text-monti-muted">{t("preview.loading")}</p>
 					)}
 					{previewQuery.isError && (
 						<LoadErrorAlert

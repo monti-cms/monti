@@ -123,13 +123,13 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 
 	return (
 		<form onSubmit={handleApply} onKeyDown={submitOnEnter} className="grid gap-3">
-			<div className="flex items-center gap-1.5 font-medium">
-				<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
+			<div className="flex items-center gap-2 font-medium">
+				<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-selected font-medium text-monti-caption text-monti-default leading-none">
 					{target.badge}
 				</span>
 				<span>{t("inlineBubble.footnotePanel")}</span>
 			</div>
-			<label htmlFor={`${id}-content`} className="grid gap-1.5 text-xs">
+			<label htmlFor={`${id}-content`} className="grid gap-2 text-monti-caption">
 				{t("inlineBubble.footnoteField")}
 				<Textarea
 					id={`${id}-content`}

@@ -12,19 +12,16 @@ import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 export function EntryEditorLoading() {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
-		<div
-			className="flex h-screen w-full flex-col overflow-hidden bg-monti-background text-monti-foreground"
-			aria-busy="true"
-		>
+		<div className="flex h-screen w-full flex-col overflow-hidden bg-monti-page text-monti-default" aria-busy="true">
 			<span className="sr-only">{t("loadingDocument")}</span>
 
 			{/* Top Header skeleton */}
-			<header className="flex h-14 shrink-0 items-center justify-between border-b bg-monti-background px-4">
+			<header className="flex h-14 shrink-0 items-center justify-between border-b bg-monti-page px-4">
 				<div className="flex items-center gap-2">
 					<Skeleton className="size-4 rounded-sm" />
 					<Skeleton className="h-4 w-12 rounded-md" />
 				</div>
-				<div className="flex items-center gap-2.5">
+				<div className="flex items-center gap-2">
 					<Skeleton className="h-4 w-20 rounded-md" />
 					<Skeleton className="h-8 w-16 rounded-md" />
 					<Skeleton className="size-8 rounded-md" />
@@ -37,10 +34,10 @@ export function EntryEditorLoading() {
 				{/* Canvas Area */}
 				<div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
 					{/* Formatting Toolbar skeleton */}
-					<div className="relative flex min-h-12 w-full shrink-0 items-center border-b bg-monti-background/95 px-6 py-2 backdrop-blur">
-						<div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+					<div className="relative flex min-h-12 w-full shrink-0 items-center border-b bg-monti-page px-6 py-2 backdrop-blur">
+						<div className="flex min-w-0 flex-1 items-center justify-center gap-2">
 							<Skeleton className="h-7 w-20 rounded-md" />
-							<span className="mx-1 h-4 w-px bg-monti-border" />
+							<span className="mx-1 h-4 w-px bg-monti-divider" />
 							<div className="flex items-center gap-1">
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
@@ -48,7 +45,7 @@ export function EntryEditorLoading() {
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
 							</div>
-							<span className="mx-1 h-4 w-px bg-monti-border" />
+							<span className="mx-1 h-4 w-px bg-monti-divider" />
 							<div className="flex items-center gap-1">
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
@@ -62,7 +59,7 @@ export function EntryEditorLoading() {
 					</div>
 
 					{/* Document Content Canvas */}
-					<div className="h-full min-w-0 flex-1 overflow-y-auto px-6 py-10">
+					<div className="h-full min-w-0 flex-1 overflow-y-auto px-6 py-8">
 						<div className="mx-auto w-full max-w-[760px] space-y-6">
 							{/* Language tabs skeleton */}
 							<div className="flex items-center gap-2">
@@ -73,7 +70,7 @@ export function EntryEditorLoading() {
 							{/* Title skeleton */}
 							<Skeleton className="h-10 w-3/4 rounded-md" />
 
-							<div className="border-monti-border/60 border-b pt-1" />
+							<div className="border-monti-muted border-b pt-1" />
 
 							{/* Paragraph skeletons */}
 							<div className="space-y-3 pt-4">
@@ -93,7 +90,7 @@ export function EntryEditorLoading() {
 				</div>
 
 				{/* Inspector Side Panel skeleton (visible on wide screens) */}
-				<aside className="hidden w-80 shrink-0 flex-col border-l bg-monti-background lg:flex">
+				<aside className="hidden w-80 shrink-0 flex-col border-l bg-monti-page lg:flex">
 					{/* Inspector Header / Tabs */}
 					<div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
 						<div className="flex items-center gap-2">
@@ -104,15 +101,15 @@ export function EntryEditorLoading() {
 					</div>
 
 					{/* Inspector Fields */}
-					<div className="flex-1 space-y-5 overflow-y-auto p-4">
+					<div className="flex-1 space-y-4 overflow-y-auto p-4">
 						{/* Address Field */}
-						<div className="space-y-1.5">
+						<div className="space-y-2">
 							<Skeleton className="h-3.5 w-16" />
 							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 
 						{/* Summary Field */}
-						<div className="space-y-1.5">
+						<div className="space-y-2">
 							<Skeleton className="h-3.5 w-20" />
 							<Skeleton className="h-16 w-full rounded-md" />
 						</div>
@@ -120,11 +117,11 @@ export function EntryEditorLoading() {
 						{/* Classification Section */}
 						<div className="space-y-3 pt-2">
 							<Skeleton className="h-3 w-24" />
-							<div className="space-y-1.5">
+							<div className="space-y-2">
 								<Skeleton className="h-3.5 w-16" />
 								<Skeleton className="h-9 w-full rounded-md" />
 							</div>
-							<div className="space-y-1.5">
+							<div className="space-y-2">
 								<Skeleton className="h-3.5 w-12" />
 								<Skeleton className="h-9 w-full rounded-md" />
 							</div>
@@ -133,7 +130,7 @@ export function EntryEditorLoading() {
 						{/* Work log / Policy Section */}
 						<div className="space-y-3 pt-2">
 							<Skeleton className="h-3 w-20" />
-							<div className="space-y-1.5">
+							<div className="space-y-2">
 								<Skeleton className="h-3.5 w-14" />
 								<Skeleton className="h-9 w-full rounded-md" />
 							</div>

@@ -14,11 +14,11 @@
  * so the host's `--chart-N` (shadcn, `render.css`) is used when it sets one.
  */
 :where(html:has(.monti-admin)):where(:root) {
-	--monti-callout-note: var(--monti-muted-foreground);
+	--monti-callout-note: var(--monti-fg-muted);
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
-	--monti-callout-warning: var(--monti-warning);
-	--monti-callout-danger: var(--monti-destructive);
+	--monti-callout-warning: var(--monti-warning-9);
+	--monti-callout-danger: var(--monti-danger-9);
 	--monti-chart-1: var(--chart-1, oklch(0.65 0.17 265));
 	--monti-chart-2: var(--chart-2, oklch(0.7 0.14 160));
 	--monti-chart-3: var(--chart-3, oklch(0.75 0.15 70));
@@ -37,9 +37,9 @@
 /* Callout edit screen (`callout/view.tsx`). Mixes the accent color into the theme background and border. The public look is up to the site. */
 .monti-callout {
 	--monti-callout-accent: var(--monti-callout-note);
-	background-color: color-mix(in oklab, var(--monti-callout-accent) 10%, var(--monti-background));
-	border-color: color-mix(in oklab, var(--monti-callout-accent) 40%, var(--monti-border));
-	color: var(--monti-foreground);
+	background-color: color-mix(in oklab, var(--monti-callout-accent) 10%, var(--monti-bg-page));
+	border-color: color-mix(in oklab, var(--monti-callout-accent) 40%, var(--monti-border-muted));
+	color: var(--monti-fg-default);
 }
 .monti-callout[data-variant="tip"] {
 	--monti-callout-accent: var(--monti-callout-tip);
@@ -57,7 +57,7 @@
 	color: var(--monti-callout-accent);
 }
 .monti-callout :is(ul, ol) > li::marker {
-	color: var(--monti-muted-foreground);
+	color: var(--monti-fg-muted);
 }
 
 /* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */

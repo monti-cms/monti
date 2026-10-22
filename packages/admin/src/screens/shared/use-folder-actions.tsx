@@ -327,7 +327,7 @@ export function useFolderActions({
 						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
 					</AlertDialogHeader>
 					{contents ? (
-						<ul className="list-disc space-y-1 pl-5 text-sm">
+						<ul className="list-disc space-y-1 pl-4 text-monti-body">
 							<li>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</li>
 							<li>
 								{t("folder.childCount", { count: contents.childFolders.length })}

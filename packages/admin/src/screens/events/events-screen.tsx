@@ -57,15 +57,15 @@ function FilterTabs({
 }) {
 	const t = useTranslator(eventsMessages);
 	return (
-		<div className="flex min-h-11 shrink-0 items-stretch border-monti-border border-b px-8">
-			<fieldset className="-mb-px flex items-stretch gap-5">
+		<div className="flex min-h-11 shrink-0 items-stretch border-monti-muted border-b px-8">
+			<fieldset className="-mb-px flex items-stretch gap-4">
 				<legend className="sr-only">{t("filter.label")}</legend>
 				{options.map((option) => (
 					<button
 						key={option.value}
 						type="button"
 						aria-pressed={filter === option.value}
-						className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
+						className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
 						onClick={() => onChange(option.value)}
 					>
 						{option.label}
@@ -152,7 +152,7 @@ export function EventsScreen() {
 			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-8 mt-3" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
-					<div className="space-y-2 px-8 py-5" aria-hidden>
+					<div className="space-y-2 px-8 py-4" aria-hidden>
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
@@ -220,9 +220,7 @@ export function EventsScreen() {
 											</button>
 										</TableCell>
 										<TableCell>
-											<span className="text-monti-muted-foreground">
-												{eventCollectionLabel(site, change.collection)} ·{" "}
-											</span>
+											<span className="text-monti-muted">{eventCollectionLabel(site, change.collection)} · </span>
 											{change.kind === "deleted" ? (
 												<span>{eventEntryLabel(change)}</span>
 											) : (

@@ -37,7 +37,7 @@ function DropdownMenuContent({
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg bg-monti-popover p-1 text-monti-popover-foreground shadow-monti-pop outline-none ring-1 ring-monti-foreground/10 duration-100 data-closed:animate-out data-open:animate-in data-closed:overflow-hidden",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none ring-1 ring-monti-muted duration-100 data-closed:animate-out data-open:animate-in data-closed:overflow-hidden",
 						className,
 					)}
 					{...props}
@@ -62,7 +62,7 @@ function DropdownMenuLabel({
 		<MenuPrimitive.GroupLabel
 			data-slot="dropdown-menu-label"
 			data-inset={inset}
-			className={cn("px-2 py-1.5 font-medium text-monti-muted-foreground text-xs data-inset:pl-8", className)}
+			className={cn("px-2 py-1.5 font-medium text-monti-caption text-monti-muted data-inset:pl-8", className)}
 			{...props}
 		/>
 	);
@@ -83,7 +83,7 @@ function DropdownMenuItem({
 			data-inset={inset}
 			data-variant={variant}
 			className={cn(
-				"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground not-data-[variant=destructive]:focus:**:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-[variant=destructive]:text-monti-destructive data-disabled:opacity-50 data-[variant=destructive]:focus:bg-monti-destructive/10 monti-dark:data-[variant=destructive]:focus:bg-monti-destructive/20 data-[variant=destructive]:focus:text-monti-destructive [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[variant=destructive]:*:[svg]:text-monti-destructive",
+				"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-body outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=destructive]:focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=destructive]:text-monti-danger data-disabled:opacity-50 data-[variant=destructive]:focus:bg-monti-danger-muted monti-dark:data-[variant=destructive]:focus:bg-monti-danger-muted data-[variant=destructive]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[variant=destructive]:*:[svg]:text-monti-danger",
 				className,
 			)}
 			{...props}
@@ -108,7 +108,7 @@ function DropdownMenuSubTrigger({
 			data-slot="dropdown-menu-sub-trigger"
 			data-inset={inset}
 			className={cn(
-				"flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground not-data-[variant=destructive]:focus:**:text-monti-accent-foreground data-open:bg-monti-accent data-popup-open:bg-monti-accent data-inset:pl-8 data-open:text-monti-accent-foreground data-popup-open:text-monti-accent-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-body outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=destructive]:focus:**:text-monti-default data-open:bg-monti-selected data-popup-open:bg-monti-selected data-inset:pl-8 data-open:text-monti-default data-popup-open:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -131,7 +131,7 @@ function DropdownMenuSubContent({
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
 			className={cn(
-				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 w-auto min-w-[96px] rounded-lg bg-monti-popover p-1 text-monti-popover-foreground shadow-monti-pop ring-1 ring-monti-foreground/10 duration-100 data-closed:animate-out data-open:animate-in",
+				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 w-auto min-w-[96px] rounded-lg bg-monti-overlay p-1 text-monti-default shadow-monti-floating ring-1 ring-monti-muted duration-100 data-closed:animate-out data-open:animate-in",
 				className,
 			)}
 			align={align}
@@ -157,7 +157,7 @@ function DropdownMenuCheckboxItem({
 			data-slot="dropdown-menu-checkbox-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground focus:**:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-body outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			checked={checked}
@@ -193,7 +193,7 @@ function DropdownMenuRadioItem({
 			data-slot="dropdown-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground focus:**:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-body outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -215,7 +215,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 	return (
 		<MenuPrimitive.Separator
 			data-slot="dropdown-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-border", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-divider", className)}
 			{...props}
 		/>
 	);
@@ -226,7 +226,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"spa
 		<span
 			data-slot="dropdown-menu-shortcut"
 			className={cn(
-				"ml-auto text-monti-muted-foreground text-xs tracking-widest group-focus/dropdown-menu-item:text-monti-accent-foreground",
+				"ml-auto text-monti-caption text-monti-muted tracking-caps group-focus/dropdown-menu-item:text-monti-default",
 				className,
 			)}
 			{...props}

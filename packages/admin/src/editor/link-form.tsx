@@ -93,7 +93,7 @@ export function PopoverFormFooter({
 					type="button"
 					variant="ghost"
 					size="sm"
-					className="text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive"
+					className="text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger"
 					onClick={onRemove}
 				>
 					{removeIcon}
@@ -179,7 +179,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 			<p className="font-medium">{draft.existing ? t("link.edit") : t("link.add")}</p>
 			{draft.entryId && <LinkTargetSummary entryId={draft.entryId} />}
 			{needsText && (
-				<label htmlFor={`${id}-text`} className="grid gap-1.5 text-xs">
+				<label htmlFor={`${id}-text`} className="grid gap-2 text-monti-caption">
 					{t("link.text")}
 					<Input
 						id={`${id}-text`}
@@ -189,7 +189,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 					/>
 				</label>
 			)}
-			<label htmlFor={`${id}-href`} className="grid gap-1.5 text-xs">
+			<label htmlFor={`${id}-href`} className="grid gap-2 text-monti-caption">
 				{t("link.href")}
 				<Input
 					id={`${id}-href`}

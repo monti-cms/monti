@@ -127,7 +127,7 @@ describe("code block edit view", () => {
 		expect(editor.state.selection.empty).toBe(true);
 		expect(editor.state.selection.from).toBe(1 + "const a = 1;\n".length);
 		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-primary\\/15")).toHaveLength(1),
+			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-accent-muted")).toHaveLength(1),
 		);
 		await openLineMenu(1);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) });
@@ -143,7 +143,7 @@ describe("code block edit view", () => {
 		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "highlight", start: 1, end: 2 }]);
 		// Changing the effect keeps the selected lines (another effect can be turned on next).
 		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-primary\\/15")).toHaveLength(1),
+			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-accent-muted")).toHaveLength(1),
 		);
 	});
 

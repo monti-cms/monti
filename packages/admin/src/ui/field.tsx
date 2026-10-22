@@ -28,7 +28,10 @@ function FormFieldLegend({
 		<legend
 			data-slot="field-legend"
 			data-variant={variant}
-			className={cn("mb-3 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base", className)}
+			className={cn(
+				"mb-3 font-medium data-[variant=label]:text-monti-body data-[variant=legend]:text-monti-title",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -47,7 +50,7 @@ function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:text-monti-destructive", {
+const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:text-monti-danger", {
 	variants: {
 		orientation: {
 			vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
@@ -82,7 +85,7 @@ function FormFieldContent({ className, ...props }: React.ComponentProps<"div">) 
 	return (
 		<div
 			data-slot="field-content"
-			className={cn("group/field-content flex flex-1 flex-col gap-1 leading-snug", className)}
+			className={cn("group/field-content flex flex-1 flex-col gap-1", className)}
 			{...props}
 		/>
 	);
@@ -93,7 +96,7 @@ function FormFieldLabel({ className, ...props }: React.ComponentProps<typeof Lab
 		<Label
 			data-slot="field-label"
 			className={cn(
-				"group/field-label peer/field-label flex w-fit gap-2 leading-snug has-[>[data-slot=field]]:has-[:focus-visible]:border-monti-ring has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-monti-ring/50 has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border has-data-checked:border-monti-primary/30 monti-dark:has-data-checked:border-monti-primary/20 has-data-checked:bg-monti-primary/5 monti-dark:has-data-checked:bg-monti-primary/10 has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-monti-muted/50 *:data-[slot=field]:p-3 group-data-[disabled=true]/field:opacity-50",
+				"group/field-label peer/field-label flex w-fit gap-2 has-[>[data-slot=field]]:has-[:focus-visible]:border-monti-focus has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-monti-focus-soft has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border has-data-checked:border-monti-emphasis monti-dark:has-data-checked:border-monti-emphasis has-data-checked:bg-monti-neutral monti-dark:has-data-checked:bg-monti-neutral has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-monti-hover *:data-[slot=field]:p-3 group-data-[disabled=true]/field:opacity-50",
 				"has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
 				className,
 			)}
@@ -107,7 +110,7 @@ function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				"flex w-fit items-center gap-2 font-medium text-sm group-data-[disabled=true]/field:opacity-50",
+				"flex w-fit items-center gap-2 font-medium text-monti-body group-data-[disabled=true]/field:opacity-50",
 				className,
 			)}
 			{...props}
@@ -120,9 +123,9 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 		<p
 			data-slot="field-description"
 			className={cn(
-				"text-left font-normal text-monti-muted-foreground text-sm leading-normal group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
+				"text-left text-monti-body text-monti-muted group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
 				"nth-last-2:-mt-1 last:mt-0",
-				"[&>a]:text-monti-highlight [&>a]:underline [&>a]:underline-offset-4",
+				"[&>a]:text-monti-accent [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
 			{...props}
@@ -141,13 +144,13 @@ function FormFieldSeparator({
 		<div
 			data-slot="field-separator"
 			data-content={!!children}
-			className={cn("relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2", className)}
+			className={cn("relative -my-2 h-5 text-monti-body group-data-[variant=outline]/field-group:-mb-2", className)}
 			{...props}
 		>
 			<Separator className="absolute inset-0 top-1/2" />
 			{children && (
 				<span
-					className="relative mx-auto block w-fit bg-monti-background px-2 text-monti-muted-foreground"
+					className="relative mx-auto block w-fit bg-monti-page px-2 text-monti-muted"
 					data-slot="field-separator-content"
 				>
 					{children}
@@ -195,7 +198,7 @@ function FormFieldError({
 		<div
 			role="alert"
 			data-slot="field-error"
-			className={cn("whitespace-pre-wrap font-normal text-monti-destructive text-xs", className)}
+			className={cn("whitespace-pre-wrap text-monti-caption text-monti-danger", className)}
 			{...props}
 		>
 			{content}

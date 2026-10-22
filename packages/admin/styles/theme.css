@@ -18,81 +18,153 @@
 @custom-variant monti-horizontal (&[data-orientation="horizontal"]);
 @custom-variant monti-vertical (&[data-orientation="vertical"]);
 
-/* Color names used by the admin UI (`monti-*`). Values are set by the admin tokens in `admin.css`. */
+/*
+ * The admin design system. Everything a screen may use is named here; Tailwind's own palette, text sizes, weights, shadows and tracking are
+ * cleared (`initial`), so a class outside the system (`text-xs`, `bg-red-500`, `shadow-lg`) produces no CSS at all.
+ *
+ * Colors come in two tiers (values in `admin.css`):
+ *   - base scales `--monti-gray-1..12` and `--monti-{accent,danger,warning,success}-{3,6,9,10,11}`: raw values, never used by a screen directly
+ *   - roles, the only color names a screen uses. Each property has its own namespace, so the class says what it paints:
+ *       bg-monti-*     page, surface, inset, overlay, emphasis, emphasis-hover, hover, active, selected, neutral, {tone}-muted, {tone}-emphasis
+ *       text-monti-*   default, muted, subtle, on-emphasis, {tone}
+ *       border-monti-* muted, default, emphasis, focus, {tone}, {tone}-muted   (also `divide-`, `ring-`, `outline-`)
+ *   where {tone} is accent, danger, warning or success.
+ */
 @theme inline {
-	--color-monti-background: var(--monti-background);
-	--color-monti-foreground: var(--monti-foreground);
-	--color-monti-card: var(--monti-card);
-	--color-monti-card-foreground: var(--monti-card-foreground);
-	--color-monti-popover: var(--monti-popover);
-	--color-monti-popover-foreground: var(--monti-popover-foreground);
-	--color-monti-primary: var(--monti-primary);
-	--color-monti-primary-foreground: var(--monti-primary-foreground);
-	--color-monti-secondary: var(--monti-secondary);
-	--color-monti-secondary-foreground: var(--monti-secondary-foreground);
-	--color-monti-muted: var(--monti-muted);
-	--color-monti-muted-foreground: var(--monti-muted-foreground);
-	--color-monti-accent: var(--monti-accent);
-	--color-monti-accent-foreground: var(--monti-accent-foreground);
-	--color-monti-destructive: var(--monti-destructive);
-	--color-monti-destructive-soft: var(--monti-destructive-soft);
-	--color-monti-destructive-foreground: var(--monti-destructive-foreground);
-	--color-monti-warning: var(--monti-warning);
-	--color-monti-warning-soft: var(--monti-warning-soft);
-	--color-monti-warning-foreground: var(--monti-warning-foreground);
-	--color-monti-success: var(--monti-success);
-	--color-monti-success-soft: var(--monti-success-soft);
-	--color-monti-success-foreground: var(--monti-success-foreground);
-	--color-monti-border: var(--monti-border);
-	--color-monti-input: var(--monti-input);
-	--color-monti-highlight: var(--monti-highlight);
-	--color-monti-highlight-soft: var(--monti-highlight-soft);
-	--color-monti-ring: var(--monti-ring);
-	--color-monti-sidebar: var(--monti-sidebar);
-	--color-monti-sidebar-foreground: var(--monti-sidebar-foreground);
-	--color-monti-sidebar-primary: var(--monti-sidebar-primary);
-	--color-monti-sidebar-primary-foreground: var(--monti-sidebar-primary-foreground);
-	--color-monti-sidebar-accent: var(--monti-sidebar-accent);
-	--color-monti-sidebar-accent-foreground: var(--monti-sidebar-accent-foreground);
-	--color-monti-sidebar-border: var(--monti-sidebar-border);
-	--color-monti-sidebar-ring: var(--monti-sidebar-ring);
+	--color-*: initial;
+	--color-transparent: transparent;
+	--color-current: currentColor;
+	--color-inherit: inherit;
+
+	--background-color-monti-page: var(--monti-bg-page);
+	--background-color-monti-surface: var(--monti-bg-surface);
+	--background-color-monti-inset: var(--monti-bg-inset);
+	--background-color-monti-overlay: var(--monti-bg-overlay);
+	--background-color-monti-emphasis: var(--monti-bg-emphasis);
+	--background-color-monti-emphasis-hover: var(--monti-bg-emphasis-hover);
+	--background-color-monti-hover: var(--monti-bg-hover);
+	--background-color-monti-active: var(--monti-bg-active);
+	--background-color-monti-selected: var(--monti-bg-selected);
+	--background-color-monti-neutral: var(--monti-bg-neutral);
+	--background-color-monti-backdrop: var(--monti-bg-backdrop);
+	/* A 1px divider drawn as a box (separators, the split button's seam). */
+	--background-color-monti-divider: var(--monti-border-muted);
+	--background-color-monti-accent-muted: var(--monti-bg-accent-muted);
+	--background-color-monti-accent-emphasis: var(--monti-bg-accent-emphasis);
+	--background-color-monti-danger-muted: var(--monti-bg-danger-muted);
+	--background-color-monti-danger-emphasis: var(--monti-bg-danger-emphasis);
+	--background-color-monti-warning-muted: var(--monti-bg-warning-muted);
+	--background-color-monti-warning-emphasis: var(--monti-bg-warning-emphasis);
+	--background-color-monti-success-muted: var(--monti-bg-success-muted);
+	--background-color-monti-success-emphasis: var(--monti-bg-success-emphasis);
+
+	--text-color-monti-default: var(--monti-fg-default);
+	--text-color-monti-muted: var(--monti-fg-muted);
+	--text-color-monti-subtle: var(--monti-fg-subtle);
+	--text-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--text-color-monti-accent: var(--monti-fg-accent);
+	--text-color-monti-danger: var(--monti-fg-danger);
+	--text-color-monti-warning: var(--monti-fg-warning);
+	--text-color-monti-success: var(--monti-fg-success);
+
+	--border-color-monti-muted: var(--monti-border-muted);
+	--border-color-monti-default: var(--monti-border-default);
+	--border-color-monti-emphasis: var(--monti-border-emphasis);
+	--border-color-monti-focus: var(--monti-border-focus);
+	--border-color-monti-accent: var(--monti-border-accent);
+	--border-color-monti-accent-muted: var(--monti-border-accent-muted);
+	--border-color-monti-danger: var(--monti-border-danger);
+	--border-color-monti-danger-muted: var(--monti-border-danger-muted);
+	--border-color-monti-warning-muted: var(--monti-border-warning-muted);
+	--border-color-monti-success-muted: var(--monti-border-success-muted);
+	/* Dividers (`divide-*`) read the border namespace; rings and outlines get the focus colors only. */
+	--ring-color-monti-focus: var(--monti-border-focus);
+	--ring-color-monti-focus-soft: var(--monti-focus-soft);
+	--ring-color-monti-danger: var(--monti-border-danger);
+	--ring-color-monti-muted: var(--monti-border-muted);
+	--ring-color-monti-default: var(--monti-border-default);
+	--outline-color-monti-focus: var(--monti-border-focus);
+	--ring-offset-color-monti-page: var(--monti-bg-page);
+	--text-decoration-color-monti-muted: var(--monti-border-emphasis);
+	--text-decoration-color-monti-accent: var(--monti-fg-accent);
+	--text-decoration-color-monti-danger: var(--monti-border-danger);
+	--caret-color-monti-default: var(--monti-fg-default);
+	--accent-color-monti-emphasis: var(--monti-bg-emphasis);
+	/* Icons drawn with `fill-` or `stroke-` follow the text roles. */
+	--fill-monti-default: var(--monti-fg-default);
+	--fill-monti-muted: var(--monti-fg-muted);
+	--fill-monti-accent: var(--monti-fg-accent);
+	--stroke-monti-muted: var(--monti-fg-muted);
+	--stroke-monti-grid: var(--monti-border-muted);
+	/* Component tokens of the field list: one hue per kind of field (text-monti-kind-*). Not for other screens. */
+	--text-color-monti-kind-teal: var(--monti-kind-teal);
+	--text-color-monti-kind-blue: var(--monti-kind-blue);
+	--text-color-monti-kind-violet: var(--monti-kind-violet);
+	--text-color-monti-kind-orange: var(--monti-kind-orange);
+	--text-color-monti-kind-green: var(--monti-kind-green);
 
 	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
+	--radius-*: initial;
 	--radius-sm: calc(var(--monti-radius) - 4px);
 	--radius-md: calc(var(--monti-radius) - 2px);
 	--radius-lg: var(--monti-radius);
-	--radius-xl: calc(var(--monti-radius) + 4px);
-	/* Scale in use (base 6px): chips, badges and tags 2px (sm), buttons, inputs, list rows and menu items 4px (md), cards, panels and menus 6px (lg), dialogs and the side sheet 8px (dialog). Pills (`rounded-full`) are reserved for switches, avatars and status dots. Bare `rounded` is not used: Tailwind resolves it to a fixed 0.25rem outside this scale. */
-	--radius-dialog: calc(var(--monti-radius) + 2px);
+	--radius-xl: calc(var(--monti-radius) + 2px);
+	/* Scale (base 6px): chips, badges and tags 2px (sm), buttons, inputs, list rows and menu items 4px (md), cards, panels and menus 6px (lg), dialogs and the side sheet 8px (xl). Pills (`rounded-full`) are reserved for switches, avatars and status dots. */
 
 	/*
-	 * Type scale. Sizes are px so a host with another root font-size cannot rescale the admin. Use `text-monti-<role>`:
-	 *   micro   11/14  counters, keyboard hints and badge counts only
-	 *   caption 12/16  meta, timestamps, helper and hint text
-	 *   label   13/18  buttons, menu items, tabs, sidebar items, table cells, field labels
-	 *   body    14/20  default text, inputs, descriptions
-	 *   title   16/22  panel, dialog and card titles, the top-bar page title
-	 *   heading 20/28  in-page screen headings
-	 *   display 34/1.15  the post title in the editor and the source pane
+	 * Type roles: size, line height and weight in one name. Sizes are px so a host with another root font-size cannot rescale the admin.
+	 * Use `text-monti-<role>`; `font-medium` / `font-semibold` only to emphasize a run inside a role.
+	 *   micro   11/14 500  counters, keyboard hints and badge counts only
+	 *   caption 12/16 400  meta, timestamps, helper and hint text, table headers
+	 *   label   13/18 500  buttons, menu items, tabs, sidebar items, field labels
+	 *   body    14/20 400  default text, inputs, descriptions
+	 *   reading 16/28 400  long-form text you write: the editor body and the source pane; inputs on a phone
+	 *   title   16/22 600  section, panel, dialog and card titles
+	 *   heading 20/28 600  the screen heading
+	 *   display 34/40 600  the post title in the editor and the source pane
+	 * Code uses `font-mono` with the role of the text around it.
 	 */
+	--text-*: initial;
+	--font-weight-*: initial;
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--tracking-*: initial;
+	/* Uppercase eyebrows only. */
+	--tracking-caps: 0.06em;
+	--leading-*: initial;
 	--text-monti-micro: 11px;
+	--text-monti-micro--font-weight: 500;
 	--text-monti-micro--line-height: 14px;
 	--text-monti-caption: 12px;
+	--text-monti-caption--font-weight: 400;
 	--text-monti-caption--line-height: 16px;
 	--text-monti-label: 13px;
+	--text-monti-label--font-weight: 500;
 	--text-monti-label--line-height: 18px;
 	--text-monti-body: 14px;
+	--text-monti-body--font-weight: 400;
 	--text-monti-body--line-height: 20px;
+	--text-monti-reading: 16px;
+	--text-monti-reading--font-weight: 400;
+	--text-monti-reading--line-height: 28px;
 	--text-monti-title: 16px;
+	--text-monti-title--font-weight: 600;
 	--text-monti-title--line-height: 22px;
 	--text-monti-heading: 20px;
+	--text-monti-heading--font-weight: 600;
 	--text-monti-heading--line-height: 28px;
 	--text-monti-display: 34px;
-	--text-monti-display--line-height: 1.15;
+	--text-monti-display--font-weight: 600;
+	--text-monti-display--line-height: 40px;
 
 	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
 	--font-sans: var(--monti-font-sans);
 	--font-mono: var(--monti-font-mono);
-	/* The one shadow of a popover or a small raised control: a hairline lift beside its border, never a soft glow. Use `shadow-monti-pop`. */
-	--shadow-monti-pop: 0 1px 2px rgb(0 0 0 / 0.1);
+	/* Two heights. Cards and panels rest on the page with a border and no shadow; menus, popovers, dialogs and toasts float (`shadow-monti-floating`). */
+	--shadow-*: initial;
+	--inset-shadow-*: initial;
+	--drop-shadow-*: initial;
+	--text-shadow-*: initial;
+	--shadow-monti-floating: var(--monti-shadow-floating);
 }

@@ -39,23 +39,23 @@ export function EntryEditorBanners({
 			{isTrashed && (
 				<section
 					aria-label={t("trash")}
-					className="flex flex-wrap items-center gap-2 border-b bg-monti-muted px-4 py-2 text-sm"
+					className="flex flex-wrap items-center gap-2 border-b bg-monti-neutral px-4 py-2 text-monti-body"
 				>
 					<span>{t("trashNotice", nounVars(site, collection))}</span>
 				</section>
 			)}
 			{visualUnavailable && (
-				<output className="border-b bg-monti-warning-soft px-4 py-2 text-monti-warning-foreground text-sm">
+				<output className="border-b bg-monti-warning-muted px-4 py-2 text-monti-body text-monti-warning">
 					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
 				</output>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-				<FormFieldError className="border-b px-4 py-2 text-sm">{editor.saveError.message}</FormFieldError>
+				<FormFieldError className="border-b px-4 py-2 text-monti-body">{editor.saveError.message}</FormFieldError>
 			)}
 
 			{sourceChanged && (
-				<output className="flex flex-wrap items-center gap-2 border-b bg-monti-warning-soft px-4 py-1.5 text-sm">
-					<span className="flex-1 font-medium text-monti-warning-foreground">{t("sourceChanged")}</span>
+				<output className="flex flex-wrap items-center gap-2 border-b bg-monti-warning-muted px-4 py-2 text-monti-body">
+					<span className="flex-1 font-medium text-monti-warning">{t("sourceChanged")}</span>
 					<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
 						{t("compare")}
 					</Button>

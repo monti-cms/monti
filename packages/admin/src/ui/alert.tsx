@@ -9,7 +9,7 @@ import { cn } from "../lib/utils";
  */
 export const alertVariants = cva(
 	[
-		"relative w-full rounded-lg border px-4 py-3 text-sm",
+		"relative w-full rounded-lg border px-4 py-3 text-monti-body",
 		"[&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
 	].join(" "),
 	{
@@ -21,11 +21,10 @@ export const alertVariants = cva(
 				inline: "flex items-center justify-between gap-3",
 			},
 			variant: {
-				default: "border-monti-border bg-monti-card text-monti-card-foreground",
-				destructive:
-					"border-monti-destructive/30 bg-monti-destructive-soft text-monti-destructive-foreground [&>svg]:text-current",
-				warning: "border-monti-warning/30 bg-monti-warning-soft text-monti-warning-foreground [&>svg]:text-current",
-				success: "border-monti-success/30 bg-monti-success-soft text-monti-success-foreground [&>svg]:text-current",
+				default: "border-monti-muted bg-monti-surface text-monti-default",
+				destructive: "border-monti-danger-muted bg-monti-danger-muted text-monti-danger [&>svg]:text-current",
+				warning: "border-monti-warning-muted bg-monti-warning-muted text-monti-warning [&>svg]:text-current",
+				success: "border-monti-success-muted bg-monti-success-muted text-monti-success [&>svg]:text-current",
 			},
 		},
 		defaultVariants: {
@@ -48,11 +47,7 @@ function Alert({
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<div
-			data-slot="alert-title"
-			className={cn("col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight", className)}
-			{...props}
-		/>
+		<div data-slot="alert-title" className={cn("col-start-2 line-clamp-1 min-h-4 font-medium", className)} {...props} />
 	);
 }
 
@@ -60,10 +55,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 	return (
 		<div
 			data-slot="alert-description"
-			className={cn(
-				"col-start-2 grid justify-items-start gap-1 text-monti-muted-foreground text-sm [&_p]:leading-relaxed",
-				className,
-			)}
+			className={cn("col-start-2 grid justify-items-start gap-1 text-monti-body text-monti-muted", className)}
 			{...props}
 		/>
 	);

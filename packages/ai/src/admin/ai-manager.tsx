@@ -115,11 +115,7 @@ const advancedEdited = (
 
 /** The small muted chip that marks an action whose advanced values were edited. */
 function ModifiedChip({ label }: { label: string }) {
-	return (
-		<span className="rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-micro text-monti-muted-foreground">
-			{label}
-		</span>
-	);
+	return <span className="rounded-sm bg-monti-neutral px-2 py-0.5 text-monti-micro text-monti-muted">{label}</span>;
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -504,15 +500,15 @@ export function AiManager() {
 				className="flex min-h-0 flex-1 flex-col gap-0"
 			>
 				<PageTabs className="px-8">
-					<TabsTrigger value="features" className="flex-none px-0 text-xs">
+					<TabsTrigger value="features" className="flex-none px-0 text-monti-caption">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
 					</TabsTrigger>
-					<TabsTrigger value="connections" className="flex-none px-0 text-xs">
+					<TabsTrigger value="connections" className="flex-none px-0 text-monti-caption">
 						<Plug aria-hidden />
 						{t("tab.connections")}
 					</TabsTrigger>
-					<TabsTrigger value="snippets" className="flex-none px-0 text-xs">
+					<TabsTrigger value="snippets" className="flex-none px-0 text-monti-caption">
 						<Quote aria-hidden />
 						{t("tab.snippets")}
 					</TabsTrigger>
@@ -520,7 +516,7 @@ export function AiManager() {
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
 					{featuresQuery.data && usable.size === 0 && (
 						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
-						<output className="flex items-center gap-3 border-monti-warning/30 border-b bg-monti-warning-soft px-8 py-2 text-monti-label text-monti-warning-foreground">
+						<output className="flex items-center gap-3 border-monti-warning-muted border-b bg-monti-warning-muted px-8 py-2 text-monti-label text-monti-warning">
 							<span className="min-w-0 flex-1">{t("banner.needsConnection")}</span>
 							<Button
 								type="button"
@@ -560,20 +556,22 @@ export function AiManager() {
 									return [
 										<li
 											key={`group-${group}`}
-											className="sticky top-0 z-10 border-monti-border border-y bg-monti-muted/80 backdrop-blur"
+											className="sticky top-0 z-10 border-monti-muted border-y bg-monti-neutral backdrop-blur"
 										>
 											<button
 												type="button"
 												onClick={() => toggleGroup(group)}
-												className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left transition-colors hover:bg-monti-muted"
+												className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-monti-hover"
 											>
 												<ChevronDown
 													className={cn(
-														"size-3.5 text-monti-muted-foreground transition-transform duration-150",
+														"size-3.5 text-monti-muted transition-transform duration-150",
 														isCollapsed && "-rotate-90",
 													)}
 												/>
-												<span className="font-semibold text-monti-foreground text-xs">{t(`group.${group}`)}</span>
+												<span className="font-semibold text-monti-caption text-monti-default">
+													{t(`group.${group}`)}
+												</span>
 											</button>
 										</li>,
 										...(isCollapsed
@@ -648,7 +646,7 @@ export function AiManager() {
 											type="button"
 											size="xs"
 											variant="ghost"
-											className="text-monti-muted-foreground hover:text-monti-foreground"
+											className="text-monti-muted hover:text-monti-default"
 											onClick={() => setShowHidden(!showHidden)}
 										>
 											{showHidden
@@ -766,14 +764,14 @@ function OneOfInput({
 	return (
 		<div
 			className={cn(
-				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-1.5 rounded-md border border-monti-input bg-monti-background p-1 text-xs shadow-sm transition-colors focus-within:ring-1 focus-within:ring-monti-ring",
+				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-2 rounded-md border border-monti-default bg-monti-page p-1 text-monti-caption transition-colors focus-within:ring-1 focus-within:ring-monti-focus",
 				disabled && "cursor-not-allowed opacity-50",
 			)}
 		>
 			{items.map((item, index) => (
 				<span
 					key={item}
-					className="inline-flex items-center gap-1 rounded-sm bg-monti-muted px-2 py-0.5 font-mono text-monti-foreground text-xs"
+					className="inline-flex items-center gap-1 rounded-sm bg-monti-neutral px-2 py-0.5 font-mono text-monti-caption text-monti-default"
 				>
 					<span className="max-w-40 truncate">{item}</span>
 					{!disabled && (
@@ -798,7 +796,7 @@ function OneOfInput({
 					onBlur={() => {
 						if (input.trim()) addItem(input);
 					}}
-					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-1 font-mono text-xs shadow-none outline-none placeholder:text-monti-muted-foreground/60 focus:ring-0"
+					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-1 font-mono text-monti-caption shadow-none outline-none placeholder:text-monti-subtle focus:ring-0"
 				/>
 			)}
 		</div>
@@ -821,7 +819,7 @@ function CheckRow({
 	const id = useId();
 	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
-		<li className={cn("flex min-h-8 gap-2.5", multiline ? "items-start pt-1" : "items-center")}>
+		<li className={cn("flex min-h-8 gap-2", multiline ? "items-start pt-1" : "items-center")}>
 			<Switch
 				id={id}
 				size="sm"
@@ -829,7 +827,7 @@ function CheckRow({
 				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
 				className={cn(multiline && "mt-1")}
 			/>
-			<Label htmlFor={id} className={cn("w-28 shrink-0 font-normal text-xs", multiline && "pt-1.5")}>
+			<Label htmlFor={id} className={cn("w-28 shrink-0 text-monti-caption", multiline && "pt-2")}>
 				{label}
 			</Label>
 			<div className="flex min-w-0 max-w-md flex-1 items-center gap-2">
@@ -839,7 +837,7 @@ function CheckRow({
 						value={check.pattern}
 						disabled={!check.enabled}
 						onChange={(event) => onChange({ ...check, pattern: event.target.value })}
-						className="h-8 min-w-0 flex-1 font-mono text-xs"
+						className="h-8 min-w-0 flex-1 font-mono text-monti-caption"
 					/>
 				)}
 				{check.kind === "maxLength" && (
@@ -854,9 +852,9 @@ function CheckRow({
 							onChange={(event) =>
 								onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
 							}
-							className="h-8 w-20 text-xs"
+							className="h-8 w-20 text-monti-caption"
 						/>
-						<span className="text-monti-muted-foreground text-xs">{t("check.charsOrLess")}</span>
+						<span className="text-monti-caption text-monti-muted">{t("check.charsOrLess")}</span>
 					</span>
 				)}
 				{check.kind === "oneOf" && (
@@ -998,15 +996,15 @@ function FeatureEditor({
 		<div className={DETAIL_PANE_FRAME}>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 				<div className="min-w-0 flex-1">
-					<h2 className="truncate font-medium text-monti-title">
+					<h2 className="truncate text-monti-title">
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
 					</h2>
-					<p className="text-monti-muted-foreground text-xs leading-relaxed">
+					<p className="text-monti-caption text-monti-muted">
 						{deciding ? t("about.decide") : t(`about.${feature.result}`)}
 					</p>
-					<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">{placeLabel(feature)}</p>
+					<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{placeLabel(feature)}</p>
 				</div>
-				<Label className="font-normal text-xs">
+				<Label className="text-monti-caption">
 					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
 					{t("toggle.on")}
 				</Label>
@@ -1040,12 +1038,12 @@ function FeatureEditor({
 			</FormField>
 
 			<section
-				className="flex flex-col gap-2 rounded-md bg-monti-muted/40 p-3 text-xs"
+				className="flex flex-col gap-2 rounded-md bg-monti-inset p-3 text-monti-caption"
 				aria-label={t("test.title")}
 				data-testid="ai-try"
 			>
 				<div className="flex items-center gap-3">
-					<p className="min-w-0 flex-1 text-monti-muted-foreground">{t("test.hint")}</p>
+					<p className="min-w-0 flex-1 text-monti-muted">{t("test.hint")}</p>
 					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
 						<Sparkles aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
@@ -1065,7 +1063,7 @@ function FeatureEditor({
 								void runTest();
 							}
 						}}
-						className="min-h-14 resize-y bg-monti-background text-xs md:text-xs"
+						className="min-h-14 resize-y bg-monti-page text-monti-caption md:text-monti-caption"
 					/>
 				)}
 				<SampleInputs
@@ -1078,37 +1076,37 @@ function FeatureEditor({
 				{test?.status === "done" &&
 					(test.result.kind === "candidates" ? (
 						test.result.items.length === 0 ? (
-							<p className="text-monti-muted-foreground">{t("test.noResults")}</p>
+							<p className="text-monti-muted">{t("test.noResults")}</p>
 						) : (
 							<ul className="flex flex-wrap gap-1">
 								{test.result.items.map((item) => (
 									<li key={item.value} className={SLOT_CHIP}>
 										<span className="truncate">{item.label}</span>
-										{item.detail && <span className="shrink-0 text-monti-muted-foreground">{item.detail}</span>}
+										{item.detail && <span className="shrink-0 text-monti-muted">{item.detail}</span>}
 									</li>
 								))}
 							</ul>
 						)
 					) : (
-						<p className="whitespace-pre-wrap rounded-lg border bg-monti-background p-2">{test.result.text}</p>
+						<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-2">{test.result.text}</p>
 					))}
 			</section>
 
 			<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced} className="border-t pt-4">
 				<CollapsibleTrigger
-					className="group/advanced flex w-full items-center gap-2 text-left font-medium text-sm"
+					className="group/advanced flex w-full items-center gap-2 text-left font-medium text-monti-body"
 					data-testid="ai-advanced-toggle"
 				>
 					<ChevronDown
 						aria-hidden
-						className="size-4 -rotate-90 text-monti-muted-foreground transition-transform group-data-[panel-open]/advanced:rotate-0"
+						className="size-4 -rotate-90 text-monti-muted transition-transform group-data-[panel-open]/advanced:rotate-0"
 					/>
 					{t("advanced.title")}
 					{advancedEdited(spec, defaults) && <ModifiedChip label={t("status.modified")} />}
-					<span className="font-normal text-monti-caption text-monti-muted-foreground">{t("advanced.hint")}</span>
+					<span className="text-monti-caption text-monti-muted">{t("advanced.hint")}</span>
 				</CollapsibleTrigger>
 				<CollapsibleContent data-testid="ai-advanced">
-					<FormFieldGroup className="gap-5 pt-4">
+					<FormFieldGroup className="gap-4 pt-4">
 						{!custom && (
 							<FormField>
 								<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
@@ -1118,13 +1116,13 @@ function FeatureEditor({
 									maxLength={60}
 									placeholder={feature.defaults?.label ?? feature.label}
 									onChange={(event) => set({ label: event.target.value })}
-									className="h-8 text-xs md:text-xs"
+									className="h-8 text-monti-caption md:text-monti-caption"
 								/>
 							</FormField>
 						)}
 
 						<div className="flex flex-wrap gap-x-6 gap-y-3">
-							<Label className="font-normal text-xs">
+							<Label className="text-monti-caption">
 								<Switch
 									size="sm"
 									checked={spec.askInstruction}
@@ -1133,7 +1131,7 @@ function FeatureEditor({
 								{t("toggle.ask")}
 							</Label>
 							{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
-								<Label className="font-normal text-xs">
+								<Label className="text-monti-caption">
 									<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
 									{t("toggle.instant")}
 								</Label>
@@ -1145,7 +1143,7 @@ function FeatureEditor({
 								<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
 								<div className="flex flex-wrap gap-3">
 									{inputs.map(([name, input]) => (
-										<Label key={name} className="font-normal text-xs">
+										<Label key={name} className="text-monti-caption">
 											<Checkbox
 												checked={uses(name) || input.required}
 												disabled={input.required}
@@ -1165,7 +1163,7 @@ function FeatureEditor({
 						{deciding && (
 							<FormField>
 								<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
-								<div className="flex items-center gap-2 text-xs">
+								<div className="flex items-center gap-2 text-monti-caption">
 									<Input
 										id={ids.threshold}
 										type="number"
@@ -1175,9 +1173,9 @@ function FeatureEditor({
 										onChange={(event) =>
 											set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
 										}
-										className="h-8 w-20 text-xs md:text-xs"
+										className="h-8 w-20 text-monti-caption md:text-monti-caption"
 									/>
-									<span className="text-monti-muted-foreground">{t("field.percentOrMore")}</span>
+									<span className="text-monti-muted">{t("field.percentOrMore")}</span>
 									<Input
 										type="number"
 										aria-label={t("field.maxCount")}
@@ -1185,17 +1183,17 @@ function FeatureEditor({
 										max={20}
 										value={spec.maxCount}
 										onChange={(event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })}
-										className="ml-3 h-8 w-16 text-xs md:text-xs"
+										className="ml-3 h-8 w-16 text-monti-caption md:text-monti-caption"
 									/>
-									<span className="text-monti-muted-foreground">{t("field.countUpTo")}</span>
+									<span className="text-monti-muted">{t("field.countUpTo")}</span>
 								</div>
 							</FormField>
 						)}
 
 						<FormField role="group" aria-labelledby={ids.checksTitle}>
 							<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
-							<div className="flex flex-col gap-1.5 text-xs">
-								<ul className="flex flex-col gap-1.5" aria-label={t("field.checks")}>
+							<div className="flex flex-col gap-2 text-monti-caption">
+								<ul className="flex flex-col gap-2" aria-label={t("field.checks")}>
 									{spec.checks.map((check, index) => (
 										<CheckRow
 											key={checkKey(check)}
@@ -1218,12 +1216,7 @@ function FeatureEditor({
 									<DropdownMenu>
 										<DropdownMenuTrigger
 											render={
-												<Button
-													type="button"
-													size="xs"
-													variant="ghost"
-													className="self-start text-monti-muted-foreground"
-												/>
+												<Button type="button" size="xs" variant="ghost" className="self-start text-monti-muted" />
 											}
 										>
 											<Plus aria-hidden />
@@ -1295,7 +1288,7 @@ function FeatureEditor({
 					</Button>
 				)}
 				{!custom?.isNew && (
-					<span className="flex-1 text-right text-monti-muted-foreground text-xs">
+					<span className="flex-1 text-right text-monti-caption text-monti-muted">
 						{feature.updatedAt
 							? t("meta.edited", {
 									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),

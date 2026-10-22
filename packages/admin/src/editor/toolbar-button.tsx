@@ -37,7 +37,7 @@ export function ToolbarButton({
 		disabled,
 		// Keep the button click from stealing the editor selection.
 		onMouseDown: (event: React.MouseEvent) => event.preventDefault(),
-		className: cn("size-8 p-0 text-xs", item.className),
+		className: cn("size-8 p-0 text-monti-caption", item.className),
 	};
 	return (
 		<Tooltip>

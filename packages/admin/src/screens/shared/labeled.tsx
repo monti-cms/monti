@@ -32,14 +32,14 @@ export function Labeled({
 	return (
 		<UiField className={cn("gap-2", className)}>
 			{aside ? (
-				<div className="flex items-center gap-1.5">
-					<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
+				<div className="flex items-center gap-2">
+					<FormFieldLabel htmlFor={htmlFor} className="font-medium text-monti-body">
 						{label}
 					</FormFieldLabel>
 					{aside}
 				</div>
 			) : (
-				<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
+				<FormFieldLabel htmlFor={htmlFor} className="font-medium text-monti-body">
 					{label}
 				</FormFieldLabel>
 			)}

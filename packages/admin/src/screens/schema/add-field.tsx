@@ -114,7 +114,7 @@ export function AddFieldDialog({
 	};
 
 	const naming = (
-		<div className="flex flex-col gap-5">
+		<div className="flex flex-col gap-4">
 			<TextInput
 				label={t("field.label")}
 				value={label}
@@ -126,9 +126,7 @@ export function AddFieldDialog({
 			<Labeled
 				label={t("field.identifier")}
 				hint={
-					typedName !== null && problem ? (
-						<span className="text-monti-destructive">{ts(`name.${problem}`)}</span>
-					) : undefined
+					typedName !== null && problem ? <span className="text-monti-danger">{ts(`name.${problem}`)}</span> : undefined
 				}
 			>
 				{isNaming ? (
@@ -181,16 +179,16 @@ export function AddFieldDialog({
 										aria-labelledby={nameId}
 										aria-describedby={`${nameId}-hint`}
 										onClick={() => pickKind(item)}
-										className="flex items-start gap-3 rounded-md border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-checked:border-monti-highlight aria-checked:bg-monti-highlight-soft"
+										className="flex items-start gap-3 rounded-md border border-transparent px-3 py-2 text-left outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-checked:border-monti-accent aria-checked:bg-monti-accent-muted"
 									>
-										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-border bg-monti-background text-monti-muted-foreground">
+										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-muted bg-monti-page text-monti-muted">
 											<Icon aria-hidden className="size-4" />
 										</span>
 										<span className="flex min-w-0 flex-col">
 											<span id={nameId} className="font-medium text-monti-body">
 												{t(`kind.${item}`)}
 											</span>
-											<span id={`${nameId}-hint`} className="text-monti-caption text-monti-muted-foreground">
+											<span id={`${nameId}-hint`} className="text-monti-caption text-monti-muted">
 												{t(`kind.${item}.hint`)}
 											</span>
 										</span>
@@ -198,7 +196,7 @@ export function AddFieldDialog({
 								);
 							})}
 						</div>
-						<div className="flex min-w-0 flex-col gap-6 md:border-monti-border md:border-l md:pl-6">
+						<div className="flex min-w-0 flex-col gap-6 md:border-monti-muted md:border-l md:pl-6">
 							{kind !== "relation" && naming}
 							<KindOptions
 								name={name}
@@ -212,7 +210,7 @@ export function AddFieldDialog({
 							/>
 							{problems.length > 0 && (
 								<ul
-									className="flex flex-col gap-0.5 text-monti-caption text-monti-muted-foreground"
+									className="flex flex-col gap-0.5 text-monti-caption text-monti-muted"
 									data-testid="new-field-problems"
 								>
 									{problems.map((item) => (

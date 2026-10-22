@@ -19,15 +19,15 @@ const formatBytes = (bytes: number): string =>
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(importMessages);
 	return (
-		<output className="flex flex-col gap-1.5" data-testid="import-progress">
-			<div className="flex items-center gap-2 text-monti-muted-foreground text-sm">
+		<output className="flex flex-col gap-2" data-testid="import-progress">
+			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{t("progress.running", { count })}
 			</div>
-			<div className="h-1 overflow-hidden rounded-sm bg-monti-muted">
-				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-primary" />
+			<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
+				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis" />
 			</div>
-			<p className="text-monti-muted-foreground text-xs">{t("progress.hint")}</p>
+			<p className="text-monti-caption text-monti-muted">{t("progress.hint")}</p>
 		</output>
 	);
 }
@@ -47,8 +47,8 @@ export function ImportEntriesFields() {
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex flex-col gap-2">
-				<p className="font-medium text-sm">{t("kinds.label")}</p>
-				<ul className="flex list-disc flex-col gap-1 pl-5 text-monti-muted-foreground text-xs leading-relaxed">
+				<p className="font-medium text-monti-body">{t("kinds.label")}</p>
+				<ul className="flex list-disc flex-col gap-1 pl-4 text-monti-caption text-monti-muted">
 					<li>{t("kinds.export")}</li>
 					<li>{t("kinds.markdown")}</li>
 				</ul>
@@ -73,7 +73,7 @@ export function ImportEntriesFields() {
 				<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
 					{form.file ? t("file.change") : t("file.choose")}
 				</Button>
-				{form.file && <span className="min-w-0 truncate text-monti-muted-foreground text-sm">{form.file.name}</span>}
+				{form.file && <span className="min-w-0 truncate text-monti-body text-monti-muted">{form.file.name}</span>}
 			</div>
 
 			{form.tooLarge && form.limit !== undefined && (
@@ -83,7 +83,7 @@ export function ImportEntriesFields() {
 			)}
 
 			{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
-				<p className="text-monti-muted-foreground text-sm">{t("preview.loading")}</p>
+				<p className="text-monti-body text-monti-muted">{t("preview.loading")}</p>
 			)}
 			{previewQuery.isError && (
 				<LoadErrorAlert
@@ -122,7 +122,7 @@ export function ImportEntriesFields() {
 						{t("action.cancel")}
 					</Button>
 					{preview.counts.imported === 0 && (
-						<span className="text-monti-muted-foreground text-xs">{t("nothing.description")}</span>
+						<span className="text-monti-caption text-monti-muted">{t("nothing.description")}</span>
 					)}
 				</div>
 			)}

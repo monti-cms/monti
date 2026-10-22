@@ -72,7 +72,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 	const previewBlocker = previewHref === null ? site.previewBlocker(collection, entry?.workingSlug) : null;
 
 	return (
-		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-monti-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
+		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-monti-page px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
 			<div className="flex min-w-0 items-center gap-2 text-monti-label">
 				<Tooltip>
 					<TooltipTrigger
@@ -80,10 +80,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 							<Link
 								href={site.adminHref(`?collection=${collection}`)}
 								aria-label={t("backToList")}
-								className={cn(
-									buttonVariants({ variant: "ghost", size: "icon-sm" }),
-									"size-8 text-monti-muted-foreground",
-								)}
+								className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8 text-monti-muted")}
 							>
 								<ChevronLeft aria-hidden className="size-4" />
 							</Link>
@@ -92,7 +89,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
 				</Tooltip>
 				{entry?.workingSlug && (
-					<span className="hidden min-w-0 truncate font-mono text-monti-caption text-monti-muted-foreground sm:block">
+					<span className="hidden min-w-0 truncate font-mono text-monti-caption text-monti-muted sm:block">
 						{entry.workingSlug}
 					</span>
 				)}
@@ -132,7 +129,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						href={previewHref}
 						target="_blank"
 						rel="noopener noreferrer"
-						className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+						className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
 					>
 						<Eye aria-hidden className="size-4" />
 						{t("preview")}
@@ -142,7 +139,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						type="button"
 						variant="outline"
 						size="sm"
-						className="gap-1.5"
+						className="gap-2"
 						onClick={() => void handlePreview(previewHref)}
 					>
 						<Eye aria-hidden className="size-4" />
@@ -158,7 +155,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 									variant="outline"
 									size="sm"
 									aria-disabled
-									className="cursor-not-allowed gap-1.5 opacity-50 hover:bg-transparent"
+									className="cursor-not-allowed gap-2 opacity-50 hover:bg-transparent"
 								>
 									<Eye aria-hidden className="size-4" />
 									{t("preview")}
@@ -205,25 +202,25 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 				) : (
 					// For an already published post, publish and "republish with today's date" are combined into one button.
 					// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
-					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-md bg-monti-primary text-monti-primary-foreground">
+					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-md bg-monti-emphasis text-monti-on-emphasis">
 						<Button
 							id="cms-publish"
 							type="button"
 							size="sm"
-							className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-monti-primary-foreground/10"
+							className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-monti-emphasis-hover"
 							disabled={isSubmitting}
 							onClick={() => void handlePublish()}
 						>
 							{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 						</Button>
-						<span aria-hidden className="h-4 w-px bg-monti-primary-foreground/30" />
+						<span aria-hidden className="h-4 w-px bg-monti-divider" />
 						<DropdownMenu>
 							<IconButton
 								label={t("publishOptions")}
 								side="bottom"
 								variant="default"
 								disabled={isSubmitting}
-								className="h-full w-7 rounded-none bg-transparent hover:bg-monti-primary-foreground/10 aria-expanded:bg-monti-primary-foreground/10"
+								className="h-full w-7 rounded-none bg-transparent hover:bg-monti-emphasis-hover aria-expanded:bg-monti-emphasis-hover"
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<ChevronDown aria-hidden className="size-3.5" />
@@ -240,12 +237,12 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						</DropdownMenu>
 					</div>
 				)}
-				<span aria-hidden className="mx-1 h-4 w-px bg-monti-border" />
+				<span aria-hidden className="mx-1 h-4 w-px bg-monti-divider" />
 				<IconButton
 					label={t("properties")}
 					side="bottom"
 					pressed={isInspectorOpen}
-					className="size-8 text-monti-muted-foreground"
+					className="size-8 text-monti-muted"
 					onClick={onToggleInspector}
 				>
 					<PanelRight aria-hidden className="size-4" />
@@ -254,7 +251,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<IconButton
 						label={t("more")}
 						side="bottom"
-						className="size-8 text-monti-muted-foreground"
+						className="size-8 text-monti-muted"
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
 						<MoreHorizontal aria-hidden className="size-4" />

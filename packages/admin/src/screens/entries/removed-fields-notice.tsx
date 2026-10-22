@@ -19,7 +19,7 @@ export function RemovedFieldsNotice({
 	return (
 		<div
 			role="note"
-			className="mb-4 space-y-1 rounded-md border border-monti-border border-dashed p-3 text-monti-caption text-monti-muted-foreground"
+			className="mb-4 space-y-1 rounded-md border border-monti-muted border-dashed p-3 text-monti-caption text-monti-muted"
 		>
 			<p className="font-medium">{t("inspector.removed.title")}</p>
 			<p className="break-words">{t("inspector.removed.body", { keys: keys.join(", ") })}</p>

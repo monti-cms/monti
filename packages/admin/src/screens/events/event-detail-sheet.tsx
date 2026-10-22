@@ -11,8 +11,8 @@ import { eventsMessages } from "./messages";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<div className="grid grid-cols-[8rem_1fr] gap-3 py-1.5 text-monti-label">
-			<dt className="text-monti-muted-foreground">{label}</dt>
+		<div className="grid grid-cols-[8rem_1fr] gap-3 py-2 text-monti-label">
+			<dt className="text-monti-muted">{label}</dt>
 			<dd className="min-w-0 break-words">{children}</dd>
 		</div>
 	);
@@ -21,8 +21,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /** One group of the detail: a small caption, with its rows below, separated from the group before by a hairline. */
 function Band({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="border-monti-border border-t px-4 py-4 first:border-t-0">
-			<h3 className="mb-1.5 font-medium text-monti-label">{title}</h3>
+		<section className="border-monti-muted border-t px-4 py-4 first:border-t-0">
+			<h3 className="mb-2 text-monti-label">{title}</h3>
 			<dl>{children}</dl>
 		</section>
 	);
@@ -93,12 +93,12 @@ export function EventDetailSheet({
 													<Mono>{delivery.subscriber ?? ""}</Mono>
 													<StatusIndicator tone={STATE_TONE[delivery.state]} label={t(`state.${delivery.state}`)} />
 												</div>
-												<div className="text-monti-caption text-monti-muted-foreground">
+												<div className="text-monti-caption text-monti-muted">
 													{t("detail.attempts", { count: delivery.attempts })}
 													{delivery.lastAttemptAt ? ` · ${formatDateTime(site, delivery.lastAttemptAt)}` : ""}
 												</div>
 												{delivery.lastError && (
-													<div className="text-monti-caption text-monti-destructive">{delivery.lastError}</div>
+													<div className="text-monti-caption text-monti-danger">{delivery.lastError}</div>
 												)}
 											</li>
 										))}

@@ -72,7 +72,7 @@ export function ChangeDot({ className }: { className?: string }) {
 	const t = useTranslator(schemaMessages);
 	return (
 		<span className={cn("inline-flex shrink-0 items-center", className)} data-testid="change-dot">
-			<span aria-hidden className="size-1.5 rounded-full bg-monti-highlight" />
+			<span aria-hidden className="size-1.5 rounded-full bg-monti-accent-emphasis" />
 			<span className="sr-only">{t("changed")}</span>
 		</span>
 	);
@@ -89,7 +89,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 				label={t("revert.named", { name })}
 				size="icon-xs"
 				disabled={disabled}
-				className="size-5 text-monti-muted-foreground"
+				className="size-5 text-monti-muted"
 				onClick={onRevert}
 			>
 				<Undo2 aria-hidden className="size-3" />
@@ -101,10 +101,10 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<ul className="flex flex-col gap-0.5 text-monti-destructive text-xs" data-testid="schema-issues">
+		<ul className="flex flex-col gap-0.5 text-monti-caption text-monti-danger" data-testid="schema-issues">
 			{issues.map((issue) => (
 				<li key={`${issue.path}:${issue.message}`}>
-					<code className="rounded-sm bg-monti-destructive/10 px-1">{issue.path || "(root)"}</code> {issue.message}
+					<code className="rounded-sm bg-monti-danger-muted px-1">{issue.path || "(root)"}</code> {issue.message}
 				</li>
 			))}
 		</ul>
@@ -147,7 +147,7 @@ export function TextInput({
 			label={
 				optional ? (
 					<>
-						{label} <span className="font-normal text-monti-muted-foreground">{t("sheet.optional")}</span>
+						{label} <span className="font-normal text-monti-muted">{t("sheet.optional")}</span>
 					</>
 				) : (
 					label
@@ -207,12 +207,12 @@ export function FlagSwitch({
 	return (
 		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-4", className)}>
 			<div className="flex flex-col gap-0.5">
-				<FormFieldLabel htmlFor={id} className="font-medium text-sm">
+				<FormFieldLabel htmlFor={id} className="font-medium text-monti-body">
 					{label}
 				</FormFieldLabel>
 				{desc && <FormFieldDescription className={HELP}>{desc}</FormFieldDescription>}
 			</div>
-			<div className="flex shrink-0 items-center gap-1.5">
+			<div className="flex shrink-0 items-center gap-2">
 				{revert && <RevertMark name={label} onRevert={revert} />}
 				<Switch
 					id={id}
@@ -247,14 +247,14 @@ export function Segmented({
 	const id = useId();
 	return (
 		<UiField className="gap-2">
-			<FormFieldLabel id={id} className="font-medium text-sm">
+			<FormFieldLabel id={id} className="font-medium text-monti-body">
 				{label}
 			</FormFieldLabel>
 			{description && <FormFieldDescription className={HELP}>{description}</FormFieldDescription>}
 			<div
 				role="radiogroup"
 				aria-labelledby={id}
-				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-monti-muted p-[3px] text-sm"
+				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-monti-neutral p-[3px] text-monti-body"
 			>
 				{items.map((item) => (
 					// biome-ignore lint/a11y/useSemanticElements: a segmented control draws radio buttons as buttons; a native radio cannot be styled as one strip
@@ -266,8 +266,8 @@ export function Segmented({
 						disabled={disabled}
 						onClick={() => onChange(item.value)}
 						className={cn(
-							"h-7 rounded-sm border border-transparent px-3 text-monti-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:opacity-50",
-							item.value === value && "border-monti-border bg-monti-background font-medium text-monti-foreground",
+							"h-7 rounded-sm border border-transparent px-3 text-monti-muted outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:opacity-50",
+							item.value === value && "border-monti-muted bg-monti-page font-medium text-monti-default",
 						)}
 					>
 						{item.label}
@@ -340,7 +340,7 @@ export function Pick({
 							{item.description ? (
 								<span className="flex flex-col gap-0.5">
 									<span>{item.label}</span>
-									<span className="whitespace-normal text-monti-muted-foreground text-xs">{item.description}</span>
+									<span className="whitespace-normal text-monti-caption text-monti-muted">{item.description}</span>
 								</span>
 							) : (
 								item.label
@@ -411,7 +411,7 @@ export function NameInput({
 					}
 				}}
 			/>
-			{problem && <FormFieldError className="text-xs">{t(`name.${problem}`)}</FormFieldError>}
+			{problem && <FormFieldError className="text-monti-caption">{t(`name.${problem}`)}</FormFieldError>}
 		</Labeled>
 	);
 }
@@ -465,7 +465,7 @@ export function RowActions({
 							disabled
 							aria-label={t("row.remove", { name })}
 							aria-description={removeBlocked}
-							className="pointer-events-none text-monti-destructive"
+							className="pointer-events-none text-monti-danger"
 						>
 							<X aria-hidden />
 						</Button>

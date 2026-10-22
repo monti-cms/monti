@@ -46,12 +46,17 @@ export function OptionSelect({
 			disabled={disabled}
 			onValueChange={(next) => typeof next === "string" && onChange(next)}
 		>
-			<SelectTrigger id={id} size="sm" aria-label={ariaLabel} className={cn("w-full min-w-0 text-xs", className)}>
+			<SelectTrigger
+				id={id}
+				size="sm"
+				aria-label={ariaLabel}
+				className={cn("w-full min-w-0 text-monti-caption", className)}
+			>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((option) => (
-					<SelectItem key={option.value} value={option.value} className="text-xs">
+					<SelectItem key={option.value} value={option.value} className="text-monti-caption">
 						{option.label}
 					</SelectItem>
 				))}
@@ -162,7 +167,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 	const fieldValue =
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
-		<div className="grid gap-5 sm:grid-cols-2">
+		<div className="grid gap-4 sm:grid-cols-2">
 			<FormField className="sm:col-span-2">
 				<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 				<Input
@@ -170,7 +175,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 					value={base.label}
 					maxLength={40}
 					onChange={(event) => onChange({ ...base, label: event.target.value })}
-					className="h-8 text-xs md:text-xs"
+					className="h-8 text-monti-caption md:text-monti-caption"
 				/>
 			</FormField>
 			<FormField>

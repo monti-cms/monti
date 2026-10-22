@@ -55,7 +55,7 @@ export function ApiKeysSettings() {
 			description: used ? (
 				<div className="flex flex-col gap-2">
 					<p>{t("delete.usedDescription", { count: key.uses.length })}</p>
-					<ul className="list-disc pl-5" data-testid="delete-dependents">
+					<ul className="list-disc pl-4" data-testid="delete-dependents">
 						{key.uses.map((use) => (
 							<li key={`${use.plugin}:${use.ref}`}>{use.label}</li>
 						))}
@@ -100,7 +100,7 @@ export function ApiKeysSettings() {
 					<AlertDescription>{t("secret.description")}</AlertDescription>
 				</Alert>
 			)}
-			<div className="flex min-h-11 shrink-0 items-center border-monti-border border-y px-8 text-monti-caption text-monti-muted-foreground">
+			<div className="flex min-h-11 shrink-0 items-center border-monti-muted border-y px-8 text-monti-caption text-monti-muted">
 				{list
 					? [
 							t("count.keys", { count: list.items.length }),
@@ -117,7 +117,7 @@ export function ApiKeysSettings() {
 				onRetry={() => void query.refetch()}
 				onAdd={() => setEditing({ mode: "add" })}
 			/>
-			<p className="px-8 py-4 text-monti-caption text-monti-muted-foreground">{t("note")}</p>
+			<p className="px-8 py-4 text-monti-caption text-monti-muted">{t("note")}</p>
 			{editing && (
 				<KeyDialog
 					key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
@@ -187,9 +187,9 @@ function KeyRows({
 		);
 	}
 	return (
-		<ul className="divide-y divide-monti-border border-monti-border border-b" aria-label={t("title")}>
+		<ul className="divide-y divide-monti-muted border-monti-muted border-b" aria-label={t("title")}>
 			{list.items.map((key) => (
-				<li key={key.id} className="flex items-center gap-3.5 px-8 py-3" data-testid={`api-key-${key.name}`}>
+				<li key={key.id} className="flex items-center gap-3 px-8 py-3" data-testid={`api-key-${key.name}`}>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-2">
 							<span className="truncate font-medium text-monti-body">{key.name}</span>
@@ -200,26 +200,24 @@ function KeyRows({
 							)}
 						</div>
 						{!key.readable ? (
-							<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">
-								{t("row.unreadableHint")}
-							</p>
+							<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{t("row.unreadableHint")}</p>
 						) : key.uses.length > 0 ? (
-							<ul aria-label={t("row.usedBy")} className="mt-1.5 flex flex-wrap gap-1">
+							<ul aria-label={t("row.usedBy")} className="mt-2 flex flex-wrap gap-1">
 								{key.uses.map((use) => (
 									<li
 										key={`${use.plugin}:${use.ref}`}
-										className="rounded-sm bg-monti-accent px-1.5 py-0.5 font-medium text-monti-caption text-monti-foreground"
+										className="rounded-sm bg-monti-selected px-2 py-0.5 font-medium text-monti-caption text-monti-default"
 									>
 										{use.label}
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">{t("row.unused")}</p>
+							<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{t("row.unused")}</p>
 						)}
 					</div>
 					<span
-						className="shrink-0 font-mono text-monti-caption text-monti-muted-foreground"
+						className="shrink-0 font-mono text-monti-caption text-monti-muted"
 						title={key.tail ? t("row.mask", { tail: key.tail }) : t("row.maskShort")}
 					>
 						{"••••"}
@@ -231,13 +229,13 @@ function KeyRows({
 			{emptySlots.map((slot) => (
 				<li
 					key={`${slot.plugin}:${slot.slot}`}
-					className="flex items-center gap-3.5 px-8 py-3"
+					className="flex items-center gap-3 px-8 py-3"
 					data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 				>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-2">
 							<span className="truncate font-medium text-monti-body">{slot.label}</span>
-							<span className="text-monti-caption text-monti-muted-foreground">{t("slot.empty")}</span>
+							<span className="text-monti-caption text-monti-muted">{t("slot.empty")}</span>
 						</div>
 					</div>
 					<Button
@@ -283,7 +281,7 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-slot-dialog">
 				<form
-					className="grid gap-5"
+					className="grid gap-4"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();
@@ -375,7 +373,7 @@ function KeyDialog({
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-dialog">
 				<form
-					className="grid gap-5"
+					className="grid gap-4"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();

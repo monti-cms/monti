@@ -121,7 +121,7 @@ export function SiteEditor({
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
 								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>
-									<code className="flex-1 text-xs">{alias}</code>
+									<code className="flex-1 text-monti-caption">{alias}</code>
 									<RowActions
 										index={index}
 										count={aliases.length}
@@ -160,7 +160,7 @@ export function SiteEditor({
 				<div className="border-t pt-6" data-testid="site-url">
 					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
 						{siteUrl.url ? (
-							<code className="block rounded-md bg-monti-muted px-3 py-2 text-xs">{siteUrl.url}</code>
+							<code className="block rounded-md bg-monti-neutral px-3 py-2 text-monti-caption">{siteUrl.url}</code>
 						) : null}
 					</Labeled>
 				</div>

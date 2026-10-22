@@ -30,7 +30,7 @@ import { snippetMessages } from "./snippet-editor.messages";
 
 /** Shape of the instruction and prompt snippet input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
-export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
+export const PROMPT_TEXTAREA = "min-h-40 text-monti-caption md:text-monti-caption";
 
 export function useAiSnippets() {
 	const site = useSite();
@@ -158,9 +158,9 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 	};
 	return (
 		<div className="flex items-center gap-1">
-			<code className="rounded-md border bg-monti-muted px-2 py-1 font-mono text-xs">{text}</code>
+			<code className="rounded-md border bg-monti-neutral px-2 py-1 font-mono text-monti-caption">{text}</code>
 			<IconButton label={copied ? t("copy.done") : t("copy.label")} size="icon-xs" onClick={() => void copy()}>
-				{copied ? <Check aria-hidden className="text-monti-primary" /> : <Copy aria-hidden />}
+				{copied ? <Check aria-hidden className="text-monti-default" /> : <Copy aria-hidden />}
 			</IconButton>
 		</div>
 	);
@@ -268,15 +268,15 @@ function SnippetEditor({
 	return (
 		<div className={DETAIL_PANE_FRAME}>
 			<div className="min-w-0">
-				<h2 className="truncate font-medium text-base">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
+				<h2 className="truncate text-monti-title">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
 				{(shownKey || item?.source === "added") && (
-					<p className="truncate text-monti-muted-foreground text-xs">
+					<p className="truncate text-monti-caption text-monti-muted">
 						{item ? detailOf(t, item) : `${placeholderOf(shownKey)} · ${t("detail.added")}`}
 					</p>
 				)}
 			</div>
 
-			<FormFieldGroup className="gap-5">
+			<FormFieldGroup className="gap-4">
 				<FormField>
 					<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 					<Input
@@ -285,7 +285,7 @@ function SnippetEditor({
 						maxLength={40}
 						disabled={fromConfig}
 						onChange={(event) => set({ label: event.target.value })}
-						className="h-8 text-xs md:text-xs"
+						className="h-8 text-monti-caption md:text-monti-caption"
 					/>
 				</FormField>
 				{item ? (
@@ -303,7 +303,7 @@ function SnippetEditor({
 							autoComplete="off"
 							spellCheck={false}
 							onChange={(event) => set({ key: event.target.value.trim() })}
-							className="h-8 font-mono text-xs md:text-xs"
+							className="h-8 font-mono text-monti-caption md:text-monti-caption"
 						/>
 					</FormField>
 				)}

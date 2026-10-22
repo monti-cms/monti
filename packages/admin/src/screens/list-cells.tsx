@@ -8,7 +8,7 @@ import type { AdminComponents, ListCellProps } from "../admin-components";
 import { fieldColumnOf } from "./list-columns";
 import { FittingTags } from "./shared/fitting-tags";
 
-const EMPTY = <span className="text-monti-muted-foreground">—</span>;
+const EMPTY = <span className="text-monti-muted">—</span>;
 
 /**
  * Finds a column's cell component in the admin extension (`listCells`). The column name comes first, otherwise the field's `input` name.
@@ -43,7 +43,6 @@ export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
 	const value = entry.values[column];
 	if (!value) return EMPTY;
 	if (field.kind === "select") return Object.hasOwn(field.options, value) ? field.options[value] : value;
-	if (field.kind === "media")
-		return <span className="font-mono text-monti-caption text-monti-muted-foreground">{value}</span>;
+	if (field.kind === "media") return <span className="font-mono text-monti-caption text-monti-muted">{value}</span>;
 	return value;
 }

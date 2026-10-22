@@ -208,7 +208,7 @@ describe("MathPreview math renderer error handling", () => {
 		const { container } = renderWithSite(<MathPreview value="\\invalidMacro{" />);
 
 		await waitFor(() => {
-			const errorBox = container.querySelector(".text-monti-destructive");
+			const errorBox = container.querySelector(".text-monti-danger");
 			expect(errorBox).not.toBeNull();
 			expect(errorBox?.textContent).toContain("KaTeX parse error");
 		});

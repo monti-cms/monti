@@ -95,7 +95,7 @@ export function ConflictDialog({
 					<DialogTitle>{t("conflict.title")}</DialogTitle>
 					<DialogDescription>{t("conflict.description")}</DialogDescription>
 					{conflict?.server.changedAt && (
-						<p className="font-medium text-sm">
+						<p className="font-medium text-monti-body">
 							{conflict.server.changedBy
 								? t("conflict.savedBy", {
 										name: conflict.server.changedBy,
@@ -160,8 +160,8 @@ function ComparePanes({
 		const body = bodyText(value.doc);
 		return (
 			<div className="space-y-2 rounded-lg border p-3">
-				<p className="font-semibold text-sm">{label}</p>
-				<p className="text-xs">
+				<p className="font-semibold text-monti-body">{label}</p>
+				<p className="text-monti-caption">
 					{t("conflict.summary", {
 						title: formTitle(site, collection, value) || tc("untitled"),
 						slug: value.slug || t("conflict.noSlug"),
@@ -170,7 +170,7 @@ function ComparePanes({
 				<Button type="button" variant="link" size="xs" className="px-0" onClick={() => void copy(body)}>
 					{t("conflict.copyBody")}
 				</Button>
-				<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-xs">{body}</pre>
+				<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-monti-caption">{body}</pre>
 			</div>
 		);
 	};

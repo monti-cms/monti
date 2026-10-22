@@ -57,23 +57,23 @@ export function IconPicker({
 							variant="outline"
 							disabled={disabled}
 							aria-label={`${label}: ${value || t("collection.iconDefault")}`}
-							className="h-9 w-full max-w-sm justify-start gap-2.5 font-normal"
+							className="h-9 w-full max-w-sm justify-start gap-2 font-normal"
 						/>
 					}
 				>
-					<span className="flex size-5 items-center justify-center text-monti-muted-foreground">
+					<span className="flex size-5 items-center justify-center text-monti-muted">
 						<CurrentIcon className="size-4" />
 					</span>
 					<span className="truncate">{value || t("collection.iconDefault")}</span>
-					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-monti-muted-foreground" />
+					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-monti-muted" />
 				</PopoverTrigger>
 				<PopoverContent align="start" className="w-72 p-3">
-					<div className="flex flex-col gap-2.5">
+					<div className="flex flex-col gap-2">
 						<Input
 							value={query}
 							placeholder={t("collection.iconSearch")}
 							onChange={(e) => setQuery(e.target.value)}
-							className="h-8 text-xs"
+							className="h-8 text-monti-caption"
 							autoFocus
 						/>
 						{value && (
@@ -81,7 +81,7 @@ export function IconPicker({
 								type="button"
 								variant="ghost"
 								size="xs"
-								className="justify-start text-monti-muted-foreground text-xs hover:text-monti-foreground"
+								className="justify-start text-monti-caption text-monti-muted hover:text-monti-default"
 								onClick={() => {
 									onChange(undefined);
 									setOpen(false);
@@ -108,8 +108,8 @@ export function IconPicker({
 											setOpen(false);
 										}}
 										className={cn(
-											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-accent",
-											isSelected && "bg-monti-accent text-monti-foreground ring-1 ring-monti-primary",
+											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-hover",
+											isSelected && "bg-monti-selected text-monti-default ring-1 ring-monti-focus",
 										)}
 									>
 										<Icon className="size-4" />
@@ -118,7 +118,7 @@ export function IconPicker({
 							})}
 						</div>
 						{filtered.length === 0 && (
-							<p className="py-4 text-center text-monti-muted-foreground text-xs">{t("collection.iconNone")}</p>
+							<p className="py-4 text-center text-monti-caption text-monti-muted">{t("collection.iconNone")}</p>
 						)}
 					</div>
 				</PopoverContent>

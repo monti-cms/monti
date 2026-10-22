@@ -97,7 +97,7 @@ function LimitList<T extends string | number>({
 		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
 			<legend className="sr-only">{label}</legend>
 			<div className="flex items-center justify-between">
-				<span className="flex items-center gap-1.5 font-medium text-sm">
+				<span className="flex items-center gap-2 font-medium text-monti-body">
 					{label}
 					{revert && <RevertMark name={label} onRevert={revert} />}
 				</span>
@@ -109,7 +109,7 @@ function LimitList<T extends string | number>({
 						disabled={disabled}
 						onCheckedChange={(on) => onChange(on === true ? undefined : [])}
 					/>
-					<Label htmlFor={allId} className="cursor-pointer font-normal text-monti-muted-foreground text-sm">
+					<Label htmlFor={allId} className="cursor-pointer text-monti-body text-monti-muted">
 						{t("allowed.all")}
 					</Label>
 				</div>
@@ -133,7 +133,7 @@ function LimitList<T extends string | number>({
 									onChange(nextList.length === all.length ? undefined : nextList);
 								}}
 							/>
-							<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
+							<Label htmlFor={id} title={String(item)} className="text-monti-body">
 								{nameOf ? nameOf(item) : String(item)}
 							</Label>
 						</li>
@@ -270,10 +270,10 @@ export function CollectionEditor({
 				<div className="flex flex-col items-start gap-3">
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
-							<h3 className="font-semibold text-lg">{label}</h3>
-							<code className="text-monti-muted-foreground text-xs">{name}</code>
+							<h3 className="text-monti-title">{label}</h3>
+							<code className="text-monti-caption text-monti-muted">{name}</code>
 						</div>
-						<p className="mt-1 text-monti-muted-foreground text-sm">
+						<p className="mt-1 text-monti-body text-monti-muted">
 							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
 						</p>
 					</div>
@@ -365,7 +365,7 @@ export function CollectionEditor({
 								variant="outline"
 								size="sm"
 								disabled={disabled}
-								className="border-monti-destructive/50 text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive"
+								className="border-monti-danger-muted text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger"
 								onClick={onRemove}
 							>
 								<Trash2 aria-hidden />

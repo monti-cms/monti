@@ -62,7 +62,7 @@ function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart } as const;
 
-const VALUE_LABEL_CLASS = "fill-monti-foreground font-medium text-monti-micro";
+const VALUE_LABEL_CLASS = "fill-monti-default font-medium text-monti-micro";
 
 /** Value labels (`show values`). */
 const valueLabel = (spec: CartesianChartSpec) =>

@@ -13,10 +13,10 @@ const toneClass = cva("shrink-0", {
 		tone: {
 			success: "text-monti-success",
 			warning: "text-monti-warning",
-			destructive: "text-monti-destructive",
-			neutral: "text-monti-muted-foreground",
+			destructive: "text-monti-danger",
+			neutral: "text-monti-muted",
 			/** The page text color: the monochrome "published" and "draft" markers. */
-			strong: "text-monti-foreground",
+			strong: "text-monti-default",
 		},
 		size: {
 			/** A bare dot beside a name (language tabs). */
@@ -85,7 +85,7 @@ export function StatusIndicator({
 			data-tone={tone}
 			className={cn(
 				"inline-flex items-center gap-1.5 whitespace-nowrap",
-				label && "text-monti-foreground/80 text-monti-label",
+				label && "text-monti-default text-monti-label",
 				className,
 			)}
 			{...props}

@@ -42,7 +42,7 @@ function RouteDescription({ path }: { path: string }) {
 	const t = useTranslator(screensMessages);
 	return (
 		<>
-			{t("list.publicAt")} <code className="font-mono text-monti-caption text-monti-foreground">{path}</code>
+			{t("list.publicAt")} <code className="font-mono text-monti-caption text-monti-default">{path}</code>
 		</>
 	);
 }
@@ -177,11 +177,11 @@ function ListLoading() {
 				))}
 			</div>
 			<div aria-hidden className="flex min-w-0 flex-1 flex-col">
-				<div className="flex h-13 shrink-0 items-center justify-between border-b px-4 lg:px-5">
+				<div className="flex h-13 shrink-0 items-center justify-between border-b px-4 lg:px-4">
 					<Skeleton className="h-5 w-32" />
 					<Skeleton className="h-8 w-64" />
 				</div>
-				<div className="space-y-3 px-5 py-4">
+				<div className="space-y-3 px-4 py-4">
 					{Array.from({ length: 8 }, (_, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 						<Skeleton key={index} className="h-7 w-full" />
@@ -232,7 +232,7 @@ function TrashPage() {
 				<EntryListHeaderActions list={list} />
 				<nav
 					aria-label={t("dashboard.trashCollections")}
-					className="flex items-center gap-1 rounded-lg bg-monti-muted p-[3px]"
+					className="flex items-center gap-1 rounded-lg bg-monti-neutral p-[3px]"
 				>
 					{site.COLLECTIONS.map((item) => (
 						<Link
@@ -241,7 +241,7 @@ function TrashPage() {
 							aria-current={state.collection === item ? "page" : undefined}
 							className={cn(
 								buttonVariants({ variant: "ghost", size: "xs" }),
-								"text-monti-muted-foreground aria-[current=page]:bg-monti-background aria-[current=page]:text-monti-foreground",
+								"text-monti-muted aria-[current=page]:bg-monti-page aria-[current=page]:text-monti-default",
 							)}
 						>
 							{site.COLLECTION_DEFINITIONS[item].label}

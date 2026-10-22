@@ -46,14 +46,14 @@ export function Section({
 			)}
 		>
 			<div>
-				<h3 className="font-semibold text-monti-title">{title}</h3>
-				{description && <p className="mt-1.5 text-monti-label text-monti-muted-foreground">{description}</p>}
-				{note && <p className="mt-1.5 text-monti-label text-monti-muted-foreground">{note}</p>}
+				<h3 className="text-monti-title">{title}</h3>
+				{description && <p className="mt-2 text-monti-label text-monti-muted">{description}</p>}
+				{note && <p className="mt-2 text-monti-label text-monti-muted">{note}</p>}
 			</div>
 			{band ? (
 				<div className="flex min-w-0 flex-col gap-6">{children}</div>
 			) : card ? (
-				<Panel className="flex min-w-0 flex-col gap-6 p-5">{children}</Panel>
+				<Panel className="flex min-w-0 flex-col gap-6 p-4">{children}</Panel>
 			) : (
 				<div className="min-w-0">{children}</div>
 			)}

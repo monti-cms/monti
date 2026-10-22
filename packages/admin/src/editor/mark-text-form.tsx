@@ -78,7 +78,7 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 			<p className="font-medium">
 				{active ? t("markText.edit", { name: labels.name }) : t("markText.add", { name: labels.name })}
 			</p>
-			<label htmlFor={`${id}-content`} className="grid gap-1.5 text-xs">
+			<label htmlFor={`${id}-content`} className="grid gap-2 text-monti-caption">
 				{labels.field}
 				<Textarea
 					id={`${id}-content`}
@@ -171,7 +171,7 @@ export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEve
 				/>
 				<TooltipContent side="bottom">{labels.name}</TooltipContent>
 			</Tooltip>
-			<PopoverContent align="center" className="w-80 p-3 text-xs">
+			<PopoverContent align="center" className="w-80 p-3 text-monti-caption">
 				<MarkTextForm
 					key={String(open)}
 					editor={editor}

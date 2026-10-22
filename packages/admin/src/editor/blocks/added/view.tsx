@@ -30,13 +30,13 @@ function AttributeField({
 	const value = values[name] ?? attribute.defaultValue ?? (attribute.type === "boolean" ? false : "");
 	const id = `${definition.name}-${name}`;
 	const description = attribute.description ? (
-		<p className="text-monti-muted-foreground text-xs">{attribute.description}</p>
+		<p className="text-monti-caption text-monti-muted">{attribute.description}</p>
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
 			<div className="flex flex-col gap-1">
 				<label htmlFor={id} className="flex items-center justify-between gap-2">
-					<span className="text-monti-muted-foreground">{attribute.label}</span>
+					<span className="text-monti-muted">{attribute.label}</span>
 					<Switch
 						id={id}
 						size="sm"
@@ -59,7 +59,7 @@ function AttributeField({
 					disabled={!editable}
 					onValueChange={(next) => next !== null && setValue(name, String(next))}
 				>
-					<SelectTrigger id={id} size="sm" className="h-7 w-full text-xs">
+					<SelectTrigger id={id} size="sm" className="h-7 w-full text-monti-caption">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -81,7 +81,7 @@ function AttributeField({
 				value={String(value)}
 				readOnly={!editable}
 				onCommit={(next) => setValue(name, next)}
-				className="h-7 w-full rounded-md border border-monti-input monti-dark:bg-monti-input/30 px-2 text-xs shadow-xs placeholder:text-monti-muted-foreground placeholder:opacity-100 focus-visible:border-monti-ring focus-visible:ring-3 focus-visible:ring-monti-ring/50"
+				className="h-7 w-full rounded-md border border-monti-default px-2 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
 			/>
 			{description}
 		</BlockSettingsField>
@@ -118,7 +118,7 @@ export function DefaultBlockView() {
 			)}
 			<div
 				contentEditable={false}
-				className={cn("not-prose px-3 py-2 font-medium text-monti-muted-foreground text-xs", container && "border-b")}
+				className={cn("not-prose px-3 py-2 font-medium text-monti-caption text-monti-muted", container && "border-b")}
 			>
 				{definition.label}
 			</div>

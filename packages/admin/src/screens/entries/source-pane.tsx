@@ -16,7 +16,7 @@ import { entriesMessages } from "./messages";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 
 const PROSE =
-	"prose monti-dark:prose-invert max-w-none text-base text-monti-foreground leading-relaxed focus:outline-none " +
+	"prose monti-dark:prose-invert max-w-none text-monti-reading text-monti-default focus:outline-none" +
 	// Read-only: hide the code block tool row. A collapsible box is open unless the translation box it is paired with is collapsed (source-sync).
 	`[&_[data-code-ui]]:hidden [&_[data-monti-collapsed]]:block [&_[data-source-collapsed]]:hidden! ${ACTIVE_BLOCK_STYLE}`;
 
@@ -69,23 +69,20 @@ export function SourcePane({
 		<aside
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-background", className)}
+			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-page", className)}
 		>
 			<div
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-monti-background/95 px-4 backdrop-blur"
+				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-monti-page px-4 backdrop-blur"
 			>
-				<h2 className="flex-1 font-medium text-sm">{t("sourcePane.heading", { locale: locale.toUpperCase() })}</h2>
+				<h2 className="flex-1 font-medium text-monti-body">
+					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
+				</h2>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
 					<X aria-hidden className="size-4" />
 				</IconButton>
 			</div>
-			<h1
-				className={cn(
-					"px-6 pt-12 pb-5 font-semibold text-monti-display leading-tight tracking-tight",
-					!title && "text-monti-muted-foreground/40",
-				)}
-			>
+			<h1 className={cn("px-6 pt-12 pb-4 text-monti-display", !title && "text-monti-subtle")}>
 				{title || tc("untitled")}
 			</h1>
 			<div className="px-6 pt-6 pb-[35vh]">

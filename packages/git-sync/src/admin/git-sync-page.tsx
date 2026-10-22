@@ -63,7 +63,7 @@ export function GitSyncPage() {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
-				<PageTabs className="border-monti-border px-8">
+				<PageTabs className="border-monti-muted px-8">
 					<TabsTrigger value="sync" className="flex-none px-0 text-monti-body">
 						<GitBranch aria-hidden />
 						{t("tab.sync")}
@@ -105,7 +105,7 @@ export function GitSyncPage() {
 
 function ListSkeleton() {
 	return (
-		<div className="space-y-3 px-8 py-5" aria-hidden>
+		<div className="space-y-3 px-8 py-4" aria-hidden>
 			<Skeleton className="h-24 w-full" />
 			<Skeleton className="h-24 w-full" />
 		</div>
@@ -155,7 +155,7 @@ function SyncTab({
 	});
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-8 my-5" message={error} onRetry={onRetry} />;
+	if (error) return <LoadErrorAlert className="mx-8 my-4" message={error} onRetry={onRetry} />;
 	if (!status) return null;
 	if (status.targets.length === 0) {
 		return <EmptyState className="h-full" icon={GitBranch} title={t("sync.empty")} />;
@@ -172,12 +172,12 @@ function SyncTab({
 				<section
 					key={target.id}
 					aria-label={target.id}
-					className="space-y-3 border-monti-border border-b px-8 py-5 first:border-t"
+					className="space-y-3 border-monti-muted border-b px-8 py-4 first:border-t"
 				>
 					<div className="flex flex-wrap items-center gap-2">
 						<h2 className="min-w-0 flex-1 truncate font-medium font-mono text-monti-body">
 							{target.repo}
-							<span className="text-monti-muted-foreground">@{target.branch}</span>
+							<span className="text-monti-muted">@{target.branch}</span>
 						</h2>
 						<Badge variant="secondary">
 							{target.mode === "pr" ? <GitPullRequest aria-hidden /> : <GitBranch aria-hidden />}
@@ -206,15 +206,15 @@ function SyncTab({
 						)}
 					</div>
 					<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-monti-caption">
-						<dt className="text-monti-muted-foreground">{t("target.folder")}</dt>
+						<dt className="text-monti-muted">{t("target.folder")}</dt>
 						<dd className="font-mono">{target.folder || t("target.wholeRepo")}</dd>
-						<dt className="text-monti-muted-foreground">{t("target.path")}</dt>
+						<dt className="text-monti-muted">{t("target.path")}</dt>
 						<dd className="font-mono">{target.path}</dd>
-						<dt className="text-monti-muted-foreground">{t("target.format")}</dt>
+						<dt className="text-monti-muted">{t("target.format")}</dt>
 						<dd className="font-mono">{target.format}</dd>
-						<dt className="text-monti-muted-foreground">{t("target.collections")}</dt>
+						<dt className="text-monti-muted">{t("target.collections")}</dt>
 						<dd>{target.collections.join(", ")}</dd>
-						<dt className="text-monti-muted-foreground">{t("target.lastPull")}</dt>
+						<dt className="text-monti-muted">{t("target.lastPull")}</dt>
 						<dd>
 							{target.lastPull
 								? t("target.pull", {
@@ -225,7 +225,7 @@ function SyncTab({
 									})
 								: t("target.never")}
 						</dd>
-						<dt className="text-monti-muted-foreground">{t("target.lastFlush")}</dt>
+						<dt className="text-monti-muted">{t("target.lastFlush")}</dt>
 						<dd>
 							{target.lastFlush ? (
 								<>
@@ -242,9 +242,7 @@ function SyncTab({
 											</a>
 										</>
 									)}
-									{target.lastFlush.note && (
-										<span className="block text-monti-muted-foreground">{target.lastFlush.note}</span>
-									)}
+									{target.lastFlush.note && <span className="block text-monti-muted">{target.lastFlush.note}</span>}
 								</>
 							) : (
 								t("target.never")
@@ -263,7 +261,7 @@ function SyncTab({
 							<h3 className="font-medium">{t("summary.errors")}</h3>
 							<ul className="space-y-0.5">
 								{target.lastPull.errors.map((item) => (
-									<li key={item.path} className="text-monti-destructive-foreground">
+									<li key={item.path} className="text-monti-danger">
 										<span className="font-mono">{item.path}</span>: {item.message}
 									</li>
 								))}
@@ -273,7 +271,7 @@ function SyncTab({
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
 						<div className="space-y-1 text-monti-caption">
 							<h3 className="font-medium">{t("summary.skipped")}</h3>
-							<ul className="space-y-0.5 text-monti-muted-foreground">
+							<ul className="space-y-0.5 text-monti-muted">
 								{target.lastPull.skipped.map((item) => (
 									<li key={item.path}>
 										<span className="font-mono">{item.path}</span>: {item.reason}
@@ -292,9 +290,9 @@ function SyncTab({
 // Conflicts tab
 
 const LINE_STYLE: Record<DiffLine["type"], string> = {
-	same: "text-monti-muted-foreground",
-	remove: "bg-monti-destructive-soft text-monti-destructive-foreground",
-	add: "bg-monti-primary/10 text-monti-foreground",
+	same: "text-monti-muted",
+	remove: "bg-monti-danger-muted text-monti-danger",
+	add: "bg-monti-success-muted text-monti-success",
 };
 const LINE_MARK: Record<DiffLine["type"], string> = { same: " ", remove: "-", add: "+" };
 
@@ -305,7 +303,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
 		<div className="space-y-1">
-			<div className="flex gap-4 text-monti-caption text-monti-muted-foreground">
+			<div className="flex gap-4 text-monti-caption text-monti-muted">
 				<span>
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
@@ -313,10 +311,10 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 				<span>+ {t("conflicts.git")}</span>
 			</div>
 			{identical ? (
-				<p className="text-monti-caption text-monti-muted-foreground">{t("conflicts.same")}</p>
+				<p className="text-monti-caption text-monti-muted">{t("conflicts.same")}</p>
 			) : (
 				<fieldset
-					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-monti-border p-0 font-mono text-monti-caption leading-relaxed"
+					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-monti-muted p-0 font-mono text-monti-caption"
 					aria-label={`${t("conflicts.server")} / ${t("conflicts.git")}`}
 				>
 					{lines.map((line, index) => (
@@ -331,7 +329,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 					))}
 				</fieldset>
 			)}
-			<p className="text-monti-caption text-monti-muted-foreground">{t("conflicts.legend")}</p>
+			<p className="text-monti-caption text-monti-muted">{t("conflicts.legend")}</p>
 		</div>
 	);
 }
@@ -367,7 +365,7 @@ function ConflictsTab({
 	};
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-8 my-5" message={error} />;
+	if (error) return <LoadErrorAlert className="mx-8 my-4" message={error} />;
 	if (!items || items.length === 0) {
 		return <EmptyState className="h-full" icon={GitBranch} title={t("conflicts.empty")} />;
 	}
@@ -377,11 +375,11 @@ function ConflictsTab({
 				<section
 					key={conflict.id}
 					aria-label={conflict.label}
-					className="space-y-3 border-monti-border border-b px-8 py-5 first:border-t"
+					className="space-y-3 border-monti-muted border-b px-8 py-4 first:border-t"
 				>
 					<div className="space-y-1">
 						<h2 className="font-medium text-monti-body">{conflict.label}</h2>
-						<p className="text-monti-caption text-monti-muted-foreground">
+						<p className="text-monti-caption text-monti-muted">
 							<span className="font-mono">{conflict.path}</span> · {conflict.repo}
 						</p>
 						<p className="text-monti-caption">{t(`conflicts.reason.${conflict.reason}`)}</p>
@@ -461,9 +459,9 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const secretKey = keys.webhookSecret;
 
 	return (
-		<div className="max-w-3xl divide-y divide-monti-border px-8 [&>*]:py-6">
+		<div className="max-w-3xl divide-y divide-monti-muted px-8 [&>*]:py-6">
 			{!keys.secretsAvailable && (
-				<Alert variant="destructive" layout="stack" className="my-5 w-auto">
+				<Alert variant="destructive" layout="stack" className="my-4 w-auto">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
 			)}
@@ -476,7 +474,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				}}
 			>
 				<p className="font-medium text-monti-body">{t("settings.token")}</p>
-				<p className="text-monti-caption text-monti-muted-foreground">{t("settings.token.help")}</p>
+				<p className="text-monti-caption text-monti-muted">{t("settings.token.help")}</p>
 				<p className="text-monti-caption">
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
 				</p>
@@ -517,12 +515,12 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</p>
 				<FormField className="gap-1">
-					<FormFieldLabel htmlFor="git-sync-url" className="text-monti-caption text-monti-muted-foreground">
+					<FormFieldLabel htmlFor="git-sync-url" className="text-monti-caption text-monti-muted">
 						{t("settings.webhook.url")}
 					</FormFieldLabel>
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-monti-caption" />
 				</FormField>
-				<p className="text-monti-caption text-monti-muted-foreground">{t("settings.webhook.help")}</p>
+				<p className="text-monti-caption text-monti-muted">{t("settings.webhook.help")}</p>
 				<div className="flex flex-wrap gap-2">
 					<Input
 						id="git-sync-secret"

@@ -40,7 +40,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 						<Badge
 							key={locale}
 							variant="outline"
-							className="border-dashed font-mono text-monti-micro text-monti-muted-foreground/70"
+							className="border-dashed font-mono text-monti-micro text-monti-subtle"
 						>
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<span className="sr-only">{t("locale.hasNot", { name })}</span>
@@ -82,7 +82,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 					<Badge
 						key={locale}
 						variant={named ? "success" : "outline"}
-						className={cn("font-mono text-monti-micro", !named && "border-dashed text-monti-muted-foreground/70")}
+						className={cn("font-mono text-monti-micro", !named && "border-dashed text-monti-subtle")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<span className="sr-only">
@@ -145,13 +145,11 @@ function DefaultEntryCell({
 	const tc = useTranslator(commonMessages);
 	switch (column) {
 		case "title": {
-			const title = item.title || <span className="text-monti-muted-foreground italic">{tc("untitled")}</span>;
+			const title = item.title || <span className="text-monti-muted italic">{tc("untitled")}</span>;
 			// Like the code names of the field list: the slug in mono, small and muted beside the title. It truncates first.
 			const slug =
 				showSlugBesideTitle && item.slug ? (
-					<span className="min-w-0 shrink-[5] truncate font-mono text-monti-caption text-monti-muted-foreground">
-						{item.slug}
-					</span>
+					<span className="min-w-0 shrink-[5] truncate font-mono text-monti-caption text-monti-muted">{item.slug}</span>
 				) : null;
 			// The title does not shrink (it truncates only at the full width), so the slug beside it gives way first.
 			const titleClass = "max-w-full shrink-0 truncate font-medium text-monti-body";
@@ -169,7 +167,7 @@ function DefaultEntryCell({
 						variant="link"
 						size="sm"
 						onClick={() => onOpenRecord(item)}
-						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:underline"
+						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-default hover:underline"
 					>
 						<span className="truncate">{title}</span>
 					</Button>
@@ -179,13 +177,13 @@ function DefaultEntryCell({
 				<span className="flex min-w-0 items-baseline gap-2">
 					<Link
 						href={site.adminEntryEditHref(item.id)}
-						className={cn(titleClass, "text-monti-foreground hover:underline")}
+						className={cn(titleClass, "text-monti-default hover:underline")}
 					>
 						{title}
 					</Link>
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
-						<span className="flex min-w-0 shrink items-center gap-1 text-monti-caption text-monti-muted-foreground">
+						<span className="flex min-w-0 shrink items-center gap-1 text-monti-caption text-monti-muted">
 							<FolderIcon aria-hidden className="size-3 shrink-0 self-center" />
 							<span className="truncate">
 								<span className="sr-only">{t("list.folderSr")}</span>
@@ -204,7 +202,7 @@ function DefaultEntryCell({
 			if (item.translations) return <LocaleBadges translations={item.translations} />;
 			// Also mark that a translation is not the original.
 			return (
-				<span className="text-monti-caption text-monti-muted-foreground">
+				<span className="text-monti-caption text-monti-muted">
 					<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
 						{item.locale.toUpperCase()}
 					</abbr>
@@ -215,16 +213,14 @@ function DefaultEntryCell({
 		case "createdAt":
 		case "publishedAt":
 			return (
-				<span className="whitespace-nowrap text-monti-caption text-monti-muted-foreground tabular-nums">
+				<span className="whitespace-nowrap text-monti-caption text-monti-muted tabular-nums">
 					{formatDate(site, item[column])}
 				</span>
 			);
 		case "slug":
-			return <span className="font-mono text-monti-caption text-monti-muted-foreground">{item.slug || "—"}</span>;
+			return <span className="font-mono text-monti-caption text-monti-muted">{item.slug || "—"}</span>;
 		case "folder":
-			return (
-				<span className="text-monti-caption text-monti-muted-foreground">{folderName(folders, item.folderId)}</span>
-			);
+			return <span className="text-monti-caption text-monti-muted">{folderName(folders, item.folderId)}</span>;
 		default:
 			// Field columns: default cells for relations (including taxonomy fields), select and text.
 			return <DefaultFieldCell collection={collection} column={column} entry={item} />;

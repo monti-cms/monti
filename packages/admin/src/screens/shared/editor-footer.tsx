@@ -64,7 +64,7 @@ export function EditorFooter({
 						variant="ghost"
 						disabled={busy}
 						className={cn(
-							"text-monti-destructive hover:bg-monti-destructive-soft hover:text-monti-destructive",
+							"text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger",
 							align === "start" && "ml-auto",
 						)}
 						onClick={onDelete}

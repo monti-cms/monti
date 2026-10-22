@@ -14,10 +14,10 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 			contentEditable={false}
 			data-monti-block-issues=""
 			aria-label={t("issues.label")}
-			className="not-prose m-0 list-none space-y-1 border-monti-warning/30 border-t bg-monti-warning-soft px-3 py-2 text-monti-warning-foreground text-xs"
+			className="not-prose m-0 list-none space-y-1 border-monti-warning-muted border-t bg-monti-warning-muted px-3 py-2 text-monti-caption text-monti-warning"
 		>
 			{texts.map((text) => (
-				<li key={text} className="flex items-start gap-1.5">
+				<li key={text} className="flex items-start gap-2">
 					{/* An inline icon, not lucide-react: block views are in the hooks graph, which stays free of icon and UI packages. */}
 					{/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative, hidden from assistive tech */}
 					<svg

@@ -123,9 +123,9 @@ export function FieldSheet({
 				showCloseButton
 			>
 				<Tabs defaultValue="basic" className="min-h-0 flex-1 gap-0">
-					<SheetHeader className="gap-0 px-6 pt-5 pb-0">
-						<SheetTitle className="pr-10 font-semibold text-base">{label || name}</SheetTitle>
-						<SheetDescription className="text-xs">
+					<SheetHeader className="gap-0 px-6 pt-4 pb-0">
+						<SheetTitle className="pr-8 text-monti-title">{label || name}</SheetTitle>
+						<SheetDescription className="text-monti-caption">
 							<code>{name}</code> · {t(`kind.${kind}`)}
 						</SheetDescription>
 						<LineTabs className="-mx-6 mt-4 w-auto px-6">
@@ -145,13 +145,13 @@ export function FieldSheet({
 									onChange={(value) => setBoth("description", orUndefined(value))}
 								/>
 								<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-									<div className="flex h-9 items-center rounded-md bg-monti-muted px-3 text-sm">
+									<div className="flex h-9 items-center rounded-md bg-monti-neutral px-3 text-monti-body">
 										<code>{name}</code>
 									</div>
 								</Labeled>
 							</section>
-							<section className="flex flex-col gap-5 border-t pt-8">
-								<h3 className="font-semibold text-sm">{t("sheet.input")}</h3>
+							<section className="flex flex-col gap-4 border-t pt-8">
+								<h3 className="font-semibold text-monti-body">{t("sheet.input")}</h3>
 								{kind === "text" && !place.branch && (
 									<FlagSwitch
 										label={t("field.isTitle")}
@@ -172,8 +172,8 @@ export function FieldSheet({
 								/>
 							</section>
 							{valueKind && (
-								<section className="flex flex-col gap-5 border-t pt-8">
-									<h3 className="font-semibold text-sm">{t("sheet.rules")}</h3>
+								<section className="flex flex-col gap-4 border-t pt-8">
+									<h3 className="font-semibold text-monti-body">{t("sheet.rules")}</h3>
 									{kind !== "conditional" && (
 										<FlagSwitch
 											label={t("field.required")}
@@ -232,14 +232,14 @@ export function FieldSheet({
 						</TabsContent>
 					</div>
 				</Tabs>
-				<SheetFooter className="mt-0 flex-row items-center gap-2 border-t px-6 py-3.5">
+				<SheetFooter className="mt-0 flex-row items-center gap-2 border-t px-6 py-3">
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
 						disabled={disabled || blocked !== null}
 						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
-						className="-ml-2.5 text-monti-destructive hover:text-monti-destructive"
+						className="-ml-2 text-monti-danger hover:text-monti-danger"
 						onClick={remove}
 					>
 						{t("sheet.delete")}
