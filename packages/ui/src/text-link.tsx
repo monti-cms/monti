@@ -13,7 +13,12 @@ const textLinkVariants = cva(
 	"cursor-pointer rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
 	{
 		variants: {
-			underline: { always: "underline underline-offset-2", hover: "underline-offset-2 hover:underline" },
+			/** `none`: a whole row or card that is clickable, where the surface shows the hover instead. */
+			underline: {
+				always: "underline underline-offset-2",
+				hover: "underline-offset-2 hover:underline",
+				none: "no-underline",
+			},
 			tone: { default: "", muted: "text-monti-muted hover:text-monti-default", accent: "text-monti-accent" },
 			mono: { true: "font-mono" },
 			size: { inherit: "", caption: "text-monti-caption", label: "text-monti-label", body: "text-monti-body" },

@@ -9,6 +9,7 @@ describe("Table options", () => {
 				<TableHeader>
 					<TableRow>
 						<TableHead size={180}>Title</TableHead>
+						<TableHead filler data-testid="filler" />
 					</TableRow>
 				</TableHeader>
 				<TableBody dimmed data-testid="body">
@@ -19,8 +20,9 @@ describe("Table options", () => {
 			</Table>,
 		);
 		expect(screen.getByRole("table").style.width).toBe("1200px");
-		expect(screen.getByRole("columnheader").style.width).toBe("180px");
+		expect(screen.getAllByRole("columnheader")[0]?.style.width).toBe("180px");
 		expect(screen.getByRole("cell").style.width).toBe("180px");
 		expect(screen.getByTestId("body").className).toContain("opacity-60");
+		expect(screen.getByTestId("filler").className).toContain("p-0");
 	});
 });

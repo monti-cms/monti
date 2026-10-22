@@ -184,7 +184,7 @@ export function AdminEntriesTable({
 										const active = sortField !== undefined && sortField === state.sortField;
 										return (
 											<Fragment key={header.id}>
-												{header.column.id === "actions" && <TableHead aria-hidden size={0} />}
+												{header.column.id === "actions" && <TableHead aria-hidden filler />}
 												<TableHead
 													size={header.getSize()}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
@@ -277,7 +277,7 @@ export function AdminEntriesTable({
 												.filter((cell) => isShown(cell.column.id))
 												.map((cell) => (
 													<Fragment key={cell.id}>
-														{cell.column.id === "actions" && <TableCell aria-hidden size={0} />}
+														{cell.column.id === "actions" && <TableCell aria-hidden filler />}
 														<TableCell truncate>
 															<table.FlexRender cell={cell} />
 														</TableCell>

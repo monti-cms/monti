@@ -91,7 +91,7 @@ export function ListRow({
 	const button = (
 		<Stack gap="none" grow minWidth={0}>
 			<TextLink
-				underline="hover"
+				underline="none"
 				aria-current={current ? "true" : undefined}
 				onClick={onClick}
 				onKeyDown={(event) => {

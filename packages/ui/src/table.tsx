@@ -111,6 +111,8 @@ export interface CellOptions {
 	/** Long content wraps onto more lines instead of widening the column. */
 	wrap?: boolean;
 	tone?: "muted";
+	/** An empty column that takes the width the others leave (before a trailing actions column in a fixed-layout table). */
+	filler?: boolean;
 }
 const COLUMN_WIDTH = { xs: "w-14", sm: "w-24", md: "w-28", lg: "w-40" } as const;
 const ALIGN = { start: "text-left", center: "text-center", end: "text-right tabular" } as const;
@@ -123,6 +125,7 @@ function TableHead({
 	size,
 	valign,
 	tone,
+	filler,
 	style,
 	...props
 }: Omit<React.ComponentProps<"th">, "align"> & CellOptions) {
@@ -136,6 +139,7 @@ function TableHead({
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top",
 				tone === "muted" && "text-monti-muted",
+				filler && "p-0",
 				className,
 			)}
 			style={size === undefined ? style : { ...style, width: size }}
@@ -153,6 +157,7 @@ function TableCell({
 	valign,
 	wrap,
 	tone,
+	filler,
 	style,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
@@ -167,6 +172,7 @@ function TableCell({
 				valign === "top" && "align-top",
 				wrap && "whitespace-normal break-words",
 				tone === "muted" && "text-monti-muted",
+				filler && "p-0",
 				className,
 			)}
 			style={size === undefined ? style : { ...style, width: size }}
