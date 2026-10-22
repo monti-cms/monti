@@ -25,9 +25,9 @@ export const tabsMessages = defineMessages("monti-blocks.tabs", {
 	},
 	ko: {
 		label: "탭",
-		description: "여러 내용을 탭으로 나눠 보여 준다",
+		description: "여러 내용을 탭으로 나눠 보여 줘요",
 		"defaultValue.label": "처음 열 탭",
-		"defaultValue.description": "탭 이름 중 하나. 비우면 첫 탭이다.",
+		"defaultValue.description": "탭 이름 중 하나. 비우면 첫 탭이에요.",
 		keywords: "탭",
 		"insert.first": "첫 번째",
 		"insert.second": "두 번째",

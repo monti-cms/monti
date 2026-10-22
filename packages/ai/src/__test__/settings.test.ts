@@ -391,7 +391,7 @@ describe("generation model call", () => {
 			.fn()
 			.mockResolvedValueOnce(notFound())
 			.mockResolvedValueOnce(notFound())
-			.mockResolvedValueOnce(completion('후보입니다.\n```json\n{"candidates":["a"]}\n```'));
+			.mockResolvedValueOnce(completion('후보예요.\n```json\n{"candidates":["a"]}\n```'));
 		vi.stubGlobal("fetch", fetchMock);
 		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		expect(await generator.generate(request)).toEqual({ candidates: ["a"] });
@@ -442,7 +442,7 @@ describe("generation model call", () => {
 		vi.stubGlobal("fetch", fetchMock);
 		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
 		await expect(generator.generate(request)).rejects.toMatchObject({
-			message: expect.stringContaining("끝까지 받지 못했습니다"),
+			message: expect.stringContaining("끝까지 받지 못했어요"),
 		});
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});

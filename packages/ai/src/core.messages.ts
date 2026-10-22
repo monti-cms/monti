@@ -8,8 +8,8 @@ export const coreMessages = defineMessages("cms-ai.core", {
 		"check.invalidRegex": "This is not a valid regular expression.",
 	},
 	ko: {
-		"image.missing": "이미지가 없습니다.",
-		"run.inputOrInputs": "input과 inputs 중 하나만 보낸다.",
-		"check.invalidRegex": "올바르지 않은 정규식입니다.",
+		"image.missing": "이미지가 없어요.",
+		"run.inputOrInputs": "input과 inputs 중 하나만 보내야 해요.",
+		"check.invalidRegex": "올바르지 않은 정규식이에요.",
 	},
 });

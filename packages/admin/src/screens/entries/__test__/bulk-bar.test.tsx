@@ -107,7 +107,7 @@ describe("bulk actions", () => {
 		expect(payloads).toHaveLength(0);
 		await confirmIn(
 			"보관 해제",
-			"선택한 게시글 1개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않습니다.",
+			"선택한 게시글 1개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않아요.",
 		);
 		await waitFor(() => expect(payloads).toHaveLength(1));
 		expect(payloads[0]).toEqual({ op: "unarchive", items: [{ id: "entry-1", expectedVersion: 3 }] });

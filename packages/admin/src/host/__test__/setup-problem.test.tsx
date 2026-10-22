@@ -72,7 +72,7 @@ describe("SetupProblemScreen", () => {
 	it("shows the Korean text for a Korean admin", () => {
 		const cms = { site: createSite({ ...testConfig, admin: { ...testConfig.admin, locale: "ko" } }) };
 		render(<SetupProblemScreen cms={cms as never} />);
-		expect(screen.getByText("아직 설정되지 않았습니다")).toBeTruthy();
+		expect(screen.getByText("아직 설정되지 않았어요")).toBeTruthy();
 		expect(screen.getByText(/monti doctor/)).toBeTruthy();
 	});
 

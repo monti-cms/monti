@@ -20,9 +20,9 @@ export const columnsMessages = defineMessages("monti-blocks.columns", {
 	},
 	ko: {
 		label: "단 나누기",
-		description: "내용을 2~4단으로 나란히 놓는다",
+		description: "내용을 2~4단으로 나란히 놓아요",
 		"widths.label": "단 너비",
-		"widths.description": "단마다 비율(%)을 쉼표로 적는다(예: 60,40). 비우면 똑같이 나눈다.",
+		"widths.description": "단마다 비율(%)을 쉼표로 적어요(예: 60,40). 비우면 똑같이 나눠요.",
 		keywords: "단,나란히",
 		"insert.text": "내용을 입력하세요",
 		"column.label": "단 하나",

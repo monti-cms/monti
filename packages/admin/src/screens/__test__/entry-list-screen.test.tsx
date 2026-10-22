@@ -226,7 +226,7 @@ describe("list screen — row menu and bulk actions", () => {
 				{ id: "나", expectedVersion: 3 },
 			],
 		});
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2개 항목을 보관했습니다."));
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2개 항목을 보관했어요."));
 	});
 
 	it("the Delete key asks whether to move all selected rows to trash", async () => {
@@ -276,7 +276,7 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast.error).toHaveBeenCalledWith("1개는 휴지통으로 이동했고 1개는 하지 못했습니다.", expect.anything());
+		expect(toast.error).toHaveBeenCalledWith("1개는 휴지통으로 이동했고 1개는 하지 못했어요.", expect.anything());
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -453,7 +453,7 @@ describe("trash screen", () => {
 
 		fireEvent.click(within(row("버린 글")).getByRole("button", { name: "복원" }));
 
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("1개 항목을 복원했습니다."));
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("1개 항목을 복원했어요."));
 		expect(bodyOf(calls("POST", "/api/monti/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
 	});
 });

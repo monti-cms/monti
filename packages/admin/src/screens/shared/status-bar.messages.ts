@@ -84,7 +84,7 @@ export const statusBarMessages = defineMessages("cms-admin.statusBar", {
 		"popover.save.now": "지금 저장",
 		"popover.save.retry": "다시 시도",
 		"popover.save.signIn": "로그인",
-		"popover.save.noBackup": "이 브라우저에는 변경사항의 임시 사본이 없습니다.",
+		"popover.save.noBackup": "이 브라우저에는 변경사항의 임시 사본이 없어요.",
 		"popover.save.restore": "브라우저 사본 복원",
 		"popover.save.discard": "브라우저 사본 버리기",
 		"popover.locale.title": "번역",
@@ -97,7 +97,7 @@ export const statusBarMessages = defineMessages("cms-admin.statusBar", {
 		"popover.body.headings": "제목",
 		"popover.body.reading": ({ minutes }) => `읽는 시간 ${minutes}분`,
 		"popover.body.rule": ({ rate }) =>
-			`읽는 시간은 공백을 뺀 글자 수를 분당 약 ${rate}자로 나눈 값이며, 최소 1분입니다.`,
+			`읽는 시간은 공백을 뺀 글자 수를 분당 약 ${rate}자로 나눈 값이며, 최소 1분이에요.`,
 		"popover.deliveries.title": "실패한 전달",
 		"popover.deliveries.open": "이벤트 로그 열기",
 		count: ({ count }) => `${count}개`,

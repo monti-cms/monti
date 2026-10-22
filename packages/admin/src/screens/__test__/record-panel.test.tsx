@@ -65,7 +65,7 @@ describe("taxonomy edit panel", () => {
 
 		fireEvent.click(within(panel()).getByRole("tab", { name: /일본어/ }));
 		expect(screen.queryByRole("textbox", { name: "주소" })).toBeNull();
-		expect(screen.getByText(/주소와 연결은 모든 언어가 같습니다/)).toBeTruthy();
+		expect(screen.getByText(/주소와 연결은 모든 언어가 같아요/)).toBeTruthy();
 		fireEvent.change(screen.getByRole("textbox", { name: /^이름/ }), { target: { value: "リアクト" } });
 		expect(within(panel()).getByRole("tab", { name: "일본어 · 번역 있음" })).toBeTruthy();
 

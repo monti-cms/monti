@@ -225,7 +225,7 @@ describe("AI action runner", () => {
 		);
 		await expect(runAiAction(action, call({ title: "글" }), deps(provider))).rejects.toMatchObject({
 			code: "upstream_failed",
-			message: "결과가 검사를 통과하지 못했습니다: 너무 짧다",
+			message: "결과가 검사를 통과하지 못했어요: 너무 짧다",
 		});
 		// A disabled code check does not run.
 		const off = resolveAction(

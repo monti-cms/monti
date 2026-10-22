@@ -30,7 +30,7 @@ export const uiMessages = defineMessages("cms-admin.ui", {
 		"pagination.nextPage": "다음 페이지",
 		"pagination.more": "다른 페이지",
 		"sidebar.title": "사이드바",
-		"sidebar.description": "모바일 사이드바를 보여 줍니다.",
+		"sidebar.description": "모바일 사이드바를 보여 줘요.",
 		"sidebar.toggle": "사이드바 열고 닫기",
 		"theme.toLight": "라이트 모드로 전환",
 		"theme.toDark": "다크 모드로 전환",

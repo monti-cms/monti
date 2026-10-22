@@ -103,7 +103,7 @@ describe("prompt snippets", () => {
 		await rejects(addSnippet(testSite, store, 1, { key: "other", label: "  ", text: "" }), /이름/);
 		await rejects(updateSnippetItem(testSite, store, 1, { key: "nope", text: "x" }), /없는 프롬프트 조각/);
 		await rejects(updateSnippets(testSite, store, 1, { texts: { nope: "x" } }), /없는 프롬프트 조각/);
-		await rejects(deleteSnippet(testSite, store, 1, "styleGuide", []), /삭제할 수 없습니다/);
+		await rejects(deleteSnippet(testSite, store, 1, "styleGuide", []), /삭제할 수 없어요/);
 		await rejects(deleteSnippet(testSite, store, 1, "nope", []), /없는 프롬프트 조각/);
 		await expect(updateSnippetItem(testSite, store, 0, { key: "tone", text: "x" })).rejects.toThrow("conflict");
 	});
@@ -119,7 +119,7 @@ describe("prompt snippets", () => {
 		];
 		await expect(deleteSnippet(testSite, store, 1, "tone", features)).rejects.toMatchObject({
 			code: "invalid_input",
-			message: "이 조각을 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기, 초안 쓰기",
+			message: "이 조각을 쓰는 기능이 있어 삭제할 수 없어요: 요약 만들기, 초안 쓰기",
 		});
 		expect((await getSnippetView(testSite, store)).items).toHaveLength(2);
 	});
@@ -166,7 +166,7 @@ describe("admin screen prompts and added prompt snippets", () => {
 
 		// Cannot be deleted because an edited prompt and a screen action use it.
 		await expect(deleteSnippet(testSite, shared, 1, "tone", await listActions(testSite, store))).rejects.toMatchObject({
-			message: "이 조각을 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기, 말투 맞추기",
+			message: "이 조각을 쓰는 기능이 있어 삭제할 수 없어요: 요약 만들기, 말투 맞추기",
 		});
 	});
 });

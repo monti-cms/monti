@@ -20,7 +20,7 @@ export const aiWriteMessages = defineMessages("cms-ai.admin.write", {
 		insertDescription: "AI action",
 	},
 	ko: {
-		blockMismatch: "결과가 같은 블록 하나가 아닙니다.",
+		blockMismatch: "결과가 같은 블록 하나가 아니에요.",
 		request: "추가 요청",
 		askWrite: "무엇을 쓸까요?",
 		askChange: "무엇을 바꿀까요?",
