@@ -47,6 +47,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton";
 import { Switch } from "../../ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { ActionContextMenu, type MenuAction } from "../shared/action-menu";
 import { AdminShell, PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -426,7 +427,7 @@ export function MediaLibrary() {
 	return (
 		<AdminShell
 			title={`${t("title")}${folderTitle}`}
-			count={mediaQuery.data ? total : undefined}
+			count={mediaQuery.data ? t("library.count", { count: total }) : undefined}
 			large
 			description={t("description")}
 			sidebar={{
@@ -443,10 +444,19 @@ export function MediaLibrary() {
 		>
 			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
-					<Label className="font-normal text-monti-caption text-monti-muted-foreground">
-						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
-						{t("library.optimize")}
-					</Label>
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Label className="font-normal text-monti-caption text-monti-muted-foreground">
+									<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
+									{t("library.optimize")}
+								</Label>
+							}
+						/>
+						<TooltipContent side="bottom" className="max-w-72">
+							{t("library.optimize.help")}
+						</TooltipContent>
+					</Tooltip>
 					<input
 						ref={fileInputRef}
 						type="file"
@@ -470,9 +480,18 @@ export function MediaLibrary() {
 						<FolderPlus aria-hidden />
 						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
-						{t("library.cleanup")}
-					</Button>
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
+									{t("library.cleanup")}
+								</Button>
+							}
+						/>
+						<TooltipContent side="bottom" className="max-w-72">
+							{t("library.cleanup.help")}
+						</TooltipContent>
+					</Tooltip>
 					<IconButton label={tc("refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
 						<RefreshCw className={cn(mediaQuery.isFetching && "animate-spin")} aria-hidden />
 					</IconButton>

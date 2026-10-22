@@ -63,10 +63,10 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 	ko: {
 		title: "백업 복원",
 		description:
-			"전체 백업을 빈 사이트에 있던 그대로 되돌려요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 기록, 이전 주소가 모두 그대로 돌아와요.",
+			"전체 백업을 빈 사이트에 있던 그대로 되돌려요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 정보, 이전 주소가 모두 그대로 돌아와요.",
 		"notEmpty.title": "빈 사이트에서만 복원할 수 있어요",
 		"notEmpty.description":
-			"이 사이트에는 이미 글, 폴더 또는 미디어 기록이 있어서 백업을 복원할 수 없어요. 백업에서 글을 더하려면 글 가져오기를 쓰세요.",
+			"이 사이트에는 이미 글, 폴더 또는 미디어 정보이 있어서 백업을 복원할 수 없어요. 백업에서 글을 더하려면 글 가져오기를 쓰세요.",
 		"kinds.label": "고를 수 있는 파일",
 		"kinds.backup":
 			"이 페이지에서 만든 전체 백업(초안 포함, 선택 없음)이에요. 일부만 고른 파일이나 공개 내보내기는 받지 않아요.",
@@ -82,7 +82,7 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"summary.trashed": ({ count }) => `휴지통 ${count}개`,
 		"summary.translations": ({ count }) => `이 중 ${count}개는 번역이에요`,
 		"summary.folders": ({ count }) => `폴더 ${count}개`,
-		"summary.media": ({ count }) => `미디어 기록 ${count}개`,
+		"summary.media": ({ count }) => `미디어 정보 ${count}개`,
 		"summary.addresses": ({ count, aliases }) => `주소 ${count}개, 이 중 계속 이어지는 이전 주소 ${aliases}개`,
 		"summary.templates": ({ added, skipped }) => `템플릿 ${added}개 추가, ${skipped}개 건너뜀`,
 		"templates.title": "추가하지 않는 템플릿",
@@ -98,11 +98,11 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"action.cancel": "처음부터",
 		"confirm.title": "이 백업을 복원할까요?",
 		"confirm.description": ({ count }) =>
-			`글 ${count}개와 폴더, 미디어 기록, 주소를 한 번에 이 사이트에 써요. 전부 쓰거나 전혀 쓰지 않아요. 복원하고 나면 사이트가 비어 있지 않으니 같은 백업을 다시 복원할 수 없어요.`,
+			`글 ${count}개와 폴더, 미디어 정보, 주소를 한 번에 이 사이트에 써요. 전부 쓰거나 전혀 쓰지 않아요. 복원하고 나면 사이트가 비어 있지 않으니 같은 백업을 다시 복원할 수 없어요.`,
 		"confirm.confirm": "백업 복원하기",
 		"danger.title": "위험 구역",
 		"danger.description":
-			"복원은 백업 전체를 한 번에 사이트에 써요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 기록, 이전 주소가 들어가요. 글, 폴더, 미디어 기록이 하나도 없을 때만 되므로 지금 있는 내용을 덮어쓰지는 않아요. 되돌리거나 다시 실행할 수 없어요.",
+			"복원은 백업 전체를 한 번에 사이트에 써요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 정보, 이전 주소가 들어가요. 글, 폴더, 미디어 정보이 하나도 없을 때만 되므로 지금 있는 내용을 덮어쓰지는 않아요. 되돌리거나 다시 실행할 수 없어요.",
 		"progress.running": ({ count }) => `글 ${count}개를 복원하는 중…`,
 		"progress.hint": "모두 한 번에 써요. 이 페이지를 닫지 마세요.",
 		"result.title": "백업을 복원했어요",

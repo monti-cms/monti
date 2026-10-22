@@ -101,6 +101,13 @@ describe("media library", () => {
 		expect(screen.getByRole("button", { name: /guide\.pdf$/ }).textContent).toContain("PDF");
 	});
 
+	it("names what the header counts, and keeps the footer free of a range line when one page holds everything", async () => {
+		await renderLibrary();
+		const heading = screen.getByRole("heading", { level: 1 });
+		expect(heading.textContent).toContain(t("library.count", { count: 3 }));
+		expect(screen.queryByText(/–/)).toBeNull();
+	});
+
 	it("puts search, type and usage conditions in the list request", async () => {
 		await renderLibrary();
 		fireEvent.change(screen.getByRole("searchbox", { name: t("library.search") }), { target: { value: "cat" } });

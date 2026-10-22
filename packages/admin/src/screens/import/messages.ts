@@ -119,7 +119,7 @@ export const importMessages = defineMessages("cms-admin.import", {
 		"body.json": "JSON 문서",
 		"fields.title": "가져오지 않는 필드",
 		"fields.only": "제목, 주소, 본문만 가져와요. 보관 파일에 있는 나머지 값은 두고 와요.",
-		"fields.shared": "보관 파일에 든 폴더, 템플릿, 주소, 환경설정, 미디어 기록은 가져오지 않아요.",
+		"fields.shared": "보관 파일에 든 폴더, 템플릿, 주소, 환경설정, 미디어 정보은 가져오지 않아요.",
 		"fields.line": ({ collection, fields }) => `${collection}: ${fields}`,
 		"fields.required": ({ collection, fields }) =>
 			`${collection}은(는) 발행하려면 ${fields} 값이 필요해요. 가져온 글에는 이 값이 비어 있어요.`,

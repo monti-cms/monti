@@ -304,7 +304,7 @@ export function MediaDetailPanel({
 							{isImage ? (media.mimeType ?? "—") : fileTypeLabel(media.filename, media.mimeType)}
 						</Row>
 						{isImage ? (
-							<Row label={t("detail.row.public")}>
+							<Row label={media.original ? t("detail.row.web") : t("detail.row.size")}>
 								{media.width}×{media.height} · {formatBytes(media.byteSize ?? 0)}
 							</Row>
 						) : (
