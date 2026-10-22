@@ -42,6 +42,7 @@ import {
 	Tabs,
 	TabsContent,
 	TabsTrigger,
+	TagInput,
 	Text,
 	Textarea,
 	useConfirm,
@@ -63,7 +64,6 @@ import {
 	Save,
 	Sparkles,
 	Trash2,
-	X,
 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
@@ -726,10 +726,7 @@ export function AiManager() {
 	);
 }
 
-/**
- * Chip input for the allowed values check. Users can add tags by typing and pressing Enter or comma, and remove tags with backspace or clicking x.
- * design-system: needs a tag input part (chips and a text entry in one bordered field). The whole function body below keeps its raw elements and classes until it exists.
- */
+/** The allowed values of a one-of check, as chips. */
 function OneOfInput({
 	items,
 	disabled,
@@ -740,69 +737,17 @@ function OneOfInput({
 	onChange: (items: string[]) => void;
 }) {
 	const t = useTranslator(aiManagerMessages);
-	const [input, setInput] = useState("");
-
-	const addItem = (value: string) => {
-		const trimmed = value.trim();
-		if (trimmed && !items.includes(trimmed)) {
-			onChange([...items, trimmed]);
-			setInput("");
-		}
-	};
-
-	const removeItem = (index: number) => {
-		onChange(items.filter((_, i) => i !== index));
-	};
-
-	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-		if (isComposingKey(event)) return;
-		if (event.key === "Enter" || event.key === ",") {
-			event.preventDefault();
-			addItem(input);
-		} else if (event.key === "Backspace" && !input && items.length > 0) {
-			removeItem(items.length - 1);
-		}
-	};
-
 	return (
-		<div
-			className={cn(
-				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-condensed rounded-md border border-monti-default bg-monti-page p-tight text-monti-caption transition-colors focus-within:ring-1 focus-within:ring-monti-focus",
-				disabled && "cursor-not-allowed opacity-50",
-			)}
-		>
-			{items.map((item, index) => (
-				<span
-					key={item}
-					className="inline-flex items-center gap-tight rounded-sm bg-monti-neutral px-condensed py-hair font-mono text-monti-caption text-monti-default"
-				>
-					<span className="max-w-40 truncate">{item}</span>
-					{!disabled && (
-						<button
-							type="button"
-							aria-label={t("check.oneOfRemove", { item })}
-							onClick={() => removeItem(index)}
-							className="rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
-						>
-							<X className="size-3" aria-hidden />
-						</button>
-					)}
-				</span>
-			))}
-			{!disabled && (
-				<input
-					type="text"
-					value={input}
-					placeholder={items.length === 0 ? t("check.oneOfPlaceholder") : ""}
-					onChange={(e) => setInput(e.target.value)}
-					onKeyDown={handleKeyDown}
-					onBlur={() => {
-						if (input.trim()) addItem(input);
-					}}
-					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-tight font-mono text-monti-caption shadow-none outline-none placeholder:text-monti-subtle focus:ring-0"
-				/>
-			)}
-		</div>
+		<Box grow maxWidth="panel-lg">
+			<TagInput
+				items={items}
+				disabled={disabled}
+				mono
+				placeholder={t("check.oneOfPlaceholder")}
+				removeLabel={(item) => t("check.oneOfRemove", { item })}
+				onChange={onChange}
+			/>
+		</Box>
 	);
 }
 
@@ -996,8 +941,7 @@ function FeatureEditor({
 	};
 
 	return (
-		// design-system: needs the detail-pane frame as a part (centered column, max 3xl, comfortable gap, spacious padding)
-		<Stack gap="comfortable" padding="spacious" maxWidth="prose" width="full">
+		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
 			<Inline gap="comfortable" wrap>
 				<Stack gap="hair" grow minWidth={0}>
 					<Heading truncate>

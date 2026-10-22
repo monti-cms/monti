@@ -302,8 +302,7 @@ function ProviderEditor({
 	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
-		// design-system: needs the detail-pane frame as a part (centered column, max 3xl, comfortable gap, spacious padding)
-		<Stack gap="comfortable" padding="spacious" maxWidth="prose" width="full">
+		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
 			<Box minWidth={0}>
 				<Heading truncate>{(provider ? provider.name : draft.name.trim()) || t("new.title")}</Heading>
 				<Text as="p" variant="caption" tone="muted" truncate>

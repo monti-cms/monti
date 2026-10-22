@@ -7,7 +7,11 @@ import { cn } from "./cn";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 
-function InputGroup({ className, size = "default", ...props }: React.ComponentProps<"div"> & { size?: "sm" | "default" }) {
+function InputGroup({
+	className,
+	size = "default",
+	...props
+}: React.ComponentProps<"div"> & { size?: "sm" | "default" }) {
 	return (
 		<div
 			data-slot="input-group"

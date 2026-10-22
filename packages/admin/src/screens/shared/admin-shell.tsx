@@ -1,10 +1,7 @@
 "use client";
 
-// design-system: drawing — the app frame locks the viewport (no page scroll, panes scroll on their own); SidebarProvider and SidebarInset have no height or overflow options
-
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Heading, Inline, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
-import { SidebarInset as OpenSidebarInset, SidebarProvider as OpenSidebarProvider } from "@monti-cms/ui/internal";
+import { Box, Heading, Inline, SidebarInset, SidebarProvider, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -192,14 +189,14 @@ export function AdminShell({
 	}
 
 	return (
-		<OpenSidebarProvider className="h-svh overflow-hidden">
+		<SidebarProvider fixed>
 			<AdminSidebar
 				{...sidebar}
 				trashCount={nav.trashCount}
 				eventsCount={nav.eventsCount}
 				folderCounts={nav.folderCounts}
 			/>
-			<OpenSidebarInset className="min-w-0 overflow-hidden">
+			<SidebarInset fixed>
 				{!bare && large && (
 					<Inline
 						as="header"
@@ -259,7 +256,7 @@ export function AdminShell({
 					</Stack>
 				</ActionsSlotContext.Provider>
 				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
-			</OpenSidebarInset>
-		</OpenSidebarProvider>
+			</SidebarInset>
+		</SidebarProvider>
 	);
 }

@@ -80,10 +80,13 @@ function DropdownMenuItem({
 	className,
 	inset,
 	variant = "default",
+	swatch = false,
 	...props
 }: MenuPrimitive.Item.Props & {
 	inset?: boolean;
 	variant?: "default" | "danger";
+	/** A small square item in a grid of items (a color sample), its content centered. */
+	swatch?: boolean;
 }) {
 	return (
 		<MenuPrimitive.Item
@@ -92,6 +95,7 @@ function DropdownMenuItem({
 			data-variant={variant}
 			className={cn(
 				"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=danger]:focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[variant=danger]:*:[svg]:text-monti-danger",
+				swatch && "justify-center p-hair",
 				className,
 			)}
 			{...props}
@@ -223,7 +227,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 	return (
 		<MenuPrimitive.Separator
 			data-slot="dropdown-menu-separator"
-			className={cn("first:hidden last:hidden -mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-divider first:hidden last:hidden", className)}
 			{...props}
 		/>
 	);

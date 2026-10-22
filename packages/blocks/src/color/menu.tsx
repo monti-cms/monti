@@ -126,7 +126,7 @@ function SwatchRow({
 										aria-checked={selected}
 										disabled={!editor.isEditable}
 										onClick={() => applyTextColor(editor, kind, color)}
-										className="relative justify-center p-hair"
+										swatch
 									/>
 								) : (
 									<button

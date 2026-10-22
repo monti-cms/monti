@@ -190,6 +190,7 @@ export const Progress = close(open.Progress);
 export const RadioGroup = close(open.RadioGroup);
 export const RadioItem = close(open.RadioItem);
 export const ChoiceCard = close(open.ChoiceCard);
+export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
 export const StatusIndicator = close(open.StatusIndicator);

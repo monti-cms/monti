@@ -10,6 +10,7 @@ export function Section({
 	description,
 	note,
 	children,
+	wide = false,
 	card = true,
 	band,
 	danger,
@@ -21,7 +22,7 @@ export function Section({
 	/** A second line under the description, in the same style (what cannot be changed, a warning about the file). */
 	note?: ReactNode;
 	children: ReactNode;
-	/** Kept for callers: the left column is one width now (the panel width), wide or not. */
+	/** A wider label column (260px instead of 220px) for longer titles. */
 	wide?: boolean;
 	/** `false` when the content is a card of its own (a list of rows with its own header). */
 	card?: boolean;
@@ -35,17 +36,15 @@ export function Section({
 }) {
 	const titleId = testId ? `${testId}-title` : undefined;
 	return (
-		// design-system: needs Grid columns rail / rail-wide (the 220 / 260px label column, tokens w-rail / w-rail-wide) and a band separator that skips the first section
 		<Grid
 			as="section"
 			id={id}
 			data-testid={testId}
 			aria-labelledby={titleId}
-			columns="sidebar"
-			gap="comfortable"
+			columns={wide ? "rail-wide" : "rail"}
+			gap="wide"
 			align="start"
-			border={band ? "top" : undefined}
-			paddingTop={band ? "wide" : undefined}
+			band={band}
 		>
 			<Stack gap="condensed">
 				<Heading as="h3" id={titleId} tone={danger ? "danger" : undefined}>

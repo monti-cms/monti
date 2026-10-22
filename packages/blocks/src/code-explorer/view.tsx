@@ -143,13 +143,12 @@ export function CodeExplorerNodeView() {
 									</SelectContent>
 								</Select>
 							) : (
-								// design-system: needs AttributeInput to look like an Input (border, focus ring, compact size)
 								<AttributeInput
 									id={openId}
 									value={open}
 									placeholder={t("open.first")}
 									onCommit={(next) => block.setValue("open", next)}
-									className="h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
+									boxed
 								/>
 							)}
 							<Text as="p" variant="caption" tone="muted">

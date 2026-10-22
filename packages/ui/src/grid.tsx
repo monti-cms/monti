@@ -17,6 +17,9 @@ const gridVariants = cva("grid", {
 			4: "grid-cols-4",
 			6: "grid-cols-6",
 			sidebar: "grid-cols-[var(--container-panel)_minmax(0,1fr)]",
+			/** A label column (220px) next to the content: a settings section. `rail-wide` is 260px. */
+			rail: "grid-cols-[var(--container-rail)_minmax(0,1fr)]",
+			"rail-wide": "grid-cols-[var(--container-rail-wide)_minmax(0,1fr)]",
 			/** As many columns as fit, each at least 160px: a grid of tiles (files, images). */
 			tiles: "grid-cols-[repeat(auto-fill,minmax(160px,1fr))]",
 		},

@@ -209,7 +209,7 @@ function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Sepa
 	return (
 		<ContextMenuPrimitive.Separator
 			data-slot="context-menu-separator"
-			className={cn("first:hidden last:hidden -mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-divider first:hidden last:hidden", className)}
 			{...props}
 		/>
 	);

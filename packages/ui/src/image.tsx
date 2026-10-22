@@ -24,8 +24,8 @@ const frameVariants = cva(
 				fill: "w-full",
 				thumb: "size-control-sm",
 				"thumb-lg": "size-control-lg",
-			/** As big as an icon, no fill: a logo inside a button. */
-			icon: "size-icon bg-transparent",
+				/** As big as an icon, no fill: a logo inside a button. */
+				icon: "size-icon bg-transparent",
 			},
 			radius: { none: "", sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg" },
 			border: { true: "border border-monti-muted" },

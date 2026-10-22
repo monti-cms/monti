@@ -132,6 +132,10 @@ export const layoutVariants = cva("", {
 		span: { all: "col-span-full" },
 		/** Out of date while new content loads, or not available: shown, but quieter. */
 		dimmed: { true: "opacity-50 transition-opacity" },
+		/** Centered in a wider parent (a detail pane's column under its list). */
+		centered: { true: "mx-auto" },
+		/** One of a run of bands: a hairline and space above every one but the first. */
+		band: { true: "border-t border-monti-muted pt-wide first:border-t-0 first:pt-0" },
 	},
 });
 
@@ -164,6 +168,8 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 		hover,
 		span,
 		dimmed,
+		band,
+		centered,
 		...rest
 	} = props;
 	return [

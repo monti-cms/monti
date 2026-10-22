@@ -9,8 +9,12 @@ function Table({
 	inset = "none",
 	layout = "auto",
 	stickyHeader = false,
+	width,
+	style,
 	...props
 }: React.ComponentProps<"table"> & {
+	/** A total width in px that the screen computes (the sum of resized columns); without it the table fills its box. */
+	width?: number;
 	/** `scroll`: the table scrolls sideways in its own box. `none`: the page or a parent scrolls it (needed for a sticky header under an outer scroll). */
 	container?: "scroll" | "none";
 	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
@@ -42,8 +46,21 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 	return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-	return <tbody data-slot="table-body" className={cn("[&_tr:last-child]:border-0", className)} {...props} />;
+function TableBody({
+	className,
+	dimmed = false,
+	...props
+}: React.ComponentProps<"tbody"> & {
+	/** The rows are out of date while new ones load: shown, but quieter. */
+	dimmed?: boolean;
+}) {
+	return (
+		<tbody
+			data-slot="table-body"
+			className={cn("transition-opacity [&_tr:last-child]:border-0", dimmed && "opacity-60", className)}
+			{...props}
+		/>
+	);
 }
 
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {

@@ -198,6 +198,7 @@ export { StatusIndicator, type StatusShape, type StatusTone } from "./status-ind
 export { Switch } from "./switch";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
 export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
+export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
 export { TextLink } from "./text-link";
 export { Textarea } from "./textarea";

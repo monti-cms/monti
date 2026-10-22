@@ -112,6 +112,7 @@ export function AdminEntriesTable({
 		isShown,
 		visibleCount,
 		tableSizing,
+		tableWidth,
 		freezeTitle,
 		updateSizing,
 		moveColumn,
@@ -172,7 +173,7 @@ export function AdminEntriesTable({
 			)}
 
 			<Stack ref={scrollRef} gap="none" grow minHeight={0} overflow="auto">
-				<Table layout="fixed" container="none" stickyHeader inset="page">
+				<Table layout="fixed" container="none" stickyHeader inset="page" width={tableWidth || undefined}>
 					<TableHeader>
 						{table.getHeaderGroups().map((group) => (
 							<TableRow key={group.id}>
@@ -223,7 +224,7 @@ export function AdminEntriesTable({
 							</TableRow>
 						))}
 					</TableHeader>
-					<TableBody aria-busy={isRefreshing || undefined}>
+					<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 						{explorer && (
 							<EntriesTableFolderRows
 								explorer={explorer}
