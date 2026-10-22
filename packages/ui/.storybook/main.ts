@@ -7,7 +7,12 @@ const config: StorybookConfig = {
 	framework: "@storybook/react-vite",
 	stories: ["../src/**/*.stories.tsx", "../../admin/src/**/*.stories.tsx"],
 	addons: ["@storybook/addon-themes"],
-	viteFinal: (vite) => ({ ...vite, plugins: [...(vite.plugins ?? []), tailwindcss()] }),
+	// Screen stories build the test site, which picks its variant from the environment: the default one here.
+	viteFinal: (vite) => ({
+		...vite,
+		plugins: [...(vite.plugins ?? []), tailwindcss()],
+		define: { ...vite.define, "process.env.MONTI_TEST_SITE": "undefined" },
+	}),
 };
 
 export default config;

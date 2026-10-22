@@ -1,34 +1,42 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, StatusIndicator } from "@monti-cms/ui";
+import {
+	DescriptionItem,
+	DescriptionList,
+	Heading,
+	Inline,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	Stack,
+	StatusIndicator,
+	Text,
+} from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import type { EventDeliveryItem } from "../../api/events";
 import { formatDateTime } from "../shared/format-date";
 import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
 import { eventsMessages } from "./messages";
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+/** One group of the detail: a small heading with its rows, separated from the group before by a hairline. */
+function Band({ title, first = false, children }: { title: string; first?: boolean; children: ReactNode }) {
 	return (
-		<div className="grid grid-cols-[8rem_1fr] gap-normal py-condensed text-monti-label">
-			<dt className="text-monti-muted">{label}</dt>
-			<dd className="min-w-0 break-words">{children}</dd>
-		</div>
-	);
-}
-
-/** One group of the detail: a small caption, with its rows below, separated from the group before by a hairline. */
-function Band({ title, children }: { title: string; children: ReactNode }) {
-	return (
-		<section className="border-monti-muted border-t px-comfortable py-comfortable first:border-t-0">
-			<h3 className="mb-condensed text-monti-label">{title}</h3>
-			<dl>{children}</dl>
-		</section>
+		<Stack as="section" gap="condensed" padding="comfortable" border={first ? undefined : "top"}>
+			<Heading as="h3" variant="label">
+				{title}
+			</Heading>
+			<DescriptionList>{children}</DescriptionList>
+		</Stack>
 	);
 }
 
 const Mono = ({ children }: { children: ReactNode }) => (
-	<span className="font-mono text-monti-caption">{children}</span>
+	<Text variant="caption" mono>
+		{children}
+	</Text>
 );
 
 /**
@@ -49,7 +57,7 @@ export function EventDetailSheet({
 	const change = item?.change;
 	return (
 		<Sheet open={item !== null} onOpenChange={(open) => !open && onClose()}>
-			<SheetContent className="gap-0 overflow-y-auto sm:max-w-md">
+			<SheetContent size="md" scroll>
 				<SheetHeader>
 					<SheetTitle>
 						{change ? `${t(`kind.${change.kind}`)} · ${eventEntryLabel(change)}` : t("detail.title")}
@@ -57,57 +65,63 @@ export function EventDetailSheet({
 					<SheetDescription>{t("detail.description")}</SheetDescription>
 				</SheetHeader>
 				{item && change && (
-					<div>
-						<Band title={t("detail.section.event")}>
-							<Row label={t("detail.eventId")}>
+					<Stack gap="none">
+						<Band first title={t("detail.section.event")}>
+							<DescriptionItem label={t("detail.eventId")}>
 								<Mono>{change.eventId}</Mono>
-							</Row>
-							<Row label={t("column.kind")}>{t(`kind.${change.kind}`)}</Row>
-							<Row label={t("column.when")}>{formatDateTime(site, change.occurredAt)}</Row>
-							<Row label={t("column.actor")}>{change.actor ?? "—"}</Row>
+							</DescriptionItem>
+							<DescriptionItem label={t("column.kind")}>{t(`kind.${change.kind}`)}</DescriptionItem>
+							<DescriptionItem label={t("column.when")}>{formatDateTime(site, change.occurredAt)}</DescriptionItem>
+							<DescriptionItem label={t("column.actor")}>{change.actor ?? "—"}</DescriptionItem>
 						</Band>
 						<Band title={t("detail.section.entry")}>
-							<Row label={t("detail.title.entry")}>{change.title ?? "—"}</Row>
-							<Row label={t("detail.entryId")}>
+							<DescriptionItem label={t("detail.title.entry")}>{change.title ?? "—"}</DescriptionItem>
+							<DescriptionItem label={t("detail.entryId")}>
 								<Mono>{change.entryId}</Mono>
-							</Row>
-							<Row label={t("detail.collection")}>{eventCollectionLabel(site, change.collection)}</Row>
-							<Row label={t("detail.locale")}>{change.locale ?? "—"}</Row>
-							<Row label={t("detail.workingSlug")}>{change.workingSlug ? <Mono>{change.workingSlug}</Mono> : "—"}</Row>
-							<Row label={t("detail.publishedSlug")}>
+							</DescriptionItem>
+							<DescriptionItem label={t("detail.collection")}>
+								{eventCollectionLabel(site, change.collection)}
+							</DescriptionItem>
+							<DescriptionItem label={t("detail.locale")}>{change.locale ?? "—"}</DescriptionItem>
+							<DescriptionItem label={t("detail.workingSlug")}>
+								{change.workingSlug ? <Mono>{change.workingSlug}</Mono> : "—"}
+							</DescriptionItem>
+							<DescriptionItem label={t("detail.publishedSlug")}>
 								{change.publishedSlug ? <Mono>{change.publishedSlug}</Mono> : "—"}
-							</Row>
-							<Row label={t("detail.translationGroup")}>
+							</DescriptionItem>
+							<DescriptionItem label={t("detail.translationGroup")}>
 								{change.translationGroupId ? <Mono>{change.translationGroupId}</Mono> : "—"}
-							</Row>
-							<Row label={t("detail.version")}>{change.version ?? "—"}</Row>
+							</DescriptionItem>
+							<DescriptionItem label={t("detail.version")}>{change.version ?? "—"}</DescriptionItem>
 						</Band>
 						<Band title={t("detail.section.delivery")}>
-							<Row label={t("detail.subscribers")}>
+							<DescriptionItem label={t("detail.subscribers")}>
 								{deliveries.some((delivery) => delivery.subscriber !== null) ? (
-									<ul className="space-y-condensed">
+									<Stack as="ul" gap="condensed">
 										{deliveries.map((delivery) => (
-											<li key={delivery.subscriber ?? ""} className="space-y-hair">
-												<div className="flex items-center gap-condensed">
+											<Stack as="li" key={delivery.subscriber ?? ""} gap="hair">
+												<Inline gap="condensed">
 													<Mono>{delivery.subscriber ?? ""}</Mono>
 													<StatusIndicator tone={STATE_TONE[delivery.state]} label={t(`state.${delivery.state}`)} />
-												</div>
-												<div className="text-monti-caption text-monti-muted">
+												</Inline>
+												<Text as="div" variant="caption" tone="muted">
 													{t("detail.attempts", { count: delivery.attempts })}
 													{delivery.lastAttemptAt ? ` · ${formatDateTime(site, delivery.lastAttemptAt)}` : ""}
-												</div>
+												</Text>
 												{delivery.lastError && (
-													<div className="text-monti-caption text-monti-danger">{delivery.lastError}</div>
+													<Text as="div" variant="caption" tone="danger">
+														{delivery.lastError}
+													</Text>
 												)}
-											</li>
+											</Stack>
 										))}
-									</ul>
+									</Stack>
 								) : (
 									t("state.recorded")
 								)}
-							</Row>
+							</DescriptionItem>
 						</Band>
-					</div>
+					</Stack>
 				)}
 			</SheetContent>
 		</Sheet>

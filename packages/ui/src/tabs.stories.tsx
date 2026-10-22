@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileText, Settings } from "lucide-react";
 import { Stack } from "./stack";
-import { LineTabs, PageTabs, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Text } from "./text";
 
 const meta = {
@@ -106,9 +106,9 @@ export const Vertical: Story = {
 export const LineTabsBar: Story = {
 	render: () => (
 		<Tabs defaultValue="write">
-			<LineTabs>
+			<PageTabs inset="none">
 				<Triggers />
-			</LineTabs>
+			</PageTabs>
 			<Panels />
 		</Tabs>
 	),

@@ -75,6 +75,7 @@ export {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "./context-menu";
+export { DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,
 	DialogClose,
@@ -189,8 +190,9 @@ export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
 export { Switch } from "./switch";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
-export { LineTabs, PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
+export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
 export { Heading, Text, textVariants } from "./text";
+export { TextLink } from "./text-link";
 export { Textarea } from "./textarea";
 export { Toggle, toggleVariants } from "./toggle";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";

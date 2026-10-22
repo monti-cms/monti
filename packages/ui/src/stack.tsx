@@ -15,6 +15,7 @@ export const stackVariants = cva("flex", {
 		direction: { column: "flex-col", row: "flex-row" },
 		gap: {
 			none: "gap-0",
+			hair: "gap-hair",
 			tight: "gap-tight",
 			condensed: "gap-condensed",
 			normal: "gap-normal",

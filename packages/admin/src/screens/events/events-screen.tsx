@@ -2,8 +2,12 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
+	Inline,
+	PageTabs,
 	Skeleton,
+	Stack,
 	StatusIndicator,
 	Table,
 	TableBody,
@@ -11,6 +15,10 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
+	Tabs,
+	TabsTrigger,
+	Text,
+	TextLink,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, RotateCw, SearchX } from "lucide-react";
@@ -52,7 +60,7 @@ const EVENTS_PARAMS = {
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
 
-/** All / Failed / Pending / Delivered as underline tabs, the same look as the status tabs of the entry list. */
+/** All / Failed / Pending / Delivered: the page's underline tabs, used as a filter (a value, no panels). */
 function FilterTabs({
 	filter,
 	options,
@@ -64,22 +72,15 @@ function FilterTabs({
 }) {
 	const t = useTranslator(eventsMessages);
 	return (
-		<div className="flex min-h-11 shrink-0 items-stretch border-monti-muted border-b px-wide">
-			<fieldset className="-mb-px flex items-stretch gap-comfortable">
-				<legend className="sr-only">{t("filter.label")}</legend>
+		<Tabs value={filter} onValueChange={(value) => onChange(value as EventsFilter)}>
+			<PageTabs aria-label={t("filter.label")}>
 				{options.map((option) => (
-					<button
-						key={option.value}
-						type="button"
-						aria-pressed={filter === option.value}
-						className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
-						onClick={() => onChange(option.value)}
-					>
+					<TabsTrigger key={option.value} value={option.value}>
 						{option.label}
-					</button>
+					</TabsTrigger>
 				))}
-			</fieldset>
-		</div>
+			</PageTabs>
+		</Tabs>
 	);
 }
 
@@ -140,7 +141,7 @@ export function EventsScreen() {
 	};
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<Stack gap="none" grow minHeight={0} overflow="hidden">
 			{waiting > 0 && (
 				<PageActions>
 					<Button
@@ -157,15 +158,17 @@ export function EventsScreen() {
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
 			{error && (
-				<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-wide mt-normal" />
+				<Box paddingX="wide" paddingTop="normal">
+					<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} />
+				</Box>
 			)}
-			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
+			<Stack gap="none" grow minHeight={0} overflow="auto">
 				{listQuery.isPending ? (
-					<div className="space-y-condensed px-wide py-comfortable" aria-hidden>
-						<Skeleton className="h-8 w-full" />
-						<Skeleton className="h-8 w-full" />
-						<Skeleton className="h-8 w-full" />
-					</div>
+					<Stack gap="condensed" paddingX="wide" paddingY="comfortable" aria-hidden>
+						<Skeleton shape="control-sm" />
+						<Skeleton shape="control-sm" />
+						<Skeleton shape="control-sm" />
+					</Stack>
 				) : items.length === 0 ? (
 					!error &&
 					(filter === "all" ? (
@@ -179,10 +182,7 @@ export function EventsScreen() {
 						/>
 					))
 				) : (
-					<Table
-						aria-label={t("list.label")}
-						className="[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide"
-					>
+					<Table aria-label={t("list.label")} inset="page">
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("column.state")}</TableHead>
@@ -195,7 +195,7 @@ export function EventsScreen() {
 								{!recordedOnly && <TableHead>{t("column.lastError")}</TableHead>}
 								{!recordedOnly && <TableHead>{t("column.nextAttempt")}</TableHead>}
 								<TableHead>
-									<span className="sr-only">{t("column.actions")}</span>
+									<Text srOnly>{t("column.actions")}</Text>
 								</TableHead>
 							</TableRow>
 						</TableHeader>
@@ -204,18 +204,24 @@ export function EventsScreen() {
 								const { change } = item;
 								const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
 								return (
-									<TableRow key={rowKey(item)} className="cursor-pointer" onClick={() => setOpenedKey(rowKey(item))}>
+									<TableRow key={rowKey(item)} onClick={() => setOpenedKey(rowKey(item))}>
 										<TableCell>
 											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
 										</TableCell>
-										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
+										<TableCell>{formatDateTime(site, change.occurredAt)}</TableCell>
 										{!recordedOnly && (
-											<TableCell className="font-mono text-monti-caption">{item.subscriber ?? ""}</TableCell>
+											<TableCell>
+												<Text variant="caption" mono>
+													{item.subscriber ?? ""}
+												</Text>
+											</TableCell>
 										)}
 										<TableCell>
-											<button
-												type="button"
-												className="text-left font-mono text-monti-caption underline-offset-2 hover:underline"
+											<TextLink
+												render={<button type="button" />}
+												underline="hover"
+												mono
+												size="caption"
 												aria-label={t("detail.open", {
 													kind: t(`kind.${change.kind}`),
 													entry: eventEntryLabel(change),
@@ -226,39 +232,38 @@ export function EventsScreen() {
 												}}
 											>
 												{t(`kind.${change.kind}`)}
-											</button>
+											</TextLink>
 										</TableCell>
 										<TableCell>
-											<span className="text-monti-muted">{eventCollectionLabel(site, change.collection)} · </span>
+											<Text tone="muted">{eventCollectionLabel(site, change.collection)} · </Text>
 											{change.kind === "deleted" ? (
-												<span>{eventEntryLabel(change)}</span>
+												<Text>{eventEntryLabel(change)}</Text>
 											) : (
-												<Link
-													href={entryHref(site, change.collection, change.entryId)}
-													className="underline"
+												<TextLink
+													render={<Link href={entryHref(site, change.collection, change.entryId)} />}
 													onClick={(event) => event.stopPropagation()}
 												>
 													{eventEntryLabel(change)}
-												</Link>
+												</TextLink>
 											)}
 										</TableCell>
 										<TableCell>{change.actor ?? ""}</TableCell>
 										{!recordedOnly && (
 											<>
-												<TableCell className="tabular-nums">{item.attempts}</TableCell>
-												<TableCell className="max-w-64 truncate" title={item.lastError ?? undefined}>
+												<TableCell align="end">{item.attempts}</TableCell>
+												<TableCell truncate title={item.lastError ?? undefined}>
 													{item.lastError ? truncate(item.lastError) : ""}
 												</TableCell>
-												<TableCell className="whitespace-nowrap">
+												<TableCell>
 													{item.state === "failed" && item.nextAttemptAt
 														? formatDateTime(site, item.nextAttemptAt)
 														: ""}
 												</TableCell>
 											</>
 										)}
-										<TableCell className="whitespace-nowrap text-right" onClick={(event) => event.stopPropagation()}>
+										<TableCell align="end" onClick={(event) => event.stopPropagation()}>
 											{(item.state === "failed" || item.state === "dead") && (
-												<>
+												<Inline gap="tight" justify="end">
 													<Button
 														type="button"
 														variant="outline"
@@ -268,7 +273,7 @@ export function EventsScreen() {
 														onClick={() => retry.mutate(key)}
 													>
 														{tc("retry")}
-													</Button>{" "}
+													</Button>
 													<Button
 														type="button"
 														variant="ghost"
@@ -278,7 +283,7 @@ export function EventsScreen() {
 													>
 														{t("action.dismiss")}
 													</Button>
-												</>
+												</Inline>
 											)}
 										</TableCell>
 									</TableRow>
@@ -287,7 +292,7 @@ export function EventsScreen() {
 						</TableBody>
 					</Table>
 				)}
-			</div>
+			</Stack>
 			<ListPagination
 				total={listQuery.data?.total ?? 0}
 				shown={items.length}
@@ -302,6 +307,6 @@ export function EventsScreen() {
 				onClose={() => setOpenedKey(null)}
 			/>
 			{dialog}
-		</div>
+		</Stack>
 	);
 }

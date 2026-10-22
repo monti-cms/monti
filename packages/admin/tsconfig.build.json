@@ -5,8 +5,19 @@
 		"outDir": "dist",
 		"rootDir": "src",
 		"declaration": true,
-		"types": ["node"]
+		"types": [
+			"node"
+		]
 	},
-	"include": ["src"],
-	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test", "src/**/__test__"]
+	"include": [
+		"src"
+	],
+	"exclude": [
+		"src/**/*.test.ts",
+		"src/**/*.test.tsx",
+		"src/test",
+		"src/**/__test__",
+		"src/**/*.stories.tsx",
+		"src/stories"
+	]
 }

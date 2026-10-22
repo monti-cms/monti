@@ -32,6 +32,8 @@ export const textVariants = cva("", {
 		weight: { role: "", medium: "font-medium", semibold: "font-semibold" },
 		mono: { true: "font-mono" },
 		truncate: { true: "truncate" },
+		/** Read by screen readers, not shown (a column name over buttons, a label the layout already makes plain). */
+		srOnly: { true: "sr-only" },
 	},
 	defaultVariants: { variant: "body", tone: "inherit", weight: "role" },
 });
@@ -42,8 +44,8 @@ type TextProps = React.HTMLAttributes<HTMLElement> &
 		htmlFor?: string;
 	};
 
-function Text({ as: Tag = "span", variant, tone, weight, mono, truncate, className, ...props }: TextProps) {
-	return <Tag className={cn(textVariants({ variant, tone, weight, mono, truncate }), className)} {...props} />;
+function Text({ as: Tag = "span", variant, tone, weight, mono, truncate, srOnly, className, ...props }: TextProps) {
+	return <Tag className={cn(textVariants({ variant, tone, weight, mono, truncate, srOnly }), className)} {...props} />;
 }
 
 /** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `heading` for the screen, `display` for the post title. */
@@ -56,7 +58,8 @@ function Heading({
 	...props
 }: React.HTMLAttributes<HTMLHeadingElement> & {
 	as?: "h1" | "h2" | "h3" | "h4";
-	variant?: "title" | "heading" | "display";
+	/** `label` for a small heading inside a panel or sheet; `title` for sections, panels and dialogs; `heading` the screen; `display` the post title. */
+	variant?: "label" | "title" | "heading" | "display";
 	tone?: VariantProps<typeof textVariants>["tone"];
 	truncate?: boolean;
 }) {

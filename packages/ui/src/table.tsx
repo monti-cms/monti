@@ -6,14 +6,26 @@ import { cn } from "./cn";
 function Table({
 	className,
 	containerClassName,
+	inset = "none",
 	...props
 }: React.ComponentProps<"table"> & {
 	/** Scroll area wrapping the table. If the outside handles scrolling, set `overflow-visible` so the sticky header works. */
 	containerClassName?: string;
+	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
+	inset?: "none" | "page";
 }) {
 	return (
 		<div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
-			<table data-slot="table" className={cn("w-full caption-bottom text-monti-body", className)} {...props} />
+			<table
+				data-slot="table"
+				className={cn(
+					"w-full caption-bottom text-monti-body",
+					inset === "page" &&
+						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
+					className,
+				)}
+				{...props}
+			/>
 		</div>
 	);
 }
@@ -50,6 +62,7 @@ function TableRow({
 			data-selected={selected || undefined}
 			aria-selected={selected || undefined}
 			className={cn(
+				props.onClick && "cursor-pointer",
 				"border-b transition-colors hover:bg-monti-hover has-aria-expanded:bg-monti-hover data-selected:bg-monti-selected",
 				className,
 			)}
