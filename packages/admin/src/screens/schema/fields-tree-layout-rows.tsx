@@ -5,7 +5,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, Input } from "@monti-cms/ui";
+import { Box, cn, Input, Text } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tabLabel } from "../entries/layout-groups";
@@ -31,7 +31,6 @@ function InlineName({
 	disabled,
 	inputRef,
 	onCommit,
-	className,
 	maxLength,
 }: {
 	value: string;
@@ -39,7 +38,6 @@ function InlineName({
 	disabled: boolean;
 	inputRef?: React.RefObject<HTMLInputElement | null>;
 	onCommit: (value: string) => void;
-	className?: string;
 	maxLength?: number;
 }) {
 	const [draft, setDraft] = useState(value);
@@ -51,6 +49,8 @@ function InlineName({
 	return (
 		<Input
 			ref={inputRef}
+			appearance="inline"
+			size="sm"
 			value={draft}
 			aria-label={label}
 			disabled={disabled}
@@ -65,10 +65,6 @@ function InlineName({
 					setDraft(value);
 				}
 			}}
-			className={cn(
-				"h-7 min-w-0 border-transparent bg-transparent monti-dark:bg-transparent px-condensed font-semibold text-monti-body shadow-none",
-				className,
-			)}
 		/>
 	);
 }
@@ -129,13 +125,12 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				inputRef={inputRef}
 				maxLength={20}
 				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name, defaultName))}
-				className="-ml-condensed font-semibold"
 			/>
-			<span className="flex-1" />
+			<Box as="span" grow />
 			{!canRename && index > 0 && (
-				<span className="shrink-0 pr-tight text-monti-caption text-monti-muted" title={t("layout.tabLocked")}>
+				<Text variant="caption" tone="muted" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
-				</span>
+				</Text>
 			)}
 			<RowButtons buttons={buttons} />
 		</div>
@@ -194,7 +189,6 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 		>
 			<div className="flex items-center gap-tight py-condensed pr-comfortable pl-wide">
 				<InlineName
-					className="-ml-condensed"
 					value={group.title}
 					label={t("layout.groupTitle")}
 					disabled={ops.disabled}
@@ -202,9 +196,11 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 					onCommit={(title) => ops.change((tree) => editGroup(tree, ref, { title }))}
 				/>
 				{group.collapsed && (
-					<span className="shrink-0 text-monti-caption text-monti-muted">{t("layout.collapsedMark")}</span>
+					<Text variant="caption" tone="muted">
+						{t("layout.collapsedMark")}
+					</Text>
 				)}
-				<span className="flex-1" />
+				<Box as="span" grow />
 				<RowButtons buttons={buttons} />
 				{moving && (
 					<MoveDialog

@@ -249,7 +249,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 		await screen.findByText("search-index");
 
-		fireEvent.click(screen.getByRole("button", { name: t("filter.failed") }));
+		fireEvent.click(screen.getByRole("tab", { name: t("filter.failed") }));
 		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeTruthy();
 		expect(requested().at(-1)?.sort()).toEqual(["dead", "failed"]);
 
@@ -265,13 +265,13 @@ describe("EventsScreen", () => {
 		const headers = screen.getAllByRole("columnheader");
 		expect(headers[0]?.textContent).toBe(t("column.state"));
 		expect(within(row).getAllByRole("cell")[0]?.textContent).toBe(t("state.failed"));
-		expect(screen.getByRole("button", { name: t("filter.all") }).getAttribute("aria-pressed")).toBe("true");
+		expect(screen.getByRole("tab", { name: t("filter.all") }).getAttribute("aria-selected")).toBe("true");
 
-		fireEvent.click(screen.getByRole("button", { name: t("filter.delivered") }));
+		fireEvent.click(screen.getByRole("tab", { name: t("filter.delivered") }));
 		await waitFor(() =>
-			expect(screen.getByRole("button", { name: t("filter.delivered") }).getAttribute("aria-pressed")).toBe("true"),
+			expect(screen.getByRole("tab", { name: t("filter.delivered") }).getAttribute("aria-selected")).toBe("true"),
 		);
-		expect(screen.getByRole("button", { name: t("filter.all") }).getAttribute("aria-pressed")).toBe("false");
+		expect(screen.getByRole("tab", { name: t("filter.all") }).getAttribute("aria-selected")).toBe("false");
 	});
 
 	it("pages through the events", async () => {

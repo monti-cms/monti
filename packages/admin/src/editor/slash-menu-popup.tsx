@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -20,8 +20,8 @@ interface SlashMenuPopupProps {
 /** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
-	const Icon = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
-	return <Icon aria-hidden className="size-4" />;
+	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
+	return <Icon icon={Glyph} tone="muted" />;
 }
 
 /**
@@ -77,13 +77,25 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>
-					<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-page text-monti-muted">
+					<Inline
+						as="span"
+						justify="center"
+						padding="condensed"
+						border="all"
+						radius="md"
+						background="page"
+						shrink={false}
+					>
 						<ItemIcon icon={item.icon} />
-					</span>
-					<span className="min-w-0">
-						<span className="block truncate font-medium text-monti-body">{item.title}</span>
-						<span className="block truncate text-monti-caption text-monti-muted">{item.description}</span>
-					</span>
+					</Inline>
+					<Stack as="span" gap="none" minWidth={0}>
+						<Text weight="medium" truncate>
+							{item.title}
+						</Text>
+						<Text variant="caption" tone="muted" truncate>
+							{item.description}
+						</Text>
+					</Stack>
 				</div>
 			))}
 		</div>,

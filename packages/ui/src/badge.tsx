@@ -15,6 +15,7 @@ const badgeVariants = cva(
 				success: "bg-monti-success-muted text-monti-success",
 				warning: "bg-monti-warning-muted text-monti-warning",
 				outline: "border-monti-muted text-monti-default [a]:hover:bg-monti-hover [a]:hover:text-monti-muted",
+				dashed: "border-monti-default border-dashed text-monti-subtle",
 				ghost: "hover:bg-monti-hover hover:text-monti-muted monti-dark:hover:bg-monti-hover",
 				link: "text-monti-accent underline underline-offset-4",
 			},
@@ -28,14 +29,19 @@ const badgeVariants = cva(
 function Badge({
 	className,
 	variant = "default",
+	mono = false,
 	render,
 	...props
-}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+}: useRender.ComponentProps<"span"> &
+	VariantProps<typeof badgeVariants> & {
+		/** Fixed-width letters, for a code or a count. */
+		mono?: boolean;
+	}) {
 	return useRender({
 		defaultTagName: "span",
 		props: mergeProps<"span">(
 			{
-				className: cn(badgeVariants({ variant }), className),
+				className: cn(badgeVariants({ variant }), mono && "font-mono", className),
 			},
 			props,
 		),

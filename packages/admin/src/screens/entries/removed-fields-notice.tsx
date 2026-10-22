@@ -1,4 +1,5 @@
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Box, Stack, Text } from "@monti-cms/ui";
 import { entriesMessages } from "./messages";
 
 /**
@@ -17,12 +18,17 @@ export function RemovedFieldsNotice({
 	const keys = site.isCollection(collection) ? site.orphanedMetadataKeys(collection, metadata ?? {}) : [];
 	if (keys.length === 0) return null;
 	return (
-		<div
-			role="note"
-			className="mb-comfortable space-y-tight rounded-md border border-monti-muted border-dashed p-normal text-monti-caption text-monti-muted"
-		>
-			<p className="font-medium">{t("inspector.removed.title")}</p>
-			<p className="break-words">{t("inspector.removed.body", { keys: keys.join(", ") })}</p>
-		</div>
+		<Box paddingBottom="comfortable">
+			<Box role="note" padding="normal" border="dashed" radius="md">
+				<Stack gap="tight">
+					<Text as="p" variant="caption" tone="muted" weight="medium">
+						{t("inspector.removed.title")}
+					</Text>
+					<Text as="p" variant="caption" tone="muted">
+						{t("inspector.removed.body", { keys: keys.join(", ") })}
+					</Text>
+				</Stack>
+			</Box>
+		</Box>
 	);
 }

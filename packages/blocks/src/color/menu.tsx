@@ -3,6 +3,7 @@
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import {
+	Box,
 	cn,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -11,6 +12,8 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
 	IconButton,
+	Stack,
+	Text,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -121,7 +124,7 @@ function SwatchRow({
 										aria-checked={selected}
 										disabled={!editor.isEditable}
 										onClick={() => applyTextColor(editor, kind, color)}
-										className="relative justify-center p-hair"
+										swatch
 									/>
 								) : (
 									<button
@@ -176,12 +179,20 @@ export function TextColorMenuItems({ editor }: { editor: Editor }) {
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
 	const t = useTranslator(colorMessages);
 	return (
-		<div className="flex flex-col gap-tight">
-			<p className="px-tight text-monti-muted">{t("fg.label")}</p>
+		<Stack gap="tight">
+			<Box paddingX="tight">
+				<Text as="p" tone="muted">
+					{t("fg.label")}
+				</Text>
+			</Box>
 			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
-			<p className="px-tight text-monti-muted">{t("bg.label")}</p>
+			<Box paddingX="tight">
+				<Text as="p" tone="muted">
+					{t("bg.label")}
+				</Text>
+			</Box>
 			<SwatchRow editor={editor} kind="bg" variant="buttons" onPicked={onPicked} />
-		</div>
+		</Stack>
 	);
 }
 
@@ -210,7 +221,7 @@ export function TextColorMenu({ editor }: { editor: Editor }) {
 			>
 				<TextColorIcon editor={editor} />
 			</IconButton>
-			<DropdownMenuContent align="start" className="w-auto">
+			<DropdownMenuContent align="start" width="auto">
 				<TextColorMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

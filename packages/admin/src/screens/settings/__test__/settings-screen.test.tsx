@@ -52,12 +52,12 @@ const element = (tab: SchemaTab) =>
 		</AdminQueryProvider>,
 	);
 const renderSettings = (tab: SchemaTab) => renderInRouter(element(tab));
-const tabBar = () => screen.getByRole("navigation", { name: t("tabs.label") });
+const tabBar = () => screen.getByRole("tablist", { name: t("tabs.label") });
 
 describe("settings tabs", () => {
 	it("lists the tabs in order, each with its own address", () => {
 		renderSettings("collections");
-		const links = within(tabBar()).getAllByRole("link");
+		const links = within(tabBar()).getAllByRole("tab");
 		const ids = SCHEMA_TABS;
 		expect(links.map((link) => link.textContent)).toEqual(ids.map((id) => t(`tab.${id}`)));
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(
@@ -68,15 +68,15 @@ describe("settings tabs", () => {
 	it("marks the open tab", () => {
 		renderSettings("site");
 		const current = within(tabBar())
-			.getAllByRole("link")
-			.filter((link) => link.getAttribute("aria-current") === "page");
+			.getAllByRole("tab")
+			.filter((link) => link.getAttribute("aria-selected") === "true");
 		expect(current.map((link) => link.textContent)).toEqual([t("tab.site")]);
 	});
 
 	it("has no tab for Data, templates, the event log or a plugin page: they are in the sidebar", () => {
 		renderSettings("collections");
 		const names = within(tabBar())
-			.getAllByRole("link")
+			.getAllByRole("tab")
 			.map((link) => link.textContent);
 		expect(names).not.toContain(sidebarText("sidebar.templates"));
 		expect(names).not.toContain(sidebarText("sidebar.events"));
@@ -88,7 +88,7 @@ describe("settings tabs", () => {
 		const nav = createTestRouter();
 		nav.render(element("collections"));
 		const editor = screen.getByText(/schema editor: collections/);
-		fireEvent.click(within(tabBar()).getByRole("link", { name: t("tab.locales") }));
+		fireEvent.click(within(tabBar()).getByRole("tab", { name: t("tab.locales") }));
 		expect(screen.getByText(/schema editor: locales/)).toBe(editor);
 		expect(window.location.pathname).toBe("/admin/settings/locales");
 		// The collection that was open is still named in the address for the way back.
@@ -96,16 +96,16 @@ describe("settings tabs", () => {
 		expect(nav.navigate).not.toHaveBeenCalled();
 		expect(
 			within(tabBar())
-				.getByRole("link", { name: t("tab.locales") })
-				.getAttribute("aria-current"),
-		).toBe("page");
+				.getByRole("tab", { name: t("tab.locales") })
+				.getAttribute("aria-selected"),
+		).toBe("true");
 	});
 
 	it("puts a dot, named for a screen reader, on the tabs that hold draft changes", () => {
 		renderSettings("collections");
 		expect(within(tabBar()).queryAllByText(t("changed"))).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "report changes" }));
-		const site = within(tabBar()).getByRole("link", { name: new RegExp(t("tab.site")) });
+		const site = within(tabBar()).getByRole("tab", { name: new RegExp(t("tab.site")) });
 		expect(within(site).getByText(t("changed"))).toBeTruthy();
 		expect(within(tabBar()).getAllByText(t("changed"))).toHaveLength(1);
 	});

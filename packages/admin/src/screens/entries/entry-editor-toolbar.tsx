@@ -27,16 +27,15 @@ export function ToolbarToggle({
 			<TooltipTrigger
 				render={
 					<Toggle
-						size="sm"
+						size={text ? "sm" : "icon-sm"}
 						aria-label={label}
 						pressed={pressed}
 						disabled={disabled}
 						onPressedChange={onPressedChange}
-						className="gap-condensed text-monti-muted aria-pressed:text-monti-default"
 					/>
 				}
 			>
-				<Icon aria-hidden className="size-4" />
+				<Icon aria-hidden />
 				{text}
 			</TooltipTrigger>
 			<TooltipContent side="bottom">{label}</TooltipContent>

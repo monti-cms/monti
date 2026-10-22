@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { FormFieldError, Input } from "@monti-cms/ui";
+import { Box, FormFieldError, Inline, Input, Stack, Text } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
@@ -48,7 +48,7 @@ export function PublicPathField({
 	const shown = pathOfSegment(draft) === path ? draft : segment;
 	const issue = hasPage ? pathProblem(path) : null;
 	return (
-		<div className="flex flex-col gap-comfortable">
+		<Stack gap="comfortable">
 			<FlagSwitch
 				label={t("collection.path")}
 				revert={revert}
@@ -56,31 +56,33 @@ export function PublicPathField({
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
 			{hasPage && (
-				<div className="ml-condensed flex flex-col gap-condensed border-monti-muted border-l-2 pt-hair pl-comfortable">
-					<div className="flex items-center gap-tight font-mono text-monti-body">
-						<span className="text-monti-muted" aria-hidden="true">
-							/
-						</span>
-						<Input
-							id={id}
-							aria-label={t("collection.path")}
-							value={shown}
-							disabled={disabled}
-							autoComplete="off"
-							placeholder="posts"
-							className="max-w-48 font-mono"
-							onChange={(event) => {
-								setDraft(event.target.value);
-								onChange(pathOfSegment(event.target.value));
-							}}
-						/>
-						<span className="text-monti-muted" aria-hidden="true">
-							{segment === "" ? ":slug" : "/:slug"}
-						</span>
-					</div>
-					{issue && <FormFieldError className="text-monti-caption">{t(`path.${issue}`)}</FormFieldError>}
-				</div>
+				<Box paddingX="condensed">
+					<Stack gap="condensed" border="left" paddingX="comfortable">
+						<Inline gap="tight">
+							<Text mono tone="muted" aria-hidden="true">
+								/
+							</Text>
+							<Input
+								id={id}
+								aria-label={t("collection.path")}
+								value={shown}
+								disabled={disabled}
+								autoComplete="off"
+								placeholder="posts"
+								mono
+								onChange={(event) => {
+									setDraft(event.target.value);
+									onChange(pathOfSegment(event.target.value));
+								}}
+							/>
+							<Text mono tone="muted" aria-hidden="true">
+								{segment === "" ? ":slug" : "/:slug"}
+							</Text>
+						</Inline>
+						{issue && <FormFieldError>{t(`path.${issue}`)}</FormFieldError>}
+					</Stack>
+				</Box>
 			)}
-		</div>
+		</Stack>
 	);
 }

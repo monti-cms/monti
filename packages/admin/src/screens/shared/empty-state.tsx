@@ -1,15 +1,14 @@
 import {
 	Button,
-	buttonVariants,
 	Empty,
 	EmptyContent,
 	EmptyDescription,
 	EmptyHeader,
 	EmptyMedia,
 	EmptyTitle,
+	Inline,
 } from "@monti-cms/ui";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { AdminLink as Link } from "../../router";
 
 export interface EmptyStateAction {
@@ -38,7 +37,6 @@ export function EmptyState({
 	action,
 	secondaryAction,
 	compact = false,
-	className,
 }: {
 	icon?: LucideIcon;
 	title: string;
@@ -46,16 +44,15 @@ export function EmptyState({
 	action?: EmptyStateAction;
 	secondaryAction?: EmptyStateSecondaryAction;
 	compact?: boolean;
-	className?: string;
 }) {
 	const ActionIcon = action?.icon;
 	const SecondaryIcon = secondaryAction?.icon;
 	if (compact) {
 		return (
-			<Empty data-variant="compact" className={cn("flex-none gap-tight p-condensed", className)}>
-				<EmptyHeader className="gap-hair">
-					<EmptyTitle className="font-normal text-monti-label text-monti-muted">{title}</EmptyTitle>
-					{description && <EmptyDescription className="text-monti-caption">{description}</EmptyDescription>}
+			<Empty size="compact" data-variant="compact">
+				<EmptyHeader>
+					<EmptyTitle>{title}</EmptyTitle>
+					{description && <EmptyDescription>{description}</EmptyDescription>}
 				</EmptyHeader>
 				{action && (
 					<Button type="button" size="xs" variant="outline" onClick={action.onClick}>
@@ -67,7 +64,7 @@ export function EmptyState({
 		);
 	}
 	return (
-		<Empty data-variant="full" className={cn("min-h-64 flex-1", className)}>
+		<Empty data-variant="full">
 			<EmptyHeader>
 				{Icon && (
 					<EmptyMedia variant="icon">
@@ -78,31 +75,38 @@ export function EmptyState({
 				{description && <EmptyDescription>{description}</EmptyDescription>}
 			</EmptyHeader>
 			{(action || secondaryAction) && (
-				<EmptyContent className="flex-row justify-center">
-					{action && (
-						<Button
-							type="button"
-							size="sm"
-							variant={action.emphasis === "primary" ? "default" : "outline"}
-							disabled={action.disabled}
-							onClick={action.onClick}
-						>
-							{ActionIcon && <ActionIcon aria-hidden />}
-							{action.label}
-						</Button>
-					)}
-					{secondaryAction &&
-						("href" in secondaryAction ? (
-							<Link href={secondaryAction.href} className={buttonVariants({ variant: "outline", size: "sm" })}>
-								{SecondaryIcon && <SecondaryIcon aria-hidden />}
-								{secondaryAction.label}
-							</Link>
-						) : (
-							<Button type="button" size="sm" variant="outline" onClick={secondaryAction.onClick}>
-								{SecondaryIcon && <SecondaryIcon aria-hidden />}
-								{secondaryAction.label}
+				<EmptyContent>
+					<Inline justify="center" gap="condensed">
+						{action && (
+							<Button
+								type="button"
+								size="sm"
+								variant={action.emphasis === "primary" ? "default" : "outline"}
+								disabled={action.disabled}
+								onClick={action.onClick}
+							>
+								{ActionIcon && <ActionIcon aria-hidden />}
+								{action.label}
 							</Button>
-						))}
+						)}
+						{secondaryAction &&
+							("href" in secondaryAction ? (
+								<Button
+									variant="outline"
+									size="sm"
+									nativeButton={false}
+									render={<Link role="link" href={secondaryAction.href} />}
+								>
+									{SecondaryIcon && <SecondaryIcon aria-hidden />}
+									{secondaryAction.label}
+								</Button>
+							) : (
+								<Button type="button" size="sm" variant="outline" onClick={secondaryAction.onClick}>
+									{SecondaryIcon && <SecondaryIcon aria-hidden />}
+									{secondaryAction.label}
+								</Button>
+							))}
+					</Inline>
 				</EmptyContent>
 			)}
 		</Empty>

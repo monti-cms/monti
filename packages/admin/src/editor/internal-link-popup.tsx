@@ -1,7 +1,7 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Spinner } from "@monti-cms/ui";
+import { Box, cn, FormFieldError, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CollectionIcon } from "../screens/shared/collection-icon";
@@ -99,28 +99,48 @@ export function InternalLinkPopup({
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>
-					<span
+					<Inline
+						as="span"
 						aria-hidden
-						className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-page text-monti-muted [&_svg]:size-4"
+						justify="center"
+						padding="condensed"
+						border="all"
+						radius="md"
+						background="page"
+						shrink={false}
 					>
 						<CollectionIcon collection={item.collection} />
-					</span>
-					<span className="min-w-0">
-						<span className="block truncate font-medium text-monti-body">{item.title}</span>
-						<span className="block truncate text-monti-caption text-monti-muted">{itemMeta(site, item)}</span>
-					</span>
+					</Inline>
+					<Stack as="span" gap="none" minWidth={0}>
+						<Text weight="medium" truncate>
+							{item.title}
+						</Text>
+						<Text variant="caption" tone="muted" truncate>
+							{itemMeta(site, item)}
+						</Text>
+					</Stack>
 				</div>
 			))}
 			{isLoading ? (
-				<output className="flex items-center gap-condensed px-condensed py-condensed text-monti-caption text-monti-muted">
-					<Spinner className="size-3.5" />
-					{t("internalLink.searching")}
-				</output>
+				<Box as="div" paddingX="condensed" paddingY="condensed">
+					<Inline as="div" gap="condensed" role="status">
+						<Spinner size="sm" />
+						<Text variant="caption" tone="muted">
+							{t("internalLink.searching")}
+						</Text>
+					</Inline>
+				</Box>
 			) : error ? (
-				<FormFieldError className="px-condensed py-condensed">{error}</FormFieldError>
+				<Box paddingX="condensed" paddingY="condensed">
+					<FormFieldError>{error}</FormFieldError>
+				</Box>
 			) : (
 				items.length === 0 && (
-					<p className="px-condensed py-condensed text-monti-caption text-monti-muted">{t("internalLink.empty")}</p>
+					<Box paddingX="condensed" paddingY="condensed">
+						<Text as="p" variant="caption" tone="muted">
+							{t("internalLink.empty")}
+						</Text>
+					</Box>
 				)
 			)}
 		</div>,

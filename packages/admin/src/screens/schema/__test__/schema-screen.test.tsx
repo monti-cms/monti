@@ -972,11 +972,12 @@ describe("SchemaScreen", () => {
 	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		const body = () => screen.getByTestId("schema-screen").querySelector("[class*='max-w-']") as HTMLElement;
-		expect(body().className).toContain("max-w-none");
+		// The page body is the full-width column around the screen's content.
+		const bodyOf = (id: string) => screen.getByTestId(id).closest("[class*='w-full']") as HTMLElement;
+		expect(bodyOf("collection-post").className).not.toContain("max-w-page");
 		fireEvent.click(screen.getByRole("tab", { name: "site" }));
 		await screen.findByTestId("site-settings");
-		expect(body().className).toContain("max-w-[1160px]");
+		expect(bodyOf("site-settings").className).toContain("max-w-page");
 	});
 
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
@@ -1325,14 +1326,13 @@ describe("SchemaScreen", () => {
 						}
 					}
 				});
-			const settingsHeader = () => within(card).getByText(tFields("fields.colSettings"));
+			const settingsHeader = () => within(card).queryByText(tFields("fields.colSettings"));
 			resizeTo(500);
-			await waitFor(() => expect(settingsHeader().className).toContain("hidden"));
-			expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/);
+			await waitFor(() => expect(settingsHeader()).toBeNull());
 			resizeTo(1400);
-			await waitFor(() => expect(settingsHeader().className).toMatch(/(^|\s)block(\s|$)/));
+			await waitFor(() => expect(settingsHeader()).not.toBeNull());
 			resizeTo(700);
-			await waitFor(() => expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/));
+			await waitFor(() => expect(settingsHeader()).toBeNull());
 			vi.unstubAllGlobals();
 		});
 
@@ -1343,7 +1343,7 @@ describe("SchemaScreen", () => {
 			const row = side.parentElement as HTMLElement;
 			// The first column stops growing at the cap; the preview follows it, not the page edge.
 			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
-			expect(screen.getByTestId("fields-card").className).toContain("max-w-[1000px]");
+			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-content");
 			vi.unstubAllGlobals();
 		});
 

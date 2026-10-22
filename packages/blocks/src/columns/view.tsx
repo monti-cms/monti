@@ -1,7 +1,7 @@
 "use client";
 
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
-import { cn } from "@monti-cms/admin/kit";
+import { Box, cn, Text } from "@monti-cms/admin/kit";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -179,9 +179,11 @@ export function ColumnsNodeView() {
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<span className="px-condensed text-monti-caption text-monti-muted tabular-nums">
-						{widths ? widths.join(" : ") : t("count", { count })}
-					</span>
+					<Box as="span" paddingX="condensed">
+						<Text variant="caption" tone="muted">
+							{widths ? widths.join(" : ") : t("count", { count })}
+						</Text>
+					</Box>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
 						<Columns2 aria-hidden />
 					</ToolbarButton>

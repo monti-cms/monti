@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/admin";
-import { formatAgo, StatusBarItem, StatusPopoverHeader, StatusPopoverRow } from "@monti-cms/admin/kit";
+import { Box, formatAgo, StatusBarItem, StatusPopoverHeader, StatusPopoverRow } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, TriangleAlert } from "lucide-react";
 import { getGitSyncStatus, gitSyncKeys, type StatusView } from "./api";
@@ -30,7 +30,7 @@ function GitSyncPopover({ status }: { status: StatusView }) {
 			{status.targets.map((target) => {
 				const { lastAt } = syncSummary({ ...status, targets: [target] });
 				return (
-					<div key={target.id} className="py-tight">
+					<Box key={target.id} paddingY="tight">
 						<StatusPopoverRow label={target.repo} value={target.branch} />
 						<StatusPopoverRow
 							label={t("status.popover.lastSync")}
@@ -42,7 +42,7 @@ function GitSyncPopover({ status }: { status: StatusView }) {
 						{target.conflicts > 0 && (
 							<StatusPopoverRow label={t("target.conflicts", { count: target.conflicts })} tone="danger" />
 						)}
-					</div>
+					</Box>
 				);
 			})}
 			<StatusPopoverRow label={t("status.title")} href={site.adminHref("/tools/git-sync")} />

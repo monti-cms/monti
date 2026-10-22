@@ -3,13 +3,18 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
+	CodeBlock,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	Grid,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
@@ -39,7 +44,7 @@ export function RecoveryDialog({
 	const site = useSite();
 	return (
 		<Dialog open={recovery !== null} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-w-md">
+			<DialogContent size="md">
 				<DialogHeader>
 					<DialogTitle>{t("recovery.title")}</DialogTitle>
 					<DialogDescription>
@@ -97,19 +102,19 @@ export function ConflictDialog({
 	};
 	return (
 		<Dialog open={conflict !== null} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+			<DialogContent size="xl" scroll>
 				<DialogHeader>
 					<DialogTitle>{t("conflict.title")}</DialogTitle>
 					<DialogDescription>{t("conflict.description")}</DialogDescription>
 					{conflict?.server.changedAt && (
-						<p className="font-medium text-monti-body">
+						<Text as="p" weight="medium">
 							{conflict.server.changedBy
 								? t("conflict.savedBy", {
 										name: conflict.server.changedBy,
 										date: formatDateTime(site, conflict.server.changedAt),
 									})
 								: t("conflict.savedAt", { date: formatDateTime(site, conflict.server.changedAt) })}
-						</p>
+						</Text>
 					)}
 				</DialogHeader>
 				{conflict && (
@@ -166,25 +171,29 @@ function ComparePanes({
 	const pane = (label: string, value: EntryForm) => {
 		const body = bodyText(value.doc);
 		return (
-			<div className="space-y-condensed rounded-lg border p-normal">
-				<p className="font-semibold text-monti-body">{label}</p>
-				<p className="text-monti-caption">
+			<Stack gap="condensed" border="all" radius="lg" padding="normal">
+				<Text as="p" weight="semibold">
+					{label}
+				</Text>
+				<Text as="p" variant="caption">
 					{t("conflict.summary", {
 						title: formTitle(site, collection, value) || tc("untitled"),
 						slug: value.slug || t("conflict.noSlug"),
 					})}
-				</p>
-				<Button type="button" variant="link" size="xs" className="px-0" onClick={() => void copy(body)}>
-					{t("conflict.copyBody")}
-				</Button>
-				<pre className="max-h-60 overflow-auto whitespace-pre-wrap text-monti-caption">{body}</pre>
-			</div>
+				</Text>
+				<Box>
+					<Button type="button" variant="link" size="xs" onClick={() => void copy(body)}>
+						{t("conflict.copyBody")}
+					</Button>
+				</Box>
+				<CodeBlock>{body}</CodeBlock>
+			</Stack>
 		);
 	};
 	return (
-		<div className="grid grid-cols-1 gap-normal sm:grid-cols-2">
+		<Grid columns={2} gap="normal">
 			{pane(t("conflict.mine"), local)}
 			{pane(t("conflict.server", { version: serverVersion }), server)}
-		</div>
+		</Grid>
 	);
 }

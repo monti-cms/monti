@@ -2,6 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -9,10 +10,21 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	IconButton,
+	Inline,
+	Separator,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { Check, MoreHorizontal } from "lucide-react";
-import { Fragment, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { editorMessages } from "./messages";
 import type { ToolbarItem } from "./toolbar-button";
 import { type FitItem, fitSlots, layoutKeys } from "./toolbar-fit";
@@ -38,8 +50,11 @@ const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
 
 export function ToolbarDivider() {
-	return <span aria-hidden className="mx-tight h-5 w-px shrink-0 self-center bg-monti-divider" />;
+	return <Separator orientation="vertical" length="control" aria-hidden />;
 }
+
+/** Where a tool sits in the "More" menu, so a group knows whether it is first (no divider above the first one). */
+const MenuSlotPosition = createContext(0);
 
 /** One tool row in a dropdown or the "More" menu. */
 export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: ToolbarItem }) {
@@ -49,9 +64,11 @@ export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: Toolba
 			disabled={!editor.isEditable || (item.isDisabled?.(editor) ?? false)}
 			onClick={() => item.run(editor)}
 		>
-			<item.icon aria-hidden className="size-4" />
-			<span className="flex-1">{item.title ?? item.label}</span>
-			{active && <Check aria-hidden className="size-4" />}
+			<item.icon aria-hidden />
+			<Box as="span" grow>
+				{item.title ?? item.label}
+			</Box>
+			{active && <Check aria-hidden />}
 		</DropdownMenuItem>
 	);
 }
@@ -61,9 +78,10 @@ export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: Toolba
  * No heading is used (the item icon and name make it clear). `label` is the group name (for screen readers).
  */
 export function ToolbarMenuSection({ label, children }: { label: string; children: ReactNode }) {
+	const position = useContext(MenuSlotPosition);
 	return (
 		<>
-			<DropdownMenuSeparator className="first:hidden" />
+			{position > 0 && <DropdownMenuSeparator />}
 			<DropdownMenuGroup aria-label={label}>{children}</DropdownMenuGroup>
 		</>
 	);
@@ -87,14 +105,13 @@ function OverflowMenu({ editor, children }: { editor: Editor; children: ReactNod
 			<IconButton
 				label={t("toolbarRow.more")}
 				side="bottom"
-				className="shrink-0"
 				disabled={!editor.isEditable}
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<MoreHorizontal className="size-4" aria-hidden />
+				<MoreHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" className="min-w-44">
+			<DropdownMenuContent align="end" width="md">
 				{children}
 			</DropdownMenuContent>
 		</DropdownMenu>
@@ -175,13 +192,13 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 				<div ref={measureRef} className="flex w-max items-center gap-tight">
 					{entries.map((entry) =>
 						isDivider(entry) ? (
-							<div key={entry.key} data-measure-key={entry.key} className="flex shrink-0 items-center">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
 								<ToolbarDivider />
-							</div>
+							</Inline>
 						) : entry.fixed ? null : (
-							<div key={entry.key} data-measure-key={entry.key} className="flex shrink-0 items-center">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
 								{entry.render()}
-							</div>
+							</Inline>
 						),
 					)}
 				</div>
@@ -191,26 +208,24 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					if (!shown.has(entry.key)) return null;
 					if (isDivider(entry)) return <ToolbarDivider key={entry.key} />;
 					return (
-						<div
-							key={entry.key}
-							data-slot-key={entry.fixed ? entry.key : undefined}
-							className="flex shrink-0 items-center"
-						>
+						<Inline key={entry.key} data-slot-key={entry.fixed ? entry.key : undefined} shrink={false} gap="none">
 							{entry.render()}
-						</div>
+						</Inline>
 					);
 				})}
 				{hiddenSlots.length > 0 && (
 					<OverflowMenu editor={editor}>
-						{hiddenSlots.map((slot) => (
-							<Fragment key={slot.key}>{slot.menu?.()}</Fragment>
+						{hiddenSlots.map((slot, index) => (
+							<MenuSlotPosition.Provider key={slot.key} value={index}>
+								{slot.menu?.()}
+							</MenuSlotPosition.Provider>
 						))}
 					</OverflowMenu>
 				)}
 				{end && (
-					<div data-slot-key={END_KEY} className="flex shrink-0 items-center">
+					<Inline data-slot-key={END_KEY} shrink={false} gap="none">
 						{end}
-					</div>
+					</Inline>
 				)}
 			</div>
 		</div>

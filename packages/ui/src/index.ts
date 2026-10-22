@@ -1,192 +1,245 @@
 /**
- * Monti's design system: the components the admin and its extensions are built from, and (in `styles/`) the tokens they read.
- * Values come only from the tokens: see `styles/theme.css` for the names and the README for the rules.
+ * Monti's design system, as screens use it: components take options (variant, tone, size, gap), never `className` or `style`.
+ * Tokens are in `styles/` (`theme.css` names, `tokens.css` values). The open versions are in `@monti-cms/ui/internal`.
  */
 
-export { Alert, AlertDescription, AlertTitle, alertVariants } from "./alert";
+import { type Closed, close } from "./closed";
+import * as open from "./internal";
+
+export const Alert = close(open.Alert);
+export const AlertDescription = close(open.AlertDescription);
+export const AlertTitle = close(open.AlertTitle);
+export const AlertDialog = close(open.AlertDialog);
+export const AlertDialogAction = close(open.AlertDialogAction);
+export const AlertDialogCancel = close(open.AlertDialogCancel);
+export const AlertDialogContent = close(open.AlertDialogContent);
+export const AlertDialogDescription = close(open.AlertDialogDescription);
+export const AlertDialogFooter = close(open.AlertDialogFooter);
+export const AlertDialogHeader = close(open.AlertDialogHeader);
+export const AlertDialogMedia = close(open.AlertDialogMedia);
+export const AlertDialogOverlay = close(open.AlertDialogOverlay);
+export const AlertDialogPortal = close(open.AlertDialogPortal);
+export const AlertDialogTitle = close(open.AlertDialogTitle);
+export const AlertDialogTrigger = close(open.AlertDialogTrigger);
+export const Badge = close(open.Badge);
+export const Button = close(open.Button);
+
+export const CalendarDayButton = close(open.CalendarDayButton);
+export const Card = close(open.Card);
+export const CardAction = close(open.CardAction);
+export const CardContent = close(open.CardContent);
+export const CardDescription = close(open.CardDescription);
+export const CardFooter = close(open.CardFooter);
+export const CardHeader = close(open.CardHeader);
+export const CardTitle = close(open.CardTitle);
+export const Panel = close(open.Panel);
+export const Checkbox = close(open.Checkbox);
+export const Collapsible = close(open.Collapsible);
+export const CollapsibleContent = close(open.CollapsibleContent);
+export const CollapsibleTrigger = close(open.CollapsibleTrigger);
+export const ComboboxChip = close(open.ComboboxChip);
+export const ComboboxChips = close(open.ComboboxChips);
+export const ComboboxChipsInput = close(open.ComboboxChipsInput);
+export const ComboboxCollection = close(open.ComboboxCollection);
+export const ComboboxContent = close(open.ComboboxContent);
+export const ComboboxEmpty = close(open.ComboboxEmpty);
+export const ComboboxGroup = close(open.ComboboxGroup);
+export const ComboboxInput = close(open.ComboboxInput);
+export const ComboboxItem = close(open.ComboboxItem);
+export const ComboboxLabel = close(open.ComboboxLabel);
+export const ComboboxList = close(open.ComboboxList);
+export const ComboboxSeparator = close(open.ComboboxSeparator);
+export const ComboboxTrigger = close(open.ComboboxTrigger);
+export const ComboboxValue = close(open.ComboboxValue);
+export const Command = close(open.Command);
+export const CommandDialog = close(open.CommandDialog);
+export const CommandEmpty = close(open.CommandEmpty);
+export const CommandGroup = close(open.CommandGroup);
+export const CommandInput = close(open.CommandInput);
+export const CommandItem = close(open.CommandItem);
+export const CommandList = close(open.CommandList);
+export const CommandSeparator = close(open.CommandSeparator);
+export const CommandShortcut = close(open.CommandShortcut);
+export const ContextMenu = close(open.ContextMenu);
+export const ContextMenuCheckboxItem = close(open.ContextMenuCheckboxItem);
+export const ContextMenuContent = close(open.ContextMenuContent);
+export const ContextMenuGroup = close(open.ContextMenuGroup);
+export const ContextMenuItem = close(open.ContextMenuItem);
+export const ContextMenuLabel = close(open.ContextMenuLabel);
+export const ContextMenuPortal = close(open.ContextMenuPortal);
+export const ContextMenuRadioGroup = close(open.ContextMenuRadioGroup);
+export const ContextMenuRadioItem = close(open.ContextMenuRadioItem);
+export const ContextMenuSeparator = close(open.ContextMenuSeparator);
+export const ContextMenuShortcut = close(open.ContextMenuShortcut);
+export const ContextMenuSub = close(open.ContextMenuSub);
+export const ContextMenuSubContent = close(open.ContextMenuSubContent);
+export const ContextMenuSubTrigger = close(open.ContextMenuSubTrigger);
+export const ContextMenuTrigger = close(open.ContextMenuTrigger);
+export const Dialog = close(open.Dialog);
+export const DialogClose = close(open.DialogClose);
+export const DialogContent = close(open.DialogContent);
+export const DialogDescription = close(open.DialogDescription);
+export const DialogFooter = close(open.DialogFooter);
+export const DialogHeader = close(open.DialogHeader);
+export const DialogOverlay = close(open.DialogOverlay);
+export const DialogPortal = close(open.DialogPortal);
+export const DialogTitle = close(open.DialogTitle);
+export const DialogTrigger = close(open.DialogTrigger);
+export const DialogFormFooter = close(open.DialogFormFooter);
+export const DropdownMenu = close(open.DropdownMenu);
+export const DropdownMenuCheckboxItem = close(open.DropdownMenuCheckboxItem);
+export const DropdownMenuContent = close(open.DropdownMenuContent);
+export const DropdownMenuGroup = close(open.DropdownMenuGroup);
+export const DropdownMenuItem = close(open.DropdownMenuItem);
+export const DropdownMenuLabel = close(open.DropdownMenuLabel);
+export const DropdownMenuPortal = close(open.DropdownMenuPortal);
+export const DropdownMenuRadioGroup = close(open.DropdownMenuRadioGroup);
+export const DropdownMenuRadioItem = close(open.DropdownMenuRadioItem);
+export const DropdownMenuSeparator = close(open.DropdownMenuSeparator);
+export const DropdownMenuShortcut = close(open.DropdownMenuShortcut);
+export const DropdownMenuSub = close(open.DropdownMenuSub);
+export const DropdownMenuSubContent = close(open.DropdownMenuSubContent);
+export const DropdownMenuSubTrigger = close(open.DropdownMenuSubTrigger);
+export const DropdownMenuTrigger = close(open.DropdownMenuTrigger);
+export const Empty = close(open.Empty);
+export const EmptyContent = close(open.EmptyContent);
+export const EmptyDescription = close(open.EmptyDescription);
+export const EmptyHeader = close(open.EmptyHeader);
+export const EmptyMedia = close(open.EmptyMedia);
+export const EmptyTitle = close(open.EmptyTitle);
+export const FormField = close(open.FormField);
+export const FormFieldContent = close(open.FormFieldContent);
+export const FormFieldDescription = close(open.FormFieldDescription);
+export const FormFieldError = close(open.FormFieldError);
+export const FormFieldGroup = close(open.FormFieldGroup);
+export const FormFieldLabel = close(open.FormFieldLabel);
+export const FormFieldLegend = close(open.FormFieldLegend);
+export const FormFieldSeparator = close(open.FormFieldSeparator);
+export const FormFieldSet = close(open.FormFieldSet);
+export const FormFieldTitle = close(open.FormFieldTitle);
+export const IconButton = close(open.IconButton);
+export const Input = close(open.Input);
+export const InputGroup = close(open.InputGroup);
+export const InputGroupAddon = close(open.InputGroupAddon);
+export const InputGroupButton = close(open.InputGroupButton);
+export const InputGroupInput = close(open.InputGroupInput);
+export const InputGroupText = close(open.InputGroupText);
+export const InputGroupTextarea = close(open.InputGroupTextarea);
+export const Label = close(open.Label);
+export const UiLabelsProvider = close(open.UiLabelsProvider);
+export const Pagination = close(open.Pagination);
+export const PaginationContent = close(open.PaginationContent);
+export const PaginationEllipsis = close(open.PaginationEllipsis);
+export const PaginationItem = close(open.PaginationItem);
+export const PaginationLink = close(open.PaginationLink);
+export const PaginationNext = close(open.PaginationNext);
+export const PaginationPrevious = close(open.PaginationPrevious);
+export const Popover = close(open.Popover);
+export const PopoverContent = close(open.PopoverContent);
+export const PopoverDescription = close(open.PopoverDescription);
+export const PopoverHeader = close(open.PopoverHeader);
+export const PopoverTitle = close(open.PopoverTitle);
+export const PopoverTrigger: Closed<typeof open.PopoverTrigger> = close(open.PopoverTrigger);
+export const SelectContent = close(open.SelectContent);
+export const SelectGroup = close(open.SelectGroup);
+export const SelectItem = close(open.SelectItem);
+export const SelectLabel = close(open.SelectLabel);
+export const SelectScrollDownButton = close(open.SelectScrollDownButton);
+export const SelectScrollUpButton = close(open.SelectScrollUpButton);
+export const SelectSeparator = close(open.SelectSeparator);
+export const SelectTrigger = close(open.SelectTrigger);
+export const SelectValue = close(open.SelectValue);
+export const Separator = close(open.Separator);
+export const Sheet = close(open.Sheet);
+export const SheetClose = close(open.SheetClose);
+export const SheetContent = close(open.SheetContent);
+export const SheetDescription = close(open.SheetDescription);
+export const SheetFooter = close(open.SheetFooter);
+export const SheetHeader = close(open.SheetHeader);
+export const SheetTitle = close(open.SheetTitle);
+export const SheetTrigger = close(open.SheetTrigger);
+export const Sidebar = close(open.Sidebar);
+export const SidebarContent = close(open.SidebarContent);
+export const SidebarFooter = close(open.SidebarFooter);
+export const SidebarGroup = close(open.SidebarGroup);
+export const SidebarGroupContent = close(open.SidebarGroupContent);
+export const SidebarGroupLabel = close(open.SidebarGroupLabel);
+export const SidebarHeader = close(open.SidebarHeader);
+export const SidebarInset = close(open.SidebarInset);
+export const SidebarMenu = close(open.SidebarMenu);
+export const SidebarMenuBadge = close(open.SidebarMenuBadge);
+export const SidebarMenuButton = close(open.SidebarMenuButton);
+export const SidebarMenuItem = close(open.SidebarMenuItem);
+export const SidebarProvider = close(open.SidebarProvider);
+export const SidebarSeparator = close(open.SidebarSeparator);
+export const SidebarTrigger = close(open.SidebarTrigger);
+export const Skeleton = close(open.Skeleton);
+export const Spinner = close(open.Spinner);
+export const Stack = close(open.Stack);
+export const Inline = close(open.Inline);
+export const Box = close(open.Box);
+export const ButtonGroup = close(open.ButtonGroup);
+export const CodeBlock = close(open.CodeBlock);
+export const DiffMark = close(open.DiffMark);
+export const DiffView = close(open.DiffView);
+export const Icon = close(open.Icon);
+export const Image = close(open.Image);
+export const List = close(open.List);
+export const ListItem = close(open.ListItem);
+export const Progress = close(open.Progress);
+export const RadioGroup = close(open.RadioGroup);
+export const RadioItem = close(open.RadioItem);
+export const ChoiceCard = close(open.ChoiceCard);
+export const TagInput = close(open.TagInput);
+export const Tile = close(open.Tile);
+export const Grid = close(open.Grid);
+export const StatusIndicator = close(open.StatusIndicator);
+export const Switch = close(open.Switch);
+export const Table = close(open.Table);
+export const TableBody = close(open.TableBody);
+export const TableCaption = close(open.TableCaption);
+export const TableCell = close(open.TableCell);
+export const TableFooter = close(open.TableFooter);
+export const TableHead = close(open.TableHead);
+export const TableHeader = close(open.TableHeader);
+export const TableRow = close(open.TableRow);
+export const PageTabs = close(open.PageTabs);
+export const Tabs = close(open.Tabs);
+export const TabsContent = close(open.TabsContent);
+export const TabsList = close(open.TabsList);
+export const TabsTrigger = close(open.TabsTrigger);
+export const Heading = close(open.Heading);
+export const Text = close(open.Text);
+export const DescriptionList = close(open.DescriptionList);
+export const DescriptionItem = close(open.DescriptionItem);
+export const TextLink = close(open.TextLink);
+export const Textarea = close(open.Textarea);
+export const Toggle = close(open.Toggle);
+export const ToggleGroup = close(open.ToggleGroup);
+export const ToggleGroupItem = close(open.ToggleGroupItem);
+export const Tooltip = close(open.Tooltip);
+export const TooltipContent = close(open.TooltipContent);
+export const TooltipProvider = close(open.TooltipProvider);
+export const TooltipTrigger = close(open.TooltipTrigger);
+
+export type { Closed } from "./closed";
+export type { LayoutProps, StackProps, StatusShape, StatusTone, UiLabels } from "./internal";
+/** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogMedia,
-	AlertDialogOverlay,
-	AlertDialogPortal,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "./alert-dialog";
-export { Badge, badgeVariants } from "./badge";
-export { Button, buttonVariants } from "./button";
-export { Calendar, CalendarDayButton } from "./calendar";
-export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
-export { Checkbox } from "./checkbox";
-export { cn } from "./cn";
-export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
-export {
+	alertVariants,
+	badgeVariants,
+	buttonVariants,
+	Calendar,
 	Combobox,
-	ComboboxChip,
-	ComboboxChips,
-	ComboboxChipsInput,
-	ComboboxCollection,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxGroup,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxLabel,
-	ComboboxList,
-	ComboboxSeparator,
-	ComboboxTrigger,
-	ComboboxValue,
-	useComboboxAnchor,
-} from "./combobox";
-export {
-	Command,
-	CommandDialog,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	CommandSeparator,
-	CommandShortcut,
-} from "./command";
-export {
-	ContextMenu,
-	ContextMenuCheckboxItem,
-	ContextMenuContent,
-	ContextMenuGroup,
-	ContextMenuItem,
-	ContextMenuLabel,
-	ContextMenuPortal,
-	ContextMenuRadioGroup,
-	ContextMenuRadioItem,
-	ContextMenuSeparator,
-	ContextMenuShortcut,
-	ContextMenuSub,
-	ContextMenuSubContent,
-	ContextMenuSubTrigger,
-	ContextMenuTrigger,
-} from "./context-menu";
-export {
-	Dialog,
-	DialogClose,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogOverlay,
-	DialogPortal,
-	DialogTitle,
-	DialogTrigger,
-} from "./dialog";
-export { DialogFormFooter } from "./dialog-form-footer";
-export {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuPortal,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "./dropdown-menu";
-export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
-export {
-	FormField,
-	FormFieldContent,
-	FormFieldDescription,
-	FormFieldError,
-	FormFieldGroup,
-	FormFieldLabel,
-	FormFieldLegend,
-	FormFieldSeparator,
-	FormFieldSet,
-	FormFieldTitle,
-} from "./field";
-export { IconButton } from "./icon-button";
-export { Input } from "./input";
-export {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupInput,
-	InputGroupText,
-	InputGroupTextarea,
-} from "./input-group";
-export { Label } from "./label";
-export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
-export {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious,
-} from "./pagination";
-export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
-export {
+	cn,
+	DEFAULT_UI_LABELS,
 	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectLabel,
-	SelectScrollDownButton,
-	SelectScrollUpButton,
-	SelectSeparator,
-	SelectTrigger,
-	SelectValue,
-} from "./select";
-export { Separator } from "./separator";
-export {
-	Sheet,
-	SheetClose,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "./sheet";
-export {
-	Sidebar,
-	SidebarContent,
-	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
-	SidebarHeader,
-	SidebarInset,
-	SidebarMenu,
-	SidebarMenuBadge,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	SidebarProvider,
-	SidebarSeparator,
-	SidebarTrigger,
+	stackVariants,
+	tabsListVariants,
+	textVariants,
+	toggleVariants,
+	useComboboxAnchor,
+	useIsMobile,
 	useSidebar,
-} from "./sidebar";
-export { Skeleton } from "./skeleton";
-export { Spinner } from "./spinner";
-export { Stack, stackVariants } from "./stack";
-export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
-export { Switch } from "./switch";
-export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
-export { LineTabs, PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
-export { Heading, Text, textVariants } from "./text";
-export { Textarea } from "./textarea";
-export { Toggle, toggleVariants } from "./toggle";
-export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
-export { useIsMobile } from "./use-mobile";
+	useUiLabels,
+} from "./internal";

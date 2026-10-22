@@ -4,10 +4,10 @@ import { cn } from "./cn";
 import { Spinner } from "./spinner";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-monti-label whitespace-nowrap transition-all outline-none select-none focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-monti-label whitespace-nowrap transition-all outline-none select-none focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
-			/** How it looks: `default` solid, `outline`, `secondary` a soft fill, `ghost` no fill, `quiet` grey text that darkens on hover, `link`. */
+			/** How it looks: `default` solid, `outline`, `secondary` a soft fill, `ghost` no fill, `quiet` grey text that darkens on hover, `link`, `dashed` for an empty slot to fill. */
 			variant: {
 				default: "bg-monti-emphasis text-monti-on-emphasis hover:bg-monti-emphasis-hover",
 				outline:
@@ -19,6 +19,8 @@ const buttonVariants = cva(
 				quiet:
 					"text-monti-muted hover:bg-monti-hover hover:text-monti-default aria-expanded:bg-monti-hover aria-expanded:text-monti-default",
 				link: "text-monti-accent underline-offset-4 hover:underline",
+				/** A place for something not there yet ("+ EN translation"). */
+				dashed: "border-monti-default border-dashed text-monti-muted hover:bg-monti-hover hover:text-monti-default",
 			},
 			/** What it means. `danger` is for steps that remove or overwrite; it works with every look. */
 			tone: { neutral: "", danger: "" },
@@ -67,6 +69,7 @@ function Button({
 	tone = "neutral",
 	size = "default",
 	loading = false,
+	width,
 	disabled,
 	children,
 	...props
@@ -74,6 +77,8 @@ function Button({
 	VariantProps<typeof buttonVariants> & {
 		/** Working on it: a spinner before the label, and the button cannot be pressed again. */
 		loading?: boolean;
+		/** `full` spans its container (a stacked form, a narrow panel). */
+		width?: "full";
 	}) {
 	return (
 		<ButtonPrimitive
@@ -81,7 +86,7 @@ function Button({
 			data-loading={loading || undefined}
 			aria-busy={loading || undefined}
 			disabled={disabled || loading}
-			className={cn(buttonVariants({ variant, tone, size, className }))}
+			className={cn(buttonVariants({ variant, tone, size }), width === "full" && "w-full", className)}
 			{...props}
 		>
 			{loading && <Spinner size="sm" aria-hidden />}

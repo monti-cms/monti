@@ -4,16 +4,19 @@
 
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
-	buttonVariants,
-	cn,
+	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	IconButton,
+	Inline,
+	Separator,
 	StatusIndicator,
+	Text,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -75,38 +78,53 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 	const previewBlocker = previewHref === null ? site.previewBlocker(collection, entry?.workingSlug) : null;
 
 	return (
-		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-tight border-b bg-monti-page px-normal py-condensed backdrop-blur sm:flex-nowrap lg:px-comfortable">
-			<div className="flex min-w-0 items-center gap-condensed text-monti-label">
+		<Inline
+			as="header"
+			wrap
+			justify="between"
+			gap="tight"
+			shrink={false}
+			border="bottom"
+			background="page"
+			paddingX="comfortable"
+			paddingY="condensed"
+		>
+			<Inline gap="condensed" minWidth={0}>
 				<Tooltip>
 					<TooltipTrigger
 						render={
-							<Link
-								href={site.adminHref(`?collection=${collection}`)}
+							// A link stays a link: Button would give a non-<button> role="button", so the role is kept.
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								nativeButton={false}
 								aria-label={t("backToList")}
-								className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "size-8 text-monti-muted")}
+								render={<Link role="link" href={site.adminHref(`?collection=${collection}`)} />}
 							>
-								<ChevronLeft aria-hidden className="size-4" />
-							</Link>
+								<ChevronLeft aria-hidden />
+							</Button>
 						}
 					/>
 					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
 				</Tooltip>
 				{entry?.workingSlug && (
-					<span className="hidden min-w-0 truncate font-mono text-monti-caption text-monti-muted sm:block">
-						{entry.workingSlug}
-					</span>
+					<Box hideBelow="sm" minWidth={0}>
+						<Text variant="caption" tone="muted" mono truncate>
+							{entry.workingSlug}
+						</Text>
+					</Box>
 				)}
 				{entry && (
 					<StatusIndicator
 						data-testid="entry-status-chip"
 						{...entryStatusMarker(entry.status)}
 						label={statusLabels(site)[entry.status]}
-						className="shrink-0 rounded-full border px-condensed py-hair"
+						chip
 					/>
 				)}
-			</div>
+			</Inline>
 
-			<div className="flex w-full items-center justify-end gap-tight whitespace-nowrap sm:w-auto">
+			<Inline gap="tight" justify="end">
 				{/* There is no server autosave, so unsaved changes get a visible save button (⌘S does the same); the status bar says the rest. */}
 				{editor.hasUnsavedChanges && !isTrashed && (
 					<Tooltip>
@@ -128,24 +146,22 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 				)}
 				{previewHref && !editor.hasUnsavedChanges ? (
 					// A link stays a link (open in new tab, copy URL).
-					<a
-						href={previewHref}
-						target="_blank"
-						rel="noopener noreferrer"
-						className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-condensed")}
-					>
-						<Eye aria-hidden className="size-4" />
-						{t("preview")}
-					</a>
-				) : previewHref ? (
 					<Button
-						type="button"
 						variant="outline"
 						size="sm"
-						className="gap-condensed"
-						onClick={() => void handlePreview(previewHref)}
+						nativeButton={false}
+						// A link stays a link: Button gives a non-<button> role="button", so the role is set back (the content is the child below).
+						// biome-ignore lint/a11y/useAnchorContent: the children are passed to the rendered element by Button
+						// biome-ignore lint/a11y/useSemanticElements: the element is an <a>; the role overrides the one Button adds
+						// biome-ignore lint/a11y/noRedundantRoles: Button adds role="button" to a non-<button>, so the link role is needed
+						render={<a role="link" href={previewHref} target="_blank" rel="noopener noreferrer" />}
 					>
-						<Eye aria-hidden className="size-4" />
+						<Eye aria-hidden />
+						{t("preview")}
+					</Button>
+				) : previewHref ? (
+					<Button type="button" variant="outline" size="sm" onClick={() => void handlePreview(previewHref)}>
+						<Eye aria-hidden />
 						{t("preview")}
 					</Button>
 				) : (
@@ -153,82 +169,51 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
 						<TooltipTrigger
 							render={
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									aria-disabled
-									className="cursor-not-allowed gap-condensed opacity-50 hover:bg-transparent"
-								>
-									<Eye aria-hidden className="size-4" />
+								<Button type="button" variant="outline" size="sm" aria-disabled>
+									<Eye aria-hidden />
 									{t("preview")}
 								</Button>
 							}
 						/>
-						<TooltipContent side="bottom" className="max-w-64">
-							{t(`preview.${previewBlocker ?? "no-slug"}`)}
-						</TooltipContent>
+						<TooltipContent side="bottom">{t(`preview.${previewBlocker ?? "no-slug"}`)}</TooltipContent>
 					</Tooltip>
 				)}
 				{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
 				{isTrashed ? (
-					<Button
-						type="button"
-						size="sm"
-						className="ml-tight"
-						disabled={isSubmitting}
-						onClick={() => void runLifecycle("restore")}
-					>
+					<Button type="button" size="sm" disabled={isSubmitting} onClick={() => void runLifecycle("restore")}>
 						{busy === "status" ? t("restoring") : lifecycleLabel(site).restore}
 					</Button>
 				) : entry?.status === "archived" ? (
-					<Button
-						type="button"
-						size="sm"
-						className="ml-tight"
-						disabled={isSubmitting}
-						onClick={() => void runLifecycle("unarchive")}
-					>
+					<Button type="button" size="sm" disabled={isSubmitting} onClick={() => void runLifecycle("unarchive")}>
 						{busy === "status" ? t("unarchiving") : lifecycleLabel(site).unarchive}
 					</Button>
 				) : !canResetPublishedAt ? (
-					<Button
-						id="cms-publish"
-						type="button"
-						size="sm"
-						className="ml-tight"
-						disabled={isSubmitting}
-						onClick={() => void handlePublish()}
-					>
+					<Button id="cms-publish" type="button" size="sm" disabled={isSubmitting} onClick={() => void handlePublish()}>
 						{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 					</Button>
 				) : (
-					// For an already published post, publish and "republish with today's date" are combined into one button.
-					// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
-					<div className="ml-tight flex h-8 items-center overflow-hidden rounded-md bg-monti-emphasis text-monti-on-emphasis">
+					// For an already published post, publish and "republish with today's date" sit side by side as one group.
+					<ButtonGroup>
 						<Button
 							id="cms-publish"
 							type="button"
 							size="sm"
-							className="h-full rounded-none bg-transparent pr-condensed pl-normal hover:bg-monti-emphasis-hover"
 							disabled={isSubmitting}
 							onClick={() => void handlePublish()}
 						>
 							{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 						</Button>
-						<span aria-hidden className="h-4 w-px bg-monti-divider" />
 						<DropdownMenu>
 							<IconButton
 								label={t("publishOptions")}
 								side="bottom"
 								variant="default"
 								disabled={isSubmitting}
-								className="h-full w-7 rounded-none bg-transparent hover:bg-monti-emphasis-hover aria-expanded:bg-monti-emphasis-hover"
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
-								<ChevronDown aria-hidden className="size-3.5" />
+								<ChevronDown aria-hidden />
 							</IconButton>
-							<DropdownMenuContent align="end" className="min-w-48">
+							<DropdownMenuContent align="end" width="md">
 								{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
 								{canResetPublishedAt && (
 									<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
@@ -238,28 +223,19 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								)}
 							</DropdownMenuContent>
 						</DropdownMenu>
-					</div>
+					</ButtonGroup>
 				)}
-				<span aria-hidden className="mx-tight h-4 w-px bg-monti-divider" />
-				<IconButton
-					label={t("properties")}
-					side="bottom"
-					pressed={isInspectorOpen}
-					className="size-8 text-monti-muted"
-					onClick={onToggleInspector}
-				>
-					<PanelRight aria-hidden className="size-4" />
+				<Inline height="control-sm" paddingX="tight">
+					<Separator orientation="vertical" aria-hidden />
+				</Inline>
+				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>
+					<PanelRight aria-hidden />
 				</IconButton>
 				<DropdownMenu>
-					<IconButton
-						label={t("more")}
-						side="bottom"
-						className="size-8 text-monti-muted"
-						trigger={(button) => <DropdownMenuTrigger render={button} />}
-					>
-						<MoreHorizontal aria-hidden className="size-4" />
+					<IconButton label={t("more")} side="bottom" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+						<MoreHorizontal aria-hidden />
 					</IconButton>
-					<DropdownMenuContent align="end" className="min-w-56">
+					<DropdownMenuContent align="end" width="lg">
 						{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 						{entry && !isTrashed && (
 							<>
@@ -307,7 +283,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</div>
+			</Inline>
 			{entry && (
 				<ExportDialog
 					open={isExporting}
@@ -318,6 +294,6 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					unsaved={editor.hasUnsavedChanges}
 				/>
 			)}
-		</header>
+		</Inline>
 	);
 }

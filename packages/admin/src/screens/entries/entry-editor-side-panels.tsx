@@ -24,14 +24,9 @@ export function TranslationSourcePanel({
 	onClose: () => void;
 }) {
 	return (
-		<SourcePane
-			ref={paneRef}
-			doc={source.doc}
-			title={source.title}
-			locale={source.locale}
-			onClose={onClose}
-			className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-floating lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
-		/>
+		<div className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-floating lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none">
+			<SourcePane ref={paneRef} doc={source.doc} title={source.title} locale={source.locale} onClose={onClose} />
+		</div>
 	);
 }
 

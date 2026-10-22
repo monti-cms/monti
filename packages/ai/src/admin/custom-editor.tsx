@@ -2,15 +2,17 @@
 
 import { type Site, type Translator, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	cn,
+	Box,
 	FormField,
 	FormFieldLabel,
+	Grid,
 	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
 } from "@monti-cms/admin/kit";
 import { useId } from "react";
 import { type CustomBase, type CustomSurface, customBlocksOf, customEngines, customResults } from "../custom";
@@ -28,7 +30,7 @@ export function OptionSelect({
 	options,
 	onChange,
 	disabled,
-	className,
+	width = "full",
 	"aria-label": ariaLabel,
 }: {
 	id?: string;
@@ -36,7 +38,7 @@ export function OptionSelect({
 	options: readonly Option[];
 	onChange: (value: string) => void;
 	disabled?: boolean;
-	className?: string;
+	width?: "fit" | "full";
 	"aria-label"?: string;
 }) {
 	return (
@@ -46,17 +48,12 @@ export function OptionSelect({
 			disabled={disabled}
 			onValueChange={(next) => typeof next === "string" && onChange(next)}
 		>
-			<SelectTrigger
-				id={id}
-				size="sm"
-				aria-label={ariaLabel}
-				className={cn("w-full min-w-0 text-monti-caption", className)}
-			>
+			<SelectTrigger id={id} size="sm" width={width} aria-label={ariaLabel}>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((option) => (
-					<SelectItem key={option.value} value={option.value} className="text-monti-caption">
+					<SelectItem key={option.value} value={option.value}>
 						{option.label}
 					</SelectItem>
 				))}
@@ -167,68 +164,70 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 	const fieldValue =
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
-		<div className="grid gap-comfortable sm:grid-cols-2">
-			<FormField className="sm:col-span-2">
+		<Stack gap="comfortable">
+			<FormField>
 				<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 				<Input
 					id={ids.label}
 					value={base.label}
 					maxLength={40}
 					onChange={(event) => onChange({ ...base, label: event.target.value })}
-					className="h-8 text-monti-caption md:text-monti-caption"
+					size="sm"
 				/>
 			</FormField>
-			<FormField>
-				<FormFieldLabel htmlFor={ids.place}>{t("field.place")}</FormFieldLabel>
-				<OptionSelect
-					id={ids.place}
-					value={placeValue(base.surface)}
-					options={placeOptions}
-					onChange={(value) => {
-						const option = placeOptions.find((item) => item.value === value);
-						if (option) setSurface(option.surface ?? firstField(site));
-					}}
-				/>
-			</FormField>
-			{base.surface.slot === "field" ? (
+			<Grid columns={2} gap="comfortable">
 				<FormField>
-					<FormFieldLabel htmlFor={ids.field}>{t("field.field")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.place}>{t("field.place")}</FormFieldLabel>
 					<OptionSelect
-						id={ids.field}
-						value={fieldValue}
-						options={fieldOptions}
+						id={ids.place}
+						value={placeValue(base.surface)}
+						options={placeOptions}
 						onChange={(value) => {
-							const [collection, field] = value.split(":");
-							if (collection && field) setSurface({ slot: "field", field, collections: [collection] });
+							const option = placeOptions.find((item) => item.value === value);
+							if (option) setSurface(option.surface ?? firstField(site));
 						}}
 					/>
 				</FormField>
-			) : (
-				<div />
-			)}
-			<FormField>
-				<FormFieldLabel htmlFor={ids.result}>{t("field.result")}</FormFieldLabel>
-				<OptionSelect
-					id={ids.result}
-					value={base.result}
-					options={customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) }))}
-					onChange={(result) => onChange({ ...base, result: result as CustomBase["result"] })}
-				/>
-			</FormField>
-			{engines.length > 1 && (
+				{base.surface.slot === "field" ? (
+					<FormField>
+						<FormFieldLabel htmlFor={ids.field}>{t("field.field")}</FormFieldLabel>
+						<OptionSelect
+							id={ids.field}
+							value={fieldValue}
+							options={fieldOptions}
+							onChange={(value) => {
+								const [collection, field] = value.split(":");
+								if (collection && field) setSurface({ slot: "field", field, collections: [collection] });
+							}}
+						/>
+					</FormField>
+				) : (
+					<Box />
+				)}
 				<FormField>
-					<FormFieldLabel htmlFor={ids.engine}>{t("field.engine")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.result}>{t("field.result")}</FormFieldLabel>
 					<OptionSelect
-						id={ids.engine}
-						value={base.engine ?? "generate"}
-						options={engines.map((engine) => ({ value: engine, label: engineLabel(engine) }))}
-						onChange={(value) => {
-							const engine = value as NonNullable<CustomBase["engine"]>;
-							onChange({ ...base, engine: engine === "decide" ? engine : undefined });
-						}}
+						id={ids.result}
+						value={base.result}
+						options={customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) }))}
+						onChange={(result) => onChange({ ...base, result: result as CustomBase["result"] })}
 					/>
 				</FormField>
-			)}
-		</div>
+				{engines.length > 1 && (
+					<FormField>
+						<FormFieldLabel htmlFor={ids.engine}>{t("field.engine")}</FormFieldLabel>
+						<OptionSelect
+							id={ids.engine}
+							value={base.engine ?? "generate"}
+							options={engines.map((engine) => ({ value: engine, label: engineLabel(engine) }))}
+							onChange={(value) => {
+								const engine = value as NonNullable<CustomBase["engine"]>;
+								onChange({ ...base, engine: engine === "decide" ? engine : undefined });
+							}}
+						/>
+					</FormField>
+				)}
+			</Grid>
+		</Stack>
 	);
 }

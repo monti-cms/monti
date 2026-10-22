@@ -23,15 +23,20 @@ function ContextMenuTrigger({ className, ...props }: ContextMenuPrimitive.Trigge
 	);
 }
 
+const MENU_WIDTH = { sm: "min-w-36", md: "min-w-48", lg: "min-w-56" } as const;
+
 function ContextMenuContent({
+	width,
 	className,
 	align = "start",
 	alignOffset = 4,
 	side = "right",
 	sideOffset = 0,
 	...props
-}: ContextMenuPrimitive.Popup.Props &
-	Pick<ContextMenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+}: ContextMenuPrimitive.Popup.Props & {
+	/** The menu's minimum width: `sm` 144px, `md` 192px, `lg` 224px. */
+	width?: keyof typeof MENU_WIDTH;
+} & Pick<ContextMenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
 	return (
 		<ContextMenuPrimitive.Portal>
 			<ContextMenuPrimitive.Positioner
@@ -45,6 +50,7 @@ function ContextMenuContent({
 					data-slot="context-menu-content"
 					className={cn(
 						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
+						width && MENU_WIDTH[width],
 						className,
 					)}
 					{...props}
@@ -203,7 +209,7 @@ function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Sepa
 	return (
 		<ContextMenuPrimitive.Separator
 			data-slot="context-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-divider first:hidden last:hidden", className)}
 			{...props}
 		/>
 	);

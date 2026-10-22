@@ -2,7 +2,7 @@
 
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton, Separator } from "@monti-cms/ui";
+import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextLink } from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -11,6 +11,7 @@ import {
 	Eye,
 	EyeOff,
 	Link2,
+	type LucideIcon,
 	MessageSquareMore,
 	Pencil,
 	Regex,
@@ -88,14 +89,12 @@ export function BubbleButton({
 	onClick,
 	pressed,
 	tone,
-	className,
 	children,
 }: {
 	label: string;
 	onClick: () => void;
 	pressed?: boolean;
 	tone?: "danger";
-	className?: string;
 	children: ReactNode;
 }) {
 	return (
@@ -107,10 +106,18 @@ export function BubbleButton({
 			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={onClick}
-			className={cn("h-8 min-w-8 px-condensed", className)}
 		>
 			{children}
 		</IconButton>
+	);
+}
+
+/** A decorative icon at the start of a bubble row (what the row is about). */
+function BubbleIcon({ icon }: { icon: LucideIcon }) {
+	return (
+		<Box as="span" paddingX="tight" shrink={false}>
+			<Icon icon={icon} tone="muted" />
+		</Box>
 	);
 }
 
@@ -313,58 +320,64 @@ export function InlineBubble({
 			const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
-				<div key={mark.name} className="flex items-center gap-hair">
-					<Link2 aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
+				<Inline key={mark.name} gap="hair">
+					<BubbleIcon icon={Link2} />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
-						<a
-							href={href}
-							target="_blank"
-							rel="noreferrer noopener"
-							title={href}
-							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
-							onMouseDown={(event) => event.preventDefault()}
-							className="max-w-56 truncate px-tight text-monti-accent text-monti-caption underline underline-offset-2"
-						>
-							{href}
-						</a>
+						<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+							<Text as="div" variant="caption" truncate>
+								<TextLink
+									href={href}
+									target="_blank"
+									rel="noreferrer noopener"
+									title={href}
+									tone="accent"
+									// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
+									onMouseDown={(event) => event.preventDefault()}
+								>
+									{href}
+								</TextLink>
+							</Text>
+						</Box>
 					)}
 					<BubbleButton
 						label={t("link.edit")}
 						onClick={() => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId })}
 					>
-						<Pencil aria-hidden className="size-4" />
+						<Pencil aria-hidden />
 					</BubbleButton>
 					<BubbleButton label={t("link.remove")} onClick={act(() => removeInlineMark(editor, mark))}>
-						<Unlink aria-hidden className="size-4" />
+						<Unlink aria-hidden />
 					</BubbleButton>
-				</div>
+				</Inline>
 			);
 		}
 		if (mark.name === CODE_TOOLTIP_MARK_NAME) {
 			const content = String(mark.attrs.content ?? "");
 			return (
-				<div key={mark.name} className="flex items-center gap-hair">
-					<MessageSquareMore aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
-					<span className="max-w-48 truncate px-tight text-monti-caption text-monti-muted" title={content}>
-						{content}
-					</span>
+				<Inline key={mark.name} gap="hair">
+					<BubbleIcon icon={MessageSquareMore} />
+					<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+						<Text as="div" variant="caption" tone="muted" truncate title={content}>
+							{content}
+						</Text>
+					</Box>
 					<BubbleButton label={t("inlineBubble.tooltipEdit")} onClick={() => openCodeTooltip(mark)}>
-						<Pencil aria-hidden className="size-4" />
+						<Pencil aria-hidden />
 					</BubbleButton>
 					<BubbleButton label={t("inlineBubble.tooltipRemove")} onClick={act(() => removeInlineMark(editor, mark))}>
-						<X aria-hidden className="size-4" />
+						<X aria-hidden />
 					</BubbleButton>
-				</div>
+				</Inline>
 			);
 		}
 		const Detail = markExtensions.find(({ name }) => name === mark.name)?.extension.detail;
 		if (Detail) {
 			return (
-				<div key={mark.name} className="flex items-center gap-hair">
+				<Inline key={mark.name} gap="hair">
 					<Detail {...bubbleProps} mark={mark} />
-				</div>
+				</Inline>
 			);
 		}
 		if (mark.name === "codeFold") {
@@ -380,19 +393,22 @@ export function InlineBubble({
 			const publicOpen = mark.attrs.open === true;
 			const type = editor.schema.marks.codeFold;
 			return (
-				<div key={mark.name} className="flex items-center gap-hair">
-					<ChevronsLeftRightEllipsis aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
-					<span className="px-tight text-monti-caption text-monti-muted">{t("inlineBubble.fold")}</span>
+				<Inline key={mark.name} gap="hair">
+					<BubbleIcon icon={ChevronsLeftRightEllipsis} />
+					<Box as="span" paddingX="tight">
+						<Text variant="caption" tone="muted">
+							{t("inlineBubble.fold")}
+						</Text>
+					</Box>
 					<BubbleButton
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
 					>
-						{open ? <EyeOff aria-hidden className="size-4" /> : <Eye aria-hidden className="size-4" />}
+						{open ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
 					</BubbleButton>
 					<BubbleButton
 						label={t("inlineBubble.openByDefault")}
 						pressed={publicOpen}
-						className="text-monti-caption"
 						onClick={act(() => {
 							if (!type) return;
 							editor
@@ -408,9 +424,9 @@ export function InlineBubble({
 						{t("inlineBubble.openByDefault")}
 					</BubbleButton>
 					<BubbleButton label={t("inlineBubble.foldRemove")} onClick={act(() => removeInlineMark(editor, mark))}>
-						<X aria-hidden className="size-4" />
+						<X aria-hidden />
 					</BubbleButton>
-				</div>
+				</Inline>
 			);
 		}
 		const tool = inlineMarkTools(site).find((item) => item.mark === mark.name);
@@ -420,10 +436,9 @@ export function InlineBubble({
 				key={mark.name}
 				label={t("markText.remove", { name: tool.title ?? tool.label })}
 				onClick={act(() => removeInlineMark(editor, mark))}
-				className="gap-hair"
 			>
-				<tool.icon aria-hidden className="size-4" />
-				<X aria-hidden className="size-3 text-monti-muted" />
+				<tool.icon aria-hidden />
+				<X aria-hidden />
 			</BubbleButton>
 		);
 	};
@@ -434,25 +449,23 @@ export function InlineBubble({
 		const region = { key: `m:${from}`, kind: "fold" as const, from, to, defaultOpen: true, hiddenLines: 0 };
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
-			<div key={rule.id} className="flex items-center gap-hair">
-				<Regex aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
-				<span
-					className="max-w-48 truncate px-tight text-monti-caption text-monti-muted"
-					title={`/${rule.pattern}/${rule.flags}`}
-				>
-					{t("inlineBubble.ruleSummary", { label, count })}
-				</span>
+			<Inline key={rule.id} gap="hair">
+				<BubbleIcon icon={Regex} />
+				<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+					<Text as="div" variant="caption" tone="muted" truncate title={`/${rule.pattern}/${rule.flags}`}>
+						{t("inlineBubble.ruleSummary", { label, count })}
+					</Text>
+				</Box>
 				{rule.name === "fold" && (
 					<BubbleButton
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
 					>
-						{open ? <EyeOff aria-hidden className="size-4" /> : <Eye aria-hidden className="size-4" />}
+						{open ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
 					</BubbleButton>
 				)}
 				<BubbleButton
 					label={t("inlineBubble.ruleExpand")}
-					className="text-monti-caption"
 					onClick={act(() => expandRule(editor.view, blockPos, rule.id))}
 				>
 					{t("inlineBubble.ruleExpandShort")}
@@ -462,9 +475,9 @@ export function InlineBubble({
 					tone="danger"
 					onClick={act(() => removeRule(editor.view, blockPos, rule.id))}
 				>
-					<Trash2 aria-hidden className="size-4" />
+					<Trash2 aria-hidden />
 				</BubbleButton>
-			</div>
+			</Inline>
 		);
 	};
 
@@ -477,28 +490,31 @@ export function InlineBubble({
 			...(simple.length ? [<Fragment key="simple">{simple.map(renderMark)}</Fragment>] : []),
 		];
 		return groups.map((group, index) => (
-			<div key={group.key} className="flex items-center gap-hair">
-				{index > 0 && <Separator orientation="vertical" className="mx-hair h-4" />}
+			<Inline key={group.key} gap="hair">
+				{index > 0 && <Separator orientation="vertical" length="control" />}
 				{group}
-			</div>
+			</Inline>
 		));
 	};
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
-		<div className="flex items-center gap-tight">
-			<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-selected font-medium text-monti-caption text-monti-default leading-none">
-				{target.badge}
-			</span>
-			<button
-				type="button"
-				onClick={() => setPanel({ kind: "footnote", target })}
-				className="max-w-48 truncate px-tight text-left text-monti-caption text-monti-muted hover:text-monti-default"
-				title={target.defText || t("inlineBubble.footnoteEmpty")}
-			>
-				{target.defText || t("inlineBubble.footnoteEmpty")}
-			</button>
+		<Inline gap="tight">
+			<Badge variant="secondary">{target.badge}</Badge>
+			<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+				<Text as="div" variant="caption" truncate>
+					<TextLink
+						render={<button type="button" />}
+						underline="hover"
+						tone="muted"
+						onClick={() => setPanel({ kind: "footnote", target })}
+						title={target.defText || t("inlineBubble.footnoteEmpty")}
+					>
+						{target.defText || t("inlineBubble.footnoteEmpty")}
+					</TextLink>
+				</Text>
+			</Box>
 			<BubbleButton label={t("inlineBubble.footnoteEdit")} onClick={() => setPanel({ kind: "footnote", target })}>
-				<Pencil aria-hidden className="size-4" />
+				<Pencil aria-hidden />
 			</BubbleButton>
 			<BubbleButton
 				label={t("inlineBubble.footnoteRemove")}
@@ -506,9 +522,9 @@ export function InlineBubble({
 					removeFootnote(editor, target);
 				})}
 			>
-				<X aria-hidden className="size-4" />
+				<X aria-hidden />
 			</BubbleButton>
-		</div>
+		</Inline>
 	);
 
 	// In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
@@ -531,14 +547,14 @@ export function InlineBubble({
 							{action.icon}
 						</BubbleButton>
 					))}
-					<Separator orientation="vertical" className="mx-hair h-4" />
+					<Separator orientation="vertical" length="control" />
 				</>
 			)}
 			{allowedMarkTools(site, editor.state).map((item) => (
 				<ToolbarButton key={item.mark} editor={editor} item={item} tooltipSide="top" />
 			))}
 			{bubbleTools("format").map(renderTool)}
-			<Separator orientation="vertical" className="mx-hair h-4" />
+			<Separator orientation="vertical" length="control" />
 			{inCode &&
 				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
 				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (
@@ -548,7 +564,7 @@ export function InlineBubble({
 						}
 						onClick={() => openCodeTooltip()}
 					>
-						<MessageSquareMore aria-hidden className="size-4" />
+						<MessageSquareMore aria-hidden />
 					</BubbleButton>
 				)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool)}
@@ -557,7 +573,7 @@ export function InlineBubble({
 					label={editor.isActive("link") ? t("link.edit") : t("link.add")}
 					onClick={() => openLink(linkDraftFromSelection(editor))}
 				>
-					<Link2 aria-hidden className="size-4" />
+					<Link2 aria-hidden />
 				</BubbleButton>
 			)}
 			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool)}
@@ -567,7 +583,7 @@ export function InlineBubble({
 					pressed={editor.isActive("codeFold")}
 					onClick={() => editor.chain().focus().toggleMark("codeFold").run()}
 				>
-					<ChevronsLeftRightEllipsis aria-hidden className="size-4" />
+					<ChevronsLeftRightEllipsis aria-hidden />
 				</BubbleButton>
 			)}
 		</>

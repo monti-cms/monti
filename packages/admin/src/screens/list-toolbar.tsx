@@ -1,7 +1,21 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, IconButton, InputGroup, InputGroupAddon, InputGroupInput, Toggle } from "@monti-cms/ui";
+import {
+	Box,
+	Button,
+	IconButton,
+	Inline,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+	PageTabs,
+	Stack,
+	Tabs,
+	TabsTrigger,
+	Text,
+	Toggle,
+} from "@monti-cms/ui";
 import { AlignLeft, Search, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -90,33 +104,34 @@ export function ListSearch({
 
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
-		<InputGroup className="h-[34px] w-64">
-			<InputGroupAddon>
-				<Search aria-hidden />
-			</InputGroupAddon>
-			<InputGroupInput
-				type="search"
-				aria-label={t("toolbar.searchLabel")}
-				value={search}
-				onChange={(event) => setSearch(event.target.value)}
-				placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
-			/>
-			{withBody && (
-				<InputGroupAddon align="inline-end">
-					<Toggle
-						size="sm"
-						aria-label={t("toolbar.includeBody")}
-						title={t("toolbar.includeBody")}
-						pressed={state.includeBody}
-						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						className="h-6 min-w-6 gap-tight px-condensed text-monti-caption text-monti-muted aria-pressed:bg-monti-selected aria-pressed:text-monti-default"
-					>
-						<AlignLeft aria-hidden />
-						{t("toolbar.includeBodyShort")}
-					</Toggle>
+		<Box width="panel">
+			<InputGroup>
+				<InputGroupAddon>
+					<Search aria-hidden />
 				</InputGroupAddon>
-			)}
-		</InputGroup>
+				<InputGroupInput
+					type="search"
+					aria-label={t("toolbar.searchLabel")}
+					value={search}
+					onChange={(event) => setSearch(event.target.value)}
+					placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
+				/>
+				{withBody && (
+					<InputGroupAddon align="inline-end">
+						<Toggle
+							size="sm"
+							aria-label={t("toolbar.includeBody")}
+							title={t("toolbar.includeBody")}
+							pressed={state.includeBody}
+							onPressedChange={(pressed) => onChange({ includeBody: pressed })}
+						>
+							<AlignLeft aria-hidden />
+							{t("toolbar.includeBodyShort")}
+						</Toggle>
+					</InputGroupAddon>
+				)}
+			</InputGroup>
+		</Box>
 	);
 }
 
@@ -137,20 +152,18 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 		...LIST_STATUSES.map((status) => ({ key: status, label: statusLabels(site)[status] })),
 	];
 	return (
-		<fieldset className="-mb-px flex items-stretch gap-comfortable">
-			<legend className="sr-only">{t("list.statusFilter")}</legend>
-			{segments.map(({ key, label }) => (
-				<button
-					key={key}
-					type="button"
-					aria-pressed={active === key}
-					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
-					onClick={() => onChange({ statuses: key === "all" ? [] : [key], hasChanges: false })}
-				>
-					{label}
-				</button>
-			))}
-		</fieldset>
+		<Tabs
+			value={active ?? ""}
+			onValueChange={(key) => onChange({ statuses: key === "all" ? [] : [key as ListStatus], hasChanges: false })}
+		>
+			<PageTabs aria-label={t("list.statusFilter")}>
+				{segments.map(({ key, label }) => (
+					<TabsTrigger key={key} value={key}>
+						{label}
+					</TabsTrigger>
+				))}
+			</PageTabs>
+		</Tabs>
 	);
 }
 
@@ -177,47 +190,58 @@ export function ListSubToolbar({
 	const chips = filterChips(site, state, options).filter(
 		(chip) => !(hasSegments && chip.key === "status" && activeStatusSegment(state) !== null),
 	);
-	return (
-		<div className="flex min-h-11 shrink-0 items-stretch gap-comfortable border-b px-wide">
-			{hasSegments && <StatusSegments state={state} onChange={onChange} />}
-			{chips.length === 0 ? (
-				<div className="flex-1" />
-			) : (
-				<ul
-					aria-label={t("toolbar.chips")}
-					className="flex min-w-0 flex-1 flex-wrap items-center gap-condensed py-condensed"
-				>
-					{chips.map((chip) => (
-						<li key={chip.key}>
-							<span className="inline-flex h-6 items-center gap-tight rounded-sm bg-monti-selected pr-hair pl-condensed font-medium text-monti-caption text-monti-default">
-								<span className="max-w-72 truncate">{chip.label}</span>
-								<IconButton
-									size="icon-xs"
-									className="size-5 text-monti-default hover:bg-monti-divider hover:text-monti-default"
-									label={t("filter.clear")}
-									onClick={() => onChange(chip.clear)}
-								>
-									<X aria-hidden />
-								</IconButton>
-							</span>
-						</li>
-					))}
-					{chips.length >= 2 && (
-						<li>
-							<Button
-								type="button"
-								variant="ghost"
-								size="xs"
-								className="text-monti-caption text-monti-muted"
-								onClick={() => onChange(clearFiltersPatch(state))}
-							>
-								{t("filter.clearAll")}
-							</Button>
-						</li>
+	const chipList =
+		chips.length === 0 ? null : (
+			<Inline as="ul" wrap gap="condensed" grow minWidth={0} paddingY="condensed" aria-label={t("toolbar.chips")}>
+				{chips.map((chip) => (
+					<Box as="li" key={chip.key}>
+						<Inline as="span" gap="tight" background="selected" radius="sm" paddingX="condensed">
+							<Box as="span" minWidth={0} maxWidth="panel-lg">
+								<Text variant="caption" weight="medium" tone="default" truncate>
+									{chip.label}
+								</Text>
+							</Box>
+							<IconButton size="icon-xs" label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
+								<X aria-hidden />
+							</IconButton>
+						</Inline>
+					</Box>
+				))}
+				{chips.length >= 2 && (
+					<Box as="li">
+						<Button type="button" variant="quiet" size="xs" onClick={() => onChange(clearFiltersPatch(state))}>
+							{t("filter.clearAll")}
+						</Button>
+					</Box>
+				)}
+			</Inline>
+		);
+	if (hasSegments) {
+		// The status tabs draw the line under the row; the chips, when there are any, get a row of their own below.
+		return (
+			<Stack gap="none" shrink={false}>
+				<Inline align="stretch" gap="none">
+					<Box grow minWidth={0}>
+						<StatusSegments state={state} onChange={onChange} />
+					</Box>
+					{trailing && (
+						<Inline border="bottom" paddingX="wide">
+							{trailing}
+						</Inline>
 					)}
-				</ul>
-			)}
-			{trailing && <div className="flex items-center">{trailing}</div>}
-		</div>
+				</Inline>
+				{chipList && (
+					<Inline border="bottom" paddingX="wide">
+						{chipList}
+					</Inline>
+				)}
+			</Stack>
+		);
+	}
+	return (
+		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="tight">
+			{chipList ?? <Box grow />}
+			{trailing && <Inline>{trailing}</Inline>}
+		</Inline>
 	);
 }

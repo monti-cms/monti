@@ -381,7 +381,7 @@ describe("list screen — folders", () => {
 describe("list screen — a collection without folders", () => {
 	/** The same list screen under a site where `post` has folders turned off. */
 	const offNav = createTestRouter({ site: siteWithFolders("post", false) });
-	const blankArea = () => document.querySelector<HTMLElement>(".min-h-12.flex-1");
+	const blankArea = () => screen.queryByTestId("list-blank-area");
 	/** The sidebar counts folders of the other collections that use them; only this collection's folders are in question. */
 	const folderRequests = () =>
 		fetchMock.mock.calls.filter(([input]) => {

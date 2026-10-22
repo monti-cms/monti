@@ -5,6 +5,7 @@
 
 import type { Site } from "@monti-cms/core/site";
 import {
+	Box,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -104,14 +105,18 @@ export const buildToolbarEntries = ({
 		<>
 			{allowance.allowsBlock("image") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openImageDialog()}>
-					<ImageIcon aria-hidden className="size-4" />
-					<span className="flex-1">{t("toolbar.image")}</span>
+					<ImageIcon aria-hidden />
+					<Box as="span" grow>
+						{t("toolbar.image")}
+					</Box>
 				</DropdownMenuItem>
 			)}
 			{allowance.allowsBlock("file") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openFilePicker()}>
-					<Paperclip aria-hidden className="size-4" />
-					<span className="flex-1">{t("toolbar.file")}</span>
+					<Paperclip aria-hidden />
+					<Box as="span" grow>
+						{t("toolbar.file")}
+					</Box>
 				</DropdownMenuItem>
 			)}
 		</>
@@ -191,9 +196,9 @@ export const buildToolbarEntries = ({
 									onMouseDown={(event) => event.preventDefault()}
 									trigger={(button) => <DropdownMenuTrigger render={button} />}
 								>
-									<Upload className="size-4" aria-hidden />
+									<Upload aria-hidden />
 								</IconButton>
-								<DropdownMenuContent align="start" className="min-w-40">
+								<DropdownMenuContent align="start" width="sm">
 									<UploadMenuItems />
 								</DropdownMenuContent>
 							</DropdownMenu>
@@ -219,22 +224,21 @@ export const buildToolbarEntries = ({
 											<PopoverTrigger
 												render={
 													<Toggle
-														size="sm"
+														size="icon-sm"
 														pressed={editor.isActive("link")}
 														disabled={!canEdit}
 														aria-label={t("toolbar.link")}
 														onMouseDown={(event) => event.preventDefault()}
-														className="size-8 p-0"
 													/>
 												}
 											>
-												<Link2 aria-hidden className="size-4" />
+												<Link2 aria-hidden />
 											</PopoverTrigger>
 										}
 									/>
 									<TooltipContent side="bottom">{t("toolbar.link")}</TooltipContent>
 								</Tooltip>
-								<PopoverContent align="start" className="w-80">
+								<PopoverContent align="start" width="md">
 									{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}
 								</PopoverContent>
 							</Popover>

@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { cn } from "./cn";
+import { type LayoutProps, layoutVariants, splitLayout } from "./layout";
 
 function Card({ className, size = "default", ...props }: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
 	return (
@@ -63,12 +64,18 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /** The plain bordered surface for a section of a screen: a list, a form group, a table. Lay out its content yourself; `Card` is for titled cards. */
-function Panel({ className, ...props }: React.ComponentProps<"div">) {
+/** A resting surface: a card with a hairline border. Takes the layout options (padding, overflow, size) of `Box`. */
+function Panel({ className, ...props }: React.ComponentProps<"div"> & LayoutProps) {
+	const [layout, rest] = splitLayout(props);
 	return (
 		<div
 			data-slot="panel"
-			className={cn("rounded-lg border border-monti-muted bg-monti-surface text-monti-default", className)}
-			{...props}
+			className={cn(
+				"rounded-lg border border-monti-muted bg-monti-surface text-monti-default",
+				layoutVariants(layout),
+				className,
+			)}
+			{...rest}
 		/>
 	);
 }

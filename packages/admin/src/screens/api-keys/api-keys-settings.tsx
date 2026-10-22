@@ -6,6 +6,7 @@ import {
 	AlertDescription,
 	AlertTitle,
 	Badge,
+	Box,
 	Button,
 	Dialog,
 	DialogContent,
@@ -14,8 +15,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 	FormFieldError,
+	Inline,
 	Input,
+	List,
+	ListItem,
 	Skeleton,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
@@ -61,14 +67,14 @@ export function ApiKeysSettings() {
 		const ok = await confirm({
 			title: t("delete.title", { name: key.name }),
 			description: used ? (
-				<div className="flex flex-col gap-condensed">
-					<p>{t("delete.usedDescription", { count: key.uses.length })}</p>
-					<ul className="list-disc pl-comfortable" data-testid="delete-dependents">
+				<Stack gap="condensed">
+					<Text as="p">{t("delete.usedDescription", { count: key.uses.length })}</Text>
+					<List data-testid="delete-dependents">
 						{key.uses.map((use) => (
-							<li key={`${use.plugin}:${use.ref}`}>{use.label}</li>
+							<ListItem key={`${use.plugin}:${use.ref}`}>{use.label}</ListItem>
 						))}
-					</ul>
-				</div>
+					</List>
+				</Stack>
 			) : (
 				t("delete.unusedDescription")
 			),
@@ -95,7 +101,7 @@ export function ApiKeysSettings() {
 	];
 
 	return (
-		<div data-testid="api-keys-settings" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+		<Stack gap="none" grow minHeight={0} overflow="y" data-testid="api-keys-settings">
 			<PageActions>
 				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
 					<Plus aria-hidden />
@@ -103,21 +109,25 @@ export function ApiKeysSettings() {
 				</Button>
 			</PageActions>
 			{list && !list.secretsAvailable && (
-				<Alert tone="danger" layout="stack" className="mx-wide mb-comfortable w-auto">
-					<AlertTitle>{t("secret.title")}</AlertTitle>
-					<AlertDescription>{t("secret.description")}</AlertDescription>
-				</Alert>
+				<Box paddingX="wide" paddingBottom="comfortable">
+					<Alert tone="danger" layout="stack">
+						<AlertTitle>{t("secret.title")}</AlertTitle>
+						<AlertDescription>{t("secret.description")}</AlertDescription>
+					</Alert>
+				</Box>
 			)}
-			<div className="flex min-h-11 shrink-0 items-center border-monti-muted border-y px-wide text-monti-caption text-monti-muted">
-				{list
-					? [
-							t("count.keys", { count: list.items.length }),
-							...(list.slots.some((slot) => !slot.key)
-								? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
-								: []),
-						].join(" · ")
-					: "\u00a0"}
-			</div>
+			<Inline border="y" paddingX="wide" paddingY="condensed" shrink={false}>
+				<Text variant="caption" tone="muted">
+					{list
+						? [
+								t("count.keys", { count: list.items.length }),
+								...(list.slots.some((slot) => !slot.key)
+									? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
+									: []),
+							].join(" · ")
+						: "\u00a0"}
+				</Text>
+			</Inline>
 			<KeyRows
 				query={query}
 				menu={rowMenu}
@@ -125,7 +135,11 @@ export function ApiKeysSettings() {
 				onRetry={() => void query.refetch()}
 				onAdd={() => setEditing({ mode: "add" })}
 			/>
-			<p className="px-wide py-comfortable text-monti-caption text-monti-muted">{t("note")}</p>
+			<Box paddingX="wide" paddingY="comfortable">
+				<Text as="p" variant="caption" tone="muted">
+					{t("note")}
+				</Text>
+			</Box>
 			{editing && (
 				<KeyDialog
 					key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
@@ -142,7 +156,7 @@ export function ApiKeysSettings() {
 				/>
 			)}
 			{dialog}
-		</div>
+		</Stack>
 	);
 }
 
@@ -165,14 +179,16 @@ function KeyRows({
 	if (!list) {
 		if (query.error) {
 			return (
-				<LoadErrorAlert
-					message={errorText(site, query.error, t("load.failed"))}
-					onRetry={onRetry}
-					className="mx-wide my-normal"
-				/>
+				<Box paddingX="wide" paddingY="normal">
+					<LoadErrorAlert message={errorText(site, query.error, t("load.failed"))} onRetry={onRetry} />
+				</Box>
 			);
 		}
-		return <Skeleton className="mx-wide my-comfortable h-12" />;
+		return (
+			<Box paddingX="wide" paddingY="comfortable">
+				<Skeleton shape="control" />
+			</Box>
+		);
 	}
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
@@ -186,57 +202,85 @@ function KeyRows({
 		);
 	}
 	return (
-		<ul className="divide-y divide-monti-muted border-monti-muted border-b" aria-label={t("title")}>
+		<Stack as="ul" gap="none" border="bottom" aria-label={t("title")}>
 			{list.items.map((key) => (
-				<li key={key.id} className="flex items-center gap-normal px-wide py-normal" data-testid={`api-key-${key.name}`}>
-					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-condensed">
-							<span className="truncate font-medium text-monti-body">{key.name}</span>
+				<Inline
+					as="li"
+					key={key.id}
+					gap="normal"
+					paddingX="wide"
+					paddingY="normal"
+					border="top"
+					data-testid={`api-key-${key.name}`}
+				>
+					<Stack gap="hair" grow minWidth={0}>
+						<Inline gap="condensed">
+							<Text weight="medium" truncate>
+								{key.name}
+							</Text>
 							{!key.readable && (
 								<Badge variant="danger" title={t("row.unreadableHint")}>
 									{t("row.unreadable")}
 								</Badge>
 							)}
-						</div>
+						</Inline>
 						{!key.readable ? (
-							<p className="mt-hair truncate text-monti-caption text-monti-muted">{t("row.unreadableHint")}</p>
+							<Text as="p" variant="caption" tone="muted" truncate>
+								{t("row.unreadableHint")}
+							</Text>
 						) : key.uses.length > 0 ? (
-							<ul aria-label={t("row.usedBy")} className="mt-condensed flex flex-wrap gap-tight">
+							<Inline as="ul" aria-label={t("row.usedBy")} gap="tight" wrap paddingTop="condensed">
 								{key.uses.map((use) => (
-									<li
+									<Box
+										as="li"
 										key={`${use.plugin}:${use.ref}`}
-										className="rounded-sm bg-monti-selected px-condensed py-hair font-medium text-monti-caption text-monti-default"
+										background="selected"
+										radius="sm"
+										paddingX="condensed"
+										paddingY="hair"
 									>
-										{use.label}
-									</li>
+										<Text variant="caption" weight="medium">
+											{use.label}
+										</Text>
+									</Box>
 								))}
-							</ul>
+							</Inline>
 						) : (
-							<p className="mt-hair truncate text-monti-caption text-monti-muted">{t("row.unused")}</p>
+							<Text as="p" variant="caption" tone="muted" truncate>
+								{t("row.unused")}
+							</Text>
 						)}
-					</div>
-					<span
-						className="shrink-0 font-mono text-monti-caption text-monti-muted"
+					</Stack>
+					<Text
+						variant="caption"
+						tone="muted"
+						mono
 						title={key.tail ? t("row.mask", { tail: key.tail }) : t("row.maskShort")}
 					>
 						{"••••"}
 						{key.tail}
-					</span>
+					</Text>
 					<MoreActionsButton label={t("row.menu", { name: key.name })} actions={menu(key)} />
-				</li>
+				</Inline>
 			))}
 			{emptySlots.map((slot) => (
-				<li
+				<Inline
+					as="li"
 					key={`${slot.plugin}:${slot.slot}`}
-					className="flex items-center gap-normal px-wide py-normal"
+					gap="normal"
+					paddingX="wide"
+					paddingY="normal"
+					border="top"
 					data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 				>
-					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-condensed">
-							<span className="truncate font-medium text-monti-body">{slot.label}</span>
-							<span className="text-monti-caption text-monti-muted">{t("slot.empty")}</span>
-						</div>
-					</div>
+					<Inline gap="condensed" grow minWidth={0}>
+						<Text weight="medium" truncate>
+							{slot.label}
+						</Text>
+						<Text variant="caption" tone="muted">
+							{t("slot.empty")}
+						</Text>
+					</Inline>
 					<Button
 						type="button"
 						variant="outline"
@@ -246,9 +290,9 @@ function KeyRows({
 					>
 						{t("slot.assign")}
 					</Button>
-				</li>
+				</Inline>
 			))}
-		</ul>
+		</Stack>
 	);
 }
 
@@ -279,8 +323,9 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-slot-dialog">
-				<form
-					className="grid gap-comfortable"
+				<Stack
+					as="form"
+					gap="comfortable"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();
@@ -298,7 +343,7 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 						disabled={!choiceReady(current)}
 						submitLabel={t("slot.dialog.confirm")}
 					/>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);
@@ -371,8 +416,9 @@ function KeyDialog({
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-dialog">
-				<form
-					className="grid gap-comfortable"
+				<Stack
+					as="form"
+					gap="comfortable"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();
@@ -392,7 +438,7 @@ function KeyDialog({
 								aria-invalid={nameTaken ? true : undefined}
 								onChange={(event) => setName(event.target.value)}
 							/>
-							{nameTaken && <FormFieldError className="text-monti-caption">{t("field.nameTaken")}</FormFieldError>}
+							{nameTaken && <FormFieldError>{t("field.nameTaken")}</FormFieldError>}
 						</Labeled>
 					)}
 					{needsValue && (
@@ -401,7 +447,7 @@ function KeyDialog({
 								id={valueId}
 								type="password"
 								autoComplete="off"
-								className="font-mono"
+								mono
 								value={value}
 								placeholder={t("field.valuePlaceholder")}
 								onChange={(event) => setValue(event.target.value)}
@@ -421,7 +467,7 @@ function KeyDialog({
 									: "dialog.replace.confirm",
 						)}
 					/>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);

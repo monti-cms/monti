@@ -42,6 +42,8 @@ function SheetContent({
 	side = "right",
 	showCloseButton = true,
 	resizable,
+	size,
+	scroll = false,
 	style,
 	...props
 }: SheetPrimitive.Popup.Props & {
@@ -52,6 +54,10 @@ function SheetContent({
 	 * which decides where the chosen width is remembered. Replaces any width class on `className`.
 	 */
 	resizable?: { style: React.CSSProperties; handle: React.ReactNode };
+	/** Width of a side sheet on a wide screen: `sm` 384px (default), `md` 448px, `lg` 576px. */
+	size?: "sm" | "md" | "lg";
+	/** Scrolls inside as a whole (a sheet with no list of its own). */
+	scroll?: boolean;
 }) {
 	const labels = useUiLabels();
 	const sized = resizable !== undefined && side === "right";
@@ -63,6 +69,9 @@ function SheetContent({
 				data-side={side}
 				className={cn(
 					"fixed z-50 flex flex-col gap-4 border-monti-muted bg-monti-overlay bg-clip-padding text-monti-body text-monti-default shadow-monti-floating transition duration-200 ease-in-out data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=bottom]:inset-x-0 data-[side=top]:inset-x-0 data-[side=left]:inset-y-0 data-[side=right]:inset-y-0 data-[side=top]:top-0 data-[side=right]:right-0 data-[side=bottom]:bottom-0 data-[side=left]:left-0 data-[side=bottom]:h-auto data-[side=left]:h-full data-[side=right]:h-full data-[side=top]:h-auto data-[side=left]:w-3/4 data-[side=right]:w-3/4 data-[side=bottom]:rounded-t-xl data-[side=left]:rounded-r-xl data-[side=top]:rounded-b-xl data-[side=right]:rounded-l-xl data-[side=bottom]:border-t data-[side=left]:border-r data-[side=left]:border-r data-[side=top]:border-b data-[side=right]:border-l data-[side=right]:border-l data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+					size === "md" && "data-[side=left]:sm:max-w-md data-[side=right]:sm:max-w-md",
+					size === "lg" && "data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl",
+					scroll && "overflow-y-auto",
 					sized &&
 						"data-[side=right]:w-full data-[side=right]:sm:w-[var(--panel-width)] data-[side=right]:sm:max-w-none",
 					className,

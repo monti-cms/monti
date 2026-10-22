@@ -8,26 +8,34 @@ import {
 	ApiKeyField,
 	apiKeysKeys,
 	Badge,
+	Box,
 	Button,
 	choiceReady,
 	commonMessages,
+	DescriptionItem,
+	DescriptionList,
+	DiffView,
 	EmptyState,
-	FormField,
-	FormFieldLabel,
+	Heading,
+	Inline,
 	Input,
+	Label,
 	LoadErrorAlert,
 	PageTabs,
 	Skeleton,
+	Stack,
 	Tabs,
 	TabsContent,
 	TabsTrigger,
+	Text,
+	TextLink,
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { type DiffLine, lineDiff } from "../diff";
+import { lineDiff } from "../diff";
 import {
 	assignGitSyncKey,
 	type ConflictView,
@@ -61,24 +69,24 @@ export function GitSyncPage() {
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
-				<PageTabs className="border-monti-muted px-wide">
-					<TabsTrigger value="sync" className="flex-none px-0 text-monti-body">
+		<Stack gap="none" grow minHeight={0} overflow="hidden">
+			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
+				<PageTabs>
+					<TabsTrigger value="sync">
 						<GitBranch aria-hidden />
 						{t("tab.sync")}
 					</TabsTrigger>
-					<TabsTrigger value="conflicts" className="flex-none px-0 text-monti-body">
+					<TabsTrigger value="conflicts">
 						<TriangleAlert aria-hidden />
 						{t("tab.conflicts")}
 						{conflictCount > 0 && <Badge variant="danger">{conflictCount}</Badge>}
 					</TabsTrigger>
-					<TabsTrigger value="settings" className="flex-none px-0 text-monti-body">
+					<TabsTrigger value="settings">
 						<KeyRound aria-hidden />
 						{t("tab.settings")}
 					</TabsTrigger>
 				</PageTabs>
-				<TabsContent value="sync" className="min-h-0 flex-1 overflow-auto">
+				<TabsContent value="sync" scroll>
 					<SyncTab
 						status={status.data}
 						error={status.error && !status.data ? errorText(site, status.error, t("load.failed")) : null}
@@ -86,7 +94,7 @@ export function GitSyncPage() {
 						onRetry={() => void status.refetch()}
 					/>
 				</TabsContent>
-				<TabsContent value="conflicts" className="min-h-0 flex-1 overflow-auto">
+				<TabsContent value="conflicts" scroll>
 					<ConflictsTab
 						items={conflicts.data?.items}
 						error={
@@ -95,20 +103,20 @@ export function GitSyncPage() {
 						loading={conflicts.isPending}
 					/>
 				</TabsContent>
-				<TabsContent value="settings" className="min-h-0 flex-1 overflow-auto">
+				<TabsContent value="settings" scroll>
 					<SettingsTab status={status.data} />
 				</TabsContent>
 			</Tabs>
-		</div>
+		</Stack>
 	);
 }
 
 function ListSkeleton() {
 	return (
-		<div className="space-y-normal px-wide py-comfortable" aria-hidden>
-			<Skeleton className="h-24 w-full" />
-			<Skeleton className="h-24 w-full" />
-		</div>
+		<Stack gap="normal" paddingX="wide" paddingY="comfortable" aria-hidden>
+			<Skeleton shape="block" />
+			<Skeleton shape="block" />
+		</Stack>
 	);
 }
 
@@ -155,30 +163,48 @@ function SyncTab({
 	});
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-wide my-comfortable" message={error} onRetry={onRetry} />;
+	if (error) {
+		return (
+			<Box paddingX="wide" paddingY="comfortable">
+				<LoadErrorAlert message={error} onRetry={onRetry} />
+			</Box>
+		);
+	}
 	if (!status) return null;
 	if (status.targets.length === 0) {
-		return <EmptyState className="h-full" icon={GitBranch} title={t("sync.empty")} />;
+		return <EmptyState icon={GitBranch} title={t("sync.empty")} />;
 	}
 
 	return (
-		<div>
+		<Stack gap="none">
 			{!status.keys.token && (
-				<Alert layout="stack" className="mx-wide mt-comfortable w-auto">
-					<AlertDescription className="col-start-auto">{t("sync.noToken")}</AlertDescription>
-				</Alert>
+				<Box paddingX="wide" paddingTop="comfortable">
+					<Alert layout="stack">
+						<AlertDescription>{t("sync.noToken")}</AlertDescription>
+					</Alert>
+				</Box>
 			)}
-			{status.targets.map((target) => (
-				<section
+			{status.targets.map((target, index) => (
+				<Stack
+					as="section"
 					key={target.id}
 					aria-label={target.id}
-					className="space-y-normal border-monti-muted border-b px-wide py-comfortable first:border-t"
+					gap="normal"
+					border={index === 0 ? "y" : "bottom"}
+					paddingX="wide"
+					paddingY="comfortable"
 				>
-					<div className="flex flex-wrap items-center gap-condensed">
-						<h2 className="min-w-0 flex-1 truncate font-medium font-mono text-monti-body">
-							{target.repo}
-							<span className="text-monti-muted">@{target.branch}</span>
-						</h2>
+					<Inline gap="condensed" wrap>
+						<Box grow minWidth={0}>
+							<Heading as="h2" variant="label" truncate>
+								<Text mono weight="medium">
+									{target.repo}
+								</Text>
+								<Text mono tone="muted">
+									@{target.branch}
+								</Text>
+							</Heading>
+						</Box>
 						<Badge variant="secondary">
 							{target.mode === "pr" ? <GitPullRequest aria-hidden /> : <GitBranch aria-hidden />}
 							{t(`target.mode.${target.mode}`)}
@@ -204,18 +230,25 @@ function SyncTab({
 								{t("flush.now")}
 							</Button>
 						)}
-					</div>
-					<dl className="grid grid-cols-[auto_1fr] gap-x-comfortable gap-y-tight text-monti-caption">
-						<dt className="text-monti-muted">{t("target.folder")}</dt>
-						<dd className="font-mono">{target.folder || t("target.wholeRepo")}</dd>
-						<dt className="text-monti-muted">{t("target.path")}</dt>
-						<dd className="font-mono">{target.path}</dd>
-						<dt className="text-monti-muted">{t("target.format")}</dt>
-						<dd className="font-mono">{target.format}</dd>
-						<dt className="text-monti-muted">{t("target.collections")}</dt>
-						<dd>{target.collections.join(", ")}</dd>
-						<dt className="text-monti-muted">{t("target.lastPull")}</dt>
-						<dd>
+					</Inline>
+					<DescriptionList>
+						<DescriptionItem label={t("target.folder")}>
+							<Text mono variant="label">
+								{target.folder || t("target.wholeRepo")}
+							</Text>
+						</DescriptionItem>
+						<DescriptionItem label={t("target.path")}>
+							<Text mono variant="label">
+								{target.path}
+							</Text>
+						</DescriptionItem>
+						<DescriptionItem label={t("target.format")}>
+							<Text mono variant="label">
+								{target.format}
+							</Text>
+						</DescriptionItem>
+						<DescriptionItem label={t("target.collections")}>{target.collections.join(", ")}</DescriptionItem>
+						<DescriptionItem label={t("target.lastPull")}>
 							{target.lastPull
 								? t("target.pull", {
 										created: target.lastPull.created,
@@ -224,9 +257,8 @@ function SyncTab({
 										conflicts: target.lastPull.conflicts,
 									})
 								: t("target.never")}
-						</dd>
-						<dt className="text-monti-muted">{t("target.lastFlush")}</dt>
-						<dd>
+						</DescriptionItem>
+						<DescriptionItem label={t("target.lastFlush")}>
 							{target.lastFlush ? (
 								<>
 									{t("target.flush", {
@@ -237,64 +269,71 @@ function SyncTab({
 									{target.lastFlush.pullRequestUrl && (
 										<>
 											{" · "}
-											<a className="underline" href={target.lastFlush.pullRequestUrl} target="_blank" rel="noreferrer">
+											<TextLink href={target.lastFlush.pullRequestUrl} target="_blank" rel="noreferrer">
 												{t("target.pullRequest")}
-											</a>
+											</TextLink>
 										</>
 									)}
-									{target.lastFlush.note && <span className="block text-monti-muted">{target.lastFlush.note}</span>}
+									{target.lastFlush.note && (
+										<Text as="div" tone="muted">
+											{target.lastFlush.note}
+										</Text>
+									)}
 								</>
 							) : (
 								t("target.never")
 							)}
-						</dd>
-					</dl>
-					<div className="flex flex-wrap gap-condensed text-monti-caption">
+						</DescriptionItem>
+					</DescriptionList>
+					<Inline gap="condensed" wrap>
 						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
 						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
 						{target.conflicts > 0 && (
 							<Badge variant="danger">{t("target.conflicts", { count: target.conflicts })}</Badge>
 						)}
-					</div>
+					</Inline>
 					{target.lastPull && target.lastPull.errors.length > 0 && (
-						<div className="space-y-tight text-monti-caption">
-							<h3 className="font-medium">{t("summary.errors")}</h3>
-							<ul className="space-y-hair">
+						<Stack gap="tight">
+							<Heading as="h3" variant="label">
+								{t("summary.errors")}
+							</Heading>
+							<Stack as="ul" gap="hair">
 								{target.lastPull.errors.map((item) => (
-									<li key={item.path} className="text-monti-danger">
-										<span className="font-mono">{item.path}</span>: {item.message}
-									</li>
+									<Text as="li" key={item.path} variant="caption" tone="danger">
+										<Text mono variant="caption">
+											{item.path}
+										</Text>
+										: {item.message}
+									</Text>
 								))}
-							</ul>
-						</div>
+							</Stack>
+						</Stack>
 					)}
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
-						<div className="space-y-tight text-monti-caption">
-							<h3 className="font-medium">{t("summary.skipped")}</h3>
-							<ul className="space-y-hair text-monti-muted">
+						<Stack gap="tight">
+							<Heading as="h3" variant="label">
+								{t("summary.skipped")}
+							</Heading>
+							<Stack as="ul" gap="hair">
 								{target.lastPull.skipped.map((item) => (
-									<li key={item.path}>
-										<span className="font-mono">{item.path}</span>: {item.reason}
-									</li>
+									<Text as="li" key={item.path} variant="caption" tone="muted">
+										<Text mono variant="caption">
+											{item.path}
+										</Text>
+										: {item.reason}
+									</Text>
 								))}
-							</ul>
-						</div>
+							</Stack>
+						</Stack>
 					)}
-				</section>
+				</Stack>
 			))}
-		</div>
+		</Stack>
 	);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
 // Conflicts tab
-
-const LINE_STYLE: Record<DiffLine["type"], string> = {
-	same: "text-monti-muted",
-	remove: "bg-monti-danger-muted text-monti-danger",
-	add: "bg-monti-success-muted text-monti-success",
-};
-const LINE_MARK: Record<DiffLine["type"], string> = { same: " ", remove: "-", add: "+" };
 
 /** The server text against the git text as a line diff: `-` lines are only on the server, `+` lines only in git. */
 export function ConflictDiff({ serverText, gitText }: { serverText: string | null; gitText: string }) {
@@ -302,35 +341,27 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 	const lines = useMemo(() => lineDiff(serverText ?? "", gitText), [serverText, gitText]);
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
-		<div className="space-y-tight">
-			<div className="flex gap-comfortable text-monti-caption text-monti-muted">
-				<span>
+		<Stack gap="tight">
+			<Inline gap="comfortable">
+				<Text variant="caption" tone="muted">
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
-				</span>
-				<span>+ {t("conflicts.git")}</span>
-			</div>
+				</Text>
+				<Text variant="caption" tone="muted">
+					+ {t("conflicts.git")}
+				</Text>
+			</Inline>
 			{identical ? (
-				<p className="text-monti-caption text-monti-muted">{t("conflicts.same")}</p>
+				<Text as="p" variant="caption" tone="muted">
+					{t("conflicts.same")}
+				</Text>
 			) : (
-				<fieldset
-					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-monti-muted p-0 font-mono text-monti-caption"
-					aria-label={`${t("conflicts.server")} / ${t("conflicts.git")}`}
-				>
-					{lines.map((line, index) => (
-						<div
-							// biome-ignore lint/suspicious/noArrayIndexKey: a diff is a fixed list of lines; the index is its identity
-							key={index}
-							data-diff={line.type}
-							className={`whitespace-pre-wrap px-condensed ${LINE_STYLE[line.type]}`}
-						>
-							{LINE_MARK[line.type]} {line.text}
-						</div>
-					))}
-				</fieldset>
+				<DiffView lines={lines} />
 			)}
-			<p className="text-monti-caption text-monti-muted">{t("conflicts.legend")}</p>
-		</div>
+			<Text as="p" variant="caption" tone="muted">
+				{t("conflicts.legend")}
+			</Text>
+		</Stack>
 	);
 }
 
@@ -365,27 +396,44 @@ function ConflictsTab({
 	};
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <LoadErrorAlert className="mx-wide my-comfortable" message={error} />;
+	if (error) {
+		return (
+			<Box paddingX="wide" paddingY="comfortable">
+				<LoadErrorAlert message={error} />
+			</Box>
+		);
+	}
 	if (!items || items.length === 0) {
-		return <EmptyState className="h-full" icon={GitBranch} title={t("conflicts.empty")} />;
+		return <EmptyState icon={GitBranch} title={t("conflicts.empty")} />;
 	}
 	return (
-		<div>
-			{items.map((conflict) => (
-				<section
+		<Stack gap="none">
+			{items.map((conflict, index) => (
+				<Stack
+					as="section"
 					key={conflict.id}
 					aria-label={conflict.label}
-					className="space-y-normal border-monti-muted border-b px-wide py-comfortable first:border-t"
+					gap="normal"
+					border={index === 0 ? "y" : "bottom"}
+					paddingX="wide"
+					paddingY="comfortable"
 				>
-					<div className="space-y-tight">
-						<h2 className="font-medium text-monti-body">{conflict.label}</h2>
-						<p className="text-monti-caption text-monti-muted">
-							<span className="font-mono">{conflict.path}</span> · {conflict.repo}
-						</p>
-						<p className="text-monti-caption">{t(`conflicts.reason.${conflict.reason}`)}</p>
-					</div>
+					<Stack gap="tight">
+						<Heading as="h2" variant="label">
+							{conflict.label}
+						</Heading>
+						<Text as="p" variant="caption" tone="muted">
+							<Text mono variant="caption">
+								{conflict.path}
+							</Text>{" "}
+							· {conflict.repo}
+						</Text>
+						<Text as="p" variant="caption">
+							{t(`conflicts.reason.${conflict.reason}`)}
+						</Text>
+					</Stack>
 					<ConflictDiff serverText={conflict.serverText} gitText={conflict.gitText} />
-					<div className="flex flex-wrap gap-condensed">
+					<Inline gap="condensed" wrap>
 						<Button
 							type="button"
 							size="sm"
@@ -404,11 +452,11 @@ function ConflictsTab({
 						>
 							{t("conflicts.useServer")}
 						</Button>
-					</div>
-				</section>
+					</Inline>
+				</Stack>
 			))}
 			{dialog}
-		</div>
+		</Stack>
 	);
 }
 
@@ -459,27 +507,36 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const secretKey = keys.webhookSecret;
 
 	return (
-		<div className="max-w-3xl divide-y divide-monti-muted px-wide [&>*]:py-spacious">
+		<Stack gap="none" maxWidth="prose" paddingX="wide">
 			{!keys.secretsAvailable && (
-				<Alert tone="danger" layout="stack" className="my-comfortable w-auto">
-					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
-				</Alert>
+				<Box paddingY="comfortable">
+					<Alert tone="danger" layout="stack">
+						<AlertDescription>{t("settings.secretMissing")}</AlertDescription>
+					</Alert>
+				</Box>
 			)}
 
-			<form
-				className="space-y-condensed"
+			<Stack
+				as="form"
+				gap="condensed"
+				border="bottom"
+				paddingY="spacious"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (tokenChanged && choiceReady(choice)) assign.mutate({ slot: "token", key: choice });
 				}}
 			>
-				<p className="font-medium text-monti-body">{t("settings.token")}</p>
-				<p className="text-monti-caption text-monti-muted">{t("settings.token.help")}</p>
-				<p className="text-monti-caption">
+				<Text as="p" weight="medium">
+					{t("settings.token")}
+				</Text>
+				<Text as="p" variant="caption" tone="muted">
+					{t("settings.token.help")}
+				</Text>
+				<Text as="p" variant="caption">
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
-				</p>
+				</Text>
 				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
-				<div className="flex gap-condensed">
+				<Inline gap="condensed">
 					<Button
 						type="submit"
 						size="sm"
@@ -498,40 +555,46 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 							{t("settings.remove")}
 						</Button>
 					)}
-				</div>
-			</form>
+				</Inline>
+			</Stack>
 
-			<form
-				className="space-y-condensed"
+			<Stack
+				as="form"
+				gap="condensed"
+				paddingY="spacious"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
 				}}
 			>
-				<FormFieldLabel htmlFor="git-sync-secret" className="font-medium text-monti-body">
+				<Text as="label" htmlFor="git-sync-secret" weight="medium">
 					{t("settings.webhook")}
-				</FormFieldLabel>
-				<p className="text-monti-caption">
+				</Text>
+				<Text as="p" variant="caption">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
-				</p>
-				<FormField className="gap-tight">
-					<FormFieldLabel htmlFor="git-sync-url" className="text-monti-caption text-monti-muted">
+				</Text>
+				<Stack gap="tight">
+					<Label htmlFor="git-sync-url" size="caption" tone="muted">
 						{t("settings.webhook.url")}
-					</FormFieldLabel>
-					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-monti-caption" />
-				</FormField>
-				<p className="text-monti-caption text-monti-muted">{t("settings.webhook.help")}</p>
-				<div className="flex flex-wrap gap-condensed">
-					<Input
-						id="git-sync-secret"
-						type={revealed ? "text" : "password"}
-						autoComplete="off"
-						spellCheck={false}
-						value={secret}
-						placeholder={t("settings.webhook.new")}
-						onChange={(event) => setSecret(event.target.value)}
-						className="min-w-0 flex-1 font-mono"
-					/>
+					</Label>
+					<Input id="git-sync-url" readOnly value={webhookUrl} size="sm" mono />
+				</Stack>
+				<Text as="p" variant="caption" tone="muted">
+					{t("settings.webhook.help")}
+				</Text>
+				<Inline gap="condensed" wrap>
+					<Box grow minWidth={0}>
+						<Input
+							id="git-sync-secret"
+							type={revealed ? "text" : "password"}
+							autoComplete="off"
+							spellCheck={false}
+							value={secret}
+							placeholder={t("settings.webhook.new")}
+							onChange={(event) => setSecret(event.target.value)}
+							mono
+						/>
+					</Box>
 					<Button
 						type="button"
 						size="sm"
@@ -561,8 +624,8 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					>
 						{t("settings.copy")}
 					</Button>
-				</div>
-				<div className="flex gap-condensed">
+				</Inline>
+				<Inline gap="condensed">
 					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
 						{tc("save")}
 					</Button>
@@ -577,8 +640,8 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 							{t("settings.remove")}
 						</Button>
 					)}
-				</div>
-			</form>
-		</div>
+				</Inline>
+			</Stack>
+		</Stack>
 	);
 }

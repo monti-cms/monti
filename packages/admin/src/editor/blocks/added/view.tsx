@@ -2,7 +2,19 @@
 
 import type { BlockDefinition } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@monti-cms/ui";
+import {
+	cn,
+	Inline,
+	Label,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Stack,
+	Switch,
+	Text,
+} from "@monti-cms/ui";
 import { type FenceEditorMeta, FencePreviewBlockView, LazyFencePreview } from "../fence-preview";
 import { blocksMessages } from "../messages";
 import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar } from "../shared";
@@ -28,13 +40,17 @@ function AttributeField({
 	const value = values[name] ?? attribute.defaultValue ?? (attribute.type === "boolean" ? false : "");
 	const id = `${definition.name}-${name}`;
 	const description = attribute.description ? (
-		<p className="text-monti-caption text-monti-muted">{attribute.description}</p>
+		<Text as="p" variant="caption" tone="muted">
+			{attribute.description}
+		</Text>
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
-			<div className="flex flex-col gap-tight">
-				<label htmlFor={id} className="flex items-center justify-between gap-condensed">
-					<span className="text-monti-muted">{attribute.label}</span>
+			<Stack gap="tight">
+				<Inline justify="between" gap="condensed">
+					<Label htmlFor={id} size="caption" tone="muted">
+						{attribute.label}
+					</Label>
 					<Switch
 						id={id}
 						size="sm"
@@ -42,9 +58,9 @@ function AttributeField({
 						disabled={!editable}
 						onCheckedChange={(checked) => setValue(name, checked)}
 					/>
-				</label>
+				</Inline>
 				{description}
-			</div>
+			</Stack>
 		);
 	}
 	if (attribute.options) {
@@ -57,7 +73,7 @@ function AttributeField({
 					disabled={!editable}
 					onValueChange={(next) => next !== null && setValue(name, String(next))}
 				>
-					<SelectTrigger id={id} size="sm" className="h-7 w-full text-monti-caption">
+					<SelectTrigger id={id} size="sm" width="full">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -79,7 +95,7 @@ function AttributeField({
 				value={String(value)}
 				readOnly={!editable}
 				onCommit={(next) => setValue(name, next)}
-				className="h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
+				boxed
 			/>
 			{description}
 		</BlockSettingsField>

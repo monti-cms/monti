@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge } from "@monti-cms/ui";
+import { Badge, Box, Heading, Inline, Stack, Text, TextLink } from "@monti-cms/ui";
 import type { ImportResultEntry, ImportRun, ImportStep } from "../../api/import";
 import { importMessages } from "./messages";
 
@@ -17,13 +17,13 @@ function StepLine({ label, step }: { label: string | null; step: ImportStep }) {
 	const t = useTranslator(importMessages);
 	const status = t(`result.step.${step.status}`);
 	return (
-		<li className="text-monti-caption">
-			{label && <span className="font-medium">{label} </span>}
-			<span className="text-monti-muted">
+		<Text as="li" variant="caption">
+			{label && <Text weight="medium">{label} </Text>}
+			<Text tone="muted">
 				{label ? `${status}${step.reason ? ": " : ""}` : ""}
 				{step.reason ? `${step.reason.text}${step.reason.fix ? ` ${step.reason.fix}` : ""}` : ""}
-			</span>
-		</li>
+			</Text>
+		</Text>
 	);
 }
 
@@ -42,49 +42,51 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	// What the editor checks said about the saved body, once each.
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
-		<li
-			className="flex flex-col gap-condensed border-b py-normal last:border-b-0"
+		<Stack
+			as="li"
+			gap="condensed"
+			paddingY="normal"
+			border="bottom"
 			data-testid="import-result"
 			data-outcome={entry.outcome}
 		>
-			<div className="flex flex-wrap items-center gap-condensed text-monti-body">
+			<Inline gap="condensed" wrap>
 				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
 				{entry.id ? (
-					<a href={site.adminEntryEditHref(entry.id)} className="font-medium underline-offset-4 hover:underline">
-						{entry.title ?? entry.slug ?? entry.key}
-					</a>
+					<TextLink underline="hover" href={site.adminEntryEditHref(entry.id)}>
+						<Text weight="medium">{entry.title ?? entry.slug ?? entry.key}</Text>
+					</TextLink>
 				) : (
-					<span className="font-medium">{entry.title ?? entry.slug ?? entry.key}</span>
+					<Text weight="medium">{entry.title ?? entry.slug ?? entry.key}</Text>
 				)}
-				<span className="text-monti-caption text-monti-muted">{site.localeLabel(entry.locale)}</span>
+				<Text variant="caption" tone="muted">
+					{site.localeLabel(entry.locale)}
+				</Text>
 				{entry.publish?.status === "done" && <Badge variant="outline">{t("result.published", { count: 1 })}</Badge>}
 				{entry.id && (
-					<a
-						href={site.adminEntryEditHref(entry.id)}
-						className="ml-auto text-monti-accent text-monti-caption underline underline-offset-4"
-					>
+					<TextLink tone="accent" size="caption" href={site.adminEntryEditHref(entry.id)}>
 						{t("result.open")}
-					</a>
+					</TextLink>
 				)}
-			</div>
+			</Inline>
 			{(problems.length > 0 || entry.notes.length > 0 || warnings.length > 0) && (
-				<ul className="flex flex-col gap-hair pl-tight">
+				<Stack as="ul" gap="hair" paddingX="tight">
 					{problems.map(([label, step]) => (
 						<StepLine key={label ?? "create"} label={label} step={step} />
 					))}
 					{entry.notes.map((note) => (
-						<li key={note.code} className="text-monti-caption text-monti-muted">
+						<Text as="li" key={note.code} variant="caption" tone="muted">
 							{note.text}
-						</li>
+						</Text>
 					))}
 					{warnings.map((text) => (
-						<li key={text} className="text-monti-caption text-monti-muted">
+						<Text as="li" key={text} variant="caption" tone="muted">
 							{text}
-						</li>
+						</Text>
 					))}
-				</ul>
+				</Stack>
 			)}
-		</li>
+		</Stack>
 	);
 }
 
@@ -93,9 +95,9 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const t = useTranslator(importMessages);
 	const { counts } = result;
 	return (
-		<div className="flex flex-col gap-comfortable" data-testid="import-run-result">
-			<h4 className="text-monti-title">{t("result.title")}</h4>
-			<p className="text-monti-body text-monti-muted" data-testid="import-result-summary">
+		<Stack gap="comfortable" data-testid="import-run-result">
+			<Heading as="h4">{t("result.title")}</Heading>
+			<Text as="p" tone="muted" data-testid="import-result-summary">
 				{[
 					t("result.imported", { count: counts.imported }),
 					counts.draft > 0 ? t("result.draft", { count: counts.draft }) : null,
@@ -105,12 +107,14 @@ export function ResultView({ result }: { result: ImportRun }) {
 				]
 					.filter(Boolean)
 					.join(" · ")}
-			</p>
-			<ul className="max-h-[28rem] overflow-y-auto rounded-md border px-normal">
-				{result.results.map((entry) => (
-					<ResultRow key={entry.key} entry={entry} />
-				))}
-			</ul>
-		</div>
+			</Text>
+			<Box radius="md" border="all" paddingX="normal" maxHeight="list" overflow="y">
+				<Stack as="ul" gap="none">
+					{result.results.map((entry) => (
+						<ResultRow key={entry.key} entry={entry} />
+					))}
+				</Stack>
+			</Box>
+		</Stack>
 	);
 }

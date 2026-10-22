@@ -2,7 +2,7 @@
 
 import { type FieldViewProps, type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
-import { cn, commonMessages, MediaThumbnail, Panel } from "@monti-cms/admin/kit";
+import { cn, commonMessages, MediaThumbnail, Panel, Stack, Text } from "@monti-cms/admin/kit";
 import { SEO_ROLES } from "../fields";
 import { seoMessages } from "../messages";
 
@@ -62,35 +62,49 @@ export function SeoPreview({
 	);
 
 	return (
-		<div className="space-y-normal">
-			<Panel role="region" aria-label={t("preview.search")} className="space-y-tight bg-monti-inset p-normal">
-				<p className="truncate text-monti-caption text-monti-muted">
-					{site.SITE_NAME}
-					{path
-						.split("/")
-						.filter(Boolean)
-						.map((part) => ` › ${decodeURIComponent(part)}`)}
-				</p>
-				<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-monti-body">
-					{title || tc("untitled")}
-				</p>
-				<p className={cn("line-clamp-2 text-monti-caption", !description && "text-monti-muted italic")}>
-					{description || t("preview.noDescription")}
-				</p>
-				{noindex && <p className="pt-tight font-medium text-monti-caption text-monti-warning">{t("preview.hidden")}</p>}
+		<Stack gap="normal">
+			<Panel role="region" aria-label={t("preview.search")} background="inset" padding="normal">
+				<Stack gap="tight">
+					<Text as="p" variant="caption" tone="muted" truncate>
+						{site.SITE_NAME}
+						{path
+							.split("/")
+							.filter(Boolean)
+							.map((part) => ` › ${decodeURIComponent(part)}`)}
+					</Text>
+					<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-monti-body">
+						{title || tc("untitled")}
+					</p>
+					<p className={cn("line-clamp-2 text-monti-caption", !description && "text-monti-muted italic")}>
+						{description || t("preview.noDescription")}
+					</p>
+					{noindex && (
+						<Text as="p" variant="caption" tone="warning" weight="medium">
+							{t("preview.hidden")}
+						</Text>
+					)}
+				</Stack>
 			</Panel>
 
 			{hasImageField && (
-				<Panel role="region" aria-label={t("preview.share")} className="overflow-hidden">
-					{imageId && <MediaThumbnail mediaId={imageId} className="aspect-[1.91/1] w-full border-b" />}
-					<div className="space-y-hair p-normal">
-						<p className="truncate text-monti-caption text-monti-muted">{site.SITE_NAME}</p>
-						<p className="line-clamp-2 font-medium text-monti-body">{title || tc("untitled")}</p>
-						{description && <p className="line-clamp-2 text-monti-caption text-monti-muted">{description}</p>}
-					</div>
+				<Panel role="region" aria-label={t("preview.share")} overflow="hidden">
+					{imageId && <MediaThumbnail mediaId={imageId} size="share" />}
+					<Stack gap="hair" padding="normal">
+						<Text as="p" variant="caption" tone="muted" truncate>
+							{site.SITE_NAME}
+						</Text>
+						<Text as="p" weight="medium" lines={2}>
+							{title || tc("untitled")}
+						</Text>
+						{description && (
+							<Text as="p" variant="caption" tone="muted" lines={2}>
+								{description}
+							</Text>
+						)}
+					</Stack>
 				</Panel>
 			)}
-		</div>
+		</Stack>
 	);
 }
 

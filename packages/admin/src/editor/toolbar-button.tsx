@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, cn, Toggle, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
+import { Button, Toggle, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
@@ -9,7 +9,8 @@ export interface ToolbarItem {
 	label: string;
 	title?: string;
 	icon: LucideIcon;
-	className?: string;
+	/** `danger` for a tool that removes something. */
+	tone?: "danger";
 	isActive?: (editor: Editor) => boolean;
 	isDisabled?: (editor: Editor) => boolean;
 	run: (editor: Editor) => void;
@@ -34,20 +35,26 @@ export function ToolbarButton({
 		disabled,
 		// Keep the button click from stealing the editor selection.
 		onMouseDown: (event: React.MouseEvent) => event.preventDefault(),
-		className: cn("size-8 p-0 text-monti-caption", item.className),
 	};
 	return (
 		<Tooltip>
 			<TooltipTrigger
 				render={
 					item.isActive ? (
-						<Toggle size="sm" pressed={active} onPressedChange={() => item.run(editor)} {...common} />
+						<Toggle size="icon-sm" pressed={active} onPressedChange={() => item.run(editor)} {...common} />
 					) : (
-						<Button type="button" variant="ghost" size="sm" onClick={() => item.run(editor)} {...common} />
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon-sm"
+							tone={item.tone}
+							onClick={() => item.run(editor)}
+							{...common}
+						/>
 					)
 				}
 			>
-				<Icon className="size-4" aria-hidden />
+				<Icon aria-hidden />
 			</TooltipTrigger>
 			<TooltipContent side={tooltipSide}>{label}</TooltipContent>
 		</Tooltip>

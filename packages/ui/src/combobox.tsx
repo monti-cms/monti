@@ -48,14 +48,18 @@ function ComboboxInput({
 	disabled = false,
 	showTrigger = true,
 	showClear = false,
+	size = "default",
+	mono = false,
 	...props
-}: ComboboxPrimitive.Input.Props & {
+}: Omit<ComboboxPrimitive.Input.Props, "size"> & {
 	showTrigger?: boolean;
 	showClear?: boolean;
+	size?: "sm" | "default";
+	mono?: boolean;
 }) {
 	return (
-		<InputGroup className={cn("w-auto", className)}>
-			<ComboboxPrimitive.Input render={<InputGroupInput disabled={disabled} />} {...props} />
+		<InputGroup className={cn("w-full", size === "sm" && "h-control-sm", className)}>
+			<ComboboxPrimitive.Input render={<InputGroupInput disabled={disabled} size={size} mono={mono} />} {...props} />
 			<InputGroupAddon align="inline-end">
 				{showTrigger && (
 					<InputGroupButton

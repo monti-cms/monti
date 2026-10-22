@@ -1,10 +1,9 @@
-import { cn, FormFieldDescription, FormFieldLabel, FormField as UiField } from "@monti-cms/ui";
+import { Box, FormFieldDescription, FormFieldLabel, Inline, Stack, Text, FormField as UiField } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 
 /** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-export const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;
-/** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
-export const HELP = "max-w-[70ch] text-monti-label";
+const CONTROL_MAX_WIDTH = { narrow: "panel-lg", normal: "prose", wide: "prose", full: undefined } as const;
+export type ControlWidth = keyof typeof CONTROL_MAX_WIDTH;
 
 export function Labeled({
 	label,
@@ -12,7 +11,6 @@ export function Labeled({
 	hint,
 	children,
 	htmlFor,
-	className,
 	control = "normal",
 	aside,
 }: {
@@ -23,30 +21,42 @@ export function Labeled({
 	hint?: ReactNode;
 	htmlFor?: string;
 	children: ReactNode;
-	className?: string;
-	control?: keyof typeof CONTROL_WIDTH;
+	control?: ControlWidth;
 	/** Next to the label on the same line (a change marker, a revert button). */
 	aside?: ReactNode;
 }) {
+	const labelNode = (
+		<FormFieldLabel htmlFor={htmlFor}>
+			<Text variant="body" weight="medium">
+				{label}
+			</Text>
+		</FormFieldLabel>
+	);
 	return (
-		<UiField className={cn("gap-condensed", className)}>
-			{aside ? (
-				<div className="flex items-center gap-condensed">
-					<FormFieldLabel htmlFor={htmlFor} className="font-medium text-monti-body">
-						{label}
-					</FormFieldLabel>
-					{aside}
-				</div>
-			) : (
-				<FormFieldLabel htmlFor={htmlFor} className="font-medium text-monti-body">
-					{label}
-				</FormFieldLabel>
-			)}
-			{description && (
-				<FormFieldDescription className={cn(HELP, "nth-last-2:mt-0")}>{description}</FormFieldDescription>
-			)}
-			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
-			{hint && <FormFieldDescription className={HELP}>{hint}</FormFieldDescription>}
+		<UiField>
+			<Stack gap="condensed">
+				{aside ? (
+					<Inline gap="condensed">
+						{labelNode}
+						{aside}
+					</Inline>
+				) : (
+					labelNode
+				)}
+				{description && (
+					<Box maxWidth="prose">
+						<FormFieldDescription>{description}</FormFieldDescription>
+					</Box>
+				)}
+				<Box width="full" maxWidth={CONTROL_MAX_WIDTH[control]}>
+					{children}
+				</Box>
+				{hint && (
+					<Box maxWidth="prose">
+						<FormFieldDescription>{hint}</FormFieldDescription>
+					</Box>
+				)}
+			</Stack>
 		</UiField>
 	);
 }

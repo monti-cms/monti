@@ -2,7 +2,17 @@
 
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { diffSources, type SourceChange, useSite, useTranslator } from "@monti-cms/core/site";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@monti-cms/ui";
+import {
+	Box,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	Grid,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import type { TranslatorFor } from "../../translator";
 import { entriesMessages } from "./messages";
 import { DocPreview } from "./source-pane";
@@ -35,7 +45,7 @@ const unitDoc = (node: StoredDocument["content"][number]): StoredDocument => ({
 
 function UnitView({ unit }: { unit: { kind: string; source: string; node: StoredDocument["content"][number] } }) {
 	return unit.kind === "header" ? (
-		<p className="text-monti-body">{headerText(unit.source)}</p>
+		<Text as="p">{headerText(unit.source)}</Text>
 	) : (
 		<DocPreview doc={unitDoc(unit.node)} />
 	);
@@ -49,25 +59,31 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	const after = change.kind === "removed" ? null : change.after;
 	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
-		<li className="flex flex-col gap-condensed rounded-md border p-normal">
-			<span className="w-fit rounded-sm bg-monti-neutral px-condensed py-hair font-medium text-monti-caption">
-				{label}
-			</span>
-			<div className="grid gap-normal md:grid-cols-2">
+		<Stack as="li" gap="condensed" border="all" radius="md" padding="normal">
+			<Box background="neutral" radius="sm" paddingX="condensed" paddingY="hair" width="fit">
+				<Text variant="caption" weight="medium">
+					{label}
+				</Text>
+			</Box>
+			<Grid columns={2} gap="normal">
 				{before && (
-					<div className="min-w-0">
-						<p className="mb-tight text-monti-caption text-monti-muted">{t("sourceChange.before")}</p>
+					<Stack gap="tight" minWidth={0}>
+						<Text as="p" variant="caption" tone="muted">
+							{t("sourceChange.before")}
+						</Text>
 						<UnitView unit={before} />
-					</div>
+					</Stack>
 				)}
 				{after && (
-					<div className="min-w-0">
-						<p className="mb-tight text-monti-caption text-monti-muted">{t("sourceChange.after")}</p>
+					<Stack gap="tight" minWidth={0}>
+						<Text as="p" variant="caption" tone="muted">
+							{t("sourceChange.after")}
+						</Text>
 						<UnitView unit={after} />
-					</div>
+					</Stack>
 				)}
-			</div>
-		</li>
+			</Grid>
+		</Stack>
 	);
 }
 
@@ -89,22 +105,26 @@ export function SourceChangeDialog({
 	const changes = open && before ? diffSources(site, before, after) : null;
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+			<DialogContent size="xl" scroll>
 				<DialogHeader>
 					<DialogTitle>{t("sourceChange.title")}</DialogTitle>
 					<DialogDescription>{t("sourceChange.description")}</DialogDescription>
 				</DialogHeader>
 				{changes === null ? (
-					<p className="text-monti-body text-monti-muted">{t("sourceChange.cantCompare")}</p>
+					<Text as="p" tone="muted">
+						{t("sourceChange.cantCompare")}
+					</Text>
 				) : changes.length === 0 ? (
-					<p className="text-monti-body text-monti-muted">{t("sourceChange.none")}</p>
+					<Text as="p" tone="muted">
+						{t("sourceChange.none")}
+					</Text>
 				) : (
-					<ol className="flex flex-col gap-normal">
+					<Stack as="ol" gap="normal">
 						{changes.map((change, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: the change list's identity is document order
 							<ChangeItem key={index} change={change} />
 						))}
-					</ol>
+					</Stack>
 				)}
 			</DialogContent>
 		</Dialog>

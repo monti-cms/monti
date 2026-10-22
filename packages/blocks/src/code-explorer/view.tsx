@@ -20,6 +20,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Text,
 } from "@monti-cms/admin/kit";
 import { File, FilePlus, Folder, FolderPlus, FolderTree, Trash2 } from "lucide-react";
 import { useId } from "react";
@@ -128,7 +129,7 @@ export function CodeExplorerNodeView() {
 									items={openItems}
 									onValueChange={(next) => next !== null && block.setValue("open", String(next))}
 								>
-									<SelectTrigger id={openId} size="sm" className="h-7 w-full text-monti-caption">
+									<SelectTrigger id={openId} size="sm" width="full">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -145,10 +146,12 @@ export function CodeExplorerNodeView() {
 									value={open}
 									placeholder={t("open.first")}
 									onCommit={(next) => block.setValue("open", next)}
-									className="h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
+									boxed
 								/>
 							)}
-							<p className="text-monti-caption text-monti-muted">{t("open.hint")}</p>
+							<Text as="p" variant="caption" tone="muted">
+								{t("open.hint")}
+							</Text>
 						</BlockSettingsField>
 					</BlockSettings>
 					<ToolbarButton label={t("delete")} tone="danger" onClick={removeBlock}>

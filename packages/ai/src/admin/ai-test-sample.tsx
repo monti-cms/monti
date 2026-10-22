@@ -1,7 +1,7 @@
 "use client";
 
 import { isUuid, type Site, useSite, useTranslator } from "@monti-cms/admin";
-import { cn, Input, Textarea } from "@monti-cms/admin/kit";
+import { Input, Textarea } from "@monti-cms/admin/kit";
 import type { AiInputKind } from "../action";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
@@ -120,7 +120,7 @@ export function SampleInputs({
 						value={value}
 						options={localeOptions}
 						onChange={(next) => onChange(field.name, next)}
-						className="w-auto self-start bg-monti-page"
+						width="fit"
 					/>
 				);
 			case "image":
@@ -130,10 +130,8 @@ export function SampleInputs({
 						key={field.name}
 						{...common}
 						onChange={(event) => onChange(field.name, event.target.value)}
-						className={cn(
-							"h-8 bg-monti-page text-monti-caption md:text-monti-caption",
-							field.kind === "image" && "font-mono",
-						)}
+						size="sm"
+						mono={field.kind === "image"}
 					/>
 				);
 			default:
@@ -143,10 +141,8 @@ export function SampleInputs({
 						{...common}
 						rows={field.kind === "text" ? 2 : 4}
 						onChange={(event) => onChange(field.name, event.target.value)}
-						className={cn(
-							"bg-monti-page text-monti-caption md:text-monti-caption",
-							field.kind !== "text" && "font-mono",
-						)}
+						size="sm"
+						mono={field.kind !== "text"}
 					/>
 				);
 		}

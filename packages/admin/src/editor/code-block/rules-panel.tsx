@@ -12,9 +12,10 @@ import {
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Button,
-	cn,
 	IconButton,
+	Inline,
 	Input,
+	Label,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -23,7 +24,9 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
 	Switch,
+	Text,
 	Textarea,
 } from "@monti-cms/ui";
 import { Plus, Regex, Trash2 } from "lucide-react";
@@ -84,17 +87,21 @@ function RuleRow({
 	const count = problem ? 0 : ruleMatches(rule, text).length;
 	const options = effectOptions(site, rule.name);
 	return (
-		<li
-			className="flex flex-col gap-condensed rounded-md border p-condensed"
+		<Stack
+			as="li"
+			gap="condensed"
+			padding="condensed"
+			border="all"
+			radius="md"
 			aria-label={t("rulesPanel.rule", { pattern: rule.pattern })}
 		>
-			<div className="flex items-center gap-condensed">
+			<Inline gap="condensed">
 				<Select
 					value={rule.name}
 					items={options}
 					onValueChange={(value) => value && onChange({ ...rule, name: value as CodeCharEffectName, attrs: {} })}
 				>
-					<SelectTrigger size="sm" className="h-7 text-monti-caption" aria-label={t("rulesPanel.effect")}>
+					<SelectTrigger size="sm" aria-label={t("rulesPanel.effect")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -117,7 +124,7 @@ function RuleRow({
 						)
 					}
 				>
-					<SelectTrigger size="sm" className="h-7 text-monti-caption" aria-label={t("rulesPanel.scope")}>
+					<SelectTrigger size="sm" aria-label={t("rulesPanel.scope")}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -131,6 +138,7 @@ function RuleRow({
 				{rule.scope === "char" && (
 					<Input
 						aria-label={t("rulesPanel.lineNumber")}
+						size="sm"
 						type="number"
 						min={1}
 						max={lineCount}
@@ -139,43 +147,50 @@ function RuleRow({
 							const line = Math.min(lineCount, Math.max(1, Number(event.target.value) || 1)) - 1;
 							onChange({ ...rule, line });
 						}}
-						className="h-7 w-14 px-condensed text-monti-caption"
 					/>
 				)}
-				<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove} className="ml-auto">
-					<Trash2 aria-hidden />
-				</IconButton>
-			</div>
-			<div className="flex items-center gap-tight font-mono text-monti-caption">
-				<span className="text-monti-muted">/</span>
+				<Inline grow justify="end">
+					<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove}>
+						<Trash2 aria-hidden />
+					</IconButton>
+				</Inline>
+			</Inline>
+			<Inline gap="tight">
+				<Text variant="caption" tone="muted" mono>
+					/
+				</Text>
 				<Input
 					aria-label={t("rulesPanel.pattern")}
 					value={rule.pattern}
 					placeholder={t("rulesPanel.patternPlaceholder")}
 					onChange={(event) => onChange({ ...rule, pattern: event.target.value })}
-					className="h-7 flex-1 px-condensed font-mono text-monti-caption"
+					size="sm"
+					mono
 					aria-invalid={!!problem && rule.pattern.length > 0}
 				/>
-				<span className="text-monti-muted">/</span>
+				<Text variant="caption" tone="muted" mono>
+					/
+				</Text>
 				<Input
 					aria-label={t("rulesPanel.flags")}
 					value={rule.flags}
 					onChange={(event) => onChange({ ...rule, flags: event.target.value.replace(/[^a-z]/gi, "") })}
-					className="h-7 w-10 px-condensed font-mono text-monti-caption"
+					size="sm"
+					mono
 				/>
-			</div>
+			</Inline>
 			{rule.name === "Tooltip" && (
 				<Textarea
 					aria-label={t("rulesPanel.tooltipContent")}
 					value={String(rule.attrs.content ?? "")}
 					placeholder={t("rulesPanel.tooltipContent")}
 					rows={1}
+					size="sm"
 					onChange={(event) => onChange({ ...rule, attrs: { ...rule.attrs, content: event.target.value } })}
-					className="min-h-7 px-condensed py-tight text-monti-caption md:text-monti-caption"
 				/>
 			)}
 			{rule.name === "fold" && (
-				<label htmlFor={`${rule.id}-open`} className="flex items-center gap-condensed text-monti-caption">
+				<Label htmlFor={`${rule.id}-open`} size="caption">
 					<Switch
 						id={`${rule.id}-open`}
 						size="sm"
@@ -183,12 +198,12 @@ function RuleRow({
 						onCheckedChange={(checked) => onChange({ ...rule, attrs: { ...rule.attrs, open: checked || undefined } })}
 					/>
 					{t("rulesPanel.openFromStart")}
-				</label>
+				</Label>
 			)}
-			<p className={cn("text-monti-caption", problem && rule.pattern ? "text-monti-danger" : "text-monti-muted")}>
+			<Text as="p" variant="caption" tone={problem && rule.pattern ? "danger" : "muted"}>
 				{problem ? (rule.pattern ? problem : t("rulesPanel.enterPattern")) : t("rulesPanel.matches", { count })}
-			</p>
-		</li>
+			</Text>
+		</Stack>
 	);
 }
 
@@ -230,23 +245,22 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 			<IconButton
 				label={t("rulesPanel.title")}
 				size="sm"
-				className={cn(
-					"h-7 min-w-7 gap-tight px-condensed text-monti-caption",
-					rules.length > 0 && "text-monti-default",
-				)}
+				variant={rules.length > 0 ? "ghost" : "quiet"}
 				trigger={(button) => <PopoverTrigger render={button} />}
 			>
-				<Regex aria-hidden className="size-3.5" />
-				{rules.length > 0 && <span className="tabular-nums">{rules.length}</span>}
+				<Regex aria-hidden />
+				{rules.length > 0 && <Text variant="caption">{rules.length}</Text>}
 			</IconButton>
-			<PopoverContent align="end" className="w-96 gap-condensed p-normal text-monti-caption" data-code-ui="">
-				<div className="flex items-center justify-between gap-condensed">
-					<p className="font-semibold">{t("rulesPanel.title")}</p>
+			<PopoverContent align="end" width="lg" scroll data-code-ui="">
+				<Inline justify="between" gap="condensed">
+					<Text as="p" weight="semibold">
+						{t("rulesPanel.title")}
+					</Text>
 					{canAdd && site.offersCharEffect("fold") && foldSlot.trigger}
-				</div>
+				</Inline>
 				{canAdd && site.offersCharEffect("fold") && foldSlot.panel}
 				{rules.length > 0 && (
-					<ul className="flex max-h-80 flex-col gap-condensed overflow-y-auto">
+					<Stack as="ul" gap="condensed">
 						{rules.map((rule) => (
 							<RuleRow
 								key={rule.id}
@@ -257,13 +271,15 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 								onRemove={() => onChange(rules.filter((item) => item.id !== rule.id))}
 							/>
 						))}
-					</ul>
+					</Stack>
 				)}
 				{canAdd && (
-					<Button type="button" variant="outline" size="sm" onClick={addRule} className="self-start">
-						<Plus aria-hidden />
-						{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
-					</Button>
+					<Inline justify="start">
+						<Button type="button" variant="outline" size="sm" onClick={addRule}>
+							<Plus aria-hidden />
+							{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
+						</Button>
+					</Inline>
 				)}
 			</PopoverContent>
 		</Popover>

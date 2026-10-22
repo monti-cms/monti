@@ -43,12 +43,12 @@ export function ColumnResizeHandle({
 					onNudge(event.key === "ArrowLeft" ? -16 : 16);
 				}
 			}}
-			className="absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
+			className="group/handle absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
 		>
 			<span
 				className={cn(
-					"h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-divider",
-					resizing && "bg-monti-emphasis group-hover/th:bg-monti-emphasis",
+					"h-full w-px bg-transparent transition-colors group-hover/handle:bg-monti-divider",
+					resizing && "bg-monti-emphasis group-hover/handle:bg-monti-emphasis",
 					"[div:focus-visible>&]:bg-monti-accent-emphasis",
 				)}
 			/>

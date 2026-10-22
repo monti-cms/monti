@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Textarea } from "@monti-cms/ui";
+import { Badge, Inline, Label, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
@@ -104,7 +104,7 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	const [value, setValue] = useState(target.defText);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleApply = (event: FormEvent<HTMLFormElement>) => {
+	const handleApply = (event: FormEvent<HTMLElement>) => {
 		event.preventDefault();
 		const trimmed = value.trim();
 		if (!trimmed) {
@@ -122,15 +122,15 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	};
 
 	return (
-		<form onSubmit={handleApply} onKeyDown={submitOnEnter} className="grid gap-normal">
-			<div className="flex items-center gap-condensed font-medium">
-				<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-selected font-medium text-monti-caption text-monti-default leading-none">
-					{target.badge}
-				</span>
-				<span>{t("inlineBubble.footnotePanel")}</span>
-			</div>
-			<label htmlFor={`${id}-content`} className="grid gap-condensed text-monti-caption">
-				{t("inlineBubble.footnoteField")}
+		<Stack as="form" gap="normal" onSubmit={handleApply} onKeyDown={submitOnEnter}>
+			<Inline gap="condensed">
+				<Badge variant="secondary">{target.badge}</Badge>
+				<Text weight="medium">{t("inlineBubble.footnotePanel")}</Text>
+			</Inline>
+			<Stack gap="condensed">
+				<Label htmlFor={`${id}-content`} size="caption">
+					{t("inlineBubble.footnoteField")}
+				</Label>
 				<Textarea
 					id={`${id}-content`}
 					value={value}
@@ -142,10 +142,9 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 						setValue(event.target.value);
 						setError(null);
 					}}
-					className="min-h-0"
 					autoFocus
 				/>
-			</label>
+			</Stack>
 			{error && <PopoverFormError id={`${id}-error`}>{error}</PopoverFormError>}
 			<PopoverFormFooter
 				removeLabel={t("inlineBubble.footnoteRemove")}
@@ -153,6 +152,6 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 				onRemove={handleRemove}
 				onCancel={onDone}
 			/>
-		</form>
+		</Stack>
 	);
 }

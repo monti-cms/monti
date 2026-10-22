@@ -1,7 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 
+import type { BoxTag } from "./box";
 import { cn } from "./cn";
+import { type LayoutProps, layoutVariants, splitLayout } from "./layout";
 
 /**
  * Lays out its children in a column or a row with a gap picked by name, from the spacing tokens (`--spacing-*` in styles/theme.css):
@@ -13,6 +15,7 @@ export const stackVariants = cva("flex", {
 		direction: { column: "flex-col", row: "flex-row" },
 		gap: {
 			none: "gap-0",
+			hair: "gap-hair",
 			tight: "gap-tight",
 			condensed: "gap-condensed",
 			normal: "gap-normal",
@@ -34,20 +37,26 @@ export const stackVariants = cva("flex", {
 	defaultVariants: { direction: "column", gap: "normal" },
 });
 
-function Stack({
-	as: Tag = "div",
-	direction,
-	gap,
-	align,
-	justify,
-	wrap,
-	className,
-	...props
-}: React.HTMLAttributes<HTMLElement> &
-	VariantProps<typeof stackVariants> & {
-		as?: "div" | "section" | "ul" | "ol" | "li" | "header" | "footer" | "nav" | "form";
-	}) {
-	return <Tag className={cn(stackVariants({ direction, gap, align, justify, wrap }), className)} {...props} />;
+type StackProps = React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> } & VariantProps<
+		typeof stackVariants
+	> &
+	LayoutProps & { as?: BoxTag };
+
+function Stack({ as: Tag = "div", direction, gap, align, justify, wrap, className, ...props }: StackProps) {
+	const [layout, rest] = splitLayout(props);
+	const Element = Tag as React.ElementType;
+	return (
+		<Element
+			className={cn(stackVariants({ direction, gap, align, justify, wrap }), layoutVariants(layout), className)}
+			{...rest}
+		/>
+	);
 }
 
-export { Stack };
+/** Children side by side: a `Stack` in a row, centered on the cross axis by default (an icon and its label, a toolbar). */
+function Inline({ align = "center", ...props }: Omit<StackProps, "direction">) {
+	return <Stack direction="row" align={align} {...props} />;
+}
+
+export { Inline, Stack };
+export type { StackProps };

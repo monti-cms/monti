@@ -5,15 +5,40 @@ import { cn } from "./cn";
 
 function Table({
 	className,
-	containerClassName,
+	container = "scroll",
+	inset = "none",
+	layout = "auto",
+	stickyHeader = false,
+	width,
+	style,
 	...props
 }: React.ComponentProps<"table"> & {
-	/** Scroll area wrapping the table. If the outside handles scrolling, set `overflow-visible` so the sticky header works. */
-	containerClassName?: string;
+	/** A total width in px that the screen computes (the sum of resized columns); without it the table fills its box. */
+	width?: number;
+	/** `scroll`: the table scrolls sideways in its own box. `none`: the page or a parent scrolls it (needed for a sticky header under an outer scroll). */
+	container?: "scroll" | "none";
+	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
+	inset?: "none" | "page";
+	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
+	layout?: "auto" | "fixed";
+	/** The header row stays at the top while the rows scroll under it. */
+	stickyHeader?: boolean;
 }) {
 	return (
-		<div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
-			<table data-slot="table" className={cn("w-full caption-bottom text-monti-body", className)} {...props} />
+		<div data-slot="table-container" className={cn("relative w-full", container === "scroll" && "overflow-x-auto")}>
+			<table
+				data-slot="table"
+				className={cn(
+					"w-full caption-bottom text-monti-body",
+					layout === "fixed" && "table-fixed",
+					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
+					inset === "page" &&
+						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
+					className,
+				)}
+				style={width === undefined ? style : { ...style, width }}
+				{...props}
+			/>
 		</div>
 	);
 }
@@ -22,8 +47,21 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 	return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-	return <tbody data-slot="table-body" className={cn("[&_tr:last-child]:border-0", className)} {...props} />;
+function TableBody({
+	className,
+	dimmed = false,
+	...props
+}: React.ComponentProps<"tbody"> & {
+	/** The rows are out of date while new ones load: shown, but quieter. */
+	dimmed?: boolean;
+}) {
+	return (
+		<tbody
+			data-slot="table-body"
+			className={cn("transition-opacity [&_tr:last-child]:border-0", dimmed && "opacity-60", className)}
+			{...props}
+		/>
+	);
 }
 
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
@@ -50,6 +88,7 @@ function TableRow({
 			data-selected={selected || undefined}
 			aria-selected={selected || undefined}
 			className={cn(
+				props.onClick && "cursor-pointer",
 				"border-b transition-colors hover:bg-monti-hover has-aria-expanded:bg-monti-hover data-selected:bg-monti-selected",
 				className,
 			)}
@@ -58,17 +97,36 @@ function TableRow({
 	);
 }
 
-/** Where a column's content sits, and whether long content ends in "…" instead of widening the column. */
-interface CellOptions {
+/**
+ * Where a column's content sits, whether long content ends in "…" instead of widening the column, a fixed column width, top alignment for
+ * rows of uneven height, and a muted tone for secondary columns.
+ */
+export interface CellOptions {
 	align?: "start" | "center" | "end";
 	truncate?: boolean;
+	width?: keyof typeof COLUMN_WIDTH;
+	/** A column width in px that the screen computes (a column the writer resized); takes over from `width`. */
+	size?: number;
+	valign?: "top";
+	/** Long content wraps onto more lines instead of widening the column. */
+	wrap?: boolean;
+	tone?: "muted";
+	/** An empty column that takes the width the others leave (before a trailing actions column in a fixed-layout table). */
+	filler?: boolean;
 }
+const COLUMN_WIDTH = { xs: "w-14", sm: "w-24", md: "w-28", lg: "w-40" } as const;
 const ALIGN = { start: "text-left", center: "text-center", end: "text-right tabular" } as const;
 
 function TableHead({
 	className,
 	align = "start",
 	truncate,
+	width,
+	size,
+	valign,
+	tone,
+	filler,
+	style,
 	...props
 }: Omit<React.ComponentProps<"th">, "align"> & CellOptions) {
 	return (
@@ -78,8 +136,13 @@ function TableHead({
 				"h-10 whitespace-nowrap px-2 align-middle text-monti-caption text-monti-muted [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
+				width && COLUMN_WIDTH[width],
+				valign === "top" && "align-top",
+				tone === "muted" && "text-monti-muted",
+				filler && "p-0",
 				className,
 			)}
+			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
 		/>
 	);
@@ -89,6 +152,13 @@ function TableCell({
 	className,
 	align = "start",
 	truncate,
+	width,
+	size,
+	valign,
+	wrap,
+	tone,
+	filler,
+	style,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
 	return (
@@ -98,8 +168,14 @@ function TableCell({
 				"whitespace-nowrap p-2 align-middle [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
+				width && COLUMN_WIDTH[width],
+				valign === "top" && "align-top",
+				wrap && "whitespace-normal break-words",
+				tone === "muted" && "text-monti-muted",
+				filler && "p-0",
 				className,
 			)}
+			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
 		/>
 	);

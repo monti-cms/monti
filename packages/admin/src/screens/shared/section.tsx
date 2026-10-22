@@ -1,4 +1,4 @@
-import { cn, Heading, Panel, Text } from "@monti-cms/ui";
+import { Box, Grid, Heading, Panel, Stack, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 
 /**
@@ -10,11 +10,10 @@ export function Section({
 	description,
 	note,
 	children,
-	wide,
+	wide = false,
 	card = true,
 	band,
 	danger,
-	className,
 	testId,
 	id,
 }: {
@@ -23,7 +22,7 @@ export function Section({
 	/** A second line under the description, in the same style (what cannot be changed, a warning about the file). */
 	note?: ReactNode;
 	children: ReactNode;
-	/** The left column is 260px (a page of its own) instead of 220px (inside a collection). */
+	/** A wider label column (260px instead of 220px) for longer titles. */
 	wide?: boolean;
 	/** `false` when the content is a card of its own (a list of rows with its own header). */
 	card?: boolean;
@@ -31,49 +30,54 @@ export function Section({
 	band?: boolean;
 	/** A step that cannot be undone: the title in the danger color and the content in a box with a danger border. */
 	danger?: boolean;
-	className?: string;
 	testId?: string;
 	/** Anchor of the section, so a link can land on it (`#id`). */
 	id?: string;
 }) {
+	const titleId = testId ? `${testId}-title` : undefined;
 	return (
-		<section
+		<Grid
+			as="section"
 			id={id}
 			data-testid={testId}
-			aria-labelledby={testId ? `${testId}-title` : undefined}
-			className={cn(
-				"grid scroll-mt-6 gap-x-wide gap-y-normal lg:items-start",
-				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
-				band && "border-t pt-wide first:border-t-0 first:pt-0",
-				className,
-			)}
+			aria-labelledby={titleId}
+			columns={wide ? "rail-wide" : "rail"}
+			gap="wide"
+			align="start"
+			band={band}
 		>
-			<div>
-				<Heading as="h3" id={testId ? `${testId}-title` : undefined} tone={danger ? "danger" : undefined}>
+			<Stack gap="condensed">
+				<Heading as="h3" id={titleId} tone={danger ? "danger" : undefined}>
 					{title}
 				</Heading>
 				{description && (
-					<Text as="p" variant="label" tone="muted" className="mt-condensed">
+					<Text as="p" variant="label" tone="muted">
 						{description}
 					</Text>
 				)}
 				{note && (
-					<Text as="p" variant="label" tone="muted" className="mt-condensed">
+					<Text as="p" variant="label" tone="muted">
 						{note}
 					</Text>
 				)}
-			</div>
+			</Stack>
 			{danger ? (
-				<div className="flex min-w-0 flex-col gap-comfortable rounded-lg border border-monti-danger-muted p-comfortable">
+				<Stack gap="comfortable" minWidth={0} border="danger" radius="lg" padding="comfortable">
 					{children}
-				</div>
+				</Stack>
 			) : band ? (
-				<div className="flex min-w-0 flex-col gap-spacious">{children}</div>
+				<Stack gap="spacious" minWidth={0}>
+					{children}
+				</Stack>
 			) : card ? (
-				<Panel className="flex min-w-0 flex-col gap-spacious p-comfortable">{children}</Panel>
+				<Panel padding="comfortable">
+					<Stack gap="spacious" minWidth={0}>
+						{children}
+					</Stack>
+				</Panel>
 			) : (
-				<div className="min-w-0">{children}</div>
+				<Box minWidth={0}>{children}</Box>
 			)}
-		</section>
+		</Grid>
 	);
 }

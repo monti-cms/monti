@@ -1,13 +1,12 @@
 "use client";
 
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, cn, IconButton, Panel } from "@monti-cms/ui";
+import { Box, Button, cn, Heading, IconButton, Inline, Panel, Stack, Text } from "@monti-cms/ui";
 import { Eye, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
-import { TREE_MAX_WIDTH } from "../shared/layout";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useSchemaEdit } from "./controls";
@@ -16,16 +15,7 @@ import { FieldSheet } from "./field-sheet";
 import { schemaFieldsMessages } from "./fields.messages";
 import { emptyId, endId, groupId, LayoutDnd, tabId } from "./fields-tree-dnd";
 import { DropRow, GroupRow, type LayoutOps, TabRow } from "./fields-tree-layout-rows";
-import {
-	columnsOf,
-	type Destination,
-	type Locked,
-	OPTION,
-	REQUIRED,
-	Row,
-	TONE,
-	type TreeContext,
-} from "./fields-tree-rows";
+import { columnsOf, type Destination, type Locked, Row, type TreeContext } from "./fields-tree-rows";
 import {
 	addGroup,
 	addTab,
@@ -201,13 +191,17 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
-			<div className="flex h-11 shrink-0 items-center justify-between border-b pr-condensed pl-comfortable">
-				<h2 className="font-medium text-monti-body">{t("layout.preview")}</h2>
+			<Inline shrink={false} justify="between" height="control" border="bottom" paddingX="condensed">
+				<Heading as="h2" variant="label">
+					{t("layout.preview")}
+				</Heading>
 				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
 					<X aria-hidden />
 				</Button>
-			</div>
-			<div className="flex min-h-0 flex-1 flex-col p-normal">{preview}</div>
+			</Inline>
+			<Stack gap="none" grow minHeight={0} padding="normal">
+				{preview}
+			</Stack>
 		</aside>
 	);
 }
@@ -279,104 +273,124 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name, undefined, defaultName) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">
-			<div className="flex flex-wrap items-center justify-between gap-x-comfortable gap-y-condensed border-b px-comfortable py-normal">
-				<div className="min-w-0">
-					<h4 className="font-semibold text-monti-body">
-						{t("field.title")} <span className="font-medium text-monti-muted">{names.length}</span>
-					</h4>
-					<p className="mt-hair truncate text-monti-caption text-monti-muted" title={t("fields.hint")}>
-						{t("fields.hint")}
-					</p>
-				</div>
-				<div className="flex flex-wrap items-center gap-condensed whitespace-nowrap">
-					<IconButton
-						label={t("layout.preview")}
-						size="icon-sm"
-						pressed={previewOpen}
-						onClick={() => setPreviewOpen(!previewOpen)}
-					>
-						<Eye aria-hidden />
-					</IconButton>
-					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
-						<Plus aria-hidden />
-						{t("layout.addTab")}
-					</Button>
-					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addGroupRow}>
-						<Plus aria-hidden />
-						{t("layout.addGroup")}
-					</Button>
-					{offeredSets.map((set) => (
-						<Button
-							key={`${set.plugin}:${set.id}`}
-							type="button"
-							variant="secondary"
-							size="sm"
-							disabled={disabled}
-							onClick={() => addSet(set)}
+		<Box maxWidth="content" minWidth={0}>
+			<Panel ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
+				<Inline wrap justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
+					<Box minWidth={0}>
+						<Heading as="h4" variant="label">
+							{t("field.title")} <Text tone="muted">{names.length}</Text>
+						</Heading>
+						<Text as="p" variant="caption" tone="muted" truncate title={t("fields.hint")}>
+							{t("fields.hint")}
+						</Text>
+					</Box>
+					<Inline wrap gap="condensed">
+						<IconButton
+							label={t("layout.preview")}
+							size="icon-sm"
+							pressed={previewOpen}
+							onClick={() => setPreviewOpen(!previewOpen)}
 						>
+							<Eye aria-hidden />
+						</IconButton>
+						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
 							<Plus aria-hidden />
-							{t("fields.addSet", { name: set.label })}
+							{t("layout.addTab")}
 						</Button>
-					))}
-					<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
-						<Plus aria-hidden />
-						{t("field.add")}
-					</Button>
+						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addGroupRow}>
+							<Plus aria-hidden />
+							{t("layout.addGroup")}
+						</Button>
+						{offeredSets.map((set) => (
+							<Button
+								key={`${set.plugin}:${set.id}`}
+								type="button"
+								variant="secondary"
+								size="sm"
+								disabled={disabled}
+								onClick={() => addSet(set)}
+							>
+								<Plus aria-hidden />
+								{t("fields.addSet", { name: set.label })}
+							</Button>
+						))}
+						<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
+							<Plus aria-hidden />
+							{t("field.add")}
+						</Button>
+					</Inline>
+				</Inline>
+				<div
+					className={cn(
+						columnsOf(ctx.compact),
+						"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
+					)}
+					aria-hidden
+				>
+					<span>{t("fields.colField")}</span>
+					<span>{t("fields.colKind")}</span>
+					{!ctx.compact && <span>{t("fields.colSettings")}</span>}
 				</div>
-			</div>
-			<div
-				className={cn(
-					columnsOf(ctx.compact),
-					"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
+				<Box paddingY="condensed">
+					{names.length === 0 ? (
+						<Box paddingX="comfortable" paddingY="normal">
+							<Text as="p" variant="caption" tone="muted">
+								{t("field.none")}
+							</Text>
+						</Box>
+					) : (
+						<LayoutTree editing={editing} ctx={ctx} />
+					)}
+				</Box>
+				<Inline wrap gap="comfortable" border="top" paddingX="comfortable" paddingY="condensed" align="baseline">
+					<Text variant="caption" tone="muted">
+						<Text mono tone="warning">
+							!
+						</Text>{" "}
+						{t("fields.legendRequired")}
+					</Text>
+					<Text variant="caption" tone="muted">
+						<Text mono tone="kind-blue">
+							→
+						</Text>{" "}
+						{t("fields.legendRelation")}
+					</Text>
+					<Text variant="caption" tone="muted">
+						<Text mono tone="kind-teal">
+							←
+						</Text>{" "}
+						{t("fields.legendBacklink")}
+					</Text>
+					<Text variant="caption" tone="muted">
+						<Text mono tone="kind-orange">
+							= "…"
+						</Text>{" "}
+						{t("fields.legendOption")}
+					</Text>
+					<Box as="span" grow />
+					<Text variant="caption" tone="muted">
+						{t("fields.legendOpen")}
+					</Text>
+				</Inline>
+				{adding && (
+					<AddFieldDialog
+						editing={editing}
+						place={{}}
+						onClose={() => setAdding(false)}
+						onAdded={() => setAdding(false)}
+					/>
 				)}
-				aria-hidden
-			>
-				<span>{t("fields.colField")}</span>
-				<span>{t("fields.colKind")}</span>
-				<span className={cn("hidden", !ctx.compact && "block")}>{t("fields.colSettings")}</span>
-			</div>
-			<div className="py-condensed pb-condensed">
-				{names.length === 0 ? (
-					<p className="px-comfortable py-normal text-monti-caption text-monti-muted">{t("field.none")}</p>
-				) : (
-					<LayoutTree editing={editing} ctx={ctx} />
+				{sheet && (
+					<FieldSheet
+						key={`${sheet.name}`}
+						editing={editing}
+						place={sheet.place}
+						name={sheet.name}
+						onClose={() => setSheet(null)}
+					/>
 				)}
-			</div>
-			<div className="flex flex-wrap gap-x-comfortable gap-y-tight border-t px-comfortable py-condensed text-monti-caption text-monti-muted">
-				<span>
-					<span className={cn("font-mono", REQUIRED)}>!</span> {t("fields.legendRequired")}
-				</span>
-				<span>
-					<span className={cn("font-mono", TONE.relation)}>→</span> {t("fields.legendRelation")}
-				</span>
-				<span>
-					<span className={cn("font-mono", TONE.backlink)}>←</span> {t("fields.legendBacklink")}
-				</span>
-				<span>
-					<span className={cn("font-mono", OPTION)}>= "…"</span> {t("fields.legendOption")}
-				</span>
-				<span className="flex-1" />
-				<span>{t("fields.legendOpen")}</span>
-			</div>
-			{adding && (
-				<AddFieldDialog
-					editing={editing}
-					place={{}}
-					onClose={() => setAdding(false)}
-					onAdded={() => setAdding(false)}
-				/>
-			)}
-			{sheet && (
-				<FieldSheet
-					key={`${sheet.name}`}
-					editing={editing}
-					place={sheet.place}
-					name={sheet.name}
-					onClose={() => setSheet(null)}
-				/>
-			)}
-		</Panel>
+			</Panel>
+		</Box>
 	);
 	const preview = (
 		<LayoutPreview

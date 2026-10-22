@@ -86,7 +86,7 @@ describe("admin CSS confinement", () => {
 		expect(names.filter((name) => name.startsWith("--background-color-monti-")).length).toBeGreaterThan(0);
 		for (const name of names)
 			expect(name).toMatch(
-				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|accent-color|text|shadow)-monti-|radius-(?:sm|md|lg|xl)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold)$|tracking-caps$|spacing-[a-z]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
+				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|accent-color|text|shadow)-monti-|radius-(?:sm|md|lg|xl)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold)$|tracking-caps$|spacing-[a-z]+$|size-(?:icon|control)(?:-[a-z]+)?$|height-control(?:-[a-z]+)?$|container-[a-z-]+$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
 			);
 		// Tailwind's palette, text sizes, weights, shadows, tracking and line heights are cleared, so an off-system class compiles to nothing.
 		for (const reset of [
@@ -101,8 +101,8 @@ describe("admin CSS confinement", () => {
 			expect(theme).toContain(`${reset}: initial;`);
 		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
 		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--monti-radius");
-		// Every role reads an admin variable.
-		for (const role of theme.matchAll(/--[a-z-]+-monti-[a-z-]+:\s*([^;]+);/g))
+		// Every role reads an admin variable (an animation names its `monti-` keyframes instead).
+		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[a-z-]+:\s*([^;]+);/g))
 			expect(role[1]).toMatch(/^var\(--monti-|^\d/);
 		// Variant names also start with `monti-`.
 		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);

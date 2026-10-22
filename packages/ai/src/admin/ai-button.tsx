@@ -19,7 +19,6 @@ export interface AiButtonProps<K extends AiActionKey<Config>, Config extends Cms
 	onResult: (result: AiActionResultOf<K, Config>) => void;
 	/** Button label. Defaults to the action name (its name in the admin AI screen). */
 	children?: ReactNode;
-	className?: string;
 }
 
 /**
@@ -35,7 +34,6 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 	input,
 	onResult,
 	children,
-	className,
 }: AiButtonProps<K, Config>) {
 	const site = useSite();
 	const t = useTranslator(aiCommonMessages);
@@ -48,7 +46,6 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 			type="button"
 			variant="outline"
 			size="sm"
-			className={className}
 			disabled={running}
 			onClick={async () => {
 				setRunning(true);

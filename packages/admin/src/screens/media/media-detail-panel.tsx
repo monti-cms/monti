@@ -3,20 +3,27 @@
 import type { Folder } from "@monti-cms/core/site";
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
-	buttonVariants,
-	cn,
+	DescriptionItem,
+	DescriptionList,
 	FormField,
 	FormFieldError,
 	FormFieldLabel,
+	Heading,
 	IconButton,
+	Image,
+	Inline,
 	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
+	Text,
 	Textarea,
+	TextLink,
 } from "@monti-cms/ui";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
@@ -39,27 +46,24 @@ import {
 	usageNoteLabel,
 	withExtension,
 } from "./media-item";
-import { MediaThumb } from "./media-views";
+import { fallbackFor } from "./media-views";
 import { mediaMessages } from "./messages";
 
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="space-y-normal border-monti-muted border-t px-comfortable py-comfortable">
-			<h3 className="text-monti-label">{title}</h3>
+		<Stack as="section" gap="normal" border="top" paddingX="comfortable" paddingY="comfortable">
+			<Heading as="h3" variant="label">
+				{title}
+			</Heading>
 			{children}
-		</section>
+		</Stack>
 	);
 }
 
 /** Item name on top, value below. Long values (ID, file name) do not push out the name column. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
-	return (
-		<div className="space-y-hair">
-			<dt className="text-monti-caption text-monti-muted">{label}</dt>
-			<dd className="break-all">{children}</dd>
-		</div>
-	);
+	return <DescriptionItem label={label}>{children}</DescriptionItem>;
 }
 
 function folderPath(folder: Folder, folders: Folder[]): string {
@@ -84,7 +88,6 @@ function folderPath(folder: Folder, folders: Folder[]): string {
 export function MediaDetailPanel({
 	media,
 	folders,
-	className,
 	onClose,
 	onSaveDefaults,
 	onRename,
@@ -94,7 +97,6 @@ export function MediaDetailPanel({
 }: {
 	media: MediaItem;
 	folders?: Folder[];
-	className?: string;
 	onClose: () => void;
 	/** Saves the default description. Rejects on failure. The error shows inside the field. */
 	onSaveDefaults: (defaults: { alt: string; caption: string }) => Promise<void>;
@@ -187,25 +189,20 @@ export function MediaDetailPanel({
 	);
 
 	return (
-		<aside
-			aria-label={t("detail.label")}
-			className={cn("flex h-full flex-col border-monti-muted border-l bg-monti-page text-monti-label", className)}
-		>
+		<Stack as="aside" aria-label={t("detail.label")} gap="none" height="full" border="left" background="page">
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
-			<div className="min-h-0 flex-1 overflow-y-auto">
-				<div className="space-y-normal p-comfortable">
-					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-inset">
-						{isImage && media.publicUrl ? (
-							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
-						) : (
-							<span className="flex flex-col items-center gap-condensed text-monti-muted">
-								<MediaThumb media={media} iconClassName="size-12" />
-								<span className="font-medium">{fileTypeLabel(media.filename, media.mimeType)}</span>
-							</span>
-						)}
-					</div>
-					<div className="flex flex-wrap gap-condensed">
+			<Stack gap="none" grow minHeight={0} overflow="y">
+				<Stack gap="normal" padding="comfortable">
+					<Image
+						src={isImage ? media.publicUrl : undefined}
+						alt=""
+						ratio="photo"
+						fit="contain"
+						border
+						fallback={fallbackFor(media, isImage)}
+					/>
+					<Inline gap="condensed" wrap>
 						{media.publicUrl && (
 							<>
 								<Button
@@ -217,15 +214,16 @@ export function MediaDetailPanel({
 									<Copy aria-hidden />
 									{t("detail.copyUrl")}
 								</Button>
-								<a
-									href={media.publicUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={buttonVariants({ variant: "outline", size: "xs" })}
+								<Button
+									nativeButton={false}
+									// biome-ignore lint/a11y/useAnchorContent: the Button renders its children into this link
+									render={<a href={media.publicUrl} target="_blank" rel="noopener noreferrer" />}
+									variant="outline"
+									size="xs"
 								>
 									<ExternalLink aria-hidden />
 									{tc("open")}
-								</a>
+								</Button>
 							</>
 						)}
 						<Button
@@ -238,11 +236,11 @@ export function MediaDetailPanel({
 							<Copy aria-hidden />
 							{t("detail.copyId")}
 						</Button>
-					</div>
-				</div>
+					</Inline>
+				</Stack>
 
 				<Section title={t("detail.section.info")}>
-					<dl className="space-y-normal">
+					<DescriptionList layout="stacked">
 						<SlotScope
 							key={`filename-${media.id}`}
 							request={slot("filename", (suggestion) => {
@@ -252,55 +250,58 @@ export function MediaDetailPanel({
 							})}
 						>
 							{({ trigger, panel }) => (
-								<form
-									className="space-y-tight"
+								<Box
+									as="form"
 									onSubmit={(event) => {
 										event.preventDefault();
 										void saveName();
 									}}
 								>
-									<FormField data-invalid={problem && nameDirty ? true : undefined}>
-										<div className="flex items-center justify-between gap-condensed">
-											<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
-											{isImage && trigger}
-										</div>
-										<div className="flex items-center gap-condensed">
-											<Input
-												id={nameFieldId}
-												value={stem}
-												disabled={renaming || media.status !== "ready"}
-												aria-invalid={(problem !== null && nameDirty) || renameError !== null || undefined}
-												aria-describedby={renameError || (problem && nameDirty) ? nameErrorId : undefined}
-												onChange={(event) => {
-													setStem(event.target.value);
-													setRenameError(null);
-												}}
-												className="h-8 min-w-0 flex-1 rounded-md font-mono text-monti-label md:text-monti-label"
-											/>
-											{extension && (
-												<span className="shrink-0 text-monti-muted" title={t("detail.filename.extensionKept")}>
-													{extension}
-												</span>
+									<Stack gap="tight">
+										<FormField data-invalid={problem && nameDirty ? true : undefined}>
+											<Inline gap="condensed" justify="between">
+												<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
+												{isImage && trigger}
+											</Inline>
+											<Inline gap="condensed">
+												<Input
+													id={nameFieldId}
+													size="sm"
+													mono
+													value={stem}
+													disabled={renaming || media.status !== "ready"}
+													aria-invalid={(problem !== null && nameDirty) || renameError !== null || undefined}
+													aria-describedby={renameError || (problem && nameDirty) ? nameErrorId : undefined}
+													onChange={(event) => {
+														setStem(event.target.value);
+														setRenameError(null);
+													}}
+												/>
+												{extension && (
+													<Text as="span" tone="muted" title={t("detail.filename.extensionKept")}>
+														{extension}
+													</Text>
+												)}
+												<IconButton
+													type="submit"
+													label={t("detail.filename.save")}
+													size="icon-sm"
+													variant="outline"
+													disabled={!nameDirty || problem !== null || renaming}
+												>
+													<Check aria-hidden />
+												</IconButton>
+											</Inline>
+											{(renameError || (problem && nameDirty)) && (
+												<FormFieldError id={nameErrorId}>
+													{renameError ??
+														(problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid"))}
+												</FormFieldError>
 											)}
-											<IconButton
-												type="submit"
-												label={t("detail.filename.save")}
-												size="icon-sm"
-												variant="outline"
-												disabled={!nameDirty || problem !== null || renaming}
-											>
-												<Check aria-hidden />
-											</IconButton>
-										</div>
-										{(renameError || (problem && nameDirty)) && (
-											<FormFieldError id={nameErrorId}>
-												{renameError ??
-													(problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid"))}
-											</FormFieldError>
-										)}
-									</FormField>
-									{panel}
-								</form>
+										</FormField>
+										{panel}
+									</Stack>
+								</Box>
 							)}
 						</SlotScope>
 						<Row label={t("detail.row.type")}>
@@ -333,7 +334,7 @@ export function MediaDetailPanel({
 										void onMoveFolder(nextId).finally(() => setMovingFolder(false));
 									}}
 								>
-									<SelectTrigger className="h-8 rounded-md text-monti-label">
+									<SelectTrigger size="sm" width="full">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -348,119 +349,128 @@ export function MediaDetailPanel({
 						)}
 						{media.publicUrl && (
 							<Row label={t("detail.row.url")}>
-								<code className="font-mono text-monti-caption">{media.publicUrl}</code>
+								<Text as="code" variant="caption" mono>
+									{media.publicUrl}
+								</Text>
 							</Row>
 						)}
 						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(site, media.createdAt)}</Row>
 						<Row label={t("detail.row.id")}>
-							<code className="font-mono text-monti-caption">{media.id}</code>
+							<Text as="code" variant="caption" mono>
+								{media.id}
+							</Text>
 						</Row>
-					</dl>
+					</DescriptionList>
 				</Section>
 
 				{isImage && (
 					<Section title={t("detail.section.defaults")}>
-						<p className="text-monti-muted">{t("detail.defaultsHelp")}</p>
-						<form
-							className="space-y-normal"
+						<Text as="p" tone="muted">
+							{t("detail.defaultsHelp")}
+						</Text>
+						<Box
+							as="form"
 							onSubmit={(event) => {
 								event.preventDefault();
 								void saveDefaults();
 							}}
 						>
-							<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
-								{({ trigger, panel }) => (
-									<FormField>
-										<div className="flex items-center justify-between gap-condensed">
-											<FormFieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FormFieldLabel>
-											{trigger}
-										</div>
-										<Textarea
-											id={altId}
-											rows={2}
-											value={draft.alt}
-											disabled={isSaving}
-											onChange={(event) => setDraft({ alt: event.target.value })}
-											className="min-h-14 rounded-md text-monti-label md:text-monti-label"
-										/>
-										{panel}
-									</FormField>
-								)}
-							</SlotScope>
-							<SlotScope
-								key={`caption-${media.id}`}
-								request={slot("defaultCaption", (caption) => setDraft({ caption }))}
-							>
-								{({ trigger, panel }) => (
-									<FormField>
-										<div className="flex items-center justify-between gap-condensed">
-											<FormFieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FormFieldLabel>
-											{trigger}
-										</div>
-										<Textarea
-											id={captionId}
-											rows={2}
-											value={draft.caption}
-											disabled={isSaving}
-											onChange={(event) => setDraft({ caption: event.target.value })}
-											className="min-h-14 rounded-md text-monti-label md:text-monti-label"
-										/>
-										{panel}
-									</FormField>
-								)}
-							</SlotScope>
-							<EditorFooter
-								dirty={dirty}
-								saving={isSaving}
-								canSave={media.status === "ready"}
-								error={saveError}
-								align="end"
-							/>
-						</form>
+							<Stack gap="normal">
+								<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
+									{({ trigger, panel }) => (
+										<FormField>
+											<Inline gap="condensed" justify="between">
+												<FormFieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FormFieldLabel>
+												{trigger}
+											</Inline>
+											<Textarea
+												id={altId}
+												rows={2}
+												value={draft.alt}
+												disabled={isSaving}
+												onChange={(event) => setDraft({ alt: event.target.value })}
+											/>
+											{panel}
+										</FormField>
+									)}
+								</SlotScope>
+								<SlotScope
+									key={`caption-${media.id}`}
+									request={slot("defaultCaption", (caption) => setDraft({ caption }))}
+								>
+									{({ trigger, panel }) => (
+										<FormField>
+											<Inline gap="condensed" justify="between">
+												<FormFieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FormFieldLabel>
+												{trigger}
+											</Inline>
+											<Textarea
+												id={captionId}
+												rows={2}
+												value={draft.caption}
+												disabled={isSaving}
+												onChange={(event) => setDraft({ caption: event.target.value })}
+											/>
+											{panel}
+										</FormField>
+									)}
+								</SlotScope>
+								<EditorFooter
+									dirty={dirty}
+									saving={isSaving}
+									canSave={media.status === "ready"}
+									error={saveError}
+									align="end"
+								/>
+							</Stack>
+						</Box>
 					</Section>
 				)}
 
 				<Section title={t("detail.section.usage", { count: usageCount(media) })}>
 					{media.referencesCount === 0 ? (
-						<p className="text-monti-muted">{t("detail.noUsage")}</p>
+						<Text as="p" tone="muted">
+							{t("detail.noUsage")}
+						</Text>
 					) : (
-						<ul className="space-y-tight">
+						<Stack as="ul" gap="tight">
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
-									<a
-										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
-										className="flex items-center gap-condensed rounded-md px-condensed py-condensed hover:bg-monti-hover"
-									>
-										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
+									<Inline gap="condensed" justify="between" paddingX="condensed" paddingY="condensed">
+										<TextLink underline="hover" href={withBasePath(entryHref(site, usage.collection, usage.entryId))}>
+											{usage.title || tc("untitled")}
+										</TextLink>
 										{usage.note && (
-											<span className="shrink-0 text-monti-caption text-monti-muted">
+											<Text variant="caption" tone="muted">
 												{usageNoteLabel(t, usage.note)}
-											</span>
+											</Text>
 										)}
-									</a>
+									</Inline>
 								</li>
 							))}
-						</ul>
+						</Stack>
 					)}
 				</Section>
-			</div>
+			</Stack>
 
-			<div className="shrink-0 space-y-condensed border-monti-muted border-t px-comfortable py-normal">
+			<Stack gap="condensed" shrink={false} border="top" paddingX="comfortable" paddingY="normal">
 				<Button
 					type="button"
 					variant="secondary"
 					tone="danger"
 					size="sm"
-					className="w-full"
+					width="full"
 					disabled={media.referencesCount > 0}
 					onClick={onRequestDelete}
 				>
 					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
 				</Button>
 				{media.referencesCount > 0 && (
-					<p className="text-center text-monti-caption text-monti-muted">{t("detail.inUse")}</p>
+					<Text as="p" variant="caption" tone="muted">
+						{t("detail.inUse")}
+					</Text>
 				)}
-			</div>
-		</aside>
+			</Stack>
+		</Stack>
 	);
 }

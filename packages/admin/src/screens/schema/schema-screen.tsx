@@ -5,7 +5,21 @@ import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Alert, AlertDescription, AlertTitle, Badge, cn, IconButton, Skeleton } from "@monti-cms/ui";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+	Badge,
+	Box,
+	CodeBlock,
+	cn,
+	Heading,
+	IconButton,
+	Inline,
+	Skeleton,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -83,25 +97,35 @@ function FileRest({ file }: { file: Obj }) {
 			{rest.length > 0 && (
 				<Section wide title={t("file.title")}>
 					{rest.map(([title, value]) => (
-						<div key={title} className="flex flex-col gap-condensed">
-							<h4 className="text-monti-label">{title}</h4>
-							<pre className="max-h-64 overflow-auto rounded-md bg-monti-inset p-normal text-monti-caption">
-								{JSON.stringify(value, null, 2)}
-							</pre>
-						</div>
+						<Stack key={title} gap="condensed">
+							<Heading as="h4" variant="label">
+								{title}
+							</Heading>
+							<CodeBlock wrap={false}>{JSON.stringify(value, null, 2)}</CodeBlock>
+						</Stack>
 					))}
 				</Section>
 			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
-					<ul className="-my-condensed flex flex-col divide-y text-monti-body">
-						{migrations.map((migration) => (
-							<li key={String(migration.id)} className="flex items-center gap-condensed py-condensed">
-								<code className="text-monti-caption">{String(migration.id)}</code>{" "}
-								<span className="text-monti-caption text-monti-muted">{String(migration.op)}</span>
-							</li>
+					<Stack as="ul" gap="none">
+						{migrations.map((migration, index) => (
+							<Inline
+								as="li"
+								key={String(migration.id)}
+								gap="condensed"
+								paddingY="condensed"
+								border={index === 0 ? undefined : "top"}
+							>
+								<Text as="code" variant="caption">
+									{String(migration.id)}
+								</Text>
+								<Text variant="caption" tone="muted">
+									{String(migration.op)}
+								</Text>
+							</Inline>
 						))}
-					</ul>
+					</Stack>
 				</Section>
 			)}
 		</>
@@ -112,10 +136,12 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<span className="inline-flex items-center gap-condensed rounded-sm border border-monti-muted bg-monti-inset px-normal py-hair font-mono text-monti-caption text-monti-muted">
-			{state.file ?? t("status.noFile")}
-			{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
-		</span>
+		<Box as="span" border="all" radius="sm" background="inset" paddingX="normal" paddingY="hair">
+			<Text variant="caption" tone="muted" mono>
+				{state.file ?? t("status.noFile")}
+				{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
+			</Text>
+		</Box>
 	);
 }
 
@@ -174,11 +200,13 @@ function CollectionNavItem({
 				)}
 				onClick={onSelect}
 			>
-				<span className="flex-1 truncate">{label}</span>
+				<Box grow minWidth={0}>
+					<Text truncate>{label}</Text>
+				</Box>
 				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangeDot />}
-				<span className="text-monti-caption text-monti-muted">
+				<Text variant="caption" tone="muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
-				</span>
+				</Text>
 			</button>
 		</div>
 	);
@@ -217,7 +245,7 @@ function SchemaEditor({
 		setSelectedName(name);
 		setSection(undefined);
 	};
-	const scroller = useRef<HTMLDivElement>(null);
+	const scroller = useRef<HTMLElement>(null);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
@@ -265,7 +293,7 @@ function SchemaEditor({
 	};
 
 	const actions = !writable ? (
-		<Badge variant="outline" className="gap-tight">
+		<Badge variant="outline">
 			<Lock aria-hidden />
 			{t("status.readOnly")}
 		</Badge>
@@ -276,29 +304,38 @@ function SchemaEditor({
 		: ((state.access.reason as keyof typeof READ_ONLY_KEY | undefined) ?? null);
 	return (
 		<SchemaEditProvider value={context}>
-			<div className="flex min-h-0 flex-1 flex-col" data-testid="schema-screen">
+			<Stack gap="none" grow minHeight={0} data-testid="schema-screen">
 				{fileSlot ? createPortal(<FileLine state={state} reason={reason} />, fileSlot) : null}
 				{actions && actionsSlot !== undefined
 					? actionsSlot
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<div className="flex items-center justify-end gap-condensed border-b bg-monti-page px-comfortable py-condensed lg:px-wide">
+							<Inline
+								justify="end"
+								gap="condensed"
+								border="bottom"
+								background="page"
+								paddingX="wide"
+								paddingY="condensed"
+							>
 								{actions}
-							</div>
+							</Inline>
 						)}
-				<div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+				<Stack ref={scroller} gap="none" grow minHeight={0} overflow="y">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
-								<AlertDescription className="flex flex-col gap-tight">
-									<span>{t(READ_ONLY_KEY[reason])}</span>
-									{reason === "has_code" && (state.access.issue || state.access.detail) && (
-										<code className="text-monti-caption" data-testid="schema-code-detail">
-											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
-										</code>
-									)}
+								<AlertDescription>
+									<Stack gap="tight">
+										<Text>{t(READ_ONLY_KEY[reason])}</Text>
+										{reason === "has_code" && (state.access.issue || state.access.detail) && (
+											<Text as="code" variant="caption" data-testid="schema-code-detail">
+												{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
+											</Text>
+										)}
+									</Stack>
 								</AlertDescription>
 							</Alert>
 						)}
@@ -315,9 +352,11 @@ function SchemaEditor({
 						{state.issues.length > 0 && (
 							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
-								<AlertDescription className="flex flex-col gap-condensed">
-									<span>{t("invalid.description")}</span>
-									<IssueList issues={state.issues} />
+								<AlertDescription>
+									<Stack gap="condensed">
+										<Text>{t("invalid.description")}</Text>
+										<IssueList issues={state.issues} />
+									</Stack>
 								</AlertDescription>
 							</Alert>
 						)}
@@ -339,22 +378,19 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<div className="flex flex-col gap-spacious lg:flex-row lg:gap-wide">
-										<div className="flex shrink-0 flex-col gap-hair lg:w-56">
-											<div className="flex items-center justify-between pb-condensed pl-normal">
-												<span className="font-medium text-monti-caption text-monti-muted">
+									<Inline wrap align="start" gap="wide">
+										<Stack gap="hair" width="panel-sm" shrink={false}>
+											<Inline justify="between" paddingBottom="condensed" paddingX="normal">
+												<Text variant="caption" weight="medium" tone="muted">
 													{t("collection.railTitle")} {names.length}
-												</span>
+												</Text>
 												{writable && (
 													<IconButton label={t("collection.create")} size="icon-xs" onClick={() => setCreating(true)}>
 														<Plus aria-hidden />
 													</IconButton>
 												)}
-											</div>
-											<nav
-												aria-label={t("tabs.collections")}
-												className="flex gap-tight overflow-x-auto pb-tight lg:flex-col lg:gap-hair lg:overflow-visible lg:pb-0"
-											>
+											</Inline>
+											<Stack as="nav" aria-label={t("tabs.collections")} gap="hair">
 												<SortableList
 													items={names}
 													onDragEnd={(from, to) => {
@@ -378,9 +414,9 @@ function SchemaEditor({
 														/>
 													))}
 												</SortableList>
-											</nav>
-										</div>
-										<div className="min-w-0 flex-1">
+											</Stack>
+										</Stack>
+										<Box grow minWidth={0}>
 											{selected && collections[selected] ? (
 												<CollectionEditor
 													key={selected}
@@ -406,23 +442,25 @@ function SchemaEditor({
 													}}
 												/>
 											) : (
-												<p className="text-monti-body text-monti-muted">{t("collection.none")}</p>
+												<Text as="p" tone="muted">
+													{t("collection.none")}
+												</Text>
 											)}
-										</div>
-									</div>
+										</Box>
+									</Inline>
 								)}
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && (
-									<div className="flex flex-col gap-section">
+									<Stack gap="section">
 										<AdminEditor file={draft} update={updateFile} />
 										<FileRest file={draft} />
-									</div>
+									</Stack>
 								)}
 							</>
 						)}
 					</PageBody>
-				</div>
+				</Stack>
 				{dirty && writable && (
 					<SaveBar
 						count={pending}
@@ -432,7 +470,7 @@ function SchemaEditor({
 						onDiscard={() => void discard()}
 					/>
 				)}
-			</div>
+			</Stack>
 			{dialog}
 			{guardDialog}
 			<NewCollectionDialog
@@ -511,12 +549,8 @@ export function SchemaSettings({
 			/>
 		);
 	return (
-		<div className="flex flex-col gap-normal p-comfortable lg:p-wide">
-			{error ? (
-				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
-			) : (
-				<Skeleton className="h-40 w-full" />
-			)}
-		</div>
+		<Stack gap="normal" padding="wide">
+			{error ? <LoadErrorAlert message={error} onRetry={() => void query.refetch()} /> : <Skeleton shape="block" />}
+		</Stack>
 	);
 }

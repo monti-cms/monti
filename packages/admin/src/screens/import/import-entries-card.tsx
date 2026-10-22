@@ -1,7 +1,20 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Alert, AlertDescription, Button, Spinner } from "@monti-cms/ui";
+import {
+	Alert,
+	AlertDescription,
+	Box,
+	Button,
+	Inline,
+	Input,
+	List,
+	ListItem,
+	Progress,
+	Spinner,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { useRef } from "react";
 import { errorText } from "../../api/client";
 import { LoadErrorAlert } from "../shared/load-error-alert";
@@ -17,15 +30,17 @@ const formatBytes = (bytes: number): string =>
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(importMessages);
 	return (
-		<output className="flex flex-col gap-condensed" data-testid="import-progress">
-			<div className="flex items-center gap-condensed text-monti-body text-monti-muted">
-				<Spinner aria-hidden className="size-3.5" />
-				{t("progress.running", { count })}
-			</div>
-			<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
-				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis" />
-			</div>
-			<p className="text-monti-caption text-monti-muted">{t("progress.hint")}</p>
+		<output data-testid="import-progress">
+			<Stack gap="condensed">
+				<Inline gap="condensed">
+					<Spinner aria-hidden size="sm" />
+					<Text tone="muted">{t("progress.running", { count })}</Text>
+				</Inline>
+				<Progress value={null} label={t("progress.running", { count })} />
+				<Text as="p" variant="caption" tone="muted">
+					{t("progress.hint")}
+				</Text>
+			</Stack>
 		</output>
 	);
 }
@@ -43,21 +58,31 @@ export function ImportEntriesFields() {
 	const running = form.isRunning;
 
 	return (
-		<div className="flex flex-col gap-spacious">
-			<div className="flex flex-col gap-condensed">
-				<p className="font-medium text-monti-body">{t("kinds.label")}</p>
-				<ul className="flex list-disc flex-col gap-tight pl-comfortable text-monti-caption text-monti-muted">
-					<li>{t("kinds.export")}</li>
-					<li>{t("kinds.markdown")}</li>
-				</ul>
-			</div>
+		<Stack gap="spacious">
+			<Stack gap="condensed">
+				<Text as="p" weight="medium">
+					{t("kinds.label")}
+				</Text>
+				<List>
+					<ListItem>
+						<Text variant="caption" tone="muted">
+							{t("kinds.export")}
+						</Text>
+					</ListItem>
+					<ListItem>
+						<Text variant="caption" tone="muted">
+							{t("kinds.markdown")}
+						</Text>
+					</ListItem>
+				</List>
+			</Stack>
 
-			<div className="flex flex-wrap items-center gap-normal">
-				<input
+			<Inline gap="normal" wrap>
+				<Input
 					ref={input}
 					type="file"
 					accept=".zip,application/zip"
-					className="sr-only"
+					srOnly
 					aria-label={t("file.choose")}
 					data-testid="import-file"
 					disabled={running}
@@ -71,8 +96,12 @@ export function ImportEntriesFields() {
 				<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
 					{form.file ? t("file.change") : t("file.choose")}
 				</Button>
-				{form.file && <span className="min-w-0 truncate text-monti-body text-monti-muted">{form.file.name}</span>}
-			</div>
+				{form.file && (
+					<Text tone="muted" truncate>
+						{form.file.name}
+					</Text>
+				)}
+			</Inline>
 
 			{form.tooLarge && form.limit !== undefined && (
 				<Alert tone="danger" layout="stack">
@@ -81,7 +110,9 @@ export function ImportEntriesFields() {
 			)}
 
 			{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
-				<p className="text-monti-body text-monti-muted">{t("preview.loading")}</p>
+				<Text as="p" tone="muted">
+					{t("preview.loading")}
+				</Text>
 			)}
 			{previewQuery.isError && (
 				<LoadErrorAlert
@@ -91,12 +122,9 @@ export function ImportEntriesFields() {
 			)}
 
 			{preview && !result && (
-				<div
-					aria-busy={previewQuery.isPlaceholderData}
-					className={previewQuery.isPlaceholderData ? "opacity-50 transition-opacity" : "transition-opacity"}
-				>
+				<Box dimmed={previewQuery.isPlaceholderData} aria-busy={previewQuery.isPlaceholderData}>
 					<PreviewView preview={preview} form={form} />
-				</div>
+				</Box>
 			)}
 
 			{Boolean(form.runError) && (
@@ -108,7 +136,7 @@ export function ImportEntriesFields() {
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 
 			{preview && !result && (
-				<div className="flex flex-wrap items-center gap-condensed">
+				<Inline gap="condensed" wrap>
 					<Button
 						type="button"
 						disabled={running || previewQuery.isPlaceholderData || preview.counts.imported === 0}
@@ -120,21 +148,23 @@ export function ImportEntriesFields() {
 						{t("action.cancel")}
 					</Button>
 					{preview.counts.imported === 0 && (
-						<span className="text-monti-caption text-monti-muted">{t("nothing.description")}</span>
+						<Text variant="caption" tone="muted">
+							{t("nothing.description")}
+						</Text>
 					)}
-				</div>
+				</Inline>
 			)}
 
 			{result && (
 				<>
 					<ResultView result={result} />
-					<div>
+					<Box>
 						<Button type="button" variant="outline" onClick={form.reset}>
 							{t("action.again")}
 						</Button>
-					</div>
+					</Box>
 				</>
 			)}
-		</div>
+		</Stack>
 	);
 }

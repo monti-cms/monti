@@ -1,20 +1,18 @@
-import { cn } from "@monti-cms/ui";
-import type { ComponentProps } from "react";
-import { PAGE_MAX_WIDTH } from "./layout";
+import { Stack, type StackProps } from "@monti-cms/ui";
 
 /**
  * The body of a settings or tools page: left-aligned under the page header, one maximum width and one padding, so no page can drift from the others.
  * Cards inside it take the full width; their texts keep a readable measure on their own. A form-like page keeps the readable width; a `wide` page
  * (a workspace of lists, trees and side panels) uses all the width there is, with the same padding.
  */
-export function PageBody({ className, wide, ...props }: ComponentProps<"div"> & { wide?: boolean }) {
+export function PageBody({ wide, ...props }: Omit<StackProps, "className"> & { wide?: boolean }) {
 	return (
-		<div
-			className={cn(
-				"flex w-full flex-col gap-spacious px-comfortable py-spacious lg:px-wide lg:py-wide",
-				wide ? "max-w-none" : PAGE_MAX_WIDTH,
-				className,
-			)}
+		<Stack
+			gap="spacious"
+			width="full"
+			maxWidth={wide ? undefined : "page"}
+			paddingX="wide"
+			paddingY="wide"
 			{...props}
 		/>
 	);

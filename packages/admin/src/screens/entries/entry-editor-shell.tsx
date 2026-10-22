@@ -4,7 +4,7 @@ import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { cn, FormFieldLabel, Input } from "@monti-cms/ui";
+import { FormFieldLabel, Inline, Input, Stack, Text, TextLink } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +25,7 @@ import { nounVars } from "../shared/noun.messages";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { type EditorStatus, StatusBar } from "../shared/status-bar";
 import { bodyStats } from "./body-stats";
+import { EditorScroller } from "./editor-scroller";
 import { EntryEditorBanners } from "./entry-editor-banners";
 import { EntryEditorHeader } from "./entry-editor-header";
 import { EntryEditorRecoveryDialogs } from "./entry-editor-recovery";
@@ -36,7 +37,7 @@ import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { SourceChangeDialog } from "./source-change-dialog";
-import { ACTIVE_BLOCK_STYLE, useSourceSync } from "./source-sync";
+import { useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
@@ -228,12 +229,9 @@ export function EntryEditorShell({
 			entry?.source ? (
 				<>
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
-					<Link
-						href={site.adminEntryEditHref(entry.source.id)}
-						className="text-monti-accent underline underline-offset-2"
-					>
+					<TextLink tone="accent" render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
 						{te("inspector.sourceLink")}
-					</Link>
+					</TextLink>
 				</>
 			) : undefined,
 		[entry?.source, site.adminEntryEditHref, site.localeLabel, te],
@@ -380,7 +378,7 @@ export function EntryEditorShell({
 		(site.isCollection(collection) ? site.titleField(collection).field.label : undefined) ?? t("title");
 	const titleInput = (
 		<>
-			<FormFieldLabel htmlFor="cms-title-canvas" className="sr-only">
+			<FormFieldLabel htmlFor="cms-title-canvas" hidden>
 				{titleLabel}
 			</FormFieldLabel>
 			<Input
@@ -391,12 +389,13 @@ export function EntryEditorShell({
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
 				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
-				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-spacious py-tight text-monti-display shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-display"
+				size="display"
+				appearance="inline"
 			/>
 			{titleIssue && (
-				<p id="cms-title-error" className="text-monti-body text-monti-danger">
+				<Text as="p" id="cms-title-error" tone="danger">
 					{issueLine(titleIssue)}
-				</p>
+				</Text>
 			)}
 		</>
 	);
@@ -432,16 +431,16 @@ export function EntryEditorShell({
 				onComposing={editor.setComposing}
 			/>
 			{bodyIssue && (
-				<p id={SOURCE_ERROR_ID} className="mt-condensed text-monti-body text-monti-danger">
+				<Text as="p" id={SOURCE_ERROR_ID} tone="danger">
 					{issueLine(bodyIssue)}
-				</p>
+				</Text>
 			)}
 		</>
 	);
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
-			<div className="flex h-screen w-full flex-col overflow-hidden bg-monti-page text-monti-default">
+			<Stack gap="none" height="screen" overflow="clip" background="page">
 				<EntryEditorHeader
 					editor={editor}
 					commands={commands}
@@ -457,7 +456,7 @@ export function EntryEditorShell({
 					onCompareSource={() => setIsSourceCompareOpen(true)}
 				/>
 
-				<div className="relative flex min-h-0 flex-1 overflow-hidden">
+				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
 					{translationSource && isSourcePaneOpen && (
 						<TranslationSourcePanel
 							source={translationSource}
@@ -465,10 +464,9 @@ export function EntryEditorShell({
 							onClose={() => toggleSourcePane(false)}
 						/>
 					)}
-					<div
-						ref={setEditorScroller}
-						// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
-						className={cn("h-full min-w-0 flex-1 overflow-y-auto", translationSource && ACTIVE_BLOCK_STYLE)}
+					<EditorScroller
+						scrollerRef={setEditorScroller}
+						highlightActive={Boolean(translationSource)}
 						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
 					>
 						<CmsEditor
@@ -481,14 +479,14 @@ export function EntryEditorShell({
 								</>
 							}
 							toolbarAside={
-								<span className="flex items-center gap-tight">
+								<Inline gap="tight">
 									{site.ADMIN_TEMPLATES && (
 										<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
 									)}
 									{extensions.toolbar}
 									{sourcePaneToggle}
 									{sourceModeToggle}
-								</span>
+								</Inline>
 							}
 							sourceView={isSourceMode ? sourceEditor : undefined}
 							editable={!isReadOnly}
@@ -504,7 +502,7 @@ export function EntryEditorShell({
 							onCompositionEnd={() => editor.setComposing(false)}
 						/>
 						{extensions.overlay}
-					</div>
+					</EditorScroller>
 
 					{isInspectorOpen && (
 						<InspectorSidePanel
@@ -518,7 +516,7 @@ export function EntryEditorShell({
 							onFocused={() => setPendingFieldPath(null)}
 						/>
 					)}
-				</div>
+				</Inline>
 
 				<StatusBar
 					context={{
@@ -541,7 +539,7 @@ export function EntryEditorShell({
 						after={translationSource.doc}
 					/>
 				)}
-			</div>
+			</Stack>
 		</EntryEditorProvider>
 	);
 }

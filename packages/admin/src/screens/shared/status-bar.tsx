@@ -4,7 +4,7 @@
 // and renders nothing when there is nothing to say.
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
+import { Box, cn, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Languages, LoaderCircle, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -252,17 +252,12 @@ export function StatusBarItem({
 	if (popover) {
 		return (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger title={title} className={classes}>
+				<PopoverTrigger title={title} render={<button type="button" className={classes} />}>
 					{content}
 				</PopoverTrigger>
-				<PopoverContent
-					side="top"
-					align={align}
-					sideOffset={6}
-					className="max-h-(--available-height) w-80 gap-0 overflow-hidden p-0 text-monti-label"
-				>
+				<PopoverContent side="top" align={align} sideOffset={6} width="md" padding="none" scroll>
 					<PopoverCloseContext.Provider value={() => setOpen(false)}>
-						<div className="min-h-0 overflow-y-auto py-tight">{popover}</div>
+						<Box paddingY="tight">{popover}</Box>
 					</PopoverCloseContext.Provider>
 				</PopoverContent>
 			</Popover>

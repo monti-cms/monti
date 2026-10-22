@@ -6,7 +6,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton } from "@monti-cms/ui";
+import { Box, Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton, Stack } from "@monti-cms/ui";
 import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { ChangeDot, useIssuesUnder, useSchemaEdit } from "./controls";
@@ -107,18 +107,18 @@ export function MoveDialog({
 }) {
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-w-sm" data-testid="move-dialog">
+			<DialogContent size="sm" scroll data-testid="move-dialog">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
-				<ul className="flex max-h-80 flex-col gap-tight overflow-y-auto">
+				<Stack as="ul" gap="tight">
 					{destinations.map((destination) => (
 						<li key={destination.label}>
 							<Button
 								type="button"
 								variant="ghost"
 								size="sm"
-								className="w-full justify-start"
+								width="full"
 								disabled={destination.disabled}
 								onClick={() => {
 									destination.run();
@@ -129,7 +129,7 @@ export function MoveDialog({
 							</Button>
 						</li>
 					))}
-				</ul>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);
@@ -252,7 +252,11 @@ export function Row({
 								{label}
 							</span>
 						)}
-						{changed && <ChangeDot className="ml-condensed" />}
+						{changed && (
+							<Box as="span" paddingX="condensed">
+								<ChangeDot />
+							</Box>
+						)}
 						{locked?.kind === "panel" && (
 							<span
 								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"

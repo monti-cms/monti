@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button } from "@monti-cms/ui";
+import { Button, Icon, Inline, Text } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Code2 } from "lucide-react";
@@ -44,31 +44,39 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 	const quoted = status.text ? `“${status.text.length > 24 ? `${status.text.slice(0, 24)}…` : status.text}”` : "";
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: a guide line above the editor (status notice)
-		<div
+		<Inline
 			role="status"
 			aria-label={t("linkBar.label")}
-			className="flex w-full flex-wrap items-center justify-center gap-condensed border-t bg-monti-selected px-comfortable py-condensed text-monti-caption"
+			width="full"
+			wrap
+			justify="center"
+			gap="condensed"
+			border="top"
+			background="selected"
+			paddingX="comfortable"
+			paddingY="condensed"
 		>
-			<Code2 aria-hidden className="size-4 shrink-0 text-monti-default" />
-			<span className="min-w-0">
+			<Icon icon={Code2} />
+			<Text variant="caption">
 				{status.kind === "text" ? (
 					<>
 						{t("linkBar.pickLinesBefore")}
-						<b>{quoted}</b>
+						<Text weight="semibold">{quoted}</Text>
 						{t("linkBar.pickLinesAfter")}
-						{status.lines && <b className="ml-tight text-monti-default">· {lineLabel(t, status.lines)}</b>}
+						{status.lines && <Text weight="semibold"> · {lineLabel(t, status.lines)}</Text>}
 					</>
 				) : (
 					<>
 						{t("linkBar.pickTextBefore")}
-						<b>{t("linkBar.codeLines", { lines: status.lines ? lineLabel(t, status.lines) : "" })}</b>
+						<Text weight="semibold">
+							{t("linkBar.codeLines", { lines: status.lines ? lineLabel(t, status.lines) : "" })}
+						</Text>
 						{t("linkBar.pickTextAfter")}
-						{status.text && <b className="ml-tight text-monti-default">· {quoted}</b>}
+						{status.text && <Text weight="semibold"> · {quoted}</Text>}
 					</>
 				)}
-			</span>
-			<div className="flex gap-tight">
+			</Text>
+			<Inline gap="tight">
 				<Button
 					type="button"
 					size="xs"
@@ -87,7 +95,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 				>
 					{tc("cancel")}
 				</Button>
-			</div>
-		</div>
+			</Inline>
+		</Inline>
 	);
 }

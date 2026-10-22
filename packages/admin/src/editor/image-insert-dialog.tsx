@@ -5,7 +5,6 @@ import {
 	Alert,
 	AlertDescription,
 	Button,
-	cn,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -14,17 +13,24 @@ import {
 	DialogHeader,
 	DialogTitle,
 	FormFieldError,
+	Grid,
+	Image,
+	Inline,
 	Input,
 	Label,
+	PageTabs,
 	Skeleton,
 	Spinner,
+	Stack,
 	Switch,
 	Tabs,
-	TabsList,
 	TabsTrigger,
+	Text,
 	Textarea,
+	Tile,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ImageIcon } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
@@ -166,7 +172,7 @@ export function ImageInsertDialog({
 		setDecorative(false);
 	};
 
-	const confirm = async (event?: FormEvent<HTMLFormElement>) => {
+	const confirm = async (event?: FormEvent<HTMLElement>) => {
 		event?.preventDefault();
 		if (needsAlt && hasImage) setAltTouched(true);
 		if (!canInsert) return;
@@ -202,7 +208,7 @@ export function ImageInsertDialog({
 	if (!media) {
 		return (
 			<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-				<DialogContent className="max-w-lg">
+				<DialogContent size="md">
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{mediaNotConfiguredMessage(site)}</DialogDescription>
@@ -219,12 +225,13 @@ export function ImageInsertDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && !isUploading && onClose()}>
-			<DialogContent className="max-w-lg" showCloseButton={!isUploading}>
-				<form
+			<DialogContent size="md" scroll showCloseButton={!isUploading}>
+				<Stack
+					as="form"
+					gap="comfortable"
 					onSubmit={(event) => void confirm(event)}
 					// Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
 					onKeyDown={submitOnEnter}
-					className="contents"
 				>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
@@ -232,18 +239,18 @@ export function ImageInsertDialog({
 					</DialogHeader>
 
 					<Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
-						<TabsList variant="line" aria-label={t("imageDialog.sourceLabel")}>
+						<PageTabs inset="none" aria-label={t("imageDialog.sourceLabel")}>
 							<TabsTrigger value="upload" disabled={isUploading}>
 								{tc("upload")}
 							</TabsTrigger>
 							<TabsTrigger value="library" disabled={isUploading}>
 								{t("imageDialog.library")}
 							</TabsTrigger>
-						</TabsList>
+						</PageTabs>
 					</Tabs>
 
 					{tab === "upload" ? (
-						<div className="space-y-condensed text-monti-body">
+						<Stack gap="condensed">
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
@@ -253,7 +260,7 @@ export function ImageInsertDialog({
 							/>
 							{file && (
 								<>
-									<Label htmlFor={optimizeId} className="font-normal">
+									<Label htmlFor={optimizeId} size="body">
 										<Switch
 											id={optimizeId}
 											checked={optimize}
@@ -262,17 +269,17 @@ export function ImageInsertDialog({
 										/>
 										{t("imageDialog.optimize")}
 									</Label>
-									<p className="text-monti-caption text-monti-muted" aria-live="polite">
+									<Text as="p" variant="caption" tone="muted" aria-live="polite">
 										{prepared?.optimized
 											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
 											: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
-									</p>
+									</Text>
 								</>
 							)}
-						</div>
+						</Stack>
 					) : (
-						<div className="space-y-condensed">
-							<Label htmlFor={searchId} className="sr-only">
+						<Stack gap="condensed">
+							<Label htmlFor={searchId} hidden>
 								{t("imageDialog.search")}
 							</Label>
 							<Input
@@ -281,52 +288,54 @@ export function ImageInsertDialog({
 								placeholder={t("imageDialog.search")}
 								onChange={(event) => setSearch(event.target.value)}
 							/>
-							<div className="grid max-h-64 grid-cols-3 gap-condensed overflow-y-auto" aria-busy={isLibraryLoading}>
-								{isLibraryLoading &&
-									library.length === 0 &&
-									["a", "b", "c"].map((key) => <Skeleton key={key} className="h-[6.25rem] w-full rounded-md" />)}
+							<Stack gap="condensed" aria-busy={isLibraryLoading}>
+								{isLibraryLoading && library.length === 0 && (
+									<Grid columns={3} responsive={false} gap="condensed">
+										{["a", "b", "c"].map((key) => (
+											<Skeleton key={key} shape="block" />
+										))}
+									</Grid>
+								)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert tone="danger" className="col-span-3">
-										<AlertDescription className="flex items-center justify-between gap-condensed">
-											{t("imageDialog.libraryFailed")}
-											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
-												{tc("retry")}
-											</Button>
-										</AlertDescription>
+									<Alert tone="danger" layout="inline">
+										<AlertDescription>{t("imageDialog.libraryFailed")}</AlertDescription>
+										<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
+											{tc("retry")}
+										</Button>
 									</Alert>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<p className="col-span-3 py-spacious text-center text-monti-body text-monti-muted">
-										{t("imageDialog.libraryEmpty")}
-									</p>
+									<Stack gap="none" paddingY="spacious" align="center">
+										<Text as="p" tone="muted">
+											{t("imageDialog.libraryEmpty")}
+										</Text>
+									</Stack>
 								)}
-								{library.map((item) => (
-									<Button
-										key={item.id}
-										type="button"
-										variant="outline"
-										aria-pressed={picked?.id === item.id}
-										onClick={() => pick(item)}
-										className={cn(
-											"h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left text-monti-caption",
-											picked?.id === item.id && "ring-2 ring-monti-focus",
-										)}
-									>
-										{item.publicUrl ? (
-											<img src={item.publicUrl} alt="" className="h-20 w-full object-cover" />
-										) : (
-											<span className="flex h-20 items-center justify-center bg-monti-neutral">
-												{t("imageDialog.noPreview")}
-											</span>
-										)}
-										<span className="block truncate px-tight py-hair">{item.filename}</span>
-									</Button>
-								))}
-							</div>
-						</div>
+								<Grid columns={3} responsive={false} gap="condensed">
+									{library.map((item) => (
+										<Tile
+											key={item.id}
+											selected={picked?.id === item.id}
+											onClick={() => pick(item)}
+											title={item.filename}
+											detail={item.publicUrl ? undefined : t("imageDialog.noPreview")}
+											preview={
+												<Image
+													src={item.publicUrl ?? undefined}
+													alt=""
+													ratio="photo"
+													radius="none"
+													fallback={ImageIcon}
+												/>
+											}
+										/>
+									))}
+								</Grid>
+							</Stack>
+						</Stack>
 					)}
 
-					<div className={cn("space-y-condensed text-monti-body", picking && "hidden")}>
+					<Stack gap="condensed" hidden={picking}>
 						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
 						<Textarea
 							id={altId}
@@ -341,15 +350,14 @@ export function ImageInsertDialog({
 								setAltTouched(true);
 							}}
 							onBlur={() => setAltTouched(true)}
-							className="min-h-0"
 						/>
 						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 						{altLater && !decorative && !alt.trim() && (
-							<p id={altLaterId} className="text-monti-caption text-monti-muted">
+							<Text as="p" id={altLaterId} variant="caption" tone="muted">
 								{t("imageDialog.altLater")}
-							</p>
+							</Text>
 						)}
-						<Label htmlFor={decorativeId} className="font-normal">
+						<Label htmlFor={decorativeId} size="body">
 							<Switch
 								id={decorativeId}
 								checked={decorative}
@@ -365,16 +373,16 @@ export function ImageInsertDialog({
 							rows={2}
 							disabled={isUploading}
 							onChange={(event) => setCaption(event.target.value)}
-							className="min-h-0"
 						/>
-					</div>
+					</Stack>
 
 					{isUploading && (
-						<output className="flex items-center gap-condensed text-monti-body">
-							<Spinner /> {t("imageDialog.uploading", { percent: progress ?? 0 })}
-						</output>
+						<Inline as="div" role="status" gap="condensed">
+							<Spinner />
+							<Text>{t("imageDialog.uploading", { percent: progress ?? 0 })}</Text>
+						</Inline>
 					)}
-					{error && <FormFieldError className="text-monti-body">{error}</FormFieldError>}
+					{error && <FormFieldError>{error}</FormFieldError>}
 
 					<DialogFormFooter
 						onCancel={() => !isUploading && onClose()}
@@ -392,7 +400,7 @@ export function ImageInsertDialog({
 						}
 						cancelLabel={tc("cancel")}
 					/>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);

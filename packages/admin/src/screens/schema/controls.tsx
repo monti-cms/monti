@@ -3,27 +3,28 @@
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
-	cn,
-	FormFieldDescription,
 	FormFieldError,
-	FormFieldLabel,
 	IconButton,
+	Inline,
 	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
+	StatusIndicator,
 	Switch,
+	Text,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-	FormField as UiField,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
-import { type CONTROL_WIDTH, HELP, Labeled } from "../shared/labeled";
+import { type ControlWidth, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
@@ -78,14 +79,25 @@ export function useSettingRevert(
 	};
 }
 
-/** A small dot that says "this has changes": the accent colour, with the word for a screen reader. */
-export function ChangeDot({ className }: { className?: string }) {
+/** A small dot that says "this has changes", with the word for a screen reader. */
+export function ChangeDot() {
 	const t = useTranslator(schemaMessages);
 	return (
-		<span className={cn("inline-flex shrink-0 items-center", className)} data-testid="change-dot">
-			<span aria-hidden className="size-1.5 rounded-full bg-monti-accent-emphasis" />
-			<span className="sr-only">{t("changed")}</span>
-		</span>
+		<Inline as="span" shrink={false} data-testid="change-dot">
+			<StatusIndicator tone="accent" size="xs" />
+			<Text srOnly>{t("changed")}</Text>
+		</Inline>
+	);
+}
+
+/** A help text under a label or a control: a muted line that stays readable in width. */
+export function Help({ children }: { children: ReactNode }) {
+	return (
+		<Box maxWidth="prose">
+			<Text as="p" variant="label" tone="muted">
+				{children}
+			</Text>
+		</Box>
 	);
 }
 
@@ -94,31 +106,28 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<span className="inline-flex items-center gap-hair" data-testid="field-changed">
+		<Inline as="span" gap="hair" data-testid="field-changed">
 			<ChangeDot />
-			<IconButton
-				label={t("revert.named", { name })}
-				size="icon-xs"
-				disabled={disabled}
-				className="size-5 text-monti-muted"
-				onClick={onRevert}
-			>
-				<Undo2 aria-hidden className="size-3" />
+			<IconButton label={t("revert.named", { name })} size="icon-xs" disabled={disabled} onClick={onRevert}>
+				<Undo2 aria-hidden />
 			</IconButton>
-		</span>
+		</Inline>
 	);
 }
 
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<ul className="flex flex-col gap-hair text-monti-caption text-monti-danger" data-testid="schema-issues">
+		<Stack as="ul" gap="hair" data-testid="schema-issues">
 			{issues.map((issue) => (
-				<li key={`${issue.path}:${issue.message}`}>
-					<code className="rounded-sm bg-monti-danger-muted px-tight">{issue.path || "(root)"}</code> {issue.message}
-				</li>
+				<Text as="li" variant="caption" tone="danger" key={`${issue.path}:${issue.message}`}>
+					<Box as="span" background="danger-muted" radius="sm" paddingX="tight">
+						<Text as="code">{issue.path || "(root)"}</Text>
+					</Box>{" "}
+					{issue.message}
+				</Text>
 			))}
-		</ul>
+		</Stack>
 	);
 }
 
@@ -130,7 +139,6 @@ export function TextInput({
 	description,
 	hint,
 	type = "text",
-	className,
 	optional,
 	disabled: customDisabled,
 	revert,
@@ -144,7 +152,6 @@ export function TextInput({
 	description?: ReactNode;
 	hint?: ReactNode;
 	type?: "text" | "number";
-	className?: string;
 	/** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
 	optional?: boolean;
 	disabled?: boolean;
@@ -158,7 +165,7 @@ export function TextInput({
 			label={
 				optional ? (
 					<>
-						{label} <span className="font-normal text-monti-muted">{t("sheet.optional")}</span>
+						{label} <Text tone="muted">{t("sheet.optional")}</Text>
 					</>
 				) : (
 					label
@@ -167,7 +174,6 @@ export function TextInput({
 			description={description}
 			hint={hint}
 			htmlFor={id}
-			className={className}
 			aside={revert && <RevertMark name={label} onRevert={revert} />}
 		>
 			<Input
@@ -196,7 +202,6 @@ export function FlagSwitch({
 	onChange,
 	description,
 	hint,
-	className,
 	locked,
 	revert,
 }: {
@@ -207,7 +212,6 @@ export function FlagSwitch({
 	onChange: (value: boolean) => void;
 	description?: ReactNode;
 	hint?: ReactNode;
-	className?: string;
 	/** The switch cannot be changed here (the value is fixed by something else): shown as it is, disabled. */
 	locked?: boolean;
 }) {
@@ -216,25 +220,24 @@ export function FlagSwitch({
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-comfortable", className)}>
-			<div className="flex flex-col gap-hair">
-				<FormFieldLabel htmlFor={id} className="font-medium text-monti-body">
+		<Inline align="start" justify="between" gap="comfortable">
+			<Stack gap="hair">
+				<Text as="label" htmlFor={id} weight="medium">
 					{label}
-				</FormFieldLabel>
-				{desc && <FormFieldDescription className={HELP}>{desc}</FormFieldDescription>}
-			</div>
-			<div className="flex shrink-0 items-center gap-condensed">
+				</Text>
+				{desc && <Help>{desc}</Help>}
+			</Stack>
+			<Inline gap="condensed" shrink={false}>
 				{revert && <RevertMark name={label} onRevert={revert} />}
 				<Switch
 					id={id}
 					size="sm"
 					checked={checked}
 					disabled={disabled}
-					className="mt-hair shrink-0"
 					onCheckedChange={(next) => onChange(next === true)}
 				/>
-			</div>
-		</UiField>
+			</Inline>
+		</Inline>
 	);
 }
 
@@ -257,36 +260,39 @@ export function Segmented({
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	return (
-		<UiField className="gap-condensed">
-			<FormFieldLabel id={id} className="font-medium text-monti-body">
+		<Stack gap="condensed">
+			<Text as="label" id={id} weight="medium">
 				{label}
-			</FormFieldLabel>
-			{description && <FormFieldDescription className={HELP}>{description}</FormFieldDescription>}
-			<div
+			</Text>
+			{description && <Help>{description}</Help>}
+			<Inline
 				role="radiogroup"
 				aria-labelledby={id}
-				className="flex w-fit max-w-full flex-wrap gap-hair rounded-md bg-monti-neutral p-[3px] text-monti-body"
+				wrap
+				gap="hair"
+				width="fit"
+				maxWidth="full"
+				background="neutral"
+				radius="md"
+				padding="hair"
 			>
 				{items.map((item) => (
-					// biome-ignore lint/a11y/useSemanticElements: a segmented control draws radio buttons as buttons; a native radio cannot be styled as one strip
-					<button
+					<Button
 						key={item.value}
 						type="button"
 						role="radio"
+						variant={item.value === value ? "outline" : "ghost"}
+						size="sm"
 						aria-checked={item.value === value}
 						disabled={disabled}
 						onClick={() => onChange(item.value)}
-						className={cn(
-							"h-7 rounded-sm border border-transparent px-normal text-monti-muted outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:opacity-50",
-							item.value === value && "border-monti-muted bg-monti-page font-medium text-monti-default",
-						)}
 					>
 						{item.label}
-					</button>
+					</Button>
 				))}
-			</div>
-			{hint && <FormFieldDescription className={HELP}>{hint}</FormFieldDescription>}
-		</UiField>
+			</Inline>
+			{hint && <Help>{hint}</Help>}
+		</Stack>
 	);
 }
 
@@ -304,7 +310,6 @@ export function Pick({
 	onChange,
 	description,
 	hint,
-	className,
 	disabled: customDisabled,
 	control = "narrow",
 	size = "default",
@@ -318,9 +323,8 @@ export function Pick({
 	onChange: (value: string) => void;
 	description?: ReactNode;
 	hint?: ReactNode;
-	className?: string;
 	disabled?: boolean;
-	control?: keyof typeof CONTROL_WIDTH;
+	control?: ControlWidth;
 	size?: "sm" | "default";
 }) {
 	const id = useId();
@@ -332,7 +336,6 @@ export function Pick({
 			description={description}
 			hint={hint}
 			htmlFor={id}
-			className={className}
 			control={control}
 			aside={revert && <RevertMark name={label} onRevert={revert} />}
 		>
@@ -342,17 +345,19 @@ export function Pick({
 				disabled={isDisabled}
 				onValueChange={(next) => typeof next === "string" && onChange(next)}
 			>
-				<SelectTrigger id={id} size={size} className="w-full" aria-label={label}>
+				<SelectTrigger id={id} size={size} width="full" aria-label={label}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
 							{item.description ? (
-								<span className="flex flex-col gap-hair">
-									<span>{item.label}</span>
-									<span className="whitespace-normal text-monti-caption text-monti-muted">{item.description}</span>
-								</span>
+								<Stack gap="hair">
+									<Text>{item.label}</Text>
+									<Text variant="caption" tone="muted">
+										{item.description}
+									</Text>
+								</Stack>
 							) : (
 								item.label
 							)}
@@ -374,7 +379,6 @@ export function NameInput({
 	taken,
 	onCommit,
 	disabled: forcedDisabled,
-	className,
 	description,
 	hint,
 }: {
@@ -384,7 +388,6 @@ export function NameInput({
 	taken: readonly string[];
 	onCommit: (name: string) => void;
 	disabled?: boolean;
-	className?: string;
 	description?: ReactNode;
 	hint?: ReactNode;
 }) {
@@ -407,7 +410,7 @@ export function NameInput({
 		onCommit(text);
 	};
 	return (
-		<Labeled label={label} htmlFor={id} className={className} description={description} hint={hint}>
+		<Labeled label={label} htmlFor={id} description={description} hint={hint}>
 			<Input
 				id={id}
 				value={text}
@@ -422,7 +425,7 @@ export function NameInput({
 					}
 				}}
 			/>
-			{problem && <FormFieldError className="text-monti-caption">{t(`name.${problem}`)}</FormFieldError>}
+			{problem && <FormFieldError>{t(`name.${problem}`)}</FormFieldError>}
 		</Labeled>
 	);
 }
@@ -447,7 +450,7 @@ export function RowActions({
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<div className="flex shrink-0 items-center">
+		<Inline gap="none" shrink={false}>
 			<IconButton
 				label={t("row.up", { name })}
 				size="icon-xs"
@@ -472,11 +475,11 @@ export function RowActions({
 						<Button
 							type="button"
 							variant="ghost"
+							tone="danger"
 							size="icon-xs"
 							disabled
 							aria-label={t("row.remove", { name })}
 							aria-description={removeBlocked}
-							className="pointer-events-none text-monti-danger"
 						>
 							<X aria-hidden />
 						</Button>
@@ -494,6 +497,6 @@ export function RowActions({
 					<X aria-hidden />
 				</IconButton>
 			)}
-		</div>
+		</Inline>
 	);
 }

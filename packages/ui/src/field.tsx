@@ -6,12 +6,17 @@ import { cn } from "./cn";
 import { Label } from "./label";
 import { Separator } from "./separator";
 
-function FormFieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
+function FormFieldSet({
+	className,
+	density = "default",
+	...props
+}: React.ComponentProps<"fieldset"> & { density?: "default" | "compact" }) {
 	return (
 		<fieldset
 			data-slot="field-set"
 			className={cn(
-				"flex flex-col gap-6 has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
+				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
+				density === "compact" ? "gap-comfortable" : "gap-spacious",
 				className,
 			)}
 			{...props}

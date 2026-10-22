@@ -2,7 +2,7 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, TableCell, TableRow } from "@monti-cms/ui";
+import { TableCell, TableRow, Text, TextLink } from "@monti-cms/ui";
 import { Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import { commonMessages } from "../lib/common.messages";
 import { folderKeyHandler } from "./admin-sidebar";
@@ -42,40 +42,42 @@ export function EntriesTableFolderRows({
 		<>
 			{explorer.parent !== null && (
 				<TableRow>
-					<TableCell className="text-center text-monti-muted">
-						<FolderUp aria-hidden className="mx-auto size-4" />
+					<TableCell align="center" tone="muted">
+						<FolderUp aria-hidden size={16} />
 					</TableCell>
 					<TableCell colSpan={visibleCount - 1}>
-						<Button
-							type="button"
-							variant="link"
-							size="sm"
-							onClick={() => onSelectFolder(explorer.parent ?? "all")}
-							className="h-auto p-0 text-monti-muted hover:text-monti-default"
+						<TextLink
+							underline="hover"
+							tone="muted"
+							render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}
 						>
 							{t("list.folderUp")}
-						</Button>
+						</TextLink>
 					</TableCell>
 				</TableRow>
 			)}
 			{explorer.folders.map((folder) => (
 				<ActionContextMenu key={`folder-${folder.id}`} actions={folderRowMenu(folder)} trigger={<TableRow />}>
-					<TableCell className="text-center text-monti-muted">
-						<FolderIcon aria-hidden className="mx-auto size-4" />
+					<TableCell align="center" tone="muted">
+						<FolderIcon aria-hidden size={16} />
 					</TableCell>
-					<TableCell colSpan={visibleCount - 2} className="font-medium">
-						<Button
-							type="button"
-							variant="link"
-							size="sm"
-							onClick={() => onSelectFolder(folder.id)}
-							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="h-auto p-0 font-medium text-monti-default"
-						>
-							{folder.name}
-						</Button>
+					<TableCell colSpan={visibleCount - 2}>
+						<Text weight="medium">
+							<TextLink
+								underline="hover"
+								render={
+									<button
+										type="button"
+										onClick={() => onSelectFolder(folder.id)}
+										onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
+									/>
+								}
+							>
+								{folder.name}
+							</TextLink>
+						</Text>
 					</TableCell>
-					<TableCell className="text-right">
+					<TableCell align="end">
 						<MoreActionsButton actions={folderRowMenu(folder)} label={t("list.folderActions", { name: folder.name })} />
 					</TableCell>
 				</ActionContextMenu>

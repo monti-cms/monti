@@ -2,8 +2,9 @@
 
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Button, badgeVariants, cn, StatusIndicator } from "@monti-cms/ui";
+import { Badge, Box, Inline, StatusIndicator, Text, TextLink } from "@monti-cms/ui";
 import { Folder as FolderIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
@@ -28,19 +29,15 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<span className="flex items-center gap-tight">
+		<Inline as="span" gap="tight">
 			{site.LOCALES.map((locale) => {
 				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<Badge
-							key={locale}
-							variant="outline"
-							className="border-dashed font-mono text-monti-micro text-monti-subtle"
-						>
+						<Badge key={locale} variant="dashed" mono>
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
-							<span className="sr-only">{t("locale.hasNot", { name })}</span>
+							<Text srOnly>{t("locale.hasNot", { name })}</Text>
 						</Badge>
 					);
 				}
@@ -51,19 +48,15 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 							? "warning"
 							: "secondary";
 				return (
-					<Link
-						key={locale}
-						href={site.adminEntryEditHref(member.id)}
-						className={cn(badgeVariants({ variant }), "font-mono text-monti-micro")}
-					>
+					<Badge key={locale} variant={variant} mono render={<Link href={site.adminEntryEditHref(member.id)} />}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<span className="sr-only">
+						<Text srOnly>
 							{name} · {statusLabels(site)[member.status]}
-						</span>
-					</Link>
+						</Text>
+					</Badge>
 				);
 			})}
-		</span>
+		</Inline>
 	);
 }
 
@@ -72,23 +65,17 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<span className="flex items-center gap-tight">
+		<Inline as="span" gap="tight">
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					<Badge
-						key={locale}
-						variant={named ? "success" : "outline"}
-						className={cn("font-mono text-monti-micro", !named && "border-dashed text-monti-subtle")}
-					>
+					<Badge key={locale} variant={named ? "success" : "dashed"} mono>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<span className="sr-only">
-							{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}
-						</span>
+						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
 					</Badge>
 				);
 			})}
-		</span>
+		</Inline>
 	);
 }
 
@@ -142,53 +129,62 @@ function DefaultEntryCell({
 	const tc = useTranslator(commonMessages);
 	switch (column) {
 		case "title": {
-			const title = item.title || <span className="text-monti-muted italic">{tc("untitled")}</span>;
+			const title = item.title || (
+				<Text tone="muted" italic>
+					{tc("untitled")}
+				</Text>
+			);
 			// Like the code names of the field list: the slug in mono, small and muted beside the title. It truncates first.
 			const slug =
 				showSlugBesideTitle && item.slug ? (
-					<span className="min-w-0 shrink-[5] truncate font-mono text-monti-caption text-monti-muted">{item.slug}</span>
+					<Box minWidth={0}>
+						<Text as="div" variant="caption" tone="muted" mono truncate>
+							{item.slug}
+						</Text>
+					</Box>
 				) : null;
 			// The title does not shrink (it truncates only at the full width), so the slug beside it gives way first.
-			const titleClass = "max-w-full shrink-0 truncate font-medium text-monti-body";
+			const titleBox = (content: ReactNode) => (
+				<Box maxWidth="full" shrink={false}>
+					<Text as="div" weight="medium" truncate>
+						{content}
+					</Text>
+				</Box>
+			);
 			if (isTrash)
 				return (
-					<span className="flex min-w-0 items-baseline gap-condensed">
-						<span className={titleClass}>{title}</span>
+					<Inline align="baseline" gap="condensed" minWidth={0}>
+						{titleBox(title)}
 						{slug}
-					</span>
+					</Inline>
 				);
 			return isRecord ? (
-				<span className="flex min-w-0 items-baseline gap-condensed">
-					<Button
-						type="button"
-						variant="link"
-						size="sm"
-						onClick={() => onOpenRecord(item)}
-						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-default hover:underline"
-					>
-						<span className="truncate">{title}</span>
-					</Button>
+				<Inline align="baseline" gap="condensed" minWidth={0}>
+					{titleBox(
+						<TextLink underline="hover" render={<button type="button" onClick={() => onOpenRecord(item)} />}>
+							{title}
+						</TextLink>,
+					)}
 					{slug}
-				</span>
+				</Inline>
 			) : (
-				<span className="flex min-w-0 items-baseline gap-condensed">
-					<Link
-						href={site.adminEntryEditHref(item.id)}
-						className={cn(titleClass, "text-monti-default hover:underline")}
-					>
-						{title}
-					</Link>
+				<Inline align="baseline" gap="condensed" minWidth={0}>
+					{titleBox(
+						<TextLink underline="hover" render={<Link href={site.adminEntryEditHref(item.id)} />}>
+							{title}
+						</TextLink>,
+					)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
-						<span className="flex min-w-0 shrink items-center gap-tight text-monti-caption text-monti-muted">
-							<FolderIcon aria-hidden className="size-3 shrink-0 self-center" />
-							<span className="truncate">
-								<span className="sr-only">{t("list.folderSr")}</span>
+						<Inline gap="tight" minWidth={0}>
+							<FolderIcon aria-hidden size={12} />
+							<Text as="div" variant="caption" tone="muted" truncate>
+								<Text srOnly>{t("list.folderSr")}</Text>
 								{folderName(folders, item.folderId)}
-							</span>
-						</span>
+							</Text>
+						</Inline>
 					)}
-				</span>
+				</Inline>
 			);
 		}
 		case "status":
@@ -199,25 +195,37 @@ function DefaultEntryCell({
 			if (item.translations) return <LocaleBadges translations={item.translations} />;
 			// Also mark that a translation is not the original.
 			return (
-				<span className="text-monti-caption text-monti-muted">
-					<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
-						{item.locale.toUpperCase()}
-					</abbr>
-					{item.translationGroupId !== item.id && <span className="ml-tight">{t("list.translation")}</span>}
-				</span>
+				<Inline as="span" gap="tight">
+					<Text variant="caption" tone="muted" weight="medium">
+						<abbr title={site.localeLabel(item.locale)}>{item.locale.toUpperCase()}</abbr>
+					</Text>
+					{item.translationGroupId !== item.id && (
+						<Text variant="caption" tone="muted">
+							{t("list.translation")}
+						</Text>
+					)}
+				</Inline>
 			);
 		case "updatedAt":
 		case "createdAt":
 		case "publishedAt":
 			return (
-				<span className="whitespace-nowrap text-monti-caption text-monti-muted tabular-nums">
+				<Text variant="caption" tone="muted">
 					{formatDate(site, item[column])}
-				</span>
+				</Text>
 			);
 		case "slug":
-			return <span className="font-mono text-monti-caption text-monti-muted">{item.slug || "—"}</span>;
+			return (
+				<Text variant="caption" tone="muted" mono>
+					{item.slug || "—"}
+				</Text>
+			);
 		case "folder":
-			return <span className="text-monti-caption text-monti-muted">{folderName(folders, item.folderId)}</span>;
+			return (
+				<Text variant="caption" tone="muted">
+					{folderName(folders, item.folderId)}
+				</Text>
+			);
 		default:
 			// Field columns: default cells for relations (including taxonomy fields), select and text.
 			return <DefaultFieldCell collection={collection} column={column} entry={item} />;

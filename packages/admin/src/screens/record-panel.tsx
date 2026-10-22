@@ -9,7 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { cn, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import { Box, PageTabs, Stack, StatusIndicator, Tabs, TabsContent, TabsTrigger, Text } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -59,7 +59,6 @@ export function RecordPanel({
 	onSaved,
 	onDirtyChange,
 	initial,
-	className,
 }: {
 	target: RecordTarget;
 	onClose: () => void;
@@ -69,7 +68,6 @@ export function RecordPanel({
 	onDirtyChange?: (dirty: boolean) => void;
 	/** Initial values of a new item (e.g. a name when added by search term in the entry edit screen). */
 	initial?: EntryFormPatch;
-	className?: string;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -186,29 +184,22 @@ export function RecordPanel({
 	};
 
 	return (
-		<aside
-			aria-label={heading}
-			className={cn("flex h-full flex-col border-monti-muted border-l bg-monti-page text-monti-body", className)}
-		>
+		<Stack as="aside" aria-label={heading} gap="none" height="full" border="left" background="page">
 			<SidePanelHeader title={heading} onClose={() => void close()} />
-			<form
-				className="flex min-h-0 flex-1 flex-col"
+			<Stack
+				as="form"
+				gap="none"
+				grow
+				minHeight={0}
 				onSubmit={(event) => {
 					event.preventDefault();
 					save();
 				}}
 			>
 				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
-					<Tabs
-						value={locale}
-						onValueChange={(value) => setLocale(value as Locale)}
-						className="min-h-0 flex-1 gap-0 overflow-hidden"
-					>
+					<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
 						{translated && (
-							<TabsList
-								variant="line"
-								className="h-10 w-full shrink-0 justify-start gap-comfortable border-monti-muted border-b px-comfortable"
-							>
+							<PageTabs inset="panel">
 								{site.LOCALES.map((option) => {
 									const filled = hasLocaleValues(site, collection, form, option);
 									const name = site.localeLabel(option);
@@ -221,7 +212,6 @@ export function RecordPanel({
 													? name
 													: t(filled ? "record.translationOn" : "record.translationOff", { name })
 											}
-											className="flex-none gap-condensed px-0 text-monti-label"
 										>
 											{name}
 											{option !== site.DEFAULT_LOCALE && (
@@ -234,36 +224,43 @@ export function RecordPanel({
 										</TabsTrigger>
 									);
 								})}
-							</TabsList>
+							</PageTabs>
 						)}
-						<div className="min-h-0 flex-1 overflow-y-auto px-comfortable py-comfortable">
-							<TabsContent value={site.DEFAULT_LOCALE} className="space-y-comfortable">
+						<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
+							<Stack gap="comfortable" padding="comfortable">
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
-								{id && <p className="text-monti-caption text-monti-muted">{t("record.slugChange")}</p>}
-							</TabsContent>
-							{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
-								<TabsContent key={option} value={option} className="space-y-comfortable">
-									<p className="text-monti-caption text-monti-muted">
+								{id && (
+									<Text as="p" variant="caption" tone="muted">
+										{t("record.slugChange")}
+									</Text>
+								)}
+							</Stack>
+						</TabsContent>
+						{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
+							<TabsContent key={option} value={option} fill scroll>
+								<Stack gap="comfortable" padding="comfortable">
+									<Text as="p" variant="caption" tone="muted">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
-									</p>
+									</Text>
 									<RecordLocaleFields collection={collection} locale={option} />
-								</TabsContent>
-							))}
-						</div>
+								</Stack>
+							</TabsContent>
+						))}
 					</Tabs>
 				</EntryFormProvider>
-				<EditorFooter
-					className="shrink-0 border-monti-muted border-t px-comfortable py-normal"
-					// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
-					dirty={dirty || isNew}
-					saving={isSaving}
-					canSave={Boolean(title.trim()) && !(id && !loaded)}
-					error={error ?? loadError}
-					align="end"
-					onCancel={() => void close()}
-				/>
-			</form>
+				<Box shrink={false} border="top" paddingX="comfortable" paddingY="normal">
+					<EditorFooter
+						// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
+						dirty={dirty || isNew}
+						saving={isSaving}
+						canSave={Boolean(title.trim()) && !(id && !loaded)}
+						error={error ?? loadError}
+						align="end"
+						onCancel={() => void close()}
+					/>
+				</Box>
+			</Stack>
 			{dialog}
-		</aside>
+		</Stack>
 	);
 }

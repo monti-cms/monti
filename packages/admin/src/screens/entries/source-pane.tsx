@@ -2,7 +2,7 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton } from "@monti-cms/ui";
+import { Box, Heading, IconButton, Inline, Stack } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
+import { ScrollRoom } from "./scroll-room";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 
 const PROSE =
@@ -50,7 +51,6 @@ export function SourcePane({
 	locale,
 	title,
 	onClose,
-	className,
 	ref,
 }: {
 	doc: StoredDocument;
@@ -58,35 +58,51 @@ export function SourcePane({
 	/** Source title. Shown large above the body, matching the title slot of the translation editor. */
 	title: string;
 	onClose: () => void;
-	className?: string;
 	/** The scrolling element. Used to link scrolling with the editor. */
 	ref?: Ref<HTMLElement>;
 }) {
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	return (
-		<aside
+		<Stack
+			as="aside"
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-page", className)}
+			gap="none"
+			height="full"
+			minWidth={0}
+			overflow="y"
+			border="right"
+			background="page"
 		>
-			<div
+			<Inline
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-condensed border-b bg-monti-page px-comfortable backdrop-blur"
+				position="sticky"
+				justify="between"
+				gap="condensed"
+				height="control"
+				shrink={false}
+				background="page"
+				border="bottom"
+				paddingX="comfortable"
 			>
-				<h2 className="flex-1 font-medium text-monti-body">
+				<Heading as="h2" variant="label">
 					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
-				</h2>
+				</Heading>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
-					<X aria-hidden className="size-4" />
+					<X aria-hidden />
 				</IconButton>
-			</div>
-			<h1 className={cn("px-spacious pt-section pb-comfortable text-monti-display", !title && "text-monti-subtle")}>
-				{title || tc("untitled")}
-			</h1>
-			<div className="px-spacious pt-spacious pb-[35vh]">
-				<DocPreview doc={doc} label={t("sourcePane.body")} />
-			</div>
-		</aside>
+			</Inline>
+			<Box paddingX="spacious" paddingTop="section" paddingBottom="comfortable">
+				<Heading as="h1" variant="display" tone={title ? undefined : "subtle"}>
+					{title || tc("untitled")}
+				</Heading>
+			</Box>
+			<Box paddingX="spacious" paddingTop="spacious">
+				<ScrollRoom>
+					<DocPreview doc={doc} label={t("sourcePane.body")} />
+				</ScrollRoom>
+			</Box>
+		</Stack>
 	);
 }

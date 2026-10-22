@@ -8,7 +8,7 @@ import {
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
-	cn,
+	Text,
 } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -96,18 +96,17 @@ export function ModelCombobox({
 				aria-label={ariaLabel}
 				placeholder={loading ? t("modelsLoading") : placeholder}
 				showClear={Boolean(value)}
-				className="h-8 w-full min-w-0 [&_input]:font-mono [&_input]:text-monti-caption"
+				size="sm"
+				mono
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{error ?? (loading ? t("modelsLoading") : t("modelsHint"))}</ComboboxEmpty>
 				<ComboboxList>
 					{(item: Item) => (
-						<ComboboxItem
-							key={item.value}
-							value={item}
-							className={cn("font-mono text-monti-caption", item.custom && "text-monti-default")}
-						>
-							<span className="truncate">{item.custom ? t("modelUse", { label: item.label }) : item.label}</span>
+						<ComboboxItem key={item.value} value={item}>
+							<Text variant="caption" mono truncate tone={item.custom ? "default" : undefined}>
+								{item.custom ? t("modelUse", { label: item.label }) : item.label}
+							</Text>
 						</ComboboxItem>
 					)}
 				</ComboboxList>

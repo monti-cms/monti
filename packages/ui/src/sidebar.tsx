@@ -45,6 +45,7 @@ function SidebarProvider({
 	defaultOpen = true,
 	open: openProp,
 	onOpenChange: setOpenProp,
+	fixed = false,
 	className,
 	style,
 	children,
@@ -53,6 +54,8 @@ function SidebarProvider({
 	defaultOpen?: boolean;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	/** The frame takes exactly the window and never scrolls, not even to bring a focused field into view; the panes inside scroll on their own (the admin's app frame). */
+	fixed?: boolean;
 }) {
 	const isMobile = useIsMobile();
 	const [openMobile, setOpenMobile] = React.useState(false);
@@ -130,7 +133,11 @@ function SidebarProvider({
 						...style,
 					} as React.CSSProperties
 				}
-				className={cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-inset", className)}
+				className={cn(
+					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-inset",
+					fixed && "h-svh overflow-clip",
+					className,
+				)}
 				{...props}
 			>
 				{children}
@@ -262,12 +269,20 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
 	);
 }
 
-function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
+function SidebarInset({
+	fixed = false,
+	className,
+	...props
+}: React.ComponentProps<"main"> & {
+	/** Inside a `fixed` frame: the main area clips to the window, so its own panes scroll. */
+	fixed?: boolean;
+}) {
 	return (
 		<main
 			data-slot="sidebar-inset"
 			className={cn(
-				"md:peer-data-[ relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl",
+				"relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl",
+				fixed && "min-w-0 overflow-clip",
 				className,
 			)}
 			{...props}

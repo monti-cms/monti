@@ -4,10 +4,10 @@ import { errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/ad
 import {
 	type ApiKeyChoice,
 	ApiKeyField,
+	Box,
 	Button,
 	choiceReady,
 	commonMessages,
-	DETAIL_PANE_FRAME,
 	EditorFooter,
 	EmptyState,
 	FormField,
@@ -15,11 +15,14 @@ import {
 	FormFieldError,
 	FormFieldGroup,
 	FormFieldLabel,
+	Heading,
 	Input,
 	ListPane,
 	ListRow,
 	LoadErrorAlert,
 	MasterDetail,
+	Stack,
+	Text,
 	useConfirm,
 	useDebounced,
 	useDraftEditor,
@@ -117,13 +120,14 @@ export function ConnectionManager({
 	const current = settings?.providers.find((provider) => provider.id === selected) ?? null;
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col">
+		<Stack gap="none" grow minHeight={0}>
 			{settingsQuery.error && !settings && (
-				<LoadErrorAlert
-					className="m-normal"
-					message={errorText(site, settingsQuery.error, t("error.loadList"))}
-					onRetry={() => void settingsQuery.refetch()}
-				/>
+				<Box padding="normal">
+					<LoadErrorAlert
+						message={errorText(site, settingsQuery.error, t("error.loadList"))}
+						onRetry={() => void settingsQuery.refetch()}
+					/>
+				</Box>
 			)}
 			<MasterDetail
 				list={
@@ -133,7 +137,11 @@ export function ConnectionManager({
 						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<p className="border-b px-normal py-condensed text-monti-caption text-monti-muted">{t("badge.fake")}</p>
+								<Box paddingX="normal" paddingY="condensed" border="bottom">
+									<Text variant="caption" tone="muted">
+										{t("badge.fake")}
+									</Text>
+								</Box>
 							)
 						}
 						empty={settings?.providers.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
@@ -178,7 +186,7 @@ export function ConnectionManager({
 					)
 				)}
 			</MasterDetail>
-		</div>
+		</Stack>
 	);
 }
 
@@ -294,17 +302,15 @@ function ProviderEditor({
 	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
-		<div className={DETAIL_PANE_FRAME}>
-			<div className="min-w-0">
-				<h2 className="truncate text-monti-title">
-					{(provider ? provider.name : draft.name.trim()) || t("new.title")}
-				</h2>
-				<p className="truncate text-monti-caption text-monti-muted">
+		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
+			<Box minWidth={0}>
+				<Heading truncate>{(provider ? provider.name : draft.name.trim()) || t("new.title")}</Heading>
+				<Text as="p" variant="caption" tone="muted" truncate>
 					{providerKindLabel(draft.kind)} · {provider?.defaultModel || draft.defaultModel || t("model.none")}
-				</p>
-			</div>
+				</Text>
+			</Box>
 
-			<FormFieldGroup className="gap-comfortable">
+			<FormFieldGroup>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
 					<Input
@@ -312,7 +318,7 @@ function ProviderEditor({
 						value={draft.name}
 						placeholder="OpenRouter"
 						onChange={(event) => set({ name: event.target.value })}
-						className="h-8 text-monti-caption md:text-monti-caption"
+						size="sm"
 					/>
 					<FormFieldDescription>{t("field.name.hint")}</FormFieldDescription>
 				</FormField>
@@ -334,19 +340,22 @@ function ProviderEditor({
 						value={draft.url}
 						placeholder={example.url}
 						onChange={(event) => set({ url: event.target.value.trim() })}
-						className="h-8 font-mono text-monti-caption md:text-monti-caption"
+						size="sm"
+						mono
 					/>
 					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<div className="flex flex-col gap-condensed">
+				<Stack gap="condensed">
 					<ApiKeyField
 						label={t("field.key")}
 						baseName={draft.name.trim() || "API"}
 						value={draft.key}
 						onChange={(key) => set({ key })}
 					/>
-					<p className="text-monti-caption text-monti-muted">{t("field.key.hint")}</p>
-				</div>
+					<Text as="p" variant="caption" tone="muted">
+						{t("field.key.hint")}
+					</Text>
+				</Stack>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.model}>{t("field.model")}</FormFieldLabel>
 					<ModelCombobox
@@ -386,13 +395,13 @@ function ProviderEditor({
 			</EditorFooter>
 			{check &&
 				(check.ok ? (
-					<p className="text-monti-caption text-monti-muted">
+					<Text as="p" variant="caption" tone="muted">
 						{t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) })}
-					</p>
+					</Text>
 				) : (
 					<FormFieldError>{check.message}</FormFieldError>
 				))}
 			{dialog}
-		</div>
+		</Stack>
 	);
 }

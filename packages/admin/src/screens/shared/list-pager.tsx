@@ -2,7 +2,9 @@
 
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
+	Inline,
 	Pagination,
 	PaginationContent,
 	PaginationItem,
@@ -13,9 +15,9 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Text,
 } from "@monti-cms/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { uiMessages } from "../../ui/messages";
 import { screensMessages } from "../messages";
 
@@ -36,7 +38,7 @@ export function ListPager({
 	if (!hrefFor) {
 		// Without addresses the controls are buttons, not anchors that go nowhere.
 		return (
-			<nav aria-label={t("pagination.label")} className="flex items-center gap-tight">
+			<Inline as="nav" gap="tight" aria-label={t("pagination.label")}>
 				<Button
 					type="button"
 					variant="ghost"
@@ -45,11 +47,13 @@ export function ListPager({
 					onClick={() => onPageChange(page - 1)}
 				>
 					<ChevronLeftIcon data-icon="inline-start" />
-					<span className="hidden sm:block">{t("pagination.previous")}</span>
+					<Box as="span" hideBelow="sm">
+						{t("pagination.previous")}
+					</Box>
 				</Button>
-				<span className="px-condensed tabular-nums">
+				<Box as="span" paddingX="condensed">
 					{page} / {totalPages}
-				</span>
+				</Box>
 				<Button
 					type="button"
 					variant="ghost"
@@ -57,20 +61,22 @@ export function ListPager({
 					disabled={page >= totalPages}
 					onClick={() => onPageChange(page + 1)}
 				>
-					<span className="hidden sm:block">{t("pagination.next")}</span>
+					<Box as="span" hideBelow="sm">
+						{t("pagination.next")}
+					</Box>
 					<ChevronRightIcon data-icon="inline-end" />
 				</Button>
-			</nav>
+			</Inline>
 		);
 	}
 	return (
-		<Pagination className="mx-0 w-auto">
+		<Pagination>
 			<PaginationContent>
 				<PaginationItem>
 					<PaginationPrevious
 						href={hrefFor(page - 1)}
 						aria-disabled={page <= 1}
-						className={cn(page <= 1 && "pointer-events-none opacity-50")}
+						disabled={page <= 1}
 						onClick={(event) => {
 							event.preventDefault();
 							if (page > 1) onPageChange(page - 1);
@@ -78,15 +84,15 @@ export function ListPager({
 					/>
 				</PaginationItem>
 				<PaginationItem>
-					<span className="px-condensed tabular-nums">
+					<Box as="span" paddingX="condensed">
 						{page} / {totalPages}
-					</span>
+					</Box>
 				</PaginationItem>
 				<PaginationItem>
 					<PaginationNext
 						href={hrefFor(page + 1)}
 						aria-disabled={page >= totalPages}
-						className={cn(page >= totalPages && "pointer-events-none opacity-50")}
+						disabled={page >= totalPages}
 						onClick={(event) => {
 							event.preventDefault();
 							if (page < totalPages) onPageChange(page + 1);
@@ -99,16 +105,24 @@ export function ListPager({
 }
 
 /** The bar pinned to the bottom of a list screen: a summary on the left, controls on the right. */
-export function ListFooter({ children, className }: { children: React.ReactNode; className?: string }) {
+export function ListFooter({
+	children,
+	end,
+}: {
+	children: React.ReactNode /** Only controls: put them at the right. */;
+	end?: boolean;
+}) {
 	return (
-		<div
-			className={cn(
-				"flex h-12 shrink-0 items-center justify-between gap-normal border-t px-wide text-monti-caption text-monti-muted",
-				className,
-			)}
+		<Inline
+			gap="normal"
+			justify={end ? "end" : "between"}
+			shrink={false}
+			border="top"
+			paddingX="wide"
+			paddingY="condensed"
 		>
 			{children}
-		</div>
+		</Inline>
 	);
 }
 
@@ -152,16 +166,16 @@ export function ListPagination({
 	const showPager = !(hidePagerWhenSingle && totalPages === 1);
 	if (!showRange && !showPager && !leading && !showPageSize) return null;
 	return (
-		<ListFooter className={cn(!showRange && "justify-end")}>
+		<ListFooter end={!showRange}>
 			{showRange && (
-				<span className="tabular">
+				<Text variant="caption" tone="muted">
 					{t("list.range", {
 						total,
 						range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
 					})}
-				</span>
+				</Text>
 			)}
-			<div className="flex items-center gap-condensed">
+			<Inline gap="condensed">
 				{leading}
 				{showPageSize && (
 					<Select
@@ -169,11 +183,7 @@ export function ListPagination({
 						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
 						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
 					>
-						<SelectTrigger
-							size="sm"
-							aria-label={t("list.pageSize")}
-							className="h-7 border-0 text-monti-caption shadow-none"
-						>
+						<SelectTrigger size="sm" variant="ghost" aria-label={t("list.pageSize")}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -186,7 +196,7 @@ export function ListPagination({
 					</Select>
 				)}
 				{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
-			</div>
+			</Inline>
 		</ListFooter>
 	);
 }

@@ -2,6 +2,7 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	Checkbox,
 	Command,
@@ -10,13 +11,15 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-	cn,
+	Inline,
 	Input,
 	Label,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 	Separator,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -44,8 +47,9 @@ function TextFilter({
 	const [draft, setDraft] = useState(value);
 	useEffect(() => setDraft(value), [value]);
 	return (
-		<form
-			className="flex gap-condensed"
+		<Inline
+			as="form"
+			gap="condensed"
 			onSubmit={(event) => {
 				event.preventDefault();
 				onApply(draft);
@@ -56,12 +60,12 @@ function TextFilter({
 				value={draft}
 				placeholder={placeholder}
 				onChange={(event) => setDraft(event.target.value)}
-				className="h-8"
+				size="sm"
 			/>
 			<Button type="submit" size="sm">
 				{tc("apply")}
 			</Button>
-		</form>
+		</Inline>
 	);
 }
 
@@ -75,10 +79,12 @@ function CheckRow({
 	onChange: (next: boolean) => void;
 }) {
 	return (
-		<Label className="flex items-center gap-condensed rounded-sm px-condensed py-condensed font-normal hover:bg-monti-hover">
-			<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
-			{label}
-		</Label>
+		<Box radius="sm" padding="condensed" hover>
+			<Label>
+				<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
+				{label}
+			</Label>
+		</Box>
 	);
 }
 
@@ -88,8 +94,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const toggle = (status: (typeof LIST_STATUSES)[number], on: boolean) =>
 		onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
 	return (
-		<fieldset className="space-y-hair">
-			<legend className="sr-only">{t("column.status")}</legend>
+		<Stack gap="hair" role="group" aria-label={t("column.status")}>
 			{LIST_STATUSES.map((status) => (
 				<CheckRow
 					key={status}
@@ -98,13 +103,15 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 					onChange={(on) => toggle(status, on)}
 				/>
 			))}
-			<Separator className="my-tight" />
+			<Box paddingY="tight">
+				<Separator />
+			</Box>
 			<CheckRow
 				label={t("filter.editing")}
 				checked={state.hasChanges}
 				onChange={(on) => onChange({ hasChanges: on })}
 			/>
-		</fieldset>
+		</Stack>
 	);
 }
 
@@ -113,8 +120,7 @@ function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<fieldset className="space-y-hair">
-			<legend className="sr-only">{t("column.locale")}</legend>
+		<Stack gap="hair" role="group" aria-label={t("column.locale")}>
 			{site.LOCALES.map((locale) => (
 				<CheckRow
 					key={locale}
@@ -125,7 +131,7 @@ function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch:
 					}
 				/>
 			))}
-		</fieldset>
+		</Stack>
 	);
 }
 
@@ -144,35 +150,30 @@ function TaxonomyFilter({
 	const toggle = (id: string) =>
 		onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 	return (
-		<div className="space-y-condensed">
-			<Command className="bg-transparent p-0">
+		<Stack gap="condensed">
+			<Command>
 				<CommandInput placeholder={t("filter.search", { label })} aria-label={t("filter.search", { label })} />
-				<CommandList className="mt-tight max-h-56">
+				<CommandList>
 					<CommandEmpty>{t("filter.empty", { label })}</CommandEmpty>
-					<CommandGroup className="space-y-hair p-0">
+					<CommandGroup>
 						{options.map((option) => (
 							<CommandItem key={option.id} value={`${option.title} ${option.id}`} onSelect={() => toggle(option.id)}>
-								<Checkbox
-									checked={selected.includes(option.id)}
-									tabIndex={-1}
-									aria-hidden
-									className="pointer-events-none"
-								/>
+								<Checkbox checked={selected.includes(option.id)} tabIndex={-1} aria-hidden />
 								{option.title}
 							</CommandItem>
 						))}
 					</CommandGroup>
 				</CommandList>
 			</Command>
-			<div className="flex justify-between">
+			<Inline justify="between">
 				<Button type="button" variant="ghost" size="sm" onClick={() => onChange(options.map((option) => option.id))}>
 					{t("filter.selectAll")}
 				</Button>
 				<Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
 					{t("filter.clearAll")}
 				</Button>
-			</div>
-		</div>
+			</Inline>
+		</Stack>
 	);
 }
 
@@ -189,13 +190,19 @@ function DateFilter({
 }) {
 	const t = useTranslator(screensMessages);
 	return (
-		<div className="space-y-condensed">
-			<p className="px-tight text-monti-caption text-monti-muted">{label}</p>
+		<Stack gap="condensed">
+			<Box paddingX="tight">
+				<Text as="p" variant="caption" tone="muted">
+					{label}
+				</Text>
+			</Box>
 			<DateRangeCalendar from={from} to={to} onChange={onChange} />
-			<p className="px-tight text-monti-caption" aria-live="polite">
-				{from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange")}
-			</p>
-		</div>
+			<Box paddingX="tight">
+				<Text as="p" variant="caption" aria-live="polite">
+					{from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange")}
+				</Text>
+			</Box>
+		</Stack>
 	);
 }
 
@@ -256,7 +263,6 @@ export function ColumnHeader({
 			variant={sorted === direction ? "secondary" : "ghost"}
 			size="sm"
 			aria-pressed={sorted === direction}
-			className="justify-start"
 			onClick={() => sortField && onChange({ sortField, sortDirection: direction })}
 		>
 			{direction === "asc" ? <ArrowUpNarrowWide /> : <ArrowDownWideNarrow />}
@@ -270,71 +276,64 @@ export function ColumnHeader({
 				render={
 					<Button
 						type="button"
-						variant="ghost"
-						size="sm"
-						className={cn(
-							"-ml-condensed h-7 gap-tight px-condensed text-monti-caption text-monti-muted",
-							filtered && "text-monti-default",
-						)}
+						variant={filtered ? "ghost" : "quiet"}
+						size="xs"
 						aria-label={`${config.label}${sorted ? t("filter.sortedSuffix", { direction: sorted === "asc" ? t("filter.sortAsc") : t("filter.sortDesc") }) : ""}${filtered ? t("filter.filteredSuffix") : ""}`}
 					/>
 				}
 			>
 				{config.label}
-				{sorted === "asc" && <ArrowUpNarrowWide aria-hidden className="size-3.5" />}
-				{sorted === "desc" && <ArrowDownWideNarrow aria-hidden className="size-3.5" />}
-				{filtered ? (
-					<ListFilter aria-hidden className="size-3.5 fill-current" data-filtered="" />
-				) : (
-					<ChevronDown aria-hidden className="size-3.5 opacity-60" />
-				)}
+				{sorted === "asc" && <ArrowUpNarrowWide aria-hidden size={14} />}
+				{sorted === "desc" && <ArrowDownWideNarrow aria-hidden size={14} />}
+				{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-72 space-y-normal p-normal">
-				{sortField && (
-					<fieldset className="flex flex-col gap-tight">
-						<legend className="sr-only">{t("filter.sortLegend", { label: config.label })}</legend>
-						{sortButton("asc")}
-						{sortButton("desc")}
-					</fieldset>
-				)}
-				{sortField && filter.kind !== "none" && <Separator />}
-				{filter.kind === "text" && (
-					<TextFilter
-						value={state[filter.key]}
-						placeholder={filter.placeholder}
-						label={config.label}
-						onApply={(value) => onChange({ [filter.key]: value })}
-					/>
-				)}
-				{filter.kind === "status" && <StatusFilter state={state} onChange={onChange} />}
-				{filter.kind === "locale" && <LocaleFilter state={state} onChange={onChange} />}
-				{filter.kind === "relation" && (
-					<TaxonomyFilter
-						label={config.label}
-						options={options[filter.field] ?? []}
-						selected={state.relations[filter.field] ?? []}
-						onChange={(ids) => onChange(setRelation(state, filter.field, ids))}
-					/>
-				)}
-				{filter.kind === "date" && (
-					<DateFilter
-						label={config.label}
-						from={state[filter.from]}
-						to={state[filter.to]}
-						onChange={(from, to) => onChange({ [filter.from]: from, [filter.to]: to })}
-					/>
-				)}
-				{filtered && (
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						className="w-full"
-						onClick={() => onChange(clearPatchFor(filter, state))}
-					>
-						{t("filter.clear")}
-					</Button>
-				)}
+			<PopoverContent align="start" width="md">
+				<Stack gap="normal">
+					{sortField && (
+						<Stack gap="tight" role="group" aria-label={t("filter.sortLegend", { label: config.label })}>
+							{sortButton("asc")}
+							{sortButton("desc")}
+						</Stack>
+					)}
+					{sortField && filter.kind !== "none" && <Separator />}
+					{filter.kind === "text" && (
+						<TextFilter
+							value={state[filter.key]}
+							placeholder={filter.placeholder}
+							label={config.label}
+							onApply={(value) => onChange({ [filter.key]: value })}
+						/>
+					)}
+					{filter.kind === "status" && <StatusFilter state={state} onChange={onChange} />}
+					{filter.kind === "locale" && <LocaleFilter state={state} onChange={onChange} />}
+					{filter.kind === "relation" && (
+						<TaxonomyFilter
+							label={config.label}
+							options={options[filter.field] ?? []}
+							selected={state.relations[filter.field] ?? []}
+							onChange={(ids) => onChange(setRelation(state, filter.field, ids))}
+						/>
+					)}
+					{filter.kind === "date" && (
+						<DateFilter
+							label={config.label}
+							from={state[filter.from]}
+							to={state[filter.to]}
+							onChange={(from, to) => onChange({ [filter.from]: from, [filter.to]: to })}
+						/>
+					)}
+					{filtered && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							width="full"
+							onClick={() => onChange(clearPatchFor(filter, state))}
+						>
+							{t("filter.clear")}
+						</Button>
+					)}
+				</Stack>
 			</PopoverContent>
 		</Popover>
 	);

@@ -16,6 +16,7 @@ import {
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
+	Inline,
 } from "@monti-cms/admin/kit";
 import { calloutMessages } from "./messages";
 import { CALLOUT_BOX_CLASS, CALLOUT_ICON_BY_VARIANT, type CalloutVariant, getDefaultCalloutTitle } from "./style";
@@ -40,7 +41,7 @@ export function CalloutNodeView() {
 	return (
 		<BlockFrame className="my-spacious rounded-lg">
 			<div data-slot="callout" data-variant={variant} role="note" className={cn(CALLOUT_BOX_CLASS, "not-prose w-full")}>
-				<div className="flex items-center gap-condensed" contentEditable={false}>
+				<Inline gap="condensed" contentEditable={false}>
 					<Icon aria-hidden data-callout-icon className="size-4 shrink-0" />
 					<AttributeInput
 						aria-label={t("title.aria")}
@@ -52,7 +53,7 @@ export function CalloutNodeView() {
 						onEscape={() => block.focus()}
 						className="w-full flex-1 font-medium"
 					/>
-				</div>
+				</Inline>
 				{/* Set the first and last child margins to 0 so the vertical margins of inner blocks (custom blocks wrapped by react-renderer) do not add to the box padding. */}
 				<Content className="mt-condensed text-current text-monti-body [&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0" />
 			</div>
@@ -65,7 +66,7 @@ export function CalloutNodeView() {
 						>
 							<Icon aria-hidden />
 						</ToolbarButton>
-						<DropdownMenuContent align="end" className="min-w-40">
+						<DropdownMenuContent align="end" width="sm">
 							<DropdownMenuRadioGroup value={variant} onValueChange={(next) => setValue("variant", String(next))}>
 								{Object.entries(VARIANT_OPTIONS).map(([key, label]) => {
 									const OptionIcon = CALLOUT_ICON_BY_VARIANT[key as CalloutVariant];

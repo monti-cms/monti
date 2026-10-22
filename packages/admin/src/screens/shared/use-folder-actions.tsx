@@ -19,9 +19,12 @@ import {
 	DialogTitle,
 	FormField,
 	FormFieldError,
-	FormFieldLabel,
 	Input,
+	Label,
+	List,
+	ListItem,
 	Skeleton,
+	Stack,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
@@ -272,7 +275,7 @@ export function useFolderActions({
 	const dialogs = (
 		<>
 			<Dialog open={nameDialog !== null} onOpenChange={(open) => !open && setNameDialog(null)}>
-				<DialogContent className="max-w-sm" finalFocus={restoreFocus}>
+				<DialogContent size="sm" finalFocus={restoreFocus}>
 					<DialogHeader>
 						<DialogTitle>
 							{nameDialog?.mode === "rename"
@@ -287,17 +290,18 @@ export function useFolderActions({
 								: t("folder.uniqueName")}
 						</DialogDescription>
 					</DialogHeader>
-					<form
+					<Stack
+						as="form"
+						gap="comfortable"
 						onSubmit={(event) => {
 							event.preventDefault();
 							void submitName();
 						}}
-						className="space-y-comfortable"
 					>
 						<FormField data-invalid={Boolean(shownError) || undefined}>
-							<FormFieldLabel htmlFor="folder-name" className="sr-only">
+							<Label htmlFor="folder-name" hidden>
 								{t("folder.nameLabel")}
-							</FormFieldLabel>
+							</Label>
 							<Input
 								id="folder-name"
 								autoFocus
@@ -322,7 +326,7 @@ export function useFolderActions({
 							busy={isBusy}
 							disabled={!name.trim()}
 						/>
-					</form>
+					</Stack>
 				</DialogContent>
 			</Dialog>
 
@@ -333,20 +337,20 @@ export function useFolderActions({
 						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
 					</AlertDialogHeader>
 					{contents ? (
-						<ul className="list-disc space-y-tight pl-comfortable text-monti-body">
-							<li>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</li>
-							<li>
+						<List>
+							<ListItem>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</ListItem>
+							<ListItem>
 								{t("folder.childCount", { count: contents.childFolders.length })}
 								{contents.childFolders.length > 0 &&
 									`: ${contents.childFolders.map((folder) => folder.name).join(", ")}`}
-							</li>
-						</ul>
+							</ListItem>
+						</List>
 					) : (
 						!shownError && (
-							<div aria-hidden className="space-y-condensed">
-								<Skeleton className="h-4 w-40" />
-								<Skeleton className="h-4 w-56" />
-							</div>
+							<Stack gap="condensed" aria-hidden>
+								<Skeleton width="third" />
+								<Skeleton width="half" />
+							</Stack>
 						)
 					)}
 					{shownError && <FormFieldError>{shownError}</FormFieldError>}

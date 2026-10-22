@@ -43,11 +43,14 @@ function DialogContent({
 	children,
 	showCloseButton = true,
 	size = "md",
+	scroll = false,
 	...props
 }: DialogPrimitive.Popup.Props & {
 	showCloseButton?: boolean;
 	/** Width on a wide screen: `sm` a question, `md` a short form (default), `lg` a form with a preview, `xl` a review of many changes. */
 	size?: keyof typeof DIALOG_WIDTH;
+	/** Scrolls inside, up to 85% of the window's height (a long review or preview). */
+	scroll?: boolean;
 }) {
 	const labels = useUiLabels();
 	return (
@@ -58,6 +61,7 @@ function DialogContent({
 				className={cn(
 					"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl border border-monti-muted bg-monti-overlay p-6 text-monti-body text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
 					DIALOG_WIDTH[size],
+					scroll && "max-h-[85vh] overflow-y-auto",
 					className,
 				)}
 				{...props}

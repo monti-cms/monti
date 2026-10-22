@@ -1,10 +1,8 @@
 "use client";
 
-import { Button, cn, Skeleton } from "@monti-cms/ui";
+import { Box, Inline, Skeleton, Stack, Text, TextLink } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
-import { LIST_PANE_WIDTH } from "./layout";
-import { OPEN_ITEM } from "./side-panel";
 
 /**
  * A list on the left and the open item's editor (or an empty state) on the right: the shape of the templates page and the AI tabs.
@@ -12,10 +10,12 @@ import { OPEN_ITEM } from "./side-panel";
  */
 export function MasterDetail({ list, children }: { list: ReactNode; children: ReactNode }) {
 	return (
-		<div className="flex min-h-0 flex-1 overflow-hidden">
+		<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden">
 			{list}
-			<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
-		</div>
+			<Stack gap="none" grow minWidth={0} overflow="y">
+				{children}
+			</Stack>
+		</Inline>
 	);
 }
 
@@ -28,7 +28,6 @@ export function ListPane({
 	skeletonRows = 3,
 	empty,
 	header,
-	className,
 	children,
 }: {
 	label: string;
@@ -37,32 +36,29 @@ export function ListPane({
 	/** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
 	empty?: ReactNode;
 	header?: ReactNode;
-	className?: string;
 	children?: ReactNode;
 }) {
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
-		<div className={cn("flex shrink-0 flex-col border-monti-muted border-r", LIST_PANE_WIDTH, className)}>
+		<Stack gap="none" shrink={false} border="right" width="panel">
 			{header}
-			<ul
-				className={cn(
-					"min-h-0 flex-1 divide-y divide-monti-muted overflow-y-auto overflow-x-hidden",
-					!hasRows && !loading && "flex flex-col",
-				)}
-				aria-label={label}
-			>
+			<Stack as="ul" gap="none" grow minHeight={0} overflow="y" aria-label={label}>
 				{loading
 					? Array.from({ length: skeletonRows }, (_, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-							<li key={index} className="p-normal" aria-hidden>
-								<Skeleton className="h-9 w-full" />
-							</li>
+							<Box as="li" key={index} padding="normal" aria-hidden>
+								<Skeleton shape="control" />
+							</Box>
 						))
 					: hasRows
 						? children
-						: empty && <li className="flex flex-1 items-center justify-center p-comfortable text-center">{empty}</li>}
-			</ul>
-		</div>
+						: empty && (
+								<Stack as="li" grow align="center" justify="center" padding="comfortable">
+									{empty}
+								</Stack>
+							)}
+			</Stack>
+		</Stack>
 	);
 }
 
@@ -93,40 +89,58 @@ export function ListRow({
 	trailing?: ReactNode;
 }) {
 	const button = (
-		<Button
-			variant="ghost"
-			type="button"
-			aria-current={current ? "true" : undefined}
-			onClick={onClick}
-			onKeyDown={(event) => {
-				if (onDelete && event.key === "Delete") {
-					event.preventDefault();
-					onDelete();
-				}
-			}}
-			className="h-auto min-w-0 flex-1 flex-col items-start gap-hair px-tight py-tight text-left font-normal hover:bg-transparent"
-		>
-			<span className="flex w-full items-center gap-condensed">
-				<span className="truncate font-medium text-monti-body">{title}</span>
-				{status && <span className="ml-auto shrink-0 text-monti-caption text-monti-muted">{status}</span>}
-			</span>
-			{detail && <span className="w-full truncate text-monti-caption text-monti-muted">{detail}</span>}
-		</Button>
+		<Stack gap="none" grow minWidth={0}>
+			<TextLink
+				underline="none"
+				aria-current={current ? "true" : undefined}
+				onClick={onClick}
+				onKeyDown={(event) => {
+					if (onDelete && event.key === "Delete") {
+						event.preventDefault();
+						onDelete();
+					}
+				}}
+				render={<button type="button" />}
+			>
+				<Stack gap="hair">
+					<Inline gap="condensed" justify="between">
+						<Text weight="medium" truncate>
+							{title}
+						</Text>
+						{status && (
+							<Text variant="caption" tone="muted">
+								{status}
+							</Text>
+						)}
+					</Inline>
+					{detail && (
+						<Text variant="caption" tone="muted" truncate>
+							{detail}
+						</Text>
+					)}
+				</Stack>
+			</TextLink>
+		</Stack>
 	);
-	const rowClass = cn(
-		"group flex items-center justify-between gap-condensed px-comfortable py-condensed transition-colors",
-		current ? OPEN_ITEM : "hover:bg-monti-hover",
-	);
+	const rowProps = {
+		as: "li",
+		gap: "condensed",
+		justify: "between",
+		paddingX: "comfortable",
+		paddingY: "condensed",
+		background: current ? "selected" : undefined,
+		hover: !current,
+	} as const;
 	if (!actions || actions.length === 0) {
 		return (
-			<li className={rowClass}>
+			<Inline {...rowProps}>
 				{button}
 				{trailing}
-			</li>
+			</Inline>
 		);
 	}
 	return (
-		<ActionContextMenu actions={actions} trigger={<li className={rowClass} />}>
+		<ActionContextMenu actions={actions} trigger={<Inline {...rowProps} />}>
 			{button}
 			{trailing}
 			<MoreActionsButton actions={actions} label={actionsLabel ?? title} />

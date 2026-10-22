@@ -2,7 +2,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
+import { Box, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -19,7 +19,6 @@ import { EmptyState } from "./shared/empty-state";
 import { writeDraggedEntries } from "./shared/entry-drag";
 import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
-import { OPEN_ITEM } from "./shared/side-panel";
 import type { FolderActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntriesTable } from "./use-entries-table";
@@ -111,9 +110,9 @@ export function AdminEntriesTable({
 		visibility,
 		scrollRef,
 		isShown,
-		tableWidth,
 		visibleCount,
 		tableSizing,
+		tableWidth,
 		freezeTitle,
 		updateSizing,
 		moveColumn,
@@ -147,7 +146,7 @@ export function AdminEntriesTable({
 	const pageHref = (page: number) => `?page=${page}`;
 
 	return (
-		<section aria-label={t("list.label")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<Stack as="section" aria-label={t("list.label")} gap="none" grow minHeight={0} overflow="hidden">
 			<ListSubToolbar
 				state={state}
 				options={options}
@@ -167,15 +166,15 @@ export function AdminEntriesTable({
 				}
 			/>
 			{aboveTable}
-			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-wide mt-normal" />}
+			{errorMessage && (
+				<Box paddingX="wide" paddingTop="normal">
+					<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
+				</Box>
+			)}
 
-			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
-				<Table
-					containerClassName="overflow-visible"
-					style={tableWidth ? { width: tableWidth } : undefined}
-					className="table-fixed [&_td:first-child]:pl-wide [&_td:last-child]:pr-spacious [&_th:first-child]:pl-wide [&_th:last-child]:pr-spacious"
-				>
-					<TableHeader className="sticky top-0 z-10 bg-monti-page [&_tr]:border-b">
+			<Stack ref={scrollRef} gap="none" grow minHeight={0} overflow="auto">
+				<Table layout="fixed" container="none" stickyHeader inset="page" width={tableWidth || undefined}>
+					<TableHeader>
 						{table.getHeaderGroups().map((group) => (
 							<TableRow key={group.id}>
 								{group.headers
@@ -185,13 +184,9 @@ export function AdminEntriesTable({
 										const active = sortField !== undefined && sortField === state.sortField;
 										return (
 											<Fragment key={header.id}>
-												{header.column.id === "actions" && <TableHead aria-hidden className="p-0" />}
+												{header.column.id === "actions" && <TableHead aria-hidden filler />}
 												<TableHead
-													style={{ width: header.getSize() }}
-													className={cn(
-														"group/th relative h-10 text-monti-caption text-monti-muted",
-														header.column.id === "select" && "w-10",
-													)}
+													size={header.getSize()}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
 												>
 													{header.isPlaceholder ? null : <table.FlexRender header={header} />}
@@ -229,10 +224,7 @@ export function AdminEntriesTable({
 							</TableRow>
 						))}
 					</TableHeader>
-					<TableBody
-						aria-busy={isRefreshing || undefined}
-						className={cn("transition-opacity", isRefreshing && "opacity-60")}
-					>
+					<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 						{explorer && (
 							<EntriesTableFolderRows
 								explorer={explorer}
@@ -247,7 +239,7 @@ export function AdminEntriesTable({
 									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
 									<TableRow key={index} aria-hidden>
 										<TableCell colSpan={visibleCount}>
-											<Skeleton className="h-5 w-full" />
+											<Skeleton />
 										</TableCell>
 									</TableRow>
 								))
@@ -259,10 +251,7 @@ export function AdminEntriesTable({
 											actions={rowMenu(row.original)}
 											trigger={
 												<TableRow
-													className={cn(
-														"h-11 hover:bg-monti-hover data-[state=selected]:bg-monti-selected",
-														row.original.id === openRecordId && OPEN_ITEM,
-													)}
+													selected={row.getIsSelected() || row.original.id === openRecordId}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}
 													data-state={row.getIsSelected() ? "selected" : undefined}
 													draggable={!isTrash}
@@ -288,8 +277,8 @@ export function AdminEntriesTable({
 												.filter((cell) => isShown(cell.column.id))
 												.map((cell) => (
 													<Fragment key={cell.id}>
-														{cell.column.id === "actions" && <TableCell aria-hidden className="p-0" />}
-														<TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+														{cell.column.id === "actions" && <TableCell aria-hidden filler />}
+														<TableCell truncate>
 															<table.FlexRender cell={cell} />
 														</TableCell>
 													</Fragment>
@@ -337,9 +326,12 @@ export function AdminEntriesTable({
 						/>
 					))}
 				{blankMenu && (
-					<ActionContextMenu actions={blankMenu} trigger={<div className="min-h-12 flex-1" aria-hidden />} />
+					<ActionContextMenu
+						actions={blankMenu}
+						trigger={<Box grow paddingY="comfortable" aria-hidden data-testid="list-blank-area" />}
+					/>
 				)}
-			</div>
+			</Stack>
 
 			<ListPagination
 				total={total}
@@ -352,6 +344,6 @@ export function AdminEntriesTable({
 				hidePagerWhenSingle
 				showRange={false}
 			/>
-		</section>
+		</Stack>
 	);
 }

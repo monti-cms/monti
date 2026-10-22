@@ -1,7 +1,20 @@
 "use client";
 
 import { type ApiKeyView, useTranslator } from "@monti-cms/core/site";
-import { cn, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@monti-cms/ui";
+import {
+	Box,
+	Inline,
+	Input,
+	RadioGroup,
+	RadioItem,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { useId } from "react";
 import { useApiKeys } from "../../api/api-keys";
 import { apiKeysMessages } from "./messages";
@@ -36,7 +49,6 @@ export function ApiKeyField({
 	baseName,
 	label,
 	disabled,
-	className,
 }: {
 	value: ApiKeyChoice;
 	onChange: (choice: ApiKeyChoice) => void;
@@ -44,7 +56,6 @@ export function ApiKeyField({
 	/** Label of the whole field. Default: "API key". */
 	label?: string;
 	disabled?: boolean;
-	className?: string;
 }) {
 	const t = useTranslator(apiKeysMessages);
 	const query = useApiKeys();
@@ -55,98 +66,98 @@ export function ApiKeyField({
 	const chosen = saved ? keys.find((key) => key.id === value.keyId) : undefined;
 	const mask = (key: ApiKeyView) => (key.tail ? `••••${key.tail}` : "••••");
 	return (
-		<fieldset className={cn("flex flex-col gap-tight", className)} disabled={disabled} data-testid="api-key-field">
-			<legend className="mb-condensed font-medium text-monti-body" id={groupId}>
-				{label ?? t("field.keyLabel")}
+		<fieldset disabled={disabled} data-testid="api-key-field">
+			<legend id={groupId}>
+				<Text weight="medium">{label ?? t("field.keyLabel")}</Text>
 			</legend>
-			<div role="radiogroup" aria-labelledby={groupId} className="flex max-w-xl flex-col gap-tight">
-				<label
-					className={cn(
-						"flex items-start gap-condensed rounded-md px-normal py-condensed",
-						keys.length === 0 ? "opacity-60" : "cursor-pointer",
-						saved && "bg-monti-hover ring-1 ring-monti-muted",
-					)}
+			<Box paddingTop="condensed" maxWidth="prose">
+				<RadioGroup
+					variant="card"
+					aria-labelledby={groupId}
+					value={value.use === "none" ? "" : value.use}
+					onValueChange={(next) => {
+						if (next === "saved") onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" });
+						else if (next === "new") onChange({ use: "new", value: "" });
+					}}
 				>
-					<input
-						type="radio"
-						name={`${groupId}-use`}
-						className="mt-tight"
-						checked={saved}
+					<RadioItem
+						value="saved"
 						disabled={keys.length === 0}
-						onChange={() => onChange({ use: "saved", keyId: chosen?.id ?? keys[0]?.id ?? "" })}
+						label={<Text weight={saved ? "medium" : undefined}>{t("field.useSaved")}</Text>}
+						hint={
+							keys.length === 0 ? (
+								<Text variant="caption" tone="muted">
+									{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
+								</Text>
+							) : saved ? (
+								<Stack gap="condensed">
+									<Box maxWidth="panel-lg">
+										<Select
+											value={value.keyId}
+											onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
+											items={keys.map((key) => ({ value: key.id, label: key.name }))}
+										>
+											<SelectTrigger aria-label={t("field.savedPick")} width="full">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{keys.map((key) => (
+													<SelectItem key={key.id} value={key.id}>
+														<Inline gap="condensed">
+															<Text>{key.name}</Text>
+															<Text variant="caption" tone="muted" mono>
+																{key.readable ? mask(key) : t("field.unreadable")}
+															</Text>
+														</Inline>
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</Box>
+									{chosen && chosen.uses.length > 0 && (
+										<Text variant="caption" tone="muted">
+											{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
+										</Text>
+									)}
+								</Stack>
+							) : undefined
+						}
 					/>
-					<span className="flex min-w-0 flex-1 flex-col gap-condensed">
-						<span className={cn("text-monti-body", saved && "font-medium")}>{t("field.useSaved")}</span>
-						{keys.length === 0 ? (
-							<span className="text-monti-caption text-monti-muted">
-								{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
-							</span>
-						) : saved ? (
-							<>
-								<Select
-									value={value.keyId}
-									onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
-									items={keys.map((key) => ({ value: key.id, label: key.name }))}
-								>
-									<SelectTrigger aria-label={t("field.savedPick")} className="h-9 w-full max-w-sm">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{keys.map((key) => (
-											<SelectItem key={key.id} value={key.id}>
-												<span>{key.name}</span>
-												<span className="ml-condensed font-mono text-monti-caption text-monti-muted">
-													{key.readable ? mask(key) : t("field.unreadable")}
-												</span>
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								{chosen && chosen.uses.length > 0 && (
-									<span className="text-monti-caption text-monti-muted">
-										{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
-									</span>
-								)}
-							</>
-						) : null}
-					</span>
-				</label>
-				<label
-					className={cn(
-						"flex items-start gap-condensed rounded-md px-normal py-condensed",
-						canSave ? "cursor-pointer" : "opacity-60",
-						value.use === "new" && "bg-monti-hover ring-1 ring-monti-muted",
-					)}
-				>
-					<input
-						type="radio"
-						name={`${groupId}-use`}
-						className="mt-tight"
-						checked={value.use === "new"}
+					<RadioItem
+						value="new"
 						disabled={!canSave}
-						onChange={() => onChange({ use: "new", value: "" })}
+						label={<Text weight={value.use === "new" ? "medium" : undefined}>{t("field.useNew")}</Text>}
+						hint={
+							value.use === "new" || !canSave ? (
+								<Stack gap="condensed">
+									{value.use === "new" && (
+										<>
+											<Box maxWidth="panel-lg">
+												<Input
+													type="password"
+													autoComplete="off"
+													aria-label={t("field.newInput")}
+													mono
+													value={value.value}
+													onChange={(event) => onChange({ use: "new", value: event.target.value })}
+												/>
+											</Box>
+											<Text variant="caption" tone="muted">
+												{t("field.newHelp", { name: freeName(baseName, keys) })}
+											</Text>
+										</>
+									)}
+									{!canSave && (
+										<Text variant="caption" tone="muted">
+											{t("field.secretMissing")}
+										</Text>
+									)}
+								</Stack>
+							) : undefined
+						}
 					/>
-					<span className="flex min-w-0 flex-1 flex-col gap-condensed">
-						<span className={cn("text-monti-body", value.use === "new" && "font-medium")}>{t("field.useNew")}</span>
-						{value.use === "new" && (
-							<>
-								<Input
-									type="password"
-									autoComplete="off"
-									aria-label={t("field.newInput")}
-									className="h-9 max-w-sm font-mono text-monti-body"
-									value={value.value}
-									onChange={(event) => onChange({ use: "new", value: event.target.value })}
-								/>
-								<span className="text-monti-caption text-monti-muted">
-									{t("field.newHelp", { name: freeName(baseName, keys) })}
-								</span>
-							</>
-						)}
-						{!canSave && <span className="text-monti-caption text-monti-muted">{t("field.secretMissing")}</span>}
-					</span>
-				</label>
-			</div>
+				</RadioGroup>
+			</Box>
 		</fieldset>
 	);
 }

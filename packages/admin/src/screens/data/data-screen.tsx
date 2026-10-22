@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Box, Stack } from "@monti-cms/ui";
 import { ExportButton, ExportFields, ExportProgressLine } from "../export/export-fields";
 import { exportMessages } from "../export/messages";
 import { useExportForm } from "../export/use-export-form";
@@ -25,37 +26,39 @@ export function DataScreen() {
 	const form = useExportForm();
 	return (
 		<ShellPage title={t("title")} nav="data" large>
-			<div className="min-h-0 flex-1 overflow-y-auto">
-				<PageBody data-testid="data-screen" className="gap-section">
-					<Section wide band title={te("data.title")} testId="site-backup">
-						<ExportFields form={form} />
-						<ExportProgressLine phase={form.phase} />
-						<div>
-							<ExportButton form={form} label={te("action.all")} />
-						</div>
-					</Section>
-					<Section
-						wide
-						band
-						title={ti("title")}
-						description={ti("description")}
-						testId="import-entries"
-						id="import-entries"
-					>
-						<ImportEntriesFields />
-					</Section>
-					<Section
-						wide
-						band
-						danger
-						title={tr("danger.title")}
-						description={tr("danger.description")}
-						testId="restore-backup"
-					>
-						<RestoreBackupFields />
-					</Section>
+			<Box grow minHeight={0} overflow="y">
+				<PageBody data-testid="data-screen">
+					<Stack gap="section">
+						<Section wide band title={te("data.title")} testId="site-backup">
+							<ExportFields form={form} />
+							<ExportProgressLine phase={form.phase} />
+							<Box>
+								<ExportButton form={form} label={te("action.all")} />
+							</Box>
+						</Section>
+						<Section
+							wide
+							band
+							title={ti("title")}
+							description={ti("description")}
+							testId="import-entries"
+							id="import-entries"
+						>
+							<ImportEntriesFields />
+						</Section>
+						<Section
+							wide
+							band
+							danger
+							title={tr("danger.title")}
+							description={tr("danger.description")}
+							testId="restore-backup"
+						>
+							<RestoreBackupFields />
+						</Section>
+					</Stack>
 				</PageBody>
-			</div>
+			</Box>
 		</ShellPage>
 	);
 }

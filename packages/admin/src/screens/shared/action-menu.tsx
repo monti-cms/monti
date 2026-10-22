@@ -82,7 +82,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 							{action.icon && <action.icon aria-hidden />}
 							{action.label}
 						</ContextMenuSubTrigger>
-						<ContextMenuSubContent className="max-h-80 overflow-y-auto">
+						<ContextMenuSubContent>
 							{action.items.length === 0 ? (
 								<ContextMenuItem disabled>{action.emptyLabel ?? t("menu.empty")}</ContextMenuItem>
 							) : (
@@ -130,7 +130,7 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 							{action.icon && <action.icon aria-hidden />}
 							{action.label}
 						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+						<DropdownMenuSubContent>
 							{action.items.length === 0 ? (
 								<DropdownMenuItem disabled>{action.emptyLabel ?? t("menu.empty")}</DropdownMenuItem>
 							) : (
@@ -180,10 +180,8 @@ export function ActionContextMenu({
 	if (!hydrated) return cloneElement(trigger, undefined, children);
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
-			<ContextMenuTrigger render={trigger} className="select-auto">
-				{children}
-			</ContextMenuTrigger>
-			<ContextMenuContent className="min-w-48">
+			<ContextMenuTrigger render={trigger}>{children}</ContextMenuTrigger>
+			<ContextMenuContent width="md">
 				<ContextItems actions={items} />
 			</ContextMenuContent>
 		</ContextMenu>
@@ -194,21 +192,19 @@ export function ActionContextMenu({
 export function MoreActionsButton({
 	actions,
 	label,
-	className,
 }: {
 	actions: MenuAction[];
 	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
-	className?: string;
 }) {
 	const items = tidy(actions);
 	if (items.length === 0) return null;
 	return (
 		<DropdownMenu>
-			<IconButton label={label} className={className} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				<MoreHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" className="min-w-48">
+			<DropdownMenuContent align="end" width="md">
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -49,7 +49,7 @@ function ColorBubbleButton({ editor, inCode, openPanel, closePanel }: EditorBubb
 function ColorMenuItems({ editor }: { editor: Editor }) {
 	return (
 		<>
-			<DropdownMenuSeparator className="first:hidden" />
+			<DropdownMenuSeparator />
 			<TextColorMenuItems editor={editor} />
 		</>
 	);

@@ -17,14 +17,21 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 	return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
+const MENU_WIDTH = { auto: "min-w-0", sm: "min-w-36", md: "min-w-48", lg: "min-w-56" } as const;
+
 function DropdownMenuContent({
 	align = "start",
 	alignOffset = 0,
 	side = "bottom",
 	sideOffset = 4,
+	width,
 	className,
 	...props
-}: MenuPrimitive.Popup.Props & Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+}: MenuPrimitive.Popup.Props &
+	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
+		/** The menu's minimum width: `sm` 144px, `md` 192px, `lg` 224px, `auto` none; it grows with its longest item otherwise. */
+		width?: keyof typeof MENU_WIDTH;
+	}) {
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
@@ -38,6 +45,7 @@ function DropdownMenuContent({
 					data-slot="dropdown-menu-content"
 					className={cn(
 						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in data-closed:overflow-hidden",
+						width && MENU_WIDTH[width],
 						className,
 					)}
 					{...props}
@@ -72,10 +80,13 @@ function DropdownMenuItem({
 	className,
 	inset,
 	variant = "default",
+	swatch = false,
 	...props
 }: MenuPrimitive.Item.Props & {
 	inset?: boolean;
 	variant?: "default" | "danger";
+	/** A small square item in a grid of items (a color sample), its content centered. */
+	swatch?: boolean;
 }) {
 	return (
 		<MenuPrimitive.Item
@@ -84,6 +95,7 @@ function DropdownMenuItem({
 			data-variant={variant}
 			className={cn(
 				"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=danger]:focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[variant=danger]:*:[svg]:text-monti-danger",
+				swatch && "justify-center p-hair",
 				className,
 			)}
 			{...props}
@@ -131,7 +143,7 @@ function DropdownMenuSubContent({
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
 			className={cn(
-				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 w-auto min-w-[96px] rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating duration-100 data-closed:animate-out data-open:animate-in",
+				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 max-h-80 w-auto min-w-[96px] rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating duration-100 data-closed:animate-out data-open:animate-in",
 				className,
 			)}
 			align={align}
@@ -215,7 +227,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 	return (
 		<MenuPrimitive.Separator
 			data-slot="dropdown-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-divider first:hidden last:hidden", className)}
 			{...props}
 		/>
 	);

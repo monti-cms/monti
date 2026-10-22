@@ -9,8 +9,8 @@ import {
 	useBlockEditor,
 	useTranslator,
 } from "@monti-cms/admin";
-import { cn, FormFieldLabel, Switch } from "@monti-cms/admin/kit";
-import { ChevronRight } from "lucide-react";
+import { cn, IconButton, Inline, Label, Switch } from "@monti-cms/admin/kit";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";
 
@@ -51,15 +51,14 @@ export function CollapsibleNodeView() {
 					open && "bg-monti-neutral",
 				)}
 			>
-				<button
-					type="button"
+				<IconButton
+					label={open ? t("toggle.close") : t("toggle.open")}
+					size="icon-xs"
 					aria-expanded={open}
-					aria-label={open ? t("toggle.close") : t("toggle.open")}
 					onClick={toggle}
-					className="-m-tight rounded-md p-tight hover:bg-monti-hover"
 				>
-					<ChevronRight className={cn("size-4 shrink-0 text-monti-muted transition-transform", open && "rotate-90")} />
-				</button>
+					{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+				</IconButton>
 				<AttributeInput
 					aria-label={t("title.aria")}
 					value={typeof values.title === "string" ? values.title : ""}
@@ -87,15 +86,17 @@ export function CollapsibleNodeView() {
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<BlockSettings>
-						<FormFieldLabel htmlFor={defaultOpenId} className="w-full items-center justify-between font-normal">
-							<span className="text-monti-muted">{t("defaultOpen.label")}</span>
+						<Inline justify="between" width="full">
+							<Label htmlFor={defaultOpenId} tone="muted">
+								{t("defaultOpen.label")}
+							</Label>
 							<Switch
 								id={defaultOpenId}
 								size="sm"
 								checked={defaultOpen}
 								onCheckedChange={(checked) => setValue("defaultOpen", checked)}
 							/>
-						</FormFieldLabel>
+						</Inline>
 					</BlockSettings>
 				</ContainerToolbar>
 			) : null}

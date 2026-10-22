@@ -2,7 +2,7 @@
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
 import { HOST_PATTERN, useTranslator } from "@monti-cms/core/site";
-import { Button, Input } from "@monti-cms/ui";
+import { Box, Button, Inline, Input, Stack, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
@@ -58,7 +58,7 @@ export function SiteEditor({
 	const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
-		<div className="flex flex-col gap-section" data-testid="site-settings">
+		<Stack gap="section" data-testid="site-settings">
 			<Section wide band title={t("site.identityTitle")}>
 				<TextInput
 					label={ts("site.name")}
@@ -97,54 +97,63 @@ export function SiteEditor({
 				/>
 			</Section>
 			<Section wide band title={t("site.addressTitle")}>
-				<div className="flex flex-col gap-condensed">
-					<Pick
-						label={t("site.localePrefix")}
-						revert={revert("localePrefix")}
-						control="wide"
-						value={mode}
-						items={PREFIX_MODES.map((value) => ({
-							value,
-							label: t(`site.prefix.${value}`),
-							description: t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode }),
-						}))}
-						onChange={(value) => set("localePrefix", value)}
-					/>
-				</div>
-				<div className="flex flex-col gap-condensed border-t pt-spacious">
+				<Pick
+					label={t("site.localePrefix")}
+					revert={revert("localePrefix")}
+					control="wide"
+					value={mode}
+					items={PREFIX_MODES.map((value) => ({
+						value,
+						label: t(`site.prefix.${value}`),
+						description: t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode }),
+					}))}
+					onChange={(value) => set("localePrefix", value)}
+				/>
+				<Stack gap="condensed" border="top" paddingTop="spacious">
 					<Labeled
 						label={t("site.aliases")}
 						control="normal"
 						aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
 					>
-						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
-							{aliases.map((alias, index) => (
-								<li
-									key={alias}
-									className="flex items-center gap-condensed px-normal py-tight"
-									data-testid={`alias-${alias}`}
-								>
-									<code className="flex-1 text-monti-caption">{alias}</code>
-									<RowActions
-										index={index}
-										count={aliases.length}
-										name={alias}
-										onMove={(delta) => setAliases(moveItem(aliases, index, delta))}
-										onRemove={() => setAliases(aliases.filter((_, at) => at !== index))}
-									/>
-								</li>
-							))}
-						</ul>
+						{aliases.length > 0 && (
+							<Stack as="ul" gap="none" border="all" radius="md" overflow="hidden">
+								{aliases.map((alias, index) => (
+									<Inline
+										as="li"
+										key={alias}
+										gap="condensed"
+										paddingX="normal"
+										paddingY="tight"
+										border={index === 0 ? undefined : "top"}
+										data-testid={`alias-${alias}`}
+									>
+										<Box grow>
+											<Text as="code" variant="caption">
+												{alias}
+											</Text>
+										</Box>
+										<RowActions
+											index={index}
+											count={aliases.length}
+											name={alias}
+											onMove={(delta) => setAliases(moveItem(aliases, index, delta))}
+											onRemove={() => setAliases(aliases.filter((_, at) => at !== index))}
+										/>
+									</Inline>
+								))}
+							</Stack>
+						)}
 					</Labeled>
 					{!disabled && (
-						<div className="flex max-w-xl items-end gap-condensed">
-							<Input
-								className="flex-1"
-								value={host}
-								aria-label={t("site.alias.new")}
-								placeholder="www.example.com"
-								onChange={(event) => setHost(event.target.value)}
-							/>
+						<Inline align="end" gap="condensed" maxWidth="panel-lg">
+							<Box grow>
+								<Input
+									value={host}
+									aria-label={t("site.alias.new")}
+									placeholder="www.example.com"
+									onChange={(event) => setHost(event.target.value)}
+								/>
+							</Box>
 							<Button
 								type="button"
 								variant="outline"
@@ -157,19 +166,21 @@ export function SiteEditor({
 							>
 								{t("site.alias.add")}
 							</Button>
-						</div>
+						</Inline>
 					)}
-				</div>
-				<div className="border-t pt-spacious" data-testid="site-url">
+				</Stack>
+				<Box border="top" paddingTop="spacious" data-testid="site-url">
 					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
 						{siteUrl.url ? (
-							<code className="block rounded-md bg-monti-neutral px-normal py-condensed text-monti-caption">
-								{siteUrl.url}
-							</code>
+							<Box background="neutral" radius="md" paddingX="normal" paddingY="condensed">
+								<Text as="code" variant="caption">
+									{siteUrl.url}
+								</Text>
+							</Box>
 						) : null}
 					</Labeled>
-				</div>
+				</Box>
 			</Section>
-		</div>
+		</Stack>
 	);
 }

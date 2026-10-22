@@ -1,14 +1,11 @@
 "use client";
 
 import { type Site, useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { Box, Inline, PageTabs, StatusIndicator, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
 import { AdminLink as Link } from "../../router";
 import { settingsMessages } from "./messages";
 import { type SchemaTab, settingsTabs } from "./tabs";
-
-const linkClass =
-	"flex shrink-0 items-center gap-condensed whitespace-nowrap border-transparent border-b-2 py-condensed text-monti-body text-monti-muted outline-hidden transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-[current=page]:border-monti-accent aria-[current=page]:font-medium aria-[current=page]:text-monti-default";
 
 /** The row of tabs under the Settings header. A tab changes the address in place when `onSchemaTab` is given, so the schema screen keeps its draft. */
 export function SettingsTabBar({
@@ -33,36 +30,41 @@ export function SettingsTabBar({
 	}, [active]);
 
 	return (
-		<nav aria-label={t("tabs.label")} className="mt-comfortable -mb-px flex items-stretch gap-spacious overflow-x-auto">
-			{tabs.map((entry) => {
-				const isActive = entry.id === active;
-				return (
-					<Link
-						key={entry.id}
-						// Moving between schema tabs is not a way out of the unsaved draft.
-						data-unsaved-guard={onSchemaTab ? "off" : undefined}
-						onClick={(event) => {
-							if (!onSchemaTab) return;
-							// A click that opens a new tab or window goes the way of a link.
-							if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-							event.preventDefault();
-							onSchemaTab(entry.id);
-						}}
-						ref={isActive ? activeLink : undefined}
-						href={entry.href}
-						aria-current={isActive ? "page" : undefined}
-						className={cn(linkClass)}
-					>
-						{t(`tab.${entry.id}` as "tab.collections")}
-						{changed?.[entry.id] && (
-							<span className="inline-flex items-center" data-testid={`tab-changed-${entry.id}`}>
-								<span aria-hidden className="size-1.5 rounded-full bg-monti-accent-emphasis" />
-								<span className="sr-only">{t("changed")}</span>
-							</span>
-						)}
-					</Link>
-				);
-			})}
-		</nav>
+		<Box paddingTop="comfortable">
+			<Tabs value={active}>
+				<PageTabs inset="none" aria-label={t("tabs.label")}>
+					{tabs.map((entry) => (
+						<TabsTrigger
+							key={entry.id}
+							value={entry.id}
+							nativeButton={false}
+							render={
+								<Link
+									href={entry.href}
+									// Moving between schema tabs is not a way out of the unsaved draft.
+									data-unsaved-guard={onSchemaTab ? "off" : undefined}
+									onClick={(event) => {
+										if (!onSchemaTab) return;
+										// A click that opens a new tab or window goes the way of a link.
+										if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+										event.preventDefault();
+										onSchemaTab(entry.id);
+									}}
+									ref={entry.id === active ? activeLink : undefined}
+								/>
+							}
+						>
+							{t(`tab.${entry.id}` as "tab.collections")}
+							{changed?.[entry.id] && (
+								<Inline as="span" data-testid={`tab-changed-${entry.id}`}>
+									<StatusIndicator tone="accent" size="xs" />
+									<Text srOnly>{t("changed")}</Text>
+								</Inline>
+							)}
+						</TabsTrigger>
+					))}
+				</PageTabs>
+			</Tabs>
+		</Box>
 	);
 }

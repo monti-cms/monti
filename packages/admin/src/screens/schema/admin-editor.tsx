@@ -1,8 +1,7 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
-import { HELP } from "../shared/labeled";
+import { Box, Stack, Text } from "@monti-cms/ui";
 import { Section } from "../shared/section";
 import { schemaAdminMessages } from "./admin.messages";
 import { FlagSwitch, Pick, useSettingRevert } from "./controls";
@@ -31,9 +30,9 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 		locale && !dictionaryLanguages.includes(locale) ? [...dictionaryLanguages, locale] : dictionaryLanguages;
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
-		<div className="flex flex-col gap-section" data-testid="admin-settings">
+		<Stack gap="section" data-testid="admin-settings">
 			<Section wide band title={t("admin.languageTitle")}>
-				<div>
+				<Box>
 					<Pick
 						label={t("admin.locale")}
 						revert={revert("locale")}
@@ -44,7 +43,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 						]}
 						onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
 					/>
-				</div>
+				</Box>
 			</Section>
 			<Section wide band title={t("admin.featuresTitle")}>
 				<FlagSwitch
@@ -53,26 +52,29 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
-				<div className="border-t pt-spacious">
+				<Box border="top" paddingTop="spacious">
 					<FlagSwitch
 						label={t("admin.translations")}
 						revert={revert("translations")}
 						checked={admin.translations !== false}
 						onChange={(on) => set("translations", on ? undefined : false)}
 					/>
-				</div>
+				</Box>
 			</Section>
 			<Section wide band title={t("admin.addressTitle")}>
-				<div className="flex flex-col gap-condensed">
-					<code
-						className="w-fit rounded-md bg-monti-neutral px-normal py-condensed text-monti-body"
-						data-testid="admin-path"
-					>
-						{path}
-					</code>
-					<p className={cn(HELP, "text-monti-muted")}>{t("admin.pathNote")}</p>
-				</div>
+				<Stack gap="condensed">
+					<Box width="fit" background="neutral" radius="md" paddingX="normal" paddingY="condensed">
+						<Text as="code" data-testid="admin-path">
+							{path}
+						</Text>
+					</Box>
+					<Box maxWidth="prose">
+						<Text as="p" variant="label" tone="muted">
+							{t("admin.pathNote")}
+						</Text>
+					</Box>
+				</Stack>
 			</Section>
-		</div>
+		</Stack>
 	);
 }

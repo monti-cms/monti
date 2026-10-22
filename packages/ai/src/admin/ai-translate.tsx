@@ -2,7 +2,17 @@
 
 import { type EditorExtension, errorText, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
-import { Button, isComposingKey, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
+import {
+	Button,
+	Inline,
+	isComposingKey,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+	Text,
+	Textarea,
+} from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
 import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -222,7 +232,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			features.map((item) => ({
 				id: `ai-translate:${item.key}`,
 				label: item.label,
-				icon: <Languages aria-hidden className="size-3.5" />,
+				icon: <Languages aria-hidden />,
 				isAvailable: (editor, pos) =>
 					!!format && unitAt(site, format, editor.state.doc, pos) !== null && progress === null,
 				isBusy: (pos) => busyBlocks.has(pos),
@@ -234,28 +244,27 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const running = progress !== null || busyBlocks.size > 0;
 	const toolbar = feature ? (
 		running ? (
-			<span className="flex items-center gap-tight">
+			<Inline gap="tight">
 				{progress && (
-					<span className="text-monti-caption text-monti-muted tabular-nums">
+					<Text variant="caption" tone="muted">
 						{t("progress", { done: progress.done, total: progress.total })}
-					</span>
+					</Text>
 				)}
-				<Button type="button" size="sm" variant="ghost" className="gap-condensed text-monti-muted" onClick={stop}>
-					<Square aria-hidden className="size-4" />
+				<Button type="button" size="sm" variant="quiet" onClick={stop}>
+					<Square aria-hidden />
 					{t("stop")}
 				</Button>
-			</span>
+			</Inline>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger
-					render={<Button type="button" size="sm" variant="ghost" className="gap-condensed text-monti-muted" />}
-				>
-					<Languages aria-hidden className="size-4" />
+				<PopoverTrigger render={<Button type="button" size="sm" variant="quiet" />}>
+					<Languages aria-hidden />
 					{t("all")}
 				</PopoverTrigger>
-				<PopoverContent align="end" className="w-72 gap-condensed p-normal text-monti-caption">
-					<form
-						className="flex flex-col gap-condensed"
+				<PopoverContent align="end" width="md">
+					<Stack
+						as="form"
+						gap="condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							void translateAll();
@@ -283,14 +292,16 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 										void translateAll();
 									}
 								}}
-								className="min-h-16 resize-y text-monti-caption md:text-monti-caption"
+								size="sm"
 							/>
 						)}
-						<Button type="submit" size="sm" className="self-end">
-							<Languages aria-hidden />
-							{t("run")}
-						</Button>
-					</form>
+						<Inline justify="end">
+							<Button type="submit" size="sm">
+								<Languages aria-hidden />
+								{t("run")}
+							</Button>
+						</Inline>
+					</Stack>
 				</PopoverContent>
 			</Popover>
 		)

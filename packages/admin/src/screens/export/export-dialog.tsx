@@ -9,6 +9,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	Text,
 } from "@monti-cms/ui";
 import { ExportButton, ExportFields, ExportProgressLine } from "./export-fields";
 import { exportMessages } from "./messages";
@@ -46,9 +47,9 @@ function ExportDialogBody({
 			</DialogHeader>
 			<ExportFields form={form} selection noun={noun} />
 			{unsaved && (
-				<p className="text-monti-caption text-monti-muted" data-testid="export-unsaved">
+				<Text as="p" variant="caption" tone="muted" data-testid="export-unsaved">
 					{t("note.unsaved")}
-				</p>
+				</Text>
 			)}
 			<ExportProgressLine phase={form.phase} />
 			<DialogFooter>
@@ -68,7 +69,7 @@ function ExportDialogBody({
 export function ExportDialog({ open, onOpenChange, ...body }: ExportDialogProps) {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+			<DialogContent size="lg" scroll>
 				<ExportDialogBody {...body} onClose={() => onOpenChange(false)} />
 			</DialogContent>
 		</Dialog>

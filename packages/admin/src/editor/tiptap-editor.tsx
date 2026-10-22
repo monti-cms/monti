@@ -2,6 +2,7 @@
 
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/site";
+import { Stack } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -327,10 +328,16 @@ export function CmsEditor({
 				startMarquee(editor.view, event.nativeEvent);
 			}}
 		>
-			<div
+			<Stack
 				role="toolbar"
 				aria-label={t("toolbar.format")}
-				className="sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-monti-page backdrop-blur"
+				gap="none"
+				position="sticky"
+				width="full"
+				shrink={false}
+				overflow="x"
+				border="bottom"
+				background="page"
 			>
 				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
 				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
@@ -342,7 +349,7 @@ export function CmsEditor({
 					</div>
 				</div>
 				{!isSourceMode && <CodeLinkBar editor={editor} />}
-			</div>
+			</Stack>
 
 			{titleField && (
 				<div className="mx-auto w-full max-w-(--editor-width) border-monti-muted border-b px-comfortable pt-section pb-comfortable">

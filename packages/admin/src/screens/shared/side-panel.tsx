@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton } from "@monti-cms/ui";
+import { Box, Heading, IconButton, Inline } from "@monti-cms/ui";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
@@ -33,30 +33,31 @@ export const RECORD_PANEL_RESIZE: PanelResizeConfig = { name: "record", defaultW
 export const MEDIA_PANEL_RESIZE: PanelResizeConfig = { name: "media-detail", defaultWidth: 384, minWidth: 352 };
 export const INSPECTOR_PANEL_RESIZE: PanelResizeConfig = { name: "inspector", defaultWidth: 384, minWidth: 352 };
 
-/** Background of the item currently open in the list (open in the right slot or edit slot). */
-export const OPEN_ITEM = "bg-monti-selected text-monti-default";
-
 /** Right slot header. A title and a close button (the name is always "Close"). */
 export function SidePanelHeader({
 	title,
 	onClose,
-	className,
 	children,
 }: {
 	title?: ReactNode;
 	onClose: () => void;
-	className?: string;
 	/** Content to put instead of (or next to) the title (tabs etc.). */
 	children?: ReactNode;
 }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<div className={cn("flex h-11 shrink-0 items-center gap-tight border-b pr-condensed pl-comfortable", className)}>
-			{title !== undefined && <h2 className="min-w-0 flex-1 truncate font-medium text-monti-body">{title}</h2>}
+		<Inline gap="tight" shrink={false} border="bottom" paddingY="condensed" paddingX="comfortable">
+			{title !== undefined && (
+				<Box grow minWidth={0}>
+					<Heading as="h2" variant="label" truncate>
+						{title}
+					</Heading>
+				</Box>
+			)}
 			{children}
 			<IconButton label={t("close")} side="bottom" onClick={onClose}>
 				<X aria-hidden />
 			</IconButton>
-		</div>
+		</Inline>
 	);
 }

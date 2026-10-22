@@ -12,7 +12,13 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 	return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
-const POPOVER_WIDTH = { sm: "w-56", md: "w-72", lg: "w-96", auto: "w-auto" } as const;
+const POPOVER_WIDTH = {
+	sm: "w-panel-sm",
+	md: "w-panel",
+	lg: "w-panel-lg",
+	auto: "w-auto",
+	anchor: "w-(--anchor-width) min-w-panel-sm",
+} as const;
 
 function PopoverContent({
 	className,
@@ -23,13 +29,16 @@ function PopoverContent({
 	anchor,
 	width = "md",
 	padding = "default",
+	scroll = false,
 	...props
 }: PopoverPrimitive.Popup.Props &
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
-		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content. */
+		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content, `anchor` as wide as what opened it. */
 		width?: keyof typeof POPOVER_WIDTH;
 		/** `none` when the content brings its own rows (a list, a calendar) and runs to the edge. */
 		padding?: "default" | "none";
+		/** Scrolls inside when taller than the space left on screen. */
+		scroll?: boolean;
 	}) {
 	return (
 		<PopoverPrimitive.Portal>
@@ -47,6 +56,7 @@ function PopoverContent({
 						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-lg border border-monti-muted bg-monti-overlay text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
 						POPOVER_WIDTH[width],
 						padding === "default" && "p-4",
+						scroll && "max-h-(--available-height) overflow-y-auto",
 						className,
 					)}
 					{...props}

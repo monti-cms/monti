@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Input } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Input, Label, Stack, Text } from "@monti-cms/ui";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
@@ -85,28 +85,22 @@ export function PopoverFormFooter({
 }) {
 	const tc = useTranslator(commonMessages);
 	return (
-		<div className="flex items-center gap-condensed">
+		<Inline gap="condensed" justify={onRemove ? "between" : "end"}>
 			{onRemove && (
-				<Button
-					type="button"
-					variant="ghost"
-					size="sm"
-					className="text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger"
-					onClick={onRemove}
-				>
+				<Button type="button" variant="ghost" tone="danger" size="sm" onClick={onRemove}>
 					{removeIcon}
 					{removeLabel}
 				</Button>
 			)}
-			<div className="ml-auto flex items-center gap-condensed">
+			<Inline gap="condensed">
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					{tc("cancel")}
 				</Button>
 				<Button type="submit" size="sm">
 					{tc("apply")}
 				</Button>
-			</div>
-		</div>
+			</Inline>
+		</Inline>
 	);
 }
 
@@ -132,7 +126,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	const [error, setError] = useState<string | null>(null);
 	const needsText = !draft.existing && draft.from === draft.to;
 
-	const submit = (event: FormEvent<HTMLFormElement>) => {
+	const submit = (event: FormEvent<HTMLElement>) => {
 		event.preventDefault();
 		// An internal link with nothing typed stays as it is.
 		if (draft.entryId && !href.trim()) {
@@ -173,22 +167,28 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	};
 
 	return (
-		<form onSubmit={submit} onKeyDown={submitOnEnter} className="grid gap-normal">
-			<p className="font-medium">{draft.existing ? t("link.edit") : t("link.add")}</p>
+		<Stack as="form" gap="normal" onSubmit={submit} onKeyDown={submitOnEnter}>
+			<Text as="p" weight="medium">
+				{draft.existing ? t("link.edit") : t("link.add")}
+			</Text>
 			{draft.entryId && <LinkTargetSummary entryId={draft.entryId} />}
 			{needsText && (
-				<label htmlFor={`${id}-text`} className="grid gap-condensed text-monti-caption">
-					{t("link.text")}
+				<Stack gap="condensed">
+					<Label htmlFor={`${id}-text`} size="caption">
+						{t("link.text")}
+					</Label>
 					<Input
 						id={`${id}-text`}
 						value={text}
 						onChange={(event) => setText(event.target.value)}
 						placeholder={t("link.textPlaceholder")}
 					/>
-				</label>
+				</Stack>
 			)}
-			<label htmlFor={`${id}-href`} className="grid gap-condensed text-monti-caption">
-				{t("link.href")}
+			<Stack gap="condensed">
+				<Label htmlFor={`${id}-href`} size="caption">
+					{t("link.href")}
+				</Label>
 				<Input
 					id={`${id}-href`}
 					autoFocus
@@ -201,7 +201,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 					}}
 					placeholder="https://example.com"
 				/>
-			</label>
+			</Stack>
 			{error && <PopoverFormError id={`${id}-error`}>{error}</PopoverFormError>}
 			<PopoverFormFooter
 				removeLabel={t("link.remove")}
@@ -209,6 +209,6 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 				onRemove={draft.existing ? remove : undefined}
 				onCancel={onDone}
 			/>
-		</form>
+		</Stack>
 	);
 }

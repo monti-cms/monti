@@ -65,9 +65,8 @@ export function BlockHandleOverlay({
 					size="icon-xs"
 					disabled={action.busy}
 					onClick={action.onClick}
-					className="text-monti-muted hover:text-monti-default"
 				>
-					{action.busy ? <Spinner className="size-3" /> : action.icon}
+					{action.busy ? <Spinner size="sm" /> : action.icon}
 				</IconButton>
 			))}
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}
@@ -83,12 +82,11 @@ export function BlockHandleOverlay({
 						onDragStart?.(event);
 					}}
 					onDragEnd={onDragEnd}
-					className="cursor-grab text-monti-muted active:cursor-grabbing"
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
 					<GripVertical aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="start" side="right" className="min-w-56">
+				<DropdownMenuContent align="start" side="right" width="lg">
 					<DropdownMenuItem onClick={onMoveUp}>
 						<ArrowUp aria-hidden />
 						{t("blockHandle.moveUp")}

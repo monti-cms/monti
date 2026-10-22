@@ -12,8 +12,8 @@ import {
 	ComboboxItem,
 	ComboboxList,
 	ComboboxValue,
-	cn,
 	FormFieldError,
+	Text,
 	useComboboxAnchor,
 } from "@monti-cms/ui";
 import { Plus } from "lucide-react";
@@ -155,14 +155,14 @@ export function RelationCombobox({
 			</ComboboxEmpty>
 			<ComboboxList>
 				{(item: Item) => (
-					<ComboboxItem key={item.value} value={item} className={cn(item.create && "text-monti-default")}>
+					<ComboboxItem key={item.value} value={item}>
 						{item.create ? (
 							<>
 								<Plus aria-hidden />
-								<span className="truncate">{t("relation.create", { label: item.label })}</span>
+								<Text truncate>{t("relation.create", { label: item.label })}</Text>
 							</>
 						) : (
-							<span className="truncate">{item.label}</span>
+							<Text truncate>{item.label}</Text>
 						)}
 					</ComboboxItem>
 				)}
@@ -191,11 +191,11 @@ export function RelationCombobox({
 					itemToStringLabel={(item: Item) => item.label}
 					isItemEqualToValue={(a: Item, b: Item) => a.value === b.value}
 				>
-					<ComboboxChips ref={anchor} className="w-full min-w-0">
+					<ComboboxChips ref={anchor}>
 						<ComboboxValue>
 							{(showChips ? selected : []).map((item) => (
-								<ComboboxChip key={item.value} className="max-w-full">
-									<span className="truncate">{item.label}</span>
+								<ComboboxChip key={item.value}>
+									<Text truncate>{item.label}</Text>
 								</ComboboxChip>
 							))}
 						</ComboboxValue>
@@ -205,7 +205,6 @@ export function RelationCombobox({
 							aria-invalid={invalid || undefined}
 							aria-describedby={describedBy}
 							placeholder={selected.length === 0 || !showChips ? placeholder : undefined}
-							className="text-monti-caption"
 						/>
 					</ComboboxChips>
 					{list}
@@ -238,7 +237,7 @@ export function RelationCombobox({
 					placeholder={placeholder}
 					showClear={selected.length > 0}
 					disabled={disabled || isCreating}
-					className="h-8 w-full rounded-md text-monti-label [&_input]:text-monti-label"
+					size="sm"
 				/>
 				{list}
 			</Combobox>

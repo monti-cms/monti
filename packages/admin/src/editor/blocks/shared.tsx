@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
+import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
@@ -21,7 +21,7 @@ export function AttributeInput({
 	onEscape,
 	required = false,
 	onBlur,
-	className,
+	boxed = false,
 	...props
 }: Omit<ComponentProps<"input">, "value" | "onChange" | "defaultValue"> & {
 	value: string;
@@ -30,6 +30,8 @@ export function AttributeInput({
 	onEscape?: () => void;
 	/** Do not write an emptied value (tab name). Leaving it empty restores the original value. */
 	required?: boolean;
+	/** A bordered field, for the settings popover. Without it the value reads as part of the block. */
+	boxed?: boolean;
 }) {
 	const [draft, setDraft] = useState(value);
 	const composingRef = useRef(false);
@@ -97,7 +99,8 @@ export function AttributeInput({
 			}}
 			className={cn(
 				"min-w-0 border-0 bg-transparent p-0 outline-none placeholder:text-current placeholder:opacity-50 focus-visible:ring-0",
-				className,
+				boxed &&
+					"h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft",
 			)}
 		/>
 	);
@@ -160,7 +163,7 @@ export function BlockSettings({
 			<ToolbarButton label={label} trigger={(button) => <PopoverTrigger render={button} />}>
 				<Settings2 aria-hidden />
 			</ToolbarButton>
-			<PopoverContent align="end" className="flex w-72 flex-col gap-normal p-normal text-monti-caption">
+			<PopoverContent align="end" width="md">
 				{children}
 			</PopoverContent>
 		</Popover>
@@ -181,14 +184,14 @@ export function BlockSettingsField({
 	children: ReactNode;
 }) {
 	return (
-		<div className="flex flex-col gap-tight">
-			<div className="flex min-h-6 items-center justify-between gap-condensed">
-				<label htmlFor={htmlFor} className="text-monti-caption text-monti-muted">
+		<Stack gap="tight">
+			<Inline justify="between" gap="condensed">
+				<Label htmlFor={htmlFor} size="caption" tone="muted">
 					{label}
-				</label>
+				</Label>
 				{action}
-			</div>
+			</Inline>
 			{children}
-		</div>
+		</Stack>
 	);
 }

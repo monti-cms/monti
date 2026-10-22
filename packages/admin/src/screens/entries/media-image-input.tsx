@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, cn, FormFieldError } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Text } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -49,16 +49,25 @@ export function useMediaUrl(mediaId: string): string | null {
 	return mediaId ? (url ?? null) : null;
 }
 
-/** Image preview. Shows an icon if the URL is unknown. */
-export function MediaThumbnail({ mediaId, className }: { mediaId: string; className?: string }) {
+/**
+ * Image preview. Shows an icon if the URL is unknown. `size="inline"` is the small preview beside an input;
+ */
+export function MediaThumbnail({ mediaId, size }: { mediaId: string; size?: "inline" | "share" }) {
 	const url = useMediaUrl(mediaId);
-	return url ? (
-		<img src={url} alt="" className={cn("object-cover", className)} />
-	) : (
-		<div className={cn("flex items-center justify-center bg-monti-neutral text-monti-muted", className)}>
-			<ImageIcon aria-hidden className="size-4" />
-		</div>
+	const inline = size === "inline";
+	const image = (
+		<Image
+			src={url}
+			alt=""
+			fallback={ImageIcon}
+			ratio={inline ? "square" : "share"}
+			size={inline ? "thumb" : "fill"}
+			radius={inline ? "md" : "none"}
+			border={inline}
+		/>
 	);
+	// A share card shows the image full width with a line under it, as the platforms draw it.
+	return size === "share" ? <Box border="bottom">{image}</Box> : image;
 }
 
 /** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */
@@ -79,35 +88,30 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	const mediaId = typeof value === "string" ? value : "";
 	return (
 		<>
-			<div className="flex items-center gap-condensed">
-				{mediaId && <MediaThumbnail mediaId={mediaId} className="aspect-[1.91/1] h-7 shrink-0 rounded-md border" />}
-				<Button
-					id={id}
-					type="button"
-					size="sm"
-					variant="outline"
-					className="h-7 flex-1 text-monti-label"
-					disabled={context.disabled || !media}
-					title={media ? undefined : mediaNotConfiguredMessage(site)}
-					aria-invalid={invalid || undefined}
-					aria-describedby={describedBy}
-					onClick={() => setPicking(true)}
-				>
-					{mediaId ? t("media.change") : t("media.chooseImage")}
-				</Button>
-				{mediaId && (
+			<Inline gap="condensed">
+				{mediaId && <MediaThumbnail mediaId={mediaId} size="inline" />}
+				<Box grow>
 					<Button
+						id={id}
 						type="button"
 						size="sm"
-						variant="ghost"
-						className="h-7 text-monti-label"
-						disabled={context.disabled}
-						onClick={() => onChange("")}
+						variant="outline"
+						width="full"
+						disabled={context.disabled || !media}
+						title={media ? undefined : mediaNotConfiguredMessage(site)}
+						aria-invalid={invalid || undefined}
+						aria-describedby={describedBy}
+						onClick={() => setPicking(true)}
 					>
+						{mediaId ? t("media.change") : t("media.chooseImage")}
+					</Button>
+				</Box>
+				{mediaId && (
+					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
 					</Button>
 				)}
-			</div>
+			</Inline>
 			<ImageInsertDialog
 				open={picking}
 				initialFile={null}
@@ -161,40 +165,41 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 	};
 	return (
 		<>
-			<div className="flex items-center gap-condensed">
+			<Inline gap="condensed">
 				{mediaId && (
-					<span className="flex min-w-0 flex-1 items-center gap-tight text-monti-caption">
-						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
-						<span className="truncate">{filename ?? mediaId}</span>
-					</span>
+					<Inline gap="tight" grow minWidth={0}>
+						<FileIcon aria-hidden size={14} />
+						<Text variant="caption" truncate>
+							{filename ?? mediaId}
+						</Text>
+					</Inline>
 				)}
-				<Button
-					id={id}
-					type="button"
-					size="sm"
-					variant="outline"
-					className={cn("h-7 text-monti-label", !mediaId && "flex-1")}
-					disabled={context.disabled || progress !== null || !media}
-					title={media ? undefined : mediaNotConfiguredMessage(site)}
-					aria-invalid={invalid || undefined}
-					aria-describedby={describedBy}
-					onClick={() => fileInput.current?.click()}
-				>
-					{progress !== null ? t("media.uploading", { progress }) : mediaId ? t("media.change") : t("media.chooseFile")}
-				</Button>
-				{mediaId && (
+				<Box grow={!mediaId}>
 					<Button
+						id={id}
 						type="button"
 						size="sm"
-						variant="ghost"
-						className="h-7 text-monti-label"
-						disabled={context.disabled}
-						onClick={() => onChange("")}
+						variant="outline"
+						width={mediaId ? undefined : "full"}
+						disabled={context.disabled || progress !== null || !media}
+						title={media ? undefined : mediaNotConfiguredMessage(site)}
+						aria-invalid={invalid || undefined}
+						aria-describedby={describedBy}
+						onClick={() => fileInput.current?.click()}
 					>
+						{progress !== null
+							? t("media.uploading", { progress })
+							: mediaId
+								? t("media.change")
+								: t("media.chooseFile")}
+					</Button>
+				</Box>
+				{mediaId && (
+					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
 					</Button>
 				)}
-			</div>
+			</Inline>
 			<input
 				ref={fileInput}
 				type="file"
