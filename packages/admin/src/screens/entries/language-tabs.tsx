@@ -88,7 +88,10 @@ export function LanguageTabs({
 	};
 
 	return (
-		<nav aria-label={t("lang.nav")} className={cn("mb-3 flex flex-wrap items-center gap-1 px-4 pt-2", className)}>
+		<nav
+			aria-label={t("lang.nav")}
+			className={cn("mb-normal flex flex-wrap items-center gap-tight px-comfortable pt-condensed", className)}
+		>
 			{site.LOCALES.map((target) => {
 				const member = members.find((item) => item.locale === target);
 				if (!member) {
@@ -99,7 +102,7 @@ export function LanguageTabs({
 							size="sm"
 							variant="ghost"
 							disabled={createDisabled}
-							className="h-7 gap-1 border border-dashed px-2 text-monti-caption text-monti-muted"
+							className="h-7 gap-tight border border-dashed px-condensed text-monti-caption text-monti-muted"
 							onClick={() => void create(target)}
 						>
 							<Plus aria-hidden className="size-3" />
@@ -130,7 +133,7 @@ export function LanguageTabs({
 								status: statusLabels(site)[member.status],
 							})}
 							className={cn(
-								"h-7 gap-2 px-2 text-monti-caption",
+								"h-7 gap-condensed px-condensed text-monti-caption",
 								current ? "bg-monti-neutral text-monti-default" : "text-monti-muted",
 							)}
 							onClick={() => {

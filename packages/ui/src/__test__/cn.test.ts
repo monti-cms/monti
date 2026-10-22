@@ -22,4 +22,9 @@ describe("cn", () => {
 		);
 		expect(cn("shadow-none", "shadow-monti-floating")).toBe("shadow-monti-floating");
 	});
+
+	it("treats named spacing as spacing, beside Tailwind's numbers", () => {
+		expect(cn("gap-tight px-comfortable", "gap-section px-condensed")).toBe("gap-section px-condensed");
+		expect(cn("px-2.5", "px-condensed")).toBe("px-condensed");
+	});
 });

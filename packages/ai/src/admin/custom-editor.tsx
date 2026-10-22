@@ -167,7 +167,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 	const fieldValue =
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
-		<div className="grid gap-4 sm:grid-cols-2">
+		<div className="grid gap-comfortable sm:grid-cols-2">
 			<FormField className="sm:col-span-2">
 				<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 				<Input

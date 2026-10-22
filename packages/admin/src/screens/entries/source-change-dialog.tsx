@@ -49,18 +49,20 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	const after = change.kind === "removed" ? null : change.after;
 	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
-		<li className="flex flex-col gap-2 rounded-md border p-3">
-			<span className="w-fit rounded-sm bg-monti-neutral px-2 py-0.5 font-medium text-monti-caption">{label}</span>
-			<div className="grid gap-3 md:grid-cols-2">
+		<li className="flex flex-col gap-condensed rounded-md border p-normal">
+			<span className="w-fit rounded-sm bg-monti-neutral px-condensed py-hair font-medium text-monti-caption">
+				{label}
+			</span>
+			<div className="grid gap-normal md:grid-cols-2">
 				{before && (
 					<div className="min-w-0">
-						<p className="mb-1 text-monti-caption text-monti-muted">{t("sourceChange.before")}</p>
+						<p className="mb-tight text-monti-caption text-monti-muted">{t("sourceChange.before")}</p>
 						<UnitView unit={before} />
 					</div>
 				)}
 				{after && (
 					<div className="min-w-0">
-						<p className="mb-1 text-monti-caption text-monti-muted">{t("sourceChange.after")}</p>
+						<p className="mb-tight text-monti-caption text-monti-muted">{t("sourceChange.after")}</p>
 						<UnitView unit={after} />
 					</div>
 				)}
@@ -97,7 +99,7 @@ export function SourceChangeDialog({
 				) : changes.length === 0 ? (
 					<p className="text-monti-body text-monti-muted">{t("sourceChange.none")}</p>
 				) : (
-					<ol className="flex flex-col gap-3">
+					<ol className="flex flex-col gap-normal">
 						{changes.map((change, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: the change list's identity is document order
 							<ChangeItem key={index} change={change} />

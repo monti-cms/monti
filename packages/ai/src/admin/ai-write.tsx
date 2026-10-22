@@ -195,16 +195,16 @@ function WriteDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="gap-4 sm:max-w-3xl">
+			<DialogContent className="gap-comfortable sm:max-w-3xl">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
+					<DialogTitle className="flex items-center gap-condensed">
 						<Sparkles aria-hidden className="size-4" />
 						{action.label}
 					</DialogTitle>
 				</DialogHeader>
 				{askRequest && (
 					<form
-						className="space-y-2"
+						className="space-y-condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (!running) void run();
@@ -238,7 +238,7 @@ function WriteDialog({
 					<Tabs
 						value={view}
 						onValueChange={(value) => setView(value as "preview" | "source")}
-						className="min-w-0 gap-2"
+						className="min-w-0 gap-condensed"
 					>
 						<TabsList>
 							<TabsTrigger value="preview">{t("preview")}</TabsTrigger>
@@ -248,7 +248,7 @@ function WriteDialog({
 							{view === "preview" ? (
 								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
-								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-inset p-3 font-mono text-monti-caption">
+								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-inset p-normal font-mono text-monti-caption">
 									{diff ? <DiffText parts={diff} /> : result || t("running")}
 								</pre>
 							)}
@@ -311,7 +311,7 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 	);
 }
 
-const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-inset p-3";
+const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-inset p-normal";
 
 /** A text as the rendered post. A text the format cannot read is shown as it is. */
 function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
@@ -336,14 +336,14 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	);
 	if (job.mode === "insert") return <div className={PANEL}>{after}</div>;
 	return (
-		<div className="grid min-w-0 gap-3 sm:grid-cols-2">
-			<section className="min-w-0 space-y-2">
+		<div className="grid min-w-0 gap-normal sm:grid-cols-2">
+			<section className="min-w-0 space-y-condensed">
 				<h3 className="font-medium text-monti-caption text-monti-muted">{t("now")}</h3>
 				<div className={PANEL}>
 					<TextPreview format={format} text={job.source} label={t("now")} />
 				</div>
 			</section>
-			<section className="min-w-0 space-y-2">
+			<section className="min-w-0 space-y-condensed">
 				<h3 className="font-medium text-monti-caption text-monti-muted">{t("after")}</h3>
 				<div className={PANEL}>{after}</div>
 			</section>
@@ -465,7 +465,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 						type="button"
 						variant="ghost"
 						size="sm"
-						className="gap-2 text-monti-muted"
+						className="gap-condensed text-monti-muted"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });

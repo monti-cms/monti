@@ -107,7 +107,7 @@ export function BubbleButton({
 			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={onClick}
-			className={cn("h-8 min-w-8 px-2", className)}
+			className={cn("h-8 min-w-8 px-condensed", className)}
 		>
 			{children}
 		</IconButton>
@@ -313,8 +313,8 @@ export function InlineBubble({
 			const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
-				<div key={mark.name} className="flex items-center gap-0.5">
-					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
+				<div key={mark.name} className="flex items-center gap-hair">
+					<Link2 aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
@@ -325,7 +325,7 @@ export function InlineBubble({
 							title={href}
 							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 							onMouseDown={(event) => event.preventDefault()}
-							className="max-w-56 truncate px-1 text-monti-accent text-monti-caption underline underline-offset-2"
+							className="max-w-56 truncate px-tight text-monti-accent text-monti-caption underline underline-offset-2"
 						>
 							{href}
 						</a>
@@ -345,9 +345,9 @@ export function InlineBubble({
 		if (mark.name === CODE_TOOLTIP_MARK_NAME) {
 			const content = String(mark.attrs.content ?? "");
 			return (
-				<div key={mark.name} className="flex items-center gap-0.5">
-					<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
-					<span className="max-w-48 truncate px-1 text-monti-caption text-monti-muted" title={content}>
+				<div key={mark.name} className="flex items-center gap-hair">
+					<MessageSquareMore aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
+					<span className="max-w-48 truncate px-tight text-monti-caption text-monti-muted" title={content}>
 						{content}
 					</span>
 					<BubbleButton label={t("inlineBubble.tooltipEdit")} onClick={() => openCodeTooltip(mark)}>
@@ -362,7 +362,7 @@ export function InlineBubble({
 		const Detail = markExtensions.find(({ name }) => name === mark.name)?.extension.detail;
 		if (Detail) {
 			return (
-				<div key={mark.name} className="flex items-center gap-0.5">
+				<div key={mark.name} className="flex items-center gap-hair">
 					<Detail {...bubbleProps} mark={mark} />
 				</div>
 			);
@@ -380,9 +380,9 @@ export function InlineBubble({
 			const publicOpen = mark.attrs.open === true;
 			const type = editor.schema.marks.codeFold;
 			return (
-				<div key={mark.name} className="flex items-center gap-0.5">
-					<ChevronsLeftRightEllipsis aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
-					<span className="px-1 text-monti-caption text-monti-muted">{t("inlineBubble.fold")}</span>
+				<div key={mark.name} className="flex items-center gap-hair">
+					<ChevronsLeftRightEllipsis aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
+					<span className="px-tight text-monti-caption text-monti-muted">{t("inlineBubble.fold")}</span>
 					<BubbleButton
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
@@ -420,7 +420,7 @@ export function InlineBubble({
 				key={mark.name}
 				label={t("markText.remove", { name: tool.title ?? tool.label })}
 				onClick={act(() => removeInlineMark(editor, mark))}
-				className="gap-0.5"
+				className="gap-hair"
 			>
 				<tool.icon aria-hidden className="size-4" />
 				<X aria-hidden className="size-3 text-monti-muted" />
@@ -434,10 +434,10 @@ export function InlineBubble({
 		const region = { key: `m:${from}`, kind: "fold" as const, from, to, defaultOpen: true, hiddenLines: 0 };
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
-			<div key={rule.id} className="flex items-center gap-0.5">
-				<Regex aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
+			<div key={rule.id} className="flex items-center gap-hair">
+				<Regex aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
 				<span
-					className="max-w-48 truncate px-1 text-monti-caption text-monti-muted"
+					className="max-w-48 truncate px-tight text-monti-caption text-monti-muted"
 					title={`/${rule.pattern}/${rule.flags}`}
 				>
 					{t("inlineBubble.ruleSummary", { label, count })}
@@ -477,22 +477,22 @@ export function InlineBubble({
 			...(simple.length ? [<Fragment key="simple">{simple.map(renderMark)}</Fragment>] : []),
 		];
 		return groups.map((group, index) => (
-			<div key={group.key} className="flex items-center gap-0.5">
-				{index > 0 && <Separator orientation="vertical" className="mx-0.5 h-4" />}
+			<div key={group.key} className="flex items-center gap-hair">
+				{index > 0 && <Separator orientation="vertical" className="mx-hair h-4" />}
 				{group}
 			</div>
 		));
 	};
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
-		<div className="flex items-center gap-1">
+		<div className="flex items-center gap-tight">
 			<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-selected font-medium text-monti-caption text-monti-default leading-none">
 				{target.badge}
 			</span>
 			<button
 				type="button"
 				onClick={() => setPanel({ kind: "footnote", target })}
-				className="max-w-48 truncate px-1 text-left text-monti-caption text-monti-muted hover:text-monti-default"
+				className="max-w-48 truncate px-tight text-left text-monti-caption text-monti-muted hover:text-monti-default"
 				title={target.defText || t("inlineBubble.footnoteEmpty")}
 			>
 				{target.defText || t("inlineBubble.footnoteEmpty")}
@@ -531,14 +531,14 @@ export function InlineBubble({
 							{action.icon}
 						</BubbleButton>
 					))}
-					<Separator orientation="vertical" className="mx-0.5 h-4" />
+					<Separator orientation="vertical" className="mx-hair h-4" />
 				</>
 			)}
 			{allowedMarkTools(site, editor.state).map((item) => (
 				<ToolbarButton key={item.mark} editor={editor} item={item} tooltipSide="top" />
 			))}
 			{bubbleTools("format").map(renderTool)}
-			<Separator orientation="vertical" className="mx-0.5 h-4" />
+			<Separator orientation="vertical" className="mx-hair h-4" />
 			{inCode &&
 				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
 				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (
@@ -594,8 +594,8 @@ export function InlineBubble({
 				style={style}
 				className={cn(
 					surface,
-					"flex flex-col gap-3 p-3 text-monti-caption",
-					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80",
+					"flex flex-col gap-normal p-normal text-monti-caption",
+					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-condensed" : "w-80",
 				)}
 				onKeyDown={(event) => {
 					if (event.key === "Escape" && !isComposingKey(event)) {

@@ -8,7 +8,7 @@ import { settingsMessages } from "./messages";
 import { type SchemaTab, settingsTabs } from "./tabs";
 
 const linkClass =
-	"flex shrink-0 items-center gap-2 whitespace-nowrap border-transparent border-b-2 py-2 text-monti-body text-monti-muted outline-hidden transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-[current=page]:border-monti-accent aria-[current=page]:font-medium aria-[current=page]:text-monti-default";
+	"flex shrink-0 items-center gap-condensed whitespace-nowrap border-transparent border-b-2 py-condensed text-monti-body text-monti-muted outline-hidden transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-[current=page]:border-monti-accent aria-[current=page]:font-medium aria-[current=page]:text-monti-default";
 
 /** The row of tabs under the Settings header. A tab changes the address in place when `onSchemaTab` is given, so the schema screen keeps its draft. */
 export function SettingsTabBar({
@@ -33,7 +33,7 @@ export function SettingsTabBar({
 	}, [active]);
 
 	return (
-		<nav aria-label={t("tabs.label")} className="mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto">
+		<nav aria-label={t("tabs.label")} className="mt-comfortable -mb-px flex items-stretch gap-spacious overflow-x-auto">
 			{tabs.map((entry) => {
 				const isActive = entry.id === active;
 				return (

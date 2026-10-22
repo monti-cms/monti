@@ -38,7 +38,7 @@ const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
 
 export function ToolbarDivider() {
-	return <span aria-hidden className="mx-1 h-5 w-px shrink-0 self-center bg-monti-divider" />;
+	return <span aria-hidden className="mx-tight h-5 w-px shrink-0 self-center bg-monti-divider" />;
 }
 
 /** One tool row in a dropdown or the "More" menu. */
@@ -172,7 +172,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 		<div ref={areaRef} className="relative min-w-0 flex-1">
 			{/* For measuring widths. Render every tool once and keep it invisible (confined to height 0 so it does not widen the scroll width). */}
 			<div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden">
-				<div ref={measureRef} className="flex w-max items-center gap-1">
+				<div ref={measureRef} className="flex w-max items-center gap-tight">
 					{entries.map((entry) =>
 						isDivider(entry) ? (
 							<div key={entry.key} data-measure-key={entry.key} className="flex shrink-0 items-center">
@@ -186,7 +186,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					)}
 				</div>
 			</div>
-			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-1">
+			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-tight">
 				{entries.map((entry) => {
 					if (!shown.has(entry.key)) return null;
 					if (isDivider(entry)) return <ToolbarDivider key={entry.key} />;

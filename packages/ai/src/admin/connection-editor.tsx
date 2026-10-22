@@ -120,7 +120,7 @@ export function ConnectionManager({
 		<div className="flex min-h-0 flex-1 flex-col">
 			{settingsQuery.error && !settings && (
 				<LoadErrorAlert
-					className="m-3"
+					className="m-normal"
 					message={errorText(site, settingsQuery.error, t("error.loadList"))}
 					onRetry={() => void settingsQuery.refetch()}
 				/>
@@ -133,7 +133,7 @@ export function ConnectionManager({
 						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<p className="border-b px-3 py-2 text-monti-caption text-monti-muted">{t("badge.fake")}</p>
+								<p className="border-b px-normal py-condensed text-monti-caption text-monti-muted">{t("badge.fake")}</p>
 							)
 						}
 						empty={settings?.providers.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
@@ -304,7 +304,7 @@ function ProviderEditor({
 				</p>
 			</div>
 
-			<FormFieldGroup className="gap-4">
+			<FormFieldGroup className="gap-comfortable">
 				<FormField>
 					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
 					<Input
@@ -338,7 +338,7 @@ function ProviderEditor({
 					/>
 					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-condensed">
 					<ApiKeyField
 						label={t("field.key")}
 						baseName={draft.name.trim() || "API"}

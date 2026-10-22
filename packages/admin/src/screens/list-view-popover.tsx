@@ -38,11 +38,11 @@ export function ColumnSettingsPanel({
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<ul className="space-y-0.5">
+		<ul className="space-y-hair">
 			{order.map((column, index) => (
 				<li
 					key={column}
-					className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-monti-hover"
+					className="flex items-center justify-between gap-condensed rounded-md px-tight py-hair hover:bg-monti-hover"
 				>
 					<Label className="font-normal text-monti-label">
 						<Checkbox
@@ -52,7 +52,7 @@ export function ColumnSettingsPanel({
 						/>
 						{columnLabel(site, collection, column)}
 					</Label>
-					<span className="flex gap-1">
+					<span className="flex gap-tight">
 						<IconButton
 							size="icon-xs"
 							variant="ghost"
@@ -81,9 +81,9 @@ export function ColumnSettingsPanel({
 /** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
 function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<section className={cn("space-y-2", scroll && "flex min-h-0 flex-col")}>
+		<section className={cn("space-y-condensed", scroll && "flex min-h-0 flex-col")}>
 			<h4 className="font-medium text-monti-caption text-monti-muted">{title}</h4>
-			{scroll ? <div className="-mx-1 min-h-0 overflow-y-auto px-1">{children}</div> : children}
+			{scroll ? <div className="-mx-tight min-h-0 overflow-y-auto px-tight">{children}</div> : children}
 		</section>
 	);
 }
@@ -133,9 +133,9 @@ export function ListViewPopover({
 				{t("view.label")}
 			</PopoverTrigger>
 			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}
-			<PopoverContent side="bottom" align="end" className="max-h-(--available-height) w-72 gap-4 p-3">
+			<PopoverContent side="bottom" align="end" className="max-h-(--available-height) w-72 gap-comfortable p-normal">
 				<ViewSection title={t("view.sort")}>
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-condensed">
 						<Select
 							value={state.sortField}
 							items={sortable}
@@ -154,7 +154,7 @@ export function ListViewPopover({
 								))}
 							</SelectContent>
 						</Select>
-						<fieldset className="flex gap-0.5">
+						<fieldset className="flex gap-hair">
 							<legend className="sr-only">{t("view.sort")}</legend>
 							{directionButton("asc")}
 							{directionButton("desc")}

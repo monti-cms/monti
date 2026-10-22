@@ -167,7 +167,7 @@ export function useEntriesTable({
 				enableResizing: false,
 				header: () => <span className="sr-only">{t("list.actions")}</span>,
 				cell: ({ row }) => (
-					<div className="flex items-center justify-end gap-1 whitespace-nowrap">
+					<div className="flex items-center justify-end gap-tight whitespace-nowrap">
 						{isTrash && (
 							<>
 								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>

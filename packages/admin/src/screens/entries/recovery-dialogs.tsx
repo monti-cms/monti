@@ -166,7 +166,7 @@ function ComparePanes({
 	const pane = (label: string, value: EntryForm) => {
 		const body = bodyText(value.doc);
 		return (
-			<div className="space-y-2 rounded-lg border p-3">
+			<div className="space-y-condensed rounded-lg border p-normal">
 				<p className="font-semibold text-monti-body">{label}</p>
 				<p className="text-monti-caption">
 					{t("conflict.summary", {
@@ -182,7 +182,7 @@ function ComparePanes({
 		);
 	};
 	return (
-		<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<div className="grid grid-cols-1 gap-normal sm:grid-cols-2">
 			{pane(t("conflict.mine"), local)}
 			{pane(t("conflict.server", { version: serverVersion }), server)}
 		</div>

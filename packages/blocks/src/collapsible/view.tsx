@@ -43,11 +43,11 @@ export function CollapsibleNodeView() {
 	};
 
 	return (
-		<BlockFrame className="my-6 rounded-md border bg-monti-page">
+		<BlockFrame className="my-spacious rounded-md border bg-monti-page">
 			<div
 				contentEditable={false}
 				className={cn(
-					"not-prose flex w-full items-center gap-2 rounded-md px-3 py-2 font-medium text-monti-body text-monti-default",
+					"not-prose flex w-full items-center gap-condensed rounded-md px-normal py-condensed font-medium text-monti-body text-monti-default",
 					open && "bg-monti-neutral",
 				)}
 			>
@@ -56,7 +56,7 @@ export function CollapsibleNodeView() {
 					aria-expanded={open}
 					aria-label={open ? t("toggle.close") : t("toggle.open")}
 					onClick={toggle}
-					className="-m-1 rounded-md p-1 hover:bg-monti-hover"
+					className="-m-tight rounded-md p-tight hover:bg-monti-hover"
 				>
 					<ChevronRight className={cn("size-4 shrink-0 text-monti-muted transition-transform", open && "rotate-90")} />
 				</button>
@@ -75,7 +75,7 @@ export function CollapsibleNodeView() {
 			</div>
 			<Content
 				className={cn(
-					"px-3 pt-2 pb-3 text-monti-default",
+					"px-normal pt-condensed pb-normal text-monti-default",
 					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
 					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
 					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",

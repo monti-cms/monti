@@ -14,7 +14,7 @@ function ErrorNoticeView({ notice, className, ...props }: React.ComponentProps<"
 		<div
 			role="alert"
 			data-slot="error-notice"
-			className={cn("flex flex-col gap-1 text-monti-caption text-monti-danger", className)}
+			className={cn("flex flex-col gap-tight text-monti-caption text-monti-danger", className)}
 			{...props}
 		>
 			<p className="whitespace-pre-wrap">{notice.message}</p>
@@ -22,7 +22,7 @@ function ErrorNoticeView({ notice, className, ...props }: React.ComponentProps<"
 			{notice.detail && (
 				<details className="text-monti-muted">
 					<summary className="cursor-pointer select-none">{t("error.details")}</summary>
-					<pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-md bg-monti-inset p-2 font-mono text-monti-caption">
+					<pre className="mt-tight max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-md bg-monti-inset p-condensed font-mono text-monti-caption">
 						{notice.detail}
 					</pre>
 				</details>

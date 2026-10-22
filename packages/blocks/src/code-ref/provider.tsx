@@ -60,9 +60,12 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 		: null;
 	return (
 		<>
-			<Code2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted" />
+			<Code2 aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
 			<span
-				className={cn("max-w-56 truncate px-1 text-monti-caption", where ? "text-monti-muted" : "text-monti-danger")}
+				className={cn(
+					"max-w-56 truncate px-tight text-monti-caption",
+					where ? "text-monti-muted" : "text-monti-danger",
+				)}
 			>
 				{where ? t("where", { where }) : t("none")}
 			</span>

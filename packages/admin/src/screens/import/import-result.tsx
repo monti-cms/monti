@@ -43,11 +43,11 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
 		<li
-			className="flex flex-col gap-2 border-b py-3 last:border-b-0"
+			className="flex flex-col gap-condensed border-b py-normal last:border-b-0"
 			data-testid="import-result"
 			data-outcome={entry.outcome}
 		>
-			<div className="flex flex-wrap items-center gap-2 text-monti-body">
+			<div className="flex flex-wrap items-center gap-condensed text-monti-body">
 				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
 				{entry.id ? (
 					<a href={site.adminEntryEditHref(entry.id)} className="font-medium underline-offset-4 hover:underline">
@@ -68,7 +68,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				)}
 			</div>
 			{(problems.length > 0 || entry.notes.length > 0 || warnings.length > 0) && (
-				<ul className="flex flex-col gap-0.5 pl-1">
+				<ul className="flex flex-col gap-hair pl-tight">
 					{problems.map(([label, step]) => (
 						<StepLine key={label ?? "create"} label={label} step={step} />
 					))}
@@ -93,7 +93,7 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const t = useTranslator(importMessages);
 	const { counts } = result;
 	return (
-		<div className="flex flex-col gap-4" data-testid="import-run-result">
+		<div className="flex flex-col gap-comfortable" data-testid="import-run-result">
 			<h4 className="text-monti-title">{t("result.title")}</h4>
 			<p className="text-monti-body text-monti-muted" data-testid="import-result-summary">
 				{[
@@ -106,7 +106,7 @@ export function ResultView({ result }: { result: ImportRun }) {
 					.filter(Boolean)
 					.join(" · ")}
 			</p>
-			<ul className="max-h-[28rem] overflow-y-auto rounded-md border px-3">
+			<ul className="max-h-[28rem] overflow-y-auto rounded-md border px-normal">
 				{result.results.map((entry) => (
 					<ResultRow key={entry.key} entry={entry} />
 				))}

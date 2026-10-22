@@ -47,7 +47,10 @@ function PreviewPanel({ collection, onClose }: { collection: string; onClose: ()
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4" data-testid="layout-preview-record">
+				<div
+					className="min-h-0 flex-1 overflow-y-auto px-comfortable py-comfortable"
+					data-testid="layout-preview-record"
+				>
 					<SchemaFields />
 				</div>
 			) : (
@@ -89,14 +92,18 @@ export function LayoutPreview({
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
-	const problem = <p className="px-4 py-4 text-monti-caption text-monti-muted">{t("layout.previewUnavailable")}</p>;
+	const problem = (
+		<p className="px-comfortable py-comfortable text-monti-caption text-monti-muted">
+			{t("layout.previewUnavailable")}
+		</p>
+	);
 
 	return (
 		<div
 			className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-monti-page"
 			data-testid="layout-preview"
 		>
-			<p className="shrink-0 border-b bg-monti-inset px-4 py-2 text-monti-caption text-monti-muted">
+			<p className="shrink-0 border-b bg-monti-inset px-comfortable py-condensed text-monti-caption text-monti-muted">
 				{t("layout.previewLabel")}
 			</p>
 			{draft?.isCollection(collection) ? (

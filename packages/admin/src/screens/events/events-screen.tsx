@@ -64,8 +64,8 @@ function FilterTabs({
 }) {
 	const t = useTranslator(eventsMessages);
 	return (
-		<div className="flex min-h-11 shrink-0 items-stretch border-monti-muted border-b px-8">
-			<fieldset className="-mb-px flex items-stretch gap-4">
+		<div className="flex min-h-11 shrink-0 items-stretch border-monti-muted border-b px-wide">
+			<fieldset className="-mb-px flex items-stretch gap-comfortable">
 				<legend className="sr-only">{t("filter.label")}</legend>
 				{options.map((option) => (
 					<button
@@ -156,10 +156,12 @@ export function EventsScreen() {
 				</PageActions>
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
-			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-8 mt-3" />}
+			{error && (
+				<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-wide mt-normal" />
+			)}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
-					<div className="space-y-2 px-8 py-4" aria-hidden>
+					<div className="space-y-condensed px-wide py-comfortable" aria-hidden>
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
 						<Skeleton className="h-8 w-full" />
@@ -179,7 +181,7 @@ export function EventsScreen() {
 				) : (
 					<Table
 						aria-label={t("list.label")}
-						className="[&_td:first-child]:pl-8 [&_td:last-child]:pr-8 [&_th:first-child]:pl-8 [&_th:last-child]:pr-8"
+						className="[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide"
 					>
 						<TableHeader>
 							<TableRow>

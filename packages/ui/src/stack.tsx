@@ -4,21 +4,22 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 /**
- * Lays out its children in a column or a row with a gap picked by meaning, from the spacing scale (styles/theme.css):
+ * Lays out its children in a column or a row with a gap picked by name, from the spacing tokens (`--spacing-*` in styles/theme.css):
  * tight 4px (an icon and its label), condensed 8px (controls in a toolbar), normal 12px (rows of a form), comfortable 16px (groups in a card),
- * spacious 24px (groups on a page), section 48px (sections of a page).
+ * spacious 24px (groups on a page), wide 32px (page padding), section 48px (sections of a page).
  */
 export const stackVariants = cva("flex", {
 	variants: {
 		direction: { column: "flex-col", row: "flex-row" },
 		gap: {
 			none: "gap-0",
-			tight: "gap-1",
-			condensed: "gap-2",
-			normal: "gap-3",
-			comfortable: "gap-4",
-			spacious: "gap-6",
-			section: "gap-12",
+			tight: "gap-tight",
+			condensed: "gap-condensed",
+			normal: "gap-normal",
+			comfortable: "gap-comfortable",
+			spacious: "gap-spacious",
+			wide: "gap-wide",
+			section: "gap-section",
 		},
 		align: {
 			start: "items-start",

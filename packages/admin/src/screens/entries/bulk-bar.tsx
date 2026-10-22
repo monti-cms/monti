@@ -216,7 +216,10 @@ function ManyPicker({
 						variant="outline"
 						size="sm"
 						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
-						className={cn("max-w-56 justify-between gap-2 font-normal", names.length === 0 && "text-monti-muted")}
+						className={cn(
+							"max-w-56 justify-between gap-condensed font-normal",
+							names.length === 0 && "text-monti-muted",
+						)}
 					/>
 				}
 			>
@@ -388,8 +391,8 @@ export function BulkBar({
 			];
 
 	return (
-		<section aria-label={t("bar")} className="border-b bg-monti-selected px-8 py-2">
-			<div className="flex min-h-7 flex-wrap items-center gap-2 text-monti-body">
+		<section aria-label={t("bar")} className="border-b bg-monti-selected px-wide py-condensed">
+			<div className="flex min-h-7 flex-wrap items-center gap-condensed text-monti-body">
 				<span className="font-medium text-monti-default">{t("count", { count: selected.length })}</span>
 				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
 					{t("clear")}
@@ -470,9 +473,9 @@ export function BulkBar({
 				)}
 			</div>
 
-			{error && <FormFieldError className="pt-2">{error}</FormFieldError>}
+			{error && <FormFieldError className="pt-condensed">{error}</FormFieldError>}
 			{failures.length > 0 && (
-				<ul className="flex flex-col gap-1 pt-2 text-monti-caption text-monti-danger">
+				<ul className="flex flex-col gap-tight pt-condensed text-monti-caption text-monti-danger">
 					{failures.map((failure) => (
 						<li key={failure.id}>
 							<span className="font-medium">{titleOf(failure.id)}</span> — {describeBulkFailure(site, failure)}

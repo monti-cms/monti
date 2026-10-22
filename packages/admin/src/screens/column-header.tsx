@@ -45,7 +45,7 @@ function TextFilter({
 	useEffect(() => setDraft(value), [value]);
 	return (
 		<form
-			className="flex gap-2"
+			className="flex gap-condensed"
 			onSubmit={(event) => {
 				event.preventDefault();
 				onApply(draft);
@@ -75,7 +75,7 @@ function CheckRow({
 	onChange: (next: boolean) => void;
 }) {
 	return (
-		<Label className="flex items-center gap-2 rounded-sm px-2 py-2 font-normal hover:bg-monti-hover">
+		<Label className="flex items-center gap-condensed rounded-sm px-condensed py-condensed font-normal hover:bg-monti-hover">
 			<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
 			{label}
 		</Label>
@@ -88,7 +88,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const toggle = (status: (typeof LIST_STATUSES)[number], on: boolean) =>
 		onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
 	return (
-		<fieldset className="space-y-0.5">
+		<fieldset className="space-y-hair">
 			<legend className="sr-only">{t("column.status")}</legend>
 			{LIST_STATUSES.map((status) => (
 				<CheckRow
@@ -98,7 +98,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 					onChange={(on) => toggle(status, on)}
 				/>
 			))}
-			<Separator className="my-1" />
+			<Separator className="my-tight" />
 			<CheckRow
 				label={t("filter.editing")}
 				checked={state.hasChanges}
@@ -113,7 +113,7 @@ function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<fieldset className="space-y-0.5">
+		<fieldset className="space-y-hair">
 			<legend className="sr-only">{t("column.locale")}</legend>
 			{site.LOCALES.map((locale) => (
 				<CheckRow
@@ -144,12 +144,12 @@ function TaxonomyFilter({
 	const toggle = (id: string) =>
 		onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 	return (
-		<div className="space-y-2">
+		<div className="space-y-condensed">
 			<Command className="bg-transparent p-0">
 				<CommandInput placeholder={t("filter.search", { label })} aria-label={t("filter.search", { label })} />
-				<CommandList className="mt-1 max-h-56">
+				<CommandList className="mt-tight max-h-56">
 					<CommandEmpty>{t("filter.empty", { label })}</CommandEmpty>
-					<CommandGroup className="space-y-0.5 p-0">
+					<CommandGroup className="space-y-hair p-0">
 						{options.map((option) => (
 							<CommandItem key={option.id} value={`${option.title} ${option.id}`} onSelect={() => toggle(option.id)}>
 								<Checkbox
@@ -189,10 +189,10 @@ function DateFilter({
 }) {
 	const t = useTranslator(screensMessages);
 	return (
-		<div className="space-y-2">
-			<p className="px-1 text-monti-caption text-monti-muted">{label}</p>
+		<div className="space-y-condensed">
+			<p className="px-tight text-monti-caption text-monti-muted">{label}</p>
 			<DateRangeCalendar from={from} to={to} onChange={onChange} />
-			<p className="px-1 text-monti-caption" aria-live="polite">
+			<p className="px-tight text-monti-caption" aria-live="polite">
 				{from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange")}
 			</p>
 		</div>
@@ -272,7 +272,10 @@ export function ColumnHeader({
 						type="button"
 						variant="ghost"
 						size="sm"
-						className={cn("-ml-2 h-7 gap-1 px-2 text-monti-caption text-monti-muted", filtered && "text-monti-default")}
+						className={cn(
+							"-ml-condensed h-7 gap-tight px-condensed text-monti-caption text-monti-muted",
+							filtered && "text-monti-default",
+						)}
 						aria-label={`${config.label}${sorted ? t("filter.sortedSuffix", { direction: sorted === "asc" ? t("filter.sortAsc") : t("filter.sortDesc") }) : ""}${filtered ? t("filter.filteredSuffix") : ""}`}
 					/>
 				}
@@ -286,9 +289,9 @@ export function ColumnHeader({
 					<ChevronDown aria-hidden className="size-3.5 opacity-60" />
 				)}
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-72 space-y-3 p-3">
+			<PopoverContent align="start" className="w-72 space-y-normal p-normal">
 				{sortField && (
-					<fieldset className="flex flex-col gap-1">
+					<fieldset className="flex flex-col gap-tight">
 						<legend className="sr-only">{t("filter.sortLegend", { label: config.label })}</legend>
 						{sortButton("asc")}
 						{sortButton("desc")}

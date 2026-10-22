@@ -120,7 +120,7 @@ export function AddFieldDialog({
 	};
 
 	const naming = (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-comfortable">
 			<TextInput
 				label={t("field.label")}
 				value={label}
@@ -145,7 +145,7 @@ export function AddFieldDialog({
 						onChange={(event) => setTypedName(event.target.value)}
 					/>
 				) : (
-					<div className="flex items-center gap-2 text-monti-label">
+					<div className="flex items-center gap-condensed text-monti-label">
 						<code className="font-mono">{name}</code>
 						<Button type="button" variant="link" size="xs" className="h-auto p-0" onClick={() => setIsNaming(true)}>
 							{t("field.identifierChange")}
@@ -164,14 +164,14 @@ export function AddFieldDialog({
 					<DialogDescription>{t("field.addDescription")}</DialogDescription>
 				</DialogHeader>
 				<form
-					className="flex flex-col gap-6"
+					className="flex flex-col gap-spacious"
 					onSubmit={(event) => {
 						event.preventDefault();
 						add();
 					}}
 				>
-					<div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)]">
-						<div role="radiogroup" aria-label={t("field.kind")} className="flex flex-col gap-1 self-start">
+					<div className="grid gap-spacious md:grid-cols-[15rem_minmax(0,1fr)]">
+						<div role="radiogroup" aria-label={t("field.kind")} className="flex flex-col gap-tight self-start">
 							{ADDABLE_KINDS.map((item) => {
 								const Icon = KIND_ICONS[item];
 								const nameId = `add-field-kind-${item}`;
@@ -185,7 +185,7 @@ export function AddFieldDialog({
 										aria-labelledby={nameId}
 										aria-describedby={`${nameId}-hint`}
 										onClick={() => pickKind(item)}
-										className="flex items-start gap-3 rounded-md border border-transparent px-3 py-2 text-left outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-checked:border-monti-accent aria-checked:bg-monti-accent-muted"
+										className="flex items-start gap-normal rounded-md border border-transparent px-normal py-condensed text-left outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-checked:border-monti-accent aria-checked:bg-monti-accent-muted"
 									>
 										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-muted bg-monti-page text-monti-muted">
 											<Icon aria-hidden className="size-4" />
@@ -202,7 +202,7 @@ export function AddFieldDialog({
 								);
 							})}
 						</div>
-						<div className="flex min-w-0 flex-col gap-6 md:border-monti-muted md:border-l md:pl-6">
+						<div className="flex min-w-0 flex-col gap-spacious md:border-monti-muted md:border-l md:pl-spacious">
 							{kind !== "relation" && naming}
 							<KindOptions
 								name={name}
@@ -216,7 +216,7 @@ export function AddFieldDialog({
 							/>
 							{problems.length > 0 && (
 								<ul
-									className="flex flex-col gap-0.5 text-monti-caption text-monti-muted"
+									className="flex flex-col gap-hair text-monti-caption text-monti-muted"
 									data-testid="new-field-problems"
 								>
 									{problems.map((item) => (

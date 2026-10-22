@@ -14,10 +14,10 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 			contentEditable={false}
 			data-monti-block-issues=""
 			aria-label={t("issues.label")}
-			className="not-prose m-0 list-none space-y-1 border-monti-warning-muted border-t bg-monti-warning-muted px-3 py-2 text-monti-caption text-monti-warning"
+			className="not-prose m-0 list-none space-y-tight border-monti-warning-muted border-t bg-monti-warning-muted px-normal py-condensed text-monti-caption text-monti-warning"
 		>
 			{texts.map((text) => (
-				<li key={text} className="flex items-start gap-2">
+				<li key={text} className="flex items-start gap-condensed">
 					{/* An inline icon, not lucide-react: block views are in the hooks graph, which stays free of icon and UI packages. */}
 					{/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative, hidden from assistive tech */}
 					<svg
@@ -28,7 +28,7 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 						strokeWidth="2"
 						strokeLinecap="round"
 						strokeLinejoin="round"
-						className="mt-0.5 size-3.5 shrink-0"
+						className="mt-hair size-3.5 shrink-0"
 					>
 						<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
 						<path d="M12 9v4" />

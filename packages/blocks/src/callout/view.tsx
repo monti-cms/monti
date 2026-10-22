@@ -38,9 +38,9 @@ export function CalloutNodeView() {
 	const Icon = CALLOUT_ICON_BY_VARIANT[variant];
 
 	return (
-		<BlockFrame className="my-6 rounded-lg">
+		<BlockFrame className="my-spacious rounded-lg">
 			<div data-slot="callout" data-variant={variant} role="note" className={cn(CALLOUT_BOX_CLASS, "not-prose w-full")}>
-				<div className="flex items-center gap-2" contentEditable={false}>
+				<div className="flex items-center gap-condensed" contentEditable={false}>
 					<Icon aria-hidden data-callout-icon className="size-4 shrink-0" />
 					<AttributeInput
 						aria-label={t("title.aria")}
@@ -54,7 +54,7 @@ export function CalloutNodeView() {
 					/>
 				</div>
 				{/* Set the first and last child margins to 0 so the vertical margins of inner blocks (custom blocks wrapped by react-renderer) do not add to the box padding. */}
-				<Content className="mt-2 text-current text-monti-body [&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0" />
+				<Content className="mt-condensed text-current text-monti-body [&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0 [&_p]:m-0" />
 			</div>
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>

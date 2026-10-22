@@ -70,14 +70,17 @@ export function CodeExplorerNodeView() {
 	];
 
 	return (
-		<BlockFrame className="my-6 rounded-md border bg-monti-page">
-			<div contentEditable={false} className="not-prose flex flex-col gap-2 rounded-t-md bg-monti-neutral px-3 py-2">
-				<div className="flex items-center gap-2 font-medium text-monti-body text-monti-default">
+		<BlockFrame className="my-spacious rounded-md border bg-monti-page">
+			<div
+				contentEditable={false}
+				className="not-prose flex flex-col gap-condensed rounded-t-md bg-monti-neutral px-normal py-condensed"
+			>
+				<div className="flex items-center gap-condensed font-medium text-monti-body text-monti-default">
 					<FolderTree aria-hidden className="size-4 shrink-0 text-monti-muted" />
 					{t("label")}
 				</div>
 				{files.length > 0 ? (
-					<ul aria-label={t("files")} className="m-0 flex list-none flex-wrap gap-1 p-0">
+					<ul aria-label={t("files")} className="m-0 flex list-none flex-wrap gap-tight p-0">
 						{files.map((file) => {
 							const Icon = file.folder ? Folder : File;
 							const current = file.index === selectedIndex;
@@ -88,7 +91,7 @@ export function CodeExplorerNodeView() {
 										aria-current={current ? "true" : undefined}
 										onClick={() => block.focus({ child: file.index })}
 										className={cn(
-											"inline-flex max-w-full items-center gap-1 rounded-md border border-transparent px-2 py-0.5 font-mono text-monti-caption text-monti-muted hover:bg-monti-hover hover:text-monti-default",
+											"inline-flex max-w-full items-center gap-tight rounded-md border border-transparent px-condensed py-hair font-mono text-monti-caption text-monti-muted hover:bg-monti-hover hover:text-monti-default",
 											current && "border-monti-muted bg-monti-page text-monti-default",
 										)}
 									>
@@ -103,7 +106,7 @@ export function CodeExplorerNodeView() {
 			</div>
 			<Content
 				className={cn(
-					"px-3 pt-2 pb-3 text-monti-default",
+					"px-normal pt-condensed pb-normal text-monti-default",
 					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
 					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
 					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
@@ -142,7 +145,7 @@ export function CodeExplorerNodeView() {
 									value={open}
 									placeholder={t("open.first")}
 									onCommit={(next) => block.setValue("open", next)}
-									className="h-7 w-full rounded-md border border-monti-default px-2 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
+									className="h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
 								/>
 							)}
 							<p className="text-monti-caption text-monti-muted">{t("open.hint")}</p>

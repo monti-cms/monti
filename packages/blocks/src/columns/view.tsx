@@ -129,14 +129,14 @@ export function ColumnsNodeView() {
 	};
 
 	return (
-		<BlockFrame ref={wrapperRef} className="my-6 rounded-md">
+		<BlockFrame ref={wrapperRef} className="my-spacious rounded-md">
 			<Content
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
 				// The top padding keeps the toolbar (-top-3.5) from covering the first line of text.
 				// Write the classes out literally instead of assembling them so Tailwind can find them.
 				className={cn(
-					"pt-3 [&>*]:flex [&>*]:flex-col [&>*]:gap-4",
-					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-6 md:[&>*]:[grid-template-columns:var(--monti-columns)]",
+					"pt-normal [&>*]:flex [&>*]:flex-col [&>*]:gap-comfortable",
+					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-spacious md:[&>*]:[grid-template-columns:var(--monti-columns)]",
 					"[&>*>*]:min-w-0",
 				)}
 			/>
@@ -179,7 +179,7 @@ export function ColumnsNodeView() {
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<span className="px-2 text-monti-caption text-monti-muted tabular-nums">
+					<span className="px-condensed text-monti-caption text-monti-muted tabular-nums">
 						{widths ? widths.join(" : ") : t("count", { count })}
 					</span>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
@@ -210,7 +210,7 @@ export function ColumnNodeView() {
 			selectedRing={false}
 			className="h-full rounded-md outline-dashed outline-1 outline-transparent transition-colors focus-within:outline-monti-focus group-hover/container:outline-monti-focus"
 		>
-			<Content className="min-h-8 px-2 py-1 [&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
+			<Content className="min-h-8 px-condensed py-tight [&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
 		</BlockFrame>
 	);
 }

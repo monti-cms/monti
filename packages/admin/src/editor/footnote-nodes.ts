@@ -44,7 +44,7 @@ const labelAttribute = {
 
 const REFERENCE_CLASS = [
 	// The number comes from the `data-footnote-number` attribute that the numbering plugin sets.
-	"mx-0.5 inline-block min-w-4 cursor-pointer select-none rounded-sm bg-monti-selected px-1 text-center align-super",
+	"mx-hair inline-block min-w-4 cursor-pointer select-none rounded-sm bg-monti-selected px-tight text-center align-super",
 	// `em` on purpose: the number scales with the surrounding text it is a superscript of.
 	"font-medium text-[0.7em] text-monti-default",
 	"after:content-[attr(data-footnote-number)]",

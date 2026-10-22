@@ -243,7 +243,7 @@ export function ImageInsertDialog({
 					</Tabs>
 
 					{tab === "upload" ? (
-						<div className="space-y-2 text-monti-body">
+						<div className="space-y-condensed text-monti-body">
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
@@ -271,7 +271,7 @@ export function ImageInsertDialog({
 							)}
 						</div>
 					) : (
-						<div className="space-y-2">
+						<div className="space-y-condensed">
 							<Label htmlFor={searchId} className="sr-only">
 								{t("imageDialog.search")}
 							</Label>
@@ -281,13 +281,13 @@ export function ImageInsertDialog({
 								placeholder={t("imageDialog.search")}
 								onChange={(event) => setSearch(event.target.value)}
 							/>
-							<div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto" aria-busy={isLibraryLoading}>
+							<div className="grid max-h-64 grid-cols-3 gap-condensed overflow-y-auto" aria-busy={isLibraryLoading}>
 								{isLibraryLoading &&
 									library.length === 0 &&
 									["a", "b", "c"].map((key) => <Skeleton key={key} className="h-[6.25rem] w-full rounded-md" />)}
 								{libraryFailed && !isLibraryLoading && (
 									<Alert tone="danger" className="col-span-3">
-										<AlertDescription className="flex items-center justify-between gap-2">
+										<AlertDescription className="flex items-center justify-between gap-condensed">
 											{t("imageDialog.libraryFailed")}
 											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
 												{tc("retry")}
@@ -296,7 +296,7 @@ export function ImageInsertDialog({
 									</Alert>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<p className="col-span-3 py-6 text-center text-monti-body text-monti-muted">
+									<p className="col-span-3 py-spacious text-center text-monti-body text-monti-muted">
 										{t("imageDialog.libraryEmpty")}
 									</p>
 								)}
@@ -319,14 +319,14 @@ export function ImageInsertDialog({
 												{t("imageDialog.noPreview")}
 											</span>
 										)}
-										<span className="block truncate px-1 py-0.5">{item.filename}</span>
+										<span className="block truncate px-tight py-hair">{item.filename}</span>
 									</Button>
 								))}
 							</div>
 						</div>
 					)}
 
-					<div className={cn("space-y-2 text-monti-body", picking && "hidden")}>
+					<div className={cn("space-y-condensed text-monti-body", picking && "hidden")}>
 						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
 						<Textarea
 							id={altId}
@@ -370,7 +370,7 @@ export function ImageInsertDialog({
 					</div>
 
 					{isUploading && (
-						<output className="flex items-center gap-2 text-monti-body">
+						<output className="flex items-center gap-condensed text-monti-body">
 							<Spinner /> {t("imageDialog.uploading", { percent: progress ?? 0 })}
 						</output>
 					)}

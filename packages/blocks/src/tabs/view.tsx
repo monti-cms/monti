@@ -16,7 +16,7 @@ import { tabsMessages } from "./messages";
 
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
-	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-monti-muted text-monti-body transition-all hover:text-monti-default monti-dark:text-monti-muted monti-dark:hover:text-monti-default";
+	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-tight whitespace-nowrap rounded-md border border-transparent px-condensed py-tight font-medium text-monti-muted text-monti-body transition-all hover:text-monti-default monti-dark:text-monti-muted monti-dark:hover:text-monti-default";
 const TAB_TRIGGER_ACTIVE =
 	"border-monti-border! bg-monti-page text-monti-default shadow-monti-floating monti-dark:border-monti-default monti-dark:text-monti-default";
 
@@ -78,7 +78,7 @@ export function TabsNodeView() {
 	};
 
 	return (
-		<BlockFrame className="my-6 rounded-lg">
+		<BlockFrame className="my-spacious rounded-lg">
 			<div contentEditable={false} className="not-prose">
 				<div
 					role="tablist"
@@ -124,7 +124,7 @@ export function TabsNodeView() {
 			</div>
 			<Content
 				visibleChild={current}
-				className="rounded-b-lg rounded-tr-lg border bg-monti-neutral px-4 py-3 text-monti-body"
+				className="rounded-b-lg rounded-tr-lg border bg-monti-neutral px-comfortable py-normal text-monti-body"
 			/>
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>

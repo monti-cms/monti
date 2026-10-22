@@ -54,13 +54,13 @@ export function ListPane({
 				{loading
 					? Array.from({ length: skeletonRows }, (_, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-							<li key={index} className="p-3" aria-hidden>
+							<li key={index} className="p-normal" aria-hidden>
 								<Skeleton className="h-9 w-full" />
 							</li>
 						))
 					: hasRows
 						? children
-						: empty && <li className="flex flex-1 items-center justify-center p-4 text-center">{empty}</li>}
+						: empty && <li className="flex flex-1 items-center justify-center p-comfortable text-center">{empty}</li>}
 			</ul>
 		</div>
 	);
@@ -104,9 +104,9 @@ export function ListRow({
 					onDelete();
 				}
 			}}
-			className="h-auto min-w-0 flex-1 flex-col items-start gap-0.5 px-1 py-1 text-left font-normal hover:bg-transparent"
+			className="h-auto min-w-0 flex-1 flex-col items-start gap-hair px-tight py-tight text-left font-normal hover:bg-transparent"
 		>
-			<span className="flex w-full items-center gap-2">
+			<span className="flex w-full items-center gap-condensed">
 				<span className="truncate font-medium text-monti-body">{title}</span>
 				{status && <span className="ml-auto shrink-0 text-monti-caption text-monti-muted">{status}</span>}
 			</span>
@@ -114,7 +114,7 @@ export function ListRow({
 		</Button>
 	);
 	const rowClass = cn(
-		"group flex items-center justify-between gap-2 px-4 py-2 transition-colors",
+		"group flex items-center justify-between gap-condensed px-comfortable py-condensed transition-colors",
 		current ? OPEN_ITEM : "hover:bg-monti-hover",
 	);
 	if (!actions || actions.length === 0) {

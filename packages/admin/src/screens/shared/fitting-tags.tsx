@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages";
 
 const GAP = 4;
-const CHIP = "shrink-0 rounded-sm border border-monti-muted px-2 py-px text-monti-caption text-monti-muted";
+const CHIP = "shrink-0 rounded-sm border border-monti-muted px-condensed py-px text-monti-caption text-monti-muted";
 
 /**
  * Shows as many tags as fit the cell width and shortens the rest to `+N`. Remeasures when the column width changes.
@@ -54,7 +54,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 	return (
 		<span
 			ref={boxRef}
-			className="relative flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap"
+			className="relative flex min-w-0 items-center gap-tight overflow-hidden whitespace-nowrap"
 			title={tags.map((tag) => tag.title).join(", ")}
 		>
 			{tags.slice(0, shown).map((tag, index) => (
@@ -68,7 +68,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 					<span className="sr-only">{t("tags.more", { count: hidden })}</span>
 				</span>
 			)}
-			<span ref={measureRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 flex gap-1">
+			<span ref={measureRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 flex gap-tight">
 				{tags.map((tag) => (
 					<span key={tag.id} className={CHIP}>
 						{tag.title}

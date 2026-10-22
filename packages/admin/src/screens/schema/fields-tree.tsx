@@ -201,13 +201,13 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
-			<div className="flex h-11 shrink-0 items-center justify-between border-b pr-2 pl-4">
+			<div className="flex h-11 shrink-0 items-center justify-between border-b pr-condensed pl-comfortable">
 				<h2 className="font-medium text-monti-body">{t("layout.preview")}</h2>
 				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
 					<X aria-hidden />
 				</Button>
 			</div>
-			<div className="flex min-h-0 flex-1 flex-col p-3">{preview}</div>
+			<div className="flex min-h-0 flex-1 flex-col p-normal">{preview}</div>
 		</aside>
 	);
 }
@@ -280,16 +280,16 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3">
+			<div className="flex flex-wrap items-center justify-between gap-x-comfortable gap-y-condensed border-b px-comfortable py-normal">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-monti-body">
 						{t("field.title")} <span className="font-medium text-monti-muted">{names.length}</span>
 					</h4>
-					<p className="mt-0.5 truncate text-monti-caption text-monti-muted" title={t("fields.hint")}>
+					<p className="mt-hair truncate text-monti-caption text-monti-muted" title={t("fields.hint")}>
 						{t("fields.hint")}
 					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
+				<div className="flex flex-wrap items-center gap-condensed whitespace-nowrap">
 					<IconButton
 						label={t("layout.preview")}
 						size="icon-sm"
@@ -326,21 +326,24 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				</div>
 			</div>
 			<div
-				className={cn(columnsOf(ctx.compact), "border-b py-2 pr-4 pl-8 text-monti-caption text-monti-muted")}
+				className={cn(
+					columnsOf(ctx.compact),
+					"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
+				)}
 				aria-hidden
 			>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
 				<span className={cn("hidden", !ctx.compact && "block")}>{t("fields.colSettings")}</span>
 			</div>
-			<div className="py-2 pb-2">
+			<div className="py-condensed pb-condensed">
 				{names.length === 0 ? (
-					<p className="px-4 py-3 text-monti-caption text-monti-muted">{t("field.none")}</p>
+					<p className="px-comfortable py-normal text-monti-caption text-monti-muted">{t("field.none")}</p>
 				) : (
 					<LayoutTree editing={editing} ctx={ctx} />
 				)}
 			</div>
-			<div className="flex flex-wrap gap-x-4 gap-y-1 border-t px-4 py-2 text-monti-caption text-monti-muted">
+			<div className="flex flex-wrap gap-x-comfortable gap-y-tight border-t px-comfortable py-condensed text-monti-caption text-monti-muted">
 				<span>
 					<span className={cn("font-mono", REQUIRED)}>!</span> {t("fields.legendRequired")}
 				</span>
@@ -387,7 +390,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		<>
 			{wide && previewOpen ? (
 				<div
-					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-6"
+					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-spacious"
 					style={sideResize.style}
 				>
 					{card}

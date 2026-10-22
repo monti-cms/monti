@@ -199,15 +199,15 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl gap-4 p-4 sm:max-w-xl">
+			<DialogContent className="max-w-2xl gap-comfortable p-comfortable sm:max-w-xl">
 				<form onSubmit={handleApply} className="contents">
 					<DialogHeader>
 						<DialogTitle>{t("imageCrop.title")}</DialogTitle>
 					</DialogHeader>
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
-					<div className="flex flex-col items-center gap-2">
-						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-monti-inset p-1">
+					<div className="flex flex-col items-center gap-condensed">
+						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-monti-inset p-tight">
 							<div
 								ref={containerRef}
 								onPointerDown={(e) => handlePointerDown(e)}
@@ -280,7 +280,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</div>
 						</div>
 
-						<div className="flex w-full flex-wrap items-center justify-between gap-2 text-monti-caption text-monti-muted">
+						<div className="flex w-full flex-wrap items-center justify-between gap-condensed text-monti-caption text-monti-muted">
 							<span>
 								{isFull
 									? t("imageCrop.full")
@@ -294,10 +294,10 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						</div>
 
 						{/* Keyboard numeric input controls */}
-						<div className="flex w-full items-center justify-between gap-2 rounded-lg border bg-monti-inset p-2 text-monti-caption">
+						<div className="flex w-full items-center justify-between gap-condensed rounded-lg border bg-monti-inset p-condensed text-monti-caption">
 							<span className="font-medium text-monti-muted">{t("imageCrop.regionPercent")}</span>
-							<div className="flex items-center gap-2">
-								<div className="flex items-center gap-1">
+							<div className="flex items-center gap-condensed">
+								<div className="flex items-center gap-tight">
 									<Label htmlFor="crop-input-x" className="text-monti-caption text-monti-muted">
 										X
 									</Label>
@@ -310,10 +310,10 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										value={cropDraft.x}
 										aria-label={t("imageCrop.x")}
 										onChange={(e) => handleNumericCropChange("x", Number(e.target.value))}
-										className="h-6 w-14 px-2 text-center text-monti-caption"
+										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
 								</div>
-								<div className="flex items-center gap-1">
+								<div className="flex items-center gap-tight">
 									<Label htmlFor="crop-input-y" className="text-monti-caption text-monti-muted">
 										Y
 									</Label>
@@ -326,10 +326,10 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										value={cropDraft.y}
 										aria-label={t("imageCrop.y")}
 										onChange={(e) => handleNumericCropChange("y", Number(e.target.value))}
-										className="h-6 w-14 px-2 text-center text-monti-caption"
+										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
 								</div>
-								<div className="flex items-center gap-1">
+								<div className="flex items-center gap-tight">
 									<Label htmlFor="crop-input-w" className="text-monti-caption text-monti-muted">
 										W
 									</Label>
@@ -342,10 +342,10 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										value={cropDraft.width}
 										aria-label={t("imageCrop.width")}
 										onChange={(e) => handleNumericCropChange("width", Number(e.target.value))}
-										className="h-6 w-14 px-2 text-center text-monti-caption"
+										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
 								</div>
-								<div className="flex items-center gap-1">
+								<div className="flex items-center gap-tight">
 									<Label htmlFor="crop-input-h" className="text-monti-caption text-monti-muted">
 										H
 									</Label>
@@ -358,7 +358,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										value={cropDraft.height}
 										aria-label={t("imageCrop.height")}
 										onChange={(e) => handleNumericCropChange("height", Number(e.target.value))}
-										className="h-6 w-14 px-2 text-center text-monti-caption"
+										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
 								</div>
 							</div>
@@ -366,8 +366,8 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 					</div>
 
 					{/* Rotation controls */}
-					<div className="flex items-center justify-between rounded-lg border bg-monti-inset p-2">
-						<div className="flex items-center gap-2 text-monti-caption">
+					<div className="flex items-center justify-between rounded-lg border bg-monti-inset p-condensed">
+						<div className="flex items-center gap-condensed text-monti-caption">
 							<span className="font-medium">{t("imageCrop.rotate")}</span>
 							<span className="font-semibold text-monti-default">{rotateDraft}°</span>
 						</div>
@@ -377,11 +377,11 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						</Button>
 					</div>
 
-					<DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+					<DialogFooter className="flex items-center justify-between gap-condensed sm:justify-between">
 						<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
 							{tc("reset")}
 						</Button>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-condensed">
 							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 								{tc("cancel")}
 							</Button>

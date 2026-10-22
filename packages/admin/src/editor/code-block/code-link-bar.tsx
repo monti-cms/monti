@@ -48,7 +48,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 		<div
 			role="status"
 			aria-label={t("linkBar.label")}
-			className="flex w-full flex-wrap items-center justify-center gap-2 border-t bg-monti-selected px-4 py-2 text-monti-caption"
+			className="flex w-full flex-wrap items-center justify-center gap-condensed border-t bg-monti-selected px-comfortable py-condensed text-monti-caption"
 		>
 			<Code2 aria-hidden className="size-4 shrink-0 text-monti-default" />
 			<span className="min-w-0">
@@ -57,18 +57,18 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 						{t("linkBar.pickLinesBefore")}
 						<b>{quoted}</b>
 						{t("linkBar.pickLinesAfter")}
-						{status.lines && <b className="ml-1 text-monti-default">· {lineLabel(t, status.lines)}</b>}
+						{status.lines && <b className="ml-tight text-monti-default">· {lineLabel(t, status.lines)}</b>}
 					</>
 				) : (
 					<>
 						{t("linkBar.pickTextBefore")}
 						<b>{t("linkBar.codeLines", { lines: status.lines ? lineLabel(t, status.lines) : "" })}</b>
 						{t("linkBar.pickTextAfter")}
-						{status.text && <b className="ml-1 text-monti-default">· {quoted}</b>}
+						{status.text && <b className="ml-tight text-monti-default">· {quoted}</b>}
 					</>
 				)}
 			</span>
-			<div className="flex gap-1">
+			<div className="flex gap-tight">
 				<Button
 					type="button"
 					size="xs"

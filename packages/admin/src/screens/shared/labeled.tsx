@@ -29,9 +29,9 @@ export function Labeled({
 	aside?: ReactNode;
 }) {
 	return (
-		<UiField className={cn("gap-2", className)}>
+		<UiField className={cn("gap-condensed", className)}>
 			{aside ? (
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-condensed">
 					<FormFieldLabel htmlFor={htmlFor} className="font-medium text-monti-body">
 						{label}
 					</FormFieldLabel>

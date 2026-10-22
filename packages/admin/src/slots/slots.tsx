@@ -44,7 +44,8 @@ export {
 const defaultIcon = <Zap aria-hidden />;
 
 /** Shape of one result candidate. The AI screen's test results use the same shape. */
-export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-sm border bg-monti-page px-2 py-0.5";
+export const SLOT_CHIP =
+	"inline-flex max-w-full items-center gap-tight rounded-sm border bg-monti-page px-condensed py-hair";
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -105,8 +106,11 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
-			<div className="flex flex-col gap-2 rounded-md border bg-monti-inset p-2 text-monti-caption" aria-live="polite">
-				<div className="flex items-center gap-1 text-monti-muted">
+			<div
+				className="flex flex-col gap-condensed rounded-md border bg-monti-inset p-condensed text-monti-caption"
+				aria-live="polite"
+			>
+				<div className="flex items-center gap-tight text-monti-muted">
 					<span className="inline-flex shrink-0 items-center [&_svg]:size-3">{state.action.icon ?? defaultIcon}</span>
 					<span className="truncate">{state.action.label}</span>
 					<span className="ml-auto flex items-center">
@@ -122,7 +126,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 				</div>
 				{state.action.askInstruction && (
 					<form
-						className="flex flex-col gap-2"
+						className="flex flex-col gap-condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (state.status !== "running") void run(state.action.id);
@@ -179,7 +183,7 @@ function SlotResult({
 	if (result.kind === "candidates") {
 		if (result.items.length === 0) return <p className="text-monti-muted">{t("noResults")}</p>;
 		return (
-			<ul className="flex flex-wrap gap-1">
+			<ul className="flex flex-wrap gap-tight">
 				{result.items.map((item) => (
 					<li key={item.value} className="max-w-full">
 						<button
@@ -197,8 +201,8 @@ function SlotResult({
 		);
 	}
 	return (
-		<div className="flex flex-col gap-2">
-			<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-2">{result.text}</p>
+		<div className="flex flex-col gap-condensed">
+			<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-condensed">{result.text}</p>
 			{result.kind === "text" && action.apply !== "none" && (
 				<Button type="button" size="xs" variant="outline" className="self-start" onClick={() => onApply(result.text)}>
 					{action.apply === "append" ? t("insert") : t("replace")}

@@ -61,9 +61,9 @@ export function ApiKeysSettings() {
 		const ok = await confirm({
 			title: t("delete.title", { name: key.name }),
 			description: used ? (
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-condensed">
 					<p>{t("delete.usedDescription", { count: key.uses.length })}</p>
-					<ul className="list-disc pl-4" data-testid="delete-dependents">
+					<ul className="list-disc pl-comfortable" data-testid="delete-dependents">
 						{key.uses.map((use) => (
 							<li key={`${use.plugin}:${use.ref}`}>{use.label}</li>
 						))}
@@ -103,12 +103,12 @@ export function ApiKeysSettings() {
 				</Button>
 			</PageActions>
 			{list && !list.secretsAvailable && (
-				<Alert tone="danger" layout="stack" className="mx-8 mb-4 w-auto">
+				<Alert tone="danger" layout="stack" className="mx-wide mb-comfortable w-auto">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
 					<AlertDescription>{t("secret.description")}</AlertDescription>
 				</Alert>
 			)}
-			<div className="flex min-h-11 shrink-0 items-center border-monti-muted border-y px-8 text-monti-caption text-monti-muted">
+			<div className="flex min-h-11 shrink-0 items-center border-monti-muted border-y px-wide text-monti-caption text-monti-muted">
 				{list
 					? [
 							t("count.keys", { count: list.items.length }),
@@ -125,7 +125,7 @@ export function ApiKeysSettings() {
 				onRetry={() => void query.refetch()}
 				onAdd={() => setEditing({ mode: "add" })}
 			/>
-			<p className="px-8 py-4 text-monti-caption text-monti-muted">{t("note")}</p>
+			<p className="px-wide py-comfortable text-monti-caption text-monti-muted">{t("note")}</p>
 			{editing && (
 				<KeyDialog
 					key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
@@ -168,11 +168,11 @@ function KeyRows({
 				<LoadErrorAlert
 					message={errorText(site, query.error, t("load.failed"))}
 					onRetry={onRetry}
-					className="mx-8 my-3"
+					className="mx-wide my-normal"
 				/>
 			);
 		}
-		return <Skeleton className="mx-8 my-4 h-12" />;
+		return <Skeleton className="mx-wide my-comfortable h-12" />;
 	}
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
@@ -188,9 +188,9 @@ function KeyRows({
 	return (
 		<ul className="divide-y divide-monti-muted border-monti-muted border-b" aria-label={t("title")}>
 			{list.items.map((key) => (
-				<li key={key.id} className="flex items-center gap-3 px-8 py-3" data-testid={`api-key-${key.name}`}>
+				<li key={key.id} className="flex items-center gap-normal px-wide py-normal" data-testid={`api-key-${key.name}`}>
 					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-condensed">
 							<span className="truncate font-medium text-monti-body">{key.name}</span>
 							{!key.readable && (
 								<Badge variant="danger" title={t("row.unreadableHint")}>
@@ -199,20 +199,20 @@ function KeyRows({
 							)}
 						</div>
 						{!key.readable ? (
-							<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{t("row.unreadableHint")}</p>
+							<p className="mt-hair truncate text-monti-caption text-monti-muted">{t("row.unreadableHint")}</p>
 						) : key.uses.length > 0 ? (
-							<ul aria-label={t("row.usedBy")} className="mt-2 flex flex-wrap gap-1">
+							<ul aria-label={t("row.usedBy")} className="mt-condensed flex flex-wrap gap-tight">
 								{key.uses.map((use) => (
 									<li
 										key={`${use.plugin}:${use.ref}`}
-										className="rounded-sm bg-monti-selected px-2 py-0.5 font-medium text-monti-caption text-monti-default"
+										className="rounded-sm bg-monti-selected px-condensed py-hair font-medium text-monti-caption text-monti-default"
 									>
 										{use.label}
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="mt-0.5 truncate text-monti-caption text-monti-muted">{t("row.unused")}</p>
+							<p className="mt-hair truncate text-monti-caption text-monti-muted">{t("row.unused")}</p>
 						)}
 					</div>
 					<span
@@ -228,11 +228,11 @@ function KeyRows({
 			{emptySlots.map((slot) => (
 				<li
 					key={`${slot.plugin}:${slot.slot}`}
-					className="flex items-center gap-3 px-8 py-3"
+					className="flex items-center gap-normal px-wide py-normal"
 					data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 				>
 					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-condensed">
 							<span className="truncate font-medium text-monti-body">{slot.label}</span>
 							<span className="text-monti-caption text-monti-muted">{t("slot.empty")}</span>
 						</div>
@@ -280,7 +280,7 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-slot-dialog">
 				<form
-					className="grid gap-4"
+					className="grid gap-comfortable"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();
@@ -372,7 +372,7 @@ function KeyDialog({
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="api-key-dialog">
 				<form
-					className="grid gap-4"
+					className="grid gap-comfortable"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();

@@ -39,7 +39,7 @@ import { RulesPanel } from "./rules-panel";
 
 /** Height of one line (px). The code (``), the line number gutter and the line background share this height. */
 const LINE_HEIGHT = 24;
-/** Vertical padding of the code (`py-3`). */
+/** Vertical padding of the code (`py-normal`). */
 const PAD_TOP = 12;
 
 const effectsOnLine = (effects: readonly CodeLineEffect[], line: number) =>
@@ -223,16 +223,16 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	return (
 		<NodeViewWrapper
-			className="not-prose group/code relative my-4 flex w-full flex-col rounded-md border bg-monti-inset text-monti-body"
+			className="not-prose group/code relative my-comfortable flex w-full flex-col rounded-md border bg-monti-inset text-monti-body"
 			data-code-block-wrapper=""
 		>
 			<div
 				data-code-ui=""
 				contentEditable={false}
-				className="flex flex-wrap items-center justify-between gap-2 rounded-t-md border-b bg-monti-inset px-2 py-1 text-monti-caption text-monti-muted"
+				className="flex flex-wrap items-center justify-between gap-condensed rounded-t-md border-b bg-monti-inset px-condensed py-tight text-monti-caption text-monti-muted"
 			>
 				{editable ? (
-					<div className="flex flex-wrap items-center gap-2">
+					<div className="flex flex-wrap items-center gap-condensed">
 						<Select
 							value={language}
 							// The name list must be passed so a closed slot shows the name (`TypeScript`) rather than the value (`ts`).
@@ -259,15 +259,15 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						/>
 					</div>
 				) : (
-					<div className="flex min-h-7 items-center gap-2 px-1">
+					<div className="flex min-h-7 items-center gap-condensed px-tight">
 						<span>{languageOptions.find((option) => option.value === language)?.label ?? language}</span>
 						{parsedMeta.title && <span className="font-mono">{parsedMeta.title}</span>}
 					</div>
 				)}
-				<div className="flex items-center gap-0.5">
+				<div className="flex items-center gap-hair">
 					{!editable ? null : rawMode ? (
 						<Tooltip>
-							<TooltipTrigger render={<span className="flex items-center gap-1 px-1" />}>
+							<TooltipTrigger render={<span className="flex items-center gap-tight px-tight" />}>
 								<Info aria-hidden className="size-3.5" />
 								{t("view.rawMode")}
 							</TooltipTrigger>
@@ -347,7 +347,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 					data-code-ui=""
 					data-code-gutter=""
 					contentEditable={false}
-					className="shrink-0 select-none rounded-bl-md border-r bg-monti-inset py-3 font-mono text-monti-caption text-monti-muted"
+					className="shrink-0 select-none rounded-bl-md border-r bg-monti-inset py-normal font-mono text-monti-caption text-monti-muted"
 				>
 					{rows.map((line) => {
 						const effects = effectsOnLine(lineEffects, line);
@@ -368,7 +368,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								onMouseEnter={() => extendLineDrag(line)}
 								onContextMenu={(event) => openLineMenuAt(line, event)}
 								className={cn(
-									"flex h-6 cursor-pointer items-center gap-0.5 pr-2 pl-0.5 hover:bg-monti-hover",
+									"flex h-6 cursor-pointer items-center gap-hair pr-condensed pl-hair hover:bg-monti-hover",
 									selected && "bg-monti-selected text-monti-default",
 									whole && "bg-monti-selected",
 									// A line linked to the body gets a line drawn on the left of the line number gutter.
@@ -434,7 +434,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										{wavy && (
 											<span
 												className={cn(
-													"block w-max whitespace-pre px-4 text-transparent underline decoration-wavy",
+													"block w-max whitespace-pre px-comfortable text-transparent underline decoration-wavy",
 													wavy,
 												)}
 											>
@@ -447,7 +447,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</div>
 						<pre
 							className={cn(
-								"relative m-0 whitespace-pre bg-transparent px-4 py-3 font-mono text-monti-body text-monti-default",
+								"relative m-0 whitespace-pre bg-transparent px-comfortable py-normal font-mono text-monti-body text-monti-default",
 								// Syntax colors are inlined as light theme colors. In the dark theme they switch to --shiki-dark.
 								"monti-dark:[&_.shiki-token]:text-(--shiki-dark)!",
 								// Hide the cursor while lines are picked by line number (picked lines are shown by the line background).

@@ -132,20 +132,20 @@ export function FieldSheet({
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent resizable={resizable} className="gap-0" data-testid="field-sheet" showCloseButton>
 				<Tabs defaultValue="basic" className="min-h-0 flex-1 gap-0">
-					<SheetHeader className="gap-0 px-6 pt-4 pb-0">
-						<SheetTitle className="pr-8 text-monti-title">{label || name}</SheetTitle>
+					<SheetHeader className="gap-0 px-spacious pt-comfortable pb-0">
+						<SheetTitle className="pr-wide text-monti-title">{label || name}</SheetTitle>
 						<SheetDescription className="text-monti-caption">
 							<code>{name}</code> · {t(`kind.${kind}`)}
 						</SheetDescription>
-						<LineTabs className="-mx-6 mt-4 w-auto px-6">
+						<LineTabs className="-mx-spacious mt-comfortable w-auto px-spacious">
 							<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 							<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
 						</LineTabs>
 					</SheetHeader>
-					<div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+					<div className="min-h-0 flex-1 overflow-y-auto px-spacious py-spacious">
 						<IssueList issues={issues} />
-						<TabsContent value="basic" className="flex flex-col gap-8">
-							<section className="flex flex-col gap-6">
+						<TabsContent value="basic" className="flex flex-col gap-wide">
+							<section className="flex flex-col gap-spacious">
 								<TextInput label={t("sheet.label")} value={label} onChange={(value) => setBoth("label", value)} />
 								<TextInput
 									label={t("field.description")}
@@ -154,12 +154,12 @@ export function FieldSheet({
 									onChange={(value) => setBoth("description", orUndefined(value))}
 								/>
 								<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-									<div className="flex h-9 items-center rounded-md bg-monti-neutral px-3 text-monti-body">
+									<div className="flex h-9 items-center rounded-md bg-monti-neutral px-normal text-monti-body">
 										<code>{name}</code>
 									</div>
 								</Labeled>
 							</section>
-							<section className="flex flex-col gap-4 border-t pt-8">
+							<section className="flex flex-col gap-comfortable border-t pt-wide">
 								<h3 className="font-semibold text-monti-body">{t("sheet.input")}</h3>
 								{kind === "text" && !place.branch && (
 									<FlagSwitch
@@ -181,7 +181,7 @@ export function FieldSheet({
 								/>
 							</section>
 							{valueKind && (
-								<section className="flex flex-col gap-4 border-t pt-8">
+								<section className="flex flex-col gap-comfortable border-t pt-wide">
 									<h3 className="font-semibold text-monti-body">{t("sheet.rules")}</h3>
 									{kind !== "conditional" && (
 										<FlagSwitch
@@ -211,7 +211,7 @@ export function FieldSheet({
 								</section>
 							)}
 						</TabsContent>
-						<TabsContent value="advanced" className="flex flex-col gap-6">
+						<TabsContent value="advanced" className="flex flex-col gap-spacious">
 							<Pick
 								label={t("field.kind")}
 								description={
@@ -241,14 +241,14 @@ export function FieldSheet({
 						</TabsContent>
 					</div>
 				</Tabs>
-				<SheetFooter className="mt-0 flex-row items-center gap-2 border-t px-6 py-3">
+				<SheetFooter className="mt-0 flex-row items-center gap-condensed border-t px-spacious py-normal">
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
 						disabled={disabled || blocked !== null}
 						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
-						className="-ml-2 text-monti-danger hover:text-monti-danger"
+						className="-ml-condensed text-monti-danger hover:text-monti-danger"
 						onClick={remove}
 					>
 						{t("sheet.delete")}

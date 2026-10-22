@@ -94,7 +94,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<span className="inline-flex items-center gap-0.5" data-testid="field-changed">
+		<span className="inline-flex items-center gap-hair" data-testid="field-changed">
 			<ChangeDot />
 			<IconButton
 				label={t("revert.named", { name })}
@@ -112,10 +112,10 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<ul className="flex flex-col gap-0.5 text-monti-caption text-monti-danger" data-testid="schema-issues">
+		<ul className="flex flex-col gap-hair text-monti-caption text-monti-danger" data-testid="schema-issues">
 			{issues.map((issue) => (
 				<li key={`${issue.path}:${issue.message}`}>
-					<code className="rounded-sm bg-monti-danger-muted px-1">{issue.path || "(root)"}</code> {issue.message}
+					<code className="rounded-sm bg-monti-danger-muted px-tight">{issue.path || "(root)"}</code> {issue.message}
 				</li>
 			))}
 		</ul>
@@ -216,21 +216,21 @@ export function FlagSwitch({
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-4", className)}>
-			<div className="flex flex-col gap-0.5">
+		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-comfortable", className)}>
+			<div className="flex flex-col gap-hair">
 				<FormFieldLabel htmlFor={id} className="font-medium text-monti-body">
 					{label}
 				</FormFieldLabel>
 				{desc && <FormFieldDescription className={HELP}>{desc}</FormFieldDescription>}
 			</div>
-			<div className="flex shrink-0 items-center gap-2">
+			<div className="flex shrink-0 items-center gap-condensed">
 				{revert && <RevertMark name={label} onRevert={revert} />}
 				<Switch
 					id={id}
 					size="sm"
 					checked={checked}
 					disabled={disabled}
-					className="mt-0.5 shrink-0"
+					className="mt-hair shrink-0"
 					onCheckedChange={(next) => onChange(next === true)}
 				/>
 			</div>
@@ -257,7 +257,7 @@ export function Segmented({
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	return (
-		<UiField className="gap-2">
+		<UiField className="gap-condensed">
 			<FormFieldLabel id={id} className="font-medium text-monti-body">
 				{label}
 			</FormFieldLabel>
@@ -265,7 +265,7 @@ export function Segmented({
 			<div
 				role="radiogroup"
 				aria-labelledby={id}
-				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-monti-neutral p-[3px] text-monti-body"
+				className="flex w-fit max-w-full flex-wrap gap-hair rounded-md bg-monti-neutral p-[3px] text-monti-body"
 			>
 				{items.map((item) => (
 					// biome-ignore lint/a11y/useSemanticElements: a segmented control draws radio buttons as buttons; a native radio cannot be styled as one strip
@@ -277,7 +277,7 @@ export function Segmented({
 						disabled={disabled}
 						onClick={() => onChange(item.value)}
 						className={cn(
-							"h-7 rounded-sm border border-transparent px-3 text-monti-muted outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:opacity-50",
+							"h-7 rounded-sm border border-transparent px-normal text-monti-muted outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:opacity-50",
 							item.value === value && "border-monti-muted bg-monti-page font-medium text-monti-default",
 						)}
 					>
@@ -349,7 +349,7 @@ export function Pick({
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
 							{item.description ? (
-								<span className="flex flex-col gap-0.5">
+								<span className="flex flex-col gap-hair">
 									<span>{item.label}</span>
 									<span className="whitespace-normal text-monti-caption text-monti-muted">{item.description}</span>
 								</span>

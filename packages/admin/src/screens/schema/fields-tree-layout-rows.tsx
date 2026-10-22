@@ -66,7 +66,7 @@ function InlineName({
 				}
 			}}
 			className={cn(
-				"h-7 min-w-0 border-transparent bg-transparent monti-dark:bg-transparent px-2 font-semibold text-monti-body shadow-none",
+				"h-7 min-w-0 border-transparent bg-transparent monti-dark:bg-transparent px-condensed font-semibold text-monti-body shadow-none",
 				className,
 			)}
 		/>
@@ -120,7 +120,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			className="group/row relative mt-3 flex items-center gap-1 border-y bg-monti-neutral py-2 pr-4 pl-8 first:mt-0"
+			className="group/row relative mt-normal flex items-center gap-tight border-y bg-monti-neutral py-condensed pr-comfortable pl-wide first:mt-0"
 		>
 			<InlineName
 				value={currentName}
@@ -129,11 +129,11 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				inputRef={inputRef}
 				maxLength={20}
 				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name, defaultName))}
-				className="-ml-2 font-semibold"
+				className="-ml-condensed font-semibold"
 			/>
 			<span className="flex-1" />
 			{!canRename && index > 0 && (
-				<span className="shrink-0 pr-1 text-monti-caption text-monti-muted" title={t("layout.tabLocked")}>
+				<span className="shrink-0 pr-tight text-monti-caption text-monti-muted" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
 				</span>
 			)}
@@ -187,14 +187,14 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative mt-3 border-y bg-monti-inset first:mt-0",
+				"group/row relative mt-normal border-y bg-monti-inset first:mt-0",
 				isDragging && "z-10 bg-monti-surface opacity-80",
 			)}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-1 py-2 pr-4 pl-8">
+			<div className="flex items-center gap-tight py-condensed pr-comfortable pl-wide">
 				<InlineName
-					className="-ml-2"
+					className="-ml-condensed"
 					value={group.title}
 					label={t("layout.groupTitle")}
 					disabled={ops.disabled}
@@ -245,7 +245,10 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("pr-4 pl-8 text-monti-caption text-monti-muted", label ? "py-2" : "-mb-2 h-2")}
+			className={cn(
+				"pr-comfortable pl-wide text-monti-caption text-monti-muted",
+				label ? "py-condensed" : "-mb-condensed h-2",
+			)}
 			data-testid={testId}
 		>
 			{label}

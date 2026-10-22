@@ -41,9 +41,9 @@ export const TONE: Record<KindTone, string> = {
 };
 export const REQUIRED = "text-monti-warning";
 export const OPTION = "text-monti-kind-orange";
-const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4";
+const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-comfortable";
 /** Two columns only, for when the preview takes the room beside the tree. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-comfortable";
 export const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
 
 export interface TreeContext {
@@ -76,7 +76,7 @@ export interface RowButton {
 
 export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 	return (
-		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-monti-surface opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-hair rounded-md bg-monti-surface opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
 			{buttons.map((button) => (
 				<IconButton
 					key={button.label}
@@ -111,7 +111,7 @@ export function MoveDialog({
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
-				<ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+				<ul className="flex max-h-80 flex-col gap-tight overflow-y-auto">
 					{destinations.map((destination) => (
 						<li key={destination.label}>
 							<Button
@@ -236,7 +236,7 @@ export function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer py-2 pr-4 pl-8 outline-none hover:bg-monti-hover focus-visible:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft focus-visible:ring-inset",
+						"min-h-[30px] cursor-pointer py-condensed pr-comfortable pl-wide outline-none hover:bg-monti-hover focus-visible:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft focus-visible:ring-inset",
 						nested && "bg-monti-inset",
 					)}
 				>
@@ -248,19 +248,22 @@ export function Row({
 							{name}
 						</span>
 						{label && (
-							<span className="ml-2 min-w-0 truncate text-monti-caption text-monti-muted" title={label}>
+							<span className="ml-condensed min-w-0 truncate text-monti-caption text-monti-muted" title={label}>
 								{label}
 							</span>
 						)}
-						{changed && <ChangeDot className="ml-2" />}
+						{changed && <ChangeDot className="ml-condensed" />}
 						{locked?.kind === "panel" && (
-							<span className="ml-2 shrink-0 text-monti-caption text-monti-muted" title={t("layout.notInPanel.title")}>
+							<span
+								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
+								title={t("layout.notInPanel.title")}
+							>
 								{t("layout.notInPanel")}
 							</span>
 						)}
 						{locked?.kind === "plugin" && (
 							<span
-								className="ml-2 shrink-0 text-monti-caption text-monti-muted"
+								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
 								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
 							>
 								{t("layout.pluginPlaced")}
@@ -270,7 +273,7 @@ export function Row({
 							<span
 								role="img"
 								aria-label={t("field.problems", { count: issues.length })}
-								className="ml-2 size-1.5 shrink-0 rounded-full bg-monti-danger-emphasis"
+								className="ml-condensed size-1.5 shrink-0 rounded-full bg-monti-danger-emphasis"
 							/>
 						)}
 					</div>
@@ -285,7 +288,7 @@ export function Row({
 					</div>
 					<div
 						className={cn(
-							"hidden min-w-0 truncate pr-8 font-mono text-monti-caption text-monti-muted",
+							"hidden min-w-0 truncate pr-wide font-mono text-monti-caption text-monti-muted",
 							!ctx.compact && "block",
 						)}
 					>
@@ -323,7 +326,7 @@ export function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-2 pr-4 pl-8")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-condensed pr-comfortable pl-wide")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 									{childLead}

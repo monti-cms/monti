@@ -32,7 +32,7 @@ export function ToolbarToggle({
 						pressed={pressed}
 						disabled={disabled}
 						onPressedChange={onPressedChange}
-						className="gap-2 text-monti-muted aria-pressed:text-monti-default"
+						className="gap-condensed text-monti-muted aria-pressed:text-monti-default"
 					/>
 				}
 			>

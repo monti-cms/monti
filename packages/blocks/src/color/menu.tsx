@@ -108,7 +108,7 @@ function SwatchRow({
 		...palette.map((color) => ({ name: color.name, color: color[kind] })),
 	];
 	return (
-		<div className="grid grid-cols-9 gap-1 px-1 pb-1">
+		<div className="grid grid-cols-9 gap-tight px-tight pb-tight">
 			{options.map(({ name, color }) => {
 				const selected = (color?.light.toLowerCase() ?? null) === current;
 				return (
@@ -121,7 +121,7 @@ function SwatchRow({
 										aria-checked={selected}
 										disabled={!editor.isEditable}
 										onClick={() => applyTextColor(editor, kind, color)}
-										className="relative justify-center p-0.5"
+										className="relative justify-center p-hair"
 									/>
 								) : (
 									<button
@@ -134,7 +134,7 @@ function SwatchRow({
 											applyTextColor(editor, kind, color);
 											onPicked?.();
 										}}
-										className="relative flex justify-center rounded-sm p-0.5 outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus"
+										className="relative flex justify-center rounded-sm p-hair outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus"
 									/>
 								)
 							}
@@ -176,10 +176,10 @@ export function TextColorMenuItems({ editor }: { editor: Editor }) {
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
 	const t = useTranslator(colorMessages);
 	return (
-		<div className="flex flex-col gap-1">
-			<p className="px-1 text-monti-muted">{t("fg.label")}</p>
+		<div className="flex flex-col gap-tight">
+			<p className="px-tight text-monti-muted">{t("fg.label")}</p>
 			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
-			<p className="px-1 text-monti-muted">{t("bg.label")}</p>
+			<p className="px-tight text-monti-muted">{t("bg.label")}</p>
 			<SwatchRow editor={editor} kind="bg" variant="buttons" onPicked={onPicked} />
 		</div>
 	);
@@ -190,7 +190,7 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 	const current = currentColor(editor);
 	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
 	return (
-		<span {...underline} className={cn(underline.className, "rounded-sm p-0.5")}>
+		<span {...underline} className={cn(underline.className, "rounded-sm p-hair")}>
 			<Baseline aria-hidden className="size-4" />
 		</span>
 	);

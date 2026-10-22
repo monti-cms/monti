@@ -6,6 +6,8 @@ import { extendTailwindMerge } from "tailwind-merge";
 // one shadow (`shadow-monti-floating`, else read as a shadow color) and the one letter spacing (`tracking-caps`).
 const twMerge = extendTailwindMerge({
 	extend: {
+		// The named spacing (`--spacing-*`), next to Tailwind's numbers: without it `p-tight` and `p-comfortable` would both survive a merge.
+		theme: { spacing: ["hair", "tight", "condensed", "normal", "comfortable", "spacious", "wide", "section"] },
 		classGroups: {
 			"font-size": [
 				{

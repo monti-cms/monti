@@ -48,7 +48,7 @@ export function PublicPathField({
 	const shown = pathOfSegment(draft) === path ? draft : segment;
 	const issue = hasPage ? pathProblem(path) : null;
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-comfortable">
 			<FlagSwitch
 				label={t("collection.path")}
 				revert={revert}
@@ -56,8 +56,8 @@ export function PublicPathField({
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
 			{hasPage && (
-				<div className="ml-2 flex flex-col gap-2 border-monti-muted border-l-2 pt-0.5 pl-4">
-					<div className="flex items-center gap-1 font-mono text-monti-body">
+				<div className="ml-condensed flex flex-col gap-condensed border-monti-muted border-l-2 pt-hair pl-comfortable">
+					<div className="flex items-center gap-tight font-mono text-monti-body">
 						<span className="text-monti-muted" aria-hidden="true">
 							/
 						</span>

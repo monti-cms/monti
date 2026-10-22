@@ -34,7 +34,7 @@ export function ToolbarDropdown({
 					label={label}
 					side="bottom"
 					size="sm"
-					className="h-8 gap-1 px-2 text-monti-caption"
+					className="h-8 gap-tight px-condensed text-monti-caption"
 					disabled={!editor.isEditable}
 					onMouseDown={(event) => event.preventDefault()}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
@@ -48,7 +48,7 @@ export function ToolbarDropdown({
 							type="button"
 							variant="ghost"
 							size="sm"
-							className="h-8 gap-1 px-2 text-monti-caption"
+							className="h-8 gap-tight px-condensed text-monti-caption"
 							aria-label={label}
 							disabled={!editor.isEditable}
 							onMouseDown={(event) => event.preventDefault()}

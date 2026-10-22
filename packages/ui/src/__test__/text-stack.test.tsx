@@ -28,6 +28,6 @@ describe("Text, Heading and Stack", () => {
 				<span>a</span>
 			</Stack>,
 		);
-		expect(screen.getByTestId("stack").className).toBe("flex flex-row gap-2 items-center");
+		expect(screen.getByTestId("stack").className).toBe("flex flex-row gap-condensed items-center");
 	});
 });

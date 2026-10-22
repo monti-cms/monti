@@ -126,9 +126,9 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		</FormFieldLabel>
 	);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-2">
+		<UiField data-invalid={Boolean(issue) || undefined} className="gap-condensed">
 			{aside ? (
-				<div className="flex min-h-6 items-center justify-between gap-2">
+				<div className="flex min-h-6 items-center justify-between gap-condensed">
 					{labelNode}
 					{aside}
 				</div>
@@ -155,13 +155,13 @@ function SlotFieldRow({
 	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-2">
-			<div className="flex min-h-6 items-center justify-between gap-2">
+		<UiField data-invalid={Boolean(issue) || undefined} className="gap-condensed">
+			<div className="flex min-h-6 items-center justify-between gap-condensed">
 				<FormFieldLabel htmlFor={id} className="text-monti-label">
 					{label} {required && <span className="text-monti-danger">*</span>}
 				</FormFieldLabel>
 				{aside || trigger ? (
-					<span className="flex items-center gap-1">
+					<span className="flex items-center gap-tight">
 						{aside}
 						{trigger}
 					</span>
@@ -400,7 +400,7 @@ function ValueRowView({
 
 	const aside =
 		fillFromBodyButton || Aside ? (
-			<div className="flex items-center gap-1">
+			<div className="flex items-center gap-tight">
 				{fillFromBodyButton}
 				{Aside && <Aside {...props} />}
 			</div>
@@ -500,7 +500,7 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 	const selected = typeof choice.value === "string" ? choice.value : field.discriminant.defaultValue;
 	const nested = field.values[selected] ?? {};
 	return (
-		<div className="space-y-3">
+		<div className="space-y-normal">
 			<ValueRow name={name} showDescriptions={showDescriptions} />
 			{Object.keys(nested).map((nestedName) => (
 				<ValueRow key={nestedName} name={nestedName} showDescriptions={showDescriptions} />
@@ -615,7 +615,7 @@ export function SchemaFields({
 				const key = `${group.group ?? "group"}-${index}`;
 				if (!group.group) {
 					return (
-						<div key={key} className="space-y-4">
+						<div key={key} className="space-y-comfortable">
 							{visible.map(renderField)}
 						</div>
 					);
@@ -624,13 +624,17 @@ export function SchemaFields({
 					// If there is only one group (one group in one tab), no title is added.
 					if (groups.length === 1) {
 						return (
-							<div key={key} className="space-y-4">
+							<div key={key} className="space-y-comfortable">
 								{visible.map(renderField)}
 							</div>
 						);
 					}
 					return (
-						<section key={key} aria-label={group.group} className="space-y-4 border-monti-muted border-t pt-4">
+						<section
+							key={key}
+							aria-label={group.group}
+							className="space-y-comfortable border-monti-muted border-t pt-comfortable"
+						>
 							<h3 className="text-monti-label">{group.group}</h3>
 							{visible.map(renderField)}
 						</section>
@@ -674,16 +678,16 @@ function LayoutSection({
 	const [open, setOpen] = useState(defaultOpen);
 	return (
 		<Collapsible open={open} onOpenChange={setOpen}>
-			<FormFieldSet className="gap-3">
+			<FormFieldSet className="gap-normal">
 				<FormFieldLegend variant="label" className="mb-0">
 					<CollapsibleTrigger
-						render={<Button type="button" variant="ghost" size="xs" className="-ml-2 text-monti-label" />}
+						render={<Button type="button" variant="ghost" size="xs" className="-ml-condensed text-monti-label" />}
 					>
 						<ChevronRight className={`transition-transform ${open ? "rotate-90" : ""}`} />
 						{title}
 					</CollapsibleTrigger>
 				</FormFieldLegend>
-				<CollapsibleContent className="space-y-4">{children}</CollapsibleContent>
+				<CollapsibleContent className="space-y-comfortable">{children}</CollapsibleContent>
 			</FormFieldSet>
 		</Collapsible>
 	);
@@ -696,7 +700,7 @@ function LayoutSection({
 export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollectionName; locale: Locale }) {
 	const site = useSite();
 	return (
-		<div className="space-y-4">
+		<div className="space-y-comfortable">
 			{site.recordLocalizedFields(collection).map((name) => (
 				<RecordLocaleField key={name} collection={collection} name={name} locale={locale} />
 			))}
