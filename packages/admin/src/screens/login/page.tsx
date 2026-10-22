@@ -1,7 +1,7 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
-import { Image,
+import {
 	Alert,
 	AlertDescription,
 	AlertTitle,
@@ -13,6 +13,7 @@ import { Image,
 	CardHeader,
 	CardTitle,
 	Heading,
+	Image,
 	Input,
 	Label,
 	Stack,
@@ -198,9 +199,7 @@ export default async function AdminLoginPage({
 											action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 										>
 											<Button type="submit" width="full">
-												{authProvider.icon ? (
-													<Image src={authProvider.icon} alt="" size="icon" radius="none" />
-												) : null}
+												{authProvider.icon ? <Image src={authProvider.icon} alt="" size="icon" radius="none" /> : null}
 												{t("signIn", { provider: authProvider.name })}
 											</Button>
 										</form>
