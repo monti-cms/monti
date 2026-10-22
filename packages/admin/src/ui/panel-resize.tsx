@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { cn } from "@monti-cms/ui/internal";
 import {
 	type CSSProperties,
 	type KeyboardEvent,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { UiLabelsProvider } from "@monti-cms/ui";
+import { UiLabelsProvider } from "@monti-cms/ui/internal";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { uiMessages } from "./messages";
