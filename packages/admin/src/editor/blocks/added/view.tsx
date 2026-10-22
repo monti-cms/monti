@@ -2,9 +2,7 @@
 
 import type { BlockDefinition } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "../../../lib/utils/cn";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
-import { Switch } from "../../../ui/switch";
+import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@monti-cms/ui";
 import { type FenceEditorMeta, FencePreviewBlockView, LazyFencePreview } from "../fence-preview";
 import { blocksMessages } from "../messages";
 import { AttributeInput, BlockSettings, BlockSettingsField, ContainerToolbar } from "../shared";

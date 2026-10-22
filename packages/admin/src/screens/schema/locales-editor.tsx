@@ -3,19 +3,37 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	cn,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	Input,
+	Panel,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@monti-cms/ui";
 import { ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import { moveWithin } from "../../lib/utils/move-within";
-import { Button } from "../../ui/button";
-import { Panel } from "../../ui/card";
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { Input } from "../../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { Pick, RevertMark, useSchemaEdit } from "./controls";

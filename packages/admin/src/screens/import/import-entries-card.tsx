@@ -1,11 +1,9 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Alert, AlertDescription, Button, Spinner } from "@monti-cms/ui";
 import { useRef } from "react";
 import { errorText } from "../../api/client";
-import { Alert, AlertDescription } from "../../ui/alert";
-import { Button } from "../../ui/button";
-import { Spinner } from "../../ui/spinner";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PreviewView } from "./import-preview";
 import { ResultView } from "./import-result";

@@ -5,10 +5,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, Input } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../lib/utils/cn";
-import { Input } from "../../ui/input";
 import { tabLabel } from "../entries/layout-groups";
 import { schemaFieldsMessages } from "./fields.messages";
 import { groupId, tabId } from "./fields-tree-dnd";

@@ -1,11 +1,12 @@
 import type { Cms } from "@monti-cms/core/server";
 import { SiteProvider } from "@monti-cms/core/site";
+import { TooltipProvider } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../internal-plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
+import { AdminUiLabels } from "../ui/labels";
 import { Toaster } from "../ui/sonner";
-import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
 import { layoutMessages } from "./messages";
 import { AdminPluginScope } from "./plugin-scope";
@@ -63,10 +64,12 @@ export async function AdminLayout({
 	// The plugins' declarations (components, slots, providers) are applied in the browser, from the outside in registration order.
 	const content = (
 		<AdminPluginScope plugins={plugins}>
-			<TooltipProvider>
-				<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
-				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
-			</TooltipProvider>
+			<AdminUiLabels>
+				<TooltipProvider>
+					<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
+					{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
+				</TooltipProvider>
+			</AdminUiLabels>
 		</AdminPluginScope>
 	);
 	// The browser gets the site as data (collections, locales, blocks, addresses, admin language), never a config file.

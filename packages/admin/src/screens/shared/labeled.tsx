@@ -1,6 +1,5 @@
+import { cn, FormFieldDescription, FormFieldLabel, FormField as UiField } from "@monti-cms/ui";
 import type { ReactNode } from "react";
-import { cn } from "../../lib/utils/cn";
-import { FormFieldDescription, FormFieldLabel, FormField as UiField } from "../../ui/field";
 
 /** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
 export const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;

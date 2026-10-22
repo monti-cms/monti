@@ -1,9 +1,9 @@
+import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
-import { TooltipProvider } from "../../ui/tooltip";
 import { slotsMessages } from "../messages";
 import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 

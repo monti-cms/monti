@@ -1,11 +1,6 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
-import { createPortal } from "react-dom";
-import { commonMessages } from "../lib/common.messages";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,9 +8,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { IconButton } from "../ui/icon-button";
-import { Spinner } from "../ui/spinner";
+	IconButton,
+	Spinner,
+} from "@monti-cms/ui";
+import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { commonMessages } from "../lib/common.messages";
 import { editorMessages } from "./messages";
 
 interface BlockHandleOverlayProps {

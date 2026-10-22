@@ -1,8 +1,16 @@
+import {
+	Button,
+	buttonVariants,
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@monti-cms/ui";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { AdminLink as Link } from "../../router";
-import { Button, buttonVariants } from "../../ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 
 export interface EmptyStateAction {
 	label: string;

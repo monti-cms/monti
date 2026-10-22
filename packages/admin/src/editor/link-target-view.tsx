@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
 import type { TranslatorFor } from "../translator";
 import { type LinkTarget, useLinkTarget } from "./link-targets";
 import { editorMessages } from "./messages";

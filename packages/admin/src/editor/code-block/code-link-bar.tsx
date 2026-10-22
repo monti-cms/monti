@@ -1,12 +1,12 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Code2 } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
-import { Button } from "../../ui/button";
 import { codeEffectsKey } from "./effects-plugin";
 import { cancelLink, commitLink, linkLines, linkTextRange } from "./link-commands";
 import { codeBlockMessages } from "./messages";

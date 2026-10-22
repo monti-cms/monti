@@ -2,6 +2,7 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, IconButton } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
@@ -10,8 +11,6 @@ import { documentKey } from "../../editor/document-key";
 import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
-import { IconButton } from "../../ui/icon-button";
 import { entriesMessages } from "./messages";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 

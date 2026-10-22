@@ -1,4 +1,4 @@
-import type { StatusShape, StatusTone } from "../../ui/status-indicator";
+import type { StatusShape, StatusTone } from "@monti-cms/ui";
 import type { EntryStatus } from "./entry-status";
 
 /**

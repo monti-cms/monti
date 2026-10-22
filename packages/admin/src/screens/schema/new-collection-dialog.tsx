@@ -1,12 +1,17 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Dialog,
+	DialogContent,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	FormFieldError,
+	Input,
+} from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { FormFieldError } from "../../ui/field";
-import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
 import { schemaMessages } from "./messages";

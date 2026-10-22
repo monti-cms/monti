@@ -1,10 +1,9 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, StatusIndicator } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import type { EventDeliveryItem } from "../../api/events";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../ui/sheet";
-import { StatusIndicator } from "../../ui/status-indicator";
 import { formatDateTime } from "../shared/format-date";
 import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
 import { eventsMessages } from "./messages";

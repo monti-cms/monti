@@ -3,6 +3,27 @@
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	buttonVariants,
+	cn,
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuBadge,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarSeparator,
+	SidebarTrigger,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+	useSidebar,
+} from "@monti-cms/ui";
+import {
 	Activity,
 	ChevronDown,
 	ChevronRight,
@@ -20,27 +41,8 @@ import {
 import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { booleanCodec, usePreference } from "../lib/hooks/use-preference";
-import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
-import { buttonVariants } from "../ui/button";
-import {
-	Sidebar,
-	SidebarContent,
-	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
-	SidebarHeader,
-	SidebarMenu,
-	SidebarMenuBadge,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	SidebarSeparator,
-	SidebarTrigger,
-	useSidebar,
-} from "../ui/sidebar";
 import { ThemeToggle } from "../ui/theme-toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { useAdminFeatures } from "./shared/admin-features";

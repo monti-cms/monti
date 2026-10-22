@@ -1,12 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn, IconButton, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
-import { cn } from "../../lib/utils/cn";
-import { IconButton } from "../../ui/icon-button";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { BLOCK_TOOLBAR } from "./block-model";
 import { blocksMessages } from "./messages";
 

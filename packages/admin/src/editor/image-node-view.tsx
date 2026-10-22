@@ -2,20 +2,14 @@
 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, FormFieldError, Input, Separator, Skeleton, Switch, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getMedia, mediaKeys } from "../api/media";
-import { cn } from "../lib/utils/cn";
 import { type SlotRequest, useSlot } from "../slots/slots";
 import type { TranslatorFor } from "../translator";
-import { FormFieldError } from "../ui/field";
-import { Input } from "../ui/input";
-import { Separator } from "../ui/separator";
-import { Skeleton } from "../ui/skeleton";
-import { Switch } from "../ui/switch";
-import { Textarea } from "../ui/textarea";
 import { BlockSettings, BlockSettingsField, ContainerToolbar, ToolbarButton } from "./blocks/shared";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { ImageCropDialog } from "./image-crop-dialog";

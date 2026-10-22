@@ -1,14 +1,10 @@
 "use client";
 
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
+import { Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger, cn, Input } from "@monti-cms/ui";
 import { ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
-import { cn } from "../../lib/utils/cn";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
-import { Input } from "../../ui/input";
 import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
 import { Labeled } from "../shared/labeled";
 import { AddFieldDialog } from "./add-field";

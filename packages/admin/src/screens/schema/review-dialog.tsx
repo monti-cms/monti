@@ -4,6 +4,21 @@ import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+	Badge,
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	Input,
+	Skeleton,
+} from "@monti-cms/ui";
 import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
@@ -18,12 +33,6 @@ import {
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink } from "../../router";
-import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { Input } from "../../ui/input";
-import { Skeleton } from "../../ui/skeleton";
 import { entryHref } from "../shared/entry-href";
 import { describeChange, describeNoTransform, describeTransform } from "./change-text";
 import { IssueList } from "./controls";

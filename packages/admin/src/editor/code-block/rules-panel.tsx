@@ -10,17 +10,25 @@ import {
 	ruleMatches,
 } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	cn,
+	IconButton,
+	Input,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+	Textarea,
+} from "@monti-cms/ui";
 import { Plus, Regex, Trash2 } from "lucide-react";
-import { cn } from "../../lib/utils/cn";
 import { useSlot } from "../../slots/slots";
 import type { TranslatorFor } from "../../translator";
-import { Button } from "../../ui/button";
-import { IconButton } from "../../ui/icon-button";
-import { Input } from "../../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Switch } from "../../ui/switch";
-import { Textarea } from "../../ui/textarea";
 import { codeBlockMessages } from "./messages";
 
 interface RulesPanelProps {

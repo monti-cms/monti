@@ -2,9 +2,8 @@
 
 // Small pieces of the entry editor's toolbar: toggles.
 
+import { Toggle, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
 import type { LucideIcon } from "lucide-react";
-import { Toggle } from "../../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 
 /** Toggle button at the end of the editor toolbar (source pane, MDX source). Name and tooltip are the same. */
 export function ToolbarToggle({

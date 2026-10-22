@@ -1,8 +1,6 @@
 "use client";
 
 import { type Translator, useTranslator } from "@monti-cms/core/site";
-import { type ReactNode, useCallback, useRef, useState } from "react";
-import { commonMessages } from "../../lib/common.messages";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -12,7 +10,9 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from "../../ui/alert-dialog";
+} from "@monti-cms/ui";
+import { type ReactNode, useCallback, useRef, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 
 export interface ConfirmRequest {
 	title: string;

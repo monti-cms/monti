@@ -1,11 +1,11 @@
 "use client";
 
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { getMedia, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
 

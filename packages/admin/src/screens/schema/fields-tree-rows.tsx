@@ -6,12 +6,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
+import { Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton } from "@monti-cms/ui";
 import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { IconButton } from "../../ui/icon-button";
 import { ChangeDot, useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";

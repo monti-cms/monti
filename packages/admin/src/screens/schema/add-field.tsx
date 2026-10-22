@@ -1,13 +1,19 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	Input,
+} from "@monti-cms/ui";
 import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { TextInput, useSchemaEdit } from "./controls";
 import { type CollectionEditing, KindOptions } from "./field-editor";

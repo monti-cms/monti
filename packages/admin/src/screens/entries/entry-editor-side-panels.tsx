@@ -4,8 +4,8 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import type { Ref } from "react";
-import { cn } from "../../lib/utils/cn";
 import { PanelResizeHandle, type usePanelResize } from "../../ui/panel-resize";
 import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import type { EntryEditor } from "./entry-editor-types";

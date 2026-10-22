@@ -2,20 +2,29 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
+import {
+	Button,
+	buttonVariants,
+	cn,
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Textarea,
+} from "@monti-cms/ui";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
-import { Button, buttonVariants } from "../../ui/button";
-import { FormField, FormFieldError, FormFieldLabel } from "../../ui/field";
-import { IconButton } from "../../ui/icon-button";
-import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Textarea } from "../../ui/textarea";
 import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";

@@ -9,6 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
+import { cn, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -16,9 +17,6 @@ import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry 
 import { issueLine } from "../api/error-message";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
-import { StatusIndicator } from "../ui/status-indicator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
 	EMPTY_FORM,
 	type EntryData,

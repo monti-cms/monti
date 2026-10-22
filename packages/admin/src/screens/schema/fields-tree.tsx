@@ -1,13 +1,10 @@
 "use client";
 
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, cn, IconButton, Panel } from "@monti-cms/ui";
 import { Eye, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { Panel } from "../../ui/card";
-import { IconButton } from "../../ui/icon-button";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
 import { TREE_MAX_WIDTH } from "../shared/layout";

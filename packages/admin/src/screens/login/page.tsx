@@ -1,13 +1,21 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+	Button,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+	Input,
+	Label,
+} from "@monti-cms/ui";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
-import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
-import { Button } from "../../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
 import { loginMessages } from "./messages";
 
 /**

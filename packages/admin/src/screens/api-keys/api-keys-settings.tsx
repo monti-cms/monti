@@ -1,19 +1,27 @@
 "use client";
 
 import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+	Badge,
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	FormFieldError,
+	Input,
+	Skeleton,
+} from "@monti-cms/ui";
 import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
 import { errorText } from "../../api/client";
 import { useCmsMutation } from "../../api/use-cms-mutation";
-import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { FormFieldError } from "../../ui/field";
-import { Input } from "../../ui/input";
-import { Skeleton } from "../../ui/skeleton";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";

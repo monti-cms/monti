@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import {
 	type CSSProperties,
 	type KeyboardEvent,
@@ -11,7 +12,6 @@ import {
 	useState,
 } from "react";
 import { positiveNumberCodec, usePreference } from "../lib/hooks/use-preference";
-import { cn } from "../lib/utils/cn";
 import { uiMessages } from "./messages";
 
 /** Below this viewport width a panel covers the screen and cannot be resized. */
@@ -162,4 +162,10 @@ export function PanelResizeHandle({ resize, className }: { resize: PanelResize; 
 			onDoubleClick={resize.reset}
 		/>
 	);
+}
+
+/** The `resizable` parts of a right-side `SheetContent`: its remembered width and its drag handle. */
+export function useResizableSheet(config: PanelResizeConfig) {
+	const resize = usePanelResize(config);
+	return { style: resize.style, handle: <PanelResizeHandle resize={resize} /> };
 }

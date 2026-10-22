@@ -4,15 +4,14 @@
 // and renders nothing when there is nothing to say.
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Languages, LoaderCircle, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import type { CmsIssue } from "../../api/error-message";
 import { countFailedEvents, eventsKeys, listEvents, retryAllEvents } from "../../api/events";
 import { useCmsMutation } from "../../api/use-cms-mutation";
-import { cn } from "../../lib/utils/cn";
 import { AdminLink } from "../../router";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { READING_CHARS_PER_MINUTE } from "../entries/body-stats";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
 import type { SaveStatus } from "../entries/entry-editor-types";

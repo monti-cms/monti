@@ -12,8 +12,12 @@ import { beforeAll, describe, expect, it } from "vitest";
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
-const themeCss = readFileSync(path.resolve(__dirname, "../../styles/theme.css"), "utf8");
-const adminCss = readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8");
+const themeCss = readFileSync(path.resolve(__dirname, "../../../ui/styles/theme.css"), "utf8");
+/** The token values (`@monti-cms/ui/tokens.css`) and the admin's own hand-written rules, read together as the admin bundle reads them. */
+const adminCss = [
+	readFileSync(path.resolve(__dirname, "../../../ui/styles/tokens.css"), "utf8"),
+	readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8"),
+].join("\n");
 /** Packages with an admin stylesheet (`styles/index.css`). */
 /** (ai, mdx, seo and git-sync ship none: their utilities are compiled into the admin's file, which scans their sources.) */
 const STYLE_PACKAGES = ["admin", "blocks"];

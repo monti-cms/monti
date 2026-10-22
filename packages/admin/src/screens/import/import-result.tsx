@@ -1,8 +1,8 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Badge } from "@monti-cms/ui";
 import type { ImportResultEntry, ImportRun, ImportStep } from "../../api/import";
-import { Badge } from "../../ui/badge";
 import { importMessages } from "./messages";
 
 const OUTCOME_VARIANT = {

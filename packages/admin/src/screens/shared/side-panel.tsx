@@ -1,11 +1,10 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn, IconButton } from "@monti-cms/ui";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
-import { IconButton } from "../../ui/icon-button";
 import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 
 /** Width classes of the right slot on wide screens: `--panel-width` comes from `usePanelResize` (written literally so Tailwind can read it). */

@@ -1,6 +1,6 @@
 import type { Site } from "@monti-cms/core/site";
+import type { StatusTone } from "@monti-cms/ui";
 import type { EventDeliveryItem } from "../../api/events";
-import type { StatusTone } from "../../ui/status-indicator";
 
 export const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
 	delivered: "success",

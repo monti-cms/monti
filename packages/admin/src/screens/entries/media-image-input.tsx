@@ -1,6 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, cn, FormFieldError } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -9,9 +10,6 @@ import { mediaNotConfiguredMessage } from "../../api/error-message";
 import { getMedia, mediaKeys } from "../../api/media";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog";
 import { uploadAttachment } from "../../editor/upload-helper";
-import { cn } from "../../lib/utils/cn";
-import { Button } from "../../ui/button";
-import { FormFieldError } from "../../ui/field";
 import { useAdminFeatures } from "../shared/admin-features";
 import type { FieldInputProps } from "./field-inputs";
 import { entriesMessages } from "./messages";

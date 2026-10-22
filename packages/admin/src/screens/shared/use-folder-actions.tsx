@@ -2,13 +2,6 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { useQuery } from "@tanstack/react-query";
-import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
-import { errorText } from "../../api/client";
-import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
-import { useCmsMutation } from "../../api/use-cms-mutation";
-import { commonMessages } from "../../lib/common.messages";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -17,13 +10,26 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from "../../ui/alert-dialog";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { FormField, FormFieldError, FormFieldLabel } from "../../ui/field";
-import { Input } from "../../ui/input";
-import { Skeleton } from "../../ui/skeleton";
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
+	FormField,
+	FormFieldError,
+	FormFieldLabel,
+	Input,
+	Skeleton,
+} from "@monti-cms/ui";
+import { useQuery } from "@tanstack/react-query";
+import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { errorText } from "../../api/client";
+import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
+import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import type { MenuAction } from "./action-menu";
 import { sharedMessages } from "./messages";
 

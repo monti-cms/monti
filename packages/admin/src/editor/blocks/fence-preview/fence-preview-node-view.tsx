@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { cn } from "../../../lib/utils/cn";
 import { SELECTED_RING } from "../block-model";
 import { blocksMessages } from "../messages";
 import { BlockFrame, useBlockEditor } from "../use-block-editor";

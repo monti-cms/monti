@@ -2,14 +2,12 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, buttonVariants, cn, Skeleton } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
-import { Button, buttonVariants } from "../ui/button";
-import { Skeleton } from "../ui/skeleton";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
 import { toSelection } from "./list-row-menu";

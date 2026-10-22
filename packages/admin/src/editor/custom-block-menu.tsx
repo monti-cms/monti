@@ -1,12 +1,11 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { Puzzle } from "lucide-react";
 import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { IconButton } from "../ui/icon-button";
 import { allowanceOfState } from "./allowed-extension";
 import { editorMessages } from "./messages";
 import { buildBlockSlashCommands, isOffered } from "./slash-command";

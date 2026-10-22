@@ -9,9 +9,9 @@ import {
 	setLineEffect,
 } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { Check, ChevronsDownUp, ChevronsUpDown, Code2, Eye, Highlighter } from "lucide-react";
 import { type CSSProperties, useEffect, useRef } from "react";
-import { cn } from "../../lib/utils/cn";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { codeBlockMessages } from "./messages";
 

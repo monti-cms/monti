@@ -2,12 +2,10 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
+import { cn, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
-import { Skeleton } from "../ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { ColumnResizeHandle } from "./column-resize-handle";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";

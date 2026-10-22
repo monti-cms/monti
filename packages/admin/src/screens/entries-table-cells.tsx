@@ -2,14 +2,11 @@
 
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { Badge, Button, badgeVariants, cn, StatusIndicator } from "@monti-cms/ui";
 import { Folder as FolderIcon } from "lucide-react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
-import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
-import { Badge, badgeVariants } from "../ui/badge";
-import { Button } from "../ui/button";
-import { StatusIndicator } from "../ui/status-indicator";
 import { customListCell, DefaultFieldCell } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { screensMessages } from "./messages";

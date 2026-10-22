@@ -2,10 +2,9 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, TableCell, TableRow } from "@monti-cms/ui";
 import { Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import { commonMessages } from "../lib/common.messages";
-import { Button } from "../ui/button";
-import { TableCell, TableRow } from "../ui/table";
 import { folderKeyHandler } from "./admin-sidebar";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";

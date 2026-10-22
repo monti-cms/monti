@@ -1,12 +1,23 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	Badge,
+	Checkbox,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@monti-cms/ui";
 import { useId } from "react";
 import type { ImportPreview, ImportPreviewEntry } from "../../api/import";
-import { Badge } from "../../ui/badge";
-import { Checkbox } from "../../ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { importMessages } from "./messages";
 import type { ImportForm } from "./use-import-entries";
 

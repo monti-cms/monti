@@ -2,14 +2,11 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
+import { Badge, Button, cn, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
 import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { folderKeyHandler } from "../admin-sidebar";
 import { EntriesTableFolderRows } from "../entries-table-folder-rows";
 import { screensMessages } from "../messages";

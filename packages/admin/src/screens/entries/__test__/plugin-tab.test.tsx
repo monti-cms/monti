@@ -1,10 +1,10 @@
 import type { Collection } from "@monti-cms/core/site";
+import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
 import { renderWithSite as render } from "../../../test/site";
-import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { InspectorPanel } from "../inspector-panel";
 import { entriesMessages } from "../messages";

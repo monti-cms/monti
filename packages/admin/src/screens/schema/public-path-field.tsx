@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { FormFieldError, Input } from "@monti-cms/ui";
 import { useId, useState } from "react";
-import { FormFieldError } from "../../ui/field";
-import { Input } from "../../ui/input";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
 import { pathProblem } from "./schema-model";

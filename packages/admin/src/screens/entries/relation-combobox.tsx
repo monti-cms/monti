@@ -1,10 +1,6 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
-import { commonMessages } from "../../lib/common.messages";
-import { cn } from "../../lib/utils/cn";
 import {
 	Combobox,
 	ComboboxChip,
@@ -16,9 +12,13 @@ import {
 	ComboboxItem,
 	ComboboxList,
 	ComboboxValue,
+	cn,
+	FormFieldError,
 	useComboboxAnchor,
-} from "../../ui/combobox";
-import { FormFieldError } from "../../ui/field";
+} from "@monti-cms/ui";
+import { Plus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { EmptyState } from "../shared/empty-state";
 import { entriesMessages } from "./messages";
 

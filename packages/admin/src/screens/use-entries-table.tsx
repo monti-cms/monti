@@ -3,6 +3,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, Checkbox } from "@monti-cms/ui";
 import {
 	type ColumnOrderState,
 	type ColumnSizingState,
@@ -20,8 +21,6 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
 import { ColumnHeader } from "./column-header";
 import { EntryCell } from "./entries-table-cells";
 import {

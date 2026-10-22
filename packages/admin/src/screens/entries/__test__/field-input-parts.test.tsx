@@ -1,9 +1,9 @@
+import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
 import { renderWithSite as render } from "../../../test/site";
-import { TooltipProvider } from "../../../ui/tooltip";
 import { AdminFeaturesProvider } from "../../shared/admin-features";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { entriesMessages } from "../messages";

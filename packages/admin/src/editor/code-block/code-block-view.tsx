@@ -2,15 +2,23 @@
 
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import {
+	cn,
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Toggle,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@monti-cms/ui";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { Check, ChevronRight, Copy, Info, ListOrdered, Rows3 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
-import { cn } from "../../lib/utils/cn";
-import { IconButton } from "../../ui/icon-button";
-import { Input } from "../../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Toggle } from "../../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { codeAnchorRef } from "../added-marks";
 import { useEditorEditable } from "../blocks/shared";
 import {

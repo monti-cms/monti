@@ -1,8 +1,8 @@
 "use client";
 
 import { type Site, useTranslator } from "@monti-cms/core/site";
+import { cn } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
-import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { settingsMessages } from "./messages";
 import { type SchemaTab, settingsTabs } from "./tabs";

@@ -1,6 +1,6 @@
 // Column width resize handle of the entries table header.
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "../lib/utils/cn";
+import { cn } from "@monti-cms/ui";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
 import { screensMessages } from "./messages";
 

@@ -1,5 +1,5 @@
+import { cn } from "@monti-cms/ui";
 import type { ComponentProps } from "react";
-import { cn } from "../../lib/utils/cn";
 import { PAGE_MAX_WIDTH } from "./layout";
 
 /**

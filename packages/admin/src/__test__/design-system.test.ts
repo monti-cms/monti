@@ -4,12 +4,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * The admin uses the design system only. `styles/theme.css` clears Tailwind's palette, text sizes, weights, shadows, tracking and line heights,
+ * The admin uses the design system only. `@monti-cms/ui`'s `styles/theme.css` clears Tailwind's palette, text sizes, weights, shadows, tracking and line heights,
  * so a class outside the system compiles to nothing; this test names each such class with its file and line instead of letting it vanish.
- * Spacing keeps Tailwind's 4px numbers, limited to the system's steps on screens; the controls in `ui/` may use in-between steps of their own.
+ * Spacing keeps Tailwind's 4px numbers, limited to the system's steps on screens; the components of `@monti-cms/ui` may use in-between steps of their own.
  */
 const packagesDir = path.resolve(__dirname, "../../..");
-const themeCss = readFileSync(path.resolve(__dirname, "../../styles/theme.css"), "utf8");
+const themeCss = readFileSync(path.resolve(__dirname, "../../../ui/styles/theme.css"), "utf8");
 /** The packages whose classes the admin stylesheet compiles (its `@source` lines): the admin UI. Core's code block line effects are site config, not admin UI. */
 const ADMIN_UI_PACKAGES = [
 	...readFileSync(path.resolve(__dirname, "../../styles/index.css"), "utf8").matchAll(
@@ -155,7 +155,7 @@ describe("design system", () => {
 		for (const pkg of ADMIN_UI_PACKAGES) {
 			for (const file of sourceFiles(path.join(packagesDir, pkg, "src"))) {
 				const rel = path.relative(packagesDir, file);
-				const inUi = rel.startsWith("admin/src/ui/");
+				const inUi = rel.startsWith("ui/src/") || rel.startsWith("admin/src/ui/");
 				for (const { word, line } of classWords(readFileSync(file, "utf8"))) {
 					const why = problem(utilityOf(word), inUi, OWN_COLORS.has(rel));
 					if (why) offenders.push(`${rel}:${line} ${word} (${why})`);
