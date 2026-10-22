@@ -17,6 +17,7 @@ import { READING_CHARS_PER_MINUTE } from "../entries/body-stats";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
 import type { SaveStatus } from "../entries/entry-editor-types";
 import { entriesMessages } from "../entries/messages";
+import { eventCollectionLabel } from "../events/event-display";
 import { eventsMessages } from "../events/messages";
 import { statusLabels } from "./entry-status";
 import { formatAgo, formatDateTime } from "./format-date";
@@ -677,7 +678,7 @@ function FailedDeliveriesPopover() {
 						<>
 							{item.subscriber ?? item.change.kind}
 							<span className="block text-monti-muted-foreground">
-								{item.lastError ?? item.change.title ?? item.change.collection}
+								{item.lastError ?? item.change.title ?? eventCollectionLabel(site, item.change.collection)}
 							</span>
 						</>
 					}

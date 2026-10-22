@@ -20,6 +20,7 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { AdminLink as Link } from "../../router";
+import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
 import { StatusIndicator } from "../../ui/status-indicator";
@@ -32,7 +33,7 @@ import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { EventDetailSheet } from "./event-detail-sheet";
-import { eventEntryLabel, STATE_TONE } from "./event-display";
+import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
 import { eventsMessages } from "./messages";
 
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
@@ -96,6 +97,8 @@ export function EventsScreen() {
 	/** Deliveries the retry can still send (pending or failed and due); recorded, delivered and dead ones give it nothing to do. */
 	const counts = listQuery.data?.counts;
 	const waiting = counts ? counts.pending + counts.failed : 0;
+	// Delivery results only exist for a webhook. When no loaded row has a subscriber, the columns about deliveries have nothing to say.
+	const recordedOnly = items.length > 0 && items.every((item) => item.subscriber === null);
 	const changeFilter = (filter: EventsFilter) => update({ filter });
 	const filterOptions = EVENTS_FILTERS.map((value) => ({ value, label: t(`filter.${value}`) }));
 	const error = listQuery.error && !listQuery.data ? errorText(site, listQuery.error, t("list.loadFailed")) : null;
@@ -147,6 +150,11 @@ export function EventsScreen() {
 				</PageActions>
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
+			{recordedOnly && (
+				<Alert layout="inline" className="mx-8 mt-3 w-auto">
+					<AlertDescription className="col-start-auto min-w-0">{t("list.noSubscribers")}</AlertDescription>
+				</Alert>
+			)}
 			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-8 mt-3" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
@@ -176,13 +184,13 @@ export function EventsScreen() {
 							<TableRow>
 								<TableHead>{t("column.state")}</TableHead>
 								<TableHead>{t("column.when")}</TableHead>
-								<TableHead>{t("column.subscriber")}</TableHead>
+								{!recordedOnly && <TableHead>{t("column.subscriber")}</TableHead>}
 								<TableHead>{t("column.kind")}</TableHead>
 								<TableHead>{t("column.entry")}</TableHead>
 								<TableHead>{t("column.actor")}</TableHead>
-								<TableHead>{t("column.attempts")}</TableHead>
-								<TableHead>{t("column.lastError")}</TableHead>
-								<TableHead>{t("column.nextAttempt")}</TableHead>
+								{!recordedOnly && <TableHead>{t("column.attempts")}</TableHead>}
+								{!recordedOnly && <TableHead>{t("column.lastError")}</TableHead>}
+								{!recordedOnly && <TableHead>{t("column.nextAttempt")}</TableHead>}
 								<TableHead>
 									<span className="sr-only">{t("column.actions")}</span>
 								</TableHead>
@@ -198,7 +206,9 @@ export function EventsScreen() {
 											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
 										</TableCell>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
-										<TableCell className="font-mono text-monti-caption">{item.subscriber ?? ""}</TableCell>
+										{!recordedOnly && (
+											<TableCell className="font-mono text-monti-caption">{item.subscriber ?? ""}</TableCell>
+										)}
 										<TableCell>
 											<button
 												type="button"
@@ -216,8 +226,8 @@ export function EventsScreen() {
 											</button>
 										</TableCell>
 										<TableCell>
-											<span className="font-mono text-monti-caption text-monti-muted-foreground">
-												{change.collection}{" "}
+											<span className="text-monti-muted-foreground">
+												{eventCollectionLabel(site, change.collection)} ·{" "}
 											</span>
 											{change.kind === "deleted" ? (
 												<span>{eventEntryLabel(change)}</span>
@@ -232,13 +242,19 @@ export function EventsScreen() {
 											)}
 										</TableCell>
 										<TableCell>{change.actor ?? ""}</TableCell>
-										<TableCell className="tabular-nums">{item.attempts}</TableCell>
-										<TableCell className="max-w-64 truncate" title={item.lastError ?? undefined}>
-											{item.lastError ? truncate(item.lastError) : ""}
-										</TableCell>
-										<TableCell className="whitespace-nowrap">
-											{item.state === "failed" && item.nextAttemptAt ? formatDateTime(site, item.nextAttemptAt) : ""}
-										</TableCell>
+										{!recordedOnly && (
+											<>
+												<TableCell className="tabular-nums">{item.attempts}</TableCell>
+												<TableCell className="max-w-64 truncate" title={item.lastError ?? undefined}>
+													{item.lastError ? truncate(item.lastError) : ""}
+												</TableCell>
+												<TableCell className="whitespace-nowrap">
+													{item.state === "failed" && item.nextAttemptAt
+														? formatDateTime(site, item.nextAttemptAt)
+														: ""}
+												</TableCell>
+											</>
+										)}
 										<TableCell className="whitespace-nowrap text-right" onClick={(event) => event.stopPropagation()}>
 											{(item.state === "failed" || item.state === "dead") && (
 												<>
