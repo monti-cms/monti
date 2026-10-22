@@ -3,7 +3,7 @@
  * It is read at package build time only: the host never sees it and needs no Tailwind.
  *
  * Every name carries the `cms` prefix:
- *   - Color names: `bg-monti-background`, `text-monti-muted-foreground`, `border-monti-border` ... (values come from `--monti-*` variables)
+ *   - Color roles per property: `bg-monti-surface`, `text-monti-muted`, `border-monti-default` ... (values come from `--monti-*` variables, see the block below)
  *   - Variants: `monti-dark:` (`.dark` or `[data-theme="dark"]` on `html` or an ancestor), `monti-horizontal:` and `monti-vertical:` (Base UI orientation)
  * Tailwind's own theme is inlined (`theme(inline)`), so the bundle declares no `--spacing`, `--color-*`, `--font-*` and so on.
  */
