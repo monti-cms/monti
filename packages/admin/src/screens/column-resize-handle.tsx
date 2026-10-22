@@ -47,9 +47,9 @@ export function ColumnResizeHandle({
 		>
 			<span
 				className={cn(
-					"h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-border",
-					resizing && "bg-monti-primary group-hover/th:bg-monti-primary",
-					"[div:focus-visible>&]:bg-monti-ring",
+					"h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-divider",
+					resizing && "bg-monti-emphasis group-hover/th:bg-monti-emphasis",
+					"[div:focus-visible>&]:bg-monti-accent-emphasis",
 				)}
 			/>
 		</div>

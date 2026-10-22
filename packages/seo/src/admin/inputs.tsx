@@ -17,12 +17,7 @@ const current = (props: FieldInputProps) => (typeof props.value === "string" ? p
 /** Character count. Changes color when it exceeds the recommended length. When empty, it is the length of the fallback value. */
 function Counter({ length, limit }: { length: number; limit: number }) {
 	return (
-		<span
-			className={cn(
-				"text-monti-micro text-monti-muted-foreground tabular-nums",
-				length > limit && "text-monti-warning-foreground",
-			)}
-		>
+		<span className={cn("text-monti-micro text-monti-muted tabular-nums", length > limit && "text-monti-warning")}>
 			{length}/{limit}
 		</span>
 	);

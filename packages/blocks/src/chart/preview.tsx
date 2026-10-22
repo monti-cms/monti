@@ -43,7 +43,7 @@ function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
 		<div className="not-prose my-6">
-			<Alert variant="destructive">
+			<Alert tone="danger">
 				<AlertOctagon />
 				<AlertTitle>{t("error.title")}</AlertTitle>
 				<AlertDescription>
@@ -62,7 +62,7 @@ function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart } as const;
 
-const VALUE_LABEL_CLASS = "fill-monti-foreground font-medium text-monti-micro";
+const VALUE_LABEL_CLASS = "fill-monti-default font-medium text-monti-micro";
 
 /** Value labels (`show values`). */
 const valueLabel = (spec: CartesianChartSpec) =>

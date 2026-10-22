@@ -10,6 +10,7 @@ export interface EmptyStateAction {
 	icon?: LucideIcon;
 	/** `primary` for the one action that starts the screen's job. Default is the quiet outline look. */
 	emphasis?: "primary";
+	disabled?: boolean;
 }
 
 /** A second way forward beside the action: a link to another screen, or a button. */
@@ -45,7 +46,7 @@ export function EmptyState({
 		return (
 			<Empty data-variant="compact" className={cn("flex-none gap-1 p-2", className)}>
 				<EmptyHeader className="gap-0.5">
-					<EmptyTitle className="font-normal text-monti-label text-monti-muted-foreground">{title}</EmptyTitle>
+					<EmptyTitle className="font-normal text-monti-label text-monti-muted">{title}</EmptyTitle>
 					{description && <EmptyDescription className="text-monti-caption">{description}</EmptyDescription>}
 				</EmptyHeader>
 				{action && (
@@ -75,6 +76,7 @@ export function EmptyState({
 							type="button"
 							size="sm"
 							variant={action.emphasis === "primary" ? "default" : "outline"}
+							disabled={action.disabled}
 							onClick={action.onClick}
 						>
 							{ActionIcon && <ActionIcon aria-hidden />}

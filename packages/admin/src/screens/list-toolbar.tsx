@@ -112,7 +112,7 @@ export function ListSearch({
 						title={t("toolbar.includeBody")}
 						pressed={state.includeBody}
 						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						className="h-6 min-w-6 gap-1 px-1.5 text-monti-caption text-monti-muted-foreground aria-pressed:bg-monti-accent aria-pressed:text-monti-foreground"
+						className="h-6 min-w-6 gap-1 px-2 text-monti-caption text-monti-muted aria-pressed:bg-monti-selected aria-pressed:text-monti-default"
 					>
 						<AlignLeft aria-hidden />
 						{t("toolbar.includeBodyShort")}
@@ -140,14 +140,14 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 		...LIST_STATUSES.map((status) => ({ key: status, label: statusLabels(site)[status] })),
 	];
 	return (
-		<fieldset className="-mb-px flex items-stretch gap-5">
+		<fieldset className="-mb-px flex items-stretch gap-4">
 			<legend className="sr-only">{t("list.statusFilter")}</legend>
 			{segments.map(({ key, label }) => (
 				<button
 					key={key}
 					type="button"
 					aria-pressed={active === key}
-					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
+					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
 					onClick={() => onChange({ statuses: key === "all" ? [] : [key], hasChanges: false })}
 				>
 					{label}
@@ -186,14 +186,14 @@ export function ListSubToolbar({
 			{chips.length === 0 ? (
 				<div className="flex-1" />
 			) : (
-				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-1.5">
+				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-2 py-2">
 					{chips.map((chip) => (
 						<li key={chip.key}>
-							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-accent pr-0.5 pl-2 font-medium text-monti-caption text-monti-foreground">
+							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-selected pr-0.5 pl-2 font-medium text-monti-caption text-monti-default">
 								<span className="max-w-72 truncate">{chip.label}</span>
 								<IconButton
 									size="icon-xs"
-									className="size-5 text-monti-foreground hover:bg-monti-border hover:text-monti-foreground"
+									className="size-5 text-monti-default hover:bg-monti-divider hover:text-monti-default"
 									label={t("filter.clear")}
 									onClick={() => onChange(chip.clear)}
 								>
@@ -208,7 +208,7 @@ export function ListSubToolbar({
 								type="button"
 								variant="ghost"
 								size="xs"
-								className="text-monti-caption text-monti-muted-foreground"
+								className="text-monti-caption text-monti-muted"
 								onClick={() => onChange(clearFiltersPatch(state))}
 							>
 								{t("filter.clearAll")}

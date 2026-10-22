@@ -18,9 +18,9 @@ import type { DocTextIssue } from "./run";
 import type { TextCheckController } from "./use-text-check";
 
 const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; className: string }>> = {
-	error: { icon: CircleAlert, className: "text-monti-destructive" },
+	error: { icon: CircleAlert, className: "text-monti-danger" },
 	warning: { icon: TriangleAlert, className: "text-monti-warning" },
-	info: { icon: Info, className: "text-monti-primary" },
+	info: { icon: Info, className: "text-monti-default" },
 };
 
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
@@ -64,11 +64,11 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						label={t("results")}
 						side="bottom"
 						size="sm"
-						className="h-8 min-w-8 px-1.5"
+						className="h-8 min-w-8 px-2"
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<span className="tabular rounded-sm bg-monti-muted px-1.5 font-medium text-xs leading-5">
+						<span className="tabular rounded-sm bg-monti-neutral px-2 font-medium text-monti-caption">
 							{count > 99 ? "99+" : count}
 						</span>
 					</IconButton>
@@ -79,7 +79,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 								<span className="flex min-w-0 flex-1 flex-col">
 									<span className="truncate font-medium">{issue.text.trim() || issue.message}</span>
 									{issue.message && (
-										<span className="truncate text-monti-muted-foreground text-xs">{issue.message}</span>
+										<span className="truncate text-monti-caption text-monti-muted">{issue.message}</span>
 									)}
 								</span>
 							</DropdownMenuItem>
@@ -149,7 +149,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 		<>
 			<div className="flex items-start gap-2">
 				<SeverityIcon severity={issue.severity} />
-				<p className="min-w-0 flex-1 text-sm">{issue.message || issue.text}</p>
+				<p className="min-w-0 flex-1 text-monti-body">{issue.message || issue.text}</p>
 			</div>
 			{issue.suggestions.length > 0 && (
 				<div className="flex flex-wrap gap-1">
@@ -169,7 +169,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 				</div>
 			)}
 			<div className="flex items-center gap-2">
-				<span className="min-w-0 flex-1 truncate text-monti-muted-foreground text-xs">
+				<span className="min-w-0 flex-1 truncate text-monti-caption text-monti-muted">
 					{checker?.label ?? issue.source}
 				</span>
 				{issue.url && (
@@ -177,7 +177,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 						href={issue.url}
 						target="_blank"
 						rel="noreferrer noopener"
-						className="text-monti-highlight text-xs underline underline-offset-2"
+						className="text-monti-accent text-monti-caption underline underline-offset-2"
 					>
 						{t("explain")}
 					</a>

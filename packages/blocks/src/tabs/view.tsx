@@ -16,9 +16,9 @@ import { tabsMessages } from "./messages";
 
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
-	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-monti-foreground/60 text-sm transition-all hover:text-monti-foreground monti-dark:text-monti-muted-foreground monti-dark:hover:text-monti-foreground";
+	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-monti-muted text-monti-body transition-all hover:text-monti-default monti-dark:text-monti-muted monti-dark:hover:text-monti-default";
 const TAB_TRIGGER_ACTIVE =
-	"border-monti-border! bg-monti-background text-monti-foreground shadow-monti-pop monti-dark:border-monti-input monti-dark:bg-monti-input/30 monti-dark:text-monti-foreground";
+	"border-monti-border! bg-monti-page text-monti-default shadow-monti-floating monti-dark:border-monti-default monti-dark:text-monti-default";
 
 const labelOf = (values: Readonly<Record<string, unknown>>) => (typeof values.label === "string" ? values.label : "");
 
@@ -83,7 +83,7 @@ export function TabsNodeView() {
 				<div
 					role="tablist"
 					aria-label={t("list")}
-					className="relative inline-flex h-9 w-fit max-w-full items-center rounded-lg rounded-b-none border bg-monti-muted p-[3px] text-monti-muted-foreground"
+					className="relative inline-flex h-9 w-fit max-w-full items-center rounded-lg rounded-b-none border bg-monti-neutral p-[3px] text-monti-muted"
 				>
 					{labels.map((label, index) =>
 						renaming === index ? (
@@ -119,10 +119,13 @@ export function TabsNodeView() {
 							</button>
 						),
 					)}
-					<span className="pointer-events-none absolute right-0 -bottom-1 left-0 inline-block h-1 bg-monti-muted" />
+					<span className="pointer-events-none absolute right-0 -bottom-1 left-0 inline-block h-1 bg-monti-neutral" />
 				</div>
 			</div>
-			<Content visibleChild={current} className="rounded-b-lg rounded-tr-lg border bg-monti-muted px-4 py-3 text-sm" />
+			<Content
+				visibleChild={current}
+				className="rounded-b-lg rounded-tr-lg border bg-monti-neutral px-4 py-3 text-monti-body"
+			/>
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addTab}>

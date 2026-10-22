@@ -110,12 +110,12 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FormFieldLabel htmlFor={id} className="font-medium text-monti-label">
-			{label} {required && <span className="text-monti-destructive">*</span>}
+		<FormFieldLabel htmlFor={id} className="text-monti-label">
+			{label} {required && <span className="text-monti-danger">*</span>}
 		</FormFieldLabel>
 	);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
+		<UiField data-invalid={Boolean(issue) || undefined} className="gap-2">
 			{aside ? (
 				<div className="flex min-h-6 items-center justify-between gap-2">
 					{labelNode}
@@ -124,7 +124,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			) : (
 				labelNode
 			)}
-			{help && <FormFieldDescription className="text-monti-caption leading-tight">{help}</FormFieldDescription>}
+			{help && <FormFieldDescription className="text-monti-caption">{help}</FormFieldDescription>}
 			{children}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
 		</UiField>
@@ -144,10 +144,10 @@ function SlotFieldRow({
 	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
+		<UiField data-invalid={Boolean(issue) || undefined} className="gap-2">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<FormFieldLabel htmlFor={id} className="font-medium text-monti-label">
-					{label} {required && <span className="text-monti-destructive">*</span>}
+				<FormFieldLabel htmlFor={id} className="text-monti-label">
+					{label} {required && <span className="text-monti-danger">*</span>}
 				</FormFieldLabel>
 				{aside || trigger ? (
 					<span className="flex items-center gap-1">
@@ -156,7 +156,7 @@ function SlotFieldRow({
 					</span>
 				) : null}
 			</div>
-			{help && <FormFieldDescription className="text-monti-caption leading-tight">{help}</FormFieldDescription>}
+			{help && <FormFieldDescription className="text-monti-caption">{help}</FormFieldDescription>}
 			{children}
 			{panel}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
@@ -381,7 +381,7 @@ function ValueRowView({
 				const excerpt = bodyExcerpt(site, currentDoc, length);
 				field.setValue(excerpt);
 			}}
-			className="text-monti-muted-foreground hover:text-monti-foreground"
+			className="text-monti-muted hover:text-monti-default"
 		>
 			<RefreshCw aria-hidden className="size-3" />
 		</IconButton>
@@ -619,8 +619,8 @@ export function SchemaFields({
 						);
 					}
 					return (
-						<section key={key} aria-label={group.group} className="space-y-4 border-monti-border border-t pt-5">
-							<h3 className="font-medium text-monti-label">{group.group}</h3>
+						<section key={key} aria-label={group.group} className="space-y-4 border-monti-muted border-t pt-4">
+							<h3 className="text-monti-label">{group.group}</h3>
 							{visible.map(renderField)}
 						</section>
 					);
@@ -666,7 +666,7 @@ function LayoutSection({
 			<FormFieldSet className="gap-3">
 				<FormFieldLegend variant="label" className="mb-0">
 					<CollapsibleTrigger
-						render={<Button type="button" variant="ghost" size="xs" className="-ml-2 font-medium text-monti-label" />}
+						render={<Button type="button" variant="ghost" size="xs" className="-ml-2 text-monti-label" />}
 					>
 						<ChevronRight className={`transition-transform ${open ? "rotate-90" : ""}`} />
 						{title}

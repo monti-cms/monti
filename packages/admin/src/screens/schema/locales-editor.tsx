@@ -91,7 +91,7 @@ function TimeZonePick({
 						{(zone: string) => (
 							<ComboboxItem key={zone} value={zone}>
 								<span className="truncate">{zone}</span>
-								<span className="ml-auto text-monti-muted-foreground text-xs">{offsetOf(zone)}</span>
+								<span className="ml-auto text-monti-caption text-monti-muted">{offsetOf(zone)}</span>
 							</ComboboxItem>
 						)}
 					</ComboboxList>
@@ -237,17 +237,17 @@ function LocaleDialog({
 												autoFocus
 												className={cn(
 													"w-full justify-between font-normal",
-													!code && "text-monti-muted-foreground",
-													code !== "" && !codeOk && "border-monti-destructive text-monti-destructive",
+													!code && "text-monti-muted",
+													code !== "" && !codeOk && "border-monti-danger text-monti-danger",
 												)}
 											/>
 										}
 									>
 										{code ? (
 											<span className="flex items-center gap-2 truncate">
-												<span className="font-mono font-semibold text-xs">{code}</span>
+												<span className="font-mono font-semibold text-monti-caption">{code}</span>
 												{nativeNameOf(code) && (
-													<span className="text-monti-muted-foreground text-xs">{nativeNameOf(code)}</span>
+													<span className="text-monti-caption text-monti-muted">{nativeNameOf(code)}</span>
 												)}
 											</span>
 										) : (
@@ -279,8 +279,8 @@ function LocaleDialog({
 																	setOpen(false);
 																}}
 															>
-																<span className="font-mono font-semibold text-xs">{known}</span>
-																{native && <span className="ml-1 text-monti-muted-foreground text-xs">{native}</span>}
+																<span className="font-mono font-semibold text-monti-caption">{known}</span>
+																{native && <span className="ml-1 text-monti-caption text-monti-muted">{native}</span>}
 															</CommandItem>
 														);
 													})}
@@ -294,7 +294,7 @@ function LocaleDialog({
 																setOpen(false);
 															}}
 														>
-															<Plus className="size-4 shrink-0 text-monti-muted-foreground" />
+															<Plus className="size-4 shrink-0 text-monti-muted" />
 															<span>{t("locales.codeCustom", { code: trimmedSearch })}</span>
 														</CommandItem>
 													</CommandGroup>
@@ -359,8 +359,8 @@ function LocaleRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative flex min-h-14 items-center gap-3.5 bg-monti-card py-2 pr-4 pl-9",
-				isDragging && "z-10 opacity-80 shadow-md",
+				"group/row relative flex min-h-14 items-center gap-3 bg-monti-surface py-2 pr-4 pl-8",
+				isDragging && "z-10 opacity-80 shadow-monti-floating",
 			)}
 			data-testid={`locale-${locale.code}`}
 		>
@@ -371,24 +371,24 @@ function LocaleRow({
 				{...listeners}
 				aria-label={t("locales.drag", { name: displayName })}
 				disabled={dragDisabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
-			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-muted px-1.5 font-mono text-xs">
+			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-neutral px-2 font-mono text-monti-caption">
 				{locale.code}
 			</span>
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
-					<span className="truncate font-medium text-sm">{displayName}</span>
+					<span className="truncate font-medium text-monti-body">{displayName}</span>
 					{isDefault && (
-						<span className="rounded-sm bg-monti-accent px-1.5 py-px text-monti-foreground text-xs">
+						<span className="rounded-sm bg-monti-selected px-2 py-px text-monti-caption text-monti-default">
 							{t("locales.defaultBadge")}
 						</span>
 					)}
 				</div>
 				{hasDistinctNative && (
-					<div className="truncate text-monti-muted-foreground text-xs">
+					<div className="truncate text-monti-caption text-monti-muted">
 						{t("locales.nativeName", { name: locale.name })}
 					</div>
 				)}
@@ -444,7 +444,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
 				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-						<span className="flex items-center gap-1.5 text-monti-muted-foreground text-sm">
+						<span className="flex items-center gap-2 text-monti-body text-monti-muted">
 							{t("locales.count", { count: locales.length })}
 							{revertKey("locales") && (
 								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />

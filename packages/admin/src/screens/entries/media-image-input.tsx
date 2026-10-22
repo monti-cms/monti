@@ -57,7 +57,7 @@ export function MediaThumbnail({ mediaId, className }: { mediaId: string; classN
 	return url ? (
 		<img src={url} alt="" className={cn("object-cover", className)} />
 	) : (
-		<div className={cn("flex items-center justify-center bg-monti-muted text-monti-muted-foreground", className)}>
+		<div className={cn("flex items-center justify-center bg-monti-neutral text-monti-muted", className)}>
 			<ImageIcon aria-hidden className="size-4" />
 		</div>
 	);
@@ -81,7 +81,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	const mediaId = typeof value === "string" ? value : "";
 	return (
 		<>
-			<div className="flex items-center gap-1.5">
+			<div className="flex items-center gap-2">
 				{mediaId && <MediaThumbnail mediaId={mediaId} className="aspect-[1.91/1] h-7 shrink-0 rounded-md border" />}
 				<Button
 					id={id}
@@ -163,10 +163,10 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 	};
 	return (
 		<>
-			<div className="flex items-center gap-1.5">
+			<div className="flex items-center gap-2">
 				{mediaId && (
 					<span className="flex min-w-0 flex-1 items-center gap-1 text-monti-caption">
-						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted-foreground" />
+						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
 						<span className="truncate">{filename ?? mediaId}</span>
 					</span>
 				)}

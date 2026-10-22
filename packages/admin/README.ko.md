@@ -500,8 +500,10 @@ import "@monti-cms/admin/styles.css";
 
 묶음이 주는 것(모두 `monti` 이름표가 붙어 앱의 이름과 겹치지 않는다):
 
-- **색 이름.** `bg-monti-background`·`text-monti-muted-foreground`·`border-monti-border` 같은 `monti-*` 색(값은 `--monti-*` 변수). 앱의 shadcn
-  이름(`bg-background` 등)과 변수(`--background` 등)는 건드리지 않는다. `--monti-*`는 관리자 화면이 있는 문서에만 걸린다.
+- **디자인 시스템, 그것만.** 속성마다 나뉜 색 역할(`bg-monti-surface`, `text-monti-muted`, `border-monti-default` 등), 글자 역할(`text-monti-caption` 등), 그림자 하나
+  (`shadow-monti-floating`), 모서리 네 단계, 굵기 세 단계다. Tailwind 자체의 팔레트·글자 크기·굵기·그림자·자간·줄 간격은 묶음에서 뺐으므로, 시스템 밖의 클래스(`text-xs`, `bg-red-500`)는
+  아무 CSS도 만들지 않는다. 관리자와 1차 플러그인에 그런 클래스가 있으면 테스트가 그 자리를 짚는다. 앱의 shadcn 이름(`bg-background` 등)과 변수(`--background` 등)는 건드리지 않는다.
+  `--monti-*`는 관리자 화면이 있는 문서에만 걸린다.
 - **변형.** `monti-dark:`는 `html`(또는 상위 요소)의 `.dark` 또는 `[data-theme="dark"]`일 때, `monti-horizontal:`·`monti-vertical:`은 Base UI의
   `data-orientation`일 때다. 앱의 `dark`·`data-horizontal` 정의와 따로 논다. 앱이 어떤 테마 방식(클래스·`data-theme`)을 쓰든 관리자 화면의
   어두운 테마가 따라간다.
@@ -530,112 +532,94 @@ import "@monti-cms/admin/styles.css";
 
 ## 관리자 테마
 
-사이트는 CSS 사용자 정의 속성을 덮어써서 관리자 화면의 테마를 바꾼다. 아래 토큰이 공개 계약이다. 이름과 뜻을 안정적으로 유지하고, 관리자 컴포넌트는 `--monti-*` 이름만 읽으므로
-사이트 자신의 변수(`--primary`, `--background` 등)가 섞여 들어오지 않고 다른 곳은 건드릴 필요가 없다. 정하지 않은 토큰은 기본값을 쓴다.
+관리자는 디자인 시스템 하나로 만든다(`styles/theme.css`, 값은 `styles/admin.css`). 사이트는 그 CSS 사용자 정의 속성을 덮어써서 테마를 바꾼다. 아래 이름이 공개 계약이다.
 
 기본값은 우선순위가 0이다(`:where(...)`). 그래서 사이트의 평범한 `:root { ... }` 규칙이 스타일시트를 어떤 순서로 불러오든 이긴다. 관리자는 `color-scheme`도 정한다(`light`, 그리고 `html`의
 `.dark` 또는 `[data-theme="dark"]` 아래에서는 `dark`. 관리자가 어두운 테마를 알아보는 두 방식이다). 그래서 `light-dark()`가 모드마다 알맞은 값을 고르고, 두 모드를 한 줄에 쓸 수 있다.
 
+### 색: 단계, 그다음 역할
+
+색은 두 층이다.
+
+1. **단계**, 원래 값이다. `--monti-gray-1`~`--monti-gray-12`(1 가장 옅은 바탕, 2 들어간 영역, 3 요소 바탕과 마우스 올림, 4 누름과 선택, 6 입력 칸 테두리, 8 진한 테두리, 9 안내 글자,
+   11 보조 글자, 12 글자와 채운 버튼), 그리고 색 네 가지를 다섯 단계씩: `--monti-accent-*`, `--monti-danger-*`, `--monti-warning-*`, `--monti-success-*`. `3` 옅은 바탕, `6` 옅은 테두리,
+   `9` 채움, `10` 채움 위 마우스, `11` 글자다. 강조색은 코발트(`#2f54eb`, 어두운 테마 `#7b93ff`)이고 조작 상태에만 쓴다: 링크, 포커스, 현재 탭과 사이드바 항목, 체크된 컨트롤, 에디터 선택.
+2. **역할**, 화면이 쓰는 이름이다. 단계를 가리키는 역할은 한 번만 선언하므로, **단계 하나를 덮어쓰면 그 단계를 쓰는 모든 역할이 두 모드 모두에서 바뀐다**.
+
+| 속성 | 역할(`--monti-…`) | 클래스 |
+| --- | --- | --- |
+| 바탕 | `bg-page`, `bg-surface`(카드), `bg-inset`(사이드바, 들어간 영역), `bg-overlay`(메뉴, 대화상자), `bg-emphasis`와 `bg-emphasis-hover`(채운 버튼), `bg-hover`, `bg-active`, `bg-selected`, `bg-neutral`(칩), `bg-{accent,danger,warning,success}-muted`와 `-emphasis` | `bg-monti-page`, `bg-monti-surface`, … |
+| 글자 | `fg-default`, `fg-muted`, `fg-subtle`(안내 글자와 비활성만), `fg-on-emphasis`, `fg-{accent,danger,warning,success}` | `text-monti-default`, `text-monti-muted`, … |
+| 테두리 | `border-muted`(가는 선), `border-default`(입력 칸), `border-emphasis`, `border-focus`, `border-accent`, `border-danger`, `border-{accent,danger,warning,success}-muted` | `border-monti-muted`, `ring-monti-focus`, … |
+| 그림자 | `shadow-floating`(메뉴, 팝오버, 대화상자, 알림. 카드는 테두리만 쓴다) | `shadow-monti-floating` |
+
+모드마다 자기 값을 갖는 역할은 `bg-page`, `bg-surface`, `bg-overlay`, `bg-emphasis-hover`, `fg-on-emphasis`, `shadow-floating`이다. 색은 어떤 CSS 색이든 된다.
+
 ```css
 /* app/globals.css: 사이트의 아무 스타일시트나 된다. @monti-cms/admin/styles.css 앞뒤 어느 쪽이든 괜찮다 */
 :root {
-	--monti-primary: light-dark(#0d9488, #2dd4bf);
-	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
-	--monti-ring: light-dark(#14b8a6, #5eead4);
+	/* 청록 강조색: 링크, 포커스 링, 현재 탭, 선택이 모두 따라온다. */
+	--monti-accent-3: light-dark(#e6f7f5, #0d2624);
+	--monti-accent-6: light-dark(#a6e0d9, #1c4a45);
+	--monti-accent-9: light-dark(#0d9488, #2dd4bf);
+	--monti-accent-10: light-dark(#0b7f75, #5eead4);
+	--monti-accent-11: light-dark(#0f766e, #5eead4);
 	--monti-radius: 0.5rem;
 }
 ```
 
-**평범한 값은 두 모드에 모두 적용된다.** 기본값은 밝은 모드와 어두운 모드 모두 우선순위가 0이라, `:root { --monti-background: #fff; }`는 어두운 기본값도 덮어쓴다. 위처럼 `light-dark()`로 쓰거나,
-어두운 테마용으로 같은 토큰을 한 번 더 정한다.
+**평범한 값은 두 모드에 다 걸린다.** 기본값은 밝은 테마와 어두운 테마 *둘 다* 우선순위가 0이라서, `:root { --monti-gray-12: #111; }`는 어두운 테마의 기본값도 바꾼다. 위처럼 `light-dark()`로 쓰거나,
+`.dark, [data-theme="dark"]` 아래에서 한 번 더 정한다.
+
+### 글자, 모서리, 글꼴
+
+글자 역할은 크기, 줄 간격, 굵기를 한 번에 정한다. 크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 사이트가 덮어쓰는 토큰이 아니라 클래스다.
+
+- `micro`(11/14, 500): 개수, 단축키 안내, 배지 숫자만
+- `caption`(12/16, 400): 메타 정보, 시간, 도움말, 표 머리
+- `label`(13/18, 500): 버튼, 메뉴 항목, 탭, 사이드바 항목, 입력 칸 이름
+- `body`(14/20, 400): 기본 글자, 입력 칸, 설명
+- `reading`(16/28, 400): 긴 글: 에디터 본문과 소스 창
+- `title`(16/22, 600): 섹션, 패널, 대화상자, 카드 제목
+- `heading`(20/28, 600): 화면 제목
+- `display`(34/40, 600): 에디터와 소스 창의 글 제목
+
+| 토큰 | 정하는 것 |
+| --- | --- |
+| `--monti-radius` | 기본 모서리 반경(기본값 `6px`). 칩 2px, 컨트롤 4px, 카드와 메뉴 6px, 대화상자 8px이 여기서 계산된다. `:root`에 한 번만 정하고 어두운 테마 값은 없다 |
+| `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드와 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
+
+간격은 4px 단계(0, 2, 4, 8, 12, 16, 24, 32, 48px)를 쓴다. 확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(뜻으로 고르는 간격: tight, condensed, normal, comfortable, spacious,
+section)과 위의 클래스로 만든다.
+
+### shadcn 테마 다시 쓰기
+
+shadcn 테마가 있는 사이트는 역할이 그 테마를 가리키게 할 수 있다. shadcn은 `.dark` 아래에서 변수를 바꾸므로, 두 번째 블록 없이도 관리자가 사이트의 어두운 테마를 따른다.
 
 ```css
 :root {
-	--monti-primary: #0d9488;
-}
-.dark,
-[data-theme="dark"] {
-	--monti-primary: #2dd4bf;
-}
-```
-
-면을 칠하는 색 토큰에는 그 위의 글자 색인 `-foreground`가 짝으로 있다. 값은 어떤 CSS 색이든 된다. 다른 토큰을 그대로 따르기만 하는 토큰은 파생되므로, 기준 토큰을 정하면 함께 바뀐다. 따로 정하는 것은
-달라지고 싶을 때뿐이다. 역할별 토큰은 다음과 같다.
-
-| 역할 | 토큰 | 칠하는 곳 |
-| --- | --- | --- |
-| 바탕 | `--monti-background`, `--monti-foreground` | 관리자 뒤쪽 바탕과 기본 글자 |
-| | `--monti-card`, `--monti-card-foreground` | 패널과 카드(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
-| | `--monti-popover`, `--monti-popover-foreground` | 메뉴, 대화상자, 툴팁 같은 팝업(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
-| 글자 | `--monti-muted-foreground` | 보조 글자: 안내, 라벨, 자리 표시 문구 |
-| 주색 | `--monti-primary`, `--monti-primary-foreground` | 주 버튼, 체크된 컨트롤, 선택 영역 |
-| 보조색 | `--monti-secondary`, `--monti-secondary-foreground` | 보조 버튼과 칩(`--monti-secondary`는 정하지 않으면 `--monti-muted`를, `-foreground`는 `--monti-foreground`를 따른다) |
-| 흐린 면과 강조 | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | 조용한 배경(코드, 비활성 영역)과 행·메뉴 항목의 호버·강조 배경(`--monti-accent-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
-| 강조 | `--monti-highlight`, `--monti-highlight-soft` | 상호작용 상태에만 쓰는 단 하나의 강조색: 링크, 포커스 링, 현재 탭과 사이드바 항목, 체크된 컨트롤, 에디터 선택 영역. 라이트 `#2f54eb`, 다크 `#7b93ff`(두 모드 모두 배경 위 글자 대비 4.5:1 이상). 버튼은 `--monti-primary`를 유지한다. `-soft`는 선택 영역의 옅은 배경(정하지 않으면 `--monti-highlight`를 따른다) |
-| 상태 | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | 오류와 삭제 동작. `-soft`는 옅게 물든 배경(정하지 않으면 `--monti-destructive`를 따른다) |
-| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | 경고(`-soft`는 정하지 않으면 `--monti-warning`을 따른다) |
-| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | 성공과 발행된 상태(`-soft`는 정하지 않으면 `--monti-success`를 따른다) |
-| 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링(`--monti-ring`은 정하지 않으면 `--monti-highlight`를 따른다) |
-| 사이드바 | `--monti-sidebar`, `--monti-sidebar-foreground` | 내비게이션 사이드바와 그 글자 |
-| | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
-| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
-| | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링(`--monti-sidebar-ring`은 정하지 않으면 `--monti-ring`을 따른다) |
-| 글꼴 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴. `--monti-font-sans`는 화면 구성(기본값: Pretendard, 이어서 한글 대체 글꼴을 포함한 시스템 스택), `--monti-font-mono`는 코드와 소스 화면(기본값: IBM Plex Mono, 이어서 시스템 고정폭 스택) |
-| 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `6px`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
-
-### 글자 크기 체계
-
-크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 클래스는 `text-monti-<역할>`(크기 / 줄 높이)이며, 사이트가 덮어쓰는 토큰이 아니다.
-
-- `micro`(11/14): 카운터, 단축키 안내, 배지 숫자에만
-- `caption`(12/16): 메타 정보, 시각, 도움말과 힌트
-- `label`(13/18): 버튼, 메뉴 항목, 탭, 사이드바 항목, 표 셀, 필드 라벨
-- `body`(14/20): 기본 글, 입력창, 설명
-- `title`(16/22): 패널·대화상자·카드 제목, 상단 바의 화면 제목
-- `heading`(20/28): 화면 안의 제목
-- `display`(34/1.15): 편집기와 원문 창의 글 제목
-
-### shadcn 테마 재사용
-
-토큰 이름은 shadcn의 이름을 그대로 따른다. 그래서 이미 shadcn 테마가 있는 사이트는 관리자가 그 값을 가리키게 할 수 있다. shadcn은 `.dark` 아래에서 자기 변수를 바꾸므로, 두 번째 블록 없이도
-관리자가 사이트의 어두운 모드를 따라간다.
-
-```css
-:root {
-	--monti-background: var(--background);
-	--monti-foreground: var(--foreground);
-	--monti-card: var(--card);
-	--monti-card-foreground: var(--card-foreground);
-	--monti-popover: var(--popover);
-	--monti-popover-foreground: var(--popover-foreground);
-	--monti-primary: var(--primary);
-	--monti-primary-foreground: var(--primary-foreground);
-	--monti-secondary: var(--secondary);
-	--monti-secondary-foreground: var(--secondary-foreground);
-	--monti-muted: var(--muted);
-	--monti-muted-foreground: var(--muted-foreground);
-	--monti-accent: var(--accent);
-	--monti-accent-foreground: var(--accent-foreground);
-	--monti-destructive: var(--destructive);
-	--monti-border: var(--border);
-	--monti-input: var(--input);
-	--monti-ring: var(--ring);
-	--monti-sidebar: var(--sidebar);
-	--monti-sidebar-foreground: var(--sidebar-foreground);
-	--monti-sidebar-primary: var(--sidebar-primary);
-	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--monti-sidebar-accent: var(--sidebar-accent);
-	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--monti-sidebar-border: var(--sidebar-border);
-	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-bg-page: var(--background);
+	--monti-bg-surface: var(--card);
+	--monti-bg-overlay: var(--popover);
+	--monti-bg-emphasis: var(--primary);
+	--monti-fg-on-emphasis: var(--primary-foreground);
+	--monti-fg-default: var(--foreground);
+	--monti-fg-muted: var(--muted-foreground);
+	--monti-bg-neutral: var(--muted);
+	--monti-bg-hover: var(--accent);
+	--monti-bg-inset: var(--sidebar);
+	--monti-border-muted: var(--border);
+	--monti-border-default: var(--input);
+	--monti-border-focus: var(--ring);
+	--monti-danger-9: var(--destructive);
 	--monti-radius: var(--radius);
 }
 ```
 
-shadcn에는 경고·성공 색이 없으므로 그 토큰은 관리자 기본값을 쓴다. 사이트의 변수가 색 채널만 담은 값이라면(`--primary: 222 47% 11%` 같은 이전 방식) `hsl(var(--primary))`로 감싼다.
+shadcn에는 경고색과 성공색이 없으므로 그 둘은 관리자의 기본값을 쓴다. 사이트 변수가 채널 값만 담고 있으면(예전 `--primary: 222 47% 11%` 방식) `hsl(var(--primary))`로 감싼다.
 
-블록은 `--monti-callout-*`과 `--monti-chart-1`~`--monti-chart-5`를 더한다(`@monti-cms/blocks` 참고). 테마는 관리자를 밝은 모드와 어두운 모드로 열어 확인한다. 나머지
-(어두운 변형, 옅은 색, 호버 상태)는 이 토큰에서 파생된다. 설정 옵션은 없다. 위 CSS가 인터페이스의 전부다.
+블록은 `--monti-callout-*`와 `--monti-chart-1`~`--monti-chart-5`를 더한다(`@monti-cms/blocks` 참고). 테마를 확인하려면 관리자를 밝은 테마와 어두운 테마로 열어 본다. 설정 항목은 없다. 위 CSS가
+인터페이스의 전부다.
 
 ## 개발
 

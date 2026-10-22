@@ -159,9 +159,9 @@ export function StatusItemsProvider({ items, children }: { items: StatusItems; c
 type Tone = "default" | "warning" | "danger";
 
 const toneClass: Record<Tone, string> = {
-	default: "text-monti-muted-foreground",
-	warning: "text-monti-warning-foreground",
-	danger: "text-monti-destructive-foreground",
+	default: "text-monti-muted",
+	warning: "text-monti-warning",
+	danger: "text-monti-danger",
 };
 
 interface StatusBarItemBase {
@@ -212,9 +212,9 @@ export type StatusBarItemProps = StatusBarItemBase &
 	);
 
 const itemClass =
-	"flex h-5 shrink-0 items-center gap-1 rounded-sm px-1.5 text-monti-caption whitespace-nowrap tabular-nums";
+	"flex h-5 shrink-0 items-center gap-1 rounded-sm px-2 text-monti-caption whitespace-nowrap tabular-nums";
 const interactiveClass =
-	"cursor-pointer outline-none hover:bg-monti-sidebar-accent hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring data-popup-open:bg-monti-sidebar-accent data-popup-open:text-monti-foreground";
+	"cursor-pointer outline-none hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus data-popup-open:bg-monti-selected data-popup-open:text-monti-default";
 
 // Which group the item sits in decides which edge its popup lines up with.
 const AlignContext = createContext<"start" | "end">("start");
@@ -312,9 +312,9 @@ export function StatusPopoverHeader({
 }) {
 	const close = useContext(PopoverCloseContext);
 	const buttonClass =
-		"h-6 shrink-0 rounded-sm px-2 font-medium text-monti-highlight-foreground outline-none hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring";
+		"h-6 shrink-0 rounded-sm px-2 font-medium text-monti-accent outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus";
 	return (
-		<div className="flex items-center justify-between gap-3 px-3 py-1.5">
+		<div className="flex items-center justify-between gap-3 px-3 py-2">
 			<h2 className="min-w-0 truncate font-medium">{title}</h2>
 			{action?.href ? (
 				<a
@@ -365,17 +365,15 @@ export function StatusPopoverRow({
 	const close = useContext(PopoverCloseContext);
 	const classes = cn(
 		"flex w-full items-baseline justify-between gap-3 px-3 py-1 text-left",
-		(href || onClick) && "cursor-pointer outline-none hover:bg-monti-muted focus-visible:bg-monti-muted",
+		(href || onClick) && "cursor-pointer outline-none hover:bg-monti-hover focus-visible:bg-monti-hover",
 	);
 	const body = (
 		<>
-			<span className={cn("min-w-0 break-words", tone === "default" ? "text-monti-foreground" : toneClass[tone])}>
+			<span className={cn("min-w-0 break-words", tone === "default" ? "text-monti-default" : toneClass[tone])}>
 				{label}
 			</span>
 			{value !== undefined && value !== null && (
-				<span className="max-w-[60%] shrink-0 break-words text-right font-mono text-monti-muted-foreground">
-					{value}
-				</span>
+				<span className="max-w-[60%] shrink-0 break-words text-right font-mono text-monti-muted">{value}</span>
 			)}
 		</>
 	);
@@ -517,13 +515,13 @@ function PublishReadinessPopover({ readiness }: { readiness: NonNullable<EditorS
 				title={t("title")}
 				action={{ label: t("recheck"), onClick: readiness.recheck, keepOpen: true }}
 			/>
-			{stale && <p className="px-3 py-1 text-monti-muted-foreground">{t("staleHint")}</p>}
-			{checking && <StatusPopoverRow label={<span className="text-monti-muted-foreground">{t("checking")}</span>} />}
+			{stale && <p className="px-3 py-1 text-monti-muted">{t("staleHint")}</p>}
+			{checking && <StatusPopoverRow label={<span className="text-monti-muted">{t("checking")}</span>} />}
 			{!checking && result && result.issues.length === 0 && <StatusPopoverRow label={t("nothingToFix")} />}
 			{result?.issues.map((issue) => row(issue, "warning"))}
 			{result && result.warnings.length > 0 && (
 				<>
-					<p className="px-3 pt-2 pb-0.5 text-monti-muted-foreground">{t("warningsHeading")}</p>
+					<p className="px-3 pt-2 pb-0.5 text-monti-muted">{t("warningsHeading")}</p>
 					{result.warnings.map((issue) => row(issue, "default"))}
 				</>
 			)}
@@ -634,9 +632,7 @@ function BodyStatsItem() {
 					<StatusPopoverRow label={t("popover.body.paragraphs")} value={bodyStats.paragraphs.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.headings")} value={bodyStats.headings.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.reading", { minutes: editor.readingMinutes })} />
-					<p className="px-3 py-1 text-monti-muted-foreground">
-						{t("popover.body.rule", { rate: READING_CHARS_PER_MINUTE })}
-					</p>
+					<p className="px-3 py-1 text-monti-muted">{t("popover.body.rule", { rate: READING_CHARS_PER_MINUTE })}</p>
 				</>
 			}
 		>
@@ -677,7 +673,7 @@ function FailedDeliveriesPopover() {
 					label={
 						<>
 							{item.subscriber ?? item.change.kind}
-							<span className="block text-monti-muted-foreground">
+							<span className="block text-monti-muted">
 								{item.lastError ?? item.change.title ?? eventCollectionLabel(site, item.change.collection)}
 							</span>
 						</>
@@ -748,7 +744,7 @@ export function StatusBar({ context }: { context: StatusBarContextValue }) {
 			<section
 				aria-label={t("label")}
 				data-slot="status-bar"
-				className="flex h-6 shrink-0 items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-t bg-monti-sidebar px-2"
+				className="flex h-6 shrink-0 items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-t bg-monti-inset px-2"
 			>
 				<div className="flex min-w-0 items-center gap-1 overflow-hidden">
 					<AlignContext.Provider value="start">

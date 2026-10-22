@@ -779,7 +779,7 @@ codeBlock: {
 			label: "정보", // 줄 효과 메뉴 이름
 			icon: "star", // 메뉴 아이콘(lucide 이름, 관리자 화면에 등록된 이름)
 			class: "bg-primary/10", // 공개 화면이 그 줄에 붙이는 클래스(사이트 Tailwind가 읽는 곳에 둔다)
-			editor: { background: "bg-monti-primary/10" }, // 편집기 표시(관리자 색은 `monti-*`, 어두운 테마는 `monti-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
+			editor: { background: "bg-monti-accent-muted" }, // 편집기 표시(관리자 색 역할은 `monti-*`, 어두운 테마는 `monti-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
 		},
 	],
 },

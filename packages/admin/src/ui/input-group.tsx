@@ -13,7 +13,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="input-group"
 			role="group"
 			className={cn(
-				"group/input-group relative flex h-9 w-full min-w-0 items-center rounded-md border border-monti-input monti-dark:bg-monti-input/30 outline-none transition-[color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-monti-ring has-[[data-slot][aria-invalid=true]]:border-monti-destructive has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-monti-ring/50 has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-monti-destructive/20 monti-dark:has-[[data-slot][aria-invalid=true]]:ring-monti-destructive/40 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
+				"group/input-group relative flex h-9 w-full min-w-0 items-center rounded-md border border-monti-default outline-none transition-[color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-monti-focus has-[[data-slot][aria-invalid=true]]:border-monti-danger has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-monti-focus-soft has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-monti-danger monti-dark:has-[[data-slot][aria-invalid=true]]:ring-monti-danger has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
 				className,
 			)}
 			{...props}
@@ -22,7 +22,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const inputGroupAddonVariants = cva(
-	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-monti-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-sm [&>svg:not([class*='size-'])]:size-4",
+	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-monti-label text-monti-muted select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-sm [&>svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			align: {
@@ -61,7 +61,7 @@ function InputGroupAddon({
 	);
 }
 
-const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-none", {
+const inputGroupButtonVariants = cva("flex items-center gap-2 text-monti-body shadow-none", {
 	variants: {
 		size: {
 			xs: "h-6 gap-1 rounded-sm px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
@@ -100,7 +100,7 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span
 			className={cn(
-				"flex items-center gap-2 text-monti-muted-foreground text-sm [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none",
+				"flex items-center gap-2 text-monti-body text-monti-muted [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none",
 				className,
 			)}
 			{...props}
@@ -116,7 +116,7 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<"input">)
 				"flex-1 rounded-none border-0 bg-transparent monti-dark:bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0",
 				// Effectively stops background color changes, so the autofill background does not paint only the inner input and clash with the group's border and buttons
 				// (the input stays transparent and shows the group background). Text color also uses the theme color.
-				"autofill:[-webkit-text-fill-color:var(--monti-foreground)] autofill:[transition:background-color_100000s_ease-in-out_0s]",
+				"autofill:[-webkit-text-fill-color:var(--monti-fg-default)] autofill:[transition:background-color_100000s_ease-in-out_0s]",
 				className,
 			)}
 			{...props}

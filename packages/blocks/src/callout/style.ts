@@ -26,7 +26,7 @@ const TITLE_BY_VARIANT: Record<CalloutVariant, string> = {
  * `.monti-callout`, accent color variable `--monti-callout-<variant>`). The public callout is drawn by the site.
  */
 export const CALLOUT_BOX_CLASS = [
-	"monti-callout relative block w-full rounded-lg border px-4 py-3 text-sm",
+	"monti-callout relative block w-full rounded-lg border px-4 py-3 text-monti-body",
 	"[&>svg]:size-4 [&>svg]:translate-y-0.5",
 ].join(" ");
 

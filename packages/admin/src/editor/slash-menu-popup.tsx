@@ -58,7 +58,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-popover p-1 text-monti-popover-foreground shadow-lg"
+			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-1 text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -73,16 +73,16 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none",
-						index === selectedIndex ? "bg-monti-accent text-monti-accent-foreground" : "hover:bg-monti-accent/50",
+						"flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 outline-none",
+						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>
-					<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-background text-monti-muted-foreground">
+					<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-page text-monti-muted">
 						<ItemIcon icon={item.icon} />
 					</span>
 					<span className="min-w-0">
-						<span className="block truncate font-medium text-sm">{item.title}</span>
-						<span className="block truncate text-monti-muted-foreground text-xs">{item.description}</span>
+						<span className="block truncate font-medium text-monti-body">{item.title}</span>
+						<span className="block truncate text-monti-caption text-monti-muted">{item.description}</span>
 					</span>
 				</div>
 			))}

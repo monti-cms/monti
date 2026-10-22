@@ -782,7 +782,7 @@ codeBlock: {
 			label: "Info", // line effect menu name
 			icon: "star", // menu icon (lucide name, a name registered in the admin UI)
 			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
-			editor: { background: "bg-monti-primary/10" }, // editor display (admin colors are `monti-*`, dark theme is `monti-dark:`): background, wavy (wavy underline color), marker({ text, className })
+			editor: { background: "bg-monti-accent-muted" }, // editor display (admin color roles are `monti-*`, dark theme is `monti-dark:`): background, wavy (wavy underline color), marker({ text, className })
 		},
 	],
 },

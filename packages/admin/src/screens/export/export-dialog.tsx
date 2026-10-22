@@ -39,7 +39,7 @@ function ExportDialogBody({
 			</DialogHeader>
 			<ExportFields form={form} selection noun={noun} />
 			{unsaved && (
-				<p className="text-monti-muted-foreground text-xs leading-relaxed" data-testid="export-unsaved">
+				<p className="text-monti-caption text-monti-muted" data-testid="export-unsaved">
 					{t("note.unsaved")}
 				</p>
 			)}

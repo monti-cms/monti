@@ -77,7 +77,7 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 			aria-hidden
 			{...(props ?? {})}
 			className={cn(
-				"flex size-6 items-center justify-center rounded-md border font-medium text-xs",
+				"flex size-6 items-center justify-center rounded-md border font-medium text-monti-caption",
 				props?.className,
 				// The background sample fills the rectangle completely (overriding the body background color's padding and corner rules).
 				kind === "bg" && "![padding:0] !rounded-md",
@@ -134,7 +134,7 @@ function SwatchRow({
 											applyTextColor(editor, kind, color);
 											onPicked?.();
 										}}
-										className="relative flex justify-center rounded-sm p-0.5 outline-none hover:bg-monti-accent focus-visible:ring-2 focus-visible:ring-monti-ring"
+										className="relative flex justify-center rounded-sm p-0.5 outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus"
 									/>
 								)
 							}
@@ -143,7 +143,7 @@ function SwatchRow({
 							{selected && (
 								<Check
 									aria-hidden
-									className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-monti-primary p-px text-monti-primary-foreground"
+									className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-monti-emphasis p-px text-monti-on-emphasis"
 								/>
 							)}
 						</TooltipTrigger>
@@ -177,9 +177,9 @@ export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?
 	const t = useTranslator(colorMessages);
 	return (
 		<div className="flex flex-col gap-1">
-			<p className="px-1 text-monti-muted-foreground">{t("fg.label")}</p>
+			<p className="px-1 text-monti-muted">{t("fg.label")}</p>
 			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
-			<p className="px-1 text-monti-muted-foreground">{t("bg.label")}</p>
+			<p className="px-1 text-monti-muted">{t("bg.label")}</p>
 			<SwatchRow editor={editor} kind="bg" variant="buttons" onPicked={onPicked} />
 		</div>
 	);

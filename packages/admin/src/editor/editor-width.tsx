@@ -79,7 +79,7 @@ export function EditorWidthMenu({
 			<IconButton
 				label={t("editorWidth.label")}
 				side="bottom"
-				className="text-monti-muted-foreground"
+				className="text-monti-muted"
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>

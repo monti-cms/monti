@@ -233,7 +233,7 @@ export function ImageInsertDialog({
 					</Tabs>
 
 					{tab === "upload" ? (
-						<div className="space-y-2 text-sm">
+						<div className="space-y-2 text-monti-body">
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
@@ -252,7 +252,7 @@ export function ImageInsertDialog({
 										/>
 										{t("imageDialog.optimize")}
 									</Label>
-									<p className="text-monti-muted-foreground text-xs" aria-live="polite">
+									<p className="text-monti-caption text-monti-muted" aria-live="polite">
 										{prepared?.optimized
 											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
 											: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
@@ -276,7 +276,7 @@ export function ImageInsertDialog({
 									library.length === 0 &&
 									["a", "b", "c"].map((key) => <Skeleton key={key} className="h-[6.25rem] w-full rounded-md" />)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert variant="destructive" className="col-span-3">
+									<Alert tone="danger" className="col-span-3">
 										<AlertDescription className="flex items-center justify-between gap-2">
 											{t("imageDialog.libraryFailed")}
 											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
@@ -286,7 +286,7 @@ export function ImageInsertDialog({
 									</Alert>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<p className="col-span-3 py-6 text-center text-monti-muted-foreground text-sm">
+									<p className="col-span-3 py-6 text-center text-monti-body text-monti-muted">
 										{t("imageDialog.libraryEmpty")}
 									</p>
 								)}
@@ -298,14 +298,14 @@ export function ImageInsertDialog({
 										aria-pressed={picked?.id === item.id}
 										onClick={() => pick(item)}
 										className={cn(
-											"h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left font-normal text-xs",
-											picked?.id === item.id && "ring-2 ring-monti-primary",
+											"h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left text-monti-caption",
+											picked?.id === item.id && "ring-2 ring-monti-focus",
 										)}
 									>
 										{item.publicUrl ? (
 											<img src={item.publicUrl} alt="" className="h-20 w-full object-cover" />
 										) : (
-											<span className="flex h-20 items-center justify-center bg-monti-muted">
+											<span className="flex h-20 items-center justify-center bg-monti-neutral">
 												{t("imageDialog.noPreview")}
 											</span>
 										)}
@@ -316,7 +316,7 @@ export function ImageInsertDialog({
 						</div>
 					)}
 
-					<div className={cn("space-y-2 text-sm", picking && "hidden")}>
+					<div className={cn("space-y-2 text-monti-body", picking && "hidden")}>
 						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
 						<Textarea
 							id={altId}
@@ -335,7 +335,7 @@ export function ImageInsertDialog({
 						/>
 						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 						{altLater && !decorative && !alt.trim() && (
-							<p id={altLaterId} className="text-monti-muted-foreground text-xs">
+							<p id={altLaterId} className="text-monti-caption text-monti-muted">
 								{t("imageDialog.altLater")}
 							</p>
 						)}
@@ -360,11 +360,11 @@ export function ImageInsertDialog({
 					</div>
 
 					{isUploading && (
-						<output className="flex items-center gap-2 text-sm">
+						<output className="flex items-center gap-2 text-monti-body">
 							<Spinner /> {t("imageDialog.uploading", { percent: progress ?? 0 })}
 						</output>
 					)}
-					{error && <FormFieldError className="text-sm">{error}</FormFieldError>}
+					{error && <FormFieldError className="text-monti-body">{error}</FormFieldError>}
 
 					<DialogFormFooter
 						onCancel={() => !isUploading && onClose()}

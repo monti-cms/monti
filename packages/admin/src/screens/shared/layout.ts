@@ -12,4 +12,4 @@ export const PAGE_MAX_WIDTH = "max-w-[1160px]";
 export const TREE_MAX_WIDTH = "max-w-[1000px]";
 
 /** The frame of the editor pane of a list-and-editor page: a centered column that reads well. */
-export const DETAIL_PANE_FRAME = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 text-sm";
+export const DETAIL_PANE_FRAME = "mx-auto flex w-full max-w-3xl flex-col gap-4 p-6 text-monti-body";

@@ -33,7 +33,7 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 	return (
 		<div className="flex flex-col gap-3" data-testid="export-summary">
 			{selection && (
-				<p className="font-medium text-base" data-testid="export-headline">
+				<p className="text-monti-title" data-testid="export-headline">
 					{summary.entries === 0
 						? t("summary.empty")
 						: [
@@ -48,13 +48,13 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 			)}
 			<dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
 				{stats.map(([key, count]) => (
-					<div key={key} className="flex items-baseline justify-between gap-3 border-b py-1.5 text-sm">
-						<dt className="text-monti-muted-foreground">{t(key as "count.entries")}</dt>
+					<div key={key} className="flex items-baseline justify-between gap-3 border-b py-2 text-monti-body">
+						<dt className="text-monti-muted">{t(key as "count.entries")}</dt>
 						<dd className="font-medium tabular-nums">{count}</dd>
 					</div>
 				))}
 			</dl>
-			<ul className="flex flex-col gap-1 text-monti-muted-foreground text-xs leading-relaxed">
+			<ul className="flex flex-col gap-1 text-monti-caption text-monti-muted">
 				{selection && summary.addedByTranslations > 0 && <li>{t("note.translations")}</li>}
 				{selection && summary.scope === "admin" && <li>{t("note.selection")}</li>}
 				{summary.notPublished > 0 && <li>{t("note.notPublished", { count: summary.notPublished })}</li>}
@@ -100,16 +100,16 @@ export function ExportFields({
 						onRetry={() => void summaryQuery.refetch()}
 					/>
 				) : (
-					<p className="text-monti-muted-foreground text-sm">{t("summary.loading")}</p>
+					<p className="text-monti-body text-monti-muted">{t("summary.loading")}</p>
 				)}
 			</section>
 
 			<fieldset className="flex flex-col gap-2" disabled={busy}>
-				<legend className="mb-1 font-medium text-sm">{t("scope.label")}</legend>
+				<legend className="mb-1 font-medium text-monti-body">{t("scope.label")}</legend>
 				{SCOPES.map((scope) => (
 					<label
 						key={scope}
-						className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm has-disabled:cursor-not-allowed has-checked:border-monti-primary has-checked:bg-monti-accent has-disabled:opacity-60"
+						className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-monti-body has-disabled:cursor-not-allowed has-checked:border-monti-emphasis has-checked:bg-monti-selected has-disabled:opacity-60"
 					>
 						<input
 							type="radio"
@@ -117,30 +117,30 @@ export function ExportFields({
 							value={scope}
 							checked={form.scope === scope}
 							onChange={() => form.setScope(scope)}
-							className="mt-0.5 accent-monti-primary"
+							className="mt-0.5 accent-monti-emphasis"
 						/>
 						<span className="flex flex-col gap-0.5">
 							<span className="font-medium">{t(`scope.${scope}`)}</span>
-							<span className="text-monti-muted-foreground text-xs leading-relaxed">{t(`scope.${scope}.hint`)}</span>
+							<span className="text-monti-caption text-monti-muted">{t(`scope.${scope}.hint`)}</span>
 						</span>
 					</label>
 				))}
 			</fieldset>
 
 			<fieldset className="flex flex-col gap-2" disabled={busy}>
-				<legend className="mb-1 font-medium text-sm">{t("formats.label")}</legend>
-				<div className="flex items-start gap-3 text-sm">
+				<legend className="mb-1 font-medium text-monti-body">{t("formats.label")}</legend>
+				<div className="flex items-start gap-3 text-monti-body">
 					<Checkbox checked disabled aria-label={t("formats.json")} className="mt-0.5" />
 					<span className="flex flex-col gap-0.5">
 						<span className="font-medium">{t("formats.json")}</span>
-						<span className="text-monti-muted-foreground text-xs leading-relaxed">{t("formats.json.hint")}</span>
+						<span className="text-monti-caption text-monti-muted">{t("formats.json.hint")}</span>
 					</span>
 				</div>
 				{formats.map((format) => (
 					<label
 						key={format.name}
 						htmlFor={`${formatId}-${format.name}`}
-						className="flex cursor-pointer items-start gap-3 text-sm"
+						className="flex cursor-pointer items-start gap-3 text-monti-body"
 					>
 						<Checkbox
 							id={`${formatId}-${format.name}`}
@@ -153,17 +153,17 @@ export function ExportFields({
 							<span className="font-medium">
 								{t("formats.text", { label: format.label, extension: format.extension })}
 							</span>
-							<span className="text-monti-muted-foreground text-xs leading-relaxed">{t("formats.text.hint")}</span>
+							<span className="text-monti-caption text-monti-muted">{t("formats.text.hint")}</span>
 						</span>
 					</label>
 				))}
-				{formats.length > 1 && <p className="text-monti-muted-foreground text-xs">{t("formats.one")}</p>}
+				{formats.length > 1 && <p className="text-monti-caption text-monti-muted">{t("formats.one")}</p>}
 				{formatsQuery.isSuccess && formats.length === 0 && (
-					<p className="text-monti-muted-foreground text-xs" data-testid="export-no-formats">
+					<p className="text-monti-caption text-monti-muted" data-testid="export-no-formats">
 						{t("formats.none")}
 					</p>
 				)}
-				{formatsQuery.isError && <p className="text-monti-muted-foreground text-xs">{t("formats.failed")}</p>}
+				{formatsQuery.isError && <p className="text-monti-caption text-monti-muted">{t("formats.failed")}</p>}
 			</fieldset>
 		</div>
 	);
@@ -175,8 +175,8 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 	if (!phase) return null;
 	const percent = phase.kind === "downloading" ? phase.percent : null;
 	return (
-		<output className="flex flex-col gap-1.5" data-testid="export-progress">
-			<div className="flex items-center gap-2 text-monti-muted-foreground text-sm">
+		<output className="flex flex-col gap-2" data-testid="export-progress">
+			<div className="flex items-center gap-2 text-monti-body text-monti-muted">
 				<Spinner aria-hidden className="size-3.5" />
 				{phase.kind === "building"
 					? t("progress.building")
@@ -184,12 +184,12 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 						? t("progress.downloadingUnknown")
 						: t("progress.downloading", { percent })}
 			</div>
-			<div className="h-1 overflow-hidden rounded-sm bg-monti-muted">
+			<div className="h-1 overflow-hidden rounded-sm bg-monti-neutral">
 				<div
 					className={
 						percent === null
-							? "h-full w-1/3 animate-pulse rounded-sm bg-monti-primary"
-							: "h-full rounded-sm bg-monti-primary transition-[width]"
+							? "h-full w-1/3 animate-pulse rounded-sm bg-monti-emphasis"
+							: "h-full rounded-sm bg-monti-emphasis transition-[width]"
 					}
 					style={percent === null ? undefined : { width: `${percent}%` }}
 				/>

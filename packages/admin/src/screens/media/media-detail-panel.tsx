@@ -36,8 +36,8 @@ import { mediaMessages } from "./messages";
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<section className="space-y-3 border-monti-border border-t px-4 py-4">
-			<h3 className="font-medium text-monti-label">{title}</h3>
+		<section className="space-y-3 border-monti-muted border-t px-4 py-4">
+			<h3 className="text-monti-label">{title}</h3>
 			{children}
 		</section>
 	);
@@ -47,7 +47,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="space-y-0.5">
-			<dt className="text-monti-caption text-monti-muted-foreground">{label}</dt>
+			<dt className="text-monti-caption text-monti-muted">{label}</dt>
 			<dd className="break-all">{children}</dd>
 		</div>
 	);
@@ -180,26 +180,23 @@ export function MediaDetailPanel({
 	return (
 		<aside
 			aria-label={t("detail.label")}
-			className={cn(
-				"flex h-full flex-col border-monti-border border-l bg-monti-background text-monti-label",
-				className,
-			)}
+			className={cn("flex h-full flex-col border-monti-muted border-l bg-monti-page text-monti-label", className)}
 		>
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="space-y-3 p-4">
-					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-border bg-monti-muted/50">
+					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-inset">
 						{isImage && media.publicUrl ? (
 							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
 						) : (
-							<span className="flex flex-col items-center gap-2 text-monti-muted-foreground">
+							<span className="flex flex-col items-center gap-2 text-monti-muted">
 								<MediaThumb media={media} iconClassName="size-12" />
 								<span className="font-medium">{fileTypeLabel(media.filename, media.mimeType)}</span>
 							</span>
 						)}
 					</div>
-					<div className="flex flex-wrap gap-1.5">
+					<div className="flex flex-wrap gap-2">
 						{media.publicUrl && (
 							<>
 								<Button
@@ -258,7 +255,7 @@ export function MediaDetailPanel({
 											<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
 											{isImage && trigger}
 										</div>
-										<div className="flex items-center gap-1.5">
+										<div className="flex items-center gap-2">
 											<Input
 												id={nameFieldId}
 												value={stem}
@@ -272,10 +269,7 @@ export function MediaDetailPanel({
 												className="h-8 min-w-0 flex-1 rounded-md font-mono text-monti-label md:text-monti-label"
 											/>
 											{extension && (
-												<span
-													className="shrink-0 text-monti-muted-foreground"
-													title={t("detail.filename.extensionKept")}
-												>
+												<span className="shrink-0 text-monti-muted" title={t("detail.filename.extensionKept")}>
 													{extension}
 												</span>
 											)}
@@ -357,7 +351,7 @@ export function MediaDetailPanel({
 
 				{isImage && (
 					<Section title={t("detail.section.defaults")}>
-						<p className="text-monti-muted-foreground">{t("detail.defaultsHelp")}</p>
+						<p className="text-monti-muted">{t("detail.defaultsHelp")}</p>
 						<form
 							className="space-y-3"
 							onSubmit={(event) => {
@@ -419,18 +413,18 @@ export function MediaDetailPanel({
 
 				<Section title={t("detail.section.usage", { count: usageCount(media) })}>
 					{media.referencesCount === 0 ? (
-						<p className="text-monti-muted-foreground">{t("detail.noUsage")}</p>
+						<p className="text-monti-muted">{t("detail.noUsage")}</p>
 					) : (
 						<ul className="space-y-1">
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
 									<a
 										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
-										className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-monti-accent"
+										className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-monti-hover"
 									>
 										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
 										{usage.note && (
-											<span className="shrink-0 text-monti-caption text-monti-muted-foreground">
+											<span className="shrink-0 text-monti-caption text-monti-muted">
 												{usageNoteLabel(t, usage.note)}
 											</span>
 										)}
@@ -442,7 +436,7 @@ export function MediaDetailPanel({
 				</Section>
 			</div>
 
-			<div className="shrink-0 space-y-1.5 border-monti-border border-t px-4 py-3">
+			<div className="shrink-0 space-y-2 border-monti-muted border-t px-4 py-3">
 				<Button
 					type="button"
 					variant="destructive"
@@ -454,7 +448,7 @@ export function MediaDetailPanel({
 					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
 				</Button>
 				{media.referencesCount > 0 && (
-					<p className="text-center text-monti-caption text-monti-muted-foreground">{t("detail.inUse")}</p>
+					<p className="text-center text-monti-caption text-monti-muted">{t("detail.inUse")}</p>
 				)}
 			</div>
 		</aside>

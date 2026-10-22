@@ -515,8 +515,10 @@ How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm b
 
 What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
-- **Color names.** `monti-*` colors such as `bg-monti-background`, `text-monti-muted-foreground` and `border-monti-border` (values come from `--monti-*` variables). The app's shadcn
-  names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--monti-*` apply only to documents that contain the admin UI.
+- **The design system, and nothing else.** Color roles per property (`bg-monti-surface`, `text-monti-muted`, `border-monti-default`, ...), type roles (`text-monti-caption`, ...), one shadow
+  (`shadow-monti-floating`), four radii and three weights. Tailwind's own palette, text sizes, weights, shadows, letter spacing and line heights are left out of the bundle, so a class outside
+  the system (`text-xs`, `bg-red-500`) compiles to nothing; a test names any such class in the admin or a first-party plugin. The app's shadcn names (`bg-background`, etc.) and variables
+  (`--background`, etc.) are left untouched. `--monti-*` apply only to documents that contain the admin UI.
 - **Variants.** `monti-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `monti-horizontal:` and `monti-vertical:` apply for Base UI's
   `data-orientation`. They are independent of the app's `dark` and `data-horizontal` definitions. Whatever theme mechanism the app uses (class or `data-theme`), the admin UI's
   dark theme follows it.
@@ -545,111 +547,94 @@ The cost is that the admin file carries the classes of first-party plugins an ap
 
 ## Admin theme
 
-A site themes the admin by overriding CSS custom properties. The tokens below are the public contract: their names and meaning are kept stable, and the admin's components read only `--monti-*` names, so
-the site's own variables (`--primary`, `--background`, ...) never leak in and nothing else needs to be touched. A token you do not set keeps its default.
+The admin is built from one design system (`styles/theme.css`, values in `styles/admin.css`). A site themes it by overriding its CSS custom properties; the names below are the public contract.
 
 The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
-`.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line:
+`.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line.
+
+### Colors: scales, then roles
+
+Colors come in two tiers.
+
+1. **Scales**, the raw values: `--monti-gray-1` to `--monti-gray-12` (1 lightest tint, 2 sunken areas, 3 element fill and hover, 4 pressed and selected, 6 control borders, 8 strong borders, 9 placeholder text,
+   11 secondary text, 12 text and the solid button), and four hues at five steps each: `--monti-accent-*`, `--monti-danger-*`, `--monti-warning-*`, `--monti-success-*` with `3` soft fill, `6` soft border,
+   `9` solid, `10` solid hover, `11` text. The accent is cobalt (`#2f54eb`, dark `#7b93ff`) and is for interactive states only: links, focus, the current tab and sidebar item, checked controls, the editor selection.
+2. **Roles**, what the screens use. A role that points at a scale is declared once, so **overriding a scale step restyles every role on it, in both modes**:
+
+| Property | Roles (`--monti-…`) | Classes |
+| --- | --- | --- |
+| Background | `bg-page`, `bg-surface` (cards), `bg-inset` (sidebar, sunken areas), `bg-overlay` (menus, dialogs), `bg-emphasis` and `bg-emphasis-hover` (the solid button), `bg-hover`, `bg-active`, `bg-selected`, `bg-neutral` (chips), `bg-{accent,danger,warning,success}-muted` and `-emphasis` | `bg-monti-page`, `bg-monti-surface`, … |
+| Text | `fg-default`, `fg-muted`, `fg-subtle` (placeholder and disabled only), `fg-on-emphasis`, `fg-{accent,danger,warning,success}` | `text-monti-default`, `text-monti-muted`, … |
+| Border | `border-muted` (hairlines), `border-default` (controls), `border-emphasis`, `border-focus`, `border-accent`, `border-danger`, `border-{accent,danger,warning,success}-muted` | `border-monti-muted`, `ring-monti-focus`, … |
+| Shadow | `shadow-floating` (menus, popovers, dialogs, toasts; cards rest on a border) | `shadow-monti-floating` |
+
+The roles with their own value in each mode are `bg-page`, `bg-surface`, `bg-overlay`, `bg-emphasis-hover`, `fg-on-emphasis` and `shadow-floating`. Colors are any CSS color.
 
 ```css
 /* app/globals.css: any stylesheet of the site, loaded before or after @monti-cms/admin/styles.css */
 :root {
-	--monti-primary: light-dark(#0d9488, #2dd4bf);
-	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
-	--monti-ring: light-dark(#14b8a6, #5eead4);
+	/* A teal accent: every link, focus ring, current tab and selection follows. */
+	--monti-accent-3: light-dark(#e6f7f5, #0d2624);
+	--monti-accent-6: light-dark(#a6e0d9, #1c4a45);
+	--monti-accent-9: light-dark(#0d9488, #2dd4bf);
+	--monti-accent-10: light-dark(#0b7f75, #5eead4);
+	--monti-accent-11: light-dark(#0f766e, #5eead4);
 	--monti-radius: 0.5rem;
 }
 ```
 
-**A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-background: #fff; }` also replaces the dark default. Either write the value with `light-dark()`
-as above, or set the token again for the dark theme:
+**A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-gray-12: #111; }` also replaces the dark default. Either write the value with `light-dark()`
+as above, or set it again under `.dark, [data-theme="dark"]`.
 
-```css
-:root {
-	--monti-primary: #0d9488;
-}
-.dark,
-[data-theme="dark"] {
-	--monti-primary: #2dd4bf;
-}
-```
+### Type, radius and fonts
 
-Every color token that colors a surface has a `-foreground` partner for the text on it. Colors are any CSS color. Tokens that only follow another one are derived, so setting the base updates them; set
-one only to break away. Tokens by role:
+Type roles set size, line height and weight together. Sizes are px, so the root font-size of the site cannot rescale the admin. They are classes, not tokens a site overrides:
 
-| Role | Tokens | What they color |
-| --- | --- | --- |
-| Surface | `--monti-background`, `--monti-foreground` | The page behind the admin and its default text |
-| | `--monti-card`, `--monti-card-foreground` | Panels and cards (`-foreground` follows `--monti-foreground` unless set) |
-| | `--monti-popover`, `--monti-popover-foreground` | Menus, dialogs, tooltips and other popups (`-foreground` follows `--monti-foreground` unless set) |
-| Text | `--monti-muted-foreground` | Secondary text: hints, labels, placeholders |
-| Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
-| Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
-| Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
-| Highlight | `--monti-highlight`, `--monti-highlight-soft` | The one accent color, for interactive states only: links, the focus ring, the current tab and sidebar item, checked controls, the editor selection. Light `#2f54eb`, dark `#7b93ff` (at least 4.5:1 text contrast on the page background in both). Buttons stay `--monti-primary`. `-soft` is the tinted fill for selections (follows `--monti-highlight` unless set) |
-| Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
-| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
-| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
-| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring (`--monti-ring` follows `--monti-highlight` unless set) |
-| Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
-| | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
-| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
-| | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
-| Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: Pretendard, then a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: IBM Plex Mono, then a system monospace stack) |
-| Radius | `--monti-radius` | Base corner radius (default `6px`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+- `micro` (11/14, 500): counters, keyboard hints and badge counts only
+- `caption` (12/16, 400): meta, timestamps, helper and hint text, table headers
+- `label` (13/18, 500): buttons, menu items, tabs, sidebar items, field labels
+- `body` (14/20, 400): default text, inputs, descriptions
+- `reading` (16/28, 400): long-form text: the editor body and the source pane
+- `title` (16/22, 600): section, panel, dialog and card titles
+- `heading` (20/28, 600): the screen heading
+- `display` (34/40, 600): the post title in the editor and the source pane
 
-### Type scale
+| Token | What it sets |
+| --- | --- |
+| `--monti-radius` | Base corner radius (default `6px`): chips 2px, controls 4px, cards and menus 6px, dialogs 8px are computed from it. Set once in `:root`, there is no dark value |
+| `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code and source views (default: IBM Plex Mono, then a system monospace stack) |
 
-Sizes are px, so the root font-size of the site cannot rescale the admin. The classes are `text-monti-<role>` (size / line-height); they are not tokens a site overrides:
-
-- `micro` (11/14): counters, keyboard hints and badge counts only
-- `caption` (12/16): meta, timestamps, helper and hint text
-- `label` (13/18): buttons, menu items, tabs, sidebar items, table cells, field labels
-- `body` (14/20): default text, inputs, descriptions
-- `title` (16/22): panel, dialog and card titles, the top-bar page title
-- `heading` (20/28): in-page screen headings
-- `display` (34/1.15): the post title in the editor and the source pane
+Spacing uses a 4px scale (0, 2, 4, 8, 12, 16, 24, 32, 48px). An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by meaning: tight, condensed, normal,
+comfortable, spacious, section) and the classes above.
 
 ### Reusing a shadcn theme
 
-The token names mirror shadcn's, so a site that already has a shadcn theme can point the admin at it. shadcn swaps its variables under `.dark`, so the admin follows the site's dark mode with no second block:
+A site that has a shadcn theme can point the roles at it. shadcn swaps its variables under `.dark`, so the admin follows the site's dark mode with no second block:
 
 ```css
 :root {
-	--monti-background: var(--background);
-	--monti-foreground: var(--foreground);
-	--monti-card: var(--card);
-	--monti-card-foreground: var(--card-foreground);
-	--monti-popover: var(--popover);
-	--monti-popover-foreground: var(--popover-foreground);
-	--monti-primary: var(--primary);
-	--monti-primary-foreground: var(--primary-foreground);
-	--monti-secondary: var(--secondary);
-	--monti-secondary-foreground: var(--secondary-foreground);
-	--monti-muted: var(--muted);
-	--monti-muted-foreground: var(--muted-foreground);
-	--monti-accent: var(--accent);
-	--monti-accent-foreground: var(--accent-foreground);
-	--monti-destructive: var(--destructive);
-	--monti-border: var(--border);
-	--monti-input: var(--input);
-	--monti-ring: var(--ring);
-	--monti-sidebar: var(--sidebar);
-	--monti-sidebar-foreground: var(--sidebar-foreground);
-	--monti-sidebar-primary: var(--sidebar-primary);
-	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--monti-sidebar-accent: var(--sidebar-accent);
-	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--monti-sidebar-border: var(--sidebar-border);
-	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-bg-page: var(--background);
+	--monti-bg-surface: var(--card);
+	--monti-bg-overlay: var(--popover);
+	--monti-bg-emphasis: var(--primary);
+	--monti-fg-on-emphasis: var(--primary-foreground);
+	--monti-fg-default: var(--foreground);
+	--monti-fg-muted: var(--muted-foreground);
+	--monti-bg-neutral: var(--muted);
+	--monti-bg-hover: var(--accent);
+	--monti-bg-inset: var(--sidebar);
+	--monti-border-muted: var(--border);
+	--monti-border-default: var(--input);
+	--monti-border-focus: var(--ring);
+	--monti-danger-9: var(--destructive);
 	--monti-radius: var(--radius);
 }
 ```
 
 shadcn has no warning or success colors, so those keep the admin's defaults. If the site's variables hold bare channels (the older `--primary: 222 47% 11%` style), wrap them: `hsl(var(--primary))`.
 
-Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark; the rest of the admin
-(dark variants, tints, hover states) is derived from these tokens. There is no config option: the CSS above is the whole interface.
+Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark. There is no config option: the CSS above is the
+whole interface.
 
 ## Development
 

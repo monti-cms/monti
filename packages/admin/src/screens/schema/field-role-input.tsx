@@ -195,7 +195,7 @@ export function InputOptionsEditor({
 				value={text}
 				disabled={disabled}
 				aria-invalid={bad || undefined}
-				className="font-mono text-xs"
+				className="font-mono text-monti-caption"
 				onChange={(event) => setText(event.target.value)}
 				onBlur={commit}
 			/>

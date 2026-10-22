@@ -117,7 +117,7 @@ function TemplateEditPanel({
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
 			className="flex h-full flex-1 flex-col overflow-hidden"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-3 border-monti-border border-b px-6 py-3">
+			<div className="flex flex-wrap items-center justify-between gap-3 border-monti-muted border-b px-6 py-3">
 				<Input
 					type="text"
 					aria-label={t("edit.nameLabel")}
@@ -135,7 +135,7 @@ function TemplateEditPanel({
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
 			{saveError && (
-				<FormFieldError className="border-monti-border border-b bg-monti-destructive-soft px-6 py-2">
+				<FormFieldError className="border-monti-muted border-b bg-monti-danger-muted px-6 py-2">
 					{saveError}
 				</FormFieldError>
 			)}
@@ -247,7 +247,7 @@ export function TemplateManager() {
 	];
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-monti-border border-t">
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-monti-muted border-t">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />

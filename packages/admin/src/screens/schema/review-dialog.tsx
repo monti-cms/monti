@@ -63,25 +63,25 @@ function Decision({
 		decision.suggestions[0]?.op === "setDefault" &&
 		decision.suggestions[0].value === "";
 	return (
-		<fieldset className="flex flex-col gap-1.5 rounded-lg border p-3" data-testid={`decision-${decision.key}`}>
-			<legend className="px-1 font-medium text-sm">{describeChange(decision.change, t)}</legend>
-			<p className="text-monti-muted-foreground text-xs">
+		<fieldset className="flex flex-col gap-2 rounded-lg border p-3" data-testid={`decision-${decision.key}`}>
+			<legend className="px-1 font-medium text-monti-body">{describeChange(decision.change, t)}</legend>
+			<p className="text-monti-caption text-monti-muted">
 				{decision.entries === 0 ? t("review.noEntries") : t("review.entriesCount", { count: decision.entries })}
 			</p>
-			<label className="flex items-start gap-2 text-sm">
+			<label className="flex items-start gap-2 text-monti-body">
 				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} className="mt-1" />
 				<span>{describeNoTransform(decision.change, t)}</span>
 			</label>
 			{decision.suggestions.map((suggestion) => {
 				const checked = sameTransform(picked, suggestion);
 				return (
-					<label key={JSON.stringify(suggestion)} className="flex flex-col gap-1 text-sm">
+					<label key={JSON.stringify(suggestion)} className="flex flex-col gap-1 text-monti-body">
 						<span className="flex items-start gap-2">
 							<input type="radio" name={name} checked={checked} onChange={() => onPick(suggestion)} className="mt-1" />
 							<span>
 								{describeTransform(suggestion, t)}
 								{suggestion.op === "dropField" && (
-									<span className="ml-1 text-monti-destructive text-xs">{t("transform.dropWarning")}</span>
+									<span className="ml-1 text-monti-caption text-monti-danger">{t("transform.dropWarning")}</span>
 								)}
 							</span>
 						</span>
@@ -112,20 +112,20 @@ function Sample({
 }) {
 	const t = useTranslator(schemaReviewMessages);
 	return (
-		<div className="text-xs">
-			<span className="text-monti-muted-foreground">{t("review.sample")} </span>
+		<div className="text-monti-caption">
+			<span className="text-monti-muted">{t("review.sample")} </span>
 			<ul className="inline">
 				{sample.map((entry, index) => (
 					<li key={entry.id} className="inline">
 						{index > 0 && ", "}
 						<AdminLink
 							href={entryHref(site, entry.collection, entry.id)}
-							className="text-monti-highlight underline underline-offset-2"
+							className="text-monti-accent underline underline-offset-2"
 							target="_blank"
 						>
 							{entry.title ?? entry.id.slice(0, 8)}
 						</AdminLink>
-						<span className="text-monti-muted-foreground">
+						<span className="text-monti-muted">
 							{" "}
 							({entry.collection}, {entry.locale}, {entry.status})
 						</span>
@@ -133,7 +133,7 @@ function Sample({
 				))}
 			</ul>
 			{entries > sample.length && (
-				<span className="text-monti-muted-foreground"> {t("review.more", { count: entries - sample.length })}</span>
+				<span className="text-monti-muted"> {t("review.more", { count: entries - sample.length })}</span>
 			)}
 		</div>
 	);
@@ -145,7 +145,7 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	return (
 		<li className="flex flex-col gap-1 rounded-md border px-3 py-2" data-testid={`impact-${impact.key}`}>
 			<div className="flex flex-wrap items-center gap-2">
-				<span className="text-sm">{describeChange(impact.change, t)}</span>
+				<span className="text-monti-body">{describeChange(impact.change, t)}</span>
 				{impact.entries > 0 && (
 					<Badge variant={impact.consequence === "deleted" ? "destructive" : "secondary"}>
 						{t("review.entriesCount", { count: impact.entries })}
@@ -153,9 +153,9 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 				)}
 			</div>
 			{impact.entries > 0 && (
-				<p className="text-monti-muted-foreground text-xs">{t(`consequence.${impact.consequence}`)}</p>
+				<p className="text-monti-caption text-monti-muted">{t(`consequence.${impact.consequence}`)}</p>
 			)}
-			{!impact.checked && <p className="text-monti-muted-foreground text-xs">{t("review.notChecked")}</p>}
+			{!impact.checked && <p className="text-monti-caption text-monti-muted">{t("review.notChecked")}</p>}
 			{impact.sample.length > 0 && <Sample sample={impact.sample} entries={impact.entries} site={site} />}
 		</li>
 	);
@@ -306,13 +306,13 @@ export function ReviewDialog({
 				</DialogHeader>
 				<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1" data-testid="review-body">
 					{error && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
 					{loading && !preview && <Skeleton className="h-24 w-full" />}
 					{preview && !preview.valid && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.invalid")}</AlertTitle>
 							<AlertDescription>
 								<IssueList issues={preview.issues} />
@@ -320,7 +320,7 @@ export function ReviewDialog({
 						</Alert>
 					)}
 					{problems.length > 0 && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
 								<ul className="list-disc pl-4">
@@ -334,23 +334,23 @@ export function ReviewDialog({
 					{preview?.valid && (
 						<>
 							<div
-								className="flex items-center gap-2.5 rounded-lg border border-monti-border bg-monti-muted/40 px-3.5 py-2.5 text-sm"
+								className="flex items-center gap-2 rounded-lg border border-monti-muted bg-monti-inset px-3 py-2 text-monti-body"
 								data-testid="review-summary"
 							>
 								{dataChanges === 0 ? (
-									<CheckCircle2 className="size-4 shrink-0 text-monti-primary" aria-hidden />
+									<CheckCircle2 className="size-4 shrink-0 text-monti-default" aria-hidden />
 								) : (
-									<Info className="size-4 shrink-0 text-monti-muted-foreground" aria-hidden />
+									<Info className="size-4 shrink-0 text-monti-muted" aria-hidden />
 								)}
 								<p>{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}</p>
 							</div>
 							{preview.baseline === "file" && (
-								<p className="text-monti-muted-foreground text-xs">{t("review.baselineFile")}</p>
+								<p className="text-monti-caption text-monti-muted">{t("review.baselineFile")}</p>
 							)}
 							{preview.decisions.length > 0 && (
 								<section className="flex flex-col gap-2" aria-label={t("review.decisions")}>
-									<h3 className="font-medium text-sm">{t("review.decisions")}</h3>
-									<p className="text-monti-muted-foreground text-xs">{t("review.decisionsHint")}</p>
+									<h3 className="font-medium text-monti-body">{t("review.decisions")}</h3>
+									<p className="text-monti-caption text-monti-muted">{t("review.decisionsHint")}</p>
 									{preview.decisions.map((decision) => (
 										<Decision
 											key={decision.key}
@@ -367,22 +367,22 @@ export function ReviewDialog({
 									aria-label={t("review.settings")}
 									data-testid="review-settings"
 								>
-									<h3 className="font-medium text-sm">{t("review.settings")}</h3>
-									<ul className="flex flex-col gap-1.5">
+									<h3 className="font-medium text-monti-body">{t("review.settings")}</h3>
+									<ul className="flex flex-col gap-2">
 										{settings.map((setting) => (
 											<li
 												key={setting.path}
-												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-monti-border bg-monti-muted/20 px-3 py-2 font-mono text-xs"
+												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-monti-muted bg-monti-inset px-3 py-2 font-mono text-monti-caption"
 											>
 												<div>
-													<code className="font-semibold text-monti-foreground">{setting.path}</code>:{" "}
+													<code className="font-semibold text-monti-default">{setting.path}</code>:{" "}
 												</div>
 												<div className="flex items-center gap-2">
-													<span className="text-monti-muted-foreground line-through decoration-monti-muted-foreground/60">
+													<span className="text-monti-muted line-through decoration-monti-muted">
 														{settingText(setting.from, t("review.unset"))}
 													</span>
 													{" -> "}
-													<span className="rounded-sm bg-monti-accent px-1.5 py-0.5 font-medium text-monti-foreground">
+													<span className="rounded-sm bg-monti-selected px-2 py-0.5 font-medium text-monti-default">
 														{settingText(setting.to, t("review.unset"))}
 													</span>
 												</div>
@@ -393,8 +393,8 @@ export function ReviewDialog({
 							)}
 							{preview.impacts.length > 0 && (
 								<section className="flex flex-col gap-2" aria-label={t("review.changes")}>
-									<h3 className="font-medium text-sm">{t("review.changes")}</h3>
-									<ul className="flex flex-col gap-1.5">
+									<h3 className="font-medium text-monti-body">{t("review.changes")}</h3>
+									<ul className="flex flex-col gap-2">
 										{preview.impacts.map((impact) => (
 											<Impact key={impact.key} impact={impact} />
 										))}
@@ -402,14 +402,14 @@ export function ReviewDialog({
 								</section>
 							)}
 							{preview.transforms.length > 0 && (
-								<p className="text-monti-muted-foreground text-xs">
+								<p className="text-monti-caption text-monti-muted">
 									{t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") })}
 								</p>
 							)}
 						</>
 					)}
 					{saveError && (
-						<Alert variant="destructive" layout="stack">
+						<Alert tone="danger" layout="stack">
 							<TriangleAlert aria-hidden />
 							<AlertDescription>{saveError.message}</AlertDescription>
 						</Alert>

@@ -27,10 +27,10 @@ export function SaveBar({
 		<section
 			aria-label={t("bar.label")}
 			data-testid="save-bar"
-			className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t bg-monti-background px-4 py-3 lg:px-10"
+			className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t bg-monti-page px-4 py-3 lg:px-8"
 		>
 			<span className="mr-auto flex items-center gap-2 text-monti-body">
-				<span aria-hidden className="size-1.5 rounded-full bg-monti-highlight" />
+				<span aria-hidden className="size-1.5 rounded-full bg-monti-accent-emphasis" />
 				<span className="tabular">{t("bar.count", { count })}</span>
 			</span>
 			<Button type="button" variant="ghost" size="sm" onClick={onDiscard}>

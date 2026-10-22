@@ -8,11 +8,11 @@ import { useEditorState } from "@tiptap/react";
  */
 
 /** Selected block border. All blocks use the same look. */
-export const SELECTED_RING = "ring-2 ring-monti-ring ring-offset-2 ring-offset-monti-background";
+export const SELECTED_RING = "ring-2 ring-monti-focus ring-offset-2 ring-offset-monti-page";
 
 /** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables). */
 export const BLOCK_TOOLBAR =
-	"z-10 flex items-center gap-0.5 rounded-md border bg-monti-popover/95 p-0.5 text-monti-popover-foreground shadow-sm backdrop-blur";
+	"z-10 flex items-center gap-0.5 rounded-md border bg-monti-overlay p-0.5 text-monti-default backdrop-blur";
 
 export type ContainerValues = Record<string, string | boolean>;
 

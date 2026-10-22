@@ -191,36 +191,29 @@ export function AdminShell({
 			/>
 			<SidebarInset className="min-w-0 overflow-hidden">
 				{!bare && large && (
-					<header className="flex shrink-0 items-end gap-3 px-8 pt-7 pb-5">
+					<header className="flex shrink-0 items-end gap-3 px-8 pt-8 pb-4">
 						<SidebarTrigger
 							aria-label={t("shell.openSidebar")}
-							className="-ml-1 self-start text-monti-muted-foreground md:hidden"
+							className="-ml-1 self-start text-monti-muted md:hidden"
 						/>
 						<div className="min-w-0 flex-1">
-							<h1 className="flex min-w-0 items-baseline gap-2.5 font-semibold text-monti-heading tracking-tight">
+							<h1 className="flex min-w-0 items-baseline gap-2 text-monti-heading">
 								<span className="truncate">{title}</span>
 								{count !== undefined && (
-									<span className="tabular font-mono font-normal text-monti-caption text-monti-muted-foreground">
-										{count}
-									</span>
+									<span className="tabular font-mono text-monti-caption text-monti-muted">{count}</span>
 								)}
 							</h1>
-							{description && <p className="mt-1 text-monti-body text-monti-muted-foreground">{description}</p>}
+							{description && <p className="mt-1 text-monti-body text-monti-muted">{description}</p>}
 						</div>
 						<div ref={setActionsSlot} className="flex flex-wrap items-center justify-end gap-2" />
 					</header>
 				)}
 				{!bare && !large && (
-					<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
-						<SidebarTrigger
-							aria-label={t("shell.openSidebar")}
-							className="-ml-1 text-monti-muted-foreground md:hidden"
-						/>
-						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-monti-title">
+					<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-4">
+						<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-monti-muted md:hidden" />
+						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate text-monti-title">
 							<span className="truncate">{title}</span>
-							{count !== undefined && (
-								<span className="tabular font-normal text-monti-muted-foreground text-sm">{count}</span>
-							)}
+							{count !== undefined && <span className="tabular text-monti-body text-monti-muted">{count}</span>}
 						</h1>
 						<div ref={setActionsSlot} className="flex items-center gap-2" />
 					</header>

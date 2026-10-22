@@ -39,27 +39,24 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	return (
 		<>
-			<header className="shrink-0 border-b bg-monti-background px-4 pt-6 lg:px-10 lg:pt-7">
+			<header className="shrink-0 border-b bg-monti-page px-4 pt-6 lg:px-8 lg:pt-8">
 				<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
 					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2.5">
-							<SidebarTrigger
-								aria-label={shared("shell.openSidebar")}
-								className="-ml-1 text-monti-muted-foreground md:hidden"
-							/>
-							<h1 className="font-semibold text-monti-heading leading-tight tracking-tight">{t("title")}</h1>
+						<div className="flex flex-wrap items-center gap-2">
+							<SidebarTrigger aria-label={shared("shell.openSidebar")} className="-ml-1 text-monti-muted md:hidden" />
+							<h1 className="text-monti-heading">{t("title")}</h1>
 							<div
 								ref={setFileLine}
-								className="flex items-center gap-1.5 empty:hidden"
+								className="flex items-center gap-2 empty:hidden"
 								data-testid="settings-file-line"
 							/>
 						</div>
 					</div>
-					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
+					<div ref={setActions} className="flex items-center gap-2" data-testid="settings-actions" />
 				</div>
 				<SettingsTabBar site={site} active={tab} onSchemaTab={go} changed={changed?.tabs} />
 			</header>
-			<div className="flex min-h-0 flex-1 flex-col bg-monti-background">
+			<div className="flex min-h-0 flex-1 flex-col bg-monti-page">
 				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} onChanged={setChanged} />
 			</div>
 		</>

@@ -236,24 +236,22 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 		running ? (
 			<span className="flex items-center gap-1">
 				{progress && (
-					<span className="text-monti-muted-foreground text-xs tabular-nums">
+					<span className="text-monti-caption text-monti-muted tabular-nums">
 						{t("progress", { done: progress.done, total: progress.total })}
 					</span>
 				)}
-				<Button type="button" size="sm" variant="ghost" className="gap-1.5 text-monti-muted-foreground" onClick={stop}>
+				<Button type="button" size="sm" variant="ghost" className="gap-2 text-monti-muted" onClick={stop}>
 					<Square aria-hidden className="size-4" />
 					{t("stop")}
 				</Button>
 			</span>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger
-					render={<Button type="button" size="sm" variant="ghost" className="gap-1.5 text-monti-muted-foreground" />}
-				>
+				<PopoverTrigger render={<Button type="button" size="sm" variant="ghost" className="gap-2 text-monti-muted" />}>
 					<Languages aria-hidden className="size-4" />
 					{t("all")}
 				</PopoverTrigger>
-				<PopoverContent align="end" className="w-72 gap-2 p-3 text-xs">
+				<PopoverContent align="end" className="w-72 gap-2 p-3 text-monti-caption">
 					<form
 						className="flex flex-col gap-2"
 						onSubmit={(event) => {
@@ -283,7 +281,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 										void translateAll();
 									}
 								}}
-								className="min-h-16 resize-y text-xs md:text-xs"
+								className="min-h-16 resize-y text-monti-caption md:text-monti-caption"
 							/>
 						)}
 						<Button type="submit" size="sm" className="self-end">

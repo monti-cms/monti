@@ -88,8 +88,8 @@ function FileRest({ file }: { file: Obj }) {
 				<Section wide title={t("file.title")}>
 					{rest.map(([title, value]) => (
 						<div key={title} className="flex flex-col gap-2">
-							<h4 className="font-medium text-monti-label">{title}</h4>
-							<pre className="max-h-64 overflow-auto rounded-md bg-monti-muted/60 p-3 text-monti-caption">
+							<h4 className="text-monti-label">{title}</h4>
+							<pre className="max-h-64 overflow-auto rounded-md bg-monti-inset p-3 text-monti-caption">
 								{JSON.stringify(value, null, 2)}
 							</pre>
 						</div>
@@ -98,11 +98,11 @@ function FileRest({ file }: { file: Obj }) {
 			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
-					<ul className="-my-2 flex flex-col divide-y text-sm">
+					<ul className="-my-2 flex flex-col divide-y text-monti-body">
 						{migrations.map((migration) => (
 							<li key={String(migration.id)} className="flex items-center gap-2 py-2">
-								<code className="text-xs">{String(migration.id)}</code>{" "}
-								<span className="text-monti-muted-foreground text-xs">{String(migration.op)}</span>
+								<code className="text-monti-caption">{String(migration.id)}</code>{" "}
+								<span className="text-monti-caption text-monti-muted">{String(migration.op)}</span>
 							</li>
 						))}
 					</ul>
@@ -116,7 +116,7 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<span className="inline-flex items-center gap-1.5 rounded-sm border border-monti-border bg-monti-muted/40 px-2.5 py-0.5 font-mono text-monti-muted-foreground text-xs">
+		<span className="inline-flex items-center gap-2 rounded-sm border border-monti-muted bg-monti-inset px-3 py-0.5 font-mono text-monti-caption text-monti-muted">
 			{state.file ?? t("status.noFile")}
 			{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
 		</span>
@@ -163,7 +163,7 @@ function CollectionNavItem({
 					{...attributes}
 					{...listeners}
 					aria-label={t("collection.drag", { name: label })}
-					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 group-hover/row:opacity-100"
+					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-3.5" />
 				</button>
@@ -172,15 +172,15 @@ function CollectionNavItem({
 				type="button"
 				aria-current={active ? "true" : undefined}
 				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50",
-					writable && "group-focus-within/row:pl-7 group-hover/row:pl-7",
-					active && "border-monti-border bg-monti-card font-medium hover:bg-monti-card",
+					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-3 text-left text-monti-body outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
+					writable && "group-focus-within/row:pl-8 group-hover/row:pl-8",
+					active && "border-monti-muted bg-monti-surface font-medium hover:bg-monti-surface",
 				)}
 				onClick={onSelect}
 			>
 				<span className="flex-1 truncate">{label}</span>
 				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangeDot />}
-				<span className="font-normal text-monti-muted-foreground text-xs">
+				<span className="text-monti-caption text-monti-muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</span>
 			</button>
@@ -287,7 +287,7 @@ function SchemaEditor({
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<div className="flex items-center justify-end gap-2.5 border-b bg-monti-background px-4 py-2 lg:px-10">
+							<div className="flex items-center justify-end gap-2 border-b bg-monti-page px-4 py-2 lg:px-8">
 								{actions}
 							</div>
 						)}
@@ -299,7 +299,7 @@ function SchemaEditor({
 								<AlertDescription className="flex flex-col gap-1">
 									<span>{t(READ_ONLY_KEY[reason])}</span>
 									{reason === "has_code" && (state.access.issue || state.access.detail) && (
-										<code className="text-xs" data-testid="schema-code-detail">
+										<code className="text-monti-caption" data-testid="schema-code-detail">
 											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
 										</code>
 									)}
@@ -312,12 +312,12 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{applyFailed && (
-							<Alert variant="destructive" layout="stack">
+							<Alert tone="danger" layout="stack">
 								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
 							</Alert>
 						)}
 						{state.issues.length > 0 && (
-							<Alert variant="destructive" layout="stack" data-testid="schema-file-invalid">
+							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-2">
 									<span>{t("invalid.description")}</span>
@@ -326,7 +326,7 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert variant="destructive" layout="stack">
+							<Alert tone="danger" layout="stack">
 								<AlertTitle>{t("issues.title")}</AlertTitle>
 								<AlertDescription>
 									<IssueList issues={issues} />
@@ -345,8 +345,8 @@ function SchemaEditor({
 								{tab === "collections" && (
 									<div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
 										<div className="flex shrink-0 flex-col gap-0.5 lg:w-56">
-											<div className="flex items-center justify-between pb-2 pl-2.5">
-												<span className="font-medium text-monti-muted-foreground text-xs">
+											<div className="flex items-center justify-between pb-2 pl-3">
+												<span className="font-medium text-monti-caption text-monti-muted">
 													{t("collection.railTitle")} {names.length}
 												</span>
 												{writable && (
@@ -410,7 +410,7 @@ function SchemaEditor({
 													}}
 												/>
 											) : (
-												<p className="text-monti-muted-foreground text-sm">{t("collection.none")}</p>
+												<p className="text-monti-body text-monti-muted">{t("collection.none")}</p>
 											)}
 										</div>
 									</div>
@@ -515,7 +515,7 @@ export function SchemaSettings({
 			/>
 		);
 	return (
-		<div className="flex flex-col gap-3 p-4 lg:p-10">
+		<div className="flex flex-col gap-3 p-4 lg:p-8">
 			{error ? (
 				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
 			) : (

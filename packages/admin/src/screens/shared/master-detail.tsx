@@ -44,11 +44,11 @@ export function ListPane({
 }) {
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
-		<div className={cn("flex shrink-0 flex-col border-monti-border border-r", LIST_PANE_WIDTH, className)}>
+		<div className={cn("flex shrink-0 flex-col border-monti-muted border-r", LIST_PANE_WIDTH, className)}>
 			{header}
 			<ul
 				className={cn(
-					"min-h-0 flex-1 divide-y divide-monti-border overflow-y-auto overflow-x-hidden",
+					"min-h-0 flex-1 divide-y divide-monti-muted overflow-y-auto overflow-x-hidden",
 					!hasRows && !loading && "flex flex-col",
 				)}
 				aria-label={label}
@@ -110,14 +110,14 @@ export function ListRow({
 		>
 			<span className="flex w-full items-center gap-2">
 				<span className="truncate font-medium text-monti-body">{title}</span>
-				{status && <span className="ml-auto shrink-0 text-monti-caption text-monti-muted-foreground">{status}</span>}
+				{status && <span className="ml-auto shrink-0 text-monti-caption text-monti-muted">{status}</span>}
 			</span>
-			{detail && <span className="w-full truncate text-monti-caption text-monti-muted-foreground">{detail}</span>}
+			{detail && <span className="w-full truncate text-monti-caption text-monti-muted">{detail}</span>}
 		</Button>
 	);
 	const rowClass = cn(
 		"group flex items-center justify-between gap-2 px-4 py-2 transition-colors",
-		current ? OPEN_ITEM : "hover:bg-monti-accent/50",
+		current ? OPEN_ITEM : "hover:bg-monti-hover",
 	);
 	if (!actions || actions.length === 0) {
 		return (

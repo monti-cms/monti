@@ -34,7 +34,7 @@ export function ColumnSettingsPanel({
 			{order.map((column, index) => (
 				<li
 					key={column}
-					className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-monti-accent"
+					className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-monti-hover"
 				>
 					<Label className="font-normal text-monti-label">
 						<Checkbox
@@ -73,8 +73,8 @@ export function ColumnSettingsPanel({
 /** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
 function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<section className={cn("space-y-1.5", scroll && "flex min-h-0 flex-col")}>
-			<h4 className="font-medium text-monti-caption text-monti-muted-foreground">{title}</h4>
+		<section className={cn("space-y-2", scroll && "flex min-h-0 flex-col")}>
+			<h4 className="font-medium text-monti-caption text-monti-muted">{title}</h4>
 			{scroll ? <div className="-mx-1 min-h-0 overflow-y-auto px-1">{children}</div> : children}
 		</section>
 	);
@@ -120,9 +120,7 @@ export function ListViewPopover({
 	);
 	return (
 		<Popover>
-			<PopoverTrigger
-				render={<Button type="button" variant="ghost" size="xs" className="text-monti-muted-foreground" />}
-			>
+			<PopoverTrigger render={<Button type="button" variant="ghost" size="xs" className="text-monti-muted" />}>
 				<SlidersHorizontal aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>

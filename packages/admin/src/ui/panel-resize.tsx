@@ -151,7 +151,7 @@ export function PanelResizeHandle({ resize, className }: { resize: PanelResize; 
 			tabIndex={0}
 			data-slot="panel-resize-handle"
 			className={cn(
-				"absolute inset-y-0 left-0 z-30 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-monti-ring/40 focus-visible:bg-monti-ring/60 focus-visible:outline-none active:bg-monti-ring/60",
+				"absolute inset-y-0 left-0 z-30 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-monti-accent-emphasis focus-visible:bg-monti-accent-emphasis focus-visible:outline-none active:bg-monti-accent-emphasis",
 				className,
 			)}
 			onPointerDown={onPointerDown}

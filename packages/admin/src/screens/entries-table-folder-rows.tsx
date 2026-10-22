@@ -43,7 +43,7 @@ export function EntriesTableFolderRows({
 		<>
 			{explorer.parent !== null && (
 				<TableRow>
-					<TableCell className="text-center text-monti-muted-foreground">
+					<TableCell className="text-center text-monti-muted">
 						<FolderUp aria-hidden className="mx-auto size-4" />
 					</TableCell>
 					<TableCell colSpan={visibleCount - 1}>
@@ -52,7 +52,7 @@ export function EntriesTableFolderRows({
 							variant="link"
 							size="sm"
 							onClick={() => onSelectFolder(explorer.parent ?? "all")}
-							className="h-auto p-0 text-monti-muted-foreground hover:text-monti-foreground"
+							className="h-auto p-0 text-monti-muted hover:text-monti-default"
 						>
 							{t("list.folderUp")}
 						</Button>
@@ -61,7 +61,7 @@ export function EntriesTableFolderRows({
 			)}
 			{explorer.folders.map((folder) => (
 				<ActionContextMenu key={`folder-${folder.id}`} actions={folderRowMenu(folder)} trigger={<TableRow />}>
-					<TableCell className="text-center text-monti-muted-foreground">
+					<TableCell className="text-center text-monti-muted">
 						<FolderIcon aria-hidden className="mx-auto size-4" />
 					</TableCell>
 					<TableCell colSpan={visibleCount - 2} className="font-medium">
@@ -71,7 +71,7 @@ export function EntriesTableFolderRows({
 							size="sm"
 							onClick={() => onSelectFolder(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="h-auto p-0 font-medium text-monti-foreground"
+							className="h-auto p-0 font-medium text-monti-default"
 						>
 							{folder.name}
 						</Button>

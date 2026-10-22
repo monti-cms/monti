@@ -286,7 +286,7 @@ export function ImageBlockView() {
 										block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
 									}
 								}}
-								className="h-7 text-xs"
+								className="h-7 text-monti-caption"
 								placeholder={t("imageNode.widthPlaceholder")}
 							/>
 							{widthInvalid && <FormFieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FormFieldError>}
@@ -304,13 +304,13 @@ export function ImageBlockView() {
 								aria-invalid={altMissing || undefined}
 								aria-describedby={altMissing ? altErrorId : undefined}
 								onChange={(e) => block.setValues({ alt: e.target.value })}
-								className="min-h-0 text-xs md:text-xs"
+								className="min-h-0 text-monti-caption md:text-monti-caption"
 							/>
 							{altMissing && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
 						<label htmlFor={decorativeId} className="flex items-center justify-between gap-2">
-							<span className="text-monti-muted-foreground">{t("imageDialog.decorative")}</span>
+							<span className="text-monti-muted">{t("imageDialog.decorative")}</span>
 							<Switch
 								id={decorativeId}
 								size="sm"
@@ -334,7 +334,7 @@ export function ImageBlockView() {
 				transform.isTransformed ? (
 					<div
 						data-slot="image-transform-wrapper"
-						className="relative w-full max-w-full overflow-hidden rounded-md bg-monti-muted"
+						className="relative w-full max-w-full overflow-hidden rounded-md bg-monti-neutral"
 						style={{
 							width: previewWidth || width || "100%",
 							maxWidth: "100%",
@@ -355,7 +355,7 @@ export function ImageBlockView() {
 						/>
 					</div>
 				) : (
-					<div className="relative overflow-hidden rounded-md bg-monti-muted">
+					<div className="relative overflow-hidden rounded-md bg-monti-neutral">
 						<img
 							src={resolved && "url" in resolved ? resolved.url : ""}
 							alt={alt || ""}
@@ -372,11 +372,11 @@ export function ImageBlockView() {
 			) : isChecking ? (
 				<Skeleton role="status" aria-label={t("imageNode.loading")} className="h-48 w-full rounded-md" />
 			) : (
-				<div className="flex h-48 w-full items-center justify-center rounded-md bg-monti-muted text-monti-muted-foreground text-sm">
+				<div className="flex h-48 w-full items-center justify-center rounded-md bg-monti-neutral text-monti-body text-monti-muted">
 					{t("imageNode.unavailable")}
 				</div>
 			)}
-			{resolveReason ? <p className="mt-1 text-center text-monti-destructive text-xs">{resolveReason}</p> : null}
+			{resolveReason ? <p className="mt-1 text-center text-monti-caption text-monti-danger">{resolveReason}</p> : null}
 
 			{/* Caption Input / Display */}
 			<figcaption className={cn("mt-2 flex items-center gap-1", captionAlignClass)}>
@@ -390,14 +390,14 @@ export function ImageBlockView() {
 						readOnly={!isEditable}
 						onChange={(e) => block.setValues({ caption: e.target.value })}
 						className={cn(
-							"h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-0 py-0 text-monti-muted-foreground text-xs shadow-none placeholder:text-monti-muted-foreground/50 focus-visible:ring-0 md:text-xs",
+							"h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-0 py-0 text-monti-caption text-monti-muted shadow-none placeholder:text-monti-subtle focus-visible:ring-0 md:text-monti-caption",
 							captionAlignClass,
 						)}
 					/>
 					{generating && (
 						<output
 							className={cn(
-								"pointer-events-none absolute inset-0 flex items-center gap-1.5 text-monti-muted-foreground/70 text-xs",
+								"pointer-events-none absolute inset-0 flex items-center gap-2 text-monti-caption text-monti-subtle",
 								caption ? "sr-only" : captionJustifyClass,
 							)}
 						>
@@ -418,14 +418,14 @@ export function ImageBlockView() {
 						data-slot="resize-handle-left"
 						aria-label={t("imageNode.resizeLeft")}
 						onPointerDown={(e) => handleResizeStart(e, "left")}
-						className="absolute -bottom-1 -left-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-border bg-monti-background p-0 opacity-0 shadow-sm transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
+						className="absolute -bottom-1 -left-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
 					/>
 					<button
 						type="button"
 						data-slot="resize-handle-right"
 						aria-label={t("imageNode.resizeRight")}
 						onPointerDown={(e) => handleResizeStart(e, "right")}
-						className="absolute -right-1 -bottom-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-border bg-monti-background p-0 opacity-0 shadow-sm transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
+						className="absolute -right-1 -bottom-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
 					/>
 				</>
 			)}

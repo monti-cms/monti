@@ -69,7 +69,7 @@ export const ChartContainer = ({
 				data-chart={chartId}
 				style={chartVars}
 				className={cn(
-					"flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-monti-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-monti-border/60 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-monti-border [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-monti-muted/60 [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
+					"flex aspect-video justify-center text-monti-caption [&_.recharts-cartesian-axis-tick_text]:fill-monti-muted [&_.recharts-cartesian-grid_line]:stroke-monti-grid [&_.recharts-curve.recharts-tooltip-cursor]:stroke-monti-grid [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-monti-muted [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
 					className,
 				)}
 			>
@@ -124,12 +124,12 @@ export const ChartTooltipContent = ({
 	return (
 		<div
 			className={cn(
-				"grid min-w-[8rem] gap-1.5 rounded-lg border border-monti-border/50 bg-monti-background px-2.5 py-1.5 text-xs shadow-xl",
+				"grid min-w-[8rem] gap-2 rounded-lg border border-monti-muted bg-monti-page px-3 py-2 text-monti-caption shadow-monti-floating",
 				className,
 			)}
 		>
 			{!hideLabel && label ? <div className="font-medium">{String(config[String(label)]?.label ?? label)}</div> : null}
-			<div className="grid gap-1.5">
+			<div className="grid gap-2">
 				{payload
 					.filter((item) => item.type !== "none")
 					.map((item) => {
@@ -141,8 +141,8 @@ export const ChartTooltipContent = ({
 							<div key={itemKey} className="flex items-center gap-2">
 								<div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color ?? item.payload?.fill }} />
 								<div className="flex flex-1 items-center justify-between gap-3">
-									<span className="text-monti-muted-foreground">{itemConfig?.label ?? key}</span>
-									<span className="font-medium font-mono text-monti-foreground tabular-nums">
+									<span className="text-monti-muted">{itemConfig?.label ?? key}</span>
+									<span className="font-medium font-mono text-monti-default tabular-nums">
 										{typeof item.value === "number" ? item.value.toLocaleString() : String(item.value)}
 									</span>
 								</div>
@@ -212,7 +212,7 @@ export const ChartLegendContent = ({
 					const itemKey = `${lookupKey}-${String(item.color ?? "")}`;
 
 					return (
-						<div key={itemKey} className="flex items-center gap-1.5">
+						<div key={itemKey} className="flex items-center gap-2">
 							<div className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
 							<span>{itemConfig?.label ?? lookupKey}</span>
 						</div>

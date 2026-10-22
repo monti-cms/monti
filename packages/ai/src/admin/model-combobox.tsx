@@ -96,7 +96,7 @@ export function ModelCombobox({
 				aria-label={ariaLabel}
 				placeholder={loading ? t("modelsLoading") : placeholder}
 				showClear={Boolean(value)}
-				className="h-8 w-full min-w-0 [&_input]:font-mono [&_input]:text-xs"
+				className="h-8 w-full min-w-0 [&_input]:font-mono [&_input]:text-monti-caption"
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>{error ?? (loading ? t("modelsLoading") : t("modelsHint"))}</ComboboxEmpty>
@@ -105,7 +105,7 @@ export function ModelCombobox({
 						<ComboboxItem
 							key={item.value}
 							value={item}
-							className={cn("font-mono text-xs", item.custom && "text-monti-primary")}
+							className={cn("font-mono text-monti-caption", item.custom && "text-monti-default")}
 						>
 							<span className="truncate">{item.custom ? t("modelUse", { label: item.label }) : item.label}</span>
 						</ComboboxItem>

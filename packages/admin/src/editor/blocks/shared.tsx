@@ -162,7 +162,7 @@ export function BlockSettings({
 			<ToolbarButton label={label} trigger={(button) => <PopoverTrigger render={button} />}>
 				<Settings2 aria-hidden />
 			</ToolbarButton>
-			<PopoverContent align="end" className="flex w-72 flex-col gap-3 p-3 text-xs">
+			<PopoverContent align="end" className="flex w-72 flex-col gap-3 p-3 text-monti-caption">
 				{children}
 			</PopoverContent>
 		</Popover>
@@ -185,7 +185,7 @@ export function BlockSettingsField({
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<label htmlFor={htmlFor} className="text-monti-muted-foreground text-xs">
+				<label htmlFor={htmlFor} className="text-monti-caption text-monti-muted">
 					{label}
 				</label>
 				{action}

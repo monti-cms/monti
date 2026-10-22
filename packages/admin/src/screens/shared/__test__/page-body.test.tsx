@@ -27,6 +27,6 @@ describe("page body", () => {
 		const body = screen.getByTestId("body");
 		expect(body.className).toContain("max-w-none");
 		expect(body.className).not.toContain("max-w-[1160px]");
-		expect(body.className).toContain("lg:px-10");
+		expect(body.className).toContain("lg:px-8");
 	});
 });

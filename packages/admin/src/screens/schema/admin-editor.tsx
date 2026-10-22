@@ -64,10 +64,10 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 			</Section>
 			<Section wide band title={t("admin.addressTitle")}>
 				<div className="flex flex-col gap-2">
-					<code className="w-fit rounded-md bg-monti-muted px-3 py-2 text-monti-body" data-testid="admin-path">
+					<code className="w-fit rounded-md bg-monti-neutral px-3 py-2 text-monti-body" data-testid="admin-path">
 						{path}
 					</code>
-					<p className={cn(HELP, "text-monti-muted-foreground")}>{t("admin.pathNote")}</p>
+					<p className={cn(HELP, "text-monti-muted")}>{t("admin.pathNote")}</p>
 				</div>
 			</Section>
 		</div>

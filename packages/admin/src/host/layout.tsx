@@ -64,7 +64,7 @@ export async function AdminLayout({
 	const content = (
 		<AdminPluginScope plugins={plugins}>
 			<TooltipProvider>
-				<div className="monti-admin min-h-screen bg-monti-background text-monti-foreground">{children}</div>
+				<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
 				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
 			</TooltipProvider>
 		</AdminPluginScope>

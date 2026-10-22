@@ -133,7 +133,7 @@ export function ConnectionManager({
 						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<p className="border-b px-3 py-2 text-monti-muted-foreground text-xs">{t("badge.fake")}</p>
+								<p className="border-b px-3 py-2 text-monti-caption text-monti-muted">{t("badge.fake")}</p>
 							)
 						}
 						empty={settings?.providers.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
@@ -296,15 +296,15 @@ function ProviderEditor({
 	return (
 		<div className={DETAIL_PANE_FRAME}>
 			<div className="min-w-0">
-				<h2 className="truncate font-medium text-base">
+				<h2 className="truncate text-monti-title">
 					{(provider ? provider.name : draft.name.trim()) || t("new.title")}
 				</h2>
-				<p className="truncate text-monti-muted-foreground text-xs">
+				<p className="truncate text-monti-caption text-monti-muted">
 					{providerKindLabel(draft.kind)} · {provider?.defaultModel || draft.defaultModel || t("model.none")}
 				</p>
 			</div>
 
-			<FormFieldGroup className="gap-5">
+			<FormFieldGroup className="gap-4">
 				<FormField>
 					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
 					<Input
@@ -312,7 +312,7 @@ function ProviderEditor({
 						value={draft.name}
 						placeholder="OpenRouter"
 						onChange={(event) => set({ name: event.target.value })}
-						className="h-8 text-xs md:text-xs"
+						className="h-8 text-monti-caption md:text-monti-caption"
 					/>
 					<FormFieldDescription>{t("field.name.hint")}</FormFieldDescription>
 				</FormField>
@@ -334,18 +334,18 @@ function ProviderEditor({
 						value={draft.url}
 						placeholder={example.url}
 						onChange={(event) => set({ url: event.target.value.trim() })}
-						className="h-8 font-mono text-xs md:text-xs"
+						className="h-8 font-mono text-monti-caption md:text-monti-caption"
 					/>
 					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<div className="flex flex-col gap-1.5">
+				<div className="flex flex-col gap-2">
 					<ApiKeyField
 						label={t("field.key")}
 						baseName={draft.name.trim() || "API"}
 						value={draft.key}
 						onChange={(key) => set({ key })}
 					/>
-					<p className="text-monti-muted-foreground text-xs">{t("field.key.hint")}</p>
+					<p className="text-monti-caption text-monti-muted">{t("field.key.hint")}</p>
 				</div>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.model}>{t("field.model")}</FormFieldLabel>
@@ -386,7 +386,7 @@ function ProviderEditor({
 			</EditorFooter>
 			{check &&
 				(check.ok ? (
-					<p className="text-monti-muted-foreground text-xs">
+					<p className="text-monti-caption text-monti-muted">
 						{t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) })}
 					</p>
 				) : (

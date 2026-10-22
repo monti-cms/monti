@@ -4,33 +4,33 @@ import type * as React from "react";
 import { cn } from "../lib/utils";
 
 /**
- * Alert box for the admin UI. `default` is for notices, `destructive` for errors such as a load failure, `warning` and `success` for the states between.
- * The look of body blocks (callouts, etc.) is decided by each block separately.
+ * Notice for the admin UI. `tone` says what it means: `neutral` for information, `danger` for errors such as a load failure, `warning` and `success`
+ * for the states between, `accent` for a pointer to the next step. `layout` says where it sits: a box in the content (`grid`, `stack`, `inline`), or
+ * a `strip` across the top of a pane, flush with what is below it. The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva(
-	[
-		"relative w-full rounded-lg border px-4 py-3 text-sm",
-		"[&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
-	].join(" "),
+	["relative w-full border text-monti-body", "[&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current"].join(" "),
 	{
 		variants: {
 			layout: {
-				grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] gap-x-3 gap-y-1 items-start",
-				stack: "block",
+				grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] items-start gap-x-3 gap-y-1 rounded-lg px-4 py-3",
+				stack: "block rounded-lg px-4 py-3",
 				/** A one-line notice with its action on the right (a load failure with "Retry"). */
-				inline: "flex items-center justify-between gap-3",
+				inline: "flex items-center justify-between gap-3 rounded-lg px-4 py-3",
+				/** Across the top of a pane, under its tabs: no radius, a line below only, the page's side padding. */
+				strip: "flex items-center justify-between gap-3 border-x-0 border-t-0 px-8 py-2 text-monti-label",
 			},
-			variant: {
-				default: "border-monti-border bg-monti-card text-monti-card-foreground",
-				destructive:
-					"border-monti-destructive/30 bg-monti-destructive-soft text-monti-destructive-foreground [&>svg]:text-current",
-				warning: "border-monti-warning/30 bg-monti-warning-soft text-monti-warning-foreground [&>svg]:text-current",
-				success: "border-monti-success/30 bg-monti-success-soft text-monti-success-foreground [&>svg]:text-current",
+			tone: {
+				neutral: "border-monti-muted bg-monti-surface text-monti-default",
+				accent: "border-monti-accent-muted bg-monti-accent-muted text-monti-accent",
+				danger: "border-monti-danger-muted bg-monti-danger-muted text-monti-danger",
+				warning: "border-monti-warning-muted bg-monti-warning-muted text-monti-warning",
+				success: "border-monti-success-muted bg-monti-success-muted text-monti-success",
 			},
 		},
 		defaultVariants: {
 			layout: "grid",
-			variant: "default",
+			tone: "neutral",
 		},
 	},
 );
@@ -38,21 +38,15 @@ export const alertVariants = cva(
 function Alert({
 	className,
 	layout,
-	variant,
+	tone,
 	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
-	return (
-		<div data-slot="alert" role="alert" className={cn(alertVariants({ layout, variant }), className)} {...props} />
-	);
+	return <div data-slot="alert" role="alert" className={cn(alertVariants({ layout, tone }), className)} {...props} />;
 }
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<div
-			data-slot="alert-title"
-			className={cn("col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight", className)}
-			{...props}
-		/>
+		<div data-slot="alert-title" className={cn("col-start-2 line-clamp-1 min-h-4 font-medium", className)} {...props} />
 	);
 }
 
@@ -60,10 +54,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 	return (
 		<div
 			data-slot="alert-description"
-			className={cn(
-				"col-start-2 grid justify-items-start gap-1 text-monti-muted-foreground text-sm [&_p]:leading-relaxed",
-				className,
-			)}
+			className={cn("col-start-2 grid justify-items-start gap-1 text-monti-body text-monti-muted", className)}
 			{...props}
 		/>
 	);

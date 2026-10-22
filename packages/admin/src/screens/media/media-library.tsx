@@ -442,7 +442,7 @@ export function MediaLibrary() {
 		>
 			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
-					<Label className="font-normal text-monti-caption text-monti-muted-foreground">
+					<Label className="text-monti-caption text-monti-muted">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>
@@ -477,22 +477,22 @@ export function MediaLibrary() {
 					</IconButton>
 				</div>
 			</PageActions>
-			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-4 border-monti-border border-b px-8">
-				<fieldset className="-mb-px flex items-stretch gap-5">
+			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-4 border-monti-muted border-b px-8">
+				<fieldset className="-mb-px flex items-stretch gap-4">
 					<legend className="sr-only">{t("library.kindLabel")}</legend>
 					{kindOptions(t).map((option) => (
 						<button
 							key={option.value}
 							type="button"
 							aria-pressed={kind === option.value}
-							className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
+							className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
 							onClick={() => update({ kind: option.value as typeof kind })}
 						>
 							{option.label}
 						</button>
 					))}
 				</fieldset>
-				<div className="ml-auto flex flex-wrap items-center gap-2 py-1.5">
+				<div className="ml-auto flex flex-wrap items-center gap-2 py-2">
 					<Input
 						type="search"
 						aria-label={t("library.search")}
@@ -549,7 +549,7 @@ export function MediaLibrary() {
 					<div
 						className={cn(
 							"flex min-h-0 flex-1 flex-col overflow-y-auto",
-							(items.length === 0 && !hasFolders) || view === "grid" ? "px-8 py-5" : "p-0",
+							(items.length === 0 && !hasFolders) || view === "grid" ? "px-8 py-4" : "p-0",
 						)}
 					>
 						{loadError && (

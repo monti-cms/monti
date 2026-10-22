@@ -17,9 +17,9 @@ function StepLine({ label, step }: { label: string | null; step: ImportStep }) {
 	const t = useTranslator(importMessages);
 	const status = t(`result.step.${step.status}`);
 	return (
-		<li className="text-xs leading-relaxed">
+		<li className="text-monti-caption">
 			{label && <span className="font-medium">{label} </span>}
-			<span className="text-monti-muted-foreground">
+			<span className="text-monti-muted">
 				{label ? `${status}${step.reason ? ": " : ""}` : ""}
 				{step.reason ? `${step.reason.text}${step.reason.fix ? ` ${step.reason.fix}` : ""}` : ""}
 			</span>
@@ -43,11 +43,11 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
 		<li
-			className="flex flex-col gap-1.5 border-b py-3 last:border-b-0"
+			className="flex flex-col gap-2 border-b py-3 last:border-b-0"
 			data-testid="import-result"
 			data-outcome={entry.outcome}
 		>
-			<div className="flex flex-wrap items-center gap-2 text-sm">
+			<div className="flex flex-wrap items-center gap-2 text-monti-body">
 				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
 				{entry.id ? (
 					<a href={site.adminEntryEditHref(entry.id)} className="font-medium underline-offset-4 hover:underline">
@@ -56,12 +56,12 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				) : (
 					<span className="font-medium">{entry.title ?? entry.slug ?? entry.key}</span>
 				)}
-				<span className="text-monti-muted-foreground text-xs">{site.localeLabel(entry.locale)}</span>
+				<span className="text-monti-caption text-monti-muted">{site.localeLabel(entry.locale)}</span>
 				{entry.publish?.status === "done" && <Badge variant="outline">{t("result.published", { count: 1 })}</Badge>}
 				{entry.id && (
 					<a
 						href={site.adminEntryEditHref(entry.id)}
-						className="ml-auto text-monti-highlight text-xs underline underline-offset-4"
+						className="ml-auto text-monti-accent text-monti-caption underline underline-offset-4"
 					>
 						{t("result.open")}
 					</a>
@@ -73,12 +73,12 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 						<StepLine key={label ?? "create"} label={label} step={step} />
 					))}
 					{entry.notes.map((note) => (
-						<li key={note.code} className="text-monti-muted-foreground text-xs leading-relaxed">
+						<li key={note.code} className="text-monti-caption text-monti-muted">
 							{note.text}
 						</li>
 					))}
 					{warnings.map((text) => (
-						<li key={text} className="text-monti-muted-foreground text-xs leading-relaxed">
+						<li key={text} className="text-monti-caption text-monti-muted">
 							{text}
 						</li>
 					))}
@@ -94,8 +94,8 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const { counts } = result;
 	return (
 		<div className="flex flex-col gap-4" data-testid="import-run-result">
-			<h4 className="font-medium text-base">{t("result.title")}</h4>
-			<p className="text-monti-muted-foreground text-sm" data-testid="import-result-summary">
+			<h4 className="text-monti-title">{t("result.title")}</h4>
+			<p className="text-monti-body text-monti-muted" data-testid="import-result-summary">
 				{[
 					t("result.imported", { count: counts.imported }),
 					counts.draft > 0 ? t("result.draft", { count: counts.draft }) : null,

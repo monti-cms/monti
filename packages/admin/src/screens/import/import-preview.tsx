@@ -24,7 +24,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 	];
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("collections.title")} data-testid="import-collections">
-			<h4 className="font-medium text-sm">{t("collections.title")}</h4>
+			<h4 className="font-medium text-monti-body">{t("collections.title")}</h4>
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -39,7 +39,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 							<TableRow key={collection.name}>
 								<TableCell className="align-top">
 									<div className="font-medium">{name}</div>
-									<div className="text-monti-muted-foreground text-xs">
+									<div className="text-monti-caption text-monti-muted">
 										{t("collections.count", { count: collection.entries })}
 									</div>
 								</TableCell>
@@ -61,9 +61,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 										</SelectContent>
 									</Select>
 									{collection.skipped && (
-										<p className="mt-1 text-monti-muted-foreground text-xs leading-relaxed">
-											{collection.skipped.text}
-										</p>
+										<p className="mt-1 text-monti-caption text-monti-muted">{collection.skipped.text}</p>
 									)}
 								</TableCell>
 							</TableRow>
@@ -82,7 +80,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 			<div className="flex flex-col gap-1">
 				<Badge variant="success">{t("entries.willImport")}</Badge>
 				{entry.notes.map((note) => (
-					<span key={note.code} className="text-monti-muted-foreground text-xs leading-relaxed">
+					<span key={note.code} className="text-monti-caption text-monti-muted">
 						{note.text}
 					</span>
 				))}
@@ -95,7 +93,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 			<Badge variant={conflict ? "warning" : "secondary"}>
 				{conflict ? t("entries.conflict") : t("entries.skipped")}
 			</Badge>
-			<span className="text-monti-muted-foreground text-xs leading-relaxed">{entry.skipped.text}</span>
+			<span className="text-monti-caption text-monti-muted">{entry.skipped.text}</span>
 		</div>
 	);
 }
@@ -113,10 +111,10 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 			: (preview.targets.find((target) => target.name === entry.target)?.label ?? entry.target);
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("entries.title")} data-testid="import-entries">
-			<h4 className="font-medium text-sm">{t("entries.title")}</h4>
+			<h4 className="font-medium text-monti-body">{t("entries.title")}</h4>
 			<div className="max-h-96 overflow-y-auto rounded-md border">
 				<Table containerClassName="overflow-visible">
-					<TableHeader className="sticky top-0 bg-monti-card">
+					<TableHeader className="sticky top-0 bg-monti-surface">
 						<TableRow>
 							<TableHead>{t("entries.title.column")}</TableHead>
 							<TableHead>{t("entries.locale")}</TableHead>
@@ -132,9 +130,9 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 										<span className="break-words font-medium">{entry.title ?? t("entries.noTitle")}</span>
 										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}
 									</div>
-									<div className="break-all font-mono text-monti-muted-foreground text-xs">{entry.slug ?? "—"}</div>
+									<div className="break-all font-mono text-monti-caption text-monti-muted">{entry.slug ?? "—"}</div>
 									{entry.body !== null && (
-										<div className="text-monti-muted-foreground text-xs">
+										<div className="text-monti-caption text-monti-muted">
 											{entry.body.kind === "text" ? t("body.text", { format: entry.body.format }) : t("body.json")}
 										</div>
 									)}
@@ -150,7 +148,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 				</Table>
 			</div>
 			{preview.entries.length > ROW_LIMIT && (
-				<p className="text-monti-muted-foreground text-xs">
+				<p className="text-monti-caption text-monti-muted">
 					{t("entries.more", { count: preview.entries.length - ROW_LIMIT })}
 				</p>
 			)}
@@ -164,8 +162,8 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 	const { counts } = preview;
 	return (
 		<section className="flex flex-col gap-2" aria-label={t("fields.title")} data-testid="import-leftovers">
-			<h4 className="font-medium text-sm">{t("fields.title")}</h4>
-			<ul className="flex flex-col gap-1.5 text-monti-muted-foreground text-sm leading-relaxed">
+			<h4 className="font-medium text-monti-body">{t("fields.title")}</h4>
+			<ul className="flex flex-col gap-2 text-monti-body text-monti-muted">
 				<li>{t("fields.only")}</li>
 				{preview.kind === "export" && <li>{t("fields.shared")}</li>}
 				{preview.fieldsNotImported.map((item) => (
@@ -175,7 +173,7 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 							fields: item.fields.join(", "),
 						})}
 						{item.required.length > 0 && (
-							<span className="block text-xs">
+							<span className="block text-monti-caption">
 								{t("fields.required", { collection: item.target, fields: item.required.join(", ") })}
 							</span>
 						)}
@@ -197,9 +195,9 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 	const { counts } = preview;
 	return (
 		<div className="flex flex-col gap-6" data-testid="import-preview">
-			<p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm" data-testid="import-summary">
-				<span className="font-medium text-base">{t("summary.found", { count: counts.entries })}</span>
-				<span className="text-monti-muted-foreground">
+			<p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-monti-body" data-testid="import-summary">
+				<span className="text-monti-title">{t("summary.found", { count: counts.entries })}</span>
+				<span className="text-monti-muted">
 					{[
 						t("summary.import", { count: counts.imported }),
 						t("summary.skipped", { count: counts.skipped }),
@@ -216,7 +214,7 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 			<EntryRows preview={preview} />
 			<Leftovers preview={preview} />
 			{counts.publishable > 0 && (
-				<label htmlFor={publishId} className="flex cursor-pointer items-start gap-3 text-sm">
+				<label htmlFor={publishId} className="flex cursor-pointer items-start gap-3 text-monti-body">
 					<Checkbox
 						id={publishId}
 						checked={form.publish}
@@ -225,7 +223,7 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 					/>
 					<span className="flex flex-col gap-0.5">
 						<span className="font-medium">{t("publish.label")}</span>
-						<span className="text-monti-muted-foreground text-xs leading-relaxed">
+						<span className="text-monti-caption text-monti-muted">
 							{t("publish.hint", { count: counts.publishable })}
 						</span>
 					</span>

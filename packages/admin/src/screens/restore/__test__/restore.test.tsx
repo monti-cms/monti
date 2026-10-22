@@ -125,7 +125,7 @@ describe("the Restore backup card", () => {
 		expect(backup.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(imports.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(within(zone).getByRole("heading", { name: t("danger.title") })).toBeTruthy();
-		expect(zone.className).toContain("border-monti-destructive/40");
+		expect(zone.querySelector(".border-monti-danger-muted")).not.toBeNull();
 		expect(within(zone).getByTestId("restore-file")).toBeTruthy();
 		expect(imports.id).toBe("import-entries");
 	});

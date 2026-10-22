@@ -82,7 +82,7 @@ export function InternalLinkPopup({
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-popover p-1 text-monti-popover-foreground shadow-lg"
+			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-1 text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -97,33 +97,31 @@ export function InternalLinkPopup({
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none",
-						index === selectedIndex ? "bg-monti-accent text-monti-accent-foreground" : "hover:bg-monti-accent/50",
+						"flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 outline-none",
+						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>
 					<span
 						aria-hidden
-						className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-background text-monti-muted-foreground [&_svg]:size-4"
+						className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-page text-monti-muted [&_svg]:size-4"
 					>
 						<CollectionIcon collection={item.collection} />
 					</span>
 					<span className="min-w-0">
-						<span className="block truncate font-medium text-sm">{item.title}</span>
-						<span className="block truncate text-monti-muted-foreground text-xs">{itemMeta(site, item)}</span>
+						<span className="block truncate font-medium text-monti-body">{item.title}</span>
+						<span className="block truncate text-monti-caption text-monti-muted">{itemMeta(site, item)}</span>
 					</span>
 				</div>
 			))}
 			{isLoading ? (
-				<output className="flex items-center gap-2 px-2 py-1.5 text-monti-muted-foreground text-xs">
+				<output className="flex items-center gap-2 px-2 py-2 text-monti-caption text-monti-muted">
 					<Spinner className="size-3.5" />
 					{t("internalLink.searching")}
 				</output>
 			) : error ? (
-				<FormFieldError className="px-2 py-1.5">{error}</FormFieldError>
+				<FormFieldError className="px-2 py-2">{error}</FormFieldError>
 			) : (
-				items.length === 0 && (
-					<p className="px-2 py-1.5 text-monti-muted-foreground text-xs">{t("internalLink.empty")}</p>
-				)
+				items.length === 0 && <p className="px-2 py-2 text-monti-caption text-monti-muted">{t("internalLink.empty")}</p>
 			)}
 		</div>,
 		document.body,

@@ -67,7 +67,7 @@ function InlineName({
 				}
 			}}
 			className={cn(
-				"h-7 min-w-0 border-transparent bg-transparent monti-dark:bg-transparent px-1.5 font-semibold text-sm shadow-none",
+				"h-7 min-w-0 border-transparent bg-transparent monti-dark:bg-transparent px-2 font-semibold text-monti-body shadow-none",
 				className,
 			)}
 		/>
@@ -121,7 +121,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			className="group/row relative mt-3 flex items-center gap-1 border-y bg-monti-muted py-1.5 pr-5 pl-9 first:mt-0"
+			className="group/row relative mt-3 flex items-center gap-1 border-y bg-monti-neutral py-2 pr-4 pl-8 first:mt-0"
 		>
 			<InlineName
 				value={currentName}
@@ -130,11 +130,11 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				inputRef={inputRef}
 				maxLength={20}
 				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name, defaultName))}
-				className="-ml-1.5 font-semibold"
+				className="-ml-2 font-semibold"
 			/>
 			<span className="flex-1" />
 			{!canRename && index > 0 && (
-				<span className="shrink-0 pr-1 text-monti-muted-foreground text-xs" title={t("layout.tabLocked")}>
+				<span className="shrink-0 pr-1 text-monti-caption text-monti-muted" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
 				</span>
 			)}
@@ -188,14 +188,14 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative mt-3 border-y bg-monti-muted/30 first:mt-0",
-				isDragging && "z-10 bg-monti-card opacity-80",
+				"group/row relative mt-3 border-y bg-monti-inset first:mt-0",
+				isDragging && "z-10 bg-monti-surface opacity-80",
 			)}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-1 py-1.5 pr-5 pl-9">
+			<div className="flex items-center gap-1 py-2 pr-4 pl-8">
 				<InlineName
-					className="-ml-1.5"
+					className="-ml-2"
 					value={group.title}
 					label={t("layout.groupTitle")}
 					disabled={ops.disabled}
@@ -203,7 +203,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 					onCommit={(title) => ops.change((tree) => editGroup(tree, ref, { title }))}
 				/>
 				{group.collapsed && (
-					<span className="shrink-0 text-monti-muted-foreground text-xs">{t("layout.collapsedMark")}</span>
+					<span className="shrink-0 text-monti-caption text-monti-muted">{t("layout.collapsedMark")}</span>
 				)}
 				<span className="flex-1" />
 				<RowButtons buttons={buttons} />
@@ -231,7 +231,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 				{...listeners}
 				aria-label={t("layout.dragGroup", { name: group.title })}
 				disabled={ops.disabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
@@ -246,7 +246,7 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("pr-5 pl-9 text-monti-muted-foreground text-xs", label ? "py-1.5" : "-mb-2 h-2")}
+			className={cn("pr-4 pl-8 text-monti-caption text-monti-muted", label ? "py-2" : "-mb-2 h-2")}
 			data-testid={testId}
 		>
 			{label}

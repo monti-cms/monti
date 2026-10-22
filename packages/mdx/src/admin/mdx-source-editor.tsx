@@ -69,10 +69,10 @@ export function MdxSourceEditor({
 	const lines = useMemo(() => value.split("\n"), [value]);
 
 	return (
-		<div className={["grid font-mono text-sm leading-6", className].filter(Boolean).join(" ")}>
+		<div className={["grid font-mono text-monti-body", className].filter(Boolean).join(" ")}>
 			<pre
 				aria-hidden
-				className="pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-monti-foreground monti-dark:[&_span[style]]:text-(--shiki-dark)!"
+				className="pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-monti-default monti-dark:[&_span[style]]:text-(--shiki-dark)!"
 			>
 				{lines.map((line, index) => {
 					const cached = highlighted[index];
@@ -96,7 +96,7 @@ export function MdxSourceEditor({
 				{...props}
 				value={value}
 				spellCheck={false}
-				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-monti-foreground outline-none selection:bg-monti-primary/20 selection:text-transparent placeholder:text-monti-muted-foreground"
+				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-monti-default outline-none selection:bg-monti-neutral selection:text-transparent placeholder:text-monti-muted"
 			/>
 		</div>
 	);
