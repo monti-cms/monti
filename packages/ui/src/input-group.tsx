@@ -63,7 +63,7 @@ function InputGroupAddon({
 
 /**
  * A button inside the field: always shorter than the 36px field, so it sits inset with the same 4px gap above, below and at the end
- * (the addon's end padding minus its pull-in). `xs` 24px for an icon-sized action, `sm` 28px for a word like "검색".
+ * (the addon's end padding). `xs` 24px for an icon-sized action, `sm` 28px for a word like "Search".
  */
 const inputGroupButtonVariants = cva("flex items-center gap-2 text-monti-label shadow-none", {
 	variants: {
