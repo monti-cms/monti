@@ -11,7 +11,7 @@ import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 export function EntryEditorLoading() {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
-		<Stack gap="none" height="screen" overflow="hidden" background="page" aria-busy="true">
+		<Stack gap="none" height="screen" overflow="clip" background="page" aria-busy="true">
 			<Text srOnly>{t("loadingDocument")}</Text>
 
 			{/* Top header skeleton */}

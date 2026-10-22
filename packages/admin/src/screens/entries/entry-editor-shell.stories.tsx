@@ -2,7 +2,7 @@ import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
-import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { docOf } from "../../test/mdx";
 import { EntryEditorShell } from "./entry-editor-shell";
 import { type EntryData, type EntryForm, formFingerprint, formFromEntry } from "./entry-form";
@@ -123,15 +123,9 @@ const server = ({ entry = draft, load, issues = [], save, publish, more }: Serve
 const screen =
 	(api: () => FakeApi, entryId = "entry-1") =>
 	() => (
-		<ScreenFrame
-			api={api()}
-			title="글 편집"
-			nav="entries"
-			pathname={`/admin/entries/${entryId}/edit`}
-			shell={{ bare: true }}
-		>
+		<PageFrame api={api()} pathname={`/admin/entries/${entryId}/edit`}>
 			<EntryEditorShell mode="edit" initialEntryId={entryId} adminId="u1" />
-		</ScreenFrame>
+		</PageFrame>
 	);
 
 /** The editor mounts slowly in Storybook: every wait in a play function gets the long timeout. */

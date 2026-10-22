@@ -440,7 +440,7 @@ export function EntryEditorShell({
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
-			<Stack gap="none" height="screen" overflow="hidden" background="page">
+			<Stack gap="none" height="screen" overflow="clip" background="page">
 				<EntryEditorHeader
 					editor={editor}
 					commands={commands}

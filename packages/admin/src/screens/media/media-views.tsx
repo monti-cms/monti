@@ -172,7 +172,7 @@ export function MediaTable({
 			<Table aria-label={t("views.table")} inset="page" layout="fixed" stickyHeader container="none">
 				<TableHeader>
 					<TableRow>
-						<TableHead width="xs">
+						<TableHead width="sm">
 							<Text srOnly>{t("views.preview")}</Text>
 						</TableHead>
 						<TableHead>{t("views.filename")}</TableHead>

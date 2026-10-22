@@ -114,7 +114,14 @@ export const LAYOUT = {
 	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64" },
 	grow: { true: "flex-1" },
 	shrink: { false: "shrink-0" },
-	overflow: { auto: "overflow-auto", hidden: "overflow-hidden", y: "overflow-y-auto", x: "overflow-x-auto" },
+	/** `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). */
+	overflow: {
+		auto: "overflow-auto",
+		hidden: "overflow-hidden",
+		clip: "overflow-clip",
+		y: "overflow-y-auto",
+		x: "overflow-x-auto",
+	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */
 	hideBelow: { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" },
 	hideFrom: { sm: "sm:hidden", md: "md:hidden", lg: "lg:hidden" },

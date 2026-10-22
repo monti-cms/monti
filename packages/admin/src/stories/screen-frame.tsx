@@ -61,6 +61,19 @@ function memoryRouter(pathname: string, search: string): AdminRouter {
 	};
 }
 
+/** No theme provider here: the toolbar puts `.dark` on `html`, and toasts follow it the way the admin's provider would tell them. */
+function useToolbarDark() {
+	return useSyncExternalStore(
+		(onChange) => {
+			const observer = new MutationObserver(onChange);
+			observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+			return () => observer.disconnect();
+		},
+		() => document.documentElement.classList.contains("dark"),
+		() => false,
+	);
+}
+
 /**
  * A page in Storybook without the admin frame, for a screen that draws its own (`ShellPage`, the media library). Toasts stay up until
  * dismissed, so a failure that only toasts can be looked at.
@@ -82,12 +95,19 @@ export function PageFrame({
 		installFetch(api);
 		return memoryRouter(pathname, search);
 	});
+	const dark = useToolbarDark();
 	return (
 		<SiteProvider site={testSite}>
 			<AdminRouterProvider router={router}>
 				<AdminQueryProvider>
 					{children}
-					<Toaster richColors closeButton position="bottom-right" duration={Number.POSITIVE_INFINITY} />
+					<Toaster
+						theme={dark ? "dark" : "light"}
+						richColors
+						closeButton
+						position="bottom-right"
+						duration={Number.POSITIVE_INFINITY}
+					/>
 				</AdminQueryProvider>
 			</AdminRouterProvider>
 		</SiteProvider>

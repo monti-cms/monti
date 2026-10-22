@@ -254,7 +254,9 @@ export const ConnectionEditorNew: Story = {
 	render: screen(withConnection()),
 	play: async ({ canvasElement }) => {
 		await tab(canvasElement, "연결");
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: "연결 추가" }));
+		// The title bar and the empty list both offer it; either opens the editor.
+		const [add] = await within(canvasElement).findAllByRole("button", { name: "연결 추가" });
+		if (add) await userEvent.click(add);
 		await within(canvasElement).findByRole("textbox", { name: "이름" });
 	},
 };

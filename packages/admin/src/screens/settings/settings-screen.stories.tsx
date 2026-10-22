@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
-import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { schemaCollectionMessages } from "../schema/collection.messages";
 import { schemaFieldsMessages } from "../schema/fields.messages";
 import { schemaLocalesMessages } from "../schema/locales.messages";
@@ -136,9 +136,9 @@ const place =
 const screen =
 	(api: FakeApi, tab: SchemaTab = "collections") =>
 	() => (
-		<ScreenFrame api={api} title="설정" nav="settings" pathname={`/admin/settings/${tab}`} shell={{ large: true }}>
+		<PageFrame api={api} pathname={`/admin/settings/${tab}`}>
 			<SettingsScreen tab={tab} />
-		</ScreenFrame>
+		</PageFrame>
 	);
 
 const story = (api: FakeApi, tab: SchemaTab, query?: Record<string, string>, extra: Partial<Story> = {}): Story => ({

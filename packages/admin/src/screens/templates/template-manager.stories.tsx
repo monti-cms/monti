@@ -42,7 +42,9 @@ const screen = (fake: FakeApi) => () => (
 
 /** Opens the first row of the list. */
 const openFirst = async (canvasElement: HTMLElement) => {
-	await userEvent.click(await within(canvasElement).findByRole("button", { name: /일반 게시글/ }));
+	// The row, not its ⋯ button (whose name also holds the title).
+	const [row] = await within(canvasElement).findAllByRole("button", { name: /^일반 게시글/ });
+	if (row) await userEvent.click(row);
 	await within(canvasElement).findByRole("textbox", { name: "템플릿 이름" });
 };
 

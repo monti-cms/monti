@@ -1,7 +1,7 @@
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { answer, type FakeApi, ScreenFrame } from "../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../stories/screen-frame";
 import { EntryListScreen, TrashScreen } from "./entry-list-screen";
 
 const meta = { title: "Screens/Entry list", parameters: { layout: "fullscreen" } } satisfies Meta;
@@ -98,9 +98,9 @@ const server =
 const listScreen =
 	(api: FakeApi, search = "collection=post") =>
 	() => (
-		<ScreenFrame api={api} title="게시글" nav="post" pathname="/admin" search={search}>
+		<PageFrame api={api} pathname="/admin" search={search}>
 			<EntryListScreen />
-		</ScreenFrame>
+		</PageFrame>
 	);
 
 /** The list reloads once when the saved settings arrive, and that clears a selection made before. */
@@ -217,9 +217,9 @@ const tagServer = (save?: FakeApi) =>
 		},
 	});
 const tagScreen = (api: FakeApi) => () => (
-	<ScreenFrame api={api} title="태그" nav="tag" pathname="/admin" search="collection=tag">
+	<PageFrame api={api} pathname="/admin" search="collection=tag">
 		<EntryListScreen />
-	</ScreenFrame>
+	</PageFrame>
 );
 const openTag = async (canvasElement: HTMLElement) => {
 	await userEvent.click(await within(canvasElement).findByRole("button", { name: "리액트" }));
@@ -278,16 +278,9 @@ export const RecordPanelDiscardDialog: Story = {
 
 // The trash screen.
 const trashScreen = (api: FakeApi) => () => (
-	<ScreenFrame
-		api={api}
-		title="휴지통"
-		nav="trash"
-		pathname="/admin/trash"
-		search="collection=post"
-		shell={{ large: true }}
-	>
+	<PageFrame api={api} pathname="/admin/trash" search="collection=post">
 		<TrashScreen />
-	</ScreenFrame>
+	</PageFrame>
 );
 export const TrashLoaded: Story = { render: trashScreen(server({ trashed })) };
 

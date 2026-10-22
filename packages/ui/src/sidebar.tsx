@@ -54,7 +54,7 @@ function SidebarProvider({
 	defaultOpen?: boolean;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-	/** The frame takes exactly the window and never scrolls; the panes inside scroll on their own (the admin's app frame). */
+	/** The frame takes exactly the window and never scrolls, not even to bring a focused field into view; the panes inside scroll on their own (the admin's app frame). */
 	fixed?: boolean;
 }) {
 	const isMobile = useIsMobile();
@@ -135,7 +135,7 @@ function SidebarProvider({
 				}
 				className={cn(
 					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-inset",
-					fixed && "h-svh overflow-hidden",
+					fixed && "h-svh overflow-clip",
 					className,
 				)}
 				{...props}
@@ -282,7 +282,7 @@ function SidebarInset({
 			data-slot="sidebar-inset"
 			className={cn(
 				"relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl",
-				fixed && "min-w-0 overflow-hidden",
+				fixed && "min-w-0 overflow-clip",
 				className,
 			)}
 			{...props}

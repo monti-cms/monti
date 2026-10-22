@@ -168,7 +168,7 @@ function useMounted() {
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline align="stretch" gap="none" height="screen" overflow="hidden" aria-busy="true">
+		<Inline align="stretch" gap="none" height="screen" overflow="clip" aria-busy="true">
 			<Text srOnly>{tc("loading")}</Text>
 			<Stack gap="condensed" width="panel-sm" shrink={false} border="right" padding="normal" hideBelow="md" aria-hidden>
 				<Skeleton shape="control-sm" width="third" />
