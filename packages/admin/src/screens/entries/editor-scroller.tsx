@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the scrolling body of the editor: its active-block highlight reaches into the editor's own markup.
-
 import { cn } from "@monti-cms/ui";
 import type { ReactNode, Ref } from "react";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";

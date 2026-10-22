@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the code block is drawn in the document: frame, line gutter, line backgrounds and the code text are positioned together
-
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {

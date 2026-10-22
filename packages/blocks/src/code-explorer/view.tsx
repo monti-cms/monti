@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — draws the explorer as the public post does
-
 import {
 	AttributeInput,
 	BlockFrame,

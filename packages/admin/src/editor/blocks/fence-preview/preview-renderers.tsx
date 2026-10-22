@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — rendered previews (diagram, formula) are drawn inside the document in the block's own look
-
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";

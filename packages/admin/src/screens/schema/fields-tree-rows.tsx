@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the field list rows: column grid, hover-revealed handle and buttons, kind colours, drag transform
-
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 

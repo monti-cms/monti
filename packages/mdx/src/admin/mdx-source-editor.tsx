@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — a textarea laid over a syntax-highlighted layer
-
 import { useDebounced } from "@monti-cms/admin/kit";
 import { type ComponentProps, type CSSProperties, useEffect, useMemo, useState } from "react";
 

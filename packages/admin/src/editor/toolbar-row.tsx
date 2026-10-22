@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the toolbar measures its own tools (refs, an invisible row, exact widths) to decide which move into "More"
-
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,

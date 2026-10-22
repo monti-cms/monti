@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the default custom block is drawn in the document: a frame with the component name above its body
-
 import type { BlockDefinition } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import {

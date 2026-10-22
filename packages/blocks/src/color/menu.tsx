@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — color samples painted by the mark's own classes and variables
-
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import {

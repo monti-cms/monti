@@ -1,4 +1,3 @@
-// design-system: drawing — the admin root: `monti-admin` scopes the tokens and the page fills the window
 import type { Cms } from "@monti-cms/core/server";
 import { SiteProvider } from "@monti-cms/core/site";
 import { TooltipProvider } from "@monti-cms/ui";

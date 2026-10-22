@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the editor canvas: the writing column is sized by `--editor-width`, with a measured padding on the toolbar row
-
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
 import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/site";
 import { Stack } from "@monti-cms/ui";

@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — chart geometry inside the post's rhythm
-
 import { useTranslator } from "@monti-cms/admin";
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
 import { AlertOctagon } from "lucide-react";

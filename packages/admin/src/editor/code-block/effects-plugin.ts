@@ -1,4 +1,3 @@
-// design-system: drawing — the fold marker is a decoration placed inside the code text
 import {
 	ANCHOR,
 	COLLAPSE,

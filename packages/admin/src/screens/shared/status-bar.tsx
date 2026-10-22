@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the status bar is a dense strip with its own item, popup row and header look that no other screen shares
-
 // The status bar at the bottom of every admin screen. Core and plugins contribute items; an item shows changing state that leads somewhere when clicked,
 // and renders nothing when there is nothing to say.
 

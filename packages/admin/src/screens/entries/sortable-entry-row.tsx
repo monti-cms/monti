@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — a sortable row is moved by dnd-kit's transform (inline style) and lifts while dragged, and its handle needs a grab cursor and no touch scrolling.
-
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";

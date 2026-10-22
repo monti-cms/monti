@@ -101,8 +101,8 @@ describe("admin CSS confinement", () => {
 			expect(theme).toContain(`${reset}: initial;`);
 		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
 		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--monti-radius");
-		// Every role reads an admin variable.
-		for (const role of theme.matchAll(/--[a-z-]+-monti-[a-z-]+:\s*([^;]+);/g))
+		// Every role reads an admin variable (an animation names its `monti-` keyframes instead).
+		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[a-z-]+:\s*([^;]+);/g))
 			expect(role[1]).toMatch(/^var\(--monti-|^\d/);
 		// Variant names also start with `monti-`.
 		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);

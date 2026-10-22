@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the sidebar composition: its header, footer and group chrome follow the icon-rail states, and the folder tree is indented by depth with row actions shown on hover
-
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";

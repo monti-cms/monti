@@ -393,7 +393,6 @@ function LocaleRow({
 	const displayName = locale.label ?? locale.name;
 	const hasDistinctNative = Boolean(locale.label && locale.label !== locale.name);
 	return (
-		// design-system: drawing — sortable list row (drag transform, hover-revealed handle and buttons)
 		<li
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -411,7 +410,6 @@ function LocaleRow({
 				{...listeners}
 				aria-label={t("locales.drag", { name: displayName })}
 				disabled={dragDisabled}
-				// design-system: drawing — drag handle, shown on hover or focus
 				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />

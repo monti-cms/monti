@@ -172,7 +172,6 @@ function CollectionNavItem({
 	const label = String(collection?.label ?? name);
 
 	return (
-		// design-system: drawing — the sortable row: the drag transform and the grip that appears on hover, which the parts cannot draw
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -180,7 +179,6 @@ function CollectionNavItem({
 			data-testid={`collection-nav-${name}`}
 		>
 			{writable && (
-				// design-system: drawing — the drag handle, placed over the row and shown on hover or focus
 				<button
 					type="button"
 					ref={setActivatorNodeRef}
@@ -192,7 +190,6 @@ function CollectionNavItem({
 					<GripVertical aria-hidden className="size-3.5" />
 				</button>
 			)}
-			{/* design-system: drawing — the row button makes room for the handle on hover (padding shift) */}
 			<button
 				type="button"
 				aria-current={active ? "true" : undefined}

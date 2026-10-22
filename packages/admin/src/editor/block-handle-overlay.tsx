@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the handle floats beside the block at measured coordinates
-
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	DropdownMenu,

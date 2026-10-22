@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)
-
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
 import { Puzzle } from "lucide-react";

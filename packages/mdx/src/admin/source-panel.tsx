@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — sizes the highlighted source editor, which draws its own surface
-
 import {
 	type BrowserFormat,
 	type Site,

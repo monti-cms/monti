@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — draws the collapsible as the public post does
-
 import {
 	AttributeInput,
 	BlockFrame,

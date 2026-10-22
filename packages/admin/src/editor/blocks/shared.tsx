@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the block toolbar floats over the block corner and attributes are written in place inside the block
-
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { Settings2 } from "lucide-react";

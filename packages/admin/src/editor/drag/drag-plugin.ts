@@ -1,4 +1,3 @@
-// design-system: drawing — the drop line is drawn between blocks while dragging
 import { Extension } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";

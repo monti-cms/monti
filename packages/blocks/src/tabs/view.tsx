@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — draws the tab bar and body as the public post does
-
 import {
 	AttributeInput,
 	BlockFrame,

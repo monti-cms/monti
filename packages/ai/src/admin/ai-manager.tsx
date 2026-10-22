@@ -12,7 +12,6 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-	cn,
 	commonMessages,
 	DropdownMenu,
 	DropdownMenuContent,

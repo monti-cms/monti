@@ -1,4 +1,3 @@
-// design-system: drawing — the public page's chart, styled by render.css
 /*
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with

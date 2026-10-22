@@ -1,4 +1,3 @@
-// design-system: drawing — the admin root: `monti-admin` scopes the tokens and the screen is centered in the window
 import type { Cms } from "@monti-cms/core/server";
 import { Alert, AlertDescription, AlertTitle, Box } from "@monti-cms/ui";
 import { layoutMessages } from "./messages";

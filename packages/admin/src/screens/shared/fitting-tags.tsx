@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — chips measured against their cell width (refs and pixel arithmetic), with a +N rest
-
 import { useTranslator } from "@monti-cms/core/site";
 import { Text } from "@monti-cms/ui";
 import { useLayoutEffect, useRef, useState } from "react";

@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — hosts the diagram SVG
-
 import { cn } from "@monti-cms/admin/kit";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { drawMermaid } from "./draw";

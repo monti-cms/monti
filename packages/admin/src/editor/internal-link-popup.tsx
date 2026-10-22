@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)
-
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, cn, FormFieldError, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";

@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow, a width the writer drags).
-
 // The two side panels of the entry editor screen: the translation source pane (left) and the properties inspector (right).
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";

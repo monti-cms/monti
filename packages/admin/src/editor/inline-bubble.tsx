@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the bubble floats at the selection (fixed coordinates, z-index, measured by ref)
-
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextLink } from "@monti-cms/ui";

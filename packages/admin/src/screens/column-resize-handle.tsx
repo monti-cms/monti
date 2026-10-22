@@ -1,5 +1,4 @@
 // Column width resize handle of the entries table header.
-// design-system: drawing — a draggable, keyboard-operable separator positioned on a column edge
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";

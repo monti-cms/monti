@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — measured column layout with boundary handles and drag
-
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
 import { Box, cn, Text } from "@monti-cms/admin/kit";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";

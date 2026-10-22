@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — chart geometry (recharts selectors, aspect ratio, tooltip and legend boxes, swatches)
-
 /*
  * Drawing frame for the chart preview (a thin layer over recharts, shaped like the shadcn/ui chart). Colors use `color` (a theme variable) from `config`.
  * Used only by the editor preview (`./preview`). The public page is rendered by the site.

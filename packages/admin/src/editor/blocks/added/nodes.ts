@@ -1,4 +1,3 @@
-// design-system: drawing — the class names the node view wrapper inside the document
 import type { BlockDefinition } from "@monti-cms/core";
 import { perSite, type Site } from "@monti-cms/core/site";
 import { mergeAttributes, Node } from "@tiptap/core";

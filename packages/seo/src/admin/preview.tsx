@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — imitates a search result (Google's link blue, two-line clamps, share card thumbnail)
-
 import { type FieldViewProps, type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
 import { cn, commonMessages, MediaThumbnail, Panel, Stack, Text } from "@monti-cms/admin/kit";

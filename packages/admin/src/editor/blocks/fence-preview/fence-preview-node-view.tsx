@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the preview block is drawn inside the document
-
 import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";

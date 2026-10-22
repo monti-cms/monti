@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the crop area is the image with a rectangle, mask and handles positioned by percent and pointer drag
-
 import {
 	type CropBox,
 	formatCrop,

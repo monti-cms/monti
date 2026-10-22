@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the docked side panel: positioned beside the list, its width comes from a drag handle (a CSS variable)
-
 import { useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline } from "@monti-cms/ui";
 import { X } from "lucide-react";

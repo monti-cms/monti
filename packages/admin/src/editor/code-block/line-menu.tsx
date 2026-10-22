@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — a menu beside the picked lines (absolute position inside the block, never takes focus from the code)
-
 import {
 	COLLAPSE,
 	type CodeLineEffect,

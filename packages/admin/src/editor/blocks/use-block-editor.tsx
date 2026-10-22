@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — `Content` and `BlockFrame` are how a block view draws inside the document, so they take a `className`
-
 import type { BlockDefinition } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";

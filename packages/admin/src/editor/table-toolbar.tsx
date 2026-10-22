@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the toolbar floats over the table at a position measured from it
-
 import { useTranslator } from "@monti-cms/core/site";
 import { Inline, Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";

@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the field list tab and group rows: drag transform, hover-revealed handle
-
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
 import { useSortable } from "@dnd-kit/sortable";

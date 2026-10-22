@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the field list frame: column grid, resizable side panel and preview column
-
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Heading, IconButton, Inline, Panel, Stack, Text } from "@monti-cms/ui";
 import { Eye, Plus, X } from "lucide-react";

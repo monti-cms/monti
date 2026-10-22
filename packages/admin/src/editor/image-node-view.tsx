@@ -1,7 +1,5 @@
 "use client";
 
-// design-system: drawing — the image block is drawn inside the document: frame, crop, width, caption in place, resize handles
-
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Stack, Switch, Textarea } from "@monti-cms/ui";
