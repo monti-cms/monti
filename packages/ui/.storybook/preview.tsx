@@ -4,7 +4,12 @@ import { TooltipProvider } from "../src/tooltip";
 import "./storybook.css";
 
 const preview: Preview = {
-	parameters: { layout: "padded", controls: { expanded: true } },
+	parameters: {
+		layout: "padded",
+		controls: { expanded: true },
+		// The tokens first: everything below is built from them.
+		options: { storySort: { order: ["Foundations", "Layout", "Controls", "Feedback", "Overlays", "*"] } },
+	},
 	decorators: [
 		(Story) => (
 			<TooltipProvider>
