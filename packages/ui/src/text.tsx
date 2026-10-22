@@ -28,12 +28,24 @@ export const textVariants = cva("", {
 			warning: "text-monti-warning",
 			success: "text-monti-success",
 			inherit: "",
+			/** The field list's kind colors (component tokens of the collection settings). */
+			"kind-teal": "text-monti-kind-teal",
+			"kind-blue": "text-monti-kind-blue",
+			"kind-violet": "text-monti-kind-violet",
+			"kind-orange": "text-monti-kind-orange",
+			"kind-green": "text-monti-kind-green",
 		},
 		weight: { role: "", medium: "font-medium", semibold: "font-semibold" },
 		mono: { true: "font-mono" },
 		truncate: { true: "truncate" },
 		/** Read by screen readers, not shown (a column name over buttons, a label the layout already makes plain). */
 		srOnly: { true: "sr-only" },
+		/** At most this many lines, then "…". */
+		lines: { 2: "line-clamp-2", 3: "line-clamp-3" },
+		italic: { true: "italic" },
+		/** Keeps the text's own line breaks (an error message, a model's answer). */
+		preserveLines: { true: "whitespace-pre-wrap" },
+		align: { start: "text-left", center: "text-center", end: "text-right" },
 	},
 	defaultVariants: { variant: "body", tone: "inherit", weight: "role" },
 });
@@ -44,8 +56,30 @@ type TextProps = React.HTMLAttributes<HTMLElement> &
 		htmlFor?: string;
 	};
 
-function Text({ as: Tag = "span", variant, tone, weight, mono, truncate, srOnly, className, ...props }: TextProps) {
-	return <Tag className={cn(textVariants({ variant, tone, weight, mono, truncate, srOnly }), className)} {...props} />;
+function Text({
+	as: Tag = "span",
+	variant,
+	tone,
+	weight,
+	mono,
+	truncate,
+	srOnly,
+	lines,
+	italic,
+	preserveLines,
+	align,
+	className,
+	...props
+}: TextProps) {
+	return (
+		<Tag
+			className={cn(
+				textVariants({ variant, tone, weight, mono, truncate, srOnly, lines, italic, preserveLines, align }),
+				className,
+			)}
+			{...props}
+		/>
+	);
 }
 
 /** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `heading` for the screen, `display` for the post title. */

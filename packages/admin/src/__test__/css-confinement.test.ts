@@ -86,7 +86,7 @@ describe("admin CSS confinement", () => {
 		expect(names.filter((name) => name.startsWith("--background-color-monti-")).length).toBeGreaterThan(0);
 		for (const name of names)
 			expect(name).toMatch(
-				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|accent-color|text|shadow)-monti-|radius-(?:sm|md|lg|xl)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold)$|tracking-caps$|spacing-[a-z]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
+				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|accent-color|text|shadow)-monti-|radius-(?:sm|md|lg|xl)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold)$|tracking-caps$|spacing-[a-z]+$|size-(?:icon|control)(?:-[a-z]+)?$|height-control(?:-[a-z]+)?$|container-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
 			);
 		// Tailwind's palette, text sizes, weights, shadows, tracking and line heights are cleared, so an off-system class compiles to nothing.
 		for (const reset of [

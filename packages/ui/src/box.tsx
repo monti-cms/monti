@@ -26,9 +26,13 @@ function Box({
 	as: Tag = "div",
 	className,
 	...props
-}: React.HTMLAttributes<HTMLElement> & LayoutProps & { as?: Tag; htmlFor?: string }) {
+}: React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> } & LayoutProps & {
+		as?: Tag;
+		htmlFor?: string;
+	}) {
 	const [layout, rest] = splitLayout(props);
-	return <Tag className={cn(layoutVariants(layout), className)} {...rest} />;
+	const Element = Tag as React.ElementType;
+	return <Element className={cn(layoutVariants(layout), className)} {...rest} />;
 }
 
 export { Box };

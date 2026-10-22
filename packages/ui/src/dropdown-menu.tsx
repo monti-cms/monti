@@ -17,7 +17,7 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 	return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
-const MENU_WIDTH = { sm: "min-w-36", md: "min-w-48", lg: "min-w-56" } as const;
+const MENU_WIDTH = { auto: "min-w-0", sm: "min-w-36", md: "min-w-48", lg: "min-w-56" } as const;
 
 function DropdownMenuContent({
 	align = "start",
@@ -29,7 +29,7 @@ function DropdownMenuContent({
 	...props
 }: MenuPrimitive.Popup.Props &
 	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
-		/** The menu's minimum width: `sm` 144px, `md` 192px, `lg` 224px; it grows with its longest item otherwise. */
+		/** The menu's minimum width: `sm` 144px, `md` 192px, `lg` 224px, `auto` none; it grows with its longest item otherwise. */
 		width?: keyof typeof MENU_WIDTH;
 	}) {
 	return (
@@ -139,7 +139,7 @@ function DropdownMenuSubContent({
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
 			className={cn(
-				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 w-auto min-w-[96px] rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating duration-100 data-closed:animate-out data-open:animate-in",
+				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 max-h-80 w-auto min-w-[96px] rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating duration-100 data-closed:animate-out data-open:animate-in",
 				className,
 			)}
 			align={align}

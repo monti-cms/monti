@@ -15,6 +15,7 @@ const badgeVariants = cva(
 				success: "bg-monti-success-muted text-monti-success",
 				warning: "bg-monti-warning-muted text-monti-warning",
 				outline: "border-monti-muted text-monti-default [a]:hover:bg-monti-hover [a]:hover:text-monti-muted",
+				dashed: "border-monti-default border-dashed text-monti-subtle",
 				ghost: "hover:bg-monti-hover hover:text-monti-muted monti-dark:hover:bg-monti-hover",
 				link: "text-monti-accent underline underline-offset-4",
 			},

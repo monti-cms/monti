@@ -28,6 +28,7 @@ export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
 export { Checkbox } from "./checkbox";
 export { cn } from "./cn";
+export { CodeBlock, DiffMark, DiffView } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 export {
 	Combobox,
@@ -120,7 +121,9 @@ export {
 	FormFieldTitle,
 } from "./field";
 export { Grid } from "./grid";
+export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
+export { Image } from "./image";
 export { Input } from "./input";
 export {
 	InputGroup,
@@ -133,6 +136,7 @@ export {
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
+export { List, ListItem } from "./list";
 export {
 	Pagination,
 	PaginationContent,
@@ -143,6 +147,8 @@ export {
 	PaginationPrevious,
 } from "./pagination";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
+export { Progress } from "./progress";
+export { RadioGroup, RadioItem } from "./radio-group";
 export {
 	Select,
 	SelectContent,
@@ -194,6 +200,7 @@ export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } 
 export { Heading, Text, textVariants } from "./text";
 export { TextLink } from "./text-link";
 export { Textarea } from "./textarea";
+export { ChoiceCard, Tile } from "./tile";
 export { Toggle, toggleVariants } from "./toggle";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";

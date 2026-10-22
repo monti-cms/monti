@@ -3,7 +3,7 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 /** What a status means; the color follows from it (success, warning, danger, muted). */
-export type StatusTone = "success" | "warning" | "danger" | "neutral" | "strong";
+export type StatusTone = "success" | "warning" | "danger" | "neutral" | "strong" | "accent";
 
 /** The marker's form. The meaning never rests on color alone: pair the shape with a `label`, or give the marker a name some other way. */
 export type StatusShape = "dot" | "ring" | "dashed" | "half" | "minus";
@@ -15,6 +15,7 @@ const toneClass = cva("shrink-0", {
 			warning: "text-monti-warning",
 			danger: "text-monti-danger",
 			neutral: "text-monti-muted",
+			accent: "text-monti-accent",
 			/** The page text color: the monochrome "published" and "draft" markers. */
 			strong: "text-monti-default",
 		},

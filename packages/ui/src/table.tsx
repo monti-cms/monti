@@ -7,12 +7,18 @@ function Table({
 	className,
 	containerClassName,
 	inset = "none",
+	layout = "auto",
+	stickyHeader = false,
 	...props
 }: React.ComponentProps<"table"> & {
 	/** Scroll area wrapping the table. If the outside handles scrolling, set `overflow-visible` so the sticky header works. */
 	containerClassName?: string;
 	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
 	inset?: "none" | "page";
+	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
+	layout?: "auto" | "fixed";
+	/** The header row stays at the top while the rows scroll under it. */
+	stickyHeader?: boolean;
 }) {
 	return (
 		<div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
@@ -20,6 +26,8 @@ function Table({
 				data-slot="table"
 				className={cn(
 					"w-full caption-bottom text-monti-body",
+					layout === "fixed" && "table-fixed",
+					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					inset === "page" &&
 						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
 					className,
@@ -79,6 +87,8 @@ interface CellOptions {
 	align?: "start" | "center" | "end";
 	truncate?: boolean;
 	width?: keyof typeof COLUMN_WIDTH;
+	/** A column width in px that the screen computes (a column the writer resized); takes over from `width`. */
+	size?: number;
 	valign?: "top";
 	tone?: "muted";
 }
@@ -90,8 +100,10 @@ function TableHead({
 	align = "start",
 	truncate,
 	width,
+	size,
 	valign,
 	tone,
+	style,
 	...props
 }: Omit<React.ComponentProps<"th">, "align"> & CellOptions) {
 	return (
@@ -106,6 +118,7 @@ function TableHead({
 				tone === "muted" && "text-monti-muted",
 				className,
 			)}
+			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
 		/>
 	);
@@ -116,8 +129,10 @@ function TableCell({
 	align = "start",
 	truncate,
 	width,
+	size,
 	valign,
 	tone,
+	style,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
 	return (
@@ -132,6 +147,7 @@ function TableCell({
 				tone === "muted" && "text-monti-muted",
 				className,
 			)}
+			style={size === undefined ? style : { ...style, width: size }}
 			{...props}
 		/>
 	);

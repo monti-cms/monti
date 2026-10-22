@@ -102,11 +102,15 @@ export const layoutVariants = cva("", {
 			panel: "max-w-panel",
 			"panel-lg": "max-w-panel-lg",
 			prose: "max-w-prose",
+			content: "max-w-content",
+			page: "max-w-page",
 		},
 		/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
 		minWidth: { 0: "min-w-0" },
-		height: { full: "h-full", auto: "h-auto", control: "h-control", "control-sm": "h-control-sm" },
-		minHeight: { 0: "min-h-0", full: "min-h-full" },
+		height: { full: "h-full", auto: "h-auto", screen: "h-svh", control: "h-control", "control-sm": "h-control-sm" },
+		/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */
+		maxHeight: { list: "max-h-96", half: "max-h-[50vh]", menu: "max-h-80" },
+		minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64" },
 		grow: { true: "flex-1" },
 		shrink: { false: "shrink-0" },
 		overflow: { auto: "overflow-auto", hidden: "overflow-hidden", y: "overflow-y-auto", x: "overflow-x-auto" },
@@ -114,6 +118,16 @@ export const layoutVariants = cva("", {
 		hideBelow: { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" },
 		hideFrom: { sm: "sm:hidden", md: "md:hidden", lg: "lg:hidden" },
 		position: { relative: "relative", sticky: "sticky top-0 z-10" },
+		/** Pinned to a corner of the nearest `position="relative"` parent (a badge or an action on a tile). */
+		place: {
+			"top-left": "absolute top-condensed left-condensed",
+			"top-right": "absolute top-condensed right-condensed",
+			"bottom-right": "absolute right-condensed bottom-condensed",
+		},
+		/** A row or item that reacts to the pointer. */
+		hover: { true: "transition-colors hover:bg-monti-hover" },
+		/** Out of date while new content loads, or not available: shown, but quieter. */
+		dimmed: { true: "opacity-50 transition-opacity" },
 	},
 });
 
@@ -134,6 +148,7 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 		maxWidth,
 		minWidth,
 		height,
+		maxHeight,
 		minHeight,
 		grow,
 		shrink,
@@ -141,6 +156,9 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 		hideBelow,
 		hideFrom,
 		position,
+		place,
+		hover,
+		dimmed,
 		...rest
 	} = props;
 	return [
@@ -157,6 +175,7 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 			maxWidth,
 			minWidth,
 			height,
+			maxHeight,
 			minHeight,
 			grow,
 			shrink,
@@ -164,6 +183,9 @@ export function splitLayout<P extends LayoutProps>(props: P): [LayoutProps, Omit
 			hideBelow,
 			hideFrom,
 			position,
+			place,
+			hover,
+			dimmed,
 		},
 		rest,
 	];

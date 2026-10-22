@@ -37,14 +37,16 @@ export const stackVariants = cva("flex", {
 	defaultVariants: { direction: "column", gap: "normal" },
 });
 
-type StackProps = React.HTMLAttributes<HTMLElement> &
-	VariantProps<typeof stackVariants> &
+type StackProps = React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> } & VariantProps<
+		typeof stackVariants
+	> &
 	LayoutProps & { as?: BoxTag };
 
 function Stack({ as: Tag = "div", direction, gap, align, justify, wrap, className, ...props }: StackProps) {
 	const [layout, rest] = splitLayout(props);
+	const Element = Tag as React.ElementType;
 	return (
-		<Tag
+		<Element
 			className={cn(stackVariants({ direction, gap, align, justify, wrap }), layoutVariants(layout), className)}
 			{...rest}
 		/>

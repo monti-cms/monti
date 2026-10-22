@@ -123,6 +123,7 @@
 	 *   icons     size-icon-xs 12, size-icon-sm 14, size-icon 16, size-icon-lg 20
 	 *   controls  h-control-xs 24, h-control-sm 32, h-control 36, h-control-lg 40 (also min-h-, and size-control-* for a square button)
 	 *   panels    w-panel-sm 224, w-panel 288, w-panel-lg 384 (also max-w-, min-w-: popovers, menus, side columns)
+	 *   pages     w-rail 220, w-rail-wide 260 (a section's label column), max-w-content 1000, max-w-page 1160
 	 */
 	--size-icon-xs: 12px;
 	--size-icon-sm: 14px;
@@ -139,6 +140,11 @@
 	--container-panel-sm: 224px;
 	--container-panel: 288px;
 	--container-panel-lg: 384px;
+	/* Page columns: a settings section's label column (rail, rail-wide) and the readable width of a form page (content, page). */
+	--container-rail: 220px;
+	--container-rail-wide: 260px;
+	--container-content: 1000px;
+	--container-page: 1160px;
 
 	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
 	--radius-*: initial;
@@ -204,4 +210,15 @@
 	--drop-shadow-*: initial;
 	--text-shadow-*: initial;
 	--shadow-monti-floating: var(--monti-shadow-floating);
+
+	/* The moving bar of a progress whose amount is unknown. */
+	--animate-monti-progress: monti-progress 1.2s ease-in-out infinite;
+	@keyframes monti-progress {
+		from {
+			left: -33%;
+		}
+		to {
+			left: 100%;
+		}
+	}
 }

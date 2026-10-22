@@ -16,6 +16,8 @@ const gridVariants = cva("grid", {
 			3: "grid-cols-3",
 			4: "grid-cols-4",
 			sidebar: "grid-cols-[var(--container-panel)_minmax(0,1fr)]",
+			/** As many columns as fit, each at least 160px: a grid of tiles (files, images). */
+			tiles: "grid-cols-[repeat(auto-fill,minmax(160px,1fr))]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		gap: {
@@ -30,6 +32,10 @@ const gridVariants = cva("grid", {
 		},
 		align: { start: "items-start", center: "items-center", end: "items-end", stretch: "items-stretch" },
 	},
+	// Tiles fit their own count of columns at every width.
+	compoundVariants: [
+		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]" },
+	],
 	defaultVariants: { columns: 2, responsive: true, gap: "normal" },
 });
 
@@ -41,10 +47,12 @@ function Grid({
 	align,
 	className,
 	...props
-}: React.HTMLAttributes<HTMLElement> & VariantProps<typeof gridVariants> & LayoutProps & { as?: BoxTag }) {
+}: React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> } & VariantProps<typeof gridVariants> &
+	LayoutProps & { as?: BoxTag }) {
 	const [layout, rest] = splitLayout(props);
+	const Element = Tag as React.ElementType;
 	return (
-		<Tag
+		<Element
 			className={cn(gridVariants({ columns, responsive, gap, align }), layoutVariants(layout), className)}
 			{...rest}
 		/>
