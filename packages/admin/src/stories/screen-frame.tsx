@@ -28,9 +28,9 @@ function installFetch(api: FakeApi) {
 	};
 }
 
-function memoryRouter(search: string): AdminRouter {
+function memoryRouter(pathname: string, search: string): AdminRouter {
 	const listeners = new Set<() => void>();
-	const state = { pathname: "/admin", search: new URLSearchParams(search) };
+	const state = { pathname, search: new URLSearchParams(search) };
 	const subscribe = (listener: () => void) => {
 		listeners.add(listener);
 		return () => listeners.delete(listener);
@@ -64,25 +64,31 @@ export function ScreenFrame({
 	api,
 	title,
 	nav,
+	pathname = "/admin",
 	search = "",
+	shell,
 	children,
 }: {
 	api: FakeApi;
 	title: string;
 	nav: NonNullable<ComponentProps<typeof AdminShell>["sidebar"]>["activeNav"];
+	/** The admin address the screen reads (`/admin/settings/collections`). */
+	pathname?: string;
 	search?: string;
+	/** Further options of the frame (`large`, `bare`, `count`). */
+	shell?: Omit<ComponentProps<typeof AdminShell>, "title" | "sidebar" | "children">;
 	children: ReactNode;
 }) {
 	// Set up once per story, before the screen's first request.
 	const [router] = useState(() => {
 		installFetch(api);
-		return memoryRouter(search);
+		return memoryRouter(pathname, search);
 	});
 	return (
 		<SiteProvider site={testSite}>
 			<AdminRouterProvider router={router}>
 				<AdminQueryProvider>
-					<AdminShell title={title} sidebar={{ activeNav: nav }}>
+					<AdminShell {...shell} title={title} sidebar={{ activeNav: nav }}>
 						{children}
 					</AdminShell>
 				</AdminQueryProvider>

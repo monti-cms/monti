@@ -22,5 +22,10 @@
 
 @source "../src";
 @source "../../admin/src";
+@source "../../ai/src";
+@source "../../blocks/src";
+@source "../../mdx/src";
+@source "../../seo/src";
+@source "../../git-sync/src";
 @source not "../src/**/__test__";
-@source not "../../admin/src/**/__test__";
+@source not "../../*/src/**/__test__";
