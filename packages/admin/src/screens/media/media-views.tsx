@@ -39,7 +39,7 @@ export const fallbackFor = (media: MediaItem, isImage: boolean) =>
 
 export interface MediaViewProps {
 	items: readonly MediaItem[];
-	/** The file open in the right detail panel. Highlighted with `OPEN_ITEM`. */
+	/** The file open in the right detail panel. */
 	selectedId: string | null;
 	/** Dims the previous rows while conditions change. */
 	dimmed: boolean;

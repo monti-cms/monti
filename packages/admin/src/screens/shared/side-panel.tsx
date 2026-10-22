@@ -33,9 +33,6 @@ export const RECORD_PANEL_RESIZE: PanelResizeConfig = { name: "record", defaultW
 export const MEDIA_PANEL_RESIZE: PanelResizeConfig = { name: "media-detail", defaultWidth: 384, minWidth: 352 };
 export const INSPECTOR_PANEL_RESIZE: PanelResizeConfig = { name: "inspector", defaultWidth: 384, minWidth: 352 };
 
-/** Background of the item currently open in the list (open in the right slot or edit slot). */
-export const OPEN_ITEM = "bg-monti-selected text-monti-default";
-
 /** Right slot header. A title and a close button (the name is always "Close"). */
 export function SidePanelHeader({
 	title,

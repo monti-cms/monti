@@ -24,7 +24,7 @@ import {
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
-import { type CONTROL_WIDTH, Labeled } from "../shared/labeled";
+import { type ControlWidth, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
@@ -324,7 +324,7 @@ export function Pick({
 	description?: ReactNode;
 	hint?: ReactNode;
 	disabled?: boolean;
-	control?: keyof typeof CONTROL_WIDTH;
+	control?: ControlWidth;
 	size?: "sm" | "default";
 }) {
 	const id = useId();

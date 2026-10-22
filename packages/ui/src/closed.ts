@@ -1,4 +1,4 @@
-import type { ComponentType, JSX } from "react";
+import type { ComponentType } from "react";
 
 /**
  * A component as screens see it: the same component, without `className`, `style` or any other `…ClassName`. Screens shape nothing themselves; they pick a component
@@ -14,5 +14,3 @@ export type Closed<C> = C extends (props: infer P) => infer R
 
 /** Types a component as {@link Closed}. Nothing changes at run time. */
 export const close = <C>(component: C) => component as unknown as Closed<C>;
-
-export type { JSX };
