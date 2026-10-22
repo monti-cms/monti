@@ -36,12 +36,21 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 	);
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({
+	className,
+	selected,
+	...props
+}: React.ComponentProps<"tr"> & {
+	/** A row the writer picked (checked for a bulk action, or open in a side panel). */
+	selected?: boolean;
+}) {
 	return (
 		<tr
 			data-slot="table-row"
+			data-selected={selected || undefined}
+			aria-selected={selected || undefined}
 			className={cn(
-				"border-b transition-colors hover:bg-monti-hover has-aria-expanded:bg-monti-hover data-[state=selected]:bg-monti-neutral",
+				"border-b transition-colors hover:bg-monti-hover has-aria-expanded:bg-monti-hover data-selected:bg-monti-selected",
 				className,
 			)}
 			{...props}

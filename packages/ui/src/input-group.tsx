@@ -26,8 +26,8 @@ const inputGroupAddonVariants = cva(
 	{
 		variants: {
 			align: {
-				"inline-start": "order-first pl-2 has-[>button]:-ml-1 has-[>kbd]:ml-[-0.15rem]",
-				"inline-end": "order-last pr-2 has-[>button]:-mr-1 has-[>kbd]:mr-[-0.15rem]",
+				"inline-start": "order-first pl-2 has-[>button]:pl-[3px] has-[>kbd]:ml-[-0.15rem]",
+				"inline-end": "order-last pr-2 has-[>button]:pr-[3px] has-[>kbd]:mr-[-0.15rem]",
 				"block-start":
 					"order-first w-full justify-start px-2.5 pt-2 group-has-[>input]/input-group:pt-2 [.border-b]:pb-2",
 				"block-end": "order-last w-full justify-start px-2.5 pb-2 group-has-[>input]/input-group:pb-2 [.border-t]:pt-2",
@@ -61,13 +61,17 @@ function InputGroupAddon({
 	);
 }
 
-const inputGroupButtonVariants = cva("flex items-center gap-2 text-monti-body shadow-none", {
+/**
+ * A button inside the field: always shorter than the 36px field, so it sits inset with the same 4px gap above, below and at the end
+ * (the addon's end padding minus its pull-in). `xs` 24px for an icon-sized action, `sm` 28px for a word like "검색".
+ */
+const inputGroupButtonVariants = cva("flex items-center gap-2 text-monti-label shadow-none", {
 	variants: {
 		size: {
 			xs: "h-6 gap-1 rounded-sm px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
-			sm: "",
+			sm: "h-7 gap-1.5 rounded-md px-2.5 [&>svg:not([class*='size-'])]:size-4",
 			"icon-xs": "size-6 rounded-sm p-0 has-[>svg]:p-0",
-			"icon-sm": "size-8 p-0 has-[>svg]:p-0",
+			"icon-sm": "size-7 rounded-md p-0 has-[>svg]:p-0",
 		},
 	},
 	defaultVariants: {
