@@ -13,8 +13,8 @@ export const translationMessages = defineMessages("cms.translation", {
 	},
 	ko: {
 		mdx_error: "MDX 오류: {message}",
-		source_unreadable: "원문을 읽을 수 없습니다.",
-		structure_changed: "원문과 구조(요소·링크·코드·속성)가 달라졌습니다.",
-		unreadable: "읽을 수 없습니다.",
+		source_unreadable: "원문을 읽을 수 없어요.",
+		structure_changed: "원문과 구조(요소·링크·코드·속성)가 달라졌어요.",
+		unreadable: "읽을 수 없어요.",
 	},
 });

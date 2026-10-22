@@ -72,7 +72,7 @@ describe("child count of added blocks", () => {
 				"",
 			].join("\n");
 		expect(analyze(testSite, groupOf(min - 1)).errors.map((error) => error.message)).toEqual([
-			`${block.component}는 ${min}~${max}개의 ${child.component}만 허용합니다.`,
+			`${block.component}는 ${min}~${max}개의 ${child.component}만 허용해요.`,
 		]);
 		expect(analyze(testSite, groupOf(min)).errors).toEqual([]);
 	});
