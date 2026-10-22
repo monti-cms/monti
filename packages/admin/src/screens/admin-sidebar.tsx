@@ -2,6 +2,9 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
+// design-system: needs a Sidebar composition for the admin (header, footer and group chrome with the icon-rail states) and a folder-tree part.
+// Until they exist this file keeps the open sidebar parts and its classes.
 import {
 	buttonVariants,
 	cn,
@@ -18,11 +21,8 @@ import {
 	SidebarMenuItem,
 	SidebarSeparator,
 	SidebarTrigger,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
 	useSidebar,
-} from "@monti-cms/ui";
+} from "@monti-cms/ui/internal";
 import {
 	Activity,
 	ChevronDown,

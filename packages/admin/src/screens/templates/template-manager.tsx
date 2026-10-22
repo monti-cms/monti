@@ -9,7 +9,7 @@ import {
 } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Input } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Inline, Input, Stack } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -111,11 +111,15 @@ function TemplateEditPanel({
 
 	return (
 		// The body editor also contains buttons and inputs, so it is not wrapped in a <form>. Enter in the name field and ⌘S save.
-		<section
+		<Stack
+			as="section"
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
-			className="flex h-full flex-1 flex-col overflow-hidden"
+			gap="none"
+			height="full"
+			grow
+			overflow="hidden"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-normal border-monti-muted border-b px-spacious py-normal">
+			<Inline gap="normal" wrap justify="between" border="bottom" paddingX="spacious" paddingY="normal">
 				<Input
 					type="text"
 					aria-label={t("edit.nameLabel")}
@@ -128,19 +132,18 @@ function TemplateEditPanel({
 						handleSave();
 					}}
 					placeholder={t("edit.nameLabel")}
-					className="h-8 min-w-0 max-w-2xl flex-1 rounded-md"
 				/>
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
-			</div>
+			</Inline>
 			{saveError && (
-				<FormFieldError className="border-monti-muted border-b bg-monti-danger-muted px-spacious py-condensed">
-					{saveError}
-				</FormFieldError>
+				<Box border="bottom" background="danger-muted" paddingX="spacious" paddingY="condensed">
+					<FormFieldError>{saveError}</FormFieldError>
+				</Box>
 			)}
-			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+			<Stack gap="none" grow minHeight={0} overflow="y">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
-			</div>
-		</section>
+			</Stack>
+		</Stack>
 	);
 }
 
@@ -245,7 +248,7 @@ export function TemplateManager() {
 	];
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden border-monti-muted border-t">
+		<Stack gap="none" grow minHeight={0} overflow="hidden" border="top">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
@@ -253,7 +256,9 @@ export function TemplateManager() {
 				</Button>
 			</PageActions>
 			{error && (
-				<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-wide my-normal" />
+				<Box paddingX="wide" paddingY="normal">
+					<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} />
+				</Box>
 			)}
 			<MasterDetail
 				list={
@@ -295,6 +300,6 @@ export function TemplateManager() {
 			</MasterDetail>
 			{dialog}
 			{guardDialog}
-		</div>
+		</Stack>
 	);
 }

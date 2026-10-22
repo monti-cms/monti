@@ -5,14 +5,18 @@ import {
 	Alert,
 	AlertDescription,
 	AlertTitle,
+	Box,
 	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	Heading,
 	Input,
 	Label,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
@@ -72,120 +76,127 @@ export default async function AdminLoginPage({
 	const siteName = site.config.site?.name?.trim() || "Monti";
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center gap-spacious p-comfortable">
-			<header className="flex flex-col items-center gap-tight text-center">
-				<h1 className="text-monti-default text-monti-heading">{siteName}</h1>
-				<p className="text-monti-caption text-monti-muted">{t("managedWith")}</p>
-			</header>
-			<Card className="w-full max-w-sm">
-				<CardHeader className="text-center">
-					{firstAdmin ? <CardTitle className="text-monti-title">{t("firstAdminTitle")}</CardTitle> : null}
-					<CardDescription className="text-monti-body">
-						{firstAdmin
-							? t("firstAdminDescription")
-							: formProviders.length > 0 && buttonProviders.length === 0
-								? t("passwordDescription")
-								: t("description", { provider })}
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{isUnauthorizedUser ? (
-						<Alert tone="danger" layout="stack" className="text-center">
-							<AlertTitle className="text-monti-caption">{t("forbiddenTitle")}</AlertTitle>
-							<AlertDescription className="mt-tight text-monti-caption">
-								{t("forbidden", { provider, accountId: accountId ?? "" })}
-							</AlertDescription>
-							<form method="post" action={adminApiUrl("/v1/session/sign-out")} className="mt-normal">
-								<Button type="submit" variant="link" size="xs">
-									{t("signOut")}
-								</Button>
-							</form>
-						</Alert>
-					) : firstAdmin ? (
-						<form
-							method="post"
-							action={adminApiUrl("/v1/session/first-admin")}
-							className="flex flex-col gap-comfortable"
-						>
-							{errorText ? <ErrorAlert text={errorText} /> : null}
-							<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
-							<TextField
-								id="password"
-								name="password"
-								label={t("password")}
-								type="password"
-								autoComplete="new-password"
-								minLength={min}
-								hint={t("passwordHint", { min })}
-							/>
-							<TextField
-								id="confirm"
-								name="confirm"
-								label={t("confirmPassword")}
-								type="password"
-								autoComplete="new-password"
-								minLength={min}
-							/>
-							<Button type="submit" className="w-full">
-								{t("createFirstAdmin")}
-							</Button>
-						</form>
-					) : providers.length === 0 ? (
-						<Alert tone="danger" layout="stack" className="text-center">
-							<AlertTitle className="text-monti-caption">{t("noLoginTitle")}</AlertTitle>
-							<AlertDescription className="mt-tight text-monti-caption">{t("noLogin")}</AlertDescription>
-						</Alert>
-					) : (
-						<div className="flex flex-col gap-comfortable">
-							{errorText ? <ErrorAlert text={errorText} /> : null}
-							{formProviders.map((authProvider) => (
-								<form
-									key={authProvider.id}
-									method="post"
-									action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
-									className="flex flex-col gap-comfortable"
-								>
+		// design-system: needs a full-screen page height (the login page is centered in the window)
+		<Stack align="center" justify="center" gap="spacious" padding="comfortable" minHeight="full">
+			<Stack as="header" align="center" gap="tight">
+				<Heading as="h1" variant="heading">
+					{siteName}
+				</Heading>
+				<Text as="p" variant="caption" tone="muted">
+					{t("managedWith")}
+				</Text>
+			</Stack>
+			<Box width="full" maxWidth="panel-lg">
+				<Card>
+					<CardHeader>
+						{firstAdmin ? <CardTitle>{t("firstAdminTitle")}</CardTitle> : null}
+						<CardDescription>
+							{firstAdmin
+								? t("firstAdminDescription")
+								: formProviders.length > 0 && buttonProviders.length === 0
+									? t("passwordDescription")
+									: t("description", { provider })}
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{isUnauthorizedUser ? (
+							<Alert tone="danger" layout="stack">
+								<AlertTitle>{t("forbiddenTitle")}</AlertTitle>
+								<AlertDescription>{t("forbidden", { provider, accountId: accountId ?? "" })}</AlertDescription>
+								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
+									<Box paddingTop="normal">
+										<Button type="submit" variant="link" size="xs">
+											{t("signOut")}
+										</Button>
+									</Box>
+								</form>
+							</Alert>
+						) : firstAdmin ? (
+							<form method="post" action={adminApiUrl("/v1/session/first-admin")}>
+								<Stack gap="comfortable">
+									{errorText ? <ErrorAlert text={errorText} /> : null}
 									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 									<TextField
 										id="password"
 										name="password"
 										label={t("password")}
 										type="password"
-										autoComplete="current-password"
+										autoComplete="new-password"
+										minLength={min}
+										hint={t("passwordHint", { min })}
 									/>
-									<Button type="submit" className="w-full">
-										{t("signInSubmit")}
+									<TextField
+										id="confirm"
+										name="confirm"
+										label={t("confirmPassword")}
+										type="password"
+										autoComplete="new-password"
+										minLength={min}
+									/>
+									<Button type="submit" width="full">
+										{t("createFirstAdmin")}
 									</Button>
-								</form>
-							))}
-							<div className="flex flex-col gap-condensed">
-								{buttonProviders.map((authProvider) => (
+								</Stack>
+							</form>
+						) : providers.length === 0 ? (
+							<Alert tone="danger" layout="stack">
+								<AlertTitle>{t("noLoginTitle")}</AlertTitle>
+								<AlertDescription>{t("noLogin")}</AlertDescription>
+							</Alert>
+						) : (
+							<Stack gap="comfortable">
+								{errorText ? <ErrorAlert text={errorText} /> : null}
+								{formProviders.map((authProvider) => (
 									<form
 										key={authProvider.id}
 										method="post"
 										action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 									>
-										<Button type="submit" className="w-full">
-											{authProvider.icon ? (
-												<img src={authProvider.icon} alt="" aria-hidden="true" className="size-4" />
-											) : null}
-											{t("signIn", { provider: authProvider.name })}
-										</Button>
+										<Stack gap="comfortable">
+											<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
+											<TextField
+												id="password"
+												name="password"
+												label={t("password")}
+												type="password"
+												autoComplete="current-password"
+											/>
+											<Button type="submit" width="full">
+												{t("signInSubmit")}
+											</Button>
+										</Stack>
 									</form>
 								))}
-							</div>
-						</div>
-					)}
-				</CardContent>
-			</Card>
-		</div>
+								<Stack gap="condensed">
+									{buttonProviders.map((authProvider) => (
+										<form
+											key={authProvider.id}
+											method="post"
+											action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
+										>
+											<Button type="submit" width="full">
+												{authProvider.icon ? (
+													// design-system: needs an Icon/Image part with a fixed size (16px)
+													<img src={authProvider.icon} alt="" aria-hidden="true" className="size-4" />
+												) : null}
+												{t("signIn", { provider: authProvider.name })}
+											</Button>
+										</form>
+									))}
+								</Stack>
+							</Stack>
+						)}
+					</CardContent>
+				</Card>
+			</Box>
+		</Stack>
 	);
 }
 
 function ErrorAlert({ text }: { text: string }) {
 	return (
-		<Alert tone="danger" layout="stack" className="text-center">
-			<AlertDescription className="text-monti-caption">{text}</AlertDescription>
+		<Alert tone="danger" layout="stack">
+			<AlertDescription>{text}</AlertDescription>
 		</Alert>
 	);
 }
@@ -198,10 +209,14 @@ function TextField({
 	...props
 }: { id: string; label: string; hint?: string } & Omit<React.ComponentProps<typeof Input>, "id">) {
 	return (
-		<div className="flex flex-col gap-condensed">
+		<Stack gap="condensed">
 			<Label htmlFor={id}>{label}</Label>
-			{hint ? <p className="text-monti-caption text-monti-muted">{hint}</p> : null}
+			{hint ? (
+				<Text as="p" variant="caption" tone="muted">
+					{hint}
+				</Text>
+			) : null}
 			<Input id={id} required {...props} />
-		</div>
+		</Stack>
 	);
 }

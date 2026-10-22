@@ -234,6 +234,7 @@ function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegi
 			button.type = "button";
 			button.contentEditable = "false";
 			button.dataset.codeFoldToggle = region.kind;
+			// design-system: drawing — the fold marker is a decoration placed inside the code text
 			button.className =
 				"mx-hair inline-flex h-5 items-center rounded-sm bg-monti-neutral px-tight align-middle font-sans text-monti-muted text-monti-caption leading-none hover:bg-monti-hover hover:text-monti-default";
 			button.textContent = region.kind === "collapse" ? `⋯ ${t("fold.lines", { count: region.hiddenLines })}` : "…";

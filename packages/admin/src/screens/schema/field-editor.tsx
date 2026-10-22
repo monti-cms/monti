@@ -1,8 +1,22 @@
 "use client";
 
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
-import { Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger, cn, Input } from "@monti-cms/ui";
-import { ChevronRight, Plus } from "lucide-react";
+import {
+	Badge,
+	Box,
+	Button,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+	Grid,
+	Inline,
+	Input,
+	Panel,
+	Stack,
+	Text,
+	TextLink,
+} from "@monti-cms/ui";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
@@ -107,9 +121,10 @@ function RelationOptions({
 	// Entries made with "Add" in the preview, on top of the stand-ins; they go when the target changes.
 	const [created, setCreated] = useState<RelationOption[]>([]);
 	const [value, setValue] = useState<string[]>([]);
+	const [moreOpen, setMoreOpen] = useState(false);
 	const options = [...previewOptions(collectionLabel(file, target)), ...created];
 	return (
-		<div className="flex flex-col gap-comfortable">
+		<Stack gap="comfortable">
 			<Pick
 				label={t("field.relationTo")}
 				value={target}
@@ -132,9 +147,11 @@ function RelationOptions({
 					setValue((current) => (next === "many" ? current : current.slice(0, 1)));
 				}}
 			/>
-			<div className="flex flex-col gap-condensed rounded-md bg-monti-inset p-normal" data-testid="relation-preview">
-				<span className="text-monti-caption text-monti-muted">{t("field.preview")}</span>
-				<span className="font-medium text-monti-body">{typeof field.label === "string" ? field.label : ""}</span>
+			<Stack gap="condensed" radius="md" background="inset" padding="normal" data-testid="relation-preview">
+				<Text variant="caption" tone="muted">
+					{t("field.preview")}
+				</Text>
+				<Text weight="medium">{typeof field.label === "string" ? field.label : ""}</Text>
 				<RelationCombobox
 					key={`${target}-${many}`}
 					aria-label={t("field.preview")}
@@ -153,39 +170,43 @@ function RelationOptions({
 							: undefined
 					}
 				/>
-			</div>
-			<Collapsible className="flex flex-col gap-comfortable">
-				<CollapsibleTrigger className="group/more flex w-fit items-center gap-tight text-monti-body text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus">
-					<ChevronRight aria-hidden className="size-4 transition-transform group-data-[panel-open]/more:rotate-90" />
-					{t("field.more")}
-				</CollapsibleTrigger>
-				<CollapsibleContent className="flex flex-col gap-comfortable">
-					<FlagSwitch
-						label={t("field.createInline")}
-						checked={field.createInline === true}
-						onChange={(on) => set("createInline", on ? true : undefined)}
-					/>
-					{many && opposite && (
-						<FlagSwitch label={t("field.opposite")} checked={opposite.on} onChange={opposite.onChange} />
-					)}
-					<Pick
-						label={t("field.unpublished")}
-						value={unpublishedTargetsOf(field)}
-						items={(["hidden", "blocking", "allowed"] as const).map((choice) => ({
-							value: choice,
-							label: t(`field.unpublished.${choice}`),
-						}))}
-						onChange={(choice) => change((current) => withUnpublishedTargets(current, choice as UnpublishedTargets))}
-					/>
-					<TextInput
-						label={t("field.placeholder")}
-						value={field.placeholder as string | undefined}
-						onChange={(text) => set("placeholder", orUndefined(text))}
-					/>
-					{more}
+			</Stack>
+			<Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+				<Box width="fit">
+					<CollapsibleTrigger render={<Button variant="quiet" size="sm" />}>
+						{moreOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+						{t("field.more")}
+					</CollapsibleTrigger>
+				</Box>
+				<CollapsibleContent>
+					<Stack gap="comfortable" paddingTop="comfortable">
+						<FlagSwitch
+							label={t("field.createInline")}
+							checked={field.createInline === true}
+							onChange={(on) => set("createInline", on ? true : undefined)}
+						/>
+						{many && opposite && (
+							<FlagSwitch label={t("field.opposite")} checked={opposite.on} onChange={opposite.onChange} />
+						)}
+						<Pick
+							label={t("field.unpublished")}
+							value={unpublishedTargetsOf(field)}
+							items={(["hidden", "blocking", "allowed"] as const).map((choice) => ({
+								value: choice,
+								label: t(`field.unpublished.${choice}`),
+							}))}
+							onChange={(choice) => change((current) => withUnpublishedTargets(current, choice as UnpublishedTargets))}
+						/>
+						<TextInput
+							label={t("field.placeholder")}
+							value={field.placeholder as string | undefined}
+							onChange={(text) => set("placeholder", orUndefined(text))}
+						/>
+						{more}
+					</Stack>
 				</CollapsibleContent>
 			</Collapsible>
-		</div>
+		</Stack>
 	);
 }
 
@@ -210,37 +231,48 @@ function OptionsEditor({
 	const taken = (value: string) => values.filter((item) => item !== value);
 	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
 	return (
-		<fieldset className="flex flex-col gap-condensed">
-			<legend className="font-medium text-monti-caption">{t("options.title")}</legend>
-			<ul className="flex flex-col gap-condensed">
+		<Stack role="group" aria-labelledby={`options-${fieldName}`} gap="condensed">
+			<Text as="div" id={`options-${fieldName}`} variant="caption" weight="medium">
+				{t("options.title")}
+			</Text>
+			<Stack as="ul" gap="condensed">
 				{values.map((value, index) => (
-					<li
+					<Inline
+						as="li"
 						key={value}
-						className="flex flex-wrap items-end gap-condensed rounded-md border bg-monti-page p-condensed"
+						wrap
+						align="end"
+						gap="condensed"
+						border="all"
+						radius="md"
+						background="page"
+						padding="condensed"
 					>
-						<NameInput
-							label={t("options.value")}
-							value={value}
-							taken={taken(value)}
-							className="w-32 flex-none"
-							onCommit={(to) => {
-								change((current) => renameOption(current, value, to));
-								editing.onRename({
-									kind: "option",
-									collection: editing.collectionName,
-									field: fieldName,
-									from: value,
-									to,
-								});
-							}}
-						/>
-						<TextInput
-							label={t("options.label")}
-							value={options[value]}
-							className="min-w-32 flex-1"
-							onChange={(label) => change((current) => setOptionLabel(current, value, label))}
-						/>
-						<label className="flex items-center gap-condensed pb-condensed text-monti-caption">
+						<Box grow>
+							<NameInput
+								label={t("options.value")}
+								value={value}
+								taken={taken(value)}
+								onCommit={(to) => {
+									change((current) => renameOption(current, value, to));
+									editing.onRename({
+										kind: "option",
+										collection: editing.collectionName,
+										field: fieldName,
+										from: value,
+										to,
+									});
+								}}
+							/>
+						</Box>
+						<Box grow>
+							<TextInput
+								label={t("options.label")}
+								value={options[value]}
+								onChange={(label) => change((current) => setOptionLabel(current, value, label))}
+							/>
+						</Box>
+						<Inline as="label" gap="condensed" paddingBottom="condensed">
 							<input
 								type="radio"
 								name={`default-${fieldName}`}
@@ -248,8 +280,8 @@ function OptionsEditor({
 								disabled={disabled}
 								onChange={() => change((current) => setDefaultOption(current, value))}
 							/>
-							{t("options.default")}
-						</label>
+							<Text variant="caption">{t("options.default")}</Text>
+						</Inline>
 						<RowActions
 							index={index}
 							count={values.length}
@@ -257,14 +289,16 @@ function OptionsEditor({
 							onMove={(delta) => change((current) => moveOption(current, value, delta))}
 							onRemove={() => change((current) => removeOption(current, value))}
 						/>
-					</li>
+					</Inline>
 				))}
-			</ul>
+			</Stack>
 			{!disabled && (
-				<div className="flex items-end gap-condensed">
-					<Labeled label={t("options.newValue")} className="w-40">
-						<Input value={draftValue} placeholder="value" onChange={(event) => setDraftValue(event.target.value)} />
-					</Labeled>
+				<Inline align="end" gap="condensed">
+					<Box width="panel-sm">
+						<Labeled label={t("options.newValue")}>
+							<Input value={draftValue} placeholder="value" onChange={(event) => setDraftValue(event.target.value)} />
+						</Labeled>
+					</Box>
 					<Button
 						type="button"
 						variant="outline"
@@ -279,9 +313,9 @@ function OptionsEditor({
 					>
 						{t("options.add")}
 					</Button>
-				</div>
+				</Inline>
 			)}
-		</fieldset>
+		</Stack>
 	);
 }
 
@@ -329,7 +363,7 @@ export function KindOptions({
 		case "text": {
 			const fill = field.fillFromBody;
 			return (
-				<div className="flex flex-col gap-comfortable">
+				<Stack gap="comfortable">
 					<FlagSwitch
 						label={t("field.multiline")}
 						checked={field.multiline === true}
@@ -372,7 +406,7 @@ export function KindOptions({
 						</>
 					)}
 					{placeholder}
-				</div>
+				</Stack>
 			);
 		}
 		case "slug": {
@@ -380,7 +414,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "text")
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="flex flex-col gap-comfortable">
+				<Stack gap="comfortable">
 					<Pick
 						label={t("field.slugFrom")}
 						description={t("field.slugFromHint")}
@@ -389,21 +423,21 @@ export function KindOptions({
 						onChange={(value) => set("from", orUndefined(value))}
 					/>
 					{placeholder}
-				</div>
+				</Stack>
 			);
 		}
 		case "relation":
 			return <RelationOptions field={field} set={set} change={change} opposite={opposite} more={more} />;
 		case "select":
 			return (
-				<div className="flex flex-col gap-comfortable">
+				<Stack gap="comfortable">
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
-				</div>
+				</Stack>
 			);
 		case "media":
 			return (
-				<div className="flex flex-col gap-comfortable">
+				<Stack gap="comfortable">
 					<Pick
 						label={t("field.accept")}
 						value={(field.accept as string | undefined) ?? "image"}
@@ -414,7 +448,7 @@ export function KindOptions({
 						onChange={(value) => set("accept", value === "image" ? undefined : value)}
 					/>
 					{placeholder}
-				</div>
+				</Stack>
 			);
 		case "backlink": {
 			const from = typeof field.from === "string" ? field.from : "";
@@ -423,7 +457,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "relation" && item.many === true)
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="flex flex-col gap-comfortable">
+				<Stack gap="comfortable">
 					<Pick
 						label={t("field.backlinkFrom")}
 						value={from}
@@ -443,7 +477,7 @@ export function KindOptions({
 						onChange={(on) => set("createInline", on ? true : undefined)}
 					/>
 					{placeholder}
-				</div>
+				</Stack>
 			);
 		}
 		case "view":
@@ -459,24 +493,24 @@ export function KindOptions({
 			const options = optionsOf(field);
 			const values = isObj(field.values) ? (field.values as Record<string, Record<string, Obj>>) : {};
 			return (
-				<div className="flex flex-col gap-normal">
+				<Stack gap="normal">
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
-					<div className="flex flex-col gap-condensed">
+					<Stack gap="condensed">
 						{Object.keys(options).map((option) => (
-							<div key={option} className="flex flex-col gap-condensed rounded-md border border-dashed p-condensed">
-								<span className="font-medium text-monti-caption">
+							<Stack key={option} gap="condensed" border="dashed" radius="md" padding="condensed">
+								<Text variant="caption" weight="medium">
 									{t("field.whenOption", { option: options[option] ?? option })}
-								</span>
+								</Text>
 								<FieldList
 									editing={editing}
 									place={{ branch: { field: name, option } }}
 									fields={values[option] ?? {}}
 								/>
-							</div>
+							</Stack>
 						))}
-					</div>
-				</div>
+					</Stack>
+				</Stack>
 			);
 		}
 		default:
@@ -533,38 +567,26 @@ export function FieldEditor({
 	const blocked = removeBlock(editing.collection, place, name);
 
 	return (
-		<Collapsible
-			open={open}
-			onOpenChange={setOpen}
-			className="rounded-lg border bg-monti-surface"
-			data-testid={`field-${name}`}
-		>
-			<div className="flex items-center gap-tight pr-tight">
-				<CollapsibleTrigger
-					aria-label={t("field.toggle", { name })}
-					className="group/field flex min-w-0 flex-1 items-center gap-condensed rounded-lg px-normal py-condensed text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-focus"
-				>
-					<ChevronRight aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-90")} />
-					<code className="shrink-0 font-medium text-monti-body">{name}</code>
-					<span className="truncate text-monti-caption text-monti-muted">{label}</span>
-					<Badge variant="secondary" className="shrink-0">
-						{t(`kind.${kind}`)}
-					</Badge>
-					{isTitle && (
-						<Badge variant="outline" className="shrink-0" data-testid="title-badge">
-							{t("field.titleBadge")}
-						</Badge>
-					)}
-					{field.required === true && (
-						<Badge variant="outline" className="shrink-0">
-							{t("field.requiredBadge")}
-						</Badge>
-					)}
-					{issues.length > 0 && (
-						<Badge variant="danger" className="shrink-0">
-							{t("field.problems", { count: issues.length })}
-						</Badge>
-					)}
+		<Collapsible open={open} onOpenChange={setOpen} render={<Panel />} data-testid={`field-${name}`}>
+			<Inline gap="tight" paddingX="tight">
+				<CollapsibleTrigger render={<Button variant="ghost" width="full" aria-label={t("field.toggle", { name })} />}>
+					<Inline as="span" grow gap="condensed" minWidth={0}>
+						{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+						<Text as="code" weight="medium">
+							{name}
+						</Text>
+						<Text variant="caption" tone="muted" truncate>
+							{label}
+						</Text>
+						<Badge variant="secondary">{t(`kind.${kind}`)}</Badge>
+						{isTitle && (
+							<Badge variant="outline" data-testid="title-badge">
+								{t("field.titleBadge")}
+							</Badge>
+						)}
+						{field.required === true && <Badge variant="outline">{t("field.requiredBadge")}</Badge>}
+						{issues.length > 0 && <Badge variant="danger">{t("field.problems", { count: issues.length })}</Badge>}
+					</Inline>
 				</CollapsibleTrigger>
 				<RowActions
 					index={index}
@@ -574,11 +596,11 @@ export function FieldEditor({
 					onRemove={() => editing.update((collection) => removeField(collection, place, name))}
 					removeBlocked={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
 				/>
-			</div>
+			</Inline>
 			<CollapsibleContent>
-				<div className="flex flex-col gap-normal border-t px-normal py-normal">
+				<Stack gap="normal" border="top" padding="normal">
 					<IssueList issues={issues} />
-					<div className="grid gap-normal sm:grid-cols-2">
+					<Grid columns={2} gap="normal">
 						<NameInput
 							label={t("field.name")}
 							value={name}
@@ -603,9 +625,9 @@ export function FieldEditor({
 							value={field.description as string | undefined}
 							onChange={(value) => setBoth("description", orUndefined(value))}
 						/>
-					</div>
+					</Grid>
 					{valueKind && (
-						<div className="grid gap-normal sm:grid-cols-2">
+						<Grid columns={2} gap="normal">
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
@@ -638,32 +660,38 @@ export function FieldEditor({
 									}
 								/>
 							)}
-						</div>
+						</Grid>
 					)}
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} place={place} />
-					<details className="rounded-md border border-dashed px-normal py-condensed text-monti-body">
-						<summary className="cursor-pointer text-monti-caption text-monti-muted">{t("field.advanced")}</summary>
-						<div className="mt-normal flex flex-col gap-comfortable">
-							{!isSlug && valueKind && (
-								<FieldRolePicker
-									role={field.role as string | undefined}
-									kind={kind}
-									isTitle={isTitle}
-									onChange={(role) => set("role", role)}
-								/>
-							)}
-							{!isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (
-								<FieldCustomInputPicker
-									value={field.input as string | undefined}
-									options={field.inputOptions}
-									onChangeInput={(input) => set("input", input)}
-									onChangeOptions={(opts) => set("inputOptions", opts)}
-								/>
-							)}
-						</div>
-					</details>
+					<Collapsible render={<Box border="dashed" radius="md" paddingX="normal" paddingY="condensed" />}>
+						<CollapsibleTrigger
+							render={<TextLink render={<button type="button" />} tone="muted" size="caption" underline="hover" />}
+						>
+							{t("field.advanced")}
+						</CollapsibleTrigger>
+						<CollapsibleContent>
+							<Stack gap="comfortable" paddingTop="normal">
+								{!isSlug && valueKind && (
+									<FieldRolePicker
+										role={field.role as string | undefined}
+										kind={kind}
+										isTitle={isTitle}
+										onChange={(role) => set("role", role)}
+									/>
+								)}
+								{!isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (
+									<FieldCustomInputPicker
+										value={field.input as string | undefined}
+										options={field.inputOptions}
+										onChangeInput={(input) => set("input", input)}
+										onChangeOptions={(opts) => set("inputOptions", opts)}
+									/>
+								)}
+							</Stack>
+						</CollapsibleContent>
+					</Collapsible>
 					{disabled && null}
-				</div>
+				</Stack>
 			</CollapsibleContent>
 		</Collapsible>
 	);
@@ -684,8 +712,12 @@ export function FieldList({
 	const names = Object.keys(fields);
 	const [adding, setAdding] = useState(false);
 	return (
-		<div className="flex flex-col gap-condensed">
-			{names.length === 0 && <p className="text-monti-caption text-monti-muted">{t("field.none")}</p>}
+		<Stack gap="condensed">
+			{names.length === 0 && (
+				<Text as="p" variant="caption" tone="muted">
+					{t("field.none")}
+				</Text>
+			)}
 			{names.map((fieldName, index) => (
 				<FieldEditor
 					key={fieldName}
@@ -698,10 +730,12 @@ export function FieldList({
 				/>
 			))}
 			{!disabled && (
-				<Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setAdding(true)}>
-					<Plus aria-hidden />
-					{t("field.add")}
-				</Button>
+				<Box width="fit">
+					<Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
+						<Plus aria-hidden />
+						{t("field.add")}
+					</Button>
+				</Box>
 			)}
 			{adding && (
 				<AddFieldDialog
@@ -711,6 +745,6 @@ export function FieldList({
 					onAdded={() => setAdding(false)}
 				/>
 			)}
-		</div>
+		</Stack>
 	);
 }

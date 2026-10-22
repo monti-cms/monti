@@ -2,7 +2,7 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import { Box, FormFieldSet, Stack, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
 import { SidePanelHeader } from "../shared/side-panel";
 import { tabLabel } from "./layout-groups";
@@ -75,7 +75,8 @@ export function InspectorPanel({
 	);
 	const fields = (include: (group: PanelGroup) => boolean) =>
 		site.isCollection(collection) && (
-			<fieldset disabled={disabled} className="min-w-0 space-y-comfortable disabled:opacity-70">
+			// design-system: needs a fieldset tag on Box/Stack (no min-width, comfortable gap, dimmed while disabled)
+			<FormFieldSet disabled={disabled}>
 				<SchemaFields
 					showDescriptions={false}
 					include={include}
@@ -84,7 +85,7 @@ export function InspectorPanel({
 					onSlugChange={onSlugChange}
 					onRegenerateSlug={onRegenerateSlug}
 				/>
-			</fieldset>
+			</FormFieldSet>
 		);
 
 	return (
@@ -92,12 +93,12 @@ export function InspectorPanel({
 			value={tab}
 			onValueChange={(value) => setTab(String(value))}
 			aria-label={t("tab.default")}
-			className="h-full w-full gap-0 overflow-hidden border-monti-muted border-l bg-monti-page text-monti-body"
+			render={<Stack gap="none" height="full" width="full" overflow="hidden" background="page" border="left" />}
 		>
 			<SidePanelHeader onClose={onClose}>
-				<TabsList variant="line" className="h-full flex-1 justify-start gap-normal">
+				<TabsList variant="line">
 					{tabs.map((name) => (
-						<TabsTrigger key={name} value={name} className="flex-none px-0 text-monti-label">
+						<TabsTrigger key={name} value={name}>
 							{tabLabel(site, name, collection)}
 							{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="danger" />}
 						</TabsTrigger>
@@ -105,14 +106,14 @@ export function InspectorPanel({
 				</TabsList>
 			</SidePanelHeader>
 
-			<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-comfortable py-comfortable">
+			<Box grow minHeight={0} overflow="y" paddingX="comfortable" paddingY="comfortable">
 				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 				{tabs.map((name) => (
 					<TabsContent key={name} value={name}>
 						{fields((group) => group.tab === name)}
 					</TabsContent>
 				))}
-			</div>
+			</Box>
 		</Tabs>
 	);
 }

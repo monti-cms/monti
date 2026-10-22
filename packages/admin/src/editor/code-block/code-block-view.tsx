@@ -5,12 +5,14 @@ import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	cn,
 	IconButton,
+	Inline,
 	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Text,
 	Toggle,
 	Tooltip,
 	TooltipContent,
@@ -221,25 +223,33 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	const collapseAt = (line: number): FoldRegion | undefined => collapses.find((region) => region.startLine === line);
 
+	// design-system: drawing — the code block drawn in the document: the frame, the line number gutter, the effect backgrounds and the code text
+	// are positioned together line by line; only the header row above them is laid out from components
 	return (
 		<NodeViewWrapper
 			className="not-prose group/code relative my-comfortable flex w-full flex-col rounded-md border bg-monti-inset text-monti-body"
 			data-code-block-wrapper=""
 		>
-			<div
+			<Inline
 				data-code-ui=""
 				contentEditable={false}
-				className="flex flex-wrap items-center justify-between gap-condensed rounded-t-md border-b bg-monti-inset px-condensed py-tight text-monti-caption text-monti-muted"
+				wrap
+				justify="between"
+				gap="condensed"
+				paddingX="condensed"
+				paddingY="tight"
+				border="bottom"
+				background="inset"
 			>
 				{editable ? (
-					<div className="flex flex-wrap items-center gap-condensed">
+					<Inline wrap gap="condensed">
 						<Select
 							value={language}
 							// The name list must be passed so a closed slot shows the name (`TypeScript`) rather than the value (`ts`).
 							items={languageOptions}
 							onValueChange={(value) => value && updateAttributes({ language: value })}
 						>
-							<SelectTrigger size="sm" className="h-7 w-36 text-monti-caption" aria-label={t("view.language")}>
+							<SelectTrigger size="sm" aria-label={t("view.language")}>
 								<SelectValue placeholder={t("view.languagePlaceholder")} />
 							</SelectTrigger>
 							<SelectContent>
@@ -254,22 +264,30 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 							placeholder={t("view.filePath")}
 							value={parsedMeta.title}
 							onChange={(event) => setMeta({ title: event.target.value })}
-							className="h-7 w-48 text-monti-caption"
+							size="sm"
 							aria-label={t("view.filePath")}
 						/>
-					</div>
+					</Inline>
 				) : (
-					<div className="flex min-h-7 items-center gap-condensed px-tight">
-						<span>{languageOptions.find((option) => option.value === language)?.label ?? language}</span>
-						{parsedMeta.title && <span className="font-mono">{parsedMeta.title}</span>}
-					</div>
+					<Inline gap="condensed" paddingX="tight">
+						<Text variant="caption" tone="muted">
+							{languageOptions.find((option) => option.value === language)?.label ?? language}
+						</Text>
+						{parsedMeta.title && (
+							<Text variant="caption" tone="muted" mono>
+								{parsedMeta.title}
+							</Text>
+						)}
+					</Inline>
 				)}
-				<div className="flex items-center gap-hair">
+				<Inline gap="hair">
 					{!editable ? null : rawMode ? (
 						<Tooltip>
-							<TooltipTrigger render={<span className="flex items-center gap-tight px-tight" />}>
-								<Info aria-hidden className="size-3.5" />
-								{t("view.rawMode")}
+							<TooltipTrigger render={<Inline as="span" gap="tight" paddingX="tight" />}>
+								<Info aria-hidden />
+								<Text variant="caption" tone="muted">
+									{t("view.rawMode")}
+								</Text>
 							</TooltipTrigger>
 							<TooltipContent>{t("view.rawModeHint")}</TooltipContent>
 						</Tooltip>
@@ -279,7 +297,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								<IconButton
 									label={t("view.lineEffects")}
 									size="icon-xs"
-									className="size-7"
 									disabled={!(picked ?? selectedLines)}
 									onMouseDown={(event) => event.preventDefault()}
 									onClick={() => {
@@ -287,7 +304,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										if (lines) setMenu({ start: lines.start, end: lines.end });
 									}}
 								>
-									<Rows3 aria-hidden className="size-3.5" />
+									<Rows3 aria-hidden />
 								</IconButton>
 							)}
 							{rulesOffered && (
@@ -318,29 +335,19 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										pressed={parsedMeta.showLineNumbers}
 										onPressedChange={(pressed) => setMeta({ showLineNumbers: pressed })}
 										aria-label={t("view.lineNumbers")}
-										className="size-7 min-w-7 p-0"
 									/>
 								}
 							>
-								<ListOrdered aria-hidden className="size-3.5" />
+								<ListOrdered aria-hidden />
 							</TooltipTrigger>
 							<TooltipContent>{t("view.lineNumbers")}</TooltipContent>
 						</Tooltip>
 					)}
-					<IconButton
-						label={copied ? t("view.copied") : t("view.copy")}
-						size="icon-xs"
-						className="size-7"
-						onClick={handleCopy}
-					>
-						{copied ? (
-							<Check aria-hidden className="size-3.5 text-monti-default" />
-						) : (
-							<Copy aria-hidden className="size-3.5" />
-						)}
+					<IconButton label={copied ? t("view.copied") : t("view.copy")} size="icon-xs" onClick={handleCopy}>
+						{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
 					</IconButton>
-				</div>
-			</div>
+				</Inline>
+			</Inline>
 
 			<div ref={bodyRef} className="relative flex rounded-b-md">
 				<div
@@ -387,7 +394,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 												event.stopPropagation();
 												setFoldOpen(editor.view, collapse, !collapse.open);
 											}}
-											className="size-4 rounded-md p-0 hover:bg-monti-hover"
 										>
 											<ChevronRight
 												aria-hidden

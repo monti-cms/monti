@@ -2,7 +2,10 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
+import { Box, Skeleton, Stack } from "@monti-cms/ui";
+// design-system: needs table options: fixed layout with pixel column widths, a sticky header, resizable columns, row hover / selected / open states, edge padding.
+// Until they exist the table keeps the open parts and its classes.
+import { cn, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui/internal";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -147,7 +150,7 @@ export function AdminEntriesTable({
 	const pageHref = (page: number) => `?page=${page}`;
 
 	return (
-		<section aria-label={t("list.label")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<Stack as="section" aria-label={t("list.label")} gap="none" grow minHeight={0} overflow="hidden">
 			<ListSubToolbar
 				state={state}
 				options={options}
@@ -167,8 +170,13 @@ export function AdminEntriesTable({
 				}
 			/>
 			{aboveTable}
-			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-wide mt-normal" />}
+			{errorMessage && (
+				<Box paddingX="wide" paddingTop="normal">
+					<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
+				</Box>
+			)}
 
+			{/* design-system: needs ref support on Stack (the table scroller is measured) */}
 			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
 				<Table
 					containerClassName="overflow-visible"
@@ -247,7 +255,7 @@ export function AdminEntriesTable({
 									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
 									<TableRow key={index} aria-hidden>
 										<TableCell colSpan={visibleCount}>
-											<Skeleton className="h-5 w-full" />
+											<Skeleton />
 										</TableCell>
 									</TableRow>
 								))
@@ -337,7 +345,10 @@ export function AdminEntriesTable({
 						/>
 					))}
 				{blankMenu && (
-					<ActionContextMenu actions={blankMenu} trigger={<div className="min-h-12 flex-1" aria-hidden />} />
+					<ActionContextMenu
+						actions={blankMenu}
+						trigger={<Box grow paddingY="comfortable" aria-hidden data-testid="list-blank-area" />}
+					/>
 				)}
 			</div>
 
@@ -352,6 +363,6 @@ export function AdminEntriesTable({
 				hidePagerWhenSingle
 				showRange={false}
 			/>
-		</section>
+		</Stack>
 	);
 }

@@ -10,7 +10,20 @@ import {
 	roundCropBox,
 } from "@monti-cms/core/document";
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label } from "@monti-cms/ui";
+import {
+	Button,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	Grid,
+	Inline,
+	Input,
+	Label,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -74,7 +87,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 		handleResetRotate();
 	};
 
-	const handleApply = (event?: React.FormEvent<HTMLFormElement>) => {
+	const handleApply = (event?: React.FormEvent<HTMLElement>) => {
 		event?.preventDefault();
 		const finalCrop = isFullCrop(cropDraft) ? null : formatCrop(cropDraft);
 		const finalRotate = rotateDraft === 0 ? null : String(rotateDraft);
@@ -199,14 +212,15 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-2xl gap-comfortable p-comfortable sm:max-w-xl">
-				<form onSubmit={handleApply} className="contents">
+			<DialogContent size="lg">
+				<Stack as="form" gap="comfortable" onSubmit={handleApply}>
 					<DialogHeader>
 						<DialogTitle>{t("imageCrop.title")}</DialogTitle>
 					</DialogHeader>
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
-					<div className="flex flex-col items-center gap-condensed">
+					<Stack gap="condensed" align="center">
+						{/* design-system: drawing — the image with the crop rectangle, its mask and handles over it (percent positions, pointer drag) */}
 						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-monti-inset p-tight">
 							<div
 								ref={containerRef}
@@ -280,8 +294,8 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</div>
 						</div>
 
-						<div className="flex w-full flex-wrap items-center justify-between gap-condensed text-monti-caption text-monti-muted">
-							<span>
+						<Inline width="full" wrap justify="between" gap="condensed">
+							<Text variant="caption" tone="muted">
 								{isFull
 									? t("imageCrop.full")
 									: t("imageCrop.region", {
@@ -290,105 +304,121 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 											x: cropDraft.x,
 											y: cropDraft.y,
 										})}
-							</span>
-						</div>
+							</Text>
+						</Inline>
 
 						{/* Keyboard numeric input controls */}
-						<div className="flex w-full items-center justify-between gap-condensed rounded-lg border bg-monti-inset p-condensed text-monti-caption">
-							<span className="font-medium text-monti-muted">{t("imageCrop.regionPercent")}</span>
-							<div className="flex items-center gap-condensed">
-								<div className="flex items-center gap-tight">
-									<Label htmlFor="crop-input-x" className="text-monti-caption text-monti-muted">
+						<Inline
+							width="full"
+							justify="between"
+							gap="condensed"
+							padding="condensed"
+							radius="lg"
+							border="all"
+							background="inset"
+						>
+							<Text variant="caption" tone="muted" weight="medium">
+								{t("imageCrop.regionPercent")}
+							</Text>
+							<Grid columns={4} responsive={false} gap="condensed">
+								<Inline gap="tight">
+									<Label htmlFor="crop-input-x" size="caption" tone="muted">
 										X
 									</Label>
 									<Input
 										id="crop-input-x"
 										type="number"
+										size="sm"
 										min={0}
 										max={99}
 										step={1}
 										value={cropDraft.x}
 										aria-label={t("imageCrop.x")}
 										onChange={(e) => handleNumericCropChange("x", Number(e.target.value))}
-										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
-								</div>
-								<div className="flex items-center gap-tight">
-									<Label htmlFor="crop-input-y" className="text-monti-caption text-monti-muted">
+								</Inline>
+								<Inline gap="tight">
+									<Label htmlFor="crop-input-y" size="caption" tone="muted">
 										Y
 									</Label>
 									<Input
 										id="crop-input-y"
 										type="number"
+										size="sm"
 										min={0}
 										max={99}
 										step={1}
 										value={cropDraft.y}
 										aria-label={t("imageCrop.y")}
 										onChange={(e) => handleNumericCropChange("y", Number(e.target.value))}
-										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
-								</div>
-								<div className="flex items-center gap-tight">
-									<Label htmlFor="crop-input-w" className="text-monti-caption text-monti-muted">
+								</Inline>
+								<Inline gap="tight">
+									<Label htmlFor="crop-input-w" size="caption" tone="muted">
 										W
 									</Label>
 									<Input
 										id="crop-input-w"
 										type="number"
+										size="sm"
 										min={1}
 										max={100}
 										step={1}
 										value={cropDraft.width}
 										aria-label={t("imageCrop.width")}
 										onChange={(e) => handleNumericCropChange("width", Number(e.target.value))}
-										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
-								</div>
-								<div className="flex items-center gap-tight">
-									<Label htmlFor="crop-input-h" className="text-monti-caption text-monti-muted">
+								</Inline>
+								<Inline gap="tight">
+									<Label htmlFor="crop-input-h" size="caption" tone="muted">
 										H
 									</Label>
 									<Input
 										id="crop-input-h"
 										type="number"
+										size="sm"
 										min={1}
 										max={100}
 										step={1}
 										value={cropDraft.height}
 										aria-label={t("imageCrop.height")}
 										onChange={(e) => handleNumericCropChange("height", Number(e.target.value))}
-										className="h-6 w-14 px-condensed text-center text-monti-caption"
 									/>
-								</div>
-							</div>
-						</div>
-					</div>
+								</Inline>
+							</Grid>
+						</Inline>
+					</Stack>
 
 					{/* Rotation controls */}
-					<div className="flex items-center justify-between rounded-lg border bg-monti-inset p-condensed">
-						<div className="flex items-center gap-condensed text-monti-caption">
-							<span className="font-medium">{t("imageCrop.rotate")}</span>
-							<span className="font-semibold text-monti-default">{rotateDraft}°</span>
-						</div>
+					<Inline justify="between" padding="condensed" radius="lg" border="all" background="inset">
+						<Inline gap="condensed">
+							<Text variant="caption" weight="medium">
+								{t("imageCrop.rotate")}
+							</Text>
+							<Text variant="caption" weight="semibold">
+								{rotateDraft}°
+							</Text>
+						</Inline>
 						<Button type="button" variant="outline" size="sm" onClick={handleRotate90}>
 							<RotateCw aria-hidden />
 							{t("imageCrop.rotate90")}
 						</Button>
-					</div>
+					</Inline>
 
-					<DialogFooter className="flex items-center justify-between gap-condensed sm:justify-between">
-						<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
-							{tc("reset")}
-						</Button>
-						<div className="flex items-center gap-condensed">
-							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-								{tc("cancel")}
+					<DialogFooter>
+						<Inline width="full" justify="between" gap="condensed">
+							<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
+								{tc("reset")}
 							</Button>
-							<Button type="submit">{tc("apply")}</Button>
-						</div>
+							<Inline gap="condensed">
+								<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+									{tc("cancel")}
+								</Button>
+								<Button type="submit">{tc("apply")}</Button>
+							</Inline>
+						</Inline>
 					</DialogFooter>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);

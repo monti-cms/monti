@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { SidebarTrigger } from "@monti-cms/ui";
+import { Box, Heading, Inline, SidebarTrigger, Stack } from "@monti-cms/ui";
 import { useState } from "react";
 import type { ChangedAreas } from "../schema/schema-model";
 import { SchemaSettings } from "../schema/schema-screen";
@@ -39,29 +39,30 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	return (
 		<>
-			<header className="shrink-0 border-b bg-monti-page px-comfortable pt-spacious lg:px-wide lg:pt-wide">
-				<div className="flex flex-wrap items-end justify-between gap-x-spacious gap-y-normal">
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-condensed">
-							<SidebarTrigger
-								aria-label={shared("shell.openSidebar")}
-								className="-ml-tight text-monti-muted md:hidden"
-							/>
-							<h1 className="text-monti-heading">{t("title")}</h1>
-							<div
-								ref={setFileLine}
-								className="flex items-center gap-condensed empty:hidden"
-								data-testid="settings-file-line"
-							/>
-						</div>
-					</div>
-					<div ref={setActions} className="flex items-center gap-condensed" data-testid="settings-actions" />
-				</div>
+			<Stack as="header" gap="none" shrink={false} border="bottom" background="page" paddingX="wide" paddingTop="wide">
+				<Inline wrap align="end" justify="between" gap="spacious">
+					<Box minWidth={0}>
+						<Inline wrap gap="condensed">
+							<Box as="span" hideFrom="md">
+								<SidebarTrigger aria-label={shared("shell.openSidebar")} />
+							</Box>
+							<Heading as="h1" variant="heading">
+								{t("title")}
+							</Heading>
+							<Inline gap="condensed">
+								<div ref={setFileLine} data-testid="settings-file-line" />
+							</Inline>
+						</Inline>
+					</Box>
+					<Inline gap="condensed">
+						<div ref={setActions} data-testid="settings-actions" />
+					</Inline>
+				</Inline>
 				<SettingsTabBar site={site} active={tab} onSchemaTab={go} changed={changed?.tabs} />
-			</header>
-			<div className="flex min-h-0 flex-1 flex-col bg-monti-page">
+			</Stack>
+			<Stack gap="none" grow minHeight={0} background="page">
 				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} onChanged={setChanged} />
-			</div>
+			</Stack>
 		</>
 	);
 }

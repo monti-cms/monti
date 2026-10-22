@@ -10,6 +10,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	IconButton,
+	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
@@ -79,9 +80,9 @@ export function TemplateMenu({
 					disabled={disabled}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
-					<LayoutTemplate aria-hidden className="size-4" />
+					<LayoutTemplate aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="end" className="max-h-80 min-w-56 overflow-y-auto">
+				<DropdownMenuContent align="end" width="lg">
 					{loadFailed ? (
 						<>
 							<DropdownMenuItem disabled>{t("template.loadFailed")}</DropdownMenuItem>
@@ -98,7 +99,7 @@ export function TemplateMenu({
 						templates.map((template) => (
 							<DropdownMenuItem key={template.id} onClick={() => void choose(template)}>
 								<FileText aria-hidden />
-								<span className="truncate">{template.name}</span>
+								<Text truncate>{template.name}</Text>
 							</DropdownMenuItem>
 						))
 					)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { FormFieldError, Textarea } from "@monti-cms/ui";
+import { FormFieldError, Stack, Textarea } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import type { TranslatorFor } from "../../translator";
@@ -126,7 +126,7 @@ export function FieldRolePicker({
 	];
 
 	return (
-		<div className="flex flex-col gap-normal">
+		<Stack gap="normal">
 			<Pick
 				label={t("field.role")}
 				description={t("field.roleHint")}
@@ -154,7 +154,7 @@ export function FieldRolePicker({
 					onChange={(val) => onChange(orUndefined(val))}
 				/>
 			)}
-		</div>
+		</Stack>
 	);
 }
 
@@ -194,7 +194,7 @@ export function InputOptionsEditor({
 				value={text}
 				disabled={disabled}
 				aria-invalid={bad || undefined}
-				className="font-mono text-monti-caption"
+				mono
 				onChange={(event) => setText(event.target.value)}
 				onBlur={commit}
 			/>
@@ -243,7 +243,7 @@ export function FieldCustomInputPicker({
 	];
 
 	return (
-		<div className="flex flex-col gap-comfortable">
+		<Stack gap="comfortable">
 			{registered.length > 0 ? (
 				<Pick
 					label={t("field.input")}
@@ -283,6 +283,6 @@ export function FieldCustomInputPicker({
 				/>
 			)}
 			<InputOptionsEditor value={options} onChange={onChangeOptions} />
-		</div>
+		</Stack>
 	);
 }

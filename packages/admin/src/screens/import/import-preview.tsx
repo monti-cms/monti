@@ -3,18 +3,23 @@
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Badge,
+	Box,
 	Checkbox,
+	Heading,
+	Inline,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
 	Table,
 	TableBody,
 	TableCell,
 	TableHead,
 	TableHeader,
 	TableRow,
+	Text,
 } from "@monti-cms/ui";
 import { useId } from "react";
 import type { ImportPreview, ImportPreviewEntry } from "../../api/import";
@@ -34,12 +39,10 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 		...preview.targets.map((target) => ({ value: target.name, label: target.label })),
 	];
 	return (
-		<section
-			className="flex flex-col gap-condensed"
-			aria-label={t("collections.title")}
-			data-testid="import-collections"
-		>
-			<h4 className="font-medium text-monti-body">{t("collections.title")}</h4>
+		<Stack as="section" gap="condensed" aria-label={t("collections.title")} data-testid="import-collections">
+			<Heading as="h4" variant="label">
+				{t("collections.title")}
+			</Heading>
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -52,13 +55,16 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 						const name = collection.name === "" ? t("collections.top") : collection.name;
 						return (
 							<TableRow key={collection.name}>
-								<TableCell className="align-top">
-									<div className="font-medium">{name}</div>
-									<div className="text-monti-caption text-monti-muted">
+								<TableCell valign="top">
+									<Text as="div" weight="medium">
+										{name}
+									</Text>
+									<Text as="div" variant="caption" tone="muted">
 										{t("collections.count", { count: collection.entries })}
-									</div>
+									</Text>
 								</TableCell>
-								<TableCell className="whitespace-normal">
+								{/* design-system: needs TableCell wrap (long cell content wraps instead of staying on one line) */}
+								<TableCell>
 									<Select
 										value={collection.target ?? SKIP}
 										items={items}
@@ -76,7 +82,11 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 										</SelectContent>
 									</Select>
 									{collection.skipped && (
-										<p className="mt-tight text-monti-caption text-monti-muted">{collection.skipped.text}</p>
+										<Box paddingTop="tight">
+											<Text as="p" variant="caption" tone="muted">
+												{collection.skipped.text}
+											</Text>
+										</Box>
 									)}
 								</TableCell>
 							</TableRow>
@@ -84,7 +94,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 					})}
 				</TableBody>
 			</Table>
-		</section>
+		</Stack>
 	);
 }
 
@@ -92,24 +102,26 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	const t = useTranslator(importMessages);
 	if (!entry.skipped) {
 		return (
-			<div className="flex flex-col gap-tight">
+			<Stack gap="tight">
 				<Badge variant="success">{t("entries.willImport")}</Badge>
 				{entry.notes.map((note) => (
-					<span key={note.code} className="text-monti-caption text-monti-muted">
+					<Text key={note.code} variant="caption" tone="muted">
 						{note.text}
-					</span>
+					</Text>
 				))}
-			</div>
+			</Stack>
 		);
 	}
 	const conflict = entry.skipped.code === "slug_exists";
 	return (
-		<div className="flex flex-col gap-tight">
+		<Stack gap="tight">
 			<Badge variant={conflict ? "warning" : "secondary"}>
 				{conflict ? t("entries.conflict") : t("entries.skipped")}
 			</Badge>
-			<span className="text-monti-caption text-monti-muted">{entry.skipped.text}</span>
-		</div>
+			<Text variant="caption" tone="muted">
+				{entry.skipped.text}
+			</Text>
+		</Stack>
 	);
 }
 
@@ -125,11 +137,14 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 				: entry.collection
 			: (preview.targets.find((target) => target.name === entry.target)?.label ?? entry.target);
 	return (
-		<section className="flex flex-col gap-condensed" aria-label={t("entries.title")} data-testid="import-entries">
-			<h4 className="font-medium text-monti-body">{t("entries.title")}</h4>
-			<div className="max-h-96 overflow-y-auto rounded-md border">
-				<Table containerClassName="overflow-visible">
-					<TableHeader className="sticky top-0 bg-monti-surface">
+		<Stack as="section" gap="condensed" aria-label={t("entries.title")} data-testid="import-entries">
+			<Heading as="h4" variant="label">
+				{t("entries.title")}
+			</Heading>
+			{/* design-system: needs a maximum height for a scrolling list (about 24rem) and a sticky table header */}
+			<Box radius="md" border="all" overflow="y">
+				<Table>
+					<TableHeader>
 						<TableRow>
 							<TableHead>{t("entries.title.column")}</TableHead>
 							<TableHead>{t("entries.locale")}</TableHead>
@@ -140,34 +155,37 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 					<TableBody>
 						{rows.map((entry) => (
 							<TableRow key={entry.key} data-testid="import-entry" data-status={entry.skipped ? "skipped" : "import"}>
-								<TableCell className="max-w-64 whitespace-normal align-top">
-									<div className="flex flex-wrap items-center gap-x-condensed gap-y-tight">
-										<span className="break-words font-medium">{entry.title ?? t("entries.noTitle")}</span>
+								{/* design-system: needs TableCell wrap (long titles, slugs and reasons wrap instead of staying on one line) */}
+								<TableCell valign="top">
+									<Inline gap="condensed" wrap>
+										<Text weight="medium">{entry.title ?? t("entries.noTitle")}</Text>
 										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}
-									</div>
-									<div className="break-all font-mono text-monti-caption text-monti-muted">{entry.slug ?? "—"}</div>
+									</Inline>
+									<Text as="div" variant="caption" tone="muted" mono>
+										{entry.slug ?? "—"}
+									</Text>
 									{entry.body !== null && (
-										<div className="text-monti-caption text-monti-muted">
+										<Text as="div" variant="caption" tone="muted">
 											{entry.body.kind === "text" ? t("body.text", { format: entry.body.format }) : t("body.json")}
-										</div>
+										</Text>
 									)}
 								</TableCell>
-								<TableCell className="align-top">{site.localeLabel(entry.locale)}</TableCell>
-								<TableCell className="align-top">{placeOf(entry)}</TableCell>
-								<TableCell className="whitespace-normal align-top">
+								<TableCell valign="top">{site.localeLabel(entry.locale)}</TableCell>
+								<TableCell valign="top">{placeOf(entry)}</TableCell>
+								<TableCell valign="top">
 									<EntryStatus entry={entry} />
 								</TableCell>
 							</TableRow>
 						))}
 					</TableBody>
 				</Table>
-			</div>
+			</Box>
 			{preview.entries.length > ROW_LIMIT && (
-				<p className="text-monti-caption text-monti-muted">
+				<Text as="p" variant="caption" tone="muted">
 					{t("entries.more", { count: preview.entries.length - ROW_LIMIT })}
-				</p>
+				</Text>
 			)}
-		</section>
+		</Stack>
 	);
 }
 
@@ -176,30 +194,44 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 	const t = useTranslator(importMessages);
 	const { counts } = preview;
 	return (
-		<section className="flex flex-col gap-condensed" aria-label={t("fields.title")} data-testid="import-leftovers">
-			<h4 className="font-medium text-monti-body">{t("fields.title")}</h4>
-			<ul className="flex flex-col gap-condensed text-monti-body text-monti-muted">
-				<li>{t("fields.only")}</li>
-				{preview.kind === "export" && <li>{t("fields.shared")}</li>}
+		<Stack as="section" gap="condensed" aria-label={t("fields.title")} data-testid="import-leftovers">
+			<Heading as="h4" variant="label">
+				{t("fields.title")}
+			</Heading>
+			<Stack as="ul" gap="condensed">
+				<Text as="li" tone="muted">
+					{t("fields.only")}
+				</Text>
+				{preview.kind === "export" && (
+					<Text as="li" tone="muted">
+						{t("fields.shared")}
+					</Text>
+				)}
 				{preview.fieldsNotImported.map((item) => (
-					<li key={item.collection} data-testid="import-fields">
+					<Text as="li" tone="muted" key={item.collection} data-testid="import-fields">
 						{t("fields.line", {
 							collection: item.collection === "" ? t("collections.top") : item.collection,
 							fields: item.fields.join(", "),
 						})}
 						{item.required.length > 0 && (
-							<span className="block text-monti-caption">
+							<Text as="div" variant="caption">
 								{t("fields.required", { collection: item.target, fields: item.required.join(", ") })}
-							</span>
+							</Text>
 						)}
-					</li>
+					</Text>
 				))}
 				{counts.outsideImages > 0 && (
-					<li data-testid="import-images">{t("images.line", { count: counts.outsideImages })}</li>
+					<Text as="li" tone="muted" data-testid="import-images">
+						{t("images.line", { count: counts.outsideImages })}
+					</Text>
 				)}
-				{counts.keptLinks > 0 && <li data-testid="import-links">{t("links.line", { count: counts.keptLinks })}</li>}
-			</ul>
-		</section>
+				{counts.keptLinks > 0 && (
+					<Text as="li" tone="muted" data-testid="import-links">
+						{t("links.line", { count: counts.keptLinks })}
+					</Text>
+				)}
+			</Stack>
+		</Stack>
 	);
 }
 
@@ -209,13 +241,10 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 	const publishId = useId();
 	const { counts } = preview;
 	return (
-		<div className="flex flex-col gap-spacious" data-testid="import-preview">
-			<p
-				className="flex flex-wrap items-baseline gap-x-normal gap-y-tight text-monti-body"
-				data-testid="import-summary"
-			>
-				<span className="text-monti-title">{t("summary.found", { count: counts.entries })}</span>
-				<span className="text-monti-muted">
+		<Stack gap="spacious" data-testid="import-preview">
+			<Inline gap="normal" wrap align="baseline" data-testid="import-summary">
+				<Text variant="title">{t("summary.found", { count: counts.entries })}</Text>
+				<Text tone="muted">
 					{[
 						t("summary.import", { count: counts.imported }),
 						t("summary.skipped", { count: counts.skipped }),
@@ -226,27 +255,28 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 					]
 						.filter(Boolean)
 						.join(" · ")}
-				</span>
-			</p>
+				</Text>
+			</Inline>
 			<CollectionTargets preview={preview} form={form} />
 			<EntryRows preview={preview} />
 			<Leftovers preview={preview} />
 			{counts.publishable > 0 && (
-				<label htmlFor={publishId} className="flex cursor-pointer items-start gap-normal text-monti-body">
-					<Checkbox
-						id={publishId}
-						checked={form.publish}
-						onCheckedChange={(checked) => form.setPublish(checked === true)}
-						className="mt-hair"
-					/>
-					<span className="flex flex-col gap-hair">
-						<span className="font-medium">{t("publish.label")}</span>
-						<span className="text-monti-caption text-monti-muted">
-							{t("publish.hint", { count: counts.publishable })}
-						</span>
-					</span>
-				</label>
+				<Box as="label" htmlFor={publishId}>
+					<Inline gap="normal" align="start">
+						<Checkbox
+							id={publishId}
+							checked={form.publish}
+							onCheckedChange={(checked) => form.setPublish(checked === true)}
+						/>
+						<Stack gap="hair">
+							<Text weight="medium">{t("publish.label")}</Text>
+							<Text variant="caption" tone="muted">
+								{t("publish.hint", { count: counts.publishable })}
+							</Text>
+						</Stack>
+					</Inline>
+				</Box>
 			)}
-		</div>
+		</Stack>
 	);
 }

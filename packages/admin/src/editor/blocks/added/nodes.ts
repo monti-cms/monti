@@ -94,6 +94,7 @@ export function createAddedBlockNode(block: BlockDefinition, all: readonly Block
 				: ["div", mergeAttributes(HTMLAttributes, { "data-monti-block": block.name })];
 		},
 		addNodeView() {
+			// design-system: drawing — the class names the node view's wrapper element inside the document
 			return ReactNodeViewRenderer(BlockNodeView, block.parent ? { className: PARENT_ONLY_VIEW_CLASS } : undefined);
 		},
 	});

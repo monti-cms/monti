@@ -3,6 +3,7 @@
 import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	Checkbox,
 	Command,
@@ -11,8 +12,8 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-	cn,
 	FormFieldError,
+	Inline,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -21,6 +22,8 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -216,30 +219,23 @@ function ManyPicker({
 						variant="outline"
 						size="sm"
 						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
-						className={cn(
-							"max-w-56 justify-between gap-condensed font-normal",
-							names.length === 0 && "text-monti-muted",
-						)}
 					/>
 				}
 			>
-				<span className="truncate">{summary}</span>
-				<ChevronDownIcon aria-hidden className="size-4 text-monti-muted" />
+				<Text truncate tone={names.length === 0 ? "muted" : undefined}>
+					{summary}
+				</Text>
+				<ChevronDownIcon aria-hidden />
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-64 p-0">
+			<PopoverContent align="start" width="md" padding="none">
 				<Command>
 					<CommandInput placeholder={t("picker.search", { label })} aria-label={t("picker.search", { label })} />
-					<CommandList className="max-h-64">
+					<CommandList>
 						<CommandEmpty>{t("picker.empty", { label })}</CommandEmpty>
 						<CommandGroup>
 							{options.map((option) => (
 								<CommandItem key={option.id} value={`${option.title} ${option.id}`} onSelect={() => toggle(option.id)}>
-									<Checkbox
-										checked={value.includes(option.id)}
-										tabIndex={-1}
-										aria-hidden
-										className="pointer-events-none"
-									/>
+									<Checkbox checked={value.includes(option.id)} tabIndex={-1} aria-hidden />
 									{option.title}
 								</CommandItem>
 							))}
@@ -391,9 +387,9 @@ export function BulkBar({
 			];
 
 	return (
-		<section aria-label={t("bar")} className="border-b bg-monti-selected px-wide py-condensed">
-			<div className="flex min-h-7 flex-wrap items-center gap-condensed text-monti-body">
-				<span className="font-medium text-monti-default">{t("count", { count: selected.length })}</span>
+		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX="wide" paddingY="condensed">
+			<Inline wrap gap="condensed">
+				<Text weight="medium">{t("count", { count: selected.length })}</Text>
 				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
 					{t("clear")}
 				</Button>
@@ -457,8 +453,10 @@ export function BulkBar({
 				</Button>
 
 				{results && (
-					<output className="text-monti-caption text-monti-muted">
-						{t("result", { success: successes, failed: failures.length })}
+					<output>
+						<Text variant="caption" tone="muted">
+							{t("result", { success: successes, failed: failures.length })}
+						</Text>
 					</output>
 				)}
 				{failures.length > 0 && (
@@ -471,17 +469,21 @@ export function BulkBar({
 						{t("retry")}
 					</Button>
 				)}
-			</div>
+			</Inline>
 
-			{error && <FormFieldError className="pt-condensed">{error}</FormFieldError>}
+			{error && (
+				<Box paddingTop="condensed">
+					<FormFieldError>{error}</FormFieldError>
+				</Box>
+			)}
 			{failures.length > 0 && (
-				<ul className="flex flex-col gap-tight pt-condensed text-monti-caption text-monti-danger">
+				<Stack as="ul" gap="tight" paddingTop="condensed">
 					{failures.map((failure) => (
-						<li key={failure.id}>
-							<span className="font-medium">{titleOf(failure.id)}</span> — {describeBulkFailure(site, failure)}
-						</li>
+						<Text as="li" key={failure.id} variant="caption" tone="danger">
+							<Text weight="medium">{titleOf(failure.id)}</Text> — {describeBulkFailure(site, failure)}
+						</Text>
 					))}
-				</ul>
+				</Stack>
 			)}
 			{dialog}
 			<ExportDialog
@@ -491,6 +493,6 @@ export function BulkBar({
 				ids={selected.map((item) => item.id)}
 				noun={collectionNoun(site, collection)}
 			/>
-		</section>
+		</Box>
 	);
 }

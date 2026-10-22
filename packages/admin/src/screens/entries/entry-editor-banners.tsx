@@ -4,7 +4,7 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError } from "@monti-cms/ui";
+import { Alert, Box, Button, FormFieldError, Inline, Text } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -36,40 +36,50 @@ export function EntryEditorBanners({
 	return (
 		<>
 			{isTrashed && (
-				<section
+				<Box
+					as="section"
 					aria-label={t("trash")}
-					className="flex flex-wrap items-center gap-condensed border-b bg-monti-neutral px-comfortable py-condensed text-monti-body"
+					background="neutral"
+					border="bottom"
+					paddingX="comfortable"
+					paddingY="condensed"
 				>
-					<span>{t("trashNotice", nounVars(site, collection))}</span>
-				</section>
+					<Inline wrap gap="condensed">
+						<Text>{t("trashNotice", nounVars(site, collection))}</Text>
+					</Inline>
+				</Box>
 			)}
 			{visualUnavailable && (
-				<output className="border-b bg-monti-warning-muted px-comfortable py-condensed text-monti-body text-monti-warning">
+				<Alert role="status" tone="warning" layout="strip">
 					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
-				</output>
+				</Alert>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-				<FormFieldError className="border-b px-comfortable py-condensed text-monti-body">
-					{editor.saveError.message}
-				</FormFieldError>
+				<Box border="bottom" paddingX="comfortable" paddingY="condensed">
+					<FormFieldError>{editor.saveError.message}</FormFieldError>
+				</Box>
 			)}
 
 			{sourceChanged && (
-				<output className="flex flex-wrap items-center gap-condensed border-b bg-monti-warning-muted px-comfortable py-condensed text-monti-body">
-					<span className="flex-1 font-medium text-monti-warning">{t("sourceChanged")}</span>
-					<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
-						{t("compare")}
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						disabled={isReadOnly}
-						onClick={editor.confirmTranslationSource}
-					>
-						{t("confirm")}
-					</Button>
-				</output>
+				<Alert role="status" tone="warning" layout="strip">
+					<Text tone="warning" weight="medium">
+						{t("sourceChanged")}
+					</Text>
+					<Inline gap="condensed">
+						<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
+							{t("compare")}
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							disabled={isReadOnly}
+							onClick={editor.confirmTranslationSource}
+						>
+							{t("confirm")}
+						</Button>
+					</Inline>
+				</Alert>
 			)}
 		</>
 	);

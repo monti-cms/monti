@@ -13,6 +13,7 @@ import {
 	MarkTextPopover,
 	removeInlineMark,
 } from "@monti-cms/admin/editor";
+import { Box, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
 import { keywordList } from "../shared/text";
@@ -32,7 +33,6 @@ const labelsOf = (t: TooltipText): MarkTextLabels => ({
 	field: t("content.label"),
 	empty: t("field.empty"),
 });
-const ICON_CLASS = "size-4";
 
 function TooltipToolbarButton({ editor }: { editor: Editor }) {
 	const t = useTranslator(tooltipMessages);
@@ -42,7 +42,7 @@ function TooltipToolbarButton({ editor }: { editor: Editor }) {
 			mark={TOOLTIP_MARK}
 			attribute="content"
 			labels={labelsOf(t)}
-			icon={<MessageSquareMore className={ICON_CLASS} aria-hidden />}
+			icon={<MessageSquareMore aria-hidden />}
 			openEvent={OPEN_TOOLTIP_EVENT}
 		/>
 	);
@@ -81,7 +81,7 @@ function TooltipBubbleButton(props: EditorBubbleProps) {
 			label={active ? t("edit") : t("add")}
 			onClick={() => openForm(t, props, { active, initial: String(editor.getAttributes(TOOLTIP_MARK).content ?? "") })}
 		>
-			<MessageSquareMore aria-hidden className={ICON_CLASS} />
+			<MessageSquareMore aria-hidden />
 		</BubbleButton>
 	);
 }
@@ -92,18 +92,25 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	const content = String(mark.attrs.content ?? "");
 	return (
 		<>
-			<MessageSquareMore aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
-			<span className="max-w-48 truncate px-tight text-monti-caption text-monti-muted" title={content}>
-				{content}
-			</span>
+			<Box as="span" paddingX="tight" shrink={false}>
+				<Text tone="muted">
+					{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
+					<MessageSquareMore aria-hidden size={16} />
+				</Text>
+			</Box>
+			<Box paddingX="tight" maxWidth="panel-sm">
+				<Text as="div" variant="caption" tone="muted" truncate title={content}>
+					{content}
+				</Text>
+			</Box>
 			<BubbleButton
 				label={t("edit")}
 				onClick={() => openForm(t, props, { active: true, initial: content, range: mark })}
 			>
-				<Pencil aria-hidden className={ICON_CLASS} />
+				<Pencil aria-hidden />
 			</BubbleButton>
 			<BubbleButton label={t("remove")} onClick={act(() => removeInlineMark(editor, mark))}>
-				<X aria-hidden className={ICON_CLASS} />
+				<X aria-hidden />
 			</BubbleButton>
 		</>
 	);

@@ -1,7 +1,8 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@monti-cms/ui";
+import { Box, Heading, Inline, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
+import { SidebarInset as OpenSidebarInset, SidebarProvider as OpenSidebarProvider } from "@monti-cms/ui/internal";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -35,7 +36,14 @@ const ActionsSlotContext = createContext<HTMLElement | null>(null);
  */
 export function PageActions({ children }: { children: ReactNode }) {
 	const slot = useContext(ActionsSlotContext);
-	return slot ? createPortal(children, slot) : null;
+	return slot
+		? createPortal(
+				<Inline wrap gap="condensed" justify="end">
+					{children}
+				</Inline>,
+				slot,
+			)
+		: null;
 }
 
 /**
@@ -182,47 +190,75 @@ export function AdminShell({
 	}
 
 	return (
-		<SidebarProvider className="h-svh overflow-hidden">
+		// design-system: needs a viewport-height, no-page-scroll option on SidebarProvider (and min-w-0 + overflow hidden on SidebarInset)
+		<OpenSidebarProvider className="h-svh overflow-hidden">
 			<AdminSidebar
 				{...sidebar}
 				trashCount={nav.trashCount}
 				eventsCount={nav.eventsCount}
 				folderCounts={nav.folderCounts}
 			/>
-			<SidebarInset className="min-w-0 overflow-hidden">
+			<OpenSidebarInset className="min-w-0 overflow-hidden">
 				{!bare && large && (
-					<header className="flex shrink-0 items-end gap-normal px-wide pt-wide pb-comfortable">
-						<SidebarTrigger
-							aria-label={t("shell.openSidebar")}
-							className="-ml-tight self-start text-monti-muted md:hidden"
-						/>
-						<div className="min-w-0 flex-1">
-							<h1 className="flex min-w-0 items-baseline gap-condensed text-monti-heading">
-								<span className="truncate">{title}</span>
-								{count !== undefined && (
-									<span className="tabular font-mono text-monti-caption text-monti-muted">{count}</span>
-								)}
-							</h1>
-							{description && <p className="mt-tight text-monti-body text-monti-muted">{description}</p>}
-						</div>
-						<div ref={setActionsSlot} className="flex flex-wrap items-center justify-end gap-condensed" />
-					</header>
+					<Inline
+						as="header"
+						align="end"
+						gap="normal"
+						shrink={false}
+						paddingX="wide"
+						paddingTop="wide"
+						paddingBottom="comfortable"
+					>
+						<Box hideFrom="md">
+							<SidebarTrigger aria-label={t("shell.openSidebar")} />
+						</Box>
+						<Stack gap="tight" grow minWidth={0}>
+							<Heading as="h1" variant="heading">
+								<Inline as="span" gap="condensed" align="baseline">
+									<Text truncate>{title}</Text>
+									{count !== undefined && (
+										<Text variant="caption" tone="muted" mono>
+											{count}
+										</Text>
+									)}
+								</Inline>
+							</Heading>
+							{description && (
+								<Text as="p" tone="muted">
+									{description}
+								</Text>
+							)}
+						</Stack>
+						<div ref={setActionsSlot} />
+					</Inline>
 				)}
 				{!bare && !large && (
-					<header className="flex h-13 shrink-0 items-center gap-normal border-b px-comfortable lg:px-comfortable">
-						<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-tight text-monti-muted md:hidden" />
-						<h1 className="flex min-w-0 flex-1 items-baseline gap-condensed truncate text-monti-title">
-							<span className="truncate">{title}</span>
-							{count !== undefined && <span className="tabular text-monti-body text-monti-muted">{count}</span>}
-						</h1>
-						<div ref={setActionsSlot} className="flex items-center gap-condensed" />
-					</header>
+					<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="comfortable" paddingY="normal">
+						<Box hideFrom="md">
+							<SidebarTrigger aria-label={t("shell.openSidebar")} />
+						</Box>
+						<Box grow minWidth={0}>
+							<Heading as="h1" variant="title">
+								<Inline as="span" gap="condensed" align="baseline">
+									<Text truncate>{title}</Text>
+									{count !== undefined && (
+										<Text tone="muted" mono>
+											{count}
+										</Text>
+									)}
+								</Inline>
+							</Heading>
+						</Box>
+						<div ref={setActionsSlot} />
+					</Inline>
 				)}
 				<ActionsSlotContext.Provider value={actionsSlot}>
-					<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+					<Stack gap="none" grow minHeight={0} overflow="hidden">
+						{children}
+					</Stack>
 				</ActionsSlotContext.Provider>
 				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
-			</SidebarInset>
-		</SidebarProvider>
+			</OpenSidebarInset>
+		</OpenSidebarProvider>
 	);
 }

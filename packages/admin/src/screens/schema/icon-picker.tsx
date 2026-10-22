@@ -1,10 +1,9 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, Input, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
+import { Box, Button, Inline, Input, Popover, PopoverContent, PopoverTrigger, Stack, Text } from "@monti-cms/ui";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
-import { cn } from "../../lib/utils";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
@@ -53,25 +52,29 @@ export function IconPicker({
 							id={id}
 							type="button"
 							variant="outline"
+							width="full"
 							disabled={disabled}
 							aria-label={`${label}: ${value || t("collection.iconDefault")}`}
-							className="h-9 w-full max-w-sm justify-start gap-condensed font-normal"
 						/>
 					}
 				>
-					<span className="flex size-5 items-center justify-center text-monti-muted">
-						<CurrentIcon className="size-4" />
-					</span>
-					<span className="truncate">{value || t("collection.iconDefault")}</span>
-					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-monti-muted" />
+					<Inline as="span" gap="condensed" grow minWidth={0}>
+						<Text as="span" tone="muted">
+							<CurrentIcon aria-hidden />
+						</Text>
+						<Text truncate>{value || t("collection.iconDefault")}</Text>
+					</Inline>
+					<Text as="span" tone="muted">
+						<ChevronDown aria-hidden />
+					</Text>
 				</PopoverTrigger>
-				<PopoverContent align="start" className="w-72 p-normal">
-					<div className="flex flex-col gap-condensed">
+				<PopoverContent align="start" width="md">
+					<Stack gap="condensed">
 						<Input
 							value={query}
+							size="sm"
 							placeholder={t("collection.iconSearch")}
 							onChange={(e) => setQuery(e.target.value)}
-							className="h-8 text-monti-caption"
 							autoFocus
 						/>
 						{value && (
@@ -79,7 +82,6 @@ export function IconPicker({
 								type="button"
 								variant="ghost"
 								size="xs"
-								className="justify-start text-monti-caption text-monti-muted hover:text-monti-default"
 								onClick={() => {
 									onChange(undefined);
 									setOpen(false);
@@ -88,16 +90,19 @@ export function IconPicker({
 								{t("collection.iconClear")} ({defaultIconName})
 							</Button>
 						)}
+						{/* design-system: needs a scrolling icon grid (6 columns, a maximum height) */}
 						<div className="grid max-h-56 grid-cols-6 gap-tight overflow-y-auto p-hair" role="listbox">
 							{filtered.map((name) => {
 								const Icon = ICONS[name];
 								if (!Icon) return null;
 								const isSelected = value === name;
 								return (
-									<button
+									<Button
 										key={name}
 										type="button"
 										role="option"
+										variant={isSelected ? "secondary" : "ghost"}
+										size="icon"
 										aria-selected={isSelected}
 										title={name}
 										aria-label={name}
@@ -105,22 +110,20 @@ export function IconPicker({
 											onChange(name);
 											setOpen(false);
 										}}
-										className={cn(
-											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-hover",
-											isSelected && "bg-monti-selected text-monti-default ring-1 ring-monti-focus",
-										)}
 									>
-										<Icon className="size-4" />
-									</button>
+										<Icon aria-hidden />
+									</Button>
 								);
 							})}
 						</div>
 						{filtered.length === 0 && (
-							<p className="py-comfortable text-center text-monti-caption text-monti-muted">
-								{t("collection.iconNone")}
-							</p>
+							<Box paddingY="comfortable">
+								<Text as="p" variant="caption" tone="muted">
+									{t("collection.iconNone")}
+								</Text>
+							</Box>
 						)}
-					</div>
+					</Stack>
 				</PopoverContent>
 			</Popover>
 		</Labeled>

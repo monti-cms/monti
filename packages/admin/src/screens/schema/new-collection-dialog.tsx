@@ -2,13 +2,18 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Dialog,
 	DialogContent,
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
 	FormFieldError,
+	Grid,
+	Inline,
 	Input,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
@@ -55,6 +60,7 @@ function NewCollectionForm({
 	const ts = useTranslator(schemaMessages);
 	const nameId = useId();
 	const idFieldId = useId();
+	const kindLabelId = useId();
 	const [name, setName] = useState("");
 	// `null`: not typed yet, so the identifier is the one the name suggests.
 	const [typedId, setTypedId] = useState<string | null>(null);
@@ -74,8 +80,10 @@ function NewCollectionForm({
 		if (ready) onCreate(id, kind, path.trim(), name.trim());
 	};
 	return (
-		<form
-			className="grid gap-comfortable"
+		<Grid
+			as="form"
+			columns={1}
+			gap="comfortable"
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
@@ -102,30 +110,39 @@ function NewCollectionForm({
 					aria-invalid={idIssue ? true : undefined}
 					onChange={(event) => setTypedId(event.target.value)}
 				/>
-				{idIssue && <FormFieldError className="text-monti-caption">{ts(`name.${idIssue}`)}</FormFieldError>}
+				{idIssue && <FormFieldError>{ts(`name.${idIssue}`)}</FormFieldError>}
 			</Labeled>
-			<fieldset className="flex flex-col gap-condensed">
-				<legend className="mb-condensed font-medium text-monti-caption">{t("collection.kind")}</legend>
+			<Stack role="group" aria-labelledby={kindLabelId} gap="condensed">
+				<Text as="div" id={kindLabelId} variant="caption" weight="medium">
+					{t("collection.kind")}
+				</Text>
 				{kinds.map((item) => (
-					<label
+					<Box
+						as="label"
 						key={item.value}
-						className="flex cursor-pointer items-start gap-condensed rounded-lg border p-condensed has-checked:border-monti-emphasis has-checked:bg-monti-selected"
+						border="all"
+						radius="lg"
+						padding="condensed"
+						background={kind === item.value ? "selected" : undefined}
 					>
-						<input
-							type="radio"
-							name="new-collection-kind"
-							value={item.value}
-							checked={kind === item.value}
-							onChange={() => setKind(item.value)}
-							className="mt-hair"
-						/>
-						<span className="flex flex-col gap-hair">
-							<span className="font-medium text-monti-body">{item.label}</span>
-							<span className="text-monti-caption text-monti-muted">{item.explain}</span>
-						</span>
-					</label>
+						<Inline align="start" gap="condensed">
+							<input
+								type="radio"
+								name="new-collection-kind"
+								value={item.value}
+								checked={kind === item.value}
+								onChange={() => setKind(item.value)}
+							/>
+							<Stack gap="hair">
+								<Text weight="medium">{item.label}</Text>
+								<Text variant="caption" tone="muted">
+									{item.explain}
+								</Text>
+							</Stack>
+						</Inline>
+					</Box>
 				))}
-			</fieldset>
+			</Stack>
 			<PublicPathField path={path} suggested={defaultPath(id)} onChange={setTypedPath} />
 			<DialogFormFooter
 				onCancel={onCancel}
@@ -133,6 +150,6 @@ function NewCollectionForm({
 				submitLabel={t("collection.createConfirm")}
 				disabled={!ready}
 			/>
-		</form>
+		</Grid>
 	);
 }

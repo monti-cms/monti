@@ -40,6 +40,7 @@ export function FileBlockView() {
 						.join(" · ")
 				: tc("loading");
 
+	// design-system: drawing — the file card is a block inside the document, with its name written in place
 	return (
 		<BlockFrame
 			framed={false}

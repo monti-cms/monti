@@ -2,15 +2,17 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
-	cn,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	IconButton,
+	Inline,
 	StatusIndicator,
 	type StatusTone,
+	Text,
 } from "@monti-cms/ui";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -41,14 +43,12 @@ export function LanguageTabs({
 	disabled,
 	onBeforeCreate,
 	onTrashTranslation,
-	className,
 }: {
 	entry: EntryData;
 	disabled: boolean;
 	/** Blocks translation creation when there are unsaved changes. */
 	onBeforeCreate: () => Promise<boolean>;
 	onTrashTranslation: () => void;
-	className?: string;
 }) {
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
@@ -88,88 +88,78 @@ export function LanguageTabs({
 	};
 
 	return (
-		<nav
-			aria-label={t("lang.nav")}
-			className={cn("mb-normal flex flex-wrap items-center gap-tight px-comfortable pt-condensed", className)}
-		>
-			{site.LOCALES.map((target) => {
-				const member = members.find((item) => item.locale === target);
-				if (!member) {
+		<Box as="nav" aria-label={t("lang.nav")} paddingX="comfortable" paddingTop="condensed" paddingBottom="normal">
+			<Inline wrap gap="tight">
+				{site.LOCALES.map((target) => {
+					const member = members.find((item) => item.locale === target);
+					if (!member) {
+						return (
+							<Button
+								key={target}
+								type="button"
+								size="xs"
+								variant="outline"
+								disabled={createDisabled}
+								onClick={() => void create(target)}
+							>
+								<Plus aria-hidden />
+								{/* The visible text is the button's name; the locale code stays in mono. */}
+								{t("lang.addTab", { code: CODE_MARK })
+									.split(CODE_MARK)
+									.flatMap((part, index) => [
+										index > 0 ? (
+											<Text key={`code-${target}`} mono>
+												{target.toUpperCase()}
+											</Text>
+										) : null,
+										part,
+									])}
+							</Button>
+						);
+					}
+					const current = member.id === entry.id;
 					return (
-						<Button
-							key={target}
-							type="button"
-							size="sm"
-							variant="ghost"
-							disabled={createDisabled}
-							className="h-7 gap-tight border border-dashed px-condensed text-monti-caption text-monti-muted"
-							onClick={() => void create(target)}
-						>
-							<Plus aria-hidden className="size-3" />
-							{/* The visible text is the button's name; the locale code stays in mono. */}
-							{t("lang.addTab", { code: CODE_MARK })
-								.split(CODE_MARK)
-								.flatMap((part, index) => [
-									index > 0 ? (
-										<span key={`code-${target}`} className="font-mono">
-											{target.toUpperCase()}
-										</span>
-									) : null,
-									part,
-								])}
-						</Button>
+						<Inline key={target}>
+							<Button
+								type="button"
+								size="xs"
+								variant={current ? "secondary" : "ghost"}
+								aria-current={current ? "page" : undefined}
+								aria-label={t(member.isSource ? "lang.currentSource" : "lang.current", {
+									lang: site.localeLabel(target),
+									status: statusLabels(site)[member.status],
+								})}
+								onClick={() => {
+									if (!current) router.navigate(site.adminEntryEditHref(member.id));
+								}}
+							>
+								<StatusIndicator size="xs" tone={STATUS_TONE[member.status] ?? "neutral"} />
+								<Text aria-hidden weight="medium">
+									{target.toUpperCase()}
+								</Text>
+								{member.isSource && (
+									<Text aria-hidden tone="muted">
+										{t("source")}
+									</Text>
+								)}
+							</Button>
+							{current && isTranslation && entry.status !== "trashed" && (
+								<DropdownMenu>
+									<IconButton label={t("lang.menu")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+										<MoreHorizontal aria-hidden />
+									</IconButton>
+									<DropdownMenuContent align="start">
+										<DropdownMenuItem variant="danger" onClick={onTrashTranslation}>
+											<Trash2 aria-hidden />
+											{tc("lifecycle.trash")}
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
+						</Inline>
 					);
-				}
-				const current = member.id === entry.id;
-				return (
-					<div key={target} className="flex items-center">
-						<Button
-							type="button"
-							size="sm"
-							variant="ghost"
-							aria-current={current ? "page" : undefined}
-							aria-label={t(member.isSource ? "lang.currentSource" : "lang.current", {
-								lang: site.localeLabel(target),
-								status: statusLabels(site)[member.status],
-							})}
-							className={cn(
-								"h-7 gap-condensed px-condensed text-monti-caption",
-								current ? "bg-monti-neutral text-monti-default" : "text-monti-muted",
-							)}
-							onClick={() => {
-								if (!current) router.navigate(site.adminEntryEditHref(member.id));
-							}}
-						>
-							<StatusIndicator size="xs" tone={STATUS_TONE[member.status] ?? "neutral"} />
-							<span aria-hidden className="font-medium">
-								{target.toUpperCase()}
-							</span>
-							{member.isSource && (
-								<span aria-hidden className="font-normal text-monti-muted">
-									{t("source")}
-								</span>
-							)}
-						</Button>
-						{current && isTranslation && entry.status !== "trashed" && (
-							<DropdownMenu>
-								<IconButton
-									label={t("lang.menu")}
-									className="size-7 text-monti-muted"
-									trigger={(button) => <DropdownMenuTrigger render={button} />}
-								>
-									<MoreHorizontal aria-hidden className="size-3.5" />
-								</IconButton>
-								<DropdownMenuContent align="start">
-									<DropdownMenuItem variant="danger" onClick={onTrashTranslation}>
-										<Trash2 aria-hidden />
-										{tc("lifecycle.trash")}
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
-					</div>
-				);
-			})}
-		</nav>
+				})}
+			</Inline>
+		</Box>
 	);
 }

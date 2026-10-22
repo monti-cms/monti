@@ -10,6 +10,7 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 	const texts = useBlockIssues(blockId);
 	if (texts.length === 0) return null;
 	return (
+		// design-system: drawing — a notice under a block inside the document; block views stay free of UI packages, so it cannot use components
 		<ul
 			contentEditable={false}
 			data-monti-block-issues=""

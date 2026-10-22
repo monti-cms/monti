@@ -28,7 +28,9 @@ import {
 	FormFieldLabel,
 	FormFieldLegend,
 	FormFieldSet,
+	Heading,
 	IconButton,
+	Inline,
 	Input,
 	InputGroup,
 	InputGroupAddon,
@@ -39,13 +41,15 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
+	Text,
 	Textarea,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 	FormField as UiField,
 } from "@monti-cms/ui";
-import { ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
 	type FieldInputEntry,
@@ -62,7 +66,6 @@ import {
 	EntryPicker,
 	type FieldInputProps,
 	type IncomingReference,
-	inputClass,
 	multilineProps,
 	OrderedEntryList,
 } from "./field-inputs";
@@ -121,21 +124,21 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FormFieldLabel htmlFor={id} className="text-monti-label">
-			{label} {required && <span className="text-monti-danger">*</span>}
+		<FormFieldLabel htmlFor={id}>
+			{label} {required && <Text tone="danger">*</Text>}
 		</FormFieldLabel>
 	);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-condensed">
+		<UiField data-invalid={Boolean(issue) || undefined}>
 			{aside ? (
-				<div className="flex min-h-6 items-center justify-between gap-condensed">
+				<Inline justify="between" gap="condensed">
 					{labelNode}
 					{aside}
-				</div>
+				</Inline>
 			) : (
 				labelNode
 			)}
-			{help && <FormFieldDescription className="text-monti-caption">{help}</FormFieldDescription>}
+			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
 		</UiField>
@@ -155,19 +158,19 @@ function SlotFieldRow({
 	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
-		<UiField data-invalid={Boolean(issue) || undefined} className="gap-condensed">
-			<div className="flex min-h-6 items-center justify-between gap-condensed">
-				<FormFieldLabel htmlFor={id} className="text-monti-label">
-					{label} {required && <span className="text-monti-danger">*</span>}
+		<UiField data-invalid={Boolean(issue) || undefined}>
+			<Inline justify="between" gap="condensed">
+				<FormFieldLabel htmlFor={id}>
+					{label} {required && <Text tone="danger">*</Text>}
 				</FormFieldLabel>
 				{aside || trigger ? (
-					<span className="flex items-center gap-tight">
+					<Inline gap="tight">
 						{aside}
 						{trigger}
-					</span>
+					</Inline>
 				) : null}
-			</div>
-			{help && <FormFieldDescription className="text-monti-caption">{help}</FormFieldDescription>}
+			</Inline>
+			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{panel}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
@@ -246,6 +249,7 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 			return field.multiline ? (
 				<Textarea
 					id={id}
+					size="sm"
 					{...multilineProps(field)}
 					autoComplete="off"
 					value={text}
@@ -253,18 +257,17 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className="resize-none rounded-md text-monti-label md:text-monti-label"
 				/>
 			) : (
 				<Input
 					id={id}
+					size="sm"
 					autoComplete="off"
 					value={text}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className={inputClass}
 				/>
 			);
 		case "select": {
@@ -280,7 +283,7 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					disabled={context.disabled}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					<SelectTrigger id={id} size="sm" className="w-full" aria-describedby={describedBy}>
+					<SelectTrigger id={id} size="sm" width="full" aria-describedby={describedBy}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -392,18 +395,17 @@ function ValueRowView({
 				const excerpt = bodyExcerpt(site, currentDoc, length);
 				field.setValue(excerpt);
 			}}
-			className="text-monti-muted hover:text-monti-default"
 		>
-			<RefreshCw aria-hidden className="size-3" />
+			<RefreshCw aria-hidden />
 		</IconButton>
 	) : null;
 
 	const aside =
 		fillFromBodyButton || Aside ? (
-			<div className="flex items-center gap-tight">
+			<Inline gap="tight">
 				{fillFromBodyButton}
 				{Aside && <Aside {...props} />}
-			</div>
+			</Inline>
 		) : undefined;
 
 	return (
@@ -456,7 +458,7 @@ const SlugRow = memo(function SlugRow({
 			help={showDescriptions ? field.description : undefined}
 			slot={slot}
 		>
-			<InputGroup className="h-8 rounded-md">
+			<InputGroup>
 				<InputGroupInput
 					id={field.ids.input}
 					autoComplete="off"
@@ -465,7 +467,8 @@ const SlugRow = memo(function SlugRow({
 					value={field.value ?? ""}
 					onChange={(event) => changeSlug(event.target.value)}
 					placeholder={placeholder ?? definition.placeholder}
-					className="font-mono text-monti-label md:text-monti-label"
+					size="sm"
+					mono
 				/>
 				{onRegenerateSlug && definition.from && (
 					<InputGroupAddon align="inline-end">
@@ -500,12 +503,12 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 	const selected = typeof choice.value === "string" ? choice.value : field.discriminant.defaultValue;
 	const nested = field.values[selected] ?? {};
 	return (
-		<div className="space-y-normal">
+		<Stack gap="normal">
 			<ValueRow name={name} showDescriptions={showDescriptions} />
 			{Object.keys(nested).map((nestedName) => (
 				<ValueRow key={nestedName} name={nestedName} showDescriptions={showDescriptions} />
 			))}
-		</div>
+		</Stack>
 	);
 });
 
@@ -615,29 +618,34 @@ export function SchemaFields({
 				const key = `${group.group ?? "group"}-${index}`;
 				if (!group.group) {
 					return (
-						<div key={key} className="space-y-comfortable">
+						<Stack key={key} gap="comfortable">
 							{visible.map(renderField)}
-						</div>
+						</Stack>
 					);
 				}
 				if (sections === "plain") {
 					// If there is only one group (one group in one tab), no title is added.
 					if (groups.length === 1) {
 						return (
-							<div key={key} className="space-y-comfortable">
+							<Stack key={key} gap="comfortable">
 								{visible.map(renderField)}
-							</div>
+							</Stack>
 						);
 					}
 					return (
-						<section
+						<Stack
+							as="section"
 							key={key}
 							aria-label={group.group}
-							className="space-y-comfortable border-monti-muted border-t pt-comfortable"
+							gap="comfortable"
+							border="top"
+							paddingTop="comfortable"
 						>
-							<h3 className="text-monti-label">{group.group}</h3>
+							<Heading as="h3" variant="label">
+								{group.group}
+							</Heading>
 							{visible.map(renderField)}
-						</section>
+						</Stack>
 					);
 				}
 				return (
@@ -678,16 +686,16 @@ function LayoutSection({
 	const [open, setOpen] = useState(defaultOpen);
 	return (
 		<Collapsible open={open} onOpenChange={setOpen}>
-			<FormFieldSet className="gap-normal">
-				<FormFieldLegend variant="label" className="mb-0">
-					<CollapsibleTrigger
-						render={<Button type="button" variant="ghost" size="xs" className="-ml-condensed text-monti-label" />}
-					>
-						<ChevronRight className={`transition-transform ${open ? "rotate-90" : ""}`} />
+			<FormFieldSet>
+				<FormFieldLegend variant="label">
+					<CollapsibleTrigger render={<Button type="button" variant="ghost" size="xs" />}>
+						{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						{title}
 					</CollapsibleTrigger>
 				</FormFieldLegend>
-				<CollapsibleContent className="space-y-comfortable">{children}</CollapsibleContent>
+				<CollapsibleContent>
+					<Stack gap="comfortable">{children}</Stack>
+				</CollapsibleContent>
 			</FormFieldSet>
 		</Collapsible>
 	);
@@ -700,11 +708,11 @@ function LayoutSection({
 export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollectionName; locale: Locale }) {
 	const site = useSite();
 	return (
-		<div className="space-y-comfortable">
+		<Stack gap="comfortable">
 			{site.recordLocalizedFields(collection).map((name) => (
 				<RecordLocaleField key={name} collection={collection} name={name} locale={locale} />
 			))}
-		</div>
+		</Stack>
 	);
 }
 
@@ -729,23 +737,23 @@ function RecordLocaleField({
 			{multiline ? (
 				<Textarea
 					id={field.ids.input}
+					size="sm"
 					{...multilineProps(definition)}
 					autoComplete="off"
 					lang={locale}
 					value={value}
 					disabled={field.readOnly}
 					onChange={(event) => field.setValue(event.target.value)}
-					className="resize-none rounded-md text-monti-label md:text-monti-label"
 				/>
 			) : (
 				<Input
 					id={field.ids.input}
+					size="sm"
 					autoComplete="off"
 					lang={locale}
 					value={value}
 					disabled={field.readOnly}
 					onChange={(event) => field.setValue(event.target.value)}
-					className={inputClass}
 				/>
 			)}
 		</FieldRow>

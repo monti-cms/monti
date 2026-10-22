@@ -2,7 +2,7 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, buttonVariants, cn, Skeleton } from "@monti-cms/ui";
+import { Button, Inline, Skeleton, Stack, Tabs, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -40,7 +40,10 @@ function RouteDescription({ path }: { path: string }) {
 	const t = useTranslator(screensMessages);
 	return (
 		<>
-			{t("list.publicAt")} <code className="font-mono text-monti-caption text-monti-default">{path}</code>
+			{t("list.publicAt")}{" "}
+			<Text as="code" variant="caption" tone="default" mono>
+				{path}
+			</Text>
 		</>
 	);
 }
@@ -55,8 +58,8 @@ function EntryListBody({ list }: { list: EntryList }) {
 	const record = list.recordTarget;
 	return (
 		<>
-			<div className="relative flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+			<Inline position="relative" align="stretch" gap="none" grow minHeight={0} overflow="hidden">
+				<Stack gap="none" grow minWidth={0} overflow="hidden">
 					<AdminEntriesTable
 						aboveTable={
 							<BulkBar
@@ -128,7 +131,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						onRetry={data.retry}
 						addAction={isTrash ? undefined : { label: t("list.add", { label: list.label }), run: list.createNew }}
 					/>
-				</div>
+				</Stack>
 				{record && (
 					<DockedPanel resize={RECORD_PANEL_RESIZE}>
 						<RecordPanel
@@ -146,7 +149,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						/>
 					</DockedPanel>
 				)}
-			</div>
+			</Inline>
 			{list.folderDialogs}
 			{list.confirmDialog}
 			{list.guardDialog}
@@ -165,28 +168,28 @@ function useMounted() {
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<div aria-busy="true" className="flex h-svh overflow-hidden">
-			<span className="sr-only">{tc("loading")}</span>
-			<div aria-hidden className="hidden w-64 shrink-0 space-y-condensed border-r p-normal md:block">
-				<Skeleton className="mb-comfortable h-7 w-32" />
+		<Inline align="stretch" gap="none" height="full" overflow="hidden" aria-busy="true">
+			<Text srOnly>{tc("loading")}</Text>
+			<Stack gap="condensed" width="panel-sm" shrink={false} border="right" padding="normal" hideBelow="md" aria-hidden>
+				<Skeleton shape="control-sm" width="third" />
 				{Array.from({ length: 6 }, (_, index) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-					<Skeleton key={index} className="h-7 w-full" />
+					<Skeleton key={index} shape="control-sm" />
 				))}
-			</div>
-			<div aria-hidden className="flex min-w-0 flex-1 flex-col">
-				<div className="flex h-13 shrink-0 items-center justify-between border-b px-comfortable lg:px-comfortable">
-					<Skeleton className="h-5 w-32" />
-					<Skeleton className="h-8 w-64" />
-				</div>
-				<div className="space-y-normal px-comfortable py-comfortable">
+			</Stack>
+			<Stack gap="none" grow minWidth={0} aria-hidden>
+				<Inline justify="between" shrink={false} border="bottom" paddingX="comfortable" paddingY="normal">
+					<Skeleton width="third" />
+					<Skeleton shape="control-sm" width="panel-sm" />
+				</Inline>
+				<Stack gap="normal" paddingX="comfortable" paddingY="comfortable">
 					{Array.from({ length: 8 }, (_, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-						<Skeleton key={index} className="h-7 w-full" />
+						<Skeleton key={index} shape="control-sm" />
 					))}
-				</div>
-			</div>
-		</div>
+				</Stack>
+			</Stack>
+		</Inline>
 	);
 }
 
@@ -228,24 +231,15 @@ function TrashPage() {
 		>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
-				<nav
-					aria-label={t("dashboard.trashCollections")}
-					className="flex items-center gap-tight rounded-lg bg-monti-neutral p-[3px]"
-				>
-					{site.COLLECTIONS.map((item) => (
-						<Link
-							key={item}
-							href={site.adminHref(`/trash?collection=${item}`)}
-							aria-current={state.collection === item ? "page" : undefined}
-							className={cn(
-								buttonVariants({ variant: "ghost", size: "xs" }),
-								"text-monti-muted aria-[current=page]:bg-monti-page aria-[current=page]:text-monti-default",
-							)}
-						>
-							{site.COLLECTION_DEFINITIONS[item].label}
-						</Link>
-					))}
-				</nav>
+				<Tabs value={state.collection}>
+					<TabsList aria-label={t("dashboard.trashCollections")}>
+						{site.COLLECTIONS.map((item) => (
+							<TabsTrigger key={item} value={item} render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}>
+								{site.COLLECTION_DEFINITIONS[item].label}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 			</PageActions>
 			<EntryListBody list={list} />
 		</AdminShell>

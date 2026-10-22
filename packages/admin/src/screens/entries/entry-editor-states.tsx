@@ -3,7 +3,7 @@
 // The loading and load-error states of the entry editor screen.
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { buttonVariants, Skeleton } from "@monti-cms/ui";
+import { Box, Button, Inline, Skeleton, Stack, Text } from "@monti-cms/ui";
 import { AdminLink as Link } from "../../router";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -11,132 +11,102 @@ import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 export function EntryEditorLoading() {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
-		<div className="flex h-screen w-full flex-col overflow-hidden bg-monti-page text-monti-default" aria-busy="true">
-			<span className="sr-only">{t("loadingDocument")}</span>
+		// design-system: needs a screen-height option on Box/Stack (the editor fills the viewport)
+		<div className="h-screen w-full">
+			<Stack gap="none" height="full" overflow="hidden" background="page" aria-busy="true">
+				<Text srOnly>{t("loadingDocument")}</Text>
 
-			{/* Top Header skeleton */}
-			<header className="flex h-14 shrink-0 items-center justify-between border-b bg-monti-page px-comfortable">
-				<div className="flex items-center gap-condensed">
-					<Skeleton className="size-4 rounded-sm" />
-					<Skeleton className="h-4 w-12 rounded-md" />
-				</div>
-				<div className="flex items-center gap-condensed">
-					<Skeleton className="h-4 w-20 rounded-md" />
-					<Skeleton className="h-8 w-16 rounded-md" />
-					<Skeleton className="size-8 rounded-md" />
-					<Skeleton className="size-8 rounded-md" />
-				</div>
-			</header>
+				{/* Top header skeleton */}
+				<Inline as="header" justify="between" height="control" shrink={false} border="bottom" paddingX="comfortable">
+					<Inline gap="condensed">
+						<Skeleton shape="icon" />
+						<Skeleton shape="line" width="quarter" />
+					</Inline>
+					<Inline gap="condensed">
+						<Skeleton shape="line" width="quarter" />
+						<Skeleton shape="control-sm" width="quarter" />
+						<Skeleton shape="icon" />
+						<Skeleton shape="icon" />
+					</Inline>
+				</Inline>
 
-			{/* Main Editor Canvas + Inspector Side Panel */}
-			<div className="relative flex min-h-0 flex-1 overflow-hidden">
-				{/* Canvas Area */}
-				<div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-					{/* Formatting Toolbar skeleton */}
-					<div className="relative flex min-h-12 w-full shrink-0 items-center border-b bg-monti-page px-spacious py-condensed backdrop-blur">
-						<div className="flex min-w-0 flex-1 items-center justify-center gap-condensed">
-							<Skeleton className="h-7 w-20 rounded-md" />
-							<span className="mx-tight h-4 w-px bg-monti-divider" />
-							<div className="flex items-center gap-tight">
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-							</div>
-							<span className="mx-tight h-4 w-px bg-monti-divider" />
-							<div className="flex items-center gap-tight">
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-								<Skeleton className="size-7 rounded-md" />
-							</div>
-						</div>
-						<div className="absolute inset-y-0 right-4 flex items-center gap-tight">
-							<Skeleton className="size-7 rounded-md" />
-							<Skeleton className="size-7 rounded-md" />
-						</div>
-					</div>
+				{/* Editor canvas and inspector side panel */}
+				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+					<Stack gap="none" grow minWidth={0} height="full" overflow="hidden">
+						{/* Formatting toolbar skeleton */}
+						<Inline
+							gap="condensed"
+							justify="center"
+							shrink={false}
+							border="bottom"
+							paddingX="spacious"
+							paddingY="condensed"
+						>
+							<Skeleton shape="control-sm" width="quarter" />
+							<Skeleton shape="icon" />
+							<Skeleton shape="icon" />
+							<Skeleton shape="icon" />
+							<Skeleton shape="icon" />
+						</Inline>
 
-					{/* Document Content Canvas */}
-					<div className="h-full min-w-0 flex-1 overflow-y-auto px-spacious py-wide">
-						<div className="mx-auto w-full max-w-[760px] space-y-spacious">
-							{/* Language tabs skeleton */}
-							<div className="flex items-center gap-condensed">
-								<Skeleton className="h-6 w-20 rounded-sm" />
-								<Skeleton className="h-6 w-14 rounded-sm" />
-							</div>
+						{/* Document canvas */}
+						<Box grow minHeight={0} overflow="y" paddingX="spacious" paddingY="wide">
+							<Stack gap="spacious" maxWidth="prose">
+								{/* Language tabs skeleton */}
+								<Inline gap="condensed">
+									<Skeleton shape="control-sm" width="quarter" />
+									<Skeleton shape="control-sm" width="quarter" />
+								</Inline>
 
-							{/* Title skeleton */}
-							<Skeleton className="h-10 w-3/4 rounded-md" />
+								{/* Title skeleton */}
+								<Skeleton shape="title" width="half" />
 
-							<div className="border-monti-muted border-b pt-tight" />
+								{/* Paragraph skeletons */}
+								<Stack gap="normal">
+									<Skeleton shape="line" />
+									<Skeleton shape="line" />
+									<Skeleton shape="line" width="half" />
+								</Stack>
+								<Stack gap="normal">
+									<Skeleton shape="line" />
+									<Skeleton shape="line" width="third" />
+								</Stack>
+							</Stack>
+						</Box>
+					</Stack>
 
-							{/* Paragraph skeletons */}
-							<div className="space-y-normal pt-comfortable">
-								<Skeleton className="h-4 w-full" />
-								<Skeleton className="h-4 w-[94%]" />
-								<Skeleton className="h-4 w-[88%]" />
-								<Skeleton className="h-4 w-[60%]" />
-							</div>
+					{/* Inspector side panel skeleton (visible on wide screens) */}
+					<Stack as="aside" gap="none" hideBelow="lg" width="panel-sm" shrink={false} border="left" background="page">
+						<Inline justify="between" height="control" shrink={false} border="bottom" paddingX="comfortable">
+							<Inline gap="condensed">
+								<Skeleton shape="control-sm" width="quarter" />
+								<Skeleton shape="control-sm" width="quarter" />
+							</Inline>
+							<Skeleton shape="icon" />
+						</Inline>
 
-							<div className="space-y-normal pt-comfortable">
-								<Skeleton className="h-4 w-[98%]" />
-								<Skeleton className="h-4 w-[92%]" />
-								<Skeleton className="h-4 w-[80%]" />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Inspector Side Panel skeleton (visible on wide screens) */}
-				<aside className="hidden w-80 shrink-0 flex-col border-l bg-monti-page lg:flex">
-					{/* Inspector Header / Tabs */}
-					<div className="flex h-12 shrink-0 items-center justify-between border-b px-comfortable">
-						<div className="flex items-center gap-condensed">
-							<Skeleton className="h-7 w-14 rounded-md" />
-							<Skeleton className="h-7 w-14 rounded-md" />
-						</div>
-						<Skeleton className="size-6 rounded-md" />
-					</div>
-
-					{/* Inspector Fields */}
-					<div className="flex-1 space-y-comfortable overflow-y-auto p-comfortable">
-						{/* Address Field */}
-						<div className="space-y-condensed">
-							<Skeleton className="h-3.5 w-16" />
-							<Skeleton className="h-9 w-full rounded-md" />
-						</div>
-
-						{/* Summary Field */}
-						<div className="space-y-condensed">
-							<Skeleton className="h-3.5 w-20" />
-							<Skeleton className="h-16 w-full rounded-md" />
-						</div>
-
-						{/* Classification Section */}
-						<div className="space-y-normal pt-condensed">
-							<Skeleton className="h-3 w-24" />
-							<div className="space-y-condensed">
-								<Skeleton className="h-3.5 w-16" />
-								<Skeleton className="h-9 w-full rounded-md" />
-							</div>
-							<div className="space-y-condensed">
-								<Skeleton className="h-3.5 w-12" />
-								<Skeleton className="h-9 w-full rounded-md" />
-							</div>
-						</div>
-
-						{/* Work log / Policy Section */}
-						<div className="space-y-normal pt-condensed">
-							<Skeleton className="h-3 w-20" />
-							<div className="space-y-condensed">
-								<Skeleton className="h-3.5 w-14" />
-								<Skeleton className="h-9 w-full rounded-md" />
-							</div>
-						</div>
-					</div>
-				</aside>
-			</div>
+						{/* Inspector fields */}
+						<Stack gap="comfortable" grow overflow="y" padding="comfortable">
+							<Stack gap="condensed">
+								<Skeleton shape="line" width="quarter" />
+								<Skeleton shape="control" />
+							</Stack>
+							<Stack gap="condensed">
+								<Skeleton shape="line" width="quarter" />
+								<Skeleton shape="block" />
+							</Stack>
+							<Stack gap="condensed">
+								<Skeleton shape="line" width="quarter" />
+								<Skeleton shape="control" />
+							</Stack>
+							<Stack gap="condensed">
+								<Skeleton shape="line" width="quarter" />
+								<Skeleton shape="control" />
+							</Stack>
+						</Stack>
+					</Stack>
+				</Inline>
+			</Stack>
 		</div>
 	);
 }
@@ -145,12 +115,14 @@ export function EntryEditorLoadError({ message }: { message: string }) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
 	return (
-		<div className="space-y-normal p-wide">
+		<Stack gap="normal" padding="wide">
 			{/* The shared notice: a grid Alert without an icon put the text in the 16px icon column, one letter per line. */}
 			<LoadErrorAlert message={message} />
-			<Link href={site.adminHref()} className={buttonVariants({ variant: "outline" })}>
-				{t("backToList")}
-			</Link>
-		</div>
+			<Box>
+				<Button variant="outline" nativeButton={false} render={<Link role="link" href={site.adminHref()} />}>
+					{t("backToList")}
+				</Button>
+			</Box>
+		</Stack>
 	);
 }

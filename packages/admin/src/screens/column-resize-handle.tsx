@@ -43,8 +43,10 @@ export function ColumnResizeHandle({
 					onNudge(event.key === "ArrowLeft" ? -16 : 16);
 				}
 			}}
+			// design-system: needs a resize-handle part (a draggable, keyboard-operable separator on a column edge)
 			className="absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
 		>
+			{/* design-system: needs a resize-handle part (the line of the handle) */}
 			<span
 				className={cn(
 					"h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-divider",

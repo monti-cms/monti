@@ -2,9 +2,12 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Label,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Stack,
+	Text,
 	Textarea,
 	Toggle,
 	Tooltip,
@@ -55,7 +58,7 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 	const [error, setError] = useState<string | null>(null);
 	const current = () => ({ [attribute]: editor.getAttributes(mark)[attribute] });
 
-	const handleApply = (event: FormEvent<HTMLFormElement>) => {
+	const handleApply = (event: FormEvent<HTMLElement>) => {
 		event.preventDefault();
 		const trimmed = value.trim();
 		if (!trimmed) {
@@ -80,12 +83,14 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 	};
 
 	return (
-		<form onSubmit={handleApply} onKeyDown={submitOnEnter} className="grid gap-normal">
-			<p className="font-medium">
+		<Stack as="form" gap="normal" onSubmit={handleApply} onKeyDown={submitOnEnter}>
+			<Text as="p" weight="medium">
 				{active ? t("markText.edit", { name: labels.name }) : t("markText.add", { name: labels.name })}
-			</p>
-			<label htmlFor={`${id}-content`} className="grid gap-condensed text-monti-caption">
-				{labels.field}
+			</Text>
+			<Stack gap="condensed">
+				<Label htmlFor={`${id}-content`} size="caption">
+					{labels.field}
+				</Label>
 				<Textarea
 					id={`${id}-content`}
 					value={value}
@@ -96,10 +101,9 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 						setValue(event.target.value);
 						setError(null);
 					}}
-					className="min-h-0"
 					autoFocus
 				/>
-			</label>
+			</Stack>
 			{error && <PopoverFormError id={`${id}-error`}>{error}</PopoverFormError>}
 			<PopoverFormFooter
 				removeLabel={t("markText.remove", { name: labels.name })}
@@ -107,7 +111,7 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 				onRemove={active ? handleRemove : undefined}
 				onCancel={onDone}
 			/>
-		</form>
+		</Stack>
 	);
 }
 
@@ -167,7 +171,6 @@ export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEve
 									disabled={disabled}
 									aria-label={labels.name}
 									onMouseDown={(event) => event.preventDefault()}
-									className="size-8 p-0"
 								/>
 							}
 						>
@@ -177,7 +180,7 @@ export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEve
 				/>
 				<TooltipContent side="bottom">{labels.name}</TooltipContent>
 			</Tooltip>
-			<PopoverContent align="center" className="w-80 p-normal text-monti-caption">
+			<PopoverContent align="center" width="md">
 				<MarkTextForm
 					key={String(open)}
 					editor={editor}

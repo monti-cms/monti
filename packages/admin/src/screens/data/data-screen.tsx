@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Box } from "@monti-cms/ui";
 import { ExportButton, ExportFields, ExportProgressLine } from "../export/export-fields";
 import { exportMessages } from "../export/messages";
 import { useExportForm } from "../export/use-export-form";
@@ -25,14 +26,15 @@ export function DataScreen() {
 	const form = useExportForm();
 	return (
 		<ShellPage title={t("title")} nav="data" large>
-			<div className="min-h-0 flex-1 overflow-y-auto">
-				<PageBody data-testid="data-screen" className="gap-section">
+			<Box grow minHeight={0} overflow="y">
+				{/* design-system: needs a gap option on PageBody (it was the section gap, now the page body's own) */}
+				<PageBody data-testid="data-screen">
 					<Section wide band title={te("data.title")} testId="site-backup">
 						<ExportFields form={form} />
 						<ExportProgressLine phase={form.phase} />
-						<div>
+						<Box>
 							<ExportButton form={form} label={te("action.all")} />
-						</div>
+						</Box>
 					</Section>
 					<Section
 						wide
@@ -55,7 +57,7 @@ export function DataScreen() {
 						<RestoreBackupFields />
 					</Section>
 				</PageBody>
-			</div>
+			</Box>
 		</ShellPage>
 	);
 }

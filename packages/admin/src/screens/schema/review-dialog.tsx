@@ -9,6 +9,7 @@ import {
 	AlertDescription,
 	AlertTitle,
 	Badge,
+	Box,
 	Button,
 	Dialog,
 	DialogContent,
@@ -16,8 +17,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	Heading,
+	Inline,
 	Input,
 	Skeleton,
+	Stack,
+	Text,
+	TextLink,
 } from "@monti-cms/ui";
 import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -72,50 +78,57 @@ function Decision({
 		decision.suggestions[0]?.op === "setDefault" &&
 		decision.suggestions[0].value === "";
 	return (
-		<fieldset
-			className="flex flex-col gap-condensed rounded-lg border p-normal"
+		<Stack
+			role="group"
+			aria-labelledby={`${name}-title`}
+			gap="condensed"
+			border="all"
+			radius="lg"
+			padding="normal"
 			data-testid={`decision-${decision.key}`}
 		>
-			<legend className="px-tight font-medium text-monti-body">{describeChange(decision.change, t)}</legend>
-			<p className="text-monti-caption text-monti-muted">
+			<Text as="div" id={`${name}-title`} weight="medium">
+				{describeChange(decision.change, t)}
+			</Text>
+			<Text as="p" variant="caption" tone="muted">
 				{decision.entries === 0 ? t("review.noEntries") : t("review.entriesCount", { count: decision.entries })}
-			</p>
-			<label className="flex items-start gap-condensed text-monti-body">
-				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} className="mt-tight" />
-				<span>{describeNoTransform(decision.change, t)}</span>
-			</label>
+			</Text>
+			<Inline as="label" align="start" gap="condensed">
+				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} />
+				<Text>{describeNoTransform(decision.change, t)}</Text>
+			</Inline>
 			{decision.suggestions.map((suggestion) => {
 				const checked = sameTransform(picked, suggestion);
 				return (
-					<label key={JSON.stringify(suggestion)} className="flex flex-col gap-tight text-monti-body">
-						<span className="flex items-start gap-condensed">
-							<input
-								type="radio"
-								name={name}
-								checked={checked}
-								onChange={() => onPick(suggestion)}
-								className="mt-tight"
-							/>
-							<span>
+					<Stack as="label" key={JSON.stringify(suggestion)} gap="tight">
+						<Inline as="span" align="start" gap="condensed">
+							<input type="radio" name={name} checked={checked} onChange={() => onPick(suggestion)} />
+							<Text>
 								{describeTransform(suggestion, t)}
 								{suggestion.op === "dropField" && (
-									<span className="ml-tight text-monti-caption text-monti-danger">{t("transform.dropWarning")}</span>
+									<>
+										{" "}
+										<Text variant="caption" tone="danger">
+											{t("transform.dropWarning")}
+										</Text>
+									</>
 								)}
-							</span>
-						</span>
+							</Text>
+						</Inline>
 						{checked && freeText && picked?.op === "setDefault" && (
-							<Input
-								aria-label={t("transform.defaultValue")}
-								className="ml-spacious w-auto"
-								value={picked.value}
-								onChange={(event) => onPick({ ...picked, value: event.target.value })}
-							/>
+							<Box paddingX="spacious">
+								<Input
+									aria-label={t("transform.defaultValue")}
+									value={picked.value}
+									onChange={(event) => onPick({ ...picked, value: event.target.value })}
+								/>
+							</Box>
 						)}
-					</label>
+					</Stack>
 				);
 			})}
 			{decision.sample.length > 0 && <Sample sample={decision.sample} entries={decision.entries} site={site} />}
-		</fieldset>
+		</Stack>
 	);
 }
 
@@ -130,30 +143,33 @@ function Sample({
 }) {
 	const t = useTranslator(schemaReviewMessages);
 	return (
-		<div className="text-monti-caption">
-			<span className="text-monti-muted">{t("review.sample")} </span>
-			<ul className="inline">
+		<Inline wrap align="baseline" gap="tight">
+			<Text variant="caption" tone="muted">
+				{t("review.sample")}
+			</Text>
+			<Inline as="ul" wrap align="baseline" gap="none">
 				{sample.map((entry, index) => (
-					<li key={entry.id} className="inline">
+					<Text as="li" variant="caption" key={entry.id}>
 						{index > 0 && ", "}
-						<AdminLink
-							href={entryHref(site, entry.collection, entry.id)}
-							className="text-monti-accent underline underline-offset-2"
-							target="_blank"
+						<TextLink
+							render={<AdminLink href={entryHref(site, entry.collection, entry.id)} target="_blank" />}
+							tone="accent"
 						>
 							{entry.title ?? entry.id.slice(0, 8)}
-						</AdminLink>
-						<span className="text-monti-muted">
+						</TextLink>
+						<Text tone="muted">
 							{" "}
 							({entry.collection}, {entry.locale}, {entry.status})
-						</span>
-					</li>
+						</Text>
+					</Text>
 				))}
-			</ul>
+			</Inline>
 			{entries > sample.length && (
-				<span className="text-monti-muted"> {t("review.more", { count: entries - sample.length })}</span>
+				<Text variant="caption" tone="muted">
+					{t("review.more", { count: entries - sample.length })}
+				</Text>
 			)}
-		</div>
+		</Inline>
 	);
 }
 
@@ -161,24 +177,35 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	return (
-		<li
-			className="flex flex-col gap-tight rounded-md border px-normal py-condensed"
+		<Stack
+			as="li"
+			gap="tight"
+			border="all"
+			radius="md"
+			paddingX="normal"
+			paddingY="condensed"
 			data-testid={`impact-${impact.key}`}
 		>
-			<div className="flex flex-wrap items-center gap-condensed">
-				<span className="text-monti-body">{describeChange(impact.change, t)}</span>
+			<Inline wrap gap="condensed">
+				<Text>{describeChange(impact.change, t)}</Text>
 				{impact.entries > 0 && (
 					<Badge variant={impact.consequence === "deleted" ? "danger" : "secondary"}>
 						{t("review.entriesCount", { count: impact.entries })}
 					</Badge>
 				)}
-			</div>
+			</Inline>
 			{impact.entries > 0 && (
-				<p className="text-monti-caption text-monti-muted">{t(`consequence.${impact.consequence}`)}</p>
+				<Text as="p" variant="caption" tone="muted">
+					{t(`consequence.${impact.consequence}`)}
+				</Text>
 			)}
-			{!impact.checked && <p className="text-monti-caption text-monti-muted">{t("review.notChecked")}</p>}
+			{!impact.checked && (
+				<Text as="p" variant="caption" tone="muted">
+					{t("review.notChecked")}
+				</Text>
+			)}
 			{impact.sample.length > 0 && <Sample sample={impact.sample} entries={impact.entries} site={site} />}
-		</li>
+		</Stack>
 	);
 }
 
@@ -320,21 +347,18 @@ export function ReviewDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[85vh] w-[min(44rem,calc(100%-2rem))] max-w-none flex-col gap-comfortable sm:max-w-none">
+			<DialogContent size="xl" scroll>
 				<DialogHeader>
 					<DialogTitle>{t("review.title")}</DialogTitle>
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
-				<div
-					className="flex min-h-0 flex-1 flex-col gap-comfortable overflow-y-auto pr-tight"
-					data-testid="review-body"
-				>
+				<Stack gap="comfortable" data-testid="review-body">
 					{error && (
 						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
-					{loading && !preview && <Skeleton className="h-24 w-full" />}
+					{loading && !preview && <Skeleton shape="block" />}
 					{preview && !preview.valid && (
 						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.invalid")}</AlertTitle>
@@ -347,34 +371,53 @@ export function ReviewDialog({
 						<Alert tone="danger" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
-								<ul className="list-disc pl-comfortable">
+								<Stack as="ul" gap="hair">
 									{problems.map((problem) => (
-										<li key={`${problem.id}:${problem.message}`}>{problem.message}</li>
+										<Text as="li" key={`${problem.id}:${problem.message}`}>
+											{problem.message}
+										</Text>
 									))}
-								</ul>
+								</Stack>
 							</AlertDescription>
 						</Alert>
 					)}
 					{preview?.valid && (
 						<>
-							<div
-								className="flex items-center gap-condensed rounded-lg border border-monti-muted bg-monti-inset px-normal py-condensed text-monti-body"
+							<Inline
+								gap="condensed"
+								border="all"
+								radius="lg"
+								background="inset"
+								paddingX="normal"
+								paddingY="condensed"
 								data-testid="review-summary"
 							>
 								{dataChanges === 0 ? (
-									<CheckCircle2 className="size-4 shrink-0 text-monti-default" aria-hidden />
+									<Text as="span">
+										<CheckCircle2 size={16} aria-hidden />
+									</Text>
 								) : (
-									<Info className="size-4 shrink-0 text-monti-muted" aria-hidden />
+									<Text as="span" tone="muted">
+										<Info size={16} aria-hidden />
+									</Text>
 								)}
-								<p>{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}</p>
-							</div>
+								<Text as="p">
+									{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}
+								</Text>
+							</Inline>
 							{preview.baseline === "file" && (
-								<p className="text-monti-caption text-monti-muted">{t("review.baselineFile")}</p>
+								<Text as="p" variant="caption" tone="muted">
+									{t("review.baselineFile")}
+								</Text>
 							)}
 							{preview.decisions.length > 0 && (
-								<section className="flex flex-col gap-condensed" aria-label={t("review.decisions")}>
-									<h3 className="font-medium text-monti-body">{t("review.decisions")}</h3>
-									<p className="text-monti-caption text-monti-muted">{t("review.decisionsHint")}</p>
+								<Stack as="section" gap="condensed" aria-label={t("review.decisions")}>
+									<Heading as="h3" variant="label">
+										{t("review.decisions")}
+									</Heading>
+									<Text as="p" variant="caption" tone="muted">
+										{t("review.decisionsHint")}
+									</Text>
 									{preview.decisions.map((decision) => (
 										<Decision
 											key={decision.key}
@@ -383,52 +426,64 @@ export function ReviewDialog({
 											onPick={(pick) => setPicks((current) => ({ ...current, [decision.key]: pick }))}
 										/>
 									))}
-								</section>
+								</Stack>
 							)}
 							{settings.length > 0 && (
-								<section
-									className="flex flex-col gap-condensed"
-									aria-label={t("review.settings")}
-									data-testid="review-settings"
-								>
-									<h3 className="font-medium text-monti-body">{t("review.settings")}</h3>
-									<ul className="flex flex-col gap-condensed">
+								<Stack as="section" gap="condensed" aria-label={t("review.settings")} data-testid="review-settings">
+									<Heading as="h3" variant="label">
+										{t("review.settings")}
+									</Heading>
+									<Stack as="ul" gap="condensed">
 										{settings.map((setting) => (
-											<li
+											<Inline
+												as="li"
 												key={setting.path}
-												className="flex flex-wrap items-center justify-between gap-condensed rounded-md border border-monti-muted bg-monti-inset px-normal py-condensed font-mono text-monti-caption"
+												wrap
+												justify="between"
+												gap="condensed"
+												border="all"
+												radius="md"
+												background="inset"
+												paddingX="normal"
+												paddingY="condensed"
 											>
-												<div>
-													<code className="font-semibold text-monti-default">{setting.path}</code>:{" "}
-												</div>
-												<div className="flex items-center gap-condensed">
-													<span className="text-monti-muted line-through decoration-monti-muted">
+												<Text as="code" variant="caption" mono weight="semibold">
+													{setting.path}:{" "}
+												</Text>
+												<Inline gap="condensed">
+													<Text variant="caption" mono tone="muted">
 														{settingText(setting.from, t("review.unset"))}
-													</span>
-													{" -> "}
-													<span className="rounded-sm bg-monti-selected px-condensed py-hair font-medium text-monti-default">
-														{settingText(setting.to, t("review.unset"))}
-													</span>
-												</div>
-											</li>
+													</Text>
+													<Text variant="caption" mono>
+														{" -> "}
+													</Text>
+													<Box as="span" background="selected" radius="sm" paddingX="condensed">
+														<Text variant="caption" mono weight="medium">
+															{settingText(setting.to, t("review.unset"))}
+														</Text>
+													</Box>
+												</Inline>
+											</Inline>
 										))}
-									</ul>
-								</section>
+									</Stack>
+								</Stack>
 							)}
 							{preview.impacts.length > 0 && (
-								<section className="flex flex-col gap-condensed" aria-label={t("review.changes")}>
-									<h3 className="font-medium text-monti-body">{t("review.changes")}</h3>
-									<ul className="flex flex-col gap-condensed">
+								<Stack as="section" gap="condensed" aria-label={t("review.changes")}>
+									<Heading as="h3" variant="label">
+										{t("review.changes")}
+									</Heading>
+									<Stack as="ul" gap="condensed">
 										{preview.impacts.map((impact) => (
 											<Impact key={impact.key} impact={impact} />
 										))}
-									</ul>
-								</section>
+									</Stack>
+								</Stack>
 							)}
 							{preview.transforms.length > 0 && (
-								<p className="text-monti-caption text-monti-muted">
+								<Text as="p" variant="caption" tone="muted">
 									{t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") })}
-								</p>
+								</Text>
 							)}
 						</>
 					)}
@@ -438,7 +493,7 @@ export function ReviewDialog({
 							<AlertDescription>{saveError.message}</AlertDescription>
 						</Alert>
 					)}
-				</div>
+				</Stack>
 				<DialogFooter>
 					{saveError?.conflict || saveError?.applyFailed ? (
 						<Button type="button" onClick={reloadPage}>

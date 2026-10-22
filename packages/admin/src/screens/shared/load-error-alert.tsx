@@ -1,10 +1,11 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Alert, AlertDescription, Button, cn } from "@monti-cms/ui";
+import { Alert, AlertDescription, Button } from "@monti-cms/ui";
+import { Box } from "@monti-cms/ui/internal";
 import { commonMessages } from "../../lib/common.messages";
 
 /**
- * The one load-failure notice of a screen: what went wrong and a retry button. Give it margins through `className`: its width is `auto`, so margins
- * narrow it instead of pushing the retry button past the edge.
+ * The one load-failure notice of a screen: what went wrong and a retry button. Screens put it in a `Box` with padding for its margins;
+ * `className` is only still here for callers that have not moved yet.
  */
 export function LoadErrorAlert({
 	message,
@@ -13,17 +14,20 @@ export function LoadErrorAlert({
 }: {
 	message: string;
 	onRetry?: () => void;
+	/** @deprecated Wrap the alert in a `Box` with padding instead. */
 	className?: string;
 }) {
 	const t = useTranslator(commonMessages);
-	return (
-		<Alert tone="danger" layout="inline" className={cn("w-auto", className)}>
-			<AlertDescription className="col-start-auto min-w-0">{message}</AlertDescription>
+	const alert = (
+		<Alert tone="danger" layout="inline">
+			<AlertDescription>{message}</AlertDescription>
 			{onRetry && (
-				<Button type="button" variant="outline" size="xs" onClick={onRetry} className="shrink-0">
+				<Button type="button" variant="outline" size="xs" onClick={onRetry}>
 					{t("retry")}
 				</Button>
 			)}
 		</Alert>
 	);
+	// transitional: className kept for callers that have not moved yet
+	return className ? <Box className={className}>{alert}</Box> : alert;
 }

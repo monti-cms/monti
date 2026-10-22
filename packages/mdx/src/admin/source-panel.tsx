@@ -142,6 +142,7 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 			onCompositionStart={() => onComposing?.(true)}
 			onCompositionEnd={() => onComposing?.(false)}
 			placeholder={t("placeholder")}
+			// design-system: drawing — sizes the highlighted source editor (a full-height writing surface)
 			className="min-h-[calc(100vh-240px)] w-full flex-1 px-comfortable"
 		/>
 	);

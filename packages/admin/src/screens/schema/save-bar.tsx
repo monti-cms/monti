@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button } from "@monti-cms/ui";
+import { Button, Inline, StatusIndicator, Text } from "@monti-cms/ui";
 import { schemaMessages } from "./messages";
 
 /**
@@ -24,15 +24,22 @@ export function SaveBar({
 }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<section
+		<Inline
+			as="section"
 			aria-label={t("bar.label")}
 			data-testid="save-bar"
-			className="flex shrink-0 flex-wrap items-center gap-x-normal gap-y-condensed border-t bg-monti-page px-comfortable py-normal lg:px-wide"
+			wrap
+			gap="normal"
+			shrink={false}
+			border="top"
+			background="page"
+			paddingX="wide"
+			paddingY="normal"
 		>
-			<span className="mr-auto flex items-center gap-condensed text-monti-body">
-				<span aria-hidden className="size-1.5 rounded-full bg-monti-accent-emphasis" />
-				<span className="tabular">{t("bar.count", { count })}</span>
-			</span>
+			<Inline grow gap="condensed">
+				<StatusIndicator tone="strong" size="xs" />
+				<Text>{t("bar.count", { count })}</Text>
+			</Inline>
 			<Button type="button" variant="ghost" size="sm" onClick={onDiscard}>
 				{t("bar.discard")}
 			</Button>
@@ -42,6 +49,6 @@ export function SaveBar({
 			<Button type="button" size="sm" disabled={disabled} onClick={onSave}>
 				{t("bar.save")}
 			</Button>
-		</section>
+		</Inline>
 	);
 }

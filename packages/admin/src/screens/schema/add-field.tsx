@@ -2,14 +2,18 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	Grid,
+	Inline,
 	Input,
+	Stack,
+	Text,
+	TextLink,
 } from "@monti-cms/ui";
 import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
@@ -120,7 +124,7 @@ export function AddFieldDialog({
 	};
 
 	const naming = (
-		<div className="flex flex-col gap-comfortable">
+		<Stack gap="comfortable">
 			<TextInput
 				label={t("field.label")}
 				value={label}
@@ -131,9 +135,7 @@ export function AddFieldDialog({
 			/>
 			<Labeled
 				label={t("field.identifier")}
-				hint={
-					typedName !== null && problem ? <span className="text-monti-danger">{ts(`name.${problem}`)}</span> : undefined
-				}
+				hint={typedName !== null && problem ? <Text tone="danger">{ts(`name.${problem}`)}</Text> : undefined}
 			>
 				{isNaming ? (
 					<Input
@@ -141,41 +143,51 @@ export function AddFieldDialog({
 						value={name}
 						aria-label={t("field.identifier")}
 						aria-invalid={problem ? true : undefined}
-						className="font-mono"
+						mono
 						onChange={(event) => setTypedName(event.target.value)}
 					/>
 				) : (
-					<div className="flex items-center gap-condensed text-monti-label">
-						<code className="font-mono">{name}</code>
-						<Button type="button" variant="link" size="xs" className="h-auto p-0" onClick={() => setIsNaming(true)}>
+					<Inline gap="condensed">
+						<Text as="code" variant="label" mono>
+							{name}
+						</Text>
+						<TextLink
+							render={<button type="button" />}
+							tone="accent"
+							underline="hover"
+							size="caption"
+							onClick={() => setIsNaming(true)}
+						>
 							{t("field.identifierChange")}
-						</Button>
-					</div>
+						</TextLink>
+					</Inline>
 				)}
 			</Labeled>
-		</div>
+		</Stack>
 	);
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl" data-testid="add-field-dialog">
+			<DialogContent size="xl" scroll data-testid="add-field-dialog">
 				<DialogHeader>
 					<DialogTitle>{t("field.addTitle")}</DialogTitle>
 					<DialogDescription>{t("field.addDescription")}</DialogDescription>
 				</DialogHeader>
-				<form
-					className="flex flex-col gap-spacious"
+				<Stack
+					as="form"
+					gap="spacious"
 					onSubmit={(event) => {
 						event.preventDefault();
 						add();
 					}}
 				>
-					<div className="grid gap-spacious md:grid-cols-[15rem_minmax(0,1fr)]">
-						<div role="radiogroup" aria-label={t("field.kind")} className="flex flex-col gap-tight self-start">
+					<Grid columns="sidebar" gap="spacious" align="start">
+						<Stack role="radiogroup" aria-label={t("field.kind")} gap="tight">
 							{ADDABLE_KINDS.map((item) => {
 								const Icon = KIND_ICONS[item];
 								const nameId = `add-field-kind-${item}`;
 								return (
+									// design-system: needs a choice-card control (icon, name and hint in one selectable row)
 									// biome-ignore lint/a11y/useSemanticElements: the kinds are drawn as rows; a native radio cannot be styled as one
 									<button
 										key={item}
@@ -190,19 +202,19 @@ export function AddFieldDialog({
 										<span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-monti-muted bg-monti-page text-monti-muted">
 											<Icon aria-hidden className="size-4" />
 										</span>
-										<span className="flex min-w-0 flex-col">
-											<span id={nameId} className="font-medium text-monti-body">
+										<Stack gap="none" minWidth={0}>
+											<Text id={nameId} weight="medium">
 												{t(`kind.${item}`)}
-											</span>
-											<span id={`${nameId}-hint`} className="text-monti-caption text-monti-muted">
+											</Text>
+											<Text id={`${nameId}-hint`} variant="caption" tone="muted">
 												{t(`kind.${item}.hint`)}
-											</span>
-										</span>
+											</Text>
+										</Stack>
 									</button>
 								);
 							})}
-						</div>
-						<div className="flex min-w-0 flex-col gap-spacious md:border-monti-muted md:border-l md:pl-spacious">
+						</Stack>
+						<Stack gap="spacious" minWidth={0} border="left" paddingX="spacious">
 							{kind !== "relation" && naming}
 							<KindOptions
 								name={name}
@@ -215,24 +227,23 @@ export function AddFieldDialog({
 								more={kind === "relation" ? naming : undefined}
 							/>
 							{problems.length > 0 && (
-								<ul
-									className="flex flex-col gap-hair text-monti-caption text-monti-muted"
-									data-testid="new-field-problems"
-								>
+								<Stack as="ul" gap="hair" data-testid="new-field-problems">
 									{problems.map((item) => (
-										<li key={item}>{t(`field.needs.${item}`)}</li>
+										<Text as="li" variant="caption" tone="muted" key={item}>
+											{t(`field.needs.${item}`)}
+										</Text>
 									))}
-								</ul>
+								</Stack>
 							)}
-						</div>
-					</div>
+						</Stack>
+					</Grid>
 					<DialogFormFooter
 						onCancel={onClose}
 						cancelLabel={tc("cancel")}
 						submitLabel={tc("add")}
 						disabled={Boolean(problem) || problems.length > 0 || label.trim() === ""}
 					/>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);

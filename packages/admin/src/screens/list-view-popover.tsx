@@ -1,10 +1,12 @@
 // "View" popover of the entry list: which columns show and in what order, how many rows a page holds, and how the list is sorted.
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	Checkbox,
-	cn,
+	Heading,
 	IconButton,
+	Inline,
 	Label,
 	Popover,
 	PopoverContent,
@@ -14,6 +16,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Stack,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
@@ -38,13 +41,11 @@ export function ColumnSettingsPanel({
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<ul className="space-y-hair">
+		<Stack as="ul" gap="hair">
 			{order.map((column, index) => (
-				<li
-					key={column}
-					className="flex items-center justify-between gap-condensed rounded-md px-tight py-hair hover:bg-monti-hover"
-				>
-					<Label className="font-normal text-monti-label">
+				// design-system: needs a hover surface on Box/Stack (the row's hover background)
+				<Inline as="li" key={column} justify="between" gap="condensed" radius="md" paddingX="tight" paddingY="hair">
+					<Label>
 						<Checkbox
 							checked={visibility[column] ?? false}
 							disabled={column === "title"}
@@ -52,7 +53,7 @@ export function ColumnSettingsPanel({
 						/>
 						{columnLabel(site, collection, column)}
 					</Label>
-					<span className="flex gap-tight">
+					<Inline as="span" gap="tight">
 						<IconButton
 							size="icon-xs"
 							variant="ghost"
@@ -71,20 +72,28 @@ export function ColumnSettingsPanel({
 						>
 							<ArrowDown aria-hidden />
 						</IconButton>
-					</span>
-				</li>
+					</Inline>
+				</Inline>
 			))}
-		</ul>
+		</Stack>
 	);
 }
 
 /** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
 function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<section className={cn("space-y-condensed", scroll && "flex min-h-0 flex-col")}>
-			<h4 className="font-medium text-monti-caption text-monti-muted">{title}</h4>
-			{scroll ? <div className="-mx-tight min-h-0 overflow-y-auto px-tight">{children}</div> : children}
-		</section>
+		<Stack as="section" gap="condensed" minHeight={scroll ? 0 : undefined}>
+			<Heading as="h4" variant="label" tone="muted">
+				{title}
+			</Heading>
+			{scroll ? (
+				<Box minHeight={0} overflow="y">
+					{children}
+				</Box>
+			) : (
+				children
+			)}
+		</Stack>
 	);
 }
 
@@ -128,66 +137,67 @@ export function ListViewPopover({
 	);
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="ghost" size="xs" className="text-monti-muted" />}>
+			<PopoverTrigger render={<Button type="button" variant="quiet" size="xs" />}>
 				<SlidersHorizontal aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>
 			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}
-			<PopoverContent side="bottom" align="end" className="max-h-(--available-height) w-72 gap-comfortable p-normal">
-				<ViewSection title={t("view.sort")}>
-					<div className="flex items-center gap-condensed">
+			<PopoverContent side="bottom" align="end" width="md" scroll>
+				<Stack gap="comfortable">
+					<ViewSection title={t("view.sort")}>
+						<Inline gap="condensed">
+							<Select
+								value={state.sortField}
+								items={sortable}
+								onValueChange={(value) =>
+									value && onStateChange({ sortField: value as ListSortField, sortDirection: state.sortDirection })
+								}
+							>
+								<SelectTrigger size="sm" aria-label={t("view.sortField")}>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{sortable.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Inline gap="hair" role="group" aria-label={t("view.sort")}>
+								{directionButton("asc")}
+								{directionButton("desc")}
+							</Inline>
+						</Inline>
+					</ViewSection>
+					<ViewSection title={t("list.pageSize")}>
 						<Select
-							value={state.sortField}
-							items={sortable}
-							onValueChange={(value) =>
-								value && onStateChange({ sortField: value as ListSortField, sortDirection: state.sortDirection })
-							}
+							value={String(state.pageSize)}
+							items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
+							onValueChange={(value) => value && onPageSizeChange(Number(value) as PageSize)}
 						>
-							<SelectTrigger size="sm" aria-label={t("view.sortField")} className="h-7 min-w-0 flex-1 text-monti-label">
+							<SelectTrigger size="sm" width="full" aria-label={t("list.pageSize")}>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{sortable.map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
+								{PAGE_SIZES.map((size) => (
+									<SelectItem key={size} value={String(size)}>
+										{t("list.pageSizeOption", { size })}
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						<fieldset className="flex gap-hair">
-							<legend className="sr-only">{t("view.sort")}</legend>
-							{directionButton("asc")}
-							{directionButton("desc")}
-						</fieldset>
-					</div>
-				</ViewSection>
-				<ViewSection title={t("list.pageSize")}>
-					<Select
-						value={String(state.pageSize)}
-						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-						onValueChange={(value) => value && onPageSizeChange(Number(value) as PageSize)}
-					>
-						<SelectTrigger size="sm" aria-label={t("list.pageSize")} className="h-7 w-full text-monti-label">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PAGE_SIZES.map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{t("list.pageSizeOption", { size })}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</ViewSection>
-				<ViewSection title={t("list.columnSettings")} scroll>
-					<ColumnSettingsPanel
-						collection={collection}
-						order={order}
-						visibility={visibility}
-						onToggle={onToggle}
-						onMove={onMove}
-					/>
-				</ViewSection>
+					</ViewSection>
+					<ViewSection title={t("list.columnSettings")} scroll>
+						<ColumnSettingsPanel
+							collection={collection}
+							order={order}
+							visibility={visibility}
+							onToggle={onToggle}
+							onMove={onMove}
+						/>
+					</ViewSection>
+				</Stack>
 			</PopoverContent>
 		</Popover>
 	);

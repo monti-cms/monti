@@ -3,6 +3,8 @@
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Alert,
+	Badge,
+	Box,
 	Button,
 	booleanCodec,
 	Checkbox,
@@ -11,7 +13,6 @@ import {
 	CollapsibleTrigger,
 	cn,
 	commonMessages,
-	DETAIL_PANE_FRAME,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -23,7 +24,9 @@ import {
 	FormFieldGroup,
 	FormFieldLabel,
 	FormFieldTitle,
+	Heading,
 	IconButton,
+	Inline,
 	Input,
 	isComposingKey,
 	Label,
@@ -33,10 +36,12 @@ import {
 	MasterDetail,
 	PageActions,
 	PageTabs,
+	Stack,
 	Switch,
 	Tabs,
 	TabsContent,
 	TabsTrigger,
+	Text,
 	Textarea,
 	useConfirm,
 	useDraftEditor,
@@ -44,9 +49,21 @@ import {
 	usePreference,
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
-import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	Eye,
+	EyeOff,
+	Plug,
+	Plus,
+	Quote,
+	RotateCcw,
+	Save,
+	Sparkles,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -60,7 +77,7 @@ import { ConnectionManager, useAiSettings } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
-import { PROMPT_ROWS, PROMPT_TEXTAREA, SnippetManager, useAiSnippets } from "./snippet-editor";
+import { PROMPT_ROWS, SnippetManager, useAiSnippets } from "./snippet-editor";
 
 /** Visible name of the attach target, read as where the action shows up ("Shows in: Selected text menu"). For a field, it is the name in the collection definition. */
 function usePlaceLabel() {
@@ -116,9 +133,7 @@ const advancedEdited = (
 
 /** The small muted chip that marks an action whose advanced values were edited. */
 function ModifiedChip({ label }: { label: string }) {
-	return (
-		<span className="rounded-sm bg-monti-neutral px-condensed py-hair text-monti-micro text-monti-muted">{label}</span>
-	);
+	return <Badge variant="secondary">{label}</Badge>;
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -495,49 +510,41 @@ export function AiManager() {
 			</Button>
 		);
 	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<Stack gap="none" grow minHeight={0} overflow="hidden">
 			<PageActions>{headerActions}</PageActions>
-			<Tabs
-				value={tab}
-				onValueChange={(value) => void changeTab(value as AiTab)}
-				className="flex min-h-0 flex-1 flex-col gap-0"
-			>
-				<PageTabs className="px-wide">
-					<TabsTrigger value="features" className="flex-none px-0 text-monti-caption">
+			{/* design-system: needs Tabs to fill the page height (grow, no gap) */}
+			<Tabs value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
+				<PageTabs>
+					<TabsTrigger value="features">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
 					</TabsTrigger>
-					<TabsTrigger value="connections" className="flex-none px-0 text-monti-caption">
+					<TabsTrigger value="connections">
 						<Plug aria-hidden />
 						{t("tab.connections")}
 					</TabsTrigger>
-					<TabsTrigger value="snippets" className="flex-none px-0 text-monti-caption">
+					<TabsTrigger value="snippets">
 						<Quote aria-hidden />
 						{t("tab.snippets")}
 					</TabsTrigger>
 				</PageTabs>
-				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
+				<TabsContent value="features" fill>
 					{featuresQuery.data && usable.size === 0 && (
 						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
 						<Alert tone="warning" layout="strip" role="status">
-							<span className="min-w-0 flex-1">{t("banner.needsConnection")}</span>
-							<Button
-								type="button"
-								size="xs"
-								variant="outline"
-								className="shrink-0"
-								onClick={() => void changeTab("connections")}
-							>
+							<Text>{t("banner.needsConnection")}</Text>
+							<Button type="button" size="xs" variant="outline" onClick={() => void changeTab("connections")}>
 								{t("banner.goToConnections")}
 							</Button>
 						</Alert>
 					)}
 					{featuresQuery.error && !featuresQuery.data && (
-						<LoadErrorAlert
-							className="m-normal"
-							message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
-							onRetry={() => void featuresQuery.refetch()}
-						/>
+						<Box padding="normal">
+							<LoadErrorAlert
+								message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
+								onRetry={() => void featuresQuery.refetch()}
+							/>
+						</Box>
 					)}
 					<MasterDetail
 						list={
@@ -545,7 +552,6 @@ export function AiManager() {
 								label={t("list.label")}
 								loading={featuresQuery.isPending}
 								skeletonRows={4}
-								className="w-80 lg:w-88"
 								empty={
 									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
 										<EmptyState compact title={t("list.empty")} />
@@ -557,26 +563,16 @@ export function AiManager() {
 									if (groupFeatures.length === 0) return [];
 									const isCollapsed = collapsedGroups.has(group);
 									return [
-										<li
-											key={`group-${group}`}
-											className="sticky top-0 z-10 border-monti-muted border-y bg-monti-neutral backdrop-blur"
-										>
-											<button
-												type="button"
-												onClick={() => toggleGroup(group)}
-												className="flex w-full items-center gap-condensed px-normal py-condensed text-left transition-colors hover:bg-monti-hover"
-											>
-												<ChevronDown
-													className={cn(
-														"size-3.5 text-monti-muted transition-transform duration-150",
-														isCollapsed && "-rotate-90",
-													)}
-												/>
-												<span className="font-semibold text-monti-caption text-monti-default">
-													{t(`group.${group}`)}
-												</span>
-											</button>
-										</li>,
+										<Box key={`group-${group}`} as="li" position="sticky" border="y" background="neutral">
+											<Button type="button" variant="ghost" size="sm" width="full" onClick={() => toggleGroup(group)}>
+												<Inline gap="condensed" width="full">
+													{isCollapsed ? <ChevronRight aria-hidden /> : <ChevronDown aria-hidden />}
+													<Text variant="caption" weight="semibold">
+														{t(`group.${group}`)}
+													</Text>
+												</Inline>
+											</Button>
+										</Box>,
 										...(isCollapsed
 											? []
 											: groupFeatures.map((feature) => (
@@ -644,14 +640,15 @@ export function AiManager() {
 									/>
 								)}
 								{features.some((feature) => feature.hidden) && (
-									<li key="hidden-toggle" className="flex items-center justify-between border-t p-condensed">
-										<Button
-											type="button"
-											size="xs"
-											variant="ghost"
-											className="text-monti-muted hover:text-monti-default"
-											onClick={() => setShowHidden(!showHidden)}
-										>
+									<Inline
+										as="li"
+										key="hidden-toggle"
+										gap="condensed"
+										justify="between"
+										border="top"
+										padding="condensed"
+									>
+										<Button type="button" size="xs" variant="quiet" onClick={() => setShowHidden(!showHidden)}>
 											{showHidden
 												? t("list.hideHidden", {
 														count: features.filter((feature) => feature.hidden).length,
@@ -666,7 +663,7 @@ export function AiManager() {
 												{t("button.restoreHidden")}
 											</Button>
 										)}
-									</li>
+									</Inline>
 								)}
 							</ListPane>
 						}
@@ -706,7 +703,7 @@ export function AiManager() {
 						)}
 					</MasterDetail>
 				</TabsContent>
-				<TabsContent value="snippets" className="flex min-h-0 flex-1 flex-col">
+				<TabsContent value="snippets" fill>
 					<SnippetManager
 						selected={snippet}
 						onOpen={(key) => void openSnippet(key)}
@@ -714,7 +711,7 @@ export function AiManager() {
 						onDirtyChange={onSnippetDirty}
 					/>
 				</TabsContent>
-				<TabsContent value="connections" className="flex min-h-0 flex-1 flex-col">
+				<TabsContent value="connections" fill>
 					<ConnectionManager
 						selected={connection}
 						onOpen={(id) => void openConnection(id)}
@@ -725,11 +722,14 @@ export function AiManager() {
 			</Tabs>
 			{dialog}
 			{guardDialog}
-		</div>
+		</Stack>
 	);
 }
 
-/** Chip input for the allowed values check. Users can add tags by typing and pressing Enter or comma, and remove tags with backspace or clicking x. */
+/**
+ * Chip input for the allowed values check. Users can add tags by typing and pressing Enter or comma, and remove tags with backspace or clicking x.
+ * design-system: needs a tag input part (chips and a text entry in one bordered field). The whole function body below keeps its raw elements and classes until it exists.
+ */
 function OneOfInput({
 	items,
 	disabled,
@@ -822,43 +822,50 @@ function CheckRow({
 	const id = useId();
 	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
-		<li className={cn("flex min-h-8 gap-condensed", multiline ? "items-start pt-tight" : "items-center")}>
+		<Inline as="li" gap="condensed" align={multiline ? "start" : "center"} paddingTop={multiline ? "tight" : undefined}>
 			<Switch
 				id={id}
 				size="sm"
 				checked={check.enabled}
 				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
-				className={cn(multiline && "mt-tight")}
 			/>
-			<Label htmlFor={id} className={cn("w-28 shrink-0 text-monti-caption", multiline && "pt-condensed")}>
+			<Label htmlFor={id} size="caption">
 				{label}
 			</Label>
-			<div className="flex min-w-0 max-w-md flex-1 items-center gap-condensed">
+			<Inline gap="condensed" grow minWidth={0} maxWidth="panel-lg">
 				{check.kind === "pattern" && (
-					<Input
-						aria-label={t("check.pattern")}
-						value={check.pattern}
-						disabled={!check.enabled}
-						onChange={(event) => onChange({ ...check, pattern: event.target.value })}
-						className="h-8 min-w-0 flex-1 font-mono text-monti-caption"
-					/>
+					<Box grow minWidth={0}>
+						<Input
+							aria-label={t("check.pattern")}
+							value={check.pattern}
+							disabled={!check.enabled}
+							onChange={(event) => onChange({ ...check, pattern: event.target.value })}
+							size="sm"
+							mono
+						/>
+					</Box>
 				)}
 				{check.kind === "maxLength" && (
-					<span className="flex items-center gap-condensed">
-						<Input
-							type="number"
-							aria-label={t("check.maxChars")}
-							min={1}
-							max={5000}
-							value={check.max}
-							disabled={!check.enabled}
-							onChange={(event) =>
-								onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
-							}
-							className="h-8 w-20 text-monti-caption"
-						/>
-						<span className="text-monti-caption text-monti-muted">{t("check.charsOrLess")}</span>
-					</span>
+					<Inline gap="condensed">
+						{/* design-system: needs an Input width option (a narrow number field); panel-sm is the closest */}
+						<Box width="panel-sm">
+							<Input
+								type="number"
+								aria-label={t("check.maxChars")}
+								min={1}
+								max={5000}
+								value={check.max}
+								disabled={!check.enabled}
+								onChange={(event) =>
+									onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
+								}
+								size="sm"
+							/>
+						</Box>
+						<Text variant="caption" tone="muted">
+							{t("check.charsOrLess")}
+						</Text>
+					</Inline>
 				)}
 				{check.kind === "oneOf" && (
 					<OneOfInput
@@ -867,21 +874,16 @@ function CheckRow({
 						onChange={(items) => onChange({ ...check, items })}
 					/>
 				)}
-			</div>
+			</Inline>
 			{onRemove ? (
-				<IconButton
-					label={t("check.remove", { label })}
-					size="icon-xs"
-					tone="danger"
-					onClick={onRemove}
-					className={cn(multiline && "mt-tight")}
-				>
+				<IconButton label={t("check.remove", { label })} size="icon-xs" tone="danger" onClick={onRemove}>
 					<Trash2 aria-hidden />
 				</IconButton>
 			) : (
-				<div className="w-6 shrink-0" aria-hidden />
+				// Keeps the rows aligned with the ones that have a remove button.
+				<Box paddingX="normal" shrink={false} aria-hidden />
 			)}
-		</li>
+		</Inline>
 	);
 }
 
@@ -996,62 +998,77 @@ function FeatureEditor({
 	};
 
 	return (
-		<div className={DETAIL_PANE_FRAME}>
-			<div className="flex flex-wrap items-center gap-x-comfortable gap-y-condensed">
-				<div className="min-w-0 flex-1">
-					<h2 className="truncate text-monti-title">
+		// design-system: needs the detail-pane frame as a part (centered column, max 3xl, comfortable gap, spacious padding)
+		<Stack gap="comfortable" padding="spacious" maxWidth="prose" width="full">
+			<Inline gap="comfortable" wrap>
+				<Stack gap="hair" grow minWidth={0}>
+					<Heading truncate>
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
-					</h2>
-					<p className="text-monti-caption text-monti-muted">
+					</Heading>
+					<Text as="p" variant="caption" tone="muted">
 						{deciding ? t("about.decide") : t(`about.${feature.result}`)}
-					</p>
-					<p className="mt-hair truncate text-monti-caption text-monti-muted">{placeLabel(feature)}</p>
-				</div>
-				<Label className="text-monti-caption">
+					</Text>
+					<Text as="p" variant="caption" tone="muted" truncate>
+						{placeLabel(feature)}
+					</Text>
+				</Stack>
+				<Label size="caption">
 					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
 					{t("toggle.on")}
 				</Label>
-			</div>
+			</Inline>
 
 			{custom && (
-				<section aria-label={t("section.basics")} className="border-y py-comfortable">
+				<Box as="section" aria-label={t("section.basics")} border="y" paddingY="comfortable">
 					<CustomBaseFields base={custom.base} onChange={custom.onBaseChange} />
-				</section>
+				</Box>
 			)}
 
 			<FormField>
 				<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
-				<div className="flex min-w-0 items-center gap-condensed">
-					<OptionSelect
-						id={ids.provider}
-						value={spec.providerId ?? ""}
-						options={providerOptions}
-						onChange={(value) => set({ providerId: value || null, modelName: "" })}
-					/>
-					<ModelCombobox
-						aria-label={t("field.model")}
-						value={spec.modelName}
-						models={modelList.models}
-						loading={modelList.loading}
-						error={modelList.error}
-						placeholder={chosen?.defaultModel || t("field.defaultModel")}
-						onChange={(modelName) => set({ modelName })}
-					/>
-				</div>
+				<Inline gap="condensed" minWidth={0}>
+					<Box grow minWidth={0}>
+						<OptionSelect
+							id={ids.provider}
+							value={spec.providerId ?? ""}
+							options={providerOptions}
+							onChange={(value) => set({ providerId: value || null, modelName: "" })}
+						/>
+					</Box>
+					<Box grow minWidth={0}>
+						<ModelCombobox
+							aria-label={t("field.model")}
+							value={spec.modelName}
+							models={modelList.models}
+							loading={modelList.loading}
+							error={modelList.error}
+							placeholder={chosen?.defaultModel || t("field.defaultModel")}
+							onChange={(modelName) => set({ modelName })}
+						/>
+					</Box>
+				</Inline>
 			</FormField>
 
-			<section
-				className="flex flex-col gap-condensed rounded-md bg-monti-inset p-normal text-monti-caption"
+			<Stack
+				as="section"
+				gap="condensed"
+				radius="md"
+				background="inset"
+				padding="normal"
 				aria-label={t("test.title")}
 				data-testid="ai-try"
 			>
-				<div className="flex items-center gap-normal">
-					<p className="min-w-0 flex-1 text-monti-muted">{t("test.hint")}</p>
+				<Inline gap="normal">
+					<Box grow minWidth={0}>
+						<Text as="p" variant="caption" tone="muted">
+							{t("test.hint")}
+						</Text>
+					</Box>
 					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
 						<Sparkles aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
 					</Button>
-				</div>
+				</Inline>
 				{spec.askInstruction && (
 					<Textarea
 						aria-label={t("test.request")}
@@ -1066,7 +1083,7 @@ function FeatureEditor({
 								void runTest();
 							}
 						}}
-						className="min-h-14 resize-y bg-monti-page text-monti-caption md:text-monti-caption"
+						size="sm"
 					/>
 				)}
 				<SampleInputs
@@ -1079,181 +1096,209 @@ function FeatureEditor({
 				{test?.status === "done" &&
 					(test.result.kind === "candidates" ? (
 						test.result.items.length === 0 ? (
-							<p className="text-monti-muted">{t("test.noResults")}</p>
+							<Text as="p" variant="caption" tone="muted">
+								{t("test.noResults")}
+							</Text>
 						) : (
-							<ul className="flex flex-wrap gap-tight">
+							<Inline as="ul" gap="tight" wrap>
 								{test.result.items.map((item) => (
-									<li key={item.value} className={SLOT_CHIP}>
-										<span className="truncate">{item.label}</span>
-										{item.detail && <span className="shrink-0 text-monti-muted">{item.detail}</span>}
-									</li>
+									<Badge key={item.value} variant="secondary" render={<li />}>
+										<Text variant="caption" truncate>
+											{item.label}
+										</Text>
+										{item.detail && (
+											<Text variant="caption" tone="muted">
+												{item.detail}
+											</Text>
+										)}
+									</Badge>
 								))}
-							</ul>
+							</Inline>
 						)
 					) : (
+						// design-system: needs a preformatted text part (wrapped text that keeps its line breaks)
 						<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-condensed">{test.result.text}</p>
 					))}
-			</section>
+			</Stack>
 
-			<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced} className="border-t pt-comfortable">
-				<CollapsibleTrigger
-					className="group/advanced flex w-full items-center gap-condensed text-left font-medium text-monti-body"
-					data-testid="ai-advanced-toggle"
-				>
-					<ChevronDown
-						aria-hidden
-						className="size-4 -rotate-90 text-monti-muted transition-transform group-data-[panel-open]/advanced:rotate-0"
-					/>
-					{t("advanced.title")}
-					{advancedEdited(spec, defaults) && <ModifiedChip label={t("status.modified")} />}
-					<span className="text-monti-caption text-monti-muted">{t("advanced.hint")}</span>
-				</CollapsibleTrigger>
-				<CollapsibleContent data-testid="ai-advanced">
-					<FormFieldGroup className="gap-comfortable pt-comfortable">
-						{!custom && (
-							<FormField>
-								<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
-								<Input
-									id={ids.name}
-									value={spec.label ?? feature.label}
-									maxLength={60}
-									placeholder={feature.defaults?.label ?? feature.label}
-									onChange={(event) => set({ label: event.target.value })}
-									className="h-8 text-monti-caption md:text-monti-caption"
-								/>
-							</FormField>
-						)}
-
-						<div className="flex flex-wrap gap-x-spacious gap-y-normal">
-							<Label className="text-monti-caption">
-								<Switch
-									size="sm"
-									checked={spec.askInstruction}
-									onCheckedChange={(askInstruction) => set({ askInstruction })}
-								/>
-								{t("toggle.ask")}
-							</Label>
-							{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
-								<Label className="text-monti-caption">
-									<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
-									{t("toggle.instant")}
-								</Label>
-							)}
-						</div>
-
-						{inputs.length > 0 && (
-							<FormField role="group" aria-labelledby={ids.sendTitle}>
-								<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
-								<div className="flex flex-wrap gap-normal">
-									{inputs.map(([name, input]) => (
-										<Label key={name} className="text-monti-caption">
-											<Checkbox
-												checked={uses(name) || input.required}
-												disabled={input.required}
-												onCheckedChange={(checked) =>
-													set({
-														send: checked === true ? [...spec.send, name] : spec.send.filter((item) => item !== name),
-													})
-												}
-											/>
-											{input.label}
-										</Label>
-									))}
-								</div>
-							</FormField>
-						)}
-
-						{deciding && (
-							<FormField>
-								<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
-								<div className="flex items-center gap-condensed text-monti-caption">
-									<Input
-										id={ids.threshold}
-										type="number"
-										min={1}
-										max={99}
-										value={Math.round(spec.threshold * 100)}
-										onChange={(event) =>
-											set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
-										}
-										className="h-8 w-20 text-monti-caption md:text-monti-caption"
-									/>
-									<span className="text-monti-muted">{t("field.percentOrMore")}</span>
-									<Input
-										type="number"
-										aria-label={t("field.maxCount")}
-										min={1}
-										max={20}
-										value={spec.maxCount}
-										onChange={(event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })}
-										className="ml-normal h-8 w-16 text-monti-caption md:text-monti-caption"
-									/>
-									<span className="text-monti-muted">{t("field.countUpTo")}</span>
-								</div>
-							</FormField>
-						)}
-
-						<FormField role="group" aria-labelledby={ids.checksTitle}>
-							<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
-							<div className="flex flex-col gap-condensed text-monti-caption">
-								<ul className="flex flex-col gap-condensed" aria-label={t("field.checks")}>
-									{spec.checks.map((check, index) => (
-										<CheckRow
-											key={checkKey(check)}
-											check={check}
-											label={
-												check.kind === "code"
-													? (feature.validatorLabels[check.name] ?? check.name)
-													: checkLabel(check.kind)
-											}
-											onChange={(next) => set({ checks: spec.checks.map((item, i) => (i === index ? next : item)) })}
-											onRemove={
-												feature.definedChecks.includes(checkKey(check))
-													? undefined
-													: () => set({ checks: spec.checks.filter((_, i) => i !== index) })
-											}
+			<Box border="top" paddingTop="comfortable">
+				<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced}>
+					<CollapsibleTrigger
+						render={<Button type="button" variant="quiet" size="sm" />}
+						data-testid="ai-advanced-toggle"
+					>
+						<Inline gap="condensed">
+							{advancedOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
+							<Text weight="medium">{t("advanced.title")}</Text>
+							{advancedEdited(spec, defaults) && <ModifiedChip label={t("status.modified")} />}
+							<Text variant="caption" tone="muted">
+								{t("advanced.hint")}
+							</Text>
+						</Inline>
+					</CollapsibleTrigger>
+					<CollapsibleContent data-testid="ai-advanced">
+						<Box paddingTop="comfortable">
+							<FormFieldGroup>
+								{!custom && (
+									<FormField>
+										<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
+										<Input
+											id={ids.name}
+											value={spec.label ?? feature.label}
+											maxLength={60}
+											placeholder={feature.defaults?.label ?? feature.label}
+											onChange={(event) => set({ label: event.target.value })}
+											size="sm"
 										/>
-									))}
-								</ul>
-								{addableChecks.length > 0 && (
-									<DropdownMenu>
-										<DropdownMenuTrigger
-											render={
-												<Button type="button" size="xs" variant="ghost" className="self-start text-monti-muted" />
-											}
-										>
-											<Plus aria-hidden />
-											{t("field.addCheck")}
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="start" className="min-w-32">
-											{addableChecks.map((kind) => (
-												<DropdownMenuItem
-													key={kind}
-													onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
-												>
-													<Plus aria-hidden />
-													{checkLabel(kind)}
-												</DropdownMenuItem>
-											))}
-										</DropdownMenuContent>
-									</DropdownMenu>
+									</FormField>
 								)}
-							</div>
-						</FormField>
 
-						<FormField>
-							<FormFieldLabel htmlFor={ids.prompt}>{deciding ? t("field.criteria") : t("field.prompt")}</FormFieldLabel>
-							<Textarea
-								id={ids.prompt}
-								rows={PROMPT_ROWS}
-								value={spec.prompt}
-								onChange={(event) => set({ prompt: event.target.value })}
-								className={PROMPT_TEXTAREA}
-							/>
-						</FormField>
-					</FormFieldGroup>
-				</CollapsibleContent>
-			</Collapsible>
+								<Inline gap="spacious" wrap>
+									<Label size="caption">
+										<Switch
+											size="sm"
+											checked={spec.askInstruction}
+											onCheckedChange={(askInstruction) => set({ askInstruction })}
+										/>
+										{t("toggle.ask")}
+									</Label>
+									{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
+										<Label size="caption">
+											<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
+											{t("toggle.instant")}
+										</Label>
+									)}
+								</Inline>
+
+								{inputs.length > 0 && (
+									<FormField role="group" aria-labelledby={ids.sendTitle}>
+										<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
+										<Inline gap="normal" wrap>
+											{inputs.map(([name, input]) => (
+												<Label key={name} size="caption">
+													<Checkbox
+														checked={uses(name) || input.required}
+														disabled={input.required}
+														onCheckedChange={(checked) =>
+															set({
+																send:
+																	checked === true ? [...spec.send, name] : spec.send.filter((item) => item !== name),
+															})
+														}
+													/>
+													{input.label}
+												</Label>
+											))}
+										</Inline>
+									</FormField>
+								)}
+
+								{deciding && (
+									<FormField>
+										<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
+										<Inline gap="condensed">
+											{/* design-system: needs an Input width option (a narrow number field); panel-sm is the closest */}
+											<Box width="panel-sm">
+												<Input
+													id={ids.threshold}
+													type="number"
+													min={1}
+													max={99}
+													value={Math.round(spec.threshold * 100)}
+													onChange={(event) =>
+														set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
+													}
+													size="sm"
+												/>
+											</Box>
+											<Text variant="caption" tone="muted">
+												{t("field.percentOrMore")}
+											</Text>
+											<Box width="panel-sm">
+												<Input
+													type="number"
+													aria-label={t("field.maxCount")}
+													min={1}
+													max={20}
+													value={spec.maxCount}
+													onChange={(event) =>
+														set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })
+													}
+													size="sm"
+												/>
+											</Box>
+											<Text variant="caption" tone="muted">
+												{t("field.countUpTo")}
+											</Text>
+										</Inline>
+									</FormField>
+								)}
+
+								<FormField role="group" aria-labelledby={ids.checksTitle}>
+									<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
+									<Stack gap="condensed">
+										<Stack as="ul" gap="condensed" aria-label={t("field.checks")}>
+											{spec.checks.map((check, index) => (
+												<CheckRow
+													key={checkKey(check)}
+													check={check}
+													label={
+														check.kind === "code"
+															? (feature.validatorLabels[check.name] ?? check.name)
+															: checkLabel(check.kind)
+													}
+													onChange={(next) =>
+														set({ checks: spec.checks.map((item, i) => (i === index ? next : item)) })
+													}
+													onRemove={
+														feature.definedChecks.includes(checkKey(check))
+															? undefined
+															: () => set({ checks: spec.checks.filter((_, i) => i !== index) })
+													}
+												/>
+											))}
+										</Stack>
+										{addableChecks.length > 0 && (
+											<Inline>
+												<DropdownMenu>
+													<DropdownMenuTrigger render={<Button type="button" size="xs" variant="quiet" />}>
+														<Plus aria-hidden />
+														{t("field.addCheck")}
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="start" width="sm">
+														{addableChecks.map((kind) => (
+															<DropdownMenuItem
+																key={kind}
+																onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
+															>
+																<Plus aria-hidden />
+																{checkLabel(kind)}
+															</DropdownMenuItem>
+														))}
+													</DropdownMenuContent>
+												</DropdownMenu>
+											</Inline>
+										)}
+									</Stack>
+								</FormField>
+
+								<FormField>
+									<FormFieldLabel htmlFor={ids.prompt}>
+										{deciding ? t("field.criteria") : t("field.prompt")}
+									</FormFieldLabel>
+									<Textarea
+										id={ids.prompt}
+										rows={PROMPT_ROWS}
+										value={spec.prompt}
+										onChange={(event) => set({ prompt: event.target.value })}
+										size="sm"
+									/>
+								</FormField>
+							</FormFieldGroup>
+						</Box>
+					</CollapsibleContent>
+				</Collapsible>
+			</Box>
 
 			<EditorFooter
 				dirty={dirty}
@@ -1291,15 +1336,19 @@ function FeatureEditor({
 					</Button>
 				)}
 				{!custom?.isNew && (
-					<span className="flex-1 text-right text-monti-caption text-monti-muted">
-						{feature.updatedAt
-							? t("meta.edited", {
-									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
-								})
-							: t("meta.default")}
-					</span>
+					<Inline grow justify="end">
+						<Text variant="caption" tone="muted">
+							{feature.updatedAt
+								? t("meta.edited", {
+										time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, {
+											timeZone: site.CMS_TIME_ZONE,
+										}),
+									})
+								: t("meta.default")}
+						</Text>
+					</Inline>
 				)}
 			</EditorFooter>
-		</div>
+		</Stack>
 	);
 }

@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	Combobox,
 	ComboboxContent,
@@ -24,11 +25,14 @@ import {
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	Inline,
 	Input,
 	Panel,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
@@ -101,15 +105,18 @@ function TimeZonePick({
 					placeholder="Asia/Seoul"
 					showClear={value !== undefined}
 					disabled={disabled}
-					className="w-full"
 				/>
 				<ComboboxContent>
 					<ComboboxEmpty>{t("locales.timeZoneNone")}</ComboboxEmpty>
 					<ComboboxList>
 						{(zone: string) => (
 							<ComboboxItem key={zone} value={zone}>
-								<span className="truncate">{zone}</span>
-								<span className="ml-auto text-monti-caption text-monti-muted">{offsetOf(zone)}</span>
+								<Inline as="span" grow justify="between" gap="condensed" minWidth={0}>
+									<Text truncate>{zone}</Text>
+									<Text variant="caption" tone="muted">
+										{offsetOf(zone)}
+									</Text>
+								</Inline>
 							</ComboboxItem>
 						)}
 					</ComboboxList>
@@ -212,13 +219,14 @@ function LocaleDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="sm:max-w-md" data-testid="locale-dialog">
+			<DialogContent size="md" data-testid="locale-dialog">
 				<DialogHeader>
 					<DialogTitle>{locale ? t("locales.editTitle", { name: locale.name }) : t("locales.addTitle")}</DialogTitle>
 					{!locale && <DialogDescription>{t("locales.contentNote")}</DialogDescription>}
 				</DialogHeader>
-				<form
-					className="flex flex-col gap-spacious"
+				<Stack
+					as="form"
+					gap="spacious"
 					onSubmit={(event) => {
 						event.preventDefault();
 						if (!ok) return;
@@ -229,7 +237,8 @@ function LocaleDialog({
 						{locale !== undefined ? (
 							<Input id={codeId} value={code} disabled aria-label={t("locales.code")} />
 						) : (
-							<div className="relative">
+							<Box position="relative">
+								{/* design-system: needs a visually hidden input option (a field for typing the code, kept beside the picker) */}
 								<input
 									id={codeId}
 									className="sr-only"
@@ -250,30 +259,33 @@ function LocaleDialog({
 											<Button
 												type="button"
 												variant="outline"
+												tone={code !== "" && !codeOk ? "danger" : "neutral"}
+												width="full"
 												role="combobox"
 												aria-expanded={open}
 												autoFocus
-												className={cn(
-													"w-full justify-between font-normal",
-													!code && "text-monti-muted",
-													code !== "" && !codeOk && "border-monti-danger text-monti-danger",
-												)}
 											/>
 										}
 									>
-										{code ? (
-											<span className="flex items-center gap-condensed truncate">
-												<span className="font-mono font-semibold text-monti-caption">{code}</span>
-												{nativeNameOf(code) && (
-													<span className="text-monti-caption text-monti-muted">{nativeNameOf(code)}</span>
-												)}
-											</span>
-										) : (
-											<span>{t("locales.codePlaceholder")}</span>
-										)}
-										<ChevronsUpDown aria-hidden className="ml-auto size-4 shrink-0 opacity-50" />
+										<Inline as="span" grow justify="between" gap="condensed" minWidth={0}>
+											{code ? (
+												<Inline as="span" gap="condensed" minWidth={0}>
+													<Text variant="caption" mono weight="semibold">
+														{code}
+													</Text>
+													{nativeNameOf(code) && (
+														<Text variant="caption" tone="muted">
+															{nativeNameOf(code)}
+														</Text>
+													)}
+												</Inline>
+											) : (
+												<Text tone="muted">{t("locales.codePlaceholder")}</Text>
+											)}
+											<ChevronsUpDown aria-hidden />
+										</Inline>
 									</PopoverTrigger>
-									<PopoverContent align="start" className="w-(--anchor-width) min-w-72 p-0">
+									<PopoverContent align="start" width="anchor" padding="none">
 										<Command>
 											<CommandInput
 												value={search}
@@ -282,7 +294,7 @@ function LocaleDialog({
 												aria-label={t("locales.codeSearch")}
 												autoFocus
 											/>
-											<CommandList className="max-h-60">
+											<CommandList>
 												<CommandEmpty>{t("locales.codeNone")}</CommandEmpty>
 												<CommandGroup>
 													{availableCodes.map((known) => {
@@ -297,9 +309,13 @@ function LocaleDialog({
 																	setOpen(false);
 																}}
 															>
-																<span className="font-mono font-semibold text-monti-caption">{known}</span>
+																<Text variant="caption" mono weight="semibold">
+																	{known}
+																</Text>
 																{native && (
-																	<span className="ml-tight text-monti-caption text-monti-muted">{native}</span>
+																	<Text variant="caption" tone="muted">
+																		{native}
+																	</Text>
 																)}
 															</CommandItem>
 														);
@@ -314,8 +330,8 @@ function LocaleDialog({
 																setOpen(false);
 															}}
 														>
-															<Plus className="size-4 shrink-0 text-monti-muted" />
-															<span>{t("locales.codeCustom", { code: trimmedSearch })}</span>
+															<Plus size={16} aria-hidden />
+															<Text>{t("locales.codeCustom", { code: trimmedSearch })}</Text>
 														</CommandItem>
 													</CommandGroup>
 												)}
@@ -323,7 +339,7 @@ function LocaleDialog({
 										</Command>
 									</PopoverContent>
 								</Popover>
-							</div>
+							</Box>
 						)}
 					</Labeled>
 					<Labeled label={t("locales.label")}>
@@ -349,7 +365,7 @@ function LocaleDialog({
 						submitLabel={locale ? tc("save") : t("locales.add")}
 						disabled={!ok}
 					/>
-				</form>
+				</Stack>
 			</DialogContent>
 		</Dialog>
 	);
@@ -360,11 +376,14 @@ function LocaleRow({
 	locale,
 	isDefault,
 	dragDisabled,
+	divided,
 	buttons,
 }: {
 	locale: Locale;
 	isDefault: boolean;
 	dragDisabled: boolean;
+	/** A hairline above the row, when it follows another. */
+	divided: boolean;
 	buttons: RowButton[];
 }) {
 	const t = useTranslator(schemaLocalesMessages);
@@ -375,11 +394,13 @@ function LocaleRow({
 	const displayName = locale.label ?? locale.name;
 	const hasDistinctNative = Boolean(locale.label && locale.label !== locale.name);
 	return (
+		// design-system: drawing — sortable list row (drag transform, hover-revealed handle and buttons)
 		<li
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"group/row relative flex min-h-14 items-center gap-normal bg-monti-surface py-condensed pr-comfortable pl-wide",
+				divided && "border-t",
 				isDragging && "z-10 opacity-80 shadow-monti-floating",
 			)}
 			data-testid={`locale-${locale.code}`}
@@ -391,28 +412,33 @@ function LocaleRow({
 				{...listeners}
 				aria-label={t("locales.drag", { name: displayName })}
 				disabled={dragDisabled}
+				// design-system: drawing — drag handle, shown on hover or focus
 				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
-			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-neutral px-condensed font-mono text-monti-caption">
-				{locale.code}
-			</span>
-			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-condensed">
-					<span className="truncate font-medium text-monti-body">{displayName}</span>
+			<Box as="span" radius="sm" background="neutral" paddingX="condensed">
+				<Text variant="caption" mono>
+					{locale.code}
+				</Text>
+			</Box>
+			<Stack gap="none" grow minWidth={0}>
+				<Inline gap="condensed">
+					<Text weight="medium" truncate>
+						{displayName}
+					</Text>
 					{isDefault && (
-						<span className="rounded-sm bg-monti-selected px-condensed py-px text-monti-caption text-monti-default">
-							{t("locales.defaultBadge")}
-						</span>
+						<Box as="span" radius="sm" background="selected" paddingX="condensed">
+							<Text variant="caption">{t("locales.defaultBadge")}</Text>
+						</Box>
 					)}
-				</div>
+				</Inline>
 				{hasDistinctNative && (
-					<div className="truncate text-monti-caption text-monti-muted">
+					<Text as="div" variant="caption" tone="muted" truncate>
 						{t("locales.nativeName", { name: locale.name })}
-					</div>
+					</Text>
 				)}
-			</div>
+			</Stack>
 			<RowButtons buttons={buttons} />
 		</li>
 	);
@@ -460,16 +486,16 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	};
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
-		<div className="flex flex-col gap-section">
+		<Stack gap="section">
 			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
-				<Panel className="overflow-hidden">
-					<div className="flex items-center justify-between gap-comfortable border-b px-comfortable py-normal">
-						<span className="flex items-center gap-condensed text-monti-body text-monti-muted">
-							{t("locales.count", { count: locales.length })}
+				<Panel overflow="hidden">
+					<Inline justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
+						<Inline as="span" gap="condensed">
+							<Text tone="muted">{t("locales.count", { count: locales.length })}</Text>
 							{revertKey("locales") && (
 								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />
 							)}
-						</span>
+						</Inline>
 						<Button
 							type="button"
 							variant="outline"
@@ -480,8 +506,8 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 							<Plus aria-hidden />
 							{t("locales.add")}
 						</Button>
-					</div>
-					<ul className="divide-y">
+					</Inline>
+					<ul>
 						<SortableList items={taken} onDragEnd={onDrop}>
 							{locales.map((locale, index) => (
 								<LocaleRow
@@ -489,6 +515,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 									locale={locale}
 									isDefault={locale.code === defaultLocale}
 									dragDisabled={disabled}
+									divided={index > 0}
 									buttons={buttons(locale, index)}
 								/>
 							))}
@@ -527,6 +554,6 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 					}}
 				/>
 			)}
-		</div>
+		</Stack>
 	);
 }

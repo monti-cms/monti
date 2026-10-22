@@ -331,38 +331,42 @@ describe("admin entry list", () => {
 		});
 	});
 	describe("status segments", () => {
-		const statusGroup = () => within(screen.getByRole("group", { name: t("list.statusFilter") }));
-		const seg = (name: string) => statusGroup().getByRole("button", { name });
+		const statusGroup = () => within(screen.getByRole("tablist", { name: t("list.statusFilter") }));
+		const seg = (name: string) => statusGroup().getByRole("tab", { name });
 
 		it("sets exactly the picked status and clears the editing filter", () => {
 			const props = renderTable();
 			fireEvent.click(seg("초안"));
 			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: ["draft"], hasChanges: false });
+			cleanup();
+			const filtered = renderTable({
+				state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")),
+			});
 			fireEvent.click(seg(t("list.statusAll")));
-			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
+			expect(filtered.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
 		});
 
 		it("highlights All with no status filter and the one status when it is the single filter", () => {
 			renderTable();
-			expect(seg(t("list.statusAll")).getAttribute("aria-pressed")).toBe("true");
+			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("true");
 			cleanup();
 			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")) });
-			expect(seg("초안").getAttribute("aria-pressed")).toBe("true");
-			expect(seg(t("list.statusAll")).getAttribute("aria-pressed")).toBe("false");
+			expect(seg("초안").getAttribute("aria-selected")).toBe("true");
+			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("false");
 			// The segment already says it, so there is no chip.
 			expect(screen.queryByRole("list", { name: t("toolbar.chips") })).toBeNull();
 		});
 
 		it("highlights nothing for a status set the segments cannot show, and explains it with a chip", () => {
 			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft&changes=1")) });
-			for (const button of statusGroup().getAllByRole("button"))
-				expect(button.getAttribute("aria-pressed")).toBe("false");
+			for (const button of statusGroup().getAllByRole("tab"))
+				expect(button.getAttribute("aria-selected")).toBe("false");
 			expect(within(screen.getByRole("list", { name: t("toolbar.chips") })).getByText(/상태/)).toBeTruthy();
 		});
 
 		it("is not drawn for an item collection", () => {
 			renderTable({ collection: "tag", state: parseListState(testSite, new URLSearchParams("collection=tag")) });
-			expect(screen.queryByRole("group", { name: t("list.statusFilter") })).toBeNull();
+			expect(screen.queryByRole("tablist", { name: t("list.statusFilter") })).toBeNull();
 		});
 	});
 

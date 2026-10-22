@@ -1,7 +1,7 @@
 "use client";
 
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
-import { cn } from "@monti-cms/admin/kit";
+import { Box, cn, Text } from "@monti-cms/admin/kit";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -129,6 +129,7 @@ export function ColumnsNodeView() {
 	};
 
 	return (
+		// design-system: drawing — the columns as the public post lays them out (grid on the content, column boundaries and resize handles)
 		<BlockFrame ref={wrapperRef} className="my-spacious rounded-md">
 			<Content
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
@@ -179,9 +180,11 @@ export function ColumnsNodeView() {
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<span className="px-condensed text-monti-caption text-monti-muted tabular-nums">
-						{widths ? widths.join(" : ") : t("count", { count })}
-					</span>
+					<Box as="span" paddingX="condensed">
+						<Text variant="caption" tone="muted">
+							{widths ? widths.join(" : ") : t("count", { count })}
+						</Text>
+					</Box>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
 						<Columns2 aria-hidden />
 					</ToolbarButton>
@@ -205,6 +208,7 @@ export function ColumnsNodeView() {
 /** One column. The boundary shows as a dotted line only on hover or when the cursor is inside. */
 export function ColumnNodeView() {
 	return (
+		// design-system: drawing — one column cell with its hover outline
 		<BlockFrame
 			framed={false}
 			selectedRing={false}

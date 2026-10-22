@@ -2,7 +2,19 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Button, cn, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
+import {
+	Badge,
+	Box,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+	Text,
+	TextLink,
+} from "@monti-cms/ui";
 import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
@@ -13,7 +25,6 @@ import { screensMessages } from "../messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { writeDraggedEntries } from "../shared/entry-drag";
 import { formatDateTime } from "../shared/format-date";
-import { OPEN_ITEM } from "../shared/side-panel";
 import { type FolderActions, folderMenuActions } from "../shared/use-folder-actions";
 import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
@@ -21,13 +32,23 @@ import { mediaMessages } from "./messages";
 const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
 /** Thumbnail for images, a type icon for other files. */
-export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconClassName?: string }) {
+export function MediaThumb({ media, iconSize }: { media: MediaItem; iconSize: number }) {
 	const site = useSite();
 	if (!site.api.isImageType(media.mimeType)) {
 		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
-		return <Icon className={cn("text-monti-muted", iconClassName)} aria-hidden />;
+		return (
+			<Text tone="muted">
+				<Icon size={iconSize} aria-hidden />
+			</Text>
+		);
 	}
-	if (!media.publicUrl) return <File className={cn("text-monti-muted", iconClassName)} aria-hidden />;
+	if (!media.publicUrl)
+		return (
+			<Text tone="muted">
+				<File size={iconSize} aria-hidden />
+			</Text>
+		);
+	// design-system: needs an Image part (fills its frame, cropped to cover)
 	return <img src={media.publicUrl} alt="" loading="lazy" className="h-full w-full object-cover" />;
 }
 
@@ -86,90 +107,104 @@ export function MediaGrid({
 				]
 			: [];
 	return (
+		// design-system: needs Grid columns 2/3/4/6 by screen width, and a dimmed (opacity) state for rows that are reloading
 		<ul
-			className={cn(
-				"grid grid-cols-2 gap-comfortable transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6",
-				dimmed && "opacity-60",
-			)}
+			className={
+				dimmed
+					? "grid grid-cols-2 gap-comfortable opacity-60 transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+					: "grid grid-cols-2 gap-comfortable transition-opacity sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+			}
 		>
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
-				<li className="relative">
-					<Button
-						variant="outline"
+				<Box as="li" position="relative">
+					{/* design-system: needs a Tile part (a card button: square preview on top, name under it) */}
+					<button
 						type="button"
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
-						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-muted bg-monti-surface p-0 text-left font-normal hover:border-monti-emphasis"
+						className="flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
 					>
 						<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted hover:text-monti-default">
-							<FolderUp className="size-10" aria-hidden />
+							<FolderUp size={40} aria-hidden />
 						</span>
-						<span className="truncate p-condensed font-medium text-monti-caption text-monti-muted">
-							{ts("list.folderUp")}
-						</span>
-					</Button>
-				</li>
+						<Box padding="condensed">
+							<Text as="div" variant="caption" tone="muted" weight="medium" truncate>
+								{ts("list.folderUp")}
+							</Text>
+						</Box>
+					</button>
+				</Box>
 			)}
 			{explorer?.folders.map((folder) => {
 				const actions = folderRowMenu(folder);
 				return (
-					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li className="relative" />}>
-						<Button
-							variant="outline"
+					<ActionContextMenu
+						key={`folder-${folder.id}`}
+						actions={actions}
+						trigger={<Box as="li" position="relative" />}
+					>
+						{/* design-system: needs a Tile part (a card button: square preview on top, name under it) */}
+						<button
 							type="button"
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-muted bg-monti-surface p-0 text-left font-normal hover:border-monti-emphasis"
+							className="flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft"
 						>
 							<span className="relative flex aspect-square items-center justify-center bg-monti-inset text-monti-muted">
-								<FolderIcon className="size-10 text-monti-muted" aria-hidden />
+								<FolderIcon size={40} aria-hidden />
 							</span>
-							<span className="truncate p-condensed font-medium text-monti-caption">{folder.name}</span>
-						</Button>
-						<MoreActionsButton
-							actions={actions}
-							label={ts("list.folderActions", { name: folder.name })}
-							className="absolute top-1 right-1 size-7 bg-monti-page"
-						/>
+							<Box padding="condensed">
+								<Text as="div" variant="caption" weight="medium" truncate>
+									{folder.name}
+								</Text>
+							</Box>
+						</button>
+						{/* design-system: needs a corner overlay position (the actions button sits on the tile's top right) */}
+						<span className="absolute top-1 right-1">
+							<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />
+						</span>
 					</ActionContextMenu>
 				);
 			})}
 			{items.map((media) => (
-				<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<li className="relative" />}>
-					<Button
-						variant="outline"
+				<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<Box as="li" position="relative" />}>
+					{/* design-system: needs a Tile part (a card button: square preview on top, name under it; a selected look) */}
+					<button
 						type="button"
 						draggable
 						onDragStart={(event) => writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)}
 						aria-current={selectedId === media.id ? "true" : undefined}
 						onClick={() => onSelect(media)}
 						onKeyDown={deleteKey(media, onDeleteKey)}
-						className={cn(
-							"h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-md border-monti-muted bg-monti-surface p-0 text-left font-normal",
-							selectedId === media.id
-								? cn(OPEN_ITEM, "border-monti-emphasis hover:bg-monti-hover")
-								: "hover:border-monti-emphasis",
-						)}
+						className={`flex w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-md border border-monti-muted bg-monti-surface text-left outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft ${
+							selectedId === media.id ? "border-monti-emphasis bg-monti-selected hover:bg-monti-hover" : ""
+						}`}
 					>
 						<span className="relative flex aspect-square items-center justify-center bg-monti-neutral">
 							{site.api.isImageType(media.mimeType) ? (
-								<MediaThumb media={media} iconClassName="size-10" />
+								<MediaThumb media={media} iconSize={40} />
 							) : (
-								<span className="flex flex-col items-center gap-condensed text-monti-muted">
-									<MediaThumb media={media} iconClassName="size-10" />
-									<span className="font-medium text-monti-micro">{fileTypeLabel(media.filename, media.mimeType)}</span>
-								</span>
+								<Stack align="center" gap="condensed">
+									<MediaThumb media={media} iconSize={40} />
+									<Text variant="micro" tone="muted" weight="medium">
+										{fileTypeLabel(media.filename, media.mimeType)}
+									</Text>
+								</Stack>
 							)}
-							<Badge variant="secondary" className="absolute top-1.5 left-1.5 rounded-sm text-monti-micro">
-								{usageLabel(t, media)}
-							</Badge>
+							{/* design-system: needs a corner overlay position (the usage badge sits on the preview's top left) */}
+							<span className="absolute top-1.5 left-1.5">
+								<Badge variant="secondary">{usageLabel(t, media)}</Badge>
+							</span>
 						</span>
-						<span className="truncate p-condensed font-mono text-monti-caption">{media.filename}</span>
-					</Button>
-					<MoreActionsButton
-						actions={menuFor(media)}
-						label={t("views.itemActions", { name: media.filename })}
-						className="absolute top-1 right-1 size-7 bg-monti-page"
-					/>
+						<Box padding="condensed">
+							<Text as="div" variant="caption" mono truncate>
+								{media.filename}
+							</Text>
+						</Box>
+					</button>
+					{/* design-system: needs a corner overlay position (the actions button sits on the tile's top right) */}
+					<span className="absolute top-1 right-1">
+						<MoreActionsButton actions={menuFor(media)} label={t("views.itemActions", { name: media.filename })} />
+					</span>
 				</ActionContextMenu>
 			))}
 		</ul>
@@ -192,101 +227,99 @@ export function MediaTable({
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	return (
-		<Table
-			aria-label={t("views.table")}
-			containerClassName="overflow-visible"
-			className={cn(
-				"table-fixed text-monti-caption transition-opacity [&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
-				dimmed && "opacity-60",
-			)}
-		>
-			<TableHeader className="sticky top-0 z-10 bg-monti-page [&_tr]:border-b">
-				<TableRow>
-					<TableHead className="w-14 font-normal text-monti-muted">
-						<span className="sr-only">{t("views.preview")}</span>
-					</TableHead>
-					<TableHead className="font-normal text-monti-muted">{t("views.filename")}</TableHead>
-					<TableHead className="w-28 font-normal text-monti-muted">{t("views.type")}</TableHead>
-					<TableHead className="w-24 font-normal text-monti-muted">{t("views.size")}</TableHead>
-					<TableHead className="w-28 font-normal text-monti-muted">{t("views.dimensions")}</TableHead>
-					<TableHead className="w-20 font-normal text-monti-muted">{t("views.usage")}</TableHead>
-					<TableHead className="w-40 font-normal text-monti-muted">{t("views.uploadedAt")}</TableHead>
-					<TableHead className="w-10 font-normal text-monti-muted">
-						<span className="sr-only">{t("views.actions")}</span>
-					</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{explorer && folders && onSelectFolder && (
-					<EntriesTableFolderRows
-						explorer={explorer}
-						folders={folders}
-						folderActions={folderActions}
-						visibleCount={8}
-						onSelectFolder={onSelectFolder}
-					/>
-				)}
-				{items.map((media) => {
-					const isSelected = selectedId === media.id;
-					return (
-						<ActionContextMenu
-							key={media.id}
-							actions={menuFor(media)}
-							trigger={
-								<TableRow
-									aria-current={isSelected ? "true" : undefined}
-									className={cn("cursor-pointer", isSelected && OPEN_ITEM)}
-									draggable
-									onDragStart={(event) =>
-										writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
-									}
-									onClick={() => onSelect(media)}
-								/>
-							}
-						>
-							<TableCell className="py-condensed">
-								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-neutral">
-									<MediaThumb media={media} iconClassName="size-4" />
-								</span>
-							</TableCell>
-							<TableCell className="max-w-0">
-								<button
-									type="button"
-									aria-current={isSelected ? "true" : undefined}
-									onClick={(event) => {
-										event.stopPropagation();
-										onSelect(media);
-									}}
-									onKeyDown={deleteKey(media, onDeleteKey)}
-									className="block w-full truncate text-left font-medium font-mono outline-none hover:underline focus-visible:underline"
-								>
-									{media.filename}
-								</button>
-							</TableCell>
-							<TableCell className="text-monti-muted">
-								{site.api.isImageType(media.mimeType)
-									? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
-									: fileTypeLabel(media.filename, media.mimeType)}
-							</TableCell>
-							<TableCell className="tabular-nums">{formatFileSize(media.byteSize ?? 0)}</TableCell>
-							<TableCell className="text-monti-muted tabular-nums">
-								{media.width && media.height ? `${media.width}×${media.height}` : "—"}
-							</TableCell>
-							<TableCell>{usageLabel(t, media)}</TableCell>
-							<TableCell className="text-monti-muted tabular-nums">
-								{formatDateTime(site, media.createdAt, { dateStyle: "medium", timeStyle: "short" })}
-							</TableCell>
-							<TableCell onClick={(event) => event.stopPropagation()}>
-								<MoreActionsButton
-									actions={menuFor(media)}
-									label={t("views.itemActions", { name: media.filename })}
-									className="size-7"
-								/>
-							</TableCell>
-						</ActionContextMenu>
-					);
-				})}
-			</TableBody>
-		</Table>
+		// design-system: needs a dimmed (opacity) state for rows that are reloading
+		<div className={dimmed ? "opacity-60 transition-opacity" : "transition-opacity"}>
+			{/* design-system: needs a sticky table header and fixed column layout */}
+			<Table aria-label={t("views.table")} inset="page">
+				<TableHeader>
+					<TableRow>
+						<TableHead width="xs">
+							<Text srOnly>{t("views.preview")}</Text>
+						</TableHead>
+						<TableHead>{t("views.filename")}</TableHead>
+						<TableHead width="md">{t("views.type")}</TableHead>
+						<TableHead width="sm">{t("views.size")}</TableHead>
+						<TableHead width="md">{t("views.dimensions")}</TableHead>
+						<TableHead width="sm">{t("views.usage")}</TableHead>
+						<TableHead width="lg">{t("views.uploadedAt")}</TableHead>
+						<TableHead width="xs">
+							<Text srOnly>{t("views.actions")}</Text>
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{explorer && folders && onSelectFolder && (
+						<EntriesTableFolderRows
+							explorer={explorer}
+							folders={folders}
+							folderActions={folderActions}
+							visibleCount={8}
+							onSelectFolder={onSelectFolder}
+						/>
+					)}
+					{items.map((media) => {
+						const isSelected = selectedId === media.id;
+						return (
+							<ActionContextMenu
+								key={media.id}
+								actions={menuFor(media)}
+								trigger={
+									<TableRow
+										aria-current={isSelected ? "true" : undefined}
+										selected={isSelected}
+										draggable
+										onDragStart={(event) =>
+											writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
+										}
+										onClick={() => onSelect(media)}
+									/>
+								}
+							>
+								<TableCell>
+									{/* design-system: needs a Thumbnail part (a small square frame for a preview image or file icon) */}
+									<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border border-monti-muted bg-monti-neutral">
+										<MediaThumb media={media} iconSize={16} />
+									</span>
+								</TableCell>
+								<TableCell truncate>
+									<TextLink
+										render={<button type="button" />}
+										underline="hover"
+										mono
+										aria-current={isSelected ? "true" : undefined}
+										onClick={(event) => {
+											event.stopPropagation();
+											onSelect(media);
+										}}
+										onKeyDown={deleteKey(media, onDeleteKey)}
+									>
+										{media.filename}
+									</TextLink>
+								</TableCell>
+								<TableCell tone="muted">
+									{site.api.isImageType(media.mimeType)
+										? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
+										: fileTypeLabel(media.filename, media.mimeType)}
+								</TableCell>
+								<TableCell>{formatFileSize(media.byteSize ?? 0)}</TableCell>
+								<TableCell tone="muted">
+									{media.width && media.height ? `${media.width}×${media.height}` : "—"}
+								</TableCell>
+								<TableCell>{usageLabel(t, media)}</TableCell>
+								<TableCell tone="muted">
+									{formatDateTime(site, media.createdAt, { dateStyle: "medium", timeStyle: "short" })}
+								</TableCell>
+								<TableCell onClick={(event) => event.stopPropagation()}>
+									<MoreActionsButton
+										actions={menuFor(media)}
+										label={t("views.itemActions", { name: media.filename })}
+									/>
+								</TableCell>
+							</ActionContextMenu>
+						);
+					})}
+				</TableBody>
+			</Table>
+		</div>
 	);
 }

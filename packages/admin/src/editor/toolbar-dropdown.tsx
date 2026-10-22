@@ -22,9 +22,9 @@ export function ToolbarDropdown({
 }) {
 	const content = (
 		<>
-			{Icon && <Icon aria-hidden className="size-4" />}
+			{Icon && <Icon aria-hidden />}
 			{!iconOnly && label}
-			<ChevronDown aria-hidden className="size-3" />
+			<ChevronDown aria-hidden />
 		</>
 	);
 	return (
@@ -34,7 +34,6 @@ export function ToolbarDropdown({
 					label={label}
 					side="bottom"
 					size="sm"
-					className="h-8 gap-tight px-condensed text-monti-caption"
 					disabled={!editor.isEditable}
 					onMouseDown={(event) => event.preventDefault()}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
@@ -48,7 +47,6 @@ export function ToolbarDropdown({
 							type="button"
 							variant="ghost"
 							size="sm"
-							className="h-8 gap-tight px-condensed text-monti-caption"
 							aria-label={label}
 							disabled={!editor.isEditable}
 							onMouseDown={(event) => event.preventDefault()}
@@ -58,7 +56,7 @@ export function ToolbarDropdown({
 					{content}
 				</DropdownMenuTrigger>
 			)}
-			<DropdownMenuContent align="start" className="min-w-36">
+			<DropdownMenuContent align="start" width="sm">
 				{items.map((item) => (
 					<ToolbarMenuItem key={item.label} editor={editor} item={item} />
 				))}

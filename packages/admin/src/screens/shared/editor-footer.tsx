@@ -1,5 +1,5 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, cn, FormFieldError } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Stack } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 
@@ -20,7 +20,6 @@ export function EditorFooter({
 	saveIcon,
 	align = "start",
 	children,
-	className,
 }: {
 	dirty: boolean;
 	saving?: boolean;
@@ -37,40 +36,32 @@ export function EditorFooter({
 	align?: "start" | "end";
 	/** Extra buttons between Cancel and Delete. */
 	children?: ReactNode;
-	className?: string;
 }) {
 	const t = useTranslator(commonMessages);
 	const busy = saving || deleting;
 	return (
-		<div className={cn("space-y-condensed", className)}>
-			{error && <FormFieldError className="whitespace-pre-wrap">{error}</FormFieldError>}
-			<div className={cn("flex flex-wrap items-center gap-condensed", align === "end" && "justify-end")}>
-				<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>
-					{saveIcon}
-					{saving ? t("saving") : (saveLabel ?? t("save"))}
-				</Button>
-				{onCancel && (
-					<Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCancel}>
-						{t("cancel")}
+		<Stack gap="condensed">
+			{/* design-system: needs a preserve-line-breaks option on FormFieldError (multi-line error text) */}
+			{error && <FormFieldError>{error}</FormFieldError>}
+			<Inline wrap gap="condensed" justify={align === "end" ? "end" : "between"}>
+				<Inline wrap gap="condensed">
+					<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>
+						{saveIcon}
+						{saving ? t("saving") : (saveLabel ?? t("save"))}
 					</Button>
-				)}
-				{children}
+					{onCancel && (
+						<Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCancel}>
+							{t("cancel")}
+						</Button>
+					)}
+					{children}
+				</Inline>
 				{onDelete && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						disabled={busy}
-						className={cn(
-							"text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger",
-							align === "start" && "ml-auto",
-						)}
-						onClick={onDelete}
-					>
+					<Button type="button" size="sm" variant="ghost" tone="danger" disabled={busy} onClick={onDelete}>
 						{deleting ? t("deleting") : t("delete")}
 					</Button>
 				)}
-			</div>
-		</div>
+			</Inline>
+		</Stack>
 	);
 }

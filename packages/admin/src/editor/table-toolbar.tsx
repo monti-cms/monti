@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Separator } from "@monti-cms/ui";
+import { Inline, Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -97,13 +97,13 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.deleteRow"),
 			icon: Rows3,
-			className: "text-monti-danger",
+			tone: "danger",
 			run: (e) => chain(e).deleteRow().run(),
 		},
 		{
 			label: t("tableToolbar.deleteColumn"),
 			icon: Columns3,
-			className: "text-monti-danger",
+			tone: "danger",
 			run: (e) => chain(e).deleteColumn().run(),
 		},
 	],
@@ -196,6 +196,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 	if (!tableKey || typeof window === "undefined") return null;
 
 	return createPortal(
+		// design-system: drawing — a toolbar floating over the table at a position measured from it (fixed coordinates, z-index); needs a floating toolbar part
 		<div
 			ref={toolbarRef}
 			role="toolbar"
@@ -204,12 +205,12 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 			className={BLOCK_TOOLBAR}
 		>
 			{TABLE_TOOL_GROUPS(t).map((group, index) => (
-				<div key={group[0]?.label} className="flex items-center gap-hair">
-					{index > 0 && <Separator orientation="vertical" className="mx-hair h-4" />}
+				<Inline key={group[0]?.label} gap="hair">
+					{index > 0 && <Separator orientation="vertical" />}
 					{group.map((item) => (
 						<ToolbarButton key={item.label} editor={editor} item={item} />
 					))}
-				</div>
+				</Inline>
 			))}
 		</div>,
 		document.body,

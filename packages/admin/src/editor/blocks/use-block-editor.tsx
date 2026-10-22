@@ -599,6 +599,7 @@ export function BlockEditorProvider({
 /** `NodeViewContent` with its element chosen by `as` at runtime (its own type fixes `as` to the element of the other props). */
 const AnyElementContent = NodeViewContent as ComponentType<Record<string, unknown>>;
 
+// design-system: drawing — `Content` and `BlockFrame` are how a block view draws inside the document, so they take a `className` for the block's own look
 /** Props of {@link Content}. Other attributes (`data-*`, `aria-*`, `id`) are passed to the content element. */
 export interface ContentProps extends Omit<ComponentProps<"div">, "ref" | "children" | "className" | "style"> {
 	readonly className?: string;

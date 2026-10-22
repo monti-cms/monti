@@ -3,7 +3,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Checkbox } from "@monti-cms/ui";
+import { Button, Checkbox, Inline, Text } from "@monti-cms/ui";
 import {
 	type ColumnOrderState,
 	type ColumnSizingState,
@@ -165,9 +165,9 @@ export function useEntriesTable({
 				id: "actions",
 				size: 52,
 				enableResizing: false,
-				header: () => <span className="sr-only">{t("list.actions")}</span>,
+				header: () => <Text srOnly>{t("list.actions")}</Text>,
 				cell: ({ row }) => (
-					<div className="flex items-center justify-end gap-tight whitespace-nowrap">
+					<Inline gap="tight" justify="end">
 						{isTrash && (
 							<>
 								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>
@@ -176,8 +176,8 @@ export function useEntriesTable({
 								<Button
 									type="button"
 									variant="ghost"
+									tone="danger"
 									size="xs"
-									className="text-monti-danger"
 									onClick={() => onPermanentDelete?.(row.original)}
 								>
 									{tc("lifecycle.deletePermanently")}
@@ -188,7 +188,7 @@ export function useEntriesTable({
 							actions={rowMenu(row.original)}
 							label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
 						/>
-					</div>
+					</Inline>
 				),
 			}),
 		]);

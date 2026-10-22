@@ -19,7 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { BacklinkField, RelationField, ValueField } from "@monti-cms/core";
 import type { Collection } from "@monti-cms/core/site";
 import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, IconButton } from "@monti-cms/ui";
+import { cn, FormFieldError, IconButton, Stack, Text } from "@monti-cms/ui";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,12 +66,10 @@ export interface FieldInputProps {
 	onChange: (value: FormValue) => void;
 }
 
-export const inputClass = "h-8 rounded-md text-monti-label md:text-monti-label";
-
-/** Row count of a multi-line text input (`rows`, 2 if absent) and the minimum height that shows that many rows (text lines + vertical padding). */
-export function multilineProps(field: { readonly rows?: number }): { rows: number; style: { minHeight: string } } {
+/** Row count of a multi-line text input (`rows`, 2 if absent). */
+export function multilineProps(field: { readonly rows?: number }): { rows: number } {
 	const rows = field.rows !== undefined && field.rows >= 1 ? Math.floor(field.rows) : 2;
-	return { rows, style: { minHeight: `${rows + 1}rem` } };
+	return { rows };
 }
 
 type EntryOption = RelationEntry;
@@ -161,6 +159,7 @@ function SortableEntryRow({
 	});
 	const title = option?.title ?? tc("loading");
 	return (
+		// design-system: needs a sortable row part (dnd-kit's transform style, a lifted look while dragging, a drag handle cursor)
 		<li
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -174,19 +173,20 @@ function SortableEntryRow({
 				size="icon-xs"
 				label={t("entry.drag", { title })}
 				disabled={disabled}
-				className="cursor-grab touch-none text-monti-muted active:cursor-grabbing"
+				// design-system: needs a drag-handle option on IconButton (grab cursor, no touch scrolling)
+				className="cursor-grab touch-none active:cursor-grabbing"
 				{...attributes}
 				{...listeners}
 			>
 				<GripVertical />
 			</IconButton>
-			<span className="min-w-0 flex-1 truncate">
+			<Text variant="caption" truncate>
 				{index + 1}. {title}
 				{/* Unpublished posts are missing from the collection's public list. */}
 				{option && option.status !== "published" && option.status !== "missing" && (
-					<span className="ml-tight text-monti-warning">{t("entry.unpublished")}</span>
+					<Text tone="warning"> {t("entry.unpublished")}</Text>
 				)}
-			</span>
+			</Text>
 			<IconButton
 				size="icon-xs"
 				label={t("entry.up", { title })}
@@ -253,7 +253,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			: undefined);
 
 	return (
-		<div className="space-y-condensed">
+		<Stack gap="condensed">
 			<RelationCombobox
 				id={id}
 				aria-label={t("entry.editList", { target })}
@@ -269,11 +269,13 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			/>
 			<SearchError failed={search.error} />
 			{ids.length === 0 ? (
-				<p className="text-monti-caption text-monti-muted">{t("entry.empty", { target })}</p>
+				<Text as="p" variant="caption" tone="muted">
+					{t("entry.empty", { target })}
+				</Text>
 			) : (
 				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
 					<SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-						<ol aria-label={t("entry.listAria", { target })} className="space-y-tight">
+						<Stack as="ol" gap="tight" aria-label={t("entry.listAria", { target })}>
 							{ids.map((itemId, index) => (
 								<SortableEntryRow
 									key={sortableIds[index]}
@@ -286,11 +288,11 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 									onRemove={() => onChange(ids.filter((_, i) => i !== index))}
 								/>
 							))}
-						</ol>
+						</Stack>
 					</SortableContext>
 				</DndContext>
 			)}
-		</div>
+		</Stack>
 	);
 }
 
@@ -485,7 +487,11 @@ export function BacklinkInput({
 	};
 
 	if (!targetId) {
-		return <p className="text-monti-caption text-monti-muted">{t("backlink.saveDraft", { label: field.label })}</p>;
+		return (
+			<Text as="p" variant="caption" tone="muted">
+				{t("backlink.saveDraft", { label: field.label })}
+			</Text>
+		);
 	}
 
 	const shown = optimistic ?? serverIds;

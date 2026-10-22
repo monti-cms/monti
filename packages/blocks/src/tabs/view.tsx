@@ -78,6 +78,7 @@ export function TabsNodeView() {
 	};
 
 	return (
+		// design-system: drawing — the tab bar and body box as the public post draws them (editor tab triggers, rename input, body frame)
 		<BlockFrame className="my-spacious rounded-lg">
 			<div contentEditable={false} className="not-prose">
 				<div
@@ -135,7 +136,7 @@ export function TabsNodeView() {
 						<PencilLine aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("default")} pressed={current === defaultIndex} onClick={() => toggleDefault(current)}>
-						<Star aria-hidden className={cn(current === defaultIndex && "fill-current")} />
+						<Star aria-hidden fill={current === defaultIndex ? "currentColor" : "none"} />
 					</ToolbarButton>
 					<ToolbarButton
 						label={t("delete")}

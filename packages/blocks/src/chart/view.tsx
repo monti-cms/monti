@@ -2,6 +2,8 @@
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
  * `monti-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
+ *
+ * design-system: drawing — the public page's chart, styled by `render.css`; it uses no admin UI and stays as it is.
  */
 
 import { createContext, type ReactElement, useContext, useEffect, useMemo, useRef, useState } from "react";

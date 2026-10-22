@@ -1,7 +1,15 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconButton } from "@monti-cms/ui";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { Puzzle } from "lucide-react";
 import { useMemo } from "react";
@@ -34,11 +42,13 @@ export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 					block.action(editor, { from, to: from });
 				}}
 			>
-				<Icon aria-hidden className="size-4" />
-				<span className="min-w-0 flex-1">
-					<span className="block truncate">{block.title}</span>
-					<span className="block truncate text-monti-caption text-monti-muted">{block.description}</span>
-				</span>
+				<Icon aria-hidden />
+				<Stack as="span" gap="none" minWidth={0} grow>
+					<Text truncate>{block.title}</Text>
+					<Text variant="caption" tone="muted" truncate>
+						{block.description}
+					</Text>
+				</Stack>
 			</DropdownMenuItem>
 		);
 	});
@@ -56,9 +66,9 @@ export function CustomBlockMenu({ editor }: { editor: Editor }) {
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<Puzzle className="size-4" aria-hidden />
+				<Puzzle aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="start" className="min-w-64">
+			<DropdownMenuContent align="start" width="lg">
 				<CustomBlockMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

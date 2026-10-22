@@ -2,7 +2,7 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton } from "@monti-cms/ui";
+import { Box, cn, Heading, IconButton, Inline } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
@@ -65,28 +65,41 @@ export function SourcePane({
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	return (
+		// design-system: needs a ref and an overlay position (absolute on narrow screens) on Box; the side panel passes the position classes
 		<aside
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
 			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-page", className)}
 		>
-			<div
+			<Inline
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-condensed border-b bg-monti-page px-comfortable backdrop-blur"
+				position="sticky"
+				justify="between"
+				gap="condensed"
+				height="control"
+				shrink={false}
+				background="page"
+				border="bottom"
+				paddingX="comfortable"
 			>
-				<h2 className="flex-1 font-medium text-monti-body">
+				<Heading as="h2" variant="label">
 					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
-				</h2>
+				</Heading>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
-					<X aria-hidden className="size-4" />
+					<X aria-hidden />
 				</IconButton>
-			</div>
-			<h1 className={cn("px-spacious pt-section pb-comfortable text-monti-display", !title && "text-monti-subtle")}>
-				{title || tc("untitled")}
-			</h1>
-			<div className="px-spacious pt-spacious pb-[35vh]">
-				<DocPreview doc={doc} label={t("sourcePane.body")} />
-			</div>
+			</Inline>
+			<Box paddingX="spacious" paddingTop="section" paddingBottom="comfortable">
+				<Heading as="h1" variant="display" tone={title ? undefined : "subtle"}>
+					{title || tc("untitled")}
+				</Heading>
+			</Box>
+			<Box paddingX="spacious" paddingTop="spacious">
+				{/* design-system: needs end-of-document scroll room (35vh) on Box */}
+				<div className="pb-[35vh]">
+					<DocPreview doc={doc} label={t("sourcePane.body")} />
+				</div>
+			</Box>
 		</aside>
 	);
 }

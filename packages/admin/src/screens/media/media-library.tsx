@@ -2,18 +2,24 @@
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
-	cn,
 	IconButton,
+	Inline,
 	Input,
 	Label,
+	PageTabs,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 	Skeleton,
+	Spinner,
+	Stack,
 	Switch,
+	Tabs,
+	TabsTrigger,
 	ToggleGroup,
 	ToggleGroupItem,
 } from "@monti-cms/ui";
@@ -448,8 +454,8 @@ export function MediaLibrary() {
 			}}
 		>
 			<PageActions>
-				<div className="flex flex-wrap items-center gap-condensed">
-					<Label className="text-monti-caption text-monti-muted">
+				<Inline gap="condensed" wrap>
+					<Label size="caption" tone="muted">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>
@@ -480,94 +486,92 @@ export function MediaLibrary() {
 						{t("library.cleanup")}
 					</Button>
 					<IconButton label={tc("refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
-						<RefreshCw className={cn(mediaQuery.isFetching && "animate-spin")} aria-hidden />
+						{mediaQuery.isFetching ? <Spinner size="sm" aria-hidden /> : <RefreshCw aria-hidden />}
 					</IconButton>
-				</div>
+				</Inline>
 			</PageActions>
-			<div className="flex min-h-11 shrink-0 flex-wrap items-stretch gap-x-comfortable border-monti-muted border-b px-wide">
-				<fieldset className="-mb-px flex items-stretch gap-comfortable">
-					<legend className="sr-only">{t("library.kindLabel")}</legend>
+			<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
+				<PageTabs aria-label={t("library.kindLabel")}>
 					{kindOptions(t).map((option) => (
-						<button
-							key={option.value}
-							type="button"
-							aria-pressed={kind === option.value}
-							className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus-soft aria-pressed:border-monti-accent aria-pressed:font-medium aria-pressed:text-monti-default"
-							onClick={() => update({ kind: option.value as typeof kind })}
-						>
+						<TabsTrigger key={option.value} value={option.value}>
 							{option.label}
-						</button>
+						</TabsTrigger>
 					))}
-				</fieldset>
-				<div className="ml-auto flex flex-wrap items-center gap-condensed py-condensed">
-					<Input
-						type="search"
-						aria-label={t("library.search")}
-						value={searchText}
-						placeholder={t("library.search")}
-						onChange={(event) => setSearchText(event.target.value)}
-						className="h-8 w-56 rounded-md"
-					/>
-					<Select
-						value={used}
-						items={usedOptions(t)}
-						onValueChange={(value) => value && update({ used: value as typeof used })}
-					>
-						<SelectTrigger size="sm" aria-label={t("library.usedLabel")} className="rounded-md">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{usedOptions(t).map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<DateRangePicker
-						label={t("library.uploadedDate")}
-						from={uploadedFrom}
-						to={uploadedTo}
-						onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
-					/>
-					<ToggleGroup
-						aria-label={t("library.view")}
-						variant="outline"
-						size="sm"
-						spacing={0}
-						value={[view]}
-						onValueChange={(next: unknown[]) => {
-							const picked = next[0];
-							if (picked === "grid" || picked === "list") setView(picked);
-						}}
-					>
-						<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
-							<LayoutGrid aria-hidden />
-						</ToggleGroupItem>
-						<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
-							<List aria-hidden />
-						</ToggleGroupItem>
-					</ToggleGroup>
-				</div>
-			</div>
+				</PageTabs>
+			</Tabs>
+			<Inline gap="condensed" wrap justify="end" paddingX="wide" paddingY="condensed" shrink={false}>
+				<Input
+					type="search"
+					size="sm"
+					aria-label={t("library.search")}
+					value={searchText}
+					placeholder={t("library.search")}
+					onChange={(event) => setSearchText(event.target.value)}
+				/>
+				<Select
+					value={used}
+					items={usedOptions(t)}
+					onValueChange={(value) => value && update({ used: value as typeof used })}
+				>
+					<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{usedOptions(t).map((option) => (
+							<SelectItem key={option.value} value={option.value}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<DateRangePicker
+					label={t("library.uploadedDate")}
+					from={uploadedFrom}
+					to={uploadedTo}
+					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
+				/>
+				<ToggleGroup
+					aria-label={t("library.view")}
+					variant="outline"
+					size="sm"
+					spacing={0}
+					value={[view]}
+					onValueChange={(next: unknown[]) => {
+						const picked = next[0];
+						if (picked === "grid" || picked === "list") setView(picked);
+					}}
+				>
+					<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
+						<LayoutGrid aria-hidden />
+					</ToggleGroupItem>
+					<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
+						<List aria-hidden />
+					</ToggleGroupItem>
+				</ToggleGroup>
+			</Inline>
 
-			<div className="relative flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-					<div
-						className={cn(
-							"flex min-h-0 flex-1 flex-col overflow-y-auto",
-							(items.length === 0 && !hasFolders) || view === "grid" ? "px-wide py-comfortable" : "p-0",
-						)}
+			<Stack as="div" direction="row" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+				<Stack gap="none" grow minWidth={0} overflow="hidden">
+					{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
+					<Stack
+						gap="none"
+						grow
+						minHeight={0}
+						overflow="y"
+						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? "wide" : "none"}
+						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : "none"}
 					>
 						{loadError && (
-							<LoadErrorAlert
-								message={loadError}
-								onRetry={() => void mediaQuery.refetch()}
-								className={(items.length === 0 && !hasFolders) || view === "grid" ? "mb-comfortable" : "m-comfortable"}
-							/>
+							<Box
+								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : "comfortable"}
+								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : undefined}
+							>
+								<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
+							</Box>
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
+								// design-system: needs Grid columns 2/3/4/6 by screen width
 								<ul
 									aria-hidden
 									className="grid grid-cols-2 gap-comfortable sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
@@ -575,7 +579,7 @@ export function MediaLibrary() {
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>
-											<Skeleton className="aspect-square w-full rounded-md" />
+											<Skeleton shape="block" />
 										</li>
 									))}
 								</ul>
@@ -603,8 +607,8 @@ export function MediaLibrary() {
 						) : (
 							<MediaTable {...viewProps} />
 						)}
-						<ActionContextMenu actions={blankMenu} trigger={<div className="min-h-16 flex-1" aria-hidden />} />
-					</div>
+						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY="spacious" aria-hidden />} />
+					</Stack>
 					<ListPagination
 						total={total}
 						shown={items.length}
@@ -615,7 +619,7 @@ export function MediaLibrary() {
 						hidePagerWhenSingle
 						showRange={total > pageSize}
 					/>
-				</div>
+				</Stack>
 
 				{selected && (
 					<DockedPanel resize={MEDIA_PANEL_RESIZE}>
@@ -632,7 +636,7 @@ export function MediaLibrary() {
 						/>
 					</DockedPanel>
 				)}
-			</div>
+			</Stack>
 			{dialog}
 			{guardDialog}
 			{folderActions.dialogs}

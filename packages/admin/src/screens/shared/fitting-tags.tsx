@@ -1,10 +1,12 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Text } from "@monti-cms/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages";
 
 const GAP = 4;
+// design-system: needs a measured chip-list part (chips that fit their cell, with a +N rest); it reads the width of its own elements, so it keeps raw elements
 const CHIP = "shrink-0 rounded-sm border border-monti-muted px-condensed py-px text-monti-caption text-monti-muted";
 
 /**
@@ -52,6 +54,7 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 
 	const hidden = tags.length - shown;
 	return (
+		// design-system: needs a measured chip-list part (see CHIP)
 		<span
 			ref={boxRef}
 			className="relative flex min-w-0 items-center gap-tight overflow-hidden whitespace-nowrap"
@@ -63,18 +66,19 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 				</span>
 			))}
 			{hidden > 0 && (
-				<span className="shrink-0 text-monti-caption text-monti-muted">
+				<Text variant="caption" tone="muted">
 					<span aria-hidden>+{hidden}</span>
-					<span className="sr-only">{t("tags.more", { count: hidden })}</span>
-				</span>
+					<Text srOnly>{t("tags.more", { count: hidden })}</Text>
+				</Text>
 			)}
+			{/* design-system: needs a measured chip-list part (see CHIP) */}
 			<span ref={measureRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 flex gap-tight">
 				{tags.map((tag) => (
 					<span key={tag.id} className={CHIP}>
 						{tag.title}
 					</span>
 				))}
-				<span className="text-monti-caption">+{tags.length}</span>
+				<Text variant="caption">+{tags.length}</Text>
 			</span>
 		</span>
 	);

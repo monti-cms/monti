@@ -3,6 +3,7 @@
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Badge,
 	Button,
 	cn,
 	DropdownMenu,
@@ -10,11 +11,16 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	IconButton,
+	Inline,
 	Popover,
 	PopoverContent,
+	Spinner,
+	Stack,
+	Text,
+	TextLink,
 } from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
-import { CircleAlert, EyeOff, Info, Loader2, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
+import { CircleAlert, EyeOff, Info, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { useIconByName } from "../../screens/shared/collection-icon";
@@ -31,6 +37,7 @@ const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; clas
 
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
 	const { icon: Icon, className } = SEVERITY_ICON[severity];
+	// design-system: needs an Icon part (size and tone for an icon outside a button)
 	return <Icon aria-hidden className={cn("size-4 shrink-0", className)} />;
 }
 
@@ -49,7 +56,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={() => void controller.run(checker.id)}
 		>
-			{running ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <Icon aria-hidden className="size-4" />}
+			{running ? <Spinner /> : <Icon aria-hidden />}
 		</IconButton>
 	);
 }
@@ -60,7 +67,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 	const { issues } = controller;
 	const count = issues.length;
 	return (
-		<div className="flex items-center gap-hair">
+		<Inline gap="hair">
 			{controller.checkers.map((checker) => (
 				<CheckerButton key={checker.id} checker={checker} controller={controller} />
 			))}
@@ -70,30 +77,31 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						label={t("results")}
 						side="bottom"
 						size="sm"
-						className="h-8 min-w-8 px-condensed"
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<span className="tabular rounded-sm bg-monti-neutral px-condensed font-medium text-monti-caption">
-							{count > 99 ? "99+" : count}
-						</span>
+						<Badge variant="secondary">{count > 99 ? "99+" : count}</Badge>
 					</IconButton>
-					<DropdownMenuContent align="end" className="max-h-80 w-72 overflow-y-auto">
+					<DropdownMenuContent align="end" width="lg">
 						{issues.map((issue) => (
-							<DropdownMenuItem key={issue.key} className="items-start" onClick={() => controller.jump(issue)}>
+							<DropdownMenuItem key={issue.key} onClick={() => controller.jump(issue)}>
 								<SeverityIcon severity={issue.severity} />
-								<span className="flex min-w-0 flex-1 flex-col">
-									<span className="truncate font-medium">{issue.text.trim() || issue.message}</span>
+								<Stack as="span" gap="none" minWidth={0} grow>
+									<Text weight="medium" truncate>
+										{issue.text.trim() || issue.message}
+									</Text>
 									{issue.message && (
-										<span className="truncate text-monti-caption text-monti-muted">{issue.message}</span>
+										<Text variant="caption" tone="muted" truncate>
+											{issue.message}
+										</Text>
 									)}
-								</span>
+								</Stack>
 							</DropdownMenuItem>
 						))}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			)}
-		</div>
+		</Inline>
 	);
 }
 
@@ -138,7 +146,8 @@ export function TextIssuePopover({ controller }: { controller: TextCheckControll
 				initialFocus={open?.focus ?? false}
 				finalFocus={() => (returnFocusRef.current ? (editor.view.dom as HTMLElement) : false)}
 				aria-label={t("results")}
-				className="w-72 gap-normal p-normal"
+				width="md"
+				scroll
 			>
 				{issue && <IssueCard controller={controller} issue={issue} />}
 			</PopoverContent>
@@ -153,12 +162,12 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 	const editable = controller.editor.isEditable;
 	return (
 		<>
-			<div className="flex items-start gap-condensed">
+			<Inline align="start" gap="condensed">
 				<SeverityIcon severity={issue.severity} />
-				<p className="min-w-0 flex-1 text-monti-body">{issue.message || issue.text}</p>
-			</div>
+				<Text as="p">{issue.message || issue.text}</Text>
+			</Inline>
 			{issue.suggestions.length > 0 && (
-				<div className="flex flex-wrap gap-tight">
+				<Inline wrap gap="tight">
 					{issue.suggestions.slice(0, 6).map((suggestion) => (
 						<Button
 							key={suggestion}
@@ -166,33 +175,29 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 							variant="outline"
 							size="sm"
 							disabled={!editable}
-							className="max-w-full"
 							onClick={() => controller.apply(issue, suggestion)}
 						>
-							<span className="truncate">{suggestion || tc("delete")}</span>
+							{suggestion || tc("delete")}
 						</Button>
 					))}
-				</div>
+				</Inline>
 			)}
-			<div className="flex items-center gap-condensed">
-				<span className="min-w-0 flex-1 truncate text-monti-caption text-monti-muted">
-					{checker?.label ?? issue.source}
-				</span>
+			<Inline gap="condensed">
+				<Inline grow minWidth={0}>
+					<Text variant="caption" tone="muted" truncate>
+						{checker?.label ?? issue.source}
+					</Text>
+				</Inline>
 				{issue.url && (
-					<a
-						href={issue.url}
-						target="_blank"
-						rel="noreferrer noopener"
-						className="text-monti-accent text-monti-caption underline underline-offset-2"
-					>
+					<TextLink href={issue.url} target="_blank" rel="noreferrer noopener" tone="accent" size="caption">
 						{t("explain")}
-					</a>
+					</TextLink>
 				)}
 				<Button type="button" variant="ghost" size="sm" onClick={() => controller.ignore(issue)}>
-					<EyeOff aria-hidden className="size-4" />
+					<EyeOff aria-hidden />
 					{t("ignore")}
 				</Button>
-			</div>
+			</Inline>
 		</>
 	);
 }

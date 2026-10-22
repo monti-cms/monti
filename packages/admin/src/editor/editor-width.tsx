@@ -79,13 +79,12 @@ export function EditorWidthMenu({
 			<IconButton
 				label={t("editorWidth.label")}
 				side="bottom"
-				className="text-monti-muted"
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<MoveHorizontal aria-hidden className="size-4" />
+				<MoveHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" className="min-w-36">
+			<DropdownMenuContent align="end" width="sm">
 				<DropdownMenuRadioGroup
 					aria-label={t("editorWidth.label")}
 					value={value.key}

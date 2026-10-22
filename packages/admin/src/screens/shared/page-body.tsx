@@ -1,4 +1,4 @@
-import { cn } from "@monti-cms/ui";
+import { cn, Stack } from "@monti-cms/ui/internal";
 import type { ComponentProps } from "react";
 import { PAGE_MAX_WIDTH } from "./layout";
 
@@ -9,9 +9,12 @@ import { PAGE_MAX_WIDTH } from "./layout";
  */
 export function PageBody({ className, wide, ...props }: ComponentProps<"div"> & { wide?: boolean }) {
 	return (
-		<div
+		<Stack
+			gap="spacious"
+			width="full"
+			// design-system: needs a page-width option on Stack (the form-like page's 1160px maximum) and responsive page padding
 			className={cn(
-				"flex w-full flex-col gap-spacious px-comfortable py-spacious lg:px-wide lg:py-wide",
+				"px-comfortable py-spacious lg:px-wide lg:py-wide",
 				wide ? "max-w-none" : PAGE_MAX_WIDTH,
 				className,
 			)}

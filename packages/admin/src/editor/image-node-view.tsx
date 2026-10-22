@@ -2,7 +2,7 @@
 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Input, Separator, Skeleton, Switch, Textarea } from "@monti-cms/ui";
+import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Switch, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
@@ -241,6 +241,8 @@ export function ImageBlockView() {
 	// TipTap v3 requires the first child of a node view to have `data-node-view-wrapper`.
 	// `NodeViewWrapper` adds that attribute, and omitting it crashes at runtime with "Please use the NodeViewWrapper
 	// component for your node view" (seen in posts that contain images).
+	// design-system: drawing — the image block lives inside the document: its frame, the image with its crop and width, the caption written in place
+	// and the resize handles are drawn here, not laid out from components
 	return (
 		<BlockFrame
 			as="figure"
@@ -266,7 +268,7 @@ export function ImageBlockView() {
 							<tool.icon aria-hidden />
 						</ToolbarButton>
 					))}
-					<Separator orientation="vertical" className="mx-hair monti-vertical:h-4" />
+					<Separator orientation="vertical" />
 					<BlockSettings open={isEditing} onOpenChange={setIsEditing}>
 						<BlockSettingsField label={t("imageNode.width")} htmlFor={widthInputId}>
 							<Input
@@ -280,7 +282,7 @@ export function ImageBlockView() {
 										block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
 									}
 								}}
-								className="h-7 text-monti-caption"
+								size="sm"
 								placeholder={t("imageNode.widthPlaceholder")}
 							/>
 							{widthInvalid && <FormFieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FormFieldError>}
@@ -298,13 +300,15 @@ export function ImageBlockView() {
 								aria-invalid={altMissing || undefined}
 								aria-describedby={altMissing ? altErrorId : undefined}
 								onChange={(e) => block.setValues({ alt: e.target.value })}
-								className="min-h-0 text-monti-caption md:text-monti-caption"
+								size="sm"
 							/>
 							{altMissing && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
-						<label htmlFor={decorativeId} className="flex items-center justify-between gap-condensed">
-							<span className="text-monti-muted">{t("imageDialog.decorative")}</span>
+						<Inline justify="between" gap="condensed">
+							<Label htmlFor={decorativeId} size="caption" tone="muted">
+								{t("imageDialog.decorative")}
+							</Label>
 							<Switch
 								id={decorativeId}
 								size="sm"
@@ -313,7 +317,7 @@ export function ImageBlockView() {
 									block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })
 								}
 							/>
-						</label>
+						</Inline>
 					</BlockSettings>
 					{canRender && (
 						<ToolbarButton label={t("imageCrop.title")} onClick={() => setIsCropDialogOpen(true)}>
@@ -364,7 +368,7 @@ export function ImageBlockView() {
 					</div>
 				)
 			) : isChecking ? (
-				<Skeleton role="status" aria-label={t("imageNode.loading")} className="h-48 w-full rounded-md" />
+				<Skeleton role="status" aria-label={t("imageNode.loading")} shape="block" />
 			) : (
 				<div className="flex h-48 w-full items-center justify-center rounded-md bg-monti-neutral text-monti-body text-monti-muted">
 					{t("imageNode.unavailable")}
@@ -378,7 +382,8 @@ export function ImageBlockView() {
 			<figcaption className={cn("mt-condensed flex items-center gap-tight", captionAlignClass)}>
 				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
 				<div className="relative w-full">
-					<Input
+					{/* design-system: needs a borderless Input (a caption written in place, without box) */}
+					<input
 						type="text"
 						value={caption || ""}
 						placeholder={generating && !caption ? "" : t("imageDialog.caption")}

@@ -1,7 +1,7 @@
 "use client";
 
 import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Sheet, SheetContent, SheetTitle } from "@monti-cms/ui";
+import { Sheet, SheetContent, SheetTitle, Text } from "@monti-cms/ui";
 import { useCallback, useRef, useState } from "react";
 import { useResizableSheet } from "../../ui/panel-resize";
 import { RecordPanel } from "../record-panel";
@@ -60,13 +60,12 @@ export function useRecordCreator() {
 					if (!open) void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
 				}}
 			>
-				<SheetContent showCloseButton={false} resizable={panel} className="gap-0 p-0">
-					<SheetTitle className="sr-only">{t("record.add")}</SheetTitle>
+				<SheetContent showCloseButton={false} resizable={panel}>
+					<SheetTitle render={<Text as="div" srOnly />}>{t("record.add")}</SheetTitle>
 					{request && (
 						<RecordPanel
 							target={{ collection: request.collection, id: null }}
 							initial={request.initial}
-							className="border-l-0"
 							onDirtyChange={(dirty) => {
 								dirtyRef.current = dirty;
 							}}

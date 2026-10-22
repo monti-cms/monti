@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { cn, Inline, Stack, Text } from "@monti-cms/ui";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -21,7 +21,7 @@ interface SlashMenuPopupProps {
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
 	const Icon = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
-	return <Icon aria-hidden className="size-4" />;
+	return <Icon aria-hidden />;
 }
 
 /**
@@ -46,6 +46,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 	if (!mounted || items.length === 0) return null;
 
 	return createPortal(
+		// design-system: drawing — a list floating at the caret (fixed coordinates, z-index, scrolls the highlighted row into view); needs a floating list part
 		<div
 			ref={listRef}
 			role="listbox"
@@ -72,18 +73,31 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 					onKeyDown={(event) => {
 						if (event.key === "Enter") onSelect(item);
 					}}
+					// design-system: needs a selectable list option (highlighted row, hover) for a listbox
 					className={cn(
 						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
 					)}
 				>
-					<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-page text-monti-muted">
+					<Inline
+						as="span"
+						justify="center"
+						padding="condensed"
+						border="all"
+						radius="md"
+						background="page"
+						shrink={false}
+					>
 						<ItemIcon icon={item.icon} />
-					</span>
-					<span className="min-w-0">
-						<span className="block truncate font-medium text-monti-body">{item.title}</span>
-						<span className="block truncate text-monti-caption text-monti-muted">{item.description}</span>
-					</span>
+					</Inline>
+					<Stack as="span" gap="none" minWidth={0}>
+						<Text weight="medium" truncate>
+							{item.title}
+						</Text>
+						<Text variant="caption" tone="muted" truncate>
+							{item.description}
+						</Text>
+					</Stack>
 				</div>
 			))}
 		</div>,

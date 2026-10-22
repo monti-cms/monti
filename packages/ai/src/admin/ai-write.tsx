@@ -13,6 +13,7 @@ import {
 } from "@monti-cms/admin";
 import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import {
+	Box,
 	Button,
 	commonMessages,
 	Dialog,
@@ -22,7 +23,11 @@ import {
 	DialogTitle,
 	ErrorNoticeView,
 	FormFieldError,
+	Grid,
+	Heading,
+	Inline,
 	isComposingKey,
+	Stack,
 	Tabs,
 	TabsList,
 	TabsTrigger,
@@ -30,7 +35,7 @@ import {
 } from "@monti-cms/admin/kit";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
 import { streamAiAction, useAiActions } from "./ai-slot-provider";
@@ -195,16 +200,19 @@ function WriteDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="gap-comfortable sm:max-w-3xl">
+			<DialogContent size="xl">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-condensed">
-						<Sparkles aria-hidden className="size-4" />
-						{action.label}
+					<DialogTitle>
+						<Inline gap="condensed">
+							<Sparkles aria-hidden />
+							{action.label}
+						</Inline>
 					</DialogTitle>
 				</DialogHeader>
 				{askRequest && (
-					<form
-						className="space-y-condensed"
+					<Stack
+						as="form"
+						gap="condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (!running) void run();
@@ -223,36 +231,32 @@ function WriteDialog({
 								}
 							}}
 							placeholder={job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request")}
-							className="max-h-48 min-h-20 resize-y text-monti-body"
 							autoFocus={!fixed}
 						/>
-						<div className="flex justify-end">
+						<Inline justify="end">
 							<Button type="submit" size="sm" disabled={running}>
 								{state.status === "idle" ? <Sparkles aria-hidden /> : <RefreshCw aria-hidden />}
 								{running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")}
 							</Button>
-						</div>
-					</form>
+						</Inline>
+					</Stack>
 				)}
 				{showResult && (
-					<Tabs
-						value={view}
-						onValueChange={(value) => setView(value as "preview" | "source")}
-						className="min-w-0 gap-condensed"
-					>
+					<Tabs value={view} onValueChange={(value) => setView(value as "preview" | "source")}>
 						<TabsList>
 							<TabsTrigger value="preview">{t("preview")}</TabsTrigger>
 							<TabsTrigger value="source">{job.mode === "insert" ? t("sourceInsert") : t("sourceChanges")}</TabsTrigger>
 						</TabsList>
-						<output aria-live="polite" className="block min-w-0">
+						<Box minWidth={0} role="status" aria-live="polite">
 							{view === "preview" ? (
 								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
+								// design-system: needs a preformatted text part (wrapped mono text with a max height)
 								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-inset p-normal font-mono text-monti-caption">
 									{diff ? <DiffText parts={diff} /> : result || t("running")}
 								</pre>
 							)}
-						</output>
+						</Box>
 					</Tabs>
 				)}
 				{state.status === "error" ? (
@@ -261,30 +265,27 @@ function WriteDialog({
 					blockProblem && <FormFieldError>{blockProblem}</FormFieldError>
 				)}
 				<DialogFooter>
-					{!askRequest && (
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							className="sm:mr-auto"
-							disabled={running}
-							onClick={() => void run()}
-						>
-							<RefreshCw aria-hidden />
-							{running ? t("running") : t("runAgain")}
-						</Button>
-					)}
-					<Button type="button" variant="outline" size="sm" onClick={onClose}>
-						{tc("cancel")}
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						disabled={state.status !== "done" || !state.text || !!blockProblem}
-						onClick={apply}
-					>
-						{job.mode === "insert" ? t("insert") : t("replace")}
-					</Button>
+					<Inline gap="condensed" justify={askRequest ? "end" : "between"} width="full">
+						{!askRequest && (
+							<Button type="button" variant="ghost" size="sm" disabled={running} onClick={() => void run()}>
+								<RefreshCw aria-hidden />
+								{running ? t("running") : t("runAgain")}
+							</Button>
+						)}
+						<Inline gap="condensed">
+							<Button type="button" variant="outline" size="sm" onClick={onClose}>
+								{tc("cancel")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								disabled={state.status !== "done" || !state.text || !!blockProblem}
+								onClick={apply}
+							>
+								{job.mode === "insert" ? t("insert") : t("replace")}
+							</Button>
+						</Inline>
+					</Inline>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
@@ -298,11 +299,13 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
+			// design-system: needs a diff mark part (removed / added text in danger / success colors)
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<del key={index} className="bg-monti-danger-muted text-monti-danger line-through">
 				{part.text}
 			</del>
 		) : (
+			// design-system: needs a diff mark part (removed / added text in danger / success colors)
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
 			<ins key={index} className="bg-monti-success-muted text-monti-success no-underline">
 				{part.text}
@@ -311,7 +314,15 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 	);
 }
 
-const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-inset p-normal";
+/** The inset box a rendered text sits in. */
+function ResultPanel({ children }: { children: ReactNode }) {
+	// design-system: needs a height limit for a scrolling box (max 50vh, min 12rem)
+	return (
+		<Box overflow="y" radius="md" background="inset" padding="normal">
+			{children}
+		</Box>
+	);
+}
 
 /** A text as the rendered post. A text the format cannot read is shown as it is. */
 function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
@@ -319,6 +330,7 @@ function TextPreview({ format, text, label }: { format: BrowserFormat; text: str
 	return doc ? (
 		<DocPreview doc={doc} label={label} />
 	) : (
+		// design-system: needs a preformatted text part (wrapped mono text)
 		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text}</pre>
 	);
 }
@@ -332,22 +344,27 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	const after = done ? (
 		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
+		// design-system: needs a preformatted text part (wrapped mono text)
 		<pre className="whitespace-pre-wrap font-mono text-monti-caption text-monti-muted">{text || t("running")}</pre>
 	);
-	if (job.mode === "insert") return <div className={PANEL}>{after}</div>;
+	if (job.mode === "insert") return <ResultPanel>{after}</ResultPanel>;
 	return (
-		<div className="grid min-w-0 gap-normal sm:grid-cols-2">
-			<section className="min-w-0 space-y-condensed">
-				<h3 className="font-medium text-monti-caption text-monti-muted">{t("now")}</h3>
-				<div className={PANEL}>
+		<Grid columns={2} gap="normal">
+			<Stack as="section" gap="condensed" minWidth={0}>
+				<Heading as="h3" variant="label" tone="muted">
+					{t("now")}
+				</Heading>
+				<ResultPanel>
 					<TextPreview format={format} text={job.source} label={t("now")} />
-				</div>
-			</section>
-			<section className="min-w-0 space-y-condensed">
-				<h3 className="font-medium text-monti-caption text-monti-muted">{t("after")}</h3>
-				<div className={PANEL}>{after}</div>
-			</section>
-		</div>
+				</ResultPanel>
+			</Stack>
+			<Stack as="section" gap="condensed" minWidth={0}>
+				<Heading as="h3" variant="label" tone="muted">
+					{t("after")}
+				</Heading>
+				<ResultPanel>{after}</ResultPanel>
+			</Stack>
+		</Grid>
 	);
 }
 
@@ -394,7 +411,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			usable.selection.map((action) => ({
 				id: `ai:${action.key}`,
 				label: action.label,
-				icon: <Sparkles aria-hidden className="size-4" />,
+				icon: <Sparkles aria-hidden />,
 				run: (current) => {
 					const { from, to } = current.state.selection;
 					if (from === to || !format) return;
@@ -434,7 +451,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				return {
 					id: `ai:${action.key}`,
 					label: action.label,
-					icon: <Sparkles aria-hidden className="size-3.5" />,
+					icon: <Sparkles aria-hidden />,
 					isAvailable: (current, pos) => nodes.has(current.state.doc.nodeAt(pos)?.type.name ?? ""),
 					run: (current, pos) => {
 						const node = current.state.doc.nodeAt(pos);
@@ -463,15 +480,14 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				{empty && editor && firstInsert && (
 					<Button
 						type="button"
-						variant="ghost"
+						variant="quiet"
 						size="sm"
-						className="gap-condensed text-monti-muted"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });
 						}}
 					>
-						<Sparkles aria-hidden className="size-4" />
+						<Sparkles aria-hidden />
 						{firstInsert.label}
 					</Button>
 				)}

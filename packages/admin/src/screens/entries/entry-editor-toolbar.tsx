@@ -32,11 +32,10 @@ export function ToolbarToggle({
 						pressed={pressed}
 						disabled={disabled}
 						onPressedChange={onPressedChange}
-						className="gap-condensed text-monti-muted aria-pressed:text-monti-default"
 					/>
 				}
 			>
-				<Icon aria-hidden className="size-4" />
+				<Icon aria-hidden />
 				{text}
 			</TooltipTrigger>
 			<TooltipContent side="bottom">{label}</TooltipContent>

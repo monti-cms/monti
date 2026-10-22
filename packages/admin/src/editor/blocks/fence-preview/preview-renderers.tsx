@@ -6,6 +6,7 @@ import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffec
 import { useAdminComponents } from "../../../admin-components";
 import { blocksMessages } from "../messages";
 
+// design-system: drawing — these draw the rendered preview (a diagram, a formula) inside the document, in the block's own look
 interface ErrorBoundaryProps {
 	children: ReactNode;
 	fallback?: (error: Error) => ReactNode;

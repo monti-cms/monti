@@ -1,7 +1,7 @@
 "use client";
 
 import { type FieldInputParts, type FieldInputProps, type Site, useSite } from "@monti-cms/admin";
-import { cn, Switch } from "@monti-cms/admin/kit";
+import { Switch, Text } from "@monti-cms/admin/kit";
 import { SUMMARY_ROLE } from "@monti-cms/core";
 import { SEO_DEFAULT_LIMITS } from "../fields";
 
@@ -17,9 +17,9 @@ const current = (props: FieldInputProps) => (typeof props.value === "string" ? p
 /** Character count. Changes color when it exceeds the recommended length. When empty, it is the length of the fallback value. */
 function Counter({ length, limit }: { length: number; limit: number }) {
 	return (
-		<span className={cn("text-monti-micro text-monti-muted tabular-nums", length > limit && "text-monti-warning")}>
+		<Text variant="micro" tone={length > limit ? "warning" : "muted"}>
 			{length}/{limit}
-		</span>
+		</Text>
 	);
 }
 

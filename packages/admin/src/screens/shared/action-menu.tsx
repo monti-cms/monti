@@ -24,8 +24,8 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-	IconButton,
 } from "@monti-cms/ui";
+import { IconButton as OpenIconButton } from "@monti-cms/ui/internal";
 import { type LucideIcon, MoreHorizontal } from "lucide-react";
 import { cloneElement, type ReactElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
@@ -82,7 +82,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 							{action.icon && <action.icon aria-hidden />}
 							{action.label}
 						</ContextMenuSubTrigger>
-						<ContextMenuSubContent className="max-h-80 overflow-y-auto">
+						<ContextMenuSubContent>
 							{action.items.length === 0 ? (
 								<ContextMenuItem disabled>{action.emptyLabel ?? t("menu.empty")}</ContextMenuItem>
 							) : (
@@ -130,7 +130,7 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 							{action.icon && <action.icon aria-hidden />}
 							{action.label}
 						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+						<DropdownMenuSubContent>
 							{action.items.length === 0 ? (
 								<DropdownMenuItem disabled>{action.emptyLabel ?? t("menu.empty")}</DropdownMenuItem>
 							) : (
@@ -180,10 +180,9 @@ export function ActionContextMenu({
 	if (!hydrated) return cloneElement(trigger, undefined, children);
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
-			<ContextMenuTrigger render={trigger} className="select-auto">
-				{children}
-			</ContextMenuTrigger>
-			<ContextMenuContent className="min-w-48">
+			<ContextMenuTrigger render={trigger}>{children}</ContextMenuTrigger>
+			{/* design-system: needs a width option on ContextMenuContent (min width 192px, as DropdownMenuContent width="md") */}
+			<ContextMenuContent>
 				<ContextItems actions={items} />
 			</ContextMenuContent>
 		</ContextMenu>
@@ -199,16 +198,18 @@ export function MoreActionsButton({
 	actions: MenuAction[];
 	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
+	/** @deprecated Only the sidebar's folder tree still sets it (a button shown on row hover). */
 	className?: string;
 }) {
 	const items = tidy(actions);
 	if (items.length === 0) return null;
 	return (
 		<DropdownMenu>
-			<IconButton label={label} className={className} trigger={(button) => <DropdownMenuTrigger render={button} />}>
+			{/* transitional: className kept for the sidebar's folder tree, which has no part for a button shown on row hover */}
+			<OpenIconButton label={label} className={className} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				<MoreHorizontal aria-hidden />
-			</IconButton>
-			<DropdownMenuContent align="end" className="min-w-48">
+			</OpenIconButton>
+			<DropdownMenuContent align="end" width="md">
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>
 		</DropdownMenu>

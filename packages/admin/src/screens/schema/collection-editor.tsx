@@ -1,11 +1,26 @@
 "use client";
 
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Checkbox, Label, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import {
+	Box,
+	Button,
+	Checkbox,
+	Grid,
+	Heading,
+	Inline,
+	Label,
+	Stack,
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+	Text,
+} from "@monti-cms/ui";
 import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
+import { PAGE_MAX_WIDTH } from "../shared/layout";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {
@@ -75,8 +90,11 @@ function LimitList<T extends string | number>({
 	onChange,
 	nameOf,
 	revert,
+	divided,
 }: {
 	label: string;
+	/** A hairline above the list, when it follows another one. */
+	divided?: boolean;
 	/** Puts the saved list back; given only while the list differs from the saved file. */
 	revert?: () => void;
 	all: readonly T[];
@@ -91,14 +109,19 @@ function LimitList<T extends string | number>({
 	const allAllowed = allowedCount === all.length;
 	const someAllowed = allowedCount > 0 && !allAllowed;
 	return (
-		<fieldset className="flex flex-col gap-normal border-t pt-spacious first:border-t-0 first:pt-0">
-			<legend className="sr-only">{label}</legend>
-			<div className="flex items-center justify-between">
-				<span className="flex items-center gap-condensed font-medium text-monti-body">
-					{label}
+		<Stack
+			role="group"
+			aria-label={label}
+			gap="normal"
+			border={divided ? "top" : undefined}
+			paddingTop={divided ? "spacious" : undefined}
+		>
+			<Inline justify="between">
+				<Inline as="span" gap="condensed">
+					<Text weight="medium">{label}</Text>
 					{revert && <RevertMark name={label} onRevert={revert} />}
-				</span>
-				<div className="flex items-center gap-condensed">
+				</Inline>
+				<Inline gap="condensed">
 					<Checkbox
 						id={allId}
 						checked={allAllowed}
@@ -106,17 +129,17 @@ function LimitList<T extends string | number>({
 						disabled={disabled}
 						onCheckedChange={(on) => onChange(on === true ? undefined : [])}
 					/>
-					<Label htmlFor={allId} className="cursor-pointer text-monti-body text-monti-muted">
+					<Label htmlFor={allId} size="body" tone="muted">
 						{t("allowed.all")}
 					</Label>
-				</div>
-			</div>
-			<ul className="grid grid-cols-2 gap-x-normal gap-y-condensed sm:grid-cols-3">
+				</Inline>
+			</Inline>
+			<Grid as="ul" columns={3} gap="condensed">
 				{all.map((item) => {
 					const id = `allowed-${label}-${item}`;
 					const checked = value === undefined || value.includes(item);
 					return (
-						<li key={String(item)} className="flex items-center gap-condensed">
+						<Inline as="li" key={String(item)} gap="condensed">
 							<Checkbox
 								id={id}
 								checked={checked}
@@ -130,14 +153,14 @@ function LimitList<T extends string | number>({
 									onChange(nextList.length === all.length ? undefined : nextList);
 								}}
 							/>
-							<Label htmlFor={id} title={String(item)} className="text-monti-body">
+							<Label htmlFor={id} size="body" title={String(item)}>
 								{nameOf ? nameOf(item) : String(item)}
 							</Label>
-						</li>
+						</Inline>
 					);
 				})}
-			</ul>
-		</fieldset>
+			</Grid>
+		</Stack>
 	);
 }
 
@@ -187,6 +210,7 @@ function AllowedEditor({
 			<LimitList
 				label={t("allowed.marks")}
 				all={vocabulary.marks}
+				divided
 				nameOf={nameLabel}
 				value={allowed.marks}
 				revert={revertOf("marks")}
@@ -195,6 +219,7 @@ function AllowedEditor({
 			<LimitList
 				label={t("allowed.blocks")}
 				all={vocabulary.blocks}
+				divided
 				nameOf={nameLabel}
 				value={allowed.blocks}
 				revert={revertOf("blocks")}
@@ -261,24 +286,22 @@ export function CollectionEditor({
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<div className="flex min-w-0 flex-col gap-spacious" data-testid={`collection-${name}`}>
+		<Stack gap="spacious" minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs
-				value={tab}
-				onValueChange={(value) => typeof value === "string" && onSection(value)}
-				className="gap-spacious"
-			>
-				<div className="flex flex-col items-start gap-normal">
-					<div className="min-w-0">
-						<div className="flex items-baseline gap-condensed">
-							<h3 className="text-monti-title">{label}</h3>
-							<code className="text-monti-caption text-monti-muted">{name}</code>
-						</div>
-						<p className="mt-tight text-monti-body text-monti-muted">
+			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
+				<Stack gap="normal" align="start">
+					<Box minWidth={0}>
+						<Inline align="baseline" gap="condensed">
+							<Heading as="h3">{label}</Heading>
+							<Text as="code" variant="caption" tone="muted">
+								{name}
+							</Text>
+						</Inline>
+						<Text as="p" tone="muted">
 							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
-						</p>
-					</div>
-					<TabsList className="w-fit justify-start">
+						</Text>
+					</Box>
+					<TabsList>
 						<TabsTrigger value="basics">
 							{t("collection.tabs.basics")}
 							{changes?.basics && <ChangeDot />}
@@ -294,96 +317,104 @@ export function CollectionEditor({
 							</TabsTrigger>
 						)}
 					</TabsList>
-				</div>
-				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-section">
-					<Section band title={t("collection.basicsTitle")}>
-						<TextInput
-							label={t("collection.label")}
-							revert={revert("label")}
-							value={collection.label as string | undefined}
-							onChange={(value) => set("label", value)}
-						/>
-						<Pick
-							label={t("collection.kind")}
-							revert={
-								savedCollection && savedCollection.kind !== collection.kind
-									? () => changeKind(String(savedCollection.kind))
-									: undefined
-							}
-							value={String(collection.kind)}
-							items={[
-								{ value: "document", label: ts("collection.kindDocument") },
-								{ value: "item", label: ts("collection.kindItem") },
-							]}
-							onChange={changeKind}
-						/>
-						<IconPicker
-							label={t("collection.icon")}
-							revert={revert("icon")}
-							value={typeof collection.icon === "string" ? collection.icon : undefined}
-							kind={typeof collection.kind === "string" ? collection.kind : undefined}
-							onChange={(value) => set("icon", value)}
-						/>
-					</Section>
-					<Section band title={t("collection.featuresTitle")}>
-						<FlagSwitch
-							label={t("collection.folders")}
-							revert={revert("folders")}
-							checked={
-								typeof collection.folders === "boolean"
-									? collection.folders
-									: kindDefaults(collection.kind as CollectionKind | undefined).folders
-							}
-							onChange={(on) => {
-								const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
-								set("folders", isDefault ? undefined : on);
-							}}
-						/>
-						<PublicPathField
-							revert={
-								savedCollection && !sameJson(savedCollection.path, collection.path)
-									? () =>
-											onChange((current) =>
-												withPublicPath(
-													current,
-													typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
-													localesOf(file).length > 1,
-												),
-											)
-									: undefined
-							}
-							path={typeof collection.path === "string" ? collection.path : ""}
-							suggested={defaultPath(name)}
-							onChange={(value) =>
-								onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
-							}
-						/>
-					</Section>
-					<Section band title={t("collection.dangerTitle")} card={false}>
-						<div className="flex justify-end">
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={disabled}
-								className="border-monti-danger-muted text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger"
-								onClick={onRemove}
-							>
-								<Trash2 aria-hidden />
-								{ts("collection.remove")}
-							</Button>
-						</div>
-					</Section>
+				</Stack>
+				<TabsContent value="basics">
+					{/* design-system: needs a page-width option on Stack (the 1160px maximum of a form-like page) */}
+					<div className={PAGE_MAX_WIDTH}>
+						<Stack gap="section">
+							<Section band title={t("collection.basicsTitle")}>
+								<TextInput
+									label={t("collection.label")}
+									revert={revert("label")}
+									value={collection.label as string | undefined}
+									onChange={(value) => set("label", value)}
+								/>
+								<Pick
+									label={t("collection.kind")}
+									revert={
+										savedCollection && savedCollection.kind !== collection.kind
+											? () => changeKind(String(savedCollection.kind))
+											: undefined
+									}
+									value={String(collection.kind)}
+									items={[
+										{ value: "document", label: ts("collection.kindDocument") },
+										{ value: "item", label: ts("collection.kindItem") },
+									]}
+									onChange={changeKind}
+								/>
+								<IconPicker
+									label={t("collection.icon")}
+									revert={revert("icon")}
+									value={typeof collection.icon === "string" ? collection.icon : undefined}
+									kind={typeof collection.kind === "string" ? collection.kind : undefined}
+									onChange={(value) => set("icon", value)}
+								/>
+							</Section>
+							<Section band title={t("collection.featuresTitle")}>
+								<FlagSwitch
+									label={t("collection.folders")}
+									revert={revert("folders")}
+									checked={
+										typeof collection.folders === "boolean"
+											? collection.folders
+											: kindDefaults(collection.kind as CollectionKind | undefined).folders
+									}
+									onChange={(on) => {
+										const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
+										set("folders", isDefault ? undefined : on);
+									}}
+								/>
+								<PublicPathField
+									revert={
+										savedCollection && !sameJson(savedCollection.path, collection.path)
+											? () =>
+													onChange((current) =>
+														withPublicPath(
+															current,
+															typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
+															localesOf(file).length > 1,
+														),
+													)
+											: undefined
+									}
+									path={typeof collection.path === "string" ? collection.path : ""}
+									suggested={defaultPath(name)}
+									onChange={(value) =>
+										onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+									}
+								/>
+							</Section>
+							<Section band title={t("collection.dangerTitle")} card={false}>
+								<Inline justify="end">
+									<Button
+										type="button"
+										variant="outline"
+										tone="danger"
+										size="sm"
+										disabled={disabled}
+										onClick={onRemove}
+									>
+										<Trash2 aria-hidden />
+										{ts("collection.remove")}
+									</Button>
+								</Inline>
+							</Section>
+						</Stack>
+					</div>
 				</TabsContent>
-				<TabsContent value="fields" className="flex flex-col gap-section">
+				<TabsContent value="fields">
 					<FieldsCard editing={editing} />
 				</TabsContent>
 				{isEditorAvailable && (
-					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-section">
-						<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
+					<TabsContent value="editor">
+						{/* design-system: needs a page-width option on Stack (the 1160px maximum of a form-like page) */}
+						<div className={PAGE_MAX_WIDTH}>
+							<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
+						</div>
 					</TabsContent>
 				)}
 			</Tabs>
-		</div>
+		</Stack>
 	);
 }

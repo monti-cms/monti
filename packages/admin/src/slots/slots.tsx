@@ -2,6 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	cn,
 	DropdownMenu,
@@ -9,7 +10,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	IconButton,
+	Inline,
 	Spinner,
+	Stack,
+	Text,
 	Textarea,
 } from "@monti-cms/ui";
 import { RefreshCw, X, Zap } from "lucide-react";
@@ -43,9 +47,9 @@ export {
 /** Icon used when an action does not provide one. */
 const defaultIcon = <Zap aria-hidden />;
 
-/** Shape of one result candidate. The AI screen's test results use the same shape. */
-export const SLOT_CHIP =
-	"inline-flex max-w-full items-center gap-tight rounded-sm border bg-monti-page px-condensed py-hair";
+/** Shape of one result candidate. */
+// design-system: needs a candidate chip (a pressable pill with a label and a detail)
+const SLOT_CHIP = "inline-flex max-w-full items-center gap-tight rounded-sm border bg-monti-page px-condensed py-hair";
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -62,7 +66,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	const busy = state.status === "running";
 	const first = actions[0];
 	const triggerIcon = busy ? (
-		<Spinner className="size-3" />
+		<Spinner size="sm" />
 	) : actions.length === 1 ? (
 		(first?.icon ?? defaultIcon)
 	) : (
@@ -76,7 +80,6 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 				side="bottom"
 				disabled={disabled}
 				onClick={() => first && start(first.id)}
-				className="text-monti-muted hover:text-monti-default"
 			>
 				{triggerIcon}
 			</IconButton>
@@ -87,7 +90,6 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 					size="icon-xs"
 					side="bottom"
 					disabled={disabled}
-					className="text-monti-muted hover:text-monti-default"
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
 					{triggerIcon}
@@ -106,14 +108,15 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
-			<div
-				className="flex flex-col gap-condensed rounded-md border bg-monti-inset p-condensed text-monti-caption"
-				aria-live="polite"
-			>
-				<div className="flex items-center gap-tight text-monti-muted">
-					<span className="inline-flex shrink-0 items-center [&_svg]:size-3">{state.action.icon ?? defaultIcon}</span>
-					<span className="truncate">{state.action.label}</span>
-					<span className="ml-auto flex items-center">
+			<Stack gap="condensed" padding="condensed" radius="md" border="all" background="inset" aria-live="polite">
+				<Inline gap="tight">
+					<Box as="span" shrink={false}>
+						{state.action.icon ?? defaultIcon}
+					</Box>
+					<Text variant="caption" tone="muted" truncate>
+						{state.action.label}
+					</Text>
+					<Inline as="span" grow justify="end">
 						{state.status !== "running" && state.status !== "asking" && (
 							<IconButton label={t("rerun")} size="icon-xs" onClick={() => void rerun()}>
 								<RefreshCw aria-hidden />
@@ -122,11 +125,12 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 						<IconButton label={tc("close")} size="icon-xs" onClick={cancel}>
 							<X aria-hidden />
 						</IconButton>
-					</span>
-				</div>
+					</Inline>
+				</Inline>
 				{state.action.askInstruction && (
-					<form
-						className="flex flex-col gap-condensed"
+					<Stack
+						as="form"
+						gap="condensed"
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (state.status !== "running") void run(state.action.id);
@@ -149,23 +153,19 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 									if (state.status !== "running") void run(state.action.id);
 								}
 							}}
-							className="min-h-14 resize-y bg-monti-page text-monti-caption md:text-monti-caption"
+							size="sm"
 						/>
-						<Button
-							type="submit"
-							variant="outline"
-							size="xs"
-							className="self-end"
-							disabled={state.status === "running"}
-						>
-							{state.action.icon ?? defaultIcon}
-							{state.status === "running" ? t("running") : t("run")}
-						</Button>
-					</form>
+						<Inline justify="end">
+							<Button type="submit" variant="outline" size="xs" disabled={state.status === "running"}>
+								{state.action.icon ?? defaultIcon}
+								{state.status === "running" ? t("running") : t("run")}
+							</Button>
+						</Inline>
+					</Stack>
 				)}
 				{state.status === "error" && <ErrorNoticeView notice={state.error} />}
 				{state.status === "done" && <SlotResult state={state} onApply={apply} />}
-			</div>
+			</Stack>
 		);
 
 	return { trigger, panel };
@@ -181,11 +181,16 @@ function SlotResult({
 	const t = useTranslator(slotsMessages);
 	const { result, action } = state;
 	if (result.kind === "candidates") {
-		if (result.items.length === 0) return <p className="text-monti-muted">{t("noResults")}</p>;
+		if (result.items.length === 0)
+			return (
+				<Text as="p" tone="muted">
+					{t("noResults")}
+				</Text>
+			);
 		return (
-			<ul className="flex flex-wrap gap-tight">
+			<Inline as="ul" wrap gap="tight">
 				{result.items.map((item) => (
-					<li key={item.value} className="max-w-full">
+					<Box as="li" key={item.value} maxWidth="full">
 						<button
 							type="button"
 							onClick={() => onApply(item.value)}
@@ -195,20 +200,26 @@ function SlotResult({
 							<span className="truncate">{item.label}</span>
 							{item.detail && <span className="shrink-0 text-monti-muted">{item.detail}</span>}
 						</button>
-					</li>
+					</Box>
 				))}
-			</ul>
+			</Inline>
 		);
 	}
 	return (
-		<div className="flex flex-col gap-condensed">
-			<p className="whitespace-pre-wrap rounded-lg border bg-monti-page p-condensed">{result.text}</p>
+		<Stack gap="condensed">
+			<Box padding="condensed" radius="lg" border="all" background="page">
+				<Text as="p" variant="caption" tone="default">
+					{result.text}
+				</Text>
+			</Box>
 			{result.kind === "text" && action.apply !== "none" && (
-				<Button type="button" size="xs" variant="outline" className="self-start" onClick={() => onApply(result.text)}>
-					{action.apply === "append" ? t("insert") : t("replace")}
-				</Button>
+				<Inline justify="start">
+					<Button type="button" size="xs" variant="outline" onClick={() => onApply(result.text)}>
+						{action.apply === "append" ? t("insert") : t("replace")}
+					</Button>
+				</Inline>
 			)}
-		</div>
+		</Stack>
 	);
 }
 

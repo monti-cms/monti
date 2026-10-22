@@ -1325,14 +1325,13 @@ describe("SchemaScreen", () => {
 						}
 					}
 				});
-			const settingsHeader = () => within(card).getByText(tFields("fields.colSettings"));
+			const settingsHeader = () => within(card).queryByText(tFields("fields.colSettings"));
 			resizeTo(500);
-			await waitFor(() => expect(settingsHeader().className).toContain("hidden"));
-			expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/);
+			await waitFor(() => expect(settingsHeader()).toBeNull());
 			resizeTo(1400);
-			await waitFor(() => expect(settingsHeader().className).toMatch(/(^|\s)block(\s|$)/));
+			await waitFor(() => expect(settingsHeader()).not.toBeNull());
 			resizeTo(700);
-			await waitFor(() => expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/));
+			await waitFor(() => expect(settingsHeader()).toBeNull());
 			vi.unstubAllGlobals();
 		});
 
@@ -1343,7 +1342,7 @@ describe("SchemaScreen", () => {
 			const row = side.parentElement as HTMLElement;
 			// The first column stops growing at the cap; the preview follows it, not the page edge.
 			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
-			expect(screen.getByTestId("fields-card").className).toContain("max-w-[1000px]");
+			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-[1000px]");
 			vi.unstubAllGlobals();
 		});
 

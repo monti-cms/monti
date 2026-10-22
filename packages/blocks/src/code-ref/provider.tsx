@@ -12,7 +12,7 @@ import {
 	startLinkFromText,
 	unlinkRef,
 } from "@monti-cms/admin/editor";
-import { cn } from "@monti-cms/admin/kit";
+import { Box, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import { Code2, Unlink } from "lucide-react";
 import { codeRefBlock } from "./definition";
@@ -42,7 +42,7 @@ function CodeRefBubbleButton({ editor, inCode }: EditorBubbleProps) {
 				startLinkFromText(editor.view, from, to);
 			}}
 		>
-			<Code2 aria-hidden className="size-4" />
+			<Code2 aria-hidden />
 		</BubbleButton>
 	);
 }
@@ -60,24 +60,22 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 		: null;
 	return (
 		<>
-			<Code2 aria-hidden className="mx-tight size-4 shrink-0 text-monti-muted" />
-			<span
-				className={cn(
-					"max-w-56 truncate px-tight text-monti-caption",
-					where ? "text-monti-muted" : "text-monti-danger",
-				)}
-			>
-				{where ? t("where", { where }) : t("none")}
-			</span>
-			<BubbleButton
-				label={t("relink")}
-				className="text-monti-caption"
-				onClick={act(() => startLinkFromText(editor.view, mark.from, mark.to))}
-			>
+			<Box as="span" paddingX="tight" shrink={false}>
+				<Text tone="muted">
+					{/* design-system: needs an Icon part (size and tone for an icon outside a button) */}
+					<Code2 aria-hidden size={16} />
+				</Text>
+			</Box>
+			<Box paddingX="tight" maxWidth="panel-sm">
+				<Text as="div" variant="caption" tone={where ? "muted" : "danger"} truncate>
+					{where ? t("where", { where }) : t("none")}
+				</Text>
+			</Box>
+			<BubbleButton label={t("relink")} onClick={act(() => startLinkFromText(editor.view, mark.from, mark.to))}>
 				{t("relink.text")}
 			</BubbleButton>
 			<BubbleButton label={t("unlink")} onClick={act(() => unlinkRef(site, editor.view, mark.from, mark.to))}>
-				<Unlink aria-hidden className="size-4" />
+				<Unlink aria-hidden />
 			</BubbleButton>
 		</>
 	);

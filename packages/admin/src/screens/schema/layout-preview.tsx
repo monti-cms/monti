@@ -1,6 +1,7 @@
 "use client";
 
 import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
+import { Box, Stack, Text } from "@monti-cms/ui";
 import { Component, type ReactNode, useMemo, useRef, useState } from "react";
 import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
 import { InspectorPanel } from "../entries/inspector-panel";
@@ -47,12 +48,9 @@ function PreviewPanel({ collection, onClose }: { collection: string; onClose: ()
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<div
-					className="min-h-0 flex-1 overflow-y-auto px-comfortable py-comfortable"
-					data-testid="layout-preview-record"
-				>
+				<Box grow minHeight={0} overflow="y" padding="comfortable" data-testid="layout-preview-record">
 					<SchemaFields />
-				</div>
+				</Box>
 			) : (
 				<InspectorPanel
 					incomingReferences={[]}
@@ -93,19 +91,29 @@ export function LayoutPreview({
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
 	const problem = (
-		<p className="px-comfortable py-comfortable text-monti-caption text-monti-muted">
-			{t("layout.previewUnavailable")}
-		</p>
+		<Box padding="comfortable">
+			<Text as="p" variant="caption" tone="muted">
+				{t("layout.previewUnavailable")}
+			</Text>
+		</Box>
 	);
 
 	return (
-		<div
-			className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-monti-page"
+		<Stack
+			gap="none"
+			grow
+			minHeight={0}
+			overflow="hidden"
+			radius="lg"
+			border="all"
+			background="page"
 			data-testid="layout-preview"
 		>
-			<p className="shrink-0 border-b bg-monti-inset px-comfortable py-condensed text-monti-caption text-monti-muted">
-				{t("layout.previewLabel")}
-			</p>
+			<Box shrink={false} border="bottom" background="inset" paddingX="comfortable" paddingY="condensed">
+				<Text as="p" variant="caption" tone="muted">
+					{t("layout.previewLabel")}
+				</Text>
+			</Box>
 			{draft?.isCollection(collection) ? (
 				<SiteProvider site={draft}>
 					<PreviewBoundary fallback={problem} resetKey={draft}>
@@ -115,6 +123,6 @@ export function LayoutPreview({
 			) : (
 				problem
 			)}
-		</div>
+		</Stack>
 	);
 }

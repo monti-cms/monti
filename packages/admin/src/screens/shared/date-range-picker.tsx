@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
+import { Button, Calendar, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { CalendarRange } from "lucide-react";
 import { adminCalendarLocale } from "../../ui/calendar-locale";
 import { dateRangeMessages } from "./date-range.messages";
@@ -36,7 +36,6 @@ export function DateRangeCalendar({
 			selected={{ from: dayToDate(from), to: dayToDate(to) }}
 			onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
 			locale={adminCalendarLocale(site)}
-			className="rounded-md border"
 		/>
 	);
 }
@@ -61,13 +60,15 @@ export function DateRangePicker({
 				<CalendarRange aria-hidden />
 				{label}: {summary}
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-auto space-y-condensed p-condensed">
-				<DateRangeCalendar from={from} to={to} onChange={onChange} />
-				{(from || to) && (
-					<Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange("", "")}>
-						{t("clear")}
-					</Button>
-				)}
+			<PopoverContent align="start" width="auto">
+				<Stack gap="condensed">
+					<DateRangeCalendar from={from} to={to} onChange={onChange} />
+					{(from || to) && (
+						<Button type="button" variant="ghost" size="sm" width="full" onClick={() => onChange("", "")}>
+							{t("clear")}
+						</Button>
+					)}
+				</Stack>
 			</PopoverContent>
 		</Popover>
 	);
