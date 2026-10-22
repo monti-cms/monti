@@ -164,10 +164,10 @@ then text inputs. An action whose result must have a specific shape to pass its 
 - **Prompt snippet**: text inserted into several actions' instructions as `{{snippet.key}}` (style guide, tone, audience, and so on).
   There are two kinds.
   - Config snippet: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
-    and only the content is edited in the "Prompt snippets" tab of the admin AI screen ("Reset to default" resets the input field to the
+    and only the content is edited in the "Shared text" tab of the admin AI screen ("Reset to default" resets the input field to the
     config snippet). It can't be deleted. An instruction (`prompt`) in the config can only use config snippets (checked when the config is
     built).
-  - Added snippet: in the "Prompt snippets" tab, "Add snippet" lets you add a key (starts with a letter; letters, digits, and `_`), a name, and
+  - Added snippet: in the "Shared text" tab, "Add shared text" lets you add a key (starts with a letter; letters, digits, and `_`), a name, and
     the content. The key can't be changed after creation and must not clash with config snippets or other snippets. It can be used by
     instructions edited in the admin screen and by UI actions. It can't be deleted while an action's instruction uses it (the action
     name is shown).
