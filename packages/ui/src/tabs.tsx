@@ -61,11 +61,26 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 	);
 }
 
-function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
+function TabsContent({
+	className,
+	fill = false,
+	scroll = false,
+	...props
+}: TabsPrimitive.Panel.Props & {
+	/** Takes the height left under the tabs, as a column (a pane with its own list or editor). */
+	fill?: boolean;
+	/** Scrolls inside instead of growing the page. */
+	scroll?: boolean;
+}) {
 	return (
 		<TabsPrimitive.Panel
 			data-slot="tabs-content"
-			className={cn("flex-1 text-monti-body outline-none", className)}
+			className={cn(
+				"flex-1 text-monti-body outline-none",
+				fill && "flex min-h-0 flex-col",
+				scroll && "min-h-0 overflow-auto",
+				className,
+			)}
 			{...props}
 		/>
 	);

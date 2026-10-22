@@ -58,17 +58,27 @@ function TableRow({
 	);
 }
 
-/** Where a column's content sits, and whether long content ends in "…" instead of widening the column. */
+/**
+ * Where a column's content sits, whether long content ends in "…" instead of widening the column, a fixed column width, top alignment for
+ * rows of uneven height, and a muted tone for secondary columns.
+ */
 interface CellOptions {
 	align?: "start" | "center" | "end";
 	truncate?: boolean;
+	width?: keyof typeof COLUMN_WIDTH;
+	valign?: "top";
+	tone?: "muted";
 }
+const COLUMN_WIDTH = { xs: "w-14", sm: "w-24", md: "w-28", lg: "w-40" } as const;
 const ALIGN = { start: "text-left", center: "text-center", end: "text-right tabular" } as const;
 
 function TableHead({
 	className,
 	align = "start",
 	truncate,
+	width,
+	valign,
+	tone,
 	...props
 }: Omit<React.ComponentProps<"th">, "align"> & CellOptions) {
 	return (
@@ -78,6 +88,9 @@ function TableHead({
 				"h-10 whitespace-nowrap px-2 align-middle text-monti-caption text-monti-muted [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
+				width && COLUMN_WIDTH[width],
+				valign === "top" && "align-top",
+				tone === "muted" && "text-monti-muted",
 				className,
 			)}
 			{...props}
@@ -89,6 +102,9 @@ function TableCell({
 	className,
 	align = "start",
 	truncate,
+	width,
+	valign,
+	tone,
 	...props
 }: Omit<React.ComponentProps<"td">, "align"> & CellOptions) {
 	return (
@@ -98,6 +114,9 @@ function TableCell({
 				"whitespace-nowrap p-2 align-middle [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
+				width && COLUMN_WIDTH[width],
+				valign === "top" && "align-top",
+				tone === "muted" && "text-monti-muted",
 				className,
 			)}
 			{...props}

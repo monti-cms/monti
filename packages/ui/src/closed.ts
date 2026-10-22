@@ -11,6 +11,6 @@ export type Closed<C> = C extends (props: infer P) => infer R
 		: C;
 
 /** Types a component as {@link Closed}. Nothing changes at run time. */
-export const close = <C,>(component: C) => component as unknown as Closed<C>;
+export const close = <C>(component: C) => component as unknown as Closed<C>;
 
 export type { JSX };

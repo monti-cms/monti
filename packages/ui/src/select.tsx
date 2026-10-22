@@ -20,17 +20,21 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 function SelectTrigger({
 	className,
 	size = "default",
+	width = "fit",
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
 	size?: "sm" | "default";
+	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter. */
+	width?: "fit" | "full";
 }) {
 	return (
 		<SelectPrimitive.Trigger
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"flex w-fit items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-transparent py-2 pr-2 pl-2.5 text-monti-body outline-none transition-[color,box-shadow] focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:text-monti-label data-placeholder:text-monti-muted *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-transparent py-2 pr-2 pl-2.5 text-monti-body outline-none transition-[color,box-shadow] focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:text-monti-label data-placeholder:text-monti-muted *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				width === "full" ? "w-full" : "w-fit",
 				className,
 			)}
 			{...props}

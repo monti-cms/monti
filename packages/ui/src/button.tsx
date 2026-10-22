@@ -67,6 +67,7 @@ function Button({
 	tone = "neutral",
 	size = "default",
 	loading = false,
+	width,
 	disabled,
 	children,
 	...props
@@ -74,6 +75,8 @@ function Button({
 	VariantProps<typeof buttonVariants> & {
 		/** Working on it: a spinner before the label, and the button cannot be pressed again. */
 		loading?: boolean;
+		/** `full` spans its container (a stacked form, a narrow panel). */
+		width?: "full";
 	}) {
 	return (
 		<ButtonPrimitive
@@ -81,7 +84,7 @@ function Button({
 			data-loading={loading || undefined}
 			aria-busy={loading || undefined}
 			disabled={disabled || loading}
-			className={cn(buttonVariants({ variant, tone, size, className }))}
+			className={cn(buttonVariants({ variant, tone, size }), width === "full" && "w-full", className)}
 			{...props}
 		>
 			{loading && <Spinner size="sm" aria-hidden />}

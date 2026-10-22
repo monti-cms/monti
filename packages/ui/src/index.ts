@@ -176,6 +176,9 @@ export const SidebarTrigger = close(open.SidebarTrigger);
 export const Skeleton = close(open.Skeleton);
 export const Spinner = close(open.Spinner);
 export const Stack = close(open.Stack);
+export const Inline = close(open.Inline);
+export const Box = close(open.Box);
+export const Grid = close(open.Grid);
 export const StatusIndicator = close(open.StatusIndicator);
 export const Switch = close(open.Switch);
 export const Table = close(open.Table);
@@ -203,8 +206,24 @@ export const TooltipContent = close(open.TooltipContent);
 export const TooltipProvider = close(open.TooltipProvider);
 export const TooltipTrigger = close(open.TooltipTrigger);
 
-/** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
-export { Calendar, Combobox, Select } from "./internal";
-export { alertVariants, badgeVariants, buttonVariants, cn, useComboboxAnchor, DEFAULT_UI_LABELS, useUiLabels, useSidebar, stackVariants, tabsListVariants, textVariants, toggleVariants, useIsMobile } from "./internal";
-export type { UiLabels, StatusShape, StatusTone } from "./internal";
 export type { Closed } from "./closed";
+export type { LayoutProps, StackProps, StatusShape, StatusTone, UiLabels } from "./internal";
+/** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
+export {
+	alertVariants,
+	badgeVariants,
+	buttonVariants,
+	Calendar,
+	Combobox,
+	cn,
+	DEFAULT_UI_LABELS,
+	Select,
+	stackVariants,
+	tabsListVariants,
+	textVariants,
+	toggleVariants,
+	useComboboxAnchor,
+	useIsMobile,
+	useSidebar,
+	useUiLabels,
+} from "./internal";

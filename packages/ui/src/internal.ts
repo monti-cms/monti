@@ -22,6 +22,7 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Badge, badgeVariants } from "./badge";
+export { Box } from "./box";
 export { Button, buttonVariants } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
@@ -117,6 +118,7 @@ export {
 	FormFieldSet,
 	FormFieldTitle,
 } from "./field";
+export { Grid } from "./grid";
 export { IconButton } from "./icon-button";
 export { Input } from "./input";
 export {
@@ -129,6 +131,7 @@ export {
 } from "./input-group";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
+export { type LayoutProps, layoutVariants } from "./layout";
 export {
 	Pagination,
 	PaginationContent,
@@ -182,7 +185,7 @@ export {
 } from "./sidebar";
 export { Skeleton } from "./skeleton";
 export { Spinner } from "./spinner";
-export { Stack, stackVariants } from "./stack";
+export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
 export { Switch } from "./switch";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
