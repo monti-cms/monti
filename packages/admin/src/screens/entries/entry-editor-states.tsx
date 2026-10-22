@@ -4,9 +4,9 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { AdminLink as Link } from "../../router";
-import { Alert, AlertDescription } from "../../ui/alert";
 import { buttonVariants } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 
 export function EntryEditorLoading() {
@@ -150,9 +150,8 @@ export function EntryEditorLoadError({ message }: { message: string }) {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
 		<div className="space-y-3 p-8">
-			<Alert variant="destructive">
-				<AlertDescription className="col-start-auto">{message}</AlertDescription>
-			</Alert>
+			{/* The shared notice: a grid Alert without an icon put the text in the 16px icon column, one letter per line. */}
+			<LoadErrorAlert message={message} />
 			<Link href={site.adminHref()} className={buttonVariants({ variant: "outline" })}>
 				{t("backToList")}
 			</Link>
