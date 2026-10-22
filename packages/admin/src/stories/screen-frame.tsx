@@ -4,6 +4,7 @@ import { testSite } from "../../../core/test/site";
 import { type AdminLinkProps, type AdminRouter, AdminRouterProvider } from "../router";
 import { AdminShell } from "../screens/shared/admin-shell";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
+import { Toaster } from "../ui/sonner";
 
 /**
  * A screen in Storybook: the test site, a router that keeps the address in memory, and server answers from `api` instead of a server.
@@ -60,6 +61,40 @@ function memoryRouter(pathname: string, search: string): AdminRouter {
 	};
 }
 
+/**
+ * A page in Storybook without the admin frame, for a screen that draws its own (`ShellPage`, the media library). Toasts stay up until
+ * dismissed, so a failure that only toasts can be looked at.
+ */
+export function PageFrame({
+	api,
+	pathname = "/admin",
+	search = "",
+	children,
+}: {
+	api: FakeApi;
+	/** The admin address the screen reads (`/admin/settings/collections`). */
+	pathname?: string;
+	search?: string;
+	children: ReactNode;
+}) {
+	// Set up once per story, before the screen's first request.
+	const [router] = useState(() => {
+		installFetch(api);
+		return memoryRouter(pathname, search);
+	});
+	return (
+		<SiteProvider site={testSite}>
+			<AdminRouterProvider router={router}>
+				<AdminQueryProvider>
+					{children}
+					<Toaster richColors closeButton position="bottom-right" duration={Number.POSITIVE_INFINITY} />
+				</AdminQueryProvider>
+			</AdminRouterProvider>
+		</SiteProvider>
+	);
+}
+
+/** A screen in Storybook inside the admin frame: the sidebar with `nav` active and `title` in the title bar. */
 export function ScreenFrame({
 	api,
 	title,
@@ -79,20 +114,11 @@ export function ScreenFrame({
 	shell?: Omit<ComponentProps<typeof AdminShell>, "title" | "sidebar" | "children">;
 	children: ReactNode;
 }) {
-	// Set up once per story, before the screen's first request.
-	const [router] = useState(() => {
-		installFetch(api);
-		return memoryRouter(pathname, search);
-	});
 	return (
-		<SiteProvider site={testSite}>
-			<AdminRouterProvider router={router}>
-				<AdminQueryProvider>
-					<AdminShell {...shell} title={title} sidebar={{ activeNav: nav }}>
-						{children}
-					</AdminShell>
-				</AdminQueryProvider>
-			</AdminRouterProvider>
-		</SiteProvider>
+		<PageFrame api={api} pathname={pathname} search={search}>
+			<AdminShell {...shell} title={title} sidebar={{ activeNav: nav }}>
+				{children}
+			</AdminShell>
+		</PageFrame>
 	);
 }

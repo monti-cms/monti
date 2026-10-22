@@ -225,6 +225,9 @@ importers:
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      storybook:
+        specifier: 10.6.1
+        version: 10.6.1(@types/react@19.3.0)(react@19.2.3)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -256,6 +259,9 @@ importers:
       '@monti-cms/mdx':
         specifier: workspace:*
         version: link:../mdx
+      '@storybook/react-vite':
+        specifier: 10.6.1
+        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.6.1(@types/react@19.3.0)(react@19.2.3))(typescript@7.0.2)(vite@8.3.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.1(react@19.2.3)
@@ -310,6 +316,9 @@ importers:
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      storybook:
+        specifier: 10.6.1
+        version: 10.6.1(@types/react@19.3.0)(react@19.2.3)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
