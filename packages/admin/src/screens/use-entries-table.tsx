@@ -236,13 +236,21 @@ export function useEntriesTable({
 			return next;
 		});
 
-	// Actual width of the scroll area. Table width and which columns to hide when narrow are decided from this.
-	const scrollRef = useRef<HTMLDivElement | null>(null);
+	// Width the table can use: the content of the box around it (its padding is not room for columns). Table width and which columns to hide when narrow
+	// are decided from this, so a panel beside the list, which narrows the page and not the window, hides columns the same way a narrower window does.
+	const scrollRef = useRef<HTMLElement | null>(null);
 	const [containerWidth, setContainerWidth] = useState(0);
 	useEffect(() => {
 		const element = scrollRef.current;
 		if (!element) return;
-		setContainerWidth(element.clientWidth);
+		const style = getComputedStyle(element);
+		setContainerWidth(
+			Math.floor(
+				element.clientWidth -
+					Number.parseFloat(style.paddingLeft || "0") -
+					Number.parseFloat(style.paddingRight || "0"),
+			),
+		);
 		if (typeof ResizeObserver === "undefined") return;
 		const observer = new ResizeObserver(([entry]) => setContainerWidth(Math.floor(entry?.contentRect.width ?? 0)));
 		observer.observe(element);

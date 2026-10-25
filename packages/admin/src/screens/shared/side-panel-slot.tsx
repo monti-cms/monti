@@ -37,8 +37,11 @@ export function AdminPanelProvider({ panel, children }: { panel: AdminPanel; chi
 
 /** The pane's width on a wide screen (px), until the person drags it. */
 const PANEL_WIDTH = { default: 400, min: 320, max: 640 } as const;
-/** Below this width the panel is a sheet over the screen. */
-const NARROW_QUERY = "(max-width: 1023px)";
+/**
+ * Below this width the panel is a sheet over the screen. Docked, it would leave the page (beside the sidebar and the 400px panel) less than 640px, which is
+ * less room than any window with a sidebar gives it.
+ */
+const NARROW_QUERY = "(max-width: 1279px)";
 
 const subscribeNarrow = (listener: () => void) => {
 	const media = window.matchMedia?.(NARROW_QUERY);

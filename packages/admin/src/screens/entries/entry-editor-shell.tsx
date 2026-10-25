@@ -57,6 +57,9 @@ interface EntryEditorShellProps {
 	folderId?: string | null;
 }
 
+/** Width (px) below which the body takes priority over its side panes. */
+const NARROW_AREA_WIDTH = 1024;
+
 /** Name of the remembered source pane state in the site's browser storage (`lib/utils/site-storage.ts`). */
 const SOURCE_PANE_CODEC = enumCodec(["open", "closed"] as const);
 
@@ -107,7 +110,6 @@ export function EntryEditorShell({
 	const [editorMode, setEditorMode] = useState<"visual" | "source">("visual");
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 	const inspectorResize = usePanelResize(INSPECTOR_PANEL_RESIZE);
-	const [isNarrowScreen, setIsNarrowScreen] = useState(false);
 	// Whether the source pane was left open is remembered in this browser (a per-device preference); a narrow window closes it for as long as it stays narrow.
 	const [sourcePanePreference, setSourcePanePreference] = usePreference(
 		"translation-source-pane",
@@ -154,21 +156,34 @@ export function EntryEditorShell({
 		if (focusBlock !== undefined) setFocusBlock(undefined);
 	}, [focusBlock]);
 
+	// "Narrow" is the window below 1024px, or the area of the body and its side panes below 1024px (a side panel open beside the editor takes room the window keeps).
+	const [isNarrowWindow, setIsNarrowWindow] = useState(false);
+	const [area, setArea] = useState<HTMLElement | null>(null);
+	const [isNarrowArea, setIsNarrowArea] = useState(false);
+	const isNarrowScreen = isNarrowWindow || isNarrowArea;
 	useEffect(() => {
 		const media = window.matchMedia?.("(max-width: 1023px)");
 		if (!media) return;
-		const update = () => {
-			setIsNarrowScreen(media.matches);
-			// At 1024px and below, the body takes priority.
-			if (media.matches) {
-				setIsInspectorOpen(false);
-				setNarrowClosedSourcePane(true);
-			}
-		};
+		const update = () => setIsNarrowWindow(media.matches);
 		update();
 		media.addEventListener?.("change", update);
 		return () => media.removeEventListener?.("change", update);
 	}, []);
+	useEffect(() => {
+		if (!area || typeof ResizeObserver === "undefined") return;
+		const observer = new ResizeObserver(([entry]) => {
+			const width = entry?.contentRect.width ?? 0;
+			setIsNarrowArea(width > 0 && width < NARROW_AREA_WIDTH);
+		});
+		observer.observe(area);
+		return () => observer.disconnect();
+	}, [area]);
+	// When it gets narrow, the body takes priority.
+	useEffect(() => {
+		if (!isNarrowScreen) return;
+		setIsInspectorOpen(false);
+		setNarrowClosedSourcePane(true);
+	}, [isNarrowScreen]);
 
 	const toggleSourcePane = (open: boolean) => {
 		setNarrowClosedSourcePane(false);
@@ -481,65 +496,78 @@ export function EntryEditorShell({
 					/>
 
 					<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
-						{translationSource && isSourcePaneOpen && (
-							<TranslationSourcePanel
-								source={translationSource}
-								paneRef={setSourcePane}
-								onClose={() => toggleSourcePane(false)}
-							/>
-						)}
-						<EditorScroller
-							scrollerRef={setEditorScroller}
-							highlightActive={Boolean(translationSource)}
-							inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+						{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
+						<Inline
+							ref={setArea}
+							container
+							align="stretch"
+							gap="none"
+							grow
+							minWidth={0}
+							minHeight={0}
+							overflow="hidden"
+							position="relative"
 						>
-							<CmsEditor
-								doc={form.doc}
-								allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
-								titleField={
-									<>
-										{languageTabs}
-										{titleInput}
-									</>
-								}
-								toolbarAside={
-									<Inline gap="tight">
-										{site.ADMIN_TEMPLATES && (
-											<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
-										)}
-										{extensions.toolbar}
-										{sourcePaneToggle}
-										{sourceModeToggle}
-									</Inline>
-								}
-								sourceView={isSourceMode ? sourceEditor : undefined}
-								editable={!isReadOnly}
-								onChange={editor.setBody}
-								blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
-								selectionActions={extensions.selectionActions}
-								insertActions={extensions.insertActions}
-								onEditor={(editor) => {
-									visualEditorRef.current = editor;
-									extensions.onEditor?.(editor);
-								}}
-								onCompositionStart={() => editor.setComposing(true)}
-								onCompositionEnd={() => editor.setComposing(false)}
-							/>
-							{extensions.overlay}
-						</EditorScroller>
+							{translationSource && isSourcePaneOpen && (
+								<TranslationSourcePanel
+									source={translationSource}
+									paneRef={setSourcePane}
+									onClose={() => toggleSourcePane(false)}
+								/>
+							)}
+							<EditorScroller
+								scrollerRef={setEditorScroller}
+								highlightActive={Boolean(translationSource)}
+								inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+							>
+								<CmsEditor
+									doc={form.doc}
+									allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
+									titleField={
+										<>
+											{languageTabs}
+											{titleInput}
+										</>
+									}
+									toolbarAside={
+										<Inline gap="tight">
+											{site.ADMIN_TEMPLATES && (
+												<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
+											)}
+											{extensions.toolbar}
+											{sourcePaneToggle}
+											{sourceModeToggle}
+										</Inline>
+									}
+									sourceView={isSourceMode ? sourceEditor : undefined}
+									editable={!isReadOnly}
+									onChange={editor.setBody}
+									blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
+									selectionActions={extensions.selectionActions}
+									insertActions={extensions.insertActions}
+									onEditor={(editor) => {
+										visualEditorRef.current = editor;
+										extensions.onEditor?.(editor);
+									}}
+									onCompositionStart={() => editor.setComposing(true)}
+									onCompositionEnd={() => editor.setComposing(false)}
+								/>
+								{extensions.overlay}
+							</EditorScroller>
 
-						{isInspectorOpen && (
-							<InspectorSidePanel
-								editor={editor}
-								resize={inspectorResize}
-								incomingItems={incoming.items}
-								isLoadingIncoming={incoming.loading}
-								onRefreshIncoming={(id) => void refreshIncoming(id)}
-								onClose={() => setIsInspectorOpen(false)}
-								focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
-								onFocused={() => setPendingFieldPath(null)}
-							/>
-						)}
+							{isInspectorOpen && (
+								<InspectorSidePanel
+									editor={editor}
+									resize={inspectorResize}
+									incomingItems={incoming.items}
+									isLoadingIncoming={incoming.loading}
+									onRefreshIncoming={(id) => void refreshIncoming(id)}
+									onClose={() => setIsInspectorOpen(false)}
+									focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
+									onFocused={() => setPendingFieldPath(null)}
+								/>
+							)}
+						</Inline>
 						<SidePanelPane />
 					</Inline>
 

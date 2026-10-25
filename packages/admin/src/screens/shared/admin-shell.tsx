@@ -209,6 +209,7 @@ export function AdminShell({
 							<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
 								<Inline
 									as="header"
+									container
 									align="end"
 									justify="between"
 									gap="normal"
@@ -233,7 +234,7 @@ export function AdminShell({
 										</Box>
 										<Inline gap="condensed" align="center" ref={setMetaSlot} />
 										{description && (
-											<Box minWidth={0} hideBelow="md">
+											<Box minWidth={0} hideBelowContainer="2xl">
 												<Text as="p" variant="caption" tone="muted" truncate>
 													{description}
 												</Text>
@@ -247,15 +248,26 @@ export function AdminShell({
 								</Inline>
 							</Box>
 						) : (
-							<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
+							<Inline
+								as="header"
+								container
+								wrap
+								gap="normal"
+								shrink={false}
+								border="bottom"
+								paddingX="wide"
+								paddingY="tight"
+								minHeight="header"
+							>
 								<Box hideFrom="md">
 									<SidebarTrigger aria-label={t("shell.openSidebar")} />
 								</Box>
-								<Inline gap="condensed" align="baseline" grow minWidth={0}>
-									<Box minWidth={0}>
+								<Inline gap="condensed" align="baseline" grow>
+									{/* The title and its count keep their width: what gives way, when the page has little room, is the description and the actions. */}
+									<Box shrink={false}>
 										<Heading as="h1" variant="title">
 											<Inline as="span" gap="condensed" align="baseline">
-												<Text truncate>{title}</Text>
+												<Text>{title}</Text>
 												{count !== undefined && (
 													<Text variant="caption" tone="muted" mono>
 														{count}
@@ -266,7 +278,7 @@ export function AdminShell({
 									</Box>
 									<Inline gap="condensed" align="center" ref={setMetaSlot} />
 									{description && (
-										<Box minWidth={0} hideBelow="md">
+										<Box minWidth={0} hideBelowContainer="2xl">
 											<Text as="p" variant="caption" tone="muted" truncate>
 												{description}
 											</Text>

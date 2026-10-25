@@ -100,6 +100,27 @@ describe("side panel in the admin shell", () => {
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
+	it("docks beside the page from 1280px wide, and is a sheet below that, so the page keeps room", async () => {
+		const windowOf = (width: number) =>
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: width <= Number(/max-width: (\d+)px/.exec(query)?.[1] ?? -1),
+				media: query,
+				addEventListener: () => undefined,
+				removeEventListener: () => undefined,
+			}));
+		windowOf(1280);
+		const wide = renderShell("media");
+		fireEvent.click(toggle());
+		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
+		wide.unmount();
+		window.localStorage.clear();
+		windowOf(1279);
+		renderShell("media");
+		fireEvent.click(toggle());
+		expect(await screen.findByRole("dialog", { name: "Helper" })).toBeTruthy();
+		expect(screen.queryByRole("complementary")).toBeNull();
+	});
+
 	it("is a sheet on a narrow screen, closed on load even when the wide screen left it open", async () => {
 		window.localStorage.setItem(preferenceKey(testSite, "side-panel"), "1");
 		stubWidth(true);
