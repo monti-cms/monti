@@ -15,6 +15,7 @@ import { ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
+import { usePublishScreenContext } from "./shared/screen-context";
 import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
@@ -56,6 +57,11 @@ function EntryListBody({ list }: { list: EntryList }) {
 	const isTrash = mode === "trash";
 	const { items } = data;
 	const record = list.recordTarget;
+	// The rows picked in the list, for the side panel; ids of rows that left the page (a filter, a search) are not offered.
+	usePublishScreenContext({
+		collection: state.collection,
+		selectedIds: items.filter((item) => list.selectedIds.has(item.id)).map((item) => item.id),
+	});
 	return (
 		<>
 			<Inline position="relative" align="stretch" gap="none" grow minHeight={0} overflow="hidden">

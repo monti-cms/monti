@@ -38,6 +38,7 @@ import {
 	type AiSettingsView,
 	PROVIDER_EXAMPLES,
 } from "../connection";
+import { AgentModelPicker } from "./agent-model-picker";
 import {
 	aiKeys,
 	checkAiProvider,
@@ -121,6 +122,15 @@ export function ConnectionManager({
 
 	return (
 		<Stack gap="none" grow minHeight={0}>
+			{settings && (
+				<AgentModelPicker
+					// Reset when what is saved changes (a saved choice, a deleted connection).
+					key={JSON.stringify(settings.agent.setting)}
+					settings={settings}
+					onSaved={applySaved}
+					onConflict={() => void settingsQuery.refetch()}
+				/>
+			)}
 			{settingsQuery.error && !settings && (
 				<Box padding="normal">
 					<LoadErrorAlert

@@ -356,7 +356,7 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`, `panel`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
@@ -411,6 +411,16 @@ function DraftsStatus() {
 	);
 }
 ```
+
+### Side panel
+
+A plugin adds one panel to the right of every screen, the entry editor included, with `panel` of `defineAdminPlugin`: a `label`, an `icon` and a `Component`. The admin draws a button for it in the header of each screen, opens it as a resizable pane (a sheet on narrow screens; Ctrl or Cmd with `.` also opens and closes it) and remembers in this browser whether it is open and how wide. The admin shows one panel for now: with several, the plugin registered last wins. Give a function of the site (`panel: (site) => ({ ... })`) when the label depends on the site config; it and the component come from a `"use client"` module.
+
+```tsx
+export default defineAdminPlugin({ panel: { label: "Notes", icon: StickyNote, Component: NotesPanel } });
+```
+
+The component reads where the admin is with `useScreenContext()`: `screen` (`entries`, `entry`, `media`, `settings` or `other`), the `collection`, the open entry's `entryId` and, on the entry list, the `selectedIds` of the picked rows (empty while none is). On the entry editor, `useOpenEditor()` also returns the open editor: `readEntry()` gives the entry as the form holds it, unsaved changes included, and `readSelection()` gives the selected text and the block at the cursor with its block id. Both read the editor at the time of the call. Everywhere else `useOpenEditor()` is `null`.
 
 ### Router adapter
 

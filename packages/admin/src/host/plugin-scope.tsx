@@ -6,13 +6,15 @@ import { AdminComponentsProvider } from "../admin-components";
 import { AdminEventsProvider } from "../events";
 import type { LoadedAdminPlugin } from "../internal-plugins";
 import type { AdminPlugin } from "../plugins";
+import { ScreenContextProvider } from "../screens/shared/screen-context";
+import { AdminPanelProvider } from "../screens/shared/side-panel-slot";
 import { StatusItemsProvider } from "../screens/shared/status-bar";
 import { SlotRegistryProvider } from "../slots/registry";
 
-/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `on`, its `statusItems` and its `slots`. */
+/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `on`, its `statusItems`, its `panel` and its `slots`. */
 function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; readonly children: ReactNode }) {
 	const site = useSite();
-	const { components, slots, Provider, on, statusItems } = plugin;
+	const { components, slots, Provider, on, statusItems, panel } = plugin;
 	const resolved = useMemo(
 		() => (typeof components === "function" ? components(site) : components),
 		[components, site],
@@ -22,7 +24,9 @@ function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; reado
 		() => (typeof statusItems === "function" ? statusItems(site) : statusItems),
 		[statusItems, site],
 	);
+	const resolvedPanel = useMemo(() => (typeof panel === "function" ? panel(site) : panel), [panel, site]);
 	let inner = children;
+	if (resolvedPanel) inner = <AdminPanelProvider panel={resolvedPanel}>{inner}</AdminPanelProvider>;
 	if (statuses) inner = <StatusItemsProvider items={statuses}>{inner}</StatusItemsProvider>;
 	if (slots && slots.length > 0) inner = <SlotRegistryProvider sources={slots}>{inner}</SlotRegistryProvider>;
 	if (events) inner = <AdminEventsProvider on={events}>{inner}</AdminEventsProvider>;
@@ -41,7 +45,7 @@ export function AdminPluginScope({
 	readonly plugins: readonly LoadedAdminPlugin[];
 	readonly children: ReactNode;
 }) {
-	return plugins.reduceRight<ReactNode>(
+	const layered = plugins.reduceRight<ReactNode>(
 		(inner, { name, plugin }) =>
 			plugin ? (
 				<PluginLayer key={name} plugin={plugin}>
@@ -52,4 +56,6 @@ export function AdminPluginScope({
 			),
 		children,
 	);
+	// Outside the plugins, so a plugin's panel and its providers read what the screens publish.
+	return <ScreenContextProvider>{layered}</ScreenContextProvider>;
 }

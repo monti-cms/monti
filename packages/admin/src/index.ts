@@ -50,5 +50,17 @@ export {
 export { formatMeta, parseMeta } from "./editor/code-block/meta";
 export type { AdminEvents, ImageInserted, ImageInsertedEvent, ImageText, InsertedImage } from "./events";
 export * from "./hooks/public";
-export { type AdminPlugin, defineAdminPlugin } from "./plugins";
+export { type AdminPanel, type AdminPlugin, defineAdminPlugin } from "./plugins";
 export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";
+export {
+	type OpenEditor,
+	type OpenEditorEntry,
+	OpenEditorProvider,
+	type OpenEditorSelection,
+	useOpenEditor,
+} from "./screens/shared/open-editor";
+export {
+	type AdminScreen,
+	type ScreenContextValue,
+	useScreenContext,
+} from "./screens/shared/screen-context";

@@ -22,7 +22,10 @@ import { usePanelResize } from "../../ui/panel-resize";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
+import { type OpenEditor, OpenEditorContext } from "../shared/open-editor";
+import { usePublishScreenContext } from "../shared/screen-context";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
+import { SidePanelPane } from "../shared/side-panel-slot";
 import { type EditorStatus, StatusBar } from "../shared/status-bar";
 import { bodyStats } from "./body-stats";
 import { EditorScroller } from "./editor-scroller";
@@ -36,6 +39,7 @@ import { ToolbarToggle } from "./entry-editor-toolbar";
 import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
+import { readOpenEntry, readOpenSelection } from "./open-editor-read";
 import { SourceChangeDialog } from "./source-change-dialog";
 import { useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
@@ -192,6 +196,25 @@ export function EntryEditorShell({
 	);
 	const formRef = useRef(form);
 	formRef.current = form;
+	// Where the admin is, for the side panel; and the editor itself, which the panel reads when its tools ask (the form as it is then, not as it was at render).
+	usePublishScreenContext({ screen: "entry", collection: collection || undefined, entryId: entry?.id });
+	const latestRef = useRef({ editor, collection });
+	latestRef.current = { editor, collection };
+	const openEditor = useMemo<OpenEditor>(
+		() => ({
+			readEntry: () => {
+				const latest = latestRef.current;
+				return readOpenEntry({
+					form: latest.editor.form,
+					entry: latest.editor.entry,
+					collection: latest.collection,
+					hasUnsavedChanges: latest.editor.getSnapshot().hasUnsavedChanges,
+				});
+			},
+			readSelection: () => readOpenSelection(visualEditorRef.current),
+		}),
+		[],
+	);
 	const getEntry = useCallback(
 		() => ({
 			title: titleKey ? formText(formRef.current, titleKey) : "",
@@ -440,106 +463,109 @@ export function EntryEditorShell({
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
-			<Stack gap="none" height="screen" overflow="clip" background="page">
-				<EntryEditorHeader
-					editor={editor}
-					commands={commands}
-					isInspectorOpen={isInspectorOpen}
-					onToggleInspector={() => setIsInspectorOpen((open) => !open)}
-				/>
-
-				<EntryEditorBanners
-					editor={editor}
-					visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
-					sourceProblem={sourceProblems[0]}
-					sourceChanged={sourceChanged && Boolean(translationSource)}
-					onCompareSource={() => setIsSourceCompareOpen(true)}
-				/>
-
-				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
-					{translationSource && isSourcePaneOpen && (
-						<TranslationSourcePanel
-							source={translationSource}
-							paneRef={setSourcePane}
-							onClose={() => toggleSourcePane(false)}
-						/>
-					)}
-					<EditorScroller
-						scrollerRef={setEditorScroller}
-						highlightActive={Boolean(translationSource)}
-						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
-					>
-						<CmsEditor
-							doc={form.doc}
-							allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
-							titleField={
-								<>
-									{languageTabs}
-									{titleInput}
-								</>
-							}
-							toolbarAside={
-								<Inline gap="tight">
-									{site.ADMIN_TEMPLATES && (
-										<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
-									)}
-									{extensions.toolbar}
-									{sourcePaneToggle}
-									{sourceModeToggle}
-								</Inline>
-							}
-							sourceView={isSourceMode ? sourceEditor : undefined}
-							editable={!isReadOnly}
-							onChange={editor.setBody}
-							blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
-							selectionActions={extensions.selectionActions}
-							insertActions={extensions.insertActions}
-							onEditor={(editor) => {
-								visualEditorRef.current = editor;
-								extensions.onEditor?.(editor);
-							}}
-							onCompositionStart={() => editor.setComposing(true)}
-							onCompositionEnd={() => editor.setComposing(false)}
-						/>
-						{extensions.overlay}
-					</EditorScroller>
-
-					{isInspectorOpen && (
-						<InspectorSidePanel
-							editor={editor}
-							resize={inspectorResize}
-							incomingItems={incoming.items}
-							isLoadingIncoming={incoming.loading}
-							onRefreshIncoming={(id) => void refreshIncoming(id)}
-							onClose={() => setIsInspectorOpen(false)}
-							focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
-							onFocused={() => setPendingFieldPath(null)}
-						/>
-					)}
-				</Inline>
-
-				<StatusBar
-					context={{
-						screen: "entry",
-						collection,
-						...(entry?.id ? { entryId: entry.id } : {}),
-						locale: entry?.locale ?? site.DEFAULT_LOCALE,
-						editor: barStatus,
-					}}
-				/>
-
-				<EntryEditorRecoveryDialogs editor={editor} />
-
-				{commands.confirmDialog}
-				{translationSource && (
-					<SourceChangeDialog
-						open={isSourceCompareOpen}
-						onOpenChange={setIsSourceCompareOpen}
-						before={confirmed?.baseDoc}
-						after={translationSource.doc}
+			<OpenEditorContext.Provider value={openEditor}>
+				<Stack gap="none" height="screen" overflow="clip" background="page">
+					<EntryEditorHeader
+						editor={editor}
+						commands={commands}
+						isInspectorOpen={isInspectorOpen}
+						onToggleInspector={() => setIsInspectorOpen((open) => !open)}
 					/>
-				)}
-			</Stack>
+
+					<EntryEditorBanners
+						editor={editor}
+						visualUnavailable={!canUseVisual && Boolean(sourcePanel)}
+						sourceProblem={sourceProblems[0]}
+						sourceChanged={sourceChanged && Boolean(translationSource)}
+						onCompareSource={() => setIsSourceCompareOpen(true)}
+					/>
+
+					<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+						{translationSource && isSourcePaneOpen && (
+							<TranslationSourcePanel
+								source={translationSource}
+								paneRef={setSourcePane}
+								onClose={() => toggleSourcePane(false)}
+							/>
+						)}
+						<EditorScroller
+							scrollerRef={setEditorScroller}
+							highlightActive={Boolean(translationSource)}
+							inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
+						>
+							<CmsEditor
+								doc={form.doc}
+								allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
+								titleField={
+									<>
+										{languageTabs}
+										{titleInput}
+									</>
+								}
+								toolbarAside={
+									<Inline gap="tight">
+										{site.ADMIN_TEMPLATES && (
+											<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
+										)}
+										{extensions.toolbar}
+										{sourcePaneToggle}
+										{sourceModeToggle}
+									</Inline>
+								}
+								sourceView={isSourceMode ? sourceEditor : undefined}
+								editable={!isReadOnly}
+								onChange={editor.setBody}
+								blockActions={extensions.blockActions.length > 0 ? extensions.blockActions : undefined}
+								selectionActions={extensions.selectionActions}
+								insertActions={extensions.insertActions}
+								onEditor={(editor) => {
+									visualEditorRef.current = editor;
+									extensions.onEditor?.(editor);
+								}}
+								onCompositionStart={() => editor.setComposing(true)}
+								onCompositionEnd={() => editor.setComposing(false)}
+							/>
+							{extensions.overlay}
+						</EditorScroller>
+
+						{isInspectorOpen && (
+							<InspectorSidePanel
+								editor={editor}
+								resize={inspectorResize}
+								incomingItems={incoming.items}
+								isLoadingIncoming={incoming.loading}
+								onRefreshIncoming={(id) => void refreshIncoming(id)}
+								onClose={() => setIsInspectorOpen(false)}
+								focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
+								onFocused={() => setPendingFieldPath(null)}
+							/>
+						)}
+						<SidePanelPane />
+					</Inline>
+
+					<StatusBar
+						context={{
+							screen: "entry",
+							collection,
+							...(entry?.id ? { entryId: entry.id } : {}),
+							locale: entry?.locale ?? site.DEFAULT_LOCALE,
+							editor: barStatus,
+						}}
+					/>
+
+					<EntryEditorRecoveryDialogs editor={editor} />
+
+					{commands.confirmDialog}
+					{translationSource && (
+						<SourceChangeDialog
+							open={isSourceCompareOpen}
+							onOpenChange={setIsSourceCompareOpen}
+							before={confirmed?.baseDoc}
+							after={translationSource.doc}
+						/>
+					)}
+				</Stack>
+			</OpenEditorContext.Provider>
 		</EntryEditorProvider>
 	);
 }

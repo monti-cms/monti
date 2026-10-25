@@ -8,6 +8,7 @@ import { siteWithFolders } from "../../test/site";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
+import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
@@ -561,5 +562,38 @@ describe("taxonomy edit panel — unsaved changes", () => {
 
 		act(() => nav.setSearch("collection=post"));
 		await waitFor(() => expect(screen.queryByRole("textbox", { name: /이름/ })).toBeNull());
+	});
+});
+
+describe("list screen — screen context", () => {
+	/** What a side panel reads about where the admin is. */
+	function Where() {
+		return <output aria-label="where">{JSON.stringify(useScreenContext())}</output>;
+	}
+	const whereIs = () => JSON.parse(screen.getByLabelText("where").textContent ?? "{}");
+	const renderWithContext = () =>
+		render(
+			<ScreenContextProvider>
+				<Where />
+				<AdminQueryProvider>
+					<EntryListScreen />
+				</AdminQueryProvider>
+			</ScreenContextProvider>,
+		);
+
+	it("publishes the collection and the selected rows, and publishes none when the selection is cleared", async () => {
+		renderWithContext();
+		await screen.findByRole("row", { name: /가/ });
+		await waitFor(() => expect(whereIs()).toMatchObject({ screen: "entries", collection: "post" }));
+		expect(whereIs().selectedIds).toEqual([]);
+
+		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
+		await waitFor(() => expect(whereIs().selectedIds).toEqual(["가", "다"]));
+
+		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
+		await waitFor(() => expect(whereIs().selectedIds).toEqual(["다"]));
+		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
+		await waitFor(() => expect(whereIs().selectedIds).toEqual([]));
 	});
 });

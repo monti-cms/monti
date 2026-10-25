@@ -1,6 +1,6 @@
 import { adminApiUrl, adminFetch, type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions";
-import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection";
+import type { AiAgentSetting, AiCheckResult, AiModelInfo, AiSettingsView } from "../connection";
 import type { AiRunResult } from "../definition";
 import type { AiSnippetView } from "../snippets";
 
@@ -21,8 +21,25 @@ export interface AiActionsResponse {
 
 export type AiRunManyResult = { result: AiRunResult } | { error: string };
 
+/** A conversation of the admin agent in the list, as `GET /v1/ai/agent/runs` sends it (the times are text). */
+export interface AgentRunView {
+	id: string;
+	title: string;
+	status: "running" | "done" | "failed" | "stopped";
+	usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+	error?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+/** One conversation with its messages, as `GET /v1/ai/agent/runs/:id` sends it. */
+export interface AgentRunDetail extends AgentRunView {
+	messages: unknown[];
+}
+
 export const aiKeys = {
 	all: ["cms", "ai"] as const,
+	agentRuns: () => [...aiKeys.all, "agent-runs"] as const,
 	actions: () => [...aiKeys.all, "actions"] as const,
 	settings: () => [...aiKeys.all, "settings"] as const,
 	snippets: () => [...aiKeys.all, "snippets"] as const,
@@ -53,6 +70,21 @@ export const deleteAiAction = (site: Site, key: string, expectedVersion: number,
 /** `GET /v1/ai/settings` */
 export const getAiSettings = (site: Site, options: AiRequestOptions = {}) =>
 	adminFetch<AiSettingsView>(site, "/v1/ai/settings", options);
+
+/** `PUT /v1/ai/settings` (chooses the model of the admin agent; `agent: null` is the default again). */
+export const setAiAgentModel = (
+	site: Site,
+	json: { expectedVersion: number; agent: AiAgentSetting | null },
+	fallback?: string,
+) => adminFetch<AiSettingsView>(site, "/v1/ai/settings", { method: "PUT", json, fallback });
+
+/** `GET /v1/ai/agent/runs`: the newest conversations of the signed-in admin. */
+export const listAgentRuns = (site: Site, options: AiRequestOptions = {}) =>
+	adminFetch<{ items: AgentRunView[]; total: number }>(site, "/v1/ai/agent/runs?pageSize=20", options);
+
+/** `GET /v1/ai/agent/runs/:id` */
+export const getAgentRun = (site: Site, id: string, options: AiRequestOptions = {}) =>
+	adminFetch<AgentRunDetail>(site, `/v1/ai/agent/runs/${segment(id)}`, options);
 
 /** `POST /v1/ai/providers` */
 export const createAiProvider = (site: Site, json: unknown, fallback?: string) =>

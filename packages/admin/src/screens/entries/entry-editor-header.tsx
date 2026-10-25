@@ -43,6 +43,7 @@ import { exportMessages } from "../export/messages";
 import { statusLabels } from "../shared/entry-status";
 import { entryStatusMarker } from "../shared/entry-status-marker";
 import { collectionNoun } from "../shared/noun.messages";
+import { SidePanelToggle } from "../shared/side-panel-slot";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
 import { isTranslationEntry } from "./entry-form";
@@ -215,6 +216,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>
 					<PanelRight aria-hidden />
 				</IconButton>
+				<SidePanelToggle />
 				<DropdownMenu>
 					<IconButton label={t("more")} side="bottom" trigger={(button) => <DropdownMenuTrigger render={button} />}>
 						<MoreHorizontal aria-hidden />

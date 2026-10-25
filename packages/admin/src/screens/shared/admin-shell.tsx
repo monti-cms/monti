@@ -12,6 +12,8 @@ import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useAdminFeatures } from "./admin-features";
 import { sharedMessages } from "./messages";
 import { useNavQueriesReady } from "./nav-queries";
+import { type ScreenContextValue, usePublishScreenContext } from "./screen-context";
+import { SidePanelPane, SidePanelToggle } from "./side-panel-slot";
 import { StatusBar, type StatusBarContextValue, type StatusBarScreen } from "./status-bar";
 
 interface AdminNavContextValue {
@@ -100,6 +102,14 @@ function shellStatusContext(site: Site, activeNav: AdminSidebarProps["activeNav"
 	};
 }
 
+/** Where the admin is on a shell page, for the side panel: a collection (or the trash) is the entry list, and the other nav items name their own screen. */
+function shellScreenContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): Partial<ScreenContextValue> {
+	if (site.COLLECTIONS.includes(activeNav)) return { screen: "entries", collection: activeNav };
+	if (activeNav === "trash") return { screen: "entries" };
+	if (activeNav === "media" || activeNav === "settings") return { screen: activeNav };
+	return { screen: "other" };
+}
+
 /** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
 export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
@@ -173,6 +183,7 @@ export function AdminShell({
 	const nav = useContext(AdminNavContext);
 	const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
 	const [metaSlot, setMetaSlot] = useState<HTMLElement | null>(null);
+	usePublishScreenContext(shellScreenContext(site, sidebar.activeNav));
 	if (!nav) {
 		return (
 			<AdminNavProvider>
@@ -192,81 +203,90 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset fixed>
-				{editorial ? (
-					<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
-						<Inline
-							as="header"
-							align="end"
-							justify="between"
-							gap="normal"
-							border="bottom-strong"
-							paddingBottom="normal"
-						>
-							<Inline gap="condensed" align="baseline" grow minWidth={0}>
+				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden">
+					<Stack gap="none" grow minWidth={0} minHeight={0}>
+						{editorial ? (
+							<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
+								<Inline
+									as="header"
+									align="end"
+									justify="between"
+									gap="normal"
+									border="bottom-strong"
+									paddingBottom="normal"
+								>
+									<Inline gap="condensed" align="baseline" grow minWidth={0}>
+										<Box hideFrom="md">
+											<SidebarTrigger aria-label={t("shell.openSidebar")} />
+										</Box>
+										<Box minWidth={0}>
+											<Heading as="h1" variant="heading">
+												<Inline as="span" gap="condensed" align="baseline">
+													<Text truncate>{title}</Text>
+													{count !== undefined && (
+														<Text variant="caption" tone="muted" mono>
+															{count}
+														</Text>
+													)}
+												</Inline>
+											</Heading>
+										</Box>
+										<Inline gap="condensed" align="center" ref={setMetaSlot} />
+										{description && (
+											<Box minWidth={0} hideBelow="md">
+												<Text as="p" variant="caption" tone="muted" truncate>
+													{description}
+												</Text>
+											</Box>
+										)}
+									</Inline>
+									<Inline gap="condensed">
+										<div ref={setActionsSlot} />
+										<SidePanelToggle />
+									</Inline>
+								</Inline>
+							</Box>
+						) : (
+							<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
 								<Box hideFrom="md">
 									<SidebarTrigger aria-label={t("shell.openSidebar")} />
 								</Box>
-								<Box minWidth={0}>
-									<Heading as="h1" variant="heading">
-										<Inline as="span" gap="condensed" align="baseline">
-											<Text truncate>{title}</Text>
-											{count !== undefined && (
-												<Text variant="caption" tone="muted" mono>
-													{count}
-												</Text>
-											)}
-										</Inline>
-									</Heading>
-								</Box>
-								<Inline gap="condensed" align="center" ref={setMetaSlot} />
-								{description && (
-									<Box minWidth={0} hideBelow="md">
-										<Text as="p" variant="caption" tone="muted" truncate>
-											{description}
-										</Text>
+								<Inline gap="condensed" align="baseline" grow minWidth={0}>
+									<Box minWidth={0}>
+										<Heading as="h1" variant="title">
+											<Inline as="span" gap="condensed" align="baseline">
+												<Text truncate>{title}</Text>
+												{count !== undefined && (
+													<Text variant="caption" tone="muted" mono>
+														{count}
+													</Text>
+												)}
+											</Inline>
+										</Heading>
 									</Box>
-								)}
-							</Inline>
-							<div ref={setActionsSlot} />
-						</Inline>
-					</Box>
-				) : (
-					<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
-						<Box hideFrom="md">
-							<SidebarTrigger aria-label={t("shell.openSidebar")} />
-						</Box>
-						<Inline gap="condensed" align="baseline" grow minWidth={0}>
-							<Box minWidth={0}>
-								<Heading as="h1" variant="title">
-									<Inline as="span" gap="condensed" align="baseline">
-										<Text truncate>{title}</Text>
-										{count !== undefined && (
-											<Text variant="caption" tone="muted" mono>
-												{count}
+									<Inline gap="condensed" align="center" ref={setMetaSlot} />
+									{description && (
+										<Box minWidth={0} hideBelow="md">
+											<Text as="p" variant="caption" tone="muted" truncate>
+												{description}
 											</Text>
-										)}
-									</Inline>
-								</Heading>
-							</Box>
-							<Inline gap="condensed" align="center" ref={setMetaSlot} />
-							{description && (
-								<Box minWidth={0} hideBelow="md">
-									<Text as="p" variant="caption" tone="muted" truncate>
-										{description}
-									</Text>
-								</Box>
-							)}
-						</Inline>
-						<div ref={setActionsSlot} />
-					</Inline>
-				)}
-				<MetaSlotContext.Provider value={metaSlot}>
-					<ActionsSlotContext.Provider value={actionsSlot}>
-						<Stack gap="none" grow minHeight={0} overflow="hidden">
-							{children}
-						</Stack>
-					</ActionsSlotContext.Provider>
-				</MetaSlotContext.Provider>
+										</Box>
+									)}
+								</Inline>
+								<div ref={setActionsSlot} />
+								<SidePanelToggle />
+							</Inline>
+						)}
+						<MetaSlotContext.Provider value={metaSlot}>
+							<ActionsSlotContext.Provider value={actionsSlot}>
+								<Stack gap="none" grow minHeight={0} overflow="hidden">
+									{children}
+								</Stack>
+							</ActionsSlotContext.Provider>
+						</MetaSlotContext.Provider>
+					</Stack>
+					<SidePanelPane />
+				</Inline>
 				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
 			</SidebarInset>
 		</SidebarProvider>
