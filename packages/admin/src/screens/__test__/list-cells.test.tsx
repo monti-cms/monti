@@ -145,9 +145,9 @@ describe("default list cells", () => {
 		expect(within(row).getAllByText("Alpha").length).toBeGreaterThan(0);
 	});
 
-	it("shows a dash for empty values and the raw value for a select option that no longer exists", () => {
+	it("leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {
 		renderTable([item("empty"), item("stale", { values: { format: "retired" } })]);
-		expect(within(rowOf(/empty/)).getAllByText("—").length).toBeGreaterThanOrEqual(5);
+		expect(within(rowOf(/empty/)).queryByText("—")).toBeNull();
 		expect(within(rowOf(/stale/)).getByText("retired")).toBeTruthy();
 	});
 });
