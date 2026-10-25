@@ -1,5 +1,8 @@
+"use client";
+
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { createContext, useContext } from "react";
 
 import { cn } from "./cn";
 
@@ -50,6 +53,12 @@ export const textVariants = cva("", {
 	defaultVariants: { variant: "body", tone: "inherit", weight: "role" },
 });
 
+/**
+ * Set inside any text that has a role (a `Text` or a `Heading`). A `Text` inside one with no `variant` of its own takes the outer role instead of
+ * `body`, so a heading's run keeps the heading size and a caption's bold word stays caption-sized.
+ */
+const InsideRole = createContext(false);
+
 type TextProps = React.HTMLAttributes<HTMLElement> &
 	VariantProps<typeof textVariants> & {
 		as?: "span" | "p" | "div" | "label" | "dt" | "dd" | "li" | "code" | "time";
@@ -71,14 +80,18 @@ function Text({
 	className,
 	...props
 }: TextProps) {
+	const inside = useContext(InsideRole);
+	const role = variant === undefined && inside ? null : variant;
 	return (
-		<Tag
-			className={cn(
-				textVariants({ variant, tone, weight, mono, truncate, srOnly, lines, italic, preserveLines, align }),
-				className,
-			)}
-			{...props}
-		/>
+		<InsideRole.Provider value={true}>
+			<Tag
+				className={cn(
+					textVariants({ variant: role, tone, weight, mono, truncate, srOnly, lines, italic, preserveLines, align }),
+					className,
+				)}
+				{...props}
+			/>
+		</InsideRole.Provider>
 	);
 }
 
@@ -97,7 +110,11 @@ function Heading({
 	tone?: VariantProps<typeof textVariants>["tone"];
 	truncate?: boolean;
 }) {
-	return <Tag className={cn(textVariants({ variant, tone, truncate }), className)} {...props} />;
+	return (
+		<InsideRole.Provider value={true}>
+			<Tag className={cn(textVariants({ variant, tone, truncate }), className)} {...props} />
+		</InsideRole.Provider>
+	);
 }
 
 export { Heading, Text };

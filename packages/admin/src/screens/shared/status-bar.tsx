@@ -252,7 +252,7 @@ export function StatusBarItem({
 	if (popover) {
 		return (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger title={title} render={<button type="button" className={classes} />}>
+				<PopoverTrigger title={title} render={<button type="button" data-slot="status-bar-item" className={classes} />}>
 					{content}
 				</PopoverTrigger>
 				<PopoverContent side="top" align={align} sideOffset={6} width="md" padding="none" scroll>
@@ -266,24 +266,31 @@ export function StatusBarItem({
 	if (href) {
 		const external = newTab || /^https?:/.test(href);
 		return external ? (
-			<a href={href} target="_blank" rel="noopener noreferrer" title={title} className={classes}>
+			<a
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				title={title}
+				data-slot="status-bar-item"
+				className={classes}
+			>
 				{content}
 			</a>
 		) : (
-			<AdminLink href={href} title={title} className={classes}>
+			<AdminLink href={href} title={title} data-slot="status-bar-item" className={classes}>
 				{content}
 			</AdminLink>
 		);
 	}
 	if (onClick) {
 		return (
-			<button type="button" title={title} onClick={onClick} className={classes}>
+			<button type="button" title={title} onClick={onClick} data-slot="status-bar-item" className={classes}>
 				{content}
 			</button>
 		);
 	}
 	return (
-		<span title={title} className={classes}>
+		<span title={title} data-slot="status-bar-item" className={classes}>
 			{content}
 		</span>
 	);
@@ -740,7 +747,8 @@ export function StatusBar({ context }: { context: StatusBarContextValue }) {
 			<section
 				aria-label={t("label")}
 				data-slot="status-bar"
-				className="flex h-6 shrink-0 items-center justify-between gap-condensed overflow-hidden whitespace-nowrap border-t bg-monti-inset px-condensed"
+				// Shown only while some item has something to say: on most screens outside the editor that is nothing.
+				className="hidden h-6 shrink-0 items-center justify-between gap-condensed overflow-hidden whitespace-nowrap border-t bg-monti-inset px-condensed has-[[data-slot=status-bar-item]]:flex"
 			>
 				<div className="flex min-w-0 items-center gap-tight overflow-hidden">
 					<AlignContext.Provider value="start">

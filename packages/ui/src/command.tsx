@@ -36,15 +36,16 @@ function CommandDialog({
 }) {
 	return (
 		<Dialog {...props}>
-			<DialogHeader className="sr-only">
-				<DialogTitle>{title}</DialogTitle>
-				<DialogDescription>{description}</DialogDescription>
-			</DialogHeader>
 			<DialogContent
 				className={cn("top-1/3 translate-y-0 overflow-hidden rounded-dialog! p-0", className)}
 				showCloseButton={showCloseButton}
 			>
-				{children}
+				<DialogHeader className="sr-only">
+					<DialogTitle>{title}</DialogTitle>
+					<DialogDescription>{description}</DialogDescription>
+				</DialogHeader>
+				{/* The palette's items read their list from a `Command` around them. */}
+				<Command>{children}</Command>
 			</DialogContent>
 		</Dialog>
 	);

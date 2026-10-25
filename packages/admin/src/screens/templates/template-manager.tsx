@@ -264,6 +264,7 @@ export function TemplateManager() {
 			<MasterDetail
 				list={
 					<ListPane
+						resizeKey="templates"
 						label={t("list.label")}
 						loading={templatesQuery.isPending}
 						empty={error ? null : <EmptyState compact title={t("list.empty")} />}

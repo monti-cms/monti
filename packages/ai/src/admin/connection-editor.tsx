@@ -132,6 +132,7 @@ export function ConnectionManager({
 			<MasterDetail
 				list={
 					<ListPane
+						resizeKey="ai-connections"
 						label={t("list.label")}
 						loading={settingsQuery.isPending}
 						skeletonRows={2}

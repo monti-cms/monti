@@ -29,6 +29,9 @@ const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 /** The element on the right of the shell's title bar, where a page's own actions go (see {@link PageActions}). */
 const ActionsSlotContext = createContext<HTMLElement | null>(null);
 
+/** The element after the title, where a page's status chip goes (see {@link PageMeta}). */
+const MetaSlotContext = createContext<HTMLElement | null>(null);
+
 /**
  * Puts a page's action buttons (the one primary action, such as "Add template") on the right of the title bar. The page decides what they are, because they
  * depend on its state; the shell only provides the place. Renders nothing until the title bar is mounted.
@@ -45,6 +48,12 @@ export function PageActions({ children }: { children: ReactNode }) {
 		: null;
 }
 
+/** Puts a page's status next to its title (the settings file and its version). Renders nothing until the title bar is mounted. */
+export function PageMeta({ children }: { children: ReactNode }) {
+	const slot = useContext(MetaSlotContext);
+	return slot ? createPortal(children, slot) : null;
+}
+
 /**
  * A page inside the admin frame: the sidebar with `nav` active, `title` in the title bar, and the page below. The generic form of the pages that
  * only wrap a screen (event log, API keys, templates, a plugin's page); a page's own actions go in the title bar through {@link PageActions}.
@@ -53,8 +62,6 @@ export function ShellPage({
 	title,
 	nav,
 	count,
-	bare,
-	large,
 	description,
 	children,
 }: {
@@ -62,21 +69,11 @@ export function ShellPage({
 	/** The sidebar item to mark as current (`events`, `tools:<path>`, ...). */
 	nav: AdminSidebarProps["activeNav"];
 	count?: number | string;
-	bare?: boolean;
-	/** The big page header with a one-line `description` under the title. */
-	large?: boolean;
 	description?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
-		<AdminShell
-			title={title}
-			count={count}
-			sidebar={{ activeNav: nav }}
-			bare={bare}
-			large={large}
-			description={description}
-		>
+		<AdminShell title={title} count={count} sidebar={{ activeNav: nav }} description={description}>
 			{children}
 		</AdminShell>
 	);
@@ -150,38 +147,33 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Frame shared by the list, media, templates and trash screens. Left is the shadcn Sidebar (a sheet on narrow screens),
- * with the screen title at the top right. On narrow screens, a header button opens the sidebar sheet.
+ * Frame of every admin page but the editor. Left is the shadcn Sidebar (a sheet on narrow screens); on the right one quiet title bar (the title, its count,
+ * a short description and the page's actions in a single row, so the content starts high) over the page. Tabs a page has sit right under it.
  */
 export function AdminShell({
 	title,
 	count,
 	sidebar,
-	bare,
 	description,
-	large,
 	children,
 }: {
 	title: ReactNode;
 	/** Item count shown dimmed next to the title. Leave it out (undefined) while the first load runs, so it never shows a false 0. */
 	count?: number | string;
-	/** The big page header of the list screens: a large title with the count in mono, this one-line description under it, and the page actions bottom-aligned on the right. */
-	large?: boolean;
-	/** The muted line under a large title. */
+	/** A short muted line after the title (where the collection is public); hidden on narrow screens. */
 	description?: ReactNode;
 	sidebar: AdminSidebarProps;
-	/** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
-	bare?: boolean;
 	children: ReactNode;
 }) {
 	const t = useTranslator(sharedMessages);
 	const site = useSite();
 	const nav = useContext(AdminNavContext);
 	const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
+	const [metaSlot, setMetaSlot] = useState<HTMLElement | null>(null);
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} bare={bare} large={large} description={description}>
+				<AdminShell title={title} count={count} sidebar={sidebar} description={description}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -197,21 +189,13 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset fixed>
-				{!bare && large && (
-					<Inline
-						as="header"
-						align="end"
-						gap="normal"
-						shrink={false}
-						paddingX="wide"
-						paddingTop="wide"
-						paddingBottom="comfortable"
-					>
-						<Box hideFrom="md">
-							<SidebarTrigger aria-label={t("shell.openSidebar")} />
-						</Box>
-						<Stack gap="tight" grow minWidth={0}>
-							<Heading as="h1" variant="heading">
+				<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
+					<Box hideFrom="md">
+						<SidebarTrigger aria-label={t("shell.openSidebar")} />
+					</Box>
+					<Inline gap="condensed" align="baseline" grow minWidth={0}>
+						<Box minWidth={0}>
+							<Heading as="h1" variant="title">
 								<Inline as="span" gap="condensed" align="baseline">
 									<Text truncate>{title}</Text>
 									{count !== undefined && (
@@ -221,40 +205,25 @@ export function AdminShell({
 									)}
 								</Inline>
 							</Heading>
-							{description && (
-								<Text as="p" tone="muted">
+						</Box>
+						<Inline gap="condensed" align="center" ref={setMetaSlot} />
+						{description && (
+							<Box minWidth={0} hideBelow="md">
+								<Text as="p" variant="caption" tone="muted" truncate>
 									{description}
 								</Text>
-							)}
+							</Box>
+						)}
+					</Inline>
+					<div ref={setActionsSlot} />
+				</Inline>
+				<MetaSlotContext.Provider value={metaSlot}>
+					<ActionsSlotContext.Provider value={actionsSlot}>
+						<Stack gap="none" grow minHeight={0} overflow="hidden">
+							{children}
 						</Stack>
-						<div ref={setActionsSlot} />
-					</Inline>
-				)}
-				{!bare && !large && (
-					<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="comfortable" paddingY="normal">
-						<Box hideFrom="md">
-							<SidebarTrigger aria-label={t("shell.openSidebar")} />
-						</Box>
-						<Box grow minWidth={0}>
-							<Heading as="h1" variant="title">
-								<Inline as="span" gap="condensed" align="baseline">
-									<Text truncate>{title}</Text>
-									{count !== undefined && (
-										<Text tone="muted" mono>
-											{count}
-										</Text>
-									)}
-								</Inline>
-							</Heading>
-						</Box>
-						<div ref={setActionsSlot} />
-					</Inline>
-				)}
-				<ActionsSlotContext.Provider value={actionsSlot}>
-					<Stack gap="none" grow minHeight={0} overflow="hidden">
-						{children}
-					</Stack>
-				</ActionsSlotContext.Provider>
+					</ActionsSlotContext.Provider>
+				</MetaSlotContext.Provider>
 				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
 			</SidebarInset>
 		</SidebarProvider>

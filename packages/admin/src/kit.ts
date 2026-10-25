@@ -73,6 +73,7 @@ export {
 	SelectValue,
 	Skeleton,
 	Spinner,
+	SplitButton,
 	Stack,
 	Switch,
 	Tabs,

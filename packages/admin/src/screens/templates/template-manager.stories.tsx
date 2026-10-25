@@ -35,7 +35,7 @@ const api =
 	};
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="템플릿" nav="templates" pathname="/admin/templates" shell={{ large: true }}>
+	<ScreenFrame api={fake} title="템플릿" nav="templates" pathname="/admin/templates">
 		<TemplateManager />
 	</ScreenFrame>
 );

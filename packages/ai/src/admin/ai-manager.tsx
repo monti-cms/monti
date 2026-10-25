@@ -548,6 +548,7 @@ export function AiManager() {
 					<MasterDetail
 						list={
 							<ListPane
+								resizeKey="ai-features"
 								label={t("list.label")}
 								loading={featuresQuery.isPending}
 								skeletonRows={4}

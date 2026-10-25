@@ -12,7 +12,7 @@ export function MediaNotConfigured() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	return (
-		<AdminShell title={t("title")} large sidebar={{ activeNav: "media" }}>
+		<AdminShell title={t("title")} sidebar={{ activeNav: "media" }}>
 			<EmptyState icon={ImageOff} title={mediaNotConfiguredMessage(site)} description={t("notConfigured.hint")} />
 		</AdminShell>
 	);

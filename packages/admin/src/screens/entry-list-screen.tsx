@@ -188,19 +188,12 @@ function ListLoading() {
 				</Stack>
 			</Stack>
 			<Stack gap="none" grow minWidth={0} aria-hidden>
-				{/* Title and address on the left, search and the add button on the right. */}
-				<Inline
-					justify="between"
-					gap="normal"
-					shrink={false}
-					paddingX="wide"
-					paddingTop="wide"
-					paddingBottom="comfortable"
-				>
-					<Stack gap="tight">
-						<Skeleton shape="title" width="short" />
+				{/* The title bar: title and address on the left, search and the add button on the right. */}
+				<Inline justify="between" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
+					<Inline gap="condensed">
+						<Skeleton shape="line" width="short" />
 						<Skeleton shape="line" width="medium" />
-					</Stack>
+					</Inline>
 					<Inline gap="condensed">
 						<Skeleton shape="control-sm" width="medium" />
 						<Skeleton shape="control-sm" width="short" />
@@ -271,7 +264,6 @@ function TrashPage() {
 			title={t("dashboard.trash")}
 			count={list.data.isLoading ? undefined : list.data.total}
 			sidebar={{ activeNav: "trash" }}
-			large
 		>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
@@ -308,7 +300,6 @@ function ListPage() {
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
 			count={list.data.isLoading ? undefined : list.data.total}
-			large
 			description={routePath ? <RouteDescription path={routePath} /> : undefined}
 			sidebar={{
 				activeNav: state.collection,

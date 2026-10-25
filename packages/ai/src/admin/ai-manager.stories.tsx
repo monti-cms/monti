@@ -120,7 +120,7 @@ const withConnection = (over: Data = {}) =>
 	ai({ actions: { usable: ["slug", "summary", "category"], items: features }, settings: connected, snippets, ...over });
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="AI" nav="ai" pathname="/admin/ai" shell={{ large: true }}>
+	<ScreenFrame api={fake} title="AI" nav="ai" pathname="/admin/ai">
 		<AiManager />
 	</ScreenFrame>
 );
