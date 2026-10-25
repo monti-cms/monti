@@ -1,6 +1,6 @@
 # Admin agent (design)
 
-Status: proposal, not implemented.
+Status: accepted, not implemented.
 
 Goal: an admin can ask the AI anything about the site and tell it to do things, from any screen of the admin, and the AI can use every capability the admin
 has, not only the fixed buttons it is given today. "Move these posts into a 2024 folder", "tag every post about React", "which media is unused, and clean
@@ -42,7 +42,7 @@ The agent needs every capability as a tool: a name, a description, an input sche
 | Option | Parity | Cost | Verdict |
 | --- | --- | --- | --- |
 | A. Write agent tools by hand next to the HTTP routes | Drifts: a new route without a tool is easy to forget | Small now, grows with every feature | Rejected |
-| B. Tools by hand, plus a test that every write route has a tool or is listed as excluded | Checked, not structural | Small | Fallback |
+| B. Tools by hand, plus a test that every write route has a tool or is listed as excluded | Checked, not structural | Small | Rejected |
 | **C. One `defineOperation` per capability; the HTTP route and the agent tool are both made from it** | **Structural: there is one definition** | **Moving the routes over (phase 3)** | **Chosen** |
 
 ```ts
@@ -158,11 +158,11 @@ editor keeps both autocomplete and a chat.
 
 Phase 1 has no writes on purpose: the loop, the context and the tool descriptions can be tuned while nothing can go wrong.
 
-## Questions
+## Decisions
 
-1. **Routes from operations (section 1, option C).** Recommended: yes, so parity is structural. It makes phase 3 a large refactor of the HTTP layer. The
-   alternative is option B: tools beside the routes, and a test that finds a write route without a tool.
-2. **Where the agent lives.** `defineOperation` belongs in core. Recommended: the loop, the panel and proposals go in `@monti-cms/ai`, because actions become
-   tools of the same agent. The alternative is a new `@monti-cms/agent` package.
-3. **Models without tool calling.** Recommended: the agent is off for that connection and actions keep working. The alternative is to require a model that
-   calls tools to connect at all.
+Decided by the owner on 2026-10-26:
+
+1. **Routes are made from operations (section 1, option C).** Parity is structural. Phase 3 is a large refactor of the HTTP layer, and that cost is accepted.
+2. **The agent lives in `@monti-cms/ai`.** `defineOperation` is in core; the loop, the panel and proposals are in the AI plugin, because actions become tools
+   of the same agent. There is no separate agent package.
+3. **Models without tool calling turn the agent off for that connection.** Actions keep working with every model.
