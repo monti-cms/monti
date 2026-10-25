@@ -48,7 +48,7 @@ The agent needs every capability as a tool: a name, a description, an input sche
 ```ts
 export const moveToFolder = defineOperation({
 	name: "entries.moveToFolder",
-	kind: "write", // "read" | "write" | "code"
+	kind: "write", // "read" | "write" | "code" | "editor"
 	describe: "Move entries into a folder, or out of every folder with folderId null.",
 	input: z.object({ ids: z.array(z.uuid()).min(1), folderId: z.uuid().nullable() }),
 	// What would change, computed without writing: the rows and their before and after values, and the versions read.
@@ -60,7 +60,8 @@ export const moveToFolder = defineOperation({
 
 - `kind: "read"` operations have no `preview`. `run` returns data for the agent and the screens.
 - `kind: "write"` operations must have a `preview`. The agent only ever calls `preview`; `run` happens when a proposal is applied (section 2).
-- `kind: "code"` operations change files in the site's repository and end in a pull request (section 5).
+- `kind: "code"` operations change files in the site's repository and end in a pull request (section 6).
+- `kind: "editor"` operations run in the browser on the open entry, and their writes are suggestions in the editor (section 5).
 - `describe` is written for the model: what the operation does and when to use it, in English. The admin screens do not show it.
 - Core defines its operations next to its services. Plugins add theirs with `defineServerPlugin({ operations })`, so git-sync, seo or a site's own plugin
   extends what the agent can do. This is also how a site customises the agent, in line with how it defines AI actions today.
@@ -119,7 +120,31 @@ type Proposal = {
 - The open proposal shows in the panel, with a button to open the review.
 - After apply, the screens refresh the data the proposal changed.
 
-## 5. Code changes as pull requests
+## 5. The open entry: editor operations
+
+When the panel is open over the entry editor, the entry on screen is not the stored one: the form holds unsaved changes (`hasUnsavedChanges` of
+`EntryEditor`, `packages/admin/src/screens/entries/entry-editor-types.ts`), and the server sees them only on save. A server write to that entry would change
+the last saved copy, ignore what the admin is typing, and make the next save a version conflict. So the open entry is changed in the editor, not on the
+server.
+
+- **Editor operations** are operations that run in the browser, against the open editor. The run on the server sends the tool call to the panel, the panel
+  runs it on the editor and returns the result, and the run goes on. The AI SDK supports this: a tool without a server `execute` is answered by the client.
+- Reads: the open entry as the form holds it (fields, and the body as text in the site's format), the selection, and the block at the cursor. These come
+  with the screen context too, so a short question needs no tool call.
+- Writes: replace the selection, rewrite a block, insert, move or remove blocks (addressed by their block ids, `packages/admin/src/editor/block-ids.ts`), and
+  set a field of the properties panel.
+- **Review in place.** An editor write does not go into a proposal. It shows in the editor as a suggestion: removed text struck through, added text
+  highlighted, with accept and reject on each block and on each field (the word diff the AI style polish uses today, `packages/ai/src/admin/word-diff.ts`,
+  is the starting point). Accepting changes the form, not the server. The admin saves as always, and the browser recovery copy covers the accepted text.
+- Rejecting a suggestion, typing over it, or closing the entry drops it. The model is told which suggestions were accepted, so it does not repeat a rejected
+  one.
+- **Which side a write goes to.** The entry open in the editor: editor operations. Every other entry, or several at once: server operations and a proposal.
+  One request can use both ("tag this post, and the three older posts like it"): the tag on this post is a suggestion in the editor, and the other three
+  are a proposal. A server write to the open entry is refused and the model is told to use the editor operation instead.
+- Lifecycle commands of the open entry (publish, archive, trash) stay server operations in a proposal, and the editor applies them the way its own buttons
+  do: save first, then the command.
+
+## 6. Code changes as pull requests
 
 Some of what the admin may ask for lives in the site's code: the schema file, and, later, the site config. In production the schema file is read-only today
 (`schema_read_only`), so the agent could never change it there directly.
@@ -132,13 +157,13 @@ Some of what the admin may ask for lives in the site's code: the schema file, an
 - The agent cannot run the site's type check or build itself, so a wrong change is found by CI, minutes later. That is acceptable for schema changes, which
   are rare. Editing arbitrary code is out of scope.
 
-## 6. AI actions
+## 7. AI actions
 
 Actions stay, and each one also becomes a read operation (`ai.<action name>`): the agent can ask for "a summary of this post" through the same definition,
 inputs and checks as the button, and put the result into a proposal with a write operation. The buttons remain the quick path for one field, the way an
 editor keeps both autocomplete and a chat.
 
-## 7. Security
+## 8. Security
 
 - **Prompt injection.** The agent reads content written by other people, and content can contain instructions. Tool results are marked as data in the
   messages, but the real defence is that no write happens without the admin's review. The agent has no tool that sends anything outside the site (no web
@@ -146,13 +171,13 @@ editor keeps both autocomplete and a chat.
 - **Scope.** Operations exist only for what an admin can already do. Sign-in, API key values, secrets and the AI connection settings are not operations.
 - **Size.** Inputs and previews have limits, like a save. A proposal has a maximum number of items; larger work is split into several runs.
 
-## 8. Phases
+## 9. Phases
 
 | Phase | What | The admin can |
 | --- | --- | --- |
 | 0 | This document; check tool calling with the models people connect (OpenAI-compatible providers differ) | — |
-| 1 | `defineOperation`; read operations (entry search by fields, read an entry, schema, folders, tags, media with usage); stored runs; the shell panel with screen context | Ask questions about the site: "which posts have no tags?" |
-| 2 | Proposals: preview, review screen, apply, undo; write operations for bulk, entry fields and media | "Tag these", "move these", "clean up unused media", then review and apply |
+| 1 | `defineOperation`; read operations (entry search by fields, read an entry, schema, folders, tags, media with usage); stored runs; the shell panel with screen context; editor reads (the open entry, the selection) | Ask questions about the site, and about the post being written: "which posts have no tags?", "is this intro too long?" |
+| 2 | Proposals: preview, review screen, apply, undo; write operations for bulk, entry fields and media; editor writes as suggestions in the editor | "Tag these", "move these", "clean up unused media", then review and apply; "tighten this paragraph", accepted or rejected in place |
 | 3 | Every admin route that fits becomes an operation and the router mounts it; actions as operations; plugin operations | Everything the admin can do |
 | 4 | `kind: "code"` and pull requests, starting with the schema file | "Add a summary field to posts" in production |
 

@@ -6,9 +6,9 @@ and what each one becomes for the agent.
 Columns:
 
 - **Operation**: the proposed `defineOperation` name.
-- **Kind**: `read` (the agent calls it freely), `write` (goes into a proposal), `code` (a pull request), or `—` (not an operation; the reason is in the notes).
+- **Kind**: `read` (the agent calls it freely), `write` (goes into a proposal), `code` (a pull request), `editor read` and `editor write` (run in the browser on the open entry; a write is a suggestion in the editor), or `—` (not an operation; the reason is in the notes).
 - **Undo**: how a proposal reverses the write. "No" means the review says it cannot be undone.
-- **Phase**: when it arrives (agent.md section 8).
+- **Phase**: when it arrives (agent.md section 9).
 
 ## Entries
 
@@ -36,6 +36,25 @@ Route base: `/v1/entries`.
 | `entries.setRelation` | write | bulk `relation.add`, `relation.remove`, `relation.set` | The opposite change | 2 | Tags and categories are relation fields, so "tag these posts" is this |
 
 The bulk route takes up to 100 items per call. A proposal with more items splits them into several bulk calls when it is applied.
+
+## The open entry (editor)
+
+These run in the browser on the entry open in the editor (agent.md section 5). There is no route: they act on the form, not on the server. A write is a
+suggestion the admin accepts or rejects in the editor, and nothing is saved until the admin saves.
+
+| Operation | Kind | Route today | Undo | Phase | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `editor.read` | editor read | none | | 1 | The open entry as the form holds it, unsaved changes included: fields, and the body as text in the site's format |
+| `editor.selection` | editor read | none | | 1 | The selected text and the block at the cursor, with its block id. Also sent with the screen context |
+| `editor.replaceSelection` | editor write | none | Reject the suggestion | 2 | |
+| `editor.rewriteBlock` | editor write | none | Reject the suggestion | 2 | A paragraph, heading, list or block, by block id |
+| `editor.insertBlocks` | editor write | none | Reject the suggestion | 2 | Before or after a block; the blocks as text in the site's format, so code blocks, images and custom blocks work |
+| `editor.moveBlocks` | editor write | none | Reject the suggestion | 2 | |
+| `editor.removeBlocks` | editor write | none | Reject the suggestion | 2 | |
+| `editor.setField` | editor write | none | Reject the suggestion | 2 | A field of the properties panel: title, slug, summary, tags, and the other fields of the collection |
+
+A server write to the entry open in the editor is refused, and the model is told to use these instead. Publishing, archiving and trashing the open entry
+stay server operations; the editor saves first, as its own buttons do.
 
 ## Folders
 
@@ -127,5 +146,7 @@ Almost every read the agent needs is a route already. The gaps:
 | read | 19 (`ai.<action>` counts once; it is one operation per enabled action) |
 | write | 26 |
 | code | 1 |
+| editor read | 2 |
+| editor write | 6 |
 
-Phase 1 is 14 reads. Phase 2 adds 14 writes.
+Phase 1 is 14 reads and 2 editor reads. Phase 2 adds 14 writes and 6 editor writes.
