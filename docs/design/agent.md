@@ -156,6 +156,8 @@ editor keeps both autocomplete and a chat.
 | 3 | Every admin route that fits becomes an operation and the router mounts it; actions as operations; plugin operations | Everything the admin can do |
 | 4 | `kind: "code"` and pull requests, starting with the schema file | "Add a summary field to posts" in production |
 
+Every capability, with its operation name, kind, undo and phase, is listed in [Admin agent: capabilities](agent-capabilities.md).
+
 Phase 1 has no writes on purpose: the loop, the context and the tool descriptions can be tuned while nothing can go wrong.
 
 ## Decisions
