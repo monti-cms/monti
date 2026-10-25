@@ -35,6 +35,8 @@ export const ERROR_STATUS = {
 	upload_incomplete: 409,
 	/** A plugin cannot do what was asked yet (a missing token, a branch that does not exist); its message says how to fix it. */
 	precondition_failed: 409,
+	/** The admin agent cannot run with the model chosen for it (the model does not call tools); the AI plugin's message says which and what to do. */
+	agent_unavailable: 409,
 	// The content or the schema is understood but not acceptable.
 	validation_failed: 422,
 	publish_validation_failed: 422,

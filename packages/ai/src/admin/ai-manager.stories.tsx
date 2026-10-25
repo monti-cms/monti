@@ -73,9 +73,15 @@ const provider = (over: Partial<AiProviderView> = {}): AiProviderView => ({
 	key: { id: "k1", name: "OpenRouter", tail: "91c0", readable: true },
 	defaultModel: "google/gemini-2.5-flash",
 	ready: true,
+	toolSupport: {},
 	...over,
 });
-const settings = (providers: AiProviderView[]): AiSettingsView => ({ version: 1, providers, fake: false });
+const settings = (providers: AiProviderView[]): AiSettingsView => ({
+	version: 1,
+	providers,
+	agent: { setting: null, effective: null },
+	fake: false,
+});
 const connected = settings([provider(), provider({ id: "p2", name: "새 서비스", key: null, ready: false })]);
 const snippets: AiSnippetView = {
 	version: 1,

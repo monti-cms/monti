@@ -2,6 +2,9 @@ import { defineServerPlugin } from "@monti-cms/core/server";
 import * as resetAction from "./routes/actions/[key]/reset/route";
 import * as action from "./routes/actions/[key]/route";
 import * as actions from "./routes/actions/route";
+import * as agent from "./routes/agent/route";
+import * as agentRun from "./routes/agent/runs/[id]/route";
+import * as agentRuns from "./routes/agent/runs/route";
 import * as models from "./routes/models/route";
 import * as provider from "./routes/providers/[id]/route";
 import * as providerCheck from "./routes/providers/check/route";
@@ -18,6 +21,9 @@ export default defineServerPlugin({
 		{ pattern: "v1/ai/actions", module: actions },
 		{ pattern: "v1/ai/actions/[key]", module: action },
 		{ pattern: "v1/ai/actions/[key]/reset", module: resetAction },
+		{ pattern: "v1/ai/agent", module: agent },
+		{ pattern: "v1/ai/agent/runs", module: agentRuns },
+		{ pattern: "v1/ai/agent/runs/[id]", module: agentRun },
 		{ pattern: "v1/ai/models", module: models },
 		{ pattern: "v1/ai/providers", module: providers },
 		{ pattern: "v1/ai/providers/check", module: providerCheck },

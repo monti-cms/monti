@@ -2,6 +2,7 @@ import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/server"
 import { z } from "zod";
 import { type AiCheckResult, aiProviderCheckSchema } from "../../../connection";
 import { AiError } from "../../../errors";
+import { checkToolSupport, isFakeAi } from "../../../provider";
 import { connectionForCheck } from "../../../settings";
 import { aiStoreFor } from "../../../store";
 
@@ -20,6 +21,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 			key: provider.key,
 			model: provider.defaultModel,
 		});
+		let tools: boolean | null | undefined;
 		if (target.generator) {
 			await target.generator.generate({
 				system: 'This is a connection check. Answer with the JSON {"ok": true}.',
@@ -31,6 +33,11 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				fake: { inputs: {} },
 				signal: request.signal,
 			});
+			// The assistant needs a model that calls tools. A failed probe concludes nothing, so nothing is stored.
+			tools = isFakeAi() || !target.chat ? true : await checkToolSupport(target.chat, request.signal);
+			if (typeof tools === "boolean" && target.storedAs) {
+				await aiStoreFor(cms).saveToolSupport({ providerId: target.storedAs, model: target.model, supported: tools });
+			}
 		} else if (target.decider) {
 			await target.decider.decide({
 				state: { text: "The sky is blue." },
@@ -38,7 +45,12 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				signal: request.signal,
 			});
 		}
-		return ok({ ok: true, ms: Date.now() - started, model: target.model } satisfies AiCheckResult);
+		return ok({
+			ok: true,
+			ms: Date.now() - started,
+			model: target.model,
+			...(tools === undefined ? {} : { tools }),
+		} satisfies AiCheckResult);
 	} catch (error) {
 		if (error instanceof AiError) return ok({ ok: false, message: error.message } satisfies AiCheckResult);
 		throw error;

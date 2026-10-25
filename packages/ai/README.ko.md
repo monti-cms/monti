@@ -132,6 +132,15 @@ const unusedAddress = defineValidator({
 
 - **비밀 값 바꾸기**: core README의 "플러그인 비밀 값"과 "API 키 저장소"를 본다.
 
+## 관리자 에이전트(읽기 전용)
+
+`POST /api/monti/v1/ai/agent { runId?, messages, context: { screen, collection?, entryId?, selectedIds? } }`는 어시스턴트를 돌리고 AI SDK UI 메시지 스트림으로 답한다(`useChat`이 읽는다. 메시지 메타데이터에 `runId`가 있고, 끝에 대화 전체의 `usage`가 붙는다). core와 플러그인의 모든 `read` 오퍼레이션(`cms.operations()`)이 `.`를 `_`로 바꾼 이름(`entries_list`)의 도구가 되고, 로그인한 관리자 권한으로 실행된다. 실패한 오퍼레이션은 `{ error: { code, message } }` 도구 결과가 되고, 20,000자를 넘는 결과는 질의를 좁히라는 안내와 함께 잘리며, 같은 도구를 같은 입력으로 세 번째 연달아 부르면 실행하지 않는다. `editor_read`, `editor_selection`은 `execute`가 없고 `context.entryId`가 있을 때만 주어진다. 브라우저가 답한다. 한 번의 실행은 모델 요청 최대 12단계이고, 실패한 모델 요청은 단계마다 한 번 다시 시도한다.
+
+- **모델**: AI 설정의 `agent`(`PUT /api/monti/v1/ai/settings { expectedVersion, agent: { providerId, model } | null }`). 없으면 준비된 첫 chat 연결의 기본 모델.
+- **도구 호출**: 연결 확인이 간단한 도구가 든 요청도 보내서, 연결·모델마다 모델이 도구를 불렀는지 저장한다(설정 보기의 `providers[].toolSupport`). 도구를 못 쓰는 것으로 알려진 모델은 거절한다(`agent_unavailable`, 409). 확인한 적 없는 모델은 시도해 보고, "도구를 지원하지 않는다"는 답이 오면 저장한 뒤 똑같이 거절한다. AI 기능은 그 모델로도 계속 동작한다.
+- **대화**: 플러그인 저장소(`agent-runs`)에 메시지, 상태(`running`, `done`, `failed`, `stopped`), 사용량과 함께 저장된다. `GET /api/monti/v1/ai/agent/runs`는 로그인한 관리자 자신의 대화를 최신순으로(`page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}`는 그 관리자에게만 대화 하나를 돌려준다. 대화 하나는 메시지 1,000,000자까지 저장하고, 관리자마다 최근 100개를 둔다.
+- `CMS_AI_FAKE=1`이면 `site_describe`를 부르고 컬렉션 이름으로 답하는 대본 모델을 쓴다.
+
 ## 가짜 연결(개발 전용)
 
 `CMS_AI_FAKE=1`(운영 빌드 제외)이면 키 없이 정해진 답을 준다. 답은 결과 모양과 입력 종류로 만든다(입력 이름은 보지 않는다).
