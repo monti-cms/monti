@@ -147,6 +147,32 @@ describe("SidePanelFrame", () => {
 		expect(screen.getByRole("button", { name: "Act" })).toBeTruthy();
 	});
 
+	it("keeps the title, the line under it, the actions and the close button in one header row", () => {
+		const { container } = render(
+			<SidePanelFrame
+				title="Assistant"
+				description="model"
+				actions={<button type="button">Act</button>}
+				onClose={() => undefined}
+			>
+				x
+			</SidePanelFrame>,
+		);
+		const headers = container.querySelectorAll("[data-slot=side-panel-frame-header]");
+		expect(headers).toHaveLength(1);
+		const header = headers[0] as HTMLElement;
+		for (const node of [
+			screen.getByText("Assistant"),
+			screen.getByText("model"),
+			screen.getByRole("button", { name: "Act" }),
+			screen.getByRole("button", { name: "Close" }),
+		])
+			expect(header.contains(node)).toBe(true);
+		// The row is one flex line: its direct children sit side by side, not stacked.
+		expect(header.className).toContain("flex");
+		expect(header.className).not.toContain("flex-col");
+	});
+
 	it("has a close button only when it is given something to do", () => {
 		const onClose = vi.fn();
 		const { rerender } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
