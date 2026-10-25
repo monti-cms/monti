@@ -22,6 +22,25 @@ describe("Text, Heading and Stack", () => {
 		expect(el.className).toContain("mt-2");
 	});
 
+	it("a Text with no role of its own takes the role around it, and an explicit role still wins", () => {
+		render(
+			<>
+				<Heading variant="heading">
+					<Text truncate>Posts</Text>
+					<Text variant="caption">12</Text>
+				</Heading>
+				<Text variant="caption">
+					<Text weight="semibold">bold</Text>
+				</Text>
+				<Text>alone</Text>
+			</>,
+		);
+		expect(screen.getByText("Posts").className).not.toContain("text-monti-body");
+		expect(screen.getByText("12").className).toContain("text-monti-caption");
+		expect(screen.getByText("bold").className).toBe("font-semibold");
+		expect(screen.getByText("alone").className).toContain("text-monti-body");
+	});
+
 	it("Stack picks its gap by meaning", () => {
 		render(
 			<Stack data-testid="stack" direction="row" gap="condensed" align="center">

@@ -1,7 +1,7 @@
 "use client";
 
 import { type Site, useTranslator } from "@monti-cms/core/site";
-import { Box, Inline, PageTabs, StatusIndicator, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
+import { Inline, PageTabs, StatusIndicator, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
 import { AdminLink as Link } from "../../router";
 import { settingsMessages } from "./messages";
@@ -30,41 +30,39 @@ export function SettingsTabBar({
 	}, [active]);
 
 	return (
-		<Box paddingTop="comfortable">
-			<Tabs value={active}>
-				<PageTabs inset="none" aria-label={t("tabs.label")}>
-					{tabs.map((entry) => (
-						<TabsTrigger
-							key={entry.id}
-							value={entry.id}
-							nativeButton={false}
-							render={
-								<Link
-									href={entry.href}
-									// Moving between schema tabs is not a way out of the unsaved draft.
-									data-unsaved-guard={onSchemaTab ? "off" : undefined}
-									onClick={(event) => {
-										if (!onSchemaTab) return;
-										// A click that opens a new tab or window goes the way of a link.
-										if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-										event.preventDefault();
-										onSchemaTab(entry.id);
-									}}
-									ref={entry.id === active ? activeLink : undefined}
-								/>
-							}
-						>
-							{t(`tab.${entry.id}` as "tab.collections")}
-							{changed?.[entry.id] && (
-								<Inline as="span" data-testid={`tab-changed-${entry.id}`}>
-									<StatusIndicator tone="accent" size="xs" />
-									<Text srOnly>{t("changed")}</Text>
-								</Inline>
-							)}
-						</TabsTrigger>
-					))}
-				</PageTabs>
-			</Tabs>
-		</Box>
+		<Tabs value={active}>
+			<PageTabs aria-label={t("tabs.label")}>
+				{tabs.map((entry) => (
+					<TabsTrigger
+						key={entry.id}
+						value={entry.id}
+						nativeButton={false}
+						render={
+							<Link
+								href={entry.href}
+								// Moving between schema tabs is not a way out of the unsaved draft.
+								data-unsaved-guard={onSchemaTab ? "off" : undefined}
+								onClick={(event) => {
+									if (!onSchemaTab) return;
+									// A click that opens a new tab or window goes the way of a link.
+									if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+									event.preventDefault();
+									onSchemaTab(entry.id);
+								}}
+								ref={entry.id === active ? activeLink : undefined}
+							/>
+						}
+					>
+						{t(`tab.${entry.id}` as "tab.collections")}
+						{changed?.[entry.id] && (
+							<Inline as="span" data-testid={`tab-changed-${entry.id}`}>
+								<StatusIndicator tone="accent" size="xs" />
+								<Text srOnly>{t("changed")}</Text>
+							</Inline>
+						)}
+					</TabsTrigger>
+				))}
+			</PageTabs>
+		</Tabs>
 	);
 }

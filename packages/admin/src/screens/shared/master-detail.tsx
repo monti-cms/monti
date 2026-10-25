@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Inline, Skeleton, Stack, Text, TextLink } from "@monti-cms/ui";
+import { Box, Inline, ResizablePane, Skeleton, Stack, Text, TextLink } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
 
@@ -21,9 +21,11 @@ export function MasterDetail({ list, children }: { list: ReactNode; children: Re
 
 /**
  * The list column. While `loading` it shows `skeletonRows` placeholders; with no rows it shows `empty`. A `header` (a notice, a toolbar) sits above the rows.
+ * Its width can be dragged (224 to 384px, 288px by default) and is remembered under `resizeKey`.
  */
 export function ListPane({
 	label,
+	resizeKey = "list",
 	loading = false,
 	skeletonRows = 3,
 	empty,
@@ -31,6 +33,8 @@ export function ListPane({
 	children,
 }: {
 	label: string;
+	/** Names the remembered width: one per list (the templates list, each AI tab). */
+	resizeKey?: string;
 	loading?: boolean;
 	skeletonRows?: number;
 	/** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
@@ -40,7 +44,7 @@ export function ListPane({
 }) {
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
-		<Stack gap="none" shrink={false} border="right" width="panel">
+		<ResizablePane resizeKey={`list-pane:${resizeKey}`} defaultWidth={288} min={224} max={384}>
 			{header}
 			<Stack as="ul" gap="none" grow minHeight={0} overflow="y" aria-label={label}>
 				{loading
@@ -58,7 +62,7 @@ export function ListPane({
 								</Stack>
 							)}
 			</Stack>
-		</Stack>
+		</ResizablePane>
 	);
 }
 

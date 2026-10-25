@@ -62,7 +62,7 @@ function memoryRouter(pathname: string, search: string): AdminRouter {
 }
 
 /** No theme provider here: the toolbar puts `.dark` on `html`, and toasts follow it the way the admin's provider would tell them. */
-function useToolbarDark() {
+export function useToolbarDark() {
 	return useSyncExternalStore(
 		(onChange) => {
 			const observer = new MutationObserver(onChange);
@@ -130,7 +130,7 @@ export function ScreenFrame({
 	/** The admin address the screen reads (`/admin/settings/collections`). */
 	pathname?: string;
 	search?: string;
-	/** Further options of the frame (`large`, `bare`, `count`). */
+	/** Further options of the frame (`count`, `description`). */
 	shell?: Omit<ComponentProps<typeof AdminShell>, "title" | "sidebar" | "children">;
 	children: ReactNode;
 }) {

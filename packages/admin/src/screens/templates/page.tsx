@@ -11,7 +11,7 @@ export default async function AdminTemplatesPage({ cms, server }: { cms: Cms; se
 	await requireAdminPage(cms, server);
 	if (!cms.site.ADMIN_TEMPLATES) return server.notFound();
 	return (
-		<AdminShell title={t("title")} large sidebar={{ activeNav: "templates" }}>
+		<AdminShell title={t("title")} sidebar={{ activeNav: "templates" }}>
 			<TemplateManager />
 		</AdminShell>
 	);

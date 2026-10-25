@@ -10,7 +10,7 @@ export default async function AdminEventsPage({ cms, server }: { cms: Cms; serve
 	const t = cms.site.createTranslator(eventsMessages);
 	await requireAdminPage(cms, server);
 	return (
-		<AdminShell title={t("title")} large sidebar={{ activeNav: "events" }}>
+		<AdminShell title={t("title")} sidebar={{ activeNav: "events" }}>
 			<EventsScreen />
 		</AdminShell>
 	);

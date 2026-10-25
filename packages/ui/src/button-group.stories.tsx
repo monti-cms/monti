@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChevronDown } from "lucide-react";
 import { Button } from "./button";
 import { ButtonGroup } from "./button-group";
 import { Stack } from "./stack";
@@ -10,10 +9,9 @@ const meta = {
 	component: ButtonGroup,
 	render: (args) => (
 		<ButtonGroup {...args}>
-			<Button>발행</Button>
-			<Button size="icon" aria-label="발행 방식">
-				<ChevronDown aria-hidden />
-			</Button>
+			<Button>목록</Button>
+			<Button>표</Button>
+			<Button>카드</Button>
 		</ButtonGroup>
 	),
 } satisfies Meta<typeof ButtonGroup>;
@@ -25,7 +23,7 @@ export const Playground: Story = {};
 const VARIANTS = ["default", "outline", "secondary", "ghost"] as const;
 const SIZES = ["xs", "sm", "default", "lg"] as const;
 
-/** Give every button in the group the same variant and size. */
+/** Give every button in the group the same variant and size. A button with a menu is a SplitButton, not a group. */
 export const Variants: Story = {
 	render: () => (
 		<Stack gap="normal">
@@ -35,10 +33,9 @@ export const Variants: Story = {
 						variant {variant}
 					</Text>
 					<ButtonGroup>
-						<Button variant={variant}>발행</Button>
-						<Button variant={variant} size="icon" aria-label="발행 방식">
-							<ChevronDown aria-hidden />
-						</Button>
+						<Button variant={variant}>목록</Button>
+						<Button variant={variant}>표</Button>
+						<Button variant={variant}>카드</Button>
 					</ButtonGroup>
 				</Stack>
 			))}
@@ -75,10 +72,10 @@ export const Disabled: Story = {
 	render: () => (
 		<ButtonGroup>
 			<Button variant="outline" disabled>
-				발행
+				목록
 			</Button>
-			<Button variant="outline" size="icon" aria-label="발행 방식" disabled>
-				<ChevronDown aria-hidden />
+			<Button variant="outline" disabled>
+				표
 			</Button>
 		</ButtonGroup>
 	),

@@ -2,8 +2,9 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 /**
- * Buttons joined into one control (a main action with a menu of its variants: "Publish" + "Republish with today's date"). The inner edges
- * lose their radius and a 1px gap (the page showing through) separates them; give every button the same variant and size.
+ * Several buttons of the same kind joined into one control (a row of related actions). The inner edges lose their radius and a 1px gap
+ * (the page showing through) separates them; give every button the same variant and size. A main action with a menu of its variants
+ * ("Publish" + "Republish with today's date") is not a group: use `SplitButton`.
  */
 function ButtonGroup({ className, ...props }: React.ComponentProps<"div">) {
 	return (

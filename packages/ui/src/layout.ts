@@ -109,7 +109,14 @@ export const LAYOUT = {
 	},
 	/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
 	minWidth: { 0: "min-w-0" },
-	height: { full: "h-full", auto: "h-auto", screen: "h-svh", control: "h-control", "control-sm": "h-control-sm" },
+	height: {
+		full: "h-full",
+		auto: "h-auto",
+		screen: "h-svh",
+		control: "h-control",
+		"control-sm": "h-control-sm",
+		header: "h-header",
+	},
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */
 	maxHeight: { list: "max-h-96", half: "max-h-[50vh]", menu: "max-h-80" },
 	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64" },

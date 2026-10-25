@@ -90,6 +90,7 @@ export function SnippetManager({
 			<MasterDetail
 				list={
 					<ListPane
+						resizeKey="ai-snippets"
 						label={t("list.label")}
 						loading={query.isPending}
 						skeletonRows={2}

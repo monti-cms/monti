@@ -42,7 +42,7 @@ const list =
 	};
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="API 키" nav="api-keys" pathname="/admin/api-keys" shell={{ large: true }}>
+	<ScreenFrame api={fake} title="API 키" nav="api-keys" pathname="/admin/api-keys">
 		<ApiKeysSettings />
 	</ScreenFrame>
 );
