@@ -1,5 +1,5 @@
 import { hostOf } from "../../../cms/host";
-import { readSchemaScreen, saveSchemaEdit } from "../../../schema-edit";
+import { saveSchemaEdit } from "../../../schema-edit";
 import { CmsError } from "../error-handler";
 import { adminRoute, ok } from "../handler";
 import { assertSchemaWritable, readEditBody } from "./shared";
@@ -10,7 +10,8 @@ import { assertSchemaWritable, readEditBody } from "./shared";
  * route.
  */
 
-export const GET = adminRoute(async ({ cms }) => ok(await readSchemaScreen(cms)));
+/** The operation `schema.read`. */
+export const GET = adminRoute(async ({ cms, auth }) => ok(await cms.runOperation("schema.read", {}, { auth })));
 
 export const PUT = adminRoute(async ({ request, cms }) => {
 	assertSchemaWritable(hostOf(cms));

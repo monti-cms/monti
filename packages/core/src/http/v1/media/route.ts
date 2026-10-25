@@ -1,16 +1,6 @@
-import { mediaListQuerySchema } from "../../../core/api";
-import { adminRoute, ok, parseWith, readQuery } from "../handler";
+import { adminRoute, ok, readQuery } from "../handler";
 
-/** Media library: filename search, filters by type, upload date, and usage, newest upload first. */
-export const GET = adminRoute(async ({ request, cms }) => {
-	const query = parseWith(mediaListQuerySchema, readQuery(request), "Invalid query parameters");
-	const result = await cms.store().listMediaAssets(query);
-	const mediaStore = cms.mediaStore();
-	return ok({
-		...result,
-		items: result.items.map((item) => ({
-			...item,
-			publicUrl: item.storageKey ? mediaStore.getPublicUrl(item.storageKey) : null,
-		})),
-	});
-});
+/** Media library: filename search, filters by type, upload date, and usage, newest upload first. The operation `media.list`. */
+export const GET = adminRoute(async ({ request, cms, auth }) =>
+	ok(await cms.runOperation("media.list", readQuery(request), { auth, invalidMessage: "Invalid query parameters" })),
+);

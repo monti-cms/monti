@@ -35,10 +35,11 @@ const pageSizeSchema = z.coerce
 		message: "pageSize must be 25, 50, or 100",
 	});
 
+/** A flag: a query string sends `true`, `false`, `1` or `0`, and a JSON caller (the agent) sends a boolean. */
 const booleanQuery = z
-	.enum(["true", "false", "1", "0"])
+	.union([z.boolean(), z.enum(["true", "false", "1", "0"])])
 	.optional()
-	.transform((val) => (val === undefined ? undefined : val === "true" || val === "1"));
+	.transform((val) => (val === undefined ? undefined : val === true || val === "true" || val === "1"));
 const dateQuery = z.iso
 	.datetime({ offset: true })
 	.optional()
@@ -232,7 +233,7 @@ export const mediaListQuerySchema = z.object({
 	kind: z.enum(["all", "image", "file"]).default("all"),
 	used: z.enum(["all", "used", "unused"]).default("all"),
 	folderId: z
-		.string()
+		.union([z.string(), z.null()])
 		.optional()
 		.transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
 		.pipe(z.union([z.uuid(), z.null(), z.undefined()])),
@@ -284,7 +285,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		/** With `translation`, each translation group appears as one row of its source. */
 		group: z.enum(["translation"]).optional(),
 		folderId: z
-			.string()
+			.union([z.string(), z.null()])
 			.optional()
 			.transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
 			.pipe(z.union([z.uuid(), z.null(), z.undefined()])),

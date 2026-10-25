@@ -4,6 +4,7 @@ import type { ConfigIssue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { RouteAccess } from "../http/v1/handler";
+import type { AnyOperation } from "../operations/define";
 import type { RenderPlugin } from "../render/plugin-render";
 import type { PluginFieldSet } from "../schema/field-sets";
 import type { PluginPlacement } from "../schema/layout";
@@ -177,6 +178,11 @@ export interface ServerPlugin {
 	 * (`adminRoute(async ({ cms, plugin }) => ...)`), so a plugin reads the stores from `cms`, its storage, secrets and key slots from `plugin`, and keeps no global state for them.
 	 */
 	readonly routes?: readonly PluginRoute[];
+	/**
+	 * Operations this plugin adds (`defineOperation`): capabilities the admin agent can call as tools, next to the core's. Names are shared with the core and every other
+	 * plugin, so use a segment of your own (`gitSync.status`); a name used twice is a config error.
+	 */
+	readonly operations?: readonly AnyOperation[];
 	/**
 	 * Called by `monti db:migrate` after the core tables, with the plugin's scope: `plugin.storage.once(name, step)` runs one-time work (e.g. moving data from an
 	 * earlier layout). Must give the same result when called repeatedly. `cms` is the instance being migrated.

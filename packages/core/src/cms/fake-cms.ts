@@ -5,6 +5,7 @@ import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { MediaStore } from "../media/store";
+import { createOperations } from "../operations/registry";
 import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
@@ -118,6 +119,12 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 		() => server,
 		() => fake as unknown as Cms,
 	);
+	const fakeOperationRunner = createOperations({
+		site: cms.site,
+		cms: () => fake as unknown as Cms,
+		plugins: plugins.load,
+	});
+	const fakeOperations = { operations: fakeOperationRunner.list, runOperation: fakeOperationRunner.run };
 	const fake: CmsHost<Config> = {
 		...cms,
 		plugins: plugins.load,
@@ -134,6 +141,7 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 		formats: async () => createFormatRegistry(parts.formats ?? []),
 		authGateway,
 		attachHost: () => undefined,
+		...fakeOperations,
 		handle: lazyHandle(() => fake as unknown as Cms),
 		read: createRead<Config>({
 			site: cms.site,

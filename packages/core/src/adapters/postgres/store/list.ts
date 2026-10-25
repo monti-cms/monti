@@ -262,8 +262,10 @@ export function createListOps(ctx: StoreContext) {
 						);
 					}
 
-					if (params.search) {
-						const token = likeContainsPattern(params.search);
+					// Word by word: every word of the search must be found (in the title, the slug or, with `includeBody`, the body), in any order. A word may
+					// be found in a different place than the others, and in a grouped list in a different language of the group.
+					for (const word of params.search?.split(/\s+/).filter(Boolean) ?? []) {
+						const token = likeContainsPattern(word);
 						const matches = (alias: "w" | "mw", slug: "e.working_slug" | "m.working_slug") =>
 							sql<boolean>`(${sql.ref(slug)} ilike ${token} or ${titleOf(alias)} ilike ${token}${
 								params.includeBody ? sql` or ${sql.ref(`${alias}.search_text`)} ilike ${token}` : sql``

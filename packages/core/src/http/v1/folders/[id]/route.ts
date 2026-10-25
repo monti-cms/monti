@@ -3,9 +3,9 @@ import { adminRoute, deleted, ok, readVersionedBody, readVersionQuery } from "..
 
 type IdParams = { id: string };
 
-/** Preview before deleting: the number of entries directly in it and its child folders. */
-export const GET = adminRoute<IdParams>(async ({ params, cms }) =>
-	ok(await cms.store().getFolderContents({ id: params.id })),
+/** Preview before deleting: the number of entries directly in it and its child folders. The operation `folders.get`. */
+export const GET = adminRoute<IdParams>(async ({ params, cms, auth }) =>
+	ok(await cms.runOperation("folders.get", { id: params.id }, { auth })),
 );
 
 /** Rename, reorder, and move a folder. Rejects cycles and duplicate names within the same parent. */

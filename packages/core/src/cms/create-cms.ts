@@ -6,6 +6,7 @@ import { problemText } from "../core/problem";
 import type { ImageWarningResolvers } from "../core/snapshot";
 import { CmsError, type ContentStore, withEventDispatch } from "../core/store";
 import type { MediaStore } from "../media/store";
+import { createOperations } from "../operations/registry";
 import { API_KEYS_SCOPE, AUTH_SCOPE } from "../plugin/collisions";
 import { createServerPlugins } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
@@ -157,6 +158,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 			return connections.mediaStore;
 		};
 		const authGateway = new CmsAuthGateway(getAuth);
+		const operations = createOperations({ site, cms: () => self() as unknown as Cms, plugins: plugins.load });
 
 		/** What a publish looks up for its image warnings. The stored file is checked once more when a media store is configured. */
 		const imageChecks = (): ImageWarningResolvers => ({
@@ -250,6 +252,8 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 			writeHooks: plugins.writeHooks,
 			formats: plugins.formats,
 			events: dispatcher.events,
+			operations: operations.list,
+			runOperation: operations.run,
 			handle: lazyHandle(() => self() as unknown as Cms),
 			read: createRead({
 				site,
