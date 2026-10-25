@@ -1,7 +1,17 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { pluginLog } from "@monti-cms/core/server";
 import { type Site, slugify } from "@monti-cms/core/site";
-import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
+import {
+	APICallError,
+	generateText,
+	type LanguageModel,
+	NoObjectGeneratedError,
+	Output,
+	RetryError,
+	streamText,
+	ToolChoiceViolationError,
+	tool,
+} from "ai";
 import { z } from "zod";
 import type { AiInputKind } from "./action";
 import type { AiModelInfo } from "./connection";
@@ -443,4 +453,76 @@ export function createFakeDecider(): AiDecider {
 			return answers;
 		},
 	};
+}
+
+/** The model of a chat connection as the AI SDK takes it, for the admin agent's tool-calling loop. */
+export function createAgentModel(config: { baseUrl: string; apiKey: string; model: string }): LanguageModel {
+	return createOpenAICompatible({
+		name: "cms-ai",
+		baseURL: config.baseUrl,
+		apiKey: config.apiKey,
+		supportsStructuredOutputs: false,
+	})(config.model);
+}
+
+/**
+ * Whether an error says the model cannot call tools. Services word it differently (OpenRouter: "No endpoints found that support tool use"), so this
+ * matches the common phrasings; a model that is not recognised here is simply tried again on the next run.
+ */
+export const isToolsUnsupportedError = (error: unknown): boolean => {
+	const inner = unwrap(error);
+	const text = APICallError.isInstance(inner)
+		? `${inner.message} ${inner.responseBody ?? ""}`
+		: inner instanceof Error
+			? inner.message
+			: typeof inner === "string"
+				? inner
+				: JSON.stringify(inner ?? "");
+	return /support.{0,30}\btools?\b|\btools?\b.{0,40}(not|n't|un)\s?support|tool.{0,10}use.{0,30}(not|n't|un)|function.?call.{0,40}(not|n't|un)\s?support/i.test(
+		text,
+	);
+};
+
+/** The words of a failed model request for the person: what the service said (or the error's own message), short. */
+export function modelFailureMessage(error: unknown): string {
+	const inner = unwrap(error);
+	if (APICallError.isInstance(inner)) return serviceMessage(inner.responseBody ?? inner.message) || inner.message;
+	if (inner instanceof Error) return inner.message;
+	const record = inner as { message?: unknown } | null;
+	return typeof record?.message === "string" ? record.message : String(inner);
+}
+
+/**
+ * The tool-support probe of a connection check: one request with a trivial tool the model is told to call. `true` if it called it, `false` if it
+ * answered without (or the service says tools are not supported), `null` when the request failed for another reason (so nothing is concluded).
+ */
+export async function checkToolSupport(
+	config: { baseUrl: string; apiKey: string; model: string },
+	signal?: AbortSignal,
+): Promise<boolean | null> {
+	try {
+		const result = await generateText({
+			model: createAgentModel(config),
+			system: "This is a connection check. Call the tool.",
+			prompt: "ping",
+			tools: {
+				ping: tool({
+					description: "Answers pong.",
+					inputSchema: z.object({}),
+					execute: async () => "pong",
+				}),
+			},
+			toolChoice: "required",
+			maxOutputTokens: 4_000,
+			maxRetries: 1,
+			abortSignal: signal,
+		});
+		return result.steps.some((step) => step.toolCalls.length > 0);
+	} catch (caught) {
+		const error = unwrap(caught);
+		if (isAbort(error)) throw error;
+		log.warn(`${config.model} tool check failed: ${failureNote(error)}`);
+		// Told to call the tool and answered without: the model does not call tools.
+		return ToolChoiceViolationError.isInstance(error) || isToolsUnsupportedError(error) ? false : null;
+	}
 }

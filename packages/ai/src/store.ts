@@ -1,5 +1,6 @@
 import type { ApiKeys, Cms, PluginCollection, PluginStorage } from "@monti-cms/core/server";
 import type { Site } from "@monti-cms/core/site";
+import { type AgentRunValue, createAgentRunStore, createToolSupportStore } from "./agent-store";
 import { AI_COLLECTIONS } from "./collections";
 import { AiError } from "./errors";
 import { AI_PLUGIN_NAME } from "./name";
@@ -43,8 +44,12 @@ export function createAiStore(
 	const overrides: PluginCollection = storage.collection(AI_COLLECTIONS.actionOverrides);
 	const custom: PluginCollection = storage.collection(AI_COLLECTIONS.customActions);
 	const settings: PluginCollection = storage.collection(AI_COLLECTIONS.settings);
+	const toolSupport = createToolSupportStore(storage.collection<Record<string, boolean>>(AI_COLLECTIONS.agentTools));
 	const holder: { current?: AiSettingsStore } = {};
 	const built = {
+		...toolSupport,
+		/** Conversations of the admin agent. */
+		agentRuns: createAgentRunStore(storage.collection<AgentRunValue>(AI_COLLECTIONS.agentRuns)),
 		apiKeys: (): ApiKeys => {
 			if (!options.apiKeys)
 				throw new AiError("service_unavailable", options.site.createTranslator(providerMessages)("noSecret"));

@@ -4,6 +4,10 @@ export const AI_COLLECTIONS = {
 	actionOverrides: "action-overrides",
 	/** Actions made in the admin AI screen. The value holds the basic info and the edited values. */
 	customActions: "custom-actions",
+	/** What the connection check learned about each model of each connection: does it call tools (the admin agent needs that)? One item per connection id. */
+	agentTools: "agent-tools",
+	/** Conversations of the admin agent, one item per run, keyed `<admin id>/<run id>`. */
+	agentRuns: "agent-runs",
 	/** AI service connections (address, encrypted key, model): one item, `default`. The edited prompt snippets are the `shared` item (the stored row name is kept). */
 	settings: "settings",
 } as const;

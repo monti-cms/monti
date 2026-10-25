@@ -1,14 +1,27 @@
 import { randomUUID } from "node:crypto";
 import type { ApiKeys } from "@monti-cms/core/server";
 import type { ApiKeyChoiceInput, ApiKeyView, Site } from "@monti-cms/core/site";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
-import type { AiProviderInput, AiProviderKind, AiProviderView, AiSettingsView } from "./connection";
+import { agentMessages } from "./agent.messages";
+import { createFakeAgentModel } from "./agent-fake";
+import type { ToolSupport } from "./agent-store";
+import {
+	type AiAgentSetting,
+	type AiAgentView,
+	type AiProviderInput,
+	type AiProviderKind,
+	type AiProviderView,
+	type AiSettingsView,
+	aiAgentSettingSchema,
+} from "./connection";
 import { AiError } from "./errors";
 import { AI_PLUGIN_NAME } from "./name";
 import {
 	type AiDecider,
 	type AiProvider,
+	createAgentModel,
 	createDecider,
 	createFakeDecider,
 	createFakeGenerator,
@@ -25,6 +38,10 @@ export interface AiSettingsStore {
 	transaction<T>(work: (scoped: AiSettingsStore) => Promise<T>): Promise<T>;
 	getAiSettings(): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { expectedVersion: number; value: unknown }): Promise<number>;
+	/** What the connection check learned about tool calling. Stores without it (tests) know nothing about the models. */
+	getToolSupport?(): Promise<ToolSupport>;
+	saveToolSupport?(params: { providerId: string; model: string; supported: boolean }): Promise<void>;
+	clearToolSupport?(providerId: string): Promise<void>;
 }
 
 /** One connection kept in the DB. `keyId` is the id of a key in the central API key store (`null`: no key). */
@@ -38,7 +55,11 @@ const storedProviderSchema = z.object({
 });
 type StoredProvider = z.output<typeof storedProviderSchema>;
 
-const storedSchema = z.object({ providers: z.array(storedProviderSchema).default([]) });
+const storedSchema = z.object({
+	providers: z.array(storedProviderSchema).default([]),
+	/** The model the admin agent runs on, when the admin chose one. */
+	agent: aiAgentSettingSchema.optional(),
+});
 
 const readStored = (value: unknown): StoredProvider[] => storedSchema.parse(value ?? {}).providers;
 
@@ -47,14 +68,17 @@ interface ResolvedProvider extends StoredProvider {
 	key: ApiKeyView | null;
 }
 
-async function load(store: AiSettingsStore): Promise<{ version: number; providers: ResolvedProvider[] }> {
+async function load(
+	store: AiSettingsStore,
+): Promise<{ version: number; providers: ResolvedProvider[]; agent: AiAgentSetting | undefined }> {
 	const row = await store.getAiSettings();
-	const stored = readStored(row?.value);
+	const { providers: stored, agent } = storedSchema.parse(row?.value ?? {});
 	const keys = stored.some((provider) => provider.keyId)
 		? new Map((await store.apiKeys().list()).map((key) => [key.id, key]))
 		: new Map();
 	return {
 		version: row?.version ?? 0,
+		agent,
 		providers: stored.map((provider) => ({ ...provider, key: (provider.keyId && keys.get(provider.keyId)) || null })),
 	};
 }
@@ -72,11 +96,43 @@ const viewOf = (provider: ResolvedProvider): AiProviderView => ({
 		: null,
 	defaultModel: provider.defaultModel,
 	ready: isReady(provider),
+	toolSupport: {},
 });
 
+/** The connection and model the admin agent runs on: the admin's choice, or else the first ready chat connection with its default model. `null` if neither is usable. */
+function pickAgentConnection(
+	providers: readonly ResolvedProvider[],
+	agent: AiAgentSetting | undefined,
+): { provider: ResolvedProvider; model: string } | null {
+	if (agent) {
+		const provider = providers.find((item) => item.id === agent.providerId && item.kind === "chat");
+		return provider && isReady({ ...provider, defaultModel: agent.model }) ? { provider, model: agent.model } : null;
+	}
+	const provider = providers.find((item) => item.kind === "chat" && isReady(item));
+	return provider ? { provider, model: provider.defaultModel } : null;
+}
+
 export async function getAiSettingsView(_site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
-	const { version, providers } = await load(store);
-	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
+	const { version, providers, agent } = await load(store);
+	const support = (await store.getToolSupport?.()) ?? {};
+	const picked = pickAgentConnection(providers, agent);
+	const view: AiAgentView = {
+		setting: agent ?? null,
+		effective: picked
+			? {
+					providerId: picked.provider.id,
+					providerName: picked.provider.name,
+					model: picked.model,
+					tools: support[picked.provider.id]?.[picked.model] ?? null,
+				}
+			: null,
+	};
+	return {
+		version,
+		providers: providers.map((provider) => ({ ...viewOf(provider), toolSupport: support[provider.id] ?? {} })),
+		agent: view,
+		fake: isFakeAi(),
+	};
 }
 
 /**
@@ -117,8 +173,11 @@ async function writeProviders(
 	store: AiSettingsStore,
 	expectedVersion: number,
 	providers: StoredProvider[],
+	agent: AiAgentSetting | undefined,
 ): Promise<AiSettingsView> {
-	await store.saveAiSettings({ expectedVersion, value: { providers } });
+	// The agent's choice goes with its connection.
+	const kept = agent && providers.some((provider) => provider.id === agent.providerId) ? agent : undefined;
+	await store.saveAiSettings({ expectedVersion, value: { providers, ...(kept ? { agent: kept } : {}) } });
 	await reportKeyUses(store, providers);
 	return getAiSettingsView(site, store);
 }
@@ -156,9 +215,15 @@ export async function addAiProvider(
 	expectedVersion: number,
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
-	const { providers } = await load(store);
+	const { providers, agent } = await load(store);
 	return saveWithKey(store, input, null, (scoped, keyId) =>
-		writeProviders(site, scoped, expectedVersion, [...providers.map(plain), toStored(randomUUID(), input, keyId)]),
+		writeProviders(
+			site,
+			scoped,
+			expectedVersion,
+			[...providers.map(plain), toStored(randomUUID(), input, keyId)],
+			agent,
+		),
 	);
 }
 
@@ -176,18 +241,23 @@ export async function updateAiProvider(
 	id: string,
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
-	const { providers } = await load(store);
+	const { providers, agent } = await load(store);
 	const current = providers.find((provider) => provider.id === id);
 	if (!current) throw new AiError("upstream_failed", site.createTranslator(settingsMessages)("unknownConnection"));
-	const keep = input.url.replace(/\/+$/, "") !== current.url ? null : current.keyId;
-	return saveWithKey(store, input, keep, (scoped, keyId) =>
+	const moved = input.url.replace(/\/+$/, "") !== current.url;
+	const keep = moved ? null : current.keyId;
+	const saved = await saveWithKey(store, input, keep, (scoped, keyId) =>
 		writeProviders(
 			site,
 			scoped,
 			expectedVersion,
 			providers.map((provider) => (provider.id === id ? toStored(id, input, keyId) : plain(provider))),
+			agent,
 		),
 	);
+	// What the check learned about the old address does not hold for a new one.
+	if (moved) await store.clearToolSupport?.(id);
+	return saved;
 }
 
 export async function removeAiProvider(
@@ -196,8 +266,30 @@ export async function removeAiProvider(
 	expectedVersion: number,
 	id: string,
 ): Promise<AiSettingsView> {
+	const { providers, agent } = await load(store);
+	const saved = await writeProviders(
+		site,
+		store,
+		expectedVersion,
+		providers.filter((provider) => provider.id !== id).map(plain),
+		agent,
+	);
+	await store.clearToolSupport?.(id);
+	return saved;
+}
+
+/** Chooses the model the admin agent runs on (`null`: the default again). The connection must be a chat connection. */
+export async function setAgentModel(
+	site: Site,
+	store: AiSettingsStore,
+	expectedVersion: number,
+	agent: AiAgentSetting | null,
+): Promise<AiSettingsView> {
 	const { providers } = await load(store);
-	return writeProviders(site, store, expectedVersion, providers.filter((provider) => provider.id !== id).map(plain));
+	if (agent && !providers.some((provider) => provider.id === agent.providerId && provider.kind === "chat")) {
+		throw new AiError("invalid_input", site.createTranslator(settingsMessages)("unknownConnection"));
+	}
+	return writeProviders(site, store, expectedVersion, providers.map(plain), agent ?? undefined);
 }
 
 /** URL and key of a stored connection (when fetching the model list). */
@@ -253,6 +345,59 @@ export async function loadAiRuntime(site: Site, store: AiSettingsStore, spec: Ac
 		: { generator: createGenerator(site, { baseUrl: provider.url, apiKey: key, model }), decider: null };
 }
 
+/** The model the admin agent runs on, and what is known of its tool calling. */
+export interface AgentRuntime {
+	model: LanguageModel;
+	/** The connection it belongs to (`fake` for the development model). */
+	providerId: string;
+	modelName: string;
+	/** Did the connection check find that the model calls tools? `null`: never checked. */
+	tools: boolean | null;
+	/** Stores what a run found out about the model's tool calling, so the next request does not try again (or does not refuse). */
+	rememberTools(supported: boolean): Promise<void>;
+}
+
+/** The refusal for a model that cannot call tools. The AI actions of that connection keep working. */
+export const noToolsError = (site: Pick<Site, "createTranslator">, model: string) => {
+	const t = site.createTranslator(agentMessages);
+	return new AiError("agent_unavailable", t("noTools", { model }), { fix: t("noTools.fix") });
+};
+
+/**
+ * The model for the admin agent (see {@link pickAgentConnection}). Refuses when nothing is usable (`service_unavailable`) or when the checks found that the
+ * chosen model cannot call tools (`agent_unavailable`). A model that was never checked is let through: the run itself finds out.
+ */
+export async function loadAgentRuntime(site: Site, store: AiSettingsStore): Promise<AgentRuntime> {
+	if (isFakeAi()) {
+		return {
+			model: createFakeAgentModel(),
+			providerId: "fake",
+			modelName: "fake-agent",
+			tools: true,
+			rememberTools: async () => {},
+		};
+	}
+	const t = site.createTranslator(agentMessages);
+	const { providers, agent } = await load(store);
+	const picked = pickAgentConnection(providers, agent);
+	const key = picked?.provider.keyId ? await store.apiKeys().read(picked.provider.keyId) : null;
+	if (!picked || !key) {
+		const chosen = agent ? "connectionNotReady" : "noConnection";
+		throw new AiError("service_unavailable", t(chosen), { fix: t(`${chosen}.fix`) });
+	}
+	const { provider, model } = picked;
+	const tools = (await store.getToolSupport?.())?.[provider.id]?.[model] ?? null;
+	if (tools === false) throw noToolsError(site, model);
+	return {
+		model: createAgentModel({ baseUrl: provider.url, apiKey: key, model }),
+		providerId: provider.id,
+		modelName: model,
+		tools,
+		rememberTools: (supported) =>
+			store.saveToolSupport?.({ providerId: provider.id, model, supported }) ?? Promise.resolve(),
+	};
+}
+
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
 export async function usableActionKeys(
 	_site: Site,
@@ -273,7 +418,15 @@ export async function connectionForCheck(
 	site: Site,
 	store: AiSettingsStore,
 	params: { providerId?: string; kind: AiProviderKind; url: string; key?: ApiKeyChoiceInput; model: string },
-): Promise<{ model: string; generator?: AiProvider; decider?: AiDecider }> {
+): Promise<{
+	model: string;
+	generator?: AiProvider;
+	decider?: AiDecider;
+	/** The saved connection this check is for, when its address is unchanged: what the check learns about the model can be stored for it. */
+	storedAs?: string;
+	/** Address, key and model of a chat check, for the tool-support probe. */
+	chat?: { baseUrl: string; apiKey: string; model: string };
+}> {
 	const url = params.url.replace(/\/+$/, "");
 	const saved = params.providerId
 		? (await load(store)).providers.find((item) => item.id === params.providerId)
@@ -297,6 +450,11 @@ export async function connectionForCheck(
 	if (!apiKey) throw new AiError("service_unavailable", unreadable ? t("keyAgain") : t("key"));
 	const config = { apiKey, model: params.model };
 	return params.kind === "chat"
-		? { model: params.model, generator: createGenerator(site, { baseUrl: url, ...config }) }
+		? {
+				model: params.model,
+				generator: createGenerator(site, { baseUrl: url, ...config }),
+				chat: { baseUrl: url, ...config },
+				...(saved && saved.url === url ? { storedAs: saved.id } : {}),
+			}
 		: { model: params.model, decider: createDecider(site, { url, ...config }) };
 }

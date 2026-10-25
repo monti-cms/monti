@@ -148,6 +148,15 @@ A connection does not hold a key. It refers to a key in the central API key stor
 
 - **Changing the secret**: see "Plugin secrets" and "API key store" in the core README.
 
+## Admin agent (read only)
+
+`POST /api/monti/v1/ai/agent { runId?, messages, context: { screen, collection?, entryId?, selectedIds? } }` runs the assistant and answers with the AI SDK UI message stream (`useChat` reads it; the message metadata carries `runId`, and at the end the `usage` of the whole conversation). Every `read` operation of the core and the plugins (`cms.operations()`) is a tool named with `_` for `.` (`entries_list`), run as the signed-in admin. A failed operation is a tool result `{ error: { code, message } }`, a result over 20,000 characters is cut with a note to narrow the query, and the same tool with the same input a third time in a row is not run. `editor_read` and `editor_selection` have no `execute` and are offered only when `context.entryId` is set: the browser answers them. A run is at most 12 model steps; a failed model request is retried once per step.
+
+- **Model**: `agent` in the AI settings (`PUT /api/monti/v1/ai/settings { expectedVersion, agent: { providerId, model } | null }`), else the first ready chat connection with its default model.
+- **Tool calling**: the connection check also sends a request with a trivial tool and stores, per connection and model, whether the model called it (`providers[].toolSupport` in the settings view). The agent refuses a model known not to (`agent_unavailable`, 409); a model never checked is tried, and a "tools not supported" answer is stored and refused the same way. AI actions keep working with such a model.
+- **Conversations**: stored in the plugin storage (`agent-runs`) with their messages, status (`running`, `done`, `failed`, `stopped`) and usage. `GET /api/monti/v1/ai/agent/runs` lists the signed-in admin's own (newest first, `page`, `pageSize`), `GET /api/monti/v1/ai/agent/runs/{id}` returns one, only to that admin. A conversation stores up to 1,000,000 characters of messages, and an admin keeps their latest 100.
+- `CMS_AI_FAKE=1` uses a scripted model that calls `site_describe` and answers with the collection names.
+
 ## Fake connection (development only)
 
 With `CMS_AI_FAKE=1` (excluded from production builds), it returns canned answers without a key. The answer is built from the result

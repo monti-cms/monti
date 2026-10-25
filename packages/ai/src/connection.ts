@@ -40,6 +40,20 @@ export const aiProviderRequestSchema = z.object({
 	provider: aiProviderInputSchema,
 });
 
+/** The model the admin agent runs on. When none is set, the agent uses the first ready chat connection with its default model. */
+export const aiAgentSettingSchema = z.object({
+	providerId: z.string().min(1).max(60),
+	model: z.string().trim().min(1).max(200),
+});
+
+export type AiAgentSetting = z.output<typeof aiAgentSettingSchema>;
+
+/** Request to choose the agent's model (`null`: back to the default). */
+export const aiAgentRequestSchema = z.object({
+	expectedVersion: z.number().int().min(0),
+	agent: aiAgentSettingSchema.nullable(),
+});
+
 /** A connection sent to the screen. Has only the last four characters instead of the key. */
 export interface AiProviderView {
 	id: string;
@@ -51,11 +65,29 @@ export interface AiProviderView {
 	defaultModel: string;
 	/** Is it usable, i.e. address, key and default model are all present? */
 	ready: boolean;
+	/** For each model the connection check has tried: did it call a tool? The admin agent needs that. Models never checked are not listed. */
+	toolSupport: Record<string, boolean>;
+}
+
+/** The model the admin agent would run on now, and whether it is known to call tools (`null`: never checked). */
+export interface AiAgentModelView {
+	providerId: string;
+	providerName: string;
+	model: string;
+	tools: boolean | null;
+}
+
+export interface AiAgentView {
+	/** What the admin chose, or `null` for the default. */
+	setting: AiAgentSetting | null;
+	/** What the agent would use now (the choice, or the first ready chat connection with its default model), or `null` when nothing is usable. */
+	effective: AiAgentModelView | null;
 }
 
 export interface AiSettingsView {
 	version: number;
 	providers: AiProviderView[];
+	agent: AiAgentView;
 	/** Using the fake development connection (`CMS_AI_FAKE=1`). All actions work regardless of the config. */
 	fake: boolean;
 }
@@ -82,4 +114,7 @@ export interface AiModelInfo {
 	name?: string;
 }
 
-export type AiCheckResult = { ok: true; ms: number; model: string } | { ok: false; message: string };
+/** `tools`: whether the model called the check's tool (`null`: the probe failed for another reason, so nothing is known). Only chat connections have it. */
+export type AiCheckResult =
+	| { ok: true; ms: number; model: string; tools?: boolean | null }
+	| { ok: false; message: string };
