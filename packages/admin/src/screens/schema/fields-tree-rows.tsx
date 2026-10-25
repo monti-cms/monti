@@ -42,8 +42,8 @@ export const TONE: Record<KindTone, string> = {
 export const REQUIRED = "text-monti-warning";
 export const OPTION = "text-monti-kind-orange";
 const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-comfortable";
-/** Two columns only, for when the preview takes the room beside the tree. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-comfortable";
+/** Two columns only, for when the preview takes the room beside the tree; the kind column is narrower so the names keep their room. */
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_6.5rem] items-center gap-x-comfortable";
 export const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
 
 export interface TreeContext {
@@ -240,7 +240,8 @@ export function Row({
 						nested && "bg-monti-inset",
 					)}
 				>
-					<div className="flex min-w-0 items-center">
+					{/* Clipped to its column: in a narrow pane the notes shorten with "…" (before the label does) instead of running over the kind beside them. */}
+					<div className="flex min-w-0 items-center overflow-hidden">
 						<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 							{prefix}
 						</span>
@@ -248,7 +249,10 @@ export function Row({
 							{name}
 						</span>
 						{label && (
-							<span className="ml-condensed min-w-0 truncate text-monti-caption text-monti-muted" title={label}>
+							<span
+								className="ml-condensed max-w-[40%] shrink-0 truncate text-monti-caption text-monti-muted"
+								title={label}
+							>
 								{label}
 							</span>
 						)}
@@ -259,7 +263,7 @@ export function Row({
 						)}
 						{locked?.kind === "panel" && (
 							<span
-								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
+								className="ml-condensed min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
 								title={t("layout.notInPanel.title")}
 							>
 								{t("layout.notInPanel")}
@@ -267,7 +271,7 @@ export function Row({
 						)}
 						{locked?.kind === "plugin" && (
 							<span
-								className="ml-condensed shrink-0 text-monti-caption text-monti-muted"
+								className="ml-condensed min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
 								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
 							>
 								{t("layout.pluginPlaced")}
@@ -281,7 +285,7 @@ export function Row({
 							/>
 						)}
 					</div>
-					<div className="whitespace-nowrap font-mono text-monti-caption">
+					<div className="min-w-0 truncate font-mono text-monti-caption" title={summary.token}>
 						<span className={TONE[summary.tone]}>{summary.token}</span>
 						{summary.required && (
 							<span className={REQUIRED} title={t("field.requiredBadge")}>
