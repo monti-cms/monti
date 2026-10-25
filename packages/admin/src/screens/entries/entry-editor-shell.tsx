@@ -57,8 +57,11 @@ interface EntryEditorShellProps {
 	folderId?: string | null;
 }
 
-/** Width (px) below which the body takes priority over its side panes. */
-const NARROW_AREA_WIDTH = 1024;
+/**
+ * Width (px) of the body and its side panes below which the body takes priority: the panes close, and one opened by hand covers the body. It is what a 1024px window
+ * gave the area beside the sidebar, and `entry-editor-side-panels.tsx` docks its panes at the same width (`@min-[784px]`).
+ */
+const NARROW_AREA_WIDTH = 784;
 
 /** Name of the remembered source pane state in the site's browser storage (`lib/utils/site-storage.ts`). */
 const SOURCE_PANE_CODEC = enumCodec(["open", "closed"] as const);
@@ -156,7 +159,7 @@ export function EntryEditorShell({
 		if (focusBlock !== undefined) setFocusBlock(undefined);
 	}, [focusBlock]);
 
-	// "Narrow" is the window below 1024px, or the area of the body and its side panes below 1024px (a side panel open beside the editor takes room the window keeps).
+	// "Narrow" is the window below 1024px, or the area of the body and its side panes below the width above (a side panel open beside the editor takes room the window keeps).
 	const [isNarrowWindow, setIsNarrowWindow] = useState(false);
 	const [area, setArea] = useState<HTMLElement | null>(null);
 	const [isNarrowArea, setIsNarrowArea] = useState(false);
