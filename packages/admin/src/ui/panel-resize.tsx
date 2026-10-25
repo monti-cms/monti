@@ -1,16 +1,8 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui/internal";
-import {
-	type CSSProperties,
-	type KeyboardEvent,
-	type PointerEvent as ReactPointerEvent,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { ResizeHandle } from "@monti-cms/ui/internal";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { positiveNumberCodec, usePreference } from "../lib/hooks/use-preference";
 import { uiMessages } from "./messages";
 
@@ -20,8 +12,6 @@ export const PANEL_RESIZE_MIN_VIEWPORT = 640;
 const MAX_VIEWPORT_SHARE = 0.7;
 /** Space always left to the page behind a panel. */
 const VIEWPORT_MARGIN = 32;
-const KEY_STEP = 16;
-const KEY_STEP_LARGE = 64;
 
 export interface PanelResizeConfig {
 	/** Kind of panel; the chosen width is remembered under this name for the site, in this browser. */
@@ -97,69 +87,23 @@ export function usePanelResize({ name, defaultWidth, minWidth }: PanelResizeConf
 }
 
 /**
- * The drag handle on the left edge of a right-side panel (the parent must be positioned). A separator: drag it, or focus it and use the arrow keys
- * (Left widens, Right narrows, Shift for bigger steps, Home and End for the limits); double-click goes back to the default width.
+ * The drag handle on the left edge of a right-side panel (the parent must be positioned): the design system's {@link ResizeHandle}, driven by
+ * `usePanelResize`. Left widens, Right narrows; Home and End go to the limits, double-click to the default width.
  */
 export function PanelResizeHandle({ resize, className }: { resize: PanelResize; className?: string }) {
 	const t = useTranslator(uiMessages);
-	const drag = useRef<{ startX: number; startWidth: number } | null>(null);
 	if (!resize.enabled) return null;
-
-	const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (event.button !== 0) return;
-		drag.current = { startX: event.clientX, startWidth: resize.width };
-		event.currentTarget.setPointerCapture?.(event.pointerId);
-		event.preventDefault();
-	};
-	const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (!drag.current) return;
-		// The panel is on the right: moving the edge left makes it wider.
-		resize.setWidth(drag.current.startWidth + (drag.current.startX - event.clientX), false);
-	};
-	const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (!drag.current) return;
-		const { startX, startWidth } = drag.current;
-		drag.current = null;
-		event.currentTarget.releasePointerCapture?.(event.pointerId);
-		resize.setWidth(startWidth + (startX - event.clientX), true);
-	};
-	const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-		const step = event.shiftKey ? KEY_STEP_LARGE : KEY_STEP;
-		const next =
-			event.key === "ArrowLeft"
-				? resize.width + step
-				: event.key === "ArrowRight"
-					? resize.width - step
-					: event.key === "Home"
-						? resize.min
-						: event.key === "End"
-							? resize.max
-							: null;
-		if (next === null) return;
-		event.preventDefault();
-		resize.setWidth(next, true);
-	};
-
 	return (
-		<div
-			role="separator"
-			aria-orientation="vertical"
-			aria-label={t("panel.resize")}
-			aria-valuenow={resize.width}
-			aria-valuemin={resize.min}
-			aria-valuemax={resize.max}
-			tabIndex={0}
+		<ResizeHandle
+			edge="start"
+			value={resize.width}
+			min={resize.min}
+			max={resize.max}
+			label={t("panel.resize")}
+			onChange={resize.setWidth}
+			onReset={resize.reset}
 			data-slot="panel-resize-handle"
-			className={cn(
-				"absolute inset-y-0 left-0 z-30 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-monti-accent-emphasis focus-visible:bg-monti-accent-emphasis focus-visible:outline-none active:bg-monti-accent-emphasis",
-				className,
-			)}
-			onPointerDown={onPointerDown}
-			onPointerMove={onPointerMove}
-			onPointerUp={onPointerEnd}
-			onPointerCancel={onPointerEnd}
-			onKeyDown={onKeyDown}
-			onDoubleClick={resize.reset}
+			className={className}
 		/>
 	);
 }

@@ -23,7 +23,6 @@ import {
 } from "@monti-cms/ui/internal";
 import {
 	Activity,
-	ChevronDown,
 	ChevronRight,
 	Database,
 	ExternalLink,
@@ -391,6 +390,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 	const closeMobile = () => {
 		if (isMobile) setOpenMobile(false);
 	};
+	// Folder trees folded away by hand, by scope.
+	const [foldersHidden, setFoldersHidden] = useState<ReadonlySet<string>>(new Set());
 
 	const navLink = (
 		href: string,
@@ -436,19 +437,38 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		const active = activeNav === scope;
 		const nav = active && folderNav?.collection === scope ? folderNav : undefined;
 		const folderCount = nav ? nav.folders.length : (folderCounts?.[scope] ?? 0);
+		const showTree = nav !== undefined && nav.folders.length > 0;
+		const treeHidden = foldersHidden.has(scope);
+		const treeId = `monti-sidebar-folders-${scope}`;
+		// The open screen's tree folds away with its own button; elsewhere the chevron only says "has folders".
+		const toggle = showTree ? (
+			<button
+				type="button"
+				aria-expanded={!treeHidden}
+				aria-controls={treeId}
+				aria-label={treeHidden ? t("sidebar.showFolders") : t("sidebar.hideFolders")}
+				onClick={() =>
+					setFoldersHidden((hidden) => {
+						const next = new Set(hidden);
+						if (!next.delete(scope)) next.add(scope);
+						return next;
+					})
+				}
+				data-sidebar="menu-action"
+				className="absolute top-1.5 right-1 flex size-5 items-center justify-center rounded-sm text-monti-muted outline-hidden ring-monti-focus hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 group-data-[collapsible=icon]:hidden"
+			>
+				<ChevronRight aria-hidden className={cn("size-3 transition-transform", !treeHidden && "rotate-90")} />
+			</button>
+		) : undefined;
 		const chevron =
-			folderCount > 0 ? (
-				active ? (
-					<ChevronDown aria-hidden className="size-3! text-monti-muted group-data-[collapsible=icon]:hidden" />
-				) : (
-					<ChevronRight aria-hidden className="size-3! text-monti-subtle group-data-[collapsible=icon]:hidden" />
-				)
+			!showTree && folderCount > 0 ? (
+				<ChevronRight aria-hidden className="size-3! text-monti-subtle group-data-[collapsible=icon]:hidden" />
 			) : null;
 		return (
 			<Fragment key={scope}>
-				{navLink(href, scope, label, icon, undefined, chevron)}
-				{nav && nav.folders.length > 0 && (
-					<SidebarMenuItem>
+				{navLink(href, scope, label, icon, toggle, chevron)}
+				{showTree && (
+					<SidebarMenuItem id={treeId} hidden={treeHidden}>
 						<FolderTree nav={nav} closeMobile={closeMobile} />
 					</SidebarMenuItem>
 				)}
@@ -469,7 +489,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 	const sitePages = pages.filter((page) => page.group === "site");
 	const pageLink = (page: ToolsPage) =>
 		navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />);
-	// The Site group starts collapsed (remembered per browser) but is open whenever the screen shown belongs to it, so the active item is never hidden.
+	// The Site group keeps the open state it was left in (remembered per browser) and opens by itself on arriving at one of its screens. It always
+	// folds when asked, even with the open screen inside; the group label then stands out so the current place is still visible.
 	const [siteOpenChoice, setSiteOpen] = usePreference("sidebar-site-open", booleanCodec, false);
 	const siteNavIds: AdminNavId[] = [
 		"data",
@@ -477,7 +498,14 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		"events",
 		...sitePages.map((page): AdminNavId => `tools:${page.path}`),
 	];
-	const siteOpen = siteOpenChoice || siteNavIds.includes(activeNav);
+	const inSite = siteNavIds.includes(activeNav);
+	// A fold or unfold on this screen; arriving at another screen drops it.
+	const [siteToggle, setSiteToggle] = useState<{ nav: AdminNavId; open: boolean } | null>(null);
+	const siteOpen = siteToggle?.nav === activeNav ? siteToggle.open : siteOpenChoice || inSite;
+	const toggleSite = () => {
+		setSiteToggle({ nav: activeNav, open: !siteOpen });
+		setSiteOpen(!siteOpen);
+	};
 
 	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <FileImage />);
 
@@ -551,8 +579,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 								type="button"
 								aria-expanded={siteOpen}
 								aria-controls="monti-sidebar-site"
-								onClick={() => setSiteOpen(!siteOpen)}
-								className="w-full cursor-pointer gap-tight text-left hover:text-monti-default"
+								onClick={toggleSite}
+								className={cn(
+									"w-full cursor-pointer gap-tight text-left hover:text-monti-default",
+									!siteOpen && inSite && "font-semibold text-monti-default",
+								)}
 							/>
 						}
 					>

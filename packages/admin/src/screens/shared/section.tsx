@@ -1,9 +1,16 @@
 import { Box, Grid, Heading, Panel, Stack, Text } from "@monti-cms/ui";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
+
+const SectionRowContext = createContext(false);
+
+/** True when a field or switch sits directly inside a `Section` band of key-value rows. */
+export function useInSectionRow(): boolean {
+	return useContext(SectionRowContext);
+}
 
 /**
- * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card on the right (stacked on a narrow
- * screen). A section is page > section > rows: the card holds fields or one list, never another bordered box.
+ * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card or divided key-value rows on the right
+ * (stacked on a narrow screen). A section is page > section > rows: the card holds fields or one list, never another bordered box.
  */
 export function Section({
 	title,
@@ -13,6 +20,7 @@ export function Section({
 	wide = false,
 	card = true,
 	band,
+	rows,
 	danger,
 	testId,
 	id,
@@ -28,6 +36,8 @@ export function Section({
 	card?: boolean;
 	/** A band instead of a card: the content sits on the page, and a hairline above the section separates it from the one before. */
 	band?: boolean;
+	/** Whether the band's children are horizontal key-value setting rows separated by hairlines (`true` by default for `band` sections). */
+	rows?: boolean;
 	/** A step that cannot be undone: the title in the danger color and the content in a box with a danger border. */
 	danger?: boolean;
 	testId?: string;
@@ -35,6 +45,7 @@ export function Section({
 	id?: string;
 }) {
 	const titleId = testId ? `${testId}-title` : undefined;
+	const isRowBand = rows ?? Boolean(band && card && !danger);
 	return (
 		<Grid
 			as="section"
@@ -65,6 +76,12 @@ export function Section({
 				<Stack gap="comfortable" minWidth={0} border="danger" radius="lg" padding="comfortable">
 					{children}
 				</Stack>
+			) : isRowBand ? (
+				<SectionRowContext.Provider value={true}>
+					<Stack gap="none" divided minWidth={0}>
+						{children}
+					</Stack>
+				</SectionRowContext.Provider>
 			) : band ? (
 				<Stack gap="spacious" minWidth={0}>
 					{children}

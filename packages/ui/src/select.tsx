@@ -36,9 +36,10 @@ function SelectTrigger({
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-transparent py-2 pr-2 pl-2.5 text-monti-body outline-none transition-[color,box-shadow] focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:text-monti-label data-placeholder:text-monti-muted *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-monti-surface py-1.5 pr-2 pl-2.5 text-monti-label shadow-monti-control outline-none transition-[color,border-color,box-shadow] hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-control data-[size=sm]:h-control-sm data-[size=sm]:text-monti-label data-placeholder:text-monti-subtle *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				width === "full" ? "w-full" : "w-fit",
-				variant === "ghost" && "border-transparent hover:bg-monti-hover",
+				variant === "ghost" &&
+					"border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-monti-hover",
 				className,
 			)}
 			{...props}

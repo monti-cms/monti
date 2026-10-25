@@ -196,14 +196,14 @@ describe("list screen — list settings", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		fireEvent.click(screen.getByRole("button", { name: /^제목/ }));
+		fireEvent.click(screen.getByRole("button", { name: "보기" }));
 		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
 
 		await waitFor(() => expect(calls("PUT", "/api/monti/v1/preferences")).toHaveLength(1));
 		expect(bodyOf(calls("PUT", "/api/monti/v1/preferences")[0])).toEqual({
-			collections: { post: { sort: { field: "title", direction: "asc" } } },
+			collections: { post: { sort: { field: "updatedAt", direction: "asc" } } },
 		});
-		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("sortField")).toBe("title"));
+		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("sortDirection")).toBe("asc"));
 	});
 });
 

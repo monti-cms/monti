@@ -122,6 +122,15 @@ describe("sidebar structure", () => {
 		expect(siteGroup().getAttribute("aria-expanded")).toBe("true");
 	});
 
+	it("folds the Site group on request even while one of its screens is open, and then marks the group as the current place", () => {
+		renderSidebar({ activeNav: "api-keys" });
+		expect(siteGroup().className).not.toContain("font-semibold");
+		fireEvent.click(siteGroup());
+		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
+		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
+		expect(siteGroup().className).toContain("font-semibold");
+	});
+
 	it("keeps Settings and the theme toggle in the footer, and Trash out of it", () => {
 		const { container } = renderSidebar();
 		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
@@ -250,10 +259,15 @@ describe("folder tree under a collection", () => {
 		expect(row(first as string).querySelector("svg[class*=chevron]")).toBeNull();
 	});
 
-	it("turns the chevron down on the open collection and keeps the tree away from collections without folders", () => {
+	it("gives the open collection's tree its own fold button, and folds the tree away with it", () => {
 		renderSidebar({ folderNav: folderNav([folder("a", "Dev")]) });
-		const link = screen.getByRole("link", { name });
-		expect(link.querySelector("svg.lucide-chevron-down")).not.toBeNull();
+		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
+		const fold = screen.getByRole("button", { name: t("sidebar.hideFolders") });
+		expect(fold.getAttribute("aria-expanded")).toBe("true");
+		fireEvent.click(fold);
+		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: t("sidebar.showFolders") }));
+		expect(tree()).toBeTruthy();
 	});
 
 	it("does not render tree when the open collection has no folders", () => {

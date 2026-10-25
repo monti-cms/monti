@@ -40,14 +40,14 @@ function RadioItem({
 			data-slot="radio-item"
 			className={cn(
 				"flex cursor-pointer items-start gap-condensed text-monti-label has-data-disabled:cursor-not-allowed has-data-disabled:opacity-50",
-				"group-data-[variant=card]/radio-group:rounded-md group-data-[variant=card]/radio-group:border group-data-[variant=card]/radio-group:border-monti-muted group-data-[variant=card]/radio-group:px-normal group-data-[variant=card]/radio-group:py-condensed group-data-[variant=card]/radio-group:has-data-checked:border-monti-focus group-data-[variant=card]/radio-group:has-data-checked:bg-monti-accent-muted",
+				"group-data-[variant=card]/radio-group:rounded-md group-data-[variant=card]/radio-group:border group-data-[variant=card]/radio-group:border-monti-muted group-data-[variant=card]/radio-group:bg-monti-surface group-data-[variant=card]/radio-group:px-normal group-data-[variant=card]/radio-group:py-condensed group-data-[variant=card]/radio-group:shadow-monti-card group-data-[variant=card]/radio-group:has-data-checked:border-monti-focus group-data-[variant=card]/radio-group:has-data-checked:bg-monti-accent-muted",
 				className,
 			)}
 		>
 			<RadioPrimitive.Root
 				value={value}
 				disabled={disabled}
-				className="mt-hair flex size-icon shrink-0 items-center justify-center rounded-full border border-monti-default outline-none focus-visible:ring-3 focus-visible:ring-monti-focus-soft data-checked:border-monti-accent"
+				className="mt-hair flex size-icon shrink-0 items-center justify-center rounded-full border border-monti-default bg-monti-surface shadow-monti-control outline-none hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft data-checked:border-monti-accent"
 			>
 				<RadioPrimitive.Indicator className="size-2 rounded-full bg-monti-accent-emphasis" />
 			</RadioPrimitive.Root>

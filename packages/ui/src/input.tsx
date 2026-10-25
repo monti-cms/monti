@@ -44,9 +44,9 @@ function Input({
 			data-slot="input"
 			data-size={size}
 			className={cn(
-				"w-full min-w-0 rounded-md border border-monti-default bg-transparent px-2.5 py-1 outline-none transition-[color,box-shadow] file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium file:text-monti-body file:text-monti-default placeholder:text-monti-muted focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft",
+				"w-full min-w-0 rounded-md border border-monti-default bg-monti-surface px-2.5 py-1 shadow-monti-control outline-none transition-[color,border-color,box-shadow] file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium file:text-monti-default file:text-monti-label placeholder:text-monti-subtle hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft",
 				appearance === "inline" || size === "title" || size === "display"
-					? "h-auto rounded-sm border-transparent bg-transparent px-0 focus-visible:border-transparent focus-visible:ring-2"
+					? "h-auto rounded-sm border-transparent bg-transparent px-0 shadow-none hover:border-transparent focus-visible:border-transparent focus-visible:ring-2"
 					: CONTROL_SIZE[size],
 				(appearance === "inline" || size === "title" || size === "display") && INLINE_SIZE[size],
 				width === "short" && "w-panel-sm",

@@ -28,12 +28,12 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-	"group/tabs-list inline-flex w-fit items-center justify-center rounded-md p-[3px] text-monti-muted group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
+	"group/tabs-list inline-flex w-fit items-center justify-center rounded-md p-[3px] text-monti-muted group-data-[orientation=horizontal]/tabs:h-control group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none data-[variant=line]:p-0",
 	{
 		variants: {
 			variant: {
-				default: "bg-monti-neutral",
-				line: "gap-1 bg-transparent",
+				default: "border border-monti-muted bg-monti-inset",
+				line: "gap-4 bg-transparent",
 			},
 		},
 		defaultVariants: {
@@ -64,8 +64,8 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 			className={cn(
 				"relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border border-transparent px-2 py-1 monti-dark:text-monti-muted text-monti-label text-monti-muted transition-all hover:text-monti-default monti-dark:hover:text-monti-default focus-visible:border-monti-focus focus-visible:outline-1 focus-visible:outline-monti-focus focus-visible:ring-[3px] focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[orientation=vertical]/tabs:w-full group-data-[variant=line]/tabs-list:flex-none group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:px-0 group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				"group-data-[variant=line]/tabs-list:bg-transparent monti-dark:group-data-[variant=line]/tabs-list:data-active:border-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent monti-dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
-				"monti-dark:data-active:border-monti-default data-active:bg-monti-page data-active:text-monti-default monti-dark:data-active:text-monti-default",
-				"after:absolute after:bg-monti-accent-emphasis after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+				"data-active:border-monti-muted monti-dark:data-active:border-monti-default data-active:bg-monti-surface data-active:font-medium data-active:text-monti-default monti-dark:data-active:text-monti-default data-active:shadow-monti-control",
+				"after:absolute after:bg-monti-accent-emphasis after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=horizontal]/tabs:after:bottom-[-1px] group-data-[orientation=horizontal]/tabs:after:h-[1.5px] group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
 				className,
 			)}
 			{...props}
@@ -113,7 +113,7 @@ function PageTabs({
 	return (
 		<TabsList
 			variant="line"
-			className={cn("h-11 w-full shrink-0 justify-start gap-comfortable border-b", TAB_INSET[inset], className)}
+			className={cn("h-10 w-full shrink-0 justify-start gap-comfortable border-b", TAB_INSET[inset], className)}
 			{...props}
 		/>
 	);

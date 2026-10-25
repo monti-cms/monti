@@ -150,6 +150,7 @@ export {
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { RadioGroup, RadioItem } from "./radio-group";
+export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export {
 	Select,
 	SelectContent,
@@ -193,6 +194,7 @@ export {
 } from "./sidebar";
 export { Skeleton } from "./skeleton";
 export { Spinner } from "./spinner";
+export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
 export { Switch } from "./switch";

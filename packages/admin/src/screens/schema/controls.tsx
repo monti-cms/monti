@@ -25,6 +25,7 @@ import {
 import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
+import { useInSectionRow } from "../shared/section";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
@@ -217,27 +218,30 @@ export function FlagSwitch({
 }) {
 	const id = useId();
 	const { disabled: readOnly } = useSchemaEdit();
+	const inSectionRow = useInSectionRow();
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<Inline align="start" justify="between" gap="comfortable">
-			<Stack gap="hair">
-				<Text as="label" htmlFor={id} weight="medium">
-					{label}
-				</Text>
-				{desc && <Help>{desc}</Help>}
-			</Stack>
-			<Inline gap="condensed" shrink={false}>
-				{revert && <RevertMark name={label} onRevert={revert} />}
-				<Switch
-					id={id}
-					size="sm"
-					checked={checked}
-					disabled={disabled}
-					onCheckedChange={(next) => onChange(next === true)}
-				/>
+		<Box maxWidth={inSectionRow ? undefined : "prose"} paddingY={inSectionRow ? "normal" : undefined}>
+			<Inline align="center" justify="between" gap="comfortable">
+				<Stack gap="hair">
+					<Text as="label" htmlFor={id} weight="medium">
+						{label}
+					</Text>
+					{desc && <Help>{desc}</Help>}
+				</Stack>
+				<Inline gap="condensed" shrink={false}>
+					{revert && <RevertMark name={label} onRevert={revert} />}
+					<Switch
+						id={id}
+						size="sm"
+						checked={checked}
+						disabled={disabled}
+						onCheckedChange={(next) => onChange(next === true)}
+					/>
+				</Inline>
 			</Inline>
-		</Inline>
+		</Box>
 	);
 }
 

@@ -6,7 +6,6 @@ import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
-	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -15,6 +14,7 @@ import {
 	IconButton,
 	Inline,
 	Separator,
+	SplitButton,
 	StatusIndicator,
 	Text,
 	Tooltip,
@@ -24,7 +24,6 @@ import {
 import {
 	Archive,
 	CalendarSync,
-	ChevronDown,
 	ChevronLeft,
 	Copy,
 	Download,
@@ -192,38 +191,23 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 					</Button>
 				) : (
-					// For an already published post, publish and "republish with today's date" sit side by side as one group.
-					<ButtonGroup>
-						<Button
-							id="cms-publish"
-							type="button"
-							size="sm"
-							disabled={isSubmitting}
-							onClick={() => void handlePublish()}
-						>
-							{isPublishing ? t("publishing") : tc("lifecycle.publish")}
-						</Button>
-						<DropdownMenu>
-							<IconButton
-								label={t("publishOptions")}
-								side="bottom"
-								variant="default"
-								disabled={isSubmitting}
-								trigger={(button) => <DropdownMenuTrigger render={button} />}
-							>
-								<ChevronDown aria-hidden />
-							</IconButton>
-							<DropdownMenuContent align="end" width="md">
-								{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
-								{canResetPublishedAt && (
-									<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
-										<CalendarSync aria-hidden />
-										{t("republish")}
-									</DropdownMenuItem>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</ButtonGroup>
+					// For an already published post, publish and "republish with today's date" sit side by side as one split button.
+					<SplitButton
+						id="cms-publish"
+						size="sm"
+						disabled={isSubmitting}
+						onClick={() => void handlePublish()}
+						menuLabel={t("publishOptions")}
+						menu={
+							// Keeping the original publish date is the default. Choose it only when re-posting an edited post as new.
+							<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
+								<CalendarSync aria-hidden />
+								{t("republish")}
+							</DropdownMenuItem>
+						}
+					>
+						{isPublishing ? t("publishing") : tc("lifecycle.publish")}
+					</SplitButton>
 				)}
 				<Inline height="control-sm" paddingX="tight">
 					<Separator orientation="vertical" aria-hidden />

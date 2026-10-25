@@ -86,10 +86,6 @@ const DRAWING = new Map<string, string>([
 		"the sidebar composition: its header, footer and group chrome follow the icon-rail states, and the folder tree is indented by depth with row actions shown on hover",
 	],
 	[
-		"admin/src/screens/column-resize-handle.tsx",
-		"a draggable, keyboard-operable separator positioned on a column edge",
-	],
-	[
 		"admin/src/screens/entries/editor-scroller.tsx",
 		"the scrolling body of the editor: its active-block highlight reaches into the editor's own markup",
 	],

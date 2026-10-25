@@ -23,6 +23,8 @@ export interface UiLabels {
 	sidebarTitle: string;
 	sidebarDescription: string;
 	sidebarToggle: string;
+	sidebarResize: string;
+	resize: string;
 }
 
 export const DEFAULT_UI_LABELS: UiLabels = {
@@ -42,6 +44,8 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	sidebarTitle: "Sidebar",
 	sidebarDescription: "Shows the mobile sidebar.",
 	sidebarToggle: "Toggle sidebar",
+	sidebarResize: "Resize sidebar",
+	resize: "Resize",
 };
 
 const LabelsContext = createContext<UiLabels>(DEFAULT_UI_LABELS);

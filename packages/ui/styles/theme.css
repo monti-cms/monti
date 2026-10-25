@@ -122,6 +122,7 @@
 	 * Sizes, by what they size. Components take these as options (an icon's size, a control's height, a panel's width); screens never write a size.
 	 *   icons     size-icon-xs 12, size-icon-sm 14, size-icon 16, size-icon-lg 20
 	 *   controls  h-control-xs 24, h-control-sm 32, h-control 36, h-control-lg 40 (also min-h-, and size-control-* for a square button)
+	 *   bars      h-header 48 (a page's title bar, the editor's top bar)
 	 *   panels    w-panel-sm 224, w-panel 288, w-panel-lg 384 (also max-w-, min-w-: popovers, menus, side columns)
 	 *   pages     w-rail 220, w-rail-wide 260 (a section's label column), max-w-content 1000, max-w-page 1160
 	 */
@@ -130,23 +131,24 @@
 	--size-icon: 16px;
 	--size-icon-lg: 20px;
 	--size-control-xs: 24px;
-	--size-control-sm: 32px;
-	--size-control: 36px;
-	--size-control-lg: 40px;
+	--size-control-sm: 28px;
+	--size-control: 32px;
+	--size-control-lg: 36px;
 	--height-control-xs: 24px;
-	--height-control-sm: 32px;
-	--height-control: 36px;
-	--height-control-lg: 40px;
+	--height-control-sm: 28px;
+	--height-control: 32px;
+	--height-control-lg: 36px;
+	--height-header: 44px;
 	--container-panel-sm: 224px;
 	--container-panel: 288px;
 	--container-panel-lg: 384px;
 	/* Page columns: a settings section's label column (rail, rail-wide) and the readable width of a form page (content, page). */
 	--container-rail: 220px;
 	--container-rail-wide: 260px;
-	--container-content: 1000px;
-	--container-page: 1160px;
-	/* The admin sidebar (the same 16rem as `SIDEBAR_WIDTH` in sidebar.tsx), for a placeholder in its place. */
-	--container-sidebar: 16rem;
+	--container-content: 860px;
+	--container-page: 1040px;
+	/* The admin sidebar (the same 15rem as `SIDEBAR_WIDTH_DEFAULT` in sidebar.tsx), for a placeholder in its place. */
+	--container-sidebar: 15rem;
 
 	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
 	--radius-*: initial;
@@ -206,11 +208,14 @@
 	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
 	--font-sans: var(--monti-font-sans);
 	--font-mono: var(--monti-font-mono);
-	/* Two heights. Cards and panels rest on the page with a border and no shadow; menus, popovers, dialogs and toasts float (`shadow-monti-floating`). */
+	/* Surface elevation tokens: primary buttons (`btn`), interactive controls (`control`), resting cards/panels (`card`), and floating overlays (`floating`). */
 	--shadow-*: initial;
 	--inset-shadow-*: initial;
 	--drop-shadow-*: initial;
 	--text-shadow-*: initial;
+	--shadow-monti-btn: var(--monti-shadow-btn);
+	--shadow-monti-control: var(--monti-shadow-control);
+	--shadow-monti-card: var(--monti-shadow-card);
 	--shadow-monti-floating: var(--monti-shadow-floating);
 
 	/* The moving bar of a progress whose amount is unknown. */

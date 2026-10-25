@@ -197,7 +197,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section band title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
+		<Section band rows={false} title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
@@ -288,7 +288,7 @@ export function CollectionEditor({
 		<Stack gap="spacious" minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
 			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
-				<Stack gap="normal" align="start">
+				<Inline align="end" justify="between" gap="comfortable" border="bottom-strong" paddingBottom="normal">
 					<Box minWidth={0}>
 						<Inline align="baseline" gap="condensed">
 							<Heading as="h3">{label}</Heading>
@@ -296,11 +296,11 @@ export function CollectionEditor({
 								{name}
 							</Text>
 						</Inline>
-						<Text as="p" tone="muted">
+						<Text as="p" variant="label" tone="muted">
 							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
 						</Text>
 					</Box>
-					<TabsList>
+					<TabsList variant="line">
 						<TabsTrigger value="basics">
 							{t("collection.tabs.basics")}
 							{changes?.basics && <ChangeDot />}
@@ -316,7 +316,7 @@ export function CollectionEditor({
 							</TabsTrigger>
 						)}
 					</TabsList>
-				</Stack>
+				</Inline>
 				<TabsContent value="basics">
 					<Stack gap="section" maxWidth="page">
 						<Section band title={t("collection.basicsTitle")}>
@@ -383,7 +383,7 @@ export function CollectionEditor({
 							/>
 						</Section>
 						<Section band title={t("collection.dangerTitle")} card={false}>
-							<Inline justify="end">
+							<Inline justify="end" paddingY="normal">
 								<Button type="button" variant="outline" tone="danger" size="sm" disabled={disabled} onClick={onRemove}>
 									<Trash2 aria-hidden />
 									{ts("collection.remove")}

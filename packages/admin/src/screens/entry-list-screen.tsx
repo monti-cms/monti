@@ -2,7 +2,7 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
+import { Box, Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -188,48 +188,41 @@ function ListLoading() {
 				</Stack>
 			</Stack>
 			<Stack gap="none" grow minWidth={0} aria-hidden>
-				{/* Title and address on the left, search and the add button on the right. */}
-				<Inline
-					justify="between"
-					gap="normal"
-					shrink={false}
-					paddingX="wide"
-					paddingTop="wide"
-					paddingBottom="comfortable"
-				>
-					<Stack gap="tight">
-						<Skeleton shape="title" width="short" />
-						<Skeleton shape="line" width="medium" />
-					</Stack>
-					<Inline gap="condensed">
-						<Skeleton shape="control-sm" width="medium" />
-						<Skeleton shape="control-sm" width="short" />
-					</Inline>
-				</Inline>
-				{/* Status tabs. */}
-				<Inline gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="condensed">
-					<Skeleton shape="line" width="chip" />
-					<Skeleton shape="line" width="chip" />
-					<Skeleton shape="line" width="chip" />
-					<Skeleton shape="line" width="chip" />
-				</Inline>
-				{/* Table header and rows. */}
-				<Stack gap="none">
-					{[-1, ...PLACEHOLDER_ROWS.slice(0, 6)].map((row) => (
-						<Inline
-							key={row}
-							gap="spacious"
-							border="bottom"
-							paddingX="wide"
-							paddingY={row < 0 ? "normal" : "comfortable"}
-						>
-							<Skeleton shape="line" width={row < 0 ? "short" : "third"} />
-							<Skeleton shape="line" width="chip" />
+				<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious">
+					{/* The title bar: title and address on the left, search and the add button on the right. */}
+					<Inline justify="between" gap="normal" shrink={false} border="bottom-strong" paddingBottom="normal">
+						<Inline gap="condensed">
 							<Skeleton shape="line" width="short" />
-							<Skeleton shape="line" width="short" />
+							<Skeleton shape="line" width="medium" />
 						</Inline>
-					))}
-				</Stack>
+						<Inline gap="condensed">
+							<Skeleton shape="control-sm" width="medium" />
+							<Skeleton shape="control-sm" width="short" />
+						</Inline>
+					</Inline>
+					{/* Status tabs. */}
+					<Inline gap="comfortable" shrink={false} border="bottom" paddingY="condensed">
+						<Skeleton shape="line" width="chip" />
+						<Skeleton shape="line" width="chip" />
+						<Skeleton shape="line" width="chip" />
+						<Skeleton shape="line" width="chip" />
+					</Inline>
+					{/* Editorial index rows. */}
+					<Stack gap="none">
+						{PLACEHOLDER_ROWS.slice(0, 6).map((row) => (
+							<Inline key={row} justify="between" gap="spacious" border="bottom" paddingY="comfortable">
+								<Stack gap="tight" grow>
+									<Skeleton shape="line" width="third" />
+									<Skeleton shape="line" width="short" />
+								</Stack>
+								<Inline gap="normal">
+									<Skeleton shape="line" width="chip" />
+									<Skeleton shape="line" width="short" />
+								</Inline>
+							</Inline>
+						))}
+					</Stack>
+				</Box>
 			</Stack>
 		</Inline>
 	);
@@ -268,28 +261,30 @@ function TrashPage() {
 	const { state } = list;
 	return (
 		<AdminShell
+			editorial
 			title={t("dashboard.trash")}
 			count={list.data.isLoading ? undefined : list.data.total}
 			sidebar={{ activeNav: "trash" }}
-			large
 		>
 			<PageActions>
 				<EntryListHeaderActions list={list} />
 			</PageActions>
-			<Tabs value={state.collection}>
-				<PageTabs aria-label={t("dashboard.trashCollections")}>
-					{site.COLLECTIONS.map((item) => (
-						<TabsTrigger
-							key={item}
-							value={item}
-							nativeButton={false}
-							render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}
-						>
-							{site.COLLECTION_DEFINITIONS[item].label}
-						</TabsTrigger>
-					))}
-				</PageTabs>
-			</Tabs>
+			<Box width="full" maxWidth="content" centered paddingX="wide" shrink={false}>
+				<Tabs value={state.collection}>
+					<PageTabs inset="none" aria-label={t("dashboard.trashCollections")}>
+						{site.COLLECTIONS.map((item) => (
+							<TabsTrigger
+								key={item}
+								value={item}
+								nativeButton={false}
+								render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}
+							>
+								{site.COLLECTION_DEFINITIONS[item].label}
+							</TabsTrigger>
+						))}
+					</PageTabs>
+				</Tabs>
+			</Box>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);
@@ -306,9 +301,9 @@ function ListPage() {
 			: "";
 	return (
 		<AdminShell
+			editorial
 			title={`${list.label}${folderLabel}`}
 			count={list.data.isLoading ? undefined : list.data.total}
-			large
 			description={routePath ? <RouteDescription path={routePath} /> : undefined}
 			sidebar={{
 				activeNav: state.collection,

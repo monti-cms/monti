@@ -8,6 +8,7 @@ function Table({
 	container = "scroll",
 	inset = "none",
 	layout = "auto",
+	density = "default",
 	stickyHeader = false,
 	width,
 	style,
@@ -21,6 +22,8 @@ function Table({
 	inset?: "none" | "page";
 	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
 	layout?: "auto" | "fixed";
+	/** `comfortable`: taller rows with a bottom rule on the last row too (an editorial index list). */
+	density?: "default" | "comfortable";
 	/** The header row stays at the top while the rows scroll under it. */
 	stickyHeader?: boolean;
 }) {
@@ -31,6 +34,7 @@ function Table({
 				className={cn(
 					"w-full caption-bottom text-monti-body",
 					layout === "fixed" && "table-fixed",
+					density === "comfortable" && "[&_td]:py-normal [&_tr:last-child]:border-b",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					inset === "page" &&
 						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",

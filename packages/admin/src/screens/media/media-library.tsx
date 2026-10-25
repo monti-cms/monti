@@ -441,7 +441,6 @@ export function MediaLibrary() {
 		<AdminShell
 			title={`${t("title")}${folderTitle}`}
 			count={mediaQuery.data ? t("library.count", { count: total }) : undefined}
-			large
 			sidebar={{
 				activeNav: "media",
 				folderNav: {

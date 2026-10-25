@@ -11,14 +11,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function Triggers({ disabled }: { disabled?: boolean }) {
+function Triggers() {
 	return (
 		<>
 			<TabsTrigger value="write">글</TabsTrigger>
 			<TabsTrigger value="seo">검색 노출</TabsTrigger>
-			<TabsTrigger value="more" disabled={disabled}>
-				{disabled ? "비활성" : "고급"}
-			</TabsTrigger>
+			<TabsTrigger value="more">고급</TabsTrigger>
 		</>
 	);
 }
@@ -79,7 +77,9 @@ export const WithIconsAndDisabled: Story = {
 							<Settings aria-hidden />
 							설정
 						</TabsTrigger>
-						<Triggers disabled />
+						<TabsTrigger value="more" disabled>
+							비활성
+						</TabsTrigger>
 					</TabsList>
 				</Tabs>
 			))}

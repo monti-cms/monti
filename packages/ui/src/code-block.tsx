@@ -16,7 +16,7 @@ function CodeBlock({
 		<pre
 			data-slot="code-block"
 			className={cn(
-				"overflow-auto rounded-md bg-monti-inset p-normal font-mono",
+				"overflow-auto rounded-md border border-monti-muted bg-monti-inset p-normal font-mono",
 				size === "caption" ? "text-monti-caption" : "text-monti-label",
 				wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre",
 				maxHeight === "list" && "max-h-96",

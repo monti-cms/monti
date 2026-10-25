@@ -1,8 +1,9 @@
 import { Box, FormFieldDescription, FormFieldLabel, Inline, Stack, Text, FormField as UiField } from "@monti-cms/ui";
 import type { ReactNode } from "react";
+import { useInSectionRow } from "./section";
 
-/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-const CONTROL_MAX_WIDTH = { narrow: "panel-lg", normal: "prose", wide: "prose", full: undefined } as const;
+/** How wide the control of a field is: controls share a unified editorial column width (`prose`), while `full` spans the whole container. */
+const CONTROL_MAX_WIDTH = { narrow: "prose", normal: "prose", wide: "prose", full: undefined } as const;
 export type ControlWidth = keyof typeof CONTROL_MAX_WIDTH;
 
 export function Labeled({
@@ -25,6 +26,7 @@ export function Labeled({
 	/** Next to the label on the same line (a change marker, a revert button). */
 	aside?: ReactNode;
 }) {
+	const inSectionRow = useInSectionRow();
 	const labelNode = (
 		<FormFieldLabel htmlFor={htmlFor}>
 			<Text variant="body" weight="medium">
@@ -32,6 +34,35 @@ export function Labeled({
 			</Text>
 		</FormFieldLabel>
 	);
+
+	if (inSectionRow && control !== "full") {
+		return (
+			<UiField>
+				<Inline align="center" justify="between" gap="spacious" paddingY="normal">
+					<Stack gap="hair" minWidth={0}>
+						{aside ? (
+							<Inline gap="condensed">
+								{labelNode}
+								{aside}
+							</Inline>
+						) : (
+							labelNode
+						)}
+						{description && (
+							<Box maxWidth="prose">
+								<FormFieldDescription>{description}</FormFieldDescription>
+							</Box>
+						)}
+					</Stack>
+					<Stack gap="tight" width="full" maxWidth="panel">
+						<Box width="full">{children}</Box>
+						{hint && <FormFieldDescription>{hint}</FormFieldDescription>}
+					</Stack>
+				</Inline>
+			</UiField>
+		);
+	}
+
 	return (
 		<UiField>
 			<Stack gap="condensed">

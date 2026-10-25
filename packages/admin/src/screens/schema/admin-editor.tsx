@@ -52,16 +52,14 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
-				<Box border="top" paddingTop="spacious">
-					<FlagSwitch
-						label={t("admin.translations")}
-						revert={revert("translations")}
-						checked={admin.translations !== false}
-						onChange={(on) => set("translations", on ? undefined : false)}
-					/>
-				</Box>
+				<FlagSwitch
+					label={t("admin.translations")}
+					revert={revert("translations")}
+					checked={admin.translations !== false}
+					onChange={(on) => set("translations", on ? undefined : false)}
+				/>
 			</Section>
-			<Section wide band title={t("admin.addressTitle")}>
+			<Section wide band rows={false} title={t("admin.addressTitle")}>
 				<Stack gap="condensed">
 					<Box width="fit" background="neutral" radius="md" paddingX="normal" paddingY="condensed">
 						<Text as="code" data-testid="admin-path">
