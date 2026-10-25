@@ -3,9 +3,9 @@ import { adminRoute, ok, parseWith, readJsonBody, written } from "../../../handl
 
 type IdParams = { id: string };
 
-/** The source and translations in the same translation group. */
-export const GET = adminRoute<IdParams>(async ({ params, cms }) =>
-	ok(await cms.store().getTranslationGroup({ entryId: params.id })),
+/** The source and translations in the same translation group. The operation `entries.translations`. */
+export const GET = adminRoute<IdParams>(async ({ params, cms, auth }) =>
+	ok(await cms.runOperation("entries.translations", { id: params.id }, { auth })),
 );
 
 /** Creates a translation: a draft copying the source's per-locale values and body. */

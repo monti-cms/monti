@@ -1,9 +1,6 @@
 import { adminRoute, ok } from "../../../handler";
 
-/** Where this entry is used (back references). Distinguishes draft and published usages. */
-export const GET = adminRoute<{ id: string }>(async ({ params, cms }) => {
-	const store = cms.store();
-	await store.getEntry(params.id);
-	const relations = await store.getIncomingReferences({ targetId: params.id });
-	return ok({ targetId: params.id, incomingReferences: relations, total: relations.length });
-});
+/** Where this entry is used (back references). Distinguishes draft and published usages. The operation `entries.usages`. */
+export const GET = adminRoute<{ id: string }>(async ({ params, cms, auth }) =>
+	ok(await cms.runOperation("entries.usages", { id: params.id }, { auth })),
+);

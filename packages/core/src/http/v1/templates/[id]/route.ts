@@ -1,13 +1,13 @@
 import { patchTemplateBodySchema } from "../../../../core/api";
 import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler";
-import { templateBodyOf, templatesJson } from "../body";
+import { templateBodyOf } from "../body";
 
 type IdParams = { id: string };
 
-export const GET = adminRoute<IdParams>(async ({ request, params, cms }) => {
-	const [template] = await templatesJson(cms, [await cms.store().getTemplate(params.id)], readFormatQuery(request));
-	return ok(template);
-});
+/** The operation `templates.get`. */
+export const GET = adminRoute<IdParams>(async ({ request, params, cms, auth }) =>
+	ok(await cms.runOperation("templates.get", { id: params.id, format: readFormatQuery(request) }, { auth })),
+);
 
 /** Without a body the stored one is kept. Blocks keep their ids where the new body pairs with the old one. */
 export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {

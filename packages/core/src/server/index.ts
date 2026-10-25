@@ -72,6 +72,14 @@ export {
 	written,
 } from "../http/v1/handler";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
+export {
+	type AnyOperation,
+	defineOperation,
+	type Operation,
+	type OperationContext,
+	type OperationKind,
+} from "../operations";
+export type { OperationInfo, OperationRunner, RunOperationOptions } from "../operations/registry";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "../plugin/content-lookup";
 export type { PluginContext } from "../plugin/context";
 export { defineServerPlugin } from "../plugin/define";

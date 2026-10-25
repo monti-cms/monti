@@ -5,6 +5,7 @@ import type { ContentStore } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
 import type { MediaStore } from "../media/store";
+import type { OperationInfo, RunOperationOptions } from "../operations/registry";
 import type { PluginContext } from "../plugin/context";
 import type { OwnedPluginRoute } from "../plugin/define";
 import type { LoadedServerPlugin } from "../plugin/server";
@@ -166,6 +167,16 @@ export interface Cms<
 	 * admin's events screen uses.
 	 */
 	readonly events: CmsEvents;
+	/**
+	 * The operations of this instance: one per capability of the admin, the core's and those plugins add (`ServerPlugin.operations`). Each has its name, kind,
+	 * description for the model, input schema and that schema as JSON Schema. A name used twice (a plugin's with the core's, or two plugins') fails here.
+	 */
+	operations(): Promise<readonly OperationInfo[]>;
+	/**
+	 * Runs the named operation as the admin in `options.auth` (the caller has verified them): the input is parsed with the operation's schema (`invalid_input`),
+	 * and the changes it makes are recorded under that admin. An unknown name is `not_found`. The admin routes and the agent both call this.
+	 */
+	runOperation(name: string, input: unknown, options: RunOperationOptions): Promise<unknown>;
 	/**
 	 * Serves one request of the admin API (`/api/monti/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
 	 * `Request` and returns a `Response`, so any host that speaks them can mount it. `@monti-cms/nextjs` mounts it in a Next.js route file (`createRouteHandler(cms)`). Unknown paths return 404 and a known

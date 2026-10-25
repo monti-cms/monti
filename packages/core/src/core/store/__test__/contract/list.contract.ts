@@ -318,6 +318,27 @@ export const listContract: ContractSuite = (factory) => {
 			expect(afterMalicious.items.map((item) => item.slug).sort()).toEqual(["le2-other", "slug-한국어"]);
 		});
 
+		it("2a. Search matches word by word: every word must be found, in any order and in different places", async () => {
+			await seed(content, "wm-launch-notes", "Spring Launch Plan", { text: "budget and timeline for the campaign" });
+			await seed(content, "wm-other", "Autumn Plan", { text: "nothing about the spring" });
+			const slugsOf = async (search: string, includeBody = false) =>
+				(await store.listEntries({ collection: content, search, includeBody })).items.map((item) => item.slug).sort();
+
+			// Words in the title, in any order
+			expect(await slugsOf("plan spring")).toEqual(["wm-launch-notes"]);
+			// One word in the title and one in the slug
+			expect(await slugsOf("spring notes")).toEqual(["wm-launch-notes"]);
+			// A word that is missing anywhere rules the entry out
+			expect(await slugsOf("spring budget")).toEqual([]);
+			// The body is searched only with includeBody, word by word as well
+			expect(await slugsOf("spring budget", true)).toEqual(["wm-launch-notes"]);
+			expect(await slugsOf("plan campaign", true)).toEqual(["wm-launch-notes"]);
+			// A single word and the surrounding spaces behave as before
+			expect(await slugsOf("  plan  ")).toEqual(["wm-launch-notes", "wm-other"]);
+			// Only spaces is no search
+			expect(await slugsOf("   ")).toEqual(["wm-launch-notes", "wm-other"]);
+		});
+
 		it("2b. Visible body search: link addresses and block attributes must not match; visible text, link labels and fenced code must match", async () => {
 			const slug = "d2-body-search";
 			await seed(content, slug, "Body Search Title", {

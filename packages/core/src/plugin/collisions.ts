@@ -105,3 +105,32 @@ export const assertPluginRoutesFree = (
 	corePatterns: readonly string[],
 	routes: readonly { readonly plugin: string; readonly pattern: string }[],
 ): void => throwIssues(CONFIG_SOURCE, checkPluginRoutes(corePatterns, routes));
+
+/**
+ * The operations that share a name with another one: a plugin's with a core operation (`plugin` is `null` for a core one) or with another plugin's. The agent and the
+ * routes find an operation by its name, so one of the two would never be reached.
+ */
+export function checkOperationNames(
+	operations: readonly { readonly plugin: string | null; readonly name: string }[],
+): ConfigIssue[] {
+	const list = new IssueList();
+	const owners = new Map<string, string | null>();
+	for (const { plugin, name } of operations) {
+		if (owners.has(name)) {
+			const owner = owners.get(name);
+			list.add(
+				pathOf("plugins", plugin ?? "core", "operations", name),
+				"collision",
+				owner === null
+					? `collides with the core operation "${name}"`
+					: `collides with the operation "${name}" of plugin "${owner}"`,
+			);
+		} else owners.set(name, plugin);
+	}
+	return list.issues;
+}
+
+/** Throws a {@link ConfigError} if an operation name is used twice. */
+export const assertOperationNamesFree = (
+	operations: readonly { readonly plugin: string | null; readonly name: string }[],
+): void => throwIssues(CONFIG_SOURCE, checkOperationNames(operations));

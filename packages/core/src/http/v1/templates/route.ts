@@ -1,10 +1,10 @@
 import { createTemplateBodySchema } from "../../../core/api";
 import { adminRoute, ok, parseWith, readFormatQuery, readJsonBody } from "../handler";
-import { templateBodyOf, templatesJson } from "./body";
+import { templateBodyOf } from "./body";
 
-/** `?format=<name>` adds `body` to each template: its document as text in that format. */
-export const GET = adminRoute(async ({ request, cms }) =>
-	ok({ items: await templatesJson(cms, await cms.store().listTemplates(), readFormatQuery(request)) }),
+/** `?format=<name>` adds `body` to each template: its document as text in that format. The operation `templates.list`. */
+export const GET = adminRoute(async ({ request, cms, auth }) =>
+	ok(await cms.runOperation("templates.list", { format: readFormatQuery(request) }, { auth })),
 );
 
 /** The body is `doc`, or `body` with its `format`. With neither the template is empty. */

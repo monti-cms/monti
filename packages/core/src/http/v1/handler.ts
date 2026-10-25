@@ -9,6 +9,7 @@ import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../core/limits";
 import type { PluginContext } from "../../plugin/context";
 import type { BulkItemResult } from "../../services/bulk-service";
 import type { WriteResult } from "../../services/content-service";
+import { translationsOf } from "../../services/translations";
 import { CmsError, deleted, handleApiError, ok } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
@@ -296,12 +297,6 @@ export function readFormatQuery(request: Request): string | undefined {
 	if (raw === null || raw === "") return undefined;
 	if (!/^[a-z][a-z0-9-]*$/.test(raw)) throw new CmsError("Invalid format", "invalid_input");
 	return raw;
-}
-
-/** The translation group of an entry (the languages the editor shows as existing). Empty for an item collection, which has no translations. */
-export async function translationsOf(cms: Cms, entry: { readonly id: string; readonly collection: string }) {
-	if (cms.site.isItemCollection(entry.collection)) return [];
-	return (await cms.store().getTranslationGroup({ entryId: entry.id })).members;
 }
 
 /**
