@@ -27,6 +27,8 @@ export { Button, buttonVariants } from "./button";
 export { ButtonGroup } from "./button-group";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
+export { ChatInput } from "./chat-input";
+export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
 export { cn } from "./cn";
 export { CodeBlock, DiffMark, DiffView } from "./code-block";
@@ -174,6 +176,7 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
+export { SidePanelFrame } from "./side-panel-frame";
 export {
 	Sidebar,
 	SidebarContent,
@@ -207,5 +210,6 @@ export { Textarea } from "./textarea";
 export { ChoiceCard, Tile } from "./tile";
 export { Toggle, toggleVariants } from "./toggle";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
+export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { useIsMobile } from "./use-mobile";

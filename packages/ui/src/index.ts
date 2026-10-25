@@ -23,6 +23,11 @@ export const AlertDialogTitle = close(open.AlertDialogTitle);
 export const AlertDialogTrigger = close(open.AlertDialogTrigger);
 export const Badge = close(open.Badge);
 export const Button = close(open.Button);
+export const ChatInput = close(open.ChatInput);
+export const ChatMessage = close(open.ChatMessage);
+export const SidePanelFrame = close(open.SidePanelFrame);
+export const ToolCallLine = close(open.ToolCallLine);
+export type { ToolCallDetail, ToolCallStatus } from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
 export const Card = close(open.Card);
