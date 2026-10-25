@@ -414,7 +414,7 @@ function DraftsStatus() {
 
 ### Side panel
 
-A plugin adds one panel to the right of every screen, the entry editor included, with `panel` of `defineAdminPlugin`: a `label`, an `icon` and a `Component`. The admin draws a button for it in the header of each screen, opens it as a resizable pane (a sheet on narrow screens; Ctrl or Cmd with `.` also opens and closes it) and remembers in this browser whether it is open and how wide. The admin shows one panel for now: with several, the plugin registered last wins. Give a function of the site (`panel: (site) => ({ ... })`) when the label depends on the site config; it and the component come from a `"use client"` module.
+A plugin adds one panel to the right of every screen, the entry editor included, with `panel` of `defineAdminPlugin`: a `label`, an `icon` and a `Component`. The admin draws a button for it in the header of each screen, opens it as a resizable pane (a sheet on narrow screens; Ctrl or Cmd with `.` also opens and closes it) and remembers in this browser whether it is open and how wide. The admin shows one panel for now: with several, the plugin registered last wins. Give a function of the site (`panel: (site) => ({ ... })`) when the label depends on the site config; it and the component come from a `"use client"` module. The component draws its own frame (`SidePanelFrame` from `/kit` has the header, a scrolling body and a pinned footer) and gets `onClose` to close the panel.
 
 ```tsx
 export default defineAdminPlugin({ panel: { label: "Notes", icon: StickyNote, Component: NotesPanel } });

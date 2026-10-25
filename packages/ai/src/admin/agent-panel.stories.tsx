@@ -111,7 +111,7 @@ const panel =
 					<div
 						style={{ width: 400, height: "100svh", borderInlineStart: "1px solid var(--monti-border-muted, #8884)" }}
 					>
-						<AgentPanel />
+						<AgentPanel onClose={() => undefined} />
 					</div>
 				</Where>
 			</ScreenContextProvider>

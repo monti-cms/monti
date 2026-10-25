@@ -2,6 +2,7 @@
 
 import {
 	type AdminPanel,
+	type AdminPanelProps,
 	CmsApiError,
 	errorText,
 	type Site,
@@ -13,6 +14,7 @@ import {
 	Alert,
 	Box,
 	Button,
+	ChatInput,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -21,18 +23,17 @@ import {
 	DropdownMenuTrigger,
 	EmptyState,
 	IconButton,
-	Inline,
+	SidePanelFrame,
 	Spinner,
 	Stack,
 	Text,
-	Textarea,
 	TextLink,
 	usePreference,
 } from "@monti-cms/admin/kit";
 import { AdminLink } from "@monti-cms/admin/router";
 import { useQuery } from "@tanstack/react-query";
-import { History, Send, Sparkles, Square, SquarePen } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { History, Sparkles, SquarePen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { AiAgentModelView } from "../connection";
 import { MessageView } from "./agent-conversation";
 import { agentPanelMessages } from "./agent-panel.messages";
@@ -131,12 +132,14 @@ function HistoryMenu({ onPick }: { onPick: (id: string) => void }) {
  * The assistant, as the admin's side panel: the conversation with its tool calls, the box to ask in, the model it runs on and what the conversation has
  * used. It knows where the admin is (`useScreenContext`), and on the entry editor it reads the open entry through the editor tools.
  */
-export function AgentPanel() {
+export function AgentPanel({ onClose }: AdminPanelProps) {
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
 	const screen = useScreenContext();
 	const settings = useAiSettings().data;
 	const chat = useAgentChat();
+	const chatRef = useRef(chat);
+	chatRef.current = chat;
 	const [text, setText] = useState("");
 	const [openError, setOpenError] = useState<string | null>(null);
 	// Every screen mounts the panel again: the open conversation is remembered in this browser and picked up where the admin left it.
@@ -157,21 +160,19 @@ export function AgentPanel() {
 		if (runId) rememberRun(runId);
 	}, [runId, rememberRun]);
 
-	const send = (event?: FormEvent) => {
-		event?.preventDefault();
-		const message = text.trim();
-		if (!message || busy || unavailable === "no-connection") return;
+	const send = (message: string) => {
+		if (busy || unavailable === "no-connection") return;
 		setText("");
 		setOpenError(null);
 		void chat.sendMessage({ text: message });
 	};
-	const onKeyDown = (event: KeyboardEvent) => {
-		if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) send(event);
-	};
 	const open = async (id: string, restoring = false) => {
 		setOpenError(null);
 		try {
-			chat.reopen(id, (await getAgentRun(site, id, { fallback: t("run.openFailed") })).messages);
+			const run = await getAgentRun(site, id, { fallback: t("run.openFailed") });
+			// The admin may have started typing while a remembered conversation loaded: theirs wins.
+			if (restoring && chatRef.current.messages.length > 0) return;
+			chat.reopen(id, run.messages);
 		} catch (error) {
 			// A conversation that is gone is forgotten; one the admin picked says it could not be opened.
 			if (restoring) rememberRun("");
@@ -187,17 +188,17 @@ export function AgentPanel() {
 	}, []);
 	const failed = chat.error && !(chat.error instanceof CmsApiError && unavailable !== null) ? chat.error : undefined;
 
+	const last = chat.messages.at(-1);
 	return (
-		<Stack gap="none" grow minHeight={0} data-testid="agent-panel">
-			<Inline gap="tight" justify="between" shrink={false} border="bottom" paddingX="comfortable" paddingY="tight">
-				<Box minWidth={0}>
-					{effective && (
-						<Text variant="caption" tone="muted" truncate>
-							{t("model.use", { model: effective.model, connection: effective.providerName })}
-						</Text>
-					)}
-				</Box>
-				<Inline gap="hair">
+		<SidePanelFrame
+			data-testid="agent-panel"
+			title={t("label")}
+			description={
+				effective ? t("model.use", { model: effective.model, connection: effective.providerName }) : undefined
+			}
+			onClose={onClose}
+			actions={
+				<>
 					<HistoryMenu onPick={(id) => void open(id)} />
 					<IconButton
 						label={t("conversation.new")}
@@ -209,76 +210,69 @@ export function AgentPanel() {
 					>
 						<SquarePen aria-hidden />
 					</IconButton>
-				</Inline>
-			</Inline>
-
-			<Stack gap="comfortable" grow minHeight={0} overflow="y" padding="comfortable">
-				{chat.messages.length === 0 ? (
-					<EmptyState
-						compact
-						icon={Sparkles}
-						title={t("empty.title")}
-						description={screen.screen === "entry" ? t("empty.entry") : t("empty.default")}
+				</>
+			}
+			footer={
+				<Stack gap="condensed">
+					{unavailable && <UnavailableNotice reason={unavailable} model={effective?.model} />}
+					<ChatInput
+						value={text}
+						onValueChange={setText}
+						onSubmit={send}
+						onStop={() => void chat.stop()}
+						busy={busy}
+						disabled={unavailable === "no-connection"}
+						label={t("input.label")}
+						placeholder={t("input.placeholder")}
+						sendLabel={t("send")}
+						stopLabel={t("stop")}
+						aside={
+							chat.usage && chat.usage.totalTokens > 0 ? (
+								<Text variant="caption" tone="muted">
+									{t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })}
+								</Text>
+							) : undefined
+						}
 					/>
-				) : (
-					chat.messages.map((message) => <MessageView key={message.id} message={message} />)
-				)}
-				{busy && chat.messages.at(-1)?.role === "user" && <Spinner size="sm" />}
-				{failed && (
-					<Alert tone="danger" layout="stack">
-						<Stack gap="tight">
-							<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
-							<Box>
-								<Button type="button" variant="outline" size="sm" onClick={() => void chat.regenerate()}>
-									{t("error.retry")}
-								</Button>
-							</Box>
-						</Stack>
-					</Alert>
-				)}
-				{openError && (
-					<Alert tone="danger" layout="stack">
-						<Text as="p">{openError}</Text>
-					</Alert>
-				)}
-				<div ref={endRef} />
-			</Stack>
-
-			<Stack gap="condensed" shrink={false} border="top" padding="comfortable">
-				{unavailable && <UnavailableNotice reason={unavailable} model={effective?.model} />}
-				<form onSubmit={send}>
-					<Stack gap="condensed">
-						<Textarea
-							size="sm"
-							aria-label={t("input.label")}
-							placeholder={t("input.placeholder")}
-							value={text}
-							disabled={unavailable === "no-connection"}
-							onChange={(event) => setText(event.target.value)}
-							onKeyDown={onKeyDown}
-						/>
-						<Inline gap="condensed" justify="between">
-							<Text variant="caption" tone="muted">
-								{chat.usage && chat.usage.totalTokens > 0
-									? t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })
-									: ""}
-							</Text>
-							{busy ? (
-								<Button type="button" variant="outline" size="sm" onClick={() => void chat.stop()}>
-									<Square aria-hidden />
-									{t("stop")}
-								</Button>
-							) : (
-								<Button type="submit" size="sm" disabled={!text.trim() || unavailable === "no-connection"}>
-									<Send aria-hidden />
-									{t("send")}
-								</Button>
-							)}
-						</Inline>
+				</Stack>
+			}
+		>
+			{chat.messages.length === 0 ? (
+				<EmptyState
+					compact
+					icon={Sparkles}
+					title={t("empty.title")}
+					description={screen.screen === "entry" ? t("empty.entry") : t("empty.default")}
+				/>
+			) : (
+				chat.messages.map((message) => (
+					<MessageView
+						key={message.id}
+						message={message}
+						streaming={chat.status === "streaming" && message === last && message.role === "assistant"}
+					/>
+				))
+			)}
+			{busy && last?.role === "user" && <Spinner size="sm" />}
+			{failed && (
+				<Alert tone="danger" layout="stack">
+					<Stack gap="tight">
+						<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
+						<Box>
+							<Button type="button" variant="outline" size="sm" onClick={() => void chat.regenerate()}>
+								{t("error.retry")}
+							</Button>
+						</Box>
 					</Stack>
-				</form>
-			</Stack>
-		</Stack>
+				</Alert>
+			)}
+			{openError && (
+				<Alert tone="danger" layout="stack">
+					<Text as="p">{openError}</Text>
+				</Alert>
+			)}
+			<div ref={endRef} />
+		</SidePanelFrame>
 	);
 }
 

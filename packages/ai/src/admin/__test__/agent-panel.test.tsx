@@ -71,6 +71,7 @@ const settings = (overrides: Partial<AiSettingsView> = {}): AiSettingsView => ({
 	...overrides,
 });
 
+const onClose = vi.fn();
 const server = {
 	settings: settings(),
 	runs: [] as Array<{ id: string; title: string }>,
@@ -120,7 +121,7 @@ const renderPanel = (
 	const panel = (
 		<ScreenContextProvider>
 			<Where context={options.context ?? { screen: "other" }} />
-			<AgentPanel />
+			<AgentPanel onClose={onClose} />
 		</ScreenContextProvider>
 	);
 	return renderRouted(
@@ -243,6 +244,24 @@ describe("assistant panel — conversation", () => {
 	});
 });
 
+describe("assistant panel — frame", () => {
+	it("closes from its header", async () => {
+		renderPanel();
+		fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("marks the answer as streaming while it arrives and not after", async () => {
+		server.agent.push(() => stream(answer(text("Done."))));
+		renderPanel();
+		await ask("hi");
+		const answerText = await screen.findByText("Done.");
+		await waitFor(() => expect(answerText.getAttribute("aria-busy")).toBeNull());
+		expect(answerText.getAttribute("data-author")).toBe("assistant");
+		expect(screen.getByText("hi").getAttribute("data-author")).toBe("user");
+	});
+});
+
 describe("assistant panel — past conversations", () => {
 	const stored = [
 		{ id: "u1", role: "user", parts: [{ type: "text", text: "An old question" }] },
@@ -286,6 +305,33 @@ describe("assistant panel — past conversations", () => {
 
 		renderPanel();
 		expect(await screen.findByText("An old answer")).toBeTruthy();
+	});
+
+	it("does not replace what the admin already asked with the conversation it was still loading", async () => {
+		window.localStorage.setItem(
+			Object.keys(window.localStorage).find((key) => key.endsWith("agent-run")) ?? "cms:test:agent-run",
+			"old-run",
+		);
+		let release: () => void = () => undefined;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const base = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+			if (String(input).includes("/v1/ai/agent/runs/")) {
+				await gate;
+				return json({ id: "old-run", title: "t", messages: stored });
+			}
+			return (base as (input: string, init?: RequestInit) => Promise<unknown>)(input, init);
+		});
+		server.agent.push(() => stream(answer(text("fresh answer"))));
+		renderPanel();
+		await ask("a new question");
+		await screen.findByText("fresh answer");
+		release();
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(screen.getByText("a new question")).toBeTruthy();
+		expect(screen.queryByText("An old answer")).toBeNull();
 	});
 
 	it("forgets a remembered conversation that is gone", async () => {

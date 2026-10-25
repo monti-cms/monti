@@ -4,7 +4,7 @@
 // screens) and a shortcut. The admin shell and the entry editor shell both render it; open or closed and the width are remembered in this browser.
 
 import { useTranslator } from "@monti-cms/core/site";
-import { IconButton, ResizablePane, Sheet, SheetContent, SheetTitle, Stack, Text } from "@monti-cms/ui";
+import { IconButton, ResizablePane, Sheet, SheetContent, SheetTitle, Text } from "@monti-cms/ui";
 import {
 	createContext,
 	type ReactNode,
@@ -17,7 +17,6 @@ import {
 } from "react";
 import { booleanCodec, usePreference } from "../../lib/hooks/use-preference";
 import type { AdminPanel } from "../../plugins";
-import { SidePanelHeader } from "./side-panel";
 import { sidePanelSlotMessages } from "./side-panel-slot.messages";
 
 interface AdminPanelState {
@@ -123,10 +122,7 @@ export function SidePanelPane() {
 			<Sheet open onOpenChange={side.setOpen}>
 				<SheetContent showCloseButton={false} size="lg">
 					<SheetTitle render={<Text as="div" srOnly />}>{label}</SheetTitle>
-					<SidePanelHeader title={label} onClose={() => side.setOpen(false)} />
-					<Stack gap="none" grow minHeight={0} overflow="hidden">
-						<Component />
-					</Stack>
+					<Component onClose={() => side.setOpen(false)} />
 				</SheetContent>
 			</Sheet>
 		);
@@ -142,10 +138,7 @@ export function SidePanelPane() {
 			aria-label={label}
 			role="complementary"
 		>
-			<SidePanelHeader title={label} onClose={() => side.setOpen(false)} />
-			<Stack gap="none" grow minHeight={0} overflow="hidden">
-				<Component />
-			</Stack>
+			<Component onClose={() => side.setOpen(false)} />
 		</ResizablePane>
 	);
 }

@@ -1,26 +1,12 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/admin";
-import {
-	Box,
-	Button,
-	CodeBlock,
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-	Inline,
-	Spinner,
-	Stack,
-	Text,
-} from "@monti-cms/admin/kit";
+import { ChatMessage, type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "@monti-cms/admin/kit";
 import { getToolName, isToolUIPart } from "ai";
-import { Check, ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
-import { useState } from "react";
 import { agentPanelMessages } from "./agent-panel.messages";
 import type { AgentMessage } from "./use-agent-chat";
 
 type ToolPart = Extract<AgentMessage["parts"][number], { toolCallId: string }>;
-type ToolStatus = "running" | "done" | "failed";
 
 /** An operation that failed answers with `{ error: { code, message } }` instead of its result: the run goes on, but the call did not work. */
 const isFailureResult = (output: unknown): boolean =>
@@ -29,7 +15,7 @@ const isFailureResult = (output: unknown): boolean =>
 	"error" in output &&
 	typeof (output as { error?: { code?: unknown } }).error?.code === "string";
 
-const statusOf = (part: ToolPart): ToolStatus =>
+const statusOf = (part: ToolPart): ToolCallStatus =>
 	part.state === "output-error" || part.state === "output-denied"
 		? "failed"
 		: part.state === "output-available"
@@ -44,83 +30,45 @@ export const operationOf = (toolName: string): string => toolName.replaceAll("_"
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
 /** One tool call as a compact line: the operation and whether it is running, done or failed. It opens to show the input and the result. */
-export function ToolLine({ part }: { part: ToolPart }) {
+function ToolLine({ part }: { part: ToolPart }) {
 	const t = useTranslator(agentPanelMessages);
-	const [open, setOpen] = useState(false);
 	const status = statusOf(part);
 	const result =
 		part.state === "output-error" ? part.errorText : part.state === "output-available" ? part.output : undefined;
+	const details: ToolCallDetail[] = [
+		...(part.input !== undefined ? [{ label: t("tool.input"), value: json(part.input) }] : []),
+		...(result !== undefined
+			? [{ label: t("tool.result"), value: typeof result === "string" ? result : json(result) }]
+			: []),
+	];
 	return (
-		<Collapsible open={open} onOpenChange={setOpen}>
-			<CollapsibleTrigger render={<Button type="button" variant="quiet" size="sm" />} data-status={status}>
-				<Inline gap="condensed">
-					{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
-					<Text variant="caption" mono>
-						{operationOf(getToolName(part))}
-					</Text>
-					{status === "running" ? (
-						<Spinner size="sm" />
-					) : status === "done" ? (
-						<Check aria-hidden />
-					) : (
-						<TriangleAlert aria-hidden />
-					)}
-					<Text variant="caption" tone={status === "failed" ? "danger" : "muted"}>
-						{t(`tool.${status}`)}
-					</Text>
-				</Inline>
-			</CollapsibleTrigger>
-			<CollapsibleContent>
-				<Stack gap="tight" paddingY="tight">
-					{part.input !== undefined && (
-						<>
-							<Text variant="caption" tone="muted">
-								{t("tool.input")}
-							</Text>
-							<CodeBlock maxHeight="list">{json(part.input)}</CodeBlock>
-						</>
-					)}
-					{result !== undefined && (
-						<>
-							<Text variant="caption" tone="muted">
-								{t("tool.result")}
-							</Text>
-							<CodeBlock maxHeight="list">{typeof result === "string" ? result : json(result)}</CodeBlock>
-						</>
-					)}
-				</Stack>
-			</CollapsibleContent>
-		</Collapsible>
+		<ToolCallLine
+			name={operationOf(getToolName(part))}
+			status={status}
+			statusLabel={t(`tool.${status}`)}
+			details={details}
+		/>
 	);
 }
 
-/** One message of the conversation: what the admin asked, or the assistant's text and tool lines in the order they came. */
-export function MessageView({ message }: { message: AgentMessage }) {
+/** One message of the conversation: what the admin asked, or the assistant's text and tool lines in the order they came. `streaming` marks the answer still being written. */
+export function MessageView({ message, streaming = false }: { message: AgentMessage; streaming?: boolean }) {
+	const lastText = message.parts.findLastIndex((part) => part.type === "text" && part.text);
 	const parts = message.parts.flatMap((part, index) => {
 		if (part.type === "text")
 			return part.text
-				? [<TextPart key={`${message.id}:${index}`} text={part.text} user={message.role === "user"} />]
+				? [
+						<ChatMessage
+							key={`${message.id}:${index}`}
+							author={message.role === "user" ? "user" : "assistant"}
+							streaming={streaming && index === lastText}
+						>
+							{part.text}
+						</ChatMessage>,
+					]
 				: [];
 		if (isToolUIPart(part)) return [<ToolLine key={part.toolCallId} part={part as ToolPart} />];
 		return [];
 	});
-	return parts.length > 0 ? (
-		<Stack gap="tight" data-role={message.role}>
-			{parts}
-		</Stack>
-	) : null;
-}
-
-function TextPart({ text, user }: { text: string; user: boolean }) {
-	return user ? (
-		<Box background="neutral" radius="lg" padding="condensed">
-			<Text as="p" preserveLines>
-				{text}
-			</Text>
-		</Box>
-	) : (
-		<Text as="p" preserveLines>
-			{text}
-		</Text>
-	);
+	return parts.length > 0 ? parts : null;
 }
