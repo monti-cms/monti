@@ -109,12 +109,12 @@ export function SiteEditor({
 					}))}
 					onChange={(value) => set("localePrefix", value)}
 				/>
-				<Stack gap="condensed" border="top" paddingTop="spacious">
-					<Labeled
-						label={t("site.aliases")}
-						control="normal"
-						aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
-					>
+				<Labeled
+					label={t("site.aliases")}
+					control="normal"
+					aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
+				>
+					<Stack gap="condensed">
 						{aliases.length > 0 && (
 							<Stack as="ul" gap="none" border="all" radius="md" overflow="hidden">
 								{aliases.map((alias, index) => (
@@ -143,33 +143,33 @@ export function SiteEditor({
 								))}
 							</Stack>
 						)}
-					</Labeled>
-					{!disabled && (
-						<Inline align="end" gap="condensed" maxWidth="panel-lg">
-							<Box grow>
-								<Input
-									value={host}
-									aria-label={t("site.alias.new")}
-									placeholder="www.example.com"
-									onChange={(event) => setHost(event.target.value)}
-								/>
-							</Box>
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={!addable}
-								onClick={() => {
-									setAliases([...aliases, host.trim()]);
-									setHost("");
-								}}
-							>
-								{t("site.alias.add")}
-							</Button>
-						</Inline>
-					)}
-				</Stack>
-				<Box border="top" paddingTop="spacious" data-testid="site-url">
+						{!disabled && (
+							<Inline align="end" gap="condensed">
+								<Box grow>
+									<Input
+										value={host}
+										aria-label={t("site.alias.new")}
+										placeholder="www.example.com"
+										onChange={(event) => setHost(event.target.value)}
+									/>
+								</Box>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={!addable}
+									onClick={() => {
+										setAliases([...aliases, host.trim()]);
+										setHost("");
+									}}
+								>
+									{t("site.alias.add")}
+								</Button>
+							</Inline>
+						)}
+					</Stack>
+				</Labeled>
+				<Box data-testid="site-url">
 					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
 						{siteUrl.url ? (
 							<Box background="neutral" radius="md" paddingX="normal" paddingY="condensed">

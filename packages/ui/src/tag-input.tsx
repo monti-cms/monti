@@ -54,7 +54,7 @@ function TagInput({
 		<div
 			data-slot="tag-input"
 			className={cn(
-				"flex min-h-control-sm w-full flex-wrap items-center gap-tight rounded-md border border-monti-default bg-monti-page p-tight text-monti-caption transition-colors focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft",
+				"flex min-h-control w-full flex-wrap items-center gap-tight rounded-md border border-monti-default bg-monti-surface p-tight text-monti-caption shadow-monti-control transition-[border-color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft hover:border-monti-emphasis",
 				mono && "font-mono",
 				disabled && "cursor-not-allowed opacity-50",
 				className,
@@ -63,7 +63,7 @@ function TagInput({
 			{items.map((item, index) => (
 				<span
 					key={item}
-					className="inline-flex items-center gap-tight rounded-sm bg-monti-neutral px-condensed py-hair text-monti-default"
+					className="inline-flex items-center gap-tight rounded-sm border border-monti-muted bg-monti-neutral px-condensed py-hair text-monti-default"
 				>
 					<span className="max-w-40 truncate">{item}</span>
 					{!disabled && (

@@ -33,7 +33,7 @@ function Tile({
 			<button
 				type="button"
 				aria-pressed={selected}
-				className="flex w-full flex-col overflow-hidden rounded-lg border border-monti-muted bg-monti-surface text-left outline-none transition-colors hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft group-data-selected/tile:border-monti-focus group-data-selected/tile:ring-2 group-data-selected/tile:ring-monti-focus-soft"
+				className="flex w-full flex-col overflow-hidden rounded-lg border border-monti-muted bg-monti-surface text-left shadow-monti-card outline-none transition-[border-color,box-shadow] hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft group-data-selected/tile:border-monti-focus group-data-selected/tile:ring-2 group-data-selected/tile:ring-monti-focus-soft"
 				{...props}
 			>
 				<span className="block border-monti-muted border-b">{preview}</span>
@@ -76,7 +76,7 @@ function ChoiceCard({
 			data-selected={selected || undefined}
 			aria-pressed={selected}
 			className={cn(
-				"flex w-full items-start gap-normal rounded-md border border-monti-muted bg-monti-surface px-normal py-condensed text-left outline-none transition-colors hover:bg-monti-hover focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 data-selected:border-monti-focus data-selected:bg-monti-accent-muted",
+				"flex w-full items-start gap-normal rounded-md border border-monti-muted bg-monti-surface px-normal py-condensed text-left shadow-monti-card outline-none transition-[background-color,border-color,box-shadow] hover:border-monti-default hover:bg-monti-hover focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 data-selected:border-monti-focus data-selected:bg-monti-accent-muted",
 				className,
 			)}
 			{...props}

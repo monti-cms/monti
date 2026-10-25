@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldError, Inline, Input, Stack, Text } from "@monti-cms/ui";
+import { FormFieldError, Inline, Input, Stack, Text } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
@@ -48,7 +48,7 @@ export function PublicPathField({
 	const shown = pathOfSegment(draft) === path ? draft : segment;
 	const issue = hasPage ? pathProblem(path) : null;
 	return (
-		<Stack gap="comfortable">
+		<Stack gap="tight" paddingBottom={hasPage ? "normal" : undefined}>
 			<FlagSwitch
 				label={t("collection.path")}
 				revert={revert}
@@ -56,8 +56,8 @@ export function PublicPathField({
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
 			{hasPage && (
-				<Box paddingX="condensed">
-					<Stack gap="condensed" border="left" paddingX="comfortable">
+				<Inline justify="end">
+					<Stack gap="condensed" width="full" maxWidth="panel">
 						<Inline gap="tight">
 							<Text mono tone="muted" aria-hidden="true">
 								/
@@ -81,7 +81,7 @@ export function PublicPathField({
 						</Inline>
 						{issue && <FormFieldError>{t(`path.${issue}`)}</FormFieldError>}
 					</Stack>
-				</Box>
+				</Inline>
 			)}
 		</Stack>
 	);

@@ -194,7 +194,7 @@ function ComboboxChips({
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
 			className={cn(
-				"flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-monti-default bg-transparent bg-clip-padding px-2.5 py-1.5 text-monti-body transition-[color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft has-aria-invalid:border-monti-danger monti-dark:has-aria-invalid:border-monti-danger has-data-[slot=combobox-chip]:px-1.5 has-aria-invalid:ring-3 has-aria-invalid:ring-monti-danger-soft monti-dark:has-aria-invalid:ring-monti-danger-soft",
+				"flex min-h-control flex-wrap items-center gap-1.5 rounded-md border border-monti-default bg-monti-surface bg-clip-padding px-2.5 py-1 text-monti-label shadow-monti-control transition-[color,border-color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft hover:border-monti-emphasis has-aria-invalid:border-monti-danger monti-dark:has-aria-invalid:border-monti-danger has-data-[slot=combobox-chip]:px-1.5 has-aria-invalid:ring-3 has-aria-invalid:ring-monti-danger-soft monti-dark:has-aria-invalid:ring-monti-danger-soft",
 				className,
 			)}
 			{...props}
@@ -215,7 +215,7 @@ function ComboboxChip({
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
 			className={cn(
-				"flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 whitespace-nowrap rounded-sm bg-monti-neutral px-1.5 font-medium text-monti-caption text-monti-default has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-data-[slot=combobox-chip-remove]:pr-0 has-disabled:opacity-50",
+				"flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 whitespace-nowrap rounded-sm border border-monti-muted bg-monti-neutral px-1.5 font-medium text-monti-caption text-monti-default has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-data-[slot=combobox-chip-remove]:pr-0 has-disabled:opacity-50",
 				className,
 			)}
 			{...props}

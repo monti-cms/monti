@@ -29,7 +29,7 @@ export function DataScreen() {
 			<Box grow minHeight={0} overflow="y">
 				<PageBody data-testid="data-screen">
 					<Stack gap="section">
-						<Section wide band title={te("data.title")} testId="site-backup">
+						<Section wide band rows={false} title={te("data.title")} testId="site-backup">
 							<ExportFields form={form} />
 							<ExportProgressLine phase={form.phase} />
 							<Box>
@@ -39,6 +39,7 @@ export function DataScreen() {
 						<Section
 							wide
 							band
+							rows={false}
 							title={ti("title")}
 							description={ti("description")}
 							testId="import-entries"

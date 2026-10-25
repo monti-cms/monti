@@ -78,6 +78,7 @@ export const LAYOUT = {
 		all: "border border-monti-muted",
 		top: "border-t border-monti-muted",
 		bottom: "border-b border-monti-muted",
+		"bottom-strong": "border-b-[1.5px] border-monti-accent",
 		left: "border-l border-monti-muted",
 		right: "border-r border-monti-muted",
 		y: "border-y border-monti-muted",
@@ -86,6 +87,8 @@ export const LAYOUT = {
 		danger: "border border-monti-danger-muted",
 		dashed: "border border-dashed border-monti-default",
 	},
+	/** A 1px hairline between each child in a column. */
+	divided: { true: "divide-y divide-monti-muted" },
 	radius: { sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg", xl: "rounded-xl", full: "rounded-full" },
 	width: {
 		full: "w-full",

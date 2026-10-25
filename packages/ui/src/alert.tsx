@@ -21,7 +21,7 @@ export const alertVariants = cva(
 				strip: "flex items-center justify-between gap-3 border-x-0 border-t-0 px-8 py-2 text-monti-label",
 			},
 			tone: {
-				neutral: "border-monti-muted bg-monti-surface text-monti-default",
+				neutral: "border-monti-muted bg-monti-surface text-monti-default shadow-monti-card",
 				accent: "border-monti-accent-muted bg-monti-accent-muted text-monti-accent",
 				danger: "border-monti-danger-muted bg-monti-danger-muted text-monti-danger",
 				warning: "border-monti-warning-muted bg-monti-warning-muted text-monti-warning",

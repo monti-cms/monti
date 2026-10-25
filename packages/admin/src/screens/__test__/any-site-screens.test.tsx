@@ -126,12 +126,11 @@ describe("any site: list screen", () => {
 		);
 		await screen.findByRole("row", { name: /Alpha/ });
 		expect(screen.getByRole("row", { name: /Beta/ })).toBeTruthy();
-		const headers = screen
-			.getAllByRole("columnheader")
-			.map((header) => header.textContent ?? "")
-			.join(" | ");
-		for (const column of columnsFor(testSite, content).defaults)
-			expect(headers).toContain(columnLabel(testSite, content, column));
+		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
+		const viewDialog = await screen.findByRole("dialog");
+		for (const column of columnsFor(testSite, content).defaults) {
+			expect(within(viewDialog).getByRole("checkbox", { name: columnLabel(testSite, content, column) })).toBeTruthy();
+		}
 		// The new item button uses the collection label.
 		expect(
 			screen.getByRole("button", { name: t("list.add", { label: testSite.schemaOf(content).label }) }),
@@ -155,13 +154,8 @@ describe("any site: list screen", () => {
 		);
 		const row = await screen.findByRole("row", { name: /Alpha/ });
 		expect(within(row).getByText(label)).toBeTruthy();
-		// A row with no value shows an empty-cell marker.
+		// A row with no value omits the empty field from the editorial subtitle.
 		expect(within(screen.getByRole("row", { name: /Beta/ })).queryByText(label)).toBeNull();
-		expect(
-			screen
-				.getAllByRole("columnheader")
-				.some((header) => header.textContent?.includes(columnLabel(testSite, content, column))),
-		).toBe(true);
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {

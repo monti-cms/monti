@@ -155,6 +155,7 @@ export function AdminShell({
 	count,
 	sidebar,
 	description,
+	editorial = false,
 	children,
 }: {
 	title: ReactNode;
@@ -162,6 +163,8 @@ export function AdminShell({
 	count?: number | string;
 	/** A short muted line after the title (where the collection is public); hidden on narrow screens. */
 	description?: ReactNode;
+	/** Centered editorial index header with a deep ink rule (`border="bottom-strong"`). */
+	editorial?: boolean;
 	sidebar: AdminSidebarProps;
 	children: ReactNode;
 }) {
@@ -173,7 +176,7 @@ export function AdminShell({
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} description={description}>
+				<AdminShell title={title} count={count} sidebar={sidebar} description={description} editorial={editorial}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -189,34 +192,74 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset fixed>
-				<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
-					<Box hideFrom="md">
-						<SidebarTrigger aria-label={t("shell.openSidebar")} />
-					</Box>
-					<Inline gap="condensed" align="baseline" grow minWidth={0}>
-						<Box minWidth={0}>
-							<Heading as="h1" variant="title">
-								<Inline as="span" gap="condensed" align="baseline">
-									<Text truncate>{title}</Text>
-									{count !== undefined && (
-										<Text variant="caption" tone="muted" mono>
-											{count}
+				{editorial ? (
+					<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
+						<Inline
+							as="header"
+							align="end"
+							justify="between"
+							gap="normal"
+							border="bottom-strong"
+							paddingBottom="normal"
+						>
+							<Inline gap="condensed" align="baseline" grow minWidth={0}>
+								<Box hideFrom="md">
+									<SidebarTrigger aria-label={t("shell.openSidebar")} />
+								</Box>
+								<Box minWidth={0}>
+									<Heading as="h1" variant="heading">
+										<Inline as="span" gap="condensed" align="baseline">
+											<Text truncate>{title}</Text>
+											{count !== undefined && (
+												<Text variant="caption" tone="muted" mono>
+													{count}
+												</Text>
+											)}
+										</Inline>
+									</Heading>
+								</Box>
+								<Inline gap="condensed" align="center" ref={setMetaSlot} />
+								{description && (
+									<Box minWidth={0} hideBelow="md">
+										<Text as="p" variant="caption" tone="muted" truncate>
+											{description}
 										</Text>
-									)}
-								</Inline>
-							</Heading>
+									</Box>
+								)}
+							</Inline>
+							<div ref={setActionsSlot} />
+						</Inline>
+					</Box>
+				) : (
+					<Inline as="header" gap="normal" shrink={false} border="bottom" paddingX="wide" height="header">
+						<Box hideFrom="md">
+							<SidebarTrigger aria-label={t("shell.openSidebar")} />
 						</Box>
-						<Inline gap="condensed" align="center" ref={setMetaSlot} />
-						{description && (
-							<Box minWidth={0} hideBelow="md">
-								<Text as="p" variant="caption" tone="muted" truncate>
-									{description}
-								</Text>
+						<Inline gap="condensed" align="baseline" grow minWidth={0}>
+							<Box minWidth={0}>
+								<Heading as="h1" variant="title">
+									<Inline as="span" gap="condensed" align="baseline">
+										<Text truncate>{title}</Text>
+										{count !== undefined && (
+											<Text variant="caption" tone="muted" mono>
+												{count}
+											</Text>
+										)}
+									</Inline>
+								</Heading>
 							</Box>
-						)}
+							<Inline gap="condensed" align="center" ref={setMetaSlot} />
+							{description && (
+								<Box minWidth={0} hideBelow="md">
+									<Text as="p" variant="caption" tone="muted" truncate>
+										{description}
+									</Text>
+								</Box>
+							)}
+						</Inline>
+						<div ref={setActionsSlot} />
 					</Inline>
-					<div ref={setActionsSlot} />
-				</Inline>
+				)}
 				<MetaSlotContext.Provider value={metaSlot}>
 					<ActionsSlotContext.Provider value={actionsSlot}>
 						<Stack gap="none" grow minHeight={0} overflow="hidden">

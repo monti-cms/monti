@@ -2,19 +2,32 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@monti-cms/ui";
+import {
+	Box,
+	Button,
+	Checkbox,
+	Inline,
+	Skeleton,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+	Text,
+} from "@monti-cms/ui";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
+import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
-import { ColumnResizeHandle } from "./column-resize-handle";
+import { ColumnHeader } from "./column-header";
+import { EntryCell, hasEntryCellValue } from "./entries-table-cells";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
-import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
-import { columnConfig, columnLabel } from "./list-columns";
+import { type AdminListColumn, filterFor, isColumnFiltered } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { ListSubToolbar } from "./list-toolbar";
 import { ListViewPopover } from "./list-view-popover";
 import { screensMessages } from "./messages";
-import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
+import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { EmptyState } from "./shared/empty-state";
 import { writeDraggedEntries } from "./shared/entry-drag";
 import { ListPagination } from "./shared/list-pager";
@@ -22,6 +35,9 @@ import { LoadErrorAlert } from "./shared/load-error-alert";
 import type { FolderActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntriesTable } from "./use-entries-table";
+
+const DATE_COLUMNS = new Set<AdminListColumn>(["updatedAt", "createdAt", "publishedAt"]);
+const HEADER_COLUMNS = new Set<AdminListColumn>(["title", "status", "slug", "updatedAt", "createdAt", "publishedAt"]);
 
 interface TableProps {
 	collection: string;
@@ -101,22 +117,12 @@ export function AdminEntriesTable({
 	collectionLabel,
 }: TableProps) {
 	const site = useSite();
+	const { listCells } = useAdminComponents();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
-	const {
-		table,
-		order,
-		visibility,
-		scrollRef,
-		isShown,
-		visibleCount,
-		tableSizing,
-		tableWidth,
-		freezeTitle,
-		updateSizing,
-		moveColumn,
-	} = useEntriesTable({
+	const isRecord = site.isItemCollection(collection);
+	const { table, order, visibility, scrollRef, moveColumn } = useEntriesTable({
 		collection,
 		items,
 		folders,
@@ -135,6 +141,16 @@ export function AdminEntriesTable({
 		onPermanentDelete,
 	});
 
+	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
+	const filterColumns = order.filter((column) => {
+		if (column === "title") return false;
+		const filter = filterFor(site, collection, column, mode);
+		if (filter.kind === "none") return false;
+		if (filter.kind === "date") return isColumnFiltered(state, filter);
+		return visibility[column] !== false || isColumnFiltered(state, filter);
+	});
+	const dateColumns = order.filter((column) => DATE_COLUMNS.has(column) && visibility[column] !== false);
+
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
 		const target = event.target as HTMLElement;
@@ -147,184 +163,263 @@ export function AdminEntriesTable({
 
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap="none" grow minHeight={0} overflow="hidden">
-			<ListSubToolbar
-				state={state}
-				options={options}
-				mode={mode}
-				onChange={onStateChange}
-				trailing={
-					<ListViewPopover
-						collection={collection}
-						state={state}
-						order={order}
-						visibility={visibility}
-						onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
-						onMove={moveColumn}
-						onStateChange={onStateChange}
-						onPageSizeChange={onPageSizeChange}
-					/>
-				}
-			/>
-			{aboveTable}
-			{errorMessage && (
-				<Box paddingX="wide" paddingTop="normal">
-					<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
-				</Box>
-			)}
+			<Box width="full" maxWidth="content" centered paddingX="wide" shrink={false}>
+				<ListSubToolbar
+					state={state}
+					options={options}
+					mode={mode}
+					onChange={onStateChange}
+					trailing={
+						<>
+							<Checkbox
+								checked={table.getIsAllPageRowsSelected()}
+								indeterminate={table.getIsSomePageRowsSelected()}
+								onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
+								aria-label={t("list.selectAll")}
+							/>
+							{filterColumns.map((column) => (
+								<ColumnHeader
+									key={column}
+									column={column}
+									filter={filterFor(site, collection, column, mode)}
+									state={state}
+									options={options}
+									onChange={onStateChange}
+								/>
+							))}
+							<ListViewPopover
+								collection={collection}
+								state={state}
+								order={order}
+								visibility={visibility}
+								onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
+								onMove={moveColumn}
+								onStateChange={onStateChange}
+								onPageSizeChange={onPageSizeChange}
+							/>
+						</>
+					}
+				/>
+				{aboveTable}
+				{errorMessage && (
+					<Box paddingTop="normal">
+						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
+					</Box>
+				)}
+			</Box>
 
 			<Stack ref={scrollRef} gap="none" grow minHeight={0} overflow="auto">
-				<Table layout="fixed" container="none" stickyHeader inset="page" width={tableWidth || undefined}>
-					<TableHeader>
-						{table.getHeaderGroups().map((group) => (
-							<TableRow key={group.id}>
-								{group.headers
-									.filter((header) => isShown(header.column.id))
-									.map((header) => {
-										const sortField = columnConfig(site, collection, header.column.id).sortField;
-										const active = sortField !== undefined && sortField === state.sortField;
-										return (
-											<Fragment key={header.id}>
-												{header.column.id === "actions" && <TableHead aria-hidden filler />}
-												<TableHead
-													size={header.getSize()}
-													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
-												>
-													{header.isPlaceholder ? null : <table.FlexRender header={header} />}
-													{header.column.getCanResize() && (
-														<ColumnResizeHandle
-															label={columnLabel(site, collection, header.column.id)}
-															width={header.getSize()}
-															resizing={header.column.getIsResizing()}
-															onStart={(event) => {
-																freezeTitle();
-																header.getResizeHandler()(event);
+				<Box width="full" maxWidth="content" centered paddingX="wide">
+					<Table density="comfortable" container="none">
+						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
+							{explorer && (
+								<EntriesTableFolderRows
+									explorer={explorer}
+									folders={folders}
+									folderActions={folderActions}
+									visibleCount={3}
+									onSelectFolder={onSelectFolder}
+								/>
+							)}
+							{isLoading
+								? Array.from({ length: 5 }, (_, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
+										<TableRow key={index} aria-hidden>
+											<TableCell colSpan={3}>
+												<Skeleton />
+											</TableCell>
+										</TableRow>
+									))
+								: items.length === 0
+									? null
+									: table.getRowModel().rows.map((row) => {
+											const subtitleColumns = order.filter(
+												(column) =>
+													!HEADER_COLUMNS.has(column) &&
+													visibility[column] !== false &&
+													hasEntryCellValue(site, listCells, collection, column, row.original, folders),
+											);
+											return (
+												<ActionContextMenu
+													key={row.id}
+													actions={rowMenu(row.original)}
+													trigger={
+														<TableRow
+															selected={row.getIsSelected() || row.original.id === openRecordId}
+															aria-current={row.original.id === openRecordId ? "true" : undefined}
+															data-state={row.getIsSelected() ? "selected" : undefined}
+															draggable={!isTrash}
+															onDragStart={(event) => {
+																// Dragging a selected row moves the whole selection; otherwise just this row.
+																const group = selectedIds.has(row.original.id)
+																	? items.filter((item) => selectedIds.has(item.id))
+																	: [row.original];
+																writeDraggedEntries(
+																	event,
+																	group.map((item) => ({ id: item.id, expectedVersion: item.version })),
+																	group.length === 1
+																		? group[0]?.title || tc("untitled")
+																		: t("list.itemsCount", { count: group.length }),
+																);
 															}}
-															onNudge={(delta) =>
-																updateSizing((current) => ({
-																	...tableSizing,
-																	...current,
-																	[header.column.id]: Math.min(
-																		MAX_COLUMN_SIZE,
-																		Math.max(MIN_COLUMN_SIZE, header.getSize() + delta),
-																	),
-																}))
-															}
-															onReset={() =>
-																updateSizing((current) => {
-																	const { [header.column.id]: _removed, ...rest } = current;
-																	return rest;
-																})
-															}
+															onKeyDown={rowKeyDown(row.original)}
 														/>
-													)}
-												</TableHead>
-											</Fragment>
-										);
-									})}
-							</TableRow>
-						))}
-					</TableHeader>
-					<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
-						{explorer && (
-							<EntriesTableFolderRows
-								explorer={explorer}
-								folders={folders}
-								folderActions={folderActions}
-								visibleCount={visibleCount}
-								onSelectFolder={onSelectFolder}
+													}
+												>
+													<TableCell width="xs">
+														<Checkbox
+															checked={row.getIsSelected()}
+															onCheckedChange={(value) => row.toggleSelected(value === true)}
+															aria-label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
+														/>
+													</TableCell>
+													<TableCell wrap>
+														<Stack gap="tight" minWidth={0}>
+															<EntryCell
+																collection={collection}
+																column="title"
+																item={row.original}
+																folders={folders}
+																isTrash={isTrash}
+																isRecord={isRecord}
+																showFolderBesideTitle={showFolderBesideTitle}
+																showSlugBesideTitle
+																onOpenRecord={onOpenRecord}
+															/>
+															{subtitleColumns.length > 0 && (
+																<Inline wrap gap="condensed" minWidth={0}>
+																	{subtitleColumns.map((column, index) => (
+																		<Fragment key={column}>
+																			{index > 0 && (
+																				<Text variant="caption" tone="muted" aria-hidden>
+																					·
+																				</Text>
+																			)}
+																			<Text as="span" variant="caption" tone="muted">
+																				<EntryCell
+																					collection={collection}
+																					column={column}
+																					item={row.original}
+																					folders={folders}
+																					isTrash={isTrash}
+																					isRecord={isRecord}
+																					showFolderBesideTitle={false}
+																					showSlugBesideTitle={false}
+																					onOpenRecord={onOpenRecord}
+																				/>
+																			</Text>
+																		</Fragment>
+																	))}
+																</Inline>
+															)}
+														</Stack>
+													</TableCell>
+													<TableCell align="end">
+														<Inline gap="normal" justify="end">
+															{!isTrash && visibility.status !== false && (
+																<EntryCell
+																	collection={collection}
+																	column="status"
+																	item={row.original}
+																	folders={folders}
+																	isTrash={isTrash}
+																	isRecord={isRecord}
+																	showFolderBesideTitle={false}
+																	showSlugBesideTitle={false}
+																	onOpenRecord={onOpenRecord}
+																/>
+															)}
+															{dateColumns
+																.filter((column) =>
+																	hasEntryCellValue(site, listCells, collection, column, row.original, folders),
+																)
+																.map((column) => (
+																	<EntryCell
+																		key={column}
+																		collection={collection}
+																		column={column}
+																		item={row.original}
+																		folders={folders}
+																		isTrash={isTrash}
+																		isRecord={isRecord}
+																		showFolderBesideTitle={false}
+																		showSlugBesideTitle={false}
+																		onOpenRecord={onOpenRecord}
+																	/>
+																))}
+															<Inline gap="tight" justify="end">
+																{isTrash && (
+																	<>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="xs"
+																			onClick={() => onRestore?.(row.original)}
+																		>
+																			{tc("lifecycle.restore")}
+																		</Button>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			tone="danger"
+																			size="xs"
+																			onClick={() => onPermanentDelete?.(row.original)}
+																		>
+																			{tc("lifecycle.deletePermanently")}
+																		</Button>
+																	</>
+																)}
+																<MoreActionsButton
+																	actions={rowMenu(row.original)}
+																	label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
+																/>
+															</Inline>
+														</Inline>
+													</TableCell>
+												</ActionContextMenu>
+											);
+										})}
+						</TableBody>
+					</Table>
+					{!isLoading &&
+						!errorMessage &&
+						items.length === 0 &&
+						!explorer?.folders.length &&
+						(isTrash ? (
+							<EmptyState icon={Trash2} title={t("list.emptyTrash")} />
+						) : isFiltered(state) ? (
+							<EmptyState
+								icon={SearchX}
+								title={t("list.emptyNoMatch")}
+								description={t("list.emptyNoMatchHint")}
+								action={{ label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) }}
 							/>
-						)}
-						{isLoading
-							? Array.from({ length: 5 }, (_, index) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
-									<TableRow key={index} aria-hidden>
-										<TableCell colSpan={visibleCount}>
-											<Skeleton />
-										</TableCell>
-									</TableRow>
-								))
-							: items.length === 0
-								? null
-								: table.getRowModel().rows.map((row) => (
-										<ActionContextMenu
-											key={row.id}
-											actions={rowMenu(row.original)}
-											trigger={
-												<TableRow
-													selected={row.getIsSelected() || row.original.id === openRecordId}
-													aria-current={row.original.id === openRecordId ? "true" : undefined}
-													data-state={row.getIsSelected() ? "selected" : undefined}
-													draggable={!isTrash}
-													onDragStart={(event) => {
-														// Dragging a selected row moves the whole selection; otherwise just this row.
-														const group = selectedIds.has(row.original.id)
-															? items.filter((item) => selectedIds.has(item.id))
-															: [row.original];
-														writeDraggedEntries(
-															event,
-															group.map((item) => ({ id: item.id, expectedVersion: item.version })),
-															group.length === 1
-																? group[0]?.title || tc("untitled")
-																: t("list.itemsCount", { count: group.length }),
-														);
-													}}
-													onKeyDown={rowKeyDown(row.original)}
-												/>
-											}
-										>
-											{row
-												.getVisibleCells()
-												.filter((cell) => isShown(cell.column.id))
-												.map((cell) => (
-													<Fragment key={cell.id}>
-														{cell.column.id === "actions" && <TableCell aria-hidden filler />}
-														<TableCell truncate>
-															<table.FlexRender cell={cell} />
-														</TableCell>
-													</Fragment>
-												))}
-										</ActionContextMenu>
-									))}
-					</TableBody>
-				</Table>
-				{!isLoading &&
-					!errorMessage &&
-					items.length === 0 &&
-					!explorer?.folders.length &&
-					(isTrash ? (
-						<EmptyState icon={Trash2} title={t("list.emptyTrash")} />
-					) : isFiltered(state) ? (
-						<EmptyState
-							icon={SearchX}
-							title={t("list.emptyNoMatch")}
-							description={t("list.emptyNoMatchHint")}
-							action={{ label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) }}
-						/>
-					) : site.isDocumentCollection(collection) && addAction && folders.length === 0 ? (
-						<EmptyState
-							icon={PenLine}
-							title={t("list.welcomeTitle")}
-							description={t("list.welcomeHint")}
-							action={{
-								label: t("list.writeNew", { label: collectionLabel ?? collection }),
-								icon: Plus,
-								onClick: addAction.run,
-								emphasis: "primary",
-							}}
-							secondaryAction={{
-								label: t("list.importMarkdown"),
-								icon: FileUp,
-								href: `${site.adminHref("/data")}#import-entries`,
-							}}
-						/>
-					) : (
-						<EmptyState
-							icon={Inbox}
-							title={t("list.emptyYet")}
-							description={t("list.emptyYetHint")}
-							action={addAction && { label: addAction.label, icon: Plus, onClick: addAction.run }}
-						/>
-					))}
+						) : site.isDocumentCollection(collection) && addAction && folders.length === 0 ? (
+							<EmptyState
+								icon={PenLine}
+								title={t("list.welcomeTitle")}
+								description={t("list.welcomeHint")}
+								action={{
+									label: t("list.writeNew", { label: collectionLabel ?? collection }),
+									icon: Plus,
+									onClick: addAction.run,
+									emphasis: "primary",
+								}}
+								secondaryAction={{
+									label: t("list.importMarkdown"),
+									icon: FileUp,
+									href: `${site.adminHref("/data")}#import-entries`,
+								}}
+							/>
+						) : (
+							<EmptyState
+								icon={Inbox}
+								title={t("list.emptyYet")}
+								description={t("list.emptyYetHint")}
+								action={addAction && { label: addAction.label, icon: Plus, onClick: addAction.run }}
+							/>
+						))}
+				</Box>
 				{blankMenu && (
 					<ActionContextMenu
 						actions={blankMenu}
@@ -333,17 +428,19 @@ export function AdminEntriesTable({
 				)}
 			</Stack>
 
-			<ListPagination
-				total={total}
-				shown={items.length}
-				page={state.page}
-				pageSize={state.pageSize}
-				onPageChange={onPageChange}
-				hrefFor={pageHref}
-				showPageSize={false}
-				hidePagerWhenSingle
-				showRange={false}
-			/>
+			<Box width="full" maxWidth="content" centered shrink={false}>
+				<ListPagination
+					total={total}
+					shown={items.length}
+					page={state.page}
+					pageSize={state.pageSize}
+					onPageChange={onPageChange}
+					hrefFor={pageHref}
+					showPageSize={false}
+					hidePagerWhenSingle
+					showRange={false}
+				/>
+			</Box>
 		</Stack>
 	);
 }

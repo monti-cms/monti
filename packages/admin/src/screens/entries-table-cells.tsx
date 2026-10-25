@@ -135,11 +135,12 @@ function DefaultEntryCell({
 				</Text>
 			);
 			// Like the code names of the field list: the slug in mono, small and muted beside the title. It truncates first.
+			const formattedSlug = item.slug ? (item.slug.startsWith("/") ? item.slug : `/${item.slug}`) : "";
 			const slug =
-				showSlugBesideTitle && item.slug ? (
+				showSlugBesideTitle && formattedSlug ? (
 					<Box minWidth={0}>
 						<Text as="div" variant="caption" tone="muted" mono truncate>
-							{item.slug}
+							{formattedSlug}
 						</Text>
 					</Box>
 				) : null;
@@ -229,6 +230,41 @@ function DefaultEntryCell({
 		default:
 			// Field columns: default cells for relations (including taxonomy fields), select and text.
 			return <DefaultFieldCell collection={collection} column={column} entry={item} />;
+	}
+}
+
+/** Whether a metadata column has a non-empty value to show on the editorial subtitle line of a row. */
+export function hasEntryCellValue(
+	site: Site,
+	listCells: ReturnType<typeof useAdminComponents>["listCells"],
+	collection: string,
+	column: AdminListColumn,
+	item: ListEntriesItem,
+	folders: readonly Folder[],
+): boolean {
+	if (customListCell(site, listCells, collection, column)) return true;
+	switch (column) {
+		case "title":
+		case "status":
+			return true;
+		case "updatedAt":
+		case "createdAt":
+		case "publishedAt":
+			return Boolean(item[column]);
+		case "locale":
+			return true;
+		case "slug":
+			return Boolean(item.slug);
+		case "folder":
+			return Boolean(item.folderId && folders.some((candidate) => candidate.id === item.folderId));
+		default: {
+			const stored = fieldColumnOf(site, collection, column);
+			if (!stored) return false;
+			if (stored.field.kind === "relation") {
+				return (item.relations[column] ?? []).some(({ title }) => Boolean(title));
+			}
+			return Boolean(item.values[column]);
+		}
 	}
 }
 

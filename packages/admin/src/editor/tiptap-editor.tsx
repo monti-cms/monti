@@ -352,9 +352,7 @@ export function CmsEditor({
 			</Stack>
 
 			{titleField && (
-				<div className="mx-auto w-full max-w-(--editor-width) border-monti-muted border-b px-comfortable pt-section pb-comfortable">
-					{titleField}
-				</div>
+				<div className="mx-auto w-full max-w-(--editor-width) px-comfortable pt-section pb-condensed">{titleField}</div>
 			)}
 
 			<input

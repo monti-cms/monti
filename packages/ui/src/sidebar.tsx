@@ -16,8 +16,8 @@ import { useIsMobile } from "./use-mobile";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-/** Where the width starts (16rem, also the `--container-sidebar` token for a loading placeholder), and the limits the person can drag it between. */
-const SIDEBAR_WIDTH_DEFAULT = 256;
+/** Where the width starts (15rem, also the `--container-sidebar` token for a loading placeholder), and the limits the person can drag it between. */
+const SIDEBAR_WIDTH_DEFAULT = 240;
 const SIDEBAR_WIDTH_MIN = 200;
 const SIDEBAR_WIDTH_MAX = 400;
 const SIDEBAR_WIDTH_MOBILE = "18rem";
@@ -439,7 +439,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-	"peer/menu-button group/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-monti-label text-monti-default ring-monti-focus outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 active:bg-monti-hover active:text-monti-default disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-hover data-open:hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-monti-accent-emphasis [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+	"peer/menu-button group/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left text-monti-label text-monti-default ring-monti-focus outline-hidden transition-[width,height,padding,background-color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 active:bg-monti-hover active:text-monti-default disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-hover data-open:hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1.5 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-monti-accent-emphasis [&_svg]:size-3.5 [&_svg]:shrink-0 [&>span:last-child]:truncate",
 	{
 		variants: {
 			variant: {
@@ -448,9 +448,9 @@ const sidebarMenuButtonVariants = cva(
 					"bg-monti-page shadow-[0_0_0_1px_var(--monti-border-muted)] hover:bg-monti-hover hover:text-monti-default hover:shadow-[0_0_0_1px_var(--monti-border-default)]",
 			},
 			size: {
-				default: "h-8 text-monti-label",
-				sm: "h-7 text-monti-caption",
-				lg: "h-12 text-monti-label group-data-[collapsible=icon]:p-0!",
+				default: "h-7 text-monti-label",
+				sm: "h-6 text-monti-caption",
+				lg: "h-11 text-monti-label group-data-[collapsible=icon]:p-0!",
 			},
 		},
 		defaultVariants: {

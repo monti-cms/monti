@@ -85,12 +85,11 @@ describe("admin entry list", () => {
 		expect(screen.getByText("발행됨 · 수정 중")).toBeTruthy();
 	});
 
-	it("sorts from the column header popup and exposes aria-sort on the header cell", async () => {
+	it("sorts from the view popover in the sub-toolbar", async () => {
 		const props = renderTable();
-		expect(screen.getByRole("columnheader", { name: /수정일/ }).getAttribute("aria-sort")).toBe("descending");
-		fireEvent.click(screen.getByRole("button", { name: /^발행일$/ }));
+		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
 		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
-		expect(props.onStateChange).toHaveBeenCalledWith({ sortField: "publishedAt", sortDirection: "asc" });
+		expect(props.onStateChange).toHaveBeenCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
 	});
 
 	it("filters status like a spreadsheet header and marks the filtered header without relying on color", async () => {
@@ -127,24 +126,24 @@ describe("admin entry list", () => {
 		]);
 	});
 
-	it("resizes a column from its header handle and pins the flexible title so only that column grows", () => {
-		vi.useFakeTimers();
-		try {
-			const props = renderTable();
-			const handle = screen.getByRole("separator", { name: "태그 열 너비 조절" });
-			expect(handle.getAttribute("aria-valuenow")).toBe("200");
-			fireEvent.keyDown(handle, { key: "ArrowRight" });
-			expect(handle.getAttribute("aria-valuenow")).toBe("216");
-			act(() => vi.advanceTimersByTime(400));
-			expect(props.onColumnSettingsChange).toHaveBeenLastCalledWith(
-				expect.objectContaining({ sizes: { title: 320, tagIds: 216 } }),
-			);
-		} finally {
-			vi.useRealTimers();
-		}
+	it("shows non-empty metadata on the second line of each editorial row and omits empty fields", () => {
+		renderTable({
+			items: [
+				item("with-tags", {
+					title: "태그 있는 글",
+					relations: { categoryId: [{ id: "c1", title: "가이드" }], tagIds: [{ id: "t1", title: "React" }] },
+				}),
+				item("plain", { title: "태그 없는 글" }),
+			],
+		});
+		const rowWithTags = screen.getByRole("row", { name: /태그 있는 글/ });
+		expect(within(rowWithTags).getByText("가이드")).toBeTruthy();
+		expect(within(rowWithTags).getAllByText("React").length).toBeGreaterThan(0);
+		const plainRow = screen.getByRole("row", { name: /태그 없는 글/ });
+		expect(within(plainRow).queryByText("—")).toBeNull();
 	});
 
-	it("ignores saved column names that are not columns any more (no guessing of old names)", () => {
+	it("ignores saved column names that are not columns any more (no guessing of old names)", async () => {
 		renderTable({
 			columnSettings: {
 				order: ["tags", "tagIds", "title"],
@@ -153,12 +152,14 @@ describe("admin entry list", () => {
 			},
 		});
 		// Old short names (`category`, `tags`) are not guessed and renamed by the core (the reference blog setup moves them with a migration).
-		expect(screen.getByRole("columnheader", { name: /카테고리/ })).toBeTruthy();
-		const handle = screen.getByRole("separator", { name: "태그 열 너비 조절" });
-		expect(handle.getAttribute("aria-valuenow")).toBe("230");
-		const headers = screen.getAllByRole("columnheader").map((header) => header.textContent);
-		expect(headers.findIndex((text) => text?.includes("태그"))).toBeLessThan(
-			headers.findIndex((text) => text?.includes("제목")),
+		expect(screen.getByRole("button", { name: /^카테고리/ })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
+		const dialog = await screen.findByRole("dialog");
+		const labels = within(dialog)
+			.getAllByRole("listitem")
+			.map((li) => li.textContent ?? "");
+		expect(labels.findIndex((text) => text.includes("태그"))).toBeLessThan(
+			labels.findIndex((text) => text.includes("제목")),
 		);
 	});
 

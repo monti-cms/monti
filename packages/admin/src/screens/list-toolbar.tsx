@@ -156,7 +156,7 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 			value={active ?? ""}
 			onValueChange={(key) => onChange({ statuses: key === "all" ? [] : [key as ListStatus], hasChanges: false })}
 		>
-			<PageTabs aria-label={t("list.statusFilter")}>
+			<PageTabs inset="none" aria-label={t("list.statusFilter")}>
 				{segments.map(({ key, label }) => (
 					<TabsTrigger key={key} value={key}>
 						{label}
@@ -225,23 +225,19 @@ export function ListSubToolbar({
 						<StatusSegments state={state} onChange={onChange} />
 					</Box>
 					{trailing && (
-						<Inline border="bottom" paddingX="wide">
+						<Inline gap="tight" border="bottom">
 							{trailing}
 						</Inline>
 					)}
 				</Inline>
-				{chipList && (
-					<Inline border="bottom" paddingX="wide">
-						{chipList}
-					</Inline>
-				)}
+				{chipList && <Inline border="bottom">{chipList}</Inline>}
 			</Stack>
 		);
 	}
 	return (
-		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingX="wide" paddingY="tight">
+		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingY="tight">
 			{chipList ?? <Box grow />}
-			{trailing && <Inline>{trailing}</Inline>}
+			{trailing && <Inline gap="tight">{trailing}</Inline>}
 		</Inline>
 	);
 }
