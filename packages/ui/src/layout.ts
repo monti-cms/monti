@@ -122,7 +122,7 @@ export const LAYOUT = {
 	},
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */
 	maxHeight: { list: "max-h-96", half: "max-h-[50vh]", menu: "max-h-80" },
-	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64" },
+	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", header: "min-h-header" },
 	grow: { true: "flex-1" },
 	shrink: { false: "shrink-0" },
 	/** `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). */
@@ -135,6 +135,13 @@ export const LAYOUT = {
 	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */
 	hideBelow: { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" },
+	/**
+	 * Hidden when the nearest `container` is narrower than this: `xl` 576px, `2xl` 672px. For a part of a header that goes when the page has less room, whatever
+	 * the window is (a panel beside the page takes room the window does not lose).
+	 */
+	hideBelowContainer: { xl: "@max-xl:hidden", "2xl": "@max-2xl:hidden" },
+	/** Makes this box the one `hideBelowContainer` measures: its own width, not the window's. */
+	container: { true: "@container" },
 	hideFrom: { sm: "sm:hidden", md: "md:hidden", lg: "lg:hidden" },
 	position: { relative: "relative", sticky: "sticky top-0 z-10" },
 	/** Pinned to a corner of the nearest `position="relative"` parent (a badge or an action on a tile). */

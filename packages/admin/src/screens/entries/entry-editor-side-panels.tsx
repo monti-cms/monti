@@ -24,7 +24,7 @@ export function TranslationSourcePanel({
 	onClose: () => void;
 }) {
 	return (
-		<div className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-floating lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none">
+		<div className="@min-[784px]:static absolute inset-y-0 left-0 z-10 @min-[784px]:w-[45%] w-[min(100%,28rem)] @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating">
 			<SourcePane ref={paneRef} doc={source.doc} title={source.title} locale={source.locale} onClose={onClose} />
 		</div>
 	);
@@ -57,7 +57,7 @@ export function InspectorSidePanel({
 		// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
 		<div
 			className={cn(
-				"absolute inset-y-0 right-0 z-20 max-w-full shadow-monti-floating lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
+				"absolute @min-[784px]:relative inset-y-0 right-0 @min-[784px]:z-auto z-20 max-w-full @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating",
 				SIDE_PANEL_WIDTH,
 			)}
 			style={resize.style}

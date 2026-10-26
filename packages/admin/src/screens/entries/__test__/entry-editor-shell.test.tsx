@@ -1,6 +1,7 @@
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { createSite, issueText } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { PanelRight } from "lucide-react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
@@ -9,12 +10,17 @@ import {
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
+import { findBlock } from "../../../editor/block-ids";
 import { preferenceKey } from "../../../lib/utils/site-storage";
+import type { AdminPanel } from "../../../plugins";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { statusLabels } from "../../shared/entry-status";
 import { formatDateTime } from "../../shared/format-date";
+import { useOpenEditor } from "../../shared/open-editor";
+import { ScreenContextProvider, useScreenContext } from "../../shared/screen-context";
+import { AdminPanelProvider } from "../../shared/side-panel-slot";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
@@ -1729,5 +1735,75 @@ describe("translation source pane", () => {
 		await editorTitle();
 		const heading = await within(sourcePane() as HTMLElement).findByRole("heading", { level: 1 });
 		expect(heading.textContent).toBe("원문 제목");
+	});
+});
+
+describe("side panel over the editor", () => {
+	/** What a plugin's panel component can read here: where the admin is, and the open editor. */
+	function Probe() {
+		const where = useScreenContext();
+		const editor = useOpenEditor();
+		return (
+			<>
+				<output aria-label="where">{JSON.stringify(where)}</output>
+				<output aria-label="entry">{editor ? JSON.stringify(editor.readEntry().fields) : "no editor"}</output>
+				<output aria-label="unsaved">{String(editor?.readEntry().hasUnsavedChanges)}</output>
+				<output aria-label="selection">{editor ? JSON.stringify(editor.readSelection()) : "no editor"}</output>
+			</>
+		);
+	}
+	const PANEL: AdminPanel = { label: "Helper", icon: PanelRight, Component: Probe };
+	const renderWithPanel = () =>
+		render(
+			withSite(
+				<ScreenContextProvider>
+					<AdminPanelProvider panel={PANEL}>
+						<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />
+					</AdminPanelProvider>
+				</ScreenContextProvider>,
+			),
+		);
+	const readOut = (label: string) => JSON.parse(screen.getByLabelText(label).textContent ?? "null");
+
+	beforeEach(() => window.localStorage.clear());
+
+	it("opens from the header and shows the plugin's component next to the editor", async () => {
+		renderWithPanel();
+		await editorTitle();
+		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
+		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
+		// The properties panel and the editor are still there.
+		expect(screen.getByRole("textbox", { name: "제목" })).toBeTruthy();
+	});
+
+	it("publishes the screen, the collection and the open entry", async () => {
+		renderWithPanel();
+		await editorTitle();
+		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
+		expect(readOut("where")).toEqual({ screen: "entry", collection: "post", entryId: "entry-1" });
+	});
+
+	it("reads the entry as the form holds it, with the changes that are not saved", async () => {
+		renderWithPanel();
+		fireEvent.change(await editorTitle(), { target: { value: "저장 전에 고친 제목" } });
+		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
+		expect(readOut("entry")).toMatchObject({ title: "저장 전에 고친 제목", summary: "요약" });
+		expect(readOut("unsaved")).toBe(true);
+	});
+
+	it("reads the selected text and the block the selection is in, with its block id", async () => {
+		renderWithPanel();
+		await editorTitle();
+		await waitFor(() => expect(mockEditor.current).not.toBeNull());
+		const editor = mockEditor.current as import("@tiptap/core").Editor;
+		act(() => void editor.commands.setTextSelection({ from: 2, to: 4 }));
+		fireEvent.click(screen.getByRole("button", { name: /Helper/ }));
+		const { text, block } = readOut("selection");
+		expect(text).toBe(editor.state.doc.textBetween(2, 4));
+		expect(text.length).toBeGreaterThan(0);
+		expect(block).toMatchObject({ type: "paragraph", text: expect.stringContaining("첫째 줄") });
+		expect(block.id).toMatch(/\S/);
+		// The id is the block's own: the same one the editor holds for that block.
+		expect(findBlock(editor.state.doc, block.id)).toBeDefined();
 	});
 });

@@ -1,3 +1,4 @@
+import { agentPanel } from "./agent-panel";
 import { AiManager } from "./ai-manager";
 import { AiSlotProvider } from "./ai-slot-provider";
 import { aiAdminEvents } from "./auto-image-text";
@@ -10,6 +11,7 @@ import { aiComponents } from "./provider";
 // The slot actions come from a query the AI screens share, so they need the plugin's own provider.
 export default defineAdminPlugin({
 	pages: { ai: AiManager },
+	panel: agentPanel,
 	components: aiComponents,
 	Provider: AiSlotProvider,
 	on: aiAdminEvents,

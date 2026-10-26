@@ -354,7 +354,7 @@ export function StatsPage() {
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusItems`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
+| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusItems`·`panel`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
@@ -409,6 +409,16 @@ function DraftsStatus() {
 	);
 }
 ```
+
+### 사이드 패널
+
+플러그인은 `defineAdminPlugin`의 `panel`로 모든 화면의 오른쪽에, 글 편집기에도, 패널 하나를 더한다. `label`, `icon`, `Component`를 준다. 관리자는 화면마다 머리글에 이 패널의 버튼을 그리고, 너비를 바꿀 수 있는 창으로 연다(1280px보다 좁으면 시트이고, Ctrl 또는 Cmd와 `.`로도 열고 닫는다). 열렸는지와 너비는 이 브라우저에 기억한다. 지금은 패널을 하나만 보여 주며, 여럿이면 나중에 등록한 플러그인의 것을 쓴다. 이름이 사이트 설정에 달려 있으면 사이트의 함수(`panel: (site) => ({ ... })`)를 준다. 이 함수와 컴포넌트는 `"use client"` 모듈에서 가져온다. 컴포넌트는 자기 틀을 직접 그리고(`/kit`의 `SidePanelFrame`이 머리글, 스크롤되는 본문, 아래에 고정된 바닥을 준다) 패널을 닫을 `onClose`를 받는다.
+
+```tsx
+export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, Component: NotesPanel } });
+```
+
+컴포넌트는 `useScreenContext()`로 관리자가 어디에 있는지 읽는다. `screen`(`entries`·`entry`·`media`·`settings`·`other`), `collection`, 열린 글의 `entryId`, 글 목록에서는 고른 행의 `selectedIds`(고른 것이 없으면 빈 배열)다. 글 편집기에서는 `useOpenEditor()`가 열린 편집기도 돌려준다. `readEntry()`는 저장하지 않은 변경까지 폼이 지금 들고 있는 글을, `readSelection()`은 고른 글자와 커서가 있는 블록(블록 id 포함)을 준다. 둘 다 부른 때의 편집기를 읽는다. 다른 화면에서 `useOpenEditor()`는 `null`이다.
 
 ### 라우터 어댑터
 

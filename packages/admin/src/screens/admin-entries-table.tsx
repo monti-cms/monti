@@ -122,7 +122,7 @@ export function AdminEntriesTable({
 	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
 	const isRecord = site.isItemCollection(collection);
-	const { table, order, visibility, scrollRef, moveColumn } = useEntriesTable({
+	const { table, order, visibility, isShown, scrollRef, moveColumn } = useEntriesTable({
 		collection,
 		items,
 		folders,
@@ -149,7 +149,10 @@ export function AdminEntriesTable({
 		if (filter.kind === "date") return isColumnFiltered(state, filter);
 		return visibility[column] !== false || isColumnFiltered(state, filter);
 	});
-	const dateColumns = order.filter((column) => DATE_COLUMNS.has(column) && visibility[column] !== false);
+	// A date the table has no room for (the post date goes first, then the others) is left out, like a hidden column: the row does not run past the page.
+	const dateColumns = order.filter(
+		(column) => DATE_COLUMNS.has(column) && visibility[column] !== false && isShown(column),
+	);
 
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
@@ -208,8 +211,8 @@ export function AdminEntriesTable({
 				)}
 			</Box>
 
-			<Stack ref={scrollRef} gap="none" grow minHeight={0} overflow="auto">
-				<Box width="full" maxWidth="content" centered paddingX="wide">
+			<Stack gap="none" grow minHeight={0} overflow="auto">
+				<Box ref={scrollRef} width="full" maxWidth="content" centered paddingX="wide">
 					<Table density="comfortable" container="none">
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (

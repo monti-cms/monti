@@ -53,6 +53,7 @@ export function ModelCombobox({
 	loading,
 	error,
 	placeholder,
+	hints,
 	"aria-label": ariaLabel,
 }: {
 	id?: string;
@@ -62,6 +63,8 @@ export function ModelCombobox({
 	loading?: boolean;
 	error?: string | null;
 	placeholder?: string;
+	/** A short note after a model's name in the list, by model id (what the connection check found out about it). */
+	hints?: Readonly<Record<string, string>>;
 	"aria-label"?: string;
 }) {
 	const t = useTranslator(aiCommonMessages);
@@ -107,6 +110,11 @@ export function ModelCombobox({
 							<Text variant="caption" mono truncate tone={item.custom ? "default" : undefined}>
 								{item.custom ? t("modelUse", { label: item.label }) : item.label}
 							</Text>
+							{hints?.[item.value] && (
+								<Text variant="caption" tone="muted">
+									{hints[item.value]}
+								</Text>
+							)}
 						</ComboboxItem>
 					)}
 				</ComboboxList>
