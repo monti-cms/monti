@@ -25,7 +25,7 @@ Route base: `/v1/entries`.
 | `entries.create` | write | `POST /entries` | Trash it | 2 | Title, slug, metadata, body as text, folder |
 | `entries.update` | write | `PATCH /entries/[id]` | Write the before values back | 2 | Any of slug, metadata fields, body, folder. The preview is a field-by-field diff, the body a text diff |
 | `entries.duplicate` | write | `POST /entries/[id]/duplicate` | Trash the copy | 2 | |
-| `entries.translate` | write | `POST /entries/[id]/translations` | Trash the translation | 3 | Creates a translation; filling it is `entries.update`, or the AI translation action |
+| `entries.translate` | write | `POST /entries/[id]/translations` | Trash the translation | 3 | Creates a translation; filling it is `entries.update`, or a built-in request of the translation editor |
 | `entries.publish` | write | `POST /entries/[id]/publish`, bulk `publish` | **No**, when the entry was already published | 2 | Monti keeps no history, so the published version it replaces is gone. A first publish is undone by archiving |
 | `entries.archive` | write | `POST /entries/[id]/archive`, bulk `archive` | Unarchive (back to draft, not republished) | 2 | Ends publication |
 | `entries.unarchive` | write | `POST /entries/[id]/unarchive`, bulk `unarchive` | Archive | 2 | |
@@ -91,10 +91,10 @@ stay server operations; the editor saves first, as its own buttons do.
 
 | Operation | Kind | Route today | Undo | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `site.describe` | read | `GET /meta` | | 1 | Collections, fields, body blocks, limits. The agent reads it at the start of every run, so it knows the site's shape |
+| `site.describe` | read | `GET /meta` | | 1 | Collections, fields, body blocks, limits. The agent reads it at the start of every run, so it knows the site's shape. From phase 2 it carries the field and collection descriptions, which tell the agent what each field is for (agent.md section 7) |
 | `schema.read` | read | `GET /schema` | | 1 | The schema file |
 | `schema.edit` | code | `POST /schema/preview`, `PUT /schema` | Revert the pull request | 4 | Writes the file in development; elsewhere a pull request. The preview's impacts on stored entries go into the review, and the admin acknowledges them there |
-| — | — | none | | | Site config in code (`defineSite`: locales, plugins, AI actions). Out of scope until the schema edit works as a pull request |
+| — | — | none | | | Site config in code (`defineSite`: locales, plugins). Out of scope until the schema edit works as a pull request |
 
 ## Delivery and sync
 
@@ -113,16 +113,29 @@ stay server operations; the editor saves first, as its own buttons do.
 
 | Operation | Kind | Route today | Undo | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `ai.<action>` | read | `POST /ai/run` | | 3 | One operation per enabled action (summary, translation, alt text, tags...). Its result is text the agent then writes with `entries.update` |
 | `spellcheck.run` | read | Bareun plugin route | | 3 | Plugin operation, when the Bareun plugin is installed |
-| — | — | `/ai/actions`, `/ai/providers`, `/ai/settings`, `/ai/snippets`, `/ai/models` | | | The AI's own settings. The agent does not change what it is allowed to do or which model it uses |
+| — | — | `POST /ai/run`, `/ai/actions`, `/ai/snippets` | | | Removed in phase 3 with actions, custom actions and snippets (agent.md section 7). There is no `ai.<action>` operation: the agent writes the summary, alt text or translation itself |
+| — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | The model moves to a picker in the assistant input, per conversation; the API keys screen shows each key's monthly usage and cap. The agent does not change which model it uses or what it may spend |
+| — | — | none | | | The writing voice (Settings › Site). Every run gets it as context; it is not a tool call |
+
+### Built-in requests
+
+Not operations: each is a fixed sentence sent to the agent with the screen context, run as one turn with only the tools it needs (agent.md section 7).
+
+| Place | Request | Tools | Phase |
+| --- | --- | --- | --- |
+| The publish to-do | Write the summary | `editor.read`, `editor.setField` | 3 |
+| The publish to-do | Fill missing alt text | `editor.read`, `media.get`, `editor.rewriteBlock` | 3 |
+| The translation editor | Translate from the source | `entries.get` (the source), `editor.read`, `editor.rewriteBlock`, `editor.setField` | 3 |
+| The translation editor | Translate only the blocks that changed | The same, limited to the blocks changed in the source since the translation | 3 |
+| The bulk bar of the media list | Fill alt text | `media.get`, `media.update` | 3 |
 
 ## Not operations
 
 | Route today | Why not |
 | --- | --- |
 | `/session/*` (sign-in, sign-out, first admin) | Signing in is the admin's |
-| `/api-keys/*` | Key values never reach the agent, and choosing keys is the admin's |
+| `/api-keys/*` | Key values never reach the agent, and choosing keys and their monthly caps is the admin's |
 | `/preferences` | The admin's own list columns and screen state, not site content |
 | `/import/*` | Takes a file from the admin's computer |
 | `/export/*` | Produces a download for the admin. The agent reads entries directly |
@@ -139,11 +152,39 @@ Almost every read the agent needs is a route already. The gaps:
    `relations.counts` read would make it one call. Add it only if the probe of phase 1 shows the agent struggling.
 3. **Size of a proposal.** The bulk route stops at 100 items; the proposal splits larger applies itself (above).
 
+## What the single AI path needs (agent.md section 7)
+
+Core, in phase 2, before the agent writes:
+
+1. **Field descriptions as agent input.** `description` of a field (`packages/core/src/schema/fields.ts`) is sent to the agent with `site.describe` and is
+   no longer rendered under the input. The field settings sheet of the schema settings edits it. Collection descriptions go the same way.
+2. **Checks in field definitions.** `max`, `required` and the other limits of a field are checked by the write operations' previews, and a unique slug is a
+   check of `entries.create` and `entries.update`, so a value that breaks them is refused before it reaches a proposal.
+3. **The writing voice.** One text in Settings › Site, stored with the site settings and added to the context of every run.
+4. **Model per conversation.** The assistant input has a model picker listing the models of the stored keys, grouped by provider. A run is stored with
+   its model; a new conversation starts with the last used one.
+5. **Usage and the monthly cap.** Each run records its tokens against the key it used; the API keys screen shows each key's month of usage with an
+   approximate cost and an optional cap. A run or built-in request on a key past its cap is refused, and the panel shows the notice in place of its input.
+
+Moving the AI over, in phase 3. Each place an action attaches today becomes a built-in request or goes away:
+
+| Today | Becomes |
+| --- | --- |
+| AI buttons beside fields (slug, summary, tags, category) | Removed. The summary is the publish to-do's "write the summary" |
+| Alt text and caption of a body image, and the automatic fill on upload (`auto-image-text.ts`) | Removed. Missing alt text is the publish to-do's "fill missing alt text" |
+| Media filename, default alt text and caption | Default alt text is the media bulk bar's "fill alt text"; the rest is removed |
+| Block translate and "translate all" in the translation editor | "Translate from the source" and "translate only changed blocks" |
+| Code fold rules | Removed |
+| The selection menu (polish), the insert menu (draft) and body block buttons | Removed; asked in the panel, with the selection in the screen context |
+| Custom actions, prompt snippets and the AI settings tab | Removed. The `styleGuide` snippet becomes the writing voice; the model is picked in the assistant input, and usage and caps are on the API keys screen |
+
+Out of scope for now: proposals from several admins at once. A Monti site has a single admin.
+
 ## Counts
 
 | Kind | Operations |
 | --- | --- |
-| read | 19 (`ai.<action>` counts once; it is one operation per enabled action) |
+| read | 18 |
 | write | 26 |
 | code | 1 |
 | editor read | 2 |
