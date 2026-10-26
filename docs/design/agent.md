@@ -141,7 +141,8 @@ Decided by the owner on 2026-10-26. Proposed changes are marked with a blue penc
 - The empty panel shows the built-in requests of the current screen (section 7) and the admin's recent requests.
 - The open proposal shows in the panel, with a button to open the review.
 - After apply, the screens refresh the data the proposal changed.
-- When the monthly cap is reached (section 7), the input is replaced by a short notice with a link to change the cap.
+- The input has a model picker at its bottom left; the chosen model belongs to the conversation (section 7).
+- When the monthly cap of the key behind the chosen model is reached (section 7), the input is replaced by a short notice with a link to change the cap.
 
 ## 5. The open entry: editor operations
 
@@ -228,13 +229,16 @@ requests of the current screen (section 4).
 One text in Settings › Site, the writing voice: how the site writes (tone, person, terms to use or avoid, how long sentences run). The agent reads it on
 every job, typed requests and built-in ones alike. It replaces the `styleGuide` snippet.
 
-### Key, model and usage: the API keys screen
+### Model and usage
 
 There is no AI settings tab.
 
-- The assistant's API key and model are chosen on the API keys screen.
-- The same screen shows the month's token usage with an approximate cost, and an optional monthly cap.
-- When the cap is reached, the assistant input is replaced by a short notice with a link to change the cap (section 4). Built-in requests are off too.
+- **The model is chosen in the assistant input.** A model picker at the bottom left of the input ("claude-sonnet-5-5 ▾") lists the models available
+  from the stored API keys, grouped by provider. The chosen model belongs to that conversation; a new conversation starts with the last used model.
+- **The API keys screen shows usage.** It does not pick the assistant's key or model. For each key it shows the month's token usage with an approximate
+  cost ("no usage this month" when unused), and an optional monthly cap.
+- When the cap of the key behind the chosen model is reached, the assistant input is replaced by a short notice with a link to change the cap (section 4).
+  Built-in requests that would use that key are off too.
 
 ### No automatic alt text on upload
 
@@ -255,7 +259,7 @@ publish to-do or the bulk bar of the media list, both built-in requests.
 | --- | --- | --- |
 | 0 | This document; check tool calling with the models people connect (done, below) | — |
 | 1 | `defineOperation`; read operations (entry search by fields, read an entry, schema, folders, tags, media with usage); stored runs; the shell panel with screen context; editor reads (the open entry, the selection) | Ask questions about the site, and about the post being written: "which posts have no tags?", "is this intro too long?" |
-| 2 | Proposals: preview, review page, apply, undo, the list in Tools › Events; write operations for bulk, entry fields and media; editor writes as blue-pencil suggestions with the bottom bubble; memos. Core: field and collection descriptions as agent input (edited in the field settings sheet, no longer shown under the input); field limits as write checks; the writing voice in Settings › Site; usage per month and the monthly cap on the API keys screen | "Tag these", "move these", "clean up unused media", then review and apply; "tighten this paragraph", accepted or discarded in place; a memo on a suggestion |
+| 2 | Proposals: preview, review page, apply, undo, the list in Tools › Events; write operations for bulk, entry fields and media; editor writes as blue-pencil suggestions with the bottom bubble; memos. Core: field and collection descriptions as agent input (edited in the field settings sheet, no longer shown under the input); field limits as write checks; the writing voice in Settings › Site; the model picker in the assistant input, kept per conversation; usage per month and the monthly cap per key on the API keys screen | "Tag these", "move these", "clean up unused media", then review and apply; "tighten this paragraph", accepted or discarded in place; a memo on a suggestion |
 | 3 | Every admin route that fits becomes an operation and the router mounts it; plugin operations. Moving the AI over: the action attach points become built-in requests or go away (see below), and actions, custom actions, snippets and the AI settings tab are removed | Everything the admin can do; the built-in requests |
 | 4 | `kind: "code"` and pull requests, starting with the schema file | "Add a summary field to posts" in production |
 
@@ -338,7 +342,8 @@ Decided by the owner later on 2026-10-26, in the review of the editorial admin m
    prompts; the quick buttons left are built-in requests tied to their place.
 5. **What the agent knows comes from the schema and the writing voice.** Field descriptions guide it and are no longer shown under the input; field limits
    are its guide and its write checks; collection descriptions help; one writing-voice text in Settings › Site is read on every job.
-6. **No AI settings tab.** Key, model, monthly usage and the monthly cap are on the API keys screen.
+6. **No AI settings tab.** The model is picked in the assistant input, per conversation, from the models of the stored keys. The API keys screen shows
+   each key's monthly usage and an optional monthly cap; it does not pick the assistant's key or model.
 7. **No automatic alt text on upload.**
 8. **Proposals show where they apply (section 2).** One place: blue-pencil marks in place. Several places, a whole list, or anything irreversible: the
    review page. Memos can be anchored to any text or proposal. Applied proposals are listed in Tools › Events with undo.

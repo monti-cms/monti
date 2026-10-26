@@ -115,7 +115,7 @@ stay server operations; the editor saves first, as its own buttons do.
 | --- | --- | --- | --- | --- | --- |
 | `spellcheck.run` | read | Bareun plugin route | | 3 | Plugin operation, when the Bareun plugin is installed |
 | — | — | `POST /ai/run`, `/ai/actions`, `/ai/snippets` | | | Removed in phase 3 with actions, custom actions and snippets (agent.md section 7). There is no `ai.<action>` operation: the agent writes the summary, alt text or translation itself |
-| — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | The key and model move to the API keys screen, with the monthly usage and cap. The agent does not change which model it uses or what it may spend |
+| — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | The model moves to a picker in the assistant input, per conversation; the API keys screen shows each key's monthly usage and cap. The agent does not change which model it uses or what it may spend |
 | — | — | none | | | The writing voice (Settings › Site). Every run gets it as context; it is not a tool call |
 
 ### Built-in requests
@@ -135,7 +135,7 @@ Not operations: each is a fixed sentence sent to the agent with the screen conte
 | Route today | Why not |
 | --- | --- |
 | `/session/*` (sign-in, sign-out, first admin) | Signing in is the admin's |
-| `/api-keys/*` | Key values never reach the agent, and choosing keys, the assistant's model and the monthly cap is the admin's |
+| `/api-keys/*` | Key values never reach the agent, and choosing keys and their monthly caps is the admin's |
 | `/preferences` | The admin's own list columns and screen state, not site content |
 | `/import/*` | Takes a file from the admin's computer |
 | `/export/*` | Produces a download for the admin. The agent reads entries directly |
@@ -161,8 +161,10 @@ Core, in phase 2, before the agent writes:
 2. **Checks in field definitions.** `max`, `required` and the other limits of a field are checked by the write operations' previews, and a unique slug is a
    check of `entries.create` and `entries.update`, so a value that breaks them is refused before it reaches a proposal.
 3. **The writing voice.** One text in Settings › Site, stored with the site settings and added to the context of every run.
-4. **Usage and the monthly cap.** Each run records its tokens; the API keys screen shows the month's usage with an approximate cost and an optional cap.
-   A run or built-in request is refused once the cap is reached, and the panel shows the notice in place of its input.
+4. **Model per conversation.** The assistant input has a model picker listing the models of the stored keys, grouped by provider. A run is stored with
+   its model; a new conversation starts with the last used one.
+5. **Usage and the monthly cap.** Each run records its tokens against the key it used; the API keys screen shows each key's month of usage with an
+   approximate cost and an optional cap. A run or built-in request on a key past its cap is refused, and the panel shows the notice in place of its input.
 
 Moving the AI over, in phase 3. Each place an action attaches today becomes a built-in request or goes away:
 
@@ -174,7 +176,7 @@ Moving the AI over, in phase 3. Each place an action attaches today becomes a bu
 | Block translate and "translate all" in the translation editor | "Translate from the source" and "translate only changed blocks" |
 | Code fold rules | Removed |
 | The selection menu (polish), the insert menu (draft) and body block buttons | Removed; asked in the panel, with the selection in the screen context |
-| Custom actions, prompt snippets and the AI settings tab | Removed. The `styleGuide` snippet becomes the writing voice; key and model move to the API keys screen |
+| Custom actions, prompt snippets and the AI settings tab | Removed. The `styleGuide` snippet becomes the writing voice; the model is picked in the assistant input, and usage and caps are on the API keys screen |
 
 Out of scope for now: proposals from several admins at once. A Monti site has a single admin.
 
