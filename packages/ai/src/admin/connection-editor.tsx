@@ -28,7 +28,7 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, PlugZap, Plus, Save } from "lucide-react";
+import { PlugZap, Save } from "lucide-react";
 import { useId, useState } from "react";
 import {
 	AI_PROVIDER_KINDS,
@@ -190,9 +190,8 @@ export function ConnectionManager({
 				) : (
 					settings && (
 						<EmptyState
-							icon={Plug}
 							title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
-							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
+							action={{ label: t("action.add"), onClick: () => onOpen("new") }}
 						/>
 					)
 				)}

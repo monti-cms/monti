@@ -240,7 +240,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			{chat.messages.length === 0 ? (
 				<EmptyState
 					compact
-					icon={Sparkles}
 					title={t("empty.title")}
 					description={screen.screen === "entry" ? t("empty.entry") : t("empty.default")}
 				/>

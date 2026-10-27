@@ -21,7 +21,7 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { BellRing, RotateCw, SearchX } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
@@ -172,17 +172,16 @@ export function EventsScreen() {
 				) : items.length === 0 ? (
 					!error &&
 					(filter === "all" ? (
-						<EmptyState icon={BellRing} title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
+						<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
 					) : (
 						<EmptyState
-							icon={SearchX}
 							title={t("list.emptyNoMatch")}
 							description={t("list.emptyNoMatchHint")}
 							action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
 						/>
 					))
 				) : (
-					<Table aria-label={t("list.label")} inset="page">
+					<Table aria-label={t("list.label")}>
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("column.state")}</TableHead>

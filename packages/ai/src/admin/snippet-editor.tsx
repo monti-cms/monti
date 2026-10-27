@@ -26,7 +26,7 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
+import { Check, Copy, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";
 import type { AiSnippetItem, AiSnippetView } from "../snippets";
 import { aiKeys, createAiSnippet, deleteAiSnippet, getAiSnippets, updateAiSnippet } from "./api";
@@ -127,11 +127,7 @@ export function SnippetManager({
 					/>
 				) : (
 					view && (
-						<EmptyState
-							icon={Quote}
-							title={t("empty.title")}
-							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
-						/>
+						<EmptyState title={t("empty.title")} action={{ label: t("action.add"), onClick: () => onOpen("new") }} />
 					)
 				)}
 			</MasterDetail>

@@ -1,14 +1,13 @@
 "use client";
 
 import type * as React from "react";
+import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 
 function Table({
 	className,
 	container = "scroll",
-	inset = "none",
 	layout = "auto",
-	density = "default",
 	stickyHeader = false,
 	width,
 	style,
@@ -16,14 +15,13 @@ function Table({
 }: React.ComponentProps<"table"> & {
 	/** A total width in px that the screen computes (the sum of resized columns); without it the table fills its box. */
 	width?: number;
-	/** `scroll`: the table scrolls sideways in its own box. `none`: the page or a parent scrolls it (needed for a sticky header under an outer scroll). */
+	/**
+	 * `scroll`: the table scrolls sideways in its own box. `none`: the page or a parent scrolls it (needed for a sticky header under an outer scroll,
+	 * and for the row check that hangs in the left margin, which a scrolling box would cut off).
+	 */
 	container?: "scroll" | "none";
-	/** `page`: the first and last column line up with the page's side padding (a table that is the page's main list). */
-	inset?: "none" | "page";
 	/** `fixed`: columns keep the widths set on their heads, whatever the content (a list with resizable columns). */
 	layout?: "auto" | "fixed";
-	/** `comfortable`: taller rows with a bottom rule on the last row too (an editorial index list). */
-	density?: "default" | "comfortable";
 	/** The header row stays at the top while the rows scroll under it. */
 	stickyHeader?: boolean;
 }) {
@@ -34,10 +32,7 @@ function Table({
 				className={cn(
 					"w-full caption-bottom text-monti-body",
 					layout === "fixed" && "table-fixed",
-					density === "comfortable" && "[&_td]:py-monti-12 [&_tr:last-child]:border-b",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
-					inset === "page" &&
-						"[&_td:first-child]:pl-monti-32 [&_td:last-child]:pr-monti-32 [&_th:first-child]:pl-monti-32 [&_th:last-child]:pr-monti-32",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -48,7 +43,9 @@ function Table({
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-	return <thead data-slot="table-header" className={cn("[&_tr]:border-b", className)} {...props} />;
+	return (
+		<thead data-slot="table-header" className={cn("[&_tr]:border-monti-muted [&_tr]:border-b", className)} {...props} />
+	);
 }
 
 function TableBody({
@@ -60,11 +57,7 @@ function TableBody({
 	dimmed?: boolean;
 }) {
 	return (
-		<tbody
-			data-slot="table-body"
-			className={cn("transition-opacity [&_tr:last-child]:border-0", dimmed && "opacity-60", className)}
-			{...props}
-		/>
+		<tbody data-slot="table-body" className={cn("transition-opacity", dimmed && "opacity-60", className)} {...props} />
 	);
 }
 
@@ -72,32 +65,105 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 	return (
 		<tfoot
 			data-slot="table-footer"
-			className={cn("border-t bg-monti-tool font-medium [&>tr]:last:border-b-0", className)}
+			className={cn("border-monti-muted border-t bg-monti-tool font-medium [&>tr]:last:border-b-0", className)}
 			{...props}
 		/>
 	);
 }
 
+/**
+ * A row of a list. Each row has its rule underneath. A picked row is filled with the muted background inside the table's rectangle (no rounded
+ * corners, nothing outside it) and its rule goes darker, so a run of picked rows still reads as separate rows; `proposal` makes the fill the
+ * proposal tint, for rows the assistant picked. The check and the ⋯ appear when the pointer is on the row ({@link RowCheck}, {@link RowActions}).
+ */
 function TableRow({
 	className,
 	selected,
+	proposal = false,
 	...props
 }: React.ComponentProps<"tr"> & {
 	/** A row the writer picked (checked for a bulk action, or open in a side panel). */
 	selected?: boolean;
+	/** The assistant picked this row and nobody has touched it yet. */
+	proposal?: boolean;
 }) {
 	return (
 		<tr
 			data-slot="table-row"
 			data-selected={selected || undefined}
+			data-proposal={(selected && proposal) || undefined}
 			aria-selected={selected || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer",
-				"border-b transition-colors hover:bg-monti-selected has-aria-expanded:bg-monti-selected data-selected:bg-monti-selected",
+				"group/row relative border-monti-muted border-b data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-muted",
 				className,
 			)}
 			{...props}
 		/>
+	);
+}
+
+/**
+ * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin and
+ * the ⋯ at the end. On a touch screen it is always shown.
+ */
+const ON_ROW =
+	"opacity-0 group-hover/row:opacity-100 group-data-selected/row:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100";
+
+/**
+ * The check of a row. It hangs 26px outside the table's left edge, on the same vertical line as the select-all of the {@link TableBar}, so the
+ * first letters of the rows stay in one column. Put it in the row's first cell; the table must not scroll itself (`container="none"`).
+ */
+function RowCheck({
+	checked,
+	onCheckedChange,
+	label,
+	proposal = false,
+}: {
+	checked: boolean;
+	onCheckedChange: (checked: boolean) => void;
+	/** The name of the check, for screen readers ("Select First post"). */
+	label: string;
+	/** The assistant picked this row. */
+	proposal?: boolean;
+}) {
+	return (
+		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] flex -translate-y-1/2", ON_ROW)}>
+			<Checkbox
+				checked={checked}
+				onCheckedChange={(next) => onCheckedChange(next === true)}
+				aria-label={label}
+				proposal={proposal}
+				className="bg-monti-page"
+			/>
+		</span>
+	);
+}
+
+/** The ⋯ of a row, and anything else that belongs to the pointer being on it: it shows only then. */
+function RowActions({ className, ...props }: React.ComponentProps<"span">) {
+	return <span data-slot="row-actions" className={cn("inline-flex", ON_ROW, className)} {...props} />;
+}
+
+/**
+ * The title cell of a row: the title in ink over its address in mono, both on one line each. The other columns are gray, so the ink alone makes
+ * the title the emphasis.
+ */
+function RowTitle({
+	title,
+	address,
+	className,
+	...props
+}: Omit<React.ComponentProps<"span">, "title"> & {
+	title: React.ReactNode;
+	/** Under the title: `/first-post`, a folder path. */
+	address?: React.ReactNode;
+}) {
+	return (
+		<span data-slot="row-title" className={cn("flex min-w-0 flex-col gap-monti-4", className)} {...props}>
+			<span className="truncate text-monti-body text-monti-default">{title}</span>
+			{address && <span className="truncate font-mono text-monti-faint text-monti-meta">{address}</span>}
+		</span>
 	);
 }
 
@@ -137,7 +203,7 @@ function TableHead({
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-10 whitespace-nowrap px-2 align-middle text-monti-caption text-monti-muted [&:has([role=checkbox])]:pr-0",
+				"h-10 whitespace-nowrap px-monti-8 align-middle text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
@@ -169,7 +235,7 @@ function TableCell({
 		<td
 			data-slot="table-cell"
 			className={cn(
-				"whitespace-nowrap p-2 align-middle [&:has([role=checkbox])]:pr-0",
+				"relative whitespace-nowrap px-monti-8 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
@@ -187,8 +253,24 @@ function TableCell({
 
 function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
 	return (
-		<caption data-slot="table-caption" className={cn("mt-4 text-monti-body text-monti-muted", className)} {...props} />
+		<caption
+			data-slot="table-caption"
+			className={cn("mt-monti-16 text-monti-body text-monti-muted", className)}
+			{...props}
+		/>
 	);
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+export {
+	RowActions,
+	RowCheck,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCaption,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+};

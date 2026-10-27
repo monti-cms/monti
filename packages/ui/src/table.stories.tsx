@@ -1,10 +1,24 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MoreHorizontal } from "lucide-react";
 import { Panel } from "./card";
-import { Checkbox } from "./checkbox";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "./empty";
+import { Count } from "./count";
+import { Empty } from "./empty";
+import { IconButton } from "./icon-button";
 import { Skeleton } from "./skeleton";
 import { StatusIndicator } from "./status-indicator";
-import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
+import {
+	RowActions,
+	RowCheck,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCaption,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "./table";
 import { Text } from "./text";
 
 const ROWS = [
@@ -75,30 +89,76 @@ export const WithCaptionAndFooter: Story = {
 	),
 };
 
-export const SelectableRows: Story = {
-	render: () => (
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>
-						<Checkbox aria-label="모두 선택" />
-					</TableHead>
-					<TableHead>제목</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{ROWS.map((row, i) => (
-					<TableRow key={row.title} data-state={i === 1 ? "selected" : undefined}>
-						<TableCell>
-							<Checkbox aria-label={`${row.title} 선택`} checked={i === 1} />
-						</TableCell>
-						<TableCell>{row.title}</TableCell>
-					</TableRow>
-				))}
-			</TableBody>
-		</Table>
-	),
-};
+const POSTS = [
+	{ title: "발행 후 고친 글", address: "/edited-post", tags: "개발 · 리액트", status: "수정 중", date: "10.26" },
+	{ title: "첫 번째 글", address: "/first-post", tags: "개발", status: "발행됨", date: "10.01" },
+	{ title: "여름 여행 기록", address: "/summer-trip", tags: "일상", status: "초안", date: "09.18" },
+	{
+		title: "아주 긴 제목의 글이 한 줄에 다 들어가지 않으면 이렇게 끝이 잘려요",
+		address: "/very-long-title",
+		tags: "",
+		status: "발행됨",
+		date: "09.02",
+	},
+];
+
+function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; proposal?: boolean }) {
+	return (
+		<div className="max-w-3xl px-monti-32">
+			<Table container="none" layout="fixed">
+				<TableBody>
+					{POSTS.map((post, index) => (
+						<TableRow key={post.address} selected={picked.has(index)} proposal={proposal}>
+							<TableCell width="md">
+								<RowCheck
+									checked={picked.has(index)}
+									onCheckedChange={() => {}}
+									label={`${post.title} 선택`}
+									proposal={proposal}
+								/>
+								<Count>{post.date}</Count>
+							</TableCell>
+							<TableCell>
+								<RowTitle title={post.title} address={post.address} />
+							</TableCell>
+							<TableCell tone="muted" width="lg">
+								{post.tags}
+							</TableCell>
+							<TableCell width="md">
+								<StatusIndicator tone="strong" shape={post.status === "발행됨" ? "dot" : "ring"} label={post.status} />
+							</TableCell>
+							<TableCell width="xs" align="end">
+								<RowActions>
+									<MoreButton />
+								</RowActions>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
+	);
+}
+
+function MoreButton() {
+	return (
+		<IconButton label="더 보기">
+			<MoreHorizontal aria-hidden />
+		</IconButton>
+	);
+}
+
+/**
+ * A list as the posts screen draws it: each row has its rule, the title is ink over its mono address, the other cells are gray. The check hangs
+ * in the left margin and the ⋯ ends the row; both show while the pointer is on the row (point at one). The table does not scroll itself.
+ */
+export const List: Story = { render: () => <ListRows picked={new Set()} /> };
+
+/** A picked row is filled with the muted background inside the table, and its rule goes darker; its check stays on. */
+export const PickedRows: Story = { render: () => <ListRows picked={new Set([1, 2])} /> };
+
+/** Rows the assistant picked: the proposal tint and a blue check. */
+export const ProposedRows: Story = { render: () => <ListRows picked={new Set([0, 1])} proposal /> };
 
 /** Cells never wrap (`whitespace-nowrap`), so a long title needs a width on the cell and a truncating `Text`. */
 export const LongTextTruncates: Story = {
@@ -137,12 +197,7 @@ export const EmptyTable: Story = {
 				<TableBody>
 					<TableRow>
 						<TableCell colSpan={2}>
-							<Empty>
-								<EmptyHeader>
-									<EmptyTitle>아직 글이 없어요</EmptyTitle>
-									<EmptyDescription>첫 글을 써서 블로그를 시작해 보세요.</EmptyDescription>
-								</EmptyHeader>
-							</Empty>
+							<Empty size="compact" title="아직 글이 없어요" description="첫 글을 써서 블로그를 시작해 보세요." />
 						</TableCell>
 					</TableRow>
 				</TableBody>

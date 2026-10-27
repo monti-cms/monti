@@ -11,7 +11,7 @@ import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, FormFieldError, Inline, Input, Stack } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
+import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTemplate } from "../../api/templates";
@@ -293,11 +293,7 @@ export function TemplateManager() {
 						onDirtyChange={setDirty}
 					/>
 				) : (
-					<EmptyState
-						icon={LayoutTemplate}
-						title={t("edit.empty")}
-						action={{ label: t("add"), icon: Plus, onClick: () => void openNew() }}
-					/>
+					<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
 				)}
 			</MasterDetail>
 			{dialog}

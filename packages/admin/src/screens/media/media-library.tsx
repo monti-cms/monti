@@ -31,13 +31,11 @@ import {
 	FolderInput,
 	FolderPlus,
 	FolderUp,
-	Image as ImageIcon,
 	LayoutGrid,
 	Link2,
 	List,
 	PanelRightOpen,
 	RefreshCw,
-	SearchX,
 	Trash2,
 	Upload,
 } from "lucide-react";
@@ -573,19 +571,16 @@ export function MediaLibrary() {
 								</Grid>
 							) : filtered ? (
 								<EmptyState
-									icon={SearchX}
 									title={t("library.emptyNoMatch")}
 									description={t("library.emptyNoMatchHint")}
 									action={{ label: t("library.clearFilters"), onClick: clearFilters }}
 								/>
 							) : (
 								<EmptyState
-									icon={ImageIcon}
 									title={t("library.emptyYet")}
 									description={t("library.emptyYetHint")}
 									action={{
 										label: t("library.upload"),
-										icon: Upload,
 										onClick: () => fileInputRef.current?.click(),
 									}}
 								/>

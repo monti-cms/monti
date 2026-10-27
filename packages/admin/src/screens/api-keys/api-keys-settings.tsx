@@ -23,7 +23,7 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
 import { errorText } from "../../api/client";
@@ -194,10 +194,9 @@ function KeyRows({
 	if (list.items.length === 0 && list.slots.length === 0) {
 		return (
 			<EmptyState
-				icon={KeyRound}
 				title={t("empty.title")}
 				description={t("empty.description")}
-				action={{ label: t("add"), icon: Plus, onClick: onAdd, disabled: !list.secretsAvailable }}
+				action={{ label: t("add"), onClick: onAdd, disabled: !list.secretsAvailable }}
 			/>
 		);
 	}

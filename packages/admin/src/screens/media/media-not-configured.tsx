@@ -1,7 +1,6 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { ImageOff } from "lucide-react";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
 import { AdminShell } from "../shared/admin-shell";
 import { EmptyState } from "../shared/empty-state";
@@ -13,7 +12,7 @@ export function MediaNotConfigured() {
 	const t = useTranslator(mediaMessages);
 	return (
 		<AdminShell title={t("title")} sidebar={{ activeNav: "media" }}>
-			<EmptyState icon={ImageOff} title={mediaNotConfiguredMessage(site)} description={t("notConfigured.hint")} />
+			<EmptyState title={mediaNotConfiguredMessage(site)} description={t("notConfigured.hint")} />
 		</AdminShell>
 	);
 }

@@ -92,6 +92,7 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
+export { DropArea } from "./drop-area";
 export {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -108,7 +109,7 @@ export {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
-export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
+export { Empty, EmptyStep } from "./empty";
 export {
 	FormField,
 	FormFieldDescription,
@@ -145,6 +146,7 @@ export {
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { RadioGroup, RadioItem } from "./radio-group";
+export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export { SearchBox, type SearchTarget } from "./search-box";
 export { Segmented, type SegmentedOption } from "./segmented";
@@ -197,13 +199,26 @@ export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
 export { Switch } from "./switch";
-export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
+export {
+	RowActions,
+	RowCheck,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCaption,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "./table";
+export { BulkBar, type SelectAll, type SelectAllState, TableBar } from "./table-bar";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
 export { TextButton } from "./text-button";
 export { Textarea } from "./textarea";
-export { ChoiceCard, Tile } from "./tile";
+export { ChoiceCard, FolderTile, Tile } from "./tile";
 export { Toaster, toast } from "./toast";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";

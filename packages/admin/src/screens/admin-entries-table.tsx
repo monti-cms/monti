@@ -15,7 +15,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
@@ -213,7 +212,7 @@ export function AdminEntriesTable({
 
 			<Stack gap={0} grow minHeight={0} overflow="auto">
 				<Box ref={scrollRef} width="full" maxWidth="content" centered paddingX={32}>
-					<Table density="comfortable" container="none">
+					<Table container="none">
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (
 								<EntriesTableFolderRows
@@ -382,37 +381,31 @@ export function AdminEntriesTable({
 						items.length === 0 &&
 						!explorer?.folders.length &&
 						(isTrash ? (
-							<EmptyState icon={Trash2} title={t("list.emptyTrash")} />
+							<EmptyState title={t("list.emptyTrash")} />
 						) : isFiltered(state) ? (
 							<EmptyState
-								icon={SearchX}
 								title={t("list.emptyNoMatch")}
 								description={t("list.emptyNoMatchHint")}
 								action={{ label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) }}
 							/>
 						) : site.isDocumentCollection(collection) && addAction && folders.length === 0 ? (
 							<EmptyState
-								icon={PenLine}
 								title={t("list.welcomeTitle")}
 								description={t("list.welcomeHint")}
 								action={{
 									label: t("list.writeNew", { label: collectionLabel ?? collection }),
-									icon: Plus,
 									onClick: addAction.run,
-									emphasis: "primary",
 								}}
 								secondaryAction={{
 									label: t("list.importMarkdown"),
-									icon: FileUp,
 									href: `${site.adminHref("/data")}#import-entries`,
 								}}
 							/>
 						) : (
 							<EmptyState
-								icon={Inbox}
 								title={t("list.emptyYet")}
 								description={t("list.emptyYetHint")}
-								action={addAction && { label: addAction.label, icon: Plus, onClick: addAction.run }}
+								action={addAction && { label: addAction.label, onClick: addAction.run }}
 							/>
 						))}
 				</Box>

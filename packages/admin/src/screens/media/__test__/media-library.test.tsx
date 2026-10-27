@@ -89,7 +89,7 @@ const renderLibrary = async () => {
 			<MediaLibrary />
 		</AdminQueryProvider>,
 	);
-	await screen.findByRole("button", { name: /cat\.png$/ });
+	await screen.findByRole("button", { name: /^cat\.png/ });
 };
 const openDetail = async (name: RegExp) => {
 	fireEvent.click(screen.getByRole("button", { name }));
@@ -101,9 +101,9 @@ describe("media library", () => {
 		await renderLibrary();
 		// The usage badge sits on the tile, beside the button that opens the file.
 		const tile = (name: RegExp) => screen.getByRole("button", { name }).parentElement?.textContent;
-		expect(tile(/cat\.png$/)).toContain(t("usage.count", { count: 1 }));
-		expect(tile(/dog\.png$/)).toContain(t("usage.none"));
-		expect(tile(/guide\.pdf\s*PDF$/)).toContain("PDF");
+		expect(tile(/^cat\.png/)).toContain(t("usage.count", { count: 1 }));
+		expect(tile(/^dog\.png/)).toContain(t("usage.none"));
+		expect(tile(/^guide\.pdf/)).toContain("PDF");
 	});
 
 	it("names what the header counts, and keeps the footer free of a range line when one page holds everything", async () => {
@@ -122,7 +122,7 @@ describe("media library", () => {
 
 	it("picking shows name, type, size, upload date and usages in the detail", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/cat\.png$/);
+		const detail = await openDetail(/^cat\.png/);
 		expect(within(detail).getAllByText("cat.png").length).toBeGreaterThan(0);
 		expect(within(detail).getByText("image/png")).toBeTruthy();
 		expect(within(detail).getByText(/640×480/)).toBeTruthy();
@@ -137,7 +137,7 @@ describe("media library", () => {
 
 	it("saves the image's default alt text and caption", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/cat\.png$/);
+		const detail = await openDetail(/^cat\.png/);
 		const alt = within(detail).getByRole("textbox", { name: t("detail.defaultAlt") }) as HTMLInputElement;
 		expect(alt.value).toBe("고양이");
 		fireEvent.change(alt, { target: { value: "창가의 고양이" } });
@@ -162,7 +162,7 @@ describe("media library", () => {
 
 		it("edits the name without its extension and renames with the extension kept", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/cat\.png$/);
+			const detail = await openDetail(/^cat\.png/);
 			expect(nameField(detail).value).toBe("cat");
 			expect(within(detail).getByText(".png")).toBeTruthy();
 			expect(saveName(detail).disabled).toBe(true);
@@ -179,7 +179,7 @@ describe("media library", () => {
 
 		it("does not send an empty name or one with a slash, and says why", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/cat\.png$/);
+			const detail = await openDetail(/^cat\.png/);
 			fireEvent.change(nameField(detail), { target: { value: "  " } });
 			expect(within(detail).getByText(t("detail.filename.empty"))).toBeTruthy();
 			expect(saveName(detail).disabled).toBe(true);
@@ -197,7 +197,7 @@ describe("media library", () => {
 					: ok(input, init),
 			);
 			await renderLibrary();
-			const detail = await openDetail(/cat\.png$/);
+			const detail = await openDetail(/^cat\.png/);
 			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
 			fireEvent.click(saveName(detail));
 			expect(await within(detail).findByText("The file name must keep the extension .png")).toBeTruthy();
@@ -207,21 +207,21 @@ describe("media library", () => {
 
 		it("asks before leaving the file while the name has an unsaved change", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/cat\.png$/);
+			const detail = await openDetail(/^cat\.png/);
 			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
-			fireEvent.click(screen.getByRole("button", { name: /dog\.png$/ }));
+			fireEvent.click(screen.getByRole("button", { name: /^dog\.png/ }));
 			expect(await screen.findByRole("alertdialog", { name: tc("discard.title") })).toBeTruthy();
 		});
 	});
 
 	it("opening another file with an edited default description asks whether to discard", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/cat\.png$/);
+		const detail = await openDetail(/^cat\.png/);
 		fireEvent.change(within(detail).getByRole("textbox", { name: t("detail.defaultCaption") }), {
 			target: { value: "고친 캡션" },
 		});
 
-		fireEvent.click(screen.getByRole("button", { name: /dog\.png$/ }));
+		fireEvent.click(screen.getByRole("button", { name: /^dog\.png/ }));
 		const dialog = await screen.findByRole("alertdialog", { name: tc("discard.title") });
 		// While the confirm dialog is up, the detail panel is covered but the edited value remains.
 		expect(screen.getByDisplayValue("고친 캡션")).toBeTruthy();
@@ -237,11 +237,11 @@ describe("media library", () => {
 
 	it("marks the open file", async () => {
 		await renderLibrary();
-		await openDetail(/cat\.png$/);
+		await openDetail(/^cat\.png/);
 		await waitFor(() =>
-			expect(screen.getByRole("button", { name: /cat\.png$/ }).getAttribute("aria-current")).toBe("true"),
+			expect(screen.getByRole("button", { name: /^cat\.png/ }).getAttribute("aria-current")).toBe("true"),
 		);
-		expect(screen.getByRole("button", { name: /dog\.png$/ }).getAttribute("aria-current")).toBeNull();
+		expect(screen.getByRole("button", { name: /^dog\.png/ }).getAttribute("aria-current")).toBeNull();
 	});
 
 	it("when loading fails, says so in place and allows retry", async () => {
@@ -263,19 +263,19 @@ describe("media library", () => {
 		expect(toast.error).not.toHaveBeenCalled();
 		fail = false;
 		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
-		expect(await screen.findByRole("button", { name: /cat\.png$/ })).toBeTruthy();
+		expect(await screen.findByRole("button", { name: /^cat\.png/ })).toBeTruthy();
 	});
 
 	it("a file shows its size without a default description field", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/guide\.pdf\s*PDF$/);
+		const detail = await openDetail(/^guide\.pdf/);
 		expect(within(detail).queryByRole("textbox", { name: t("detail.defaultAlt") })).toBeNull();
 		expect(within(detail).getByText(/1\.4 ?MB|1\.5 ?MB/)).toBeTruthy();
 	});
 
 	it("an unused file is deleted after confirmation", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/dog\.png$/);
+		const detail = await openDetail(/^dog\.png/);
 		fireEvent.click(within(detail).getByRole("button", { name: tc("delete") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("library.delete.title") });
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
@@ -287,7 +287,7 @@ describe("media library", () => {
 	it("the right-click menu has open, usages and delete", async () => {
 		await renderLibrary();
 		await act(async () => {
-			fireEvent.contextMenu(screen.getByRole("button", { name: /cat\.png$/ }));
+			fireEvent.contextMenu(screen.getByRole("button", { name: /^cat\.png/ }));
 		});
 		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
 		expect(items).toEqual([tc("open"), t("library.menu.usage"), `${tc("delete")}Del`]);

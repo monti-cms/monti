@@ -171,7 +171,7 @@ function SyncTab({
 	}
 	if (!status) return null;
 	if (status.targets.length === 0) {
-		return <EmptyState icon={GitBranch} title={t("sync.empty")} />;
+		return <EmptyState title={t("sync.empty")} />;
 	}
 
 	return (
@@ -408,7 +408,7 @@ function ConflictsTab({
 		);
 	}
 	if (!items || items.length === 0) {
-		return <EmptyState icon={GitBranch} title={t("conflicts.empty")} />;
+		return <EmptyState title={t("conflicts.empty")} />;
 	}
 	return (
 		<Stack gap={0}>

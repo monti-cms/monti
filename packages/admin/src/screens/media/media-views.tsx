@@ -3,8 +3,8 @@
 import type { Folder } from "@monti-cms/core/site";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
+	FolderTile,
 	Grid,
 	Image,
 	Table,
@@ -17,7 +17,7 @@ import {
 	TextButton,
 	Tile,
 } from "@monti-cms/ui";
-import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
+import { File, FileArchive, FileText, FileType, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
@@ -95,9 +95,9 @@ export function MediaGrid({
 		<Grid as="ul" columns="tiles" gap={16} dimmed={dimmed}>
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
 				<li>
-					<Tile
-						preview={<Image alt="" ratio="square" radius="none" fallback={FolderUp} />}
-						title={ts("list.folderUp")}
+					<FolderTile
+						icon={<FolderUp aria-hidden />}
+						name={ts("list.folderUp")}
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
 					/>
 				</li>
@@ -106,10 +106,8 @@ export function MediaGrid({
 				const actions = folderRowMenu(folder);
 				return (
 					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li />}>
-						<Tile
-							preview={<Image alt="" ratio="square" radius="none" fallback={FolderIcon} />}
-							title={folder.name}
-							action={<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />}
+						<FolderTile
+							name={folder.name}
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
 						/>
@@ -131,14 +129,15 @@ export function MediaGrid({
 								<Image
 									src={isImage ? media.publicUrl : undefined}
 									alt=""
-									ratio="square"
+									ratio="photo"
 									radius="none"
 									fallback={fallbackFor(media, isImage)}
 								/>
 							}
 							title={media.filename}
-							detail={isImage ? undefined : fileTypeLabel(media.filename, media.mimeType)}
-							badge={<Badge variant="secondary">{usageLabel(t, media)}</Badge>}
+							detail={[isImage ? null : fileTypeLabel(media.filename, media.mimeType), usageLabel(t, media)]
+								.filter(Boolean)
+								.join(" · ")}
 							action={
 								<MoreActionsButton actions={menuFor(media)} label={t("views.itemActions", { name: media.filename })} />
 							}
@@ -169,7 +168,7 @@ export function MediaTable({
 	const t = useTranslator(mediaMessages);
 	return (
 		<Box dimmed={dimmed}>
-			<Table aria-label={t("views.table")} inset="page" layout="fixed" stickyHeader container="none">
+			<Table aria-label={t("views.table")} layout="fixed" stickyHeader container="none">
 				<TableHeader>
 					<TableRow>
 						<TableHead width="sm">

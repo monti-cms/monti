@@ -693,9 +693,8 @@ export function AiManager() {
 						) : (
 							featuresQuery.data && (
 								<EmptyState
-									icon={Sparkles}
 									title={t("empty.pick")}
-									action={{ label: t("add.feature"), onClick: () => void startNew(), icon: Plus }}
+									action={{ label: t("add.feature"), onClick: () => void startNew() }}
 								/>
 							)
 						)}
