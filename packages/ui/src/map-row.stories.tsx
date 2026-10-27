@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Stack } from "./stack";
 
 /** One line of "match the fields" in an import: the key from the file, an arrow, and what it goes into. */
-const meta = { title: "Controls/MapRow", component: MapRow, args: { name: "title", children: null } } satisfies Meta<
+const meta = { title: "Field/MapRow", component: MapRow, args: { name: "title", children: null } } satisfies Meta<
 	typeof MapRow
 >;
 export default meta;

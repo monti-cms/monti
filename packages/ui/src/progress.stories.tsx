@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Feedback/Progress",
+	title: "Status/Progress",
 	component: Progress,
 	args: { value: 40, label: "업로드 진행률" },
 	decorators: [

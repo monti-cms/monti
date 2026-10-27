@@ -4,7 +4,7 @@ import { TextButton } from "./text-button";
 
 /** The text of an action inside a section: add, edit, cancel, go to. No box; the color and a 1px rule say what it is. */
 const meta = {
-	title: "Controls/TextButton",
+	title: "Button/TextButton",
 	component: TextButton,
 	args: { children: "취소" },
 } satisfies Meta<typeof TextButton>;

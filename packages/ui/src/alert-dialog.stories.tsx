@@ -15,7 +15,7 @@ import {
 import { Button } from "./button";
 
 const meta = {
-	title: "Overlays/AlertDialog",
+	title: "Overlay/AlertDialog",
 	component: AlertDialog,
 	args: {},
 	render: (args) => (

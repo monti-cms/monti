@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/Label",
+	title: "Field/Label",
 	component: Label,
 	args: { children: "글 제목", size: "label", tone: "default", hidden: false },
 } satisfies Meta<typeof Label>;

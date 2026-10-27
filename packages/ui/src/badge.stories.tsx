@@ -4,7 +4,7 @@ import { Badge } from "./badge";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Feedback/Badge",
+	title: "Status/Badge",
 	component: Badge,
 	args: { children: "발행됨", variant: "default" },
 } satisfies Meta<typeof Badge>;

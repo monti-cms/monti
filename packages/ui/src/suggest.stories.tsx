@@ -5,7 +5,7 @@ import { Text } from "./text";
 
 /** A request to start from, in the assistant's empty panel: a saved one (spark) or one asked before (clock). */
 const meta = {
-	title: "Chat/Suggest",
+	title: "Assistant/Suggest",
 	component: Suggest,
 	args: { kind: "request", children: "요약 써 줘" },
 	decorators: [

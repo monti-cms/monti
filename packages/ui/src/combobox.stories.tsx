@@ -16,7 +16,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/Combobox",
+	title: "Field/Combobox",
 	component: Combobox,
 } satisfies Meta<typeof Combobox>;
 export default meta;

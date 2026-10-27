@@ -17,7 +17,7 @@ import { MENU_CARD, MenuShortcut } from "./menu-parts";
  * bottom. Typing filters across groups; the keyboard never leaves the line. The card is a `PopoverContent` with `padding="menu"`.
  */
 const meta = {
-	title: "Overlays/Command",
+	title: "Menu/Command",
 	component: Command,
 	decorators: [
 		(Story) => (

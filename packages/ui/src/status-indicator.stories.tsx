@@ -4,7 +4,7 @@ import { StatusIndicator, type StatusShape, type StatusTone } from "./status-ind
 import { Text } from "./text";
 
 const meta = {
-	title: "Feedback/StatusIndicator",
+	title: "Status/EntryStatus",
 	component: StatusIndicator,
 	args: { tone: "success", shape: "dot", size: "md", label: "발행됨" },
 } satisfies Meta<typeof StatusIndicator>;

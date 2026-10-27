@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Feedback/Icon",
+	title: "Layout/Icon",
 	component: Icon,
 	args: { icon: FileText, size: "md", tone: "inherit" },
 } satisfies Meta<typeof Icon>;

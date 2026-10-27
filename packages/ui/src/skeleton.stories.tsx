@@ -3,7 +3,7 @@ import { Skeleton } from "./skeleton";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Feedback/Skeleton",
+	title: "Status/Skeleton",
 	component: Skeleton,
 	args: {},
 	render: (args) => (

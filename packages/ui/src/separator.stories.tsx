@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/Separator",
+	title: "Layout/Separator",
 	component: Separator,
 } satisfies Meta<typeof Separator>;
 export default meta;

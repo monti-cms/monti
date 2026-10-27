@@ -6,7 +6,7 @@ import { Stack } from "./stack";
 
 /** Round, 32px: the header's more (⋯), properties and assistant, a panel's close. The label is the screen reader name and the tooltip. */
 const meta = {
-	title: "Controls/IconButton",
+	title: "Button/IconButton",
 	component: IconButton,
 	args: { label: "더보기", children: <MoreHorizontal aria-hidden /> },
 } satisfies Meta<typeof IconButton>;

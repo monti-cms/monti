@@ -5,7 +5,7 @@ import { Text } from "./text";
 import { TextButton } from "./text-button";
 
 const meta = {
-	title: "Chat/Input",
+	title: "Assistant/Input",
 	component: ChatInput,
 	args: {
 		value: "",

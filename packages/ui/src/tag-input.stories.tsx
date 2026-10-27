@@ -5,7 +5,7 @@ import { TagInput } from "./tag-input";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/TagInput",
+	title: "Field/TagInput",
 	component: TagInput,
 	args: {
 		items: ["여행", "일상"],

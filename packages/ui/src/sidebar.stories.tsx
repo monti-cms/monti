@@ -101,7 +101,7 @@ function AdminSidebar({
 }
 
 const meta = {
-	title: "Layout/Sidebar",
+	title: "Frame/Sidebar",
 	component: Sidebar,
 	args: {},
 	render: () => (

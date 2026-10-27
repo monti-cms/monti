@@ -35,7 +35,7 @@ function Body({ title = "글 설정" }: { title?: string }) {
 }
 
 const meta = {
-	title: "Overlays/Sheet",
+	title: "Overlay/Sheet",
 	component: Sheet,
 	args: {},
 	render: (args) => (

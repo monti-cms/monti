@@ -28,7 +28,7 @@ const ROWS = [
 ];
 
 const meta = {
-	title: "Layout/Table",
+	title: "List/Table",
 	component: Table,
 	args: {},
 	render: (args) => (

@@ -6,7 +6,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Feedback/Alert",
+	title: "Status/Alert",
 	component: Alert,
 	args: { tone: "neutral", layout: "grid" },
 	render: (args) => (

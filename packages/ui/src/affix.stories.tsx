@@ -7,7 +7,7 @@ import { Stack } from "./stack";
 
 /** Only the middle is typed: the fixed ends are faint mono text under the same single underline, so it reads as one address. */
 const meta = {
-	title: "Controls/Affix",
+	title: "Field/Affix",
 	component: Affix,
 	args: { prefix: "/", suffix: "/:slug", defaultValue: "posts" },
 	decorators: [

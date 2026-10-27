@@ -6,7 +6,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/Collapsible",
+	title: "List/Collapsible",
 	component: Collapsible,
 	decorators: [
 		(Story) => (

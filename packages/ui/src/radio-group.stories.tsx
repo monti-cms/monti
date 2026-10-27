@@ -3,7 +3,7 @@ import { RadioGroup, RadioItem } from "./radio-group";
 
 /** One choice out of a few: a ring that fills when picked, the label, and an optional note in mono. */
 const meta = {
-	title: "Controls/RadioGroup",
+	title: "Choice/Radio",
 	component: RadioGroup,
 	args: { defaultValue: "move" },
 	render: (args) => (

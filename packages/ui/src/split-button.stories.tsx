@@ -5,7 +5,7 @@ import { DropdownMenuItem } from "./dropdown-menu";
 import { SplitButton } from "./split-button";
 
 const meta = {
-	title: "Controls/SplitButton",
+	title: "Button/SplitButton",
 	component: SplitButton,
 	args: {
 		children: "발행",

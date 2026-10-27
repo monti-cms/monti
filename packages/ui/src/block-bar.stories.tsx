@@ -12,7 +12,7 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
  * The tools of a block that has settings, in a small floating row: align, then settings and crop after a rule. A tool that is on keeps its
  * background. Delete is not here; it is in the block menu.
  */
-const meta = { title: "Editor/BlockBar", component: BlockBar } satisfies Meta<typeof BlockBar>;
+const meta = { title: "EditorTools/BlockBar", component: BlockBar } satisfies Meta<typeof BlockBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

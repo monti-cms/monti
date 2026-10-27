@@ -11,7 +11,7 @@ import {
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Controls/Pagination",
+	title: "List/Pagination",
 	component: Pagination,
 } satisfies Meta<typeof Pagination>;
 export default meta;

@@ -7,7 +7,7 @@ import { Ins } from "./proposal-marks";
  * Once applied the line says so, with the time and a way back.
  */
 const meta = {
-	title: "Chat/Proposal card",
+	title: "Assistant/ProposalCard",
 	component: ProposalCard,
 	args: {
 		title: "제안",

@@ -9,7 +9,7 @@ import { Text } from "./text";
  * rule) and `toolbar` (the filter row under a page title: bold, no underline). A tab can carry a mono count and a dot for something to handle.
  */
 const meta = {
-	title: "Controls/Tabs",
+	title: "Tabs/Tabs",
 	component: Tabs,
 } satisfies Meta<typeof Tabs>;
 export default meta;

@@ -7,7 +7,7 @@ import { SheetList, TodoDone, TodoItem } from "./sheet-list";
  * is already right. A red ring blocks publishing; a spark before the action means the assistant does it.
  */
 const meta = {
-	title: "Overlays/SheetList",
+	title: "Overlay/SheetList",
 	component: SheetList,
 	args: {
 		label: "고칠 것",

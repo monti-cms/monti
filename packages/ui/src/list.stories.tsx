@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/List",
+	title: "List/List",
 	component: List,
 	args: { marker: "bullet", ordered: false },
 	render: (args) => (

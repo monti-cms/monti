@@ -18,7 +18,7 @@ const ROWS = [
  * left margin: hidden while nothing is picked (point at the bar), a bar while only some rows of the page are picked, a ✓ for all of them. Once rows
  * are picked it becomes the bulk bar.
  */
-const meta = { title: "Layout/TableBar", component: TableBar } satisfies Meta<typeof TableBar>;
+const meta = { title: "List/Bulk bar", component: TableBar } satisfies Meta<typeof TableBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

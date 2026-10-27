@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Controls/Input",
+	title: "Field/Input",
 	component: Input,
 	args: { placeholder: "글 제목" },
 	decorators: [

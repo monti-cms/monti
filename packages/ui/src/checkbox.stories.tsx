@@ -4,7 +4,7 @@ import { Label } from "./label";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Controls/Checkbox",
+	title: "Choice/Checkbox",
 	component: Checkbox,
 } satisfies Meta<typeof Checkbox>;
 export default meta;

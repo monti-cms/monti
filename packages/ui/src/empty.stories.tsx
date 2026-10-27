@@ -6,7 +6,7 @@ import { Empty, EmptyStep } from "./empty";
  * steps whose order really matters.
  */
 const meta = {
-	title: "Feedback/Empty",
+	title: "List/Empty",
 	component: Empty,
 	args: { title: "아직 글이 없어요.", description: "어디서부터 시작할까요?" },
 	decorators: [

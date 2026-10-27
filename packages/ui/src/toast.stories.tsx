@@ -8,7 +8,7 @@ import { Toaster, toast } from "./toast";
  * can be looked at; in the admin they close after four seconds. Switch light and dark with the toolbar.
  */
 const meta = {
-	title: "Overlays/Toast",
+	title: "Overlay/Toast",
 	component: Toaster,
 	parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof Toaster>;

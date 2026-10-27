@@ -3,7 +3,7 @@ import { Count } from "./count";
 import { Stack } from "./stack";
 
 /** A number in mono next to a name. No pill; warning for something to look at, danger for something that failed. */
-const meta = { title: "Controls/Count", component: Count, args: { children: "148" } } satisfies Meta<typeof Count>;
+const meta = { title: "Status/Count", component: Count, args: { children: "148" } } satisfies Meta<typeof Count>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 /** Tabs that sit on a box like folder tabs, for a list of fields split into pages. The picked tab joins the box. */
-const meta = { title: "Controls/FolderTabs", component: FolderTabs } satisfies Meta<typeof FolderTabs>;
+const meta = { title: "Tabs/FolderTabs", component: FolderTabs } satisfies Meta<typeof FolderTabs>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

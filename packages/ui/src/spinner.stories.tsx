@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Feedback/Spinner",
+	title: "Status/Spinner",
 	component: Spinner,
 	args: {},
 } satisfies Meta<typeof Spinner>;

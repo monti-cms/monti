@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -34,5 +34,54 @@ describe("storybook styles", () => {
 		expect(preview).toContain("bg-monti-page");
 		for (const [name, source] of Object.entries({ storybook, main, preview }))
 			expect(source, `${name} has a literal color`).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|hsl|oklch)a?\(/);
+	});
+});
+
+/**
+ * The catalog follows the design system's component groups (`Foundations`, `Button`, `Field` ...). A part without a story would be a part nobody
+ * looks at in light and dark, and a story outside the groups would not be found.
+ */
+describe("storybook catalog", () => {
+	const src = path.resolve(__dirname, "..");
+	const stories = (dir: string): string[] =>
+		readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+			entry.isDirectory() && entry.name !== "__test__"
+				? stories(path.join(dir, entry.name))
+				: entry.name.endsWith(".stories.tsx")
+					? [path.join(dir, entry.name)]
+					: [],
+		);
+	const titles = stories(src).map((file) => ({
+		file,
+		title: /^\s*(?:const meta = \{ )?title: "([A-Za-z]+\/[A-Za-z ]+)"/m.exec(readFileSync(file, "utf8"))?.[1],
+	}));
+	const groups = [...read("../../.storybook/preview.tsx").matchAll(/^\t+"([A-Za-z]+)",$/gm)].map((match) => match[1]);
+
+	/** Modules the package exports that draw nothing of their own: helpers, labels, the menu pieces the menu stories show. */
+	const NOT_PARTS = ["cn", "closed", "labels", "layout", "menu-parts", "use-mobile"];
+
+	it("has a story file for every part the package exports", () => {
+		const modules = [...read("../internal.ts").matchAll(/from "\.\/([\w-]+)"/g)].map((match) => match[1]);
+		const missing = modules.filter(
+			(name) => !NOT_PARTS.includes(name) && !existsSync(path.join(src, `${name}.stories.tsx`)),
+		);
+		expect(missing).toEqual([]);
+	});
+
+	it("puts every story under one of the design system's groups, in the sidebar's order", () => {
+		for (const { file, title } of titles) {
+			expect(title, file).toBeDefined();
+			expect(groups, `${title} (${path.basename(file)})`).toContain(title?.split("/")[0]);
+			expect(title?.split("/").length, file).toBe(2);
+		}
+	});
+
+	it("draws the tokens on the Foundations pages", () => {
+		const foundations = titles.filter(({ title }) => title?.startsWith("Foundations/")).map(({ title }) => title);
+		expect(foundations).toEqual(
+			expect.arrayContaining(
+				["Colors", "Type", "Spacing", "Radius", "Sizes", "Shadows"].map((page) => `Foundations/${page}`),
+			),
+		);
 	});
 });

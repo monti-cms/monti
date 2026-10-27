@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 
 /** The pill that opens in place of the page's search button. An optional picker in front chooses where to look; × clears the words. */
 const meta = {
-	title: "Controls/SearchBox",
+	title: "Field/SearchBox",
 	component: SearchBox,
 	args: { "aria-label": "검색", value: "", onValueChange: () => {} },
 } satisfies Meta<typeof SearchBox>;

@@ -9,7 +9,7 @@ import { Text } from "./text";
 import { ToolCallLine } from "./tool-call-line";
 
 const meta = {
-	title: "Layout/Side panel frame",
+	title: "Overlay/SidePanel",
 	component: SidePanelFrame,
 	args: { title: "Assistant", children: null },
 	parameters: { layout: "fullscreen" },

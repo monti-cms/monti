@@ -4,9 +4,7 @@ import { Chip } from "./chip";
 import { Stack } from "./stack";
 
 /** A condition that is on or a value that was picked, with a × to take it off. `proposal` marks one the assistant set and nobody has touched. */
-const meta = { title: "Controls/Chip", component: Chip, args: { children: "태그: 리액트" } } satisfies Meta<
-	typeof Chip
->;
+const meta = { title: "Tabs/Chip", component: Chip, args: { children: "태그: 리액트" } } satisfies Meta<typeof Chip>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

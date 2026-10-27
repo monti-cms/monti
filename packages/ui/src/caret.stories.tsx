@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { TextButton } from "./text-button";
 
 /** The fold-out mark after a text button that opens a list. 12px, 6px from the text, centered on it. */
-const meta = { title: "Controls/Caret", component: Caret } satisfies Meta<typeof Caret>;
+const meta = { title: "Field/Caret", component: Caret } satisfies Meta<typeof Caret>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

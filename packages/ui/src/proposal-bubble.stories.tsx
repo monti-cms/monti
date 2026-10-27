@@ -8,7 +8,7 @@ import { Stack } from "./stack";
  * discard all and accept all. 44px tall. Accepting, discarding or asking again about one proposal is in the card that opens from its mark, not here.
  */
 const meta = {
-	title: "AI/Proposal bubble",
+	title: "Proposal/Bubble",
 	component: ProposalBubble,
 	args: {
 		name: "더 짧게 다듬기",
