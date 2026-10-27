@@ -36,10 +36,10 @@ function SelectTrigger({
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-monti-surface py-1.5 pr-2 pl-2.5 text-monti-label shadow-monti-control outline-none transition-[color,border-color,box-shadow] hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-control data-[size=sm]:h-control-sm data-[size=sm]:text-monti-label data-placeholder:text-monti-subtle *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-monti-md border border-monti-default bg-monti-page py-1.5 pr-2 pl-2.5 text-monti-label outline-none transition-[color,border-color,box-shadow] hover:border-monti-emphasis focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger/20 data-[size=default]:h-monti-icon data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-label data-placeholder:text-monti-subtle *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				width === "full" ? "w-full" : "w-fit",
 				variant === "ghost" &&
-					"border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-monti-hover",
+					"border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-monti-selected",
 				className,
 			)}
 			{...props}
@@ -75,7 +75,7 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay text-monti-default shadow-monti-floating duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-monti-lg border border-monti-muted bg-monti-page text-monti-default shadow-monti-floating duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
 						className,
 					)}
 					{...props}
@@ -104,7 +104,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"relative flex w-full cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				"relative flex w-full cursor-default select-none items-center gap-2 rounded-monti-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
 				className,
 			)}
 			{...props}
@@ -136,7 +136,7 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
 		<SelectPrimitive.ScrollUpArrow
 			data-slot="select-scroll-up-button"
 			className={cn(
-				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
+				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-1 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
@@ -151,7 +151,7 @@ function SelectScrollDownButton({ className, ...props }: React.ComponentProps<ty
 		<SelectPrimitive.ScrollDownArrow
 			data-slot="select-scroll-down-button"
 			className={cn(
-				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
+				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-1 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}

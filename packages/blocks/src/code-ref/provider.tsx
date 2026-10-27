@@ -80,7 +80,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 
 /** Editor registration of the code-ref mark. Shown with an underline in the theme accent color. */
 export const codeRefMarkExtension: EditorMarkExtension = {
-	render: () => ({ class: "underline decoration-monti-accent decoration-solid underline-offset-4" }),
+	render: () => ({ class: "underline decoration-monti-strong decoration-solid underline-offset-4" }),
 	bubble: { group: "link", order: 1, Button: CodeRefBubbleButton },
 	detail: CodeRefDetail,
 };

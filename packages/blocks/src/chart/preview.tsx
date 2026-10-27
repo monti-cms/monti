@@ -42,12 +42,12 @@ import {
 function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
-		<div className="not-prose my-spacious">
+		<div className="not-prose my-monti-24">
 			<Alert tone="danger">
 				<AlertOctagon />
 				<AlertTitle>{t("error.title")}</AlertTitle>
 				<AlertDescription>
-					<ul className="ml-comfortable list-disc space-y-tight">
+					<ul className="ml-monti-16 list-disc space-y-monti-4">
 						{errors.map((error) => (
 							<li key={`${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`}>
 								{chartErrorLine(error, t)}
@@ -126,7 +126,7 @@ function CartesianPreview({ spec, className }: { spec: CartesianChartSpec; class
 	const Chart = CARTESIAN[spec.type];
 	const [legendHeight, setLegendHeight] = useState(CHART_LEGEND_HEIGHT);
 	return (
-		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-spacious w-full min-w-0", className)}>
+		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-monti-24 w-full min-w-0", className)}>
 			<Chart
 				accessibilityLayer
 				data={spec.data}
@@ -160,7 +160,7 @@ function CartesianPreview({ spec, className }: { spec: CartesianChartSpec; class
 function PiePreview({ spec, className }: { spec: PieChartSpec; className?: string }) {
 	const [legendHeight, setLegendHeight] = useState(CHART_LEGEND_HEIGHT);
 	return (
-		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-spacious w-full min-w-0", className)}>
+		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-monti-24 w-full min-w-0", className)}>
 			<PieChart>
 				<ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey={spec.labelKey} />} />
 				{spec.options.showLegend ? (

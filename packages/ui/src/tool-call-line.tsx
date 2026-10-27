@@ -62,9 +62,9 @@ export function ToolCallLine({
 				<Collapsible open={open} onOpenChange={setOpen}>
 					<CollapsibleTrigger render={<Button type="button" variant="quiet" size="sm" />}>{summary}</CollapsibleTrigger>
 					<CollapsibleContent>
-						<div className="flex flex-col gap-tight py-tight">
+						<div className="flex flex-col gap-monti-4 py-monti-4">
 							{details.map((detail) => (
-								<div key={String(detail.label)} className="flex flex-col gap-tight">
+								<div key={String(detail.label)} className="flex flex-col gap-monti-4">
 									<Text variant="caption" tone="muted">
 										{detail.label}
 									</Text>
@@ -75,7 +75,9 @@ export function ToolCallLine({
 					</CollapsibleContent>
 				</Collapsible>
 			) : (
-				<div className="inline-flex h-control-sm items-center gap-condensed px-condensed [&_svg]:size-4">{summary}</div>
+				<div className="inline-flex h-monti-control-sm items-center gap-monti-8 px-monti-8 [&_svg]:size-4">
+					{summary}
+				</div>
 			)}
 		</div>
 	);

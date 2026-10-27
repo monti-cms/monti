@@ -21,7 +21,7 @@ import { Text } from "./text";
 
 function Target({ children = "여기를 오른쪽 클릭하세요" }: { children?: string }) {
 	return (
-		<ContextMenuTrigger className="flex h-32 w-72 items-center justify-center rounded-lg border border-monti-muted border-dashed">
+		<ContextMenuTrigger className="flex h-32 w-72 items-center justify-center rounded-monti-lg border border-monti-muted border-dashed">
 			<Text tone="muted">{children}</Text>
 		</ContextMenuTrigger>
 	);

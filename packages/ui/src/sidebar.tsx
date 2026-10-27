@@ -16,8 +16,8 @@ import { useIsMobile } from "./use-mobile";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-/** Where the width starts (15rem, also the `--container-sidebar` token for a loading placeholder), and the limits the person can drag it between. */
-const SIDEBAR_WIDTH_DEFAULT = 240;
+/** Where the width starts (232px, the same as the `w-monti-sidebar` token, which a loading placeholder uses), and the limits the person can drag it between. */
+const SIDEBAR_WIDTH_DEFAULT = 232;
 const SIDEBAR_WIDTH_MIN = 200;
 const SIDEBAR_WIDTH_MAX = 400;
 const SIDEBAR_WIDTH_MOBILE = "18rem";
@@ -152,7 +152,7 @@ function SidebarProvider({
 					} as React.CSSProperties
 				}
 				className={cn(
-					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-inset",
+					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-tool",
 					fixed && "h-svh overflow-clip",
 					className,
 				)}
@@ -197,7 +197,7 @@ function Sidebar({
 		return (
 			<div
 				data-slot="sidebar"
-				className={cn("relative flex h-full w-(--sidebar-width) flex-col bg-monti-inset text-monti-default", className)}
+				className={cn("relative flex h-full w-(--sidebar-width) flex-col bg-monti-tool text-monti-default", className)}
 				{...props}
 			>
 				{children}
@@ -214,7 +214,7 @@ function Sidebar({
 					data-sidebar="sidebar"
 					data-slot="sidebar"
 					data-mobile="true"
-					className="w-(--sidebar-width) bg-monti-inset p-0 text-monti-default [&>button]:hidden"
+					className="w-(--sidebar-width) bg-monti-tool p-0 text-monti-default [&>button]:hidden"
 					style={
 						{
 							"--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -269,7 +269,7 @@ function Sidebar({
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="group-data-[ flex size-full flex-col bg-monti-inset group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-monti-muted"
+					className="group-data-[ flex size-full flex-col bg-monti-tool group-data-[variant=floating]:rounded-monti-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-monti-muted"
 				>
 					{children}
 				</div>
@@ -314,7 +314,7 @@ function SidebarInset({
 		<main
 			data-slot="sidebar-inset"
 			className={cn(
-				"relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl",
+				"relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-monti-xl",
 				fixed && "min-w-0 overflow-clip",
 				className,
 			)}
@@ -391,7 +391,7 @@ function SidebarGroupLabel({
 		props: mergeProps<"div">(
 			{
 				className: cn(
-					"flex h-8 shrink-0 items-center rounded-md px-2 font-mono text-monti-micro uppercase tracking-caps text-monti-muted ring-monti-focus outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+					"flex h-8 shrink-0 items-center rounded-monti-md px-2 font-mono text-monti-micro uppercase tracking-caps text-monti-muted ring-monti-contrast outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
 					className,
 				),
 			},
@@ -439,13 +439,13 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-	"peer/menu-button group/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left text-monti-label text-monti-default ring-monti-focus outline-hidden transition-[width,height,padding,background-color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 active:bg-monti-hover active:text-monti-default disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-hover data-open:hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1.5 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-monti-accent-emphasis [&_svg]:size-3.5 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+	"peer/menu-button group/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-monti-md px-2 py-1.5 text-left text-monti-label text-monti-default ring-monti-contrast outline-hidden transition-[width,height,padding,background-color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 active:bg-monti-selected active:text-monti-default disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-selected data-open:hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1.5 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-monti-full data-active:before:bg-monti-emphasis [&_svg]:size-3.5 [&_svg]:shrink-0 [&>span:last-child]:truncate",
 	{
 		variants: {
 			variant: {
-				default: "hover:bg-monti-hover hover:text-monti-default",
+				default: "hover:bg-monti-selected hover:text-monti-default",
 				outline:
-					"bg-monti-page shadow-[0_0_0_1px_var(--monti-border-muted)] hover:bg-monti-hover hover:text-monti-default hover:shadow-[0_0_0_1px_var(--monti-border-default)]",
+					"bg-monti-page shadow-[0_0_0_1px_var(--monti-border-muted)] hover:bg-monti-selected hover:text-monti-default hover:shadow-[0_0_0_1px_var(--monti-border-default)]",
 			},
 			size: {
 				default: "h-7 text-monti-label",
@@ -515,7 +515,7 @@ function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">) 
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
 			className={cn(
-				"pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-sm px-1 font-medium text-monti-caption text-monti-default tabular-nums peer-hover/menu-button:text-monti-default group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-monti-default",
+				"pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-monti-sm px-1 font-medium text-monti-caption text-monti-default tabular-nums peer-hover/menu-button:text-monti-default group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-monti-default",
 				className,
 			)}
 			{...props}

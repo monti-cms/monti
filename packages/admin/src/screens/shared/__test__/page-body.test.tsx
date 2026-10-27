@@ -10,7 +10,7 @@ describe("page body", () => {
 		const body = screen.getByTestId("body");
 		// Not centered: no auto margins.
 		expect(body.className).not.toMatch(/\bmx-auto\b/);
-		expect(body.className).toContain("max-w-page");
+		expect(body.className).toContain("max-w-monti-content");
 	});
 
 	it("uses all the width for a workspace page, with the same padding", () => {
@@ -20,7 +20,7 @@ describe("page body", () => {
 			</PageBody>,
 		);
 		const body = screen.getByTestId("body");
-		expect(body.className).not.toContain("max-w-page");
-		expect(body.className).toContain("px-wide");
+		expect(body.className).not.toContain("max-w-monti-content");
+		expect(body.className).toContain("px-monti-32");
 	});
 });

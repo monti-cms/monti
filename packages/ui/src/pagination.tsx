@@ -96,7 +96,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span"
 		<span
 			aria-hidden
 			data-slot="pagination-ellipsis"
-			className={cn("flex size-control items-center justify-center [&_svg:not([class*='size-'])]:size-4", className)}
+			className={cn("flex size-monti-icon items-center justify-center [&_svg:not([class*='size-'])]:size-4", className)}
 			{...props}
 		>
 			<MoreHorizontalIcon />

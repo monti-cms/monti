@@ -44,7 +44,7 @@ export function FileBlockView() {
 		<BlockFrame
 			framed={false}
 			data-file-block
-			className="not-prose my-spacious flex items-center gap-normal rounded-lg border bg-monti-surface px-comfortable py-normal"
+			className="not-prose my-monti-24 flex items-center gap-monti-12 rounded-monti-lg border bg-monti-page px-monti-16 py-monti-12"
 		>
 			<Icon aria-hidden className="size-8 shrink-0 text-monti-muted" strokeWidth={1.5} />
 			<div className="min-w-0 flex-1">

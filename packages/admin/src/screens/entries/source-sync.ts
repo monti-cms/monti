@@ -44,7 +44,7 @@ export const ACTIVE_BLOCK_CLASS = "monti-source-active";
  * also wraps list bullets).
  */
 export const ACTIVE_BLOCK_STYLE =
-	"[&_.monti-source-active]:rounded-sm [&_.monti-source-active]:bg-monti-accent-muted [&_.monti-source-active]:shadow-[0_0_0_12px_var(--monti-bg-accent-muted)] [&_.monti-source-active]:transition-[background-color,box-shadow]";
+	"[&_.monti-source-active]:rounded-monti-sm [&_.monti-source-active]:bg-monti-selected [&_.monti-source-active]:shadow-[0_0_0_12px_var(--monti-bg-selected)] [&_.monti-source-active]:transition-[background-color,box-shadow]";
 
 /** Attribute the sync puts on the body of a source box whose paired translation box is collapsed. */
 export const SOURCE_COLLAPSED_ATTRIBUTE = "data-source-collapsed";

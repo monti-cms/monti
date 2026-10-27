@@ -223,7 +223,7 @@ const RULE_CLASS: Record<string, string> = {
 	del: "line-through",
 	u: "underline underline-offset-4",
 	Tooltip: "underline decoration-dotted underline-offset-4",
-	fold: "rounded-sm outline-1 outline-monti-focus outline-dashed -outline-offset-1",
+	fold: "rounded-monti-sm outline-1 outline-monti-contrast outline-dashed -outline-offset-1",
 };
 
 function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegion) {
@@ -235,7 +235,7 @@ function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegi
 			button.contentEditable = "false";
 			button.dataset.codeFoldToggle = region.kind;
 			button.className =
-				"mx-hair inline-flex h-5 items-center rounded-sm bg-monti-neutral px-tight align-middle font-sans text-monti-muted text-monti-caption leading-none hover:bg-monti-hover hover:text-monti-default";
+				"mx-monti-2 inline-flex h-5 items-center rounded-monti-sm bg-monti-muted px-monti-4 align-middle font-sans text-monti-muted text-monti-caption leading-none hover:bg-monti-selected hover:text-monti-default";
 			button.textContent = region.kind === "collapse" ? `⋯ ${t("fold.lines", { count: region.hiddenLines })}` : "…";
 			button.title =
 				region.kind === "collapse" ? t("fold.expandLines", { count: region.hiddenLines }) : t("fold.expandText");
@@ -274,7 +274,7 @@ function blockDecorations(
 		for (const match of ruleMatches(rule, text, starts))
 			decorations.push(
 				Decoration.inline(base + match.from, base + match.to, {
-					class: `${style} bg-monti-accent-muted`,
+					class: `${style} bg-monti-selected`,
 					title,
 					"data-code-rule": rule.id,
 				}),
@@ -456,7 +456,7 @@ export function createCodeEffectsPlugin(site: Site): Plugin<CodeEffectsState> {
 				// While linking (body text picked first), paint the picked text.
 				if (plugin?.linking?.kind === "text")
 					decorations.push(
-						Decoration.inline(plugin.linking.from, plugin.linking.to, { class: "rounded-sm bg-monti-accent-muted" }),
+						Decoration.inline(plugin.linking.from, plugin.linking.to, { class: "rounded-monti-sm bg-monti-selected" }),
 					);
 				return decorations.length ? DecorationSet.create(state.doc, decorations) : DecorationSet.empty;
 			},

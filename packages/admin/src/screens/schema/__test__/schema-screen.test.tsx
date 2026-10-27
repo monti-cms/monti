@@ -735,7 +735,7 @@ describe("SchemaScreen", () => {
 		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
 		const button = screen.getByRole("button", { name: t("collection.remove") });
-		expect(button.closest("section")?.querySelector(".bg-monti-card")).toBeNull();
+		expect(button.closest("section")?.querySelector("[data-slot='card']")).toBeNull();
 	});
 
 	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {
@@ -974,10 +974,10 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		// The page body is the full-width column around the screen's content.
 		const bodyOf = (id: string) => screen.getByTestId(id).closest("[class*='w-full']") as HTMLElement;
-		expect(bodyOf("collection-post").className).not.toContain("max-w-page");
+		expect(bodyOf("collection-post").className).not.toContain("max-w-monti-content");
 		fireEvent.click(screen.getByRole("tab", { name: "site" }));
 		await screen.findByTestId("site-settings");
-		expect(bodyOf("site-settings").className).toContain("max-w-page");
+		expect(bodyOf("site-settings").className).toContain("max-w-monti-content");
 	});
 
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
@@ -1343,7 +1343,7 @@ describe("SchemaScreen", () => {
 			const row = side.parentElement as HTMLElement;
 			// The first column stops growing at the cap; the preview follows it, not the page edge.
 			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
-			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-content");
+			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-monti-content");
 			vi.unstubAllGlobals();
 		});
 

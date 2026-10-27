@@ -51,7 +51,7 @@ export function ChatInput({
 	return (
 		<form
 			data-slot="chat-input"
-			className={cn("flex flex-col gap-condensed", className)}
+			className={cn("flex flex-col gap-monti-8", className)}
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
@@ -67,7 +67,7 @@ export function ChatInput({
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={onKeyDown}
 			/>
-			<div className="flex items-center justify-between gap-condensed">
+			<div className="flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
 				{busy ? (
 					<Button type="button" variant="outline" size="sm" onClick={onStop}>

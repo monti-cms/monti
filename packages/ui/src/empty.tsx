@@ -7,7 +7,7 @@ function Empty({ className, size = "fill", ...props }: React.ComponentProps<"div
 			data-slot="empty"
 			className={cn(
 				"flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance text-center",
-				size === "fill" ? "min-h-64 p-12" : "p-condensed",
+				size === "fill" ? "min-h-64 p-12" : "p-monti-8",
 				className,
 			)}
 			{...props}
@@ -27,7 +27,7 @@ const emptyMediaVariants = cva(
 		variants: {
 			variant: {
 				default: "bg-transparent",
-				icon: "flex size-10 shrink-0 items-center justify-center rounded-lg bg-monti-neutral text-monti-default [&_svg:not([class*='size-'])]:size-6",
+				icon: "flex size-10 shrink-0 items-center justify-center rounded-monti-lg bg-monti-muted text-monti-default [&_svg:not([class*='size-'])]:size-6",
 			},
 		},
 		defaultVariants: {
@@ -60,7 +60,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
 		<div
 			data-slot="empty-description"
 			className={cn(
-				"text-monti-body text-monti-muted [&>a]:text-monti-accent [&>a]:underline [&>a]:underline-offset-4",
+				"text-monti-body text-monti-muted [&>a]:text-monti-default [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
 			{...props}

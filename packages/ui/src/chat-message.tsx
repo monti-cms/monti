@@ -6,12 +6,12 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 	variants: {
 		/** The admin's own message is a quiet bubble; the assistant's answer is plain text on the panel. */
 		author: {
-			user: "rounded-lg bg-monti-neutral p-condensed text-monti-default",
+			user: "rounded-monti-lg bg-monti-muted p-monti-8 text-monti-default",
 			assistant: "text-monti-default",
 		},
 		/** The answer is still arriving: a small blinking mark after the last word. */
 		streaming: {
-			true: "after:ml-1 after:inline-block after:h-3.5 after:w-1.5 after:translate-y-0.5 after:animate-pulse after:rounded-sm after:bg-monti-emphasis after:content-[''] motion-reduce:after:animate-none",
+			true: "after:ml-1 after:inline-block after:h-3.5 after:w-1.5 after:translate-y-0.5 after:animate-pulse after:rounded-monti-sm after:bg-monti-emphasis after:content-[''] motion-reduce:after:animate-none",
 		},
 	},
 	defaultVariants: { author: "assistant" },

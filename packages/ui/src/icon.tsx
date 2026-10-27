@@ -5,12 +5,11 @@ import { cn } from "./cn";
 /** An icon outside a button (a severity mark, a file type, a hint), sized and colored by name. Decorative unless it has a `label`. */
 const iconVariants = cva("shrink-0", {
 	variants: {
-		size: { xs: "size-icon-xs", sm: "size-icon-sm", md: "size-icon", lg: "size-icon-lg" },
+		size: { xs: "size-monti-icon-xs", sm: "size-monti-icon-sm", md: "size-monti-icon-md", lg: "size-monti-icon-lg" },
 		tone: {
 			inherit: "",
 			muted: "text-monti-muted",
 			subtle: "text-monti-subtle",
-			accent: "text-monti-accent",
 			danger: "text-monti-danger",
 			warning: "text-monti-warning",
 			success: "text-monti-success",

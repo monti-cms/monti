@@ -397,7 +397,7 @@ function LocaleRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative flex min-h-14 items-center gap-normal bg-monti-surface py-condensed pr-comfortable pl-wide",
+				"group/row relative flex min-h-14 items-center gap-monti-12 bg-monti-page py-monti-8 pr-monti-16 pl-monti-32",
 				divided && "border-t",
 				isDragging && "z-10 opacity-80 shadow-monti-floating",
 			)}
@@ -410,7 +410,7 @@ function LocaleRow({
 				{...listeners}
 				aria-label={t("locales.drag", { name: displayName })}
 				disabled={dragDisabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>

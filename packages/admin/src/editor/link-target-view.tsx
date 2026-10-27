@@ -60,7 +60,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 				onMouseDown={(event) => event.preventDefault()}
 			>
 				<Stack as="span" gap="none">
-					<Text variant="caption" tone="accent" truncate>
+					<Text variant="caption" tone="default" truncate>
 						{nameOf(tc, target)}
 					</Text>
 					<Text variant="caption" tone="muted" truncate>

@@ -13,19 +13,19 @@ export const alertVariants = cva(
 	{
 		variants: {
 			layout: {
-				grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] items-start gap-x-3 gap-y-1 rounded-lg px-4 py-3",
-				stack: "block rounded-lg px-4 py-3",
+				grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] items-start gap-x-3 gap-y-1 rounded-monti-lg px-4 py-3",
+				stack: "block rounded-monti-lg px-4 py-3",
 				/** A one-line notice with its action on the right (a load failure with "Retry"). */
-				inline: "flex items-center justify-between gap-3 rounded-lg px-4 py-3",
+				inline: "flex items-center justify-between gap-3 rounded-monti-lg px-4 py-3",
 				/** Across the top of a pane, under its tabs: no radius, a line below only, the page's side padding. */
 				strip: "flex items-center justify-between gap-3 border-x-0 border-t-0 px-8 py-2 text-monti-label",
 			},
 			tone: {
-				neutral: "border-monti-muted bg-monti-surface text-monti-default shadow-monti-card",
-				accent: "border-monti-accent-muted bg-monti-accent-muted text-monti-accent",
-				danger: "border-monti-danger-muted bg-monti-danger-muted text-monti-danger",
-				warning: "border-monti-warning-muted bg-monti-warning-muted text-monti-warning",
-				success: "border-monti-success-muted bg-monti-success-muted text-monti-success",
+				neutral: "border-monti-muted bg-monti-page text-monti-default",
+				accent: "border-monti-emphasis bg-monti-selected text-monti-default",
+				danger: "border-monti-danger/40 bg-monti-danger-muted text-monti-danger",
+				warning: "border-monti-warning/40 bg-monti-warning-muted text-monti-warning",
+				success: "border-monti-success/40 bg-monti-success-muted text-monti-success",
 			},
 		},
 		defaultVariants: {

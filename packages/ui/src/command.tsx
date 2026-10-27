@@ -12,7 +12,7 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
 		<CommandPrimitive
 			data-slot="command"
 			className={cn(
-				"flex size-full flex-col overflow-hidden rounded-dialog! bg-monti-overlay p-1 text-monti-default",
+				"flex size-full flex-col overflow-hidden rounded-dialog! bg-monti-page p-1 text-monti-default",
 				className,
 			)}
 			{...props}
@@ -54,7 +54,7 @@ function CommandDialog({
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
 		<div data-slot="command-input-wrapper" className="p-1 pb-0">
-			<InputGroup className="h-8! rounded-md! border-monti-default shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+			<InputGroup className="!rounded-monti-md h-8! border-monti-default shadow-none! *:data-[slot=input-group-addon]:pl-2!">
 				<CommandPrimitive.Input
 					data-slot="command-input"
 					className={cn(
@@ -128,7 +128,7 @@ function CommandItem({
 			data-slot="command-item"
 			data-checked={checked ? "true" : undefined}
 			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-hover data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
+				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-monti-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
 				className,
 			)}
 			{...props}

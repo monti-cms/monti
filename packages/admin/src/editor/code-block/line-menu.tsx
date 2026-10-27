@@ -28,7 +28,7 @@ interface LineMenuProps {
 }
 
 const ITEM_CLASS =
-	"flex w-full items-center gap-condensed rounded-md px-condensed py-tight text-left text-monti-caption hover:bg-monti-hover disabled:pointer-events-none disabled:opacity-50";
+	"flex w-full items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-4 text-left text-monti-caption hover:bg-monti-selected disabled:pointer-events-none disabled:opacity-50";
 
 interface ItemProps {
 	disabled?: boolean;
@@ -147,7 +147,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 			data-code-ui=""
 			contentEditable={false}
 			style={style}
-			className="absolute z-20 flex w-44 flex-col gap-hair rounded-md border bg-monti-overlay p-tight font-sans text-monti-default shadow-monti-floating"
+			className="absolute z-20 flex w-44 flex-col gap-monti-2 rounded-monti-md border bg-monti-page p-monti-4 font-sans text-monti-default shadow-monti-floating"
 		>
 			{listed.map((effect) => {
 				const active = hasLineEffect(lineEffects, effect.name, start, end);
@@ -163,7 +163,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 					</CheckItem>
 				);
 			})}
-			{listed.length > 0 && showFold && <div aria-hidden className="my-hair h-px bg-monti-divider" />}
+			{listed.length > 0 && showFold && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
 			{collapse ? (
 				<>
 					<MenuItem onSelect={() => onChange(lineEffects.filter((effect) => effect !== collapse))}>
@@ -199,7 +199,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 			) : null}
 			{onLinkText && (
 				<>
-					{(listed.length > 0 || showFold) && <div aria-hidden className="my-hair h-px bg-monti-divider" />}
+					{(listed.length > 0 || showFold) && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
 					<MenuItem onSelect={onLinkText}>
 						<Code2 aria-hidden className="size-3.5" />
 						{t("lineMenu.linkText")}

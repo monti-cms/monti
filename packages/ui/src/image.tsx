@@ -10,7 +10,7 @@ import { cn } from "./cn";
  * the frame shows `fallback` (a file-type icon) on the neutral fill instead of a broken image.
  */
 const frameVariants = cva(
-	"relative flex shrink-0 items-center justify-center overflow-hidden bg-monti-neutral text-monti-muted",
+	"relative flex shrink-0 items-center justify-center overflow-hidden bg-monti-muted text-monti-muted",
 	{
 		variants: {
 			ratio: {
@@ -22,12 +22,12 @@ const frameVariants = cva(
 			},
 			size: {
 				fill: "w-full",
-				thumb: "size-control-sm",
-				"thumb-lg": "size-control-lg",
+				thumb: "size-monti-control-sm",
+				"thumb-lg": "size-monti-control",
 				/** As big as an icon, no fill: a logo inside a button. */
-				icon: "size-icon bg-transparent",
+				icon: "size-monti-icon-md bg-transparent",
 			},
-			radius: { none: "", sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg" },
+			radius: { none: "", sm: "rounded-monti-sm", md: "rounded-monti-md", lg: "rounded-monti-lg" },
 			border: { true: "border border-monti-muted" },
 		},
 		defaultVariants: { ratio: "square", size: "fill", radius: "md" },
@@ -70,7 +70,7 @@ function Image({
 					className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain")}
 				/>
 			) : (
-				Fallback && <Fallback aria-hidden className={thumb ? "size-icon" : "size-icon-lg"} />
+				Fallback && <Fallback aria-hidden className={thumb ? "size-monti-icon-md" : "size-monti-icon-lg"} />
 			)}
 		</span>
 	);

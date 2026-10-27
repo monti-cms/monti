@@ -25,7 +25,7 @@ function Calendar({
 		<DayPicker
 			showOutsideDays={showOutsideDays}
 			className={cn(
-				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(8)]",
+				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--monti-radius-md)] [--cell-size:--spacing(8)]",
 				String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
 				String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
 				className,
@@ -60,7 +60,7 @@ function Calendar({
 					defaultClassNames.dropdowns,
 				),
 				dropdown_root: cn("relative rounded-(--cell-radius)", defaultClassNames.dropdown_root),
-				dropdown: cn("absolute inset-0 bg-monti-overlay opacity-0", defaultClassNames.dropdown),
+				dropdown: cn("absolute inset-0 bg-monti-page opacity-0", defaultClassNames.dropdown),
 				caption_label: cn(
 					"font-medium select-none",
 					captionLayout === "label"
@@ -85,16 +85,16 @@ function Calendar({
 					defaultClassNames.day,
 				),
 				range_start: cn(
-					"relative isolate z-0 rounded-l-(--cell-radius) bg-monti-neutral after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-monti-neutral",
+					"relative isolate z-0 rounded-l-(--cell-radius) bg-monti-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-monti-muted",
 					defaultClassNames.range_start,
 				),
 				range_middle: cn("rounded-none", defaultClassNames.range_middle),
 				range_end: cn(
-					"relative isolate z-0 rounded-r-(--cell-radius) bg-monti-neutral after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-monti-neutral",
+					"relative isolate z-0 rounded-r-(--cell-radius) bg-monti-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-monti-muted",
 					defaultClassNames.range_end,
 				),
 				today: cn(
-					"rounded-(--cell-radius) bg-monti-neutral text-monti-default data-[selected=true]:rounded-none",
+					"rounded-(--cell-radius) bg-monti-muted text-monti-default data-[selected=true]:rounded-none",
 					defaultClassNames.today,
 				),
 				outside: cn("text-monti-muted aria-selected:text-monti-muted", defaultClassNames.outside),
@@ -158,7 +158,7 @@ function CalendarDayButton({
 			data-range-end={modifiers.range_end}
 			data-range-middle={modifiers.range_middle}
 			className={cn(
-				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-neutral data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-focus group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-focus-soft [&>span]:text-monti-caption [&>span]:opacity-70",
+				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
 				defaultClassNames.day,
 				className,
 			)}

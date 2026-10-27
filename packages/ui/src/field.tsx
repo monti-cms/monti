@@ -16,7 +16,7 @@ function FormFieldSet({
 			data-slot="field-set"
 			className={cn(
 				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
-				density === "compact" ? "gap-comfortable" : "gap-spacious",
+				density === "compact" ? "gap-monti-16" : "gap-monti-24",
 				className,
 			)}
 			{...props}
@@ -98,7 +98,7 @@ function FormFieldLabel({ className, ...props }: React.ComponentProps<typeof Lab
 		<Label
 			data-slot="field-label"
 			className={cn(
-				"group/field-label peer/field-label flex w-fit gap-2 has-[>[data-slot=field]]:has-[:focus-visible]:border-monti-focus has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-monti-focus-soft has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border has-data-checked:border-monti-emphasis monti-dark:has-data-checked:border-monti-emphasis has-data-checked:bg-monti-neutral monti-dark:has-data-checked:bg-monti-neutral has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-monti-hover *:data-[slot=field]:p-3 group-data-[disabled=true]/field:opacity-50",
+				"group/field-label peer/field-label flex w-fit gap-2 has-[>[data-slot=field]]:has-[:focus-visible]:border-monti-contrast has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-monti-contrast/20 has-[>[data-slot=field]]:rounded-monti-md has-[>[data-slot=field]]:border has-data-checked:border-monti-emphasis monti-dark:has-data-checked:border-monti-emphasis has-data-checked:bg-monti-muted monti-dark:has-data-checked:bg-monti-muted has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-monti-selected *:data-[slot=field]:p-3 group-data-[disabled=true]/field:opacity-50",
 				"has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
 				className,
 			)}
@@ -127,7 +127,7 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 			className={cn(
 				"text-left text-monti-label text-monti-muted group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
 				"nth-last-2:-mt-1 last:mt-0",
-				"[&>a]:text-monti-accent [&>a]:underline [&>a]:underline-offset-4",
+				"[&>a]:text-monti-default [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
 			{...props}

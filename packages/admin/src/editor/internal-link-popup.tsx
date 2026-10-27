@@ -80,7 +80,7 @@ export function InternalLinkPopup({
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-tight text-monti-default shadow-monti-floating"
+			className="max-h-80 w-72 overflow-y-auto rounded-monti-lg border bg-monti-page p-monti-4 text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -95,8 +95,8 @@ export function InternalLinkPopup({
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
-						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
+						"flex cursor-pointer items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-8 outline-none",
+						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
 					)}
 				>
 					<Inline

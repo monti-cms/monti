@@ -100,7 +100,7 @@ export function AttributeInput({
 			className={cn(
 				"min-w-0 border-0 bg-transparent p-0 outline-none placeholder:text-current placeholder:opacity-50 focus-visible:ring-0",
 				boxed &&
-					"h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft",
+					"h-7 w-full rounded-monti-md border border-monti-default px-monti-8 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
 			)}
 		/>
 	);

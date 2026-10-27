@@ -23,7 +23,7 @@ function DescriptionItem({
 		<div
 			data-slot="description-item"
 			className={cn(
-				"grid grid-cols-[8rem_minmax(0,1fr)] in-data-[layout=stacked]:grid-cols-1 gap-normal in-data-[layout=stacked]:gap-tight py-condensed text-monti-label",
+				"grid grid-cols-[8rem_minmax(0,1fr)] in-data-[layout=stacked]:grid-cols-1 gap-monti-12 in-data-[layout=stacked]:gap-monti-4 py-monti-8 text-monti-label",
 				className,
 			)}
 			{...props}

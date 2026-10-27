@@ -2,18 +2,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./cn";
 
 /** A loading placeholder in the shape of what will appear: a line of text, a control, a block, an icon button or an avatar. */
-const skeletonVariants = cva("animate-pulse bg-monti-neutral", {
+const skeletonVariants = cva("animate-pulse bg-monti-muted", {
 	variants: {
 		shape: {
-			line: "h-4 rounded-sm",
-			title: "h-6 rounded-sm",
+			line: "h-4 rounded-monti-sm",
+			title: "h-6 rounded-monti-sm",
 			/** The large title at the top of a document (the editor's title line). */
-			heading: "h-9 rounded-md",
-			control: "h-control rounded-md",
-			"control-sm": "h-control-sm rounded-md",
-			block: "h-24 rounded-lg",
-			icon: "size-control-sm rounded-md",
-			avatar: "size-control rounded-full",
+			heading: "h-9 rounded-monti-md",
+			control: "h-monti-icon rounded-monti-md",
+			"control-sm": "h-monti-control-sm rounded-monti-md",
+			block: "h-24 rounded-monti-lg",
+			icon: "size-monti-control-sm rounded-monti-md",
+			avatar: "size-monti-icon rounded-monti-full",
 		},
 		/** Fractions follow the box; `chip`, `short` and `medium` are fixed, for a tab, a button or a short label. */
 		width: {
@@ -25,7 +25,7 @@ const skeletonVariants = cva("animate-pulse bg-monti-neutral", {
 			chip: "w-14",
 			short: "w-20",
 			medium: "w-32",
-			"panel-sm": "w-panel-sm",
+			"panel-sm": "w-monti-menu",
 		},
 	},
 	compoundVariants: [{ shape: ["icon", "avatar"], class: "shrink-0" }],

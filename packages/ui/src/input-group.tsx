@@ -17,8 +17,8 @@ function InputGroup({
 			data-slot="input-group"
 			role="group"
 			className={cn(
-				"group/input-group relative flex w-full min-w-0 items-center rounded-md border border-monti-default bg-monti-surface shadow-monti-control outline-none transition-[color,border-color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 hover:border-monti-emphasis has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-monti-focus has-[[data-slot][aria-invalid=true]]:border-monti-danger has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-monti-focus-soft has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-monti-danger monti-dark:has-[[data-slot][aria-invalid=true]]:ring-monti-danger has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
-				size === "sm" ? "h-control-sm" : "h-control",
+				"group/input-group relative flex w-full min-w-0 items-center rounded-monti-md border border-monti-default bg-monti-page outline-none transition-[color,border-color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 hover:border-monti-emphasis has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-monti-contrast has-[[data-slot][aria-invalid=true]]:border-monti-danger has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-monti-contrast/20 has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-monti-danger monti-dark:has-[[data-slot][aria-invalid=true]]:ring-monti-danger has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
+				size === "sm" ? "h-monti-control-sm" : "h-monti-icon",
 				className,
 			)}
 			{...props}
@@ -27,7 +27,7 @@ function InputGroup({
 }
 
 const inputGroupAddonVariants = cva(
-	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-monti-label text-monti-muted select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-sm [&>svg:not([class*='size-'])]:size-4",
+	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-monti-label text-monti-muted select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-monti-sm [&>svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			align: {
@@ -73,10 +73,10 @@ function InputGroupAddon({
 const inputGroupButtonVariants = cva("flex items-center gap-2 text-monti-label shadow-none", {
 	variants: {
 		size: {
-			xs: "h-6 gap-1 rounded-sm px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
-			sm: "h-7 gap-1.5 rounded-md px-2.5 [&>svg:not([class*='size-'])]:size-4",
-			"icon-xs": "size-6 rounded-sm p-0 has-[>svg]:p-0",
-			"icon-sm": "size-7 rounded-md p-0 has-[>svg]:p-0",
+			xs: "h-6 gap-1 rounded-monti-sm px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
+			sm: "h-7 gap-1.5 rounded-monti-md px-2.5 [&>svg:not([class*='size-'])]:size-4",
+			"icon-xs": "size-6 rounded-monti-sm p-0 has-[>svg]:p-0",
+			"icon-sm": "size-7 rounded-monti-md p-0 has-[>svg]:p-0",
 		},
 	},
 	defaultVariants: {

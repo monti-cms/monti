@@ -34,10 +34,10 @@ function Table({
 				className={cn(
 					"w-full caption-bottom text-monti-body",
 					layout === "fixed" && "table-fixed",
-					density === "comfortable" && "[&_td]:py-normal [&_tr:last-child]:border-b",
+					density === "comfortable" && "[&_td]:py-monti-12 [&_tr:last-child]:border-b",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					inset === "page" &&
-						"[&_td:first-child]:pl-wide [&_td:last-child]:pr-wide [&_th:first-child]:pl-wide [&_th:last-child]:pr-wide",
+						"[&_td:first-child]:pl-monti-32 [&_td:last-child]:pr-monti-32 [&_th:first-child]:pl-monti-32 [&_th:last-child]:pr-monti-32",
 					className,
 				)}
 				style={width === undefined ? style : { ...style, width }}
@@ -72,7 +72,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 	return (
 		<tfoot
 			data-slot="table-footer"
-			className={cn("border-t bg-monti-inset font-medium [&>tr]:last:border-b-0", className)}
+			className={cn("border-t bg-monti-tool font-medium [&>tr]:last:border-b-0", className)}
 			{...props}
 		/>
 	);
@@ -93,7 +93,7 @@ function TableRow({
 			aria-selected={selected || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer",
-				"border-b transition-colors hover:bg-monti-hover has-aria-expanded:bg-monti-hover data-selected:bg-monti-selected",
+				"border-b transition-colors hover:bg-monti-selected has-aria-expanded:bg-monti-selected data-selected:bg-monti-selected",
 				className,
 			)}
 			{...props}

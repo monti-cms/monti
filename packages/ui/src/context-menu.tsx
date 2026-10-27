@@ -49,7 +49,7 @@ function ContextMenuContent({
 				<ContextMenuPrimitive.Popup
 					data-slot="context-menu-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-monti-lg border border-monti-muted bg-monti-page p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
 						width && MENU_WIDTH[width],
 						className,
 					)}
@@ -96,7 +96,7 @@ function ContextMenuItem({
 			data-inset={inset}
 			data-variant={variant}
 			className={cn(
-				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-monti-default data-[variant=danger]:*:[svg]:text-monti-danger",
+				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-monti-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-monti-default data-[variant=danger]:*:[svg]:text-monti-danger",
 				className,
 			)}
 			{...props}
@@ -121,7 +121,7 @@ function ContextMenuSubTrigger({
 			data-slot="context-menu-sub-trigger"
 			data-inset={inset}
 			className={cn(
-				"flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-open:bg-monti-selected data-inset:pl-8 data-open:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex cursor-default select-none items-center gap-2 rounded-monti-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default data-open:bg-monti-selected data-inset:pl-8 data-open:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -157,7 +157,7 @@ function ContextMenuCheckboxItem({
 			data-slot="context-menu-checkbox-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-monti-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			checked={checked}
@@ -190,7 +190,7 @@ function ContextMenuRadioItem({
 			data-slot="context-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-monti-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}

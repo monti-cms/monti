@@ -20,7 +20,7 @@ function Separator({
 				"monti-horizontal:h-px monti-horizontal:w-full monti-vertical:w-px shrink-0 bg-monti-divider",
 				length === "full"
 					? "monti-vertical:self-stretch"
-					: "monti-vertical:mx-tight monti-vertical:h-4 monti-vertical:self-center",
+					: "monti-vertical:mx-monti-4 monti-vertical:h-4 monti-vertical:self-center",
 				className,
 			)}
 			{...props}

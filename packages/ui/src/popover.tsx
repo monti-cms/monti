@@ -13,11 +13,11 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 }
 
 const POPOVER_WIDTH = {
-	sm: "w-panel-sm",
-	md: "w-panel",
-	lg: "w-panel-lg",
+	sm: "w-monti-menu",
+	md: "w-monti-panel",
+	lg: "w-monti-assistant",
 	auto: "w-auto",
-	anchor: "w-(--anchor-width) min-w-panel-sm",
+	anchor: "w-(--anchor-width) min-w-monti-menu",
 } as const;
 
 function PopoverContent({
@@ -53,7 +53,7 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-lg border border-monti-muted bg-monti-overlay text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-monti-lg border border-monti-muted bg-monti-page text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
 						POPOVER_WIDTH[width],
 						padding === "default" && "p-4",
 						scroll && "max-h-(--available-height) overflow-y-auto",

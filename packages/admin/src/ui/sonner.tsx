@@ -20,7 +20,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 			}}
 			style={
 				{
-					"--normal-bg": "var(--monti-bg-overlay)",
+					"--normal-bg": "var(--monti-bg-page)",
 					"--normal-text": "var(--monti-fg-default)",
 					"--normal-border": "var(--monti-border-muted)",
 					"--border-radius": "var(--radius)",

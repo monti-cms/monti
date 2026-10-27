@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 
 function Box({ children, tall }: { children: string; tall?: boolean }) {
 	return (
-		<div className={tall ? "rounded-md bg-monti-neutral p-4" : "rounded-md bg-monti-neutral p-2"}>
+		<div className={tall ? "rounded-monti-md bg-monti-muted p-4" : "rounded-monti-md bg-monti-muted p-2"}>
 			<Text variant="caption">{children}</Text>
 		</div>
 	);
@@ -76,7 +76,7 @@ export const Align: Story = {
 					<Text variant="label" tone="muted">
 						align {align}
 					</Text>
-					<Stack direction="row" align={align} className="rounded-md bg-monti-inset p-2">
+					<Stack direction="row" align={align} className="rounded-monti-md bg-monti-tool p-2">
 						<Box>짧음</Box>
 						<Box tall>높음</Box>
 						<Box>짧음</Box>
@@ -95,7 +95,7 @@ export const Justify: Story = {
 					<Text variant="label" tone="muted">
 						justify {justify}
 					</Text>
-					<Stack direction="row" justify={justify} className="rounded-md bg-monti-inset p-2">
+					<Stack direction="row" justify={justify} className="rounded-monti-md bg-monti-tool p-2">
 						<Box>첫째</Box>
 						<Box>둘째</Box>
 					</Stack>

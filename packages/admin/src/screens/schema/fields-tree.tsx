@@ -187,7 +187,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 		<aside
 			aria-label={t("layout.previewTitle")}
 			style={resize.style}
-			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-overlay sm:w-[var(--panel-width)]"
+			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-page sm:w-[var(--panel-width)]"
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
@@ -323,7 +323,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				<div
 					className={cn(
 						columnsOf(ctx.compact),
-						"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
+						"border-b py-monti-8 pr-monti-16 pl-monti-32 text-monti-caption text-monti-muted",
 					)}
 					aria-hidden
 				>
@@ -350,19 +350,19 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						{t("fields.legendRequired")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-blue">
+						<Text mono tone="muted">
 							→
 						</Text>{" "}
 						{t("fields.legendRelation")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-teal">
+						<Text mono tone="muted">
 							←
 						</Text>{" "}
 						{t("fields.legendBacklink")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-orange">
+						<Text mono tone="muted">
 							= "…"
 						</Text>{" "}
 						{t("fields.legendOption")}
@@ -404,7 +404,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		<>
 			{wide && previewOpen ? (
 				<div
-					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-spacious"
+					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-monti-24"
 					style={sideResize.style}
 				>
 					{card}

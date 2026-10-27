@@ -44,12 +44,12 @@ const labelAttribute = {
 
 const REFERENCE_CLASS = [
 	// The number comes from the `data-footnote-number` attribute that the numbering plugin sets.
-	"mx-hair inline-block min-w-4 cursor-pointer select-none rounded-sm bg-monti-selected px-tight text-center align-super",
+	"mx-monti-2 inline-block min-w-4 cursor-pointer select-none rounded-monti-sm bg-monti-selected px-monti-4 text-center align-super",
 	// `em` on purpose: the number scales with the surrounding text it is a superscript of.
 	"font-medium text-[0.7em] text-monti-default",
 	"after:content-[attr(data-footnote-number)]",
 	"data-[footnote-missing]:bg-monti-danger-muted data-[footnote-missing]:text-monti-danger",
-	"[&.ProseMirror-selectednode]:ring-2 [&.ProseMirror-selectednode]:ring-monti-focus",
+	"[&.ProseMirror-selectednode]:ring-2 [&.ProseMirror-selectednode]:ring-monti-contrast",
 ].join(" ");
 
 /**

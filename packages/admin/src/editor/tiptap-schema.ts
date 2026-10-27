@@ -72,12 +72,12 @@ export const cmsOpaqueBlock = perSite((site: Pick<Site, "createTranslator">) => 
 					"data-monti-opaque": "",
 					"data-node": held,
 					"data-label": label,
-					class: "my-comfortable rounded-lg border border-dashed border-monti-default bg-monti-inset p-normal",
+					class: "my-monti-16 rounded-monti-lg border border-dashed border-monti-default bg-monti-tool p-monti-12",
 				},
 				["div", { class: "text-monti-caption font-medium text-monti-muted" }, t("opaqueBlock.editInSource", { label })],
 				[
 					"pre",
-					{ class: "mt-condensed overflow-x-auto whitespace-pre-wrap text-monti-caption" },
+					{ class: "mt-monti-8 overflow-x-auto whitespace-pre-wrap text-monti-caption" },
 					written || previewOf(held),
 				],
 			];

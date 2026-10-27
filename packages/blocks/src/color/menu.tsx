@@ -80,10 +80,10 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 			aria-hidden
 			{...(props ?? {})}
 			className={cn(
-				"flex size-6 items-center justify-center rounded-md border font-medium text-monti-caption",
+				"flex size-6 items-center justify-center rounded-monti-md border font-medium text-monti-caption",
 				props?.className,
 				// The background sample fills the rectangle completely (overriding the body background color's padding and corner rules).
-				kind === "bg" && "![padding:0] !rounded-md",
+				kind === "bg" && "![padding:0] !rounded-monti-md",
 			)}
 		>
 			{t("sample")}
@@ -111,7 +111,7 @@ function SwatchRow({
 		...palette.map((color) => ({ name: color.name, color: color[kind] })),
 	];
 	return (
-		<div className="grid grid-cols-9 gap-tight px-tight pb-tight">
+		<div className="grid grid-cols-9 gap-monti-4 px-monti-4 pb-monti-4">
 			{options.map(({ name, color }) => {
 				const selected = (color?.light.toLowerCase() ?? null) === current;
 				return (
@@ -137,7 +137,7 @@ function SwatchRow({
 											applyTextColor(editor, kind, color);
 											onPicked?.();
 										}}
-										className="relative flex justify-center rounded-sm p-hair outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus"
+										className="relative flex justify-center rounded-monti-sm p-monti-2 outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast"
 									/>
 								)
 							}
@@ -146,7 +146,7 @@ function SwatchRow({
 							{selected && (
 								<Check
 									aria-hidden
-									className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-monti-emphasis p-px text-monti-on-emphasis"
+									className="absolute -top-0.5 -right-0.5 size-3 rounded-monti-full bg-monti-emphasis p-px text-monti-on-emphasis"
 								/>
 							)}
 						</TooltipTrigger>
@@ -201,7 +201,7 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 	const current = currentColor(editor);
 	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
 	return (
-		<span {...underline} className={cn(underline.className, "rounded-sm p-hair")}>
+		<span {...underline} className={cn(underline.className, "rounded-monti-sm p-monti-2")}>
 			<Baseline aria-hidden className="size-4" />
 		</span>
 	);

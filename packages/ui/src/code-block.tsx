@@ -16,7 +16,7 @@ function CodeBlock({
 		<pre
 			data-slot="code-block"
 			className={cn(
-				"overflow-auto rounded-md border border-monti-muted bg-monti-inset p-normal font-mono",
+				"overflow-auto rounded-monti-md border border-monti-muted bg-monti-tool p-monti-12 font-mono",
 				size === "caption" ? "text-monti-caption" : "text-monti-label",
 				wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre",
 				maxHeight === "list" && "max-h-96",
@@ -40,7 +40,7 @@ function DiffView({
 		<pre
 			data-slot="diff-view"
 			className={cn(
-				"max-h-96 overflow-auto rounded-md border border-monti-muted font-mono text-monti-caption",
+				"max-h-96 overflow-auto rounded-monti-md border border-monti-muted font-mono text-monti-caption",
 				className,
 			)}
 		>
@@ -48,7 +48,7 @@ function DiffView({
 				<div
 					key={index}
 					className={cn(
-						"flex gap-condensed whitespace-pre-wrap break-words px-condensed",
+						"flex gap-monti-8 whitespace-pre-wrap break-words px-monti-8",
 						line.type === "add" && "bg-monti-success-muted text-monti-success",
 						line.type === "remove" && "bg-monti-danger-muted text-monti-danger",
 					)}
@@ -66,9 +66,9 @@ function DiffView({
 /** A run of text marked as removed or added, inside a sentence (a suggested rewrite). */
 function DiffMark({ type, children }: { type: "add" | "remove"; children: React.ReactNode }) {
 	return type === "add" ? (
-		<ins className="rounded-sm bg-monti-success-muted text-monti-success no-underline">{children}</ins>
+		<ins className="rounded-monti-sm bg-monti-success-muted text-monti-success no-underline">{children}</ins>
 	) : (
-		<del className="rounded-sm bg-monti-danger-muted text-monti-danger">{children}</del>
+		<del className="rounded-monti-sm bg-monti-danger-muted text-monti-danger">{children}</del>
 	);
 }
 

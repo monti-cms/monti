@@ -189,7 +189,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 		<div ref={areaRef} className="relative min-w-0 flex-1">
 			{/* For measuring widths. Render every tool once and keep it invisible (confined to height 0 so it does not widen the scroll width). */}
 			<div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden">
-				<div ref={measureRef} className="flex w-max items-center gap-tight">
+				<div ref={measureRef} className="flex w-max items-center gap-monti-4">
 					{entries.map((entry) =>
 						isDivider(entry) ? (
 							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
@@ -203,7 +203,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					)}
 				</div>
 			</div>
-			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-tight">
+			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-monti-4">
 				{entries.map((entry) => {
 					if (!shown.has(entry.key)) return null;
 					if (isDivider(entry)) return <ToolbarDivider key={entry.key} />;

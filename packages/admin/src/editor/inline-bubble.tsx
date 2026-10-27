@@ -590,7 +590,7 @@ export function InlineBubble({
 	);
 
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
-	const surface = "rounded-md border bg-monti-overlay text-monti-default backdrop-blur";
+	const surface = "rounded-monti-md border bg-monti-page text-monti-default backdrop-blur";
 
 	return createPortal(
 		panel ? (
@@ -610,8 +610,8 @@ export function InlineBubble({
 				style={style}
 				className={cn(
 					surface,
-					"flex flex-col gap-normal p-normal text-monti-caption",
-					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-condensed" : "w-80",
+					"flex flex-col gap-monti-12 p-monti-12 text-monti-caption",
+					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-monti-8" : "w-80",
 				)}
 				onKeyDown={(event) => {
 					if (event.key === "Escape" && !isComposingKey(event)) {

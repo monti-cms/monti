@@ -185,7 +185,7 @@ function CollectionNavItem({
 					{...attributes}
 					{...listeners}
 					aria-label={t("collection.drag", { name: label })}
-					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft group-hover/row:opacity-100"
+					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-3.5" />
 				</button>
@@ -194,9 +194,9 @@ function CollectionNavItem({
 				type="button"
 				aria-current={active ? "true" : undefined}
 				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-condensed rounded-md border border-transparent px-normal text-left text-monti-body outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
-					writable && "group-focus-within/row:pl-wide group-hover/row:pl-wide",
-					active && "border-monti-muted bg-monti-surface font-medium hover:bg-monti-surface",
+					"flex h-8 w-full shrink-0 items-center gap-monti-8 rounded-monti-md border border-transparent px-monti-12 text-left text-monti-body outline-none transition-colors hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+					writable && "group-focus-within/row:pl-monti-32 group-hover/row:pl-monti-32",
+					active && "border-monti-muted bg-monti-page font-medium hover:bg-monti-page",
 				)}
 				onClick={onSelect}
 			>

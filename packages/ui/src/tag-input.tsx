@@ -54,7 +54,7 @@ function TagInput({
 		<div
 			data-slot="tag-input"
 			className={cn(
-				"flex min-h-control w-full flex-wrap items-center gap-tight rounded-md border border-monti-default bg-monti-surface p-tight text-monti-caption shadow-monti-control transition-[border-color,box-shadow] focus-within:border-monti-focus focus-within:ring-3 focus-within:ring-monti-focus-soft hover:border-monti-emphasis",
+				"flex min-h-monti-icon w-full flex-wrap items-center gap-monti-4 rounded-monti-md border border-monti-default bg-monti-page p-monti-4 text-monti-caption transition-[border-color,box-shadow] focus-within:border-monti-contrast focus-within:ring-3 focus-within:ring-monti-contrast/20 hover:border-monti-emphasis",
 				mono && "font-mono",
 				disabled && "cursor-not-allowed opacity-50",
 				className,
@@ -63,7 +63,7 @@ function TagInput({
 			{items.map((item, index) => (
 				<span
 					key={item}
-					className="inline-flex items-center gap-tight rounded-sm border border-monti-muted bg-monti-neutral px-condensed py-hair text-monti-default"
+					className="inline-flex items-center gap-monti-4 rounded-monti-sm border border-monti-muted bg-monti-muted px-monti-8 py-monti-2 text-monti-default"
 				>
 					<span className="max-w-40 truncate">{item}</span>
 					{!disabled && (
@@ -71,9 +71,9 @@ function TagInput({
 							type="button"
 							aria-label={removeLabel(item)}
 							onClick={() => remove(index)}
-							className="rounded-sm text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus"
+							className="rounded-monti-sm text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast"
 						>
-							<X className="size-icon-xs" aria-hidden />
+							<X className="size-monti-icon-xs" aria-hidden />
 						</button>
 					)}
 				</span>
@@ -89,7 +89,7 @@ function TagInput({
 					onBlur={() => {
 						if (input.trim()) add(input);
 					}}
-					className="h-6 min-w-28 flex-1 bg-transparent px-tight outline-none placeholder:text-monti-subtle"
+					className="h-6 min-w-28 flex-1 bg-transparent px-monti-4 outline-none placeholder:text-monti-subtle"
 				/>
 			)}
 		</div>

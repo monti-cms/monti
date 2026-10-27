@@ -15,7 +15,7 @@ const toneClass = cva("shrink-0", {
 			warning: "text-monti-warning",
 			danger: "text-monti-danger",
 			neutral: "text-monti-muted",
-			accent: "text-monti-accent",
+			accent: "text-monti-default",
 			/** The page text color: the monochrome "published" and "draft" markers. */
 			strong: "text-monti-default",
 		},
@@ -90,7 +90,7 @@ export function StatusIndicator({
 			className={cn(
 				"inline-flex items-center gap-1.5 whitespace-nowrap",
 				label && "text-monti-default text-monti-label",
-				chip && "rounded-full border border-monti-muted px-condensed py-hair",
+				chip && "rounded-monti-full border border-monti-muted px-monti-8 py-monti-2",
 				className,
 			)}
 			{...props}

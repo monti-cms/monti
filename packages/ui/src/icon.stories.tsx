@@ -15,7 +15,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 const SIZES = ["xs", "sm", "md", "lg"] as const;
-const TONES = ["inherit", "muted", "subtle", "accent", "danger", "warning", "success"] as const;
+const TONES = ["inherit", "muted", "subtle", "danger", "warning", "success"] as const;
 
 export const Sizes: Story = {
 	render: () => (

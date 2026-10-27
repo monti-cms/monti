@@ -86,7 +86,7 @@ export const Resizable: Story = {
 			<SheetContent
 				resizable={{
 					style: { "--panel-width": "32rem" } as React.CSSProperties,
-					handle: <div aria-hidden className="absolute inset-y-0 left-0 w-1 cursor-col-resize bg-monti-neutral" />,
+					handle: <div aria-hidden className="absolute inset-y-0 left-0 w-1 cursor-col-resize bg-monti-muted" />,
 				}}
 			>
 				<Body title="넓힐 수 있는 패널" />

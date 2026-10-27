@@ -10,7 +10,7 @@ import { cn } from "./cn";
  * as `render` (`render={<Link href="…" />}`), or `render={<button type="button" />}` for an action that reads as text.
  */
 const textLinkVariants = cva(
-	"cursor-pointer rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
+	"cursor-pointer rounded-monti-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 	{
 		variants: {
 			/** `none`: a whole row or card that is clickable, where the surface shows the hover instead. */
@@ -19,7 +19,7 @@ const textLinkVariants = cva(
 				hover: "underline-offset-2 hover:underline",
 				none: "no-underline",
 			},
-			tone: { default: "", muted: "text-monti-muted hover:text-monti-default", accent: "text-monti-accent" },
+			tone: { default: "", muted: "text-monti-muted hover:text-monti-default", accent: "text-monti-default" },
 			mono: { true: "font-mono" },
 			size: { inherit: "", caption: "text-monti-caption", label: "text-monti-label", body: "text-monti-body" },
 		},

@@ -38,7 +38,7 @@ export const ListRows: Story = {
 export const Shapes: Story = {
 	render: () => (
 		<Stack direction="row" gap="spacious" align="center">
-			<Skeleton className="size-12 rounded-full" />
+			<Skeleton className="size-12 rounded-monti-full" />
 			<Skeleton className="h-8 w-24" />
 			<Skeleton className="h-24 w-40" />
 		</Stack>

@@ -36,7 +36,7 @@ export function SidePanelFrame({
 		<section data-slot="side-panel-frame" className={cn("flex min-h-0 min-w-0 flex-1 flex-col", className)} {...props}>
 			<header
 				data-slot="side-panel-frame-header"
-				className="flex shrink-0 items-center gap-tight border-monti-muted border-b px-comfortable py-condensed"
+				className="flex shrink-0 items-center gap-monti-4 border-monti-muted border-b px-monti-16 py-monti-8"
 			>
 				<div className="flex min-w-0 flex-1 flex-col">
 					<Heading as="h2" variant="label" truncate>
@@ -57,12 +57,12 @@ export function SidePanelFrame({
 			</header>
 			<div
 				data-slot="side-panel-frame-body"
-				className="flex min-h-0 flex-1 flex-col gap-comfortable overflow-y-auto p-comfortable"
+				className="flex min-h-0 flex-1 flex-col gap-monti-16 overflow-y-auto p-monti-16"
 			>
 				{children}
 			</div>
 			{footer && (
-				<footer data-slot="side-panel-frame-footer" className="shrink-0 border-monti-muted border-t p-comfortable">
+				<footer data-slot="side-panel-frame-footer" className="shrink-0 border-monti-muted border-t p-monti-16">
 					{footer}
 				</footer>
 			)}

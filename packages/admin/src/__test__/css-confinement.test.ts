@@ -79,14 +79,14 @@ const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.monti-admin
 
 describe("admin CSS confinement", () => {
 	it("the theme defines only monti-prefixed names, after clearing Tailwind's own", () => {
-		// `@theme` holds the color roles per namespace (`--background-color-monti-*` and so on), the type roles, the one shadow, the radius names
-		// (computed from `--monti-radius`), the three weights, the one tracking, `--font-sans`/`--font-mono` (mapped to `--monti-font-*`), and the resets.
-		const theme = themeCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
+		// `@theme` holds the color roles per namespace (`--background-color-monti-*` and so on), the scales (spacing, radius, heights, widths, sizes, shadows),
+		// the weights, the one tracking, `--font-sans`/`--font-mono` (mapped to `--monti-font-*`), and the resets. The type roles are `@utility` rules.
+		const theme = [...themeCss.matchAll(/@theme inline \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
 		const names = [...theme.matchAll(/(--[\w-]+(?:-\*)?)\s*:/g)].map((m) => m[1]);
 		expect(names.filter((name) => name.startsWith("--background-color-monti-")).length).toBeGreaterThan(0);
 		for (const name of names)
 			expect(name).toMatch(
-				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|accent-color|text|shadow)-monti-|radius-(?:sm|md|lg|xl)$|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold)$|tracking-caps$|spacing-[a-z]+$|size-(?:icon|control)(?:-[a-z]+)?$|height-(?:control(?:-[a-z]+)?|header)$|container-[a-z-]+$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
+				/^--(?:(?:background-color|text-color|border-color|ring-color|ring-offset-color|outline-color|fill|stroke|text-decoration-color|caret-color|spacing|radius|height|size|container|shadow)-monti-|font-(?:sans|mono)$|font-weight-(?:normal|medium|semibold|bold)$|tracking-caps$|animate-monti-[a-z-]+$|color-(?:transparent|current|inherit)$|[a-z-]+-\*$)/,
 			);
 		// Tailwind's palette, text sizes, weights, shadows, tracking and line heights are cleared, so an off-system class compiles to nothing.
 		for (const reset of [
@@ -100,9 +100,10 @@ describe("admin CSS confinement", () => {
 		])
 			expect(theme).toContain(`${reset}: initial;`);
 		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
-		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--monti-radius");
+		for (const radius of theme.matchAll(/--radius-monti-[a-z]+:\s*([^;]+);/g))
+			expect(radius[1]).toContain("--monti-radius-");
 		// Every role reads an admin variable (an animation names its `monti-` keyframes instead).
-		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[a-z-]+:\s*([^;]+);/g))
+		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[\w-]+:\s*([^;]+);/g))
 			expect(role[1]).toMatch(/^var\(--monti-|^\d/);
 		// Variant names also start with `monti-`.
 		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);
@@ -141,25 +142,26 @@ describe("admin CSS confinement", () => {
 			blocks[rule.selector.includes(".dark") ? "dark" : "light"] = decls;
 		});
 		const scaled = [...blocks.light].filter(([, value]) =>
-			/^var\(--monti-(gray|accent|danger|warning|success)-\d+\)$/.test(value),
+			/^var\(--monti-(gray|success|warning|danger|proposal)-\d+\)$/.test(value),
 		);
 		expect(scaled.length).toBeGreaterThan(20);
 		expect(Object.fromEntries(scaled)).toMatchObject({
 			"--monti-fg-default": "var(--monti-gray-12)",
 			"--monti-fg-muted": "var(--monti-gray-11)",
-			"--monti-border-focus": "var(--monti-accent-9)",
-			"--monti-bg-accent-muted": "var(--monti-accent-3)",
+			"--monti-border-strong": "var(--monti-gray-7)",
+			"--monti-bg-success-muted": "var(--monti-success-3)",
 		});
-		for (const [name] of scaled) expect(blocks.dark.has(name)).toBe(false);
+		// Dark repeats a role only where it points at another step (the page and tool grounds swap).
+		for (const [name, value] of scaled) if (blocks.dark.has(name)) expect(blocks.dark.get(name)).not.toBe(value);
 		// Every scale step exists in both modes.
 		const steps = [...blocks.light.keys()].filter((name) =>
-			/^--monti-(gray|accent|danger|warning|success)-\d+$/.test(name),
+			/^--monti-(gray|success|warning|danger|proposal)-\d+$/.test(name),
 		);
-		expect(steps.length).toBe(12 + 4 * 5);
+		expect(steps.length).toBe(12 + 4 * 2);
 		for (const step of steps) expect(blocks.dark.has(step)).toBe(true);
 	});
 
-	it("the accent exists in both modes, readable as text, and the focus ring follows it", () => {
+	it("the text roles people must read keep 4.5:1 on the page ground, in both modes", () => {
 		const luminance = (hex: string) => {
 			const [r, g, b] = [1, 3, 5].map((i) => {
 				const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
@@ -171,24 +173,30 @@ describe("admin CSS confinement", () => {
 			const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
 			return (hi + 0.05) / (lo + 0.05);
 		};
-		const modes: Record<string, { accent: string; background: string }> = {};
+		const modes: Record<string, Map<string, string>> = {};
 		postcss.parse(adminCss).walkRules((rule) => {
-			const value = (prop: string) => {
-				const decl = rule.nodes.find((node) => node.type === "decl" && node.prop === prop);
-				return decl?.type === "decl" ? decl.value : "";
-			};
-			if (!value("--monti-bg-page")) return;
-			modes[rule.selector.includes(".dark") ? "dark" : "light"] = {
-				accent: value("--monti-accent-11"),
-				background: value("--monti-bg-page"),
-			};
+			if (!rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-gray-1")) return;
+			const decls = new Map<string, string>();
+			for (const node of rule.nodes) if (node.type === "decl") decls.set(node.prop, node.value);
+			modes[rule.selector.includes(".dark") ? "dark" : "light"] = decls;
 		});
 		expect(Object.keys(modes).sort()).toEqual(["dark", "light"]);
-		for (const { accent, background } of Object.values(modes)) {
-			expect(accent).toMatch(/^#[\da-f]{6}$/);
-			expect(contrast(accent, background)).toBeGreaterThanOrEqual(4.5);
+		/** A variable's color in a mode: the mode's own declaration, else the light one, followed through `var()` references. */
+		const resolve = (mode: string, name: string): string => {
+			const value = modes[mode].get(name) ?? modes.light.get(name) ?? "";
+			const reference = value.match(/^var\((--[\w-]+)\)$/);
+			return reference ? resolve(mode, reference[1]) : value;
+		};
+		// `fg-faint` is for placeholders and meta only (3.4:1 on paper in light), so it is left out on purpose.
+		for (const mode of ["light", "dark"]) {
+			const page = resolve(mode, "--monti-bg-page");
+			for (const role of ["default", "muted", "subtle", "success", "warning", "danger", "proposal"]) {
+				const color = resolve(mode, `--monti-fg-${role}`);
+				expect(color, `${mode} ${role}`).toMatch(/^#[\da-f]{6}$/);
+				expect(contrast(color, page), `${mode} ${role}`).toBeGreaterThanOrEqual(4.5);
+			}
 		}
-		expect(themeCss).toContain("--ring-color-monti-focus: var(--monti-border-focus)");
+		expect(themeCss).toContain("--ring-color-monti-contrast: var(--monti-border-contrast)");
 	});
 
 	it("the theme keeps the admin's own names only", () => {
@@ -319,8 +327,8 @@ describe("admin CSS confinement", () => {
 			expect(css).toContain("KaTeX_Main");
 			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.
 			expect(css).not.toMatch(/(?:^|[;{])--(?:radius|color|spacing|font|text|shadow|ease|animate)(?:-[\w-]+)?:/);
-			// Radius utilities are computed from the admin's own base radius.
-			expect(css).toMatch(/border-radius:calc\(var\(--monti-radius\)/);
+			// Radius utilities read the design system's radius tokens.
+			expect(css).toMatch(/border-radius:var\(--monti-radius-md\)/);
 		});
 	});
 

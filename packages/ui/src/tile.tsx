@@ -33,18 +33,18 @@ function Tile({
 			<button
 				type="button"
 				aria-pressed={selected}
-				className="flex w-full flex-col overflow-hidden rounded-lg border border-monti-muted bg-monti-surface text-left shadow-monti-card outline-none transition-[border-color,box-shadow] hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-focus-soft group-data-selected/tile:border-monti-focus group-data-selected/tile:ring-2 group-data-selected/tile:ring-monti-focus-soft"
+				className="flex w-full flex-col overflow-hidden rounded-monti-lg border border-monti-muted bg-monti-page text-left outline-none transition-[border-color,box-shadow] hover:border-monti-emphasis focus-visible:ring-3 focus-visible:ring-monti-contrast/20 group-data-selected/tile:border-monti-contrast group-data-selected/tile:ring-2 group-data-selected/tile:ring-monti-contrast/20"
 				{...props}
 			>
 				<span className="block border-monti-muted border-b">{preview}</span>
-				<span className="flex min-w-0 flex-col gap-hair px-condensed py-condensed">
+				<span className="flex min-w-0 flex-col gap-monti-2 px-monti-8 py-monti-8">
 					<span className="truncate text-monti-label">{title}</span>
 					{detail && <span className="truncate text-monti-caption text-monti-muted">{detail}</span>}
 				</span>
 			</button>
-			{badge && <span className="pointer-events-none absolute top-condensed left-condensed">{badge}</span>}
+			{badge && <span className="pointer-events-none absolute top-monti-8 left-monti-8">{badge}</span>}
 			{action && (
-				<span className="absolute top-condensed right-condensed opacity-0 transition-opacity focus-within:opacity-100 group-hover/tile:opacity-100 group-data-selected/tile:opacity-100">
+				<span className="absolute top-monti-8 right-monti-8 opacity-0 transition-opacity focus-within:opacity-100 group-hover/tile:opacity-100 group-data-selected/tile:opacity-100">
 					{action}
 				</span>
 			)}
@@ -76,13 +76,13 @@ function ChoiceCard({
 			data-selected={selected || undefined}
 			aria-pressed={selected}
 			className={cn(
-				"flex w-full items-start gap-normal rounded-md border border-monti-muted bg-monti-surface px-normal py-condensed text-left shadow-monti-card outline-none transition-[background-color,border-color,box-shadow] hover:border-monti-default hover:bg-monti-hover focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:opacity-50 data-selected:border-monti-focus data-selected:bg-monti-accent-muted",
+				"flex w-full items-start gap-monti-12 rounded-monti-md border border-monti-muted bg-monti-page px-monti-12 py-monti-8 text-left outline-none transition-[background-color,border-color,box-shadow] hover:border-monti-default hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-50 data-selected:border-monti-contrast data-selected:bg-monti-selected",
 				className,
 			)}
 			{...props}
 		>
-			{icon && <span className="mt-hair text-monti-muted [&_svg]:size-icon">{icon}</span>}
-			<span className="flex min-w-0 flex-col gap-hair">
+			{icon && <span className="mt-monti-2 text-monti-muted [&_svg]:size-monti-icon-md">{icon}</span>}
+			<span className="flex min-w-0 flex-col gap-monti-2">
 				<span className="text-monti-label">{title}</span>
 				{hint && <span className="text-monti-caption text-monti-muted">{hint}</span>}
 			</span>

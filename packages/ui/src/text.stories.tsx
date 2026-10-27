@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 const VARIANTS = ["micro", "caption", "label", "body", "reading", "title", "heading", "display"] as const;
-const TONES = ["default", "muted", "subtle", "accent", "danger", "warning", "success", "inherit"] as const;
+const TONES = ["default", "muted", "subtle", "danger", "warning", "success", "inherit"] as const;
 const WEIGHTS = ["role", "medium", "semibold"] as const;
 
 export const AllVariants: Story = {

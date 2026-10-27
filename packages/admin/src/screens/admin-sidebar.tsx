@@ -102,7 +102,7 @@ export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 const TREE_INDENT = 8;
 const TREE_STEP = 16;
 const subRow =
-	"group/row relative flex h-7 items-center gap-tight rounded-md pr-tight text-monti-label text-monti-default hover:bg-monti-hover hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1 data-active:before:left-0 data-active:before:w-[3px] data-active:before:rounded-full data-active:before:bg-monti-accent-emphasis";
+	"group/row relative flex h-7 items-center gap-monti-4 rounded-monti-md pr-monti-4 text-monti-label text-monti-default hover:bg-monti-selected hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1 data-active:before:left-0 data-active:before:w-[3px] data-active:before:rounded-monti-full data-active:before:bg-monti-emphasis";
 
 /** The folders of the open collection, drawn under its entry: All, the folders (nested), then Add folder. */
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
@@ -252,7 +252,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 							{...dropProps(folder.id, folder.id)}
 							data-active={isActive || undefined}
 							style={{ paddingLeft: TREE_INDENT + depth * TREE_STEP }}
-							className={cn(subRow, dropTarget === folder.id && "ring-2 ring-monti-focus")}
+							className={cn(subRow, dropTarget === folder.id && "ring-2 ring-monti-contrast")}
 						/>
 					}
 				>
@@ -269,7 +269,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									return next;
 								})
 							}
-							className="flex size-4 shrink-0 items-center justify-center rounded-sm text-monti-muted outline-hidden hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus"
+							className="flex size-4 shrink-0 items-center justify-center rounded-monti-sm text-monti-muted outline-hidden hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast"
 						>
 							<ChevronRight aria-hidden className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
 						</button>
@@ -298,7 +298,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 								void commitRename(folder);
 							}}
 							onClick={(e) => e.stopPropagation()}
-							className="h-6 min-w-0 flex-1 rounded-md bg-monti-page px-condensed text-monti-default text-monti-label outline-hidden ring-1 ring-monti-default focus:ring-2 focus:ring-monti-focus"
+							className="h-6 min-w-0 flex-1 rounded-monti-md bg-monti-page px-monti-8 text-monti-default text-monti-label outline-hidden ring-1 ring-monti-default focus:ring-2 focus:ring-monti-contrast"
 						/>
 					) : (
 						<button
@@ -314,7 +314,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									void nav.folderActions.requestDelete(folder);
 								}
 							}}
-							className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-monti-focus"
+							className="h-full min-w-0 flex-1 truncate rounded-monti-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-monti-contrast"
 						>
 							{folder.name}
 						</button>
@@ -324,9 +324,9 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 					</span>
 				</ActionContextMenu>
 				{isExpanded && (children.length > 0 || isCreatingChild) && (
-					<ul className="flex flex-col gap-hair">
+					<ul className="flex flex-col gap-monti-2">
 						{isCreatingChild && (
-							<li style={{ paddingLeft: TREE_INDENT + (depth + 1) * TREE_STEP }} className={cn(subRow, "pr-condensed")}>
+							<li style={{ paddingLeft: TREE_INDENT + (depth + 1) * TREE_STEP }} className={cn(subRow, "pr-monti-8")}>
 								<span aria-hidden className="size-4 shrink-0" />
 								<FolderPlus aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
 								<input
@@ -349,7 +349,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									onBlur={() => {
 										void commitCreate();
 									}}
-									className="h-6 min-w-0 flex-1 rounded-md bg-monti-page px-condensed text-monti-default text-monti-label outline-hidden ring-1 ring-monti-default focus:ring-2 focus:ring-monti-focus"
+									className="h-6 min-w-0 flex-1 rounded-monti-md bg-monti-page px-monti-8 text-monti-default text-monti-label outline-hidden ring-1 ring-monti-default focus:ring-2 focus:ring-monti-contrast"
 								/>
 							</li>
 						)}
@@ -369,7 +369,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	return (
 		<ul
 			aria-label={t("sidebar.folderTree", { label })}
-			className="mt-hair mb-tight flex flex-col gap-hair group-data-[collapsible=icon]:hidden"
+			className="mt-monti-2 mb-monti-4 flex flex-col gap-monti-2 group-data-[collapsible=icon]:hidden"
 		>
 			{folders.filter((f) => !f.parentId).map((folder) => renderFolder(folder, 0))}
 		</ul>
@@ -455,7 +455,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					})
 				}
 				data-sidebar="menu-action"
-				className="absolute top-1.5 right-1 flex size-5 items-center justify-center rounded-sm text-monti-muted outline-hidden ring-monti-focus hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 group-data-[collapsible=icon]:hidden"
+				className="absolute top-1.5 right-1 flex size-5 items-center justify-center rounded-monti-sm text-monti-muted outline-hidden ring-monti-contrast hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 group-data-[collapsible=icon]:hidden"
 			>
 				<ChevronRight aria-hidden className={cn("size-3 transition-transform", !treeHidden && "rotate-90")} />
 			</button>
@@ -511,15 +511,15 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader className="flex-row items-center gap-tight px-normal pt-normal group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-condensed">
+			<SidebarHeader className="flex-row items-center gap-monti-4 px-monti-12 pt-monti-12 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-monti-8">
 				<Link
 					href={site.adminHref()}
 					onClick={closeMobile}
-					className="flex min-w-0 flex-1 items-center gap-condensed rounded-md px-condensed py-tight group-data-[collapsible=icon]:hidden"
+					className="flex min-w-0 flex-1 items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-4 group-data-[collapsible=icon]:hidden"
 				>
 					<span
 						aria-hidden
-						className="flex size-6 shrink-0 items-center justify-center rounded-md bg-monti-emphasis font-semibold text-monti-caption text-monti-on-emphasis"
+						className="flex size-6 shrink-0 items-center justify-center rounded-monti-md bg-monti-emphasis font-semibold text-monti-caption text-monti-on-emphasis"
 					>
 						{(site.SITE_NAME || "CMS").slice(0, 1)}
 					</span>
@@ -581,7 +581,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 								aria-controls="monti-sidebar-site"
 								onClick={toggleSite}
 								className={cn(
-									"w-full cursor-pointer gap-tight text-left hover:text-monti-default",
+									"w-full cursor-pointer gap-monti-4 text-left hover:text-monti-default",
 									!siteOpen && inSite && "font-semibold text-monti-default",
 								)}
 							/>
@@ -644,7 +644,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="flex-row items-center gap-tight border-monti-muted border-t px-condensed py-condensed group-data-[collapsible=icon]:flex-col">
+			<SidebarFooter className="flex-row items-center gap-monti-4 border-monti-muted border-t px-monti-8 py-monti-8 group-data-[collapsible=icon]:flex-col">
 				<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
 					{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <Settings2 />)}
 				</SidebarMenu>

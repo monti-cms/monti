@@ -17,7 +17,7 @@ function Textarea({
 			data-slot="textarea"
 			data-size={size}
 			className={cn(
-				"field-sizing-content flex min-h-16 w-full rounded-md border border-monti-default bg-monti-surface px-2.5 py-2 shadow-monti-control outline-none transition-[color,border-color,box-shadow] placeholder:text-monti-subtle hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft",
+				"field-sizing-content flex min-h-16 w-full rounded-monti-md border border-monti-default bg-monti-page px-2.5 py-2 outline-none transition-[color,border-color,box-shadow] placeholder:text-monti-subtle hover:border-monti-emphasis focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger/20",
 				size === "sm" ? "text-monti-label" : "text-monti-reading md:text-monti-body",
 				mono && "font-mono",
 				className,

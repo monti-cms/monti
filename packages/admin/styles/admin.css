@@ -12,7 +12,7 @@ html:has(.monti-admin) body {
 @layer base {
 	:where(html:has(.monti-admin)) * {
 		border-color: var(--monti-border-muted);
-		outline-color: var(--monti-focus-soft);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 20%, transparent);
 	}
 }
 
@@ -58,18 +58,18 @@ html:has(.monti-admin) body {
 	text-decoration-thickness: 1px;
 	text-decoration-skip-ink: none;
 	text-underline-offset: 3px;
-	text-decoration-color: var(--monti-warning-9);
+	text-decoration-color: var(--monti-fg-warning);
 	cursor: pointer;
 }
 .monti-admin .monti-text-issue[data-severity="error"] {
-	text-decoration-color: var(--monti-danger-9);
+	text-decoration-color: var(--monti-fg-danger);
 }
 .monti-admin .monti-text-issue[data-severity="info"] {
-	text-decoration-color: var(--monti-accent-9);
+	text-decoration-color: var(--monti-fg-subtle);
 }
 
-/* The text selection in the editor body takes the accent's tint. */
+/* The text selection in the editor body takes the selected-row tint. */
 .monti-admin .ProseMirror ::selection,
 .monti-admin .ProseMirror::selection {
-	background: var(--monti-bg-accent-muted);
+	background: var(--monti-bg-selected);
 }

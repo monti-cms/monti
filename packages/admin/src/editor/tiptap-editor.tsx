@@ -162,16 +162,16 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-spacious focus:outline-none text-monti-default text-monti-reading selection:bg-monti-accent-muted" +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected" +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
-					"[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-sm [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-monti-overlay " +
+					"[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-monti-sm [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-monti-page " +
 					// Block selection (marquee): lay a box with margin (-inset-1) after the line and hide the text selection highlight. List items cover the bullet too.
 					// To avoid confusion with text selection (primary purple), show "a block is selected" with a different color (sky) and border.
-					"[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-1 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-md [&_.monti-block-selected]:before:bg-monti-accent-muted [&_.monti-block-selected]:before:ring-1 [&_.monti-block-selected]:before:ring-monti-focus-soft [&_li.monti-block-selected]:before:-left-7 [&.monti-block-range]:selection:bg-transparent " +
+					"[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-1 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-monti-md [&_.monti-block-selected]:before:bg-monti-selected [&_.monti-block-selected]:before:ring-1 [&_.monti-block-selected]:before:ring-monti-contrast/20 [&_li.monti-block-selected]:before:-left-7 [&.monti-block-range]:selection:bg-transparent " +
 					// Dragging across cells to select several (CellSelection) paints the selected cells. The range to merge is visible.
-					"[&_.selectedCell]:bg-monti-accent-muted [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-monti-focus",
+					"[&_.selectedCell]:bg-monti-selected [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-monti-contrast",
 			},
 			handleKeyDown: (view, event) => {
 				// Do not handle menu navigation or confirmation during Korean IME composition.
@@ -341,9 +341,9 @@ export function CmsEditor({
 			>
 				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
 				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
-				<div className="relative flex min-h-12 items-center py-condensed" style={{ paddingInline: asideWidth + 24 }}>
+				<div className="relative flex min-h-12 items-center py-monti-8" style={{ paddingInline: asideWidth + 24 }}>
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
-					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-tight">
+					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-monti-4">
 						{toolbarAside}
 						<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
 					</div>
@@ -352,7 +352,7 @@ export function CmsEditor({
 			</Stack>
 
 			{titleField && (
-				<div className="mx-auto w-full max-w-(--editor-width) px-comfortable pt-section pb-condensed">{titleField}</div>
+				<div className="mx-auto w-full max-w-(--editor-width) px-monti-16 pt-monti-48 pb-monti-8">{titleField}</div>
 			)}
 
 			<input
@@ -379,7 +379,7 @@ export function CmsEditor({
 			/>
 
 			{isSourceMode && (
-				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-comfortable pt-spacious pb-[35vh]">
+				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-monti-16 pt-monti-24 pb-[35vh]">
 					{sourceView}
 				</div>
 			)}
@@ -389,7 +389,7 @@ export function CmsEditor({
 			<div
 				hidden={isSourceMode}
 				// Leave bottom margin (35% of screen height) so the last line does not stick to the bottom of the screen.
-				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-comfortable pt-spacious pb-[35vh]"
+				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-monti-16 pt-monti-24 pb-[35vh]"
 				onClick={(event) => {
 					// Move to the end only when the empty canvas outside the body is clicked. Clicks on NodeView buttons and popovers (portals)
 					// also bubble up here through the React tree, so leave the body DOM and anything outside the canvas (portals) alone.

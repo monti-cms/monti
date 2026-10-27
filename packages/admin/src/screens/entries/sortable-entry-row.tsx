@@ -42,7 +42,7 @@ export function SortableEntryRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"flex items-center gap-tight rounded-md border border-monti-muted bg-monti-page px-tight py-tight text-monti-caption",
+				"flex items-center gap-monti-4 rounded-monti-md border border-monti-muted bg-monti-page px-monti-4 py-monti-4 text-monti-caption",
 				isDragging && "relative z-10 shadow-monti-floating",
 			)}
 		>

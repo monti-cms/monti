@@ -176,7 +176,7 @@ function ResizeHandle({
 					"absolute inset-y-0 w-px bg-transparent transition-colors motion-reduce:transition-none",
 					// Drawn over the pane's own 1px border (the handle is centered on the inside of that border).
 					edge === "end" ? "left-1" : "left-0.75",
-					"group-hover/resize:bg-monti-accent-emphasis group-focus-visible/resize:bg-monti-accent-emphasis group-data-resizing/resize:bg-monti-accent-emphasis",
+					"group-hover/resize:bg-monti-emphasis group-focus-visible/resize:bg-monti-emphasis group-data-resizing/resize:bg-monti-emphasis",
 				)}
 			/>
 		</div>
