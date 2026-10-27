@@ -1,15 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { initProject } from "../init";
 
 /**
  * Types of the generated project: `monti init` is run with every feature on, and `tsc` checks the result against the sources of this repo's packages.
- * The fixture sits in `packages/nextjs/` because that folder already has `next` and `react` installed; the `@monti-cms/*` packages are linked into the fixture only.
+ * The fixture sits in the system's temp folder, not in the repo: a folder of symlinks that lead back into the repo would loop the file watchers of the dev
+ * servers (Vite, Storybook). `next`, `react` and the other packages `packages/nextjs/` has installed are linked into it, and so are the `@monti-cms/*` packages.
  */
 const repo = path.resolve(__dirname, "../../../../..");
-const fixtureRoot = path.join(repo, "packages/nextjs");
+const installed = path.join(repo, "packages/nextjs/node_modules");
 const dirs: string[] = [];
 
 afterAll(() => {
@@ -17,7 +19,7 @@ afterAll(() => {
 });
 
 function fixture(): string {
-	const dir = mkdtempSync(path.join(fixtureRoot, ".init-typecheck-"));
+	const dir = mkdtempSync(path.join(tmpdir(), "monti-init-typecheck-"));
 	dirs.push(dir);
 	writeFileSync(
 		path.join(dir, "package.json"),
@@ -50,7 +52,13 @@ function fixture(): string {
 		'import type { NextConfig } from "next";\n\nconst nextConfig: NextConfig = {};\n\nexport default nextConfig;\n',
 	);
 	// The packages of this repo, by name, the way a install would put them in node_modules.
-	const scope = path.join(dir, "node_modules/@monti-cms");
+	const modules = path.join(dir, "node_modules");
+	mkdirSync(modules, { recursive: true });
+	for (const name of readdirSync(installed)) {
+		if (name.startsWith(".") || name === "@monti-cms") continue;
+		symlinkSync(path.join(installed, name), path.join(modules, name), "dir");
+	}
+	const scope = path.join(modules, "@monti-cms");
 	mkdirSync(scope, { recursive: true });
 	for (const name of readdirSync(path.join(repo, "packages"))) {
 		if (existsSync(path.join(repo, "packages", name, "package.json"))) {
