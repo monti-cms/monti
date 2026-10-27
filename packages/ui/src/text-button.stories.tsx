@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { SlidersHorizontal, Upload } from "lucide-react";
+import { Box } from "./box";
 import { Stack } from "./stack";
+import { Text } from "./text";
 import { TextButton } from "./text-button";
 
 /** The text of an action inside a section: add, edit, cancel, go to. No box; the color and a 1px rule say what it is. */
@@ -37,5 +40,37 @@ export const AsLink: Story = {
 				/first-post
 			</TextButton>
 		</Stack>
+	),
+};
+
+/** An icon before the text sits on the same line, 14px with a 6px gap. */
+export const WithIcon: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<TextButton variant="quiet">
+				<SlidersHorizontal aria-hidden />
+				보기
+			</TextButton>
+			<TextButton>
+				<Upload aria-hidden />
+				올리기
+			</TextButton>
+		</Stack>
+	),
+};
+
+/** Inside a sentence the text sits on the text's own baseline, and an icon does not lift the line. */
+export const InRunningText: Story = {
+	render: () => (
+		<Box maxWidth="panel">
+			<Text variant="body">
+				글이 아직 저장되지 않았어요. <TextButton variant="underline">목록에서 보기 →</TextButton> 또는{" "}
+				<TextButton variant="quiet">
+					<Upload aria-hidden />
+					올리기
+				</TextButton>
+				를 눌러 이어서 하세요.
+			</Text>
+		</Box>
 	),
 };

@@ -8,10 +8,10 @@ import { cn } from "./cn";
 
 /**
  * The text of an action inside a section: add, edit, cancel, go to. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
- * `render` (`render={<Link href="…" />}`). It has no box: its text color and, for `underline`, a 1px rule under it say what it is.
+ * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap. It has no box: its text color and, for `underline`, a 1px rule under it say what it is.
  */
 const textButtonVariants = cva(
-	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45",
+	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg]:mr-monti-6 [&_svg]:inline-block [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:align-[-0.2em]",
 	{
 		variants: {
 			variant: {
