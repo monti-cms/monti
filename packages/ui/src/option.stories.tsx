@@ -4,7 +4,7 @@ import { Option } from "./option";
 import { Switch } from "./switch";
 
 /** A row of a choice: a control, its text and, if needed, a note. Pressing the text presses the control. */
-const meta = { title: "Choice/Option", component: Option } satisfies Meta<typeof Option>;
+const meta = { title: "Controls/Choice/Option", component: Option } satisfies Meta<typeof Option>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

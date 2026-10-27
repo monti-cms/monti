@@ -22,7 +22,7 @@ import { Textarea } from "./textarea";
  * sits on the label row and shows while the pointer or keyboard is in the field.
  */
 const meta = {
-	title: "Field/Field",
+	title: "Controls/Field/Field",
 	component: FormField,
 	decorators: [
 		(Story) => (

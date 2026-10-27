@@ -3,7 +3,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/Stack",
+	title: "Primitives/Stack",
 	component: Stack,
 	args: { gap: 12, direction: "column" },
 	render: (args) => (

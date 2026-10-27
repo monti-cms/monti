@@ -8,7 +8,7 @@ import { Stack } from "./stack";
  * undone. Text sits 2px high in the pill and a leading icon pulls 2px into the padding. Switch light and dark with the toolbar.
  */
 const meta = {
-	title: "Button/Button",
+	title: "Controls/Button/Button",
 	component: Button,
 	args: { children: "새 글 쓰기" },
 } satisfies Meta<typeof Button>;

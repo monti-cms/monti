@@ -6,7 +6,7 @@ import { Patch } from "./patch";
  * with a −, and the lines around them are dimmed.
  */
 const meta = {
-	title: "Change/Patch",
+	title: "Monti/Change/Patch",
 	component: Patch,
 	args: {
 		file: "monti.schema.ts · memo",

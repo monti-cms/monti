@@ -9,7 +9,7 @@ import { TextButton } from "./text-button";
  * done about it at the right end. Cream background, one rule below.
  */
 const meta = {
-	title: "Frame/Banner",
+	title: "Patterns/Frame/Banner",
 	component: Banner,
 	args: { title: "한국어 원문이 바뀌었어요", meta: "10. 26 · 블록 2개" },
 } satisfies Meta<typeof Banner>;

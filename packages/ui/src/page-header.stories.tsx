@@ -13,7 +13,7 @@ import { TextButton } from "./text-button";
  * on the right (the secondary pill, then the one primary pill). Under it the toolbar holds the tabs and filters.
  */
 const meta = {
-	title: "Frame/PageHeader",
+	title: "Patterns/Frame/PageHeader",
 	component: PageHeader,
 	args: { title: "게시글", meta: "/posts/:slug" },
 } satisfies Meta<typeof PageHeader>;

@@ -3,7 +3,7 @@ import { AiAction, Spark } from "./ai-action";
 import { Stack } from "./stack";
 
 /** "✦ 채우기" on an empty field, "↻ 다시" once it has a value: mono 11 in the proposal blue, no box. Usually on a `FormFieldLabel`. */
-const meta = { title: "Proposal/AiAction", component: AiAction } satisfies Meta<typeof AiAction>;
+const meta = { title: "Monti/Proposal/AiAction", component: AiAction } satisfies Meta<typeof AiAction>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -8,7 +8,7 @@ import { TextButton } from "./text-button";
  * Sending is never blocked beforehand; this is what comes back after.
  */
 const meta = {
-	title: "Assistant/Error",
+	title: "Monti/Assistant/Error",
 	component: ChatError,
 	args: {
 		title: "이번 달 상한에 닿아서 보내지 못했어요",

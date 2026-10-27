@@ -25,7 +25,7 @@ function Target({ children = "여기를 오른쪽 클릭하세요" }: { children
 
 /** What opens at the cursor on a row or tile: 232px, a 16px icon first, a shortcut or › last, and the red row at the bottom. */
 const meta = {
-	title: "Menu/ContextMenu",
+	title: "Controls/Menu/ContextMenu",
 	component: ContextMenu,
 	args: {},
 	render: (args) => (

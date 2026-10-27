@@ -7,7 +7,7 @@ import { Text } from "./text";
  * Translation in the editor. A block not decided yet is dimmed (`Untranslated`); a small `Marker` in the left margin says what a block is: its
  * source changed, it is new, it was removed, or it stays in the source language.
  */
-const meta = { title: "Translation/Marks", component: Marker, args: { children: "바뀜" } } satisfies Meta<
+const meta = { title: "Monti/Translation/Marks", component: Marker, args: { children: "바뀜" } } satisfies Meta<
 	typeof Marker
 >;
 export default meta;

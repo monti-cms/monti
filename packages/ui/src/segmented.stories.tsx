@@ -5,7 +5,7 @@ import { Segmented } from "./segmented";
 import { Stack } from "./stack";
 
 /** A short choice of one among a few. The picked cell is on the selected background at 600. */
-const meta = { title: "Choice/Segmented", component: Segmented } satisfies Meta<typeof Segmented>;
+const meta = { title: "Controls/Choice/Segmented", component: Segmented } satisfies Meta<typeof Segmented>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -24,7 +24,7 @@ import { MenuShortcut, MenuValue } from "./menu-parts";
  * the side). The pointed row and the row whose second level is open take the selected background. What cannot be undone is last, in red.
  */
 const meta = {
-	title: "Menu/DropdownMenu",
+	title: "Controls/Menu/DropdownMenu",
 	component: DropdownMenu,
 	args: {},
 	render: (args) => (

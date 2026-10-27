@@ -13,7 +13,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Field/Select",
+	title: "Controls/Field/Select",
 	component: Select,
 } satisfies Meta<typeof Select>;
 export default meta;

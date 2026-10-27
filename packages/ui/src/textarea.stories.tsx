@@ -4,7 +4,7 @@ import { Text } from "./text";
 import { Textarea } from "./textarea";
 
 const meta = {
-	title: "Field/Textarea",
+	title: "Controls/Field/Textarea",
 	component: Textarea,
 	args: { placeholder: "글 요약" },
 	decorators: [

@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/CodeBlock",
+	title: "Primitives/CodeBlock",
 	component: CodeBlock,
 	args: { wrap: true, maxHeight: "list", size: "caption", children: SAMPLE() },
 } satisfies Meta<typeof CodeBlock>;

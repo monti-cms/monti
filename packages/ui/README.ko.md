@@ -25,7 +25,9 @@ Monti의 디자인 시스템이다. 관리자와 그 확장이 쓰는 토큰과 
 pnpm --filter @monti-cms/ui storybook
 ```
 
-관리자의 화면 상태(불러오기 실패, 빈 목록, 열린 대화상자)는 `packages/admin`에서 같은 카탈로그에 더해진다.
+사이드바는 가장 작은 부품에서 제품 고유의 부품까지 다섯 단으로 나뉜다. **Foundations**(토큰 페이지), **Primitives**(레이아웃 원자, 글, 아이콘, AI 표시: Box, Stack, Grid, Text, Icon, Label, Separator …), **Controls**(사람이 조작하는 것, 묶음별: Button, Field, Choice, Tabs, Menu, Overlay, Status), **Patterns**(컨트롤로 조립한 것: List, Frame, Sheet), **Monti**(CMS에만 있는 것: EditorTools, Change, Proposal, Assistant, Translation). 스토리 제목은 Foundations와 Primitives에서는 `단/이름`, 나머지에서는 `단/묶음/이름`이고, 모든 스토리는 정확히 한 단에 놓인다(`.storybook/preview.tsx`의 `storySort`, `storybook-parity.test.ts`가 확인).
+
+관리자의 화면 상태(불러오기 실패, 빈 목록, 열린 대화상자)는 `packages/admin`에서 같은 카탈로그에 더해지며, 다섯 단 뒤 `Screens` 아래에 놓인다.
 
 ## 시각 회귀
 

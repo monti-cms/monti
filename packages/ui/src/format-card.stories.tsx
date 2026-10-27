@@ -9,7 +9,7 @@ import { Text } from "./text";
  * rule one row that asks the assistant.
  */
 const meta = {
-	title: "EditorTools/FormatCard",
+	title: "Monti/EditorTools/FormatCard",
 	component: FormatCard,
 	args: { requestLabel: "요청", requestShortcut: "⌘J", onRequest: () => undefined, children: null },
 	// The footnote button's glyph is a word of the app's language.

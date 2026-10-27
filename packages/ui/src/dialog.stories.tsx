@@ -18,7 +18,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Overlay/Dialog",
+	title: "Controls/Overlay/Dialog",
 	component: Dialog,
 	args: {},
 	render: (args) => (

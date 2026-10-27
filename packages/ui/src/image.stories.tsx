@@ -11,7 +11,7 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 const meta = {
-	title: "Layout/Image",
+	title: "Primitives/Image",
 	component: Image,
 	args: {
 		src: SAMPLE,

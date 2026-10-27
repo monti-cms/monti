@@ -3,7 +3,7 @@ import { ChangeDot } from "./change-dot";
 import { Stack } from "./stack";
 
 /** A 6px dot after a name: this has something to deal with. Warning is an unsaved change; proposal is an assistant suggestion. */
-const meta = { title: "Status/ChangeDot", component: ChangeDot } satisfies Meta<typeof ChangeDot>;
+const meta = { title: "Controls/Status/ChangeDot", component: ChangeDot } satisfies Meta<typeof ChangeDot>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

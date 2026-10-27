@@ -3,7 +3,7 @@ import { useState } from "react";
 import { RenameField } from "./rename-field";
 import { FolderTile } from "./tile";
 
-const meta = { title: "List/RenameField" } satisfies Meta;
+const meta = { title: "Patterns/List/RenameField" } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

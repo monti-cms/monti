@@ -8,7 +8,7 @@ import { TodoDone, TodoItem } from "./todo-item";
  * changed. A ✓ line under the rows is what is already right.
  */
 const meta = {
-	title: "Status/TodoItem",
+	title: "Controls/Status/TodoItem",
 	component: TodoItem,
 	args: {
 		title: "대표 이미지가 없어요",

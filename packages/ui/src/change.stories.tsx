@@ -12,7 +12,7 @@ import { TextButton } from "./text-button";
  * key at the end, then what to do with the data already saved: radio choices, one line for the result, a list of what is affected.
  */
 const meta = {
-	title: "Change/ChangeGroup",
+	title: "Monti/Change/ChangeGroup",
 	component: ChangeGroup,
 	args: { kind: "edit", tag: "이름", title: "요약", identifier: "summary → excerpt", children: null },
 	decorators: [

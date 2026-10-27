@@ -9,7 +9,7 @@ import { Text } from "./text";
  * puts in has a pale blue background, a suggestion for an empty place is blue letters only. The proposal being looked at has a blue line in the
  * margin. The same marks are used in the editor, settings, review and the assistant's cards.
  */
-const meta = { title: "Proposal/Marks", component: Ins, args: { children: "만든" } } satisfies Meta<typeof Ins>;
+const meta = { title: "Monti/Proposal/Marks", component: Ins, args: { children: "만든" } } satisfies Meta<typeof Ins>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

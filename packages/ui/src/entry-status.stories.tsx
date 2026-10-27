@@ -8,7 +8,7 @@ import { Text } from "./text";
  * color, draft an empty ring, archived a short bar, failed a red dot (a delivery that did not arrive).
  */
 const meta = {
-	title: "Status/EntryStatus",
+	title: "Controls/Status/EntryStatus",
 	component: EntryStatus,
 	args: { status: "published", children: "발행됨" },
 } satisfies Meta<typeof EntryStatus>;

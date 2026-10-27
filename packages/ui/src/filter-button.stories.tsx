@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 
 /** A condition that is not on yet: its name and a caret, opening a list of values. Once a value is picked it becomes a chip. */
 const meta = {
-	title: "List/FilterButton",
+	title: "Patterns/List/FilterButton",
 	component: FilterButton,
 	args: { children: "태그" },
 } satisfies Meta<typeof FilterButton>;

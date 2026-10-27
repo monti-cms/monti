@@ -20,7 +20,7 @@ const ROWS = [
  * for all of them.
  */
 const meta = {
-	title: "List/Bulk bar",
+	title: "Patterns/List/Bulk bar",
 	component: BulkBar,
 	args: { label: "2개 선택", clearLabel: "선택 해제", onClear: () => {} },
 } satisfies Meta<typeof BulkBar>;

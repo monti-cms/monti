@@ -12,7 +12,7 @@ import { Text } from "./text";
  * continues the note. Hover the head's buttons for their key combinations.
  */
 const meta = {
-	title: "Proposal/MemoCard",
+	title: "Monti/Proposal/MemoCard",
 	component: MemoCard,
 	args: {
 		where: "요청 · 문단 4",

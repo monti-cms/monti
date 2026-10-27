@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 const meta = {
-	title: "Overlay/Tooltip",
+	title: "Controls/Overlay/Tooltip",
 	component: Tooltip,
 	args: {},
 } satisfies Meta<typeof Tooltip>;

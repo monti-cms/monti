@@ -6,7 +6,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/Box",
+	title: "Primitives/Box",
 	component: Box,
 	args: { padding: 12, background: "muted", radius: "md" },
 	render: (args) => (

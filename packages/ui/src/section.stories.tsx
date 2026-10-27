@@ -8,7 +8,7 @@ import { Section } from "./section";
  * under the title.
  */
 const meta = {
-	title: "Layout/Section",
+	title: "Primitives/Section",
 	component: Section,
 	args: { title: "사이트", children: null },
 	decorators: [

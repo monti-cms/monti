@@ -3,7 +3,7 @@ import { Stack } from "./stack";
 import { Heading, Text } from "./text";
 
 const meta = {
-	title: "Layout/Text",
+	title: "Primitives/Text",
 	component: Text,
 	args: { children: "처음 쓰는 블로그 글", variant: "body", tone: "default", weight: "role" },
 } satisfies Meta<typeof Text>;

@@ -25,7 +25,9 @@ Every component in every variant and state, in light and dark:
 pnpm --filter @monti-cms/ui storybook
 ```
 
-The admin's screen states (load failures, empty lists, open dialogs) join the same catalog from `packages/admin`.
+The sidebar has five tiers, from the smallest part to the product's own: **Foundations** (the token pages), **Primitives** (layout atoms, text, icons and the AI mark: Box, Stack, Grid, Text, Icon, Label, Separator ...), **Controls** (what a person operates, by group: Button, Field, Choice, Tabs, Menu, Overlay, Status), **Patterns** (what is assembled from controls: List, Frame, Sheet) and **Monti** (what only a CMS has: EditorTools, Change, Proposal, Assistant, Translation). A story title is `Tier/Name` for Foundations and Primitives and `Tier/Group/Name` for the others, and every story sits in exactly one tier (`storySort` in `.storybook/preview.tsx`, checked by `storybook-parity.test.ts`).
+
+The admin's screen states (load failures, empty lists, open dialogs) join the same catalog from `packages/admin`, under `Screens`, after the five tiers.
 
 ## Visual regression
 

@@ -28,7 +28,7 @@ const ROWS = [
 ];
 
 const meta = {
-	title: "List/Table",
+	title: "Patterns/List/Table",
 	component: Table,
 	args: {},
 	render: (args) => (

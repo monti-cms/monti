@@ -3,7 +3,7 @@ import { ChatMessage } from "./chat-message";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Assistant/Message",
+	title: "Monti/Assistant/Message",
 	component: ChatMessage,
 	args: { author: "assistant", children: "Two posts are drafts. One entry I tried to open no longer exists." },
 	argTypes: { author: { control: "inline-radio", options: ["user", "assistant"] } },

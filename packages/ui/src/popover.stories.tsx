@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Overlay/Popover",
+	title: "Controls/Overlay/Popover",
 	component: Popover,
 	args: {},
 	render: (args) => (

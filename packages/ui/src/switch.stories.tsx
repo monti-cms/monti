@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Switch } from "./switch";
 
 const meta = {
-	title: "Choice/Switch",
+	title: "Controls/Choice/Switch",
 	component: Switch,
 } satisfies Meta<typeof Switch>;
 export default meta;

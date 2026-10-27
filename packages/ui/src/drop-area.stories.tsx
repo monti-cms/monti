@@ -3,7 +3,7 @@ import { DropArea } from "./drop-area";
 import { FolderTile } from "./tile";
 
 const meta = {
-	title: "List/DropArea",
+	title: "Patterns/List/DropArea",
 	component: DropArea,
 	decorators: [
 		(Story) => (

@@ -23,7 +23,7 @@ function Demo({ resizeKey }: { resizeKey: string }) {
 }
 
 const meta = {
-	title: "Frame/ResizeHandle",
+	title: "Patterns/Frame/ResizeHandle",
 	component: ResizablePane,
 	args: { resizeKey: "story", defaultWidth: 288, min: 224, max: 384 },
 	render: () => <Demo resizeKey="story-rest" />,

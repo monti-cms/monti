@@ -4,7 +4,7 @@ import { Calendar } from "./calendar";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Field/Calendar",
+	title: "Controls/Field/Calendar",
 	component: Calendar,
 	args: { locale: ko, defaultMonth: new Date(2026, 9, 1) },
 } satisfies Meta<typeof Calendar>;

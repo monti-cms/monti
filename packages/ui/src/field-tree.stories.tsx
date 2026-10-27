@@ -6,7 +6,7 @@ import { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } 
  * The outline of a collection's fields: a grip, the key (mono), the label, and the kind at the end. A group is a grey band, and the fields in it
  * are indented. A field that cannot be moved has no grip.
  */
-const meta = { title: "List/FieldTree", component: FieldTree } satisfies Meta<typeof FieldTree>;
+const meta = { title: "Patterns/List/FieldTree", component: FieldTree } satisfies Meta<typeof FieldTree>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

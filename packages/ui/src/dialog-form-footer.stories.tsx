@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Overlay/DialogFormFooter",
+	title: "Controls/Overlay/DialogFormFooter",
 	component: DialogFormFooter,
 	args: { onCancel: () => {}, busy: false, disabled: false },
 	render: (args) => (

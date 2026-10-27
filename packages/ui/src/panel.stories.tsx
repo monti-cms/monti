@@ -3,7 +3,7 @@ import { Panel } from "./panel";
 import { Text } from "./text";
 
 /** A resting surface with a hairline border, for a section of a screen: a list, a form group, a table. Floating things use the menu card instead. */
-const meta = { title: "Layout/Panel", component: Panel, args: { padding: 16 } } satisfies Meta<typeof Panel>;
+const meta = { title: "Primitives/Panel", component: Panel, args: { padding: 16 } } satisfies Meta<typeof Panel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

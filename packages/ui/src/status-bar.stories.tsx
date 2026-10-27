@@ -9,7 +9,7 @@ import { TodoDone, TodoItem } from "./todo-item";
  * and a cell with something to fix carries a dot in the warning color (red while it stops publishing).
  */
 const meta = {
-	title: "Frame/StatusBar",
+	title: "Patterns/Frame/StatusBar",
 	component: StatusBar,
 	args: { "aria-label": "상태" },
 	decorators: [

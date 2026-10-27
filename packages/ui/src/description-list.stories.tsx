@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "List/DescriptionList",
+	title: "Patterns/List/DescriptionList",
 	component: DescriptionList,
 	args: { layout: "columns" },
 	render: (args) => (

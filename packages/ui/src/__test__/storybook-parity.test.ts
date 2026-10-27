@@ -42,8 +42,8 @@ describe("storybook styles", () => {
 });
 
 /**
- * The catalog follows the design system's component groups (`Foundations`, `Button`, `Field` ...). A part without a story would be a part nobody
- * looks at in light and dark, and a story outside the groups would not be found.
+ * The catalog has five tiers: Foundations and Primitives hold pages (`Tier/Name`), Controls, Patterns and Monti hold groups (`Tier/Group/Name`). A part
+ * without a story would be a part nobody looks at in light and dark, and a story outside the tiers would not be found.
  */
 describe("storybook catalog", () => {
 	const src = path.resolve(__dirname, "..");
@@ -57,9 +57,17 @@ describe("storybook catalog", () => {
 		);
 	const titles = stories(src).map((file) => ({
 		file,
-		title: /^\s*(?:const meta = \{ )?title: "([A-Za-z]+\/[A-Za-z ]+)"/m.exec(readFileSync(file, "utf8"))?.[1],
+		title: /^\s*(?:const meta = \{ )?title: "([A-Za-z]+(?:\/[A-Za-z ]+)+)"/m.exec(readFileSync(file, "utf8"))?.[1],
 	}));
-	const groups = [...read("../../.storybook/preview.tsx").matchAll(/^\t+"([A-Za-z]+)",$/gm)].map((match) => match[1]);
+	// The sidebar's order, as `storySort` writes it: a tier's name, then the array of its pages or groups.
+	const order = new Function(
+		`return ${/order: (\[[\s\S]*?\n\t{4}\]),/.exec(read("../../.storybook/preview.tsx"))?.[1]}`,
+	)() as (string | string[])[];
+	const tiers = order.flatMap((entry, index) =>
+		typeof entry === "string" && Array.isArray(order[index + 1])
+			? [{ tier: entry, names: order[index + 1] as string[] }]
+			: [],
+	);
 
 	/** Modules the package exports that draw nothing of their own: helpers, labels, the menu pieces the menu stories show. */
 	const NOT_PARTS = ["cn", "closed", "labels", "layout", "menu-parts", "use-mobile"];
@@ -72,12 +80,43 @@ describe("storybook catalog", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("puts every story under one of the design system's groups, in the sidebar's order", () => {
+	it("sorts five tiers, smallest part first, then the screens", () => {
+		expect(order.filter((entry) => typeof entry === "string")).toEqual([
+			"Foundations",
+			"Primitives",
+			"Controls",
+			"Patterns",
+			"Monti",
+			"Screens",
+			"*",
+		]);
+		expect(tiers.map(({ tier }) => tier)).toEqual(["Foundations", "Primitives", "Controls", "Patterns", "Monti"]);
+	});
+
+	it("puts every story in exactly one tier: a page of Foundations or Primitives, or a group of the other tiers", () => {
+		const pageTiers = ["Foundations", "Primitives"];
 		for (const { file, title } of titles) {
 			expect(title, file).toBeDefined();
-			expect(groups, `${title} (${path.basename(file)})`).toContain(title?.split("/")[0]);
-			expect(title?.split("/").length, file).toBe(2);
+			const [tierName = "", second, ...rest] = (title ?? "").split("/");
+			const where = `${title} (${path.basename(file)})`;
+			const tier = tiers.filter(({ tier: name }) => name === tierName);
+			expect(tier, where).toHaveLength(1);
+			if (pageTiers.includes(tierName)) {
+				expect(rest, where).toEqual([]);
+			} else {
+				expect(tier[0]?.names, where).toContain(second);
+				expect(rest, where).toHaveLength(1);
+			}
 		}
+	});
+
+	it("has a story in every group a tier names", () => {
+		for (const { tier, names } of tiers.filter(({ tier: name }) => !["Foundations", "Primitives"].includes(name)))
+			for (const group of names)
+				expect(
+					titles.some(({ title }) => title?.startsWith(`${tier}/${group}/`)),
+					`${tier}/${group} has no story`,
+				).toBe(true);
 	});
 
 	it("draws the tokens on the Foundations pages", () => {

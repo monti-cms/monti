@@ -21,7 +21,7 @@ const preview = <Image src={SAMPLE} alt="" ratio="photo" radius="none" />;
  * tile, a ring marks a picked one, and uploading, failed and suggested files have their own looks.
  */
 const meta = {
-	title: "List/Tile",
+	title: "Patterns/List/Tile",
 	component: Tile,
 	args: {
 		preview,

@@ -23,7 +23,7 @@ import { Text } from "./text";
  * pressed and the block has the block background.
  */
 const meta = {
-	title: "EditorTools/BlockHandle",
+	title: "Monti/EditorTools/BlockHandle",
 	component: BlockHandle,
 	args: { addLabel: "아래에 블록 넣기", gripLabel: "블록 메뉴" },
 } satisfies Meta<typeof BlockHandle>;

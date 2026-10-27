@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/Grid",
+	title: "Primitives/Grid",
 	component: Grid,
 	args: { columns: 3, gap: 12 },
 	render: (args) => (

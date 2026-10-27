@@ -9,7 +9,7 @@ const details = [
 
 /** One call the assistant made, as a mono line: a mark for where it stands and what was done. It opens to the input and the result. */
 const meta = {
-	title: "Assistant/ToolCallLine",
+	title: "Monti/Assistant/ToolCallLine",
 	component: ToolCallLine,
 	args: { status: "done", statusLabel: "완료", details, children: "글 목록 읽음 · 게시글 6편" },
 	argTypes: { status: { control: "inline-radio", options: ["running", "done", "failed"] } },
