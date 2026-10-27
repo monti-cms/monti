@@ -125,7 +125,7 @@ const VARIANTS: MenuVariant[] = ["default", "outline"];
 /** Every menu button size and variant (`size` x `variant`). The rail is rendered in flow (`collapsible="none"`). */
 export const ButtonSizesAndVariants: Story = {
 	render: () => (
-		<SidebarProvider>
+		<SidebarProvider className="flex-wrap">
 			{VARIANTS.flatMap((variant) =>
 				SIZES.map((size) => (
 					<div key={`${variant}-${size}`} className="border-monti-muted border-r">

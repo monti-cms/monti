@@ -28,7 +28,7 @@ export const Row: Story = {
 /** Opening a menu from it. */
 export const OpensMenu: Story = {
 	render: () => (
-		<DropdownMenu>
+		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger render={<FilterButton>태그</FilterButton>} />
 			<DropdownMenuContent>
 				<DropdownMenuItem>리액트</DropdownMenuItem>

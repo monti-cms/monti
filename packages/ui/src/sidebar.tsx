@@ -451,7 +451,7 @@ const sidebarMenuButtonVariants = cva(
 			},
 			size: {
 				default: "h-7 text-monti-label",
-				sm: "h-6 text-monti-caption",
+				sm: "h-6 py-monti-4 text-monti-caption",
 				lg: "h-11 text-monti-label group-data-[collapsible=icon]:p-0!",
 			},
 		},
