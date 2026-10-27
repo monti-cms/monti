@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { ChatInput } from "./chat-input";
 import { Text } from "./text";
+import { TextButton } from "./text-button";
 
 const meta = {
 	title: "Chat/Input",
@@ -45,6 +46,18 @@ export const Busy: Story = { args: { value: "", busy: true } };
 
 /** The assistant can't run: the box is off. */
 export const Disabled: Story = { args: { disabled: true, placeholder: "Add a connection first" } };
+
+/** The model picker sits at the start of the row, the round send button at the end. */
+export const WithModelPicker: Story = {
+	args: {
+		value: "요약이 비어 있는 글 찾아 줘",
+		aside: (
+			<TextButton variant="quiet" mono className="text-monti-meta">
+				claude-sonnet-5-5 ▾
+			</TextButton>
+		),
+	},
+};
 
 /** What the conversation has used sits at the start of the row. */
 export const WithAside: Story = {

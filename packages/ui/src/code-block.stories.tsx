@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CodeBlock, DiffMark } from "./code-block";
+import { CodeBlock } from "./code-block";
 import { Stack } from "./stack";
 import { Text } from "./text";
 
@@ -61,28 +61,6 @@ export const Size: Story = {
 					<CodeBlock size={size}>{SAMPLE()}</CodeBlock>
 				</Stack>
 			))}
-		</Stack>
-	),
-};
-
-/** Marks inside a sentence: a suggested rewrite. */
-export const Marks: Story = {
-	render: () => (
-		<Stack gap={12}>
-			{(["remove", "add"] as const).map((type) => (
-				<Stack key={type} gap={4}>
-					<Text variant="label" tone="muted">
-						DiffMark {type}
-					</Text>
-					<Text>
-						오늘은 <DiffMark type={type}>맑은 하루</DiffMark>였다.
-					</Text>
-				</Stack>
-			))}
-			<Text>
-				오늘은 <DiffMark type="remove">흐린</DiffMark>
-				<DiffMark type="add">맑은</DiffMark> 하루였다.
-			</Text>
 		</Stack>
 	),
 };

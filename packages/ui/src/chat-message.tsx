@@ -4,9 +4,9 @@ import { cn } from "./cn";
 
 const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap break-words", {
 	variants: {
-		/** The admin's own message is a quiet bubble; the assistant's answer is plain text on the panel. */
+		/** The admin's own message is a paper bubble on the right; the assistant's answer is plain text with no background. */
 		author: {
-			user: "rounded-monti-lg bg-monti-muted p-monti-8 text-monti-default",
+			user: "max-w-[85%] self-end rounded-monti-xl rounded-br-monti-sm border border-monti-default bg-monti-page px-[14px] py-monti-10 text-monti-default",
 			assistant: "text-monti-default",
 		},
 		/** The answer is still arriving: a small blinking mark after the last word. */
@@ -17,7 +17,10 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 	defaultVariants: { author: "assistant" },
 });
 
-/** One message of a conversation: what the admin asked (`user`) or what the assistant answered (`assistant`, `streaming` while it is still being written). */
+/**
+ * One message of a conversation: what the admin asked (`user`, a bubble at the right) or what the assistant answered (`assistant`, plain text, `streaming`
+ * while it is still being written). Put them in a column; the bubble moves to the right edge of it.
+ */
 export function ChatMessage({
 	author = "assistant",
 	streaming,

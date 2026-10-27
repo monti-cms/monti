@@ -32,14 +32,18 @@ describe("ToolCallLine", () => {
 		{ label: "Result", value: '{ "b": 2 }' },
 	];
 
-	it("shows the name and where the call stands, for each status", () => {
+	it("shows what was done and where the call stands, for each status", () => {
 		for (const [status, word] of [
 			["running", "Running"],
 			["done", "Done"],
 			["failed", "Failed"],
 		] as const) {
-			const { unmount, container } = render(<ToolCallLine name="entries.list" status={status} statusLabel={word} />);
-			expect(screen.getByText("entries.list")).toBeTruthy();
+			const { unmount, container } = render(
+				<ToolCallLine status={status} statusLabel={word}>
+					Read the post list
+				</ToolCallLine>,
+			);
+			expect(screen.getByText("Read the post list")).toBeTruthy();
 			expect(screen.getByText(word)).toBeTruthy();
 			expect(container.querySelector("[data-slot=tool-call-line]")?.getAttribute("data-status")).toBe(status);
 			unmount();
@@ -47,9 +51,17 @@ describe("ToolCallLine", () => {
 	});
 
 	it("is a plain line without details, and opens to the details with them", () => {
-		const { rerender } = render(<ToolCallLine name="x" status="done" statusLabel="Done" />);
+		const { rerender } = render(
+			<ToolCallLine status="done" statusLabel="Done">
+				x
+			</ToolCallLine>,
+		);
 		expect(screen.queryByRole("button")).toBeNull();
-		rerender(<ToolCallLine name="x" status="done" statusLabel="Done" details={details} />);
+		rerender(
+			<ToolCallLine status="done" statusLabel="Done" details={details}>
+				x
+			</ToolCallLine>,
+		);
 		const line = screen.getByRole("button", { name: /x/ });
 		expect(line.getAttribute("aria-expanded")).toBe("false");
 		expect(screen.queryByText("Input")).toBeNull();
@@ -60,7 +72,11 @@ describe("ToolCallLine", () => {
 	});
 
 	it("can start open", () => {
-		render(<ToolCallLine name="x" status="failed" statusLabel="Failed" details={details} defaultOpen />);
+		render(
+			<ToolCallLine status="failed" statusLabel="Failed" details={details} defaultOpen>
+				x
+			</ToolCallLine>,
+		);
 		expect(screen.getByText("Result")).toBeTruthy();
 	});
 });

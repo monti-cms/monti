@@ -82,7 +82,9 @@ export const Scrolling: Story = {
 			{Array.from({ length: 8 }, (_, index) => (
 				<div key={index} style={{ display: "contents" }}>
 					<ChatMessage author="user">Question {index + 1}</ChatMessage>
-					<ToolCallLine name="entries.list" status="done" statusLabel="Done" />
+					<ToolCallLine status="done" statusLabel="Done">
+						Read the post list · 6 posts
+					</ToolCallLine>
 					<ChatMessage>
 						An answer to question {index + 1}, long enough to take a couple of lines in the panel.
 					</ChatMessage>

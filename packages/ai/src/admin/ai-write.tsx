@@ -17,17 +17,18 @@ import {
 	Button,
 	CodeBlock,
 	commonMessages,
+	Del,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DiffMark,
 	ErrorNoticeView,
 	FormFieldError,
 	Grid,
 	Heading,
 	Inline,
+	Ins,
 	isComposingKey,
 	Stack,
 	Tabs,
@@ -300,14 +301,10 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<DiffMark key={index} type="remove">
-				{part.text}
-			</DiffMark>
+			<Del key={index}>{part.text}</Del>
 		) : (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<DiffMark key={index} type="add">
-				{part.text}
-			</DiffMark>
+			<Ins key={index}>{part.text}</Ins>
 		),
 	);
 }

@@ -33,12 +33,13 @@ export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader,
 export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
+export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
-export { CodeBlock, DiffMark } from "./code-block";
+export { CodeBlock } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 export {
 	Combobox,
@@ -138,6 +139,7 @@ export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
+export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export { Option } from "./option";
 export {
@@ -152,6 +154,9 @@ export {
 export { Patch, type PatchLine } from "./patch";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
+export { ProposalBubble } from "./proposal-bubble";
+export { ProposalCard, ProposalItem } from "./proposal-card";
+export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
@@ -206,6 +211,7 @@ export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
+export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {
 	RowActions,

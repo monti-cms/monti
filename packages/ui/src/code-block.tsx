@@ -28,13 +28,4 @@ function CodeBlock({
 	);
 }
 
-/** A run of text marked as removed or added, inside a sentence (a suggested rewrite). */
-function DiffMark({ type, children }: { type: "add" | "remove"; children: React.ReactNode }) {
-	return type === "add" ? (
-		<ins className="rounded-monti-sm bg-monti-success-muted text-monti-success no-underline">{children}</ins>
-	) : (
-		<del className="rounded-monti-sm bg-monti-danger-muted text-monti-danger">{children}</del>
-	);
-}
-
-export { CodeBlock, DiffMark };
+export { CodeBlock };

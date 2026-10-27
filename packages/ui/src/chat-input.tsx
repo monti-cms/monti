@@ -1,15 +1,13 @@
 "use client";
 
-import { Send, Square } from "lucide-react";
 import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
-import { Textarea } from "./textarea";
+import { SendButton } from "./send-button";
 
 /**
- * The box a conversation is typed in: a text area, and a send button that becomes a stop button while the answer is being written (`busy`). Enter sends,
- * Shift+Enter breaks the line (not while an input method is composing). `aside` sits at the start of the row under the box (what the conversation has used).
- * Nothing is sent while the text is blank or the box is `disabled`. The words are the app's.
+ * The box a conversation is typed in: a rounded box with a text area, and under it a row with `aside` at the start (the model picker) and a round send
+ * button at the end that becomes a stop button while the answer is being written (`busy`). Enter sends, Shift+Enter breaks the line (not while an input
+ * method is composing). Nothing is sent while the text is blank or the box is `disabled`. The words are the app's.
  */
 export function ChatInput({
 	value,
@@ -51,34 +49,32 @@ export function ChatInput({
 	return (
 		<form
 			data-slot="chat-input"
-			className={cn("flex flex-col gap-monti-8", className)}
+			className={cn(
+				"rounded-monti-xl border border-monti-emphasis bg-monti-page px-monti-12 pt-monti-10 pb-monti-8 has-disabled:opacity-45",
+				className,
+			)}
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
 			}}
 			{...props}
 		>
-			<Textarea
-				size="sm"
+			<textarea
 				aria-label={label}
 				placeholder={placeholder}
 				value={value}
 				disabled={disabled}
+				rows={2}
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={onKeyDown}
+				className="field-sizing-content max-h-40 min-h-10 w-full resize-none border-0 bg-transparent px-0 py-monti-2 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
 			/>
-			<div className="flex items-center justify-between gap-monti-8">
+			<div className="mt-monti-4 flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
 				{busy ? (
-					<Button type="button" variant="secondary" size="sm" onClick={onStop}>
-						<Square aria-hidden />
-						{stopLabel}
-					</Button>
+					<SendButton busy label={stopLabel} onClick={onStop} />
 				) : (
-					<Button type="submit" size="sm" disabled={blank || disabled}>
-						<Send aria-hidden />
-						{sendLabel}
-					</Button>
+					<SendButton type="submit" label={sendLabel} disabled={blank || disabled} />
 				)}
 			</div>
 		</form>
