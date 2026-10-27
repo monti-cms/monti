@@ -1,16 +1,18 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./cn";
+import { Spinner } from "./spinner";
 
 /**
  * A pill. One `primary` per screen or floating surface, then `secondary` for the one or two common side actions, `danger` only to confirm
  * something that cannot be undone, and `outline-danger` for a quieter version of it. The text is centered by the font (no padding nudge), and a
  * leading icon pulls 2px into the left padding so it centers visually. The filled pills have no border, so their text starts at the padding the
  * design system gives (18px, 16px for `secondary`, 12px for `sm`); only `outline-danger` draws a 1px line.
- * A button that is `loading` keeps its fill and its place: the caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, and its cursor says so.
+ * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon (pulled 2px left like one), and the caller
+ * changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px]",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] [&>[data-slot=spinner]:first-child]:-ml-[2px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
@@ -47,7 +49,7 @@ function Button({
 	...props
 }: ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
-		/** Working on it: the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
+		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
 		width?: "full";
@@ -61,6 +63,7 @@ function Button({
 			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...props}
 		>
+			{loading && <Spinner className={size === "sm" ? "size-3" : "size-3.5"} />}
 			{children}
 		</ButtonPrimitive>
 	);

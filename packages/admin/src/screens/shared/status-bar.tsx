@@ -10,12 +10,13 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Spinner,
 	StatusBarCell,
 	StatusBar as StatusBarFrame,
 	StatusBarSpacer,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Languages, LoaderCircle, TriangleAlert } from "lucide-react";
+import { Check, Languages, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import type { CmsIssue } from "../../api/error-message";
 import { countFailedEvents, eventsKeys, listEvents, retryAllEvents } from "../../api/events";
@@ -542,7 +543,7 @@ function PublishReadinessItem() {
 		<>
 			<StatusBarItem
 				tone={!checking && blocking > 0 ? "warning" : "default"}
-				icon={checking ? <LoaderCircle className="animate-spin" /> : blocking > 0 ? <TriangleAlert /> : <Check />}
+				icon={checking ? <Spinner /> : blocking > 0 ? <TriangleAlert /> : <Check />}
 				title={t("itemTitle")}
 				{...(readiness.open !== undefined && readiness.onOpenChange
 					? { open: readiness.open, onOpenChange: readiness.onOpenChange }

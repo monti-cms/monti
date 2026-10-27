@@ -15,6 +15,7 @@ export const KO_UI_LABELS: UiLabels = {
 	deselect: "선택 해제",
 	aiFill: "채우기",
 	aiAgain: "다시",
+	aiWorking: "쓰는 중…",
 	proposal: "AI 제안",
 	blocking: "발행을 막아요",
 	footnoteMark: "각¹",

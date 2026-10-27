@@ -5,7 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "./cn";
-import { SheetList } from "./sheet-list";
+import { StatusBarList } from "./status-bar-list";
 import { TextButton } from "./text-button";
 import { TodoItem } from "./todo-item";
 
@@ -143,7 +143,7 @@ function StatusBarPluginCell({
 	if (findings.length === 0) return null;
 	const blocking = findings.some((finding) => finding.blocking);
 	return (
-		<SheetList
+		<StatusBarList
 			trigger={
 				<StatusBarCell end={end} tone={blocking ? "danger" : "warning"}>
 					{label} {findings.length}
@@ -174,7 +174,7 @@ function StatusBarPluginCell({
 			{findings.map(({ id, ...finding }) => (
 				<TodoItem key={id} {...finding} />
 			))}
-		</SheetList>
+		</StatusBarList>
 	);
 }
 

@@ -2,9 +2,9 @@
 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Inline, Input, Label, Separator, Switch, Text, Textarea } from "@monti-cms/ui";
+import { cn, FormFieldError, Inline, Input, Label, Separator, Spinner, Switch, Text, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getMedia, mediaKeys } from "../api/media";
@@ -399,7 +399,7 @@ export function ImageBlockView() {
 								caption ? "sr-only" : captionJustifyClass,
 							)}
 						>
-							<Loader2 aria-hidden className="size-3 shrink-0 animate-spin" />
+							<Spinner />
 							{t("imageNode.generating")}
 						</output>
 					)}

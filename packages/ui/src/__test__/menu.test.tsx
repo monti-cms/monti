@@ -13,7 +13,7 @@ import {
 	DropdownMenuTrigger,
 } from "../dropdown-menu";
 import { MenuShortcut, MenuValue } from "../menu-parts";
-import { SheetList } from "../sheet-list";
+import { StatusBarList } from "../status-bar-list";
 import { TodoDone, TodoItem } from "../todo-item";
 
 afterEach(cleanup);
@@ -106,19 +106,19 @@ describe("menus", () => {
 	});
 });
 
-describe("SheetList", () => {
+describe("StatusBarList", () => {
 	it("opens upward with the group's name and count, runs a row's action, and shows what is done", async () => {
 		const onAction = vi.fn();
 		render(
-			<SheetList trigger={<button type="button">고칠 것 2</button>} label="고칠 것" count={2} defaultOpen>
+			<StatusBarList trigger={<button type="button">고칠 것 2</button>} label="고칠 것" count={2} defaultOpen>
 				<TodoItem blocking title="제목이 비어 있어요" detail="제목" actionLabel="이동" onAction={onAction} />
 				<TodoDone>요약 확인함</TodoDone>
-			</SheetList>,
+			</StatusBarList>,
 		);
-		const sheet = await screen.findByText("제목이 비어 있어요");
-		expect(sheet.closest("[data-slot=sheet-list]")?.querySelector("[data-slot=sheet-list-head]")?.textContent).toBe(
-			"고칠 것2",
-		);
+		const row = await screen.findByText("제목이 비어 있어요");
+		expect(
+			row.closest("[data-slot=status-bar-list]")?.querySelector("[data-slot=status-bar-list-head]")?.textContent,
+		).toBe("고칠 것2");
 		expect(document.querySelector("[data-slot=todo-mark]")?.getAttribute("data-blocking")).toBe("true");
 		fireEvent.click(screen.getByRole("button", { name: "이동" }));
 		expect(onAction).toHaveBeenCalledOnce();

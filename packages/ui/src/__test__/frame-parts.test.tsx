@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Banner } from "../banner";
 import { EntryStatus } from "../entry-status";
 import { PageHeader, PageToolbar, PageToolbarEnd } from "../page-header";
-import { SheetList } from "../sheet-list";
 import { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "../status-bar";
+import { StatusBarList } from "../status-bar-list";
 import { TodoItem } from "../todo-item";
 
 afterEach(cleanup);
@@ -153,14 +153,14 @@ describe("TodoItem", () => {
 	// The design's `.act` has no border and no background: plain muted text. A box around it is the focus ring of a popover that moved focus there.
 	it("is plain text with no box, and an opening list does not put focus on it", async () => {
 		render(
-			<SheetList defaultOpen label="할 일" count={1} trigger={<StatusBarCell>할 일 1</StatusBarCell>}>
+			<StatusBarList defaultOpen label="할 일" count={1} trigger={<StatusBarCell>할 일 1</StatusBarCell>}>
 				<TodoItem blocking title="제목이 비어 있어요" actionLabel="이동" onAction={() => {}} />
-			</SheetList>,
+			</StatusBarList>,
 		);
 		const action = await screen.findByRole("button", { name: "이동" });
 		expect(action.className).toContain("border-0");
 		expect(action.className).toContain("bg-transparent");
 		await waitFor(() => expect(document.activeElement).not.toBe(action));
-		expect(document.activeElement?.getAttribute("data-slot")).toBe("sheet-list");
+		expect(document.activeElement?.getAttribute("data-slot")).toBe("status-bar-list");
 	});
 });

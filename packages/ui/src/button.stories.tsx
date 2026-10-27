@@ -59,13 +59,23 @@ export const WithIcon: Story = {
 	),
 };
 
-/** Working: the button keeps its fill and its label says what is happening ("저장 중…", with a share when it is known); it cannot be pressed again. */
+/**
+ * Working: a spinner comes first (in place of a leading icon, pulled 2px left like one), the button keeps its fill, and its label says what is
+ * happening ("저장 중…", with a share when it is known). It cannot be pressed again and is `aria-busy`.
+ */
 export const Loading: Story = {
 	render: () => (
-		<Stack direction="row" gap={16} align="center">
+		<Stack direction="row" gap={16} align="center" wrap>
 			<Button loading>저장 중…</Button>
+			<Button variant="secondary" loading>
+				<Search aria-hidden />
+				검색 중…
+			</Button>
 			<Button variant="secondary" size="sm" loading>
 				올리는 중 64%
+			</Button>
+			<Button variant="danger" loading>
+				지우는 중…
 			</Button>
 		</Stack>
 	),

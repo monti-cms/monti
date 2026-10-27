@@ -201,7 +201,6 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
-export { SheetList } from "./sheet-list";
 export { SidePanelFrame } from "./side-panel-frame";
 export {
 	Sidebar,
@@ -222,9 +221,11 @@ export {
 	useSidebar,
 } from "./sidebar";
 export { Spark } from "./spark";
+export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+export { StatusBarList } from "./status-bar-list";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {

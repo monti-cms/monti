@@ -5,6 +5,7 @@ import { type ReactNode, useRef } from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
+import { Spinner } from "./spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 // The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
@@ -64,6 +65,7 @@ function SplitButton({
 				onClick={onClick}
 				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]")}
 			>
+				{loading && <Spinner className="-ml-[2px]" />}
 				{children}
 			</ButtonPrimitive>
 			<DropdownMenu>

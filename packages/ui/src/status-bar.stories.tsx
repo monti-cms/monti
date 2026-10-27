@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SheetList } from "./sheet-list";
 import { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+import { StatusBarList } from "./status-bar-list";
 import { TodoDone, TodoItem } from "./todo-item";
 
 /**
@@ -27,7 +27,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {
 	render: (args) => (
 		<StatusBar {...args}>
-			<SheetList
+			<StatusBarList
 				defaultOpen
 				label="할 일"
 				count={2}
@@ -43,7 +43,7 @@ export const Playground: Story = {
 					onAction={() => {}}
 				/>
 				<TodoDone>요약, 태그 확인함</TodoDone>
-			</SheetList>
+			</StatusBarList>
 			<StatusBarCell>요청 2 · 1 고치는 중</StatusBarCell>
 			<StatusBarSpacer />
 			<StatusBarCell end render={<span />}>

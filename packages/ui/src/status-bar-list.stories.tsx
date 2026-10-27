@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Marker } from "./marker";
-import { SheetList } from "./sheet-list";
+import { StatusBarList } from "./status-bar-list";
 import { TodoDone, TodoItem } from "./todo-item";
 
 /**
@@ -8,8 +8,8 @@ import { TodoDone, TodoItem } from "./todo-item";
  * is already done. A red ring blocks publishing; a spark before the action means the assistant does it.
  */
 const meta = {
-	title: "Patterns/Sheet/SheetList",
-	component: SheetList,
+	title: "Patterns/Frame/StatusBarList",
+	component: StatusBarList,
 	args: {
 		label: "할 일",
 		count: 3,
@@ -24,7 +24,7 @@ const meta = {
 			</div>
 		),
 	],
-} satisfies Meta<typeof SheetList>;
+} satisfies Meta<typeof StatusBarList>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -37,7 +37,7 @@ const cell = ({ label, count }: { label: string; count: number }) => (
 
 export const Playground: Story = {
 	render: (args) => (
-		<SheetList {...args} trigger={cell(args)} countTone="danger">
+		<StatusBarList {...args} trigger={cell(args)} countTone="danger">
 			<TodoItem blocking title="제목이 비어 있어요" detail="제목" actionLabel="이동" onAction={() => {}} />
 			<TodoItem
 				blocking
@@ -54,7 +54,7 @@ export const Playground: Story = {
 				onAction={() => {}}
 			/>
 			<TodoDone>요약, 태그 확인함</TodoDone>
-		</SheetList>
+		</StatusBarList>
 	),
 };
 
@@ -62,10 +62,10 @@ export const Playground: Story = {
 export const WarningsOnly: Story = {
 	args: { count: 2 },
 	render: (args) => (
-		<SheetList {...args} trigger={cell(args)}>
+		<StatusBarList {...args} trigger={cell(args)}>
 			<TodoItem title="번역이 일부만 채워졌어요" detail="영어 · 문단 3개" actionLabel="열기" onAction={() => {}} />
 			<TodoItem title="링크 하나가 끊겼어요" detail="/posts/old-title" actionLabel="이동" onAction={() => {}} />
-		</SheetList>
+		</StatusBarList>
 	),
 };
 
@@ -73,7 +73,7 @@ export const WarningsOnly: Story = {
 export const SourceChanges: Story = {
 	args: { label: "원문에서 바뀐 곳", count: 3 },
 	render: (args) => (
-		<SheetList {...args} trigger={cell(args)}>
+		<StatusBarList {...args} trigger={cell(args)}>
 			<TodoItem
 				marker={<Marker tone="changed">바뀜</Marker>}
 				current
@@ -98,7 +98,7 @@ export const SourceChanges: Story = {
 				actionLabel="지우기"
 				onAction={() => {}}
 			/>
-		</SheetList>
+		</StatusBarList>
 	),
 };
 
@@ -106,7 +106,7 @@ export const SourceChanges: Story = {
 export const LongText: Story = {
 	args: { count: 1 },
 	render: (args) => (
-		<SheetList {...args} trigger={cell(args)}>
+		<StatusBarList {...args} trigger={cell(args)}>
 			<TodoItem
 				blocking
 				title="아주 긴 제목의 항목이 한 줄 안에서 어떻게 보이는지 확인합니다"
@@ -114,7 +114,7 @@ export const LongText: Story = {
 				actionLabel="이동"
 				onAction={() => {}}
 			/>
-		</SheetList>
+		</StatusBarList>
 	),
 };
 
@@ -122,8 +122,8 @@ export const LongText: Story = {
 export const AllDone: Story = {
 	args: { count: 0 },
 	render: (args) => (
-		<SheetList {...args} trigger={cell(args)}>
+		<StatusBarList {...args} trigger={cell(args)}>
 			<TodoDone>제목, 주소, 대표 이미지 확인함</TodoDone>
-		</SheetList>
+		</StatusBarList>
 	),
 };

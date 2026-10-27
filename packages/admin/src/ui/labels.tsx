@@ -22,6 +22,7 @@ export function AdminUiLabels({ children }: { children: ReactNode }) {
 				deselect: t("deselect"),
 				aiFill: t("ai.fill"),
 				aiAgain: t("ai.again"),
+				aiWorking: t("ai.working"),
 				proposal: t("proposal"),
 				blocking: t("blocking"),
 				footnoteMark: t("footnote.mark"),

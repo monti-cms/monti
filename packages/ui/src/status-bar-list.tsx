@@ -11,7 +11,7 @@ import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts
  * left), then the rows to do (`TodoItem`) and the ones already done (`TodoDone`), and under a rule the actions that belong to the whole list
  * (`footer`: a link to its settings, "Fix all"). `trigger` is the cell that opens it.
  */
-function SheetList({
+function StatusBarList({
 	trigger,
 	label,
 	count,
@@ -50,14 +50,14 @@ function SheetList({
 					<PopoverPrimitive.Popup
 						ref={popup}
 						initialFocus={popup}
-						data-slot="sheet-list"
+						data-slot="status-bar-list"
 						className={cn(
 							MENU_CARD,
 							MENU_MOTION,
 							"z-50 max-h-(--available-height) w-85 overflow-y-auto p-monti-6 text-left outline-none",
 						)}
 					>
-						<div data-slot="sheet-list-head" className={MENU_LABEL}>
+						<div data-slot="status-bar-list-head" className={MENU_LABEL}>
 							<span>{label}</span>
 							{count > 0 && <Count tone={countTone}>{count}</Count>}
 						</div>
@@ -66,7 +66,7 @@ function SheetList({
 							<>
 								<div aria-hidden className={MENU_SEPARATOR} />
 								<div
-									data-slot="sheet-list-foot"
+									data-slot="status-bar-list-foot"
 									className="flex items-center justify-between gap-monti-12 px-[9px] pt-monti-4 pb-monti-4 text-monti-note"
 								>
 									{footer}
@@ -80,4 +80,4 @@ function SheetList({
 	);
 }
 
-export { SheetList };
+export { StatusBarList };
