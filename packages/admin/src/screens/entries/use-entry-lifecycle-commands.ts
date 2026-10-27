@@ -68,7 +68,7 @@ export function useEntryLifecycleCommands({
 	 */
 	const ensureSaved = async (
 		purpose: Purpose,
-		{ saveChanges = false, report = toast }: { saveChanges?: boolean; report?: (message: string) => void } = {},
+		{ saveChanges = false, report = toast.error }: { saveChanges?: boolean; report?: (message: string) => void } = {},
 	) => {
 		if (editor.getSnapshot().saveStatus === "conflict") {
 			report(t("conflictFirst", { purpose }));
@@ -94,7 +94,7 @@ export function useEntryLifecycleCommands({
 		const saved = await editor.save();
 		if (saved.ok) toast(tc("saved"));
 		// On failure, always show the reason (a conflict opens its own conflict dialog).
-		else if (saved.error.code !== "conflict") toast(saved.error.message || tc("saveFailed"));
+		else if (saved.error.code !== "conflict") toast.error(saved.error.message || tc("saveFailed"));
 	};
 
 	/**
@@ -111,7 +111,7 @@ export function useEntryLifecycleCommands({
 			return;
 		}
 		opened?.close();
-		toast(`${t("previewNotOpened")} ${saved.error.message}`.trim());
+		toast.error(`${t("previewNotOpened")} ${saved.error.message}`.trim());
 	};
 
 	const handlePublish = async ({ resetPublishedAt = false }: { resetPublishedAt?: boolean } = {}) => {
@@ -119,7 +119,7 @@ export function useEntryLifecycleCommands({
 		// A field filled from the body (`fillFromBody`) that is empty is generated from the body and shown. If there is no body to generate from, it must be entered by hand.
 		const filled = editor.fillFromBody();
 		if (!filled.ok) {
-			toast(filled.error.message);
+			toast.error(filled.error.message);
 			return;
 		}
 		for (const { label } of filled.value) toast(t("fillDone", { label }));
@@ -134,9 +134,9 @@ export function useEntryLifecycleCommands({
 				// A conflict opens its own conflict dialog.
 				if (published.error.code === "conflict") return;
 				if (published.error.issues?.length) {
-					toast(t("publishBlocked"));
+					toast.error(t("publishBlocked"));
 					onPublishBlocked(published.error.issues);
-				} else toast(published.error.message);
+				} else toast.error(published.error.message);
 				return;
 			}
 			void refreshIncoming(id);
@@ -161,12 +161,12 @@ export function useEntryLifecycleCommands({
 	const runLifecycle = async (action: LifecycleAction) => {
 		if (!entry || isSubmitting) return;
 		if (action !== "restore" && editor.getSnapshot().hasUnsavedChanges) {
-			toast(saveFirstMessage(t, action));
+			toast.error(saveFirstMessage(t, action));
 			return;
 		}
 		const changed = await editor.changeStatus(action);
 		if (!changed.ok) {
-			toast(changed.error.message);
+			toast.error(changed.error.message);
 			return;
 		}
 		toast(lifecycleSuccess(site)[action]);
@@ -191,7 +191,7 @@ export function useEntryLifecycleCommands({
 		if (!ok) return;
 		const deleted = await editor.deletePermanently();
 		if (!deleted.ok) {
-			toast(deleted.error.message);
+			toast.error(deleted.error.message);
 			return;
 		}
 		router.navigate(site.adminHref(`?collection=${entry.collection}&status=trashed`));
@@ -202,7 +202,7 @@ export function useEntryLifecycleCommands({
 		if (!id) return;
 		const copy = await editor.duplicate();
 		if (!copy.ok) {
-			toast(copy.error.message);
+			toast.error(copy.error.message);
 			return;
 		}
 		router.navigate(site.adminEntryEditHref(copy.value.id));

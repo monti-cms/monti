@@ -40,7 +40,7 @@ function announce(site: Site, label: string, results: BulkItemResult[], items: B
 	}
 	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
 	const lines = failures.slice(0, 3).map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`);
-	toast(
+	toast.error(
 		[ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), ...lines].join(
 			"\n",
 		),
@@ -122,7 +122,7 @@ export function useEntryMutations({
 		try {
 			announce(site, label, await run(op, targets, params), targets);
 		} catch (error) {
-			toast(errorText(site, error, t("bulk.failed", { label })));
+			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}
 	};
 

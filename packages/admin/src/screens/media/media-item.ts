@@ -58,7 +58,7 @@ export async function copyText(text: string, success: string, failure: string) {
 		await navigator.clipboard.writeText(text);
 		toast(success);
 	} catch {
-		toast(failure);
+		toast.error(failure);
 	}
 }
 

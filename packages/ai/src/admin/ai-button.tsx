@@ -51,7 +51,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				try {
 					onResult(await ai.run(input()));
 				} catch (error) {
-					toast(errorText(site, error, t("runFailed")));
+					toast.error(errorText(site, error, t("runFailed")));
 				} finally {
 					setRunning(false);
 				}

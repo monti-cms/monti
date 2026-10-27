@@ -163,7 +163,7 @@ export function useTextCheck(
 				const count = done.length > 0 ? place(editor, done, new Set(segments.map((segment) => segment.id)), scopes) : 0;
 				const [first] = failed;
 				if (first) {
-					toast(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
+					toast.error(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
 				} else if (count === 0) toast(t("nothingToFix"));
 			} finally {
 				if (manualRef.current === controller) {
@@ -209,7 +209,7 @@ export function useTextCheck(
 			const [first] = failed;
 			if (first && !failedOnce) {
 				failedOnce = true;
-				toast(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
+				toast.error(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
 			}
 		};
 		const onTransaction = ({ transaction }: { transaction: Transaction }) => {

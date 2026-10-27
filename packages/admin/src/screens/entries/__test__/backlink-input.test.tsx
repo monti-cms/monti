@@ -6,7 +6,7 @@ import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
 import { BacklinkInput } from "../field-inputs";
 
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -100,7 +100,7 @@ describe("adding to a collection (inverse relation)", () => {
 		release();
 		await waitFor(() => expect(shared.refresh).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
-		expect(toast).not.toHaveBeenCalled();
+		expect(toast.error).not.toHaveBeenCalled();
 	});
 
 	it("if the save fails, reports below the input and reverts", async () => {
@@ -110,7 +110,7 @@ describe("adding to a collection (inverse relation)", () => {
 		release();
 		// Reports right below the input like other relation inputs (not a toast).
 		expect((await screen.findByRole("alert")).textContent).toBe("실패");
-		expect(toast).not.toHaveBeenCalled();
+		expect(toast.error).not.toHaveBeenCalled();
 		await waitFor(() => expect(screen.queryByText("시리즈 B")).toBeNull());
 		expect(screen.getByText("시리즈 A")).toBeTruthy();
 	});

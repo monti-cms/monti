@@ -104,7 +104,7 @@ export function useMediaInsertion({
 	// Slash menu "File": open the file picker. If there is no media storage, report that uploading is not possible.
 	useEffect(() => {
 		const open = () => {
-			if (!media) toast(mediaNotConfiguredMessage(site));
+			if (!media) toast.error(mediaNotConfiguredMessage(site));
 			else fileInputRef.current?.click();
 		};
 		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
@@ -116,7 +116,7 @@ export function useMediaInsertion({
 		async (files: File[], at?: number) => {
 			if (!editor) return;
 			if (!media) {
-				toast(mediaNotConfiguredMessage(site));
+				toast.error(mediaNotConfiguredMessage(site));
 				return;
 			}
 			let position = at;
@@ -139,7 +139,9 @@ export function useMediaInsertion({
 				} catch (error) {
 					// The reason, when there is one the person can read (the title already says it failed).
 					const reason = errorText(site, error, "");
-					toast([t("toolbar.uploadFailed", { name: file.name }), reason].filter(Boolean).join("\n"), { id: toastId });
+					toast.error([t("toolbar.uploadFailed", { name: file.name }), reason].filter(Boolean).join("\n"), {
+						id: toastId,
+					});
 				}
 			}
 		},

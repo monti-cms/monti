@@ -7,7 +7,7 @@ import type { ImageInserted, ImageInsertedEvent } from "../../events";
 import { BLOCK_ID_ATTRIBUTE, CmsBlockIds, findBlock } from "../block-ids";
 import { runImageInserted } from "../image-inserted";
 
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -116,6 +116,6 @@ describe("editor.imageInserted", () => {
 		await settle();
 		await settle();
 		expect(attrs()).toMatchObject({ alt: "", caption: "From the other one", mediaId: "m1" });
-		expect(toast).toHaveBeenCalledWith(expect.stringContaining("Could not fill it in."));
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Could not fill it in."));
 	});
 });

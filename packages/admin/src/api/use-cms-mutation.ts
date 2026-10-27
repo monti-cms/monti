@@ -52,7 +52,7 @@ export function useCmsMutation<TVariables = void, TResult = unknown, TData = unk
 		onError: (error, variables, context) => {
 			for (const [key, data] of context?.snapshots ?? []) queryClient.setQueryData(key, data);
 			const fallback = typeof options.failure === "function" ? options.failure(variables) : options.failure;
-			if (!options.inline) toast(errorText(site, error, fallback));
+			if (!options.inline) toast.error(errorText(site, error, fallback));
 			options.onError?.(error, variables);
 		},
 		onSuccess: (result, variables) => {

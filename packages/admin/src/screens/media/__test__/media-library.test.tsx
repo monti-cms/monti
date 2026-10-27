@@ -13,7 +13,7 @@ import { mediaMessages } from "../messages";
 const t = testSite.createTranslator(mediaMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -202,7 +202,7 @@ describe("media library", () => {
 			fireEvent.click(saveName(detail));
 			expect(await within(detail).findByText("The file name must keep the extension .png")).toBeTruthy();
 			expect(nameField(detail).value).toBe("tabby");
-			expect(toast).not.toHaveBeenCalled();
+			expect(toast.error).not.toHaveBeenCalled();
 		});
 
 		it("asks before leaving the file while the name has an unsaved change", async () => {
@@ -260,7 +260,7 @@ describe("media library", () => {
 		// The list request is retried once before it is treated as a failure.
 		const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
 		expect(alert.textContent).toContain("서버 오류");
-		expect(toast).not.toHaveBeenCalled();
+		expect(toast.error).not.toHaveBeenCalled();
 		fail = false;
 		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
 		expect(await screen.findByRole("button", { name: /cat\.png$/ })).toBeTruthy();

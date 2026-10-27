@@ -26,7 +26,7 @@ export function EntryEditorRecoveryDialogs({ editor }: { editor: EntryEditor }) 
 				// The server version is loaded in place: the page is not reloaded.
 				onReload={() =>
 					void editor.reload().then((reloaded) => {
-						if (!reloaded.ok) toast(reloaded.error.message);
+						if (!reloaded.ok) toast.error(reloaded.error.message);
 					})
 				}
 				onOverwrite={() => void editor.overwriteWithMine()}

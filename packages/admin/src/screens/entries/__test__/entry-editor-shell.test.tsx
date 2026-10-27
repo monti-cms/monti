@@ -29,7 +29,7 @@ const { getLocalBackup, deleteLocalBackup, saveLocalBackup, toast } = vi.hoisted
 	getLocalBackup: vi.fn(),
 	deleteLocalBackup: vi.fn(),
 	saveLocalBackup: vi.fn(),
-	toast: vi.fn(),
+	toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }));
 // The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
@@ -342,7 +342,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
 		pressSave();
-		await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
 	});
 
 	it("saves pending changes before opening the preview", async () => {
@@ -564,7 +564,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(screen.getByRole("button", { name: "발행" }));
 			const popup = within(await screen.findByRole("dialog"));
 			expect(popup.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
-			expect(toast).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
+			expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
 			expect(await (await bar()).findByRole("button", { name: "발행 전 1" })).toBeTruthy();
 			// The list under the header is gone: the popup is where the problems are.
 			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
@@ -1168,7 +1168,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
 	});
 
@@ -1279,7 +1279,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
@@ -1451,7 +1451,7 @@ describe("language tabs", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
 		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		expect(methodCalls("POST", "/translations")).toHaveLength(0);
 	});
 

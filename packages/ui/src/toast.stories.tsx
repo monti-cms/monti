@@ -4,7 +4,7 @@ import { Toaster, toast } from "./toast";
 
 /**
  * One look for every message that appears at the bottom of the window: an ink pill with the message and, at most, one text button ("되돌리기" undo,
- * "보기" view, "열기" open). No status icons and no colored variants: an error is the same pill, only its words differ. Toasts stay up here so they
+ * "보기" view, "열기" open). No status icons. The one other look is the error: the same pill on the danger background. Toasts stay up here so they
  * can be looked at; in the admin they close after four seconds. Switch light and dark with the toolbar.
  */
 const meta = {
@@ -31,6 +31,9 @@ function Open({ send }: { send: () => void }) {
 
 const plain = () => void toast("저장했어요");
 const withAction = () => void toast("휴지통으로 옮겼어요", { action: { label: "되돌리기", onClick: () => {} } });
+const failure = () => void toast.error("저장하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.");
+const failureWithAction = () =>
+	void toast.error("3개 중 1개를 옮기지 못했어요", { action: { label: "다시 시도", onClick: () => {} } });
 const dropHint = () =>
 	void toast.dropHint(
 		<>
@@ -49,6 +52,13 @@ export const Plain: Story = { render: () => <Open send={plain} /> };
 /** A message with its one action. */
 export const WithAction: Story = { render: () => <Open send={withAction} /> };
 
+/** A failure: the same pill on the danger background. */
+const ErrorToast: Story = { render: () => <Open send={failure} /> };
+export { ErrorToast as Error };
+
+/** A failure with its one action (retry). */
+export const ErrorWithAction: Story = { render: () => <Open send={failureWithAction} /> };
+
 /** Shown while files are dragged over a folder: an icon and a sentence with the folder's name in bold. */
 export const DropHint: Story = { render: () => <Open send={dropHint} /> };
 
@@ -59,3 +69,8 @@ export const PlainDark: Story = { globals: { theme: "dark" }, render: () => <Ope
 export const WithActionDark: Story = { globals: { theme: "dark" }, render: () => <Open send={withAction} /> };
 export const DropHintDark: Story = { globals: { theme: "dark" }, render: () => <Open send={dropHint} /> };
 export const LongMessageDark: Story = { globals: { theme: "dark" }, render: () => <Open send={longMessage} /> };
+export const ErrorDark: Story = { globals: { theme: "dark" }, render: () => <Open send={failure} /> };
+export const ErrorWithActionDark: Story = {
+	globals: { theme: "dark" },
+	render: () => <Open send={failureWithAction} />,
+};

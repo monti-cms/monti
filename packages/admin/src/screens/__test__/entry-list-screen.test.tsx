@@ -14,7 +14,7 @@ import { ScreenContextProvider, useScreenContext } from "../shared/screen-contex
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
 const { render } = nav;
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -298,7 +298,7 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로 이동했고 1개는 하지 못했어요."));
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로 이동했고 1개는 하지 못했어요."));
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -319,7 +319,7 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("menuitem", { name: "보관" }));
 		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "보관" }));
 
-		await waitFor(() => expect(toast).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		const checked = (title: string) =>
 			screen.getByRole("checkbox", { name: `${title} 선택` }).getAttribute("aria-checked");
 		await waitFor(() => expect(checked("가")).toBe("false"));
@@ -343,7 +343,7 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동Del" }));
 		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로 이동" }));
 
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("서버 오류"));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();
 	});
 

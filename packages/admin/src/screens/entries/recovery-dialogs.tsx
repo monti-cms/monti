@@ -166,7 +166,7 @@ function ComparePanes({
 			await navigator.clipboard.writeText(body);
 			toast(t("conflict.copied"));
 		} catch {
-			toast(tc("copyFailed"));
+			toast.error(tc("copyFailed"));
 		}
 	};
 	const pane = (label: string, value: EntryForm) => {

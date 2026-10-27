@@ -14,6 +14,22 @@ describe("toast", () => {
 		expect(screen.queryByRole("button")).toBeNull();
 	});
 
+	it("shows an error in the same pill on the danger background, with its action", async () => {
+		const onClick = vi.fn();
+		render(<Toaster />);
+		act(() => void toast.error("Could not save", { action: { label: "Retry", onClick } }));
+		const pill = (await screen.findByText("Could not save")).parentElement;
+		expect(pill?.className).toContain("bg-monti-danger-emphasis");
+		fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+		expect(onClick).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps an ordinary toast on the ink background", async () => {
+		render(<Toaster />);
+		act(() => void toast("Saved"));
+		expect((await screen.findByText("Saved")).parentElement?.className).not.toContain("bg-monti-danger-emphasis");
+	});
+
 	it("calls the action back and closes the toast", async () => {
 		const onClick = vi.fn();
 		render(<Toaster />);

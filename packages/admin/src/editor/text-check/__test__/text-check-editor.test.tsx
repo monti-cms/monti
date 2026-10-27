@@ -19,7 +19,7 @@ import { AUTO_CHECK_DELAY } from "../use-text-check";
 const t = testSite.createTranslator(textCheckMessages);
 const tEditor = testSite.createTranslator(editorMessages);
 
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -270,7 +270,7 @@ describe("spellcheck button", () => {
 		});
 		await renderEditor("틀린말\n", [failing]);
 		fireEvent.click(checkButton("고장") as HTMLElement);
-		await waitFor(() => expect(toast).toHaveBeenCalledWith(`${t("failed", { label: "고장" })}\nHTTP 500`));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(`${t("failed", { label: "고장" })}\nHTTP 500`));
 		expect(checkButton("고장")?.hasAttribute("disabled")).toBe(false);
 	});
 

@@ -10,7 +10,7 @@ import { AdminQueryProvider } from "../../shared/query-provider";
 import { ExportDialog } from "../export-dialog";
 import { exportMessages } from "../messages";
 
-const toast = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
 vi.mock("@monti-cms/ui", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@monti-cms/ui")>()),
 	toast,
@@ -236,7 +236,7 @@ describe("the Data page", () => {
 		renderData();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
-		expect(String(toast.mock.calls[0]?.[0])).not.toContain(t("toast.done", { name: "" }));
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
+		expect(toast).not.toHaveBeenCalled();
 	});
 });

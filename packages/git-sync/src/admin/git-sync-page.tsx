@@ -622,7 +622,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						onClick={() =>
 							void navigator.clipboard.writeText(secret).then(
 								() => toast(t("settings.copied")),
-								() => toast(tc("copyFailed")),
+								() => toast.error(tc("copyFailed")),
 							)
 						}
 					>

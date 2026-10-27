@@ -140,7 +140,7 @@ export function runImageInserted({
 			.catch((error: unknown) => {
 				if (controller.signal.aborted) return;
 				console.error("[cms] editor.imageInserted subscriber failed", error);
-				toast([failed, errorText(site, error, "")].filter(Boolean).join("\n"));
+				toast.error([failed, errorText(site, error, "")].filter(Boolean).join("\n"));
 			})
 			.finally(() => {
 				change(blockId, -1);

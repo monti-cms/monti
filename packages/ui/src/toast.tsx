@@ -15,7 +15,7 @@ type ToastOptions = {
 	id?: string | number;
 };
 
-/** Every toast looks the same: an ink pill, one message, at most one action. An error is the same pill; only its wording tells. */
+/** Every toast is the same pill: one message, at most one action. It is ink; an error is the same pill on the danger background. */
 const PILL =
 	"pointer-events-auto flex w-fit max-w-full items-center rounded-monti-lg bg-monti-emphasis px-monti-16 py-monti-10 text-monti-label font-normal text-monti-on-emphasis shadow-monti-floating";
 
@@ -28,10 +28,10 @@ function Frame({ className, children }: { className?: string; children: ReactNod
 	);
 }
 
-function show(message: ReactNode, { action, duration, id }: ToastOptions = {}): string | number {
+function render(message: ReactNode, { action, duration, id }: ToastOptions, error: boolean): string | number {
 	return engine.custom(
 		(toastId) => (
-			<Frame className="gap-monti-16 whitespace-pre-line">
+			<Frame className={cn("gap-monti-16 whitespace-pre-line", error && "bg-monti-danger-emphasis")}>
 				<span>{message}</span>
 				{action && (
 					<button
@@ -50,6 +50,15 @@ function show(message: ReactNode, { action, duration, id }: ToastOptions = {}): 
 		),
 		{ id, duration },
 	);
+}
+
+function show(message: ReactNode, options: ToastOptions = {}): string | number {
+	return render(message, options, false);
+}
+
+/** A message about something that went wrong: the same pill on the danger background, with the same options. */
+function error(message: ReactNode, options: ToastOptions = {}): string | number {
+	return render(message, options, true);
 }
 
 /**
@@ -79,10 +88,10 @@ function dropHint(
 }
 
 /**
- * Shows a message at the bottom of the window. `toast("Moved to the trash", { action: { label: "Undo", onClick } })`. Returns the id, for `toast.dismiss(id)`
- * or to replace the message by showing another with that `id`.
+ * Shows a message at the bottom of the window. `toast("Moved to the trash", { action: { label: "Undo", onClick } })`; `toast.error(...)` for a failure.
+ * Returns the id, for `toast.dismiss(id)` or to replace the message by showing another with that `id`.
  */
-export const toast = Object.assign(show, { dropHint, dismiss: engine.dismiss });
+export const toast = Object.assign(show, { error, dropHint, dismiss: engine.dismiss });
 
 /**
  * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center. `duration` is how long a toast stays

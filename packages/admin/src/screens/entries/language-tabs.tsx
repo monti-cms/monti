@@ -75,12 +75,12 @@ export function LanguageTabs({
 		setCreating(target);
 		try {
 			if (!(await onBeforeCreate())) {
-				toast(t("lang.saveFirst"));
+				toast.error(t("lang.saveFirst"));
 				setCreating(null);
 				return;
 			}
 		} catch (error) {
-			toast(errorText(site, error, t("lang.createFailed")));
+			toast.error(errorText(site, error, t("lang.createFailed")));
 			setCreating(null);
 			return;
 		}

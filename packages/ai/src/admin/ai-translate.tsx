@@ -148,15 +148,15 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				);
 				if (!result || controller.signal.aborted) return;
 				if ("error" in result) {
-					toast(t("toast.failedOne", { reason: result.error }));
+					toast.error(t("toast.failedOne", { reason: result.error }));
 					return;
 				}
 				const applied = applyTranslation(site, format, editor, unit, result.mdx, pos);
 				if (applied === "changed") toast(t("toast.blockChanged"));
-				else if (applied === "invalid") toast(t("toast.invalidOne"));
+				else if (applied === "invalid") toast.error(t("toast.invalidOne"));
 			} catch (error) {
 				if (controller.signal.aborted) toast(t("toast.stopped"));
-				else toast(errorText(site, error, t("runFailed")));
+				else toast.error(errorText(site, error, t("runFailed")));
 			} finally {
 				if (blockAbortRef.current.get(pos) === controller) blockAbortRef.current.delete(pos);
 				setBusyBlocks((current) => new Set([...current].filter((item) => item !== pos)));
@@ -220,7 +220,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 		setProgress(null);
 		abortRef.current = null;
 		if (controller.signal.aborted) toast(t("toast.stoppedKeep"));
-		else if (fatal) toast(fatal);
+		else if (fatal) toast.error(fatal);
 		else if (failures.length > 0 || skipped > 0) {
 			toast(
 				`${t("toast.partial", { done: blocks.length - failures.length - skipped, kept: failures.length + skipped })}${failures[0] ? ` · ${failures[0]}` : ""}`,
