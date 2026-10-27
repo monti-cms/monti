@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { BulkBar } from "./bulk-bar";
 import { DropdownMenuItem, DropdownMenuSeparator } from "./dropdown-menu";
 import { MenuShortcut } from "./menu-parts";
+import { PageToolbar, type SelectAllState } from "./page-header";
 import { RowCheck, RowTitle, Table, TableBody, TableCell, TableRow } from "./table";
-import { BulkBar, type SelectAllState, TableBar } from "./table-bar";
 import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { TextButton } from "./text-button";
 
@@ -14,11 +15,15 @@ const ROWS = [
 ];
 
 /**
- * The row above a list. It is as wide as the rows' content (12px inside), so the first letters line up, and it carries the select-all in the
- * left margin: hidden while nothing is picked (point at the bar), a bar while only some rows of the page are picked, a ✓ for all of them. Once rows
- * are picked it becomes the bulk bar.
+ * What the filter row above a list becomes once rows are picked. It is as wide as the rows' content (12px inside), so the first letters line up, and
+ * the select-all hangs in the left margin: hidden while nothing is picked (point at the row), a bar while only some rows of the page are picked, a ✓
+ * for all of them.
  */
-const meta = { title: "List/Bulk bar", component: TableBar } satisfies Meta<typeof TableBar>;
+const meta = {
+	title: "List/Bulk bar",
+	component: BulkBar,
+	args: { label: "2개 선택", clearLabel: "선택 해제", onClear: () => {} },
+} satisfies Meta<typeof BulkBar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -39,14 +44,14 @@ function List({ initial }: { initial: number[] }) {
 	return (
 		<div className="max-w-2xl px-monti-32">
 			{picked.size === 0 ? (
-				<TableBar selectAll={selectAll} className="border-monti-muted border-b">
+				<PageToolbar inset selectAll={selectAll}>
 					<Tabs value="all">
-						<TabsList variant="bar">
+						<TabsList variant="toolbar">
 							<TabsTrigger value="all">전체</TabsTrigger>
 							<TabsTrigger value="published">발행됨</TabsTrigger>
 						</TabsList>
 					</Tabs>
-				</TableBar>
+				</PageToolbar>
 			) : (
 				<BulkBar
 					label={`${picked.size}개 선택`}
@@ -67,7 +72,6 @@ function List({ initial }: { initial: number[] }) {
 					}}
 					clearLabel="선택 해제"
 					onClear={() => setPicked(new Set())}
-					className="border-monti-muted border-b"
 				>
 					<TextButton>발행</TextButton>
 					<TextButton>폴더로</TextButton>

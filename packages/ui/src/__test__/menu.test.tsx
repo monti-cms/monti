@@ -13,7 +13,8 @@ import {
 	DropdownMenuTrigger,
 } from "../dropdown-menu";
 import { MenuShortcut, MenuValue } from "../menu-parts";
-import { SheetList, TodoDone, TodoItem } from "../sheet-list";
+import { SheetList } from "../sheet-list";
+import { TodoDone, TodoItem } from "../todo-item";
 
 afterEach(cleanup);
 

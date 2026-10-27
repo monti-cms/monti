@@ -2,7 +2,7 @@
 
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, Inline, StatusIndicator, Text, TextButton } from "@monti-cms/ui";
+import { Badge, Box, EntryStatus, Inline, Text, TextButton } from "@monti-cms/ui";
 import { Folder as FolderIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
@@ -11,8 +11,7 @@ import { AdminLink as Link } from "../router";
 import { customListCell, DefaultFieldCell } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { screensMessages } from "./messages";
-import { describeEntryStatus, statusLabels } from "./shared/entry-status";
-import { entryStatusMarker } from "./shared/entry-status-marker";
+import { describeEntryStatus, entryStatusKind, statusLabels } from "./shared/entry-status";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 
 /** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
@@ -84,7 +83,7 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	return <StatusIndicator {...entryStatusMarker(item.status, item.hasUnpublishedChanges)} label={label} />;
+	return <EntryStatus status={entryStatusKind(item.status, item.hasUnpublishedChanges)}>{label}</EntryStatus>;
 }
 
 /** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */

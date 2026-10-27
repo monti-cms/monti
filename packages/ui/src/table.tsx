@@ -111,7 +111,7 @@ const ON_ROW =
 	"opacity-0 group-hover/row:opacity-100 group-data-selected/row:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100";
 
 /**
- * The check of a row. It hangs 26px outside the table's left edge, on the same vertical line as the select-all of the {@link TableBar}, so the
+ * The check of a row. It hangs 26px outside the table's left edge, on the same vertical line as the select-all of the {@link PageToolbar}, so the
  * first letters of the rows stay in one column. Put it in the row's first cell; the table must not scroll itself (`container="none"`).
  */
 function RowCheck({

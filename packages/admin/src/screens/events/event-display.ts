@@ -1,15 +1,16 @@
 import type { Site } from "@monti-cms/core/site";
-import type { StatusTone } from "@monti-cms/ui";
+import type { EntryStatusKind } from "@monti-cms/ui";
 import type { EventDeliveryItem } from "../../api/events";
 
-export const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
-	delivered: "success",
-	failed: "danger",
-	dead: "danger",
-	pending: "warning",
-	delivering: "warning",
-	dismissed: "neutral",
-	recorded: "neutral",
+/** The status mark of a delivery state: arrived is a filled dot, on its way is orange, did not arrive is red, set aside is a bar, only recorded is a ring. */
+export const STATE_STATUS: Record<EventDeliveryItem["state"], EntryStatusKind> = {
+	delivered: "published",
+	failed: "failed",
+	dead: "failed",
+	pending: "editing",
+	delivering: "editing",
+	dismissed: "archived",
+	recorded: "draft",
 };
 
 /** What names the entry of an event: its title when the change was made, else its address, else the id (an entry may have no title). */

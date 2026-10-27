@@ -8,6 +8,7 @@ export {
 	AlertDescription,
 	AlertTitle,
 	Badge,
+	Banner,
 	Box,
 	Button,
 	ChatInput,

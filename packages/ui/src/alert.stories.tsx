@@ -23,9 +23,9 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 const TONES = ["neutral", "danger", "warning", "success"] as const;
-const LAYOUTS = ["grid", "stack", "inline", "strip"] as const;
+const LAYOUTS = ["grid", "stack", "inline"] as const;
 
-/** Every tone in every layout. `grid` expects an icon, a title and a description; `stack` is plain text; `inline` and `strip` carry an action. */
+/** Every tone in every layout. `grid` expects an icon, a title and a description; `stack` is plain text; `inline` carries an action. */
 export const AllTonesAndLayouts: Story = {
 	render: () => (
 		<Stack gap={48}>
@@ -40,7 +40,7 @@ export const AllTonesAndLayouts: Story = {
 							{layout === "grid" && <AlertTitle>글을 불러오지 못했어요</AlertTitle>}
 							{layout === "grid" && <AlertDescription>잠시 뒤에 다시 시도해 주세요.</AlertDescription>}
 							{layout === "stack" && <span>글을 불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요.</span>}
-							{(layout === "inline" || layout === "strip") && (
+							{layout === "inline" && (
 								<>
 									<span>글을 불러오지 못했어요</span>
 									<Button size="sm" variant="secondary">

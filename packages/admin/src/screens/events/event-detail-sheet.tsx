@@ -4,6 +4,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	DescriptionItem,
 	DescriptionList,
+	EntryStatus,
 	Heading,
 	Inline,
 	Sheet,
@@ -12,13 +13,12 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Stack,
-	StatusIndicator,
 	Text,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import type { EventDeliveryItem } from "../../api/events";
 import { formatDateTime } from "../shared/format-date";
-import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
+import { eventCollectionLabel, eventEntryLabel, STATE_STATUS } from "./event-display";
 import { eventsMessages } from "./messages";
 
 /** One group of the detail: a small heading with its rows, separated from the group before by a hairline. */
@@ -102,7 +102,9 @@ export function EventDetailSheet({
 											<Stack as="li" key={delivery.subscriber ?? ""} gap={2}>
 												<Inline gap={8}>
 													<Mono>{delivery.subscriber ?? ""}</Mono>
-													<StatusIndicator tone={STATE_TONE[delivery.state]} label={t(`state.${delivery.state}`)} />
+													<EntryStatus status={STATE_STATUS[delivery.state]}>
+														{t(`state.${delivery.state}`)}
+													</EntryStatus>
 												</Inline>
 												<Text as="div" variant="caption" tone="muted">
 													{t("detail.attempts", { count: delivery.attempts })}

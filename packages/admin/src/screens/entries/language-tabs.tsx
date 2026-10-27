@@ -8,10 +8,9 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	EntryStatus,
 	IconButton,
 	Inline,
-	StatusIndicator,
-	type StatusTone,
 	Text,
 	toast,
 } from "@monti-cms/ui";
@@ -22,17 +21,12 @@ import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { useAdminRouter } from "../../router";
-import { statusLabels } from "../shared/entry-status";
+import { entryStatusKind, statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
 
 /** Stands in for the locale code while the "add translation" text is split around it. */
 const CODE_MARK = "\u0000";
-
-const STATUS_TONE: Record<string, StatusTone> = {
-	published: "success",
-	draft: "warning",
-};
 
 /**
  * Language tabs above the title. Switch between languages of the same translation group; for a missing language, create a translation.
@@ -133,7 +127,7 @@ export function LanguageTabs({
 									if (!current) router.navigate(site.adminEntryEditHref(member.id));
 								}}
 							>
-								<StatusIndicator size="sm" tone={STATUS_TONE[member.status] ?? "neutral"} />
+								<EntryStatus status={entryStatusKind(member.status)} ink={current} />
 								<Text aria-hidden weight="medium">
 									{target.toUpperCase()}
 								</Text>

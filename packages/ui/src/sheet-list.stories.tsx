@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Marker } from "./marker";
-import { SheetList, TodoDone, TodoItem } from "./sheet-list";
+import { SheetList } from "./sheet-list";
+import { TodoDone, TodoItem } from "./todo-item";
 
 /**
  * The list a status bar cell opens upward: the group's name and count, then what needs fixing (a ring, a title, one line, one action) and what

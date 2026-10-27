@@ -24,6 +24,7 @@ export const AlertDialogPortal = close(open.AlertDialogPortal);
 export const AlertDialogTitle = close(open.AlertDialogTitle);
 export const AlertDialogTrigger = close(open.AlertDialogTrigger);
 export const Badge = close(open.Badge);
+export const Banner = close(open.Banner);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
@@ -114,7 +115,10 @@ export const BulkBar = close(open.BulkBar);
 export const RowActions = close(open.RowActions);
 export const RowCheck = close(open.RowCheck);
 export const RowTitle = close(open.RowTitle);
-export const TableBar = close(open.TableBar);
+export const PageHeader = close(open.PageHeader);
+export const PageToolbar = close(open.PageToolbar);
+export const PageToolbarEnd = close(open.PageToolbarEnd);
+export const ToolbarDivider = close(open.ToolbarDivider);
 export const FormField = close(open.FormField);
 export const FormFieldDescription = close(open.FormFieldDescription);
 export const FormFieldError = close(open.FormFieldError);
@@ -233,7 +237,11 @@ export const ChoiceCard = close(open.ChoiceCard);
 export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
-export const StatusIndicator = close(open.StatusIndicator);
+export const StatusBar = close(open.StatusBar);
+export const StatusBarCell = close(open.StatusBarCell);
+export const StatusBarPluginCell = close(open.StatusBarPluginCell);
+export const StatusBarSpacer = close(open.StatusBarSpacer);
+export const EntryStatus = close(open.EntryStatus);
 export const Switch = close(open.Switch);
 export const Table = close(open.Table);
 export const TableBody = close(open.TableBody);
@@ -261,13 +269,14 @@ export const TooltipTrigger = close(open.TooltipTrigger);
 export type { Closed } from "./closed";
 export type {
 	Background,
+	EntryStatusKind,
 	LayoutProps,
 	SearchTarget,
 	SegmentedOption,
+	SelectAll,
+	SelectAllState,
 	Spacing,
 	StackProps,
-	StatusShape,
-	StatusTone,
 	UiLabels,
 } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */

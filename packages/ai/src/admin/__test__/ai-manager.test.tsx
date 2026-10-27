@@ -161,7 +161,7 @@ describe("AI Manager UI", () => {
 			</SiteWrapper>,
 		);
 		const notice = await screen.findByText(tManager("banner.needsConnection"));
-		expect(notice.closest('[data-slot="alert"]')).not.toBeNull();
+		expect(notice.closest("[data-slot=banner]")).not.toBeNull();
 		expect(screen.getByRole("button", { name: tManager("banner.goToConnections") })).toBeInTheDocument();
 		// The switches show as off and cannot be turned on.
 		const off = screen.getByLabelText(tManager("toggle.enableAction", { label: "Suggest slug" }));

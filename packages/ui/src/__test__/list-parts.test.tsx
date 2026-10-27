@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BulkBar } from "../bulk-bar";
 import { DropArea } from "../drop-area";
 import { DropdownMenuItem } from "../dropdown-menu";
 import { Empty, EmptyStep } from "../empty";
+import { PageToolbar } from "../page-header";
 import { RenameField } from "../rename-field";
 import { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
-import { BulkBar, TableBar } from "../table-bar";
 import { FolderTile, Tile } from "../tile";
 
 afterEach(cleanup);
@@ -56,17 +57,29 @@ describe("list rows", () => {
 	});
 });
 
-describe("TableBar and BulkBar", () => {
+describe("PageToolbar and BulkBar", () => {
 	it("shows the select-all as mixed while some are picked and picks the page when pressed", () => {
 		const onChange = vi.fn();
-		const { rerender } = render(<TableBar selectAll={{ state: "some", onChange, label: "모두 선택" }}>탭</TableBar>);
+		const { rerender } = render(
+			<PageToolbar inset selectAll={{ state: "some", onChange, label: "모두 선택" }}>
+				탭
+			</PageToolbar>,
+		);
 		const check = screen.getByRole("checkbox", { name: "모두 선택" });
 		expect(check.getAttribute("aria-checked")).toBe("mixed");
 		fireEvent.click(check);
 		expect(onChange).toHaveBeenCalledWith(true);
-		rerender(<TableBar selectAll={{ state: "all", onChange, label: "모두 선택" }}>탭</TableBar>);
+		rerender(
+			<PageToolbar inset selectAll={{ state: "all", onChange, label: "모두 선택" }}>
+				탭
+			</PageToolbar>,
+		);
 		expect(screen.getByRole("checkbox", { name: "모두 선택" }).getAttribute("aria-checked")).toBe("true");
-		rerender(<TableBar selectAll={{ state: "none", onChange, label: "모두 선택" }}>탭</TableBar>);
+		rerender(
+			<PageToolbar inset selectAll={{ state: "none", onChange, label: "모두 선택" }}>
+				탭
+			</PageToolbar>,
+		);
 		expect(document.querySelector("[data-slot=select-all]")?.className).toContain("opacity-0");
 	});
 

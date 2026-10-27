@@ -4,10 +4,10 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	EntryStatus,
 	Inline,
 	Skeleton,
 	Stack,
-	StatusIndicator,
 	Table,
 	TableBody,
 	TableCell,
@@ -47,7 +47,7 @@ import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { EventDetailSheet } from "./event-detail-sheet";
-import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
+import { eventCollectionLabel, eventEntryLabel, STATE_STATUS } from "./event-display";
 import { eventsMessages } from "./messages";
 
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
@@ -205,7 +205,7 @@ export function EventsScreen() {
 								return (
 									<TableRow key={rowKey(item)} onClick={() => setOpenedKey(rowKey(item))}>
 										<TableCell>
-											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
+											<EntryStatus status={STATE_STATUS[item.state]}>{t(`state.${item.state}`)}</EntryStatus>
 										</TableCell>
 										<TableCell>{formatDateTime(site, change.occurredAt)}</TableCell>
 										{!recordedOnly && (

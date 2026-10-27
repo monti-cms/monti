@@ -81,9 +81,13 @@ describe("status bar", () => {
 				right: { align: "end", order: 1, Component: () => <Item label="오른쪽 항목" /> },
 			},
 		);
-		const [start, end] = (screen.getByRole("region", { name: "상태" }).children ?? []) as unknown as HTMLElement[];
-		expect(texts(start as HTMLElement)).toEqual(["이른 항목", "늦은 항목"]);
-		expect(texts(end as HTMLElement)).toEqual(["오른쪽 항목"]);
+		// One row of cells: the start group, the spacer, then the end group.
+		const region = screen.getByRole("region", { name: "상태" });
+		const children = [...region.children] as HTMLElement[];
+		const spacer = children.findIndex((child) => child.dataset.slot === "status-bar-spacer");
+		expect(texts(region)).toEqual(["이른 항목", "늦은 항목", "오른쪽 항목"]);
+		expect(children.slice(0, spacer).map((child) => child.textContent)).toEqual(["이른 항목", "늦은 항목"]);
+		expect(children.slice(spacer + 1).map((child) => child.textContent)).toEqual(["오른쪽 항목"]);
 	});
 
 	it("leaves no gap or wrapper for an item that renders nothing", () => {
@@ -94,8 +98,8 @@ describe("status bar", () => {
 				hidden: { align: "start", order: 2, Component: () => null },
 			},
 		);
-		const [start] = screen.getByRole("region", { name: "상태" }).children as unknown as HTMLElement[];
-		expect((start as HTMLElement).children).toHaveLength(1);
+		const region = screen.getByRole("region", { name: "상태" });
+		expect(region.querySelectorAll("[data-slot=status-bar-cell]")).toHaveLength(1);
 	});
 
 	it("gives an item the screen it is on", () => {

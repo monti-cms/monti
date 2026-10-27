@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MoreHorizontal } from "lucide-react";
 import { Count } from "./count";
 import { Empty } from "./empty";
+import { EntryStatus } from "./entry-status";
 import { IconButton } from "./icon-button";
 import { Panel } from "./panel";
 import { Skeleton } from "./skeleton";
-import { StatusIndicator } from "./status-indicator";
 import {
 	RowActions,
 	RowCheck,
@@ -45,7 +45,7 @@ const meta = {
 					<TableRow key={row.title}>
 						<TableCell>{row.title}</TableCell>
 						<TableCell>
-							<StatusIndicator tone="strong" shape={row.status === "발행됨" ? "dot" : "ring"} label={row.status} />
+							<EntryStatus status={row.status === "발행됨" ? "published" : "draft"}>{row.status}</EntryStatus>
 						</TableCell>
 						<TableCell>
 							<Text tone="muted">{row.date}</Text>
@@ -125,7 +125,7 @@ function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; p
 								{post.tags}
 							</TableCell>
 							<TableCell width="md">
-								<StatusIndicator tone="strong" shape={post.status === "발행됨" ? "dot" : "ring"} label={post.status} />
+								<EntryStatus status={post.status === "발행됨" ? "published" : "draft"}>{post.status}</EntryStatus>
 							</TableCell>
 							<TableCell width="xs" align="end">
 								<RowActions>

@@ -11,11 +11,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	EntryStatus,
 	IconButton,
 	Inline,
 	Separator,
 	SplitButton,
-	StatusIndicator,
 	Text,
 	TextButton,
 	Tooltip,
@@ -41,8 +41,7 @@ import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
 import { ExportDialog } from "../export/export-dialog";
 import { exportMessages } from "../export/messages";
-import { statusLabels } from "../shared/entry-status";
-import { entryStatusMarker } from "../shared/entry-status-marker";
+import { entryStatusKind, statusLabels } from "../shared/entry-status";
 import { collectionNoun } from "../shared/noun.messages";
 import { SidePanelToggle } from "../shared/side-panel-slot";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -108,12 +107,9 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					</Box>
 				)}
 				{entry && (
-					<StatusIndicator
-						data-testid="entry-status-chip"
-						{...entryStatusMarker(entry.status)}
-						label={statusLabels(site)[entry.status]}
-						chip
-					/>
+					<EntryStatus data-testid="entry-status-chip" status={entryStatusKind(entry.status)}>
+						{statusLabels(site)[entry.status]}
+					</EntryStatus>
 				)}
 			</Inline>
 

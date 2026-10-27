@@ -9,7 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { Box, Stack, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
+import { Box, EntryStatus, Stack, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -214,13 +214,7 @@ export function RecordPanel({
 											}
 										>
 											{name}
-											{option !== site.DEFAULT_LOCALE && (
-												<StatusIndicator
-													size="sm"
-													tone={filled ? "success" : "neutral"}
-													shape={filled ? "dot" : "ring"}
-												/>
-											)}
+											{option !== site.DEFAULT_LOCALE && <EntryStatus status={filled ? "published" : "draft"} />}
 										</TabsTrigger>
 									);
 								})}

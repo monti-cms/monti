@@ -2,8 +2,8 @@
 
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Alert,
 	Badge,
+	Banner,
 	Box,
 	Button,
 	booleanCodec,
@@ -530,13 +530,12 @@ export function AiManager() {
 				</TabsList>
 				<TabsContent value="features" fill>
 					{featuresQuery.data && usable.size === 0 && (
-						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
-						<Alert tone="warning" layout="strip" role="status">
-							<Text>{t("banner.needsConnection")}</Text>
-							<Button type="button" size="sm" variant="secondary" onClick={() => void changeTab("connections")}>
+						// A banner across the page under the tabs, flush with the list below, so it reads as the state of this tab.
+						<Banner title={t("banner.needsConnection")}>
+							<TextButton variant="underline" onClick={() => void changeTab("connections")}>
 								{t("banner.goToConnections")}
-							</Button>
-						</Alert>
+							</TextButton>
+						</Banner>
 					)}
 					{featuresQuery.error && !featuresQuery.data && (
 						<Box padding={12}>

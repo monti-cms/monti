@@ -4,7 +4,7 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { Alert, Box, Button, FormFieldError, Inline, Text } from "@monti-cms/ui";
+import { Banner, Box, FormFieldError, Inline, Text, TextButton } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -43,9 +43,10 @@ export function EntryEditorBanners({
 				</Box>
 			)}
 			{visualUnavailable && (
-				<Alert role="status" tone="warning" layout="strip">
-					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
-				</Alert>
+				<Banner
+					title={t("visualUnavailable")}
+					meta={sourceProblem ? issueLine(issueText(site, sourceProblem)) : undefined}
+				/>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
 				<Box border="bottom" paddingX={16} paddingY={8}>
@@ -54,25 +55,14 @@ export function EntryEditorBanners({
 			)}
 
 			{sourceChanged && (
-				<Alert role="status" tone="warning" layout="strip">
-					<Text tone="warning" weight="medium">
-						{t("sourceChanged")}
-					</Text>
-					<Inline gap={8}>
-						<Button type="button" size="sm" variant="secondary" onClick={onCompareSource}>
-							{t("compare")}
-						</Button>
-						<Button
-							type="button"
-							size="sm"
-							variant="secondary"
-							disabled={isReadOnly}
-							onClick={editor.confirmTranslationSource}
-						>
-							{t("confirm")}
-						</Button>
-					</Inline>
-				</Alert>
+				<Banner title={t("sourceChanged")}>
+					<TextButton variant="underline" onClick={onCompareSource}>
+						{t("compare")}
+					</TextButton>
+					<TextButton disabled={isReadOnly} onClick={editor.confirmTranslationSource}>
+						{t("confirm")}
+					</TextButton>
+				</Banner>
 			)}
 		</>
 	);

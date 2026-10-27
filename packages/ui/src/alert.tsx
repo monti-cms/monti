@@ -5,8 +5,8 @@ import { cn } from "./cn";
 
 /**
  * Notice for the admin UI. `tone` says what it means: `neutral` for information, `danger` for errors such as a load failure, `warning` and `success`
- * for the states between. `layout` says where it sits: a box in the content (`grid`, `stack`, `inline`), or
- * a `strip` across the top of a pane, flush with what is below it. The look of body blocks (callouts, etc.) is decided by each block separately.
+ * for the states between. `layout` says how it is arranged inside its box in the content (`grid`, `stack`, `inline`). A notice across the top of a pane
+ * is a `Banner`. The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva(
 	["relative w-full text-monti-body", "[&>svg]:size-4 [&>svg]:translate-y-[2px] [&>svg]:text-current"].join(" "),
@@ -17,8 +17,6 @@ export const alertVariants = cva(
 				stack: "block rounded-monti-lg px-monti-16 py-monti-12",
 				/** A one-line notice with its action on the right (a load failure with "Retry"). */
 				inline: "flex items-center justify-between gap-monti-12 rounded-monti-lg px-monti-16 py-monti-12",
-				/** Across the top of a pane, under its tabs: no radius, one line below, the page's side padding. */
-				strip: "flex items-center justify-between gap-monti-12 border-b px-monti-32 py-monti-8 text-monti-label",
 			},
 			tone: {
 				neutral: "border-monti-muted bg-monti-tool text-monti-default",

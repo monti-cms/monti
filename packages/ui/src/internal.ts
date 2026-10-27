@@ -24,9 +24,11 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Badge, badgeVariants } from "./badge";
+export { Banner } from "./banner";
 export { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
+export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
@@ -113,6 +115,7 @@ export {
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
 export { Empty, EmptyStep } from "./empty";
+export { EntryStatus, type EntryStatusKind } from "./entry-status";
 export {
 	FormField,
 	FormFieldDescription,
@@ -141,6 +144,14 @@ export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export { Option } from "./option";
+export {
+	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
+	type SelectAll,
+	type SelectAllState,
+	ToolbarDivider,
+} from "./page-header";
 export {
 	Pagination,
 	PaginationContent,
@@ -186,7 +197,7 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
-export { SheetList, TodoDone, TodoItem } from "./sheet-list";
+export { SheetList } from "./sheet-list";
 export { SidePanelFrame } from "./side-panel-frame";
 export {
 	Sidebar,
@@ -210,7 +221,7 @@ export { Skeleton } from "./skeleton";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
-export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
+export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {
@@ -226,7 +237,6 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
-export { BulkBar, type SelectAll, type SelectAllState, TableBar } from "./table-bar";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
@@ -234,6 +244,7 @@ export { TextButton } from "./text-button";
 export { Textarea } from "./textarea";
 export { ChoiceCard, FolderTile, Tile } from "./tile";
 export { Toaster, toast } from "./toast";
+export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
