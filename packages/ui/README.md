@@ -29,7 +29,9 @@ The admin's screen states (load failures, empty lists, open dialogs) join the sa
 
 ## Visual regression
 
-Every story of this package's catalog is shot in light and dark and compared with the PNGs in `visual/baselines`. The same page is checked for a sideways scroll, text cut by its box, and type-role classes (`text-monti-*`) that do not compute to their size. Admin screen stories are not shot until they carry the `visual` tag; a catalog story leaves out with `no-visual` (the rule is `visual/stories.ts`).
+Every story of this package's catalog is shot in light and dark and compared with the PNGs in `visual/baselines`. The same page is checked for a sideways scroll, text cut by its box, type-role classes (`text-monti-*`) that do not compute to their size, and an icon that sits off the line of the text of its button, link or tab. Admin screen stories are not shot until they carry the `visual` tag; a catalog story leaves out with `no-visual` (the rule is `visual/stories.ts`).
+
+**The audit.** `pnpm test:visual:audit` runs those checks, and only those, over every story of the built Storybook (the admin's screens included, shot or not) in light and dark. It compares no image, so it runs on any system. Run it at the end of each redesign epic: a finding is fixed, or written down under the issue that owns the screen. `MONTI_STORYBOOK_DIR=<a build>` points it at another build (the base branch) to tell what a branch broke from what was already there.
 
 The baselines are made on the Linux image CI runs in and nowhere else, because text is drawn differently per system: `pnpm test:visual` refuses to run on macOS and Windows. CI is where they come from.
 

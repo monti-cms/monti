@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { isShot, type StoryEntry } from "../../visual/stories";
+import { allowedChecks, isShot, type StoryEntry } from "../../visual/stories";
 
 const root = path.resolve(__dirname, "../../../..");
 const read = (file: string) => readFileSync(path.join(root, file), "utf8");
@@ -42,6 +42,15 @@ describe("visual regression setup", () => {
 		it("lets a screen story in with the `visual` tag, and a catalog story out with `no-visual`", () => {
 			expect(isShot(story("../admin/src/screens/entries/entries.stories.tsx", ["visual"]))).toBe(true);
 			expect(isShot(story("./src/button.stories.tsx", ["no-visual"]))).toBe(false);
+		});
+
+		it("lets a story through only the checks its tags name", () => {
+			expect(allowedChecks(story("./src/box.stories.tsx", ["visual-allow-clipped"]))).toEqual(["clipped"]);
+			expect(allowedChecks(story("./src/box.stories.tsx", ["visual-allow-overflow", "visual-allow-clipped"]))).toEqual([
+				"clipped",
+				"overflow",
+			]);
+			expect(allowedChecks(story("./src/box.stories.tsx"))).toEqual([]);
 		});
 
 		it("leaves out docs pages", () => {

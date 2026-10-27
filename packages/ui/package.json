@@ -20,6 +20,7 @@
 		"build-storybook": "storybook build -o storybook-static",
 		"visual:run": "playwright test --config visual/playwright.config.ts",
 		"test:visual": "pnpm build-storybook && pnpm visual:run",
+		"test:visual:audit": "pnpm build-storybook && playwright test --config visual/audit.config.ts",
 		"test:visual:update": "pnpm build-storybook && pnpm visual:run --update-snapshots"
 	},
 	"dependencies": {

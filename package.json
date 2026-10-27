@@ -12,6 +12,7 @@
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:recipes": "node scripts/check-recipes.mjs",
 		"test:visual": "pnpm --filter @monti-cms/ui test:visual",
+		"test:visual:audit": "pnpm --filter @monti-cms/ui test:visual:audit",
 		"test:visual:update": "pnpm --filter @monti-cms/ui test:visual:update",
 		"test:visual:docker": "node scripts/visual-docker.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" --filter \"./docs/recipes\" -r typecheck",

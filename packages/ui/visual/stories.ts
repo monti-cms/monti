@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import type { Finding } from "./checks";
 
 /** What a story is in Storybook's `index.json`. */
 export interface StoryEntry {
@@ -33,10 +34,24 @@ export const isShot = (entry: StoryEntry): boolean =>
 	!entry.tags.includes(OPT_OUT_TAG) &&
 	(entry.importPath.startsWith("./src/") || entry.tags.includes(OPT_IN_TAG));
 
+/** The checks a story lets through, by its tags (see {@link ALLOW_CLIPPED_TAG}). */
+export const allowedChecks = (entry: StoryEntry): readonly Finding["check"][] => [
+	...(entry.tags.includes(ALLOW_CLIPPED_TAG) ? (["clipped"] as const) : []),
+	...(entry.tags.includes(ALLOW_OVERFLOW_TAG) ? (["overflow"] as const) : []),
+];
+
+const readEntries = (storybookDir: string): StoryEntry[] =>
+	Object.values(
+		(
+			JSON.parse(readFileSync(path.join(storybookDir, "index.json"), "utf8")) as {
+				entries: Record<string, StoryEntry>;
+			}
+		).entries,
+	);
+
 /** The stories to shoot, in the order of the built Storybook's index. */
-export const readShots = (storybookDir: string): StoryEntry[] => {
-	const index = JSON.parse(readFileSync(path.join(storybookDir, "index.json"), "utf8")) as {
-		entries: Record<string, StoryEntry>;
-	};
-	return Object.values(index.entries).filter(isShot);
-};
+export const readShots = (storybookDir: string): StoryEntry[] => readEntries(storybookDir).filter(isShot);
+
+/** Every story of the built Storybook, shot or not: the audit runs the checks over all of them. */
+export const readAllStories = (storybookDir: string): StoryEntry[] =>
+	readEntries(storybookDir).filter((entry) => entry.type === "story");
