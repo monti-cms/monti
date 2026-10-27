@@ -55,13 +55,17 @@ export const LAYOUT = {
 	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", ...MIN_HEIGHT },
 	grow: { true: "flex-1" },
 	shrink: { false: "shrink-0" },
-	/** `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). */
+	/**
+	 * `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). A scrolling box (`auto`, `y`,
+	 * `x`) is `relative`: the screen-reader-only inputs inside it (a radio, a combobox) are placed in the box and scroll with it, instead of in the page around it,
+	 * where they would stretch the page past its window.
+	 */
 	overflow: {
-		auto: "overflow-auto",
+		auto: "relative overflow-auto",
 		hidden: "overflow-hidden",
 		clip: "overflow-clip",
-		y: "overflow-y-auto",
-		x: "overflow-x-auto",
+		y: "relative overflow-y-auto",
+		x: "relative overflow-x-auto",
 	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */
 	hideBelow: { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" },
