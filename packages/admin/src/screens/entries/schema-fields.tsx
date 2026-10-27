@@ -38,7 +38,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Stack,
-	Text,
 	Textarea,
 	TextButton,
 	FormField as UiField,
@@ -118,8 +117,8 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FormFieldLabel htmlFor={id}>
-			{label} {required && <Text tone="danger">*</Text>}
+		<FormFieldLabel htmlFor={id} required={required}>
+			{label}
 		</FormFieldLabel>
 	);
 	return (
@@ -154,8 +153,8 @@ function SlotFieldRow({
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
 			<Inline justify="between" gap={8}>
-				<FormFieldLabel htmlFor={id}>
-					{label} {required && <Text tone="danger">*</Text>}
+				<FormFieldLabel htmlFor={id} required={required}>
+					{label}
 				</FormFieldLabel>
 				{aside || trigger ? (
 					<Inline gap={4}>

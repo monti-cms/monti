@@ -284,9 +284,12 @@ function SnippetEditor({
 
 			<FormFieldGroup>
 				<FormField>
-					<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.label} required>
+						{t("field.name")}
+					</FormFieldLabel>
 					<Input
 						id={ids.label}
+						required
 						value={draft.label}
 						maxLength={40}
 						disabled={fromConfig}
@@ -301,9 +304,12 @@ function SnippetEditor({
 					</FormField>
 				) : (
 					<FormField>
-						<FormFieldLabel htmlFor={ids.key}>{t("field.key")}</FormFieldLabel>
+						<FormFieldLabel htmlFor={ids.key} required>
+							{t("field.key")}
+						</FormFieldLabel>
 						<Input
 							id={ids.key}
+							required
 							value={draft.key}
 							maxLength={40}
 							autoComplete="off"

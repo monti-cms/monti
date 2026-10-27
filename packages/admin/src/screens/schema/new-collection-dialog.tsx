@@ -92,18 +92,20 @@ function NewCollectionForm({
 			<DialogHeader>
 				<DialogTitle>{t("collection.createTitle")}</DialogTitle>
 			</DialogHeader>
-			<Labeled label={t("collection.newName")} htmlFor={nameId}>
+			<Labeled label={t("collection.newName")} htmlFor={nameId} required>
 				<Input
 					id={nameId}
+					required
 					value={name}
 					placeholder="Blog posts"
 					autoComplete="off"
 					onChange={(event) => setName(event.target.value)}
 				/>
 			</Labeled>
-			<Labeled label={t("collection.newId")} htmlFor={idFieldId} description={t("collection.newIdHint")}>
+			<Labeled label={t("collection.newId")} htmlFor={idFieldId} description={t("collection.newIdHint")} required>
 				<Input
 					id={idFieldId}
+					required
 					value={id}
 					placeholder="blog-posts"
 					autoComplete="off"

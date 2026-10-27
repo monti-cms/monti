@@ -323,9 +323,12 @@ function ProviderEditor({
 
 			<FormFieldGroup>
 				<FormField>
-					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.name} required>
+						{t("field.name")}
+					</FormFieldLabel>
 					<Input
 						id={ids.name}
+						required
 						value={draft.name}
 						placeholder="OpenRouter"
 						onChange={(event) => set({ name: event.target.value })}

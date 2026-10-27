@@ -7,7 +7,7 @@ import { StoryCaption } from "./story-caption";
 const meta = {
 	title: "Primitives/Label",
 	component: Label,
-	args: { children: "글 제목", size: "micro", tone: "subtle", hidden: false },
+	args: { children: "글 제목", size: "micro", tone: "subtle", hidden: false, required: false },
 } satisfies Meta<typeof Label>;
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -791,11 +791,11 @@ describe("SchemaScreen", () => {
 		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
 		// A name that is taken is refused with the reason.
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "post");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "post");
 		expect(within(dialog).getByText(t("name.taken"))).toBeTruthy();
 		expect(confirm.disabled).toBe(true);
 
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "note");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "note");
 		expect(
 			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
 		).toBe("notes");
@@ -806,7 +806,7 @@ describe("SchemaScreen", () => {
 		expect(within(dialog).getByText("/:slug")).toBeTruthy();
 		// An address of the writer's own stays when the name changes.
 		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "ideas");
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "notes");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "notes");
 		expect(
 			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
 		).toBe("ideas");
@@ -840,8 +840,9 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		const name = within(dialog).getByLabelText(tCollection("collection.newName"));
-		const id = () => (within(dialog).getByLabelText(tCollection("collection.newId")) as HTMLInputElement).value;
+		const name = within(dialog).getByRole("textbox", { name: tCollection("collection.newName") });
+		const id = () =>
+			(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }) as HTMLInputElement).value;
 		const path = () =>
 			`/${(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value}/:slug`;
 
@@ -860,13 +861,13 @@ describe("SchemaScreen", () => {
 			name: tCollection("collection.createConfirm"),
 		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
-		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memo");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }), "memo");
 		expect(path()).toBe("/memos/:slug");
 		expect(confirm.disabled).toBe(false);
 
 		// Once the address is edited it stops following the identifier.
 		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "my");
-		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memos");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }), "memos");
 		expect(path()).toBe("/my/:slug");
 
 		fireEvent.click(confirm);
@@ -883,7 +884,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "category");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "category");
 		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
 		expect(within(dialog).queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 		fireEvent.click(within(dialog).getByRole("button", { name: tCollection("collection.createConfirm") }));

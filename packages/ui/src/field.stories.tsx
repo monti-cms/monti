@@ -108,6 +108,33 @@ export const FillAction: Story = {
 	),
 };
 
+/**
+ * A form with required and optional fields marks the ones to fill in with a red `*` after the label (`required` on the label, and the real
+ * `required` on the control). A form whose fields are all required, and a select that always holds a value, get no mark.
+ */
+export const Required: Story = {
+	render: () => (
+		<FormFieldGroup>
+			<FormField>
+				<FormFieldLabel htmlFor="r-name" required>
+					이름
+				</FormFieldLabel>
+				<Input id="r-name" required placeholder="posts" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="r-slug" required>
+					식별자
+				</FormFieldLabel>
+				<Input id="r-slug" mono required placeholder="posts" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="r-desc">설명</FormFieldLabel>
+				<Textarea id="r-desc" rows={2} />
+			</FormField>
+		</FormFieldGroup>
+	),
+};
+
 /** The plain Label alone, and next to a control it labels. */
 export const Labels: Story = {
 	render: () => (

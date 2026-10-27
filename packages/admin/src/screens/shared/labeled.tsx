@@ -14,6 +14,7 @@ export function Labeled({
 	htmlFor,
 	control = "normal",
 	aside,
+	required,
 }: {
 	label: ReactNode;
 	/** A field description explaining what the setting is, placed between label and control. */
@@ -25,10 +26,12 @@ export function Labeled({
 	control?: ControlWidth;
 	/** Next to the label on the same line (a change marker, a revert button). */
 	aside?: ReactNode;
+	/** The field must be filled in: the label ends with a red star. Only in a form that also has optional fields; the control carries the real `required`. */
+	required?: boolean;
 }) {
 	const inSectionRow = useInSectionRow();
 	const labelNode = (
-		<FormFieldLabel htmlFor={htmlFor}>
+		<FormFieldLabel htmlFor={htmlFor} required={required}>
 			<Text variant="body" weight="medium">
 				{label}
 			</Text>
