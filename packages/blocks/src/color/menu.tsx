@@ -221,7 +221,7 @@ export function TextColorMenu({ editor }: { editor: Editor }) {
 			>
 				<TextColorIcon editor={editor} />
 			</IconButton>
-			<DropdownMenuContent align="start" width="auto">
+			<DropdownMenuContent align="start">
 				<TextColorMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -57,27 +57,21 @@ export {
 } from "./combobox";
 export {
 	Command,
-	CommandDialog,
 	CommandEmpty,
+	CommandFooter,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
 	CommandList,
 	CommandSeparator,
-	CommandShortcut,
 } from "./command";
 export {
 	ContextMenu,
-	ContextMenuCheckboxItem,
 	ContextMenuContent,
 	ContextMenuGroup,
 	ContextMenuItem,
 	ContextMenuLabel,
-	ContextMenuPortal,
-	ContextMenuRadioGroup,
-	ContextMenuRadioItem,
 	ContextMenuSeparator,
-	ContextMenuShortcut,
 	ContextMenuSub,
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
@@ -109,7 +103,6 @@ export {
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -138,6 +131,7 @@ export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from 
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { MapRow } from "./map-row";
+export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export { Option } from "./option";
 export {
 	Pagination,
@@ -177,6 +171,7 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
+export { SheetList, TodoDone, TodoItem } from "./sheet-list";
 export { SidePanelFrame } from "./side-panel-frame";
 export {
 	Sidebar,

@@ -81,7 +81,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 					>
 						<Count>{count > 99 ? "99+" : count}</Count>
 					</IconButton>
-					<DropdownMenuContent align="end" width="lg">
+					<DropdownMenuContent align="end">
 						{issues.map((issue) => (
 							<DropdownMenuItem key={issue.key} onClick={() => controller.jump(issue)}>
 								<SeverityIcon severity={issue.severity} />

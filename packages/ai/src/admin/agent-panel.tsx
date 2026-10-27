@@ -105,7 +105,7 @@ function HistoryMenu({ onPick }: { onPick: (id: string) => void }) {
 			>
 				<History aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="lg">
+			<DropdownMenuContent align="end">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>{t("history.label")}</DropdownMenuLabel>
 					{runs.isPending && (

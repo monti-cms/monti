@@ -64,7 +64,7 @@ function SearchBox<T extends string = string>({
 						{current.label}
 						<Caret />
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" width="sm">
+					<DropdownMenuContent align="start">
 						<DropdownMenuRadioGroup value={current.value} onValueChange={(next) => onTargetChange?.(next as T)}>
 							{targets.map((item) => (
 								<DropdownMenuRadioItem key={item.value} value={item.value}>

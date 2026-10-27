@@ -8,7 +8,6 @@ import {
 	ContextMenuItem,
 	ContextMenuLabel,
 	ContextMenuSeparator,
-	ContextMenuShortcut,
 	ContextMenuSub,
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
@@ -19,12 +18,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
+	MenuShortcut,
 } from "@monti-cms/ui";
 import { type LucideIcon, MoreHorizontal } from "lucide-react";
 import { cloneElement, type ReactElement } from "react";
@@ -101,7 +100,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 					>
 						{action.icon && <action.icon aria-hidden />}
 						{action.label}
-						{action.shortcut && <ContextMenuShortcut>{action.shortcut}</ContextMenuShortcut>}
+						{action.shortcut && <MenuShortcut>{action.shortcut}</MenuShortcut>}
 					</ContextMenuItem>
 				);
 			default:
@@ -149,7 +148,7 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 					>
 						{action.icon && <action.icon aria-hidden />}
 						{action.label}
-						{action.shortcut && <DropdownMenuShortcut>{action.shortcut}</DropdownMenuShortcut>}
+						{action.shortcut && <MenuShortcut>{action.shortcut}</MenuShortcut>}
 					</DropdownMenuItem>
 				);
 			default:
@@ -181,7 +180,7 @@ export function ActionContextMenu({
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
 			<ContextMenuTrigger render={trigger}>{children}</ContextMenuTrigger>
-			<ContextMenuContent width="md">
+			<ContextMenuContent>
 				<ContextItems actions={items} />
 			</ContextMenuContent>
 		</ContextMenu>
@@ -204,7 +203,7 @@ export function MoreActionsButton({
 			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				<MoreHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="md">
+			<DropdownMenuContent align="end">
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>
 		</DropdownMenu>

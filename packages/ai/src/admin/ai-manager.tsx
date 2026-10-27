@@ -1192,7 +1192,7 @@ function FeatureEditor({
 														<Plus aria-hidden />
 														{t("field.addCheck")}
 													</DropdownMenuTrigger>
-													<DropdownMenuContent align="start" width="sm">
+													<DropdownMenuContent align="start">
 														{addableChecks.map((kind) => (
 															<DropdownMenuItem
 																key={kind}

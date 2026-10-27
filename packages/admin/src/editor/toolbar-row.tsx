@@ -111,9 +111,7 @@ function OverflowMenu({ editor, children }: { editor: Editor; children: ReactNod
 			>
 				<MoreHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="md">
-				{children}
-			</DropdownMenuContent>
+			<DropdownMenuContent align="end">{children}</DropdownMenuContent>
 		</DropdownMenu>
 	);
 }

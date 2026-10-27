@@ -53,7 +53,7 @@ export function ToolbarDropdown({
 					{content}
 				</DropdownMenuTrigger>
 			)}
-			<DropdownMenuContent align="start" width="sm">
+			<DropdownMenuContent align="start">
 				{items.map((item) => (
 					<ToolbarMenuItem key={item.label} editor={editor} item={item} />
 				))}

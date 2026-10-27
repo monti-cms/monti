@@ -211,7 +211,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<IconButton label={t("more")} side="bottom" trigger={(button) => <DropdownMenuTrigger render={button} />}>
 						<MoreHorizontal aria-hidden />
 					</IconButton>
-					<DropdownMenuContent align="end" width="lg">
+					<DropdownMenuContent align="end">
 						{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 						{entry && !isTrashed && (
 							<>

@@ -1,10 +1,11 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
+import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
 const Select = SelectPrimitive.Root;
 
@@ -81,7 +82,9 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-monti-lg border border-monti-muted bg-monti-page text-monti-default shadow-monti-floating duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
+						MENU_CARD,
+						MENU_MOTION,
+						"relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}
@@ -96,33 +99,16 @@ function SelectContent({
 }
 
 function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) {
-	return (
-		<SelectPrimitive.GroupLabel
-			data-slot="select-label"
-			className={cn("px-2 py-1.5 text-monti-caption text-monti-muted", className)}
-			{...props}
-		/>
-	);
+	return <SelectPrimitive.GroupLabel data-slot="select-label" className={cn(MENU_LABEL, className)} {...props} />;
 }
 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
-		<SelectPrimitive.Item
-			data-slot="select-item"
-			className={cn(
-				"relative flex w-full cursor-default select-none items-center gap-2 rounded-monti-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-selected focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-				className,
-			)}
-			{...props}
-		>
+		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
 			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
 				{children}
 			</SelectPrimitive.ItemText>
-			<SelectPrimitive.ItemIndicator
-				render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}
-			>
-				<CheckIcon className="pointer-events-none" />
-			</SelectPrimitive.ItemIndicator>
+			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
 		</SelectPrimitive.Item>
 	);
 }
@@ -131,7 +117,7 @@ function SelectSeparator({ className, ...props }: SelectPrimitive.Separator.Prop
 	return (
 		<SelectPrimitive.Separator
 			data-slot="select-separator"
-			className={cn("pointer-events-none -mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("pointer-events-none", MENU_SEPARATOR, className)}
 			{...props}
 		/>
 	);

@@ -194,7 +194,7 @@ export const buildToolbarEntries = ({
 								>
 									<Upload aria-hidden />
 								</IconButton>
-								<DropdownMenuContent align="start" width="sm">
+								<DropdownMenuContent align="start">
 									<UploadMenuItems />
 								</DropdownMenuContent>
 							</DropdownMenu>

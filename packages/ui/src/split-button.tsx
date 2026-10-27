@@ -84,9 +84,7 @@ function SplitButton({
 					</TooltipTrigger>
 					<TooltipContent side="bottom">{menuLabel}</TooltipContent>
 				</Tooltip>
-				<DropdownMenuContent align={align} width="md">
-					{menu}
-				</DropdownMenuContent>
+				<DropdownMenuContent align={align}>{menu}</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
 	);

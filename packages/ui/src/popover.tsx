@@ -3,6 +3,7 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type * as React from "react";
 import { cn } from "./cn";
+import { MENU_CARD, MENU_MOTION } from "./menu-parts";
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -35,8 +36,8 @@ function PopoverContent({
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
 		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content, `anchor` as wide as what opened it. */
 		width?: keyof typeof POPOVER_WIDTH;
-		/** `none` when the content brings its own rows (a list, a calendar) and runs to the edge. */
-		padding?: "default" | "none";
+		/** `menu` for a list of rows (6px, as a menu card); `none` when the content brings its own rows (a calendar) and runs to the edge. */
+		padding?: "default" | "menu" | "none";
 		/** Scrolls inside when taller than the space left on screen. */
 		scroll?: boolean;
 	}) {
@@ -53,9 +54,12 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-monti-lg border border-monti-muted bg-monti-page text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
+						MENU_CARD,
+						MENU_MOTION,
+						"z-50 gap-monti-16",
 						POPOVER_WIDTH[width],
-						padding === "default" && "p-4",
+						padding === "default" && "p-monti-16",
+						padding === "menu" && "gap-0 p-monti-6",
 						scroll && "max-h-(--available-height) overflow-y-auto",
 						className,
 					)}

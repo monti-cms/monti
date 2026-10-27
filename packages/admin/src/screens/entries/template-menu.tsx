@@ -82,7 +82,7 @@ export function TemplateMenu({
 				>
 					<LayoutTemplate aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="end" width="lg">
+				<DropdownMenuContent align="end">
 					{loadFailed ? (
 						<>
 							<DropdownMenuItem disabled>{t("template.loadFailed")}</DropdownMenuItem>

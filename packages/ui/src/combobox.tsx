@@ -1,7 +1,7 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { CheckIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVE } from "./chip";
@@ -9,6 +9,7 @@ import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
 import { Input } from "./input";
 import { useUiLabels } from "./labels";
+import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -95,7 +96,9 @@ function ComboboxContent({
 					data-slot="combobox-content"
 					data-chips={!!anchor}
 					className={cn(
-						"group/combobox-content data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative max-h-(--available-height) w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-monti-lg border border-monti-muted bg-monti-page text-monti-default shadow-monti-floating duration-100 data-[chips=true]:min-w-(--anchor-width) data-closed:animate-out data-open:animate-in",
+						MENU_CARD,
+						MENU_MOTION,
+						"group/combobox-content relative max-h-(--available-height) w-(--anchor-width) min-w-[calc(var(--anchor-width)+--spacing(7))] max-w-(--available-width) overflow-hidden data-[chips=true]:min-w-(--anchor-width)",
 						className,
 					)}
 					{...props}
@@ -110,7 +113,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 		<ComboboxPrimitive.List
 			data-slot="combobox-list"
 			className={cn(
-				"no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-1 data-empty:p-0",
+				"no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-monti-6 data-empty:p-0",
 				className,
 			)}
 			{...props}
@@ -120,20 +123,9 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
 	return (
-		<ComboboxPrimitive.Item
-			data-slot="combobox-item"
-			className={cn(
-				"relative flex w-full cursor-default select-none items-center gap-2 rounded-monti-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden data-disabled:pointer-events-none data-highlighted:bg-monti-selected data-highlighted:text-monti-default data-disabled:opacity-50 data-highlighted:**:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				className,
-			)}
-			{...props}
-		>
+		<ComboboxPrimitive.Item data-slot="combobox-item" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			<ComboboxPrimitive.ItemIndicator
-				render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}
-			>
-				<CheckIcon className="pointer-events-none" />
-			</ComboboxPrimitive.ItemIndicator>
+			<ComboboxPrimitive.ItemIndicator render={<MenuTick />} />
 		</ComboboxPrimitive.Item>
 	);
 }
@@ -143,13 +135,7 @@ function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
 }
 
 function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
-	return (
-		<ComboboxPrimitive.GroupLabel
-			data-slot="combobox-label"
-			className={cn("px-2 py-1.5 text-monti-caption text-monti-muted", className)}
-			{...props}
-		/>
-	);
+	return <ComboboxPrimitive.GroupLabel data-slot="combobox-label" className={cn(MENU_LABEL, className)} {...props} />;
 }
 
 function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
@@ -171,11 +157,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 
 function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.Props) {
 	return (
-		<ComboboxPrimitive.Separator
-			data-slot="combobox-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-divider", className)}
-			{...props}
-		/>
+		<ComboboxPrimitive.Separator data-slot="combobox-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
 	);
 }
 

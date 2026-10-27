@@ -72,7 +72,7 @@ export const LongText: Story = {
 	),
 };
 
-/** The widths: `sm`, `md` (default), `lg`, `auto`; `padding={0}` for content that brings its own rows. */
+/** The widths: `sm`, `md` (default), `lg`, `auto`; `padding="none"` for content that brings its own rows. */
 export const Widths: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">

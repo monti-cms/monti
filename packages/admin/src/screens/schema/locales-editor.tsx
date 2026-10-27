@@ -283,7 +283,7 @@ function LocaleDialog({
 											<ChevronsUpDown aria-hidden />
 										</Inline>
 									</PopoverTrigger>
-									<PopoverContent align="start" width="anchor" padding="none">
+									<PopoverContent align="start" width="anchor" padding="menu">
 										<Command>
 											<CommandInput
 												value={search}
@@ -301,7 +301,7 @@ function LocaleDialog({
 															<CommandItem
 																key={known}
 																value={`${known} ${native ?? ""}`}
-																data-checked={code === known ? "true" : undefined}
+																checked={code === known}
 																onSelect={() => {
 																	handleCodeSelect(known);
 																	setOpen(false);

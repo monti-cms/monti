@@ -228,7 +228,7 @@ function ManyPicker({
 				</Text>
 				<ChevronDownIcon aria-hidden />
 			</PopoverTrigger>
-			<PopoverContent align="start" width="md" padding="none">
+			<PopoverContent align="start" width="md" padding="menu">
 				<Command>
 					<CommandInput placeholder={t("picker.search", { label })} aria-label={t("picker.search", { label })} />
 					<CommandList>

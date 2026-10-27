@@ -68,7 +68,7 @@ export function CustomBlockMenu({ editor }: { editor: Editor }) {
 			>
 				<Puzzle aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="start" width="lg">
+			<DropdownMenuContent align="start">
 				<CustomBlockMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

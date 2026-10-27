@@ -6,9 +6,9 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 	IconButton,
+	MenuShortcut,
 	Spinner,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
@@ -78,27 +78,27 @@ export function BlockHandleOverlay({
 				>
 					<GripVertical aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="start" side="right" width="lg">
+				<DropdownMenuContent align="start" side="right">
 					<DropdownMenuItem onClick={onMoveUp}>
 						<ArrowUp aria-hidden />
 						{t("blockHandle.moveUp")}
-						<DropdownMenuShortcut>⌥↑</DropdownMenuShortcut>
+						<MenuShortcut>⌥↑</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={onMoveDown}>
 						<ArrowDown aria-hidden />
 						{t("blockHandle.moveDown")}
-						<DropdownMenuShortcut>⌥↓</DropdownMenuShortcut>
+						<MenuShortcut>⌥↓</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={onDuplicate}>
 						<Copy aria-hidden />
 						{t("blockHandle.duplicate")}
-						<DropdownMenuShortcut>⇧⌘D</DropdownMenuShortcut>
+						<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="danger" onClick={onDelete}>
 						<Trash2 aria-hidden />
 						{tc("delete")}
-						<DropdownMenuShortcut>⇧⌘⌫</DropdownMenuShortcut>
+						<MenuShortcut>⇧⌘⌫</MenuShortcut>
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
