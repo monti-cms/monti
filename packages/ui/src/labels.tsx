@@ -20,7 +20,7 @@ export interface UiLabels {
 	proposal: string;
 	/** What a to-do row marked `blocking` says besides its red ring. */
 	blocking: string;
-	/** The footnote button of the format card: a short word with its number raised ("Note¹"). */
+	/** The footnote button of the format bar: a short word with its number raised ("Note¹"). */
 	footnoteMark: string;
 	paginationLabel: string;
 	paginationPrevious: string;

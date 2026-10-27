@@ -5,7 +5,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	IconButton,
 	MenuShortcut,
@@ -93,7 +92,6 @@ export function BlockHandleOverlay({
 						{t("blockHandle.duplicate")}
 						<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
-					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="danger" onClick={onDelete}>
 						<Trash2 aria-hidden />
 						{tc("delete")}

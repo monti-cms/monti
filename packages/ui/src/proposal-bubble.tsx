@@ -10,7 +10,7 @@ const STEP =
 	"cursor-pointer border-0 bg-transparent p-0 text-monti-muted outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45";
 
 /**
- * The pill that floats over the status bar while proposals are waiting: the name of the request (a spark and the words, so the source is clear even
+ * The pill that floats over the status bar while proposals are waiting: the name of the request (a spark and the words, cut with … when long, so the source is clear even
  * with the panel closed; press it to open that conversation), "↑ 2 / 5 ↓" to step through the places the proposals touch, then discard all and accept
  * all. It holds nothing for the single proposal: accepting, discarding or asking again about one is in the card that opens from its mark.
  */
@@ -48,7 +48,9 @@ function ProposalBubble({
 	const who = (
 		<>
 			<Spark className="size-monti-icon-sm" />
-			{name}
+			<span title={name} className="max-w-60 truncate">
+				{name}
+			</span>
 		</>
 	);
 	return (
@@ -56,17 +58,20 @@ function ProposalBubble({
 			data-slot="proposal-bubble"
 			role="group"
 			className={cn(
-				"inline-flex h-11 items-center gap-monti-12 whitespace-nowrap rounded-monti-full border border-monti-emphasis bg-monti-page pr-monti-6 pl-monti-16 text-monti-body text-monti-default shadow-monti-floating",
+				"inline-flex h-11 max-w-full items-center gap-monti-12 whitespace-nowrap rounded-monti-full border border-monti-emphasis bg-monti-page pr-monti-6 pl-monti-16 text-monti-body text-monti-default shadow-monti-floating",
 				className,
 			)}
 			{...props}
 		>
 			{onOpen ? (
-				<TextButton onClick={onOpen} className="inline-flex items-center gap-[7px] font-semibold text-monti-proposal">
+				<TextButton
+					onClick={onOpen}
+					className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal"
+				>
 					{who}
 				</TextButton>
 			) : (
-				<span className="inline-flex items-center gap-[7px] font-semibold text-monti-proposal">{who}</span>
+				<span className="inline-flex min-w-0 items-center gap-[7px] font-semibold text-monti-proposal">{who}</span>
 			)}
 			<span aria-hidden className="h-3.5 border-monti-default border-l" />
 			<span className="inline-flex items-center gap-monti-6 font-mono text-monti-meta text-monti-muted">

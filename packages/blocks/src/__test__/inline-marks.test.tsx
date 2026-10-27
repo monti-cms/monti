@@ -200,7 +200,7 @@ describe("inline bubble", () => {
 			editor.view.focus();
 		});
 
-	it("selecting text shows text color (after marks), tooltip (before link) and code ref (after link, when a code block exists)", async () => {
+	it("selecting text shows tooltip (before link) and code ref (after link, when a code block exists), then the footnote, and text color last (a site-added format)", async () => {
 		const editor = await mount("가나다\n\n```ts\nconst a = 1;\n```\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
@@ -209,10 +209,11 @@ describe("inline bubble", () => {
 			"인라인 코드",
 			"위첨자",
 			"아래첨자",
-			"글자색",
 			"툴팁 넣기",
 			"링크 넣기",
 			"코드 연결",
+			"각주",
+			"글자색",
 		]);
 	});
 

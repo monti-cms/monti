@@ -2,7 +2,21 @@
 
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, Icon, IconButton, Inline, Separator, Text, TextButton } from "@monti-cms/ui";
+import {
+	Box,
+	cn,
+	FormatBar,
+	FormatBarButton,
+	FormatBarRequest,
+	FormatBarSeparator,
+	FormatButton,
+	type FormatMark,
+	Icon,
+	Inline,
+	Separator,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -32,10 +46,10 @@ import { isComposingKey } from "../lib/keyboard";
 import type { TranslatorFor } from "../translator";
 import { addedMarkName } from "./added-marks";
 import { allowanceOfState } from "./allowed-extension";
-import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
 import { codeEffectsKey, expandRule, removeRule, setFoldOpen } from "./code-block/effects-plugin";
 import { FootnoteForm, removeFootnote } from "./footnote-form";
+import { canInsertFootnote, insertFootnote } from "./footnote-nodes";
 import {
 	type ActiveCodeRule,
 	type ActiveInlineMark,
@@ -53,7 +67,6 @@ import { type LinkDraft, LinkForm, linkDraftFromSelection } from "./link-form";
 import { LinkTargetAnchor } from "./link-target-view";
 import { MarkTextForm, type MarkTextLabels } from "./mark-text-form";
 import { editorMessages } from "./messages";
-import { ToolbarButton } from "./toolbar-button";
 
 /** Text for the tooltip form on text inside code. */
 const CODE_TOOLTIP_LABELS = (t: TranslatorFor<typeof editorMessages>): MarkTextLabels => ({
@@ -80,10 +93,13 @@ export function useMarkExtensions(editor?: Editor | null): { name: string; exten
 	});
 }
 
+/** Marks of the first group of the bar (bold … code); the other marks (super- and subscript) go in the second. */
+const TEXT_FORMATS: readonly string[] = ["bold", "italic", "underline", "strike", "code"];
+
 const GAP = 8;
 const EDGE = 8;
 
-/** A bubble button. The name (aria-label) and tooltip are the same. With `pressed`, it is a toggle button. Extension bubble buttons use this too. */
+/** A bubble button, 28px like the buttons of the format bar. The name (aria-label) and tooltip are the same. With `pressed`, it is a toggle button. Extension bubble buttons use this too. */
 export function BubbleButton({
 	label,
 	onClick,
@@ -99,16 +115,9 @@ export function BubbleButton({
 	children: ReactNode;
 }) {
 	return (
-		<IconButton
-			label={label}
-			pressed={pressed}
-			tone={tone}
-			// Do not steal the editor selection or focus on press.
-			onMouseDown={(event) => event.preventDefault()}
-			onClick={onClick}
-		>
+		<FormatBarButton label={label} pressed={pressed} tone={tone} onClick={onClick}>
 			{children}
-		</IconButton>
+		</FormatBarButton>
 	);
 }
 
@@ -539,56 +548,93 @@ export function InlineBubble({
 		<bubble.Button key={name} {...bubbleProps} />
 	);
 	const linkTools = bubbleTools("link");
-	const renderSelectionTools = () => (
-		<>
-			{!inCode && actions.length > 0 && (
-				<>
-					{actions.map((action) => (
-						<BubbleButton key={action.id} label={action.label} onClick={() => action.run(editor)}>
-							{action.icon}
-						</BubbleButton>
-					))}
-					<Separator orientation="vertical" length="control" />
-				</>
-			)}
-			{allowedMarkTools(site, editor.state).map((item) => (
-				<ToolbarButton key={item.mark} editor={editor} item={item} tooltipSide="top" />
-			))}
-			{bubbleTools("format").map(renderTool)}
-			<Separator orientation="vertical" length="control" />
-			{inCode &&
+	const renderSelectionTools = () => {
+		const marks = allowedMarkTools(site, editor.state);
+		const markButton = (item: (typeof marks)[number]) => (
+			<FormatButton
+				key={item.mark}
+				mark={item.mark as FormatMark}
+				label={item.title ?? item.label}
+				pressed={item.isActive?.(editor)}
+				disabled={item.isDisabled?.(editor)}
+				onClick={() => item.run(editor)}
+			/>
+		);
+		// The groups of the bar: the text formats, then the rest of the formats and what attaches to text, then the requests to the assistant.
+		const groups = [
+			marks.filter((item) => TEXT_FORMATS.includes(item.mark)).map(markButton),
+			[
+				...marks.filter((item) => !TEXT_FORMATS.includes(item.mark)).map(markButton),
+				...(inCode &&
 				allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
-				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (
-					<BubbleButton
-						label={
-							editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd")
-						}
-						onClick={() => openCodeTooltip()}
-					>
-						<MessageSquareMore aria-hidden />
-					</BubbleButton>
-				)}
-			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool)}
-			{allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link") && (
-				<BubbleButton
-					label={editor.isActive("link") ? t("link.edit") : t("link.add")}
-					onClick={() => openLink(linkDraftFromSelection(editor))}
-				>
-					<Link2 aria-hidden />
-				</BubbleButton>
-			)}
-			{linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool)}
-			{inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold") && (
-				<BubbleButton
-					label={t("inlineBubble.fold")}
-					pressed={editor.isActive("codeFold")}
-					onClick={() => editor.chain().focus().toggleMark("codeFold").run()}
-				>
-					<ChevronsLeftRightEllipsis aria-hidden />
-				</BubbleButton>
-			)}
-		</>
-	);
+				offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME)
+					? [
+							<BubbleButton
+								key="tooltip"
+								label={
+									editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd")
+								}
+								onClick={() => openCodeTooltip()}
+							>
+								<MessageSquareMore aria-hidden />
+							</BubbleButton>,
+						]
+					: []),
+				...linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool),
+				...(allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link")
+					? [
+							<FormatButton
+								key="link"
+								mark="link"
+								label={editor.isActive("link") ? t("link.edit") : t("link.add")}
+								pressed={editor.isActive("link")}
+								onClick={() => openLink(linkDraftFromSelection(editor))}
+							/>,
+						]
+					: []),
+				...linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool),
+				...(!inCode && allowance.allowsBlock("footnotes") && canInsertFootnote(editor)
+					? [
+							<FormatButton
+								key="footnote"
+								mark="footnote"
+								label={t("toolbar.footnote")}
+								// A footnote goes after the selected words; it does not replace them.
+								onClick={() => {
+									editor.chain().focus().setTextSelection(editor.state.selection.to).run();
+									insertFootnote(editor);
+								}}
+							/>,
+						]
+					: []),
+				...bubbleTools("format").map(renderTool),
+				...(inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold")
+					? [
+							<BubbleButton
+								key="fold"
+								label={t("inlineBubble.fold")}
+								pressed={editor.isActive("codeFold")}
+								onClick={() => editor.chain().focus().toggleMark("codeFold").run()}
+							>
+								<ChevronsLeftRightEllipsis aria-hidden />
+							</BubbleButton>,
+						]
+					: []),
+			],
+			!inCode
+				? actions.map((action) => (
+						<FormatBarRequest key={action.id} label={action.label} onClick={() => action.run(editor)} />
+					))
+				: [],
+		].filter((group) => group.length > 0);
+		return groups.map((group, index) => (
+			// biome-ignore lint/suspicious/noArrayIndexKey: the groups are fixed in number and order.
+			<Fragment key={index}>
+				{index > 0 && <FormatBarSeparator />}
+				{group}
+			</Fragment>
+		));
+	};
 
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
 	const surface = "rounded-monti-md border bg-monti-page text-monti-default backdrop-blur";
@@ -641,25 +687,22 @@ export function InlineBubble({
 				)}
 			</div>
 		) : (
-			<div
-				ref={bubbleRef}
-				role="toolbar"
-				aria-label={
-					target.kind === "selection"
-						? t("inlineBubble.selectionLabel")
+			<div ref={bubbleRef} data-monti-inline-bubble style={style}>
+				<FormatBar
+					aria-label={
+						target.kind === "selection"
+							? t("inlineBubble.selectionLabel")
+							: target.kind === "footnote"
+								? t("inlineBubble.footnoteTitle")
+								: t("inlineBubble.effectLabel")
+					}
+				>
+					{target.kind === "selection"
+						? renderSelectionTools()
 						: target.kind === "footnote"
-							? t("inlineBubble.footnoteTitle")
-							: t("inlineBubble.effectLabel")
-				}
-				data-monti-inline-bubble
-				style={style}
-				className={BLOCK_TOOLBAR}
-			>
-				{target.kind === "selection"
-					? renderSelectionTools()
-					: target.kind === "footnote"
-						? renderFootnote(target)
-						: renderMarks(target.marks, target.rules)}
+							? renderFootnote(target)
+							: renderMarks(target.marks, target.rules)}
+				</FormatBar>
 			</div>
 		),
 		document.body,

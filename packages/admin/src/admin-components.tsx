@@ -41,11 +41,10 @@ export interface EditorExtensionContext {
 	};
 }
 
-/** An action added to the inline menu that appears when text is selected (e.g. polishing the writing style). */
+/** An action added to the format bar that appears when text is selected (e.g. polishing the writing style). It is drawn as a "✦ label" button. */
 export interface EditorSelectionAction {
 	readonly id: string;
 	readonly label: string;
-	readonly icon: ReactNode;
 	readonly run: (editor: Editor) => void;
 }
 

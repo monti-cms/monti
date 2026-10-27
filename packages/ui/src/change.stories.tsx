@@ -17,7 +17,7 @@ const meta = {
 	args: { kind: "edit", tag: "이름", title: "요약", identifier: "summary → excerpt", children: null },
 	decorators: [
 		(Story) => (
-			<div className="w-[472px] rounded-monti-lg border border-monti-default bg-monti-tool px-monti-24">
+			<div className="max-w-[472px] bg-monti-tool px-monti-24">
 				<Story />
 			</div>
 		),

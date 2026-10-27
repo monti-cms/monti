@@ -6,12 +6,12 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 	variants: {
 		/** The admin's own message is a paper bubble on the right; the assistant's answer is plain text with no background. */
 		author: {
-			user: "max-w-[85%] self-end rounded-monti-xl rounded-br-monti-sm border border-monti-default bg-monti-page px-[14px] py-monti-10 text-monti-default",
-			assistant: "text-monti-default",
+			user: "max-w-[85%] self-end rounded-monti-xl rounded-br-monti-sm border border-monti-default bg-monti-page px-[14px] py-monti-10 text-monti-default leading-[1.6]",
+			assistant: "text-monti-default leading-[1.7]",
 		},
-		/** The answer is still arriving: a small blinking mark after the last word. */
+		/** The answer is still arriving: a thin blinking caret after the last word, the height of the text. */
 		streaming: {
-			true: "after:ml-monti-4 after:inline-block after:h-3.5 after:w-1.5 after:translate-y-0.5 after:animate-pulse after:rounded-monti-sm after:bg-monti-emphasis after:content-[''] motion-reduce:after:animate-none",
+			true: "after:ml-monti-2 after:inline-block after:h-[1.15em] after:w-0.5 after:animate-pulse after:rounded-[1px] after:bg-(--monti-fg-default) after:align-text-bottom after:content-[''] motion-reduce:after:animate-none",
 		},
 	},
 	defaultVariants: { author: "assistant" },

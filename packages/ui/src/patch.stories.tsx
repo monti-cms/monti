@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Patch } from "./patch";
 
 /**
- * What changes in a file: its name and the number of lines added in the head, then the lines. Added lines are green with a +, removed lines red
+ * What changes in a file: its name and the numbers of lines added and taken out in the head, then the lines. Added lines are green with a +, removed lines red
  * with a −, and the lines around them are dimmed.
  */
 const meta = {
@@ -34,7 +34,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Nothing added (only lines taken out): no count in the head; and no action. */
+/** Nothing added (only lines taken out): only the red count in the head; and no action. */
 export const OnlyRemoved: Story = {
 	args: {
 		actionLabel: undefined,

@@ -400,7 +400,6 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			usable.selection.map((action) => ({
 				id: `ai:${action.key}`,
 				label: action.label,
-				icon: <Spark aria-hidden />,
 				run: (current) => {
 					const { from, to } = current.state.selection;
 					if (from === to || !format) return;

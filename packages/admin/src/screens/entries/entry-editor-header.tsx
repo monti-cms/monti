@@ -128,7 +128,9 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								</TextButton>
 							}
 						/>
-						<TooltipContent side="bottom">⌘S</TooltipContent>
+						<TooltipContent side="bottom" shortcut="⌘S">
+							{tc("save")}
+						</TooltipContent>
 					</Tooltip>
 				)}
 				{previewHref && !editor.hasUnsavedChanges ? (

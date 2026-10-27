@@ -2,6 +2,7 @@
 
 import { Check, TriangleAlert } from "lucide-react";
 import { type ComponentProps, type ReactNode, useState } from "react";
+import { Caret } from "./caret";
 import { cn } from "./cn";
 import { CodeBlock } from "./code-block";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -54,6 +55,8 @@ function ToolCallLine({
 			)}
 			<span className={cn(status === "failed" && "text-monti-danger")}>{children}</span>
 			<span className="sr-only">{statusLabel}</span>
+			{/* A line that opens ends in a caret; a plain line has none. It turns over while open. */}
+			{expandable && <Caret className="ml-0 transition-transform group-data-panel-open/line:rotate-180" />}
 		</>
 	);
 	return (
@@ -63,7 +66,7 @@ function ToolCallLine({
 					<CollapsibleTrigger
 						className={cn(
 							LINE,
-							"cursor-pointer border-0 bg-transparent p-0 py-[3px] outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+							"group/line cursor-pointer border-0 bg-transparent p-0 py-[3px] outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 						)}
 					>
 						{summary}
@@ -72,7 +75,7 @@ function ToolCallLine({
 						<div className="flex flex-col gap-monti-4 py-monti-4">
 							{details.map((detail) => (
 								<div key={String(detail.label)} className="flex flex-col gap-monti-4">
-									<Text variant="caption" tone="muted">
+									<Text variant="micro" tone="subtle">
 										{detail.label}
 									</Text>
 									<CodeBlock maxHeight="list">{detail.value}</CodeBlock>

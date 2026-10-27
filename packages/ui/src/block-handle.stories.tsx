@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ArrowDown, ArrowUp, Copy, Trash2 } from "lucide-react";
+import { AlignLeft, ArrowDown, ArrowUp, Copy, Repeat2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Block, BlockHandle } from "./block-handle";
 import {
@@ -32,16 +32,8 @@ type Story = StoryObj<typeof meta>;
 
 const TEXT = "블로그를 다시 만들기로 한 건 도구를 고치는 시간이 길어졌기 때문이다.";
 
-export const Playground: Story = {
-	render: (args) => (
-		<div className="flex items-start gap-monti-12">
-			<BlockHandle {...args} />
-			<Block>
-				<Text variant="reading">{TEXT}</Text>
-			</Block>
-		</div>
-	),
-};
+/** Press the grip to open the block menu. */
+export const Playground: Story = { render: () => <BlockMenuDemo defaultOpen={false} /> };
 
 /** At rest, and with the menu open (the grip pressed, the block shaded). */
 export const States: Story = {
@@ -63,8 +55,8 @@ export const States: Story = {
 	),
 };
 
-function BlockMenuDemo() {
-	const [open, setOpen] = useState(true);
+function BlockMenuDemo({ defaultOpen = true }: { defaultOpen?: boolean }) {
+	const [open, setOpen] = useState(defaultOpen);
 	return (
 		<div className="flex min-h-80 max-w-lg items-start gap-monti-12">
 			<DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
@@ -74,11 +66,14 @@ function BlockMenuDemo() {
 					active={open}
 					trigger={(grip) => <DropdownMenuTrigger render={grip} />}
 				/>
-				<DropdownMenuContent side="right" align="start" className="min-w-56">
+				<DropdownMenuContent side="right" align="start">
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>문단</DropdownMenuLabel>
 						<DropdownMenuSub>
-							<DropdownMenuSubTrigger>다른 블록으로 바꾸기</DropdownMenuSubTrigger>
+							<DropdownMenuSubTrigger>
+								<Repeat2 aria-hidden />
+								다른 블록으로 바꾸기
+							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
 								<DropdownMenuItem>문단</DropdownMenuItem>
 								<DropdownMenuItem>
@@ -96,7 +91,10 @@ function BlockMenuDemo() {
 							</DropdownMenuSubContent>
 						</DropdownMenuSub>
 						<DropdownMenuSub>
-							<DropdownMenuSubTrigger>정렬</DropdownMenuSubTrigger>
+							<DropdownMenuSubTrigger>
+								<AlignLeft aria-hidden />
+								정렬
+							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
 								<DropdownMenuItem>왼쪽</DropdownMenuItem>
 								<DropdownMenuItem>가운데</DropdownMenuItem>
@@ -117,7 +115,6 @@ function BlockMenuDemo() {
 						<Copy aria-hidden />
 						복제<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
-					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="danger">
 						<Trash2 aria-hidden />
 						삭제<MenuShortcut>⇧⌘⌫</MenuShortcut>

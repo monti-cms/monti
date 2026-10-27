@@ -9,7 +9,7 @@ export interface PatchLine {
 }
 
 /**
- * What changes in one file, line by line: the file's name (mono) and how many lines are added in the head, then the lines. Added lines have a green
+ * What changes in one file, line by line: the file's name (mono) and how many lines are added (green) and taken out (red) in the head, then the lines. Added lines have a green
  * background and a +, removed lines a red one and a −; the lines around them are dimmed. `actionLabel` is one text button at the end of the head
  * (copy).
  */
@@ -27,6 +27,7 @@ function Patch({
 	onAction?: () => void;
 }) {
 	const added = lines.filter((line) => line.type === "add").length;
+	const removed = lines.filter((line) => line.type === "remove").length;
 	return (
 		<div
 			data-slot="patch"
@@ -36,6 +37,7 @@ function Patch({
 			<div className="flex h-10 items-center gap-monti-12 border-monti-muted border-b pr-monti-6 pl-monti-12 text-monti-note">
 				<span className="min-w-0 grow truncate text-monti-meta text-monti-muted">{file}</span>
 				{added > 0 && <span className="text-monti-meta text-monti-success">+{added}</span>}
+				{removed > 0 && <span className="text-monti-danger text-monti-meta">−{removed}</span>}
 				{actionLabel && (
 					<TextButton type="button" onClick={onAction}>
 						{actionLabel}

@@ -126,7 +126,14 @@ export {
 export { FieldRow, FieldTree } from "./field-tree";
 export { FilterButton } from "./filter-button";
 export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
-export { FormatButton, FormatCard, type FormatMark } from "./format-card";
+export {
+	FormatBar,
+	FormatBarButton,
+	FormatBarRequest,
+	FormatBarSeparator,
+	FormatButton,
+	type FormatMark,
+} from "./format-bar";
 export { Grid } from "./grid";
 export { Icon } from "./icon";
 export { IconButton } from "./icon-button";

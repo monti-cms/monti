@@ -9,13 +9,15 @@ import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
-/** A button of the card's head that tells its key combination in a tooltip, and only there. */
-function WithShortcut({ shortcut, children }: { shortcut?: string; children: ReactElement }) {
+/** A button of the card's head that tells its key combination in a tooltip after its name, and only there. */
+function WithShortcut({ label, shortcut, children }: { label: string; shortcut?: string; children: ReactElement }) {
 	if (!shortcut) return children;
 	return (
 		<Tooltip>
 			<TooltipTrigger render={children} />
-			<TooltipContent side="top">{shortcut}</TooltipContent>
+			<TooltipContent side="top" shortcut={shortcut}>
+				{label}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
@@ -72,12 +74,12 @@ function MemoCard({
 		<div data-slot="memo-card" className={cn(MENU_CARD, "w-[420px] max-w-full overflow-hidden", className)} {...props}>
 			<div className="flex h-12 items-center gap-monti-16 border-monti-muted border-b pr-monti-10 pl-monti-16">
 				<span className="grow text-monti-caption text-monti-subtle">{where}</span>
-				<WithShortcut shortcut={discardShortcut}>
+				<WithShortcut label={discardLabel} shortcut={discardShortcut}>
 					<TextButton className="text-monti-note" onClick={onDiscard}>
 						{discardLabel}
 					</TextButton>
 				</WithShortcut>
-				<WithShortcut shortcut={acceptShortcut}>
+				<WithShortcut label={acceptLabel} shortcut={acceptShortcut}>
 					<Button size="sm" onClick={onAccept}>
 						{acceptSpark && <Spark className="size-monti-icon-xs" />}
 						{acceptLabel}
