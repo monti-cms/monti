@@ -8,6 +8,13 @@ import { cn } from "./cn";
 export const MENU_CARD =
 	"flex flex-col rounded-monti-xl border border-monti-emphasis bg-monti-page text-monti-body text-monti-default shadow-monti-floating outline-none";
 
+/**
+ * Where a second level starts, measured from the row that opens it: the row sits 7px inside its card (6 padding, 1 border), so 7 + 4 puts the
+ * second card 4px clear of the parent's edge. Its first row lines up with the parent row when the card is raised by the same 7px.
+ */
+export const SUB_SIDE_OFFSET = 11;
+export const SUB_ALIGN_OFFSET = -7;
+
 /** How a card opens and closes, whichever side it opens to. */
 export const MENU_MOTION =
 	"origin-(--transform-origin) duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in";

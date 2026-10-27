@@ -4,7 +4,17 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { ChevronRightIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MENU_SUB_MARK, MenuTick } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MENU_SUB_MARK,
+	MenuTick,
+	SUB_ALIGN_OFFSET,
+	SUB_SIDE_OFFSET,
+} from "./menu-parts";
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -108,9 +118,9 @@ function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive
 /** The second level. It opens toward the side with room, and its first row lines up with the row that opened it. */
 function DropdownMenuSubContent({
 	align = "start",
-	alignOffset = -7,
+	alignOffset = SUB_ALIGN_OFFSET,
 	side = "right",
-	sideOffset = 2,
+	sideOffset = SUB_SIDE_OFFSET,
 	...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
 	return (

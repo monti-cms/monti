@@ -4,7 +4,16 @@ import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu
 import { ChevronRightIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
-import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MENU_SUB_MARK } from "./menu-parts";
+import {
+	MENU_CARD,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MENU_SUB_MARK,
+	SUB_ALIGN_OFFSET,
+	SUB_SIDE_OFFSET,
+} from "./menu-parts";
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
 	return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -106,9 +115,9 @@ function ContextMenuSubTrigger({ className, children, ...props }: ContextMenuPri
 
 function ContextMenuSubContent({
 	align = "start",
-	alignOffset = -7,
+	alignOffset = SUB_ALIGN_OFFSET,
 	side = "right",
-	sideOffset = 2,
+	sideOffset = SUB_SIDE_OFFSET,
 	...props
 }: React.ComponentProps<typeof ContextMenuContent>) {
 	return (
