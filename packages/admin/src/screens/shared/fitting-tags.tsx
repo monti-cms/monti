@@ -69,17 +69,16 @@ export function FittingTags({ tags }: { tags: readonly { id: string; title: stri
 					<Text srOnly>{t("tags.more", { count: hidden })}</Text>
 				</Text>
 			)}
-			<span
-				ref={measureRef}
-				aria-hidden
-				className="pointer-events-none invisible absolute top-0 left-0 flex gap-monti-4"
-			>
-				{tags.map((tag) => (
-					<span key={tag.id} className={CHIP}>
-						{tag.title}
-					</span>
-				))}
-				<Text variant="caption">+{tags.length}</Text>
+			{/* The wrapper cuts the measuring row at the cell's width, so the row's full width never stretches the cell's own scrollable area. */}
+			<span aria-hidden className="pointer-events-none invisible absolute inset-x-0 top-0 overflow-hidden">
+				<span ref={measureRef} className="flex w-max gap-monti-4">
+					{tags.map((tag) => (
+						<span key={tag.id} className={CHIP}>
+							{tag.title}
+						</span>
+					))}
+					<Text variant="caption">+{tags.length}</Text>
+				</span>
 			</span>
 		</span>
 	);
