@@ -22,6 +22,7 @@ export function AdminUiLabels({ children }: { children: ReactNode }) {
 				deselect: t("deselect"),
 				aiFill: t("ai.fill"),
 				aiAgain: t("ai.again"),
+				footnoteMark: t("footnote.mark"),
 				paginationLabel: t("pagination.label"),
 				paginationPrevious: t("pagination.previous"),
 				paginationPreviousPage: t("pagination.previousPage"),

@@ -16,6 +16,8 @@ export interface UiLabels {
 	deselect: string;
 	aiFill: string;
 	aiAgain: string;
+	/** The footnote button of the format card: a short word with its number raised ("Note¹"). */
+	footnoteMark: string;
 	paginationLabel: string;
 	paginationPrevious: string;
 	paginationPreviousPage: string;
@@ -39,6 +41,7 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	deselect: "Remove",
 	aiFill: "Fill",
 	aiAgain: "Again",
+	footnoteMark: "Note¹",
 	paginationLabel: "Pagination",
 	paginationPrevious: "Previous",
 	paginationPreviousPage: "Previous page",

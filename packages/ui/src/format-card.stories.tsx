@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FormatButton, FormatCard } from "./format-card";
+import { UiLabelsProvider } from "./labels";
 import { Stack } from "./stack";
 import { Text } from "./text";
 
@@ -8,9 +9,17 @@ import { Text } from "./text";
  * rule one row that asks the assistant.
  */
 const meta = {
-	title: "Editor/FormatCard",
+	title: "EditorTools/FormatCard",
 	component: FormatCard,
 	args: { requestLabel: "요청", requestShortcut: "⌘J", onRequest: () => undefined, children: null },
+	// The footnote button's glyph is a word of the app's language.
+	decorators: [
+		(Story) => (
+			<UiLabelsProvider labels={{ footnoteMark: "각¹" }}>
+				<Story />
+			</UiLabelsProvider>
+		),
+	],
 } satisfies Meta<typeof FormatCard>;
 export default meta;
 type Story = StoryObj<typeof meta>;

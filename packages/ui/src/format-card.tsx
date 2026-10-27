@@ -5,6 +5,7 @@ import { Link2 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Spark } from "./ai-action";
 import { cn } from "./cn";
+import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_ITEM, MENU_SEPARATOR, MenuShortcut } from "./menu-parts";
 
 /** How each inline format looks on its button: the letter itself, in the style it gives. */
@@ -17,7 +18,8 @@ const FORMAT_GLYPHS = {
 	superscript: { glyph: "x²", className: "text-monti-label" },
 	subscript: { glyph: "x₂", className: "text-monti-label" },
 	link: { glyph: <Link2 aria-hidden className="size-4" />, className: "" },
-	footnote: { glyph: "[1]", className: "font-mono text-monti-meta" },
+	// The glyph is a word of the app's language (`footnoteMark` in the ui labels), so it is read from them in `FormatButton`.
+	footnote: { glyph: null, className: "text-monti-label" },
 	more: { glyph: "⋯", className: "" },
 } satisfies Record<string, { glyph: ReactNode; className: string }>;
 
@@ -39,6 +41,7 @@ function FormatButton({
 	label: string;
 	pressed?: boolean;
 }) {
+	const labels = useUiLabels();
 	const { glyph, className: glyphClassName } = FORMAT_GLYPHS[mark];
 	return (
 		<ButtonPrimitive
@@ -55,7 +58,7 @@ function FormatButton({
 			)}
 			{...props}
 		>
-			{glyph}
+			{mark === "footnote" ? labels.footnoteMark : glyph}
 		</ButtonPrimitive>
 	);
 }
