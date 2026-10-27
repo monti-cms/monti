@@ -27,6 +27,17 @@ pnpm --filter @monti-cms/ui storybook
 
 관리자의 화면 상태(불러오기 실패, 빈 목록, 열린 대화상자)는 `packages/admin`에서 같은 카탈로그에 더해진다.
 
+## 시각 회귀
+
+이 패키지 카탈로그의 모든 스토리를 밝은 테마와 어두운 테마로 찍어 `visual/baselines`의 PNG와 비교한다. 같은 화면에서 가로 스크롤, 상자에 잘린 글, 글자 크기가 `text-monti-*` 역할과 다른 요소도 검사한다. 관리자 화면 스토리는 `visual` 태그를 달기 전까지 찍지 않고, 카탈로그 스토리를 빼려면 `no-visual`을 단다(규칙은 `visual/stories.ts`).
+
+```bash
+pnpm test:visual:docker           # CI가 쓰는 Linux 이미지에서 비교
+pnpm test:visual:docker --update  # 의도한 변경 뒤 기준 이미지를 다시 쓴다
+```
+
+기준 이미지는 Linux에서만 만든다(글자가 시스템마다 다르게 그려진다). 그래서 `pnpm test:visual`은 macOS와 Windows에서 실행을 거부한다. CI가 차이를 찾으면 바뀐 이미지를 `visual-baselines` 산출물로 올린다. 받아들이려면 `visual/baselines`를 그 폴더로 바꾼다.
+
 ## 개발
 
 ```bash

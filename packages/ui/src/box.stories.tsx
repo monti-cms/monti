@@ -287,7 +287,9 @@ export const Height: Story = {
 	),
 };
 
+/** Shows `overflow` cutting its content, so the visual check on clipped text lets this one through. */
 export const Overflow: Story = {
+	tags: ["visual-allow-clipped"],
 	render: () => (
 		<Values
 			option="overflow"

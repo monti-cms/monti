@@ -17,7 +17,10 @@
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs",
 		"storybook": "storybook dev -p 6006 --no-open",
-		"build-storybook": "storybook build -o storybook-static"
+		"build-storybook": "storybook build -o storybook-static",
+		"visual:run": "playwright test --config visual/playwright.config.ts",
+		"test:visual": "pnpm build-storybook && pnpm visual:run",
+		"test:visual:update": "pnpm build-storybook && pnpm visual:run --update-snapshots"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
@@ -34,6 +37,7 @@
 		"react-dom": ">=19"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.64.1",
 		"@storybook/addon-themes": "10.6.1",
 		"@storybook/react-vite": "10.6.1",
 		"@tailwindcss/vite": "^4.3.3",

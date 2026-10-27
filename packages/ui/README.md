@@ -27,6 +27,17 @@ pnpm --filter @monti-cms/ui storybook
 
 The admin's screen states (load failures, empty lists, open dialogs) join the same catalog from `packages/admin`.
 
+## Visual regression
+
+Every story of this package's catalog is shot in light and dark and compared with the PNGs in `visual/baselines`. The same page is checked for a sideways scroll, text cut by its box, and type-role classes (`text-monti-*`) that do not compute to their size. Admin screen stories are not shot until they carry the `visual` tag; a catalog story leaves out with `no-visual` (the rule is `visual/stories.ts`).
+
+```bash
+pnpm test:visual:docker           # compare, in the Linux image CI uses
+pnpm test:visual:docker --update  # write the baselines again after a change that is meant
+```
+
+Baselines are made on Linux only (text is drawn differently per system), so `pnpm test:visual` refuses to run on macOS and Windows. When CI finds a difference it uploads the changed shots as the `visual-baselines` artifact: replace `visual/baselines` with it to accept them.
+
 ## Development
 
 ```bash

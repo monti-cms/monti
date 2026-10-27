@@ -4,6 +4,9 @@
 		".": {
 			"entry": ["scripts/*.mjs"]
 		},
+		"packages/ui": {
+			"entry": ["visual/playwright.config.ts", "visual/*.spec.ts"]
+		},
 		"packages/admin": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"],
 			"ignoreIssues": {
