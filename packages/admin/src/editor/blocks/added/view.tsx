@@ -53,7 +53,6 @@ function AttributeField({
 					</Label>
 					<Switch
 						id={id}
-						size="sm"
 						checked={value === true}
 						disabled={!editable}
 						onCheckedChange={(checked) => setValue(name, checked)}

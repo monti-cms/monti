@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text, TextLink } from "@monti-cms/ui";
+import { Box, Stack, Text, TextButton } from "@monti-cms/ui";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { type LinkTarget, useLinkTarget } from "./link-targets";
@@ -50,7 +50,8 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 		: t("link.targetOpenAdmin", { title: nameOf(tc, target) });
 	return (
 		<Box as="span" paddingX={4} minWidth={0} maxWidth="menu">
-			<TextLink
+			<TextButton
+				variant="underline"
 				href={target.href}
 				target="_blank"
 				rel="noreferrer noopener"
@@ -68,7 +69,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 						{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}
 					</Text>
 				</Stack>
-			</TextLink>
+			</TextButton>
 		</Box>
 	);
 }

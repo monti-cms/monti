@@ -17,7 +17,7 @@ import {
 	Spinner,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
 import { CircleAlert, EyeOff, Info, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
@@ -76,7 +76,6 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 					<IconButton
 						label={t("results")}
 						side="bottom"
-						size="sm"
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
@@ -172,7 +171,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 						<Button
 							key={suggestion}
 							type="button"
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							disabled={!editable}
 							onClick={() => controller.apply(issue, suggestion)}
@@ -189,14 +188,14 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					</Text>
 				</Inline>
 				{issue.url && (
-					<TextLink href={issue.url} target="_blank" rel="noreferrer noopener" size="caption">
+					<TextButton variant="underline" href={issue.url} target="_blank" rel="noreferrer noopener">
 						{t("explain")}
-					</TextLink>
+					</TextButton>
 				)}
-				<Button type="button" variant="ghost" size="sm" onClick={() => controller.ignore(issue)}>
+				<TextButton type="button" onClick={() => controller.ignore(issue)}>
 					<EyeOff aria-hidden />
 					{t("ignore")}
-				</Button>
+				</TextButton>
 			</Inline>
 		</>
 	);

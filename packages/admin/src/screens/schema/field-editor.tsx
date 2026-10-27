@@ -14,7 +14,7 @@ import {
 	Panel,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -173,7 +173,7 @@ function RelationOptions({
 			</Stack>
 			<Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
 				<Box width="fit">
-					<CollapsibleTrigger render={<Button variant="quiet" size="sm" />}>
+					<CollapsibleTrigger render={<TextButton variant="quiet" />}>
 						{moreOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						{t("field.more")}
 					</CollapsibleTrigger>
@@ -291,7 +291,7 @@ function OptionsEditor({
 					</Box>
 					<Button
 						type="button"
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						disabled={!addable}
 						onClick={() => {
@@ -559,7 +559,9 @@ export function FieldEditor({
 	return (
 		<Collapsible open={open} onOpenChange={setOpen} render={<Panel />} data-testid={`field-${name}`}>
 			<Inline gap={4} paddingX={4}>
-				<CollapsibleTrigger render={<Button variant="ghost" width="full" aria-label={t("field.toggle", { name })} />}>
+				<CollapsibleTrigger
+					render={<Button variant="secondary" width="full" aria-label={t("field.toggle", { name })} />}
+				>
 					<Inline as="span" grow gap={8} minWidth={0}>
 						{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						<Text as="code" weight="medium">
@@ -654,9 +656,7 @@ export function FieldEditor({
 					)}
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} place={place} />
 					<Collapsible render={<Box border="dashed" radius="md" paddingX={12} paddingY={8} />}>
-						<CollapsibleTrigger
-							render={<TextLink render={<button type="button" />} tone="muted" size="caption" underline="hover" />}
-						>
+						<CollapsibleTrigger render={<TextButton variant="quiet" render={<button type="button" />} />}>
 							{t("field.advanced")}
 						</CollapsibleTrigger>
 						<CollapsibleContent>
@@ -721,7 +721,7 @@ export function FieldList({
 			))}
 			{!disabled && (
 				<Box width="fit">
-					<Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
+					<Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)}>
 						<Plus aria-hidden />
 						{t("field.add")}
 					</Button>

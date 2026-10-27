@@ -23,7 +23,7 @@ import {
 	Stack,
 	Text,
 	Textarea,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
@@ -207,8 +207,8 @@ export function MediaDetailPanel({
 							<>
 								<Button
 									type="button"
-									variant="outline"
-									size="xs"
+									variant="secondary"
+									size="sm"
 									onClick={() => void copyText(media.publicUrl as string, t("detail.copiedUrl"), tc("copyFailed"))}
 								>
 									<Copy aria-hidden />
@@ -218,8 +218,8 @@ export function MediaDetailPanel({
 									nativeButton={false}
 									// biome-ignore lint/a11y/useAnchorContent: the Button renders its children into this link
 									render={<a href={media.publicUrl} target="_blank" rel="noopener noreferrer" />}
-									variant="outline"
-									size="xs"
+									variant="secondary"
+									size="sm"
 								>
 									<ExternalLink aria-hidden />
 									{tc("open")}
@@ -228,8 +228,8 @@ export function MediaDetailPanel({
 						)}
 						<Button
 							type="button"
-							variant="outline"
-							size="xs"
+							variant="secondary"
+							size="sm"
 							aria-label={t("detail.copyIdLabel")}
 							onClick={() => void copyText(media.id, t("detail.copiedId"), tc("copyFailed"))}
 						>
@@ -285,8 +285,6 @@ export function MediaDetailPanel({
 												<IconButton
 													type="submit"
 													label={t("detail.filename.save")}
-													size="icon-sm"
-													variant="outline"
 													disabled={!nameDirty || problem !== null || renaming}
 												>
 													<Check aria-hidden />
@@ -437,9 +435,9 @@ export function MediaDetailPanel({
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
 									<Inline gap={8} justify="between" paddingX={8} paddingY={8}>
-										<TextLink underline="hover" href={withBasePath(entryHref(site, usage.collection, usage.entryId))}>
+										<TextButton href={withBasePath(entryHref(site, usage.collection, usage.entryId))}>
 											{usage.title || tc("untitled")}
-										</TextLink>
+										</TextButton>
 										{usage.note && (
 											<Text variant="caption" tone="muted">
 												{usageNoteLabel(t, usage.note)}
@@ -456,8 +454,7 @@ export function MediaDetailPanel({
 			<Stack gap={8} shrink={false} border="top" paddingX={16} paddingY={12}>
 				<Button
 					type="button"
-					variant="secondary"
-					tone="danger"
+					variant="outline-danger"
 					size="sm"
 					width="full"
 					disabled={media.referencesCount > 0}

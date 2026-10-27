@@ -3,9 +3,10 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
+import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
+import { TextButton } from "./text-button";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -68,13 +69,13 @@ function DialogContent({
 			>
 				{children}
 				{showCloseButton && (
-					<DialogPrimitive.Close
-						data-slot="dialog-close"
-						render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
+					<IconButton
+						label={labels.close}
+						className="absolute top-4 right-4"
+						trigger={(button) => <DialogPrimitive.Close data-slot="dialog-close" render={button} />}
 					>
 						<XIcon />
-						<span className="sr-only">{labels.close}</span>
-					</DialogPrimitive.Close>
+					</IconButton>
 				)}
 			</DialogPrimitive.Popup>
 		</DialogPortal>
@@ -97,13 +98,11 @@ function DialogFooter({
 	return (
 		<div
 			data-slot="dialog-footer"
-			className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+			className={cn("flex flex-col-reverse gap-monti-16 sm:flex-row sm:items-center sm:justify-end", className)}
 			{...props}
 		>
 			{children}
-			{showCloseButton && (
-				<DialogPrimitive.Close render={<Button variant="outline" />}>{labels.close}</DialogPrimitive.Close>
-			)}
+			{showCloseButton && <DialogPrimitive.Close render={<TextButton />}>{labels.close}</DialogPrimitive.Close>}
 		</div>
 	);
 }

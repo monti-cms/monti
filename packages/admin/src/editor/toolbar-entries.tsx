@@ -14,10 +14,6 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-	Toggle,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { AlignLeft, ImageIcon, Link2, List, type LucideIcon, Paperclip, Superscript, Upload } from "lucide-react";
@@ -218,26 +214,16 @@ export const buildToolbarEntries = ({
 								open={linkDraft !== null}
 								onOpenChange={(open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null)}
 							>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<PopoverTrigger
-												render={
-													<Toggle
-														size="icon-sm"
-														pressed={editor.isActive("link")}
-														disabled={!canEdit}
-														aria-label={t("toolbar.link")}
-														onMouseDown={(event) => event.preventDefault()}
-													/>
-												}
-											>
-												<Link2 aria-hidden />
-											</PopoverTrigger>
-										}
-									/>
-									<TooltipContent side="bottom">{t("toolbar.link")}</TooltipContent>
-								</Tooltip>
+								<IconButton
+									label={t("toolbar.link")}
+									side="bottom"
+									pressed={editor.isActive("link")}
+									disabled={!canEdit}
+									onMouseDown={(event) => event.preventDefault()}
+									trigger={(button) => <PopoverTrigger render={button} />}
+								>
+									<Link2 aria-hidden />
+								</IconButton>
 								<PopoverContent align="start" width="md">
 									{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}
 								</PopoverContent>

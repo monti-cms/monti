@@ -155,7 +155,7 @@ export function SiteEditor({
 								</Box>
 								<Button
 									type="button"
-									variant="outline"
+									variant="secondary"
 									size="sm"
 									disabled={!addable}
 									onClick={() => {

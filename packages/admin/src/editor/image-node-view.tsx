@@ -309,7 +309,6 @@ export function ImageBlockView() {
 							</Label>
 							<Switch
 								id={decorativeId}
-								size="sm"
 								checked={decorative}
 								onCheckedChange={(checked) =>
 									block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })

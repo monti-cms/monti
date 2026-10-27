@@ -43,7 +43,7 @@ export const AllTonesAndLayouts: Story = {
 							{(layout === "inline" || layout === "strip") && (
 								<>
 									<span>글을 불러오지 못했어요</span>
-									<Button size="xs" variant="outline">
+									<Button size="sm" variant="secondary">
 										다시 시도
 									</Button>
 								</>

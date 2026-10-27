@@ -2,7 +2,6 @@
 
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import type * as React from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
 
@@ -31,26 +30,25 @@ type PaginationLinkProps = {
 	isActive?: boolean;
 	/** The first page's "previous" and the last page's "next": shown, not followed. */
 	disabled?: boolean;
-} & Pick<React.ComponentProps<typeof Button>, "size"> &
-	React.ComponentProps<"a">;
+	/** `icon` a round 32px mark for a page number; `default` wider, with a word and an arrow. */
+	size?: "icon" | "default";
+} & React.ComponentProps<"a">;
 
 function PaginationLink({ className, isActive, disabled, size = "icon", ...props }: PaginationLinkProps) {
 	return (
-		<Button
-			variant={isActive ? "outline" : "ghost"}
-			size={size}
-			className={cn(disabled && "pointer-events-none opacity-50", className)}
-			nativeButton={false}
-			render={
-				<a
-					aria-current={isActive ? "page" : undefined}
-					aria-disabled={disabled || undefined}
-					tabIndex={disabled ? -1 : undefined}
-					data-slot="pagination-link"
-					data-active={isActive}
-					{...props}
-				/>
-			}
+		<a
+			aria-current={isActive ? "page" : undefined}
+			aria-disabled={disabled || undefined}
+			tabIndex={disabled ? -1 : undefined}
+			data-slot="pagination-link"
+			data-active={isActive}
+			className={cn(
+				"inline-flex h-monti-icon shrink-0 cursor-pointer items-center justify-center gap-monti-4 rounded-monti-full text-monti-body text-monti-muted no-underline outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-[active=true]:bg-monti-selected data-[active=true]:font-semibold data-[active=true]:text-monti-default [&_svg:not([class*='size-'])]:size-4",
+				size === "icon" ? "min-w-monti-icon px-monti-4" : "px-monti-12",
+				disabled && "pointer-events-none opacity-45",
+				className,
+			)}
+			{...props}
 		/>
 	);
 }
@@ -66,7 +64,7 @@ function PaginationPrevious({
 		<PaginationLink
 			aria-label={labels.paginationPreviousPage}
 			size="default"
-			className={cn("pl-2!", className)}
+			className={cn("pl-monti-8", className)}
 			{...props}
 		>
 			<ChevronLeftIcon data-icon="inline-start" />
@@ -83,7 +81,12 @@ function PaginationNext({
 	const labels = useUiLabels();
 	text ??= labels.paginationNext;
 	return (
-		<PaginationLink aria-label={labels.paginationNextPage} size="default" className={cn("pr-2!", className)} {...props}>
+		<PaginationLink
+			aria-label={labels.paginationNextPage}
+			size="default"
+			className={cn("pr-monti-8", className)}
+			{...props}
+		>
 			<span className="hidden sm:block">{text}</span>
 			<ChevronRightIcon data-icon="inline-end" />
 		</PaginationLink>

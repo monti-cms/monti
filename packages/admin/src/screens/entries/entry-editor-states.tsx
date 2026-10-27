@@ -118,7 +118,7 @@ export function EntryEditorLoadError({ message }: { message: string }) {
 			{/* The shared notice: a grid Alert without an icon put the text in the 16px icon column, one letter per line. */}
 			<LoadErrorAlert message={message} />
 			<Box>
-				<Button variant="outline" nativeButton={false} render={<Link role="link" href={site.adminHref()} />}>
+				<Button variant="secondary" nativeButton={false} render={<Link role="link" href={site.adminHref()} />}>
 					{t("backToList")}
 				</Button>
 			</Box>

@@ -17,6 +17,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Stack,
+	TextButton,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
@@ -54,8 +55,6 @@ export function ColumnSettingsPanel({
 					</Label>
 					<Inline as="span" gap={4}>
 						<IconButton
-							size="icon-xs"
-							variant="ghost"
 							label={t("list.columnUp", { label: columnLabel(site, collection, column) })}
 							disabled={index === 0}
 							onClick={() => onMove(column, -1)}
@@ -63,8 +62,6 @@ export function ColumnSettingsPanel({
 							<ArrowUp aria-hidden />
 						</IconButton>
 						<IconButton
-							size="icon-xs"
-							variant="ghost"
 							label={t("list.columnDown", { label: columnLabel(site, collection, column) })}
 							disabled={index === order.length - 1}
 							onClick={() => onMove(column, 1)}
@@ -126,8 +123,8 @@ export function ListViewPopover({
 	const directionButton = (direction: "asc" | "desc") => (
 		<Button
 			type="button"
-			size="xs"
-			variant={state.sortDirection === direction ? "secondary" : "ghost"}
+			size="sm"
+			variant={state.sortDirection === direction ? "primary" : "secondary"}
 			aria-pressed={state.sortDirection === direction}
 			onClick={() => onStateChange({ sortField: state.sortField, sortDirection: direction })}
 		>
@@ -136,7 +133,7 @@ export function ListViewPopover({
 	);
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="quiet" size="xs" />}>
+			<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
 				<SlidersHorizontal aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>

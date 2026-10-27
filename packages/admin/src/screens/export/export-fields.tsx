@@ -142,7 +142,6 @@ export function ExportFields({
 				</legend>
 				<Box paddingTop={4}>
 					<RadioGroup
-						variant="card"
 						aria-label={t("scope.label")}
 						value={form.scope}
 						onValueChange={(value) => form.setScope(value as ExportScope)}

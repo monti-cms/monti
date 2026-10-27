@@ -1,17 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RadioGroup, RadioItem } from "./radio-group";
-import { Stack } from "./stack";
-import { Text } from "./text";
 
+/** One choice out of a few: a ring that fills when picked, the label, and an optional note in mono. */
 const meta = {
 	title: "Controls/RadioGroup",
 	component: RadioGroup,
-	args: { variant: "plain", defaultValue: "all" },
+	args: { defaultValue: "move" },
 	render: (args) => (
-		<RadioGroup {...args} className="max-w-sm">
-			<RadioItem value="all" label="모든 글" hint="초안과 발행된 글을 모두 내보내요" />
-			<RadioItem value="published" label="발행된 글만" />
-			<RadioItem value="draft" label="초안만" />
+		<RadioGroup {...args}>
+			<RadioItem value="move" label="값 옮기기" hint="글 148편" />
+			<RadioItem value="blank" label="새 칸으로 시작" />
 		</RadioGroup>
 	),
 } satisfies Meta<typeof RadioGroup>;
@@ -20,48 +18,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-export const Variants: Story = {
-	render: () => (
-		<Stack gap={24}>
-			{(["plain", "card"] as const).map((variant) => (
-				<Stack key={variant} gap={4}>
-					<Text variant="label" tone="muted">
-						variant {variant}
-					</Text>
-					<RadioGroup variant={variant} defaultValue="all" className="max-w-sm">
-						<RadioItem value="all" label="모든 글" hint="초안과 발행된 글을 모두 내보내요" />
-						<RadioItem value="published" label="발행된 글만" hint="공개된 글만 내보내요" />
-						<RadioItem value="draft" label="초안만" />
-					</RadioGroup>
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-/** Options with and without a hint, and a disabled one. */
+/** Picked, not picked, and a disabled option. */
 export const ItemStates: Story = {
 	render: () => (
-		<Stack gap={24}>
-			{(["plain", "card"] as const).map((variant) => (
-				<Stack key={variant} gap={4}>
-					<Text variant="label" tone="muted">
-						variant {variant}, disabled
-					</Text>
-					<RadioGroup variant={variant} defaultValue="published" className="max-w-sm">
-						<RadioItem value="published" label="발행된 글만" hint="선택된 상태" />
-						<RadioItem value="draft" label="초안만" hint="선택하지 않은 상태" />
-						<RadioItem value="private" label="비공개 글" hint="사용할 수 없어요" disabled />
-					</RadioGroup>
-				</Stack>
-			))}
-		</Stack>
+		<RadioGroup defaultValue="published">
+			<RadioItem value="published" label="발행된 글만" hint="글 120편" />
+			<RadioItem value="draft" label="초안만" hint="글 28편" />
+			<RadioItem value="private" label="비공개 글" disabled />
+		</RadioGroup>
 	),
 };
 
 export const GroupDisabled: Story = {
 	render: () => (
-		<RadioGroup disabled defaultValue="all" className="max-w-sm">
+		<RadioGroup disabled defaultValue="all">
 			<RadioItem value="all" label="모든 글" />
 			<RadioItem value="draft" label="초안만" />
 		</RadioGroup>

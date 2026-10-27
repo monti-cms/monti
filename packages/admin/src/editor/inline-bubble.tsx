@@ -2,7 +2,7 @@
 
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextLink } from "@monti-cms/ui";
+import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextButton } from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -88,21 +88,17 @@ export function BubbleButton({
 	label,
 	onClick,
 	pressed,
-	tone,
 	children,
 }: {
 	label: string;
 	onClick: () => void;
 	pressed?: boolean;
-	tone?: "danger";
 	children: ReactNode;
 }) {
 	return (
 		<IconButton
 			label={label}
 			pressed={pressed}
-			tone={tone}
-			size="sm"
 			// Do not steal the editor selection or focus on press.
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={onClick}
@@ -327,7 +323,8 @@ export function InlineBubble({
 					) : (
 						<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 							<Text as="div" variant="caption" truncate>
-								<TextLink
+								<TextButton
+									variant="underline"
 									href={href}
 									target="_blank"
 									rel="noreferrer noopener"
@@ -336,7 +333,7 @@ export function InlineBubble({
 									onMouseDown={(event) => event.preventDefault()}
 								>
 									{href}
-								</TextLink>
+								</TextButton>
 							</Text>
 						</Box>
 					)}
@@ -471,7 +468,6 @@ export function InlineBubble({
 				</BubbleButton>
 				<BubbleButton
 					label={t("inlineBubble.ruleDelete")}
-					tone="danger"
 					onClick={act(() => removeRule(editor.view, blockPos, rule.id))}
 				>
 					<Trash2 aria-hidden />
@@ -501,15 +497,14 @@ export function InlineBubble({
 			<Badge variant="secondary">{target.badge}</Badge>
 			<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 				<Text as="div" variant="caption" truncate>
-					<TextLink
+					<TextButton
+						variant="quiet"
 						render={<button type="button" />}
-						underline="hover"
-						tone="muted"
 						onClick={() => setPanel({ kind: "footnote", target })}
 						title={target.defText || t("inlineBubble.footnoteEmpty")}
 					>
 						{target.defText || t("inlineBubble.footnoteEmpty")}
-					</TextLink>
+					</TextButton>
 				</Text>
 			</Box>
 			<BubbleButton label={t("inlineBubble.footnoteEdit")} onClick={() => setPanel({ kind: "footnote", target })}>

@@ -13,7 +13,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Text,
-	Toggle,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -294,7 +293,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 							{lineMenuOffered && (
 								<IconButton
 									label={t("view.lineEffects")}
-									size="icon-xs"
 									disabled={!(picked ?? selectedLines)}
 									onMouseDown={(event) => event.preventDefault()}
 									onClick={() => {
@@ -325,23 +323,15 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</>
 					)}
 					{editable && (
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<Toggle
-										size="icon-sm"
-										pressed={parsedMeta.showLineNumbers}
-										onPressedChange={(pressed) => setMeta({ showLineNumbers: pressed })}
-										aria-label={t("view.lineNumbers")}
-									/>
-								}
-							>
-								<ListOrdered aria-hidden />
-							</TooltipTrigger>
-							<TooltipContent>{t("view.lineNumbers")}</TooltipContent>
-						</Tooltip>
+						<IconButton
+							label={t("view.lineNumbers")}
+							pressed={parsedMeta.showLineNumbers}
+							onClick={() => setMeta({ showLineNumbers: !parsedMeta.showLineNumbers })}
+						>
+							<ListOrdered aria-hidden />
+						</IconButton>
 					)}
-					<IconButton label={copied ? t("view.copied") : t("view.copy")} size="icon-xs" onClick={handleCopy}>
+					<IconButton label={copied ? t("view.copied") : t("view.copy")} onClick={handleCopy}>
 						{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
 					</IconButton>
 				</Inline>
@@ -385,7 +375,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										<IconButton
 											label={t(collapse.open ? "view.collapseFrom" : "view.expandFrom", { line: line + 1 })}
 											side="left"
-											size="icon-xs"
 											aria-expanded={collapse.open}
 											onMouseDown={(event) => {
 												event.preventDefault();

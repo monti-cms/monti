@@ -358,8 +358,7 @@ export function useFolderActions({
 						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
 						<Button
 							type="button"
-							variant="secondary"
-							tone="danger"
+							variant="outline-danger"
 							disabled={!contents || isBusy}
 							onClick={() => void confirmDelete()}
 						>

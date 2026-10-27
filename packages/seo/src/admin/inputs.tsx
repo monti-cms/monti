@@ -63,7 +63,6 @@ function NoindexSwitch({ field, id, value, describedBy, context, onChange }: Fie
 	return (
 		<Switch
 			id={id}
-			size="sm"
 			checked={selected === "noindex"}
 			disabled={context.disabled}
 			aria-describedby={describedBy}

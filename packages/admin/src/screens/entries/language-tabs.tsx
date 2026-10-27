@@ -97,8 +97,8 @@ export function LanguageTabs({
 							<Button
 								key={target}
 								type="button"
-								size="xs"
-								variant="outline"
+								size="sm"
+								variant="secondary"
 								disabled={createDisabled}
 								onClick={() => void create(target)}
 							>
@@ -122,8 +122,8 @@ export function LanguageTabs({
 						<Inline key={target}>
 							<Button
 								type="button"
-								size="xs"
-								variant={current ? "secondary" : "ghost"}
+								size="sm"
+								variant={current ? "primary" : "secondary"}
 								aria-current={current ? "page" : undefined}
 								aria-label={t(member.isSource ? "lang.currentSource" : "lang.current", {
 									lang: site.localeLabel(target),

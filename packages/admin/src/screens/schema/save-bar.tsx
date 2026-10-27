@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, StatusIndicator, Text } from "@monti-cms/ui";
+import { Button, Inline, StatusIndicator, Text, TextButton } from "@monti-cms/ui";
 import { schemaMessages } from "./messages";
 
 /**
@@ -40,10 +40,10 @@ export function SaveBar({
 				<StatusIndicator tone="warning" size="xs" />
 				<Text>{t("bar.count", { count })}</Text>
 			</Inline>
-			<Button type="button" variant="ghost" size="sm" onClick={onDiscard}>
+			<TextButton type="button" onClick={onDiscard}>
 				{t("bar.discard")}
-			</Button>
-			<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={onReview}>
+			</TextButton>
+			<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={onReview}>
 				{t("bar.review")}
 			</Button>
 			<Button type="button" size="sm" disabled={disabled} onClick={onSave}>

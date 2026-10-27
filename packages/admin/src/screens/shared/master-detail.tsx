@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Inline, ResizablePane, Skeleton, Stack, Text, TextLink } from "@monti-cms/ui";
+import { Box, Inline, ResizablePane, Skeleton, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
 
@@ -94,8 +94,7 @@ export function ListRow({
 }) {
 	const button = (
 		<Stack gap={0} grow minWidth={0}>
-			<TextLink
-				underline="none"
+			<TextButton
 				aria-current={current ? "true" : undefined}
 				onClick={onClick}
 				onKeyDown={(event) => {
@@ -123,7 +122,7 @@ export function ListRow({
 						</Text>
 					)}
 				</Stack>
-			</TextLink>
+			</TextButton>
 		</Stack>
 	);
 	const rowProps = {

@@ -25,7 +25,7 @@ const meta = {
 	args: {},
 	render: (args) => (
 		<DropdownMenu {...args}>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>
 				<MoreHorizontal aria-hidden />더 보기
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>
@@ -57,7 +57,7 @@ export const Open: Story = { args: { defaultOpen: true }, render: meta.render };
 export const DisabledItems: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>글 작업</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 작업</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem>미리보기</DropdownMenuItem>
 				<DropdownMenuItem disabled>발행 취소</DropdownMenuItem>
@@ -72,7 +72,7 @@ export const DisabledItems: Story = {
 export const GroupsAndLabels: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>내 계정</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>내 계정</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>김하루</DropdownMenuLabel>
@@ -96,7 +96,7 @@ function CheckboxDemo() {
 	const [showTrash, setShowTrash] = useState(false);
 	return (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>보기</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuCheckboxItem checked={showDrafts} onCheckedChange={setShowDrafts}>
 					초안 보기
@@ -118,7 +118,7 @@ function RadioDemo() {
 	const [order, setOrder] = useState("recent");
 	return (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>정렬</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>정렬</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuRadioGroup value={order} onValueChange={setOrder}>
 					<DropdownMenuRadioItem value="recent">최근 수정순</DropdownMenuRadioItem>
@@ -137,7 +137,7 @@ export const RadioItems: Story = { render: () => <RadioDemo /> };
 export const Submenu: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>내보내기</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>내보내기</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem>링크 복사</DropdownMenuItem>
 				<DropdownMenuSub defaultOpen>
@@ -156,7 +156,7 @@ export const Submenu: Story = {
 export const LongLabel: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
-			<DropdownMenuTrigger render={<Button variant="outline" />}>글 고르기</DropdownMenuTrigger>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 고르기</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem>아주 긴 제목의 글이 메뉴 안에서 어떻게 보이는지 확인하기 위한 제목입니다</DropdownMenuItem>
 				<DropdownMenuItem>짧은 글</DropdownMenuItem>

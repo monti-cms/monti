@@ -51,12 +51,7 @@ export function CollapsibleNodeView() {
 					open && "bg-monti-muted",
 				)}
 			>
-				<IconButton
-					label={open ? t("toggle.close") : t("toggle.open")}
-					size="icon-xs"
-					aria-expanded={open}
-					onClick={toggle}
-				>
+				<IconButton label={open ? t("toggle.close") : t("toggle.open")} aria-expanded={open} onClick={toggle}>
 					{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 				</IconButton>
 				<AttributeInput
@@ -92,7 +87,6 @@ export function CollapsibleNodeView() {
 							</Label>
 							<Switch
 								id={defaultOpenId}
-								size="sm"
 								checked={defaultOpen}
 								onCheckedChange={(checked) => setValue("defaultOpen", checked)}
 							/>

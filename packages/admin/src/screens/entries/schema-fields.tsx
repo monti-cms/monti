@@ -19,7 +19,7 @@ import {
 	useTranslator,
 } from "@monti-cms/core/site";
 import {
-	Button,
+	Affix,
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
@@ -32,10 +32,6 @@ import {
 	IconButton,
 	Inline,
 	Input,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupInput,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -44,9 +40,7 @@ import {
 	Stack,
 	Text,
 	Textarea,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
+	TextButton,
 	FormField as UiField,
 } from "@monti-cms/ui";
 import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
@@ -385,7 +379,6 @@ function ValueRowView({
 	const fillFromBodyButton = canFillFromBody ? (
 		<IconButton
 			label={t("field.fillFromBody")}
-			size="icon-xs"
 			side="bottom"
 			disabled={field.readOnly}
 			onClick={() => {
@@ -458,38 +451,22 @@ const SlugRow = memo(function SlugRow({
 			help={showDescriptions ? field.description : undefined}
 			slot={slot}
 		>
-			<InputGroup>
-				<InputGroupInput
-					id={field.ids.input}
-					autoComplete="off"
-					aria-invalid={field.inputProps["aria-invalid"]}
-					aria-describedby={field.inputProps["aria-describedby"]}
-					value={field.value ?? ""}
-					onChange={(event) => changeSlug(event.target.value)}
-					placeholder={placeholder ?? definition.placeholder}
-					size="sm"
-					mono
-				/>
-				{onRegenerateSlug && definition.from && (
-					<InputGroupAddon align="inline-end">
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<InputGroupButton
-										size="icon-xs"
-										aria-label={regenerateLabel}
-										disabled={field.readOnly}
-										onClick={onRegenerateSlug}
-									/>
-								}
-							>
-								<RefreshCw aria-hidden />
-							</TooltipTrigger>
-							<TooltipContent side="bottom">{regenerateLabel}</TooltipContent>
-						</Tooltip>
-					</InputGroupAddon>
-				)}
-			</InputGroup>
+			<Affix
+				id={field.ids.input}
+				autoComplete="off"
+				aria-invalid={field.inputProps["aria-invalid"]}
+				aria-describedby={field.inputProps["aria-describedby"]}
+				value={field.value ?? ""}
+				onChange={(event) => changeSlug(event.target.value)}
+				placeholder={placeholder ?? definition.placeholder}
+				action={
+					onRegenerateSlug && definition.from ? (
+						<IconButton label={regenerateLabel} side="bottom" disabled={field.readOnly} onClick={onRegenerateSlug}>
+							<RefreshCw aria-hidden />
+						</IconButton>
+					) : undefined
+				}
+			/>
 		</FieldRow>
 	);
 });
@@ -681,7 +658,7 @@ function LayoutSection({
 		<Collapsible open={open} onOpenChange={setOpen}>
 			<FormFieldSet>
 				<FormFieldLegend variant="label">
-					<CollapsibleTrigger render={<Button type="button" variant="ghost" size="xs" />}>
+					<CollapsibleTrigger render={<TextButton type="button" />}>
 						{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						{title}
 					</CollapsibleTrigger>

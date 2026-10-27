@@ -23,7 +23,7 @@ import {
 	Spinner,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
@@ -248,9 +248,9 @@ function ResultView({ form }: { form: RestoreForm }) {
 			<Warnings warnings={result.warnings} />
 			<NotRestored items={result.notRestored} />
 			<Box>
-				<TextLink href={site.adminHref()} data-testid="restore-open">
+				<TextButton variant="underline" href={site.adminHref()} data-testid="restore-open">
 					{t("result.open")}
-				</TextLink>
+				</TextButton>
 			</Box>
 		</Stack>
 	);
@@ -281,7 +281,7 @@ export function RestoreBackupFields() {
 					{t("notEmpty.description")}
 				</Text>
 				<Box>
-					<Button type="button" variant="outline" disabled aria-disabled>
+					<Button type="button" variant="secondary" disabled aria-disabled>
 						{t("file.choose")}
 					</Button>
 				</Box>
@@ -322,7 +322,7 @@ export function RestoreBackupFields() {
 								event.target.value = "";
 							}}
 						/>
-						<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
+						<Button type="button" variant="secondary" disabled={running} onClick={() => input.current?.click()}>
 							{form.file ? t("file.change") : t("file.choose")}
 						</Button>
 						{form.file && (
@@ -372,9 +372,9 @@ export function RestoreBackupFields() {
 							>
 								{t("action.restore")}
 							</Button>
-							<Button type="button" variant="ghost" disabled={running} onClick={form.reset}>
+							<TextButton type="button" disabled={running} onClick={form.reset}>
 								{t("action.cancel")}
-							</Button>
+							</TextButton>
 						</Inline>
 					)}
 				</>
@@ -391,7 +391,7 @@ export function RestoreBackupFields() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
-						<AlertDialogAction type="button" variant="secondary" tone="danger" onClick={() => form.start()}>
+						<AlertDialogAction type="button" variant="outline-danger" onClick={() => form.start()}>
 							{t("confirm.confirm")}
 						</AlertDialogAction>
 					</AlertDialogFooter>

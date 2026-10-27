@@ -34,6 +34,7 @@ import {
 	TabsList,
 	TabsTrigger,
 	Textarea,
+	TextButton,
 } from "@monti-cms/admin/kit";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { RefreshCw, Sparkles } from "lucide-react";
@@ -266,13 +267,13 @@ function WriteDialog({
 				<DialogFooter>
 					<Inline gap={8} justify={askRequest ? "end" : "between"} width="full">
 						{!askRequest && (
-							<Button type="button" variant="ghost" size="sm" disabled={running} onClick={() => void run()}>
+							<TextButton type="button" disabled={running} onClick={() => void run()}>
 								<RefreshCw aria-hidden />
 								{running ? t("running") : t("runAgain")}
-							</Button>
+							</TextButton>
 						)}
 						<Inline gap={8}>
-							<Button type="button" variant="outline" size="sm" onClick={onClose}>
+							<Button type="button" variant="secondary" size="sm" onClick={onClose}>
 								{tc("cancel")}
 							</Button>
 							<Button
@@ -468,10 +469,9 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			<>
 				{/* In an empty document, the toolbar writes a draft directly. */}
 				{empty && editor && firstInsert && (
-					<Button
+					<TextButton
 						type="button"
 						variant="quiet"
-						size="sm"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });
@@ -479,7 +479,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 					>
 						<Sparkles aria-hidden />
 						{firstInsert.label}
-					</Button>
+					</TextButton>
 				)}
 			</>
 		),

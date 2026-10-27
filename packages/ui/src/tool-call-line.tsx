@@ -2,12 +2,12 @@
 
 import { Check, ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
 import { type ComponentProps, type ReactNode, useState } from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
 import { CodeBlock } from "./code-block";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 import { Spinner } from "./spinner";
 import { Text } from "./text";
+import { TextButton } from "./text-button";
 
 export type ToolCallStatus = "running" | "done" | "failed";
 
@@ -60,7 +60,9 @@ export function ToolCallLine({
 		<div data-slot="tool-call-line" data-status={status} className={cn("min-w-0", className)} {...props}>
 			{expandable ? (
 				<Collapsible open={open} onOpenChange={setOpen}>
-					<CollapsibleTrigger render={<Button type="button" variant="quiet" size="sm" />}>{summary}</CollapsibleTrigger>
+					<CollapsibleTrigger render={<TextButton variant="quiet" className="inline-flex items-center gap-monti-6" />}>
+						{summary}
+					</CollapsibleTrigger>
 					<CollapsibleContent>
 						<div className="flex flex-col gap-monti-4 py-monti-4">
 							{details.map((detail) => (

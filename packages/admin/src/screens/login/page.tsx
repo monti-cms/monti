@@ -18,6 +18,7 @@ import {
 	Label,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
@@ -121,9 +122,9 @@ export default async function AdminLoginPage({
 								</AlertDescription>
 								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
 									<Box paddingTop={12}>
-										<Button type="submit" variant="link" size="xs">
+										<TextButton type="submit" variant="underline">
 											{t("signOut")}
-										</Button>
+										</TextButton>
 									</Box>
 								</form>
 							</Alert>

@@ -43,7 +43,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 	return (
 		<Button
 			type="button"
-			variant="outline"
+			variant="secondary"
 			size="sm"
 			disabled={running}
 			onClick={async () => {

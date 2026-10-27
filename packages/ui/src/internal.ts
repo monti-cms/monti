@@ -6,6 +6,8 @@
  * Values come only from the tokens: see `styles/theme.css` for the names and the README for the rules.
  */
 
+export { Affix } from "./affix";
+export { AiAction, Spark } from "./ai-action";
 export { Alert, AlertDescription, AlertTitle, alertVariants } from "./alert";
 export {
 	AlertDialog,
@@ -23,10 +25,10 @@ export {
 } from "./alert-dialog";
 export { Badge, badgeVariants } from "./badge";
 export { Box } from "./box";
-export { Button, buttonVariants } from "./button";
-export { ButtonGroup } from "./button-group";
+export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
+export { Caret } from "./caret";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
@@ -113,13 +115,11 @@ export {
 export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
 export {
 	FormField,
-	FormFieldContent,
 	FormFieldDescription,
 	FormFieldError,
 	FormFieldGroup,
 	FormFieldLabel,
 	FormFieldLegend,
-	FormFieldSeparator,
 	FormFieldSet,
 	FormFieldTitle,
 } from "./field";
@@ -128,18 +128,11 @@ export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";
 export { Input } from "./input";
-export {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupInput,
-	InputGroupText,
-	InputGroupTextarea,
-} from "./input-group";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
+export { Option } from "./option";
 export {
 	Pagination,
 	PaginationContent,
@@ -153,6 +146,7 @@ export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 export { Progress } from "./progress";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
+export { Segmented, type SegmentedOption } from "./segmented";
 export {
 	Select,
 	SelectContent,
@@ -205,12 +199,10 @@ export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, Tabl
 export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
-export { TextLink } from "./text-link";
+export { TextButton } from "./text-button";
 export { Textarea } from "./textarea";
 export { ChoiceCard, Tile } from "./tile";
 export { Toaster, toast } from "./toast";
-export { Toggle, toggleVariants } from "./toggle";
-export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";

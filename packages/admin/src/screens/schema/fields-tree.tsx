@@ -195,9 +195,9 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 				<Heading as="h2" variant="label">
 					{t("layout.preview")}
 				</Heading>
-				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
+				<IconButton label={t("layout.previewClose")} onClick={onClose}>
 					<X aria-hidden />
-				</Button>
+				</IconButton>
 			</Inline>
 			<Stack gap={0} grow minHeight={0} padding={12}>
 				{preview}
@@ -285,12 +285,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						</Text>
 					</Box>
 					<Inline wrap gap={8}>
-						<IconButton
-							label={t("layout.preview")}
-							size="icon-sm"
-							pressed={previewOpen}
-							onClick={() => setPreviewOpen(!previewOpen)}
-						>
+						<IconButton label={t("layout.preview")} pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
 							<Eye aria-hidden />
 						</IconButton>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
@@ -314,7 +309,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 								{t("fields.addSet", { name: set.label })}
 							</Button>
 						))}
-						<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
+						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
 							<Plus aria-hidden />
 							{t("field.add")}
 						</Button>

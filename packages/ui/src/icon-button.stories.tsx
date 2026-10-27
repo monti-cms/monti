@@ -1,71 +1,50 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Pencil, Settings, Trash2 } from "lucide-react";
+import { MoreHorizontal, PanelRight, X } from "lucide-react";
+import { Spark } from "./ai-action";
 import { IconButton } from "./icon-button";
 import { Stack } from "./stack";
 
+/** Round, 32px: the header's more (⋯), properties and assistant, a panel's close. The label is the screen reader name and the tooltip. */
 const meta = {
 	title: "Controls/IconButton",
 	component: IconButton,
-	args: { label: "편집", children: <Pencil aria-hidden /> },
+	args: { label: "더보기", children: <MoreHorizontal aria-hidden /> },
 } satisfies Meta<typeof IconButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
-const VARIANTS = ["quiet", "ghost", "outline", "secondary", "default"] as const;
-
-/** Every variant at every size. */
-export const AllVariants: Story = {
-	render: () => (
-		<Stack gap={24}>
-			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap={8} align="center">
-					{SIZES.map((size) => (
-						<IconButton key={size} label={`${variant} ${size}`} variant={variant} size={size}>
-							<Settings aria-hidden />
-						</IconButton>
-					))}
-					<IconButton label="비활성" variant={variant} disabled>
-						<Settings aria-hidden />
-					</IconButton>
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-/** Pressed (toggle) on and off, danger, invalid. */
+/** Rest, pressed (the properties panel is open), disabled. */
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap={8} align="center">
-			<IconButton label="고정 해제" pressed={false}>
-				<Pencil aria-hidden />
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="더보기">
+				<MoreHorizontal aria-hidden />
 			</IconButton>
-			<IconButton label="고정됨" pressed>
-				<Pencil aria-hidden />
+			<IconButton label="속성" pressed>
+				<PanelRight aria-hidden />
 			</IconButton>
-			<IconButton label="삭제" tone="danger">
-				<Trash2 aria-hidden />
+			<IconButton label="어시스턴트 열기">
+				<Spark className="size-4" />
 			</IconButton>
-			<IconButton label="유효하지 않음" aria-invalid>
-				<Pencil aria-hidden />
+			<IconButton label="닫기">
+				<X aria-hidden />
 			</IconButton>
 			<IconButton label="비활성" disabled>
-				<Pencil aria-hidden />
+				<X aria-hidden />
 			</IconButton>
 		</Stack>
 	),
 };
 
-/** The tooltip appears on hover; side picks where. */
+/** The tooltip appears on hover; `side` picks where. */
 export const TooltipSides: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="center">
 			{(["top", "bottom", "left", "right"] as const).map((side) => (
 				<IconButton key={side} label={`툴팁 ${side}`} side={side}>
-					<Pencil aria-hidden />
+					<MoreHorizontal aria-hidden />
 				</IconButton>
 			))}
 		</Stack>

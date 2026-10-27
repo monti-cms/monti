@@ -15,6 +15,7 @@ import {
 	Grid,
 	Stack,
 	Text,
+	TextButton,
 	toast,
 } from "@monti-cms/ui";
 import { useSourceFormat } from "../../admin-components";
@@ -53,7 +54,7 @@ export function RecoveryDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={onKeepServer}>
+					<Button type="button" variant="secondary" onClick={onKeepServer}>
 						{t("recovery.keepServer")}
 					</Button>
 					<Button type="button" onClick={onRestore}>
@@ -126,13 +127,13 @@ export function ConflictDialog({
 					/>
 				)}
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={onClose}>
+					<Button type="button" variant="secondary" onClick={onClose}>
 						{tc("close")}
 					</Button>
-					<Button type="button" variant="outline" onClick={onReload}>
+					<Button type="button" variant="secondary" onClick={onReload}>
 						{t("conflict.reload")}
 					</Button>
-					<Button type="button" variant="secondary" tone="danger" onClick={() => void overwrite()}>
+					<Button type="button" variant="outline-danger" onClick={() => void overwrite()}>
 						{t("conflict.overwriteMine")}
 					</Button>
 				</DialogFooter>
@@ -182,9 +183,9 @@ function ComparePanes({
 					})}
 				</Text>
 				<Box>
-					<Button type="button" variant="link" size="xs" onClick={() => void copy(body)}>
+					<TextButton type="button" variant="underline" onClick={() => void copy(body)}>
 						{t("conflict.copyBody")}
-					</Button>
+					</TextButton>
 				</Box>
 				<CodeBlock>{body}</CodeBlock>
 			</Stack>

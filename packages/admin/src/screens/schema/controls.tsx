@@ -109,7 +109,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	return (
 		<Inline as="span" gap={2} data-testid="field-changed">
 			<ChangeDot />
-			<IconButton label={t("revert.named", { name })} size="icon-xs" disabled={disabled} onClick={onRevert}>
+			<IconButton label={t("revert.named", { name })} disabled={disabled} onClick={onRevert}>
 				<Undo2 aria-hidden />
 			</IconButton>
 		</Inline>
@@ -232,13 +232,7 @@ export function FlagSwitch({
 				</Stack>
 				<Inline gap={8} shrink={false}>
 					{revert && <RevertMark name={label} onRevert={revert} />}
-					<Switch
-						id={id}
-						size="sm"
-						checked={checked}
-						disabled={disabled}
-						onCheckedChange={(next) => onChange(next === true)}
-					/>
+					<Switch id={id} checked={checked} disabled={disabled} onCheckedChange={(next) => onChange(next === true)} />
 				</Inline>
 			</Inline>
 		</Box>
@@ -285,7 +279,7 @@ export function Segmented({
 						key={item.value}
 						type="button"
 						role="radio"
-						variant={item.value === value ? "outline" : "ghost"}
+						variant={item.value === value ? "primary" : "secondary"}
 						size="sm"
 						aria-checked={item.value === value}
 						disabled={disabled}
@@ -455,20 +449,10 @@ export function RowActions({
 	const { disabled } = useSchemaEdit();
 	return (
 		<Inline gap={0} shrink={false}>
-			<IconButton
-				label={t("row.up", { name })}
-				size="icon-xs"
-				disabled={disabled || index === 0}
-				onClick={() => onMove(-1)}
-			>
+			<IconButton label={t("row.up", { name })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
 				<ArrowUp aria-hidden />
 			</IconButton>
-			<IconButton
-				label={t("row.down", { name })}
-				size="icon-xs"
-				disabled={disabled || index === count - 1}
-				onClick={() => onMove(1)}
-			>
+			<IconButton label={t("row.down", { name })} disabled={disabled || index === count - 1} onClick={() => onMove(1)}>
 				<ArrowDown aria-hidden />
 			</IconButton>
 			{removeBlocked ? (
@@ -476,28 +460,14 @@ export function RowActions({
 					{/* A disabled button gets no pointer events, so the tooltip hangs on a wrapper that can also take focus. */}
 					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
 					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
-						<Button
-							type="button"
-							variant="ghost"
-							tone="danger"
-							size="icon-xs"
-							disabled
-							aria-label={t("row.remove", { name })}
-							aria-description={removeBlocked}
-						>
+						<IconButton label={t("row.remove", { name })} disabled aria-description={removeBlocked}>
 							<X aria-hidden />
-						</Button>
+						</IconButton>
 					</TooltipTrigger>
 					<TooltipContent side="top">{removeBlocked}</TooltipContent>
 				</Tooltip>
 			) : (
-				<IconButton
-					label={t("row.remove", { name })}
-					size="icon-xs"
-					tone="danger"
-					disabled={disabled}
-					onClick={onRemove}
-				>
+				<IconButton label={t("row.remove", { name })} disabled={disabled} onClick={onRemove}>
 					<X aria-hidden />
 				</IconButton>
 			)}

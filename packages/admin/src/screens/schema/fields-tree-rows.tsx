@@ -81,8 +81,6 @@ export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 				<IconButton
 					key={button.label}
 					label={button.label}
-					size="icon-xs"
-					tone={button.destructive ? "danger" : undefined}
 					pressed={button.pressed}
 					disabled={button.disabled}
 					title={button.title}
@@ -116,7 +114,7 @@ export function MoveDialog({
 						<li key={destination.label}>
 							<Button
 								type="button"
-								variant="ghost"
+								variant="secondary"
 								size="sm"
 								width="full"
 								disabled={destination.disabled}

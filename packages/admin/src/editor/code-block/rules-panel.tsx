@@ -150,7 +150,7 @@ function RuleRow({
 					/>
 				)}
 				<Inline grow justify="end">
-					<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove}>
+					<IconButton label={t("rulesPanel.remove")} onClick={onRemove}>
 						<Trash2 aria-hidden />
 					</IconButton>
 				</Inline>
@@ -193,7 +193,6 @@ function RuleRow({
 				<Label htmlFor={`${rule.id}-open`} size="caption">
 					<Switch
 						id={`${rule.id}-open`}
-						size="sm"
 						checked={rule.attrs.open === true}
 						onCheckedChange={(checked) => onChange({ ...rule, attrs: { ...rule.attrs, open: checked || undefined } })}
 					/>
@@ -242,12 +241,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 
 	return (
 		<Popover>
-			<IconButton
-				label={t("rulesPanel.title")}
-				size="sm"
-				variant={rules.length > 0 ? "ghost" : "quiet"}
-				trigger={(button) => <PopoverTrigger render={button} />}
-			>
+			<IconButton label={t("rulesPanel.title")} trigger={(button) => <PopoverTrigger render={button} />}>
 				<Regex aria-hidden />
 				{rules.length > 0 && <Text variant="caption">{rules.length}</Text>}
 			</IconButton>
@@ -275,7 +269,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				)}
 				{canAdd && (
 					<Inline justify="start">
-						<Button type="button" variant="outline" size="sm" onClick={addRule}>
+						<Button type="button" variant="secondary" size="sm" onClick={addRule}>
 							<Plus aria-hidden />
 							{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
 						</Button>

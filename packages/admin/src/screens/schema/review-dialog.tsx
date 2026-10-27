@@ -25,7 +25,7 @@ import {
 	Skeleton,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -153,9 +153,12 @@ function Sample({
 				{sample.map((entry, index) => (
 					<Text as="li" variant="caption" key={entry.id}>
 						{index > 0 && ", "}
-						<TextLink render={<AdminLink href={entryHref(site, entry.collection, entry.id)} target="_blank" />}>
+						<TextButton
+							variant="underline"
+							render={<AdminLink href={entryHref(site, entry.collection, entry.id)} target="_blank" />}
+						>
 							{entry.title ?? entry.id.slice(0, 8)}
-						</TextLink>
+						</TextButton>
 						<Text tone="muted">
 							{" "}
 							({entry.collection}, {entry.locale}, {entry.status})
@@ -490,7 +493,7 @@ export function ReviewDialog({
 						</Button>
 					) : (
 						<>
-							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+							<Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
 								{tc("cancel")}
 							</Button>
 							<Button type="button" disabled={!ready} onClick={() => void save()}>

@@ -72,7 +72,6 @@ export function ApiKeyField({
 			</legend>
 			<Box paddingTop={8} maxWidth="reading">
 				<RadioGroup
-					variant="card"
 					aria-labelledby={groupId}
 					value={value.use === "none" ? "" : value.use}
 					onValueChange={(next) => {

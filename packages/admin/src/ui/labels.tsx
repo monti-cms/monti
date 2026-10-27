@@ -20,6 +20,8 @@ export function AdminUiLabels({ children }: { children: ReactNode }) {
 				loading: t("loading"),
 				clear: t("clear"),
 				deselect: t("deselect"),
+				aiFill: t("ai.fill"),
+				aiAgain: t("ai.again"),
 				paginationLabel: t("pagination.label"),
 				paginationPrevious: t("pagination.previous"),
 				paginationPreviousPage: t("pagination.previousPage"),

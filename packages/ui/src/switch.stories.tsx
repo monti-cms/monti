@@ -19,26 +19,23 @@ export const Playground: Story = {
 	),
 };
 
-/** Both sizes, off and on, plus disabled and invalid. */
+/** Off, on, AI-turned-on (blue), disabled and invalid. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={12}>
-			{(["default", "sm"] as const).map((size) =>
-				[
-					{ name: "off", props: {} },
-					{ name: "on", props: { defaultChecked: true } },
-					{ name: "disabled", props: { disabled: true } },
-					{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
-					{ name: "invalid", props: { "aria-invalid": true } },
-				].map(({ name, props }) => (
-					<Stack key={`${size}-${name}`} direction="row" gap={8} align="center">
-						<Switch id={`${size}-${name}`} size={size} {...props} />
-						<Label htmlFor={`${size}-${name}`}>
-							{size} · {name}
-						</Label>
-					</Stack>
-				)),
-			)}
+			{[
+				{ name: "off", props: {} },
+				{ name: "on", props: { defaultChecked: true } },
+				{ name: "proposal · on", props: { defaultChecked: true, proposal: true } },
+				{ name: "disabled", props: { disabled: true } },
+				{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
+				{ name: "invalid", props: { "aria-invalid": true } },
+			].map(({ name, props }) => (
+				<Stack key={name} direction="row" gap={8} align="center">
+					<Switch id={name} {...props} />
+					<Label htmlFor={name}>{name}</Label>
+				</Stack>
+			))}
 		</Stack>
 	),
 };

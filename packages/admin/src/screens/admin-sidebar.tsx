@@ -2,9 +2,8 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
+import { IconButton, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
 import {
-	buttonVariants,
 	cn,
 	Sidebar,
 	SidebarContent,
@@ -526,25 +525,14 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					<span className="truncate font-semibold text-monti-default text-monti-label">{site.SITE_NAME || "CMS"}</span>
 				</Link>
 				{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. Opens in a new tab so the admin stays. */}
-				<Tooltip>
-					<TooltipTrigger
-						render={
-							<Link
-								href={site.SITE_HOME}
-								target="_blank"
-								rel="noopener noreferrer"
-								aria-label={t("sidebar.viewSite")}
-								className={cn(
-									buttonVariants({ variant: "ghost", size: "icon-sm" }),
-									"size-8 shrink-0 text-monti-muted",
-								)}
-							/>
-						}
-					>
-						<ExternalLink aria-hidden className="size-4" />
-					</TooltipTrigger>
-					<TooltipContent side="right">{t("sidebar.viewSite")}</TooltipContent>
-				</Tooltip>
+				<IconButton
+					label={t("sidebar.viewSite")}
+					side="right"
+					nativeButton={false}
+					render={<Link role="link" href={site.SITE_HOME} target="_blank" rel="noopener noreferrer" />}
+				>
+					<ExternalLink aria-hidden />
+				</IconButton>
 				<Tooltip>
 					<TooltipTrigger
 						render={<SidebarTrigger aria-label={toggleLabel} className="size-8 shrink-0 text-monti-muted" />}
@@ -648,7 +636,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
 					{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <Settings2 />)}
 				</SidebarMenu>
-				<ThemeToggle className="size-8 shrink-0 text-monti-muted" />
+				<ThemeToggle />
 			</SidebarFooter>
 		</Sidebar>
 	);

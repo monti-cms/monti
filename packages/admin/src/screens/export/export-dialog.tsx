@@ -53,7 +53,7 @@ function ExportDialogBody({
 			)}
 			<ExportProgressLine phase={form.phase} />
 			<DialogFooter>
-				<Button type="button" variant="outline" onClick={onClose}>
+				<Button type="button" variant="secondary" onClick={onClose}>
 					{t("action.cancel")}
 				</Button>
 				<ExportButton form={form} selection label={t("action.selected")} onDone={onClose} />

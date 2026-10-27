@@ -214,7 +214,7 @@ export function ImageInsertDialog({
 						<DialogDescription>{mediaNotConfiguredMessage(site)}</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
+						<Button type="button" variant="secondary" onClick={onClose}>
 							{tc("close")}
 						</Button>
 					</DialogFooter>
@@ -299,7 +299,7 @@ export function ImageInsertDialog({
 								{libraryFailed && !isLibraryLoading && (
 									<Alert tone="danger" layout="inline">
 										<AlertDescription>{t("imageDialog.libraryFailed")}</AlertDescription>
-										<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
+										<Button type="button" size="sm" variant="secondary" onClick={() => void libraryQuery.refetch()}>
 											{tc("retry")}
 										</Button>
 									</Alert>

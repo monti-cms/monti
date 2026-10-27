@@ -32,7 +32,7 @@ export const InButton: Story = {
 				<Spinner />
 				저장 중
 			</Button>
-			<Button variant="outline" disabled>
+			<Button variant="secondary" disabled>
 				<Spinner />
 				불러오는 중
 			</Button>

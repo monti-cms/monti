@@ -12,6 +12,7 @@ import {
 	Inline,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/admin/kit";
 import { useState } from "react";
 import type { AiProviderView, AiSettingsView } from "../connection";
@@ -132,17 +133,15 @@ export function AgentModelPicker({
 					</Text>
 					<Inline gap={8}>
 						{chosen && (
-							<Button
+							<TextButton
 								type="button"
-								variant="ghost"
-								size="sm"
 								onClick={() => {
 									setProviderId(DEFAULT_CONNECTION);
 									setModel("");
 								}}
 							>
 								{t("picker.reset")}
-							</Button>
+							</TextButton>
 						)}
 						<Button type="button" size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate(undefined)}>
 							{t("picker.save")}

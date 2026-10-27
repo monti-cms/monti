@@ -23,14 +23,14 @@ const meta = {
 	args: {},
 	render: (args) => (
 		<Dialog {...args}>
-			<DialogTrigger render={<Button variant="outline" />}>안내 열기</DialogTrigger>
+			<DialogTrigger render={<Button variant="secondary" />}>안내 열기</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>예약 발행</DialogTitle>
 					<DialogDescription>정한 시간에 글이 자동으로 발행돼요.</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<DialogClose render={<Button variant="outline" />}>닫기</DialogClose>
+					<DialogClose render={<Button variant="secondary" />}>닫기</DialogClose>
 					<Button>예약하기</Button>
 				</DialogFooter>
 			</DialogContent>

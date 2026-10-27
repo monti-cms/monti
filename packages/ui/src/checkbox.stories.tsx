@@ -19,14 +19,16 @@ export const Playground: Story = {
 	),
 };
 
-/** Unchecked, checked, indeterminate, each plain, disabled and invalid. */
+/** Off, on, mixed (some of a list picked), and the AI versions (the assistant chose); plain, disabled and invalid. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={12}>
 			{[
 				{ name: "unchecked", props: {} },
 				{ name: "checked", props: { defaultChecked: true } },
-				{ name: "indeterminate", props: { indeterminate: true } },
+				{ name: "mixed", props: { indeterminate: true } },
+				{ name: "proposal · on", props: { defaultChecked: true, proposal: true } },
+				{ name: "proposal · mixed", props: { indeterminate: true, proposal: true } },
 				{ name: "disabled", props: { disabled: true } },
 				{ name: "disabled · checked", props: { disabled: true, defaultChecked: true } },
 				{ name: "invalid", props: { "aria-invalid": true } },

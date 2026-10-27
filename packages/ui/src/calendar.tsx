@@ -1,24 +1,22 @@
 "use client";
 
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 import { type DayButton, DayPicker, getDefaultClassNames, type Locale } from "react-day-picker";
-import { Button, buttonVariants } from "./button";
 import { cn } from "./cn";
+import { ICON_BUTTON } from "./icon-button";
 
 function Calendar({
 	className,
 	classNames,
 	showOutsideDays = true,
 	captionLayout = "label",
-	buttonVariant = "ghost",
 	locale,
 	formatters,
 	components,
 	...props
-}: React.ComponentProps<typeof DayPicker> & {
-	buttonVariant?: React.ComponentProps<typeof Button>["variant"];
-}) {
+}: React.ComponentProps<typeof DayPicker>) {
 	const defaultClassNames = getDefaultClassNames();
 
 	return (
@@ -42,12 +40,12 @@ function Calendar({
 				month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
 				nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1", defaultClassNames.nav),
 				button_previous: cn(
-					buttonVariants({ variant: buttonVariant }),
+					ICON_BUTTON,
 					"size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
 					defaultClassNames.button_previous,
 				),
 				button_next: cn(
-					buttonVariants({ variant: buttonVariant }),
+					ICON_BUTTON,
 					"size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
 					defaultClassNames.button_next,
 				),
@@ -147,9 +145,8 @@ function CalendarDayButton({
 	}, [modifiers.focused]);
 
 	return (
-		<Button
-			variant="ghost"
-			size="icon"
+		<ButtonPrimitive
+			ref={ref}
 			data-day={day.date.toLocaleDateString(locale?.code)}
 			data-selected-single={
 				modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
@@ -158,7 +155,8 @@ function CalendarDayButton({
 			data-range-end={modifiers.range_end}
 			data-range-middle={modifiers.range_middle}
 			className={cn(
-				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
+				ICON_BUTTON,
+				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 rounded-(--cell-radius) border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
 				defaultClassNames.day,
 				className,
 			)}

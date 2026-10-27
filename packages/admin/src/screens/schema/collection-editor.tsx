@@ -384,7 +384,7 @@ export function CollectionEditor({
 						</Section>
 						<Section band title={t("collection.dangerTitle")} card={false}>
 							<Inline justify="end" paddingY={12}>
-								<Button type="button" variant="outline" tone="danger" size="sm" disabled={disabled} onClick={onRemove}>
+								<Button type="button" variant="outline-danger" size="sm" disabled={disabled} onClick={onRemove}>
 									<Trash2 aria-hidden />
 									{ts("collection.remove")}
 								</Button>

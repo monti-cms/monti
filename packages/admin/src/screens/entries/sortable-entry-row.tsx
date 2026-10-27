@@ -48,7 +48,6 @@ export function SortableEntryRow({
 		>
 			<IconButton
 				ref={setActivatorNodeRef}
-				size="icon-xs"
 				label={t("entry.drag", { title })}
 				disabled={disabled}
 				className="cursor-grab touch-none active:cursor-grabbing"
@@ -64,23 +63,17 @@ export function SortableEntryRow({
 					<Text tone="warning"> {t("entry.unpublished")}</Text>
 				)}
 			</Text>
-			<IconButton
-				size="icon-xs"
-				label={t("entry.up", { title })}
-				disabled={disabled || index === 0}
-				onClick={() => onMove(-1)}
-			>
+			<IconButton label={t("entry.up", { title })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
 				<ArrowUp />
 			</IconButton>
 			<IconButton
-				size="icon-xs"
 				label={t("entry.down", { title })}
 				disabled={disabled || index === count - 1}
 				onClick={() => onMove(1)}
 			>
 				<ArrowDown />
 			</IconButton>
-			<IconButton size="icon-xs" label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
+			<IconButton label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
 				<X />
 			</IconButton>
 		</li>

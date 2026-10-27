@@ -58,7 +58,9 @@ export function DateRangePicker({
 	const summary = from || to ? `${from || t("start")} ~ ${to || t("end")}` : t("all");
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="outline" size="sm" aria-label={`${label}: ${summary}`} />}>
+			<PopoverTrigger
+				render={<Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${summary}`} />}
+			>
 				<CalendarRange aria-hidden />
 				{label}: {summary}
 			</PopoverTrigger>
@@ -66,7 +68,7 @@ export function DateRangePicker({
 				<Stack gap={8}>
 					<DateRangeCalendar from={from} to={to} onChange={onChange} />
 					{(from || to) && (
-						<Button type="button" variant="ghost" size="sm" width="full" onClick={() => onChange("", "")}>
+						<Button type="button" variant="secondary" size="sm" width="full" onClick={() => onChange("", "")}>
 							{t("clear")}
 						</Button>
 					)}

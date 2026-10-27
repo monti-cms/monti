@@ -49,11 +49,11 @@ export const Playground: Story = {
 	),
 };
 
-/** Links at every size, current page vs not, and custom previous/next text. */
+/** Links as a round number and as a wide link, current page vs not, and custom previous/next text. */
 export const Links: Story = {
 	render: () => (
 		<Stack gap={16}>
-			{(["xs", "sm", "icon", "icon-sm", "icon-xs", "icon-lg"] as const).map((size) => (
+			{(["icon", "default"] as const).map((size) => (
 				<Pagination key={size}>
 					<PaginationContent>
 						<PaginationItem>

@@ -257,8 +257,7 @@ function LocaleDialog({
 										render={
 											<Button
 												type="button"
-												variant="outline"
-												tone={code !== "" && !codeOk ? "danger" : "neutral"}
+												variant={code !== "" && !codeOk ? "outline-danger" : "secondary"}
 												width="full"
 												role="combobox"
 												aria-expanded={open}
@@ -495,7 +494,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 						</Inline>
 						<Button
 							type="button"
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							disabled={disabled}
 							onClick={() => setDialog({ code: null })}

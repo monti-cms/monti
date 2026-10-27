@@ -168,7 +168,7 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 					{text}
 				</Text>
 			</Box>
-			<IconButton label={copied ? t("copy.done") : t("copy.label")} size="icon-xs" onClick={() => void copy()}>
+			<IconButton label={copied ? t("copy.done") : t("copy.label")} onClick={() => void copy()}>
 				{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
 			</IconButton>
 		</Inline>
@@ -344,7 +344,7 @@ function SnippetEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={draft.text === item.defaultText}
 						onClick={() => set({ text: item.defaultText })}
 					>

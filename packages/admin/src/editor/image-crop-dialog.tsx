@@ -23,6 +23,7 @@ import {
 	Label,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { RotateCw } from "lucide-react";
 import type React from "react";
@@ -390,7 +391,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 								{rotateDraft}°
 							</Text>
 						</Inline>
-						<Button type="button" variant="outline" size="sm" onClick={handleRotate90}>
+						<Button type="button" variant="secondary" size="sm" onClick={handleRotate90}>
 							<RotateCw aria-hidden />
 							{t("imageCrop.rotate90")}
 						</Button>
@@ -398,11 +399,11 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 					<DialogFooter>
 						<Inline width="full" justify="between" gap={8}>
-							<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
+							<TextButton type="button" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
 								{tc("reset")}
-							</Button>
+							</TextButton>
 							<Inline gap={8}>
-								<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+								<Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
 									{tc("cancel")}
 								</Button>
 								<Button type="submit">{tc("apply")}</Button>

@@ -1,26 +1,29 @@
 "use client";
 
-import type { ComponentProps, ReactElement, ReactNode } from "react";
-import { Button } from "./button";
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import type { ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
+/** The look of a round icon button, for parts that render their own button (a combobox's open and clear buttons). */
+export const ICON_BUTTON =
+	"inline-flex size-monti-icon shrink-0 items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+
 /**
- * An icon-only button. `label` is both the screen reader name and the tooltip shown on hover (the two are always the same).
- * With `pressed` it becomes a toggle button and has a background while on. Grey by default (`quiet`); `tone="danger"` for a remove button.
+ * A round icon button, 32px: the header's more (⋯), properties and assistant, a panel's close. `label` is both the screen reader name and the
+ * tooltip shown on hover (the two are always the same). With `pressed` it is a toggle and keeps a background while on.
  * For a button that opens a menu or popover, wrap it with `trigger`: `trigger={(button) => <PopoverTrigger render={button} />}`.
  */
 export function IconButton({
 	label,
 	pressed,
 	side = "top",
-	size = "icon-sm",
-	variant = "quiet",
 	className,
 	trigger,
 	children,
+	type = "button",
 	...props
-}: Omit<ComponentProps<typeof Button>, "aria-label" | "aria-pressed" | "children"> & {
+}: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
 	label: string;
 	pressed?: boolean;
 	side?: "top" | "bottom" | "left" | "right";
@@ -28,13 +31,12 @@ export function IconButton({
 	children: ReactNode;
 }) {
 	const button = (
-		<Button
-			type="button"
-			variant={variant}
-			size={size}
+		<ButtonPrimitive
+			data-slot="icon-button"
+			type={type}
 			aria-label={label}
 			aria-pressed={pressed}
-			className={cn("aria-pressed:bg-monti-selected aria-pressed:text-monti-default", className)}
+			className={cn(ICON_BUTTON, className)}
 			{...props}
 		/>
 	);

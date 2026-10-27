@@ -27,7 +27,7 @@ import {
 	Spinner,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 	usePreference,
 } from "@monti-cms/admin/kit";
 import { AdminLink } from "@monti-cms/admin/router";
@@ -76,7 +76,9 @@ function UnavailableNotice({ reason, model }: { reason: Unavailable; model?: str
 						: t("unavailable.noTools", { model: model ?? "" })}{" "}
 					{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
 				</Text>
-				<TextLink render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>{t("unavailable.link")}</TextLink>
+				<TextButton variant="underline" render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>
+					{t("unavailable.link")}
+				</TextButton>
 			</Stack>
 		</Alert>
 	);
@@ -257,7 +259,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 					<Stack gap={4}>
 						<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
 						<Box>
-							<Button type="button" variant="outline" size="sm" onClick={() => void chat.regenerate()}>
+							<Button type="button" variant="secondary" size="sm" onClick={() => void chat.regenerate()}>
 								{t("error.retry")}
 							</Button>
 						</Box>

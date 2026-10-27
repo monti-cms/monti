@@ -10,7 +10,7 @@ const meta = {
 	args: {},
 	render: (args) => (
 		<Popover {...args}>
-			<PopoverTrigger render={<Button variant="outline" />}>슬러그 바꾸기</PopoverTrigger>
+			<PopoverTrigger render={<Button variant="secondary" />}>슬러그 바꾸기</PopoverTrigger>
 			<PopoverContent>
 				<PopoverHeader>
 					<PopoverTitle>슬러그</PopoverTitle>
@@ -32,7 +32,7 @@ export const Open: Story = { args: { defaultOpen: true }, render: meta.render };
 export const TitleOnly: Story = {
 	render: () => (
 		<Popover defaultOpen>
-			<PopoverTrigger render={<Button variant="outline" />}>도움말</PopoverTrigger>
+			<PopoverTrigger render={<Button variant="secondary" />}>도움말</PopoverTrigger>
 			<PopoverContent>
 				<PopoverTitle>예약 발행</PopoverTitle>
 			</PopoverContent>
@@ -45,7 +45,7 @@ export const Sides: Story = {
 		<Stack direction="row" gap={48} className="px-40 py-40">
 			{(["top", "right", "bottom", "left"] as const).map((side) => (
 				<Popover key={side} defaultOpen>
-					<PopoverTrigger render={<Button variant="outline" />}>{side}</PopoverTrigger>
+					<PopoverTrigger render={<Button variant="secondary" />}>{side}</PopoverTrigger>
 					<PopoverContent side={side} className="w-40">
 						<PopoverDescription>{side}에 열렸어요</PopoverDescription>
 					</PopoverContent>
@@ -58,7 +58,7 @@ export const Sides: Story = {
 export const LongText: Story = {
 	render: () => (
 		<Popover defaultOpen>
-			<PopoverTrigger render={<Button variant="outline" />}>안내</PopoverTrigger>
+			<PopoverTrigger render={<Button variant="secondary" />}>안내</PopoverTrigger>
 			<PopoverContent>
 				<PopoverHeader>
 					<PopoverTitle>이 글을 발행하기 전에 확인해 주세요</PopoverTitle>
@@ -78,7 +78,7 @@ export const Widths: Story = {
 		<Stack direction="row" gap={24} align="start">
 			{(["sm", "md", "lg"] as const).map((width) => (
 				<Popover key={width} open>
-					<PopoverTrigger render={<Button variant="outline" />}>{width}</PopoverTrigger>
+					<PopoverTrigger render={<Button variant="secondary" />}>{width}</PopoverTrigger>
 					<PopoverContent width={width} side="bottom" align="start">
 						{width} 너비의 팝오버
 					</PopoverContent>

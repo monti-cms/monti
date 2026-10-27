@@ -20,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Placeholder, filled, disabled, invalid, and the other input types. */
+/** Placeholder, filled, disabled, invalid (the underline turns red), proposal (the assistant wrote it: blue), and the other input types. */
 export const States: Story = {
 	render: () => (
 		<Stack gap={16}>
@@ -56,6 +56,12 @@ export const States: Story = {
 			</Stack>
 			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
+					proposal (written by the assistant, not yet touched)
+				</Text>
+				<Input proposal defaultValue="어시스턴트가 채운 제목" />
+			</Stack>
+			<Stack gap={4}>
+				<Text variant="caption" tone="muted">
 					type=password
 				</Text>
 				<Input type="password" defaultValue="비밀번호" />
@@ -70,7 +76,7 @@ export const States: Story = {
 	),
 };
 
-/** The two shared sizes and fixed-width letters: `sm` beside 32px buttons, `default` in forms; `mono` for slugs and paths. */
+/** The two sizes and fixed-width letters: `sm` beside 28px buttons, `default` in forms; `mono` for slugs and paths. */
 export const SizesAndMono: Story = {
 	render: () => (
 		<Stack gap={12} className="max-w-sm">

@@ -18,7 +18,7 @@ import {
 	Tabs,
 	TabsTrigger,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, RotateCw, SearchX } from "lucide-react";
@@ -147,7 +147,7 @@ export function EventsScreen() {
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={retryAll.isPending}
 						onClick={() => retryAll.mutate()}
 					>
@@ -217,11 +217,9 @@ export function EventsScreen() {
 											</TableCell>
 										)}
 										<TableCell>
-											<TextLink
+											<TextButton
 												render={<button type="button" />}
-												underline="hover"
 												mono
-												size="caption"
 												aria-label={t("detail.open", {
 													kind: t(`kind.${change.kind}`),
 													entry: eventEntryLabel(change),
@@ -232,19 +230,20 @@ export function EventsScreen() {
 												}}
 											>
 												{t(`kind.${change.kind}`)}
-											</TextLink>
+											</TextButton>
 										</TableCell>
 										<TableCell>
 											<Text tone="muted">{eventCollectionLabel(site, change.collection)} · </Text>
 											{change.kind === "deleted" ? (
 												<Text>{eventEntryLabel(change)}</Text>
 											) : (
-												<TextLink
+												<TextButton
+													variant="underline"
 													render={<Link href={entryHref(site, change.collection, change.entryId)} />}
 													onClick={(event) => event.stopPropagation()}
 												>
 													{eventEntryLabel(change)}
-												</TextLink>
+												</TextButton>
 											)}
 										</TableCell>
 										<TableCell>{change.actor ?? ""}</TableCell>
@@ -266,23 +265,21 @@ export function EventsScreen() {
 												<Inline gap={4} justify="end">
 													<Button
 														type="button"
-														variant="outline"
-														size="xs"
+														variant="secondary"
+														size="sm"
 														aria-label={t("action.retryLabel", { subscriber: item.subscriber ?? "" })}
 														disabled={retry.isPending}
 														onClick={() => retry.mutate(key)}
 													>
 														{tc("retry")}
 													</Button>
-													<Button
+													<TextButton
 														type="button"
-														variant="ghost"
-														size="xs"
 														aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
 														onClick={() => void requestDismiss(key)}
 													>
 														{t("action.dismiss")}
-													</Button>
+													</TextButton>
 												</Inline>
 											)}
 										</TableCell>

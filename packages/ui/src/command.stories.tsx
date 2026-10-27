@@ -98,7 +98,7 @@ function DialogExample({ initiallyOpen }: { initiallyOpen: boolean }) {
 	const [open, setOpen] = useState(initiallyOpen);
 	return (
 		<>
-			<Button variant="outline" onClick={() => setOpen(true)}>
+			<Button variant="secondary" onClick={() => setOpen(true)}>
 				명령 팔레트 열기
 			</Button>
 			<CommandDialog open={open} onOpenChange={setOpen} title="명령 팔레트" description="실행할 명령을 검색하세요">

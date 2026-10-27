@@ -1,19 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import {
-	Label,
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-	Stack,
-	Text,
-	Textarea,
-	Toggle,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@monti-cms/ui";
+import { IconButton, Label, Popover, PopoverContent, PopoverTrigger, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
@@ -160,26 +148,16 @@ export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEve
 
 	return (
 		<Popover open={open} onOpenChange={handleOpenChange}>
-			<Tooltip>
-				<TooltipTrigger
-					render={
-						<PopoverTrigger
-							render={
-								<Toggle
-									size="icon-sm"
-									pressed={isActive}
-									disabled={disabled}
-									aria-label={labels.name}
-									onMouseDown={(event) => event.preventDefault()}
-								/>
-							}
-						>
-							{icon}
-						</PopoverTrigger>
-					}
-				/>
-				<TooltipContent side="bottom">{labels.name}</TooltipContent>
-			</Tooltip>
+			<IconButton
+				label={labels.name}
+				side="bottom"
+				pressed={isActive}
+				disabled={disabled}
+				onMouseDown={(event) => event.preventDefault()}
+				trigger={(button) => <PopoverTrigger render={button} />}
+			>
+				{icon}
+			</IconButton>
 			<PopoverContent align="center" width="md">
 				<MarkTextForm
 					key={String(open)}

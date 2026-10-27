@@ -2,7 +2,7 @@
 
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, Inline, StatusIndicator, Text, TextLink } from "@monti-cms/ui";
+import { Badge, Box, Inline, StatusIndicator, Text, TextButton } from "@monti-cms/ui";
 import { Folder as FolderIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
@@ -162,19 +162,13 @@ function DefaultEntryCell({
 			return isRecord ? (
 				<Inline align="baseline" gap={8} minWidth={0}>
 					{titleBox(
-						<TextLink underline="hover" render={<button type="button" onClick={() => onOpenRecord(item)} />}>
-							{title}
-						</TextLink>,
+						<TextButton render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</TextButton>,
 					)}
 					{slug}
 				</Inline>
 			) : (
 				<Inline align="baseline" gap={8} minWidth={0}>
-					{titleBox(
-						<TextLink underline="hover" render={<Link href={site.adminEntryEditHref(item.id)} />}>
-							{title}
-						</TextLink>,
-					)}
+					{titleBox(<TextButton render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</TextButton>)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
 						<Inline gap={4} minWidth={0}>

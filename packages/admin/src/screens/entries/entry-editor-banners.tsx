@@ -59,13 +59,13 @@ export function EntryEditorBanners({
 						{t("sourceChanged")}
 					</Text>
 					<Inline gap={8}>
-						<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
+						<Button type="button" size="sm" variant="secondary" onClick={onCompareSource}>
 							{t("compare")}
 						</Button>
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={isReadOnly}
 							onClick={editor.confirmTranslationSource}
 						>

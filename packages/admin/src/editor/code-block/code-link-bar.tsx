@@ -79,7 +79,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 			<Inline gap={4}>
 				<Button
 					type="button"
-					size="xs"
+					size="sm"
 					disabled={!ready}
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={() => commitLink(site, editor.view)}
@@ -88,8 +88,8 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 				</Button>
 				<Button
 					type="button"
-					variant="outline"
-					size="xs"
+					variant="secondary"
+					size="sm"
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={() => cancelLink(editor.view)}
 				>

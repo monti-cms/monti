@@ -3,7 +3,6 @@
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Inline,
 	Pagination,
 	PaginationContent,
@@ -16,6 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { uiMessages } from "../../ui/messages";
@@ -39,9 +39,8 @@ export function ListPager({
 		// Without addresses the controls are buttons, not anchors that go nowhere.
 		return (
 			<Inline as="nav" gap={4} aria-label={t("pagination.label")}>
-				<Button
+				<TextButton
 					type="button"
-					variant="ghost"
 					aria-label={t("pagination.previousPage")}
 					disabled={page <= 1}
 					onClick={() => onPageChange(page - 1)}
@@ -50,13 +49,12 @@ export function ListPager({
 					<Box as="span" hideBelow="sm">
 						{t("pagination.previous")}
 					</Box>
-				</Button>
+				</TextButton>
 				<Box as="span" paddingX={8}>
 					{page} / {totalPages}
 				</Box>
-				<Button
+				<TextButton
 					type="button"
-					variant="ghost"
 					aria-label={t("pagination.nextPage")}
 					disabled={page >= totalPages}
 					onClick={() => onPageChange(page + 1)}
@@ -65,7 +63,7 @@ export function ListPager({
 						{t("pagination.next")}
 					</Box>
 					<ChevronRightIcon data-icon="inline-end" />
-				</Button>
+				</TextButton>
 			</Inline>
 		);
 	}
@@ -176,7 +174,7 @@ export function ListPagination({
 						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
 						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
 					>
-						<SelectTrigger size="sm" variant="ghost" aria-label={t("list.pageSize")}>
+						<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

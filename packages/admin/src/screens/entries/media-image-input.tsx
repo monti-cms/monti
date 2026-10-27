@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, FormFieldError, Image, Inline, Text } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Text, TextButton } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -95,7 +95,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 						id={id}
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						width="full"
 						disabled={context.disabled || !media}
 						title={media ? undefined : mediaNotConfiguredMessage(site)}
@@ -107,9 +107,9 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 					</Button>
 				</Box>
 				{mediaId && (
-					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
+					<TextButton type="button" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
-					</Button>
+					</TextButton>
 				)}
 			</Inline>
 			<ImageInsertDialog
@@ -179,7 +179,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 						id={id}
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						width={mediaId ? undefined : "full"}
 						disabled={context.disabled || progress !== null || !media}
 						title={media ? undefined : mediaNotConfiguredMessage(site)}
@@ -195,9 +195,9 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 					</Button>
 				</Box>
 				{mediaId && (
-					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
+					<TextButton type="button" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
-					</Button>
+					</TextButton>
 				)}
 			</Inline>
 			<input

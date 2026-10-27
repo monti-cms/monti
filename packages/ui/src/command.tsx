@@ -5,7 +5,6 @@ import { CheckIcon, SearchIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
-import { InputGroup, InputGroupAddon } from "./input-group";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
 	return (
@@ -53,20 +52,19 @@ function CommandDialog({
 
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
-		<div data-slot="command-input-wrapper" className="p-1 pb-0">
-			<InputGroup className="!rounded-monti-md h-8! border-monti-default shadow-none! *:data-[slot=input-group-addon]:pl-2!">
-				<CommandPrimitive.Input
-					data-slot="command-input"
-					className={cn(
-						"w-full text-monti-label outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-						className,
-					)}
-					{...props}
-				/>
-				<InputGroupAddon>
-					<SearchIcon className="size-4 shrink-0 opacity-50" />
-				</InputGroupAddon>
-			</InputGroup>
+		<div
+			data-slot="command-input-wrapper"
+			className="mx-monti-8 mt-monti-4 flex items-center gap-monti-8 border-monti-default border-b focus-within:border-monti-contrast"
+		>
+			<SearchIcon className="size-4 shrink-0 text-monti-subtle" aria-hidden />
+			<CommandPrimitive.Input
+				data-slot="command-input"
+				className={cn(
+					"w-full bg-transparent py-monti-6 text-monti-body outline-hidden placeholder:text-monti-faint disabled:cursor-not-allowed disabled:opacity-45",
+					className,
+				)}
+				{...props}
+			/>
 		</div>
 	);
 }

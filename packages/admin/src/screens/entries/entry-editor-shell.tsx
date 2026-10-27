@@ -4,7 +4,7 @@ import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, Inline, Input, Stack, Text, TextLink } from "@monti-cms/ui";
+import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -270,9 +270,9 @@ export function EntryEditorShell({
 			entry?.source ? (
 				<>
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
-					<TextLink render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
+					<TextButton variant="underline" render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
 						{te("inspector.sourceLink")}
-					</TextLink>
+					</TextButton>
 				</>
 			) : undefined,
 		[entry?.source, site.adminEntryEditHref, site.localeLabel, te],

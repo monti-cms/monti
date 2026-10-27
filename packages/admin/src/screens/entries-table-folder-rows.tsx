@@ -2,7 +2,7 @@
 
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { TableCell, TableRow, Text, TextLink } from "@monti-cms/ui";
+import { TableCell, TableRow, Text, TextButton } from "@monti-cms/ui";
 import { Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import { commonMessages } from "../lib/common.messages";
 import { folderKeyHandler } from "./admin-sidebar";
@@ -46,13 +46,12 @@ export function EntriesTableFolderRows({
 						<FolderUp aria-hidden size={16} />
 					</TableCell>
 					<TableCell colSpan={visibleCount - 1}>
-						<TextLink
-							underline="hover"
-							tone="muted"
+						<TextButton
+							variant="quiet"
 							render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}
 						>
 							{t("list.folderUp")}
-						</TextLink>
+						</TextButton>
 					</TableCell>
 				</TableRow>
 			)}
@@ -63,8 +62,7 @@ export function EntriesTableFolderRows({
 					</TableCell>
 					<TableCell colSpan={visibleCount - 2}>
 						<Text weight="medium">
-							<TextLink
-								underline="hover"
+							<TextButton
 								render={
 									<button
 										type="button"
@@ -74,7 +72,7 @@ export function EntriesTableFolderRows({
 								}
 							>
 								{folder.name}
-							</TextLink>
+							</TextButton>
 						</Text>
 					</TableCell>
 					<TableCell align="end">

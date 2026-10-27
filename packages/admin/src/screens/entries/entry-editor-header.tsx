@@ -17,6 +17,7 @@ import {
 	SplitButton,
 	StatusIndicator,
 	Text,
+	TextButton,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -90,23 +91,15 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 			paddingY={8}
 		>
 			<Inline gap={8} minWidth={0}>
-				<Tooltip>
-					<TooltipTrigger
-						render={
-							// A link stays a link: Button would give a non-<button> role="button", so the role is kept.
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								nativeButton={false}
-								aria-label={t("backToList")}
-								render={<Link role="link" href={site.adminHref(`?collection=${collection}`)} />}
-							>
-								<ChevronLeft aria-hidden />
-							</Button>
-						}
-					/>
-					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
-				</Tooltip>
+				{/* A link stays a link: the button would give a non-<button> role="button", so the role is kept. */}
+				<IconButton
+					label={t("backToList")}
+					side="bottom"
+					nativeButton={false}
+					render={<Link role="link" href={site.adminHref(`?collection=${collection}`)} />}
+				>
+					<ChevronLeft aria-hidden />
+				</IconButton>
 				{entry?.workingSlug && (
 					<Box hideBelow="sm" minWidth={0}>
 						<Text variant="caption" tone="muted" mono truncate>
@@ -130,15 +123,13 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<Tooltip>
 						<TooltipTrigger
 							render={
-								<Button
+								<TextButton
 									type="button"
-									variant="ghost"
-									size="sm"
 									disabled={busy !== null || isSubmitting}
 									onClick={() => void commands.handleSaveNow()}
 								>
 									{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
-								</Button>
+								</TextButton>
 							}
 						/>
 						<TooltipContent side="bottom">⌘S</TooltipContent>
@@ -147,7 +138,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 				{previewHref && !editor.hasUnsavedChanges ? (
 					// A link stays a link (open in new tab, copy URL).
 					<Button
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						nativeButton={false}
 						// A link stays a link: Button gives a non-<button> role="button", so the role is set back (the content is the child below).
@@ -160,7 +151,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{t("preview")}
 					</Button>
 				) : previewHref ? (
-					<Button type="button" variant="outline" size="sm" onClick={() => void handlePreview(previewHref)}>
+					<Button type="button" variant="secondary" size="sm" onClick={() => void handlePreview(previewHref)}>
 						<Eye aria-hidden />
 						{t("preview")}
 					</Button>
@@ -169,7 +160,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
 						<TooltipTrigger
 							render={
-								<Button type="button" variant="outline" size="sm" aria-disabled>
+								<Button type="button" variant="secondary" size="sm" aria-disabled>
 									<Eye aria-hidden />
 									{t("preview")}
 								</Button>
@@ -195,7 +186,6 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					// For an already published post, publish and "republish with today's date" sit side by side as one split button.
 					<SplitButton
 						id="cms-publish"
-						size="sm"
 						disabled={isSubmitting}
 						onClick={() => void handlePublish()}
 						menuLabel={t("publishOptions")}

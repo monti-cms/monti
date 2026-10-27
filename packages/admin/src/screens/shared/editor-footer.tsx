@@ -1,5 +1,5 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 
@@ -53,16 +53,16 @@ export function EditorFooter({
 						{saving ? t("saving") : (saveLabel ?? t("save"))}
 					</Button>
 					{onCancel && (
-						<Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCancel}>
+						<Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onCancel}>
 							{t("cancel")}
 						</Button>
 					)}
 					{children}
 				</Inline>
 				{onDelete && (
-					<Button type="button" size="sm" variant="ghost" tone="danger" disabled={busy} onClick={onDelete}>
+					<TextButton type="button" variant="danger" disabled={busy} onClick={onDelete}>
 						{deleting ? t("deleting") : t("delete")}
-					</Button>
+					</TextButton>
 				)}
 			</Inline>
 		</Stack>

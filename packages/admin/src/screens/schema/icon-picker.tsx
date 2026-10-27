@@ -1,7 +1,19 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Grid, Inline, Input, Popover, PopoverContent, PopoverTrigger, Stack, Text } from "@monti-cms/ui";
+import {
+	Box,
+	Button,
+	Grid,
+	Inline,
+	Input,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
@@ -51,7 +63,7 @@ export function IconPicker({
 						<Button
 							id={id}
 							type="button"
-							variant="outline"
+							variant="secondary"
 							width="full"
 							disabled={disabled}
 							aria-label={`${label}: ${value || t("collection.iconDefault")}`}
@@ -78,17 +90,15 @@ export function IconPicker({
 							autoFocus
 						/>
 						{value && (
-							<Button
+							<TextButton
 								type="button"
-								variant="ghost"
-								size="xs"
 								onClick={() => {
 									onChange(undefined);
 									setOpen(false);
 								}}
 							>
 								{t("collection.iconClear")} ({defaultIconName})
-							</Button>
+							</TextButton>
 						)}
 						<Box maxHeight="list" overflow="y" padding={2}>
 							<Grid columns={6} responsive={false} gap={4} role="listbox">
@@ -101,8 +111,8 @@ export function IconPicker({
 											key={name}
 											type="button"
 											role="option"
-											variant={isSelected ? "secondary" : "ghost"}
-											size="icon"
+											variant={isSelected ? "primary" : "secondary"}
+											size="sm"
 											aria-selected={isSelected}
 											title={name}
 											aria-label={name}

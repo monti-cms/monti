@@ -17,6 +17,7 @@ import {
 	TabsContent,
 	TabsTrigger,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
@@ -259,19 +260,17 @@ export function FieldSheet({
 					</Box>
 				</Tabs>
 				<Inline gap={8} border="top" paddingX={24} paddingY={12}>
-					<Button
+					<TextButton
 						type="button"
-						variant="ghost"
-						tone="danger"
-						size="sm"
+						variant="danger"
 						disabled={disabled || blocked !== null}
 						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
 						onClick={remove}
 					>
 						{t("sheet.delete")}
-					</Button>
+					</TextButton>
 					<Box as="span" grow />
-					<Button type="button" variant="outline" size="sm" onClick={onClose}>
+					<Button type="button" variant="secondary" size="sm" onClick={onClose}>
 						{tc("cancel")}
 					</Button>
 					<Button type="button" size="sm" disabled={disabled} onClick={apply}>

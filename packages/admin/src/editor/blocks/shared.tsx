@@ -138,7 +138,7 @@ export function ContainerToolbar({
 
 /** Icon button of the toolbar. Its name shows on mouse hover. */
 export function ToolbarButton(props: ComponentProps<typeof IconButton>) {
-	return <IconButton size="icon-xs" {...props} />;
+	return <IconButton {...props} />;
 }
 
 /**

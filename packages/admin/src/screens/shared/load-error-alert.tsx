@@ -9,7 +9,7 @@ export function LoadErrorAlert({ message, onRetry }: { message: string; onRetry?
 		<Alert tone="danger" layout="inline">
 			<AlertDescription>{message}</AlertDescription>
 			{onRetry && (
-				<Button type="button" variant="outline" size="xs" onClick={onRetry}>
+				<Button type="button" variant="secondary" size="sm" onClick={onRetry}>
 					{t("retry")}
 				</Button>
 			)}

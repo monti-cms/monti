@@ -192,7 +192,6 @@ export function ColumnsNodeView() {
 					</ToolbarButton>
 					<ToolbarButton
 						label={selectedIndex === -1 ? t("deleteLast") : t("delete")}
-						tone="danger"
 						disabled={!block.canRemoveChild(selectedIndex === -1 ? count - 1 : selectedIndex)}
 						onClick={removeColumn}
 					>

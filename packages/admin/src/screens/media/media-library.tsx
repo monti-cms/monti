@@ -10,6 +10,7 @@ import {
 	Input,
 	Label,
 	PageTabs,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -21,8 +22,6 @@ import {
 	Switch,
 	Tabs,
 	TabsTrigger,
-	ToggleGroup,
-	ToggleGroupItem,
 	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -455,7 +454,7 @@ export function MediaLibrary() {
 			<PageActions>
 				<Inline gap={8} wrap>
 					<Label size="caption" tone="muted">
-						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
+						<Switch checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>
 					<input
@@ -475,16 +474,16 @@ export function MediaLibrary() {
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
 					>
 						<FolderPlus aria-hidden />
 						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
-					<IconButton label={tc("refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
+					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
 						{mediaQuery.isFetching ? <Spinner size="sm" aria-hidden /> : <RefreshCw aria-hidden />}
 					</IconButton>
 				</Inline>
@@ -529,24 +528,17 @@ export function MediaLibrary() {
 					to={uploadedTo}
 					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
 				/>
-				<ToggleGroup
+				<Segmented
 					aria-label={t("library.view")}
-					variant="outline"
 					size="sm"
-					spacing={0}
-					value={[view]}
-					onValueChange={(next: unknown[]) => {
-						const picked = next[0];
-						if (picked === "grid" || picked === "list") setView(picked);
-					}}
-				>
-					<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
-						<LayoutGrid aria-hidden />
-					</ToggleGroupItem>
-					<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
-						<List aria-hidden />
-					</ToggleGroupItem>
-				</ToggleGroup>
+					inline
+					value={view}
+					onValueChange={setView}
+					options={[
+						{ value: "grid", label: <LayoutGrid aria-hidden />, "aria-label": t("library.viewGrid") },
+						{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
+					]}
+				/>
 			</Inline>
 
 			<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">

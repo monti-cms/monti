@@ -14,6 +14,7 @@ import {
 	Spinner,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useRef } from "react";
 import { errorText } from "../../api/client";
@@ -93,7 +94,7 @@ export function ImportEntriesFields() {
 						event.target.value = "";
 					}}
 				/>
-				<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
+				<Button type="button" variant="secondary" disabled={running} onClick={() => input.current?.click()}>
 					{form.file ? t("file.change") : t("file.choose")}
 				</Button>
 				{form.file && (
@@ -144,9 +145,9 @@ export function ImportEntriesFields() {
 					>
 						{t("action.import")}
 					</Button>
-					<Button type="button" variant="ghost" disabled={running} onClick={form.reset}>
+					<TextButton type="button" disabled={running} onClick={form.reset}>
 						{t("action.cancel")}
-					</Button>
+					</TextButton>
 					{preview.counts.imported === 0 && (
 						<Text variant="caption" tone="muted">
 							{t("nothing.description")}
@@ -159,7 +160,7 @@ export function ImportEntriesFields() {
 				<>
 					<ResultView result={result} />
 					<Box>
-						<Button type="button" variant="outline" onClick={form.reset}>
+						<Button type="button" variant="secondary" onClick={form.reset}>
 							{t("action.again")}
 						</Button>
 					</Box>

@@ -4,7 +4,6 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Checkbox,
 	Inline,
 	Skeleton,
@@ -14,6 +13,7 @@ import {
 	TableCell,
 	TableRow,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { FileUp, Inbox, PenLine, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
@@ -353,23 +353,16 @@ export function AdminEntriesTable({
 															<Inline gap={4} justify="end">
 																{isTrash && (
 																	<>
-																		<Button
-																			type="button"
-																			variant="ghost"
-																			size="xs"
-																			onClick={() => onRestore?.(row.original)}
-																		>
+																		<TextButton type="button" onClick={() => onRestore?.(row.original)}>
 																			{tc("lifecycle.restore")}
-																		</Button>
-																		<Button
+																		</TextButton>
+																		<TextButton
 																			type="button"
-																			variant="ghost"
-																			tone="danger"
-																			size="xs"
+																			variant="danger"
 																			onClick={() => onPermanentDelete?.(row.original)}
 																		>
 																			{tc("lifecycle.deletePermanently")}
-																		</Button>
+																		</TextButton>
 																	</>
 																)}
 																<MoreActionsButton

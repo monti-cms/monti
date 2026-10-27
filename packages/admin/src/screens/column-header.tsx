@@ -20,6 +20,7 @@ import {
 	Separator,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -166,12 +167,12 @@ function TaxonomyFilter({
 				</CommandList>
 			</Command>
 			<Inline justify="between">
-				<Button type="button" variant="ghost" size="sm" onClick={() => onChange(options.map((option) => option.id))}>
+				<TextButton type="button" onClick={() => onChange(options.map((option) => option.id))}>
 					{t("filter.selectAll")}
-				</Button>
-				<Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+				</TextButton>
+				<TextButton type="button" onClick={() => onChange([])}>
 					{t("filter.clearAll")}
-				</Button>
+				</TextButton>
 			</Inline>
 		</Stack>
 	);
@@ -260,7 +261,7 @@ export function ColumnHeader({
 	const sortButton = (direction: "asc" | "desc") => (
 		<Button
 			type="button"
-			variant={sorted === direction ? "secondary" : "ghost"}
+			variant={sorted === direction ? "primary" : "secondary"}
 			size="sm"
 			aria-pressed={sorted === direction}
 			onClick={() => sortField && onChange({ sortField, sortDirection: direction })}
@@ -274,18 +275,18 @@ export function ColumnHeader({
 		<Popover>
 			<PopoverTrigger
 				render={
-					<Button
-						type="button"
-						variant={filtered ? "ghost" : "quiet"}
-						size="xs"
+					<TextButton
+						variant={filtered ? "plain" : "quiet"}
 						aria-label={`${config.label}${sorted ? t("filter.sortedSuffix", { direction: sorted === "asc" ? t("filter.sortAsc") : t("filter.sortDesc") }) : ""}${filtered ? t("filter.filteredSuffix") : ""}`}
 					/>
 				}
 			>
-				{config.label}
-				{sorted === "asc" && <ArrowUpNarrowWide aria-hidden size={14} />}
-				{sorted === "desc" && <ArrowDownWideNarrow aria-hidden size={14} />}
-				{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
+				<Inline as="span" gap={4}>
+					{config.label}
+					{sorted === "asc" && <ArrowUpNarrowWide aria-hidden size={14} />}
+					{sorted === "desc" && <ArrowDownWideNarrow aria-hidden size={14} />}
+					{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
+				</Inline>
 			</PopoverTrigger>
 			<PopoverContent align="start" width="md">
 				<Stack gap={12}>
@@ -325,7 +326,7 @@ export function ColumnHeader({
 					{filtered && (
 						<Button
 							type="button"
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							width="full"
 							onClick={() => onChange(clearPatchFor(filter, state))}

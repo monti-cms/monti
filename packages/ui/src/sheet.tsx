@@ -3,8 +3,8 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
+import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
@@ -82,13 +82,13 @@ function SheetContent({
 				{sized && resizable.handle}
 				{children}
 				{showCloseButton && (
-					<SheetPrimitive.Close
-						data-slot="sheet-close"
-						render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
+					<IconButton
+						label={labels.close}
+						className="absolute top-4 right-4"
+						trigger={(button) => <SheetPrimitive.Close data-slot="sheet-close" render={button} />}
 					>
 						<XIcon />
-						<span className="sr-only">{labels.close}</span>
-					</SheetPrimitive.Close>
+					</IconButton>
 				)}
 			</SheetPrimitive.Popup>
 		</SheetPortal>

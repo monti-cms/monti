@@ -102,7 +102,7 @@ export const Slots: Story = {
 					preview={preview}
 					title="여름 바다.png"
 					action={
-						<Button size="xs" variant="secondary">
+						<Button size="sm" variant="secondary">
 							삭제
 						</Button>
 					}
@@ -114,7 +114,7 @@ export const Slots: Story = {
 					title="여름 바다.png"
 					selected
 					action={
-						<Button size="xs" variant="secondary">
+						<Button size="sm" variant="secondary">
 							삭제
 						</Button>
 					}
@@ -126,7 +126,7 @@ export const Slots: Story = {
 					title="여름 바다.png"
 					badge={<Badge>새 파일</Badge>}
 					action={
-						<Button size="xs" variant="secondary">
+						<Button size="sm" variant="secondary">
 							삭제
 						</Button>
 					}

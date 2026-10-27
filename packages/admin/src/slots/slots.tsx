@@ -70,20 +70,13 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	);
 	const trigger =
 		actions.length === 1 ? (
-			<IconButton
-				label={first?.label ?? ""}
-				size="icon-xs"
-				side="bottom"
-				disabled={disabled}
-				onClick={() => first && start(first.id)}
-			>
+			<IconButton label={first?.label ?? ""} side="bottom" disabled={disabled} onClick={() => first && start(first.id)}>
 				{triggerIcon}
 			</IconButton>
 		) : (
 			<DropdownMenu>
 				<IconButton
 					label={first?.menuLabel ?? first?.label ?? ""}
-					size="icon-xs"
 					side="bottom"
 					disabled={disabled}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
@@ -114,11 +107,11 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 					</Text>
 					<Inline as="span" grow justify="end">
 						{state.status !== "running" && state.status !== "asking" && (
-							<IconButton label={t("rerun")} size="icon-xs" onClick={() => void rerun()}>
+							<IconButton label={t("rerun")} onClick={() => void rerun()}>
 								<RefreshCw aria-hidden />
 							</IconButton>
 						)}
-						<IconButton label={tc("close")} size="icon-xs" onClick={cancel}>
+						<IconButton label={tc("close")} onClick={cancel}>
 							<X aria-hidden />
 						</IconButton>
 					</Inline>
@@ -152,7 +145,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 							size="sm"
 						/>
 						<Inline justify="end">
-							<Button type="submit" variant="outline" size="xs" disabled={state.status === "running"}>
+							<Button type="submit" variant="secondary" size="sm" disabled={state.status === "running"}>
 								{state.action.icon ?? defaultIcon}
 								{state.status === "running" ? t("running") : t("run")}
 							</Button>
@@ -214,7 +207,7 @@ function SlotResult({
 			</Box>
 			{result.kind === "text" && action.apply !== "none" && (
 				<Inline justify="start">
-					<Button type="button" size="xs" variant="outline" onClick={() => onApply(result.text)}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => onApply(result.text)}>
 						{action.apply === "append" ? t("insert") : t("replace")}
 					</Button>
 				</Inline>

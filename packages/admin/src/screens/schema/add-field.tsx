@@ -14,7 +14,7 @@ import {
 	Input,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
@@ -152,14 +152,9 @@ export function AddFieldDialog({
 						<Text as="code" variant="label" mono>
 							{name}
 						</Text>
-						<TextLink
-							render={<button type="button" />}
-							underline="hover"
-							size="caption"
-							onClick={() => setIsNaming(true)}
-						>
+						<TextButton render={<button type="button" />} onClick={() => setIsNaming(true)}>
 							{t("field.identifierChange")}
-						</TextLink>
+						</TextButton>
 					</Inline>
 				)}
 			</Labeled>

@@ -1,6 +1,6 @@
 /** The dropdown button used by the toolbar for grouped tools (block shape, alignment, lists, ...). */
 
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, IconButton } from "@monti-cms/ui";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, IconButton, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import type { ToolbarItem } from "./toolbar-button";
@@ -33,7 +33,6 @@ export function ToolbarDropdown({
 				<IconButton
 					label={label}
 					side="bottom"
-					size="sm"
 					disabled={!editor.isEditable}
 					onMouseDown={(event) => event.preventDefault()}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
@@ -43,10 +42,8 @@ export function ToolbarDropdown({
 			) : (
 				<DropdownMenuTrigger
 					render={
-						<Button
+						<TextButton
 							type="button"
-							variant="ghost"
-							size="sm"
 							aria-label={label}
 							disabled={!editor.isEditable}
 							onMouseDown={(event) => event.preventDefault()}

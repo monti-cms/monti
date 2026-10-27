@@ -396,7 +396,7 @@ function ProviderEditor({
 				<Button
 					type="button"
 					size="sm"
-					variant="outline"
+					variant="secondary"
 					disabled={checking || !draft.url || !draft.defaultModel}
 					onClick={() => void runCheck()}
 				>

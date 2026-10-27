@@ -14,6 +14,8 @@ export interface UiLabels {
 	loading: string;
 	clear: string;
 	deselect: string;
+	aiFill: string;
+	aiAgain: string;
 	paginationLabel: string;
 	paginationPrevious: string;
 	paginationPreviousPage: string;
@@ -35,6 +37,8 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	loading: "Loading",
 	clear: "Clear",
 	deselect: "Remove",
+	aiFill: "Fill",
+	aiAgain: "Again",
 	paginationLabel: "Pagination",
 	paginationPrevious: "Previous",
 	paginationPreviousPage: "Previous page",

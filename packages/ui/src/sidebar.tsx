@@ -5,8 +5,8 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
-import { Button } from "./button";
 import { cn } from "./cn";
+import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Separator } from "./separator";
@@ -279,16 +279,19 @@ function Sidebar({
 	);
 }
 
-function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
+function SidebarTrigger({
+	className,
+	onClick,
+	...props
+}: Omit<React.ComponentProps<typeof IconButton>, "label" | "children">) {
 	const labels = useUiLabels();
 	const { toggleSidebar } = useSidebar();
 
 	return (
-		<Button
+		<IconButton
 			data-sidebar="trigger"
 			data-slot="sidebar-trigger"
-			variant="ghost"
-			size="icon-sm"
+			label={labels.sidebarToggle}
 			className={cn(className)}
 			onClick={(event) => {
 				onClick?.(event);
@@ -297,8 +300,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
 			{...props}
 		>
 			<PanelLeftIcon />
-			<span className="sr-only">{labels.sidebarToggle}</span>
-		</Button>
+		</IconButton>
 	);
 }
 

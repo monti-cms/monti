@@ -283,8 +283,8 @@ function KeyRows({
 					</Inline>
 					<Button
 						type="button"
-						variant="outline"
-						size="xs"
+						variant="secondary"
+						size="sm"
 						disabled={!list.secretsAvailable}
 						onClick={() => onAssign(slot)}
 					>

@@ -28,7 +28,7 @@ function Body({ title = "글 설정" }: { title?: string }) {
 			</FormFieldGroup>
 			<SheetFooter>
 				<Button>저장</Button>
-				<SheetClose render={<Button variant="outline" />}>닫기</SheetClose>
+				<SheetClose render={<Button variant="secondary" />}>닫기</SheetClose>
 			</SheetFooter>
 		</>
 	);
@@ -40,7 +40,7 @@ const meta = {
 	args: {},
 	render: (args) => (
 		<Sheet {...args}>
-			<SheetTrigger render={<Button variant="outline" />}>설정 열기</SheetTrigger>
+			<SheetTrigger render={<Button variant="secondary" />}>설정 열기</SheetTrigger>
 			<SheetContent>
 				<Body />
 			</SheetContent>

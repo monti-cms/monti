@@ -70,7 +70,7 @@ export function ChatInput({
 			<div className="flex items-center justify-between gap-monti-8">
 				<div className="min-w-0">{aside}</div>
 				{busy ? (
-					<Button type="button" variant="outline" size="sm" onClick={onStop}>
+					<Button type="button" variant="secondary" size="sm" onClick={onStop}>
 						<Square aria-hidden />
 						{stopLabel}
 					</Button>

@@ -47,6 +47,12 @@ export const States: Story = {
 			</Stack>
 			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
+					proposal (written by the assistant, not yet touched)
+				</Text>
+				<Textarea proposal defaultValue="어시스턴트가 쓴 요약" />
+			</Stack>
+			<Stack gap={4}>
+				<Text variant="caption" tone="muted">
 					invalid
 				</Text>
 				<Textarea aria-invalid defaultValue="너무 긴 요약" />
@@ -55,7 +61,7 @@ export const States: Story = {
 	),
 };
 
-/** `sm` writes at the label size for compact panels; `mono` for code and source text. */
+/** `sm` writes at the note size for compact panels; `mono` for code and source text. */
 export const SizesAndMono: Story = {
 	render: () => (
 		<Stack gap={12} className="max-w-sm">

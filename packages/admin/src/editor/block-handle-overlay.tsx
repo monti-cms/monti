@@ -58,14 +58,7 @@ export function BlockHandleOverlay({
 			className="flex items-center"
 		>
 			{actions.map((action) => (
-				<IconButton
-					key={action.id}
-					label={action.label}
-					side="bottom"
-					size="icon-xs"
-					disabled={action.busy}
-					onClick={action.onClick}
-				>
+				<IconButton key={action.id} label={action.label} side="bottom" disabled={action.busy} onClick={action.onClick}>
 					{action.busy ? <Spinner size="sm" /> : action.icon}
 				</IconButton>
 			))}
@@ -74,7 +67,6 @@ export function BlockHandleOverlay({
 				<IconButton
 					label={t("blockHandle.label")}
 					side="bottom"
-					size="icon-xs"
 					draggable
 					onDragStart={(event) => {
 						// A menu opened on press closes when dragging starts.

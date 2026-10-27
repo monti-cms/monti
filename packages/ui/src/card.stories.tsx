@@ -54,7 +54,7 @@ export const WithAction: Story = {
 				<CardTitle>댓글</CardTitle>
 				<CardDescription>승인을 기다리는 댓글이 3개 있어요.</CardDescription>
 				<CardAction>
-					<Button size="sm" variant="outline">
+					<Button size="sm" variant="secondary">
 						모두 보기
 					</Button>
 				</CardAction>
@@ -74,9 +74,7 @@ export const WithDividers: Story = {
 				<Text tone="muted">삭제한 글은 30일 동안 휴지통에 남아요.</Text>
 			</CardContent>
 			<CardFooter className="border-t">
-				<Button variant="secondary" tone="danger">
-					휴지통으로 이동
-				</Button>
+				<Button variant="outline-danger">휴지통으로 이동</Button>
 			</CardFooter>
 		</Card>
 	),

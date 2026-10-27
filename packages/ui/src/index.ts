@@ -6,6 +6,8 @@
 import { type Closed, close } from "./closed";
 import * as open from "./internal";
 
+export const Affix = close(open.Affix);
+export const AiAction = close(open.AiAction);
 export const Alert = close(open.Alert);
 export const AlertDescription = close(open.AlertDescription);
 export const AlertTitle = close(open.AlertTitle);
@@ -23,6 +25,7 @@ export const AlertDialogTitle = close(open.AlertDialogTitle);
 export const AlertDialogTrigger = close(open.AlertDialogTrigger);
 export const Badge = close(open.Badge);
 export const Button = close(open.Button);
+export const Caret = close(open.Caret);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
 export const SidePanelFrame = close(open.SidePanelFrame);
@@ -113,23 +116,15 @@ export const EmptyHeader = close(open.EmptyHeader);
 export const EmptyMedia = close(open.EmptyMedia);
 export const EmptyTitle = close(open.EmptyTitle);
 export const FormField = close(open.FormField);
-export const FormFieldContent = close(open.FormFieldContent);
 export const FormFieldDescription = close(open.FormFieldDescription);
 export const FormFieldError = close(open.FormFieldError);
 export const FormFieldGroup = close(open.FormFieldGroup);
 export const FormFieldLabel = close(open.FormFieldLabel);
 export const FormFieldLegend = close(open.FormFieldLegend);
-export const FormFieldSeparator = close(open.FormFieldSeparator);
 export const FormFieldSet = close(open.FormFieldSet);
 export const FormFieldTitle = close(open.FormFieldTitle);
 export const IconButton = close(open.IconButton);
 export const Input = close(open.Input);
-export const InputGroup = close(open.InputGroup);
-export const InputGroupAddon = close(open.InputGroupAddon);
-export const InputGroupButton = close(open.InputGroupButton);
-export const InputGroupInput = close(open.InputGroupInput);
-export const InputGroupText = close(open.InputGroupText);
-export const InputGroupTextarea = close(open.InputGroupTextarea);
 export const Label = close(open.Label);
 export const UiLabelsProvider = close(open.UiLabelsProvider);
 export const Pagination = close(open.Pagination);
@@ -180,12 +175,12 @@ export const SidebarProvider = close(open.SidebarProvider);
 export const SidebarSeparator = close(open.SidebarSeparator);
 export const SidebarTrigger = close(open.SidebarTrigger);
 export const Skeleton = close(open.Skeleton);
+export const Spark = close(open.Spark);
 export const Spinner = close(open.Spinner);
 export const SplitButton = close(open.SplitButton);
 export const Stack = close(open.Stack);
 export const Inline = close(open.Inline);
 export const Box = close(open.Box);
-export const ButtonGroup = close(open.ButtonGroup);
 export const CodeBlock = close(open.CodeBlock);
 export const DiffMark = close(open.DiffMark);
 export const DiffView = close(open.DiffView);
@@ -194,6 +189,7 @@ export const Image = close(open.Image);
 export const List = close(open.List);
 export const ListItem = close(open.ListItem);
 export const Progress = close(open.Progress);
+export const Option = close(open.Option);
 export const RadioGroup = close(open.RadioGroup);
 export const RadioItem = close(open.RadioItem);
 export const ChoiceCard = close(open.ChoiceCard);
@@ -219,34 +215,39 @@ export const Heading = close(open.Heading);
 export const Text = close(open.Text);
 export const DescriptionList = close(open.DescriptionList);
 export const DescriptionItem = close(open.DescriptionItem);
-export const TextLink = close(open.TextLink);
+export const TextButton = close(open.TextButton);
 export const Textarea = close(open.Textarea);
-export const Toggle = close(open.Toggle);
-export const ToggleGroup = close(open.ToggleGroup);
-export const ToggleGroupItem = close(open.ToggleGroupItem);
 export const Tooltip = close(open.Tooltip);
 export const TooltipContent = close(open.TooltipContent);
 export const TooltipProvider = close(open.TooltipProvider);
 export const TooltipTrigger = close(open.TooltipTrigger);
 
 export type { Closed } from "./closed";
-export type { Background, LayoutProps, Spacing, StackProps, StatusShape, StatusTone, UiLabels } from "./internal";
+export type {
+	Background,
+	LayoutProps,
+	SegmentedOption,
+	Spacing,
+	StackProps,
+	StatusShape,
+	StatusTone,
+	UiLabels,
+} from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
 	alertVariants,
 	badgeVariants,
-	buttonVariants,
 	Calendar,
 	Combobox,
 	cn,
 	DEFAULT_UI_LABELS,
+	Segmented,
 	Select,
 	stackVariants,
 	Toaster,
 	tabsListVariants,
 	textVariants,
 	toast,
-	toggleVariants,
 	useComboboxAnchor,
 	useIsMobile,
 	useSidebar,

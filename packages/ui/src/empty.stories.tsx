@@ -74,7 +74,7 @@ export const SearchWithNoResult: Story = {
 				</EmptyDescription>
 			</EmptyHeader>
 			<EmptyContent>
-				<Button variant="outline">필터 지우기</Button>
+				<Button variant="secondary">필터 지우기</Button>
 			</EmptyContent>
 		</Empty>
 	),

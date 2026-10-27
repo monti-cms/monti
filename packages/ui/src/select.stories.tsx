@@ -77,12 +77,19 @@ export const Sizes: Story = {
 	),
 };
 
+/** Disabled, proposal (the assistant picked it: blue), invalid (red underline). */
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap={8} align="center">
+		<Stack direction="row" gap={16} align="center">
 			<Select disabled>
 				<SelectTrigger>
 					<SelectValue placeholder="비활성" />
+				</SelectTrigger>
+				<Items />
+			</Select>
+			<Select defaultValue="notice">
+				<SelectTrigger proposal>
+					<SelectValue />
 				</SelectTrigger>
 				<Items />
 			</Select>

@@ -12,6 +12,7 @@ import {
 	Stack,
 	Text,
 	Textarea,
+	TextButton,
 	toast,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
@@ -250,14 +251,14 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 						{t("progress", { done: progress.done, total: progress.total })}
 					</Text>
 				)}
-				<Button type="button" size="sm" variant="quiet" onClick={stop}>
+				<TextButton type="button" variant="quiet" onClick={stop}>
 					<Square aria-hidden />
 					{t("stop")}
-				</Button>
+				</TextButton>
 			</Inline>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger render={<Button type="button" size="sm" variant="quiet" />}>
+				<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
 					<Languages aria-hidden />
 					{t("all")}
 				</PopoverTrigger>

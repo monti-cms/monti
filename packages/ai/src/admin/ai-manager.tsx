@@ -44,6 +44,7 @@ import {
 	TagInput,
 	Text,
 	Textarea,
+	TextButton,
 	useConfirm,
 	useDraftEditor,
 	useHydratedQuery,
@@ -532,7 +533,7 @@ export function AiManager() {
 						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
 						<Alert tone="warning" layout="strip" role="status">
 							<Text>{t("banner.needsConnection")}</Text>
-							<Button type="button" size="xs" variant="outline" onClick={() => void changeTab("connections")}>
+							<Button type="button" size="sm" variant="secondary" onClick={() => void changeTab("connections")}>
 								{t("banner.goToConnections")}
 							</Button>
 						</Alert>
@@ -564,7 +565,13 @@ export function AiManager() {
 									const isCollapsed = collapsedGroups.has(group);
 									return [
 										<Box key={`group-${group}`} as="li" position="sticky" border="y" background="muted">
-											<Button type="button" variant="ghost" size="sm" width="full" onClick={() => toggleGroup(group)}>
+											<Button
+												type="button"
+												variant="secondary"
+												size="sm"
+												width="full"
+												onClick={() => toggleGroup(group)}
+											>
 												<Inline gap={8} width="full">
 													{isCollapsed ? <ChevronRight aria-hidden /> : <ChevronDown aria-hidden />}
 													<Text variant="caption" weight="semibold">
@@ -589,7 +596,6 @@ export function AiManager() {
 														onClick={() => void openFeature(feature)}
 														trailing={
 															<Switch
-																size="sm"
 																checked={feature.enabled && connected}
 																disabled={!connected}
 																aria-label={t("toggle.enableAction", { label: feature.label })}
@@ -619,7 +625,6 @@ export function AiManager() {
 												onClick={() => void openFeature(feature)}
 												trailing={
 													<Switch
-														size="sm"
 														checked={feature.enabled && connected}
 														disabled={!connected}
 														aria-label={t("toggle.enableAction", { label: feature.label })}
@@ -641,7 +646,7 @@ export function AiManager() {
 								)}
 								{features.some((feature) => feature.hidden) && (
 									<Inline as="li" key="hidden-toggle" gap={8} justify="between" border="top" padding={8}>
-										<Button type="button" size="xs" variant="quiet" onClick={() => setShowHidden(!showHidden)}>
+										<TextButton type="button" variant="quiet" onClick={() => setShowHidden(!showHidden)}>
 											{showHidden
 												? t("list.hideHidden", {
 														count: features.filter((feature) => feature.hidden).length,
@@ -649,9 +654,9 @@ export function AiManager() {
 												: t("list.showHidden", {
 														count: features.filter((feature) => feature.hidden).length,
 													})}
-										</Button>
+										</TextButton>
 										{showHidden && (
-											<Button type="button" size="xs" variant="outline" onClick={() => void restoreAllHidden()}>
+											<Button type="button" size="sm" variant="secondary" onClick={() => void restoreAllHidden()}>
 												<RotateCcw aria-hidden />
 												{t("button.restoreHidden")}
 											</Button>
@@ -761,12 +766,7 @@ function CheckRow({
 	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
 		<Inline as="li" gap={8} align={multiline ? "start" : "center"} paddingTop={multiline ? 4 : undefined}>
-			<Switch
-				id={id}
-				size="sm"
-				checked={check.enabled}
-				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
-			/>
+			<Switch id={id} checked={check.enabled} onCheckedChange={(enabled) => onChange({ ...check, enabled })} />
 			<Label htmlFor={id} size="caption">
 				{label}
 			</Label>
@@ -812,7 +812,7 @@ function CheckRow({
 				)}
 			</Inline>
 			{onRemove ? (
-				<IconButton label={t("check.remove", { label })} size="icon-xs" tone="danger" onClick={onRemove}>
+				<IconButton label={t("check.remove", { label })} onClick={onRemove}>
 					<Trash2 aria-hidden />
 				</IconButton>
 			) : (
@@ -948,7 +948,7 @@ function FeatureEditor({
 					</Text>
 				</Stack>
 				<Label size="caption">
-					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
+					<Switch checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
 					{t("toggle.on")}
 				</Label>
 			</Inline>
@@ -999,7 +999,7 @@ function FeatureEditor({
 							{t("test.hint")}
 						</Text>
 					</Box>
-					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
+					<Button type="button" size="sm" variant="secondary" disabled={testDisabled} onClick={() => void runTest()}>
 						<Sparkles aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
 					</Button>
@@ -1057,10 +1057,7 @@ function FeatureEditor({
 
 			<Box border="top" paddingTop={16}>
 				<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced}>
-					<CollapsibleTrigger
-						render={<Button type="button" variant="quiet" size="sm" />}
-						data-testid="ai-advanced-toggle"
-					>
+					<CollapsibleTrigger render={<TextButton type="button" variant="quiet" />} data-testid="ai-advanced-toggle">
 						<Inline gap={8}>
 							{advancedOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 							<Text weight="medium">{t("advanced.title")}</Text>
@@ -1090,7 +1087,6 @@ function FeatureEditor({
 								<Inline gap={24} wrap>
 									<Label size="caption">
 										<Switch
-											size="sm"
 											checked={spec.askInstruction}
 											onCheckedChange={(askInstruction) => set({ askInstruction })}
 										/>
@@ -1098,7 +1094,7 @@ function FeatureEditor({
 									</Label>
 									{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
 										<Label size="caption">
-											<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
+											<Switch checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
 											{t("toggle.instant")}
 										</Label>
 									)}
@@ -1192,7 +1188,7 @@ function FeatureEditor({
 										{addableChecks.length > 0 && (
 											<Inline>
 												<DropdownMenu>
-													<DropdownMenuTrigger render={<Button type="button" size="xs" variant="quiet" />}>
+													<DropdownMenuTrigger render={<TextButton type="button" variant="quiet" />}>
 														<Plus aria-hidden />
 														{t("field.addCheck")}
 													</DropdownMenuTrigger>
@@ -1246,7 +1242,7 @@ function FeatureEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={saving}
 						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
 					>
@@ -1258,7 +1254,7 @@ function FeatureEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={atDefaults}
 						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
 					>

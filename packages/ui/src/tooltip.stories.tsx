@@ -16,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {
 	render: (args) => (
 		<Tooltip {...args}>
-			<TooltipTrigger render={<Button variant="outline" />}>새 글</TooltipTrigger>
+			<TooltipTrigger render={<Button variant="secondary" />}>새 글</TooltipTrigger>
 			<TooltipContent>새 글 쓰기</TooltipContent>
 		</Tooltip>
 	),
@@ -26,7 +26,7 @@ export const Playground: Story = {
 export const Open: Story = {
 	render: () => (
 		<Tooltip open>
-			<TooltipTrigger render={<Button variant="outline" />}>새 글</TooltipTrigger>
+			<TooltipTrigger render={<Button variant="secondary" />}>새 글</TooltipTrigger>
 			<TooltipContent>새 글 쓰기</TooltipContent>
 		</Tooltip>
 	),
@@ -39,7 +39,7 @@ export const Sides: Story = {
 		<Stack direction="row" gap={48} align="center" justify="center" className="p-12">
 			{SIDES.map((side) => (
 				<Tooltip key={side} open>
-					<TooltipTrigger render={<Button variant="outline" />}>{side}</TooltipTrigger>
+					<TooltipTrigger render={<Button variant="secondary" />}>{side}</TooltipTrigger>
 					<TooltipContent side={side}>{side}에 표시</TooltipContent>
 				</Tooltip>
 			))}
@@ -50,7 +50,7 @@ export const Sides: Story = {
 export const IconButton: Story = {
 	render: () => (
 		<Tooltip open>
-			<TooltipTrigger render={<Button size="icon" variant="outline" aria-label="추가" />}>
+			<TooltipTrigger render={<Button variant="secondary" aria-label="추가" />}>
 				<Plus aria-hidden />
 			</TooltipTrigger>
 			<TooltipContent side="bottom">블록 추가</TooltipContent>
@@ -62,7 +62,7 @@ export const IconButton: Story = {
 export const LongText: Story = {
 	render: () => (
 		<Tooltip open>
-			<TooltipTrigger render={<Button variant="outline" />}>발행</TooltipTrigger>
+			<TooltipTrigger render={<Button variant="secondary" />}>발행</TooltipTrigger>
 			<TooltipContent side="bottom">
 				발행하면 방문자에게 바로 보여요. 되돌리려면 글을 초안으로 바꾸면 돼요. 예약 발행도 쓸 수 있어요.
 			</TooltipContent>
@@ -75,7 +75,7 @@ export const Alignment: Story = {
 		<Stack direction="row" gap={48} className="pt-12 pb-16">
 			{(["start", "center", "end"] as const).map((align) => (
 				<Tooltip key={align} open>
-					<TooltipTrigger render={<Button variant="outline" />}>{align}</TooltipTrigger>
+					<TooltipTrigger render={<Button variant="secondary" />}>{align}</TooltipTrigger>
 					<TooltipContent side="bottom" align={align}>
 						align {align}
 					</TooltipContent>

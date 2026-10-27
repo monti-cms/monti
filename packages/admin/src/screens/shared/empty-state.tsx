@@ -55,7 +55,7 @@ export function EmptyState({
 					{description && <EmptyDescription>{description}</EmptyDescription>}
 				</EmptyHeader>
 				{action && (
-					<Button type="button" size="xs" variant="outline" onClick={action.onClick}>
+					<Button type="button" size="sm" variant="secondary" onClick={action.onClick}>
 						{ActionIcon && <ActionIcon aria-hidden />}
 						{action.label}
 					</Button>
@@ -81,7 +81,7 @@ export function EmptyState({
 							<Button
 								type="button"
 								size="sm"
-								variant={action.emphasis === "primary" ? "default" : "outline"}
+								variant={action.emphasis === "primary" ? "primary" : "secondary"}
 								disabled={action.disabled}
 								onClick={action.onClick}
 							>
@@ -92,7 +92,7 @@ export function EmptyState({
 						{secondaryAction &&
 							("href" in secondaryAction ? (
 								<Button
-									variant="outline"
+									variant="secondary"
 									size="sm"
 									nativeButton={false}
 									render={<Link role="link" href={secondaryAction.href} />}
@@ -101,7 +101,7 @@ export function EmptyState({
 									{secondaryAction.label}
 								</Button>
 							) : (
-								<Button type="button" size="sm" variant="outline" onClick={secondaryAction.onClick}>
+								<Button type="button" size="sm" variant="secondary" onClick={secondaryAction.onClick}>
 									{SecondaryIcon && <SecondaryIcon aria-hidden />}
 									{secondaryAction.label}
 								</Button>

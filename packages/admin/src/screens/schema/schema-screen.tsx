@@ -372,7 +372,7 @@ function SchemaEditor({
 													{t("collection.railTitle")} {names.length}
 												</Text>
 												{writable && (
-													<IconButton label={t("collection.create")} size="icon-xs" onClick={() => setCreating(true)}>
+													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
 														<Plus aria-hidden />
 													</IconButton>
 												)}

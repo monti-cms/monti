@@ -1,33 +1,36 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Sparkles } from "lucide-react";
 import { Button } from "./button";
 import { Stack } from "./stack";
 
+/**
+ * Pills. One `primary` per screen or floating surface; `secondary` for one or two common side actions; `danger` only to confirm what cannot be
+ * undone. Text sits 2px high in the pill and a leading icon pulls 2px into the padding. Switch light and dark with the toolbar.
+ */
 const meta = {
 	title: "Controls/Button",
 	component: Button,
-	args: { children: "저장" },
+	args: { children: "새 글 쓰기" },
 } satisfies Meta<typeof Button>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const VARIANTS = ["default", "outline", "secondary", "ghost", "quiet", "link"] as const;
-const SIZES = ["xs", "sm", "default", "lg"] as const;
+const VARIANTS = ["primary", "secondary", "danger", "outline-danger"] as const;
 
-/** Every variant at every size, then the disabled state. */
+/** Every variant at both sizes, then disabled. */
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap={24}>
-			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap={8} align="center">
-					{SIZES.map((size) => (
-						<Button key={size} variant={variant} size={size}>
-							{variant} · {size}
+		<Stack gap={16}>
+			{(["md", "sm"] as const).map((size) => (
+				<Stack key={size} direction="row" gap={16} align="center" wrap>
+					{VARIANTS.map((variant) => (
+						<Button key={variant} variant={variant} size={size}>
+							{variant}
 						</Button>
 					))}
-					<Button variant={variant} disabled>
+					<Button size={size} disabled>
 						disabled
 					</Button>
 				</Stack>
@@ -36,33 +39,21 @@ export const AllVariants: Story = {
 	),
 };
 
+/** A leading icon sits 2px into the left padding, so it looks centered. */
 export const WithIcon: Story = {
 	render: () => (
-		<Stack direction="row" gap={8}>
+		<Stack direction="row" gap={16} align="center" wrap>
 			<Button>
-				<Plus aria-hidden />
-				Post 추가
+				<Plus aria-hidden />새 글 쓰기
 			</Button>
-			<Button variant="secondary" tone="danger">
-				<Trash2 aria-hidden />
-				삭제
+			<Button variant="secondary">
+				<Search aria-hidden />
+				검색
 			</Button>
-			<Button size="icon" variant="outline" aria-label="추가">
-				<Plus aria-hidden />
+			<Button size="sm">
+				<Sparkles aria-hidden />
+				적용
 			</Button>
-		</Stack>
-	),
-};
-
-/** Every look in the danger tone: for steps that remove or overwrite. */
-export const DangerTone: Story = {
-	render: () => (
-		<Stack direction="row" gap={8} align="center" wrap>
-			{VARIANTS.map((variant) => (
-				<Button key={variant} variant={variant} tone="danger">
-					{variant}
-				</Button>
-			))}
 		</Stack>
 	),
 };
@@ -70,14 +61,20 @@ export const DangerTone: Story = {
 /** Working: a spinner before the label, and the button cannot be pressed again. */
 export const Loading: Story = {
 	render: () => (
-		<Stack direction="row" gap={8} align="center">
+		<Stack direction="row" gap={16} align="center">
 			<Button loading>저장 중…</Button>
-			<Button variant="outline" size="sm" loading>
+			<Button variant="secondary" size="sm" loading>
 				불러오는 중
 			</Button>
-			<Button variant="secondary" tone="danger" loading>
-				삭제 중
-			</Button>
+		</Stack>
+	),
+};
+
+/** `width="full"` spans a stacked form or a narrow panel. */
+export const FullWidth: Story = {
+	render: () => (
+		<Stack className="max-w-xs">
+			<Button width="full">로그인</Button>
 		</Stack>
 	),
 };

@@ -97,13 +97,11 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.deleteRow"),
 			icon: Rows3,
-			tone: "danger",
 			run: (e) => chain(e).deleteRow().run(),
 		},
 		{
 			label: t("tableToolbar.deleteColumn"),
 			icon: Columns3,
-			tone: "danger",
 			run: (e) => chain(e).deleteColumn().run(),
 		},
 	],

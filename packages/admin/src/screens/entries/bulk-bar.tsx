@@ -24,6 +24,7 @@ import {
 	SelectValue,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -216,7 +217,7 @@ function ManyPicker({
 				render={
 					<Button
 						type="button"
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
 					/>
@@ -390,9 +391,9 @@ export function BulkBar({
 		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX={32} paddingY={8}>
 			<Inline wrap gap={8}>
 				<Text weight="medium">{t("count", { count: selected.length })}</Text>
-				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
+				<TextButton type="button" onClick={onClearSelection}>
 					{t("clear")}
-				</Button>
+				</TextButton>
 
 				{actions.length > 1 ? (
 					<Select
@@ -444,8 +445,7 @@ export function BulkBar({
 				<Button
 					type="button"
 					size="sm"
-					variant={activeAction?.destructive ? "secondary" : "default"}
-					tone={activeAction?.destructive ? "danger" : "neutral"}
+					variant={activeAction?.destructive ? "danger" : "primary"}
 					disabled={!canRun}
 					onClick={start}
 				>
@@ -462,8 +462,8 @@ export function BulkBar({
 				{failures.length > 0 && (
 					<Button
 						type="button"
-						variant="outline"
-						size="xs"
+						variant="secondary"
+						size="sm"
 						onClick={() => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id)))}
 					>
 						{t("retry")}

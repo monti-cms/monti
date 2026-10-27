@@ -28,7 +28,7 @@ import {
 	TabsContent,
 	TabsTrigger,
 	Text,
-	TextLink,
+	TextButton,
 	toast,
 	useConfirm,
 } from "@monti-cms/admin/kit";
@@ -212,7 +212,7 @@ function SyncTab({
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={pull.isPending}
 							onClick={() => pull.mutate(target.id)}
 						>
@@ -223,7 +223,7 @@ function SyncTab({
 							<Button
 								type="button"
 								size="sm"
-								variant="outline"
+								variant="secondary"
 								disabled={flush.isPending}
 								onClick={() => flush.mutate(target.id)}
 							>
@@ -269,9 +269,14 @@ function SyncTab({
 									{target.lastFlush.pullRequestUrl && (
 										<>
 											{" · "}
-											<TextLink href={target.lastFlush.pullRequestUrl} target="_blank" rel="noreferrer">
+											<TextButton
+												variant="underline"
+												href={target.lastFlush.pullRequestUrl}
+												target="_blank"
+												rel="noreferrer"
+											>
 												{t("target.pullRequest")}
-											</TextLink>
+											</TextButton>
 										</>
 									)}
 									{target.lastFlush.note && (
@@ -437,7 +442,7 @@ function ConflictsTab({
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={resolve.isPending}
 							onClick={() => void decide(conflict, "git")}
 						>
@@ -446,7 +451,7 @@ function ConflictsTab({
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={resolve.isPending}
 							onClick={() => void decide(conflict, "server")}
 						>
@@ -548,7 +553,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={assign.isPending}
 							onClick={() => assign.mutate({ slot: "token", key: { use: "none" } })}
 						>
@@ -598,7 +603,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						onClick={() => {
 							setSecret(generateSecret());
 							// A generated value has to be seen once: it goes into GitHub, and the store does not show it again.
@@ -607,13 +612,13 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					>
 						{t("settings.generate")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => setRevealed((shown) => !shown)}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => setRevealed((shown) => !shown)}>
 						{revealed ? t("settings.hide") : t("settings.show")}
 					</Button>
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={!secret}
 						onClick={() =>
 							void navigator.clipboard.writeText(secret).then(
@@ -633,7 +638,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={assign.isPending}
 							onClick={() => assign.mutate({ slot: "webhook-secret", key: { use: "none" } })}
 						>

@@ -6,17 +6,15 @@ import {
 	Button,
 	IconButton,
 	Inline,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
+	Input,
 	PageTabs,
 	Stack,
 	Tabs,
 	TabsTrigger,
 	Text,
-	Toggle,
+	TextButton,
 } from "@monti-cms/ui";
-import { AlignLeft, Search, X } from "lucide-react";
+import { AlignLeft, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
@@ -105,32 +103,29 @@ export function ListSearch({
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
 		<Box width="panel">
-			<InputGroup>
-				<InputGroupAddon>
-					<Search aria-hidden />
-				</InputGroupAddon>
-				<InputGroupInput
+			<Inline gap={8}>
+				<Input
 					type="search"
+					size="sm"
 					aria-label={t("toolbar.searchLabel")}
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 					placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
 				/>
 				{withBody && (
-					<InputGroupAddon align="inline-end">
-						<Toggle
-							size="sm"
-							aria-label={t("toolbar.includeBody")}
-							title={t("toolbar.includeBody")}
-							pressed={state.includeBody}
-							onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						>
-							<AlignLeft aria-hidden />
-							{t("toolbar.includeBodyShort")}
-						</Toggle>
-					</InputGroupAddon>
+					<Button
+						size="sm"
+						variant={state.includeBody ? "primary" : "secondary"}
+						aria-label={t("toolbar.includeBody")}
+						title={t("toolbar.includeBody")}
+						aria-pressed={state.includeBody}
+						onClick={() => onChange({ includeBody: !state.includeBody })}
+					>
+						<AlignLeft aria-hidden />
+						{t("toolbar.includeBodyShort")}
+					</Button>
 				)}
-			</InputGroup>
+			</Inline>
 		</Box>
 	);
 }
@@ -201,7 +196,7 @@ export function ListSubToolbar({
 									{chip.label}
 								</Text>
 							</Box>
-							<IconButton size="icon-xs" label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
+							<IconButton label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
 								<X aria-hidden />
 							</IconButton>
 						</Inline>
@@ -209,9 +204,9 @@ export function ListSubToolbar({
 				))}
 				{chips.length >= 2 && (
 					<Box as="li">
-						<Button type="button" variant="quiet" size="xs" onClick={() => onChange(clearFiltersPatch(state))}>
+						<TextButton type="button" variant="quiet" onClick={() => onChange(clearFiltersPatch(state))}>
 							{t("filter.clearAll")}
-						</Button>
+						</TextButton>
 					</Box>
 				)}
 			</Inline>

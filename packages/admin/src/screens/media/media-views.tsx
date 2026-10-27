@@ -14,7 +14,7 @@ import {
 	TableHeader,
 	TableRow,
 	Text,
-	TextLink,
+	TextButton,
 	Tile,
 } from "@monti-cms/ui";
 import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
@@ -224,9 +224,8 @@ export function MediaTable({
 									/>
 								</TableCell>
 								<TableCell truncate>
-									<TextLink
+									<TextButton
 										render={<button type="button" />}
-										underline="hover"
 										mono
 										aria-current={isSelected ? "true" : undefined}
 										onClick={(event) => {
@@ -236,7 +235,7 @@ export function MediaTable({
 										onKeyDown={deleteKey(media, onDeleteKey)}
 									>
 										{media.filename}
-									</TextLink>
+									</TextButton>
 								</TableCell>
 								<TableCell tone="muted">
 									{site.api.isImageType(media.mimeType)

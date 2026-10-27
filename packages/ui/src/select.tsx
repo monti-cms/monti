@@ -3,6 +3,7 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import type * as React from "react";
+import { Caret } from "./caret";
 import { cn } from "./cn";
 
 const Select = SelectPrimitive.Root;
@@ -17,35 +18,40 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 	);
 }
 
+/**
+ * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,
+ * which can search. `proposal` marks a value the assistant picked and nobody has touched.
+ */
 function SelectTrigger({
 	className,
 	size = "default",
 	width = "fit",
-	variant = "default",
+	proposal = false,
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
 	size?: "sm" | "default";
 	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter. */
 	width?: "fit" | "full";
-	/** `ghost` drops the border until hovered (a select in a footer or a sentence). */
-	variant?: "default" | "ghost";
+	/** The assistant picked this value and nobody has touched it yet. Turn it off when the value is changed. */
+	proposal?: boolean;
 }) {
 	return (
 		<SelectPrimitive.Trigger
 			data-slot="select-trigger"
 			data-size={size}
+			data-proposal={proposal || undefined}
 			className={cn(
-				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-monti-md border border-monti-default bg-monti-page py-1.5 pr-2 pl-2.5 text-monti-label outline-none transition-[color,border-color,box-shadow] hover:border-monti-emphasis focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger/20 data-[size=default]:h-monti-icon data-[size=sm]:h-monti-control-sm data-[size=sm]:text-monti-label data-placeholder:text-monti-subtle *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				width === "full" ? "w-full" : "w-fit",
-				variant === "ghost" &&
-					"border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-monti-selected",
 				className,
 			)}
 			{...props}
 		>
 			{children}
-			<SelectPrimitive.Icon render={<ChevronDownIcon className="pointer-events-none size-4 text-monti-muted" />} />
+			<SelectPrimitive.Icon className="flex">
+				<Caret solo className="size-3.5" />
+			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);
 }
