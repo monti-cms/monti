@@ -36,6 +36,17 @@ describe("SplitButton", () => {
 		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeTruthy();
 	});
 
+	it("draws the focus ring inside each half, solid in the pill's text color", () => {
+		renderSplit();
+		for (const name of ["Publish", "Publish options"]) {
+			const half = screen.getByRole("button", { name }).className;
+			// An outer ring would be cut by the pill's overflow, and a faded one is lost on the ink.
+			expect(half).toContain("focus-visible:ring-inset");
+			expect(half).toContain("focus-visible:ring-monti-on-emphasis");
+			expect(half).not.toContain("focus-visible:ring-monti-on-emphasis/");
+		}
+	});
+
 	it("disables both halves together, and while loading", () => {
 		const { rerender } = renderSplit({ disabled: true });
 		expect(screen.getByRole("button", { name: "Publish" }).hasAttribute("disabled")).toBe(true);

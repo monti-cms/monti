@@ -34,3 +34,19 @@ export const MenuOpen: Story = {
 		await expect(await within(document.body).findByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
 	},
 };
+
+/** Keyboard focus on the main half: a ring inside the pill, in the pill's text color. */
+export const FocusMain: Story = {
+	play: async () => {
+		await userEvent.tab();
+	},
+};
+
+/** Keyboard focus on the caret half. */
+export const FocusMenu: Story = {
+	play: async ({ canvasElement }) => {
+		await userEvent.tab();
+		await userEvent.tab();
+		await expect(within(canvasElement).getByRole("button", { name: "발행 방식" })).toHaveFocus();
+	},
+};

@@ -8,8 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdo
 import { Spinner } from "./spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
+// The focus ring is drawn inside each half, in the pill's own text color: an outer ring would be cut by the pill's `overflow-hidden`, and a
+// faint one is lost on the ink.
 const HALF =
-	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none focus-visible:ring-3 focus-visible:ring-monti-on-emphasis/40 disabled:pointer-events-none";
+	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis focus-visible:ring-inset disabled:pointer-events-none";
 
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
@@ -58,7 +60,7 @@ function SplitButton({
 				disabled={inert}
 				aria-busy={loading || undefined}
 				onClick={onClick}
-				className={cn(HALF, "gap-monti-6 pr-monti-12 pb-[2px] pl-[18px]")}
+				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pb-[2px] pl-[18px]")}
 			>
 				{loading && <Spinner size="sm" aria-hidden />}
 				{children}
@@ -73,7 +75,7 @@ function SplitButton({
 										type="button"
 										aria-label={menuLabel}
 										disabled={inert}
-										className={cn(HALF, "relative pr-[13px] pl-monti-12")}
+										className={cn(HALF, "relative rounded-r-monti-full pr-[13px] pl-monti-12")}
 									/>
 								}
 							/>
