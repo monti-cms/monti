@@ -1,3 +1,4 @@
+import { toast } from "@monti-cms/ui";
 /**
  * Image and file insertion of the visual editor: the image dialog state (opened from the slash menu, the toolbar, paste and drop),
  * inserting the chosen image, the file picker, and uploading attachments as file cards.
@@ -7,7 +8,6 @@ import { newBlockId } from "@monti-cms/core/document";
 import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { useAdminEvents } from "../events";
@@ -104,7 +104,7 @@ export function useMediaInsertion({
 	// Slash menu "File": open the file picker. If there is no media storage, report that uploading is not possible.
 	useEffect(() => {
 		const open = () => {
-			if (!media) toast.error(mediaNotConfiguredMessage(site));
+			if (!media) toast(mediaNotConfiguredMessage(site));
 			else fileInputRef.current?.click();
 		};
 		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
@@ -116,15 +116,18 @@ export function useMediaInsertion({
 		async (files: File[], at?: number) => {
 			if (!editor) return;
 			if (!media) {
-				toast.error(mediaNotConfiguredMessage(site));
+				toast(mediaNotConfiguredMessage(site));
 				return;
 			}
 			let position = at;
 			for (const file of files) {
-				const toastId = toast.loading(t("toolbar.uploading", { name: file.name }));
+				const toastId = toast(t("toolbar.uploading", { name: file.name }), { duration: Number.POSITIVE_INFINITY });
 				try {
 					const { mediaId } = await uploadAttachment(site, file, (percent) =>
-						toast.loading(t("toolbar.uploadingPercent", { name: file.name, percent }), { id: toastId }),
+						toast(t("toolbar.uploadingPercent", { name: file.name, percent }), {
+							id: toastId,
+							duration: Number.POSITIVE_INFINITY,
+						}),
 					);
 					const node = { type: FILE_NODE_NAME, attrs: { mediaId, label: null } };
 					if (position === undefined) editor.chain().focus().insertContent(node).run();
@@ -132,13 +135,11 @@ export function useMediaInsertion({
 						editor.chain().focus().insertContentAt(position, node).run();
 						position = editor.state.selection.to;
 					}
-					toast.success(t("toolbar.uploaded", { name: file.name }), { id: toastId });
+					toast(t("toolbar.uploaded", { name: file.name }), { id: toastId });
 				} catch (error) {
-					toast.error(t("toolbar.uploadFailed", { name: file.name }), {
-						id: toastId,
-						// The reason, when there is one the person can read (the title already says it failed).
-						description: errorText(site, error, "") || undefined,
-					});
+					// The reason, when there is one the person can read (the title already says it failed).
+					const reason = errorText(site, error, "");
+					toast([t("toolbar.uploadFailed", { name: file.name }), reason].filter(Boolean).join("\n"), { id: toastId });
 				}
 			}
 		},

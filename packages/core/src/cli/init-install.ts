@@ -13,13 +13,12 @@ import type { Prompter } from "./prompt";
 
 /**
  * The libraries the admin shares with the app, which `@monti-cms/admin` (and the AI plugin and the blocks) declare as peer dependencies and so are not installed
- * with it. They must stay peers: React Query, next-themes, sonner, Tiptap and the lucide icons keep state in a module-level context or schema, so the admin, the plugins and
+ * with it. They must stay peers: React Query, next-themes, Tiptap and the lucide icons keep state in a module-level context or schema, so the admin, the plugins and
  * the app's own admin pages have to load one copy. `monti init` installs them with the Monti packages.
  */
 export const ADMIN_PEER_PACKAGES = [
 	"next-themes",
 	"@tanstack/react-query",
-	"sonner",
 	"@tiptap/core",
 	"@tiptap/pm",
 	"@tiptap/react",

@@ -29,12 +29,12 @@ import {
 	TabsTrigger,
 	Text,
 	TextLink,
+	toast,
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { lineDiff } from "../diff";
 import {
 	assignGitSyncKey,
@@ -617,8 +617,8 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						disabled={!secret}
 						onClick={() =>
 							void navigator.clipboard.writeText(secret).then(
-								() => toast.success(t("settings.copied")),
-								() => toast.error(tc("copyFailed")),
+								() => toast(t("settings.copied")),
+								() => toast(tc("copyFailed")),
 							)
 						}
 					>

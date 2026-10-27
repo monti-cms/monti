@@ -15,8 +15,8 @@ import {
 	Grid,
 	Stack,
 	Text,
+	toast,
 } from "@monti-cms/ui";
-import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -163,9 +163,9 @@ function ComparePanes({
 	const copy = async (body: string) => {
 		try {
 			await navigator.clipboard.writeText(body);
-			toast.success(t("conflict.copied"));
+			toast(t("conflict.copied"));
 		} catch {
-			toast.error(tc("copyFailed"));
+			toast(tc("copyFailed"));
 		}
 	};
 	const pane = (label: string, value: EntryForm) => {

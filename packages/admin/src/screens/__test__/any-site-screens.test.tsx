@@ -33,8 +33,11 @@ const titleLabel = (collection: Collection) => testSite.storedField(collection, 
 
 const nav = createTestRouter();
 const render = (ui: ReactElement) => nav.render(withSite(ui));
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
 vi.mock("../entries/local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../entries/local-backup")>()),

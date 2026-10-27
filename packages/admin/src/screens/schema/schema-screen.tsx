@@ -19,12 +19,12 @@ import {
 	Skeleton,
 	Stack,
 	Text,
+	toast,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
@@ -256,7 +256,7 @@ function SchemaEditor({
 	}, [areas, onChanged]);
 	useEffect(() => {
 		const message = takeSavedMessage();
-		if (message) toast.success(message);
+		if (message) toast(message);
 	}, []);
 	// After the reload that follows a save, scroll back to where the writer was.
 	useLayoutEffect(() => {

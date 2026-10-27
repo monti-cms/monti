@@ -10,8 +10,11 @@ import { AdminQueryProvider } from "../../shared/query-provider";
 import { ExportDialog } from "../export-dialog";
 import { exportMessages } from "../messages";
 
-const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success, error } }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 const t = testSite.createTranslator(exportMessages);
 const ts = testSite.createTranslator(settingsMessages);
@@ -124,7 +127,7 @@ describe("the export dialog", () => {
 		await screen.findByRole("checkbox", { name: /MDX/ });
 		fireEvent.click(screen.getByRole("button", { name: t("action.selected") }));
 
-		await waitFor(() => expect(success).toHaveBeenCalledWith(t("toast.done", { name: "monti-export-admin-2026.zip" })));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("toast.done", { name: "monti-export-admin-2026.zip" })));
 		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([
 			{ scope: "admin", ids: ["a", "b", "c"], format: "mdx" },
 		]);
@@ -137,8 +140,8 @@ describe("the export dialog", () => {
 		open();
 		await screen.findByTestId("export-headline");
 		fireEvent.click(screen.getByRole("button", { name: t("action.selected") }));
-		await waitFor(() => expect(success).toHaveBeenCalled());
-		expect(String(success.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 2 }));
+		await waitFor(() => expect(toast).toHaveBeenCalled());
+		expect(String(toast.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 2 }));
 	});
 
 	it("notes that unsaved changes of the open entry are not in the archive", async () => {
@@ -205,7 +208,7 @@ describe("the Data page", () => {
 		expect(await screen.findByTestId("export-no-formats")).toBeTruthy();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(success).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([{ scope: "admin" }]);
 	});
 
@@ -215,9 +218,9 @@ describe("the Data page", () => {
 		await screen.findByRole("checkbox", { name: /MDX/ });
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(success).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(bodiesTo(fetchMock, "/api/monti/v1/export")).toEqual([{ scope: "admin", format: "mdx" }]);
-		expect(String(success.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 1 }));
+		expect(String(toast.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 1 }));
 		expect(saved).toHaveLength(1);
 	});
 
@@ -233,7 +236,7 @@ describe("the Data page", () => {
 		renderData();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
-		await waitFor(() => expect(error).toHaveBeenCalled());
-		expect(success).not.toHaveBeenCalled();
+		await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+		expect(String(toast.mock.calls[0]?.[0])).not.toContain(t("toast.done", { name: "" }));
 	});
 });

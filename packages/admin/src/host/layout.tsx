@@ -1,12 +1,11 @@
 import type { Cms } from "@monti-cms/core/server";
 import { SiteProvider } from "@monti-cms/core/site";
-import { TooltipProvider } from "@monti-cms/ui";
+import { Toaster, TooltipProvider } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../internal-plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
 import { AdminUiLabels } from "../ui/labels";
-import { Toaster } from "../ui/sonner";
 import { AdminThemeProvider } from "./admin-theme-provider";
 import { layoutMessages } from "./messages";
 import { AdminPluginScope } from "./plugin-scope";
@@ -40,8 +39,7 @@ export type AdminLayoutProps = {
 	 */
 	themeStorageKey?: string;
 	/**
-	 * Whether to render the admin UI's toast container (`sonner`'s `Toaster`). Default `true`. Set `false` if the site already has a `Toaster`.
-	 * Admin UI toasts also appear in the site's `Toaster` (when using the same `sonner` package).
+	 * Whether to render the admin UI's toast container (the `Toaster` of `@monti-cms/ui`). Default `true`. Set `false` only if the page mounts that `Toaster` itself.
 	 */
 	toaster?: boolean;
 };
@@ -67,7 +65,7 @@ export async function AdminLayout({
 			<AdminUiLabels>
 				<TooltipProvider>
 					<div className="monti-admin min-h-screen bg-monti-page text-monti-default">{children}</div>
-					{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
+					{toaster ? <Toaster /> : null}
 				</TooltipProvider>
 			</AdminUiLabels>
 		</AdminPluginScope>

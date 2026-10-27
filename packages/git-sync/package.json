@@ -28,8 +28,7 @@
 		"@monti-cms/core": "workspace:^",
 		"@tanstack/react-query": "^5.104.0",
 		"lucide-react": ">=0.562.0",
-		"react": ">=19",
-		"sonner": "^2.0.8"
+		"react": ">=19"
 	},
 	"devDependencies": {
 		"@monti-cms/admin": "workspace:*",
@@ -52,7 +51,6 @@
 		"pg": "^8.23.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
-		"sonner": "^2.0.8",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.0",
 		"vitest": "^4.0.18"

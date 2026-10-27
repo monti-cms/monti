@@ -13,8 +13,11 @@ import { mediaMessages } from "../messages";
 const t = testSite.createTranslator(mediaMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 const media = (id: string, fields: Record<string, unknown> = {}) => ({
 	id,
@@ -148,7 +151,7 @@ describe("media library", () => {
 			defaultAlt: "창가의 고양이",
 			defaultCaption: "캡션",
 		});
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(tc("saved")));
 	});
 
 	describe("file name field", () => {
@@ -171,9 +174,7 @@ describe("media library", () => {
 			expect(JSON.parse(String(calls("PATCH", "/api/monti/v1/media/cat")[0]?.[1]?.body))).toEqual({
 				filename: "고양이 사진.png",
 			});
-			await waitFor(() =>
-				expect(toast.success).toHaveBeenCalledWith(t("library.renamed", { name: "고양이 사진.png" })),
-			);
+			await waitFor(() => expect(toast).toHaveBeenCalledWith(t("library.renamed", { name: "고양이 사진.png" })));
 		});
 
 		it("does not send an empty name or one with a slash, and says why", async () => {
@@ -201,7 +202,7 @@ describe("media library", () => {
 			fireEvent.click(saveName(detail));
 			expect(await within(detail).findByText("The file name must keep the extension .png")).toBeTruthy();
 			expect(nameField(detail).value).toBe("tabby");
-			expect(toast.error).not.toHaveBeenCalled();
+			expect(toast).not.toHaveBeenCalled();
 		});
 
 		it("asks before leaving the file while the name has an unsaved change", async () => {
@@ -259,7 +260,7 @@ describe("media library", () => {
 		// The list request is retried once before it is treated as a failure.
 		const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
 		expect(alert.textContent).toContain("서버 오류");
-		expect(toast.error).not.toHaveBeenCalled();
+		expect(toast).not.toHaveBeenCalled();
 		fail = false;
 		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
 		expect(await screen.findByRole("button", { name: /cat\.png$/ })).toBeTruthy();
@@ -280,7 +281,7 @@ describe("media library", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
 
 		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/media/dog")).toHaveLength(1));
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
 	});
 
 	it("the right-click menu has open, usages and delete", async () => {

@@ -10,8 +10,11 @@ import { eventsMessages } from "../messages";
 
 const t = testSite.createTranslator(eventsMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (
@@ -186,7 +189,7 @@ describe("EventsScreen", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
 
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
-		await waitFor(() => expect(toast.success).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
 		// Nothing pending or failed is left to retry.
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();

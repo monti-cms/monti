@@ -13,10 +13,10 @@ import {
 	StatusIndicator,
 	type StatusTone,
 	Text,
+	toast,
 } from "@monti-cms/ui";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
@@ -75,12 +75,12 @@ export function LanguageTabs({
 		setCreating(target);
 		try {
 			if (!(await onBeforeCreate())) {
-				toast.error(t("lang.saveFirst"));
+				toast(t("lang.saveFirst"));
 				setCreating(null);
 				return;
 			}
 		} catch (error) {
-			toast.error(errorText(site, error, t("lang.createFailed")));
+			toast(errorText(site, error, t("lang.createFailed")));
 			setCreating(null);
 			return;
 		}

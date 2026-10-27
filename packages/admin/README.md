@@ -540,7 +540,7 @@ so the shared utilities, `prose`, the theme and the reset are defined in **one**
 A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `monti-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
 The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
-`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
+`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider, turn it off to avoid duplicates.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
@@ -553,7 +553,7 @@ The cost is that the admin file carries the classes of first-party plugins an ap
   (the site's own theme is left alone, and public screens in the same root layout do not stay dark). When off, the admin follows the
   `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
 - `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
-- `toaster` (default `true`): the admin UI adds `sonner`'s `Toaster`. When off, admin notifications appear in the site's `Toaster` (when using the same `sonner`).
+- `toaster` (default `true`): the admin UI adds its `Toaster` (from `@monti-cms/ui`). Turn it off only if the page mounts that `Toaster` itself.
 
 ## Admin theme
 

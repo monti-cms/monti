@@ -1,9 +1,9 @@
 "use client";
 
+import { toast } from "@monti-cms/ui";
 // The recovery-copy and conflict dialogs of the entry editor screen. Closing one hides it without answering it.
 
 import { useState } from "react";
-import { toast } from "sonner";
 import type { ConflictInfo, EntryEditor, RecoveryOffer } from "./entry-editor-types";
 import { ConflictDialog, RecoveryDialog } from "./recovery-dialogs";
 
@@ -26,7 +26,7 @@ export function EntryEditorRecoveryDialogs({ editor }: { editor: EntryEditor }) 
 				// The server version is loaded in place: the page is not reloaded.
 				onReload={() =>
 					void editor.reload().then((reloaded) => {
-						if (!reloaded.ok) toast.error(reloaded.error.message);
+						if (!reloaded.ok) toast(reloaded.error.message);
 					})
 				}
 				onOverwrite={() => void editor.overwriteWithMine()}

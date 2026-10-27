@@ -1,11 +1,10 @@
 "use client";
 
 import { errorText, useSite, useTranslator } from "@monti-cms/admin";
-import { Button, Spinner } from "@monti-cms/admin/kit";
+import { Button, Spinner, toast } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { toast } from "sonner";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";
 import { aiCommonMessages } from "./ai-common.messages";
 import { useAiAction } from "./use-ai-action";
@@ -52,7 +51,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				try {
 					onResult(await ai.run(input()));
 				} catch (error) {
-					toast.error(errorText(site, error, t("runFailed")));
+					toast(errorText(site, error, t("runFailed")));
 				} finally {
 					setRunning(false);
 				}

@@ -12,11 +12,11 @@ import {
 	Stack,
 	Text,
 	Textarea,
+	toast,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
 import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { runAiActionMany, useAiActions } from "./ai-slot-provider";
 import { aiTranslateMessages } from "./ai-translate.messages";
 import { applyTranslation, collectUnits, type TranslateUnit, unitAt } from "./ai-translate-units";
@@ -147,15 +147,15 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				);
 				if (!result || controller.signal.aborted) return;
 				if ("error" in result) {
-					toast.error(t("toast.failedOne", { reason: result.error }));
+					toast(t("toast.failedOne", { reason: result.error }));
 					return;
 				}
 				const applied = applyTranslation(site, format, editor, unit, result.mdx, pos);
-				if (applied === "changed") toast.message(t("toast.blockChanged"));
-				else if (applied === "invalid") toast.error(t("toast.invalidOne"));
+				if (applied === "changed") toast(t("toast.blockChanged"));
+				else if (applied === "invalid") toast(t("toast.invalidOne"));
 			} catch (error) {
-				if (controller.signal.aborted) toast.message(t("toast.stopped"));
-				else toast.error(errorText(site, error, t("runFailed")));
+				if (controller.signal.aborted) toast(t("toast.stopped"));
+				else toast(errorText(site, error, t("runFailed")));
 			} finally {
 				if (blockAbortRef.current.get(pos) === controller) blockAbortRef.current.delete(pos);
 				setBusyBlocks((current) => new Set([...current].filter((item) => item !== pos)));
@@ -174,7 +174,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			}),
 		);
 		if (blocks.length === 0) {
-			toast.message(t("toast.noBlocks"));
+			toast(t("toast.noBlocks"));
 			return;
 		}
 		const controller = new AbortController();
@@ -218,13 +218,13 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 		await Promise.all(Array.from({ length: Math.min(PARALLEL_REQUESTS, groups.length) }, worker));
 		setProgress(null);
 		abortRef.current = null;
-		if (controller.signal.aborted) toast.message(t("toast.stoppedKeep"));
-		else if (fatal) toast.error(fatal);
+		if (controller.signal.aborted) toast(t("toast.stoppedKeep"));
+		else if (fatal) toast(fatal);
 		else if (failures.length > 0 || skipped > 0) {
-			toast.warning(
+			toast(
 				`${t("toast.partial", { done: blocks.length - failures.length - skipped, kept: failures.length + skipped })}${failures[0] ? ` · ${failures[0]}` : ""}`,
 			);
-		} else toast.success(t("toast.all", { count: blocks.length }));
+		} else toast(t("toast.all", { count: blocks.length }));
 	}, [locales, request, actionKey, format, site, t]);
 
 	const blockActions = useMemo<BlockAction[]>(

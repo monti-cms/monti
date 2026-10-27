@@ -2,10 +2,9 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
+import { Box, Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text, toast } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
@@ -148,7 +147,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 							onSaved={(saved) => {
 								// Keep the saved item open as is. For a new item, switch to editing the created item.
 								if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
-								toast.success(tc("saved"));
+								toast(tc("saved"));
 								void list.invalidateEntries();
 								list.reloadTaxonomies();
 							}}

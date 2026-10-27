@@ -10,8 +10,11 @@ import { DataScreen } from "../../data/data-screen";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { restoreMessages } from "../messages";
 
-const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success, error } }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 const t = testSite.createTranslator(restoreMessages);
 
@@ -220,7 +223,7 @@ describe("the Restore backup card", () => {
 		expect(result.textContent).toContain(t("result.summary", { count: 6 }));
 		expect(within(result).getByTestId("restore-not-restored")).toBeTruthy();
 		expect(within(result).getByTestId("restore-open").getAttribute("href")).toBe(testSite.adminHref());
-		expect(success).toHaveBeenCalledWith(t("toast.done", { count: 6 }));
+		expect(toast).toHaveBeenCalledWith(t("toast.done", { count: 6 }));
 	});
 
 	it("does not restore when the confirmation is cancelled", async () => {

@@ -23,6 +23,7 @@ import {
 	TabsTrigger,
 	ToggleGroup,
 	ToggleGroupItem,
+	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -42,7 +43,6 @@ import {
 	Upload,
 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { foldersKeys, listFolders } from "../../api/folders";
 import {
@@ -181,11 +181,11 @@ export function MediaLibrary() {
 		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
 		try {
 			await updateMedia(site, media.id, { folderId: targetFolderId });
-			toast.success(t("library.moved", { name: media.filename, destination }));
+			toast(t("library.moved", { name: media.filename, destination }));
 			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
 		} catch (error) {
-			toast.error(errorText(site, error, t("library.moveFailed", { name: media.filename })));
+			toast(errorText(site, error, t("library.moveFailed", { name: media.filename })));
 		}
 	};
 
@@ -198,11 +198,11 @@ export function MediaLibrary() {
 				entries.length === 1
 					? (items.find((item) => item.id === entries[0].id)?.filename ?? "File")
 					: `${entries.length} files`;
-			toast.success(t("library.moved", { name: label, destination }));
+			toast(t("library.moved", { name: label, destination }));
 			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
 		} catch (error) {
-			toast.error(errorText(site, error, t("library.unknownError")));
+			toast(errorText(site, error, t("library.unknownError")));
 		}
 	};
 
@@ -235,8 +235,7 @@ export function MediaLibrary() {
 		failure: t("library.unknownError"),
 		inline: true,
 		onSuccess: () => update({ page: 1 }),
-		onError: (error) =>
-			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
+		onError: (error) => toast(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
 		invalidate: [mediaKeys.all, foldersKeys.list("media")],
 	});
 
@@ -245,7 +244,7 @@ export function MediaLibrary() {
 		const list: File[] = [];
 		for (const file of Array.from(files)) {
 			if (isAllowedImageFile(site, file) || site.api.fileTypeFor(file.name)) list.push(file);
-			else toast.error(t("library.unsupportedType", { name: file.name }));
+			else toast(t("library.unsupportedType", { name: file.name }));
 		}
 		if (list.length === 0) {
 			if (fileInputRef.current) fileInputRef.current.value = "";
@@ -314,8 +313,8 @@ export function MediaLibrary() {
 			const text = result.failed.length
 				? t("library.cleanup.doneWithFailed", { removed: result.removed, failed: result.failed.length })
 				: t("library.cleanup.done", { removed: result.removed });
-			if (result.failed.length) toast.error(text);
-			else toast.success(text);
+			if (result.failed.length) toast(text);
+			else toast(text);
 		},
 		invalidate: [mediaKeys.all],
 	});

@@ -95,6 +95,7 @@ export {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
+	toast,
 } from "@monti-cms/ui";
 export { apiKeysKeys } from "./api/api-keys";
 export { commonMessages } from "./lib/common.messages";

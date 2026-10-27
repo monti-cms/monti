@@ -1,3 +1,4 @@
+import { toast } from "@monti-cms/ui";
 /**
  * Runs the `editor.imageInserted` subscribers for an image that was just inserted, and keeps the state the image view shows while they run. Each
  * subscriber runs on its own: its failure clears its part of the "generating" state and shows a notice, and never touches the image or the others.
@@ -7,7 +8,6 @@ import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { useSyncExternalStore } from "react";
-import { toast } from "sonner";
 import { errorText } from "../api/client";
 import type { ImageInserted, ImageText } from "../events";
 import { findBlock } from "./block-ids";
@@ -140,7 +140,7 @@ export function runImageInserted({
 			.catch((error: unknown) => {
 				if (controller.signal.aborted) return;
 				console.error("[cms] editor.imageInserted subscriber failed", error);
-				toast.error(failed, { description: errorText(site, error, "") || undefined });
+				toast([failed, errorText(site, error, "")].filter(Boolean).join("\n"));
 			})
 			.finally(() => {
 				change(blockId, -1);

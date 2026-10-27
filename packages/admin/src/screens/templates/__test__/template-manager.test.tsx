@@ -11,8 +11,11 @@ import { TemplateManager } from "../template-manager";
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 vi.mock("../../../editor/tiptap-editor", () => ({ CmsEditor: () => null }));
 
 const DOC = {
@@ -85,7 +88,7 @@ describe("TemplateManager", () => {
 		fireEvent.change(name, { target: { value: "긴 글" } });
 		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
 
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(tc("saved")));
 		expect((screen.getByRole("textbox", { name: t("edit.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
 	});
 

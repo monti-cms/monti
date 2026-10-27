@@ -208,6 +208,7 @@ export { Heading, Text, textVariants } from "./text";
 export { TextLink } from "./text-link";
 export { Textarea } from "./textarea";
 export { ChoiceCard, Tile } from "./tile";
+export { Toaster, toast } from "./toast";
 export { Toggle, toggleVariants } from "./toggle";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 export type { Background, Spacing } from "./tokens.generated";

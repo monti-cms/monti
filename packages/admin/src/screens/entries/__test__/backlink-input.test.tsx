@@ -1,13 +1,16 @@
 import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
 import { BacklinkInput } from "../field-inputs";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 afterEach(() => {
 	cleanup();
@@ -97,7 +100,7 @@ describe("adding to a collection (inverse relation)", () => {
 		release();
 		await waitFor(() => expect(shared.refresh).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
-		expect(toast.error).not.toHaveBeenCalled();
+		expect(toast).not.toHaveBeenCalled();
 	});
 
 	it("if the save fails, reports below the input and reverts", async () => {
@@ -107,7 +110,7 @@ describe("adding to a collection (inverse relation)", () => {
 		release();
 		// Reports right below the input like other relation inputs (not a toast).
 		expect((await screen.findByRole("alert")).textContent).toBe("실패");
-		expect(toast.error).not.toHaveBeenCalled();
+		expect(toast).not.toHaveBeenCalled();
 		await waitFor(() => expect(screen.queryByText("시리즈 B")).toBeNull());
 		expect(screen.getByText("시리즈 A")).toBeTruthy();
 	});

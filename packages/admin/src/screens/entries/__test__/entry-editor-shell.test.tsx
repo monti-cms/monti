@@ -25,14 +25,11 @@ import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
-const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, message, error } = vi.hoisted(() => ({
+const { getLocalBackup, deleteLocalBackup, saveLocalBackup, toast } = vi.hoisted(() => ({
 	getLocalBackup: vi.fn(),
 	deleteLocalBackup: vi.fn(),
 	saveLocalBackup: vi.fn(),
-	success: vi.fn(),
-	warning: vi.fn(),
-	message: vi.fn(),
-	error: vi.fn(),
+	toast: vi.fn(),
 }));
 // The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
@@ -119,7 +116,10 @@ function MockEditor({
 		</>
 	);
 }
-vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, message, error } }));
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
@@ -331,7 +331,7 @@ describe("entry editor shell", () => {
 		fireEvent.compositionStart(title);
 		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1), { timeout: 3000 });
-		await waitFor(() => expect(success).toHaveBeenCalledWith("저장했어요."));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
 	});
 
 	it("shows why an explicit save failed instead of doing nothing", async () => {
@@ -342,7 +342,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
 		pressSave();
-		await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
 	});
 
 	it("saves pending changes before opening the preview", async () => {
@@ -564,7 +564,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(screen.getByRole("button", { name: "발행" }));
 			const popup = within(await screen.findByRole("dialog"));
 			expect(popup.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
-			expect(error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
+			expect(toast).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
 			expect(await (await bar()).findByRole("button", { name: "발행 전 1" })).toBeTruthy();
 			// The list under the header is gone: the popup is where the problems are.
 			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
@@ -1168,7 +1168,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
 	});
 
@@ -1267,7 +1267,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: label }));
 			expect(screen.queryByRole("alertdialog")).toBeNull();
 			await waitFor(() => expect(methodCalls("POST", `/${action}`)).toHaveLength(1));
-			await waitFor(() => expect(success).toHaveBeenCalledWith(message));
+			await waitFor(() => expect(toast).toHaveBeenCalledWith(message));
 			cleanup();
 		}
 	});
@@ -1279,7 +1279,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(error).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
@@ -1443,7 +1443,7 @@ describe("language tabs", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
 		expect(JSON.parse(String(methodCalls("POST", "/translations")[0]?.[1]?.body))).toEqual({ locale: "ja" });
-		expect(success).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
+		expect(toast).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
 	});
 
 	it("blocks translation creation while there are unsaved changes", async () => {
@@ -1451,7 +1451,7 @@ describe("language tabs", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
 		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
-		await waitFor(() => expect(error).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(methodCalls("POST", "/translations")).toHaveLength(0);
 	});
 

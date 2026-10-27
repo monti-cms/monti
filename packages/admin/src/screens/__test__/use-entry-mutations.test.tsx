@@ -7,7 +7,11 @@ import { renderHookWithSite } from "../../test/site";
 import { parseListState } from "../list-state";
 import { useEntryMutations } from "../use-entry-mutations";
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const toast = vi.hoisted(() => vi.fn());
+vi.mock("@monti-cms/ui", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/ui")>()),
+	toast,
+}));
 
 let fetchMock: ReturnType<typeof vi.fn>;
 const bulkBodies = () =>

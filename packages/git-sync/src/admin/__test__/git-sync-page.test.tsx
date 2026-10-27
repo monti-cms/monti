@@ -16,8 +16,12 @@ const common = site.createTranslator(commonMessages);
 /** The API key field belongs to the admin package; its texts are looked up by their English wording (the test site is English). */
 const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew" ? "Enter a new key" : "New API key");
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+const toast = vi.hoisted(() => vi.fn());
+// The admin's own hooks toast too, so the toast is replaced where it is made.
+vi.mock("../../../../ui/src/toast", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../../../../ui/src/toast")>()),
+	toast,
+}));
 vi.mock("../../../../admin/src/screens/admin-sidebar", () => ({ AdminSidebar: () => null }));
 
 const target = {
@@ -149,7 +153,7 @@ describe("Git sync screen: sync tab", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("pull.now") }));
 		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/pull", { target: "site" }]));
 		await waitFor(() =>
-			expect(toast.success).toHaveBeenCalledWith(t("pull.done", { created: 2, applied: 1, conflicts: 1, errors: 1 })),
+			expect(toast).toHaveBeenCalledWith(t("pull.done", { created: 2, applied: 1, conflicts: 1, errors: 1 })),
 		);
 	});
 
@@ -199,7 +203,7 @@ describe("Git sync screen: conflicts tab", () => {
 				{ target: "site", entryId: "e1", resolution: "git", gitSha: "a".repeat(40) },
 			]),
 		);
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("conflicts.resolved.git")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("conflicts.resolved.git")));
 	});
 
 	it('"Use server version" sends the other decision', async () => {
@@ -246,7 +250,7 @@ describe("Git sync screen: settings tab", () => {
 				{ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_brand_new" } },
 			]),
 		);
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(common("saved")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(common("saved")));
 	});
 
 	it("shows the webhook URL, makes a webhook secret that can be seen and copied, and saves it into its slot", async () => {
