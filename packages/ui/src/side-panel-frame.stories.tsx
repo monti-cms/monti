@@ -19,7 +19,7 @@ const meta = {
 	title: "Patterns/Sheet/SidePanel",
 	component: SidePanelFrame,
 	args: { title: "어시스턴트", children: null },
-	parameters: { layout: "fullscreen" },
+	parameters: { layout: "fullscreen", bleed: true },
 	decorators: [
 		(Story) => (
 			<div className="flex h-svh w-monti-assistant">

@@ -69,6 +69,7 @@ function Filters() {
 
 /** The row under the title, as a list page has it (12px inside, like the rows): tabs on the left, the filters used most and the sort on the right, with a short rule between the groups. */
 export const Toolbar: Story = {
+	parameters: { bleed: true },
 	render: () => (
 		<PageToolbar inset>
 			<Tabs defaultValue="all">
@@ -87,6 +88,7 @@ export const Toolbar: Story = {
 
 /** Rows picked: the same place becomes the bulk bar, with the same inset, so the first letter does not move. */
 export const Picked: Story = {
+	parameters: { bleed: true },
 	render: () => (
 		<BulkBar label="3개 선택" clearLabel="고르기 끝" onClear={() => {}}>
 			<TextButton>발행</TextButton>

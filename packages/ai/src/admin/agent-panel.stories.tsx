@@ -6,7 +6,7 @@ import { type FakeApi, PageFrame } from "../../../admin/src/stories/screen-frame
 import type { AiSettingsView } from "../connection";
 import { AgentPanel } from "./agent-panel";
 
-const meta = { title: "Screens/AI/Assistant panel", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/AI/Assistant panel", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -12,7 +12,7 @@ import { deleteLocalBackup, saveLocalBackup } from "./local-backup";
 // failed in one run does not offer its copy in the next.
 const meta = {
 	title: "Screens/Entry editor",
-	parameters: { layout: "fullscreen" },
+	parameters: { layout: "fullscreen", bleed: true },
 	loaders: [async () => void (await deleteLocalBackup("u1:entry-1", testSite))],
 } satisfies Meta;
 export default meta;

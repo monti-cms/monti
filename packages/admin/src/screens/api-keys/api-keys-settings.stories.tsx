@@ -3,7 +3,7 @@ import { userEvent, within } from "storybook/test";
 import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
 import { ApiKeysSettings } from "./api-keys-settings";
 
-const meta = { title: "Screens/API keys/API keys", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/API keys/API keys", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -12,9 +12,10 @@ const meta = {
 	title: "Patterns/Frame/StatusBar",
 	component: StatusBar,
 	args: { "aria-label": "상태" },
+	parameters: { bleed: true },
 	decorators: [
 		(Story) => (
-			<div className="flex min-h-96 flex-col justify-end">
+			<div className="flex min-h-screen flex-col justify-end">
 				<Story />
 			</div>
 		),

@@ -3,7 +3,10 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
 import { TemplateManager } from "./template-manager";
 
-const meta = { title: "Screens/Templates/Template manager", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = {
+	title: "Screens/Templates/Template manager",
+	parameters: { layout: "fullscreen", bleed: true },
+} satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

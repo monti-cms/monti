@@ -4,7 +4,7 @@ import { testSite } from "../../../../core/test/site";
 import type { AdminServer } from "../../host/server";
 import AdminLoginPage from "./page";
 
-const meta = { title: "Screens/Login", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Login", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

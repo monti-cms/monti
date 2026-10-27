@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
 import { EventsScreen } from "./events-screen";
 
-const meta = { title: "Screens/Event log", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Event log", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

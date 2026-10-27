@@ -12,6 +12,7 @@ const meta = {
 	title: "Patterns/Frame/Banner",
 	component: Banner,
 	args: { title: "한국어 원문이 바뀌었어요", meta: "10. 26 · 블록 2개" },
+	parameters: { bleed: true },
 } satisfies Meta<typeof Banner>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -42,7 +43,6 @@ export const Narrow: Story = {
 
 /** Directly under the editor's top bar, across the pane's width, with no gap: the bar's rule is the banner's top edge. */
 export const UnderHeader: Story = {
-	parameters: { layout: "fullscreen" },
 	render: (args) => (
 		<div>
 			<header className="flex h-monti-header flex-wrap items-center gap-monti-12 border-monti-default border-b pr-monti-12 pl-monti-24">

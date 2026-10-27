@@ -1,6 +1,7 @@
 import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react-vite";
 import { type ReactNode, useEffect } from "react";
+import { cn } from "../src/cn";
 import { DEFAULT_UI_LABELS, UiLabelsProvider } from "../src/labels";
 import { TooltipProvider } from "../src/tooltip";
 import { KO_UI_LABELS } from "./ko-labels";
@@ -8,15 +9,20 @@ import "./storybook.css";
 
 type Language = "ko" | "en";
 
-/** The page every story sits on: the admin root, the language of the words the components write, and the tooltip provider. */
-function Frame({ language, children }: { language: Language; children: ReactNode }) {
+/**
+ * The page every story sits on: the admin root, the language of the words the components write, and the tooltip provider. The root keeps 16px
+ * around a story, except for a story that draws a pane edge to edge (`parameters: { bleed: true }`): there the story touches the frame.
+ */
+function Frame({ language, bleed, children }: { language: Language; bleed: boolean; children: ReactNode }) {
 	useEffect(() => {
 		document.documentElement.lang = language;
 	}, [language]);
 	return (
 		<UiLabelsProvider labels={language === "ko" ? KO_UI_LABELS : DEFAULT_UI_LABELS}>
 			<TooltipProvider>
-				<div className="monti-admin min-h-screen bg-monti-page p-monti-16 text-monti-default">{children}</div>
+				<div className={cn("monti-admin min-h-screen bg-monti-page text-monti-default", !bleed && "p-monti-16")}>
+					{children}
+				</div>
 			</TooltipProvider>
 		</UiLabelsProvider>
 	);
@@ -65,8 +71,8 @@ const preview: Preview = {
 		},
 	},
 	decorators: [
-		(Story, { globals }) => (
-			<Frame language={globals.language === "en" ? "en" : "ko"}>
+		(Story, { globals, parameters }) => (
+			<Frame language={globals.language === "en" ? "en" : "ko"} bleed={parameters.bleed === true}>
 				<Story />
 			</Frame>
 		),

@@ -10,7 +10,7 @@ import { schemaReviewMessages } from "../schema/review.messages";
 import { SettingsScreen } from "./settings-screen";
 import type { SchemaTab } from "./tabs";
 
-const meta = { title: "Screens/Settings", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Settings", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

@@ -115,6 +115,7 @@ const meta = {
 	title: "Patterns/Frame/Sidebar",
 	component: Sidebar,
 	args: {},
+	parameters: { bleed: true },
 	render: () => (
 		<SidebarProvider>
 			<AdminSidebar />
