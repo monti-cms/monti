@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus, Search, Sparkles } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "./button";
+import { Spark } from "./spark";
 import { Stack } from "./stack";
 
 /**
@@ -51,7 +52,7 @@ export const WithIcon: Story = {
 				검색
 			</Button>
 			<Button size="sm">
-				<Sparkles aria-hidden />
+				<Spark aria-hidden />
 				적용
 			</Button>
 		</Stack>

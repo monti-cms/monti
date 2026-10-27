@@ -7,7 +7,7 @@
  */
 
 export { Affix } from "./affix";
-export { AiAction, Spark } from "./ai-action";
+export { AiAction } from "./ai-action";
 export { Alert, AlertDescription, AlertTitle, alertVariants } from "./alert";
 export {
 	AlertDialog,
@@ -218,6 +218,7 @@ export {
 	useSidebar,
 } from "./sidebar";
 export { Skeleton } from "./skeleton";
+export { Spark } from "./spark";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";

@@ -35,6 +35,7 @@ import {
 	LoadErrorAlert,
 	MasterDetail,
 	PageActions,
+	Spark,
 	Stack,
 	Switch,
 	Tabs,
@@ -52,19 +53,7 @@ import {
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	ChevronRight,
-	Eye,
-	EyeOff,
-	Plug,
-	Plus,
-	Quote,
-	RotateCcw,
-	Save,
-	Sparkles,
-	Trash2,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -516,7 +505,7 @@ export function AiManager() {
 			<Tabs fill value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
 				<TabsList variant="bar">
 					<TabsTrigger value="features">
-						<Sparkles aria-hidden />
+						<Spark aria-hidden />
 						{t("tab.features")}
 					</TabsTrigger>
 					<TabsTrigger value="connections">
@@ -998,7 +987,7 @@ function FeatureEditor({
 						</Text>
 					</Box>
 					<Button type="button" size="sm" variant="secondary" disabled={testDisabled} onClick={() => void runTest()}>
-						<Sparkles aria-hidden />
+						<Spark aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
 					</Button>
 				</Inline>

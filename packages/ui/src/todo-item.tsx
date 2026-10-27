@@ -1,8 +1,8 @@
 import { Check } from "lucide-react";
 import type * as React from "react";
-import { Spark } from "./ai-action";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
+import { Spark } from "./spark";
 
 /**
  * One thing to fix, in the list a status bar cell opens: a ring, the title, one short line under it, and the one action that goes to it at the
@@ -93,7 +93,7 @@ function TodoItem({
 						proposal ? "text-monti-proposal" : "text-monti-muted",
 					)}
 				>
-					{proposal && <Spark />}
+					{proposal && <Spark className="size-monti-icon-xs" />}
 					{actionLabel}
 				</button>
 			)}

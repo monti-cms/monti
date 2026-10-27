@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdminComponents } from "@monti-cms/admin";
-import { Sparkles } from "lucide-react";
+import { Spark } from "@monti-cms/admin/kit";
 import { useAiTranslateExtension } from "./ai-translate";
 import { useAiWriteExtension } from "./ai-write";
 
@@ -9,5 +9,5 @@ import { useAiWriteExtension } from "./ai-write";
 export const aiComponents: AdminComponents = {
 	editorExtensions: [useAiTranslateExtension, useAiWriteExtension],
 	// Icons picked by name by sidebar items (`nav`) and slash menu items.
-	icons: { sparkles: Sparkles },
+	icons: { sparkles: Spark },
 };

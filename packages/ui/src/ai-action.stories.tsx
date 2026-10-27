@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AiAction, Spark } from "./ai-action";
+import { AiAction } from "./ai-action";
 import { Stack } from "./stack";
 
 /** "✦ 채우기" on an empty field, "↻ 다시" once it has a value: mono 11 in the proposal blue, no box. Usually on a `FormFieldLabel`. */
@@ -15,7 +15,6 @@ export const States: Story = {
 			<AiAction />
 			<AiAction filled />
 			<AiAction disabled />
-			<Spark className="size-4 text-monti-proposal" />
 		</Stack>
 	),
 };

@@ -2,10 +2,10 @@
 
 import { MoreHorizontal } from "lucide-react";
 import type * as React from "react";
-import { Spark } from "./ai-action";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
 import { PageToolbar, type SelectAll, ToolbarDivider } from "./page-header";
+import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
 /**
@@ -50,7 +50,7 @@ function BulkBar({
 				<>
 					<ToolbarDivider />
 					<TextButton onClick={request.onClick} className="inline-flex items-center gap-monti-4 text-monti-proposal">
-						<Spark />
+						<Spark className="size-monti-icon-xs" />
 						{request.label}
 					</TextButton>
 				</>

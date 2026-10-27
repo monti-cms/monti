@@ -1,9 +1,9 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { Spark } from "./ai-action";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 
 const STEP =
@@ -47,7 +47,7 @@ function ProposalBubble({
 }) {
 	const who = (
 		<>
-			<Spark className="size-3.5" />
+			<Spark className="size-monti-icon-sm" />
 			{name}
 		</>
 	);

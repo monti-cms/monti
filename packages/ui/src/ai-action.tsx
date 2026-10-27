@@ -4,22 +4,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { RotateCw } from "lucide-react";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
-
-/** The AI mark: a four-point spark. */
-export function Spark({ className }: { className?: string }) {
-	return (
-		<svg
-			data-slot="spark"
-			aria-hidden="true"
-			focusable="false"
-			viewBox="0 0 16 16"
-			fill="currentColor"
-			className={cn("size-3 shrink-0", className)}
-		>
-			<path d="M8 1.5l1.7 4.8 4.8 1.7-4.8 1.7L8 14.5l-1.7-4.8L1.5 8l4.8-1.7z" />
-		</svg>
-	);
-}
+import { Spark } from "./spark";
 
 /**
  * The assistant's action on one field: "✦ Fill" while the field is empty, "↻ Again" once it has a value. It is a text button set exactly like
@@ -45,7 +30,11 @@ function AiAction({
 			)}
 			{...props}
 		>
-			{filled ? <RotateCw aria-hidden className="size-3 shrink-0" strokeWidth={1.8} /> : <Spark />}
+			{filled ? (
+				<RotateCw aria-hidden className="size-3 shrink-0" strokeWidth={1.8} />
+			) : (
+				<Spark className="size-monti-icon-xs" />
+			)}
 			{filled ? labels.aiAgain : labels.aiFill}
 		</ButtonPrimitive>
 	);

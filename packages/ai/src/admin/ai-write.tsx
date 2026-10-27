@@ -30,6 +30,7 @@ import {
 	Inline,
 	Ins,
 	isComposingKey,
+	Spark,
 	Stack,
 	Tabs,
 	TabsList,
@@ -38,7 +39,7 @@ import {
 	TextButton,
 } from "@monti-cms/admin/kit";
 import type { Editor, JSONContent } from "@tiptap/core";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
@@ -208,7 +209,7 @@ function WriteDialog({
 				<DialogHeader>
 					<DialogTitle>
 						<Inline gap={8}>
-							<Sparkles aria-hidden />
+							<Spark aria-hidden />
 							{action.label}
 						</Inline>
 					</DialogTitle>
@@ -239,7 +240,7 @@ function WriteDialog({
 						/>
 						<Inline justify="end">
 							<Button type="submit" size="sm" disabled={running}>
-								{state.status === "idle" ? <Sparkles aria-hidden /> : <RefreshCw aria-hidden />}
+								{state.status === "idle" ? <Spark aria-hidden /> : <RefreshCw aria-hidden />}
 								{running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")}
 							</Button>
 						</Inline>
@@ -399,7 +400,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			usable.selection.map((action) => ({
 				id: `ai:${action.key}`,
 				label: action.label,
-				icon: <Sparkles aria-hidden />,
+				icon: <Spark aria-hidden />,
 				run: (current) => {
 					const { from, to } = current.state.selection;
 					if (from === to || !format) return;
@@ -439,7 +440,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				return {
 					id: `ai:${action.key}`,
 					label: action.label,
-					icon: <Sparkles aria-hidden />,
+					icon: <Spark aria-hidden />,
 					isAvailable: (current, pos) => nodes.has(current.state.doc.nodeAt(pos)?.type.name ?? ""),
 					run: (current, pos) => {
 						const node = current.state.doc.nodeAt(pos);
@@ -474,7 +475,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });
 						}}
 					>
-						<Sparkles aria-hidden />
+						<Spark aria-hidden />
 						{firstInsert.label}
 					</TextButton>
 				)}

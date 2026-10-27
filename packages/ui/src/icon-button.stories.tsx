@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MoreHorizontal, PanelRight, Trash2, X } from "lucide-react";
-import { Spark } from "./ai-action";
 import { IconButton } from "./icon-button";
+import { Spark } from "./spark";
 import { Stack } from "./stack";
 
 /** Round, 32px: the header's more (⋯), properties and assistant, a panel's close. The label is the screen reader name and the tooltip. */
@@ -26,7 +26,7 @@ export const States: Story = {
 				<PanelRight aria-hidden />
 			</IconButton>
 			<IconButton label="어시스턴트 열기">
-				<Spark className="size-4" />
+				<Spark className="size-monti-icon-md" />
 			</IconButton>
 			<IconButton label="닫기">
 				<X aria-hidden />

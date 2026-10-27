@@ -24,6 +24,7 @@ import {
 	EmptyState,
 	IconButton,
 	SidePanelFrame,
+	Spark,
 	Spinner,
 	Stack,
 	Text,
@@ -32,7 +33,7 @@ import {
 } from "@monti-cms/admin/kit";
 import { AdminLink } from "@monti-cms/admin/router";
 import { useQuery } from "@tanstack/react-query";
-import { History, Sparkles, SquarePen } from "lucide-react";
+import { History, SquarePen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AiAgentModelView } from "../connection";
 import { MessageView } from "./agent-conversation";
@@ -278,6 +279,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 /** The assistant as the admin's side panel (`defineAdminPlugin({ panel })`). A function of the site for the label's language; it lives here, in a client module, so the browser can call it. */
 export const agentPanel = (site: Site): AdminPanel => ({
 	label: site.createTranslator(agentPanelMessages)("label"),
-	icon: Sparkles,
+	icon: Spark,
 	Component: AgentPanel,
 });

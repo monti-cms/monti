@@ -1,7 +1,7 @@
 import { Clock } from "lucide-react";
 import type { ComponentProps } from "react";
-import { Spark } from "./ai-action";
 import { cn } from "./cn";
+import { Spark } from "./spark";
 
 /**
  * One row of the assistant's empty panel: a request to start from. `request` is a saved one (a spark), `recent` one asked before (a clock). Pressing it
@@ -25,7 +25,7 @@ function Suggest({
 			{...props}
 		>
 			{kind === "request" ? (
-				<Spark className="size-3.5" />
+				<Spark className="size-monti-icon-sm" />
 			) : (
 				<Clock aria-hidden className="size-3.5" strokeWidth={1.5} />
 			)}

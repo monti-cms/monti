@@ -75,6 +75,7 @@ export {
 	SelectValue,
 	SidePanelFrame,
 	Skeleton,
+	Spark,
 	Spinner,
 	SplitButton,
 	Stack,

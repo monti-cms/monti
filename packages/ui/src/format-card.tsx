@@ -3,10 +3,10 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Link2 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { Spark } from "./ai-action";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
 import { MENU_CARD, MENU_ITEM, MENU_SEPARATOR, MenuShortcut } from "./menu-parts";
+import { Spark } from "./spark";
 
 /** How each inline format looks on its button: the letter itself, in the style it gives. */
 const FORMAT_GLYPHS = {
@@ -94,7 +94,7 @@ function FormatCard({
 				onClick={onRequest}
 			>
 				<span className="flex shrink-0 text-monti-proposal">
-					<Spark className="size-4" />
+					<Spark className="size-monti-icon-md" />
 				</span>
 				{requestLabel}
 				{requestShortcut && <MenuShortcut>{requestShortcut}</MenuShortcut>}

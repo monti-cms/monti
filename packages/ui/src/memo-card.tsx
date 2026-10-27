@@ -1,11 +1,11 @@
 "use client";
 
 import type { ComponentProps, KeyboardEvent, ReactElement, ReactNode } from "react";
-import { Spark } from "./ai-action";
 import { Button } from "./button";
 import { cn } from "./cn";
 import { MENU_CARD } from "./menu-parts";
 import { SendButton } from "./send-button";
+import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
@@ -79,7 +79,7 @@ function MemoCard({
 				</WithShortcut>
 				<WithShortcut shortcut={acceptShortcut}>
 					<Button size="sm" onClick={onAccept}>
-						{acceptSpark && <Spark />}
+						{acceptSpark && <Spark className="size-monti-icon-xs" />}
 						{acceptLabel}
 					</Button>
 				</WithShortcut>
@@ -131,7 +131,7 @@ function MemoMessage({
 						ai ? "text-monti-proposal" : "text-monti-muted",
 					)}
 				>
-					{ai && <Spark />}
+					{ai && <Spark className="size-monti-icon-xs" />}
 					{author}
 				</b>
 				{time}

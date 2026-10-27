@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Sparkles, SquarePen } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { Button } from "./button";
 import { ChatInput } from "./chat-input";
 import { ChatMessage } from "./chat-message";
 import { IconButton } from "./icon-button";
 import { SidePanelFrame } from "./side-panel-frame";
+import { Spark } from "./spark";
 import { Text } from "./text";
 import { ToolCallLine } from "./tool-call-line";
 
@@ -69,7 +70,7 @@ export const EmptyWithFooter: Story = {
 	render: (args) => (
 		<SidePanelFrame {...args} onClose={() => undefined} footer={input}>
 			<Text tone="muted">
-				<Sparkles aria-hidden /> Ask about your site
+				<Spark aria-hidden /> Ask about your site
 			</Text>
 		</SidePanelFrame>
 	),

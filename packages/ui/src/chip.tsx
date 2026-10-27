@@ -2,10 +2,10 @@
 
 import { X } from "lucide-react";
 import type * as React from "react";
-import { Spark } from "./ai-action";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
 import { ProposalNote } from "./proposal-cue";
+import { Spark } from "./spark";
 
 /** The pill of a chip, for parts that draw their own chip (a combobox's selected values). */
 export const CHIP =
@@ -42,7 +42,7 @@ function Chip({
 			className={cn(CHIP, proposal && "bg-monti-proposal-muted text-monti-proposal", className)}
 			{...props}
 		>
-			{proposal && <Spark />}
+			{proposal && <Spark className="size-monti-icon-xs" />}
 			<ProposalNote proposal={proposal} />
 			{children}
 			{onRemove && (
