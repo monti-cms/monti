@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Marker } from "./marker";
 import { SheetList, TodoDone, TodoItem } from "./sheet-list";
 
 /**
@@ -56,6 +57,39 @@ export const WarningsOnly: Story = {
 		<SheetList {...args}>
 			<TodoItem title="번역이 일부만 채워졌어요" detail="영어 · 문단 3개" actionLabel="열기" onAction={() => {}} />
 			<TodoItem title="링크 하나가 끊겼어요" detail="/posts/old-title" actionLabel="이동" onAction={() => {}} />
+		</SheetList>
+	),
+};
+
+/** Blocks of a translation whose source changed: the ring is a marker (changed, new, removed), and the row whose place is open is shaded. */
+export const SourceChanges: Story = {
+	args: { label: "원문에서 바뀐 곳", count: 3 },
+	render: (args) => (
+		<SheetList {...args}>
+			<TodoItem
+				marker={<Marker tone="changed">바뀜</Marker>}
+				current
+				title="문단 2"
+				detail="접어 두고 필요할 때 펼친다."
+				actionLabel="다시 번역"
+				proposal
+				onAction={() => {}}
+			/>
+			<TodoItem
+				marker={<Marker tone="changed">새로</Marker>}
+				title="문단 5"
+				detail="원문에 새로 생긴 블록"
+				actionLabel="번역"
+				proposal
+				onAction={() => {}}
+			/>
+			<TodoItem
+				marker={<Marker tone="changed">지워짐</Marker>}
+				title="문단 7"
+				detail="원문에서 지워진 블록"
+				actionLabel="지우기"
+				onAction={() => {}}
+			/>
 		</SheetList>
 	),
 };

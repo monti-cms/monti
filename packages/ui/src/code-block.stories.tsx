@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CodeBlock, DiffMark, DiffView } from "./code-block";
+import { CodeBlock, DiffMark } from "./code-block";
 import { Stack } from "./stack";
 import { Text } from "./text";
 
@@ -59,37 +59,6 @@ export const Size: Story = {
 						size {size}
 					</Text>
 					<CodeBlock size={size}>{SAMPLE()}</CodeBlock>
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-const DIFF_LINES = [
-	{ type: "same", text: "---" },
-	{ type: "remove", text: "title: 여름 여행" },
-	{ type: "add", text: "title: 여름 여행 기록" },
-	{ type: "same", text: "status: 초안" },
-	{ type: "add", text: "tags: [여행, 일상]" },
-	{ type: "same", text: "---" },
-	{ type: "remove", text: "오래된 첫 문단입니다." },
-	{ type: "add", text: "새로 고쳐 쓴 첫 문단입니다." },
-] as const;
-
-/** Every line type: same, remove, add. */
-export const Diff: Story = {
-	render: () => <DiffView lines={DIFF_LINES} />,
-};
-
-export const DiffLineTypes: Story = {
-	render: () => (
-		<Stack gap={12}>
-			{(["same", "remove", "add"] as const).map((type) => (
-				<Stack key={type} gap={4}>
-					<Text variant="label" tone="muted">
-						type {type}
-					</Text>
-					<DiffView lines={[{ type, text: "여름 여행 기록" }]} />
 				</Stack>
 			))}
 		</Stack>

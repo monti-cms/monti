@@ -28,41 +28,6 @@ function CodeBlock({
 	);
 }
 
-/** What changed between two texts, line by line: removed lines in red with "-", added lines in green with "+", the rest as they are. */
-function DiffView({
-	lines,
-	className,
-}: {
-	lines: readonly { type: "same" | "add" | "remove"; text: string }[];
-	className?: string;
-}) {
-	return (
-		<pre
-			data-slot="diff-view"
-			className={cn(
-				"max-h-96 overflow-auto rounded-monti-md border border-monti-muted font-mono text-monti-caption",
-				className,
-			)}
-		>
-			{lines.map((line, index) => (
-				<div
-					key={index}
-					className={cn(
-						"flex gap-monti-8 whitespace-pre-wrap break-words px-monti-8",
-						line.type === "add" && "bg-monti-success-muted text-monti-success",
-						line.type === "remove" && "bg-monti-danger-muted text-monti-danger",
-					)}
-				>
-					<span aria-hidden className="w-2 shrink-0 select-none text-monti-subtle">
-						{line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
-					</span>
-					<span className="min-w-0">{line.text}</span>
-				</div>
-			))}
-		</pre>
-	);
-}
-
 /** A run of text marked as removed or added, inside a sentence (a suggested rewrite). */
 function DiffMark({ type, children }: { type: "add" | "remove"; children: React.ReactNode }) {
 	return type === "add" ? (
@@ -72,4 +37,4 @@ function DiffMark({ type, children }: { type: "add" | "remove"; children: React.
 	);
 }
 
-export { CodeBlock, DiffMark, DiffView };
+export { CodeBlock, DiffMark };

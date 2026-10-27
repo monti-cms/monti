@@ -186,8 +186,8 @@ describe("Git sync screen: conflicts tab", () => {
 		const section = await screen.findByRole("region", { name: "Hello" });
 		expect(within(section).getByText(t("conflicts.reason.both-changed"))).toBeTruthy();
 		expect(within(section).getByText("content/memo/hello.en.mdx")).toBeTruthy();
-		expect(within(section).getByText("title: Server title").parentElement?.textContent).toBe("-title: Server title");
-		expect(within(section).getByText("title: Git title").parentElement?.textContent).toBe("+title: Git title");
+		expect(within(section).getByText("title: Server title").textContent).toBe("- title: Server title");
+		expect(within(section).getByText("title: Git title").textContent).toBe("+ title: Git title");
 	});
 
 	it('"Use git version" asks first, then sends the decision with the file the person looked at', async () => {
@@ -312,15 +312,15 @@ describe("ConflictDiff", () => {
 	it("marks a removed server version and says when the two are the same", () => {
 		const { rerender } = render(
 			<SiteProvider site={site}>
-				<ConflictDiff serverText={null} gitText={"a\nb"} />
+				<ConflictDiff path="posts/a.mdx" serverText={null} gitText={"a\nb"} />
 			</SiteProvider>,
 		);
 		expect(screen.getByText(new RegExp(t("conflicts.serverRemoved").replace(/[()]/g, "\\$&")))).toBeTruthy();
-		expect(screen.getByText("a").parentElement?.textContent).toBe("+a");
-		expect(screen.getByText("b").parentElement?.textContent).toBe("+b");
+		expect(screen.getByText("a").textContent).toBe("+ a");
+		expect(screen.getByText("b").textContent).toBe("+ b");
 		rerender(
 			<SiteProvider site={site}>
-				<ConflictDiff serverText={"a\nb"} gitText={"a\nb"} />
+				<ConflictDiff path="posts/a.mdx" serverText={"a\nb"} gitText={"a\nb"} />
 			</SiteProvider>,
 		);
 		expect(screen.getByText(t("conflicts.same"))).toBeTruthy();

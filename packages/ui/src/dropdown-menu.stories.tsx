@@ -157,6 +157,7 @@ export const PickOne: Story = { render: () => <RadioDemo /> };
 
 function SubmenuDemo() {
 	const [by, setBy] = useState("modified");
+	const [direction, setDirection] = useState("newest");
 	return (
 		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
@@ -171,6 +172,11 @@ function SubmenuDemo() {
 							<DropdownMenuRadioItem value="published">발행한 날</DropdownMenuRadioItem>
 							<DropdownMenuRadioItem value="created">만든 날</DropdownMenuRadioItem>
 							<DropdownMenuRadioItem value="title">제목</DropdownMenuRadioItem>
+						</DropdownMenuRadioGroup>
+						<DropdownMenuSeparator />
+						<DropdownMenuRadioGroup value={direction} onValueChange={setDirection}>
+							<DropdownMenuRadioItem value="newest">최신순</DropdownMenuRadioItem>
+							<DropdownMenuRadioItem value="oldest">오래된순</DropdownMenuRadioItem>
 						</DropdownMenuRadioGroup>
 					</DropdownMenuSubContent>
 				</DropdownMenuSub>

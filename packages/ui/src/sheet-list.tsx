@@ -64,13 +64,15 @@ function SheetList({
 
 /**
  * One thing to fix: a ring, the title, one short line under it, and the one action that goes to it at the right. `blocking` draws the ring in
- * red for what stops publishing; the others are warning-colored. `proposal` puts a spark in front of the action and makes it blue: the
- * assistant does it.
+ * red for what stops publishing; the others are warning-colored. `marker` replaces the ring with a `Marker` (a translated block whose source changed).
+ * `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and makes it blue: the assistant does it.
  */
 function TodoItem({
 	title,
 	detail,
 	blocking = false,
+	marker,
+	current = false,
 	actionLabel,
 	onAction,
 	proposal = false,
@@ -82,6 +84,9 @@ function TodoItem({
 	detail?: React.ReactNode;
 	/** Stops publishing. */
 	blocking?: boolean;
+	/** A `Marker` in front of the title, instead of the ring. */
+	marker?: React.ReactNode;
+	current?: boolean;
 	actionLabel?: string;
 	onAction?: () => void;
 	/** The action is the assistant's. */
@@ -90,21 +95,28 @@ function TodoItem({
 	return (
 		<div
 			data-slot="todo-item"
+			data-current={current || undefined}
 			className={cn(
-				"flex items-center gap-[10px] rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default",
+				"flex items-center gap-[10px] rounded-monti-md px-[9px] py-monti-8 text-monti-body text-monti-default data-current:bg-monti-selected",
 				className,
 			)}
 			{...props}
 		>
-			<span
-				aria-hidden
-				data-slot="todo-mark"
-				data-blocking={blocking || undefined}
-				className={cn(
-					"size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-warning",
-					blocking && "border-monti-danger",
-				)}
-			/>
+			{marker ? (
+				<span data-slot="todo-mark" className="flex min-w-11 shrink-0 justify-center">
+					{marker}
+				</span>
+			) : (
+				<span
+					aria-hidden
+					data-slot="todo-mark"
+					data-blocking={blocking || undefined}
+					className={cn(
+						"size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-warning",
+						blocking && "border-monti-danger",
+					)}
+				/>
+			)}
 			<span className="flex min-w-0 grow flex-col gap-monti-2">
 				<span>{title}</span>
 				{detail && <span className="truncate text-monti-caption text-monti-subtle">{detail}</span>}

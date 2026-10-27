@@ -24,18 +24,21 @@ export {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 export { Badge, badgeVariants } from "./badge";
+export { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
+export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
 export { Caret } from "./caret";
+export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
 export { Chip } from "./chip";
 export { cn } from "./cn";
-export { CodeBlock, DiffMark, DiffView } from "./code-block";
+export { CodeBlock, DiffMark } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 export {
 	Combobox,
@@ -120,8 +123,10 @@ export {
 	FormFieldSet,
 	FormFieldTitle,
 } from "./field";
+export { FieldRow, FieldTree } from "./field-tree";
 export { FilterButton } from "./filter-button";
 export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
+export { FormatButton, FormatCard, type FormatMark } from "./format-card";
 export { Grid } from "./grid";
 export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
@@ -132,6 +137,7 @@ export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from 
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { MapRow } from "./map-row";
+export { Marker, Untranslated } from "./marker";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export { Option } from "./option";
 export {
@@ -143,12 +149,14 @@ export {
 	PaginationNext,
 	PaginationPrevious,
 } from "./pagination";
+export { Patch, type PatchLine } from "./patch";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export { SearchBox, type SearchTarget } from "./search-box";
+export { Section } from "./section";
 export { Segmented, type SegmentedOption } from "./segmented";
 export {
 	Select,

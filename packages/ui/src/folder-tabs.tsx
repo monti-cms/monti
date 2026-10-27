@@ -78,13 +78,13 @@ function FolderTabsAdd({ className, ...props }: ButtonPrimitive.Props) {
 	);
 }
 
-/** The box under the tabs: the fields of the picked tab. Its top-left corner is square, where the picked tab joins it. */
+/** The box under the tabs: the fields of the picked tab (a `FieldTree` without its outer rules, the box has its own). Its top-left corner is square, where the picked tab joins it. */
 function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 	return (
 		<TabsPrimitive.Panel
 			data-slot="folder-tabs-body"
 			className={cn(
-				"overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none",
+				"overflow-hidden rounded-monti-lg rounded-tl-none border border-monti-default outline-none [&>ul>li:first-child]:border-t-0 [&>ul>li:last-child]:border-b-0",
 				className,
 			)}
 			{...props}

@@ -14,13 +14,13 @@ import {
 	commonMessages,
 	DescriptionItem,
 	DescriptionList,
-	DiffView,
 	EmptyState,
 	Heading,
 	Inline,
 	Input,
 	Label,
 	LoadErrorAlert,
+	Patch,
 	Skeleton,
 	Stack,
 	Tabs,
@@ -340,7 +340,15 @@ function SyncTab({
 // Conflicts tab
 
 /** The server text against the git text as a line diff: `-` lines are only on the server, `+` lines only in git. */
-export function ConflictDiff({ serverText, gitText }: { serverText: string | null; gitText: string }) {
+export function ConflictDiff({
+	path,
+	serverText,
+	gitText,
+}: {
+	path: string;
+	serverText: string | null;
+	gitText: string;
+}) {
 	const t = useTranslator(gitSyncMessages);
 	const lines = useMemo(() => lineDiff(serverText ?? "", gitText), [serverText, gitText]);
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
@@ -360,7 +368,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 					{t("conflicts.same")}
 				</Text>
 			) : (
-				<DiffView lines={lines} />
+				<Patch file={path} lines={lines} />
 			)}
 			<Text as="p" variant="caption" tone="muted">
 				{t("conflicts.legend")}
@@ -427,16 +435,13 @@ function ConflictsTab({
 							{conflict.label}
 						</Heading>
 						<Text as="p" variant="caption" tone="muted">
-							<Text mono variant="caption">
-								{conflict.path}
-							</Text>{" "}
-							· {conflict.repo}
+							{conflict.repo}
 						</Text>
 						<Text as="p" variant="caption">
 							{t(`conflicts.reason.${conflict.reason}`)}
 						</Text>
 					</Stack>
-					<ConflictDiff serverText={conflict.serverText} gitText={conflict.gitText} />
+					<ConflictDiff path={conflict.path} serverText={conflict.serverText} gitText={conflict.gitText} />
 					<Inline gap={8} wrap>
 						<Button
 							type="button"
