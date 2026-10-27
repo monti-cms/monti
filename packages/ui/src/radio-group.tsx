@@ -27,7 +27,8 @@ function RadioItem({
 }: {
 	value: string;
 	label: React.ReactNode;
-	hint?: React.ReactNode;
+	/** A short note in mono at the end of the row ("148 posts"). Text only, never a control: a control or a longer note goes under the group, not in the row. */
+	hint?: string;
 	disabled?: boolean;
 	className?: string;
 }) {

@@ -186,11 +186,13 @@ function KeyRows({
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
 		return (
-			<EmptyState
-				title={t("empty.title")}
-				description={t("empty.description")}
-				action={{ label: t("add"), onClick: onAdd, disabled: !list.secretsAvailable }}
-			/>
+			<Box paddingX={32}>
+				<EmptyState
+					title={t("empty.title")}
+					description={t("empty.description")}
+					action={{ label: t("add"), onClick: onAdd, disabled: !list.secretsAvailable }}
+				/>
+			</Box>
 		);
 	}
 	return (

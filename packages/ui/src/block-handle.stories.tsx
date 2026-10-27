@@ -19,7 +19,7 @@ import { Stack } from "./stack";
 import { Text } from "./text";
 
 /**
- * The + and the grip in the left margin of an editor block. The grip opens the block menu and drags the block; while the menu is open the grip is
+ * The + and the grip in the left margin of an editor block. The + adds an empty block below this one and opens the block picker (the same list as typing "/"). The grip opens the block menu and drags the block; while the menu is open the grip is
  * pressed and the block has the block background.
  */
 const meta = {

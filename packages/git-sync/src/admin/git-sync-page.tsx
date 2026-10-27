@@ -172,7 +172,11 @@ function SyncTab({
 	}
 	if (!status) return null;
 	if (status.targets.length === 0) {
-		return <EmptyState title={t("sync.empty")} />;
+		return (
+			<Box paddingX={32}>
+				<EmptyState title={t("sync.empty")} />
+			</Box>
+		);
 	}
 
 	return (
@@ -411,7 +415,11 @@ function ConflictsTab({
 		);
 	}
 	if (!items || items.length === 0) {
-		return <EmptyState title={t("conflicts.empty")} />;
+		return (
+			<Box paddingX={32}>
+				<EmptyState title={t("conflicts.empty")} />
+			</Box>
+		);
 	}
 	return (
 		<Stack gap={0}>

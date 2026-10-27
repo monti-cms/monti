@@ -293,7 +293,9 @@ export function TemplateManager() {
 						onDirtyChange={setDirty}
 					/>
 				) : (
-					<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
+					<Box paddingX={24}>
+						<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
+					</Box>
 				)}
 			</MasterDetail>
 			{dialog}

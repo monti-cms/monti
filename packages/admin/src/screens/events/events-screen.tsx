@@ -169,16 +169,19 @@ export function EventsScreen() {
 						</Text>
 					</Box>
 				) : items.length === 0 ? (
-					!error &&
-					(filter === "all" ? (
-						<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
-					) : (
-						<EmptyState
-							title={t("list.emptyNoMatch")}
-							description={t("list.emptyNoMatchHint")}
-							action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
-						/>
-					))
+					!error && (
+						<Box paddingX={32}>
+							{filter === "all" ? (
+								<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
+							) : (
+								<EmptyState
+									title={t("list.emptyNoMatch")}
+									description={t("list.emptyNoMatchHint")}
+									action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
+								/>
+							)}
+						</Box>
+					)
 				) : (
 					<Table aria-label={t("list.label")}>
 						<TableHeader>

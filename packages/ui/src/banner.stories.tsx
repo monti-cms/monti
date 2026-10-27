@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ChevronLeft } from "lucide-react";
 import { Banner } from "./banner";
-import { Button } from "./button";
-import { PageHeader } from "./page-header";
+import { Text } from "./text";
 import { TextButton } from "./text-button";
 
 /**
@@ -40,16 +40,21 @@ export const Narrow: Story = {
 	),
 };
 
-/** Under a page header, across the pane's width. */
+/** Directly under the editor's top bar, across the pane's width, with no gap: the bar's rule is the banner's top edge. */
 export const UnderHeader: Story = {
+	parameters: { layout: "fullscreen" },
 	render: (args) => (
 		<div>
-			<div className="px-monti-24 pt-monti-24">
-				<PageHeader title="여름 여행 기록" meta="/posts/summer-trip">
-					<Button>발행하기</Button>
-				</PageHeader>
-			</div>
-			<Banner {...args} className="mt-monti-16">
+			<header className="flex h-monti-header flex-wrap items-center gap-monti-12 border-monti-default border-b pr-monti-12 pl-monti-24">
+				<TextButton variant="quiet">
+					<ChevronLeft aria-hidden />
+					게시글
+				</TextButton>
+				<Text variant="meta" tone="faint">
+					/posts/summer-trip
+				</Text>
+			</header>
+			<Banner {...args}>
 				<TextButton variant="underline">비교</TextButton>
 				<TextButton>확인</TextButton>
 			</Banner>

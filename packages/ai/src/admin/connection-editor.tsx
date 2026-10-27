@@ -188,10 +188,12 @@ export function ConnectionManager({
 					/>
 				) : (
 					settings && (
-						<EmptyState
-							title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
-							action={{ label: t("action.add"), onClick: () => onOpen("new") }}
-						/>
+						<Box paddingX={24}>
+							<EmptyState
+								title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
+								action={{ label: t("action.add"), onClick: () => onOpen("new") }}
+							/>
+						</Box>
 					)
 				)}
 			</MasterDetail>

@@ -682,10 +682,12 @@ export function AiManager() {
 							/>
 						) : (
 							featuresQuery.data && (
-								<EmptyState
-									title={t("empty.pick")}
-									action={{ label: t("add.feature"), onClick: () => void startNew() }}
-								/>
+								<Box paddingX={24}>
+									<EmptyState
+										title={t("empty.pick")}
+										action={{ label: t("add.feature"), onClick: () => void startNew() }}
+									/>
+								</Box>
 							)
 						)}
 					</MasterDetail>

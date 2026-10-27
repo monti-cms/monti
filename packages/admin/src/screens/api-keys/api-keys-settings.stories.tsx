@@ -68,6 +68,24 @@ export const AssignSlotDialog: Story = {
 		await within(document.body).findByRole("dialog");
 	},
 };
+/** The new-key option picked: the key input and its note sit under the radio group, not in the row. */
+export const AssignSlotNewKey: Story = {
+	render: screen(list({ items: keys, slots: [emptySlot] })),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "키 넣기" }));
+		const dialog = within(await within(document.body).findByRole("dialog"));
+		await userEvent.click(await dialog.findByRole("radio", { name: "새 키 넣기" }));
+		await dialog.findByLabelText("새 API 키");
+	},
+};
+/** No saved key yet: the first option is disabled, and the note says why, under the group. */
+export const AssignSlotNoSavedKeys: Story = {
+	render: screen(list({ items: [], slots: [emptySlot] })),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "키 넣기" }));
+		await within(document.body).findByRole("dialog");
+	},
+};
 export const SaveFailed: Story = {
 	render: screen(
 		list({ items: keys }, () =>

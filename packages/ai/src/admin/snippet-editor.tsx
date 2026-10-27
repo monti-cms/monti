@@ -126,7 +126,9 @@ export function SnippetManager({
 					/>
 				) : (
 					view && (
-						<EmptyState title={t("empty.title")} action={{ label: t("action.add"), onClick: () => onOpen("new") }} />
+						<Box paddingX={24}>
+							<EmptyState title={t("empty.title")} action={{ label: t("action.add"), onClick: () => onOpen("new") }} />
+						</Box>
 					)
 				)}
 			</MasterDetail>

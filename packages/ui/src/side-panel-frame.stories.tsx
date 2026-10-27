@@ -6,7 +6,8 @@ import { ChatMessage } from "./chat-message";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { IconButton } from "./icon-button";
 import { SidePanelFrame } from "./side-panel-frame";
-import { Spark } from "./spark";
+import { Stack } from "./stack";
+import { Suggest } from "./suggest";
 import { Text } from "./text";
 import { ToolCallLine } from "./tool-call-line";
 
@@ -94,13 +95,25 @@ export const Details: Story = {
 	),
 };
 
-/** A body that is empty, and a foot that stays at the bottom. */
-export const EmptyWithFooter: Story = {
+/**
+ * The assistant's empty panel: no text of its own. The body holds requests to start from, pushed down to just above the input: the group
+ * "이 글에서" (saved requests) and "최근" (asked before). The frame's body padding is taken back so the groups sit 12px from the panel's edges and 4px above the input.
+ */
+export const Empty: Story = {
 	render: (args) => (
 		<SidePanelFrame {...args} onClose={() => undefined} footer={input}>
-			<Text tone="muted">
-				<Spark aria-hidden /> 사이트에 대해 물어보세요
-			</Text>
+			<Stack gap={2} className="-mx-monti-24 mt-auto -mb-monti-20 px-monti-12 pt-monti-12 pb-monti-4">
+				<Text variant="micro" tone="subtle" className="px-monti-12 pb-monti-6">
+					이 글에서
+				</Text>
+				<Suggest kind="request">요약 써 줘</Suggest>
+				<Suggest kind="request">영어로 옮겨 줘</Suggest>
+				<Text variant="micro" tone="subtle" className="px-monti-12 pt-monti-12 pb-monti-6">
+					최근
+				</Text>
+				<Suggest kind="recent">첫 문단을 더 짧게 다듬어 줘</Suggest>
+				<Suggest kind="recent">작년 글은 2024 폴더로 옮겨 줘</Suggest>
+			</Stack>
 		</SidePanelFrame>
 	),
 };
