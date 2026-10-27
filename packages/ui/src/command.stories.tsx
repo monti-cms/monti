@@ -40,13 +40,13 @@ export const Playground: Story = {
 					<CommandItem>
 						<FilePlus aria-hidden />새 글 쓰기<MenuShortcut>⌘N</MenuShortcut>
 					</CommandItem>
-					<CommandItem>
-						<Trash2 aria-hidden />
-						휴지통 비우기
-					</CommandItem>
 					<CommandItem disabled>
 						<Trash2 aria-hidden />
 						휴지통으로<MenuShortcut>쓰는 중</MenuShortcut>
+					</CommandItem>
+					<CommandItem variant="danger">
+						<Trash2 aria-hidden />
+						휴지통 비우기
 					</CommandItem>
 				</CommandGroup>
 				<CommandSeparator />
@@ -73,10 +73,10 @@ export const NothingFound: Story = {
 	),
 };
 
-/** Pick one: the current value is a ✓ at the end; the row the keyboard is on has the background. */
+/** Pick one: the current value is a ✓ at the end, and no row has the background until the pointer or the keyboard is on one. */
 export const PickOne: Story = {
 	render: () => (
-		<Command value="공개">
+		<Command value="-">
 			<CommandList>
 				<CommandItem value="공개" checked>
 					공개

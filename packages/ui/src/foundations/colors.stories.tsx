@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { cn } from "../cn";
 import { Stack } from "../stack";
 import { Text } from "../text";
 import { classOf, Group, Page, px, Spec, tokens } from "./shared";
@@ -9,6 +10,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const colors = tokens.color.tokens;
+/** The surface a text role is read on: `fg-on-emphasis` is the text of the black pill, `fg-proposal` of the blue pencil's wash; the rest sit on the page. */
+const GROUND: Record<string, string> = {
+	"fg-on-emphasis": "bg-monti-emphasis",
+	"fg-proposal": "bg-monti-proposal-muted",
+};
 /** Roles by property: `bg-tool` is the class `bg-monti-tool`. */
 const roles = (prefix: string) => colors.filter(({ name }) => name.startsWith(`${prefix}-`));
 
@@ -45,7 +51,10 @@ export const Roles: Story = {
 			<Group title="Text (text-monti-*)">
 				{roles("fg").map(({ name, usage }) => (
 					<Spec key={name} name={classOf(name)} usage={usage}>
-						<Stack gap={0} className="h-12 justify-center rounded-monti-md bg-monti-page">
+						<Stack
+							gap={0}
+							className={cn("h-12 justify-center rounded-monti-md px-monti-12", GROUND[name] ?? "bg-monti-page")}
+						>
 							<Text variant="title" style={{ color: px(name) }}>
 								가나다 Aa
 							</Text>

@@ -16,7 +16,9 @@ export const Scale: Story = {
 					<Text variant="label" mono className="w-24 shrink-0">
 						monti-{name.replace("space-", "")}
 					</Text>
-					<div className="h-4 rounded-monti-sm bg-monti-emphasis" style={{ width: px(name) }} />
+					<div className="w-monti-48 shrink-0">
+						<div className="h-4 rounded-monti-sm bg-monti-emphasis" style={{ width: px(name) }} />
+					</div>
 					<Text variant="caption" tone="muted">
 						{value} · {usage}
 					</Text>

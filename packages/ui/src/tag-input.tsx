@@ -25,7 +25,7 @@ function TagInput({
 	/** The accessible name of a chip's remove button. */
 	removeLabel: (item: string) => string;
 	disabled?: boolean;
-	/** Values are code (keys, identifiers). */
+	/** Values are code (keys, identifiers): the chips and the entry are fixed-width. */
 	mono?: boolean;
 	className?: string;
 	"aria-label"?: string;
@@ -54,14 +54,19 @@ function TagInput({
 		<div
 			data-slot="tag-input"
 			className={cn(
-				"flex min-h-monti-control flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-4 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+				"flex flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 				mono && "font-mono",
-				disabled && "cursor-not-allowed opacity-50",
+				disabled && "cursor-not-allowed opacity-45",
 				className,
 			)}
 		>
 			{items.map((item, index) => (
-				<Chip key={item} onRemove={disabled ? undefined : () => remove(index)} removeLabel={removeLabel(item)}>
+				<Chip
+					key={item}
+					className={mono ? "font-mono" : undefined}
+					onRemove={disabled ? undefined : () => remove(index)}
+					removeLabel={removeLabel(item)}
+				>
 					<span className="max-w-40 truncate">{item}</span>
 				</Chip>
 			))}
@@ -76,7 +81,7 @@ function TagInput({
 					onBlur={() => {
 						if (input.trim()) add(input);
 					}}
-					className="h-6 min-w-28 flex-1 bg-transparent px-monti-2 outline-none placeholder:text-monti-faint"
+					className="h-7 min-w-8 flex-1 bg-transparent px-monti-2 outline-none placeholder:text-monti-faint"
 				/>
 			)}
 		</div>

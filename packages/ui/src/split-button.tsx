@@ -1,22 +1,22 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
 import { Spinner } from "./spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
-// The focus ring is drawn inside each half, in the pill's own text color: an outer ring would be cut by the pill's `overflow-hidden`, and a
-// faint one is lost on the ink.
+// The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
+// and the half that has the focus is marked by a lighter fill, not by a line of its own.
 const HALF =
-	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none focus-visible:ring-2 focus-visible:ring-monti-on-emphasis focus-visible:ring-inset disabled:pointer-events-none";
+	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] disabled:pointer-events-none";
 
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
  * the same action; a first publish has no menu and is a plain primary `Button`. `menuLabel` names the caret half for screen readers and its
- * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves.
+ * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves; a loading pill keeps its fill.
  */
 function SplitButton({
 	children,
@@ -44,13 +44,16 @@ function SplitButton({
 	align?: "start" | "center" | "end";
 }) {
 	const inert = disabled || loading;
+	// The menu hangs under the whole pill, not under the caret half: its edge lines up with the pill's edge.
+	const pill = useRef<HTMLDivElement>(null);
 	return (
 		<div
+			ref={pill}
 			role="group"
 			data-slot="split-button"
 			className={cn(
-				"inline-flex h-monti-control shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis",
-				inert && "opacity-45",
+				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-3 has-focus-visible:ring-monti-contrast/20",
+				disabled && "opacity-45",
 			)}
 		>
 			<ButtonPrimitive
@@ -86,7 +89,9 @@ function SplitButton({
 					</TooltipTrigger>
 					<TooltipContent side="bottom">{menuLabel}</TooltipContent>
 				</Tooltip>
-				<DropdownMenuContent align={align}>{menu}</DropdownMenuContent>
+				<DropdownMenuContent align={align} anchor={pill}>
+					{menu}
+				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
 	);

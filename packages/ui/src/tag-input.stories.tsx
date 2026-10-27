@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { Stack } from "./stack";
+import { StoryCaption } from "./story-caption";
 import { TagInput } from "./tag-input";
-import { Text } from "./text";
 
 const meta = {
 	title: "Controls/Field/TagInput",
@@ -32,9 +32,7 @@ export const Playground: Story = {};
 function Static({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<Stack gap={4}>
-			<Text variant="label" tone="muted">
-				{label}
-			</Text>
+			<StoryCaption>{label}</StoryCaption>
 			<div className="max-w-sm">{children}</div>
 		</Stack>
 	);

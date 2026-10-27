@@ -6,7 +6,8 @@ import { useProposalDescription } from "./proposal-cue";
 
 /**
  * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
- * is drawn, so the state never rests on color alone. `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue.
+ * is drawn, so the state never rests on color alone. The root is a `span`, not a `button`, so a disabled one is dimmed through `data-disabled`.
+ * An invalid one keeps a red ring on or off. `proposal` marks a choice the assistant made and nobody has touched: the same mark in blue.
  */
 function Checkbox({
 	className,
@@ -22,7 +23,7 @@ function Checkbox({
 			data-proposal={proposal || undefined}
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent outline-none transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-checked:data-proposal:bg-(--monti-fg-proposal) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis",
+				"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent outline-none transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-monti-contrast/20 aria-invalid:border-monti-danger aria-invalid:ring-2 aria-invalid:ring-monti-danger data-checked:data-proposal:bg-(--monti-fg-proposal) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-disabled:cursor-not-allowed data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis data-disabled:opacity-45",
 				className,
 			)}
 			{...props}

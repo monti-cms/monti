@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ComponentProps } from "react";
+import { tokens } from "./foundations/shared";
 import { Stack } from "./stack";
 import { Heading, Text } from "./text";
 
@@ -9,11 +11,15 @@ const meta = {
 } satisfies Meta<typeof Text>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+type Role = NonNullable<ComponentProps<typeof Text>["variant"]>;
 
 export const Playground: Story = {};
 
-const VARIANTS = ["micro", "caption", "label", "body", "reading", "title", "heading", "display"] as const;
-const TONES = ["default", "muted", "subtle", "danger", "warning", "success", "inherit"] as const;
+// Every role of the design system, from tokens.json, so a role added there shows up here.
+const VARIANTS = tokens.type.groups.flatMap((group) =>
+	group.styles.map((style) => style.name.replace("text-", "") as Role),
+);
+const TONES = ["default", "muted", "subtle", "faint", "proposal", "danger", "warning", "success", "inherit"] as const;
 const WEIGHTS = ["role", "medium", "semibold"] as const;
 
 export const AllVariants: Story = {
@@ -91,7 +97,7 @@ export const Elements: Story = {
 	),
 };
 
-const HEADING_VARIANTS = ["title", "heading", "display"] as const;
+const HEADING_VARIANTS = ["label", "title", "page", "heading", "display"] as const;
 
 export const Headings: Story = {
 	render: () => (
@@ -120,7 +126,7 @@ export const HeadingsByTone: Story = {
 export const HeadingLevelsAndTruncate: Story = {
 	render: () => (
 		<Stack gap={8} className="max-w-xs">
-			<Heading as="h1" variant="heading">
+			<Heading as="h1" variant="page">
 				h1 · 글
 			</Heading>
 			<Heading as="h3">h3 · 설정</Heading>

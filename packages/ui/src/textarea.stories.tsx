@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 import { Textarea } from "./textarea";
 
 const meta = {
@@ -24,15 +24,11 @@ export const States: Story = {
 	render: () => (
 		<Stack gap={16}>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					placeholder
-				</Text>
+				<StoryCaption>placeholder</StoryCaption>
 				<Textarea placeholder="글 요약" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					filled, grows with content
-				</Text>
+				<StoryCaption>filled, grows with content</StoryCaption>
 				<Textarea
 					defaultValue={
 						"검색 결과와 공유 카드에 보이는 요약이에요.\n두 줄이 넘어가면 입력창이 같이 늘어납니다.\n세 번째 줄."
@@ -40,21 +36,15 @@ export const States: Story = {
 				/>
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					disabled
-				</Text>
+				<StoryCaption>disabled</StoryCaption>
 				<Textarea disabled defaultValue="수정할 수 없는 요약" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					proposal (written by the assistant, not yet touched)
-				</Text>
+				<StoryCaption>proposal (written by the assistant, not yet touched)</StoryCaption>
 				<Textarea proposal defaultValue="어시스턴트가 쓴 요약" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					invalid
-				</Text>
+				<StoryCaption>invalid</StoryCaption>
 				<Textarea aria-invalid defaultValue="너무 긴 요약" />
 			</Stack>
 		</Stack>

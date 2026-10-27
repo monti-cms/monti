@@ -28,21 +28,29 @@ export const Disabled: Story = { args: { disabled: true } };
 /** Working on the main action: a spinner on the main half, and neither half can be pressed. */
 export const Loading: Story = { args: { loading: true, children: "발행 중" } };
 
+/** The menu hangs under the whole pill, its right edge on the pill's, as it does in the editor header. */
 export const MenuOpen: Story = {
+	decorators: [
+		(Story) => (
+			<div className="flex justify-end">
+				<Story />
+			</div>
+		),
+	],
 	play: async ({ canvasElement }) => {
 		await userEvent.click(within(canvasElement).getByRole("button", { name: "발행 방식" }));
 		await expect(await within(document.body).findByRole("menuitem", { name: "오늘 날짜로 다시 발행" })).toBeVisible();
 	},
 };
 
-/** Keyboard focus on the main half: a ring inside the pill, in the pill's text color. */
+/** Keyboard focus on the main half: one ring round the whole pill, and the half that has the focus a shade lighter. */
 export const FocusMain: Story = {
 	play: async () => {
 		await userEvent.tab();
 	},
 };
 
-/** Keyboard focus on the caret half. */
+/** Keyboard focus on the caret half: the same ring round the whole pill. */
 export const FocusMenu: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.tab();

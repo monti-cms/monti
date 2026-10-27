@@ -12,9 +12,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const FIELDS = [
+	{ value: "title", label: "제목" },
+	{ value: "summary", label: "요약" },
+	{ value: "skip", label: "가져오지 않음" },
+];
+
 function FieldSelect({ value, proposal = false }: { value: string; proposal?: boolean }) {
 	return (
-		<Select defaultValue={value}>
+		<Select defaultValue={value} items={FIELDS}>
 			<SelectTrigger size="sm" width="full" proposal={proposal}>
 				<SelectValue />
 			</SelectTrigger>

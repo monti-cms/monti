@@ -169,7 +169,7 @@ function ComboboxChips({
 		<ComboboxPrimitive.Chips
 			data-slot="combobox-chips"
 			className={cn(
-				"flex min-h-monti-icon flex-wrap items-center gap-monti-6 border-monti-default border-b py-monti-4 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
+				"flex flex-wrap items-center gap-monti-6 border-monti-default border-b py-monti-2 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 				className,
 			)}
 			{...props}
@@ -211,7 +211,7 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
 	return (
 		<ComboboxPrimitive.Input
 			data-slot="combobox-chip-input"
-			className={cn("min-w-16 flex-1 outline-none", className)}
+			className={cn("h-7 min-w-16 flex-1 outline-none", className)}
 			{...props}
 		/>
 	);

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AlertTriangle, CheckCircle2, FileText, Loader2 } from "lucide-react";
 import { Icon } from "./icon";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
 	title: "Primitives/Icon",
@@ -23,9 +23,7 @@ export const Sizes: Story = {
 			{SIZES.map((size) => (
 				<Stack key={size} gap={4} align="center">
 					<Icon icon={FileText} size={size} />
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+					<StoryCaption>size {size}</StoryCaption>
 				</Stack>
 			))}
 		</Stack>
@@ -38,9 +36,7 @@ export const Tones: Story = {
 			{TONES.map((tone) => (
 				<Stack key={tone} gap={4} align="center">
 					<Icon icon={AlertTriangle} tone={tone} />
-					<Text variant="label" tone="muted">
-						tone {tone}
-					</Text>
+					<StoryCaption>tone {tone}</StoryCaption>
 				</Stack>
 			))}
 		</Stack>
@@ -53,9 +49,7 @@ export const Spin: Story = {
 			{[false, true].map((spin) => (
 				<Stack key={String(spin)} gap={4} align="center">
 					<Icon icon={Loader2} spin={spin} />
-					<Text variant="label" tone="muted">
-						spin {String(spin)}
-					</Text>
+					<StoryCaption>spin {String(spin)}</StoryCaption>
 				</Stack>
 			))}
 		</Stack>
@@ -68,15 +62,11 @@ export const Label: Story = {
 		<Stack direction="row" gap={24} align="end">
 			<Stack gap={4} align="center">
 				<Icon icon={CheckCircle2} tone="success" label="발행됨" />
-				<Text variant="label" tone="muted">
-					label 있음
-				</Text>
+				<StoryCaption>label 있음</StoryCaption>
 			</Stack>
 			<Stack gap={4} align="center">
 				<Icon icon={CheckCircle2} tone="success" />
-				<Text variant="label" tone="muted">
-					label 없음
-				</Text>
+				<StoryCaption>label 없음</StoryCaption>
 			</Stack>
 		</Stack>
 	),

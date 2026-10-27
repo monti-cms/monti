@@ -223,7 +223,7 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 								: t("progress.downloading", { percent })}
 					</Text>
 				</Inline>
-				<Progress value={percent} label={t("progress.building")} />
+				{percent !== null && <Progress value={percent} label={t("progress.building")} />}
 			</Stack>
 		</output>
 	);

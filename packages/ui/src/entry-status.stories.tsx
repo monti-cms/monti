@@ -68,14 +68,3 @@ export const InAList: Story = {
 		</Stack>
 	),
 };
-
-/** On a dark pill the mark follows the text color; the shape still says the status. */
-export const OnDark: Story = {
-	render: () => (
-		<span className="inline-flex gap-monti-16 rounded-monti-full bg-monti-emphasis px-monti-16 py-monti-6 text-monti-on-emphasis">
-			{STATUSES.map(([status]) => (
-				<EntryStatus key={status} status={status} ink />
-			))}
-		</span>
-	),
-};

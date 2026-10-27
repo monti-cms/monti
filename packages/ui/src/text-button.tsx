@@ -8,19 +8,20 @@ import { cn } from "./cn";
 
 /**
  * The text of an action inside a section: add, edit, cancel, go to. A `<button>`; with an `href` it is an `<a>`, and the app's router link goes in
- * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap. It has no box: its text color and, for `underline`, a 1px rule under it say what it is.
+ * `render` (`render={<Link href="…" />}`). An icon goes before the text, 14px with a 6px gap; a `Caret` after it keeps its own 12px. It has no box: its text color
+ * and, for `underline`, a 1px rule under it say what it is. The design system draws no hover for it; the text turns ink (and the rule too), as an icon button's does.
  */
 const textButtonVariants = cva(
-	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg]:mr-monti-6 [&_svg]:inline-block [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:align-[-0.2em]",
+	"inline cursor-pointer border-0 bg-transparent p-0 text-left whitespace-nowrap no-underline outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:cursor-default disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg:not([data-slot=caret])]:mr-monti-6 [&_svg:not([data-slot=caret])]:inline-block [&_svg:not([data-slot=caret])]:size-3.5 [&_svg]:shrink-0 [&_svg:not([data-slot=caret])]:align-[-0.2em]",
 	{
 		variants: {
 			variant: {
 				/** Cancel, undo all. */
-				plain: "text-monti-muted",
+				plain: "text-monti-muted hover:text-monti-default",
 				/** Takes you somewhere or opens something: review, fill with AI, see in the list →. */
-				underline: "border-b border-monti-strong text-monti-muted",
+				underline: "border-b border-monti-strong text-monti-muted hover:border-monti-contrast hover:text-monti-default",
 				/** Less important: + language, + group. */
-				quiet: "text-monti-subtle",
+				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
 			},

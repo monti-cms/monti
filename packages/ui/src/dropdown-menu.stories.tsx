@@ -213,7 +213,7 @@ export const MixedRows: Story = {
 	render: () => (
 		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 작업</DropdownMenuTrigger>
-			<DropdownMenuContent className="min-w-56">
+			<DropdownMenuContent>
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
 						<FolderInput aria-hidden />

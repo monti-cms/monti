@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** The look of a round icon button, for parts that render their own button (a combobox's open and clear buttons). */
 export const ICON_BUTTON =
-	"inline-flex size-monti-icon shrink-0 items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:hover:bg-monti-danger-muted data-[tone=danger]:hover:text-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+	"inline-flex size-monti-icon-button shrink-0 items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-expanded:bg-monti-selected aria-expanded:text-monti-default aria-pressed:bg-monti-selected aria-pressed:text-monti-default data-[tone=danger]:text-monti-danger data-[tone=danger]:hover:bg-monti-danger-muted data-[tone=danger]:hover:text-monti-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
 /**
  * A round icon button, 32px: the header's more (⋯), properties and assistant, a panel's close. `label` is both the screen reader name and the

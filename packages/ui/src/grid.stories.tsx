@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box } from "./box";
 import { Grid } from "./grid";
 import { Stack } from "./stack";
+import { StoryCaption } from "./story-caption";
 import { Text } from "./text";
 
 const meta = {
@@ -23,7 +24,7 @@ const CELLS = ["첫째", "둘째", "셋째", "넷째", "다섯째", "여섯째"]
 
 function Cell({ children, tall }: { children: string; tall?: boolean }) {
 	return (
-		<Box background="muted" radius="md" padding={tall ? 12 : 8}>
+		<Box background="selected" radius="md" padding={8} className={tall ? "h-16" : undefined}>
 			<Text variant="caption">{children}</Text>
 		</Box>
 	);
@@ -40,9 +41,7 @@ export const Columns: Story = {
 		<Stack gap={24}>
 			{COLUMNS.map((columns) => (
 				<Stack key={columns} gap={4}>
-					<Text variant="label" tone="muted">
-						columns {columns}
-					</Text>
+					<StoryCaption>columns {columns}</StoryCaption>
 					<Grid columns={columns}>
 						{CELLS.map((cell) => (
 							<Cell key={cell}>{cell}</Cell>
@@ -59,9 +58,7 @@ export const Gaps: Story = {
 		<Stack gap={24}>
 			{GAPS.map((gap) => (
 				<Stack key={gap} gap={4}>
-					<Text variant="label" tone="muted">
-						gap {gap}
-					</Text>
+					<StoryCaption>gap {gap}</StoryCaption>
 					<Grid columns={3} gap={gap}>
 						{CELLS.map((cell) => (
 							<Cell key={cell}>{cell}</Cell>
@@ -78,10 +75,8 @@ export const Align: Story = {
 		<Stack gap={24}>
 			{ALIGNS.map((align) => (
 				<Stack key={align} gap={4}>
-					<Text variant="label" tone="muted">
-						align {align}
-					</Text>
-					<Grid columns={3} align={align} background="tool" padding={4}>
+					<StoryCaption>align {align}</StoryCaption>
+					<Grid columns={3} align={align} border="all" radius="md" padding={4}>
 						<Cell>짧음</Cell>
 						<Cell tall>높음</Cell>
 						<Cell>짧음</Cell>
@@ -98,9 +93,7 @@ export const Responsive: Story = {
 		<Stack gap={24}>
 			{[true, false].map((responsive) => (
 				<Stack key={String(responsive)} gap={4}>
-					<Text variant="label" tone="muted">
-						responsive {String(responsive)}
-					</Text>
+					<StoryCaption>responsive {String(responsive)}</StoryCaption>
 					<Grid columns={3} responsive={responsive}>
 						{CELLS.slice(0, 3).map((cell) => (
 							<Cell key={cell}>{cell}</Cell>

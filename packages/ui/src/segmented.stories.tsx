@@ -29,6 +29,22 @@ function Demo({ size, inline }: { size?: "md" | "sm"; inline?: boolean }) {
 	);
 }
 
+function SortDemo() {
+	const [value, setValue] = useState<"asc" | "desc" | null>(null);
+	return (
+		<Segmented
+			aria-label="정렬"
+			size="sm"
+			value={value}
+			onValueChange={setValue}
+			options={[
+				{ value: "asc", label: "오름차순" },
+				{ value: "desc", label: "내림차순" },
+			]}
+		/>
+	);
+}
+
 export const Playground: Story = {
 	args: { value: "same", onValueChange: () => {}, options: MODES },
 	render: () => (
@@ -43,16 +59,7 @@ export const NothingPicked: Story = {
 	args: { value: null, onValueChange: () => {}, options: MODES },
 	render: () => (
 		<Stack className="max-w-sm">
-			<Segmented
-				aria-label="정렬"
-				size="sm"
-				value={null}
-				onValueChange={() => {}}
-				options={[
-					{ value: "asc", label: "오름차순" },
-					{ value: "desc", label: "내림차순" },
-				]}
-			/>
+			<SortDemo />
 		</Stack>
 	),
 };

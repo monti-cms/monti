@@ -173,7 +173,7 @@ export function AdminShell({
 	count?: number | string;
 	/** A short muted line after the title (where the collection is public); hidden on narrow screens. */
 	description?: ReactNode;
-	/** Centered editorial index header with a deep ink rule (`border="bottom-strong"`). */
+	/** Centered editorial index header with a deep ink rule (`border="bottom-contrast"`). */
 	editorial?: boolean;
 	sidebar: AdminSidebarProps;
 	children: ReactNode;
@@ -213,7 +213,7 @@ export function AdminShell({
 									align="end"
 									justify="between"
 									gap={12}
-									border="bottom-strong"
+									border="bottom-contrast"
 									paddingBottom={12}
 								>
 									<Inline gap={8} align="baseline" grow minWidth={0}>
@@ -221,7 +221,7 @@ export function AdminShell({
 											<SidebarTrigger aria-label={t("shell.openSidebar")} />
 										</Box>
 										<Box minWidth={0}>
-											<Heading as="h1" variant="heading">
+											<Heading as="h1" variant="page">
 												<Inline as="span" gap={8} align="baseline">
 													<Text truncate>{title}</Text>
 													{count !== undefined && (

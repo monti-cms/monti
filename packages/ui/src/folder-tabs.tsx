@@ -2,7 +2,7 @@
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
-import { GripVertical, Lock } from "lucide-react";
+import { GripVertical, Lock, Plus } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
@@ -63,18 +63,20 @@ function FolderTab({
 	);
 }
 
-/** The button after the last tab that adds one. */
-function FolderTabsAdd({ className, ...props }: ButtonPrimitive.Props) {
+/** The button after the last tab that adds one: a 16px plus icon, named by its `aria-label`. */
+function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props) {
 	return (
 		<ButtonPrimitive
 			data-slot="folder-tabs-add"
 			type="button"
 			className={cn(
-				"h-9 cursor-pointer border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+				"inline-flex h-9 cursor-pointer items-center border-0 bg-transparent px-monti-12 text-monti-body text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children ?? <Plus aria-hidden className="size-monti-icon-md" />}
+		</ButtonPrimitive>
 	);
 }
 

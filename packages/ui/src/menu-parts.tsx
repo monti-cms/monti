@@ -34,7 +34,7 @@ export const MENU_ITEM = cn(
 /** The same row inside a searchable list (cmdk marks the row it is on with `data-selected`). */
 export const COMMAND_ITEM = cn(
 	ROW,
-	"data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint",
+	"data-[selected=true]:bg-monti-selected data-[selected=true]:text-monti-default data-[disabled=true]:pointer-events-none data-[disabled=true]:text-monti-faint data-[variant=danger]:text-monti-danger data-[variant=danger]:data-[selected=true]:text-monti-danger data-[variant=danger]:[&>svg]:text-monti-danger",
 );
 
 /** A group's name: mono, small, with room at the end for a count. */

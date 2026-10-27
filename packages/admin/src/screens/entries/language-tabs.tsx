@@ -106,7 +106,7 @@ export function LanguageTabs({
 										status: statusLabels(site)[member.status],
 									})}
 								>
-									<EntryStatus status={entryStatusKind(member.status)} ink={current} />
+									<EntryStatus status={entryStatusKind(member.status)} />
 									<Text aria-hidden>{target.toUpperCase()}</Text>
 									{member.isSource && (
 										<Text aria-hidden tone="muted">

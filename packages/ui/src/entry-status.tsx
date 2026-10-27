@@ -31,18 +31,16 @@ const markVariants = cva("box-border w-[7px] shrink-0 rounded-monti-full bg-curr
 
 /**
  * The status of an entry in a list, beside its address in the editor, or a delivery in the event log: a 7px mark and the status name. Without
- * `children` it is the mark alone (a language's tab), decorative, so say the status in words nearby or on the parent.
+ * `children` it is the mark alone (a language's tab), decorative, so say the status in words nearby or on the parent. It has no version for a dark
+ * pill: on ink every status would take the same color, and the shapes of three of them are alike. It is drawn on the page or a tool surface.
  */
 function EntryStatus({
 	status,
-	ink = false,
 	className,
 	children,
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
 	status: EntryStatusKind;
-	/** On a dark pill (the current language): the mark and the name take the surrounding text color, and the shape alone tells the status. */
-	ink?: boolean;
 	/** The status name. */
 	children?: React.ReactNode;
 }) {
@@ -52,7 +50,7 @@ function EntryStatus({
 			data-status={status}
 			className={cn(
 				"inline-flex items-center gap-[7px] whitespace-nowrap font-medium text-monti-note",
-				!ink && COLOR[status],
+				COLOR[status],
 				className,
 			)}
 			{...props}

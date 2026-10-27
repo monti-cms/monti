@@ -11,8 +11,8 @@ export { tokens };
 
 export const px = (name: string) => `var(--monti-${name})`;
 
-/** The class a token is used through: `bg-tool` → `bg-monti-tool`, `fg-faint` → `text-monti-faint`, `width-sheet` → `w-monti-sheet`. */
-const CLASS_PREFIX: Record<string, string> = { fg: "text", width: "w" };
+/** The class a token is used through: `bg-tool` → `bg-monti-tool`, `fg-faint` → `text-monti-faint`, `width-sheet` → `w-monti-sheet`, `height-icon-button` → `h-monti-icon-button`. */
+const CLASS_PREFIX: Record<string, string> = { fg: "text", width: "w", height: "h" };
 export const classOf = (token: string) => {
 	const [group, ...rest] = token.split("-");
 	return `${CLASS_PREFIX[group] ?? group}-monti-${rest.join("-")}`;
@@ -34,7 +34,7 @@ export function Group({ title, children }: { title: string; children: ReactNode 
 /** A token's name, its value and its usage line, under whatever sample is drawn above it. */
 export function Spec({ name, usage, children }: { name: string; usage?: string; children: ReactNode }) {
 	return (
-		<Stack gap={4} className="w-44">
+		<Stack gap={4} className="w-56">
 			{children}
 			<Text variant="meta">{name}</Text>
 			{usage && (

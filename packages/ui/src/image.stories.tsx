@@ -3,7 +3,7 @@ import { ImageIcon } from "lucide-react";
 import type * as React from "react";
 import { Image } from "./image";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 /** An inline SVG, so the stories load nothing from the network. */
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -38,9 +38,7 @@ export const Playground: Story = {};
 function Labelled({ name, children }: { name: string; children: React.ReactNode }) {
 	return (
 		<Stack gap={4} align="start">
-			<Text variant="label" tone="muted">
-				{name}
-			</Text>
+			<StoryCaption>{name}</StoryCaption>
 			{children}
 		</Stack>
 	);

@@ -47,6 +47,9 @@ const OWN_COLORS = new Set([
 	"seo/src/admin/preview.tsx",
 ]);
 
+/** Files whose text runs over several lines in a field, which takes the design system's own line of 1.6 times the size (`.mt-textarea`), not a type role's. */
+const MULTILINE = new Set(["ui/src/textarea.tsx"]);
+
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const full = path.join(dir, entry.name);
@@ -167,7 +170,9 @@ describe("design system", () => {
 				const rel = path.relative(packagesDir, file);
 				const inUi = rel.startsWith("ui/src/") || rel.startsWith("admin/src/ui/");
 				for (const { word, line } of classWords(readFileSync(file, "utf8"))) {
-					const why = problem(utilityOf(word), inUi, OWN_COLORS.has(rel));
+					const utility = utilityOf(word);
+					const why = problem(utility, inUi, OWN_COLORS.has(rel));
+					if (why && MULTILINE.has(rel) && utility === "leading-[1.6]") continue;
 					if (why) offenders.push(`${rel}:${line} ${word} (${why})`);
 				}
 			}

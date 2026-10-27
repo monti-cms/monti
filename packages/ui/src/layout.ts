@@ -26,17 +26,16 @@ export const LAYOUT = {
 	paddingTop: PADDING_TOP,
 	paddingBottom: PADDING_BOTTOM,
 	background: BACKGROUND,
-	/** A hairline on every side, or on one; `default` is the stronger line of a control. */
+	/** A hairline on every side, or on one; `bottom-contrast` is the ink rule under a page title (1px, the design system's `border-contrast`). */
 	border: {
 		all: "border border-monti-muted",
 		top: "border-t border-monti-muted",
 		bottom: "border-b border-monti-muted",
-		"bottom-strong": "border-b-[1.5px] border-monti-contrast",
+		"bottom-contrast": "border-b border-monti-contrast",
 		left: "border-l border-monti-muted",
 		right: "border-r border-monti-muted",
 		y: "border-y border-monti-muted",
 		x: "border-x border-monti-muted",
-		default: "border border-monti-default",
 		danger: "border border-monti-danger/40",
 		dashed: "border border-dashed border-monti-default",
 	},

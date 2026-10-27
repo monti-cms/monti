@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
 	title: "Primitives/Label",
 	component: Label,
-	args: { children: "글 제목", size: "label", tone: "default", hidden: false },
+	args: { children: "글 제목", size: "micro", tone: "subtle", hidden: false },
 } satisfies Meta<typeof Label>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -17,11 +17,9 @@ export const Playground: Story = {};
 export const Sizes: Story = {
 	render: () => (
 		<Stack gap={12}>
-			{(["label", "caption", "body"] as const).map((size) => (
+			{(["micro", "label", "caption", "body"] as const).map((size) => (
 				<Stack key={size} gap={4}>
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+					<StoryCaption>size {size}</StoryCaption>
 					<Label size={size}>글 제목</Label>
 				</Stack>
 			))}
@@ -32,11 +30,9 @@ export const Sizes: Story = {
 export const Tones: Story = {
 	render: () => (
 		<Stack gap={12}>
-			{(["default", "muted"] as const).map((tone) => (
+			{(["subtle", "muted", "default"] as const).map((tone) => (
 				<Stack key={tone} gap={4}>
-					<Text variant="label" tone="muted">
-						tone {tone}
-					</Text>
+					<StoryCaption>tone {tone}</StoryCaption>
 					<Label tone={tone}>글 제목</Label>
 				</Stack>
 			))}
@@ -50,9 +46,7 @@ export const Hidden: Story = {
 		<Stack gap={12}>
 			{[false, true].map((hidden) => (
 				<Stack key={String(hidden)} gap={4}>
-					<Text variant="label" tone="muted">
-						hidden {String(hidden)}
-					</Text>
+					<StoryCaption>hidden {String(hidden)}</StoryCaption>
 					<Label htmlFor={`hidden-${hidden}`} hidden={hidden}>
 						글 제목
 					</Label>

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Icon } from "./icon";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 /**
  * The one AI mark: a four-point star ✦, never a lucide sparkles icon. It is an icon like the others (it goes wherever an `icon` does), drawn in
@@ -23,18 +23,14 @@ export const Sizes: Story = {
 			{SIZES.map((size) => (
 				<Stack key={size} gap={4} align="center">
 					<Icon icon={Spark} size={size} />
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+					<StoryCaption>size {size}</StoryCaption>
 				</Stack>
 			))}
 			<Stack gap={4} align="center">
 				<span className="text-monti-proposal">
 					<Icon icon={Spark} />
 				</span>
-				<Text variant="label" tone="muted">
-					in proposal blue
-				</Text>
+				<StoryCaption>in proposal blue</StoryCaption>
 			</Stack>
 		</Stack>
 	),

@@ -287,7 +287,7 @@ export function CollectionEditor({
 		<Stack gap={24} minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
 			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
-				<Inline align="end" justify="between" gap={16} border="bottom-strong" paddingBottom={12}>
+				<Inline align="end" justify="between" gap={16} border="bottom-contrast" paddingBottom={12}>
 					<Box minWidth={0}>
 						<Inline align="baseline" gap={8}>
 							<Heading as="h3">{label}</Heading>

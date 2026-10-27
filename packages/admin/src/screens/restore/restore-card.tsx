@@ -19,7 +19,6 @@ import {
 	Input,
 	List,
 	ListItem,
-	Progress,
 	Spinner,
 	Stack,
 	Text,
@@ -190,7 +189,7 @@ function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 	);
 }
 
-/** What the run is doing: the server writes everything in one step and answers when it is done, so the bar does not claim a percentage. */
+/** What the run is doing: the server writes everything in one step and answers when it is done, so there is no bar, only the words (a step that cannot be measured has none). */
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(restoreMessages);
 	return (
@@ -200,7 +199,6 @@ function RunProgress({ count }: { count: number }) {
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">{t("progress.running", { count })}</Text>
 				</Inline>
-				<Progress value={null} label={t("progress.running", { count })} />
 				<Text as="p" variant="caption" tone="muted">
 					{t("progress.hint")}
 				</Text>

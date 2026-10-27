@@ -2,15 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { AiAction } from "./ai-action";
 import { Checkbox } from "./checkbox";
-import {
-	FormField,
-	FormFieldDescription,
-	FormFieldError,
-	FormFieldGroup,
-	FormFieldLabel,
-	FormFieldLegend,
-	FormFieldSet,
-} from "./field";
+import { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldLegend, FormFieldSet } from "./field";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Option } from "./option";
@@ -133,20 +125,21 @@ export const Labels: Story = {
 	),
 };
 
-/** A set with a legend and its description. */
+/** A set with a legend over its options, 12px apart. The design system hangs no help line under a legend. */
 export const SetAndGroup: Story = {
 	render: () => (
 		<FormFieldSet>
 			<FormFieldLegend variant="label">공개 설정</FormFieldLegend>
-			<FormFieldDescription>사이트에 어떻게 보일지 정해요.</FormFieldDescription>
-			<Option>
-				<Checkbox defaultChecked />
-				댓글 허용
-			</Option>
-			<Option>
-				<Checkbox />
-				검색 엔진에 노출
-			</Option>
+			<Stack gap={12}>
+				<Option>
+					<Checkbox defaultChecked />
+					댓글 허용
+				</Option>
+				<Option>
+					<Checkbox />
+					검색 엔진에 노출
+				</Option>
+			</Stack>
 		</FormFieldSet>
 	),
 };

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CodeBlock } from "./code-block";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
 	title: "Primitives/CodeBlock",
@@ -25,9 +25,7 @@ export const Wrap: Story = {
 		<Stack gap={12}>
 			{[true, false].map((wrap) => (
 				<Stack key={String(wrap)} gap={4}>
-					<Text variant="label" tone="muted">
-						wrap {String(wrap)}
-					</Text>
+					<StoryCaption>wrap {String(wrap)}</StoryCaption>
 					<CodeBlock wrap={wrap}>{LONG_LINE}</CodeBlock>
 				</Stack>
 			))}
@@ -37,12 +35,12 @@ export const Wrap: Story = {
 
 export const MaxHeight: Story = {
 	render: () => (
-		<Stack direction="row" gap={12} align="start">
+		<Stack gap={24}>
 			{(["list", "half", "none"] as const).map((maxHeight) => (
-				<Stack key={maxHeight} gap={4} className="min-w-0 flex-1">
-					<Text variant="label" tone="muted">
-						maxHeight {maxHeight}
-					</Text>
+				<Stack key={maxHeight} gap={4}>
+					<StoryCaption>
+						maxHeight {maxHeight} ({{ list: "384px", half: "half the window", none: "no limit" }[maxHeight]})
+					</StoryCaption>
 					<CodeBlock maxHeight={maxHeight}>{MANY_LINES}</CodeBlock>
 				</Stack>
 			))}
@@ -53,11 +51,9 @@ export const MaxHeight: Story = {
 export const Size: Story = {
 	render: () => (
 		<Stack gap={12}>
-			{(["caption", "label"] as const).map((size) => (
+			{(["caption", "note"] as const).map((size) => (
 				<Stack key={size} gap={4}>
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+					<StoryCaption>size {size}</StoryCaption>
 					<CodeBlock size={size}>{SAMPLE()}</CodeBlock>
 				</Stack>
 			))}

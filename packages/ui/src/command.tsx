@@ -77,19 +77,22 @@ function CommandSeparator({ className, ...props }: React.ComponentProps<typeof C
 
 /**
  * A row. `checked` marks the current value of a pick-one list with a ✓ at its end (cmdk itself only tracks the row the keyboard is on, which
- * takes the selected background).
+ * takes the selected background). `variant="danger"` is for what cannot be undone: red, and the last row of its group.
  */
 function CommandItem({
 	className,
 	children,
 	checked,
+	variant = "default",
 	...props
 }: React.ComponentProps<typeof CommandPrimitive.Item> & {
 	checked?: boolean;
+	variant?: "default" | "danger";
 }) {
 	return (
 		<CommandPrimitive.Item
 			data-slot="command-item"
+			data-variant={variant}
 			data-checked={checked ? "true" : undefined}
 			className={cn(COMMAND_ITEM, className)}
 			{...props}

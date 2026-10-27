@@ -561,7 +561,7 @@ export function MediaLibrary() {
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								<Grid as="ul" columns="tiles" gap={16} aria-hidden>
+								<Grid as="ul" columns="tiles" aria-hidden>
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>

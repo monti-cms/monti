@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Stack } from "./stack";
+import { StoryCaption } from "./story-caption";
 import { Text } from "./text";
 
 const meta = {
@@ -19,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 function Box({ children, tall }: { children: string; tall?: boolean }) {
 	return (
-		<div className={tall ? "rounded-monti-md bg-monti-muted p-4" : "rounded-monti-md bg-monti-muted p-2"}>
+		<div className={tall ? "h-16 rounded-monti-md bg-monti-selected p-2" : "rounded-monti-md bg-monti-selected p-2"}>
 			<Text variant="caption">{children}</Text>
 		</div>
 	);
@@ -36,9 +37,7 @@ export const AllGaps: Story = {
 		<Stack gap={24}>
 			{GAPS.map((gap) => (
 				<Stack key={gap} gap={4}>
-					<Text variant="label" tone="muted">
-						gap {gap}
-					</Text>
+					<StoryCaption>gap {gap}</StoryCaption>
 					<Stack direction="row" gap={gap}>
 						<Box>첫째</Box>
 						<Box>둘째</Box>
@@ -52,12 +51,10 @@ export const AllGaps: Story = {
 
 export const ColumnGaps: Story = {
 	render: () => (
-		<Stack direction="row" gap={48} align="start">
+		<Stack direction="row" gap={32} align="start" wrap>
 			{GAPS.map((gap) => (
 				<Stack key={gap} gap={4}>
-					<Text variant="label" tone="muted">
-						{gap}
-					</Text>
+					<StoryCaption>{gap}</StoryCaption>
 					<Stack gap={gap}>
 						<Box>첫째</Box>
 						<Box>둘째</Box>
@@ -73,10 +70,8 @@ export const Align: Story = {
 		<Stack gap={24}>
 			{ALIGNS.map((align) => (
 				<Stack key={align} gap={4}>
-					<Text variant="label" tone="muted">
-						align {align}
-					</Text>
-					<Stack direction="row" align={align} className="rounded-monti-md bg-monti-tool p-2">
+					<StoryCaption>align {align}</StoryCaption>
+					<Stack direction="row" align={align} className="rounded-monti-md border border-monti-default p-2">
 						<Box>짧음</Box>
 						<Box tall>높음</Box>
 						<Box>짧음</Box>
@@ -92,10 +87,8 @@ export const Justify: Story = {
 		<Stack gap={24}>
 			{JUSTIFIES.map((justify) => (
 				<Stack key={justify} gap={4}>
-					<Text variant="label" tone="muted">
-						justify {justify}
-					</Text>
-					<Stack direction="row" justify={justify} className="rounded-monti-md bg-monti-tool p-2">
+					<StoryCaption>justify {justify}</StoryCaption>
+					<Stack direction="row" justify={justify} className="rounded-monti-md border border-monti-default p-2">
 						<Box>첫째</Box>
 						<Box>둘째</Box>
 					</Stack>

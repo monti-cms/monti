@@ -14,7 +14,9 @@ export const Playground: Story = {
 	render: (args) => (
 		<Stack direction="row" gap={8} align="center">
 			<Checkbox id="pg" {...args} />
-			<Label htmlFor="pg">댓글 허용</Label>
+			<Label htmlFor="pg" size="body" tone="default">
+				댓글 허용
+			</Label>
 		</Stack>
 	),
 };
@@ -36,7 +38,9 @@ export const States: Story = {
 			].map(({ name, props }) => (
 				<Stack key={name} direction="row" gap={8} align="center">
 					<Checkbox id={name} {...props} />
-					<Label htmlFor={name}>{name}</Label>
+					<Label htmlFor={name} size="body" tone="default">
+						{name}
+					</Label>
 				</Stack>
 			))}
 		</Stack>

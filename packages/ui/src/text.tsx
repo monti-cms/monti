@@ -29,6 +29,8 @@ export const textVariants = cva("", {
 			default: "text-monti-default",
 			muted: "text-monti-muted",
 			subtle: "text-monti-subtle",
+			faint: "text-monti-faint",
+			proposal: "text-monti-proposal",
 			danger: "text-monti-danger",
 			warning: "text-monti-warning",
 			success: "text-monti-success",
@@ -91,7 +93,7 @@ function Text({
 	);
 }
 
-/** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `heading` for the screen, `display` for the post title. */
+/** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `page` for the screen's title, `heading` for a heading in a text, `display` for the post title. */
 function Heading({
 	as: Tag = "h2",
 	variant = "title",
@@ -101,8 +103,8 @@ function Heading({
 	...props
 }: React.HTMLAttributes<HTMLHeadingElement> & {
 	as?: "h1" | "h2" | "h3" | "h4";
-	/** `label` for a small heading inside a panel or sheet; `title` for sections, panels and dialogs; `heading` the screen; `display` the post title. */
-	variant?: "label" | "title" | "heading" | "display";
+	/** `label` for a small heading inside a panel or sheet; `title` for sections, panels and dialogs; `page` the title of a screen; `heading` a heading in a text; `display` the post title. */
+	variant?: "label" | "title" | "page" | "heading" | "display";
 	tone?: VariantProps<typeof textVariants>["tone"];
 	truncate?: boolean;
 }) {

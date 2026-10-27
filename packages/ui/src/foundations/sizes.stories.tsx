@@ -11,9 +11,9 @@ type Story = StoryObj<typeof meta>;
 export const Heights: Story = {
 	render: () => (
 		<Page>
-			<Group title="h-monti-*">
+			<Group title="h-monti-* (the square ones also size-monti-*)">
 				{tokens.height.tokens.map(({ name, value, usage }) => (
-					<Spec key={name} name={`${name} · ${value}`} usage={usage}>
+					<Spec key={name} name={`${classOf(name)} · ${value}`} usage={usage}>
 						<div className="rounded-monti-sm bg-monti-muted" style={{ height: px(name) }} />
 					</Spec>
 				))}
@@ -46,9 +46,9 @@ export const Widths: Story = {
 export const Icons: Story = {
 	render: () => (
 		<Page>
-			<Group title="size-monti-icon-*">
+			<Group title="size-monti-icon-* (glyphs; the 32px button is size-monti-icon-button)">
 				{tokens.size.tokens.map(({ name, value, usage }) => (
-					<Spec key={name} name={`${name} · ${value}`} usage={usage}>
+					<Spec key={name} name={`${classOf(name)} · ${value}`} usage={usage}>
 						<div className="rounded-monti-sm bg-monti-emphasis" style={{ width: px(name), height: px(name) }} />
 					</Spec>
 				))}

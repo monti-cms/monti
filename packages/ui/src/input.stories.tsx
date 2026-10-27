@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Input } from "./input";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
 	title: "Controls/Field/Input",
@@ -25,52 +25,32 @@ export const States: Story = {
 	render: () => (
 		<Stack gap={16}>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					placeholder
-				</Text>
+				<StoryCaption>placeholder</StoryCaption>
 				<Input placeholder="글 제목" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					filled
-				</Text>
+				<StoryCaption>filled</StoryCaption>
 				<Input defaultValue="처음 쓰는 블로그 글" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					disabled
-				</Text>
+				<StoryCaption>disabled</StoryCaption>
 				<Input disabled defaultValue="슬러그는 잠겨 있어요" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					disabled, empty
-				</Text>
+				<StoryCaption>disabled, empty</StoryCaption>
 				<Input disabled placeholder="슬러그" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					invalid
-				</Text>
+				<StoryCaption>invalid</StoryCaption>
 				<Input aria-invalid defaultValue="중복된 슬러그" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					proposal (written by the assistant, not yet touched)
-				</Text>
+				<StoryCaption>proposal (written by the assistant, not yet touched)</StoryCaption>
 				<Input proposal defaultValue="어시스턴트가 채운 제목" />
 			</Stack>
 			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					type=password
-				</Text>
+				<StoryCaption>type=password</StoryCaption>
 				<Input type="password" defaultValue="비밀번호" />
-			</Stack>
-			<Stack gap={4}>
-				<Text variant="caption" tone="muted">
-					type=file
-				</Text>
-				<Input type="file" />
 			</Stack>
 		</Stack>
 	),

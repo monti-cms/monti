@@ -7,7 +7,8 @@ import { GAP } from "./tokens.generated";
 
 /**
  * Children in equal columns, by count, stacked to one column on a narrow screen (`responsive`, the default). `sidebar` is a fixed side column
- * (the panel width) next to a fluid one. The gap takes the spacing steps, as in `Stack`.
+ * (the panel width) next to a fluid one. `tiles` is the design system's tile grid (`.mt-tiles`): four columns, 24px between rows and 20px between columns
+ * (two columns on a narrow screen). Every other gap takes the spacing steps, as in `Stack`.
  */
 const gridVariants = cva("grid", {
 	variants: {
@@ -18,20 +19,24 @@ const gridVariants = cva("grid", {
 			4: "grid-cols-4",
 			6: "grid-cols-6",
 			sidebar: "grid-cols-[var(--monti-width-panel)_minmax(0,1fr)]",
-			/** A label column (220px) next to the content: a settings section. `rail-wide` is 260px. */
+			/**
+			 * A label column next to the content: the admin's own settings section (`screens/shared/section.tsx`), 220px, or 260px wide. These two widths are not
+			 * the design system's; its settings section is `Section`, a title column that wraps (`flex: 1 1 180px`), which that screen part moves to with the settings screens.
+			 */
 			rail: "grid-cols-[220px_minmax(0,1fr)]",
 			"rail-wide": "grid-cols-[260px_minmax(0,1fr)]",
-			/** As many columns as fit, each at least 160px: a grid of tiles (files, images). */
-			tiles: "grid-cols-[repeat(auto-fill,minmax(160px,1fr))]",
+			/** Four equal columns: a grid of tiles (files, images, folders). */
+			tiles: "grid-cols-4",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		gap: GAP,
 
 		align: { start: "items-start", center: "items-center", end: "items-end", stretch: "items-stretch" },
 	},
-	// Tiles fit their own count of columns at every width.
+	// Tiles keep the design system's own gaps, whatever `gap` says; on a narrow screen they are two across.
 	compoundVariants: [
-		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]" },
+		{ columns: "tiles", class: "gap-x-monti-20 gap-y-monti-24" },
+		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-2" },
 	],
 	defaultVariants: { columns: 2, responsive: true, gap: 12 },
 });

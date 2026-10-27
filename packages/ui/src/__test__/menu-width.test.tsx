@@ -24,7 +24,7 @@ describe("menu widths", () => {
 		const menu = await screen.findByTestId("menu");
 		expect(menu.className).not.toMatch(FIXED_TO_ANCHOR);
 		expect(menu.className).toContain("w-max");
-		expect(menu.className).toContain("min-w-32");
+		expect(menu.className).toContain("min-w-monti-menu");
 	});
 
 	it("keeps context menus and selects from being fixed to their anchor's width", () => {

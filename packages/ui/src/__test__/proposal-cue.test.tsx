@@ -18,7 +18,7 @@ describe("proposal state, in words", () => {
 		Checkbox: (proposal) => <Checkbox aria-label="field" proposal={proposal} />,
 		Switch: (proposal) => <Switch aria-label="field" proposal={proposal} />,
 		Select: (proposal) => (
-			<Select defaultValue="a">
+			<Select defaultValue="a" items={[{ value: "a", label: "A" }]}>
 				<SelectTrigger aria-label="field" proposal={proposal}>
 					<SelectValue />
 				</SelectTrigger>

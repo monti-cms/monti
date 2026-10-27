@@ -36,14 +36,15 @@ describe("SplitButton", () => {
 		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeTruthy();
 	});
 
-	it("draws the focus ring inside each half, solid in the pill's text color", () => {
+	it("draws one focus ring round the whole pill, and marks the focused half by its fill, so the pill never reads as two shapes", () => {
 		renderSplit();
+		const pill = screen.getByRole("group");
+		// The ring is the pill's (it is not cut by the pill's `overflow-hidden`, which clips only what is inside), like a `Button`'s.
+		expect(pill.className).toContain("has-focus-visible:ring-3");
 		for (const name of ["Publish", "Publish options"]) {
 			const half = screen.getByRole("button", { name }).className;
-			// An outer ring would be cut by the pill's overflow, and a faded one is lost on the ink.
-			expect(half).toContain("focus-visible:ring-inset");
-			expect(half).toContain("focus-visible:ring-monti-on-emphasis");
-			expect(half).not.toContain("focus-visible:ring-monti-on-emphasis/");
+			expect(half).not.toMatch(/(^|\s)focus-visible:ring/);
+			expect(half).toContain("focus-visible:bg-");
 		}
 	});
 

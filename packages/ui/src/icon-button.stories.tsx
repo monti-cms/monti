@@ -55,7 +55,7 @@ export const Danger: Story = {
 /** The tooltip appears on hover; `side` picks where. */
 export const TooltipSides: Story = {
 	render: () => (
-		<Stack direction="row" gap={24} align="center">
+		<Stack direction="row" gap={24} align="center" padding={48}>
 			{(["top", "bottom", "left", "right"] as const).map((side) => (
 				<IconButton key={side} label={`툴팁 ${side}`} side={side}>
 					<MoreHorizontal aria-hidden />

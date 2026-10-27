@@ -195,7 +195,7 @@ function ListLoading() {
 			<Stack gap={0} grow minWidth={0} aria-hidden>
 				<Box width="full" maxWidth="content" centered paddingX={32} paddingTop={24}>
 					{/* The title bar: title and address on the left, search and the add button on the right. */}
-					<Inline justify="between" gap={12} shrink={false} border="bottom-strong" paddingBottom={12}>
+					<Inline justify="between" gap={12} shrink={false} border="bottom-contrast" paddingBottom={12}>
 						<Inline gap={8}>
 							<Skeleton shape="line" width="short" />
 							<Skeleton shape="line" width="medium" />

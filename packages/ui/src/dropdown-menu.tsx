@@ -29,7 +29,7 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 }
 
 /**
- * The menu card. It is as wide as its longest row (20rem at most; a longer name is cut). A row that picks a further value opens a second
+ * The menu card, the design system's 240px (`--width-menu`); wider only for a longer row (20rem at most; a longer name is cut). A row that picks a further value opens a second
  * level at its side ({@link DropdownMenuSub}); a third level is not drawn.
  */
 function DropdownMenuContent({
@@ -37,9 +37,11 @@ function DropdownMenuContent({
 	alignOffset = 0,
 	side = "bottom",
 	sideOffset = 4,
+	anchor,
 	className,
 	...props
-}: MenuPrimitive.Popup.Props & Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+}: MenuPrimitive.Popup.Props &
+	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor">) {
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
@@ -48,6 +50,7 @@ function DropdownMenuContent({
 				alignOffset={alignOffset}
 				side={side}
 				sideOffset={sideOffset}
+				anchor={anchor}
 			>
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
@@ -55,7 +58,7 @@ function DropdownMenuContent({
 						MENU_CARD,
 						"p-monti-6",
 						MENU_MOTION,
-						"z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						"z-50 max-h-(--available-height) w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))] overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
 						className,
 					)}
 					{...props}

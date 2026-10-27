@@ -8,12 +8,20 @@ import { cn } from "./cn";
 import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 import { useProposalDescription } from "./proposal-cue";
 
-const Select = SelectPrimitive.Root;
+/**
+ * The select. `items` is every value with its label: the closed trigger shows the chosen item's label, and Base UI only knows the labels once the list has been
+ * opened, so without `items` the trigger would show the raw value ("dev" for "Dev notes"). It is required, so that cannot be written.
+ */
+function Select<Value, Multiple extends boolean | undefined = false>(
+	props: SelectPrimitive.Root.Props<Value, Multiple> & {
+		items: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["items"]>;
+	},
+) {
+	return <SelectPrimitive.Root {...props} />;
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
-	return (
-		<SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1 p-monti-4", className)} {...props} />
-	);
+	return <SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1", className)} {...props} />;
 }
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
@@ -66,9 +74,9 @@ function SelectContent({
 	children,
 	side = "bottom",
 	sideOffset = 4,
-	align = "center",
+	align = "start",
 	alignOffset = 0,
-	alignItemWithTrigger = true,
+	alignItemWithTrigger = false,
 	...props
 }: SelectPrimitive.Popup.Props &
 	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger">) {
@@ -88,7 +96,7 @@ function SelectContent({
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
-						"relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
+						"relative isolate z-50 max-h-(--available-height) w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}

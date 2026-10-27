@@ -23,12 +23,12 @@ const frameVariants = cva(
 			size: {
 				fill: "w-full",
 				thumb: "size-monti-control-sm",
-				"thumb-lg": "size-monti-control",
+				"thumb-lg": "size-monti-control-md",
 				/** As big as an icon, no fill: a logo inside a button. */
 				icon: "size-monti-icon-md bg-transparent",
 			},
 			radius: { none: "", sm: "rounded-monti-sm", md: "rounded-monti-md", lg: "rounded-monti-lg" },
-			border: { true: "border border-monti-muted" },
+			border: { true: "border border-monti-default" },
 		},
 		defaultVariants: { ratio: "square", size: "fill", radius: "md" },
 	},

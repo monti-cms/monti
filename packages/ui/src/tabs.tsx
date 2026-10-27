@@ -80,7 +80,7 @@ function TabTail({ count, dot, dotLabel }: TabExtras) {
 				<ChangeDot
 					tone={dot}
 					label={dotLabel}
-					className="mt-monti-2 ml-monti-2 self-center group-data-[variant=bar]/tabs-list:m-0"
+					className="ml-monti-2 self-center group-data-[variant=bar]/tabs-list:m-0"
 				/>
 			)}
 		</>

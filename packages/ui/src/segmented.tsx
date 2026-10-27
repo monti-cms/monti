@@ -57,9 +57,12 @@ function Segmented<T extends string>({
 					value={option.value}
 					aria-label={option["aria-label"]}
 					className={cn(
-						"whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:bg-monti-selected data-pressed:font-semibold data-pressed:text-monti-default",
+						"flex items-center justify-center whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:bg-monti-selected data-pressed:font-semibold data-pressed:text-monti-default",
 						inline ? "flex-none px-monti-10" : "flex-1",
-						size === "sm" ? "py-[5px]" : "py-[7px]",
+						// The design system's `sm` is 12px type on a 20px line with 5px above and below, 32px tall. The role's 16px line takes 7px to be as tall.
+						"py-[7px]",
+						// A cell holding only an icon is as tall as one holding text (14px of padding and the role's 20px line), so a row of icons is 36px, like the others.
+						size === "md" && "min-h-[34px]",
 					)}
 				>
 					{option.label}

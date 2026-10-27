@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Copy, ExternalLink, FolderInput, FolderOpen, Tag, Trash2 } from "lucide-react";
+import { fireEvent } from "storybook/test";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -15,9 +16,20 @@ import {
 import { MenuShortcut } from "./menu-parts";
 import { Text } from "./text";
 
+/**
+ * Opens the menu the way a right click does, at a point inside its target (its center), so a story shows the menu where it would open in use. Base UI
+ * places a context menu at the pointer; there is no anchor to hold it open by.
+ */
+const openAtTarget: NonNullable<Story["play"]> = async ({ canvasElement }) => {
+	const target = canvasElement.querySelector('[data-slot="context-menu-trigger"]');
+	if (!target) throw new Error("no context menu target");
+	const box = target.getBoundingClientRect();
+	fireEvent.contextMenu(target, { clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
+};
+
 function Target({ children = "여기를 오른쪽 클릭하세요" }: { children?: string }) {
 	return (
-		<ContextMenuTrigger className="flex h-32 w-72 items-center justify-center rounded-monti-lg border border-monti-muted border-dashed">
+		<ContextMenuTrigger className="flex h-32 w-72 items-center justify-center rounded-monti-lg border border-monti-default">
 			<Text tone="muted">{children}</Text>
 		</ContextMenuTrigger>
 	);
@@ -78,12 +90,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-export const Open: Story = { args: { open: true }, render: meta.render };
+export const Open: Story = { play: openAtTarget };
 
 /** A row that cannot be used is faint, and its end says why. */
 export const DisabledItems: Story = {
+	play: openAtTarget,
 	render: () => (
-		<ContextMenu open>
+		<ContextMenu>
 			<Target>글 목록의 한 줄</Target>
 			<ContextMenuContent>
 				<ContextMenuItem>
@@ -106,8 +119,9 @@ export const DisabledItems: Story = {
 
 /** With several rows picked, the menu starts with their count; what only works on one row (open, copy) is left out. */
 export const SeveralRows: Story = {
+	play: openAtTarget,
 	render: () => (
-		<ContextMenu open>
+		<ContextMenu>
 			<Target>글 목록의 한 줄</Target>
 			<ContextMenuContent>
 				<ContextMenuGroup>

@@ -72,15 +72,6 @@ describe("EntryStatus", () => {
 		render(<EntryStatus status="archived">보관됨</EntryStatus>);
 		expect(document.querySelector("[data-slot=entry-status-mark]")?.className).toContain("h-0.5");
 	});
-
-	it("follows the surrounding text color on a dark pill", () => {
-		render(
-			<EntryStatus status="published" ink>
-				발행됨
-			</EntryStatus>,
-		);
-		expect(screen.getByText("발행됨").className).not.toContain("text-monti-success");
-	});
 });
 
 describe("StatusBar", () => {
