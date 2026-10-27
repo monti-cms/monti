@@ -4,7 +4,7 @@ import { Count } from "./count";
 
 /**
  * A one-line notice across the top of a pane, under its header, for something the writer should know about the whole page ("The Korean source
- * changed"): cream background and one rule below. `title` is the sentence in the warning color, `meta` the small detail after it in mono; `children`
+ * changed"): cream background and one rule below. `title` is the sentence in the warning color, `meta` the small detail after it in mono, which is cut with "…" when the line is short (the sentence and the actions never wrap); `children`
  * are what can be done about it, at the right end (text buttons: the one that goes there underlined, then the one that dismisses).
  */
 function Banner({
@@ -27,9 +27,11 @@ function Banner({
 			)}
 			{...props}
 		>
-			<span className="font-semibold text-monti-warning">{title}</span>
-			{meta && <Count>{meta}</Count>}
-			{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
+			<span className="shrink-0 whitespace-nowrap font-semibold text-monti-warning">{title}</span>
+			{meta && <Count className="min-w-0 truncate">{meta}</Count>}
+			{children && (
+				<span className="ml-auto flex shrink-0 items-center gap-monti-16 whitespace-nowrap">{children}</span>
+			)}
 		</div>
 	);
 }

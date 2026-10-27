@@ -347,7 +347,7 @@ export function StatsPage() {
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
 `cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`),
-목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`), 상태 부품(`Badge`·
+목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`), 상태 부품(`Count`·
 `Banner`·`LoadErrorAlert`·`FormFieldError`), `commonMessages`(저장·취소·다시 시도 등), `useDebounced`, 미디어 미리보기(`MediaThumbnail`), 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. Monti 패키지와 예제가 쓰는 것만 내보내며, 없는 부품은 확장이 필요로 할 때 추가한다. 색은 `--monti-success`·`--monti-warning`·`--monti-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.

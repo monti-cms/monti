@@ -5,7 +5,6 @@ import { type ReactNode, useRef } from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
-import { Spinner } from "./spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 // The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
@@ -16,7 +15,7 @@ const HALF =
 /**
  * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
  * the same action; a first publish has no menu and is a plain primary `Button`. `menuLabel` names the caret half for screen readers and its
- * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves; a loading pill keeps its fill.
+ * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves; a loading pill keeps its fill, and its label says what is happening.
  */
 function SplitButton({
 	children,
@@ -65,7 +64,6 @@ function SplitButton({
 				onClick={onClick}
 				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]")}
 			>
-				{loading && <Spinner size="sm" aria-hidden />}
 				{children}
 			</ButtonPrimitive>
 			<DropdownMenu>

@@ -1,4 +1,4 @@
-import { Empty, EmptyStep } from "@monti-cms/ui";
+import { Box, Empty, EmptyStep, Text } from "@monti-cms/ui";
 import { AdminLink as Link } from "../../router";
 
 export interface EmptyStateAction {
@@ -12,7 +12,7 @@ export type EmptyStateSecondaryAction = { label: string; href: string } | { labe
 
 /**
  * The one empty look of the admin: a line that says so, one quiet line under it, and what can be done as steps (the action, then the second way).
- * The full form is for a list or grid that has nothing; the compact form is for dialogs and popovers.
+ * The full form is for a list or grid that has nothing. The compact form, for a popup or a short list, is one quiet line of text with no box.
  */
 export function EmptyState({
 	title,
@@ -27,13 +27,16 @@ export function EmptyState({
 	secondaryAction?: EmptyStateSecondaryAction;
 	compact?: boolean;
 }) {
+	if (compact)
+		return (
+			<Box padding={12}>
+				<Text as="p" variant="note" tone="subtle">
+					{title}
+				</Text>
+			</Box>
+		);
 	return (
-		<Empty
-			size={compact ? "compact" : "fill"}
-			title={title}
-			description={description}
-			data-variant={compact ? "compact" : "full"}
-		>
+		<Empty title={title} description={description}>
 			{action && (
 				<EmptyStep disabled={action.disabled} onClick={action.onClick}>
 					{action.label}

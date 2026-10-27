@@ -2,7 +2,6 @@
 
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Badge,
 	Banner,
 	Box,
 	Button,
@@ -121,9 +120,13 @@ const advancedEdited = (
 	JSON.stringify({ prompt: action.prompt, send: action.send, checks: action.checks }) !==
 		JSON.stringify({ prompt: defaults.prompt, send: defaults.send, checks: defaults.checks });
 
-/** The small muted chip that marks an action whose advanced values were edited. */
+/** The small quiet word that marks an action whose advanced values were edited. */
 function ModifiedChip({ label }: { label: string }) {
-	return <Badge variant="secondary">{label}</Badge>;
+	return (
+		<Text variant="meta" tone="subtle">
+			{label}
+		</Text>
+	);
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -540,7 +543,6 @@ export function AiManager() {
 								resizeKey="ai-features"
 								label={t("list.label")}
 								loading={featuresQuery.isPending}
-								skeletonRows={4}
 								empty={
 									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
 										<EmptyState compact title={t("list.empty")} />
@@ -1022,9 +1024,9 @@ function FeatureEditor({
 								{t("test.noResults")}
 							</Text>
 						) : (
-							<Inline as="ul" gap={4} wrap>
+							<Inline as="ul" gap={12} wrap>
 								{test.result.items.map((item) => (
-									<Badge key={item.value} variant="secondary" render={<li />}>
+									<Inline as="li" key={item.value} gap={4}>
 										<Text variant="caption" truncate>
 											{item.label}
 										</Text>
@@ -1033,7 +1035,7 @@ function FeatureEditor({
 												{item.detail}
 											</Text>
 										)}
-									</Badge>
+									</Inline>
 								))}
 							</Inline>
 						)

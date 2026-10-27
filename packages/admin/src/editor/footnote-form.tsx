@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Badge, Inline, Label, Stack, Text, Textarea } from "@monti-cms/ui";
+import { Inline, Label, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
@@ -124,7 +124,9 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	return (
 		<Stack as="form" gap={12} onSubmit={handleApply} onKeyDown={submitOnEnter}>
 			<Inline gap={8}>
-				<Badge variant="secondary">{target.badge}</Badge>
+				<Text variant="meta" tone="subtle">
+					{target.badge}
+				</Text>
 				<Text weight="medium">{t("inlineBubble.footnotePanel")}</Text>
 			</Inline>
 			<Stack gap={8}>

@@ -1,7 +1,9 @@
 "use client";
 
-import { Box, Inline, ResizablePane, Skeleton, Stack, Text, TextButton } from "@monti-cms/ui";
+import { useTranslator } from "@monti-cms/core/site";
+import { Box, Inline, ResizablePane, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-menu";
 
 /**
@@ -20,14 +22,13 @@ export function MasterDetail({ list, children }: { list: ReactNode; children: Re
 }
 
 /**
- * The list column. While `loading` it shows `skeletonRows` placeholders; with no rows it shows `empty`. A `header` (a notice, a toolbar) sits above the rows.
+ * The list column. While `loading` it shows one quiet line saying so; with no rows it shows `empty`. A `header` (a notice, a toolbar) sits above the rows.
  * Its width can be dragged (224 to 384px, 288px by default) and is remembered under `resizeKey`.
  */
 export function ListPane({
 	label,
 	resizeKey = "list",
 	loading = false,
-	skeletonRows = 3,
 	empty,
 	header,
 	children,
@@ -36,31 +37,32 @@ export function ListPane({
 	/** Names the remembered width: one per list (the templates list, each AI tab). */
 	resizeKey?: string;
 	loading?: boolean;
-	skeletonRows?: number;
 	/** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
 	empty?: ReactNode;
 	header?: ReactNode;
 	children?: ReactNode;
 }) {
+	const tc = useTranslator(commonMessages);
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
 		<ResizablePane resizeKey={`list-pane:${resizeKey}`} defaultWidth={288} min={224} max={384}>
 			{header}
 			<Stack as="ul" gap={0} grow minHeight={0} overflow="y" aria-label={label}>
-				{loading
-					? Array.from({ length: skeletonRows }, (_, index) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-							<Box as="li" key={index} padding={12} aria-hidden>
-								<Skeleton shape="control" />
-							</Box>
-						))
-					: hasRows
-						? children
-						: empty && (
-								<Stack as="li" grow align="center" justify="center" padding={16}>
-									{empty}
-								</Stack>
-							)}
+				{loading ? (
+					<Box as="li" padding={12}>
+						<Text as="p" variant="note" tone="subtle" role="status">
+							{tc("loading")}
+						</Text>
+					</Box>
+				) : hasRows ? (
+					children
+				) : (
+					empty && (
+						<Stack as="li" grow align="center" justify="center" padding={16}>
+							{empty}
+						</Stack>
+					)
+				)}
 			</Stack>
 		</ResizablePane>
 	);

@@ -30,7 +30,7 @@ function Table({
 			<table
 				data-slot="table"
 				className={cn(
-					"w-full caption-bottom text-monti-body",
+					"w-full text-monti-body",
 					layout === "fixed" && "table-fixed",
 					stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-monti-page",
 					className,
@@ -58,16 +58,6 @@ function TableBody({
 }) {
 	return (
 		<tbody data-slot="table-body" className={cn("transition-opacity", dimmed && "opacity-60", className)} {...props} />
-	);
-}
-
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
-	return (
-		<tfoot
-			data-slot="table-footer"
-			className={cn("border-monti-muted border-t bg-monti-tool font-medium [&>tr]:last:border-b-0", className)}
-			{...props}
-		/>
 	);
 }
 
@@ -180,7 +170,8 @@ export interface CellOptions {
 	valign?: "top";
 	/** Long content wraps onto more lines instead of widening the column. */
 	wrap?: boolean;
-	tone?: "muted";
+	/** `muted` for a secondary column, `subtle` for the quietest (a category, a note), at the note size. */
+	tone?: "muted" | "subtle";
 	/** An empty column that takes the width the others leave (before a trailing actions column in a fixed-layout table). */
 	filler?: boolean;
 }
@@ -203,7 +194,7 @@ function TableHead({
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-10 whitespace-nowrap px-monti-8 align-middle text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				"h-10 whitespace-nowrap px-monti-10 align-middle text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
@@ -235,13 +226,14 @@ function TableCell({
 		<td
 			data-slot="table-cell"
 			className={cn(
-				"relative whitespace-nowrap px-monti-8 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				"relative whitespace-nowrap px-monti-10 py-monti-10 align-middle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
 				valign === "top" && "align-top",
 				wrap && "whitespace-normal break-words",
 				tone === "muted" && "text-monti-muted",
+				tone === "subtle" && "text-monti-note text-monti-subtle",
 				filler && "p-0",
 				className,
 			)}
@@ -251,26 +243,4 @@ function TableCell({
 	);
 }
 
-function TableCaption({ className, ...props }: React.ComponentProps<"caption">) {
-	return (
-		<caption
-			data-slot="table-caption"
-			className={cn("mt-monti-16 text-monti-body text-monti-muted", className)}
-			{...props}
-		/>
-	);
-}
-
-export {
-	RowActions,
-	RowCheck,
-	RowTitle,
-	Table,
-	TableBody,
-	TableCaption,
-	TableCell,
-	TableFooter,
-	TableHead,
-	TableHeader,
-	TableRow,
-};
+export { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow };

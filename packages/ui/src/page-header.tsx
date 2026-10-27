@@ -41,7 +41,7 @@ type SelectAll = {
 };
 
 /**
- * The select-all of a list: it hangs 26px outside the toolbar's left edge, on the line of the rows' checks. It is hidden while nothing is picked
+ * The select-all of a list: it hangs 26px outside the toolbar's left edge, on the line of the rows' checks, level with the toolbar's first line (24px down, half of 48) even when a narrow toolbar wraps onto a second. It is hidden while nothing is picked
  * and shows when the pointer is on the toolbar. It shows a bar while only some rows of the page are picked and a ✓ when all of them are.
  */
 function SelectAllCheck({ selectAll }: { selectAll: SelectAll }) {
@@ -49,7 +49,7 @@ function SelectAllCheck({ selectAll }: { selectAll: SelectAll }) {
 		<span
 			data-slot="select-all"
 			className={cn(
-				"absolute top-1/2 -left-[26px] flex -translate-y-1/2 pointer-coarse:opacity-100 focus-within:opacity-100",
+				"absolute top-6 -left-[26px] flex -translate-y-1/2 pointer-coarse:opacity-100 focus-within:opacity-100",
 				selectAll.state === "none" ? "opacity-0 group-hover/toolbar:opacity-100" : "opacity-100",
 			)}
 		>

@@ -15,7 +15,7 @@ function Untranslated({ className, ...props }: ComponentProps<"span">) {
 }
 
 const markerVariants = cva(
-	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 font-mono text-monti-micro leading-none",
+	"inline-flex h-[18px] items-center gap-monti-2 whitespace-nowrap rounded-monti-full border-0 font-mono text-[10px] leading-none",
 	{
 		variants: {
 			/**
@@ -41,7 +41,7 @@ const markerVariants = cva(
 );
 
 /**
- * A small tag in the left margin of a block. `request` carries a count (or "…" while the assistant works) and opens the note's card; `changed` says a
+ * A small tag in the left margin of a block, 18px tall in mono 10px (the one text smaller than the micro role). `request` carries a count (or "…" while the assistant works) and opens the note's card; `changed` says a
  * translated block's source changed ("Changed", "New", "Removed"); `keep` says the block stays in the source language. Press it to open what it is about
  * (give it `onClick`). The words are the app's.
  */

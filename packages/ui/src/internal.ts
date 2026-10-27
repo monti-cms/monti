@@ -21,7 +21,6 @@ export {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
-export { Badge, badgeVariants } from "./badge";
 export { Banner } from "./banner";
 export { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
 export { Block, BlockHandle } from "./block-handle";
@@ -160,6 +159,7 @@ export {
 	PaginationPrevious,
 } from "./pagination";
 export { Patch, type PatchLine } from "./patch";
+export { PickList, PickListItem } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
 export { ProposalBubble } from "./proposal-bubble";
@@ -202,21 +202,19 @@ export {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
 	SidebarProvider,
-	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
-export { Skeleton } from "./skeleton";
 export { Spark } from "./spark";
-export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
@@ -228,9 +226,7 @@ export {
 	RowTitle,
 	Table,
 	TableBody,
-	TableCaption,
 	TableCell,
-	TableFooter,
 	TableHead,
 	TableHeader,
 	TableRow,
@@ -240,7 +236,7 @@ export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
 export { TextButton } from "./text-button";
 export { Textarea } from "./textarea";
-export { ChoiceCard, FolderTile, Tile } from "./tile";
+export { FolderTile, Tile } from "./tile";
 export { Toaster, toast } from "./toast";
 export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";

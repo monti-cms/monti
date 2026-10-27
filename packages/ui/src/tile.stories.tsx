@@ -1,13 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FileText, FolderUp, Image as ImageGlyph, MoreHorizontal, Table2, Type } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { FileText, FolderUp, MoreHorizontal } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import { DropArea } from "./drop-area";
 import { IconButton } from "./icon-button";
 import { Image } from "./image";
 import { RenameField } from "./rename-field";
 import { Stack } from "./stack";
 import { Text } from "./text";
-import { ChoiceCard, FolderTile, Tile } from "./tile";
+import { FolderTile, Tile } from "./tile";
+import { Toaster, toast } from "./toast";
 
 /** An inline SVG, so the stories load nothing from the network. */
 const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -58,10 +59,10 @@ function Labelled({ name, children }: { name: string; children: ReactNode }) {
 export const Picked: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">
-			<Labelled name="ready">
+			<Labelled name="보통">
 				<Tile preview={preview} title="desk-morning.jpg" detail="2400×1600 · 글 1" onSelectedChange={() => {}} />
 			</Labelled>
-			<Labelled name="picked">
+			<Labelled name="고름">
 				<Tile
 					preview={preview}
 					title="desk-morning.jpg"
@@ -70,24 +71,21 @@ export const Picked: Story = {
 					onSelectedChange={() => {}}
 				/>
 			</Labelled>
-			<Labelled name="picking (others picked)">
+			<Labelled name="다른 칸을 고른 중">
 				<Tile preview={preview} title="notes.png" detail="1200×800" picking onSelectedChange={() => {}} />
 			</Labelled>
 		</Stack>
 	),
 };
 
-/** Uploading: faded preview and a bar along its bottom edge; waiting has no bar. Failed: a red edge and line, and what can be done. */
+/** Uploading: a faded preview and a bar along its bottom edge. Failed: a red ring over the preview, a red line, and what can be done. */
 export const UploadingAndFailed: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">
-			<Labelled name="uploading">
+			<Labelled name="올리는 중">
 				<Tile preview={preview} title="hero.png" detail="올리는 중 · 64%" status="uploading" progress={64} />
 			</Labelled>
-			<Labelled name="waiting">
-				<Tile preview={preview} title="hero-dark.png" detail="대기" status="uploading" />
-			</Labelled>
-			<Labelled name="failed">
+			<Labelled name="실패">
 				<Tile
 					preview={preview}
 					title="panorama.jpg"
@@ -99,7 +97,7 @@ export const UploadingAndFailed: Story = {
 					]}
 				/>
 			</Labelled>
-			<Labelled name="failed, no way to retry">
+			<Labelled name="실패, 다시 할 수 없음">
 				<Tile
 					preview={<Image src={null} alt="" fallback={FileText} ratio="photo" radius="none" />}
 					title="IMG_2041.HEIC"
@@ -116,7 +114,7 @@ export const UploadingAndFailed: Story = {
 export const Proposal: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">
-			<Labelled name="proposal">
+			<Labelled name="제안">
 				<Tile
 					preview={preview}
 					title="desk-morning.jpg"
@@ -124,7 +122,7 @@ export const Proposal: Story = {
 					onSelectedChange={() => {}}
 				/>
 			</Labelled>
-			<Labelled name="proposal, picked">
+			<Labelled name="제안, 고름">
 				<Tile
 					preview={preview}
 					title="desk-morning.jpg"
@@ -137,10 +135,13 @@ export const Proposal: Story = {
 	),
 };
 
-/** `action` is the ⋯ at the top right, shown with the pointer (point at the tile). */
+/** `action` is the ⋯ at the top right, shown with the pointer. Shown here in the pointed-at state (a story cannot hover, so it sets `data-hovered`): the check and the ⋯. */
 export const WithMenu: Story = {
+	play: async ({ canvasElement }) => {
+		for (const tile of canvasElement.querySelectorAll("[data-slot=tile]")) tile.setAttribute("data-hovered", "");
+	},
 	render: () => (
-		<Labelled name="action">
+		<Labelled name="포인터를 올린 칸">
 			<Tile
 				preview={preview}
 				title="desk-morning.jpg"
@@ -183,7 +184,7 @@ export const Detail: Story = {
 /** A folder is a low tile with its icon, name and count. */
 export const Folders: Story = {
 	render: () => (
-		<div className="grid w-[640px] grid-cols-3 gap-x-monti-20 gap-y-monti-12">
+		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12">
 			<FolderTile name="covers" count={6} />
 			<FolderTile name="diagrams" count={3} />
 			<FolderTile name="상위 폴더로" icon={<FolderUp aria-hidden />} />
@@ -197,7 +198,7 @@ export const Folders: Story = {
 /** `action` is the ⋯ at the right, shown with the pointer and in place of the count (point at the first folder; the second shows it open). */
 export const FolderWithMenu: Story = {
 	render: () => (
-		<div className="grid w-[640px] grid-cols-3 gap-x-monti-20 gap-y-monti-12">
+		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12">
 			{[false, true].map((open) => (
 				<FolderTile
 					key={String(open)}
@@ -218,7 +219,7 @@ export const FolderWithMenu: Story = {
 function RenameDemo() {
 	const [name, setName] = useState("새 폴더");
 	return (
-		<div className="grid w-[640px] grid-cols-3 gap-x-monti-20">
+		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20">
 			<FolderTile>
 				<RenameField
 					value={name}
@@ -238,15 +239,28 @@ export const Renaming: Story = { render: () => <RenameDemo /> };
 
 function GridDemo({ over, folderOver }: { over: boolean; folderOver: boolean }) {
 	const [picked, setPicked] = useState<number[]>([1]);
+	// While files are dragged, a pill at the bottom says where they land.
+	useEffect(() => {
+		toast.dismiss();
+		if (over) toast.dropHint("여기에 올려요");
+		if (folderOver)
+			toast.dropHint(
+				<>
+					<b>covers</b>에 올려요
+				</>,
+			);
+		return () => void toast.dismiss();
+	}, [over, folderOver]);
 	const toggle = (index: number) =>
 		setPicked((now) => (now.includes(index) ? now.filter((item) => item !== index) : [...now, index]));
 	return (
-		<DropArea over={over} className="w-[720px]">
-			<div className="grid grid-cols-4 gap-x-monti-20 gap-y-monti-12 px-monti-12 pt-monti-24">
+		<DropArea over={over} className="w-[720px] max-w-full">
+			<Toaster duration={Number.POSITIVE_INFINITY} />
+			<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12 px-monti-12 pt-monti-24">
 				<FolderTile name="covers" count={6} dropTarget={folderOver} />
 				<FolderTile name="diagrams" count={3} />
 			</div>
-			<div className="grid grid-cols-4 gap-x-monti-20 gap-y-monti-24 px-monti-12 pt-monti-24">
+			<div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-24 px-monti-12 pt-monti-24">
 				{["desk-morning.jpg", "notes.png", "cover-a.png", "cover-b.png"].map((name, index) => (
 					<Tile
 						key={name}
@@ -269,71 +283,14 @@ export const InGrid: Story = {
 	render: () => <GridDemo over={false} folderOver={false} />,
 };
 
-/** Files dragged over the grid: a line and a tint around all of it, the tiles unchanged. */
+/** Files dragged over the grid: a line and a tint around all of it, the tiles unchanged, and the pill at the bottom saying where they land. */
 export const DroppingOnTheGrid: Story = {
 	decorators: [],
 	render: () => <GridDemo over folderOver={false} />,
 };
 
-/** Over a subfolder, the grid's frame goes out and that folder takes the drop look. */
+/** Over a subfolder, the grid's frame goes out, that folder takes the drop look, and the pill names the folder. */
 export const DroppingOnAFolder: Story = {
 	decorators: [],
 	render: () => <GridDemo over={false} folderOver />,
-};
-
-const KINDS = [
-	{ icon: <Type aria-hidden />, title: "텍스트", hint: "짧은 글자 한 줄" },
-	{ icon: <ImageGlyph aria-hidden />, title: "이미지", hint: "사진이나 그림 한 장" },
-	{ icon: <Table2 aria-hidden />, title: "표", hint: "행과 열로 된 값" },
-];
-
-export const ChoiceCards: Story = {
-	render: () => {
-		const [picked, setPicked] = useState(0);
-		return (
-			<Stack gap={8} className="max-w-sm">
-				{KINDS.map((kind, index) => (
-					<ChoiceCard
-						key={kind.title}
-						icon={kind.icon}
-						title={kind.title}
-						hint={kind.hint}
-						selected={picked === index}
-						onClick={() => setPicked(index)}
-					/>
-				))}
-			</Stack>
-		);
-	},
-};
-
-export const ChoiceCardOptions: Story = {
-	render: () => (
-		<Stack gap={24} className="max-w-sm">
-			<Stack gap={4}>
-				<Text variant="label" tone="muted">
-					selected false
-				</Text>
-				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="짧은 글자 한 줄" />
-			</Stack>
-			<Stack gap={4}>
-				<Text variant="label" tone="muted">
-					selected true
-				</Text>
-				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="짧은 글자 한 줄" selected />
-			</Stack>
-			<Stack gap={4}>
-				<Text variant="label" tone="muted">
-					disabled
-				</Text>
-				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="지금은 고를 수 없어요" disabled />
-			</Stack>
-			<Stack gap={4}>
-				<Text variant="label" tone="muted">
-					icon 없음, hint 없음
-				</Text>
-				<ChoiceCard title="텍스트" />
-			</Stack>
-		</Stack>
-	),
 };

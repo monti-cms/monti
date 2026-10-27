@@ -2,7 +2,7 @@
 
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Stack, Switch, Textarea } from "@monti-cms/ui";
+import { cn, FormFieldError, Inline, Input, Label, Separator, Switch, Text, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
@@ -365,10 +365,9 @@ export function ImageBlockView() {
 					</div>
 				)
 			) : isChecking ? (
-				<Stack gap={0} role="status" aria-label={t("imageNode.loading")}>
-					<Skeleton shape="block" />
-					<Skeleton shape="block" />
-				</Stack>
+				<Text as="p" tone="subtle" role="status">
+					{t("imageNode.loading")}
+				</Text>
 			) : (
 				<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
 					{t("imageNode.unavailable")}

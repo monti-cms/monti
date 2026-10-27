@@ -93,7 +93,6 @@ export function SnippetManager({
 						resizeKey="ai-snippets"
 						label={t("list.label")}
 						loading={query.isPending}
-						skeletonRows={2}
 						empty={view?.items.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
 					>
 						{view?.items.map((item) => (

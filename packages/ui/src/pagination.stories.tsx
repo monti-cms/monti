@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Count } from "./count";
 import {
 	Pagination,
 	PaginationContent,
@@ -10,9 +11,21 @@ import {
 } from "./pagination";
 import { Stack } from "./stack";
 
+/**
+ * The pager of a list, at the right end of the row under the table (the range, "1–25 / 148", at the left). Page buttons are 32px and never narrower
+ * than tall; the current page has the selected ground and is semibold; "‹ 이전" and "다음 ›" end the run, and a long run is cut with a quiet "…".
+ */
 const meta = {
 	title: "Patterns/List/Pagination",
 	component: Pagination,
+	decorators: [
+		(Story) => (
+			<div className="flex w-full max-w-2xl items-center px-monti-12">
+				<Count className="whitespace-nowrap">26–50 / 148</Count>
+				<Story />
+			</div>
+		),
+	],
 } satisfies Meta<typeof Pagination>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -49,32 +62,30 @@ export const Playground: Story = {
 	),
 };
 
-/** Links as a round number and as a wide link, current page vs not (one digit is a circle, more digits a pill), and custom previous/next text. */
+/** One digit is a circle, more digits a pill; the current page and the others; custom previous and next text. */
 export const Links: Story = {
+	decorators: [],
 	render: () => (
 		<Stack gap={16}>
-			{(["icon", "default"] as const).map((size) => (
-				<Pagination key={size}>
-					<PaginationContent>
-						<PaginationItem>
-							<PaginationLink href="#" size={size}>
-								1
-							</PaginationLink>
-						</PaginationItem>
-						<PaginationItem>
-							<PaginationLink href="#" size={size} isActive>
-								2
-							</PaginationLink>
-						</PaginationItem>
-						<PaginationItem>
-							<PaginationLink href="#" size={size}>
-								12
-							</PaginationLink>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			))}
-			<Pagination>
+			<Pagination className="ml-0">
+				<PaginationContent>
+					<PaginationItem>
+						<PaginationLink href="#">1</PaginationLink>
+					</PaginationItem>
+					<PaginationItem>
+						<PaginationLink href="#" isActive>
+							2
+						</PaginationLink>
+					</PaginationItem>
+					<PaginationItem>
+						<PaginationLink href="#">12</PaginationLink>
+					</PaginationItem>
+					<PaginationItem>
+						<PaginationLink href="#">128</PaginationLink>
+					</PaginationItem>
+				</PaginationContent>
+			</Pagination>
+			<Pagination className="ml-0">
 				<PaginationContent>
 					<PaginationItem>
 						<PaginationPrevious href="#" text="이전 글" />
@@ -88,13 +99,13 @@ export const Links: Story = {
 	),
 };
 
-/** First and last page: the link has no disabled prop, so aria-disabled is the only hint. */
+/** The only page: "이전" and "다음" are dimmed to .45, cannot be followed and are skipped by the keyboard. */
 export const Disabled: Story = {
 	render: () => (
 		<Pagination>
 			<PaginationContent>
 				<PaginationItem>
-					<PaginationPrevious aria-disabled />
+					<PaginationPrevious disabled />
 				</PaginationItem>
 				<PaginationItem>
 					<PaginationLink href="#" isActive>
@@ -102,7 +113,7 @@ export const Disabled: Story = {
 					</PaginationLink>
 				</PaginationItem>
 				<PaginationItem>
-					<PaginationNext href="#" />
+					<PaginationNext disabled />
 				</PaginationItem>
 			</PaginationContent>
 		</Pagination>

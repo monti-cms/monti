@@ -5,7 +5,6 @@ import { type ComponentProps, type ReactNode, useState } from "react";
 import { cn } from "./cn";
 import { CodeBlock } from "./code-block";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
-import { Spinner } from "./spinner";
 import { Text } from "./text";
 
 export type ToolCallStatus = "running" | "done" | "failed";
@@ -45,7 +44,9 @@ function ToolCallLine({
 	const summary = (
 		<>
 			{status === "running" ? (
-				<Spinner className="size-3.5" />
+				<span aria-hidden className="w-3.5 shrink-0 text-center">
+					…
+				</span>
 			) : status === "done" ? (
 				<Check aria-hidden className="size-3.5" strokeWidth={1.6} />
 			) : (

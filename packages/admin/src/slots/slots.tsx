@@ -2,7 +2,6 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
 	Button,
 	DropdownMenu,
@@ -11,10 +10,10 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 	Inline,
-	Spinner,
 	Stack,
 	Text,
 	Textarea,
+	TextButton,
 } from "@monti-cms/ui";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
@@ -61,16 +60,17 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 
 	const busy = state.status === "running";
 	const first = actions[0];
-	const triggerIcon = busy ? (
-		<Spinner size="sm" />
-	) : actions.length === 1 ? (
-		(first?.icon ?? defaultIcon)
-	) : (
-		(first?.menuIcon ?? first?.icon ?? defaultIcon)
-	);
+	const triggerIcon =
+		actions.length === 1 ? (first?.icon ?? defaultIcon) : (first?.menuIcon ?? first?.icon ?? defaultIcon);
 	const trigger =
 		actions.length === 1 ? (
-			<IconButton label={first?.label ?? ""} side="bottom" disabled={disabled} onClick={() => first && start(first.id)}>
+			<IconButton
+				label={first?.label ?? ""}
+				side="bottom"
+				pressed={busy}
+				disabled={disabled}
+				onClick={() => first && start(first.id)}
+			>
 				{triggerIcon}
 			</IconButton>
 		) : (
@@ -78,6 +78,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 				<IconButton
 					label={first?.menuLabel ?? first?.label ?? ""}
 					side="bottom"
+					pressed={busy}
 					disabled={disabled}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
@@ -94,7 +95,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 			</DropdownMenu>
 		);
 
-	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
+	// While generating, the button shows as pressed. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
 			<Stack gap={8} padding={8} radius="md" border="all" background="tool" aria-live="polite">
@@ -177,22 +178,18 @@ function SlotResult({
 				</Text>
 			);
 		return (
-			<Inline as="ul" wrap gap={4}>
+			<Inline as="ul" wrap gap={12}>
 				{result.items.map((item) => (
 					<Box as="li" key={item.value} maxWidth="full">
-						<Badge
-							variant="outline"
-							render={<button type="button" />}
-							onClick={() => onApply(item.value)}
-							title={item.label}
-						>
-							<Text truncate>{item.label}</Text>
+						<TextButton onClick={() => onApply(item.value)} title={item.label}>
+							{item.label}
 							{item.detail && (
-								<Text tone="muted" variant="caption">
+								<Text as="span" tone="subtle" variant="caption">
+									{" "}
 									{item.detail}
 								</Text>
 							)}
-						</Badge>
+						</TextButton>
 					</Box>
 				))}
 			</Inline>

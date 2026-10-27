@@ -1,14 +1,14 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, Heading, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Box, Count, Heading, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ImportResultEntry, ImportRun, ImportStep } from "../../api/import";
 import { importMessages } from "./messages";
 
-const OUTCOME_VARIANT = {
+const OUTCOME_TONE = {
 	imported: "success",
 	draft: "warning",
-	skipped: "secondary",
+	skipped: "subtle",
 	failed: "danger",
 } as const;
 
@@ -44,7 +44,9 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	return (
 		<Stack as="li" gap={8} paddingY={12} border="bottom" data-testid="import-result" data-outcome={entry.outcome}>
 			<Inline gap={8} wrap>
-				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
+				<Text variant="label" tone={OUTCOME_TONE[entry.outcome]}>
+					{t(`result.outcome.${entry.outcome}`)}
+				</Text>
 				{entry.id ? (
 					<TextButton href={site.adminEntryEditHref(entry.id)}>
 						<Text weight="medium">{entry.title ?? entry.slug ?? entry.key}</Text>
@@ -55,7 +57,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				<Text variant="caption" tone="muted">
 					{site.localeLabel(entry.locale)}
 				</Text>
-				{entry.publish?.status === "done" && <Badge variant="outline">{t("result.published", { count: 1 })}</Badge>}
+				{entry.publish?.status === "done" && <Count>{t("result.published", { count: 1 })}</Count>}
 				{entry.id && (
 					<TextButton variant="underline" href={site.adminEntryEditHref(entry.id)}>
 						{t("result.open")}

@@ -10,9 +10,9 @@ import { TextButton } from "./text-button";
  *
  * - Picked: a 2px ink ring around the preview and the check on. The check shows in the preview's top left when the pointer is on the tile, and
  *   on every tile (faint) while any are picked (`picking`). `action` is the ⋯ at the top right, shown with the pointer.
- * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known; without it the tile
- *   waits. The detail line says which ("Uploading · 64%", "Waiting"). The name is quiet.
- * - `status="failed"`: the preview's edge and the detail line are red and the name is quiet; `actions` are what can be done ("Shrink and retry",
+ * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known. The detail line says how
+ *   far ("Uploading · 64%"). The name is quiet.
+ * - `status="failed"`: a 1px red ring drawn over the preview's edge, the detail line is red and the name is quiet; `actions` are what can be done ("Shrink and retry",
  *   "Remove"). A failed file stays in its place.
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
  *   is ringed and checked in blue.
@@ -74,11 +74,18 @@ function Tile({
 				<span
 					className={cn(
 						"relative block aspect-[4/3] overflow-hidden rounded-monti-md bg-monti-muted",
-						failed && "ring-1 ring-monti-danger ring-inset",
 						selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
 					)}
 				>
 					<span className={cn("block size-full", uploading && "opacity-45")}>{preview}</span>
+					{failed && (
+						// Above the picture: a ring on the box itself would be painted under it.
+						<span
+							aria-hidden
+							data-slot="tile-failed-ring"
+							className="pointer-events-none absolute inset-0 rounded-monti-md ring-1 ring-monti-danger ring-inset"
+						/>
+					)}
 					{uploading && progress !== undefined && (
 						<span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-monti-muted">
 							<span className="block h-full bg-monti-emphasis" style={{ width: `${progress}%` }} />
@@ -111,8 +118,8 @@ function Tile({
 						selected
 							? "opacity-100"
 							: picking
-								? "opacity-60 group-hover/tile:opacity-100"
-								: "opacity-0 group-hover/tile:opacity-100",
+								? "opacity-60 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100"
+								: "opacity-0 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100",
 					)}
 				>
 					<Checkbox
@@ -125,7 +132,7 @@ function Tile({
 				</span>
 			)}
 			{action && (
-				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100">
+				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100">
 					{action}
 				</span>
 			)}
@@ -197,7 +204,7 @@ function FolderTile({
 		</>
 	);
 	const look = cn(
-		"flex h-13 w-full min-w-0 items-center gap-[10px] rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-muted outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
+		"flex h-13 w-full min-w-0 items-center gap-[10px] rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
 		selected && "bg-monti-selected",
 		dropTarget && "bg-monti-selected ring-[1.5px] ring-monti-contrast ring-inset",
 		className,
@@ -231,42 +238,4 @@ function FolderTile({
 	);
 }
 
-/**
- * A choice in a list of options, as a row: an icon, a title and a hint, with a selected look (a field kind, an export scope). Renders a
- * button by default; inside a radio group it takes the radio's role from `render`.
- */
-function ChoiceCard({
-	icon,
-	title,
-	hint,
-	selected = false,
-	className,
-	...props
-}: Omit<React.ComponentProps<"button">, "title"> & {
-	icon?: React.ReactNode;
-	title: React.ReactNode;
-	hint?: React.ReactNode;
-	selected?: boolean;
-}) {
-	return (
-		<button
-			type="button"
-			data-slot="choice-card"
-			data-selected={selected || undefined}
-			aria-pressed={selected}
-			className={cn(
-				"flex w-full items-start gap-monti-12 rounded-monti-md border border-monti-muted bg-monti-page px-monti-12 py-monti-8 text-left outline-none transition-[background-color,border-color,box-shadow] hover:border-monti-default hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-50 data-selected:border-monti-contrast data-selected:bg-monti-selected",
-				className,
-			)}
-			{...props}
-		>
-			{icon && <span className="mt-monti-2 text-monti-muted [&_svg]:size-monti-icon-md">{icon}</span>}
-			<span className="flex min-w-0 flex-col gap-monti-2">
-				<span className="text-monti-label">{title}</span>
-				{hint && <span className="text-monti-caption text-monti-muted">{hint}</span>}
-			</span>
-		</button>
-	);
-}
-
-export { ChoiceCard, FolderTile, Tile };
+export { FolderTile, Tile };

@@ -181,7 +181,7 @@ describe("the center check", () => {
 		).toEqual([]);
 	});
 
-	it("looks at menu rows, tabs, chips, badges and status bar cells", () => {
+	it("looks at menu rows, tabs, chips and status bar cells", () => {
 		const row = (attrs: string) =>
 			`<div ${attrs} style="display:flex" data-box="0,36"><span data-box="0,36" data-lines="8,16">Save</span></div>`;
 		for (const attrs of [
@@ -189,7 +189,6 @@ describe("the center check", () => {
 			'role="tab"',
 			'role="option"',
 			'data-slot="chip"',
-			'data-slot="badge"',
 			'data-slot="status-bar-cell"',
 		])
 			expect(check(row(attrs)), attrs).toHaveLength(1);

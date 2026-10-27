@@ -1,7 +1,7 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, FormFieldError, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
+import { Box, cn, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CollectionIcon } from "../screens/shared/collection-icon";
@@ -123,12 +123,9 @@ export function InternalLinkPopup({
 			))}
 			{isLoading ? (
 				<Box as="div" paddingX={8} paddingY={8}>
-					<Inline as="div" gap={8} role="status">
-						<Spinner size="sm" />
-						<Text variant="caption" tone="muted">
-							{t("internalLink.searching")}
-						</Text>
-					</Inline>
+					<Text as="p" variant="caption" tone="muted" role="status">
+						{t("internalLink.searching")}
+					</Text>
 				</Box>
 			) : error ? (
 				<Box paddingX={8} paddingY={8}>

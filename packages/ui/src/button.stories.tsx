@@ -59,13 +59,13 @@ export const WithIcon: Story = {
 	),
 };
 
-/** Working: a spinner before the label, and the button cannot be pressed again. */
+/** Working: the button keeps its fill and its label says what is happening ("저장 중…", with a share when it is known); it cannot be pressed again. */
 export const Loading: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center">
 			<Button loading>저장 중…</Button>
 			<Button variant="secondary" size="sm" loading>
-				불러오는 중
+				올리는 중 64%
 			</Button>
 		</Stack>
 	),

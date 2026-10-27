@@ -139,6 +139,8 @@ function StatusBarPluginCell({
 	defaultOpen?: boolean;
 	onOpenChange?: (open: boolean) => void;
 }) {
+	// A cell with nothing in it is not drawn.
+	if (findings.length === 0) return null;
 	const blocking = findings.some((finding) => finding.blocking);
 	return (
 		<SheetList

@@ -5,10 +5,10 @@ import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Banner,
 	Box,
 	Button,
+	Count,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -20,7 +20,6 @@ import {
 	Input,
 	List,
 	ListItem,
-	Skeleton,
 	Stack,
 	Text,
 	TextButton,
@@ -181,9 +180,9 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 			<Inline wrap gap={8}>
 				<Text>{describeChange(impact.change, t)}</Text>
 				{impact.entries > 0 && (
-					<Badge variant={impact.consequence === "deleted" ? "danger" : "secondary"}>
+					<Count tone={impact.consequence === "deleted" ? "danger" : "default"}>
 						{t("review.entriesCount", { count: impact.entries })}
-					</Badge>
+					</Count>
 				)}
 			</Inline>
 			{impact.entries > 0 && (
@@ -346,7 +345,11 @@ export function ReviewDialog({
 				</DialogHeader>
 				<Stack gap={16} maxHeight="half" overflow="y" data-testid="review-body">
 					{error && <Banner role="alert" title={error} />}
-					{loading && !preview && <Skeleton shape="block" />}
+					{loading && !preview && (
+						<Text as="p" tone="subtle" role="status">
+							{tc("loading")}
+						</Text>
+					)}
 					{preview && !preview.valid && (
 						<Stack gap={8}>
 							<Banner role="alert" title={t("review.invalid")} />

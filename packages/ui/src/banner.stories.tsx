@@ -20,7 +20,7 @@ export const Playground: Story = {
 	render: (args) => (
 		<Banner {...args}>
 			<TextButton variant="underline">비교</TextButton>
-			<TextButton>확인했어요</TextButton>
+			<TextButton>확인</TextButton>
 		</Banner>
 	),
 };
@@ -28,13 +28,13 @@ export const Playground: Story = {
 /** Only the sentence, with nothing to do about it. */
 export const TitleOnly: Story = { args: { meta: undefined } };
 
-/** A long sentence and a long detail share the line; the actions keep their place. */
+/** On a narrow screen the detail gives way first; the sentence and the actions stay whole on one line. */
 export const Narrow: Story = {
 	render: (args) => (
 		<div className="max-w-md">
 			<Banner {...args} meta="10. 26 · 블록 2개 · 원문 버전 7">
 				<TextButton variant="underline">비교</TextButton>
-				<TextButton>확인했어요</TextButton>
+				<TextButton>확인</TextButton>
 			</Banner>
 		</div>
 	),
@@ -51,7 +51,7 @@ export const UnderHeader: Story = {
 			</div>
 			<Banner {...args} className="mt-monti-16">
 				<TextButton variant="underline">비교</TextButton>
-				<TextButton>확인했어요</TextButton>
+				<TextButton>확인</TextButton>
 			</Banner>
 		</div>
 	),

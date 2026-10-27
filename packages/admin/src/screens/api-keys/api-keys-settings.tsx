@@ -2,7 +2,6 @@
 
 import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Banner,
 	Box,
 	Button,
@@ -17,7 +16,6 @@ import {
 	Input,
 	List,
 	ListItem,
-	Skeleton,
 	Stack,
 	Text,
 } from "@monti-cms/ui";
@@ -26,6 +24,7 @@ import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
 import { errorText } from "../../api/client";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -165,6 +164,7 @@ function KeyRows({
 	onAdd: () => void;
 }) {
 	const t = useTranslator(apiKeysMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const list = query.data;
 	if (!list) {
@@ -177,7 +177,9 @@ function KeyRows({
 		}
 		return (
 			<Box paddingX={32} paddingY={16}>
-				<Skeleton shape="control" />
+				<Text as="p" variant="note" tone="subtle" role="status">
+					{tc("loading")}
+				</Text>
 			</Box>
 		);
 	}
@@ -209,9 +211,9 @@ function KeyRows({
 								{key.name}
 							</Text>
 							{!key.readable && (
-								<Badge variant="danger" title={t("row.unreadableHint")}>
+								<Text variant="meta" tone="danger" title={t("row.unreadableHint")}>
 									{t("row.unreadable")}
-								</Badge>
+								</Text>
 							)}
 						</Inline>
 						{!key.readable ? (

@@ -13,11 +13,8 @@ import {
 	FormFieldError,
 	Grid,
 	Image,
-	Inline,
 	Input,
 	Label,
-	Skeleton,
-	Spinner,
 	Stack,
 	Switch,
 	Tabs,
@@ -289,11 +286,9 @@ export function ImageInsertDialog({
 							/>
 							<Stack gap={8} aria-busy={isLibraryLoading}>
 								{isLibraryLoading && library.length === 0 && (
-									<Grid columns={3} responsive={false} gap={8}>
-										{["a", "b", "c"].map((key) => (
-											<Skeleton key={key} shape="block" />
-										))}
-									</Grid>
+									<Text as="p" variant="note" tone="subtle" role="status">
+										{tc("loading")}
+									</Text>
 								)}
 								{libraryFailed && !isLibraryLoading && (
 									<LoadErrorAlert
@@ -374,10 +369,9 @@ export function ImageInsertDialog({
 					</Stack>
 
 					{isUploading && (
-						<Inline as="div" role="status" gap={8}>
-							<Spinner />
-							<Text>{t("imageDialog.uploading", { percent: progress ?? 0 })}</Text>
-						</Inline>
+						<Text as="p" role="status">
+							{t("imageDialog.uploading", { percent: progress ?? 0 })}
+						</Text>
 					)}
 					{error && <FormFieldError>{error}</FormFieldError>}
 

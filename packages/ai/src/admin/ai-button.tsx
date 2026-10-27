@@ -1,7 +1,7 @@
 "use client";
 
 import { errorText, useSite, useTranslator } from "@monti-cms/admin";
-import { Button, Spark, Spinner, toast } from "@monti-cms/admin/kit";
+import { Button, Spark, toast } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
 import { type ReactNode, useState } from "react";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";
@@ -56,7 +56,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				}
 			}}
 		>
-			{running ? <Spinner /> : <Spark aria-hidden />}
+			<Spark aria-hidden />
 			{running ? t("running") : (children ?? label)}
 		</Button>
 	);

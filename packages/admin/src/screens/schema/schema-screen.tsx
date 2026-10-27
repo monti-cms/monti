@@ -5,20 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Badge,
-	Banner,
-	Box,
-	CodeBlock,
-	cn,
-	Heading,
-	IconButton,
-	Inline,
-	Skeleton,
-	Stack,
-	Text,
-	toast,
-} from "@monti-cms/ui";
+import { Banner, Box, CodeBlock, cn, Heading, Icon, IconButton, Inline, Stack, Text, toast } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -195,7 +182,13 @@ function CollectionNavItem({
 				<Box grow minWidth={0}>
 					<Text truncate>{label}</Text>
 				</Box>
-				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangedMark />}
+				{isNew ? (
+					<Text variant="meta" tone="subtle">
+						{t("collection.new")}
+					</Text>
+				) : (
+					changed && <ChangedMark />
+				)}
 				<Text variant="caption" tone="muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</Text>
@@ -285,10 +278,12 @@ function SchemaEditor({
 	};
 
 	const actions = !writable ? (
-		<Badge variant="outline">
-			<Lock aria-hidden />
-			{t("status.readOnly")}
-		</Badge>
+		<Inline gap={4}>
+			<Icon icon={Lock} size="sm" tone="subtle" />
+			<Text variant="meta" tone="subtle">
+				{t("status.readOnly")}
+			</Text>
+		</Inline>
 	) : null;
 
 	const reason = state.access.writable
@@ -493,6 +488,7 @@ export function SchemaSettings({
 }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
+	const tc = useTranslator(commonMessages);
 	const query = useQuery({
 		queryKey: schemaKeys.state(),
 		queryFn: ({ signal }) => fetchSchema(site, signal),
@@ -515,7 +511,13 @@ export function SchemaSettings({
 		);
 	return (
 		<Stack gap={12} padding={32}>
-			{error ? <LoadErrorAlert message={error} onRetry={() => void query.refetch()} /> : <Skeleton shape="block" />}
+			{error ? (
+				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
+			) : (
+				<Text as="p" tone="subtle" role="status">
+					{tc("loading")}
+				</Text>
+			)}
 		</Stack>
 	);
 }

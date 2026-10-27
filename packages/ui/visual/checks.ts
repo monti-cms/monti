@@ -12,7 +12,7 @@ export interface Finding {
  * - clipped: an element hides part of its own text (`overflow: hidden` or `clip`, more content than room) without a `text-overflow: ellipsis` or a
  *   line clamp that says the cut is meant;
  * - type: an element that carries a `text-monti-<role>` type class does not compute to that role's font size. Line height and weight are left out: a part sets
- *   them on purpose (`leading-none` in a badge, `font-semibold` in a button). An element whose role changes under a variant is left out too;
+ *   them on purpose (`leading-none` in a marker, `font-semibold` in a button). An element whose role changes under a variant is left out too;
  * - mono: mono and sans trade places: an element that asks for fixed-width letters (`font-mono`, or the `text-monti-meta` and `text-monti-micro` roles) computes
  *   another face, or an element with a sans role and no `font-mono` computes mono (see {@link findWrongMono});
  * - icon: a button, link or tab that holds an icon and visible text puts them on different lines (see {@link findSplitIcons});
@@ -216,7 +216,7 @@ const runBoxChecks = (): Finding[] => {
  * The function runs in the page (and in the unit test), so it holds no outside reference.
  */
 export const findOffCenterText = (): Finding[] => {
-	// The controls: anything a pointer or a key picks, and the chips, badges and status bar cells that are sized like one.
+	// The controls: anything a pointer or a key picks, and the chips and status bar cells that are sized like one.
 	const tolerance = 0.75;
 	// Hangul set in the mono face is drawn by the system's own Hangul face, whose metrics the page does not know (the design system keeps Korean in its
 	// mono roles as it is), so such a text is measured to a pixel, not to 0.75.
@@ -227,7 +227,7 @@ export const findOffCenterText = (): Finding[] => {
 	const hangul = "가나다라마바사아자차카타파하";
 	const latin = "H";
 	const controls =
-		'button, a[href], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [data-slot="chip"], [data-slot="badge"], [data-slot="status-bar-cell"]';
+		'button, a[href], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [data-slot="chip"], [data-slot="status-bar-cell"]';
 	const findings: Finding[] = [];
 	const shown = (el: Element) => {
 		const style = getComputedStyle(el);

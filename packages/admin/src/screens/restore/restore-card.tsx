@@ -19,7 +19,6 @@ import {
 	Input,
 	List,
 	ListItem,
-	Spinner,
 	Stack,
 	Text,
 	TextButton,
@@ -195,10 +194,7 @@ function RunProgress({ count }: { count: number }) {
 	return (
 		<output data-testid="restore-progress">
 			<Stack gap={8}>
-				<Inline gap={8}>
-					<Spinner aria-hidden size="sm" />
-					<Text tone="muted">{t("progress.running", { count })}</Text>
-				</Inline>
+				<Text tone="muted">{t("progress.running", { count })}</Text>
 				<Text as="p" variant="caption" tone="muted">
 					{t("progress.hint")}
 				</Text>

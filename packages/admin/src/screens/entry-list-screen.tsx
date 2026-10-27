@@ -2,7 +2,7 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, Skeleton, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
+import { Box, Button, Inline, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -169,71 +169,17 @@ function useMounted() {
 	return mounted;
 }
 
-/** Placeholder before the first render, in the places and sizes of the sidebar, the list header, its tabs and table, so nothing jumps. */
+/** Before the first render: a quiet line in the middle of the page, with nothing drawn in the shape of what will come. */
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline align="stretch" gap={0} height="screen" overflow="clip" aria-busy="true">
-			<Text srOnly>{tc("loading")}</Text>
-			<Stack
-				gap={8}
-				width="sidebar"
-				shrink={false}
-				border="right"
-				background="tool"
-				padding={8}
-				hideBelow="md"
-				aria-hidden
-			>
-				<Skeleton shape="control-sm" width="medium" />
-				<Stack gap={4} paddingTop={12}>
-					{PLACEHOLDER_ROWS.map((row) => (
-						<Skeleton key={row} shape="control-sm" />
-					))}
-				</Stack>
-			</Stack>
-			<Stack gap={0} grow minWidth={0} aria-hidden>
-				<Box width="full" maxWidth="content" centered paddingX={32} paddingTop={24}>
-					{/* The title bar: title and address on the left, search and the add button on the right. */}
-					<Inline justify="between" gap={12} shrink={false} border="bottom-contrast" paddingBottom={12}>
-						<Inline gap={8}>
-							<Skeleton shape="line" width="short" />
-							<Skeleton shape="line" width="medium" />
-						</Inline>
-						<Inline gap={8}>
-							<Skeleton shape="control-sm" width="medium" />
-							<Skeleton shape="control-sm" width="short" />
-						</Inline>
-					</Inline>
-					{/* Status tabs. */}
-					<Inline gap={16} shrink={false} border="bottom" paddingY={8}>
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-					</Inline>
-					{/* Editorial index rows. */}
-					<Stack gap={0}>
-						{PLACEHOLDER_ROWS.slice(0, 6).map((row) => (
-							<Inline key={row} justify="between" gap={24} border="bottom" paddingY={16}>
-								<Stack gap={4} grow>
-									<Skeleton shape="line" width="third" />
-									<Skeleton shape="line" width="short" />
-								</Stack>
-								<Inline gap={12}>
-									<Skeleton shape="line" width="chip" />
-									<Skeleton shape="line" width="short" />
-								</Inline>
-							</Inline>
-						))}
-					</Stack>
-				</Box>
-			</Stack>
-		</Inline>
+		<Stack height="screen" align="center" justify="center" aria-busy="true">
+			<Text as="p" tone="subtle" role="status">
+				{tc("loading")}
+			</Text>
+		</Stack>
 	);
 }
-
-const PLACEHOLDER_ROWS = Array.from({ length: 8 }, (_, index) => index);
 
 /** List screen. Opens the collection list, with no separate stats dashboard. */
 export function EntryListScreen() {

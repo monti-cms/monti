@@ -67,10 +67,10 @@ function Filters() {
 	);
 }
 
-/** The row under the title: tabs on the left, the filters used most and the sort on the right, with a short rule between the groups. */
+/** The row under the title, as a list page has it (12px inside, like the rows): tabs on the left, the filters used most and the sort on the right, with a short rule between the groups. */
 export const Toolbar: Story = {
 	render: () => (
-		<PageToolbar>
+		<PageToolbar inset>
 			<Tabs defaultValue="all">
 				<TabsList variant="toolbar" aria-label="상태">
 					<TabsTrigger value="all" count={148}>
@@ -85,7 +85,7 @@ export const Toolbar: Story = {
 	),
 };
 
-/** Rows picked: the same place becomes the bulk bar. */
+/** Rows picked: the same place becomes the bulk bar, with the same inset, so the first letter does not move. */
 export const Picked: Story = {
 	render: () => (
 		<BulkBar label="3개 선택" clearLabel="고르기 끝" onClear={() => {}}>
@@ -104,7 +104,7 @@ export const Page: Story = {
 				<Button variant="secondary">검색</Button>
 				<Button>+ 새 글 쓰기</Button>
 			</PageHeader>
-			<PageToolbar>
+			<PageToolbar inset>
 				<Tabs defaultValue="all">
 					<TabsList variant="toolbar" aria-label="상태">
 						<TabsTrigger value="all" count={148}>

@@ -25,7 +25,7 @@ export const Playground: Story = {};
 
 export const Disabled: Story = { args: { disabled: true } };
 
-/** Working on the main action: a spinner on the main half, and neither half can be pressed. */
+/** Working on the main action: the label says so, the pill keeps its fill, and neither half can be pressed. */
 export const Loading: Story = { args: { loading: true, children: "발행 중" } };
 
 /** The menu hangs under the whole pill, its right edge on the pill's, as it does in the editor header. */

@@ -14,7 +14,6 @@ import {
 	Inline,
 	Popover,
 	PopoverContent,
-	Spinner,
 	Stack,
 	Text,
 	TextButton,
@@ -56,7 +55,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={() => void controller.run(checker.id)}
 		>
-			{running ? <Spinner /> : <Glyph aria-hidden />}
+			<Glyph aria-hidden />
 		</IconButton>
 	);
 }

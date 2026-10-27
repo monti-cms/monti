@@ -23,8 +23,8 @@ import {
 	Label,
 	List,
 	ListItem,
-	Skeleton,
 	Stack,
+	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
@@ -347,10 +347,9 @@ export function useFolderActions({
 						</List>
 					) : (
 						!shownError && (
-							<Stack gap={8} aria-hidden>
-								<Skeleton width="third" />
-								<Skeleton width="half" />
-							</Stack>
+							<Text as="p" tone="subtle" role="status">
+								{tc("loading")}
+							</Text>
 						)
 					)}
 					{shownError && <FormFieldError>{shownError}</FormFieldError>}

@@ -176,7 +176,8 @@ function ResizeHandle({
 					"absolute inset-y-0 w-px bg-transparent transition-colors motion-reduce:transition-none",
 					// Drawn over the pane's own 1px border (the handle is centered on the inside of that border).
 					edge === "end" ? "left-1" : "left-0.75",
-					"group-hover/resize:bg-monti-emphasis group-focus-visible/resize:bg-monti-emphasis group-data-resizing/resize:bg-monti-emphasis",
+					// `data-hovered` is the pointed-at look on demand: a story cannot hover, so it sets the attribute.
+					"group-hover/resize:bg-monti-emphasis group-focus-visible/resize:bg-monti-emphasis group-data-hovered/resize:bg-monti-emphasis group-data-resizing/resize:bg-monti-emphasis",
 				)}
 			/>
 		</div>
@@ -211,7 +212,7 @@ function ResizablePane({
 			data-slot="resizable-pane"
 			className={cn(
 				"relative flex min-h-0 shrink-0 flex-col",
-				edge === "end" ? "border-monti-muted border-r" : "border-monti-muted border-l",
+				edge === "end" ? "border-monti-default border-r" : "border-monti-default border-l",
 				className,
 			)}
 			style={{ width: resize.width }}

@@ -19,7 +19,6 @@ export const AlertDialogOverlay = close(open.AlertDialogOverlay);
 export const AlertDialogPortal = close(open.AlertDialogPortal);
 export const AlertDialogTitle = close(open.AlertDialogTitle);
 export const AlertDialogTrigger = close(open.AlertDialogTrigger);
-export const Badge = close(open.Badge);
 export const Banner = close(open.Banner);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
@@ -136,6 +135,8 @@ export const PaginationPrevious = close(open.PaginationPrevious);
 export const MenuShortcut = close(open.MenuShortcut);
 export const MenuTick = close(open.MenuTick);
 export const MenuValue = close(open.MenuValue);
+export const PickList = close(open.PickList);
+export const PickListItem = close(open.PickListItem);
 export const Popover = close(open.Popover);
 export const PopoverContent = close(open.PopoverContent);
 export const PopoverDescription = close(open.PopoverDescription);
@@ -166,20 +167,18 @@ export const SidebarContent = close(open.SidebarContent);
 export const SidebarFooter = close(open.SidebarFooter);
 export const SidebarGroup = close(open.SidebarGroup);
 export const SidebarGroupContent = close(open.SidebarGroupContent);
-export const SidebarGroupLabel = close(open.SidebarGroupLabel);
 export const SidebarHeader = close(open.SidebarHeader);
 export const SidebarInset = close(open.SidebarInset);
 export const SidebarMenu = close(open.SidebarMenu);
 export const SidebarMenuBadge = close(open.SidebarMenuBadge);
 export const SidebarMenuButton = close(open.SidebarMenuButton);
 export const SidebarMenuItem = close(open.SidebarMenuItem);
+export const SidebarMenuSub = close(open.SidebarMenuSub);
+export const SidebarMenuSubButton = close(open.SidebarMenuSubButton);
 export const SidebarProvider = close(open.SidebarProvider);
-export const SidebarSeparator = close(open.SidebarSeparator);
 export const SidebarTrigger = close(open.SidebarTrigger);
-export const Skeleton = close(open.Skeleton);
 /** An icon like the lucide ones, so it is not closed: it goes where an `icon` goes (`<Icon icon={Spark}>`, a panel's or a menu item's icon). */
 export const Spark = open.Spark;
-export const Spinner = close(open.Spinner);
 export const SheetList = close(open.SheetList);
 export const TodoDone = close(open.TodoDone);
 export const TodoItem = close(open.TodoItem);
@@ -229,7 +228,6 @@ export const Progress = close(open.Progress);
 export const Option = close(open.Option);
 export const RadioGroup = close(open.RadioGroup);
 export const RadioItem = close(open.RadioItem);
-export const ChoiceCard = close(open.ChoiceCard);
 export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
@@ -241,9 +239,7 @@ export const EntryStatus = close(open.EntryStatus);
 export const Switch = close(open.Switch);
 export const Table = close(open.Table);
 export const TableBody = close(open.TableBody);
-export const TableCaption = close(open.TableCaption);
 export const TableCell = close(open.TableCell);
-export const TableFooter = close(open.TableFooter);
 export const TableHead = close(open.TableHead);
 export const TableHeader = close(open.TableHeader);
 export const TableRow = close(open.TableRow);
@@ -279,7 +275,6 @@ export type {
 } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
-	badgeVariants,
 	Calendar,
 	Combobox,
 	cn,

@@ -2,7 +2,6 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	ChoiceCard,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -12,11 +11,12 @@ import {
 	Grid,
 	Inline,
 	Input,
+	PickList,
+	PickListItem,
 	Stack,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { Labeled } from "../shared/labeled";
@@ -44,13 +44,6 @@ import {
 } from "./schema-model";
 
 type AddableKind = (typeof ADDABLE_KINDS)[number];
-
-const KIND_ICONS: Readonly<Record<AddableKind, LucideIcon>> = {
-	text: Type,
-	select: ListChecks,
-	media: Image,
-	relation: Link2,
-};
 
 /**
  * Adds a field in one step: the kinds are a list on the left and the settings of the picked kind sit beside it, so a wrong pick is fixed by picking another. The identifier follows the label (a
@@ -177,24 +170,19 @@ export function AddFieldDialog({
 					}}
 				>
 					<Grid columns="sidebar" gap={24} align="start">
-						<Stack role="radiogroup" aria-label={t("field.kind")} gap={4}>
-							{ADDABLE_KINDS.map((item) => {
-								const Icon = KIND_ICONS[item];
-								return (
-									<ChoiceCard
-										key={item}
-										role="radio"
-										aria-checked={item === kind}
-										aria-label={t(`kind.${item}`)}
-										icon={<Icon aria-hidden />}
-										title={t(`kind.${item}`)}
-										hint={t(`kind.${item}.hint`)}
-										selected={item === kind}
-										onClick={() => pickKind(item)}
-									/>
-								);
-							})}
-						</Stack>
+						<PickList aria-label={t("field.kind")}>
+							{ADDABLE_KINDS.map((item) => (
+								<PickListItem
+									key={item}
+									selected={item === kind}
+									aria-label={t(`kind.${item}`)}
+									mark={item === "relation" ? "→" : undefined}
+									onClick={() => pickKind(item)}
+								>
+									{t(`kind.${item}`)}
+								</PickListItem>
+							))}
+						</PickList>
 						<Stack gap={24} minWidth={0} border="left" paddingX={24}>
 							{kind !== "relation" && naming}
 							<KindOptions

@@ -3,15 +3,12 @@
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
-import { Separator } from "./separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useIsMobile } from "./use-mobile";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -20,8 +17,6 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_DEFAULT = 232;
 const SIDEBAR_WIDTH_MIN = 200;
 const SIDEBAR_WIDTH_MAX = 400;
-const SIDEBAR_WIDTH_MOBILE = "18rem";
-const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
@@ -58,7 +53,7 @@ function SidebarProvider({
 	children,
 	...props
 }: React.ComponentProps<"div"> & {
-	/** Names the remembered width of the sidebar (between 200px and 400px, 256px until it is dragged). */
+	/** Names the remembered width of the sidebar (between 200px and 400px, 232px until it is dragged). */
 	resizeKey?: string;
 	defaultOpen?: boolean;
 	open?: boolean;
@@ -144,18 +139,8 @@ function SidebarProvider({
 				data-slot="sidebar-wrapper"
 				// The width follows the pointer while it is dragged, and does not animate from the default to the remembered one on load.
 				data-resizing={resize.resizing || !resize.settled ? "" : undefined}
-				style={
-					{
-						"--sidebar-width": `${resize.width}px`,
-						"--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-						...style,
-					} as React.CSSProperties
-				}
-				className={cn(
-					"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-tool",
-					fixed && "h-svh overflow-clip",
-					className,
-				)}
+				style={{ "--sidebar-width": `${resize.width}px`, ...style } as React.CSSProperties}
+				className={cn("group/sidebar-wrapper flex min-h-svh w-full", fixed && "h-svh overflow-clip", className)}
 				{...props}
 			>
 				{children}
@@ -164,18 +149,23 @@ function SidebarProvider({
 	);
 }
 
+/** The rail as the design draws it: the tool ground, 20px above, 14px at the sides, 16px below, rows 2px apart. */
+const RAIL = "flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default";
+
+/**
+ * The left navigation: the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a footer. The
+ * writer drags its edge to change the width. `collapsible="offcanvas"` (the default) lets the writer slide it away; `none` keeps it in the page
+ * flow, always shown. On a narrow screen it is a drawer that opens from the left over a dimmed page (square, on the same ground, with a line on its
+ * open edge, like the sheet).
+ */
 function Sidebar({
-	side = "left",
-	variant = "sidebar",
 	collapsible = "offcanvas",
 	className,
 	children,
 	dir,
 	...props
 }: React.ComponentProps<"div"> & {
-	side?: "left" | "right";
-	variant?: "sidebar" | "floating" | "inset";
-	collapsible?: "offcanvas" | "icon" | "none";
+	collapsible?: "offcanvas" | "none";
 }) {
 	const labels = useUiLabels();
 	const { isMobile, state, openMobile, setOpenMobile, resize } = useSidebar();
@@ -188,7 +178,7 @@ function Sidebar({
 			onChange={resize.setWidth}
 			onReset={resize.reset}
 			label={labels.sidebarResize}
-			edge={side === "left" ? "end" : "start"}
+			edge="end"
 			resizing={resize.resizing}
 		/>
 	);
@@ -197,7 +187,11 @@ function Sidebar({
 		return (
 			<div
 				data-slot="sidebar"
-				className={cn("relative flex h-full w-(--sidebar-width) flex-col bg-monti-tool text-monti-default", className)}
+				className={cn(
+					RAIL,
+					"relative w-(--sidebar-width) shrink-0 self-stretch border-monti-default border-r",
+					className,
+				)}
 				{...props}
 			>
 				{children}
@@ -207,7 +201,6 @@ function Sidebar({
 	}
 
 	if (isMobile) {
-		// A drawer for the narrow screen, not a sheet: it opens from the side the sidebar is on, over a dimmed page.
 		return (
 			<DrawerPrimitive.Root open={openMobile} onOpenChange={setOpenMobile} {...props}>
 				<DrawerPrimitive.Portal>
@@ -217,13 +210,14 @@ function Sidebar({
 						data-sidebar="sidebar"
 						data-slot="sidebar"
 						data-mobile="true"
-						data-side={side}
-						className="fixed inset-y-0 z-50 flex h-full w-(--sidebar-width) flex-col bg-monti-tool text-monti-default outline-none transition duration-200 ease-in-out data-[side=right]:right-0 data-[side=left]:left-0 data-[side=left]:border-monti-emphasis data-[side=right]:border-monti-emphasis data-[side=left]:border-r data-[side=right]:border-l data-ending-style:opacity-0 data-starting-style:opacity-0"
-						style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
+						className={cn(
+							RAIL,
+							"fixed inset-y-0 left-0 z-50 h-full w-monti-sidebar max-w-full border-monti-emphasis border-r outline-none transition duration-200 ease-in-out data-ending-style:-translate-x-10 data-starting-style:-translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0",
+						)}
 					>
 						<DrawerPrimitive.Title className="sr-only">{labels.sidebarTitle}</DrawerPrimitive.Title>
 						<DrawerPrimitive.Description className="sr-only">{labels.sidebarDescription}</DrawerPrimitive.Description>
-						<div className="flex h-full w-full flex-col">{children}</div>
+						{children}
 					</DrawerPrimitive.Popup>
 				</DrawerPrimitive.Portal>
 			</DrawerPrimitive.Root>
@@ -235,40 +229,22 @@ function Sidebar({
 			className="group peer hidden text-monti-default md:block"
 			data-state={state}
 			data-collapsible={state === "collapsed" ? collapsible : ""}
-			data-variant={variant}
-			data-side={side}
 			data-slot="sidebar"
 		>
 			{/* This is what handles the sidebar gap on desktop */}
 			<div
 				data-slot="sidebar-gap"
-				className={cn(
-					"relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-resizing/sidebar-wrapper:transition-none",
-					"group-data-[collapsible=offcanvas]:w-0",
-					"group-data-[side=right]:rotate-180",
-					variant === "floating" || variant === "inset"
-						? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
-				)}
+				className="relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=offcanvas]:w-0 group-data-resizing/sidebar-wrapper:transition-none"
 			/>
 			<div
 				data-slot="sidebar-container"
-				data-side={side}
 				className={cn(
-					"fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=right]:right-0 data-[side=left]:left-0 group-data-resizing/sidebar-wrapper:transition-none data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] md:flex",
-					// Adjust the padding for floating and inset variants.
-					variant === "floating" || variant === "inset"
-						? "p-monti-8 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+					"fixed inset-y-0 left-0 z-10 hidden h-svh w-(--sidebar-width) border-monti-default border-r transition-[left,width] duration-200 ease-linear group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] group-data-resizing/sidebar-wrapper:transition-none md:flex",
 					className,
 				)}
 				{...props}
 			>
-				<div
-					data-sidebar="sidebar"
-					data-slot="sidebar-inner"
-					className="group-data-[ flex size-full flex-col bg-monti-tool group-data-[variant=floating]:rounded-monti-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-monti-muted"
-				>
+				<div data-sidebar="sidebar" data-slot="sidebar-inner" className={cn(RAIL, "size-full")}>
 					{children}
 				</div>
 				{state === "expanded" && handle}
@@ -313,44 +289,31 @@ function SidebarInset({
 	return (
 		<main
 			data-slot="sidebar-inset"
-			className={cn(
-				"relative flex w-full flex-1 flex-col bg-monti-page md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-monti-8 md:peer-data-[variant=inset]:m-monti-8 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-monti-xl",
-				fixed && "min-w-0 overflow-clip",
-				className,
-			)}
+			className={cn("relative flex w-full flex-1 flex-col bg-monti-page", fixed && "min-w-0 overflow-clip", className)}
 			{...props}
 		/>
 	);
 }
 
+/** The site's name (and what sits beside it), 6px in from the rows' edge and 20px above them. */
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sidebar-header"
 			data-sidebar="header"
-			className={cn("flex flex-col gap-monti-8 p-monti-8", className)}
+			className={cn("flex items-center gap-monti-12 px-monti-6 pb-monti-20", className)}
 			{...props}
 		/>
 	);
 }
 
+/** The group at the bottom (trash, tools, settings): under a line, pushed to the end of the rail. */
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sidebar-footer"
 			data-sidebar="footer"
-			className={cn("flex flex-col gap-monti-8 p-monti-8", className)}
-			{...props}
-		/>
-	);
-}
-
-function SidebarSeparator({ className, ...props }: React.ComponentProps<typeof Separator>) {
-	return (
-		<Separator
-			data-slot="sidebar-separator"
-			data-sidebar="separator"
-			className={cn("mx-monti-8 monti-horizontal:w-auto bg-monti-divider", className)}
+			className={cn("mt-auto flex flex-col gap-monti-2 border-monti-default border-t pt-monti-12", className)}
 			{...props}
 		/>
 	);
@@ -361,10 +324,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-content"
 			data-sidebar="content"
-			className={cn(
-				"no-scrollbar flex min-h-0 flex-1 flex-col gap-monti-8 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
-				className,
-			)}
+			className={cn("no-scrollbar flex min-h-0 flex-1 flex-col gap-monti-2 overflow-auto", className)}
 			{...props}
 		/>
 	);
@@ -375,34 +335,10 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-group"
 			data-sidebar="group"
-			className={cn("relative flex w-full min-w-0 flex-col p-monti-8", className)}
+			className={cn("relative flex w-full min-w-0 flex-col", className)}
 			{...props}
 		/>
 	);
-}
-
-function SidebarGroupLabel({
-	className,
-	render,
-	...props
-}: useRender.ComponentProps<"div"> & React.ComponentProps<"div">) {
-	return useRender({
-		defaultTagName: "div",
-		props: mergeProps<"div">(
-			{
-				className: cn(
-					"flex h-8 shrink-0 items-center rounded-monti-md px-monti-8 font-mono text-monti-micro uppercase tracking-caps text-monti-muted ring-monti-contrast outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-monti-32 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-					className,
-				),
-			},
-			props,
-		),
-		render,
-		state: {
-			slot: "sidebar-group-label",
-			sidebar: "group-label",
-		},
-	});
 }
 
 function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div">) {
@@ -410,7 +346,7 @@ function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div"
 		<div
 			data-slot="sidebar-group-content"
 			data-sidebar="group-content"
-			className={cn("w-full text-monti-body", className)}
+			className={cn("flex w-full flex-col gap-monti-2", className)}
 			{...props}
 		/>
 	);
@@ -421,7 +357,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
 		<ul
 			data-slot="sidebar-menu"
 			data-sidebar="menu"
-			className={cn("flex w-full min-w-0 flex-col gap-monti-4", className)}
+			className={cn("m-0 flex w-full min-w-0 list-none flex-col gap-monti-2 p-0", className)}
 			{...props}
 		/>
 	);
@@ -438,89 +374,95 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 	);
 }
 
-const sidebarMenuButtonVariants = cva(
-	"peer/menu-button group/menu-button relative flex w-full items-center gap-monti-8 overflow-hidden rounded-monti-md px-monti-8 py-monti-6 text-left text-monti-label text-monti-default ring-monti-contrast outline-hidden transition-[width,height,padding,background-color] group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-monti-8! hover:bg-monti-selected hover:text-monti-default focus-visible:ring-2 active:bg-monti-selected active:text-monti-default disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-selected data-open:hover:text-monti-default data-active:bg-monti-selected data-active:font-medium data-active:text-monti-default data-active:before:absolute data-active:before:inset-y-1.5 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-monti-full data-active:before:bg-monti-emphasis [&_svg]:size-3.5 [&_svg]:shrink-0 [&>span:last-child]:truncate",
-	{
-		variants: {
-			variant: {
-				default: "hover:bg-monti-selected hover:text-monti-default",
-				outline:
-					"bg-monti-page shadow-[0_0_0_1px_var(--monti-border-muted)] hover:bg-monti-selected hover:text-monti-default hover:shadow-[0_0_0_1px_var(--monti-border-default)]",
-			},
-			size: {
-				default: "h-7 text-monti-label",
-				sm: "h-6 py-monti-4 text-monti-caption",
-				lg: "h-11 text-monti-label group-data-[collapsible=icon]:p-0!",
-			},
-		},
-		defaultVariants: {
-			variant: "default",
-			size: "default",
-		},
-	},
-);
-
+/**
+ * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the selected ground and
+ * semibold; there is no bar beside it. Pointing at any other row gives it the muted ground, which is paler than the selected one, so a row
+ * that is only pointed at is never taken for the open one. `removed` is a row the writer took out in the schema (struck through and faint).
+ * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
+ */
 function SidebarMenuButton({
 	render,
 	isActive = false,
-	variant = "default",
-	size = "default",
-	tooltip,
+	removed = false,
 	className,
 	...props
 }: useRender.ComponentProps<"button"> &
 	React.ComponentProps<"button"> & {
 		isActive?: boolean;
-		tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-	} & VariantProps<typeof sidebarMenuButtonVariants>) {
-	const { isMobile, state } = useSidebar();
-	const comp = useRender({
+		removed?: boolean;
+	}) {
+	return useRender({
 		defaultTagName: "button",
 		props: mergeProps<"button">(
 			{
-				className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+				className: cn(
+					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-muted focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-selected data-active:font-semibold data-removed:text-monti-faint data-removed:line-through [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					className,
+				),
 			},
 			props,
 		),
-		render: !tooltip ? render : <TooltipTrigger render={render} />,
+		render,
 		state: {
 			slot: "sidebar-menu-button",
 			sidebar: "menu-button",
-			size,
 			active: isActive,
+			removed,
 		},
 	});
-
-	if (!tooltip) {
-		return comp;
-	}
-
-	if (typeof tooltip === "string") {
-		tooltip = {
-			children: tooltip,
-		};
-	}
-
-	return (
-		<Tooltip>
-			{comp}
-			<TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
-		</Tooltip>
-	);
 }
 
-function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">) {
+/** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
+function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"span">) {
 	return (
-		<div
+		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
 			className={cn(
-				"pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-monti-sm px-monti-4 font-medium text-monti-caption text-monti-default tabular-nums peer-hover/menu-button:text-monti-default group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-monti-default",
+				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta text-monti-subtle tabular-nums group-data-removed/menu-button:text-monti-faint",
 				className,
 			)}
 			{...props}
 		/>
 	);
+}
+
+/** The folders under an open row: 36px in from the edge, 13px muted. Rows are {@link SidebarMenuSubButton}s. */
+function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
+	return (
+		<ul
+			data-slot="sidebar-menu-sub"
+			data-sidebar="menu-sub"
+			className={cn(
+				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-9 text-monti-muted text-monti-note",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/** A folder under a row: its name and, at the end, its count. The open one is ink and semibold. */
+function SidebarMenuSubButton({
+	render,
+	isActive = false,
+	className,
+	...props
+}: useRender.ComponentProps<"a"> & React.ComponentProps<"a"> & { isActive?: boolean }) {
+	return useRender({
+		defaultTagName: "a",
+		props: mergeProps<"a">(
+			{
+				className: cn(
+					"flex items-center justify-between gap-monti-8 py-[5px] pr-monti-10 no-underline outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: { slot: "sidebar-menu-sub-button", sidebar: "menu-sub-button", active: isActive },
+	});
 }
 
 export {
@@ -529,15 +471,15 @@ export {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
 	SidebarProvider,
-	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
 };

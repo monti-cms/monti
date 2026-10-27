@@ -11,7 +11,6 @@ import {
 	Progress,
 	RadioGroup,
 	RadioItem,
-	Spinner,
 	Stack,
 	Text,
 } from "@monti-cms/ui";
@@ -213,16 +212,13 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 	return (
 		<output data-testid="export-progress">
 			<Stack gap={8}>
-				<Inline gap={8}>
-					<Spinner aria-hidden size="sm" />
-					<Text tone="muted">
-						{phase.kind === "building"
-							? t("progress.building")
-							: percent === null
-								? t("progress.downloadingUnknown")
-								: t("progress.downloading", { percent })}
-					</Text>
-				</Inline>
+				<Text tone="muted">
+					{phase.kind === "building"
+						? t("progress.building")
+						: percent === null
+							? t("progress.downloadingUnknown")
+							: t("progress.downloading", { percent })}
+				</Text>
 				{percent !== null && <Progress value={percent} label={t("progress.building")} />}
 			</Stack>
 		</output>

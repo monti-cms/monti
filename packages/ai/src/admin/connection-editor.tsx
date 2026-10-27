@@ -145,7 +145,6 @@ export function ConnectionManager({
 						resizeKey="ai-connections"
 						label={t("list.label")}
 						loading={settingsQuery.isPending}
-						skeletonRows={2}
 						header={
 							settings?.fake && (
 								<Box paddingX={12} paddingY={8} border="bottom">

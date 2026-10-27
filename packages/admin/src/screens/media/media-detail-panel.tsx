@@ -240,7 +240,7 @@ export function MediaDetailPanel({
 				</Stack>
 
 				<Section title={t("detail.section.info")}>
-					<DescriptionList layout="stacked">
+					<DescriptionList>
 						<SlotScope
 							key={`filename-${media.id}`}
 							request={slot("filename", (suggestion) => {

@@ -9,7 +9,6 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 	MenuShortcut,
-	Spinner,
 } from "@monti-cms/ui";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
@@ -59,7 +58,7 @@ export function BlockHandleOverlay({
 		>
 			{actions.map((action) => (
 				<IconButton key={action.id} label={action.label} side="bottom" disabled={action.busy} onClick={action.onClick}>
-					{action.busy ? <Spinner size="sm" /> : action.icon}
+					{action.icon}
 				</IconButton>
 			))}
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}

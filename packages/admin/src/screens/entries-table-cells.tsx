@@ -2,7 +2,7 @@
 
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, EntryStatus, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Box, EntryStatus, Inline, Text, TextButton } from "@monti-cms/ui";
 import { Folder as FolderIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
@@ -23,55 +23,61 @@ const formatDate = (site: Site, value: Date | string | null) => {
 		: formatDateOnly(site, value);
 };
 
-/** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
+/**
+ * Per-locale state of a translation group, as the list draws it: each locale's code in mono, its tone saying how that language stands (green in sync,
+ * orange has a draft or unpublished changes, gray otherwise, faint when there is no translation). Existing locales link to their edit screen. The state
+ * is also in words for screen readers, not just color.
+ */
 function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap={4}>
+		<Inline as="span" gap={8}>
 			{site.LOCALES.map((locale) => {
 				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<Badge key={locale} variant="dashed">
+						<Text key={locale} as="span" variant="meta" tone="faint">
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<Text srOnly>{t("locale.hasNot", { name })}</Text>
-						</Badge>
+						</Text>
 					);
 				}
-				const variant =
+				const tone =
 					member.status === "published" && !member.hasUnpublishedChanges
 						? "success"
 						: member.status === "published" || member.status === "draft"
 							? "warning"
-							: "secondary";
+							: "subtle";
 				return (
-					<Badge key={locale} variant={variant} render={<Link href={site.adminEntryEditHref(member.id)} />}>
-						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<Text srOnly>
-							{name} · {statusLabels(site)[member.status]}
+					<TextButton key={locale} render={<Link href={site.adminEntryEditHref(member.id)} />}>
+						<Text as="span" variant="meta" tone={tone}>
+							<span aria-hidden="true">{locale.toUpperCase()}</span>
+							<Text srOnly>
+								{name} · {statusLabels(site)[member.status]}
+							</Text>
 						</Text>
-					</Badge>
+					</TextButton>
 				);
 			})}
 		</Inline>
 	);
 }
 
-/** Locales of a taxonomy item (category, tag, series). Locales with a name are filled badges, others are dashed badges. */
+/** Locales of a taxonomy item (category, tag, series): a locale with a name is in ink-gray, one without is faint. */
 function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap={4}>
+		<Inline as="span" gap={8}>
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					<Badge key={locale} variant={named ? "success" : "dashed"}>
+					<Text key={locale} as="span" variant="meta" tone={named ? "muted" : "faint"}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
-					</Badge>
+					</Text>
 				);
 			})}
 		</Inline>

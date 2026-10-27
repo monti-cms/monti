@@ -1,7 +1,17 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Heading, Inline, SidebarInset, SidebarProvider, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
+import {
+	Box,
+	Heading,
+	Inline,
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+	Stack,
+	Text,
+	useSidebar,
+} from "@monti-cms/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -156,8 +166,14 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	return <AdminNavContext.Provider value={nav}>{children}</AdminNavContext.Provider>;
 }
 
+/** The way back to the sidebar: on a narrow screen it opens the drawer, on a wide one it shows only while the sidebar is slid away. */
+function ShellSidebarTrigger({ label }: { label: string }) {
+	const { isMobile, state } = useSidebar();
+	return isMobile || state === "collapsed" ? <SidebarTrigger aria-label={label} /> : null;
+}
+
 /**
- * Frame of every admin page but the editor. Left is the shadcn Sidebar (a sheet on narrow screens); on the right one quiet title bar (the title, its count,
+ * Frame of every admin page but the editor. Left is the Sidebar (a drawer on narrow screens); on the right one quiet title bar (the title, its count,
  * a short description and the page's actions in a single row, so the content starts high) over the page. Tabs a page has sit right under it.
  */
 export function AdminShell({
@@ -217,9 +233,7 @@ export function AdminShell({
 									paddingBottom={12}
 								>
 									<Inline gap={8} align="baseline" grow minWidth={0}>
-										<Box hideFrom="md">
-											<SidebarTrigger aria-label={t("shell.openSidebar")} />
-										</Box>
+										<ShellSidebarTrigger label={t("shell.openSidebar")} />
 										<Box minWidth={0}>
 											<Heading as="h1" variant="page">
 												<Inline as="span" gap={8} align="baseline">
@@ -259,9 +273,7 @@ export function AdminShell({
 								paddingY={4}
 								minHeight="header"
 							>
-								<Box hideFrom="md">
-									<SidebarTrigger aria-label={t("shell.openSidebar")} />
-								</Box>
+								<ShellSidebarTrigger label={t("shell.openSidebar")} />
 								<Inline gap={8} align="baseline" grow>
 									{/* The title and its count keep their width: what gives way, when the page has little room, is the description and the actions. */}
 									<Box shrink={false}>

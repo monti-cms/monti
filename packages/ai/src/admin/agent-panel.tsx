@@ -23,7 +23,6 @@ import {
 	IconButton,
 	SidePanelFrame,
 	Spark,
-	Spinner,
 	Stack,
 	Text,
 	TextButton,
@@ -106,11 +105,7 @@ function HistoryMenu({ onPick }: { onPick: (id: string) => void }) {
 			<DropdownMenuContent align="end">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>{t("history.label")}</DropdownMenuLabel>
-					{runs.isPending && (
-						<DropdownMenuItem disabled>
-							<Spinner size="sm" />
-						</DropdownMenuItem>
-					)}
+					{runs.isPending && <DropdownMenuItem disabled>{t("history.loading")}</DropdownMenuItem>}
 					{runs.error && (
 						<DropdownMenuItem disabled>{errorText(site, runs.error, t("history.failed"))}</DropdownMenuItem>
 					)}
@@ -254,7 +249,11 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 					/>
 				))
 			)}
-			{busy && last?.role === "user" && <Spinner size="sm" />}
+			{busy && last?.role === "user" && (
+				<Text as="p" variant="meta" tone="subtle" role="status" aria-label={t("tool.running")}>
+					…
+				</Text>
+			)}
 			{failed && (
 				<ChatError
 					title={errorText(site, failed, t("error.failed"))}

@@ -4,7 +4,6 @@ import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
-	Grid,
 	IconButton,
 	Inline,
 	Input,
@@ -15,13 +14,12 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	Skeleton,
-	Spinner,
 	Stack,
 	Switch,
 	Tabs,
 	TabsList,
 	TabsTrigger,
+	Text,
 	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -483,7 +481,7 @@ export function MediaLibrary() {
 						{t("library.cleanup")}
 					</Button>
 					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
-						{mediaQuery.isFetching ? <Spinner size="sm" aria-hidden /> : <RefreshCw aria-hidden />}
+						<RefreshCw aria-hidden />
 					</IconButton>
 				</Inline>
 			</PageActions>
@@ -561,14 +559,9 @@ export function MediaLibrary() {
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								<Grid as="ul" columns="tiles" aria-hidden>
-									{Array.from({ length: 6 }, (_, index) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-										<li key={index}>
-											<Skeleton shape="block" />
-										</li>
-									))}
-								</Grid>
+								<Text as="p" variant="note" tone="subtle" role="status">
+									{tc("loading")}
+								</Text>
 							) : filtered ? (
 								<EmptyState
 									title={t("library.emptyNoMatch")}

@@ -403,11 +403,11 @@ describe("SchemaScreen", () => {
 		openTab("fields");
 		await screen.findByTestId("fields-card");
 		const dialog = await openAddField();
-		for (const kind of ["text", "select", "media", "relation"] as const) {
-			const radio = within(dialog).getByRole("radio", { name: tFields(`kind.${kind}`) });
-			// Each kind is a row with a one-line description.
-			expect(radio.textContent).toContain(tFields(`kind.${kind}.hint`));
-		}
+		// Each kind is a row of the list with its name alone.
+		for (const kind of ["text", "select", "media", "relation"] as const)
+			expect(within(dialog).getByRole("radio", { name: tFields(`kind.${kind}`) }).textContent).toContain(
+				tFields(`kind.${kind}`),
+			);
 		for (const kind of ["slug", "conditional", "backlink", "view"] as const)
 			expect(within(dialog).queryByRole("radio", { name: tFields(`kind.${kind}`) })).toBeNull();
 		// Picking another kind swaps the settings below without leaving the dialog.

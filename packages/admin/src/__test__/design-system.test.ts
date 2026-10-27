@@ -56,6 +56,9 @@ const MODAL_TEXT = {
 	utilities: new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"]),
 };
 
+/** The translation marker's text, 10px, the one size under the micro role (`.mt-marker`). */
+const MARKER_TEXT = { file: "ui/src/marker.tsx", utilities: new Set(["text-[10px]"]) };
+
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const full = path.join(dir, entry.name);
@@ -180,6 +183,7 @@ describe("design system", () => {
 					const why = problem(utility, inUi, OWN_COLORS.has(rel));
 					if (why && MULTILINE.has(rel) && utility === "leading-[1.6]") continue;
 					if (why && rel === MODAL_TEXT.file && MODAL_TEXT.utilities.has(utility)) continue;
+					if (why && rel === MARKER_TEXT.file && MARKER_TEXT.utilities.has(utility)) continue;
 					if (why) offenders.push(`${rel}:${line} ${word} (${why})`);
 				}
 			}

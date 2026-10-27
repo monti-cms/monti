@@ -2,7 +2,6 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
 	Checkbox,
 	Heading,
@@ -102,7 +101,9 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	if (!entry.skipped) {
 		return (
 			<Stack gap={4}>
-				<Badge variant="success">{t("entries.willImport")}</Badge>
+				<Text variant="label" tone="success">
+					{t("entries.willImport")}
+				</Text>
 				{entry.notes.map((note) => (
 					<Text key={note.code} variant="caption" tone="muted">
 						{note.text}
@@ -114,9 +115,9 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	const conflict = entry.skipped.code === "slug_exists";
 	return (
 		<Stack gap={4}>
-			<Badge variant={conflict ? "warning" : "secondary"}>
+			<Text variant="label" tone={conflict ? "warning" : "subtle"}>
 				{conflict ? t("entries.conflict") : t("entries.skipped")}
-			</Badge>
+			</Text>
 			<Text variant="caption" tone="muted">
 				{entry.skipped.text}
 			</Text>
@@ -156,7 +157,11 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 								<TableCell valign="top" wrap>
 									<Inline gap={8} wrap>
 										<Text weight="medium">{entry.title ?? t("entries.noTitle")}</Text>
-										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}
+										{entry.isTranslation && (
+											<Text variant="meta" tone="subtle">
+												{t("entries.translation")}
+											</Text>
+										)}
 									</Inline>
 									<Text as="div" variant="caption" tone="muted" mono>
 										{entry.slug ?? "—"}

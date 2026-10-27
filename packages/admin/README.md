@@ -349,7 +349,7 @@ attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
 `cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
-the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Badge`,
+the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Count`,
 `Banner`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
 (`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--monti-success`, `--monti-warning` and `--monti-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.

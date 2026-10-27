@@ -59,7 +59,6 @@ export const Cells: Story = {
 		<StatusBar {...args}>
 			<StatusBarCell tone="warning">할 일 2</StatusBarCell>
 			<StatusBarCell>요청 2 · 1 고치는 중</StatusBarCell>
-			<StatusBarCell render={<span />}>EN</StatusBarCell>
 			<StatusBarSpacer />
 			<StatusBarCell end render={<span />}>
 				1,240자
@@ -84,11 +83,10 @@ export const CellOpen: Story = {
 	),
 };
 
-/** A cell a plugin fills: the name and the count, one row per finding with its own action, then the way to the plugin's settings and "fix all". */
+/** A cell a plugin fills: the name and the count, one row per finding with its own action, then the way to the plugin's settings and "fix all". With nothing to fix it is not drawn at all, like every cell. */
 export const PluginCell: Story = {
 	render: (args) => (
 		<StatusBar {...args}>
-			<StatusBarCell>할 일 0</StatusBarCell>
 			<StatusBarPluginCell
 				defaultOpen
 				label="맞춤법"

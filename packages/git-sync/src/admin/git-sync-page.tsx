@@ -5,22 +5,22 @@ import {
 	type ApiKeyChoice,
 	ApiKeyField,
 	apiKeysKeys,
-	Badge,
 	Banner,
 	Box,
 	Button,
+	Count,
 	choiceReady,
 	commonMessages,
 	DescriptionItem,
 	DescriptionList,
 	EmptyState,
 	Heading,
+	Icon,
 	Inline,
 	Input,
 	Label,
 	LoadErrorAlert,
 	Patch,
-	Skeleton,
 	Stack,
 	Tabs,
 	TabsContent,
@@ -109,12 +109,14 @@ export function GitSyncPage() {
 	);
 }
 
-function ListSkeleton() {
+function ListLoading() {
+	const tc = useTranslator(commonMessages);
 	return (
-		<Stack gap={12} paddingX={32} paddingY={16} aria-hidden>
-			<Skeleton shape="block" />
-			<Skeleton shape="block" />
-		</Stack>
+		<Box paddingX={32} paddingY={16}>
+			<Text as="p" variant="note" tone="subtle" role="status">
+				{tc("loading")}
+			</Text>
+		</Box>
 	);
 }
 
@@ -160,7 +162,7 @@ function SyncTab({
 		invalidate: [gitSyncKeys.all],
 	});
 
-	if (loading) return <ListSkeleton />;
+	if (loading) return <ListLoading />;
 	if (error) {
 		return (
 			<Box paddingX={32} paddingY={16}>
@@ -197,10 +199,12 @@ function SyncTab({
 								</Text>
 							</Heading>
 						</Box>
-						<Badge variant="secondary">
-							{target.mode === "pr" ? <GitPullRequest aria-hidden /> : <GitBranch aria-hidden />}
-							{t(`target.mode.${target.mode}`)}
-						</Badge>
+						<Inline gap={4}>
+							<Icon icon={target.mode === "pr" ? GitPullRequest : GitBranch} size="sm" tone="subtle" />
+							<Text variant="meta" tone="subtle">
+								{t(`target.mode.${target.mode}`)}
+							</Text>
+						</Inline>
 						<Button
 							type="button"
 							size="sm"
@@ -283,11 +287,9 @@ function SyncTab({
 						</DescriptionItem>
 					</DescriptionList>
 					<Inline gap={8} wrap>
-						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
-						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
-						{target.conflicts > 0 && (
-							<Badge variant="danger">{t("target.conflicts", { count: target.conflicts })}</Badge>
-						)}
+						<Count>{t("target.synced", { count: target.synced })}</Count>
+						{target.queued > 0 && <Count tone="warning">{t("target.queued", { count: target.queued })}</Count>}
+						{target.conflicts > 0 && <Count tone="danger">{t("target.conflicts", { count: target.conflicts })}</Count>}
 					</Inline>
 					{target.lastPull && target.lastPull.errors.length > 0 && (
 						<Stack gap={4}>
@@ -400,7 +402,7 @@ function ConflictsTab({
 		if (ok) resolve.mutate({ conflict, resolution });
 	};
 
-	if (loading) return <ListSkeleton />;
+	if (loading) return <ListLoading />;
 	if (error) {
 		return (
 			<Box paddingX={32} paddingY={16}>
@@ -498,7 +500,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 		},
 	});
 
-	if (!status) return <ListSkeleton />;
+	if (!status) return <ListLoading />;
 	const { keys } = status;
 	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${adminApiUrl("/v1/git-sync/webhook")}`;
 	const tokenKey = keys.token;

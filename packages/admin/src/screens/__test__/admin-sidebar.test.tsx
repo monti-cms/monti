@@ -124,18 +124,17 @@ describe("sidebar structure", () => {
 
 	it("folds the Site group on request even while one of its screens is open, and then marks the group as the current place", () => {
 		renderSidebar({ activeNav: "api-keys" });
-		expect(siteGroup().className).not.toContain("font-semibold");
+		expect(siteGroup().hasAttribute("data-active")).toBe(false);
 		fireEvent.click(siteGroup());
 		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
 		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
-		expect(siteGroup().className).toContain("font-semibold");
+		expect(siteGroup().hasAttribute("data-active")).toBe(true);
 	});
 
-	it("keeps Settings and the theme toggle in the footer, and Trash out of it", () => {
+	it("keeps Trash and Settings with the theme toggle in the footer", () => {
 		const { container } = renderSidebar();
 		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
-		expect(labels(footer)).toEqual([t("sidebar.settings")]);
-		expect(within(footer).queryByText(t("sidebar.trash"))).toBeNull();
+		expect(labels(footer)).toEqual([t("sidebar.trash"), t("sidebar.settings")]);
 		expect(within(footer).getAllByRole("button").length).toBeGreaterThan(0);
 	});
 

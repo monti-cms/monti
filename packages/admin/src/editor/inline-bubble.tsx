@@ -2,7 +2,7 @@
 
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, cn, Icon, IconButton, Inline, Separator, Text, TextButton } from "@monti-cms/ui";
+import { Box, cn, Icon, IconButton, Inline, Separator, Text, TextButton } from "@monti-cms/ui";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -499,7 +499,9 @@ export function InlineBubble({
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
 		<Inline gap={4}>
-			<Badge variant="secondary">{target.badge}</Badge>
+			<Text variant="meta" tone="subtle">
+				{target.badge}
+			</Text>
 			<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 				<Text as="div" variant="caption" truncate>
 					<TextButton

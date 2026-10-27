@@ -2,7 +2,6 @@
 
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
 	Button,
 	Collapsible,
@@ -569,14 +568,24 @@ export function FieldEditor({
 						<Text variant="caption" tone="muted" truncate>
 							{label}
 						</Text>
-						<Badge variant="secondary">{t(`kind.${kind}`)}</Badge>
+						<Text variant="meta" tone="subtle">
+							{t(`kind.${kind}`)}
+						</Text>
 						{isTitle && (
-							<Badge variant="outline" data-testid="title-badge">
+							<Text variant="meta" tone="subtle" data-testid="title-badge">
 								{t("field.titleBadge")}
-							</Badge>
+							</Text>
 						)}
-						{field.required === true && <Badge variant="outline">{t("field.requiredBadge")}</Badge>}
-						{issues.length > 0 && <Badge variant="danger">{t("field.problems", { count: issues.length })}</Badge>}
+						{field.required === true && (
+							<Text variant="meta" tone="subtle">
+								{t("field.requiredBadge")}
+							</Text>
+						)}
+						{issues.length > 0 && (
+							<Text variant="meta" tone="danger">
+								{t("field.problems", { count: issues.length })}
+							</Text>
+						)}
 					</Inline>
 				</CollapsibleTrigger>
 				<RowActions

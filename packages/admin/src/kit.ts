@@ -4,7 +4,6 @@
  */
 
 export {
-	Badge,
 	Banner,
 	Box,
 	Button,
@@ -12,7 +11,6 @@ export {
 	ChatInput,
 	ChatMessage,
 	Checkbox,
-	ChoiceCard,
 	CodeBlock,
 	Collapsible,
 	CollapsibleContent,
@@ -23,6 +21,7 @@ export {
 	ComboboxInput,
 	ComboboxItem,
 	ComboboxList,
+	Count,
 	cn,
 	Del,
 	DescriptionItem,
@@ -71,9 +70,7 @@ export {
 	SelectTrigger,
 	SelectValue,
 	SidePanelFrame,
-	Skeleton,
 	Spark,
-	Spinner,
 	SplitButton,
 	Stack,
 	Switch,

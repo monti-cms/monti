@@ -6,7 +6,6 @@ import {
 	Button,
 	EntryStatus,
 	Inline,
-	Skeleton,
 	Stack,
 	Table,
 	TableBody,
@@ -164,11 +163,11 @@ export function EventsScreen() {
 			)}
 			<Stack gap={0} grow minHeight={0} overflow="auto">
 				{listQuery.isPending ? (
-					<Stack gap={8} paddingX={32} paddingY={16} aria-hidden>
-						<Skeleton shape="control-sm" />
-						<Skeleton shape="control-sm" />
-						<Skeleton shape="control-sm" />
-					</Stack>
+					<Box paddingX={32} paddingY={16}>
+						<Text as="p" variant="note" tone="subtle" role="status">
+							{tc("loading")}
+						</Text>
+					</Box>
 				) : items.length === 0 ? (
 					!error &&
 					(filter === "all" ? (

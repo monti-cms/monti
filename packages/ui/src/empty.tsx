@@ -8,57 +8,33 @@ import { Count } from "./count";
 
 /**
  * What a list or grid shows when it has nothing: a line that says so and, instead of an explanation, the things that can be done, as
- * {@link EmptyStep}s in order. `size="compact"` is the small form for a popover or a dialog: the text alone, centered.
+ * {@link EmptyStep}s in order. No box. A popup or a short list that is empty needs no component: one quiet line of text.
  */
 function Empty({
 	title,
 	description,
-	size = "fill",
 	className,
 	children,
 	...props
 }: Omit<React.ComponentProps<"div">, "title"> & {
 	title: React.ReactNode;
-	/** One quiet line under the title ("Where do you want to start?"). */
+	/** One quiet line under the title, only when the steps cannot say what is missing. */
 	description?: React.ReactNode;
-	size?: "fill" | "compact";
 }) {
-	const compact = size === "compact";
 	return (
-		<div
-			data-slot="empty"
-			data-size={size}
-			className={cn(
-				"flex w-full min-w-0 flex-col",
-				compact ? "px-monti-8 py-monti-12 text-center" : "pt-monti-48",
-				className,
-			)}
-			{...props}
-		>
-			<p
-				data-slot="empty-title"
-				className={cn("m-0", compact ? "text-monti-body text-monti-default" : "mb-monti-8 text-monti-heading")}
-			>
+		<div data-slot="empty" className={cn("flex w-full min-w-0 flex-col pt-monti-48", className)} {...props}>
+			<p data-slot="empty-title" className="m-0 mb-monti-8 text-monti-heading">
 				{title}
 			</p>
 			{description && (
-				<p
-					data-slot="empty-description"
-					className={cn(
-						"m-0 text-monti-subtle",
-						compact ? "text-monti-note" : "mb-monti-32 font-normal text-monti-title",
-					)}
-				>
+				<p data-slot="empty-description" className="m-0 mb-monti-32 font-normal text-monti-subtle text-monti-title">
 					{description}
 				</p>
 			)}
 			{children && (
 				<div
 					data-slot="empty-steps"
-					className={cn(
-						"flex flex-col border-monti-muted border-t",
-						compact ? "mt-monti-8" : !description && "mt-monti-32",
-					)}
+					className={cn("flex flex-col border-monti-muted border-t", !description && "mt-monti-32")}
 				>
 					{children}
 				</div>
