@@ -1416,21 +1416,22 @@ describe("language tabs", () => {
 		serve(() => undefined, source);
 		renderEdit();
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		const current = within(nav).getByRole("tab", { name: "한국어 원문 · 발행됨" });
-		expect(current.getAttribute("aria-selected")).toBe("true");
-		const other = within(nav).getByRole("tab", { name: "영어 · 초안" });
-		expect(other.getAttribute("aria-selected")).toBe("false");
+		const current = within(nav).getByRole("link", { name: "한국어 원문 · 발행됨" });
+		expect(current.getAttribute("aria-current")).toBe("page");
+		const other = within(nav).getByRole("link", { name: "영어 · 초안" });
+		expect(other.getAttribute("aria-current")).toBeNull();
 		expect(within(nav).getByRole("button", { name: "JA 번역 추가" })).toBeTruthy();
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
 		const title = await editorTitle();
 		expect(nav.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 
-	it("moves to another language by its tab", async () => {
+	it("moves to another language by its link, and has no tab list without panels", async () => {
 		serve(() => undefined, source);
 		renderEdit();
-		fireEvent.click(await screen.findByRole("tab", { name: "영어 · 초안" }));
-		expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit");
+		const link = await screen.findByRole("link", { name: "영어 · 초안" });
+		expect(link.getAttribute("href")).toBe("/admin/entries/entry-en/edit");
+		expect(within(screen.getByRole("navigation", { name: "언어" })).queryByRole("tablist")).toBeNull();
 	});
 
 	it("creates a translation from the missing-language button and opens it", async () => {
@@ -1464,7 +1465,7 @@ describe("language tabs", () => {
 		}, translation);
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		expect(within(nav).getByRole("tab", { name: "영어 · 초안" }).getAttribute("aria-selected")).toBe("true");
+		expect(within(nav).getByRole("link", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
 		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동" }));
 		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로 이동" });

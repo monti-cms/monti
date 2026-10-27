@@ -10,9 +10,8 @@ import {
 	EntryStatus,
 	IconButton,
 	Inline,
-	Tabs,
-	TabsList,
-	TabsTrigger,
+	TabLink,
+	TabLinks,
 	Text,
 	TextButton,
 	toast,
@@ -23,7 +22,7 @@ import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
-import { useAdminRouter } from "../../router";
+import { AdminLink, useAdminRouter } from "../../router";
 import { entryStatusKind, statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
@@ -94,34 +93,30 @@ export function LanguageTabs({
 		<Box as="nav" aria-label={t("lang.nav")} paddingX={16} paddingTop={8} paddingBottom={12}>
 			<Inline wrap gap={20} align="end">
 				{present.length > 0 && (
-					<Tabs
-						value={entry.id}
-						onValueChange={(id) => id !== entry.id && router.navigate(site.adminEntryEditHref(String(id)))}
-					>
-						<TabsList variant="line">
-							{present.map(({ target, member }) => {
-								const current = member.id === entry.id;
-								return (
-									<TabsTrigger
-										key={target}
-										value={member.id}
-										aria-label={t(member.isSource ? "lang.currentSource" : "lang.current", {
-											lang: site.localeLabel(target),
-											status: statusLabels(site)[member.status],
-										})}
-									>
-										<EntryStatus status={entryStatusKind(member.status)} ink={current} />
-										<Text aria-hidden>{target.toUpperCase()}</Text>
-										{member.isSource && (
-											<Text aria-hidden tone="muted">
-												{t("source")}
-											</Text>
-										)}
-									</TabsTrigger>
-								);
-							})}
-						</TabsList>
-					</Tabs>
+					<TabLinks>
+						{present.map(({ target, member }) => {
+							const current = member.id === entry.id;
+							return (
+								<TabLink
+									key={target}
+									current={current}
+									render={<AdminLink href={site.adminEntryEditHref(member.id)} />}
+									aria-label={t(member.isSource ? "lang.currentSource" : "lang.current", {
+										lang: site.localeLabel(target),
+										status: statusLabels(site)[member.status],
+									})}
+								>
+									<EntryStatus status={entryStatusKind(member.status)} ink={current} />
+									<Text aria-hidden>{target.toUpperCase()}</Text>
+									{member.isSource && (
+										<Text aria-hidden tone="muted">
+											{t("source")}
+										</Text>
+									)}
+								</TabLink>
+							);
+						})}
+					</TabLinks>
 				)}
 				{missing.map((target) => (
 					<TextButton key={target} variant="quiet" disabled={createDisabled} onClick={() => void create(target)}>

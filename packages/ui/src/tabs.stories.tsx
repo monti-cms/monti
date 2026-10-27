@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileText, Settings } from "lucide-react";
 import { Stack } from "./stack";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Text } from "./text";
 
 /**
@@ -125,5 +125,27 @@ export const BarInsets: Story = {
 				</Tabs>
 			))}
 		</Stack>
+	),
+};
+
+/**
+ * Tabs that go to another page (the languages of an entry) are links, not a tab list: no panels, and `aria-current="page"` on the one you are
+ * on. The look is the `line` tabs'. Put them in a `nav`.
+ */
+export const Links: Story = {
+	render: () => (
+		<nav aria-label="언어">
+			<TabLinks>
+				<TabLink href="#ko" current>
+					KO
+				</TabLink>
+				<TabLink href="#en" count={3}>
+					EN
+				</TabLink>
+				<TabLink href="#ja" dot="warning" dotLabel="저장하지 않은 변경">
+					JA
+				</TabLink>
+			</TabLinks>
+		</nav>
 	),
 };

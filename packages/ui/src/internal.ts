@@ -237,7 +237,7 @@ export {
 	TableHeader,
 	TableRow,
 } from "./table";
-export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+export { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
 export { TextButton } from "./text-button";
