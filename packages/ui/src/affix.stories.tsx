@@ -5,7 +5,7 @@ import { FormField, FormFieldError, FormFieldLabel } from "./field";
 import { IconButton } from "./icon-button";
 import { Stack } from "./stack";
 
-/** Only the middle is typed: the fixed ends are faint mono text under the same single underline, so it reads as one address. */
+/** Only the middle is typed: the fixed ends are faint mono text with no line, and the underline is under the typed part only. A click anywhere in the field puts the caret at the end of the typed part. */
 const meta = {
 	title: "Controls/Field/Affix",
 	component: Affix,
@@ -22,6 +22,46 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
+
+/** Empty: the typed part keeps a width of its own, so its line is there to click. */
+export const Empty: Story = {
+	render: () => (
+		<Stack gap={24}>
+			<FormField>
+				<FormFieldLabel htmlFor="e-1">공개 주소</FormFieldLabel>
+				<Affix id="e-1" prefix="/" suffix="/:slug" defaultValue="" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="e-2">공개 주소 (안내 문구)</FormFieldLabel>
+				<Affix id="e-2" prefix="/" suffix="/:slug" defaultValue="" placeholder="posts" />
+			</FormField>
+		</Stack>
+	),
+};
+
+/** The caret is in the field: the underline under the typed part turns to the contrast color. Error and proposal keep their own colors. */
+export const Focused: Story = {
+	render: () => (
+		<Stack gap={24}>
+			<FormField>
+				<FormFieldLabel htmlFor="f-1">공개 주소</FormFieldLabel>
+				<Affix id="f-1" prefix="/" suffix="/:slug" defaultValue="posts" />
+			</FormField>
+			<FormField data-invalid="true">
+				<FormFieldLabel htmlFor="f-2">공개 주소 (오류)</FormFieldLabel>
+				<Affix id="f-2" prefix="/" suffix="/:slug" aria-invalid defaultValue="내 글" />
+				<FormFieldError>영문 소문자와 -만 쓸 수 있어요.</FormFieldError>
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="f-3">공개 주소 (제안)</FormFieldLabel>
+				<Affix id="f-3" prefix="/" suffix="/:slug" proposal defaultValue="notes" />
+			</FormField>
+		</Stack>
+	),
+	play: ({ canvasElement }) => {
+		canvasElement.querySelector<HTMLInputElement>("#f-1")?.focus();
+	},
+};
 
 export const States: Story = {
 	render: () => (
