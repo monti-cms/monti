@@ -60,7 +60,7 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-monti-xl border border-monti-muted bg-monti-page p-6 text-monti-body text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
+					"data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-monti-24 rounded-monti-xl border border-monti-muted bg-monti-page p-monti-24 text-monti-body text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in",
 					DIALOG_WIDTH[size],
 					scroll && "max-h-[85vh] overflow-y-auto",
 					className,
@@ -83,7 +83,7 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="dialog-header" className={cn("flex flex-col gap-2", className)} {...props} />;
+	return <div data-slot="dialog-header" className={cn("flex flex-col gap-monti-8", className)} {...props} />;
 }
 
 function DialogFooter({

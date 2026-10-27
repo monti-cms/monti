@@ -9,22 +9,22 @@ import { cn } from "./cn";
  * a `strip` across the top of a pane, flush with what is below it. The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva(
-	["relative w-full border text-monti-body", "[&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current"].join(" "),
+	["relative w-full text-monti-body", "[&>svg]:size-4 [&>svg]:translate-y-[2px] [&>svg]:text-current"].join(" "),
 	{
 		variants: {
 			layout: {
-				grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] items-start gap-x-3 gap-y-1 rounded-monti-lg px-4 py-3",
-				stack: "block rounded-monti-lg px-4 py-3",
+				grid: "grid grid-cols-[16px_1fr] items-start gap-x-monti-12 gap-y-monti-4 rounded-monti-lg px-monti-16 py-monti-12",
+				stack: "block rounded-monti-lg px-monti-16 py-monti-12",
 				/** A one-line notice with its action on the right (a load failure with "Retry"). */
-				inline: "flex items-center justify-between gap-3 rounded-monti-lg px-4 py-3",
-				/** Across the top of a pane, under its tabs: no radius, a line below only, the page's side padding. */
-				strip: "flex items-center justify-between gap-3 border-x-0 border-t-0 px-8 py-2 text-monti-label",
+				inline: "flex items-center justify-between gap-monti-12 rounded-monti-lg px-monti-16 py-monti-12",
+				/** Across the top of a pane, under its tabs: no radius, one line below, the page's side padding. */
+				strip: "flex items-center justify-between gap-monti-12 border-b px-monti-32 py-monti-8 text-monti-label",
 			},
 			tone: {
-				neutral: "border-monti-muted bg-monti-page text-monti-default",
-				danger: "border-monti-danger/40 bg-monti-danger-muted text-monti-danger",
-				warning: "border-monti-warning/40 bg-monti-warning-muted text-monti-warning",
-				success: "border-monti-success/40 bg-monti-success-muted text-monti-success",
+				neutral: "border-monti-muted bg-monti-tool text-monti-default",
+				danger: "border-monti-danger/30 bg-monti-danger-muted text-monti-danger",
+				warning: "border-monti-warning/30 bg-monti-warning-muted text-monti-warning",
+				success: "border-monti-success/30 bg-monti-success-muted text-monti-success",
 			},
 		},
 		defaultVariants: {
@@ -45,7 +45,11 @@ function Alert({
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<div data-slot="alert-title" className={cn("col-start-2 line-clamp-1 min-h-4 font-medium", className)} {...props} />
+		<div
+			data-slot="alert-title"
+			className={cn("col-start-2 line-clamp-1 min-h-4 text-monti-label", className)}
+			{...props}
+		/>
 	);
 }
 
@@ -53,7 +57,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 	return (
 		<div
 			data-slot="alert-description"
-			className={cn("col-start-2 grid justify-items-start gap-1 text-monti-body text-monti-muted", className)}
+			className={cn("col-start-2 grid justify-items-start gap-monti-4 text-monti-body text-monti-muted", className)}
 			{...props}
 		/>
 	);

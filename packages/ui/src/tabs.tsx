@@ -17,7 +17,7 @@ function Tabs({
 	return (
 		<TabsPrimitive.Root
 			data-slot="tabs"
-			className={cn("group/tabs flex flex-col", fill ? "min-h-0 flex-1 gap-0" : "gap-2", className)}
+			className={cn("group/tabs flex flex-col", fill ? "min-h-0 flex-1 gap-0" : "gap-monti-8", className)}
 			{...props}
 		/>
 	);
@@ -92,7 +92,7 @@ function TabsTrigger({
 				<ChangeDot
 					tone={dot}
 					label={dotLabel}
-					className="mt-0.5 ml-0.5 self-center group-data-[variant=bar]/tabs-list:m-0"
+					className="mt-monti-2 ml-monti-2 self-center group-data-[variant=bar]/tabs-list:m-0"
 				/>
 			)}
 		</TabsPrimitive.Tab>

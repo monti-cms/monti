@@ -29,7 +29,6 @@ export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
-export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
 export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
@@ -151,6 +150,7 @@ export {
 	PaginationNext,
 	PaginationPrevious,
 } from "./pagination";
+export { Panel } from "./panel";
 export { Patch, type PatchLine } from "./patch";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";

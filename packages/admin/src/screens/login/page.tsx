@@ -7,11 +7,6 @@ import {
 	AlertTitle,
 	Box,
 	Button,
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
 	Heading,
 	Image,
 	Input,
@@ -88,26 +83,22 @@ export default async function AdminLoginPage({
 				</Text>
 			</Stack>
 			<Box width="full" maxWidth="assistant">
-				<Card>
-					<CardHeader>
+				<Stack gap={24}>
+					<Stack gap={8}>
 						{firstAdmin ? (
-							<CardTitle>
-								<Text as="div" align="center" variant="title">
-									{t("firstAdminTitle")}
-								</Text>
-							</CardTitle>
-						) : null}
-						<CardDescription>
-							<Text as="div" align="center" tone="muted">
-								{firstAdmin
-									? t("firstAdminDescription")
-									: formProviders.length > 0 && buttonProviders.length === 0
-										? t("passwordDescription")
-										: t("description", { provider })}
+							<Text as="div" align="center" variant="title">
+								{t("firstAdminTitle")}
 							</Text>
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
+						) : null}
+						<Text as="div" align="center" tone="muted">
+							{firstAdmin
+								? t("firstAdminDescription")
+								: formProviders.length > 0 && buttonProviders.length === 0
+									? t("passwordDescription")
+									: t("description", { provider })}
+						</Text>
+					</Stack>
+					<Stack gap={12}>
 						{isUnauthorizedUser ? (
 							<Alert tone="danger" layout="stack">
 								<AlertTitle>
@@ -208,8 +199,8 @@ export default async function AdminLoginPage({
 								</Stack>
 							</Stack>
 						)}
-					</CardContent>
-				</Card>
+					</Stack>
+				</Stack>
 			</Box>
 		</Stack>
 	);

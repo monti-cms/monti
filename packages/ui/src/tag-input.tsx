@@ -1,11 +1,11 @@
 "use client";
 
-import { X } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
+import { Chip } from "./chip";
 import { cn } from "./cn";
 
 /**
- * A list of short values in one bordered field: each value is a chip, and a text entry at the end adds the next one on Enter or a comma
+ * A list of short values in one underline field: each value is a `Chip`, and a text entry at the end adds the next one on Enter or a comma
  * (and when the field loses focus). Backspace in the empty entry removes the last chip.
  */
 function TagInput({
@@ -54,29 +54,16 @@ function TagInput({
 		<div
 			data-slot="tag-input"
 			className={cn(
-				"flex min-h-monti-icon w-full flex-wrap items-center gap-monti-4 rounded-monti-md border border-monti-default bg-monti-page p-monti-4 text-monti-caption transition-[border-color,box-shadow] focus-within:border-monti-contrast focus-within:ring-3 focus-within:ring-monti-contrast/20 hover:border-monti-emphasis",
+				"flex min-h-monti-control flex-wrap items-center gap-monti-6 border-0 border-monti-default border-b bg-transparent py-monti-4 text-monti-body transition-colors focus-within:border-monti-contrast has-aria-invalid:border-monti-danger",
 				mono && "font-mono",
 				disabled && "cursor-not-allowed opacity-50",
 				className,
 			)}
 		>
 			{items.map((item, index) => (
-				<span
-					key={item}
-					className="inline-flex items-center gap-monti-4 rounded-monti-sm border border-monti-muted bg-monti-muted px-monti-8 py-monti-2 text-monti-default"
-				>
+				<Chip key={item} onRemove={disabled ? undefined : () => remove(index)} removeLabel={removeLabel(item)}>
 					<span className="max-w-40 truncate">{item}</span>
-					{!disabled && (
-						<button
-							type="button"
-							aria-label={removeLabel(item)}
-							onClick={() => remove(index)}
-							className="rounded-monti-sm text-monti-muted outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast"
-						>
-							<X className="size-monti-icon-xs" aria-hidden />
-						</button>
-					)}
-				</span>
+				</Chip>
 			))}
 			{!disabled && (
 				<input
@@ -89,7 +76,7 @@ function TagInput({
 					onBlur={() => {
 						if (input.trim()) add(input);
 					}}
-					className="h-6 min-w-28 flex-1 bg-transparent px-monti-4 outline-none placeholder:text-monti-subtle"
+					className="h-6 min-w-28 flex-1 bg-transparent px-monti-2 outline-none placeholder:text-monti-faint"
 				/>
 			)}
 		</div>

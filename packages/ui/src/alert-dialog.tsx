@@ -45,7 +45,7 @@ function AlertDialogContent({
 				data-slot="alert-dialog-content"
 				data-size={size}
 				className={cn(
-					"group/alert-dialog-content data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-monti-xl border border-monti-muted bg-monti-page p-6 text-monti-default shadow-monti-floating outline-none duration-100 data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-closed:animate-out data-open:animate-in data-[size=default]:sm:max-w-lg",
+					"group/alert-dialog-content data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-monti-24 rounded-monti-xl border border-monti-muted bg-monti-page p-monti-24 text-monti-default shadow-monti-floating outline-none duration-100 data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-closed:animate-out data-open:animate-in data-[size=default]:sm:max-w-lg",
 					className,
 				)}
 				{...props}
@@ -59,7 +59,7 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">)
 		<div
 			data-slot="alert-dialog-header"
 			className={cn(
-				"grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
+				"grid grid-rows-[auto_1fr] place-items-center gap-monti-6 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-monti-24 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
 				className,
 			)}
 			{...props}
@@ -72,7 +72,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
 		<div
 			data-slot="alert-dialog-footer"
 			className={cn(
-				"flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
+				"flex flex-col-reverse gap-monti-8 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
 				className,
 			)}
 			{...props}
@@ -85,7 +85,7 @@ function AlertDialogMedia({ className, ...props }: React.ComponentProps<"div">) 
 		<div
 			data-slot="alert-dialog-media"
 			className={cn(
-				"mb-2 inline-flex size-16 items-center justify-center rounded-monti-md bg-monti-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
+				"mb-monti-8 inline-flex size-16 items-center justify-center rounded-monti-md bg-monti-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
 				className,
 			)}
 			{...props}

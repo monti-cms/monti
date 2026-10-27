@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const VARIANTS = ["default", "secondary", "danger", "success", "warning", "outline", "ghost", "link"] as const;
+const VARIANTS = ["default", "secondary", "danger", "success", "warning", "outline", "dashed"] as const;
 
 export const AllVariants: Story = {
 	render: () => (
@@ -39,24 +39,5 @@ export const WithIcon: Story = {
 				<Check data-icon="inline-end" aria-hidden />
 			</Badge>
 		</Stack>
-	),
-};
-
-/** As a link through the `render` prop, which turns on the `[a]:hover` styles. */
-export const AsLink: Story = {
-	render: () => (
-		<Stack direction="row" gap={8} align="center">
-			{VARIANTS.map((variant) => (
-				<Badge key={variant} variant={variant} render={<a href="#top">{variant}</a>} />
-			))}
-		</Stack>
-	),
-};
-
-export const Invalid: Story = {
-	render: () => (
-		<Badge variant="outline" aria-invalid>
-			슬러그 중복
-		</Badge>
 	),
 };

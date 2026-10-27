@@ -85,7 +85,7 @@ export function StatusIndicator({
 			data-slot="status-indicator"
 			data-tone={tone}
 			className={cn(
-				"inline-flex items-center gap-1.5 whitespace-nowrap",
+				"inline-flex items-center gap-monti-6 whitespace-nowrap",
 				label && "text-monti-default text-monti-label",
 				chip && "rounded-monti-full border border-monti-muted px-monti-8 py-monti-2",
 				className,

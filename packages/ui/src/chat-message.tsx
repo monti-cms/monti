@@ -11,7 +11,7 @@ const chatMessageVariants = cva("min-w-0 text-monti-body whitespace-pre-wrap bre
 		},
 		/** The answer is still arriving: a small blinking mark after the last word. */
 		streaming: {
-			true: "after:ml-1 after:inline-block after:h-3.5 after:w-1.5 after:translate-y-0.5 after:animate-pulse after:rounded-monti-sm after:bg-monti-emphasis after:content-[''] motion-reduce:after:animate-none",
+			true: "after:ml-monti-4 after:inline-block after:h-3.5 after:w-1.5 after:translate-y-0.5 after:animate-pulse after:rounded-monti-sm after:bg-monti-emphasis after:content-[''] motion-reduce:after:animate-none",
 		},
 	},
 	defaultVariants: { author: "assistant" },

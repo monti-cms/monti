@@ -13,7 +13,7 @@ function FormFieldSet({
 		<fieldset
 			data-slot="field-set"
 			className={cn(
-				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
+				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-monti-12 has-[>[data-slot=radio-group]]:gap-monti-12",
 				density === "compact" ? "gap-monti-16" : "gap-monti-24",
 				className,
 			)}
@@ -31,7 +31,10 @@ function FormFieldLegend({
 		<legend
 			data-slot="field-legend"
 			data-variant={variant}
-			className={cn("mb-3 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title", className)}
+			className={cn(
+				"mb-monti-12 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -42,7 +45,7 @@ function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-group"
 			className={cn(
-				"group/field-group @container/field-group flex w-full flex-col gap-7 data-[slot=checkbox-group]:gap-3 *:data-[slot=field-group]:gap-4",
+				"group/field-group @container/field-group flex w-full flex-col gap-7 data-[slot=checkbox-group]:gap-monti-12 *:data-[slot=field-group]:gap-monti-16",
 				className,
 			)}
 			{...props}
@@ -96,7 +99,7 @@ function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				"flex w-fit items-center gap-2 text-monti-label group-data-[disabled=true]/field:opacity-50",
+				"flex w-fit items-center gap-monti-8 text-monti-label group-data-[disabled=true]/field:opacity-50",
 				className,
 			)}
 			{...props}
@@ -109,8 +112,8 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 		<p
 			data-slot="field-description"
 			className={cn(
-				"text-left text-monti-label text-monti-muted [[data-variant=legend]+&]:-mt-1.5",
-				"nth-last-2:-mt-1 last:mt-0",
+				"text-left text-monti-label text-monti-muted [[data-variant=legend]+&]:-mt-monti-6",
+				"nth-last-2:-mt-monti-4 last:mt-0",
 				"[&>a]:text-monti-default [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
@@ -143,7 +146,7 @@ function FormFieldError({
 		}
 
 		return (
-			<ul className="ml-4 flex list-disc flex-col gap-1">
+			<ul className="ml-monti-16 flex list-disc flex-col gap-monti-4">
 				{uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
 			</ul>
 		);

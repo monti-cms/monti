@@ -71,7 +71,9 @@ function PopoverContent({
 }
 
 function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="popover-header" className={cn("flex flex-col gap-1 text-monti-body", className)} {...props} />;
+	return (
+		<div data-slot="popover-header" className={cn("flex flex-col gap-monti-4 text-monti-body", className)} {...props} />
+	);
 }
 
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {

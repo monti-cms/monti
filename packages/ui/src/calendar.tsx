@@ -23,7 +23,7 @@ function Calendar({
 		<DayPicker
 			showOutsideDays={showOutsideDays}
 			className={cn(
-				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--monti-radius-md)] [--cell-size:--spacing(8)]",
+				"group/calendar bg-monti-page in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-monti-12 [--cell-radius:var(--monti-radius-md)] [--cell-size:--spacing(8)]",
 				String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
 				String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
 				className,
@@ -36,9 +36,9 @@ function Calendar({
 			}}
 			classNames={{
 				root: cn("w-fit", defaultClassNames.root),
-				months: cn("relative flex flex-col gap-4 md:flex-row", defaultClassNames.months),
-				month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
-				nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1", defaultClassNames.nav),
+				months: cn("relative flex flex-col gap-monti-16 md:flex-row", defaultClassNames.months),
+				month: cn("flex w-full flex-col gap-monti-16", defaultClassNames.month),
+				nav: cn("absolute inset-x-0 top-0 flex w-full items-center justify-between gap-monti-4", defaultClassNames.nav),
 				button_previous: cn(
 					ICON_BUTTON,
 					"size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
@@ -54,7 +54,7 @@ function Calendar({
 					defaultClassNames.month_caption,
 				),
 				dropdowns: cn(
-					"flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-monti-body font-medium",
+					"flex h-(--cell-size) w-full items-center justify-center gap-monti-6 text-monti-body font-medium",
 					defaultClassNames.dropdowns,
 				),
 				dropdown_root: cn("relative rounded-(--cell-radius)", defaultClassNames.dropdown_root),
@@ -63,7 +63,7 @@ function Calendar({
 					"font-medium select-none",
 					captionLayout === "label"
 						? "text-monti-body"
-						: "flex items-center gap-1 rounded-(--cell-radius) text-monti-body [&>svg]:size-3.5 [&>svg]:text-monti-muted",
+						: "flex items-center gap-monti-4 rounded-(--cell-radius) text-monti-body [&>svg]:size-3.5 [&>svg]:text-monti-muted",
 					defaultClassNames.caption_label,
 				),
 				month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
@@ -72,7 +72,7 @@ function Calendar({
 					"flex-1 rounded-(--cell-radius) text-monti-caption text-monti-muted select-none",
 					defaultClassNames.weekday,
 				),
-				week: cn("mt-2 flex w-full", defaultClassNames.week),
+				week: cn("mt-monti-8 flex w-full", defaultClassNames.week),
 				week_number_header: cn("w-(--cell-size) select-none", defaultClassNames.week_number_header),
 				week_number: cn("text-monti-caption text-monti-muted select-none", defaultClassNames.week_number),
 				day: cn(
@@ -156,7 +156,7 @@ function CalendarDayButton({
 			data-range-middle={modifiers.range_middle}
 			className={cn(
 				ICON_BUTTON,
-				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 rounded-(--cell-radius) border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
+				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-monti-4 rounded-(--cell-radius) border-0 font-normal leading-none monti-dark:hover:text-monti-default data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-emphasis data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-emphasis data-[selected-single=true]:bg-monti-emphasis data-[range-end=true]:text-monti-on-emphasis data-[range-middle=true]:text-monti-default data-[range-start=true]:text-monti-on-emphasis data-[selected-single=true]:text-monti-on-emphasis group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-contrast group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-contrast/20 [&>span]:text-monti-caption [&>span]:opacity-70",
 				defaultClassNames.day,
 				className,
 			)}

@@ -10,7 +10,9 @@ import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick
 const Select = SelectPrimitive.Root;
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
-	return <SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1 p-1", className)} {...props} />;
+	return (
+		<SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1 p-monti-4", className)} {...props} />
+	);
 }
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
@@ -105,7 +107,7 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
 		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
-			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-monti-8 whitespace-nowrap">
 				{children}
 			</SelectPrimitive.ItemText>
 			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
@@ -128,7 +130,7 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
 		<SelectPrimitive.ScrollUpArrow
 			data-slot="select-scroll-up-button"
 			className={cn(
-				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-1 [&_svg:not([class*='size-'])]:size-4",
+				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-monti-4 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
@@ -143,7 +145,7 @@ function SelectScrollDownButton({ className, ...props }: React.ComponentProps<ty
 		<SelectPrimitive.ScrollDownArrow
 			data-slot="select-scroll-down-button"
 			className={cn(
-				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-1 [&_svg:not([class*='size-'])]:size-4",
+				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-monti-4 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}

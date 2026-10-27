@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MoreHorizontal } from "lucide-react";
-import { Panel } from "./card";
 import { Count } from "./count";
 import { Empty } from "./empty";
 import { IconButton } from "./icon-button";
+import { Panel } from "./panel";
 import { Skeleton } from "./skeleton";
 import { StatusIndicator } from "./status-indicator";
 import {
