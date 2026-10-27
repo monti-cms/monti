@@ -59,7 +59,6 @@ export {
 	Label,
 	List,
 	ListItem,
-	PageTabs,
 	Panel,
 	Popover,
 	PopoverContent,

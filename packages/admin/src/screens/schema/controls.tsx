@@ -5,6 +5,7 @@ import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	ChangeDot,
 	FormFieldError,
 	IconButton,
 	Inline,
@@ -15,7 +16,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Stack,
-	StatusIndicator,
 	Switch,
 	Text,
 	Tooltip,
@@ -80,15 +80,10 @@ export function useSettingRevert(
 	};
 }
 
-/** A small dot that says "this has changes", with the word for a screen reader. */
-export function ChangeDot() {
+/** A small dot that says "this has changes", named for a screen reader. */
+export function ChangedMark() {
 	const t = useTranslator(schemaMessages);
-	return (
-		<Inline as="span" shrink={false} data-testid="change-dot">
-			<StatusIndicator tone="warning" size="xs" />
-			<Text srOnly>{t("changed")}</Text>
-		</Inline>
-	);
+	return <ChangeDot label={t("changed")} />;
 }
 
 /** A help text under a label or a control: a muted line that stays readable in width. */
@@ -108,7 +103,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	const { disabled } = useSchemaEdit();
 	return (
 		<Inline as="span" gap={2} data-testid="field-changed">
-			<ChangeDot />
+			<ChangedMark />
 			<IconButton label={t("revert.named", { name })} disabled={disabled} onClick={onRevert}>
 				<Undo2 aria-hidden />
 			</IconButton>

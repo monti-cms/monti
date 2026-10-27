@@ -103,11 +103,11 @@ describe("settings tabs", () => {
 
 	it("puts a dot, named for a screen reader, on the tabs that hold draft changes", () => {
 		renderSettings("collections");
-		expect(within(tabBar()).queryAllByText(t("changed"))).toHaveLength(0);
+		expect(within(tabBar()).queryAllByRole("img", { name: t("changed") })).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "report changes" }));
 		const site = within(tabBar()).getByRole("tab", { name: new RegExp(t("tab.site")) });
-		expect(within(site).getByText(t("changed"))).toBeTruthy();
-		expect(within(tabBar()).getAllByText(t("changed"))).toHaveLength(1);
+		expect(within(site).getByRole("img", { name: t("changed") })).toBeTruthy();
+		expect(within(tabBar()).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
 	});
 
 	it("shows the schema editor for the open tab", () => {

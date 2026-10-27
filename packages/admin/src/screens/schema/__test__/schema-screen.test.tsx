@@ -1497,7 +1497,7 @@ describe("SchemaScreen", () => {
 	};
 
 	describe("change marks and the save bar", () => {
-		const dotsIn = (element: HTMLElement) => within(element).queryAllByTestId("change-dot");
+		const dotsIn = (element: HTMLElement) => within(element).queryAllByRole("img", { name: t("changed") });
 		const revertName = (name: string) => t("revert.named", { name });
 		const subTab = (name: "basics" | "fields" | "editor") =>
 			screen.getByRole("tab", { name: new RegExp(`^${tCollection(`collection.tabs.${name}`)}`) });
@@ -1565,11 +1565,13 @@ describe("SchemaScreen", () => {
 			renderScreen();
 			await screen.findByTestId("collection-post");
 			openTab("fields");
-			expect(within(await screen.findByTestId("field-summary")).queryAllByTestId("change-dot")).toHaveLength(0);
+			expect(
+				within(await screen.findByTestId("field-summary")).queryAllByRole("img", { name: t("changed") }),
+			).toHaveLength(0);
 			const sheet = await openFieldSheet("summary");
 			type(within(sheet).getByLabelText(tFields("field.label")), "Teaser");
 			await applySheet(sheet);
-			expect(within(screen.getByTestId("field-summary")).getAllByTestId("change-dot")).toHaveLength(1);
+			expect(within(screen.getByTestId("field-summary")).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
 			expect(dotsIn(subTab("fields"))).toHaveLength(1);
 			expect(dotsIn(subTab("basics"))).toHaveLength(0);
 			fireEvent.click(

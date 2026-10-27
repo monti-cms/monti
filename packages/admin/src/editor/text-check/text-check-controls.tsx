@@ -3,8 +3,8 @@
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Button,
+	Count,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -79,7 +79,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<Badge variant="secondary">{count > 99 ? "99+" : count}</Badge>
+						<Count>{count > 99 ? "99+" : count}</Count>
 					</IconButton>
 					<DropdownMenuContent align="end" width="lg">
 						{issues.map((issue) => (

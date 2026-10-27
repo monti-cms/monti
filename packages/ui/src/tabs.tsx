@@ -1,12 +1,13 @@
 "use client";
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
-import { cva, type VariantProps } from "class-variance-authority";
+import type * as React from "react";
+import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import { Count } from "./count";
 
 function Tabs({
 	className,
-	orientation = "horizontal",
 	fill = false,
 	...props
 }: TabsPrimitive.Root.Props & {
@@ -16,60 +17,85 @@ function Tabs({
 	return (
 		<TabsPrimitive.Root
 			data-slot="tabs"
-			data-orientation={orientation}
-			className={cn(
-				"group/tabs flex data-[orientation=horizontal]:flex-col",
-				fill ? "min-h-0 flex-1 gap-0" : "gap-2",
-				className,
-			)}
+			className={cn("group/tabs flex flex-col", fill ? "min-h-0 flex-1 gap-0" : "gap-2", className)}
 			{...props}
 		/>
 	);
 }
 
-const tabsListVariants = cva(
-	"group/tabs-list inline-flex w-fit items-center justify-center rounded-monti-md p-[3px] text-monti-muted group-data-[orientation=horizontal]/tabs:h-monti-icon group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none data-[variant=line]:p-0",
-	{
-		variants: {
-			variant: {
-				default: "border border-monti-muted bg-monti-tool",
-				line: "gap-4 bg-transparent",
-			},
-		},
-		defaultVariants: {
-			variant: "default",
-		},
-	},
-);
+/** The side padding of a bar, so its first tab lines up with the content's side padding. */
+const BAR_INSET = { page: "px-monti-32", panel: "px-monti-24", none: "" } as const;
 
+/**
+ * The list of tabs: switches the view in the same place (language, status, a screen's sections, a panel's parts).
+ * - `line` (default): underlined tabs, the picked one in ink at 600 with a 1.5px ink rule.
+ * - `bar`: the tab row at the top of a pane, 44px with a rule under it that the picked tab's underline sits on; `inset` lines its first tab
+ *   up with the content's side padding.
+ * - `toolbar`: the tabs under a page title, in the filter row: 14px, the picked one bold, no underline (the title's rule is the only heavy line).
+ */
 function TabsList({
 	className,
-	variant = "default",
+	variant = "line",
+	inset = "panel",
 	...props
-}: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+}: TabsPrimitive.List.Props & {
+	variant?: "line" | "bar" | "toolbar";
+	inset?: keyof typeof BAR_INSET;
+}) {
 	return (
 		<TabsPrimitive.List
 			data-slot="tabs-list"
 			data-variant={variant}
-			className={cn(tabsListVariants({ variant }), className)}
+			className={cn(
+				"group/tabs-list flex w-fit gap-monti-20 text-monti-note",
+				variant === "line" && "items-end",
+				variant === "toolbar" && "items-baseline text-monti-body",
+				variant === "bar" &&
+					cn("h-monti-panebar w-full shrink-0 items-end justify-start border-monti-default border-b", BAR_INSET[inset]),
+				className,
+			)}
 			{...props}
 		/>
 	);
 }
 
-function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
+/**
+ * A tab. `count` is a number after the name in mono; `dot` says this tab has something to handle: `warning` for an unsaved change, `proposal`
+ * for something the assistant suggested. Say what the dot means in `dotLabel`.
+ */
+function TabsTrigger({
+	className,
+	children,
+	count,
+	dot,
+	dotLabel,
+	...props
+}: TabsPrimitive.Tab.Props & {
+	count?: React.ReactNode;
+	dot?: "warning" | "proposal";
+	dotLabel?: string;
+}) {
 	return (
 		<TabsPrimitive.Tab
 			data-slot="tabs-trigger"
 			className={cn(
-				"relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-monti-sm border border-transparent px-2 py-1 monti-dark:text-monti-muted text-monti-label text-monti-muted transition-all hover:text-monti-default monti-dark:hover:text-monti-default focus-visible:border-monti-contrast focus-visible:outline-1 focus-visible:outline-monti-contrast focus-visible:ring-[3px] focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[orientation=vertical]/tabs:w-full group-data-[variant=line]/tabs-list:flex-none group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:px-0 group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				"group-data-[variant=line]/tabs-list:bg-transparent monti-dark:group-data-[variant=line]/tabs-list:data-active:border-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent monti-dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
-				"data-active:border-monti-muted monti-dark:data-active:border-monti-default data-active:bg-monti-page data-active:font-medium data-active:text-monti-default monti-dark:data-active:text-monti-default",
-				"after:absolute after:bg-monti-emphasis after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=horizontal]/tabs:after:bottom-[-1px] group-data-[orientation=horizontal]/tabs:after:h-[1.5px] group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+				"inline-flex cursor-pointer items-baseline gap-monti-4 whitespace-nowrap border-0 border-transparent border-b-[1.5px] bg-transparent px-0 pt-monti-4 pb-[3px] text-monti-subtle outline-none transition-colors hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:border-monti-contrast data-active:font-semibold data-active:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:self-center",
+				"group-data-[variant=toolbar]/tabs-list:border-b-0 group-data-[variant=toolbar]/tabs-list:p-0 group-data-[variant=toolbar]/tabs-list:data-active:font-bold",
+				"group-data-[variant=bar]/tabs-list:-mb-px group-data-[variant=bar]/tabs-list:items-center group-data-[variant=bar]/tabs-list:gap-monti-6 group-data-[variant=bar]/tabs-list:pb-monti-12",
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children}
+			{count !== undefined && <Count>{count}</Count>}
+			{dot && (
+				<ChangeDot
+					tone={dot}
+					label={dotLabel}
+					className="mt-0.5 ml-0.5 self-center group-data-[variant=bar]/tabs-list:m-0"
+				/>
+			)}
+		</TabsPrimitive.Tab>
 	);
 }
 
@@ -98,27 +124,4 @@ function TabsContent({
 	);
 }
 
-/** A bar of line tabs under a header, edge to edge with a bottom border (inside a panel or a sheet). */
-const TAB_INSET = { page: "px-monti-32", panel: "px-monti-24", none: "" } as const;
-
-/**
- * The underline tab bar across a page or a panel: the one look for switching views (a screen's sections, a list's filters, a panel's parts).
- * `inset` lines its first tab up with the content's side padding. Works without panels too: a filter is a value and `onValueChange`.
- */
-function PageTabs({
-	className,
-	inset = "page",
-	...props
-}: Omit<TabsPrimitive.List.Props, "variant"> & { inset?: keyof typeof TAB_INSET }) {
-	return (
-		<TabsList
-			variant="line"
-			className={cn("h-10 w-full shrink-0 justify-start gap-monti-16 border-b", TAB_INSET[inset], className)}
-			{...props}
-		/>
-	);
-}
-
-/** The line tabs that sit at the top of a page or a screen's main area. */
-
-export { Tabs, TabsList, TabsTrigger, TabsContent, PageTabs, tabsListVariants };
+export { Tabs, TabsList, TabsTrigger, TabsContent };

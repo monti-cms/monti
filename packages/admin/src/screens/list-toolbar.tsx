@@ -3,18 +3,17 @@
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	IconButton,
 	Inline,
-	Input,
-	PageTabs,
+	SearchBox,
 	Stack,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { AlignLeft, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
@@ -103,29 +102,23 @@ export function ListSearch({
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
 		<Box width="panel">
-			<Inline gap={8}>
-				<Input
-					type="search"
-					size="sm"
-					aria-label={t("toolbar.searchLabel")}
-					value={search}
-					onChange={(event) => setSearch(event.target.value)}
-					placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
-				/>
-				{withBody && (
-					<Button
-						size="sm"
-						variant={state.includeBody ? "primary" : "secondary"}
-						aria-label={t("toolbar.includeBody")}
-						title={t("toolbar.includeBody")}
-						aria-pressed={state.includeBody}
-						onClick={() => onChange({ includeBody: !state.includeBody })}
-					>
-						<AlignLeft aria-hidden />
-						{t("toolbar.includeBodyShort")}
-					</Button>
-				)}
-			</Inline>
+			<SearchBox
+				aria-label={t("toolbar.searchLabel")}
+				value={search}
+				onValueChange={setSearch}
+				placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
+				targets={
+					withBody
+						? [
+								{ value: "fields", label: t("toolbar.targetFields") },
+								{ value: "all", label: t("toolbar.targetAll") },
+							]
+						: undefined
+				}
+				target={state.includeBody ? "all" : "fields"}
+				onTargetChange={(target) => onChange({ includeBody: target === "all" })}
+				targetLabel={t("toolbar.target")}
+			/>
 		</Box>
 	);
 }
@@ -151,13 +144,13 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 			value={active ?? ""}
 			onValueChange={(key) => onChange({ statuses: key === "all" ? [] : [key as ListStatus], hasChanges: false })}
 		>
-			<PageTabs inset="none" aria-label={t("list.statusFilter")}>
+			<TabsList variant="bar" inset="none" aria-label={t("list.statusFilter")}>
 				{segments.map(({ key, label }) => (
 					<TabsTrigger key={key} value={key}>
 						{label}
 					</TabsTrigger>
 				))}
-			</PageTabs>
+			</TabsList>
 		</Tabs>
 	);
 }

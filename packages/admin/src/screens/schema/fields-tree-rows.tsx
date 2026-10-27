@@ -9,7 +9,7 @@ import { useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton, Stack } from "@monti-cms/ui";
 import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
-import { ChangeDot, useIssuesUnder, useSchemaEdit } from "./controls";
+import { ChangedMark, useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
@@ -256,7 +256,7 @@ export function Row({
 						)}
 						{changed && (
 							<Box as="span" paddingX={8}>
-								<ChangeDot />
+								<ChangedMark />
 							</Box>
 						)}
 						{locked?.kind === "panel" && (

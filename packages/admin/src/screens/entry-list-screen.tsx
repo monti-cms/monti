@@ -2,7 +2,7 @@
 
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text, toast } from "@monti-cms/ui";
+import { Box, Button, Inline, Skeleton, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -276,7 +276,7 @@ function TrashPage() {
 			</PageActions>
 			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
 				<Tabs value={state.collection}>
-					<PageTabs inset="none" aria-label={t("dashboard.trashCollections")}>
+					<TabsList variant="bar" inset="none" aria-label={t("dashboard.trashCollections")}>
 						{site.COLLECTIONS.map((item) => (
 							<TabsTrigger
 								key={item}
@@ -287,7 +287,7 @@ function TrashPage() {
 								{site.COLLECTION_DEFINITIONS[item].label}
 							</TabsTrigger>
 						))}
-					</PageTabs>
+					</TabsList>
 				</Tabs>
 			</Box>
 			<EntryListBody list={list} />

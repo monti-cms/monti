@@ -18,12 +18,12 @@ import {
 	Inline,
 	Input,
 	Label,
-	PageTabs,
 	Skeleton,
 	Spinner,
 	Stack,
 	Switch,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
 	Textarea,
@@ -239,14 +239,14 @@ export function ImageInsertDialog({
 					</DialogHeader>
 
 					<Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
-						<PageTabs inset="none" aria-label={t("imageDialog.sourceLabel")}>
+						<TabsList variant="bar" inset="none" aria-label={t("imageDialog.sourceLabel")}>
 							<TabsTrigger value="upload" disabled={isUploading}>
 								{tc("upload")}
 							</TabsTrigger>
 							<TabsTrigger value="library" disabled={isUploading}>
 								{t("imageDialog.library")}
 							</TabsTrigger>
-						</PageTabs>
+						</TabsList>
 					</Tabs>
 
 					{tab === "upload" ? (

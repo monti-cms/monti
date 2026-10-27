@@ -15,7 +15,7 @@ export const Playground: Story = {};
 
 const TONES: StatusTone[] = ["success", "warning", "danger", "neutral", "strong"];
 const SHAPES: StatusShape[] = ["dot", "ring", "dashed", "half", "minus"];
-const SIZES = ["xs", "sm", "md"] as const;
+const SIZES = ["sm", "md"] as const;
 
 /** Every shape in every tone, with its label. */
 export const ShapesByTone: Story = {

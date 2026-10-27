@@ -35,7 +35,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<Badge key={locale} variant="dashed" mono>
+						<Badge key={locale} variant="dashed">
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<Text srOnly>{t("locale.hasNot", { name })}</Text>
 						</Badge>
@@ -48,7 +48,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 							? "warning"
 							: "secondary";
 				return (
-					<Badge key={locale} variant={variant} mono render={<Link href={site.adminEntryEditHref(member.id)} />}>
+					<Badge key={locale} variant={variant} render={<Link href={site.adminEntryEditHref(member.id)} />}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<Text srOnly>
 							{name} · {statusLabels(site)[member.status]}
@@ -69,7 +69,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					<Badge key={locale} variant={named ? "success" : "dashed"} mono>
+					<Badge key={locale} variant={named ? "success" : "dashed"}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
 					</Badge>

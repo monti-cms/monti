@@ -133,7 +133,7 @@ export function LanguageTabs({
 									if (!current) router.navigate(site.adminEntryEditHref(member.id));
 								}}
 							>
-								<StatusIndicator size="xs" tone={STATUS_TONE[member.status] ?? "neutral"} />
+								<StatusIndicator size="sm" tone={STATUS_TONE[member.status] ?? "neutral"} />
 								<Text aria-hidden weight="medium">
 									{target.toUpperCase()}
 								</Text>

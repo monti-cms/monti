@@ -9,7 +9,6 @@ import {
 	Inline,
 	Input,
 	Label,
-	PageTabs,
 	Segmented,
 	Select,
 	SelectContent,
@@ -21,6 +20,7 @@ import {
 	Stack,
 	Switch,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	toast,
 } from "@monti-cms/ui";
@@ -489,13 +489,13 @@ export function MediaLibrary() {
 				</Inline>
 			</PageActions>
 			<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
-				<PageTabs aria-label={t("library.kindLabel")}>
+				<TabsList variant="bar" aria-label={t("library.kindLabel")}>
 					{kindOptions(t).map((option) => (
 						<TabsTrigger key={option.value} value={option.value}>
 							{option.label}
 						</TabsTrigger>
 					))}
-				</PageTabs>
+				</TabsList>
 			</Tabs>
 			<Inline gap={8} wrap justify="end" paddingX={32} paddingY={8} shrink={false}>
 				<Input

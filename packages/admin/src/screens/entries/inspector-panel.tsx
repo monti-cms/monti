@@ -2,7 +2,7 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldSet, Stack, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import { Box, FormFieldSet, Stack, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
 import { SidePanelHeader } from "../shared/side-panel";
 import { tabLabel } from "./layout-groups";
@@ -93,9 +93,8 @@ export function InspectorPanel({
 				<SidePanelHeader onClose={onClose}>
 					<TabsList variant="line">
 						{tabs.map((name) => (
-							<TabsTrigger key={name} value={name}>
+							<TabsTrigger key={name} value={name} dot={issuesIn(name) > 0 ? "warning" : undefined}>
 								{tabLabel(site, name, collection)}
-								{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="danger" />}
 							</TabsTrigger>
 						))}
 					</TabsList>

@@ -19,8 +19,6 @@ const toneClass = cva("shrink-0", {
 			strong: "text-monti-default",
 		},
 		size: {
-			/** A bare dot beside a name (language tabs). */
-			xs: "size-2",
 			/** The dot of the save status. */
 			sm: "size-2.5",
 			/** The marker of a label in a list column. */
@@ -72,7 +70,7 @@ export function StatusIndicator({
 }: Omit<React.ComponentProps<"span">, "children"> & {
 	tone?: StatusTone;
 	shape?: StatusShape;
-	size?: "xs" | "sm" | "md";
+	size?: "sm" | "md";
 	/** The status name next to the marker. Without it the marker is decorative (`aria-hidden`). */
 	label?: string;
 	/** Shows the label only from this width up (the marker stays); set `aria-label` on the parent so screen readers still get the name. */

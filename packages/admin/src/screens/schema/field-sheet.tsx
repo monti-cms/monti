@@ -6,7 +6,6 @@ import {
 	Button,
 	Heading,
 	Inline,
-	PageTabs,
 	Sheet,
 	SheetContent,
 	SheetDescription,
@@ -15,6 +14,7 @@ import {
 	Stack,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	Text,
 	TextButton,
@@ -144,10 +144,10 @@ export function FieldSheet({
 							<Text as="code">{name}</Text> · {t(`kind.${kind}`)}
 						</SheetDescription>
 					</SheetHeader>
-					<PageTabs inset="panel">
+					<TabsList variant="bar" inset="panel">
 						<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 						<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
-					</PageTabs>
+					</TabsList>
 					<Box grow minHeight={0} overflow="y" paddingX={24} paddingY={24}>
 						<IssueList issues={issues} />
 						<TabsContent value="basic">

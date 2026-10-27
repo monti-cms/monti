@@ -5,7 +5,6 @@ import {
 	Box,
 	Button,
 	Inline,
-	PageTabs,
 	Skeleton,
 	Stack,
 	StatusIndicator,
@@ -16,6 +15,7 @@ import {
 	TableHeader,
 	TableRow,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
 	TextButton,
@@ -73,13 +73,13 @@ function FilterTabs({
 	const t = useTranslator(eventsMessages);
 	return (
 		<Tabs value={filter} onValueChange={(value) => onChange(value as EventsFilter)}>
-			<PageTabs aria-label={t("filter.label")}>
+			<TabsList variant="bar" aria-label={t("filter.label")}>
 				{options.map((option) => (
 					<TabsTrigger key={option.value} value={option.value}>
 						{option.label}
 					</TabsTrigger>
 				))}
-			</PageTabs>
+			</TabsList>
 		</Tabs>
 	);
 }

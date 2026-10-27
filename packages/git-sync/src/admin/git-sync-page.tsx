@@ -21,11 +21,11 @@ import {
 	Input,
 	Label,
 	LoadErrorAlert,
-	PageTabs,
 	Skeleton,
 	Stack,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	Text,
 	TextButton,
@@ -71,21 +71,20 @@ export function GitSyncPage() {
 	return (
 		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
-				<PageTabs>
+				<TabsList variant="bar">
 					<TabsTrigger value="sync">
 						<GitBranch aria-hidden />
 						{t("tab.sync")}
 					</TabsTrigger>
-					<TabsTrigger value="conflicts">
+					<TabsTrigger value="conflicts" count={conflictCount > 0 ? conflictCount : undefined}>
 						<TriangleAlert aria-hidden />
 						{t("tab.conflicts")}
-						{conflictCount > 0 && <Badge variant="danger">{conflictCount}</Badge>}
 					</TabsTrigger>
 					<TabsTrigger value="settings">
 						<KeyRound aria-hidden />
 						{t("tab.settings")}
 					</TabsTrigger>
-				</PageTabs>
+				</TabsList>
 				<TabsContent value="sync" scroll>
 					<SyncTab
 						status={status.data}

@@ -30,19 +30,14 @@ const badgeVariants = cva(
 function Badge({
 	className,
 	variant = "default",
-	mono = false,
 	render,
 	...props
-}: useRender.ComponentProps<"span"> &
-	VariantProps<typeof badgeVariants> & {
-		/** Fixed-width letters, for a code or a count. */
-		mono?: boolean;
-	}) {
+}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
 	return useRender({
 		defaultTagName: "span",
 		props: mergeProps<"span">(
 			{
-				className: cn(badgeVariants({ variant }), mono && "font-mono", className),
+				className: cn(badgeVariants({ variant }), className),
 			},
 			props,
 		),

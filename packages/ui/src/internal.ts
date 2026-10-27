@@ -29,9 +29,11 @@ export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Panel } from "./card";
 export { Caret } from "./caret";
+export { ChangeDot } from "./change-dot";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
+export { Chip } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock, DiffMark, DiffView } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -81,6 +83,7 @@ export {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "./context-menu";
+export { Count } from "./count";
 export { DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,
@@ -123,6 +126,8 @@ export {
 	FormFieldSet,
 	FormFieldTitle,
 } from "./field";
+export { FilterButton } from "./filter-button";
+export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export { Grid } from "./grid";
 export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
@@ -132,6 +137,7 @@ export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
+export { MapRow } from "./map-row";
 export { Option } from "./option";
 export {
 	Pagination,
@@ -146,6 +152,7 @@ export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 export { Progress } from "./progress";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
+export { SearchBox, type SearchTarget } from "./search-box";
 export { Segmented, type SegmentedOption } from "./segmented";
 export {
 	Select,
@@ -196,7 +203,7 @@ export { Inline, Stack, type StackProps, stackVariants } from "./stack";
 export { StatusIndicator, type StatusShape, type StatusTone } from "./status-indicator";
 export { Switch } from "./switch";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./table";
-export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants } from "./tabs";
+export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 export { TagInput } from "./tag-input";
 export { Heading, Text, textVariants } from "./text";
 export { TextButton } from "./text-button";

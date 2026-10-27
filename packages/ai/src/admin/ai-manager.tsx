@@ -35,11 +35,11 @@ import {
 	LoadErrorAlert,
 	MasterDetail,
 	PageActions,
-	PageTabs,
 	Stack,
 	Switch,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	TagInput,
 	Text,
@@ -514,7 +514,7 @@ export function AiManager() {
 		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			<PageActions>{headerActions}</PageActions>
 			<Tabs fill value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
-				<PageTabs>
+				<TabsList variant="bar">
 					<TabsTrigger value="features">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
@@ -527,7 +527,7 @@ export function AiManager() {
 						<Quote aria-hidden />
 						{t("tab.snippets")}
 					</TabsTrigger>
-				</PageTabs>
+				</TabsList>
 				<TabsContent value="features" fill>
 					{featuresQuery.data && usable.size === 0 && (
 						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.

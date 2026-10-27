@@ -26,6 +26,16 @@ export const AlertDialogTrigger = close(open.AlertDialogTrigger);
 export const Badge = close(open.Badge);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
+export const ChangeDot = close(open.ChangeDot);
+export const Chip = close(open.Chip);
+export const Count = close(open.Count);
+export const FilterButton = close(open.FilterButton);
+export const FolderTab = close(open.FolderTab);
+export const FolderTabs = close(open.FolderTabs);
+export const FolderTabsAdd = close(open.FolderTabsAdd);
+export const FolderTabsBody = close(open.FolderTabsBody);
+export const FolderTabsList = close(open.FolderTabsList);
+export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
 export const SidePanelFrame = close(open.SidePanelFrame);
@@ -206,7 +216,6 @@ export const TableFooter = close(open.TableFooter);
 export const TableHead = close(open.TableHead);
 export const TableHeader = close(open.TableHeader);
 export const TableRow = close(open.TableRow);
-export const PageTabs = close(open.PageTabs);
 export const Tabs = close(open.Tabs);
 export const TabsContent = close(open.TabsContent);
 export const TabsList = close(open.TabsList);
@@ -226,6 +235,7 @@ export type { Closed } from "./closed";
 export type {
 	Background,
 	LayoutProps,
+	SearchTarget,
 	SegmentedOption,
 	Spacing,
 	StackProps,
@@ -241,11 +251,11 @@ export {
 	Combobox,
 	cn,
 	DEFAULT_UI_LABELS,
+	SearchBox,
 	Segmented,
 	Select,
 	stackVariants,
 	Toaster,
-	tabsListVariants,
 	textVariants,
 	toast,
 	useComboboxAnchor,

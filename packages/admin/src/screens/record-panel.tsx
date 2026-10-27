@@ -9,7 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { Box, PageTabs, Stack, StatusIndicator, Tabs, TabsContent, TabsTrigger, Text } from "@monti-cms/ui";
+import { Box, Stack, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -199,7 +199,7 @@ export function RecordPanel({
 				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
 					<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
 						{translated && (
-							<PageTabs inset="panel">
+							<TabsList variant="bar" inset="panel">
 								{site.LOCALES.map((option) => {
 									const filled = hasLocaleValues(site, collection, form, option);
 									const name = site.localeLabel(option);
@@ -216,7 +216,7 @@ export function RecordPanel({
 											{name}
 											{option !== site.DEFAULT_LOCALE && (
 												<StatusIndicator
-													size="xs"
+													size="sm"
 													tone={filled ? "success" : "neutral"}
 													shape={filled ? "dot" : "ring"}
 												/>
@@ -224,7 +224,7 @@ export function RecordPanel({
 										</TabsTrigger>
 									);
 								})}
-							</PageTabs>
+							</TabsList>
 						)}
 						<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
 							<Stack gap={16} padding={16}>

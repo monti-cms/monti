@@ -4,6 +4,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { CheckIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Caret } from "./caret";
+import { CHIP, CHIP_REMOVE } from "./chip";
 import { cn } from "./cn";
 import { ICON_BUTTON } from "./icon-button";
 import { Input } from "./input";
@@ -207,17 +208,15 @@ function ComboboxChip({
 		<ComboboxPrimitive.Chip
 			data-slot="combobox-chip"
 			className={cn(
-				"flex h-monti-control-sm w-fit items-center justify-center gap-monti-6 whitespace-nowrap rounded-monti-full bg-monti-selected px-monti-10 pb-[2px] font-semibold text-monti-default text-monti-note has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
+				CHIP,
+				"has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-45",
 				className,
 			)}
 			{...props}
 		>
 			{children}
 			{showRemove && (
-				<ComboboxPrimitive.ChipRemove
-					className="flex font-normal text-monti-subtle outline-none hover:text-monti-default"
-					data-slot="combobox-chip-remove"
-				>
+				<ComboboxPrimitive.ChipRemove className={CHIP_REMOVE} data-slot="combobox-chip-remove">
 					<XIcon className="pointer-events-none size-3" aria-hidden />
 					<span className="sr-only">{labels.deselect}</span>
 				</ComboboxPrimitive.ChipRemove>

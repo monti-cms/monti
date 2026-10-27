@@ -38,7 +38,7 @@ import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
-import { ChangeDot, IssueList, SchemaEditProvider } from "./controls";
+import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
@@ -197,7 +197,7 @@ function CollectionNavItem({
 				<Box grow minWidth={0}>
 					<Text truncate>{label}</Text>
 				</Box>
-				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangeDot />}
+				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangedMark />}
 				<Text variant="caption" tone="muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</Text>

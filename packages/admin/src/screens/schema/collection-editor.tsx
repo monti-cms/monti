@@ -23,7 +23,6 @@ import type { TranslatorFor } from "../../translator";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {
-	ChangeDot,
 	FlagSwitch,
 	IssueList,
 	orUndefined,
@@ -301,18 +300,15 @@ export function CollectionEditor({
 						</Text>
 					</Box>
 					<TabsList variant="line">
-						<TabsTrigger value="basics">
+						<TabsTrigger value="basics" dot={changes?.basics ? "warning" : undefined} dotLabel={ts("changed")}>
 							{t("collection.tabs.basics")}
-							{changes?.basics && <ChangeDot />}
 						</TabsTrigger>
-						<TabsTrigger value="fields">
+						<TabsTrigger value="fields" dot={changes?.fields ? "warning" : undefined} dotLabel={ts("changed")}>
 							{t("collection.tabs.fields")}
-							{changes?.fields && <ChangeDot />}
 						</TabsTrigger>
 						{isEditorAvailable && (
-							<TabsTrigger value="editor">
+							<TabsTrigger value="editor" dot={changes?.editor ? "warning" : undefined} dotLabel={ts("changed")}>
 								{t("collection.tabs.editor")}
-								{changes?.editor && <ChangeDot />}
 							</TabsTrigger>
 						)}
 					</TabsList>
