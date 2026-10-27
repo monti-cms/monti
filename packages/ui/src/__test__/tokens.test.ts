@@ -19,6 +19,7 @@ describe("design tokens", () => {
 		expect(read("styles/tokens.css")).toBe(generated.tokens);
 		expect(read("styles/theme.css")).toBe(generated.theme);
 		expect(read("src/tokens.generated.ts")).toBe(generated.layout);
+		expect(read(".storybook/manager-theme.generated.ts")).toBe(generated.managerTheme);
 	});
 
 	it("key the layout options by the design system's names, once, and write each class out whole", async () => {

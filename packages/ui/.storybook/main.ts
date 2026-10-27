@@ -16,6 +16,12 @@ const pretendardSubsets = path.join(
 );
 const plexFiles = path.join(path.dirname(adminRequire.resolve("@fontsource/ibm-plex-mono/package.json")), "files");
 
+/** Adds the admin's `@font-face` rules to a document head. */
+const withFonts = async (head: string) => {
+	const { bundledFonts } = await import(/* @vite-ignore */ buildStyles);
+	return `${head}<style>${bundledFonts(adminDir).css}</style>`;
+};
+
 // The design system's catalog: every component in every variant and state, in light and dark. The admin's screen states join it from
 // `packages/admin` and the plugins (dev only; nothing here ships).
 const config: StorybookConfig = {
@@ -27,10 +33,9 @@ const config: StorybookConfig = {
 		{ from: pretendardSubsets, to: "/fonts/pretendard" },
 		{ from: plexFiles, to: "/fonts/ibm-plex-mono" },
 	],
-	previewHead: async (head) => {
-		const { bundledFonts } = await import(/* @vite-ignore */ buildStyles);
-		return `${head}<style>${bundledFonts(adminDir).css}</style>`;
-	},
+	previewHead: withFonts,
+	// The manager's chrome uses the same faces as the preview (`manager-theme.generated.ts` names them).
+	managerHead: withFonts,
 	// Screen stories build the test site, which picks its variant from the environment: the default one here.
 	viteFinal: (vite) => ({
 		...vite,
