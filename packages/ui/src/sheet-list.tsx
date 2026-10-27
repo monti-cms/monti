@@ -7,9 +7,9 @@ import { Count } from "./count";
 import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts";
 
 /**
- * The list that opens upward from a status bar cell ("To fix 3"): a card with the group's name and its count in the head, then the rows to
- * fix (`TodoItem`) and the ones already done (`TodoDone`), and under a rule the actions that belong to the whole list (`footer`: a link to its
- * settings, "Fix all"). `trigger` is the cell that opens it.
+ * The list that opens upward from a status bar cell ("To do 3"): a card with the group's name and its count in the head (no count once nothing is
+ * left), then the rows to do (`TodoItem`) and the ones already done (`TodoDone`), and under a rule the actions that belong to the whole list
+ * (`footer`: a link to its settings, "Fix all"). `trigger` is the cell that opens it.
  */
 function SheetList({
 	trigger,
@@ -59,7 +59,7 @@ function SheetList({
 					>
 						<div data-slot="sheet-list-head" className={MENU_LABEL}>
 							<span>{label}</span>
-							<Count tone={countTone}>{count}</Count>
+							{count > 0 && <Count tone={countTone}>{count}</Count>}
 						</div>
 						{children}
 						{footer && (

@@ -218,7 +218,7 @@ function LocaleDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="md" data-testid="locale-dialog">
+			<DialogContent data-testid="locale-dialog">
 				<DialogHeader>
 					<DialogTitle>{locale ? t("locales.editTitle", { name: locale.name }) : t("locales.addTitle")}</DialogTitle>
 					{!locale && <DialogDescription>{t("locales.contentNote")}</DialogDescription>}

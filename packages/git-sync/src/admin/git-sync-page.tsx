@@ -2,12 +2,11 @@
 
 import { adminApiUrl, errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Alert,
-	AlertDescription,
 	type ApiKeyChoice,
 	ApiKeyField,
 	apiKeysKeys,
 	Badge,
+	Banner,
 	Box,
 	Button,
 	choiceReady,
@@ -176,13 +175,7 @@ function SyncTab({
 
 	return (
 		<Stack gap={0}>
-			{!status.keys.token && (
-				<Box paddingX={32} paddingTop={16}>
-					<Alert layout="stack">
-						<AlertDescription>{t("sync.noToken")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
+			{!status.keys.token && <Banner title={t("sync.noToken")} />}
 			{status.targets.map((target, index) => (
 				<Stack
 					as="section"
@@ -517,13 +510,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 
 	return (
 		<Stack gap={0} maxWidth="reading" paddingX={32}>
-			{!keys.secretsAvailable && (
-				<Box paddingY={16}>
-					<Alert tone="danger" layout="stack">
-						<AlertDescription>{t("settings.secretMissing")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
+			{!keys.secretsAvailable && <Banner title={t("settings.secretMissing")} />}
 
 			<Stack
 				as="form"

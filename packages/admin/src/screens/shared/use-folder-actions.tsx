@@ -275,7 +275,7 @@ export function useFolderActions({
 	const dialogs = (
 		<>
 			<Dialog open={nameDialog !== null} onOpenChange={(open) => !open && setNameDialog(null)}>
-				<DialogContent size="sm" finalFocus={restoreFocus}>
+				<DialogContent finalFocus={restoreFocus}>
 					<DialogHeader>
 						<DialogTitle>
 							{nameDialog?.mode === "rename"

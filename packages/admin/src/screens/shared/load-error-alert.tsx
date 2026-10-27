@@ -1,18 +1,17 @@
 import { useTranslator } from "@monti-cms/core/site";
-import { Alert, AlertDescription, Button } from "@monti-cms/ui";
+import { Banner, TextButton } from "@monti-cms/ui";
 import { commonMessages } from "../../lib/common.messages";
 
-/** The one load-failure notice of a screen: what went wrong and a retry button. Screens put it in a `Box` with padding for its margins. */
+/** The one load-failure notice of a screen: what went wrong, and a retry beside it. A notice strip, so it runs the width of the pane it is put in. */
 export function LoadErrorAlert({ message, onRetry }: { message: string; onRetry?: () => void }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<Alert tone="danger" layout="inline">
-			<AlertDescription>{message}</AlertDescription>
+		<Banner role="alert" title={message}>
 			{onRetry && (
-				<Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+				<TextButton type="button" variant="underline" onClick={onRetry}>
 					{t("retry")}
-				</Button>
+				</TextButton>
 			)}
-		</Alert>
+		</Banner>
 	);
 }

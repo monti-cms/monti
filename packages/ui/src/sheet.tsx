@@ -4,8 +4,10 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
+import { PANEL_BODY, PANEL_FOOT, PANEL_HEAD, PANEL_TITLE } from "./side-panel-frame";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
 	return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -28,7 +30,7 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 		<SheetPrimitive.Backdrop
 			data-slot="sheet-overlay"
 			className={cn(
-				"fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+				"fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0",
 				className,
 			)}
 			{...props}
@@ -36,97 +38,78 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 	);
 }
 
+/**
+ * The sheet: where work with several inputs happens (add a field, review a save). It opens from the right over a dimmed page, 520px wide, on the
+ * tool ground with a line down its left edge, square, with the sheet shadow. Put a `SheetHeader`, a `SheetBody` and a `SheetFooter` in it.
+ */
 function SheetContent({
 	className,
 	children,
-	side = "right",
-	showCloseButton = true,
 	resizable,
-	size,
-	scroll = false,
 	style,
 	...props
 }: SheetPrimitive.Popup.Props & {
-	side?: "top" | "right" | "bottom" | "left";
-	showCloseButton?: boolean;
 	/**
-	 * A right-side sheet the writer can widen: its width (`--panel-width` in `style`) and the drag handle on its left edge, both from the app,
-	 * which decides where the chosen width is remembered. Replaces any width class on `className`.
+	 * A sheet the writer can widen: its width (`--panel-width` in `style`) and the drag handle on its left edge, both from the app, which decides
+	 * where the chosen width is remembered. Replaces the default width.
 	 */
 	resizable?: { style: React.CSSProperties; handle: React.ReactNode };
-	/** Width of a side sheet on a wide screen: `sm` 384px (default), `md` 448px, `lg` 576px. */
-	size?: "sm" | "md" | "lg";
-	/** Scrolls inside as a whole (a sheet with no list of its own). */
-	scroll?: boolean;
 }) {
-	const labels = useUiLabels();
-	const sized = resizable !== undefined && side === "right";
+	// Focus starts in the first field, or on the sheet itself: never on the close button, whose tooltip and ring would show the moment it opens.
+	const { popup, initialFocus } = useModalFocus();
 	return (
 		<SheetPortal>
 			<SheetOverlay />
 			<SheetPrimitive.Popup
+				ref={popup}
+				initialFocus={initialFocus}
 				data-slot="sheet-content"
-				data-side={side}
 				className={cn(
-					"fixed z-50 flex flex-col gap-monti-16 border-monti-muted bg-monti-page bg-clip-padding text-monti-body text-monti-default shadow-monti-floating transition duration-200 ease-in-out data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=bottom]:inset-x-0 data-[side=top]:inset-x-0 data-[side=left]:inset-y-0 data-[side=right]:inset-y-0 data-[side=top]:top-0 data-[side=right]:right-0 data-[side=bottom]:bottom-0 data-[side=left]:left-0 data-[side=bottom]:h-auto data-[side=left]:h-full data-[side=right]:h-full data-[side=top]:h-auto data-[side=left]:w-3/4 data-[side=right]:w-3/4 data-[side=bottom]:rounded-t-monti-xl data-[side=left]:rounded-r-monti-xl data-[side=top]:rounded-b-monti-xl data-[side=right]:rounded-l-monti-xl data-[side=bottom]:border-t data-[side=left]:border-r data-[side=left]:border-r data-[side=top]:border-b data-[side=right]:border-l data-[side=right]:border-l data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
-					size === "md" && "data-[side=left]:sm:max-w-md data-[side=right]:sm:max-w-md",
-					size === "lg" && "data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl",
-					scroll && "overflow-y-auto",
-					sized &&
-						"data-[side=right]:w-full data-[side=right]:sm:w-[var(--panel-width)] data-[side=right]:sm:max-w-none",
+					"fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-monti-emphasis border-l bg-monti-tool text-monti-body text-monti-default shadow-monti-sheet outline-none transition duration-200 ease-in-out data-ending-style:translate-x-10 data-starting-style:translate-x-10 data-ending-style:opacity-0 data-starting-style:opacity-0",
+					resizable ? "sm:w-(--panel-width)" : "sm:w-monti-sheet",
 					className,
 				)}
-				style={sized ? { ...resizable.style, ...style } : style}
+				style={resizable ? { ...resizable.style, ...style } : style}
 				{...props}
 			>
-				{sized && resizable.handle}
+				{resizable?.handle}
 				{children}
-				{showCloseButton && (
-					<IconButton
-						label={labels.close}
-						className="absolute top-4 right-4"
-						trigger={(button) => <SheetPrimitive.Close data-slot="sheet-close" render={button} />}
-					>
-						<XIcon />
-					</IconButton>
-				)}
 			</SheetPrimitive.Popup>
 		</SheetPortal>
 	);
 }
 
-function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="sheet-header" className={cn("flex flex-col gap-monti-6 p-monti-16", className)} {...props} />;
+/** The 60px head: the title at the start and the close button at the end. */
+function SheetHeader({ className, children, ...props }: React.ComponentProps<"div">) {
+	const labels = useUiLabels();
+	return (
+		<div data-slot="sheet-header" className={cn(PANEL_HEAD, className)} {...props}>
+			{children}
+			<IconButton
+				label={labels.close}
+				side="bottom"
+				trigger={(button) => <SheetPrimitive.Close data-slot="sheet-close" render={button} />}
+			>
+				<XIcon aria-hidden />
+			</IconButton>
+		</div>
+	);
 }
 
-function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
+/** What the sheet is for; it scrolls when it is longer than the sheet. */
+function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<div
-			data-slot="sheet-footer"
-			className={cn("mt-auto flex flex-col gap-monti-8 p-monti-16", className)}
-			{...props}
-		/>
+		<div data-slot="sheet-body" className={cn(PANEL_BODY, "min-h-0 grow overflow-y-auto", className)} {...props} />
 	);
+}
+
+/** Cancel (a text button) and the one pill, right-aligned, at the bottom of the sheet. */
+function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="sheet-footer" className={cn(PANEL_FOOT, "mt-auto", className)} {...props} />;
 }
 
 function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
-	return (
-		<SheetPrimitive.Title
-			data-slot="sheet-title"
-			className={cn("text-monti-default text-monti-title", className)}
-			{...props}
-		/>
-	);
+	return <SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, className)} {...props} />;
 }
 
-function SheetDescription({ className, ...props }: SheetPrimitive.Description.Props) {
-	return (
-		<SheetPrimitive.Description
-			data-slot="sheet-description"
-			className={cn("text-monti-body text-monti-muted", className)}
-			{...props}
-		/>
-	);
-}
-
-export { Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription };
+export { Sheet, SheetBody, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger };

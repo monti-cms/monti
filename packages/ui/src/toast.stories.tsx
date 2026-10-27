@@ -64,13 +64,3 @@ export const DropHint: Story = { render: () => <Open send={dropHint} /> };
 
 /** A message that wraps: the pill grows in height, and the action stays on the first line's side. */
 export const LongMessage: Story = { render: () => <Open send={longMessage} /> };
-
-export const PlainDark: Story = { globals: { theme: "dark" }, render: () => <Open send={plain} /> };
-export const WithActionDark: Story = { globals: { theme: "dark" }, render: () => <Open send={withAction} /> };
-export const DropHintDark: Story = { globals: { theme: "dark" }, render: () => <Open send={dropHint} /> };
-export const LongMessageDark: Story = { globals: { theme: "dark" }, render: () => <Open send={longMessage} /> };
-export const ErrorDark: Story = { globals: { theme: "dark" }, render: () => <Open send={failure} /> };
-export const ErrorWithActionDark: Story = {
-	globals: { theme: "dark" },
-	render: () => <Open send={failureWithAction} />,
-};

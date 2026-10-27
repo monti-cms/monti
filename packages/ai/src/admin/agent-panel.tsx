@@ -11,9 +11,7 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import {
-	Alert,
-	Box,
-	Button,
+	ChatError,
 	ChatInput,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -69,19 +67,18 @@ function UnavailableNotice({ reason, model }: { reason: Unavailable; model?: str
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
 	return (
-		<Alert tone="warning" layout="stack">
-			<Stack gap={4}>
-				<Text as="p">
-					{reason === "no-connection"
-						? t("unavailable.noConnection")
-						: t("unavailable.noTools", { model: model ?? "" })}{" "}
-					{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
-				</Text>
+		<ChatError
+			title={
+				reason === "no-connection" ? t("unavailable.noConnection") : t("unavailable.noTools", { model: model ?? "" })
+			}
+			actions={
 				<TextButton variant="underline" render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>
 					{t("unavailable.link")}
 				</TextButton>
-			</Stack>
-		</Alert>
+			}
+		>
+			{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
+		</ChatError>
 	);
 }
 
@@ -194,9 +191,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 		<SidePanelFrame
 			data-testid="agent-panel"
 			title={t("label")}
-			description={
-				effective ? t("model.use", { model: effective.model, connection: effective.providerName }) : undefined
-			}
 			onClose={onClose}
 			actions={
 				<>
@@ -214,7 +208,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 				</>
 			}
 			footer={
-				<Stack gap={8}>
+				<Stack gap={8} grow>
 					{unavailable && <UnavailableNotice reason={unavailable} model={effective?.model} />}
 					<ChatInput
 						value={text}
@@ -228,11 +222,18 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 						sendLabel={t("send")}
 						stopLabel={t("stop")}
 						aside={
-							chat.usage && chat.usage.totalTokens > 0 ? (
-								<Text variant="caption" tone="muted">
-									{t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })}
-								</Text>
-							) : undefined
+							<Stack direction="row" gap={8} align="center">
+								{effective && (
+									<Text variant="caption" tone="subtle" mono truncate>
+										{t("model.use", { model: effective.model, connection: effective.providerName })}
+									</Text>
+								)}
+								{chat.usage && chat.usage.totalTokens > 0 && (
+									<Text variant="caption" tone="muted">
+										{t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })}
+									</Text>
+								)}
+							</Stack>
 						}
 					/>
 				</Stack>
@@ -255,22 +256,16 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			)}
 			{busy && last?.role === "user" && <Spinner size="sm" />}
 			{failed && (
-				<Alert tone="danger" layout="stack">
-					<Stack gap={4}>
-						<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
-						<Box>
-							<Button type="button" variant="secondary" size="sm" onClick={() => void chat.regenerate()}>
-								{t("error.retry")}
-							</Button>
-						</Box>
-					</Stack>
-				</Alert>
+				<ChatError
+					title={errorText(site, failed, t("error.failed"))}
+					actions={
+						<TextButton type="button" variant="underline" onClick={() => void chat.regenerate()}>
+							{t("error.retry")}
+						</TextButton>
+					}
+				/>
 			)}
-			{openError && (
-				<Alert tone="danger" layout="stack">
-					<Text as="p">{openError}</Text>
-				</Alert>
-			)}
+			{openError && <ChatError title={openError} />}
 			<div ref={endRef} />
 		</SidePanelFrame>
 	);

@@ -1,8 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/admin";
-import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { AlertOctagon } from "lucide-react";
+import { Banner, cn, FormFieldError } from "@monti-cms/admin/kit";
 import { useMemo, useState } from "react";
 import {
 	Area,
@@ -42,20 +41,9 @@ import {
 function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
-		<div className="not-prose my-monti-24">
-			<Alert tone="danger">
-				<AlertOctagon />
-				<AlertTitle>{t("error.title")}</AlertTitle>
-				<AlertDescription>
-					<ul className="ml-monti-16 list-disc space-y-monti-4">
-						{errors.map((error) => (
-							<li key={`${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`}>
-								{chartErrorLine(error, t)}
-							</li>
-						))}
-					</ul>
-				</AlertDescription>
-			</Alert>
+		<div className="not-prose my-monti-24 flex flex-col gap-monti-8">
+			<Banner title={t("error.title")} />
+			<FormFieldError errors={errors.map((error) => ({ message: chartErrorLine(error, t) }))} />
 		</div>
 	);
 }

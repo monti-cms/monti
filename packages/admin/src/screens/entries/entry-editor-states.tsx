@@ -115,7 +115,6 @@ export function EntryEditorLoadError({ message }: { message: string }) {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
 		<Stack gap={12} padding={32}>
-			{/* The shared notice: a grid Alert without an icon put the text in the 16px icon column, one letter per line. */}
 			<LoadErrorAlert message={message} />
 			<Box>
 				<Button variant="secondary" nativeButton={false} render={<Link role="link" href={site.adminHref()} />}>

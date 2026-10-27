@@ -2,8 +2,6 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -12,8 +10,10 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	Banner,
 	Box,
 	Button,
+	FormFieldError,
 	Heading,
 	Inline,
 	Input,
@@ -218,12 +218,10 @@ function PreviewView({ preview }: { preview: RestorePreview }) {
 					<NotRestored items={preview.notRestored} />
 				</>
 			) : (
-				<Alert tone="danger" layout="stack" data-testid="restore-refusal">
-					<AlertDescription>
-						{preview.refusal?.text}
-						{preview.refusal?.fix ? ` ${preview.refusal.fix}` : ""}
-					</AlertDescription>
-				</Alert>
+				<FormFieldError data-testid="restore-refusal">
+					{preview.refusal?.text}
+					{preview.refusal?.fix ? ` ${preview.refusal.fix}` : ""}
+				</FormFieldError>
 			)}
 		</Stack>
 	);
@@ -331,9 +329,7 @@ export function RestoreBackupFields() {
 					</Inline>
 
 					{form.tooLarge && form.limit !== undefined && (
-						<Alert tone="danger" layout="stack">
-							<AlertDescription>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</AlertDescription>
-						</Alert>
+						<FormFieldError>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</FormFieldError>
 					)}
 
 					{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
@@ -351,9 +347,7 @@ export function RestoreBackupFields() {
 					{preview && <PreviewView preview={preview} />}
 
 					{Boolean(form.runError) && (
-						<Alert tone="danger" layout="stack" data-testid="restore-error">
-							<AlertDescription>{errorText(site, form.runError, t("error.run"))}</AlertDescription>
-						</Alert>
+						<Banner role="alert" title={errorText(site, form.runError, t("error.run"))} data-testid="restore-error" />
 					)}
 
 					{running && preview && <RunProgress count={preview.counts.entries} />}

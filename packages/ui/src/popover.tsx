@@ -34,9 +34,9 @@ function PopoverContent({
 	...props
 }: PopoverPrimitive.Popup.Props &
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
-		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content, `anchor` as wide as what opened it. */
+		/** `sm` 240px (the width of a menu), `md` 300px (default, a panel), `lg` 380px (the assistant), `auto` as wide as its content, `anchor` as wide as what opened it. */
 		width?: keyof typeof POPOVER_WIDTH;
-		/** `menu` for a list of rows (6px, as a menu card); `none` when the content brings its own rows (a calendar) and runs to the edge. */
+		/** `menu` for a list of rows (6px, as a menu card); `default` for a small form or a note (12px above, 16 at the sides and below); `none` when the content brings its own rows (a calendar) and runs to the edge. */
 		padding?: "default" | "menu" | "none";
 		/** Scrolls inside when taller than the space left on screen. */
 		scroll?: boolean;
@@ -56,9 +56,9 @@ function PopoverContent({
 					className={cn(
 						MENU_CARD,
 						MENU_MOTION,
-						"z-50 gap-monti-16",
+						"z-50 gap-monti-12",
 						POPOVER_WIDTH[width],
-						padding === "default" && "p-monti-16",
+						padding === "default" && "px-monti-16 pt-monti-12 pb-monti-16",
 						padding === "menu" && "gap-0 p-monti-6",
 						scroll && "max-h-(--available-height) overflow-y-auto",
 						className,
@@ -77,7 +77,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
-	return <PopoverPrimitive.Title data-slot="popover-title" className={cn("font-medium", className)} {...props} />;
+	return <PopoverPrimitive.Title data-slot="popover-title" className={cn("font-semibold", className)} {...props} />;
 }
 
 function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {

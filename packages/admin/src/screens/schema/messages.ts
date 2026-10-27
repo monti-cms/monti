@@ -14,7 +14,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"readonly.short.notWritable": "the file cannot be written",
 		"readonly.short.hasCode": "the file contains code",
 		"status.readOnly": "Read-only",
-		"readonly.title": "This schema is read-only",
 		"readonly.production":
 			"Settings are saved to monti.schema.ts. Change them on your computer (pnpm dev), then commit and deploy.",
 		"readonly.noFile":
@@ -104,7 +103,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"readonly.short.notWritable": "파일에 쓸 수 없어요",
 		"readonly.short.hasCode": "파일에 코드가 있어요",
 		"status.readOnly": "읽기 전용",
-		"readonly.title": "이 스키마는 읽기 전용이에요",
 		"readonly.production": "설정은 monti.schema.ts에 저장돼요. 내 컴퓨터에서 pnpm dev로 바꾼 뒤 커밋하고 배포하세요.",
 		"readonly.noFile":
 			"편집할 스키마 파일이 없어요. 컬렉션이 코드(cms.config.ts)에 적혀 있어요. monti schema:extract로 monti.schema.ts에 옮길 수 있어요.",

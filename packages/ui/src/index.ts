@@ -8,9 +8,6 @@ import * as open from "./internal";
 
 export const Affix = close(open.Affix);
 export const AiAction = close(open.AiAction);
-export const Alert = close(open.Alert);
-export const AlertDescription = close(open.AlertDescription);
-export const AlertTitle = close(open.AlertTitle);
 export const AlertDialog = close(open.AlertDialog);
 export const AlertDialogAction = close(open.AlertDialogAction);
 export const AlertDialogCancel = close(open.AlertDialogCancel);
@@ -18,7 +15,6 @@ export const AlertDialogContent = close(open.AlertDialogContent);
 export const AlertDialogDescription = close(open.AlertDialogDescription);
 export const AlertDialogFooter = close(open.AlertDialogFooter);
 export const AlertDialogHeader = close(open.AlertDialogHeader);
-export const AlertDialogMedia = close(open.AlertDialogMedia);
 export const AlertDialogOverlay = close(open.AlertDialogOverlay);
 export const AlertDialogPortal = close(open.AlertDialogPortal);
 export const AlertDialogTitle = close(open.AlertDialogTitle);
@@ -159,7 +155,7 @@ export const Separator = close(open.Separator);
 export const Sheet = close(open.Sheet);
 export const SheetClose = close(open.SheetClose);
 export const SheetContent = close(open.SheetContent);
-export const SheetDescription = close(open.SheetDescription);
+export const SheetBody = close(open.SheetBody);
 export const SheetFooter = close(open.SheetFooter);
 export const SheetHeader = close(open.SheetHeader);
 export const SheetTitle = close(open.SheetTitle);
@@ -283,7 +279,6 @@ export type {
 } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
-	alertVariants,
 	badgeVariants,
 	Calendar,
 	Combobox,

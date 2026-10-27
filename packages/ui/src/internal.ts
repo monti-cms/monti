@@ -8,7 +8,6 @@
 
 export { Affix } from "./affix";
 export { AiAction } from "./ai-action";
-export { Alert, AlertDescription, AlertTitle, alertVariants } from "./alert";
 export {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,7 +16,6 @@ export {
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
-	AlertDialogMedia,
 	AlertDialogOverlay,
 	AlertDialogPortal,
 	AlertDialogTitle,
@@ -188,9 +186,9 @@ export {
 export { Separator } from "./separator";
 export {
 	Sheet,
+	SheetBody,
 	SheetClose,
 	SheetContent,
-	SheetDescription,
 	SheetFooter,
 	SheetHeader,
 	SheetTitle,

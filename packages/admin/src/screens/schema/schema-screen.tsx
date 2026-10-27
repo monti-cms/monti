@@ -6,10 +6,8 @@ import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
 	Badge,
+	Banner,
 	Box,
 	CodeBlock,
 	cn,
@@ -312,55 +310,35 @@ function SchemaEditor({
 				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
-							<Alert layout="stack" data-testid="schema-read-only">
-								<AlertTitle>{t("readonly.title")}</AlertTitle>
-								<AlertDescription>
-									<Stack gap={4}>
-										<Text>{t(READ_ONLY_KEY[reason])}</Text>
-										{reason === "has_code" && (state.access.issue || state.access.detail) && (
-											<Text as="code" variant="caption" data-testid="schema-code-detail">
-												{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
-											</Text>
-										)}
-									</Stack>
-								</AlertDescription>
-							</Alert>
+							<Banner
+								title={t(READ_ONLY_KEY[reason])}
+								meta={
+									reason === "has_code" && (state.access.issue || state.access.detail) ? (
+										<span data-testid="schema-code-detail">
+											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
+										</span>
+									) : undefined
+								}
+								data-testid="schema-read-only"
+							/>
 						)}
-						{writable && state.comments && (
-							<Alert layout="stack" data-testid="schema-comments-note">
-								<AlertDescription>{t("comments.note")}</AlertDescription>
-							</Alert>
-						)}
-						{applyFailed && (
-							<Alert tone="danger" layout="stack">
-								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
-							</Alert>
-						)}
+						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
+						{applyFailed && <Banner role="alert" title={t("save.applyFailedNote")} />}
 						{state.issues.length > 0 && (
-							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
-								<AlertTitle>{t("invalid.title")}</AlertTitle>
-								<AlertDescription>
-									<Stack gap={8}>
-										<Text>{t("invalid.description")}</Text>
-										<IssueList issues={state.issues} />
-									</Stack>
-								</AlertDescription>
-							</Alert>
+							<Stack gap={8} data-testid="schema-file-invalid">
+								<Banner role="alert" title={t("invalid.title")} />
+								<Text tone="muted">{t("invalid.description")}</Text>
+								<IssueList issues={state.issues} />
+							</Stack>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert tone="danger" layout="stack">
-								<AlertTitle>{t("issues.title")}</AlertTitle>
-								<AlertDescription>
-									<IssueList issues={issues} />
-								</AlertDescription>
-							</Alert>
+							<Stack gap={8}>
+								<Banner role="alert" title={t("issues.title")} />
+								<IssueList issues={issues} />
+							</Stack>
 						)}
 						{state.codeCollections.length > 0 && (
-							<Alert layout="stack">
-								<AlertDescription>
-									{t("code.collections", { names: state.codeCollections.join(", ") })}
-								</AlertDescription>
-							</Alert>
+							<Banner title={t("code.collections", { names: state.codeCollections.join(", ") })} />
 						)}
 						{state.issues.length === 0 && (
 							<>

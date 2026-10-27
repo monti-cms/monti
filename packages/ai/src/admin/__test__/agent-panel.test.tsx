@@ -132,7 +132,7 @@ const renderPanel = (
 };
 /** An element whose own text holds `part` (a message in the dictionary is plain text, not a pattern). */
 const includes = (part: string) => (_: string, element: Element | null) =>
-	element?.tagName === "P" && (element.textContent ?? "").includes(part);
+	element?.tagName === "SPAN" && (element.textContent ?? "").includes(part);
 const ask = async (message: string) => {
 	const box = await screen.findByRole("textbox", { name: t("input.label") });
 	await waitFor(() => expect(box).not.toBeDisabled());

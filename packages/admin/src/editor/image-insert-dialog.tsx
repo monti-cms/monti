@@ -2,8 +2,6 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
 	Button,
 	Dialog,
 	DialogContent,
@@ -37,6 +35,7 @@ import { mediaNotConfiguredMessage } from "../api/error-message";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import { LoadErrorAlert } from "../screens/shared/load-error-alert";
 import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
 import { submitOnEnter } from "./link-form";
@@ -208,7 +207,7 @@ export function ImageInsertDialog({
 	if (!media) {
 		return (
 			<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-				<DialogContent size="md">
+				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{mediaNotConfiguredMessage(site)}</DialogDescription>
@@ -225,7 +224,7 @@ export function ImageInsertDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && !isUploading && onClose()}>
-			<DialogContent size="md" scroll showCloseButton={!isUploading}>
+			<DialogContent scroll>
 				<Stack
 					as="form"
 					gap={16}
@@ -297,12 +296,10 @@ export function ImageInsertDialog({
 									</Grid>
 								)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert tone="danger" layout="inline">
-										<AlertDescription>{t("imageDialog.libraryFailed")}</AlertDescription>
-										<Button type="button" size="sm" variant="secondary" onClick={() => void libraryQuery.refetch()}>
-											{tc("retry")}
-										</Button>
-									</Alert>
+									<LoadErrorAlert
+										message={t("imageDialog.libraryFailed")}
+										onRetry={() => void libraryQuery.refetch()}
+									/>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
 									<Stack gap={0} paddingY={24} align="center">

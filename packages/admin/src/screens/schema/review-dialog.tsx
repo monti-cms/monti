@@ -5,10 +5,8 @@ import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
 	Badge,
+	Banner,
 	Box,
 	Button,
 	Dialog,
@@ -27,7 +25,7 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Info } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {
@@ -347,31 +345,23 @@ export function ReviewDialog({
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
 				<Stack gap={16} maxHeight="half" overflow="y" data-testid="review-body">
-					{error && (
-						<Alert tone="danger" layout="stack">
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					)}
+					{error && <Banner role="alert" title={error} />}
 					{loading && !preview && <Skeleton shape="block" />}
 					{preview && !preview.valid && (
-						<Alert tone="danger" layout="stack">
-							<AlertTitle>{t("review.invalid")}</AlertTitle>
-							<AlertDescription>
-								<IssueList issues={preview.issues} />
-							</AlertDescription>
-						</Alert>
+						<Stack gap={8}>
+							<Banner role="alert" title={t("review.invalid")} />
+							<IssueList issues={preview.issues} />
+						</Stack>
 					)}
 					{problems.length > 0 && (
-						<Alert tone="danger" layout="stack">
-							<AlertTitle>{t("review.problems")}</AlertTitle>
-							<AlertDescription>
-								<List>
-									{problems.map((problem) => (
-										<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
-									))}
-								</List>
-							</AlertDescription>
-						</Alert>
+						<Stack gap={8}>
+							<Banner role="alert" title={t("review.problems")} />
+							<List>
+								{problems.map((problem) => (
+									<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
+								))}
+							</List>
+						</Stack>
 					)}
 					{preview?.valid && (
 						<>
@@ -479,12 +469,7 @@ export function ReviewDialog({
 							)}
 						</>
 					)}
-					{saveError && (
-						<Alert tone="danger" layout="stack">
-							<TriangleAlert aria-hidden />
-							<AlertDescription>{saveError.message}</AlertDescription>
-						</Alert>
-					)}
+					{saveError && <Banner role="alert" title={saveError.message} />}
 				</Stack>
 				<DialogFooter>
 					{saveError?.conflict || saveError?.applyFailed ? (
@@ -493,9 +478,9 @@ export function ReviewDialog({
 						</Button>
 					) : (
 						<>
-							<Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+							<TextButton type="button" onClick={() => onOpenChange(false)}>
 								{tc("cancel")}
-							</Button>
+							</TextButton>
 							<Button type="button" disabled={!ready} onClick={() => void save()}>
 								{saving ? tc("saving") : t("review.save")}
 							</Button>

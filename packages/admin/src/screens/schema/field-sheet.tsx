@@ -7,8 +7,9 @@ import {
 	Heading,
 	Inline,
 	Sheet,
+	SheetBody,
 	SheetContent,
-	SheetDescription,
+	SheetFooter,
 	SheetHeader,
 	SheetTitle,
 	Stack,
@@ -135,20 +136,17 @@ export function FieldSheet({
 	const resizable = useResizableSheet(FIELD_SHEET_RESIZE);
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent resizable={resizable} data-testid="field-sheet" showCloseButton>
+			<SheetContent resizable={resizable} data-testid="field-sheet">
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
 				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>
 						<SheetTitle>{label || name}</SheetTitle>
-						<SheetDescription>
-							<Text as="code">{name}</Text> · {t(`kind.${kind}`)}
-						</SheetDescription>
 					</SheetHeader>
 					<TabsList variant="bar" inset="panel">
 						<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 						<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
 					</TabsList>
-					<Box grow minHeight={0} overflow="y" paddingX={24} paddingY={24}>
+					<SheetBody>
 						<IssueList issues={issues} />
 						<TabsContent value="basic">
 							<Stack gap={32}>
@@ -257,9 +255,9 @@ export function FieldSheet({
 								)}
 							</Stack>
 						</TabsContent>
-					</Box>
+					</SheetBody>
 				</Tabs>
-				<Inline gap={8} border="top" paddingX={24} paddingY={12}>
+				<SheetFooter>
 					<TextButton
 						type="button"
 						variant="danger"
@@ -270,13 +268,13 @@ export function FieldSheet({
 						{t("sheet.delete")}
 					</TextButton>
 					<Box as="span" grow />
-					<Button type="button" variant="secondary" size="sm" onClick={onClose}>
+					<TextButton type="button" onClick={onClose}>
 						{tc("cancel")}
-					</Button>
-					<Button type="button" size="sm" disabled={disabled} onClick={apply}>
+					</TextButton>
+					<Button type="button" disabled={disabled} onClick={apply}>
 						{tc("apply")}
 					</Button>
-				</Inline>
+				</SheetFooter>
 			</SheetContent>
 		</Sheet>
 	);

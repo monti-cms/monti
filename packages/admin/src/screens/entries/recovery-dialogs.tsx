@@ -45,7 +45,7 @@ export function RecoveryDialog({
 	const site = useSite();
 	return (
 		<Dialog open={recovery !== null} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="md">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{t("recovery.title")}</DialogTitle>
 					<DialogDescription>

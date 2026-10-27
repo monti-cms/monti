@@ -2,10 +2,10 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
+	Banner,
 	Box,
 	Button,
+	FormFieldError,
 	Inline,
 	Input,
 	List,
@@ -103,9 +103,7 @@ export function ImportEntriesFields() {
 			</Inline>
 
 			{form.tooLarge && form.limit !== undefined && (
-				<Alert tone="danger" layout="stack">
-					<AlertDescription>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</AlertDescription>
-				</Alert>
+				<FormFieldError>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</FormFieldError>
 			)}
 
 			{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
@@ -126,11 +124,7 @@ export function ImportEntriesFields() {
 				</Box>
 			)}
 
-			{Boolean(form.runError) && (
-				<Alert tone="danger" layout="stack">
-					<AlertDescription>{errorText(site, form.runError, t("error.run"))}</AlertDescription>
-				</Alert>
-			)}
+			{Boolean(form.runError) && <Banner role="alert" title={errorText(site, form.runError, t("error.run"))} />}
 
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 

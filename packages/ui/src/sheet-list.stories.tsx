@@ -4,16 +4,16 @@ import { SheetList } from "./sheet-list";
 import { TodoDone, TodoItem } from "./todo-item";
 
 /**
- * The list a status bar cell opens upward: the group's name and count, then what needs fixing (a ring, a title, one line, one action) and what
- * is already right. A red ring blocks publishing; a spark before the action means the assistant does it.
+ * The list a status bar cell opens upward (340px): the group's name and count, then what needs doing (a ring, a title, one line, one action) and what
+ * is already done. A red ring blocks publishing; a spark before the action means the assistant does it.
  */
 const meta = {
 	title: "Patterns/Sheet/SheetList",
 	component: SheetList,
 	args: {
-		label: "고칠 것",
+		label: "할 일",
 		count: 3,
-		trigger: <button type="button">고칠 것 3</button>,
+		trigger: <button type="button">할 일 3</button>,
 		defaultOpen: true,
 		children: null,
 	},
@@ -28,9 +28,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The status bar cell that opens the list: its name and the real count. */
+const cell = ({ label, count }: { label: string; count: number }) => (
+	<button type="button">
+		{label} {count}
+	</button>
+);
+
 export const Playground: Story = {
 	render: (args) => (
-		<SheetList {...args} countTone="danger">
+		<SheetList {...args} trigger={cell(args)} countTone="danger">
 			<TodoItem blocking title="제목이 비어 있어요" detail="제목" actionLabel="이동" onAction={() => {}} />
 			<TodoItem
 				blocking
@@ -55,7 +62,7 @@ export const Playground: Story = {
 export const WarningsOnly: Story = {
 	args: { count: 2 },
 	render: (args) => (
-		<SheetList {...args}>
+		<SheetList {...args} trigger={cell(args)}>
 			<TodoItem title="번역이 일부만 채워졌어요" detail="영어 · 문단 3개" actionLabel="열기" onAction={() => {}} />
 			<TodoItem title="링크 하나가 끊겼어요" detail="/posts/old-title" actionLabel="이동" onAction={() => {}} />
 		</SheetList>
@@ -66,7 +73,7 @@ export const WarningsOnly: Story = {
 export const SourceChanges: Story = {
 	args: { label: "원문에서 바뀐 곳", count: 3 },
 	render: (args) => (
-		<SheetList {...args}>
+		<SheetList {...args} trigger={cell(args)}>
 			<TodoItem
 				marker={<Marker tone="changed">바뀜</Marker>}
 				current
@@ -99,7 +106,7 @@ export const SourceChanges: Story = {
 export const LongText: Story = {
 	args: { count: 1 },
 	render: (args) => (
-		<SheetList {...args}>
+		<SheetList {...args} trigger={cell(args)}>
 			<TodoItem
 				blocking
 				title="아주 긴 제목의 항목이 한 줄 안에서 어떻게 보이는지 확인합니다"
@@ -115,7 +122,7 @@ export const LongText: Story = {
 export const AllDone: Story = {
 	args: { count: 0 },
 	render: (args) => (
-		<SheetList {...args}>
+		<SheetList {...args} trigger={cell(args)}>
 			<TodoDone>제목, 주소, 대표 이미지 확인함</TodoDone>
 		</SheetList>
 	),

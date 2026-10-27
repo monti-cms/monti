@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -10,7 +11,6 @@ import { IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { Separator } from "./separator";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useIsMobile } from "./use-mobile";
 
@@ -207,28 +207,26 @@ function Sidebar({
 	}
 
 	if (isMobile) {
+		// A drawer for the narrow screen, not a sheet: it opens from the side the sidebar is on, over a dimmed page.
 		return (
-			<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-				<SheetContent
-					dir={dir}
-					data-sidebar="sidebar"
-					data-slot="sidebar"
-					data-mobile="true"
-					className="w-(--sidebar-width) bg-monti-tool p-0 text-monti-default [&>button]:hidden"
-					style={
-						{
-							"--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-						} as React.CSSProperties
-					}
-					side={side}
-				>
-					<SheetHeader className="sr-only">
-						<SheetTitle>{labels.sidebarTitle}</SheetTitle>
-						<SheetDescription>{labels.sidebarDescription}</SheetDescription>
-					</SheetHeader>
-					<div className="flex h-full w-full flex-col">{children}</div>
-				</SheetContent>
-			</Sheet>
+			<DrawerPrimitive.Root open={openMobile} onOpenChange={setOpenMobile} {...props}>
+				<DrawerPrimitive.Portal>
+					<DrawerPrimitive.Backdrop className="fixed inset-0 z-50 bg-monti-backdrop transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+					<DrawerPrimitive.Popup
+						dir={dir}
+						data-sidebar="sidebar"
+						data-slot="sidebar"
+						data-mobile="true"
+						data-side={side}
+						className="fixed inset-y-0 z-50 flex h-full w-(--sidebar-width) flex-col bg-monti-tool text-monti-default outline-none transition duration-200 ease-in-out data-[side=right]:right-0 data-[side=left]:left-0 data-[side=left]:border-monti-emphasis data-[side=right]:border-monti-emphasis data-[side=left]:border-r data-[side=right]:border-l data-ending-style:opacity-0 data-starting-style:opacity-0"
+						style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
+					>
+						<DrawerPrimitive.Title className="sr-only">{labels.sidebarTitle}</DrawerPrimitive.Title>
+						<DrawerPrimitive.Description className="sr-only">{labels.sidebarDescription}</DrawerPrimitive.Description>
+						<div className="flex h-full w-full flex-col">{children}</div>
+					</DrawerPrimitive.Popup>
+				</DrawerPrimitive.Portal>
+			</DrawerPrimitive.Root>
 		);
 	}
 

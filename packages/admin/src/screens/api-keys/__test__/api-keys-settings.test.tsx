@@ -121,7 +121,7 @@ describe("API keys page", () => {
 	it("cannot add a key while the server has no secret, and says why", async () => {
 		secretsAvailable = false;
 		renderTab();
-		expect(await screen.findByText(t("secret.title"))).toBeTruthy();
+		expect(await screen.findByText(t("secret.description"))).toBeTruthy();
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 

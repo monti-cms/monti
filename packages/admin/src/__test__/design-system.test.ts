@@ -50,6 +50,12 @@ const OWN_COLORS = new Set([
 /** Files whose text runs over several lines in a field, which takes the design system's own line of 1.6 times the size (`.mt-textarea`), not a type role's. */
 const MULTILINE = new Set(["ui/src/textarea.tsx"]);
 
+/** The modal's own type, which no role covers: a 20px title (28px line, -0.015em) and text at 1.65 times the size (`.mt-dialog-title`, `.mt-dialog` text). */
+const MODAL_TEXT = {
+	file: "ui/src/dialog.tsx",
+	utilities: new Set(["text-[20px]", "leading-[28px]", "tracking-[-0.015em]", "leading-[1.65]"]),
+};
+
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const full = path.join(dir, entry.name);
@@ -173,6 +179,7 @@ describe("design system", () => {
 					const utility = utilityOf(word);
 					const why = problem(utility, inUi, OWN_COLORS.has(rel));
 					if (why && MULTILINE.has(rel) && utility === "leading-[1.6]") continue;
+					if (why && rel === MODAL_TEXT.file && MODAL_TEXT.utilities.has(utility)) continue;
 					if (why) offenders.push(`${rel}:${line} ${word} (${why})`);
 				}
 			}

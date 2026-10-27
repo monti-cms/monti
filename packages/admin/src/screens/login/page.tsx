@@ -1,20 +1,7 @@
 import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
-import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-	Box,
-	Button,
-	Heading,
-	Image,
-	Input,
-	Label,
-	Stack,
-	Text,
-	TextButton,
-} from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Heading, Image, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
 import { loginMessages } from "./messages";
@@ -100,29 +87,25 @@ export default async function AdminLoginPage({
 					</Stack>
 					<Stack gap={12}>
 						{isUnauthorizedUser ? (
-							<Alert tone="danger" layout="stack">
-								<AlertTitle>
-									<Text as="div" align="center" variant="caption">
-										{t("forbiddenTitle")}
-									</Text>
-								</AlertTitle>
-								<AlertDescription>
-									<Text as="div" align="center" variant="caption">
-										{t("forbidden", { provider, accountId: accountId ?? "" })}
-									</Text>
-								</AlertDescription>
+							<Stack gap={8} align="center">
+								<Text as="div" align="center" tone="danger" weight="semibold">
+									{t("forbiddenTitle")}
+								</Text>
+								<Text as="div" align="center" tone="muted">
+									{t("forbidden", { provider, accountId: accountId ?? "" })}
+								</Text>
 								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
-									<Box paddingTop={12}>
+									<Box paddingTop={8}>
 										<TextButton type="submit" variant="underline">
 											{t("signOut")}
 										</TextButton>
 									</Box>
 								</form>
-							</Alert>
+							</Stack>
 						) : firstAdmin ? (
 							<form method="post" action={adminApiUrl("/v1/session/first-admin")}>
 								<Stack gap={16}>
-									{errorText ? <ErrorAlert text={errorText} /> : null}
+									{errorText ? <SignInError text={errorText} /> : null}
 									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 									<TextField
 										id="password"
@@ -147,21 +130,17 @@ export default async function AdminLoginPage({
 								</Stack>
 							</form>
 						) : providers.length === 0 ? (
-							<Alert tone="danger" layout="stack">
-								<AlertTitle>
-									<Text as="div" align="center" variant="caption">
-										{t("noLoginTitle")}
-									</Text>
-								</AlertTitle>
-								<AlertDescription>
-									<Text as="div" align="center" variant="caption">
-										{t("noLogin")}
-									</Text>
-								</AlertDescription>
-							</Alert>
+							<Stack gap={8} align="center">
+								<Text as="div" align="center" tone="danger" weight="semibold">
+									{t("noLoginTitle")}
+								</Text>
+								<Text as="div" align="center" tone="muted">
+									{t("noLogin")}
+								</Text>
+							</Stack>
 						) : (
 							<Stack gap={16}>
-								{errorText ? <ErrorAlert text={errorText} /> : null}
+								{errorText ? <SignInError text={errorText} /> : null}
 								{formProviders.map((authProvider) => (
 									<form
 										key={authProvider.id}
@@ -206,15 +185,12 @@ export default async function AdminLoginPage({
 	);
 }
 
-function ErrorAlert({ text }: { text: string }) {
+/** What went wrong with the sign-in that was just tried, under the form it was sent from. */
+function SignInError({ text }: { text: string }) {
 	return (
-		<Alert tone="danger" layout="stack">
-			<AlertDescription>
-				<Text as="div" align="center" variant="caption">
-					{text}
-				</Text>
-			</AlertDescription>
-		</Alert>
+		<Text as="div" align="center">
+			<FormFieldError>{text}</FormFieldError>
+		</Text>
 	);
 }
 

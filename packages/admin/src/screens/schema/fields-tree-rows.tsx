@@ -106,7 +106,7 @@ export function MoveDialog({
 }) {
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="sm" scroll data-testid="move-dialog">
+			<DialogContent scroll data-testid="move-dialog">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>

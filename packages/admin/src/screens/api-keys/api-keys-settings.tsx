@@ -2,10 +2,8 @@
 
 import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
 	Badge,
+	Banner,
 	Box,
 	Button,
 	Dialog,
@@ -108,14 +106,7 @@ export function ApiKeysSettings() {
 					{t("add")}
 				</Button>
 			</PageActions>
-			{list && !list.secretsAvailable && (
-				<Box paddingX={32} paddingBottom={16}>
-					<Alert tone="danger" layout="stack">
-						<AlertTitle>{t("secret.title")}</AlertTitle>
-						<AlertDescription>{t("secret.description")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
+			{list && !list.secretsAvailable && <Banner role="alert" title={t("secret.description")} />}
 			<Inline border="y" paddingX={32} paddingY={8} shrink={false}>
 				<Text variant="caption" tone="muted">
 					{list

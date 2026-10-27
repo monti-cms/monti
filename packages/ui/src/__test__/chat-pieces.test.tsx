@@ -147,30 +147,20 @@ describe("ChatInput", () => {
 });
 
 describe("SidePanelFrame", () => {
-	it("has the title, a line under it, actions, body and footer", () => {
+	it("has the title, actions, body and footer", () => {
 		render(
-			<SidePanelFrame
-				title="Assistant"
-				description="model · connection"
-				actions={<button type="button">Act</button>}
-				footer={<p>Footer</p>}
-			>
+			<SidePanelFrame title="Assistant" actions={<button type="button">Act</button>} footer={<p>Footer</p>}>
 				<p>Body</p>
 			</SidePanelFrame>,
 		);
 		expect(screen.getByRole("heading", { name: "Assistant" })).toBeTruthy();
-		for (const text of ["model · connection", "Body", "Footer"]) expect(screen.getByText(text)).toBeTruthy();
+		for (const text of ["Body", "Footer"]) expect(screen.getByText(text)).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Act" })).toBeTruthy();
 	});
 
-	it("keeps the title, the line under it, the actions and the close button in one header row", () => {
+	it("keeps the title, the actions and the close button in one header row", () => {
 		const { container } = render(
-			<SidePanelFrame
-				title="Assistant"
-				description="model"
-				actions={<button type="button">Act</button>}
-				onClose={() => undefined}
-			>
+			<SidePanelFrame title="Assistant" actions={<button type="button">Act</button>} onClose={() => undefined}>
 				x
 			</SidePanelFrame>,
 		);
@@ -179,7 +169,6 @@ describe("SidePanelFrame", () => {
 		const header = headers[0] as HTMLElement;
 		for (const node of [
 			screen.getByText("Assistant"),
-			screen.getByText("model"),
 			screen.getByRole("button", { name: "Act" }),
 			screen.getByRole("button", { name: "Close" }),
 		])
