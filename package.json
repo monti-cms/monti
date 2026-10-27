@@ -8,6 +8,7 @@
 		"test:quick": "MONTI_TEST_QUICK=1 vitest run",
 		"lint": "pnpm exec biome check .",
 		"lint:fix": "pnpm exec biome check . --write",
+		"gen:tokens": "node scripts/gen-tokens.mjs",
 		"check:korean": "node scripts/check-korean.mjs",
 		"check:recipes": "node scripts/check-recipes.mjs",
 		"typecheck": "pnpm --filter \"./packages/*\" --filter \"./docs/recipes\" -r typecheck",

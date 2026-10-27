@@ -2,10 +2,14 @@
  * The admin theme, shared by every prebuilt admin stylesheet (this package and the plugins' `styles/index.css`).
  * It is read at package build time only: the host never sees it and needs no Tailwind.
  *
- * Every name carries the `cms` prefix:
- *   - Color roles per property: `bg-monti-surface`, `text-monti-muted`, `border-monti-default` ... (values come from `--monti-*` variables, see the block below)
+ * Every design-token class carries `monti-` and then the design system's role name: `bg-monti-tool`, `text-monti-faint`, `border-monti-muted`,
+ * `gap-monti-12`, `rounded-monti-md`, `h-monti-control`, `w-monti-sidebar`, `shadow-monti-floating`, `text-monti-body`. The admin runs on the site's own
+ * pages next to the site's Tailwind classes, so none of ours may look like one of theirs. Other names:
  *   - Variants: `monti-dark:` (`.dark` or `[data-theme="dark"]` on `html` or an ancestor), `monti-horizontal:` and `monti-vertical:` (Base UI orientation)
- * Tailwind's own theme is inlined (`theme(inline)`), so the bundle declares no `--spacing`, `--color-*`, `--font-*` and so on.
+ *   - Tailwind's own theme is inlined (`theme(inline)`), so the bundle declares no `--spacing`, `--color-*`, `--font-*` and so on.
+ *
+ * The tokens come from `tokens/tokens.json`, the design system's file. `scripts/gen-tokens.mjs` (`pnpm gen:tokens`) writes their values to `tokens.css`
+ * and their Tailwind names to the generated block below. This file keeps the rest: what Tailwind's own theme must not offer, and the variants.
  */
 @import "tailwindcss/theme.css" layer(theme) theme(inline);
 
@@ -19,16 +23,8 @@
 @custom-variant monti-vertical (&[data-orientation="vertical"]);
 
 /*
- * The admin design system. Everything a screen may use is named here; Tailwind's own palette, text sizes, weights, shadows and tracking are
- * cleared (`initial`), so a class outside the system (`text-xs`, `bg-red-500`, `shadow-lg`) produces no CSS at all.
- *
- * Colors come in two tiers (values in `admin.css`):
- *   - base scales `--monti-gray-1..12` and `--monti-{accent,danger,warning,success}-{3,6,9,10,11}`: raw values, never used by a screen directly
- *   - roles, the only color names a screen uses. Each property has its own namespace, so the class says what it paints:
- *       bg-monti-*     page, surface, inset, overlay, emphasis, emphasis-hover, hover, active, selected, neutral, {tone}-muted, {tone}-emphasis
- *       text-monti-*   default, muted, subtle, on-emphasis, {tone}
- *       border-monti-* muted, default, emphasis, focus, {tone}, {tone}-muted   (also `divide-`, `ring-`, `outline-`)
- *   where {tone} is accent, danger, warning or success.
+ * What Tailwind's own theme must not offer: its palette, text sizes, weights, tracking, line heights and shadows are cleared (`initial`), so a class outside
+ * the system (`text-xs`, `bg-red-500`, `shadow-lg`) produces no CSS at all. Numbers stay for sizes (`h-8`, `size-4`), which share Tailwind's 4px base.
  */
 @theme inline {
 	--color-*: initial;
@@ -36,187 +32,22 @@
 	--color-current: currentColor;
 	--color-inherit: inherit;
 
-	--background-color-monti-page: var(--monti-bg-page);
-	--background-color-monti-surface: var(--monti-bg-surface);
-	--background-color-monti-inset: var(--monti-bg-inset);
-	--background-color-monti-overlay: var(--monti-bg-overlay);
-	--background-color-monti-emphasis: var(--monti-bg-emphasis);
-	--background-color-monti-emphasis-hover: var(--monti-bg-emphasis-hover);
-	--background-color-monti-hover: var(--monti-bg-hover);
-	--background-color-monti-active: var(--monti-bg-active);
-	--background-color-monti-selected: var(--monti-bg-selected);
-	--background-color-monti-neutral: var(--monti-bg-neutral);
-	--background-color-monti-backdrop: var(--monti-bg-backdrop);
-	/* A 1px divider drawn as a box (separators, the split button's seam). */
-	--background-color-monti-divider: var(--monti-border-muted);
-	--background-color-monti-accent-muted: var(--monti-bg-accent-muted);
-	--background-color-monti-accent-emphasis: var(--monti-bg-accent-emphasis);
-	--background-color-monti-danger-muted: var(--monti-bg-danger-muted);
-	--background-color-monti-danger-emphasis: var(--monti-bg-danger-emphasis);
-	--background-color-monti-danger-emphasis-hover: var(--monti-bg-danger-emphasis-hover);
-	--background-color-monti-warning-muted: var(--monti-bg-warning-muted);
-	--background-color-monti-warning-emphasis: var(--monti-bg-warning-emphasis);
-	--background-color-monti-success-muted: var(--monti-bg-success-muted);
-	--background-color-monti-success-emphasis: var(--monti-bg-success-emphasis);
-
-	--text-color-monti-default: var(--monti-fg-default);
-	--text-color-monti-muted: var(--monti-fg-muted);
-	--text-color-monti-subtle: var(--monti-fg-subtle);
-	--text-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
-	--text-color-monti-accent: var(--monti-fg-accent);
-	--text-color-monti-danger: var(--monti-fg-danger);
-	--text-color-monti-warning: var(--monti-fg-warning);
-	--text-color-monti-success: var(--monti-fg-success);
-
-	--border-color-monti-muted: var(--monti-border-muted);
-	--border-color-monti-default: var(--monti-border-default);
-	--border-color-monti-emphasis: var(--monti-border-emphasis);
-	--border-color-monti-focus: var(--monti-border-focus);
-	--border-color-monti-accent: var(--monti-border-accent);
-	--border-color-monti-accent-muted: var(--monti-border-accent-muted);
-	--border-color-monti-danger: var(--monti-border-danger);
-	--border-color-monti-danger-muted: var(--monti-border-danger-muted);
-	--border-color-monti-warning-muted: var(--monti-border-warning-muted);
-	--border-color-monti-success-muted: var(--monti-border-success-muted);
-	/* Dividers (`divide-*`) read the border namespace; rings and outlines get the focus colors only. */
-	--ring-color-monti-focus: var(--monti-border-focus);
-	--ring-color-monti-focus-soft: var(--monti-focus-soft);
-	--ring-color-monti-danger: var(--monti-border-danger);
-	--ring-color-monti-danger-soft: var(--monti-danger-soft);
-	--ring-color-monti-muted: var(--monti-border-muted);
-	--ring-color-monti-default: var(--monti-border-default);
-	--outline-color-monti-focus: var(--monti-border-focus);
-	--ring-offset-color-monti-page: var(--monti-bg-page);
-	--text-decoration-color-monti-muted: var(--monti-border-emphasis);
-	--text-decoration-color-monti-accent: var(--monti-fg-accent);
-	--text-decoration-color-monti-danger: var(--monti-border-danger);
-	--caret-color-monti-default: var(--monti-fg-default);
-	--accent-color-monti-emphasis: var(--monti-bg-emphasis);
-	/* Icons drawn with `fill-` or `stroke-` follow the text roles. */
-	--fill-monti-default: var(--monti-fg-default);
-	--fill-monti-muted: var(--monti-fg-muted);
-	--fill-monti-accent: var(--monti-fg-accent);
-	--stroke-monti-muted: var(--monti-fg-muted);
-	--stroke-monti-grid: var(--monti-border-muted);
-	/* Component tokens of the field list: one hue per kind of field (text-monti-kind-*). Not for other screens. */
-	--text-color-monti-kind-teal: var(--monti-kind-teal);
-	--text-color-monti-kind-blue: var(--monti-kind-blue);
-	--text-color-monti-kind-violet: var(--monti-kind-violet);
-	--text-color-monti-kind-orange: var(--monti-kind-orange);
-	--text-color-monti-kind-green: var(--monti-kind-green);
-
-	/*
-	 * Spacing: gaps, padding and margins take a name, never a number (`gap-condensed`, `px-comfortable`, `-mt-tight`). Tailwind's 4px numbers stay
-	 * for sizes (`h-8`, `size-4`), which share its base, so the design-system test is what keeps numbers out of spacing on screens.
-	 */
-	--spacing-hair: 2px;
-	--spacing-tight: 4px;
-	--spacing-condensed: 8px;
-	--spacing-normal: 12px;
-	--spacing-comfortable: 16px;
-	--spacing-spacious: 24px;
-	--spacing-wide: 32px;
-	--spacing-section: 48px;
-
-	/*
-	 * Sizes, by what they size. Components take these as options (an icon's size, a control's height, a panel's width); screens never write a size.
-	 *   icons     size-icon-xs 12, size-icon-sm 14, size-icon 16, size-icon-lg 20
-	 *   controls  h-control-xs 24, h-control-sm 32, h-control 36, h-control-lg 40 (also min-h-, and size-control-* for a square button)
-	 *   bars      h-header 48 (a page's title bar, the editor's top bar)
-	 *   panels    w-panel-sm 224, w-panel 288, w-panel-lg 384 (also max-w-, min-w-: popovers, menus, side columns)
-	 *   pages     w-rail 220, w-rail-wide 260 (a section's label column), max-w-content 1000, max-w-page 1160
-	 */
-	--size-icon-xs: 12px;
-	--size-icon-sm: 14px;
-	--size-icon: 16px;
-	--size-icon-lg: 20px;
-	--size-control-xs: 24px;
-	--size-control-sm: 28px;
-	--size-control: 32px;
-	--size-control-lg: 36px;
-	--height-control-xs: 24px;
-	--height-control-sm: 28px;
-	--height-control: 32px;
-	--height-control-lg: 36px;
-	--height-header: 44px;
-	--container-panel-sm: 224px;
-	--container-panel: 288px;
-	--container-panel-lg: 384px;
-	/* Page columns: a settings section's label column (rail, rail-wide) and the readable width of a form page (content, page). */
-	--container-rail: 220px;
-	--container-rail-wide: 260px;
-	--container-content: 860px;
-	--container-page: 1040px;
-	/* The admin sidebar (the same 15rem as `SIDEBAR_WIDTH_DEFAULT` in sidebar.tsx), for a placeholder in its place. */
-	--container-sidebar: 15rem;
-
-	/* Corner radius. Tailwind's `rounded-*` names are computed from `--monti-radius` inside the admin bundles only; the host's `--radius*` is never defined or changed. */
-	--radius-*: initial;
-	--radius-sm: calc(var(--monti-radius) - 4px);
-	--radius-md: calc(var(--monti-radius) - 2px);
-	--radius-lg: var(--monti-radius);
-	--radius-xl: calc(var(--monti-radius) + 2px);
-	/* Scale (base 6px): chips, badges and tags 2px (sm), buttons, inputs, list rows and menu items 4px (md), cards, panels and menus 6px (lg), dialogs and the side sheet 8px (xl). Pills (`rounded-full`) are reserved for switches, avatars and status dots. */
-
-	/*
-	 * Type roles: size, line height and weight in one name. Sizes are px so a host with another root font-size cannot rescale the admin.
-	 * Use `text-monti-<role>`; `font-medium` / `font-semibold` only to emphasize a run inside a role.
-	 *   micro   11/14 500  counters, keyboard hints and badge counts only
-	 *   caption 12/16 400  meta, timestamps, helper and hint text, table headers
-	 *   label   13/18 500  buttons, menu items, tabs, sidebar items, field labels
-	 *   body    14/20 400  default text, inputs, descriptions
-	 *   reading 16/28 400  long-form text you write: the editor body and the source pane; inputs on a phone
-	 *   title   16/22 600  section, panel, dialog and card titles
-	 *   heading 20/28 600  the screen heading
-	 *   display 34/40 600  the post title in the editor and the source pane
-	 * Code uses `font-mono` with the role of the text around it.
-	 */
 	--text-*: initial;
+	--leading-*: initial;
+	--inset-shadow-*: initial;
+	--drop-shadow-*: initial;
+	--text-shadow-*: initial;
+
+	/* Weights: `font-medium` and `font-semibold` only to emphasize a run inside a type role; `font-bold` for the heaviest. */
 	--font-weight-*: initial;
 	--font-weight-normal: 400;
 	--font-weight-medium: 500;
 	--font-weight-semibold: 600;
-	--tracking-*: initial;
-	/* Uppercase eyebrows only. */
-	--tracking-caps: 0.06em;
-	--leading-*: initial;
-	--text-monti-micro: 11px;
-	--text-monti-micro--font-weight: 500;
-	--text-monti-micro--line-height: 14px;
-	--text-monti-caption: 12px;
-	--text-monti-caption--font-weight: 400;
-	--text-monti-caption--line-height: 16px;
-	--text-monti-label: 13px;
-	--text-monti-label--font-weight: 500;
-	--text-monti-label--line-height: 18px;
-	--text-monti-body: 14px;
-	--text-monti-body--font-weight: 400;
-	--text-monti-body--line-height: 20px;
-	--text-monti-reading: 16px;
-	--text-monti-reading--font-weight: 400;
-	--text-monti-reading--line-height: 28px;
-	--text-monti-title: 16px;
-	--text-monti-title--font-weight: 600;
-	--text-monti-title--line-height: 22px;
-	--text-monti-heading: 20px;
-	--text-monti-heading--font-weight: 600;
-	--text-monti-heading--line-height: 28px;
-	--text-monti-display: 34px;
-	--text-monti-display--font-weight: 600;
-	--text-monti-display--line-height: 40px;
+	--font-weight-bold: 700;
 
-	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
-	--font-sans: var(--monti-font-sans);
-	--font-mono: var(--monti-font-mono);
-	/* Surface elevation tokens: primary buttons (`btn`), interactive controls (`control`), resting cards/panels (`card`), and floating overlays (`floating`). */
-	--shadow-*: initial;
-	--inset-shadow-*: initial;
-	--drop-shadow-*: initial;
-	--text-shadow-*: initial;
-	--shadow-monti-btn: var(--monti-shadow-btn);
-	--shadow-monti-control: var(--monti-shadow-control);
-	--shadow-monti-card: var(--monti-shadow-card);
-	--shadow-monti-floating: var(--monti-shadow-floating);
+	/* Uppercase eyebrows only. */
+	--tracking-*: initial;
+	--tracking-caps: 0.06em;
 
 	/* The moving bar of a progress whose amount is unknown. */
 	--animate-monti-progress: monti-progress 1.2s ease-in-out infinite;
@@ -229,3 +60,271 @@
 		}
 	}
 }
+
+/* BEGIN generated by scripts/gen-tokens.mjs from packages/ui/tokens/tokens.json. Do not edit by hand. */
+@theme inline {
+	/* These namespaces hold the design system's names only: Tailwind's own `rounded-*` and `shadow-*` produce no CSS. */
+	--radius-*: initial;
+	--shadow-*: initial;
+
+	/* Colors. Each property has its own namespace, so the class says what it paints: bg-monti-<role>, text-monti-<role>, border-monti-<role> ... */
+	--background-color-monti-page: var(--monti-bg-page);
+	--background-color-monti-tool: var(--monti-bg-tool);
+	--background-color-monti-muted: var(--monti-bg-muted);
+	--background-color-monti-selected: var(--monti-bg-selected);
+	--background-color-monti-highlight: var(--monti-bg-highlight);
+	--background-color-monti-block: var(--monti-bg-block);
+	--background-color-monti-emphasis: var(--monti-bg-emphasis);
+	--background-color-monti-success-muted: var(--monti-bg-success-muted);
+	--background-color-monti-warning-muted: var(--monti-bg-warning-muted);
+	--background-color-monti-danger-muted: var(--monti-bg-danger-muted);
+	--background-color-monti-danger-emphasis: var(--monti-bg-danger-emphasis);
+	--background-color-monti-proposal-muted: var(--monti-bg-proposal-muted);
+	--background-color-monti-backdrop: var(--monti-bg-backdrop);
+	--background-color-monti-divider: var(--monti-border-muted);
+	--text-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--text-color-monti-default: var(--monti-fg-default);
+	--text-color-monti-muted: var(--monti-fg-muted);
+	--text-color-monti-subtle: var(--monti-fg-subtle);
+	--text-color-monti-faint: var(--monti-fg-faint);
+	--text-color-monti-success: var(--monti-fg-success);
+	--text-color-monti-warning: var(--monti-fg-warning);
+	--text-color-monti-danger: var(--monti-fg-danger);
+	--text-color-monti-proposal: var(--monti-fg-proposal);
+	--border-color-monti-muted: var(--monti-border-muted);
+	--border-color-monti-default: var(--monti-border-default);
+	--border-color-monti-emphasis: var(--monti-border-emphasis);
+	--border-color-monti-strong: var(--monti-border-strong);
+	--border-color-monti-contrast: var(--monti-border-contrast);
+	--border-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--border-color-monti-subtle: var(--monti-fg-subtle);
+	--border-color-monti-faint: var(--monti-fg-faint);
+	--border-color-monti-success: var(--monti-fg-success);
+	--border-color-monti-warning: var(--monti-fg-warning);
+	--border-color-monti-danger: var(--monti-fg-danger);
+	--border-color-monti-proposal: var(--monti-fg-proposal);
+	--ring-color-monti-muted: var(--monti-border-muted);
+	--ring-color-monti-default: var(--monti-border-default);
+	--ring-color-monti-emphasis: var(--monti-border-emphasis);
+	--ring-color-monti-strong: var(--monti-border-strong);
+	--ring-color-monti-contrast: var(--monti-border-contrast);
+	--ring-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--ring-color-monti-subtle: var(--monti-fg-subtle);
+	--ring-color-monti-faint: var(--monti-fg-faint);
+	--ring-color-monti-success: var(--monti-fg-success);
+	--ring-color-monti-warning: var(--monti-fg-warning);
+	--ring-color-monti-danger: var(--monti-fg-danger);
+	--ring-color-monti-proposal: var(--monti-fg-proposal);
+	--outline-color-monti-muted: var(--monti-border-muted);
+	--outline-color-monti-default: var(--monti-border-default);
+	--outline-color-monti-emphasis: var(--monti-border-emphasis);
+	--outline-color-monti-strong: var(--monti-border-strong);
+	--outline-color-monti-contrast: var(--monti-border-contrast);
+	--outline-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--outline-color-monti-subtle: var(--monti-fg-subtle);
+	--outline-color-monti-faint: var(--monti-fg-faint);
+	--outline-color-monti-success: var(--monti-fg-success);
+	--outline-color-monti-warning: var(--monti-fg-warning);
+	--outline-color-monti-danger: var(--monti-fg-danger);
+	--outline-color-monti-proposal: var(--monti-fg-proposal);
+	--text-decoration-color-monti-muted: var(--monti-border-muted);
+	--text-decoration-color-monti-default: var(--monti-border-default);
+	--text-decoration-color-monti-emphasis: var(--monti-border-emphasis);
+	--text-decoration-color-monti-strong: var(--monti-border-strong);
+	--text-decoration-color-monti-contrast: var(--monti-border-contrast);
+	--text-decoration-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--text-decoration-color-monti-subtle: var(--monti-fg-subtle);
+	--text-decoration-color-monti-faint: var(--monti-fg-faint);
+	--text-decoration-color-monti-success: var(--monti-fg-success);
+	--text-decoration-color-monti-warning: var(--monti-fg-warning);
+	--text-decoration-color-monti-danger: var(--monti-fg-danger);
+	--text-decoration-color-monti-proposal: var(--monti-fg-proposal);
+	--caret-color-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--caret-color-monti-default: var(--monti-fg-default);
+	--caret-color-monti-muted: var(--monti-fg-muted);
+	--caret-color-monti-subtle: var(--monti-fg-subtle);
+	--caret-color-monti-faint: var(--monti-fg-faint);
+	--caret-color-monti-success: var(--monti-fg-success);
+	--caret-color-monti-warning: var(--monti-fg-warning);
+	--caret-color-monti-danger: var(--monti-fg-danger);
+	--caret-color-monti-proposal: var(--monti-fg-proposal);
+	--fill-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--fill-monti-default: var(--monti-fg-default);
+	--fill-monti-muted: var(--monti-fg-muted);
+	--fill-monti-subtle: var(--monti-fg-subtle);
+	--fill-monti-faint: var(--monti-fg-faint);
+	--fill-monti-success: var(--monti-fg-success);
+	--fill-monti-warning: var(--monti-fg-warning);
+	--fill-monti-danger: var(--monti-fg-danger);
+	--fill-monti-proposal: var(--monti-fg-proposal);
+	--stroke-monti-on-emphasis: var(--monti-fg-on-emphasis);
+	--stroke-monti-default: var(--monti-fg-default);
+	--stroke-monti-muted: var(--monti-fg-muted);
+	--stroke-monti-subtle: var(--monti-fg-subtle);
+	--stroke-monti-faint: var(--monti-fg-faint);
+	--stroke-monti-success: var(--monti-fg-success);
+	--stroke-monti-warning: var(--monti-fg-warning);
+	--stroke-monti-danger: var(--monti-fg-danger);
+	--stroke-monti-proposal: var(--monti-fg-proposal);
+	--stroke-monti-emphasis: var(--monti-border-emphasis);
+	--stroke-monti-strong: var(--monti-border-strong);
+	--stroke-monti-contrast: var(--monti-border-contrast);
+	--stroke-monti-divider: var(--monti-border-muted);
+	--ring-offset-color-monti-page: var(--monti-bg-page);
+
+	/* Spacing: gaps, padding and margins take the scale (gap-monti-12, px-monti-16, -mt-monti-4). Tailwind's own numbers stay for sizes. */
+	--spacing-monti-2: var(--monti-space-2);
+	--spacing-monti-4: var(--monti-space-4);
+	--spacing-monti-6: var(--monti-space-6);
+	--spacing-monti-8: var(--monti-space-8);
+	--spacing-monti-10: var(--monti-space-10);
+	--spacing-monti-12: var(--monti-space-12);
+	--spacing-monti-16: var(--monti-space-16);
+	--spacing-monti-20: var(--monti-space-20);
+	--spacing-monti-24: var(--monti-space-24);
+	--spacing-monti-32: var(--monti-space-32);
+	--spacing-monti-40: var(--monti-space-40);
+	--spacing-monti-48: var(--monti-space-48);
+
+	/* Corner radius (rounded-monti-sm ... rounded-monti-full). */
+	--radius-monti-sm: var(--monti-radius-sm);
+	--radius-monti-md: var(--monti-radius-md);
+	--radius-monti-lg: var(--monti-radius-lg);
+	--radius-monti-xl: var(--monti-radius-xl);
+	--radius-monti-full: var(--monti-radius-full);
+
+	/* Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Icon sizes are size-monti-icon-*. */
+	--height-monti-control: var(--monti-height-control-md);
+	--size-monti-control: var(--monti-height-control-md);
+	--height-monti-control-sm: var(--monti-height-control-sm);
+	--size-monti-control-sm: var(--monti-height-control-sm);
+	--height-monti-icon: var(--monti-height-icon-button);
+	--size-monti-icon: var(--monti-height-icon-button);
+	--height-monti-header: var(--monti-height-header);
+	--height-monti-toolbar: var(--monti-height-toolbar);
+	--height-monti-panebar: var(--monti-height-panebar);
+	--height-monti-statusbar: var(--monti-height-statusbar);
+	--size-monti-icon-xs: var(--monti-size-icon-xs);
+	--size-monti-icon-sm: var(--monti-size-icon-sm);
+	--size-monti-icon-md: var(--monti-size-icon-md);
+	--size-monti-icon-lg: var(--monti-size-icon-lg);
+
+	/* Widths of columns, panels and sheets (w-monti-*, min-w-monti-*, max-w-monti-*). */
+	--container-monti-sidebar: var(--monti-width-sidebar);
+	--container-monti-menu: var(--monti-width-menu);
+	--container-monti-panel: var(--monti-width-panel);
+	--container-monti-side-panel: var(--monti-width-side-panel);
+	--container-monti-assistant: var(--monti-width-assistant);
+	--container-monti-sheet: var(--monti-width-sheet);
+	--container-monti-content: var(--monti-width-content);
+	--container-monti-reading: var(--monti-width-reading);
+
+	/* Shadows: floating surfaces only. The rest of the design is flat. */
+	--shadow-monti-floating: var(--monti-shadow-floating);
+	--shadow-monti-overlay: var(--monti-shadow-overlay);
+	--shadow-monti-sheet: var(--monti-shadow-sheet);
+
+	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
+	--font-sans: var(--monti-font-sans);
+	--font-mono: var(--monti-font-mono);
+}
+
+/* 36px/45px 700. The entry title in the editor. */
+@utility text-monti-display {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-display-size);
+	line-height: var(--monti-text-display-line);
+	font-weight: var(--monti-text-display-weight);
+	letter-spacing: var(--monti-text-display-tracking);
+}
+
+/* 26px/32px 700. Content page title, above the ink rule. */
+@utility text-monti-page {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-page-size);
+	line-height: var(--monti-text-page-line);
+	font-weight: var(--monti-text-page-weight);
+	letter-spacing: var(--monti-text-page-tracking);
+}
+
+/* 22px/30px 700. Headings in the editor body; dialog titles at 20px use this role. */
+@utility text-monti-heading {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-heading-size);
+	line-height: var(--monti-text-heading-line);
+	font-weight: var(--monti-text-heading-weight);
+	letter-spacing: var(--monti-text-heading-tracking);
+}
+
+/* 17px/30px 400. Editor body text. */
+@utility text-monti-reading {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-reading-size);
+	line-height: var(--monti-text-reading-line);
+	font-weight: var(--monti-text-reading-weight);
+	letter-spacing: var(--monti-text-reading-tracking);
+}
+
+/* 16px/22px 600. Panel and sheet titles, section titles in settings. */
+@utility text-monti-title {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-title-size);
+	line-height: var(--monti-text-title-line);
+	font-weight: var(--monti-text-title-weight);
+	letter-spacing: var(--monti-text-title-tracking);
+}
+
+/* 14px/20px 400. Default UI text, buttons, inputs, and list row titles (in ink; the other cells are gray). */
+@utility text-monti-body {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-body-size);
+	line-height: var(--monti-text-body-line);
+	font-weight: var(--monti-text-body-weight);
+	letter-spacing: var(--monti-text-body-tracking);
+}
+
+/* 13px/18px 500. Tabs, filters, small buttons. */
+@utility text-monti-label {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-label-size);
+	line-height: var(--monti-text-label-line);
+	font-weight: var(--monti-text-label-weight);
+	letter-spacing: var(--monti-text-label-tracking);
+}
+
+/* 13px/20px 400. Secondary lines under a row title, hints that cannot be avoided. */
+@utility text-monti-note {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-note-size);
+	line-height: var(--monti-text-note-line);
+	font-weight: var(--monti-text-note-weight);
+	letter-spacing: var(--monti-text-note-tracking);
+}
+
+/* 12px/16px 400. Captions, timestamps in sans. */
+@utility text-monti-caption {
+	font-family: var(--monti-font-sans);
+	font-size: var(--monti-text-caption-size);
+	line-height: var(--monti-text-caption-line);
+	font-weight: var(--monti-text-caption-weight);
+	letter-spacing: var(--monti-text-caption-tracking);
+}
+
+/* 12px/16px 400. Addresses, identifiers, counts, file sizes. */
+@utility text-monti-meta {
+	font-family: var(--monti-font-mono);
+	font-size: var(--monti-text-meta-size);
+	line-height: var(--monti-text-meta-line);
+	font-weight: var(--monti-text-meta-weight);
+	letter-spacing: var(--monti-text-meta-tracking);
+}
+
+/* 11px/14px 400. Field labels, group labels in menus and panels. */
+@utility text-monti-micro {
+	font-family: var(--monti-font-mono);
+	font-size: var(--monti-text-micro-size);
+	line-height: var(--monti-text-micro-line);
+	font-weight: var(--monti-text-micro-weight);
+	letter-spacing: var(--monti-text-micro-tracking);
+}
+/* END generated */

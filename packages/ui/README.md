@@ -2,7 +2,7 @@
 
 Monti's design system: the tokens and the components the admin and its extensions are built from.
 
-- **Tokens.** `styles/theme.css` names them for Tailwind 4; `styles/tokens.css` holds their light and dark values. Colors come in two tiers: base scales (`--monti-gray-1..12`, and accent, danger, warning and success at steps 3, 6, 9, 10, 11) and the roles screens use, one namespace per property (`bg-monti-surface`, `text-monti-muted`, `border-monti-default`). Type roles set size, line height and weight together (`text-monti-caption` … `text-monti-display`). Spacing is a 4px scale (0, 2, 4, 8, 12, 16, 24, 32, 48px), one shadow (`shadow-monti-floating`), four radii.
+- **Tokens.** `tokens/tokens.json` is the design system's own token file and the single source. `pnpm gen:tokens` (at the repo root) writes `styles/tokens.css` (the values, light and dark, as `--monti-*` variables) and the token block of `styles/theme.css` (their names for Tailwind 4); a test fails when either differs from what the script writes. Every class carries `monti-` and then the design system's role name: colors per property (`bg-monti-tool`, `text-monti-faint`, `border-monti-muted`, `ring-monti-contrast`), the spacing scale (`gap-monti-12`, 2 to 48px), radii (`rounded-monti-md`), heights (`h-monti-control`, `h-monti-header`), widths (`w-monti-sidebar`, `max-w-monti-reading`), icon sizes (`size-monti-icon-md`), three shadows (`shadow-monti-floating`, `-overlay`, `-sheet`) and one type role per style, with size, line height, weight, letter spacing and family together (`text-monti-body` … `text-monti-display`).
 - **Components.** Controls (`Button`, `IconButton`, `Input`, `Select`, `Combobox`, `Checkbox`, `Switch`, `Tabs`, ...), feedback (`Alert`, `Badge`, `StatusIndicator`, `Skeleton`, `Spinner`), overlays (`Dialog`, `Sheet`, `Popover`, `DropdownMenu`, `Tooltip`), and layout (`Text`, `Heading`, `Stack`, `Panel`, `Table`). Components take a role or a tone as props, never a raw value.
 - **Built-in words.** A few components write words themselves (close, clear, pagination). They are English unless an app passes its own through `UiLabelsProvider`; the admin passes its dictionaries.
 
@@ -31,6 +31,7 @@ The admin's screen states (load failures, empty lists, open dialogs) join the sa
 
 ```bash
 pnpm --filter @monti-cms/ui test:run
+pnpm gen:tokens   # after editing tokens/tokens.json
 ```
 
 The admin's design-system test (`packages/admin/src/__test__/design-system.test.ts`) fails on any class outside the system in this package, the admin and the first-party plugins.
