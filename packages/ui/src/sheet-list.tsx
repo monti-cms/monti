@@ -1,7 +1,7 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
 import { MENU_CARD, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR } from "./menu-parts";
@@ -39,17 +39,22 @@ function SheetList({
 	footer?: React.ReactNode;
 	children: React.ReactNode;
 }) {
+	// Focus lands on the card itself, not on its first row's action: the row's focus ring would otherwise show as a box around it when the list
+	// opens (and with `defaultOpen`). Tab then goes row by row.
+	const popup = React.useRef<HTMLDivElement>(null);
 	return (
 		<PopoverPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
 			<PopoverPrimitive.Trigger render={trigger} />
 			<PopoverPrimitive.Portal>
 				<PopoverPrimitive.Positioner side="top" align={align} sideOffset={6} className="isolate z-50">
 					<PopoverPrimitive.Popup
+						ref={popup}
+						initialFocus={popup}
 						data-slot="sheet-list"
 						className={cn(
 							MENU_CARD,
 							MENU_MOTION,
-							"z-50 max-h-(--available-height) w-85 overflow-y-auto p-monti-6 text-left",
+							"z-50 max-h-(--available-height) w-85 overflow-y-auto p-monti-6 text-left outline-none",
 						)}
 					>
 						<div data-slot="sheet-list-head" className={MENU_LABEL}>
