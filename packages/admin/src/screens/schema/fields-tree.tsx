@@ -1,7 +1,7 @@
 "use client";
 
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, cn, Heading, IconButton, Inline, Panel, Stack, Text } from "@monti-cms/ui";
+import { Box, Button, cn, Heading, IconButton, Inline, Stack, Text } from "@monti-cms/ui";
 import { Eye, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
@@ -191,7 +191,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
-			<Inline shrink={false} justify="between" height="icon" border="bottom" paddingX={8}>
+			<Inline shrink={false} justify="between" height="icon-button" border="bottom" paddingX={8}>
 				<Heading as="h2" variant="label">
 					{t("layout.preview")}
 				</Heading>
@@ -274,7 +274,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<Box maxWidth="content" minWidth={0}>
-			<Panel ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
+			<Box ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
 				<Inline wrap justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
 					<Box minWidth={0}>
 						<Heading as="h4" variant="label">
@@ -384,7 +384,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						onClose={() => setSheet(null)}
 					/>
 				)}
-			</Panel>
+			</Box>
 		</Box>
 	);
 	const preview = (

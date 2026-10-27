@@ -27,7 +27,6 @@ import {
 	DialogTitle,
 	Inline,
 	Input,
-	Panel,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -484,7 +483,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	return (
 		<Stack gap={48}>
 			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
-				<Panel overflow="hidden">
+				<Box overflow="hidden">
 					<Inline justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
 						<Inline as="span" gap={8}>
 							<Text tone="muted">{t("locales.count", { count: locales.length })}</Text>
@@ -517,7 +516,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 							))}
 						</SortableList>
 					</ul>
-				</Panel>
+				</Box>
 			</Section>
 			<Section wide band title={t("locales.defaultTitle")} testId="locales-default">
 				<Pick

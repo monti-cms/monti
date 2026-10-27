@@ -11,7 +11,6 @@ import {
 	Grid,
 	Inline,
 	Input,
-	Panel,
 	Stack,
 	Text,
 	TextButton,
@@ -557,7 +556,7 @@ export function FieldEditor({
 	const blocked = removeBlock(editing.collection, place, name);
 
 	return (
-		<Collapsible open={open} onOpenChange={setOpen} render={<Panel />} data-testid={`field-${name}`}>
+		<Collapsible open={open} onOpenChange={setOpen} render={<Box border="bottom" />} data-testid={`field-${name}`}>
 			<Inline gap={4} paddingX={4}>
 				<CollapsibleTrigger
 					render={<Button variant="secondary" width="full" aria-label={t("field.toggle", { name })} />}

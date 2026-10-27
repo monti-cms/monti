@@ -60,7 +60,6 @@ export {
 	Label,
 	List,
 	ListItem,
-	Panel,
 	Patch,
 	Popover,
 	PopoverContent,

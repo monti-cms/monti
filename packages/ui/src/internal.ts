@@ -161,7 +161,6 @@ export {
 	PaginationNext,
 	PaginationPrevious,
 } from "./pagination";
-export { Panel } from "./panel";
 export { Patch, type PatchLine } from "./patch";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";

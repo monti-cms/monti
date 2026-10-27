@@ -2,7 +2,7 @@
 
 import { type FieldViewProps, type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
-import { cn, commonMessages, MediaThumbnail, Panel, Stack, Text } from "@monti-cms/admin/kit";
+import { Box, cn, commonMessages, MediaThumbnail, Stack, Text } from "@monti-cms/admin/kit";
 import { SEO_ROLES } from "../fields";
 import { seoMessages } from "../messages";
 
@@ -63,7 +63,7 @@ export function SeoPreview({
 
 	return (
 		<Stack gap={12}>
-			<Panel role="region" aria-label={t("preview.search")} background="tool" padding={12}>
+			<Box role="region" aria-label={t("preview.search")} background="muted" radius="lg" padding={12}>
 				<Stack gap={4}>
 					<Text as="p" variant="caption" tone="muted" truncate>
 						{site.SITE_NAME}
@@ -84,10 +84,10 @@ export function SeoPreview({
 						</Text>
 					)}
 				</Stack>
-			</Panel>
+			</Box>
 
 			{hasImageField && (
-				<Panel role="region" aria-label={t("preview.share")} overflow="hidden">
+				<Box role="region" aria-label={t("preview.share")} border="all" radius="lg" overflow="hidden">
 					{imageId && <MediaThumbnail mediaId={imageId} size="share" />}
 					<Stack gap={2} padding={12}>
 						<Text as="p" variant="caption" tone="muted" truncate>
@@ -102,7 +102,7 @@ export function SeoPreview({
 							</Text>
 						)}
 					</Stack>
-				</Panel>
+				</Box>
 			)}
 		</Stack>
 	);

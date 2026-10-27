@@ -1,4 +1,4 @@
-import { Box, Grid, Heading, Panel, Stack, Text } from "@monti-cms/ui";
+import { Box, Grid, Heading, Stack, Text } from "@monti-cms/ui";
 import { createContext, type ReactNode, useContext } from "react";
 
 const SectionRowContext = createContext(false);
@@ -87,11 +87,11 @@ export function Section({
 					{children}
 				</Stack>
 			) : card ? (
-				<Panel padding={16}>
+				<Box padding={16}>
 					<Stack gap={24} minWidth={0}>
 						{children}
 					</Stack>
-				</Panel>
+				</Box>
 			) : (
 				<Box minWidth={0}>{children}</Box>
 			)}

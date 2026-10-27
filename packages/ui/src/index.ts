@@ -44,7 +44,6 @@ export const ToolCallLine = close(open.ToolCallLine);
 export type { FormatMark, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
-export const Panel = close(open.Panel);
 export const Checkbox = close(open.Checkbox);
 export const Collapsible = close(open.Collapsible);
 export const CollapsibleContent = close(open.CollapsibleContent);

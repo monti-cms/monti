@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MoreHorizontal } from "lucide-react";
+import { Box } from "./box";
 import { Count } from "./count";
 import { Empty } from "./empty";
 import { EntryStatus } from "./entry-status";
 import { IconButton } from "./icon-button";
-import { Panel } from "./panel";
 import { Skeleton } from "./skeleton";
 import {
 	RowActions,
@@ -186,7 +186,7 @@ export const LongTextTruncates: Story = {
 
 export const EmptyTable: Story = {
 	render: () => (
-		<Panel>
+		<Box>
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -202,7 +202,7 @@ export const EmptyTable: Story = {
 					</TableRow>
 				</TableBody>
 			</Table>
-		</Panel>
+		</Box>
 	),
 };
 
@@ -266,7 +266,7 @@ export const WideScrolls: Story = {
 /** Column alignment (numbers to the end) and long text that ends in "…". */
 export const AlignAndTruncate: Story = {
 	render: () => (
-		<Panel className="max-w-lg">
+		<Box className="max-w-lg">
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -283,6 +283,6 @@ export const AlignAndTruncate: Story = {
 					</TableRow>
 				</TableBody>
 			</Table>
-		</Panel>
+		</Box>
 	),
 };
