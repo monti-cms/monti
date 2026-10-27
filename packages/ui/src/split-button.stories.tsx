@@ -32,7 +32,7 @@ export const Loading: Story = { args: { loading: true, children: "발행 중" } 
 export const MenuOpen: Story = {
 	decorators: [
 		(Story) => (
-			<div className="flex justify-end">
+			<div className="flex min-h-40 justify-start pt-monti-12 pl-64">
 				<Story />
 			</div>
 		),

@@ -28,14 +28,14 @@ export const Streaming: Story = {
 	args: { streaming: true, children: "초안인 글은 두 편이고, 그중 하나는" },
 };
 
-/** Line breaks in the text are kept, and a long word wraps instead of widening the panel. */
+/** Answers are plain text, not markdown: line breaks are kept and a long word wraps instead of widening the panel. */
 export const LongText: Story = {
 	render: () => (
 		<Stack gap={16} maxWidth="panel">
 			<ChatMessage author="user">
 				{"첫 줄\n둘째 줄\nhttps://example.com/a/very/long/address/that/has/no/spaces/at/all/and/keeps/going"}
 			</ChatMessage>
-			<ChatMessage>{"- 하나\n- 둘\n- 셋"}</ChatMessage>
+			<ChatMessage>{"초안인 글은 두 편이에요.\n하나는 쓰는 중이고, 하나는 발행한 뒤에 고친 글이에요."}</ChatMessage>
 		</Stack>
 	),
 };

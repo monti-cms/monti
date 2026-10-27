@@ -29,7 +29,7 @@ function Switch({
 		>
 			<SwitchPrimitive.Thumb
 				data-slot="switch-thumb"
-				className="pointer-events-none block size-4 translate-x-[2px] rounded-monti-full bg-monti-page transition-transform data-checked:translate-x-[16px] data-checked:bg-(--monti-fg-on-emphasis)"
+				className="pointer-events-none block size-4 translate-x-[2px] rounded-monti-full bg-monti-page shadow-[0_0_0_1px_var(--monti-border-strong)] transition-transform data-checked:translate-x-[16px] data-checked:bg-(--monti-fg-on-emphasis) data-checked:shadow-none"
 			/>
 		</SwitchPrimitive.Root>
 	);

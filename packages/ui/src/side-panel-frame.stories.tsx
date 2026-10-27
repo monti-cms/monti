@@ -3,7 +3,6 @@ import { Ellipsis, SquarePen } from "lucide-react";
 import { Button } from "./button";
 import { ChatInput } from "./chat-input";
 import { ChatMessage } from "./chat-message";
-import { Count } from "./count";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { IconButton } from "./icon-button";
 import { SidePanelFrame } from "./side-panel-frame";
@@ -78,7 +77,7 @@ export const Details: Story = {
 				}
 				footer={
 					<>
-						<Count className="grow">쓰는 곳이 있어 지울 수 없어요</Count>
+						<span className="grow text-monti-note text-monti-subtle">쓰는 곳이 있어 지울 수 없어요</span>
 						<Button size="sm">저장</Button>
 					</>
 				}
