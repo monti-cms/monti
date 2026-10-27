@@ -8,6 +8,8 @@ export interface ToolbarItem {
 	label: string;
 	title?: string;
 	icon: LucideIcon;
+	/** `danger` for a tool that removes something. */
+	tone?: "danger";
 	isActive?: (editor: Editor) => boolean;
 	isDisabled?: (editor: Editor) => boolean;
 	run: (editor: Editor) => void;
@@ -31,6 +33,7 @@ export function ToolbarButton({
 		<IconButton
 			label={label}
 			side={tooltipSide}
+			tone={item.tone}
 			pressed={item.isActive ? active : undefined}
 			disabled={disabled}
 			// Keep the button click from stealing the editor selection.

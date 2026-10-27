@@ -150,7 +150,7 @@ function RuleRow({
 					/>
 				)}
 				<Inline grow justify="end">
-					<IconButton label={t("rulesPanel.remove")} onClick={onRemove}>
+					<IconButton label={t("rulesPanel.remove")} tone="danger" onClick={onRemove}>
 						<Trash2 aria-hidden />
 					</IconButton>
 				</Inline>

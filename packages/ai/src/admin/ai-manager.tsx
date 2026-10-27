@@ -810,7 +810,7 @@ function CheckRow({
 				)}
 			</Inline>
 			{onRemove ? (
-				<IconButton label={t("check.remove", { label })} onClick={onRemove}>
+				<IconButton label={t("check.remove", { label })} tone="danger" onClick={onRemove}>
 					<Trash2 aria-hidden />
 				</IconButton>
 			) : (

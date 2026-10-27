@@ -81,6 +81,7 @@ export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 				<IconButton
 					key={button.label}
 					label={button.label}
+					tone={button.destructive ? "danger" : undefined}
 					pressed={button.pressed}
 					disabled={button.disabled}
 					title={button.title}

@@ -154,7 +154,7 @@ export function CodeExplorerNodeView() {
 							</Text>
 						</BlockSettingsField>
 					</BlockSettings>
-					<ToolbarButton label={t("delete")} onClick={removeBlock}>
+					<ToolbarButton label={t("delete")} tone="danger" onClick={removeBlock}>
 						<Trash2 aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>

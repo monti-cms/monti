@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MoreHorizontal, PanelRight, X } from "lucide-react";
+import { MoreHorizontal, PanelRight, Trash2, X } from "lucide-react";
 import { Spark } from "./ai-action";
 import { IconButton } from "./icon-button";
 import { Stack } from "./stack";
@@ -33,6 +33,20 @@ export const States: Story = {
 			</IconButton>
 			<IconButton label="비활성" disabled>
 				<X aria-hidden />
+			</IconButton>
+		</Stack>
+	),
+};
+
+/** `tone="danger"` is for a button that deletes or removes something: a red icon, and the red wash on hover. */
+export const Danger: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="규칙 지우기" tone="danger">
+				<Trash2 aria-hidden />
+			</IconButton>
+			<IconButton label="비활성" tone="danger" disabled>
+				<Trash2 aria-hidden />
 			</IconButton>
 		</Stack>
 	),

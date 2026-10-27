@@ -184,6 +184,9 @@ describe("code block edit view", () => {
 		fireEvent.change(await screen.findByLabelText(t("rulesPanel.pattern")), { target: { value: "const" } });
 		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeTruthy();
 
+		// The rule's delete button is red.
+		expect(screen.getByRole("button", { name: t("rulesPanel.remove") }).getAttribute("data-tone")).toBe("danger");
+
 		const rules = block(editor).attrs.rules as CodeRule[];
 		// A new rule starts with the first offered text effect (bold by default).
 		expect(rules[0]).toMatchObject({ scope: "document", name: "strong", pattern: "const", flags: "g" });
