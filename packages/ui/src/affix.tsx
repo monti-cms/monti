@@ -1,6 +1,9 @@
+"use client";
+
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
+import { useProposalDescription } from "./proposal-cue";
 
 /**
  * A field whose ends are fixed and only the middle is typed: faint mono text before and after the input, under one underline, so it reads as
@@ -36,6 +39,7 @@ function Affix({
 			{prefix && <span className="whitespace-nowrap py-monti-6 text-monti-subtle">{prefix}</span>}
 			<InputPrimitive
 				data-slot="affix-input"
+				aria-description={useProposalDescription(proposal)}
 				className="field-sizing-content min-w-[2ch] flex-initial rounded-none border-0 bg-transparent px-px py-monti-6 text-monti-default outline-none placeholder:text-monti-faint group-data-proposal/affix:text-monti-proposal"
 				{...props}
 			/>

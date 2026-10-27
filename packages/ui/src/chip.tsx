@@ -5,6 +5,7 @@ import type * as React from "react";
 import { Spark } from "./ai-action";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
+import { ProposalNote } from "./proposal-cue";
 
 /** The pill of a chip, for parts that draw their own chip (a combobox's selected values). */
 export const CHIP =
@@ -42,6 +43,7 @@ function Chip({
 			{...props}
 		>
 			{proposal && <Spark />}
+			<ProposalNote proposal={proposal} />
 			{children}
 			{onRemove && (
 				<button

@@ -12,7 +12,8 @@ afterEach(cleanup);
 const t = testSite.createTranslator(screensMessages);
 const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(query));
 
-const picker = () => screen.queryByRole("button", { name: t("toolbar.target") });
+// The picker's name starts with the place now picked (its visible text) and then says what it is.
+const picker = () => screen.queryByRole("button", { name: new RegExp(`, ${t("toolbar.target")}$`) });
 
 describe("search box", () => {
 	it("turns body search on and off with the picker in front of the box", async () => {
@@ -27,6 +28,7 @@ describe("search box", () => {
 		const onChange = vi.fn();
 		render(withSite(<ListSearch state={stateOf("collection=post&body=1")} onChange={onChange} />));
 		expect(picker()?.textContent).toBe(t("toolbar.targetAll"));
+		expect(picker()?.getAttribute("aria-label")).toBe(`${t("toolbar.targetAll")}, ${t("toolbar.target")}`);
 		fireEvent.click(picker() as HTMLElement);
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("toolbar.targetFields") }));
 		expect(onChange).toHaveBeenLastCalledWith({ includeBody: false });

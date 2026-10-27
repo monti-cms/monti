@@ -2,6 +2,7 @@
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { cn } from "./cn";
+import { useProposalDescription } from "./proposal-cue";
 
 /**
  * A checkbox: 14px, a ✓ when on and a bar when only some are on (`indeterminate`, the select-all of a list with part of it picked). The mark
@@ -19,6 +20,7 @@ function Checkbox({
 		<CheckboxPrimitive.Root
 			data-slot="checkbox"
 			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				"group/check peer data-checked:data-proposal:border-(color:--monti-fg-proposal) data-indeterminate:data-proposal:border-(color:--monti-fg-proposal) relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint bg-transparent outline-none transition-colors after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-checked:data-proposal:bg-(--monti-fg-proposal) data-indeterminate:data-proposal:bg-(--monti-fg-proposal) data-checked:border-monti-contrast data-indeterminate:border-monti-contrast data-checked:bg-monti-emphasis data-indeterminate:bg-monti-emphasis",
 				className,

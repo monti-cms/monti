@@ -1,5 +1,8 @@
+"use client";
+
 import type * as React from "react";
 import { cn } from "./cn";
+import { useProposalDescription } from "./proposal-cue";
 
 /** Several lines, drawn like `Input`: an underline, never a box. `proposal` marks text the assistant wrote and nobody has touched. */
 function Textarea({
@@ -21,6 +24,7 @@ function Textarea({
 			data-slot="textarea"
 			data-size={size}
 			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
 				size === "sm" ? "text-monti-note" : "text-monti-reading md:text-monti-body",

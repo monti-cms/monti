@@ -1,6 +1,9 @@
+"use client";
+
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import type * as React from "react";
 import { cn } from "./cn";
+import { useProposalDescription } from "./proposal-cue";
 
 /** The text of an input that reads as text (no underline): the label size, or a heading's. */
 const INLINE_SIZE = {
@@ -51,6 +54,7 @@ function Input({
 			data-slot="input"
 			data-size={size}
 			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors file:inline-flex file:h-7 file:border-0 file:bg-transparent file:font-medium file:text-monti-default file:text-monti-label placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45",
 				inline

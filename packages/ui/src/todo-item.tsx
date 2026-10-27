@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import type * as React from "react";
 import { Spark } from "./ai-action";
 import { cn } from "./cn";
+import { useUiLabels } from "./labels";
 
 /**
  * One thing to fix, in the list a status bar cell opens: a ring, the title, one short line under it, and the one action that goes to it at the
@@ -37,6 +38,7 @@ function TodoItem({
 	/** The action is the assistant's. */
 	proposal?: boolean;
 }) {
+	const labels = useUiLabels();
 	const text = (
 		<>
 			<span>{title}</span>
@@ -59,14 +61,17 @@ function TodoItem({
 				</span>
 			) : (
 				<span
-					aria-hidden
+					aria-hidden={blocking ? undefined : true}
 					data-slot="todo-mark"
 					data-blocking={blocking || undefined}
 					className={cn(
 						"size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-warning",
 						blocking && "border-monti-danger",
 					)}
-				/>
+				>
+					{/* The red ring is the only visible cue, so what it means is also said in words. */}
+					{blocking && <span className="sr-only">{labels.blocking}</span>}
+				</span>
 			)}
 			{onOpen ? (
 				<button

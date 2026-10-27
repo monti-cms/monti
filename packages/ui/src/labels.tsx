@@ -16,6 +16,10 @@ export interface UiLabels {
 	deselect: string;
 	aiFill: string;
 	aiAgain: string;
+	/** What a control in the `proposal` state says besides its blue: the assistant set this value and nobody has touched it. */
+	proposal: string;
+	/** What a to-do row marked `blocking` says besides its red ring. */
+	blocking: string;
 	/** The footnote button of the format card: a short word with its number raised ("Note¹"). */
 	footnoteMark: string;
 	paginationLabel: string;
@@ -41,6 +45,8 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	deselect: "Remove",
 	aiFill: "Fill",
 	aiAgain: "Again",
+	proposal: "AI suggestion",
+	blocking: "Blocks publishing",
 	footnoteMark: "Note¹",
 	paginationLabel: "Pagination",
 	paginationPrevious: "Previous",

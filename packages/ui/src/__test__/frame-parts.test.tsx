@@ -147,6 +147,13 @@ describe("StatusBarPluginCell", () => {
 });
 
 describe("TodoItem", () => {
+	it("says in words that a row blocks publishing, not by the red ring alone", () => {
+		const { rerender } = render(<TodoItem blocking title="제목이 비어 있어요" />);
+		expect(screen.getByText("Blocks publishing")).toBeTruthy();
+		rerender(<TodoItem title="제목이 비어 있어요" />);
+		expect(screen.queryByText("Blocks publishing")).toBeNull();
+	});
+
 	it("is not a button for the whole row unless it goes somewhere", () => {
 		render(<TodoItem title="제목이 비어 있어요" detail="제목" actionLabel="이동" onAction={() => {}} />);
 		expect(screen.getAllByRole("button")).toHaveLength(1);
