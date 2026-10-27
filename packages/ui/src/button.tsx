@@ -8,11 +8,11 @@ import { Spinner } from "./spinner";
  * something that cannot be undone, and `outline-danger` for a quieter version of it. The text is centered by the font (no padding nudge), and a
  * leading icon pulls 2px into the left padding so it centers visually. The filled pills have no border, so their text starts at the padding the
  * design system gives (18px, 16px for `secondary`, 12px for `sm`); only `outline-danger` draws a 1px line.
- * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon (pulled 2px left like one), and the caller
- * changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
+ * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon, set by eye: 13px from the left edge at `md`
+ * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] [&>[data-slot=spinner]:first-child]:-ml-[2px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
 			variant: {
@@ -34,6 +34,17 @@ const buttonVariants = cva(
 				sm: "h-monti-control-sm px-[12px] text-monti-note",
 			},
 		},
+		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
+		// tighter than the resting padding, so the pill does not look empty on the right.
+		compoundVariants: [
+			{
+				size: "md",
+				variant: ["primary", "danger", "outline-danger"],
+				class: "data-loading:pr-[15px] data-loading:pl-[13px]",
+			},
+			{ size: "md", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
+			{ size: "sm", class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
+		],
 		defaultVariants: { variant: "primary", size: "md" },
 	},
 );

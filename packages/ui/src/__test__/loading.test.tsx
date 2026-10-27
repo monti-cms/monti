@@ -21,6 +21,10 @@ describe("loading controls show a spinner", () => {
 		expect(button.getAttribute("aria-busy")).toBe("true");
 		expect(button.hasAttribute("disabled")).toBe(true);
 		expect(button.className).toContain("data-loading:[&>[data-slot=spinner]+svg]:hidden");
+		// The loading padding is set by eye: 13px left and 15px right at md, 7px between the spinner and the words.
+		expect(button.className).toContain("data-loading:pl-[13px]");
+		expect(button.className).toContain("data-loading:pr-[15px]");
+		expect(button.className).toContain("data-loading:gap-[7px]");
 	});
 
 	it("an idle Button has no spinner", () => {

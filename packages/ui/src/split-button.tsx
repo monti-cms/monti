@@ -63,9 +63,9 @@ function SplitButton({
 				disabled={inert}
 				aria-busy={loading || undefined}
 				onClick={onClick}
-				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]")}
+				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]", loading && "gap-[7px] pl-[13px]")}
 			>
-				{loading && <Spinner className="-ml-[2px]" />}
+				{loading && <Spinner />}
 				{children}
 			</ButtonPrimitive>
 			<DropdownMenu>
