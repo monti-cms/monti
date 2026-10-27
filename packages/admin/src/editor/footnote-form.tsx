@@ -122,12 +122,12 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	};
 
 	return (
-		<Stack as="form" gap="normal" onSubmit={handleApply} onKeyDown={submitOnEnter}>
-			<Inline gap="condensed">
+		<Stack as="form" gap={12} onSubmit={handleApply} onKeyDown={submitOnEnter}>
+			<Inline gap={8}>
 				<Badge variant="secondary">{target.badge}</Badge>
 				<Text weight="medium">{t("inlineBubble.footnotePanel")}</Text>
 			</Inline>
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				<Label htmlFor={`${id}-content`} size="caption">
 					{t("inlineBubble.footnoteField")}
 				</Label>

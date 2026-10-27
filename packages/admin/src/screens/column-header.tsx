@@ -49,7 +49,7 @@ function TextFilter({
 	return (
 		<Inline
 			as="form"
-			gap="condensed"
+			gap={8}
 			onSubmit={(event) => {
 				event.preventDefault();
 				onApply(draft);
@@ -79,7 +79,7 @@ function CheckRow({
 	onChange: (next: boolean) => void;
 }) {
 	return (
-		<Box radius="sm" padding="condensed" hover>
+		<Box radius="sm" padding={8} hover>
 			<Label>
 				<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
 				{label}
@@ -94,7 +94,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const toggle = (status: (typeof LIST_STATUSES)[number], on: boolean) =>
 		onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
 	return (
-		<Stack gap="hair" role="group" aria-label={t("column.status")}>
+		<Stack gap={2} role="group" aria-label={t("column.status")}>
 			{LIST_STATUSES.map((status) => (
 				<CheckRow
 					key={status}
@@ -103,7 +103,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 					onChange={(on) => toggle(status, on)}
 				/>
 			))}
-			<Box paddingY="tight">
+			<Box paddingY={4}>
 				<Separator />
 			</Box>
 			<CheckRow
@@ -120,7 +120,7 @@ function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack gap="hair" role="group" aria-label={t("column.locale")}>
+		<Stack gap={2} role="group" aria-label={t("column.locale")}>
 			{site.LOCALES.map((locale) => (
 				<CheckRow
 					key={locale}
@@ -150,7 +150,7 @@ function TaxonomyFilter({
 	const toggle = (id: string) =>
 		onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Command>
 				<CommandInput placeholder={t("filter.search", { label })} aria-label={t("filter.search", { label })} />
 				<CommandList>
@@ -190,14 +190,14 @@ function DateFilter({
 }) {
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack gap="condensed">
-			<Box paddingX="tight">
+		<Stack gap={8}>
+			<Box paddingX={4}>
 				<Text as="p" variant="caption" tone="muted">
 					{label}
 				</Text>
 			</Box>
 			<DateRangeCalendar from={from} to={to} onChange={onChange} />
-			<Box paddingX="tight">
+			<Box paddingX={4}>
 				<Text as="p" variant="caption" aria-live="polite">
 					{from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange")}
 				</Text>
@@ -288,9 +288,9 @@ export function ColumnHeader({
 				{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
 			</PopoverTrigger>
 			<PopoverContent align="start" width="md">
-				<Stack gap="normal">
+				<Stack gap={12}>
 					{sortField && (
-						<Stack gap="tight" role="group" aria-label={t("filter.sortLegend", { label: config.label })}>
+						<Stack gap={4} role="group" aria-label={t("filter.sortLegend", { label: config.label })}>
 							{sortButton("asc")}
 							{sortButton("desc")}
 						</Stack>

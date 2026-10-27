@@ -43,7 +43,7 @@ describe("Text, Heading and Stack", () => {
 
 	it("Stack picks its gap by meaning", () => {
 		render(
-			<Stack data-testid="stack" direction="row" gap="condensed" align="center">
+			<Stack data-testid="stack" direction="row" gap={8} align="center">
 				<span>a</span>
 			</Stack>,
 		);

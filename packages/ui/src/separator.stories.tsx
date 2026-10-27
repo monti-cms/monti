@@ -22,13 +22,13 @@ export const Playground: Story = {
 
 export const Orientations: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<Stack className="max-w-sm">
 				<Text>horizontal</Text>
 				<Separator orientation="horizontal" />
 				<Text>다음 항목</Text>
 			</Stack>
-			<Stack direction="row" gap="comfortable" className="h-6">
+			<Stack direction="row" gap={16} className="h-6">
 				<Text>글</Text>
 				<Separator orientation="vertical" />
 				<Text>페이지</Text>

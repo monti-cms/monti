@@ -141,7 +141,7 @@ export function EventsScreen() {
 	};
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden">
+		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			{waiting > 0 && (
 				<PageActions>
 					<Button
@@ -158,13 +158,13 @@ export function EventsScreen() {
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
 			{error && (
-				<Box paddingX="wide" paddingTop="normal">
+				<Box paddingX={32} paddingTop={12}>
 					<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} />
 				</Box>
 			)}
-			<Stack gap="none" grow minHeight={0} overflow="auto">
+			<Stack gap={0} grow minHeight={0} overflow="auto">
 				{listQuery.isPending ? (
-					<Stack gap="condensed" paddingX="wide" paddingY="comfortable" aria-hidden>
+					<Stack gap={8} paddingX={32} paddingY={16} aria-hidden>
 						<Skeleton shape="control-sm" />
 						<Skeleton shape="control-sm" />
 						<Skeleton shape="control-sm" />
@@ -263,7 +263,7 @@ export function EventsScreen() {
 										)}
 										<TableCell align="end" onClick={(event) => event.stopPropagation()}>
 											{(item.state === "failed" || item.state === "dead") && (
-												<Inline gap="tight" justify="end">
+												<Inline gap={4} justify="end">
 													<Button
 														type="button"
 														variant="outline"

@@ -83,11 +83,11 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 	};
 
 	return (
-		<Stack as="form" gap="normal" onSubmit={handleApply} onKeyDown={submitOnEnter}>
+		<Stack as="form" gap={12} onSubmit={handleApply} onKeyDown={submitOnEnter}>
 			<Text as="p" weight="medium">
 				{active ? t("markText.edit", { name: labels.name }) : t("markText.add", { name: labels.name })}
 			</Text>
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				<Label htmlFor={`${id}-content`} size="caption">
 					{labels.field}
 				</Label>

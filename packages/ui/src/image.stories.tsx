@@ -37,7 +37,7 @@ export const Playground: Story = {};
 
 function Labelled({ name, children }: { name: string; children: React.ReactNode }) {
 	return (
-		<Stack gap="tight" align="start">
+		<Stack gap={4} align="start">
 			<Text variant="label" tone="muted">
 				{name}
 			</Text>
@@ -48,7 +48,7 @@ function Labelled({ name, children }: { name: string; children: React.ReactNode 
 
 export const Ratio: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" wrap align="start">
+		<Stack direction="row" gap={24} wrap align="start">
 			{(["square", "photo", "wide", "share", "auto"] as const).map((ratio) => (
 				<Labelled key={ratio} name={`ratio ${ratio}`}>
 					<div className="w-40">
@@ -62,7 +62,7 @@ export const Ratio: Story = {
 
 export const Size: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" wrap align="start">
+		<Stack direction="row" gap={24} wrap align="start">
 			{(["fill", "thumb", "thumb-lg", "icon"] as const).map((size) => (
 				<Labelled key={size} name={`size ${size}`}>
 					<div className="w-40">
@@ -76,7 +76,7 @@ export const Size: Story = {
 
 export const Radius: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" wrap align="start">
+		<Stack direction="row" gap={24} wrap align="start">
 			{(["none", "sm", "md", "lg"] as const).map((radius) => (
 				<Labelled key={radius} name={`radius ${radius}`}>
 					<div className="w-32">
@@ -90,7 +90,7 @@ export const Radius: Story = {
 
 export const Border: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			{[false, true].map((border) => (
 				<Labelled key={String(border)} name={`border ${border}`}>
 					<div className="w-32">
@@ -105,7 +105,7 @@ export const Border: Story = {
 /** `cover` fills the frame and crops; `contain` shows all of it. */
 export const Fit: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			{(["cover", "contain"] as const).map((fit) => (
 				<Labelled key={fit} name={`fit ${fit}`}>
 					<div className="w-40">
@@ -120,7 +120,7 @@ export const Fit: Story = {
 /** Without a source (or when it fails) the frame shows the fallback icon on the neutral fill. */
 export const Fallback: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" wrap align="start">
+		<Stack direction="row" gap={24} wrap align="start">
 			<Labelled name="src 없음, fallback 있음">
 				<div className="w-40">
 					<Image src={null} alt="" fallback={ImageIcon} ratio="photo" />

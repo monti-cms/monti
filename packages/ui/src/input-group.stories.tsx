@@ -39,7 +39,7 @@ export const Playground: Story = {
 /** Addons at every side: inline-start, inline-end, block-start, block-end. */
 export const Addons: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<InputGroup>
 				<InputGroupAddon align="inline-start">
 					<InputGroupText>https://</InputGroupText>
@@ -71,7 +71,7 @@ export const Addons: Story = {
 /** Every InputGroupButton size, in an end addon. */
 export const Buttons: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{(["xs", "sm", "icon-xs", "icon-sm"] as const).map((size) => (
 				<InputGroup key={size}>
 					<InputGroupInput placeholder={`버튼 크기 ${size}`} />
@@ -100,7 +100,7 @@ export const Buttons: Story = {
 
 export const States: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<Text variant="caption" tone="muted">
 				filled
 			</Text>
@@ -134,7 +134,7 @@ export const States: Story = {
 
 export const WithTextarea: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<InputGroup>
 				<InputGroupTextarea placeholder="댓글 쓰기" />
 				<InputGroupAddon align="block-end">

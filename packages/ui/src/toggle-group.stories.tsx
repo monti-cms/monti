@@ -38,11 +38,11 @@ export const Playground: Story = {
 /** Variants x sizes, at spacing 0 (joined) and the default spacing 2. */
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["default", "outline"] as const).map((variant) =>
 				(["sm", "default", "lg"] as const).map((size) =>
 					[0, 2].map((spacing) => (
-						<Stack key={`${variant}-${size}-${spacing}`} direction="row" gap="condensed" align="center">
+						<Stack key={`${variant}-${size}-${spacing}`} direction="row" gap={8} align="center">
 							<Text variant="caption" tone="muted">
 								{variant} · {size} · spacing {spacing}
 							</Text>
@@ -67,7 +67,7 @@ export const Multiple: Story = {
 
 export const Vertical: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious">
+		<Stack direction="row" gap={24}>
 			<ToggleGroup orientation="vertical" variant="outline" spacing={0} defaultValue={["center"]}>
 				<Items />
 			</ToggleGroup>
@@ -80,7 +80,7 @@ export const Vertical: Story = {
 
 export const Disabled: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<ToggleGroup disabled defaultValue={["left"]}>
 				<Items />
 			</ToggleGroup>

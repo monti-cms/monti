@@ -192,11 +192,11 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 				<div ref={measureRef} className="flex w-max items-center gap-monti-4">
 					{entries.map((entry) =>
 						isDivider(entry) ? (
-							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap={0}>
 								<ToolbarDivider />
 							</Inline>
 						) : entry.fixed ? null : (
-							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap={0}>
 								{entry.render()}
 							</Inline>
 						),
@@ -208,7 +208,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					if (!shown.has(entry.key)) return null;
 					if (isDivider(entry)) return <ToolbarDivider key={entry.key} />;
 					return (
-						<Inline key={entry.key} data-slot-key={entry.fixed ? entry.key : undefined} shrink={false} gap="none">
+						<Inline key={entry.key} data-slot-key={entry.fixed ? entry.key : undefined} shrink={false} gap={0}>
 							{entry.render()}
 						</Inline>
 					);
@@ -223,7 +223,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					</OverflowMenu>
 				)}
 				{end && (
-					<Inline data-slot-key={END_KEY} shrink={false} gap="none">
+					<Inline data-slot-key={END_KEY} shrink={false} gap={0}>
 						{end}
 					</Inline>
 				)}

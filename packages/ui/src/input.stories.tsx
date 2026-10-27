@@ -23,44 +23,44 @@ export const Playground: Story = {};
 /** Placeholder, filled, disabled, invalid, and the other input types. */
 export const States: Story = {
 	render: () => (
-		<Stack gap="comfortable">
-			<Stack gap="tight">
+		<Stack gap={16}>
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					placeholder
 				</Text>
 				<Input placeholder="글 제목" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					filled
 				</Text>
 				<Input defaultValue="처음 쓰는 블로그 글" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					disabled
 				</Text>
 				<Input disabled defaultValue="슬러그는 잠겨 있어요" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					disabled, empty
 				</Text>
 				<Input disabled placeholder="슬러그" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					invalid
 				</Text>
 				<Input aria-invalid defaultValue="중복된 슬러그" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					type=password
 				</Text>
 				<Input type="password" defaultValue="비밀번호" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					type=file
 				</Text>
@@ -73,7 +73,7 @@ export const States: Story = {
 /** The two shared sizes and fixed-width letters: `sm` beside 32px buttons, `default` in forms; `mono` for slugs and paths. */
 export const SizesAndMono: Story = {
 	render: () => (
-		<Stack gap="normal" className="max-w-sm">
+		<Stack gap={12} className="max-w-sm">
 			<Input size="sm" placeholder="작게: 필터, 표, 도구 모음" />
 			<Input placeholder="기본: 폼" />
 			<Input mono defaultValue="cms-elements-details" />

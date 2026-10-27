@@ -46,7 +46,7 @@ export function SidePanelHeader({
 }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<Inline gap="tight" shrink={false} border="bottom" paddingY="condensed" paddingX="comfortable">
+		<Inline gap={4} shrink={false} border="bottom" paddingY={8} paddingX={16}>
 			{title !== undefined && (
 				<Box grow minWidth={0}>
 					<Heading as="h2" variant="label" truncate>

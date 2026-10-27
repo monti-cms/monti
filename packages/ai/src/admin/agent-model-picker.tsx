@@ -82,12 +82,12 @@ export function AgentModelPicker({
 
 	if (chatConnections.length === 0) return null;
 	return (
-		<Box border="bottom" paddingX="comfortable" paddingY="normal" shrink={false}>
-			<Stack gap="condensed">
+		<Box border="bottom" paddingX={16} paddingY={12} shrink={false}>
+			<Stack gap={8}>
 				<Heading as="h2" variant="label">
 					{t("picker.title")}
 				</Heading>
-				<Grid gap="comfortable" columns={2}>
+				<Grid gap={16} columns={2}>
 					<FormField>
 						<FormFieldLabel htmlFor="agent-connection">{t("picker.connection")}</FormFieldLabel>
 						<OptionSelect
@@ -124,13 +124,13 @@ export function AgentModelPicker({
 						)}
 					</FormField>
 				</Grid>
-				<Inline gap="condensed" justify="between">
+				<Inline gap={8} justify="between">
 					<Text variant="caption" tone={tools === false ? "danger" : "muted"}>
 						{provider && model
 							? t(tools === undefined ? "picker.tools.unknown" : tools ? "picker.tools.yes" : "picker.tools.no")
 							: ""}
 					</Text>
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						{chosen && (
 							<Button
 								type="button"

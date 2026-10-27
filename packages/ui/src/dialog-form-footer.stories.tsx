@@ -39,9 +39,9 @@ export const States: Story = {
 			{ name: "busy, busyLabel", props: { busy: true, submitLabel: "만들기", busyLabel: "만드는 중…" } },
 		];
 		return (
-			<Stack gap="spacious">
+			<Stack gap={24}>
 				{rows.map((row) => (
-					<Stack key={row.name} gap="tight">
+					<Stack key={row.name} gap={4}>
 						<Text variant="label" tone="muted">
 							{row.name}
 						</Text>

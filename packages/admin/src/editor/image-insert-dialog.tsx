@@ -228,7 +228,7 @@ export function ImageInsertDialog({
 			<DialogContent size="md" scroll showCloseButton={!isUploading}>
 				<Stack
 					as="form"
-					gap="comfortable"
+					gap={16}
 					onSubmit={(event) => void confirm(event)}
 					// Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
 					onKeyDown={submitOnEnter}
@@ -250,7 +250,7 @@ export function ImageInsertDialog({
 					</Tabs>
 
 					{tab === "upload" ? (
-						<Stack gap="condensed">
+						<Stack gap={8}>
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
@@ -278,7 +278,7 @@ export function ImageInsertDialog({
 							)}
 						</Stack>
 					) : (
-						<Stack gap="condensed">
+						<Stack gap={8}>
 							<Label htmlFor={searchId} hidden>
 								{t("imageDialog.search")}
 							</Label>
@@ -288,9 +288,9 @@ export function ImageInsertDialog({
 								placeholder={t("imageDialog.search")}
 								onChange={(event) => setSearch(event.target.value)}
 							/>
-							<Stack gap="condensed" aria-busy={isLibraryLoading}>
+							<Stack gap={8} aria-busy={isLibraryLoading}>
 								{isLibraryLoading && library.length === 0 && (
-									<Grid columns={3} responsive={false} gap="condensed">
+									<Grid columns={3} responsive={false} gap={8}>
 										{["a", "b", "c"].map((key) => (
 											<Skeleton key={key} shape="block" />
 										))}
@@ -305,13 +305,13 @@ export function ImageInsertDialog({
 									</Alert>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<Stack gap="none" paddingY="spacious" align="center">
+									<Stack gap={0} paddingY={24} align="center">
 										<Text as="p" tone="muted">
 											{t("imageDialog.libraryEmpty")}
 										</Text>
 									</Stack>
 								)}
-								<Grid columns={3} responsive={false} gap="condensed">
+								<Grid columns={3} responsive={false} gap={8}>
 									{library.map((item) => (
 										<Tile
 											key={item.id}
@@ -335,7 +335,7 @@ export function ImageInsertDialog({
 						</Stack>
 					)}
 
-					<Stack gap="condensed" hidden={picking}>
+					<Stack gap={8} hidden={picking}>
 						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
 						<Textarea
 							id={altId}
@@ -377,7 +377,7 @@ export function ImageInsertDialog({
 					</Stack>
 
 					{isUploading && (
-						<Inline as="div" role="status" gap="condensed">
+						<Inline as="div" role="status" gap={8}>
 							<Spinner />
 							<Text>{t("imageDialog.uploading", { percent: progress ?? 0 })}</Text>
 						</Inline>

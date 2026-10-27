@@ -19,7 +19,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	const state = useLinkTarget(entryId);
 	if (!state || state.status === "loading") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="muted">
 					{t("link.targetLoading")}
 				</Text>
@@ -28,7 +28,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	}
 	if (state.status === "missing") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="danger">
 					{t("link.targetMissing")}
 				</Text>
@@ -37,7 +37,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	}
 	if (state.status === "error") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="muted">
 					{t("link.targetUnavailable")}
 				</Text>
@@ -49,7 +49,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 		? t("link.targetOpenSite", { title: nameOf(tc, target) })
 		: t("link.targetOpenAdmin", { title: nameOf(tc, target) });
 	return (
-		<Box as="span" paddingX="tight" minWidth={0} maxWidth="panel-sm">
+		<Box as="span" paddingX={4} minWidth={0} maxWidth="menu">
 			<TextLink
 				href={target.href}
 				target="_blank"
@@ -59,7 +59,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 				// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 				onMouseDown={(event) => event.preventDefault()}
 			>
-				<Stack as="span" gap="none">
+				<Stack as="span" gap={0}>
 					<Text variant="caption" tone="default" truncate>
 						{nameOf(tc, target)}
 					</Text>
@@ -85,7 +85,7 @@ export function LinkTargetSummary({ entryId }: { entryId: string }) {
 	else text = t("link.target", { title: nameOf(tc, state.target) });
 	const path = state?.status === "ready" ? state.target.path : null;
 	return (
-		<Stack gap="hair">
+		<Stack gap={2}>
 			<Text as="p" variant="caption" tone={state?.status === "missing" ? "danger" : "default"}>
 				{text}
 			</Text>

@@ -615,7 +615,7 @@ Type roles set size, line height, weight, letter spacing and font family togethe
 | `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | Heights of controls and bars (`h-monti-control` 36, `h-monti-header` 60, …), widths of columns, panels and sheets (`w-monti-sidebar` 232, `w-monti-sheet` 520, …) and icon sizes (`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code, identifiers and source views (default: IBM Plex Mono, then a system monospace stack) |
 
-An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by meaning: tight, condensed, normal, comfortable, spacious, section) and the classes above.
+An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by the px step of the spacing scale: `gap={8}`) and the classes above.
 
 ### Reusing a shadcn theme
 

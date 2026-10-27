@@ -125,7 +125,7 @@ export function AddFieldDialog({
 	};
 
 	const naming = (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<TextInput
 				label={t("field.label")}
 				value={label}
@@ -148,7 +148,7 @@ export function AddFieldDialog({
 						onChange={(event) => setTypedName(event.target.value)}
 					/>
 				) : (
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						<Text as="code" variant="label" mono>
 							{name}
 						</Text>
@@ -176,14 +176,14 @@ export function AddFieldDialog({
 				</DialogHeader>
 				<Stack
 					as="form"
-					gap="spacious"
+					gap={24}
 					onSubmit={(event) => {
 						event.preventDefault();
 						add();
 					}}
 				>
-					<Grid columns="sidebar" gap="spacious" align="start">
-						<Stack role="radiogroup" aria-label={t("field.kind")} gap="tight">
+					<Grid columns="sidebar" gap={24} align="start">
+						<Stack role="radiogroup" aria-label={t("field.kind")} gap={4}>
 							{ADDABLE_KINDS.map((item) => {
 								const Icon = KIND_ICONS[item];
 								return (
@@ -201,7 +201,7 @@ export function AddFieldDialog({
 								);
 							})}
 						</Stack>
-						<Stack gap="spacious" minWidth={0} border="left" paddingX="spacious">
+						<Stack gap={24} minWidth={0} border="left" paddingX={24}>
 							{kind !== "relation" && naming}
 							<KindOptions
 								name={name}
@@ -214,7 +214,7 @@ export function AddFieldDialog({
 								more={kind === "relation" ? naming : undefined}
 							/>
 							{problems.length > 0 && (
-								<Stack as="ul" gap="hair" data-testid="new-field-problems">
+								<Stack as="ul" gap={2} data-testid="new-field-problems">
 									{problems.map((item) => (
 										<Text as="li" variant="caption" tone="muted" key={item}>
 											{t(`field.needs.${item}`)}

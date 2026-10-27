@@ -42,15 +42,8 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	// What the editor checks said about the saved body, once each.
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
-		<Stack
-			as="li"
-			gap="condensed"
-			paddingY="normal"
-			border="bottom"
-			data-testid="import-result"
-			data-outcome={entry.outcome}
-		>
-			<Inline gap="condensed" wrap>
+		<Stack as="li" gap={8} paddingY={12} border="bottom" data-testid="import-result" data-outcome={entry.outcome}>
+			<Inline gap={8} wrap>
 				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
 				{entry.id ? (
 					<TextLink underline="hover" href={site.adminEntryEditHref(entry.id)}>
@@ -70,7 +63,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				)}
 			</Inline>
 			{(problems.length > 0 || entry.notes.length > 0 || warnings.length > 0) && (
-				<Stack as="ul" gap="hair" paddingX="tight">
+				<Stack as="ul" gap={2} paddingX={4}>
 					{problems.map(([label, step]) => (
 						<StepLine key={label ?? "create"} label={label} step={step} />
 					))}
@@ -95,7 +88,7 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const t = useTranslator(importMessages);
 	const { counts } = result;
 	return (
-		<Stack gap="comfortable" data-testid="import-run-result">
+		<Stack gap={16} data-testid="import-run-result">
 			<Heading as="h4">{t("result.title")}</Heading>
 			<Text as="p" tone="muted" data-testid="import-result-summary">
 				{[
@@ -108,8 +101,8 @@ export function ResultView({ result }: { result: ImportRun }) {
 					.filter(Boolean)
 					.join(" · ")}
 			</Text>
-			<Box radius="md" border="all" paddingX="normal" maxHeight="list" overflow="y">
-				<Stack as="ul" gap="none">
+			<Box radius="md" border="all" paddingX={12} maxHeight="list" overflow="y">
+				<Stack as="ul" gap={0}>
 					{result.results.map((entry) => (
 						<ResultRow key={entry.key} entry={entry} />
 					))}

@@ -31,7 +31,7 @@ export const Playground: Story = {};
 
 function Static({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<Stack gap="tight">
+		<Stack gap={4}>
 			<Text variant="label" tone="muted">
 				{label}
 			</Text>
@@ -54,7 +54,7 @@ export const Disabled: Story = {
 
 export const Mono: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[false, true].map((mono) => (
 				<Static key={String(mono)} label={`mono ${mono}`}>
 					<TagInput

@@ -114,12 +114,12 @@ function TemplateEditPanel({
 		<Stack
 			as="section"
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
-			gap="none"
+			gap={0}
 			height="full"
 			grow
 			overflow="hidden"
 		>
-			<Inline gap="normal" wrap justify="between" border="bottom" paddingX="spacious" paddingY="normal">
+			<Inline gap={12} wrap justify="between" border="bottom" paddingX={24} paddingY={12}>
 				<Input
 					type="text"
 					size="sm"
@@ -137,11 +137,11 @@ function TemplateEditPanel({
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</Inline>
 			{saveError && (
-				<Box border="bottom" background="danger-muted" paddingX="spacious" paddingY="condensed">
+				<Box border="bottom" background="danger-muted" paddingX={24} paddingY={8}>
 					<FormFieldError>{saveError}</FormFieldError>
 				</Box>
 			)}
-			<Stack gap="none" grow minHeight={0} overflow="y">
+			<Stack gap={0} grow minHeight={0} overflow="y">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
 			</Stack>
 		</Stack>
@@ -249,7 +249,7 @@ export function TemplateManager() {
 	];
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden" border="top">
+		<Stack gap={0} grow minHeight={0} overflow="hidden" border="top">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
@@ -257,7 +257,7 @@ export function TemplateManager() {
 				</Button>
 			</PageActions>
 			{error && (
-				<Box paddingX="wide" paddingY="normal">
+				<Box paddingX={32} paddingY={12}>
 					<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} />
 				</Box>
 			)}

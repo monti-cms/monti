@@ -43,7 +43,7 @@ export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 				}}
 			>
 				<Icon aria-hidden />
-				<Stack as="span" gap="none" minWidth={0} grow>
+				<Stack as="span" gap={0} minWidth={0} grow>
 					<Text truncate>{block.title}</Text>
 					<Text variant="caption" tone="muted" truncate>
 						{block.description}

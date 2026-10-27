@@ -179,14 +179,14 @@ export function TextColorMenuItems({ editor }: { editor: Editor }) {
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
 	const t = useTranslator(colorMessages);
 	return (
-		<Stack gap="tight">
-			<Box paddingX="tight">
+		<Stack gap={4}>
+			<Box paddingX={4}>
 				<Text as="p" tone="muted">
 					{t("fg.label")}
 				</Text>
 			</Box>
 			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
-			<Box paddingX="tight">
+			<Box paddingX={4}>
 				<Text as="p" tone="muted">
 					{t("bg.label")}
 				</Text>

@@ -31,7 +31,7 @@ export const Playground: Story = {};
 
 export const Sizes: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start" wrap>
+		<Stack direction="row" gap={24} align="start" wrap>
 			{(["default", "sm"] as const).map((size) => (
 				<Card key={size} size={size} className="w-72">
 					<CardHeader>

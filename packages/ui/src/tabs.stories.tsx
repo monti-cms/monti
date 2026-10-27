@@ -51,7 +51,7 @@ export const Playground: Story = {
 /** `default` is the segmented control, `line` is the underlined bar. */
 export const Variants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["default", "line"] as const).map((variant) => (
 				<Tabs key={variant} defaultValue="write">
 					<TabsList variant={variant}>
@@ -66,7 +66,7 @@ export const Variants: Story = {
 
 export const WithIconsAndDisabled: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["default", "line"] as const).map((variant) => (
 				<Tabs key={variant} defaultValue="seo">
 					<TabsList variant={variant}>
@@ -89,7 +89,7 @@ export const WithIconsAndDisabled: Story = {
 
 export const Vertical: Story = {
 	render: () => (
-		<Stack gap="spacious" direction="row">
+		<Stack gap={24} direction="row">
 			{(["default", "line"] as const).map((variant) => (
 				<Tabs key={variant} orientation="vertical" defaultValue="write">
 					<TabsList variant={variant}>

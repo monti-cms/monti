@@ -19,11 +19,11 @@ const SIZES = ["sm", "default", "lg"] as const;
 /** Every variant at every size, off and on, then disabled. */
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="condensed" align="center">
+				<Stack key={variant} direction="row" gap={8} align="center">
 					{SIZES.map((size) => (
-						<Stack key={size} direction="row" gap="tight">
+						<Stack key={size} direction="row" gap={4}>
 							<Toggle variant={variant} size={size} aria-label={`${variant} ${size}`}>
 								<Bold aria-hidden />
 							</Toggle>
@@ -49,7 +49,7 @@ export const AllVariants: Story = {
 
 export const WithText: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed">
+		<Stack direction="row" gap={8}>
 			<Toggle>
 				<Italic aria-hidden />
 				기울임

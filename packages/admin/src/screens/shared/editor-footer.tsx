@@ -40,14 +40,14 @@ export function EditorFooter({
 	const t = useTranslator(commonMessages);
 	const busy = saving || deleting;
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{error && (
 				<FormFieldError>
 					<Text preserveLines>{error}</Text>
 				</FormFieldError>
 			)}
-			<Inline wrap gap="condensed" justify={align === "end" ? "end" : "between"}>
-				<Inline wrap gap="condensed">
+			<Inline wrap gap={8} justify={align === "end" ? "end" : "between"}>
+				<Inline wrap gap={8}>
 					<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>
 						{saveIcon}
 						{saving ? t("saving") : (saveLabel ?? t("save"))}

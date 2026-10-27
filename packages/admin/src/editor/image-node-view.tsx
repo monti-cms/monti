@@ -303,7 +303,7 @@ export function ImageBlockView() {
 							{altMissing && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
-						<Inline justify="between" gap="condensed">
+						<Inline justify="between" gap={8}>
 							<Label htmlFor={decorativeId} size="caption" tone="muted">
 								{t("imageDialog.decorative")}
 							</Label>
@@ -366,7 +366,7 @@ export function ImageBlockView() {
 					</div>
 				)
 			) : isChecking ? (
-				<Stack gap="none" role="status" aria-label={t("imageNode.loading")}>
+				<Stack gap={0} role="status" aria-label={t("imageNode.loading")}>
 					<Skeleton shape="block" />
 					<Skeleton shape="block" />
 				</Stack>

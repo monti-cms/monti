@@ -22,9 +22,9 @@ export const Playground: Story = {};
 
 export const Layouts: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["columns", "stacked"] as const).map((layout) => (
-				<Stack key={layout} gap="tight">
+				<Stack key={layout} gap={4}>
 					<Text variant="label" tone="muted">
 						layout {layout}
 					</Text>

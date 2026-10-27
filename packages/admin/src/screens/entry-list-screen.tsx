@@ -64,8 +64,8 @@ function EntryListBody({ list }: { list: EntryList }) {
 	});
 	return (
 		<>
-			<Inline position="relative" align="stretch" gap="none" grow minHeight={0} overflow="hidden">
-				<Stack gap="none" grow minWidth={0} overflow="hidden">
+			<Inline position="relative" align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+				<Stack gap={0} grow minWidth={0} overflow="hidden">
 					<AdminEntriesTable
 						aboveTable={
 							<BulkBar
@@ -174,54 +174,54 @@ function useMounted() {
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline align="stretch" gap="none" height="screen" overflow="clip" aria-busy="true">
+		<Inline align="stretch" gap={0} height="screen" overflow="clip" aria-busy="true">
 			<Text srOnly>{tc("loading")}</Text>
 			<Stack
-				gap="condensed"
+				gap={8}
 				width="sidebar"
 				shrink={false}
 				border="right"
-				background="inset"
-				padding="condensed"
+				background="tool"
+				padding={8}
 				hideBelow="md"
 				aria-hidden
 			>
 				<Skeleton shape="control-sm" width="medium" />
-				<Stack gap="tight" paddingTop="normal">
+				<Stack gap={4} paddingTop={12}>
 					{PLACEHOLDER_ROWS.map((row) => (
 						<Skeleton key={row} shape="control-sm" />
 					))}
 				</Stack>
 			</Stack>
-			<Stack gap="none" grow minWidth={0} aria-hidden>
-				<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious">
+			<Stack gap={0} grow minWidth={0} aria-hidden>
+				<Box width="full" maxWidth="content" centered paddingX={32} paddingTop={24}>
 					{/* The title bar: title and address on the left, search and the add button on the right. */}
-					<Inline justify="between" gap="normal" shrink={false} border="bottom-strong" paddingBottom="normal">
-						<Inline gap="condensed">
+					<Inline justify="between" gap={12} shrink={false} border="bottom-strong" paddingBottom={12}>
+						<Inline gap={8}>
 							<Skeleton shape="line" width="short" />
 							<Skeleton shape="line" width="medium" />
 						</Inline>
-						<Inline gap="condensed">
+						<Inline gap={8}>
 							<Skeleton shape="control-sm" width="medium" />
 							<Skeleton shape="control-sm" width="short" />
 						</Inline>
 					</Inline>
 					{/* Status tabs. */}
-					<Inline gap="comfortable" shrink={false} border="bottom" paddingY="condensed">
+					<Inline gap={16} shrink={false} border="bottom" paddingY={8}>
 						<Skeleton shape="line" width="chip" />
 						<Skeleton shape="line" width="chip" />
 						<Skeleton shape="line" width="chip" />
 						<Skeleton shape="line" width="chip" />
 					</Inline>
 					{/* Editorial index rows. */}
-					<Stack gap="none">
+					<Stack gap={0}>
 						{PLACEHOLDER_ROWS.slice(0, 6).map((row) => (
-							<Inline key={row} justify="between" gap="spacious" border="bottom" paddingY="comfortable">
-								<Stack gap="tight" grow>
+							<Inline key={row} justify="between" gap={24} border="bottom" paddingY={16}>
+								<Stack gap={4} grow>
 									<Skeleton shape="line" width="third" />
 									<Skeleton shape="line" width="short" />
 								</Stack>
-								<Inline gap="normal">
+								<Inline gap={12}>
 									<Skeleton shape="line" width="chip" />
 									<Skeleton shape="line" width="short" />
 								</Inline>
@@ -275,7 +275,7 @@ function TrashPage() {
 			<PageActions>
 				<EntryListHeaderActions list={list} />
 			</PageActions>
-			<Box width="full" maxWidth="content" centered paddingX="wide" shrink={false}>
+			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
 				<Tabs value={state.collection}>
 					<PageTabs inset="none" aria-label={t("dashboard.trashCollections")}>
 						{site.COLLECTIONS.map((item) => (

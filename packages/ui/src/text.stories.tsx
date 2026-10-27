@@ -18,7 +18,7 @@ const WEIGHTS = ["role", "medium", "semibold"] as const;
 
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{VARIANTS.map((variant) => (
 				<Text key={variant} as="div" variant={variant}>
 					{variant} · 글을 쓰고 발행해 보세요
@@ -31,9 +31,9 @@ export const AllVariants: Story = {
 /** Every variant in every tone. */
 export const VariantsByTone: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="spacious" wrap align="baseline">
+				<Stack key={variant} direction="row" gap={24} wrap align="baseline">
 					{TONES.map((tone) => (
 						<Text key={tone} variant={variant} tone={tone}>
 							{variant} {tone}
@@ -47,7 +47,7 @@ export const VariantsByTone: Story = {
 
 export const Weights: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{WEIGHTS.map((weight) => (
 				<Text key={weight} as="div" weight={weight}>
 					weight {weight} · 발행됨
@@ -77,7 +77,7 @@ export const Truncate: Story = {
 
 export const Elements: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Text as="label" htmlFor="title" variant="label">
 				제목
 			</Text>
@@ -95,7 +95,7 @@ const HEADING_VARIANTS = ["title", "heading", "display"] as const;
 
 export const Headings: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{HEADING_VARIANTS.map((variant) => (
 				<Heading key={variant} variant={variant}>
 					{variant} · 여름 여행 기록
@@ -107,7 +107,7 @@ export const Headings: Story = {
 
 export const HeadingsByTone: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{TONES.map((tone) => (
 				<Heading key={tone} tone={tone}>
 					title {tone}
@@ -119,7 +119,7 @@ export const HeadingsByTone: Story = {
 
 export const HeadingLevelsAndTruncate: Story = {
 	render: () => (
-		<Stack gap="condensed" className="max-w-xs">
+		<Stack gap={8} className="max-w-xs">
 			<Heading as="h1" variant="heading">
 				h1 · 글
 			</Heading>

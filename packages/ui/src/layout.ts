@@ -1,78 +1,31 @@
 import { cva, type VariantProps } from "class-variance-authority";
+import {
+	BACKGROUND,
+	HEIGHT,
+	MAX_WIDTH,
+	MIN_HEIGHT,
+	PADDING,
+	PADDING_BOTTOM,
+	PADDING_TOP,
+	PADDING_X,
+	PADDING_Y,
+	RADIUS,
+	WIDTH,
+} from "./tokens.generated";
 
 /**
  * The options every layout part shares (Box, Stack, Inline, Grid): padding, a surface, a border, a radius, a size and how it grows, all by
- * token name. A screen arranges with these and never writes a class; anything they cannot say belongs in a component of its own.
+ * the design system's token names (`padding={16}`, `background="tool"`, `radius="lg"`, `width="sheet"`). A screen arranges with these and never
+ * writes a class; anything they cannot say belongs in a component of its own.
  */
-/** Written out in full so Tailwind finds every class in this file. */
+/** Every class is written out in full (here or in `tokens.generated.ts`) so Tailwind finds it. */
 export const LAYOUT = {
-	padding: {
-		none: "p-0",
-		hair: "p-monti-2",
-		tight: "p-monti-4",
-		condensed: "p-monti-8",
-		normal: "p-monti-12",
-		comfortable: "p-monti-16",
-		spacious: "p-monti-24",
-		wide: "p-monti-32",
-		section: "p-monti-48",
-	},
-	paddingX: {
-		none: "px-0",
-		hair: "px-monti-2",
-		tight: "px-monti-4",
-		condensed: "px-monti-8",
-		normal: "px-monti-12",
-		comfortable: "px-monti-16",
-		spacious: "px-monti-24",
-		wide: "px-monti-32",
-		section: "px-monti-48",
-	},
-	paddingY: {
-		none: "py-0",
-		hair: "py-monti-2",
-		tight: "py-monti-4",
-		condensed: "py-monti-8",
-		normal: "py-monti-12",
-		comfortable: "py-monti-16",
-		spacious: "py-monti-24",
-		wide: "py-monti-32",
-		section: "py-monti-48",
-	},
-	paddingTop: {
-		none: "pt-0",
-		hair: "pt-monti-2",
-		tight: "pt-monti-4",
-		condensed: "pt-monti-8",
-		normal: "pt-monti-12",
-		comfortable: "pt-monti-16",
-		spacious: "pt-monti-24",
-		wide: "pt-monti-32",
-		section: "pt-monti-48",
-	},
-	paddingBottom: {
-		none: "pb-0",
-		hair: "pb-monti-2",
-		tight: "pb-monti-4",
-		condensed: "pb-monti-8",
-		normal: "pb-monti-12",
-		comfortable: "pb-monti-16",
-		spacious: "pb-monti-24",
-		wide: "pb-monti-32",
-		section: "pb-monti-48",
-	},
-	background: {
-		page: "bg-monti-page",
-		surface: "bg-monti-page",
-		inset: "bg-monti-tool",
-		overlay: "bg-monti-page",
-		neutral: "bg-monti-muted",
-		selected: "bg-monti-selected",
-		"accent-muted": "bg-monti-selected",
-		"danger-muted": "bg-monti-danger-muted",
-		"warning-muted": "bg-monti-warning-muted",
-		"success-muted": "bg-monti-success-muted",
-	},
+	padding: PADDING,
+	paddingX: PADDING_X,
+	paddingY: PADDING_Y,
+	paddingTop: PADDING_TOP,
+	paddingBottom: PADDING_BOTTOM,
+	background: BACKGROUND,
 	/** A hairline on every side, or on one; `default` is the stronger line of a control. */
 	border: {
 		all: "border border-monti-muted",
@@ -89,46 +42,17 @@ export const LAYOUT = {
 	},
 	/** A 1px hairline between each child in a column. */
 	divided: { true: "divide-y divide-monti-muted" },
-	radius: {
-		sm: "rounded-monti-sm",
-		md: "rounded-monti-md",
-		lg: "rounded-monti-lg",
-		xl: "rounded-monti-xl",
-		full: "rounded-monti-full",
-	},
-	width: {
-		full: "w-full",
-		auto: "w-auto",
-		fit: "w-fit",
-		"panel-sm": "w-monti-menu",
-		panel: "w-monti-panel",
-		"panel-lg": "w-monti-assistant",
-		sidebar: "w-monti-sidebar",
-	},
-	maxWidth: {
-		full: "max-w-full",
-		"panel-sm": "max-w-monti-menu",
-		panel: "max-w-monti-panel",
-		"panel-lg": "max-w-monti-assistant",
-		prose: "max-w-prose",
-		content: "max-w-monti-content",
-		page: "max-w-monti-content",
-		/** A detail pane's readable column (768px). */
-		detail: "max-w-3xl",
-	},
+	radius: RADIUS,
+	/** `full`, `auto` and `fit` are sizes of their own; the rest are the width tokens. */
+	width: { full: "w-full", auto: "w-auto", fit: "w-fit", ...WIDTH },
+	maxWidth: { full: "max-w-full", ...MAX_WIDTH },
 	/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
 	minWidth: { 0: "min-w-0" },
-	height: {
-		full: "h-full",
-		auto: "h-auto",
-		screen: "h-svh",
-		control: "h-monti-icon",
-		"control-sm": "h-monti-control-sm",
-		header: "h-monti-header",
-	},
+	/** `full`, `auto` and `screen` are sizes of their own; the rest are the height tokens. */
+	height: { full: "h-full", auto: "h-auto", screen: "h-svh", ...HEIGHT },
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */
 	maxHeight: { list: "max-h-96", half: "max-h-[50vh]", menu: "max-h-80" },
-	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", header: "min-h-monti-header" },
+	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", ...MIN_HEIGHT },
 	grow: { true: "flex-1" },
 	shrink: { false: "shrink-0" },
 	/** `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). */

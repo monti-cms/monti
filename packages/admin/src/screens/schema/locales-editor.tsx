@@ -111,7 +111,7 @@ function TimeZonePick({
 					<ComboboxList>
 						{(zone: string) => (
 							<ComboboxItem key={zone} value={zone}>
-								<Inline as="span" grow justify="between" gap="condensed" minWidth={0}>
+								<Inline as="span" grow justify="between" gap={8} minWidth={0}>
 									<Text truncate>{zone}</Text>
 									<Text variant="caption" tone="muted">
 										{offsetOf(zone)}
@@ -226,7 +226,7 @@ function LocaleDialog({
 				</DialogHeader>
 				<Stack
 					as="form"
-					gap="spacious"
+					gap={24}
 					onSubmit={(event) => {
 						event.preventDefault();
 						if (!ok) return;
@@ -266,9 +266,9 @@ function LocaleDialog({
 											/>
 										}
 									>
-										<Inline as="span" grow justify="between" gap="condensed" minWidth={0}>
+										<Inline as="span" grow justify="between" gap={8} minWidth={0}>
 											{code ? (
-												<Inline as="span" gap="condensed" minWidth={0}>
+												<Inline as="span" gap={8} minWidth={0}>
 													<Text variant="caption" mono weight="semibold">
 														{code}
 													</Text>
@@ -414,18 +414,18 @@ function LocaleRow({
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
-			<Box as="span" radius="sm" background="neutral" paddingX="condensed">
+			<Box as="span" radius="sm" background="muted" paddingX={8}>
 				<Text variant="caption" mono>
 					{locale.code}
 				</Text>
 			</Box>
-			<Stack gap="none" grow minWidth={0}>
-				<Inline gap="condensed">
+			<Stack gap={0} grow minWidth={0}>
+				<Inline gap={8}>
 					<Text weight="medium" truncate>
 						{displayName}
 					</Text>
 					{isDefault && (
-						<Box as="span" radius="sm" background="selected" paddingX="condensed">
+						<Box as="span" radius="sm" background="selected" paddingX={8}>
 							<Text variant="caption">{t("locales.defaultBadge")}</Text>
 						</Box>
 					)}
@@ -483,11 +483,11 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	};
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
-		<Stack gap="section">
+		<Stack gap={48}>
 			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
 				<Panel overflow="hidden">
-					<Inline justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
-						<Inline as="span" gap="condensed">
+					<Inline justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
+						<Inline as="span" gap={8}>
 							<Text tone="muted">{t("locales.count", { count: locales.length })}</Text>
 							{revertKey("locales") && (
 								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />

@@ -184,11 +184,11 @@ export function RecordPanel({
 	};
 
 	return (
-		<Stack as="aside" aria-label={heading} gap="none" height="full" border="left" background="page">
+		<Stack as="aside" aria-label={heading} gap={0} height="full" border="left" background="page">
 			<SidePanelHeader title={heading} onClose={() => void close()} />
 			<Stack
 				as="form"
-				gap="none"
+				gap={0}
 				grow
 				minHeight={0}
 				onSubmit={(event) => {
@@ -227,7 +227,7 @@ export function RecordPanel({
 							</PageTabs>
 						)}
 						<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
-							<Stack gap="comfortable" padding="comfortable">
+							<Stack gap={16} padding={16}>
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
 								{id && (
 									<Text as="p" variant="caption" tone="muted">
@@ -238,7 +238,7 @@ export function RecordPanel({
 						</TabsContent>
 						{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
 							<TabsContent key={option} value={option} fill scroll>
-								<Stack gap="comfortable" padding="comfortable">
+								<Stack gap={16} padding={16}>
 									<Text as="p" variant="caption" tone="muted">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
 									</Text>
@@ -248,7 +248,7 @@ export function RecordPanel({
 						))}
 					</Tabs>
 				</EntryFormProvider>
-				<Box shrink={false} border="top" paddingX="comfortable" paddingY="normal">
+				<Box shrink={false} border="top" paddingX={16} paddingY={12}>
 					<EditorFooter
 						// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
 						dirty={dirty || isNew}

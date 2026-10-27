@@ -89,13 +89,13 @@ function RuleRow({
 	return (
 		<Stack
 			as="li"
-			gap="condensed"
-			padding="condensed"
+			gap={8}
+			padding={8}
 			border="all"
 			radius="md"
 			aria-label={t("rulesPanel.rule", { pattern: rule.pattern })}
 		>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				<Select
 					value={rule.name}
 					items={options}
@@ -155,7 +155,7 @@ function RuleRow({
 					</IconButton>
 				</Inline>
 			</Inline>
-			<Inline gap="tight">
+			<Inline gap={4}>
 				<Text variant="caption" tone="muted" mono>
 					/
 				</Text>
@@ -252,7 +252,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				{rules.length > 0 && <Text variant="caption">{rules.length}</Text>}
 			</IconButton>
 			<PopoverContent align="end" width="lg" scroll data-code-ui="">
-				<Inline justify="between" gap="condensed">
+				<Inline justify="between" gap={8}>
 					<Text as="p" weight="semibold">
 						{t("rulesPanel.title")}
 					</Text>
@@ -260,7 +260,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				</Inline>
 				{canAdd && site.offersCharEffect("fold") && foldSlot.panel}
 				{rules.length > 0 && (
-					<Stack as="ul" gap="condensed">
+					<Stack as="ul" gap={8}>
 						{rules.map((rule) => (
 							<RuleRow
 								key={rule.id}

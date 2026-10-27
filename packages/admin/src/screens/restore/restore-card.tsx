@@ -47,7 +47,7 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 		t(`summary.${status}`, { count: counts.byStatus[status] ?? 0 }),
 	);
 	return (
-		<Stack gap="condensed" data-testid="restore-counts">
+		<Stack gap={8} data-testid="restore-counts">
 			<Text as="p" variant="title">
 				{t("summary.entries", { count: counts.entries })}
 			</Text>
@@ -78,11 +78,11 @@ function CountLines({ counts }: { counts: RestoreCounts }) {
 				</ListItem>
 			</List>
 			{counts.templatesSkipped.length > 0 && (
-				<Stack gap="tight" paddingTop="tight" data-testid="restore-templates">
+				<Stack gap={4} paddingTop={4} data-testid="restore-templates">
 					<Text as="p" weight="medium">
 						{t("templates.title")}
 					</Text>
-					<Stack as="ul" gap="hair">
+					<Stack as="ul" gap={2}>
 						{counts.templatesSkipped.slice(0, LIST_LIMIT).map((template) => (
 							<Text as="li" variant="caption" tone="muted" key={template.id}>
 								<Text weight="medium">{template.name}</Text>: {template.text}
@@ -100,22 +100,22 @@ function Problems({ preview }: { preview: RestorePreview }) {
 	const t = useTranslator(restoreMessages);
 	const shown = preview.problems.slice(0, LIST_LIMIT);
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("problems.title")} data-testid="restore-problems">
+		<Stack as="section" gap={8} aria-label={t("problems.title")} data-testid="restore-problems">
 			<Heading as="h4" variant="label" tone="danger">
 				{t("problems.title")}
 			</Heading>
 			<Text as="p" variant="caption" tone="muted">
 				{t("problems.hint")}
 			</Text>
-			<Box radius="md" border="all" paddingX="normal" paddingY="condensed" maxHeight="list" overflow="y">
-				<Stack as="ul" gap="condensed">
+			<Box radius="md" border="all" paddingX={12} paddingY={8} maxHeight="list" overflow="y">
+				<Stack as="ul" gap={8}>
 					{shown.map((problem, index) => (
 						<Stack
 							as="li"
 							// biome-ignore lint/suspicious/noArrayIndexKey: a problem has no id of its own; the list does not change while it is shown.
 							key={index}
-							gap="hair"
-							paddingBottom="condensed"
+							gap={2}
+							paddingBottom={8}
 							border="bottom"
 							data-testid="restore-problem"
 							data-code={problem.code}
@@ -146,11 +146,11 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 	const t = useTranslator(restoreMessages);
 	if (warnings.length === 0) return null;
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("warnings.title")} data-testid="restore-warnings">
+		<Stack as="section" gap={8} aria-label={t("warnings.title")} data-testid="restore-warnings">
 			<Heading as="h4" variant="label">
 				{t("warnings.title")}
 			</Heading>
-			<Stack as="ul" gap="tight">
+			<Stack as="ul" gap={4}>
 				{warnings.slice(0, LIST_LIMIT).map((warning) => (
 					<Text as="li" variant="caption" tone="muted" key={`${warning.code}:${warning.id ?? ""}`}>
 						{warning.label && <Text weight="medium">{warning.label} </Text>}
@@ -170,7 +170,7 @@ function Warnings({ warnings }: { warnings: RestoreWarning[] }) {
 function NotRestored({ items }: { items: RestoreNotRestored[] }) {
 	const t = useTranslator(restoreMessages);
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("notRestored.title")} data-testid="restore-not-restored">
+		<Stack as="section" gap={8} aria-label={t("notRestored.title")} data-testid="restore-not-restored">
 			<Heading as="h4" variant="label">
 				{t("notRestored.title")}
 			</Heading>
@@ -195,8 +195,8 @@ function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(restoreMessages);
 	return (
 		<output data-testid="restore-progress">
-			<Stack gap="condensed">
-				<Inline gap="condensed">
+			<Stack gap={8}>
+				<Inline gap={8}>
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">{t("progress.running", { count })}</Text>
 				</Inline>
@@ -211,7 +211,7 @@ function RunProgress({ count }: { count: number }) {
 
 function PreviewView({ preview }: { preview: RestorePreview }) {
 	return (
-		<Stack gap="spacious" data-testid="restore-preview">
+		<Stack gap={24} data-testid="restore-preview">
 			{preview.isBackup ? (
 				<>
 					<CountLines counts={preview.counts} />
@@ -237,8 +237,8 @@ function ResultView({ form }: { form: RestoreForm }) {
 	const result = form.result;
 	if (!result) return null;
 	return (
-		<Stack gap="spacious" data-testid="restore-result">
-			<Stack gap="condensed">
+		<Stack gap={24} data-testid="restore-result">
+			<Stack gap={8}>
 				<Heading as="h4">{t("result.title")}</Heading>
 				<Text as="p" tone="muted">
 					{t("result.summary", { count: result.counts.entries })}
@@ -273,7 +273,7 @@ export function RestoreBackupFields() {
 
 	if (disabled) {
 		return (
-			<Stack gap="condensed" data-testid="restore-disabled">
+			<Stack gap={8} data-testid="restore-disabled">
 				<Text as="p" weight="medium">
 					{t("notEmpty.title")}
 				</Text>
@@ -290,10 +290,10 @@ export function RestoreBackupFields() {
 	}
 
 	return (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{!result && (
 				<>
-					<Stack gap="condensed">
+					<Stack gap={8}>
 						<Text as="p" weight="medium">
 							{t("kinds.label")}
 						</Text>
@@ -306,7 +306,7 @@ export function RestoreBackupFields() {
 						</List>
 					</Stack>
 
-					<Inline gap="normal" wrap>
+					<Inline gap={12} wrap>
 						<Input
 							ref={input}
 							type="file"
@@ -361,7 +361,7 @@ export function RestoreBackupFields() {
 					{running && preview && <RunProgress count={preview.counts.entries} />}
 
 					{preview && (
-						<Inline gap="condensed" wrap>
+						<Inline gap={8} wrap>
 							<Button
 								type="button"
 								disabled={running || !preview.ready}

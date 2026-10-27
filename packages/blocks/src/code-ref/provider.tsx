@@ -60,10 +60,10 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 		: null;
 	return (
 		<>
-			<Box as="span" paddingX="tight" shrink={false}>
+			<Box as="span" paddingX={4} shrink={false}>
 				<Icon icon={Code2} size="sm" tone="muted" />
 			</Box>
-			<Box paddingX="tight" maxWidth="panel-sm">
+			<Box paddingX={4} maxWidth="menu">
 				<Text as="div" variant="caption" tone={where ? "muted" : "danger"} truncate>
 					{where ? t("where", { where }) : t("none")}
 				</Text>

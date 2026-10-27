@@ -31,13 +31,13 @@ const VARIANTS = ["default", "secondary", "outline"] as const;
 /** Every variant at every size: both halves share the height, the look and the outer radius. */
 export const Sizes: Story = {
 	render: (args) => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} gap="tight" align="start">
+				<Stack key={variant} gap={4} align="start">
 					<Text variant="label" tone="muted">
 						variant {variant}
 					</Text>
-					<Stack direction="row" gap="normal" align="center">
+					<Stack direction="row" gap={12} align="center">
 						{SIZES.map((size) => (
 							<SplitButton key={size} {...args} variant={variant} size={size}>
 								{size}

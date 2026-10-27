@@ -41,7 +41,7 @@ const preview = <Image src={SAMPLE} alt="" ratio="photo" radius="none" />;
 
 function Labelled({ name, children }: { name: string; children: ReactNode }) {
 	return (
-		<Stack gap="tight">
+		<Stack gap={4}>
 			<Text variant="label" tone="muted">
 				{name}
 			</Text>
@@ -52,7 +52,7 @@ function Labelled({ name, children }: { name: string; children: ReactNode }) {
 
 export const Selected: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			{[false, true].map((selected) => (
 				<Labelled key={String(selected)} name={`selected ${selected}`}>
 					<Tile preview={preview} title="여름 바다.png" detail="1.2MB" selected={selected} />
@@ -64,7 +64,7 @@ export const Selected: Story = {
 
 export const Dimmed: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			{[false, true].map((dimmed) => (
 				<Labelled key={String(dimmed)} name={`dimmed ${dimmed}`}>
 					<Tile preview={preview} title="여름 바다.png" detail="1.2MB" dimmed={dimmed} />
@@ -76,7 +76,7 @@ export const Dimmed: Story = {
 
 export const Detail: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			<Labelled name="detail 있음">
 				<Tile preview={preview} title="여름 바다.png" detail="1.2MB" />
 			</Labelled>
@@ -93,7 +93,7 @@ export const Detail: Story = {
 /** `badge` sits top left; `action` top right and appears on hover, focus and when selected. */
 export const Slots: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			<Labelled name="badge">
 				<Tile preview={preview} title="여름 바다.png" badge={<Badge variant="success">사용 중</Badge>} />
 			</Labelled>
@@ -180,7 +180,7 @@ export const ChoiceCards: Story = {
 	render: () => {
 		const [picked, setPicked] = useState(0);
 		return (
-			<Stack gap="condensed" className="max-w-sm">
+			<Stack gap={8} className="max-w-sm">
 				{KINDS.map((kind, index) => (
 					<ChoiceCard
 						key={kind.title}
@@ -198,26 +198,26 @@ export const ChoiceCards: Story = {
 
 export const ChoiceCardOptions: Story = {
 	render: () => (
-		<Stack gap="spacious" className="max-w-sm">
-			<Stack gap="tight">
+		<Stack gap={24} className="max-w-sm">
+			<Stack gap={4}>
 				<Text variant="label" tone="muted">
 					selected false
 				</Text>
 				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="짧은 글자 한 줄" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="label" tone="muted">
 					selected true
 				</Text>
 				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="짧은 글자 한 줄" selected />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="label" tone="muted">
 					disabled
 				</Text>
 				<ChoiceCard icon={<Type aria-hidden />} title="텍스트" hint="지금은 고를 수 없어요" disabled />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="label" tone="muted">
 					icon 없음, hint 없음
 				</Text>

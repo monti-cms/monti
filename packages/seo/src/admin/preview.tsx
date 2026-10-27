@@ -62,9 +62,9 @@ export function SeoPreview({
 	);
 
 	return (
-		<Stack gap="normal">
-			<Panel role="region" aria-label={t("preview.search")} background="inset" padding="normal">
-				<Stack gap="tight">
+		<Stack gap={12}>
+			<Panel role="region" aria-label={t("preview.search")} background="tool" padding={12}>
+				<Stack gap={4}>
 					<Text as="p" variant="caption" tone="muted" truncate>
 						{site.SITE_NAME}
 						{path
@@ -89,7 +89,7 @@ export function SeoPreview({
 			{hasImageField && (
 				<Panel role="region" aria-label={t("preview.share")} overflow="hidden">
 					{imageId && <MediaThumbnail mediaId={imageId} size="share" />}
-					<Stack gap="hair" padding="normal">
+					<Stack gap={2} padding={12}>
 						<Text as="p" variant="caption" tone="muted" truncate>
 							{site.SITE_NAME}
 						</Text>

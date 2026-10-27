@@ -26,9 +26,9 @@ const SIZES = ["xs", "sm", "default", "lg"] as const;
 /** Give every button in the group the same variant and size. A button with a menu is a SplitButton, not a group. */
 export const Variants: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} gap="tight" align="start">
+				<Stack key={variant} gap={4} align="start">
 					<Text variant="label" tone="muted">
 						variant {variant}
 					</Text>
@@ -45,9 +45,9 @@ export const Variants: Story = {
 
 export const Sizes: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{SIZES.map((size) => (
-				<Stack key={size} gap="tight" align="start">
+				<Stack key={size} gap={4} align="start">
 					<Text variant="label" tone="muted">
 						size {size}
 					</Text>

@@ -600,7 +600,7 @@ import "@monti-cms/admin/styles.css";
 | `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | 컨트롤과 바의 높이(`h-monti-control` 36, `h-monti-header` 60 …), 열, 패널, 시트의 너비(`w-monti-sidebar` 232, `w-monti-sheet` 520 …), 아이콘 크기(`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드, 식별자, 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
 
-확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(뜻으로 고르는 간격: tight, condensed, normal, comfortable, spacious, section)과 위의 클래스로 만든다.
+확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(간격 눈금의 px 단계로 고르는 간격: `gap={8}`)과 위의 클래스로 만든다.
 
 ### shadcn 테마 다시 쓰기
 

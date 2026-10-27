@@ -22,14 +22,14 @@ export const Playground: Story = {};
 
 export const States: Story = {
 	render: () => (
-		<Stack gap="comfortable">
-			<Stack gap="tight">
+		<Stack gap={16}>
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					placeholder
 				</Text>
 				<Textarea placeholder="글 요약" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					filled, grows with content
 				</Text>
@@ -39,13 +39,13 @@ export const States: Story = {
 					}
 				/>
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					disabled
 				</Text>
 				<Textarea disabled defaultValue="수정할 수 없는 요약" />
 			</Stack>
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text variant="caption" tone="muted">
 					invalid
 				</Text>
@@ -58,7 +58,7 @@ export const States: Story = {
 /** `sm` writes at the label size for compact panels; `mono` for code and source text. */
 export const SizesAndMono: Story = {
 	render: () => (
-		<Stack gap="normal" className="max-w-sm">
+		<Stack gap={12} className="max-w-sm">
 			<Textarea size="sm" placeholder="작게: 패널 안의 메모" />
 			<Textarea mono defaultValue={"export const a = 1;\nexport const b = 2;"} />
 		</Stack>

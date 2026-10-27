@@ -104,8 +104,8 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
-			<Stack gap="condensed" padding="condensed" radius="md" border="all" background="inset" aria-live="polite">
-				<Inline gap="tight">
+			<Stack gap={8} padding={8} radius="md" border="all" background="tool" aria-live="polite">
+				<Inline gap={4}>
 					<Box as="span" shrink={false}>
 						{state.action.icon ?? defaultIcon}
 					</Box>
@@ -126,7 +126,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 				{state.action.askInstruction && (
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (state.status !== "running") void run(state.action.id);
@@ -184,7 +184,7 @@ function SlotResult({
 				</Text>
 			);
 		return (
-			<Inline as="ul" wrap gap="tight">
+			<Inline as="ul" wrap gap={4}>
 				{result.items.map((item) => (
 					<Box as="li" key={item.value} maxWidth="full">
 						<Badge
@@ -206,8 +206,8 @@ function SlotResult({
 		);
 	}
 	return (
-		<Stack gap="condensed">
-			<Box padding="condensed" radius="lg" border="all" background="page">
+		<Stack gap={8}>
+			<Box padding={8} radius="lg" border="all" background="page">
 				<Text as="p" variant="caption" tone="default">
 					{result.text}
 				</Text>

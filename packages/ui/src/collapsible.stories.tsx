@@ -39,7 +39,7 @@ export const Playground: Story = {};
 
 export const States: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<Example />
 			<Example defaultOpen />
 			<Example disabled />

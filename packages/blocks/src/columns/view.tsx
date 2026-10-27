@@ -179,7 +179,7 @@ export function ColumnsNodeView() {
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<Box as="span" paddingX="condensed">
+					<Box as="span" paddingX={8}>
 						<Text variant="caption" tone="muted">
 							{widths ? widths.join(" : ") : t("count", { count })}
 						</Text>

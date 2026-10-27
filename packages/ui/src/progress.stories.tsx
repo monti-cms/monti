@@ -22,9 +22,9 @@ export const Playground: Story = {};
 
 export const Values: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[0, 25, 50, 75, 100].map((value) => (
-				<Stack key={value} gap="tight">
+				<Stack key={value} gap={4}>
 					<Text variant="label" tone="muted">
 						value {value}
 					</Text>

@@ -28,9 +28,9 @@ const LAYOUTS = ["grid", "stack", "inline", "strip"] as const;
 /** Every tone in every layout. `grid` expects an icon, a title and a description; `stack` is plain text; `inline` and `strip` carry an action. */
 export const AllTonesAndLayouts: Story = {
 	render: () => (
-		<Stack gap="section">
+		<Stack gap={48}>
 			{LAYOUTS.map((layout) => (
-				<Stack key={layout} gap="comfortable">
+				<Stack key={layout} gap={16}>
 					<Text variant="label" tone="muted">
 						{layout}
 					</Text>

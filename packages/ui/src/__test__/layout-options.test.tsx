@@ -9,7 +9,7 @@ import { Inline, Stack } from "../stack";
 const CASES = Object.entries(LAYOUT).flatMap(([option, values]) =>
 	Object.entries(values).map(([value, classes]) => ({
 		option,
-		value: value === "true" ? true : value === "false" ? false : value === "0" ? 0 : value,
+		value: value === "true" ? true : value === "false" ? false : /^\d+$/.test(value) ? Number(value) : value,
 		classes: classes as string,
 	})),
 );

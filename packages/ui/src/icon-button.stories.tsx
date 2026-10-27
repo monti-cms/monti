@@ -19,9 +19,9 @@ const VARIANTS = ["quiet", "ghost", "outline", "secondary", "default"] as const;
 /** Every variant at every size. */
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="condensed" align="center">
+				<Stack key={variant} direction="row" gap={8} align="center">
 					{SIZES.map((size) => (
 						<IconButton key={size} label={`${variant} ${size}`} variant={variant} size={size}>
 							<Settings aria-hidden />
@@ -39,7 +39,7 @@ export const AllVariants: Story = {
 /** Pressed (toggle) on and off, danger, invalid. */
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<IconButton label="고정 해제" pressed={false}>
 				<Pencil aria-hidden />
 			</IconButton>
@@ -62,7 +62,7 @@ export const States: Story = {
 /** The tooltip appears on hover; side picks where. */
 export const TooltipSides: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="center">
+		<Stack direction="row" gap={24} align="center">
 			{(["top", "bottom", "left", "right"] as const).map((side) => (
 				<IconButton key={side} label={`툴팁 ${side}`} side={side}>
 					<Pencil aria-hidden />

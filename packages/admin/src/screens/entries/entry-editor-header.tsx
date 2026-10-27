@@ -82,14 +82,14 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 			as="header"
 			wrap
 			justify="between"
-			gap="tight"
+			gap={4}
 			shrink={false}
 			border="bottom"
 			background="page"
-			paddingX="comfortable"
-			paddingY="condensed"
+			paddingX={16}
+			paddingY={8}
 		>
-			<Inline gap="condensed" minWidth={0}>
+			<Inline gap={8} minWidth={0}>
 				<Tooltip>
 					<TooltipTrigger
 						render={
@@ -124,7 +124,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 				)}
 			</Inline>
 
-			<Inline gap="tight" justify="end">
+			<Inline gap={4} justify="end">
 				{/* There is no server autosave, so unsaved changes get a visible save button (⌘S does the same); the status bar says the rest. */}
 				{editor.hasUnsavedChanges && !isTrashed && (
 					<Tooltip>
@@ -210,7 +210,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 					</SplitButton>
 				)}
-				<Inline height="control-sm" paddingX="tight">
+				<Inline height="control-sm" paddingX={4}>
 					<Separator orientation="vertical" aria-hidden />
 				</Inline>
 				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>

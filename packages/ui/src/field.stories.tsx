@@ -45,13 +45,13 @@ export const Playground: Story = {
 /** The plain Label alone, and next to a control it labels. */
 export const Labels: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<Label>레이블만</Label>
-			<Stack direction="row" gap="condensed" align="center">
+			<Stack direction="row" gap={8} align="center">
 				<Checkbox id="lbl" />
 				<Label htmlFor="lbl">레이블과 체크박스</Label>
 			</Stack>
-			<Stack direction="row" gap="condensed" align="center">
+			<Stack direction="row" gap={8} align="center">
 				<Checkbox id="lbl-d" disabled />
 				<Label htmlFor="lbl-d">비활성 체크박스의 레이블</Label>
 			</Stack>
@@ -62,7 +62,7 @@ export const Labels: Story = {
 /** The three orientations. `responsive` switches to a row at the container width `md`. */
 export const Orientations: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["vertical", "horizontal", "responsive"] as const).map((orientation) => (
 				<FormField key={orientation} orientation={orientation}>
 					<FormFieldContent>
@@ -142,7 +142,7 @@ export const SetAndGroup: Story = {
 
 export const LegendVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<FormFieldSet>
 				<FormFieldLegend variant="legend">legend</FormFieldLegend>
 				<FormFieldDescription>소제목 크기의 범례</FormFieldDescription>

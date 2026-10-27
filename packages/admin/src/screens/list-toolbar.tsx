@@ -192,11 +192,11 @@ export function ListSubToolbar({
 	);
 	const chipList =
 		chips.length === 0 ? null : (
-			<Inline as="ul" wrap gap="condensed" grow minWidth={0} paddingY="condensed" aria-label={t("toolbar.chips")}>
+			<Inline as="ul" wrap gap={8} grow minWidth={0} paddingY={8} aria-label={t("toolbar.chips")}>
 				{chips.map((chip) => (
 					<Box as="li" key={chip.key}>
-						<Inline as="span" gap="tight" background="selected" radius="sm" paddingX="condensed">
-							<Box as="span" minWidth={0} maxWidth="panel-lg">
+						<Inline as="span" gap={4} background="selected" radius="sm" paddingX={8}>
+							<Box as="span" minWidth={0} maxWidth="assistant">
 								<Text variant="caption" weight="medium" tone="default" truncate>
 									{chip.label}
 								</Text>
@@ -219,13 +219,13 @@ export function ListSubToolbar({
 	if (hasSegments) {
 		// The status tabs draw the line under the row; the chips, when there are any, get a row of their own below.
 		return (
-			<Stack gap="none" shrink={false}>
-				<Inline align="stretch" gap="none">
+			<Stack gap={0} shrink={false}>
+				<Inline align="stretch" gap={0}>
 					<Box grow minWidth={0}>
 						<StatusSegments state={state} onChange={onChange} />
 					</Box>
 					{trailing && (
-						<Inline gap="tight" border="bottom">
+						<Inline gap={4} border="bottom">
 							{trailing}
 						</Inline>
 					)}
@@ -235,9 +235,9 @@ export function ListSubToolbar({
 		);
 	}
 	return (
-		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingY="tight">
+		<Inline align="stretch" gap={16} shrink={false} border="bottom" paddingY={4}>
 			{chipList ?? <Box grow />}
-			{trailing && <Inline gap="tight">{trailing}</Inline>}
+			{trailing && <Inline gap={4}>{trailing}</Inline>}
 		</Inline>
 	);
 }

@@ -184,8 +184,8 @@ export function BlockSettingsField({
 	children: ReactNode;
 }) {
 	return (
-		<Stack gap="tight">
-			<Inline justify="between" gap="condensed">
+		<Stack gap={4}>
+			<Inline justify="between" gap={8}>
 				<Label htmlFor={htmlFor} size="caption" tone="muted">
 					{label}
 				</Label>

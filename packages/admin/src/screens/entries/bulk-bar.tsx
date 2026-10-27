@@ -387,8 +387,8 @@ export function BulkBar({
 			];
 
 	return (
-		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX="wide" paddingY="condensed">
-			<Inline wrap gap="condensed">
+		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX={32} paddingY={8}>
+			<Inline wrap gap={8}>
 				<Text weight="medium">{t("count", { count: selected.length })}</Text>
 				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
 					{t("clear")}
@@ -472,12 +472,12 @@ export function BulkBar({
 			</Inline>
 
 			{error && (
-				<Box paddingTop="condensed">
+				<Box paddingTop={8}>
 					<FormFieldError>{error}</FormFieldError>
 				</Box>
 			)}
 			{failures.length > 0 && (
-				<Stack as="ul" gap="tight" paddingTop="condensed">
+				<Stack as="ul" gap={4} paddingTop={8}>
 					{failures.map((failure) => (
 						<Text as="li" key={failure.id} variant="caption" tone="danger">
 							<Text weight="medium">{titleOf(failure.id)}</Text> — {describeBulkFailure(site, failure)}

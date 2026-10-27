@@ -167,7 +167,7 @@ export function useEntriesTable({
 				enableResizing: false,
 				header: () => <Text srOnly>{t("list.actions")}</Text>,
 				cell: ({ row }) => (
-					<Inline gap="tight" justify="end">
+					<Inline gap={4} justify="end">
 						{isTrash && (
 							<>
 								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>

@@ -39,7 +39,7 @@ export const Disabled: Story = {
 
 export const Layouts: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<Calendar
 				locale={ko}
 				defaultMonth={new Date(2026, 9, 1)}

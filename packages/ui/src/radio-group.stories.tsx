@@ -22,9 +22,9 @@ export const Playground: Story = {};
 
 export const Variants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["plain", "card"] as const).map((variant) => (
-				<Stack key={variant} gap="tight">
+				<Stack key={variant} gap={4}>
 					<Text variant="label" tone="muted">
 						variant {variant}
 					</Text>
@@ -42,9 +42,9 @@ export const Variants: Story = {
 /** Options with and without a hint, and a disabled one. */
 export const ItemStates: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["plain", "card"] as const).map((variant) => (
-				<Stack key={variant} gap="tight">
+				<Stack key={variant} gap={4}>
 					<Text variant="label" tone="muted">
 						variant {variant}, disabled
 					</Text>

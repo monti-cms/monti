@@ -24,9 +24,9 @@ const ITEMS = ["글 세 편이 발행돼요", "이미지 두 장이 옮겨져요
 
 export const Markers: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["bullet", "none"] as const).map((marker) => (
-				<Stack key={marker} gap="tight">
+				<Stack key={marker} gap={4}>
 					<Text variant="label" tone="muted">
 						marker {marker}
 					</Text>
@@ -43,9 +43,9 @@ export const Markers: Story = {
 
 export const Ordered: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{(["bullet", "none"] as const).map((marker) => (
-				<Stack key={marker} gap="tight">
+				<Stack key={marker} gap={4}>
 					<Text variant="label" tone="muted">
 						ordered, marker {marker}
 					</Text>

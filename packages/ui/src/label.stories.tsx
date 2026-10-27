@@ -16,9 +16,9 @@ export const Playground: Story = {};
 
 export const Sizes: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["label", "caption", "body"] as const).map((size) => (
-				<Stack key={size} gap="tight">
+				<Stack key={size} gap={4}>
 					<Text variant="label" tone="muted">
 						size {size}
 					</Text>
@@ -31,9 +31,9 @@ export const Sizes: Story = {
 
 export const Tones: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["default", "muted"] as const).map((tone) => (
-				<Stack key={tone} gap="tight">
+				<Stack key={tone} gap={4}>
 					<Text variant="label" tone="muted">
 						tone {tone}
 					</Text>
@@ -47,9 +47,9 @@ export const Tones: Story = {
 /** `hidden` keeps the label for screen readers only; the input is still named. */
 export const Hidden: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[false, true].map((hidden) => (
-				<Stack key={String(hidden)} gap="tight">
+				<Stack key={String(hidden)} gap={4}>
 					<Text variant="label" tone="muted">
 						hidden {String(hidden)}
 					</Text>

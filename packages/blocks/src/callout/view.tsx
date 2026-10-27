@@ -41,7 +41,7 @@ export function CalloutNodeView() {
 	return (
 		<BlockFrame className="my-monti-24 rounded-monti-lg">
 			<div data-slot="callout" data-variant={variant} role="note" className={cn(CALLOUT_BOX_CLASS, "not-prose w-full")}>
-				<Inline gap="condensed" contentEditable={false}>
+				<Inline gap={8} contentEditable={false}>
 					<Icon aria-hidden data-callout-icon className="size-4 shrink-0" />
 					<AttributeInput
 						aria-label={t("title.aria")}

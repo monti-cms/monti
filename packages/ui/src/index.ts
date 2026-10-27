@@ -230,7 +230,7 @@ export const TooltipProvider = close(open.TooltipProvider);
 export const TooltipTrigger = close(open.TooltipTrigger);
 
 export type { Closed } from "./closed";
-export type { LayoutProps, StackProps, StatusShape, StatusTone, UiLabels } from "./internal";
+export type { Background, LayoutProps, Spacing, StackProps, StatusShape, StatusTone, UiLabels } from "./internal";
 /** Roots that infer their value type: closing them would erase it, and they render no box of their own to style. */
 export {
 	alertVariants,

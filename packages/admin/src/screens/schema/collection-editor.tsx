@@ -111,16 +111,16 @@ function LimitList<T extends string | number>({
 		<Stack
 			role="group"
 			aria-label={label}
-			gap="normal"
+			gap={12}
 			border={divided ? "top" : undefined}
-			paddingTop={divided ? "spacious" : undefined}
+			paddingTop={divided ? 24 : undefined}
 		>
 			<Inline justify="between">
-				<Inline as="span" gap="condensed">
+				<Inline as="span" gap={8}>
 					<Text weight="medium">{label}</Text>
 					{revert && <RevertMark name={label} onRevert={revert} />}
 				</Inline>
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Checkbox
 						id={allId}
 						checked={allAllowed}
@@ -133,12 +133,12 @@ function LimitList<T extends string | number>({
 					</Label>
 				</Inline>
 			</Inline>
-			<Grid as="ul" columns={3} gap="condensed">
+			<Grid as="ul" columns={3} gap={8}>
 				{all.map((item) => {
 					const id = `allowed-${label}-${item}`;
 					const checked = value === undefined || value.includes(item);
 					return (
-						<Inline as="li" key={String(item)} gap="condensed">
+						<Inline as="li" key={String(item)} gap={8}>
 							<Checkbox
 								id={id}
 								checked={checked}
@@ -285,12 +285,12 @@ export function CollectionEditor({
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<Stack gap="spacious" minWidth={0} data-testid={`collection-${name}`}>
+		<Stack gap={24} minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
 			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
-				<Inline align="end" justify="between" gap="comfortable" border="bottom-strong" paddingBottom="normal">
+				<Inline align="end" justify="between" gap={16} border="bottom-strong" paddingBottom={12}>
 					<Box minWidth={0}>
-						<Inline align="baseline" gap="condensed">
+						<Inline align="baseline" gap={8}>
 							<Heading as="h3">{label}</Heading>
 							<Text as="code" variant="caption" tone="muted">
 								{name}
@@ -318,7 +318,7 @@ export function CollectionEditor({
 					</TabsList>
 				</Inline>
 				<TabsContent value="basics">
-					<Stack gap="section" maxWidth="page">
+					<Stack gap={48} maxWidth="content">
 						<Section band title={t("collection.basicsTitle")}>
 							<TextInput
 								label={t("collection.label")}
@@ -383,7 +383,7 @@ export function CollectionEditor({
 							/>
 						</Section>
 						<Section band title={t("collection.dangerTitle")} card={false}>
-							<Inline justify="end" paddingY="normal">
+							<Inline justify="end" paddingY={12}>
 								<Button type="button" variant="outline" tone="danger" size="sm" disabled={disabled} onClick={onRemove}>
 									<Trash2 aria-hidden />
 									{ts("collection.remove")}
@@ -397,7 +397,7 @@ export function CollectionEditor({
 				</TabsContent>
 				{isEditorAvailable && (
 					<TabsContent value="editor">
-						<Box maxWidth="page">
+						<Box maxWidth="content">
 							<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
 						</Box>
 					</TabsContent>

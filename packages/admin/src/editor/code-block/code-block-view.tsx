@@ -233,14 +233,14 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 				contentEditable={false}
 				wrap
 				justify="between"
-				gap="condensed"
-				paddingX="condensed"
-				paddingY="tight"
+				gap={8}
+				paddingX={8}
+				paddingY={4}
 				border="bottom"
-				background="inset"
+				background="tool"
 			>
 				{editable ? (
-					<Inline wrap gap="condensed">
+					<Inline wrap gap={8}>
 						<Select
 							value={language}
 							// The name list must be passed so a closed slot shows the name (`TypeScript`) rather than the value (`ts`).
@@ -267,7 +267,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						/>
 					</Inline>
 				) : (
-					<Inline gap="condensed" paddingX="tight">
+					<Inline gap={8} paddingX={4}>
 						<Text variant="caption" tone="muted">
 							{languageOptions.find((option) => option.value === language)?.label ?? language}
 						</Text>
@@ -278,10 +278,10 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						)}
 					</Inline>
 				)}
-				<Inline gap="hair">
+				<Inline gap={2}>
 					{!editable ? null : rawMode ? (
 						<Tooltip>
-							<TooltipTrigger render={<Inline as="span" gap="tight" paddingX="tight" />}>
+							<TooltipTrigger render={<Inline as="span" gap={4} paddingX={4} />}>
 								<Info aria-hidden />
 								<Text variant="caption" tone="muted">
 									{t("view.rawMode")}

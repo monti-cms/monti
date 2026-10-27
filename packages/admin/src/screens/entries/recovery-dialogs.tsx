@@ -171,7 +171,7 @@ function ComparePanes({
 	const pane = (label: string, value: EntryForm) => {
 		const body = bodyText(value.doc);
 		return (
-			<Stack gap="condensed" border="all" radius="lg" padding="normal">
+			<Stack gap={8} border="all" radius="lg" padding={12}>
 				<Text as="p" weight="semibold">
 					{label}
 				</Text>
@@ -191,7 +191,7 @@ function ComparePanes({
 		);
 	};
 	return (
-		<Grid columns={2} gap="normal">
+		<Grid columns={2} gap={12}>
 			{pane(t("conflict.mine"), local)}
 			{pane(t("conflict.server", { version: serverVersion }), server)}
 		</Grid>

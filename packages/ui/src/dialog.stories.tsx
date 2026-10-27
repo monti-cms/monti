@@ -64,7 +64,7 @@ function FormDemo({ busy = false, disabled = false }: { busy?: boolean; disabled
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent>
 				<form onSubmit={(e) => e.preventDefault()}>
-					<Stack gap="spacious">
+					<Stack gap={24}>
 						<DialogHeader>
 							<DialogTitle>카테고리 추가</DialogTitle>
 							<DialogDescription>글을 묶는 이름을 정해 주세요.</DialogDescription>

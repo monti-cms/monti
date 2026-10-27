@@ -3,10 +3,11 @@ import type * as React from "react";
 import type { BoxTag } from "./box";
 import { cn } from "./cn";
 import { type LayoutProps, layoutVariants, splitLayout } from "./layout";
+import { GAP } from "./tokens.generated";
 
 /**
  * Children in equal columns, by count, stacked to one column on a narrow screen (`responsive`, the default). `sidebar` is a fixed side column
- * (the panel width) next to a fluid one. The gap takes the spacing names, as in `Stack`.
+ * (the panel width) next to a fluid one. The gap takes the spacing steps, as in `Stack`.
  */
 const gridVariants = cva("grid", {
 	variants: {
@@ -24,23 +25,15 @@ const gridVariants = cva("grid", {
 			tiles: "grid-cols-[repeat(auto-fill,minmax(160px,1fr))]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
-		gap: {
-			none: "gap-0",
-			tight: "gap-monti-4",
-			condensed: "gap-monti-8",
-			normal: "gap-monti-12",
-			comfortable: "gap-monti-16",
-			spacious: "gap-monti-24",
-			wide: "gap-monti-32",
-			section: "gap-monti-48",
-		},
+		gap: GAP,
+
 		align: { start: "items-start", center: "items-center", end: "items-end", stretch: "items-stretch" },
 	},
 	// Tiles fit their own count of columns at every width.
 	compoundVariants: [
 		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]" },
 	],
-	defaultVariants: { columns: 2, responsive: true, gap: "normal" },
+	defaultVariants: { columns: 2, responsive: true, gap: 12 },
 });
 
 function Grid({

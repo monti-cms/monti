@@ -41,18 +41,9 @@ export function ColumnSettingsPanel({
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack as="ul" gap="hair">
+		<Stack as="ul" gap={2}>
 			{order.map((column, index) => (
-				<Inline
-					as="li"
-					key={column}
-					justify="between"
-					gap="condensed"
-					radius="md"
-					paddingX="tight"
-					paddingY="hair"
-					hover
-				>
+				<Inline as="li" key={column} justify="between" gap={8} radius="md" paddingX={4} paddingY={2} hover>
 					<Label>
 						<Checkbox
 							checked={visibility[column] ?? false}
@@ -61,7 +52,7 @@ export function ColumnSettingsPanel({
 						/>
 						{columnLabel(site, collection, column)}
 					</Label>
-					<Inline as="span" gap="tight">
+					<Inline as="span" gap={4}>
 						<IconButton
 							size="icon-xs"
 							variant="ghost"
@@ -90,7 +81,7 @@ export function ColumnSettingsPanel({
 /** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
 function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<Stack as="section" gap="condensed" minHeight={scroll ? 0 : undefined}>
+		<Stack as="section" gap={8} minHeight={scroll ? 0 : undefined}>
 			<Heading as="h4" variant="label" tone="muted">
 				{title}
 			</Heading>
@@ -151,9 +142,9 @@ export function ListViewPopover({
 			</PopoverTrigger>
 			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}
 			<PopoverContent side="bottom" align="end" width="md" scroll>
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<ViewSection title={t("view.sort")}>
-						<Inline gap="condensed">
+						<Inline gap={8}>
 							<Select
 								value={state.sortField}
 								items={sortable}
@@ -172,7 +163,7 @@ export function ListViewPopover({
 									))}
 								</SelectContent>
 							</Select>
-							<Inline gap="hair" role="group" aria-label={t("view.sort")}>
+							<Inline gap={2} role="group" aria-label={t("view.sort")}>
 								{directionButton("asc")}
 								{directionButton("desc")}
 							</Inline>

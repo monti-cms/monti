@@ -22,9 +22,9 @@ export const Playground: Story = {};
 
 export const Wrap: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[true, false].map((wrap) => (
-				<Stack key={String(wrap)} gap="tight">
+				<Stack key={String(wrap)} gap={4}>
 					<Text variant="label" tone="muted">
 						wrap {String(wrap)}
 					</Text>
@@ -37,9 +37,9 @@ export const Wrap: Story = {
 
 export const MaxHeight: Story = {
 	render: () => (
-		<Stack direction="row" gap="normal" align="start">
+		<Stack direction="row" gap={12} align="start">
 			{(["list", "half", "none"] as const).map((maxHeight) => (
-				<Stack key={maxHeight} gap="tight" className="min-w-0 flex-1">
+				<Stack key={maxHeight} gap={4} className="min-w-0 flex-1">
 					<Text variant="label" tone="muted">
 						maxHeight {maxHeight}
 					</Text>
@@ -52,9 +52,9 @@ export const MaxHeight: Story = {
 
 export const Size: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["caption", "label"] as const).map((size) => (
-				<Stack key={size} gap="tight">
+				<Stack key={size} gap={4}>
 					<Text variant="label" tone="muted">
 						size {size}
 					</Text>
@@ -83,9 +83,9 @@ export const Diff: Story = {
 
 export const DiffLineTypes: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["same", "remove", "add"] as const).map((type) => (
-				<Stack key={type} gap="tight">
+				<Stack key={type} gap={4}>
 					<Text variant="label" tone="muted">
 						type {type}
 					</Text>
@@ -99,9 +99,9 @@ export const DiffLineTypes: Story = {
 /** Marks inside a sentence: a suggested rewrite. */
 export const Marks: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["remove", "add"] as const).map((type) => (
-				<Stack key={type} gap="tight">
+				<Stack key={type} gap={4}>
 					<Text variant="label" tone="muted">
 						DiffMark {type}
 					</Text>

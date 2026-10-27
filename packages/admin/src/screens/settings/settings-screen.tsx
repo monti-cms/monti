@@ -43,7 +43,7 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 				<div ref={setActions} data-testid="settings-actions" />
 			</PageActions>
 			<SettingsTabBar site={site} active={tab} onSchemaTab={go} changed={changed?.tabs} />
-			<Stack gap="none" grow minHeight={0} background="page">
+			<Stack gap={0} grow minHeight={0} background="page">
 				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} onChanged={setChanged} />
 			</Stack>
 		</>

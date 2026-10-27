@@ -257,7 +257,7 @@ export function StatusBarItem({
 				</PopoverTrigger>
 				<PopoverContent side="top" align={align} sideOffset={6} width="md" padding="none" scroll>
 					<PopoverCloseContext.Provider value={() => setOpen(false)}>
-						<Box paddingY="tight">{popover}</Box>
+						<Box paddingY={4}>{popover}</Box>
 					</PopoverCloseContext.Provider>
 				</PopoverContent>
 			</Popover>

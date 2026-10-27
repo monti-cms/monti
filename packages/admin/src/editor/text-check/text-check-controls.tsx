@@ -67,7 +67,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 	const { issues } = controller;
 	const count = issues.length;
 	return (
-		<Inline gap="hair">
+		<Inline gap={2}>
 			{controller.checkers.map((checker) => (
 				<CheckerButton key={checker.id} checker={checker} controller={controller} />
 			))}
@@ -86,7 +86,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						{issues.map((issue) => (
 							<DropdownMenuItem key={issue.key} onClick={() => controller.jump(issue)}>
 								<SeverityIcon severity={issue.severity} />
-								<Stack as="span" gap="none" minWidth={0} grow>
+								<Stack as="span" gap={0} minWidth={0} grow>
 									<Text weight="medium" truncate>
 										{issue.text.trim() || issue.message}
 									</Text>
@@ -162,12 +162,12 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 	const editable = controller.editor.isEditable;
 	return (
 		<>
-			<Inline align="start" gap="condensed">
+			<Inline align="start" gap={8}>
 				<SeverityIcon severity={issue.severity} />
 				<Text as="p">{issue.message || issue.text}</Text>
 			</Inline>
 			{issue.suggestions.length > 0 && (
-				<Inline wrap gap="tight">
+				<Inline wrap gap={4}>
 					{issue.suggestions.slice(0, 6).map((suggestion) => (
 						<Button
 							key={suggestion}
@@ -182,7 +182,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					))}
 				</Inline>
 			)}
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				<Inline grow minWidth={0}>
 					<Text variant="caption" tone="muted" truncate>
 						{checker?.label ?? issue.source}

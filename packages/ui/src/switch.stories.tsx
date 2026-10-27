@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {
 	render: (args) => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Switch id="pg" {...args} />
 			<Label htmlFor="pg">공개</Label>
 		</Stack>
@@ -22,7 +22,7 @@ export const Playground: Story = {
 /** Both sizes, off and on, plus disabled and invalid. */
 export const States: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{(["default", "sm"] as const).map((size) =>
 				[
 					{ name: "off", props: {} },
@@ -31,7 +31,7 @@ export const States: Story = {
 					{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
 					{ name: "invalid", props: { "aria-invalid": true } },
 				].map(({ name, props }) => (
-					<Stack key={`${size}-${name}`} direction="row" gap="condensed" align="center">
+					<Stack key={`${size}-${name}`} direction="row" gap={8} align="center">
 						<Switch id={`${size}-${name}`} size={size} {...props} />
 						<Label htmlFor={`${size}-${name}`}>
 							{size} · {name}

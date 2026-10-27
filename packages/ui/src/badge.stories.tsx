@@ -17,7 +17,7 @@ const VARIANTS = ["default", "secondary", "danger", "success", "warning", "outli
 
 export const AllVariants: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" wrap align="center">
+		<Stack direction="row" gap={8} wrap align="center">
 			{VARIANTS.map((variant) => (
 				<Badge key={variant} variant={variant}>
 					{variant}
@@ -29,7 +29,7 @@ export const AllVariants: Story = {
 
 export const WithIcon: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Badge variant="success">
 				<Check data-icon="inline-start" aria-hidden />
 				발행됨
@@ -45,7 +45,7 @@ export const WithIcon: Story = {
 /** As a link through the `render` prop, which turns on the `[a]:hover` styles. */
 export const AsLink: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			{VARIANTS.map((variant) => (
 				<Badge key={variant} variant={variant} render={<a href="#top">{variant}</a>} />
 			))}

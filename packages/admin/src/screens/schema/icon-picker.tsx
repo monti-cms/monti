@@ -58,7 +58,7 @@ export function IconPicker({
 						/>
 					}
 				>
-					<Inline as="span" gap="condensed" grow minWidth={0}>
+					<Inline as="span" gap={8} grow minWidth={0}>
 						<Text as="span" tone="muted">
 							<CurrentIcon aria-hidden />
 						</Text>
@@ -69,7 +69,7 @@ export function IconPicker({
 					</Text>
 				</PopoverTrigger>
 				<PopoverContent align="start" width="md">
-					<Stack gap="condensed">
+					<Stack gap={8}>
 						<Input
 							value={query}
 							size="sm"
@@ -90,8 +90,8 @@ export function IconPicker({
 								{t("collection.iconClear")} ({defaultIconName})
 							</Button>
 						)}
-						<Box maxHeight="list" overflow="y" padding="hair">
-							<Grid columns={6} responsive={false} gap="tight" role="listbox">
+						<Box maxHeight="list" overflow="y" padding={2}>
+							<Grid columns={6} responsive={false} gap={4} role="listbox">
 								{filtered.map((name) => {
 									const Icon = ICONS[name];
 									if (!Icon) return null;
@@ -118,7 +118,7 @@ export function IconPicker({
 							</Grid>
 						</Box>
 						{filtered.length === 0 && (
-							<Box paddingY="comfortable">
+							<Box paddingY={16}>
 								<Text as="p" variant="caption" tone="muted">
 									{t("collection.iconNone")}
 								</Text>

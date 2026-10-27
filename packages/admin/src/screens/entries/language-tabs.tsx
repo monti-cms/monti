@@ -88,8 +88,8 @@ export function LanguageTabs({
 	};
 
 	return (
-		<Box as="nav" aria-label={t("lang.nav")} paddingX="comfortable" paddingTop="condensed" paddingBottom="normal">
-			<Inline wrap gap="tight">
+		<Box as="nav" aria-label={t("lang.nav")} paddingX={16} paddingTop={8} paddingBottom={12}>
+			<Inline wrap gap={4}>
 				{site.LOCALES.map((target) => {
 					const member = members.find((item) => item.locale === target);
 					if (!member) {

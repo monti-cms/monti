@@ -29,7 +29,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap="tight">
+		<Inline as="span" gap={4}>
 			{site.LOCALES.map((locale) => {
 				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
@@ -65,7 +65,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap="tight">
+		<Inline as="span" gap={4}>
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
@@ -154,13 +154,13 @@ function DefaultEntryCell({
 			);
 			if (isTrash)
 				return (
-					<Inline align="baseline" gap="condensed" minWidth={0}>
+					<Inline align="baseline" gap={8} minWidth={0}>
 						{titleBox(title)}
 						{slug}
 					</Inline>
 				);
 			return isRecord ? (
-				<Inline align="baseline" gap="condensed" minWidth={0}>
+				<Inline align="baseline" gap={8} minWidth={0}>
 					{titleBox(
 						<TextLink underline="hover" render={<button type="button" onClick={() => onOpenRecord(item)} />}>
 							{title}
@@ -169,7 +169,7 @@ function DefaultEntryCell({
 					{slug}
 				</Inline>
 			) : (
-				<Inline align="baseline" gap="condensed" minWidth={0}>
+				<Inline align="baseline" gap={8} minWidth={0}>
 					{titleBox(
 						<TextLink underline="hover" render={<Link href={site.adminEntryEditHref(item.id)} />}>
 							{title}
@@ -177,7 +177,7 @@ function DefaultEntryCell({
 					)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
-						<Inline gap="tight" minWidth={0}>
+						<Inline gap={4} minWidth={0}>
 							<FolderIcon aria-hidden size={12} />
 							<Text as="div" variant="caption" tone="muted" truncate>
 								<Text srOnly>{t("list.folderSr")}</Text>
@@ -196,7 +196,7 @@ function DefaultEntryCell({
 			if (item.translations) return <LocaleBadges translations={item.translations} />;
 			// Also mark that a translation is not the original.
 			return (
-				<Inline as="span" gap="tight">
+				<Inline as="span" gap={4}>
 					<Text variant="caption" tone="muted" weight="medium">
 						<abbr title={site.localeLabel(item.locale)}>{item.locale.toUpperCase()}</abbr>
 					</Text>

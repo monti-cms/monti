@@ -30,7 +30,7 @@ export const Playground: Story = {};
 
 export const MediaVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<Empty>
 				<EmptyHeader>
 					<EmptyMedia variant="default">

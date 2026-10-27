@@ -7,13 +7,13 @@ import { Text } from "./text";
 
 function Demo({ resizeKey }: { resizeKey: string }) {
 	return (
-		<Inline align="stretch" gap="none" minHeight="screen">
+		<Inline align="stretch" gap={0} minHeight="screen">
 			<ResizablePane resizeKey={resizeKey} defaultWidth={288} min={224} max={384} label="목록 너비 조절">
-				<Box padding="comfortable">
+				<Box padding={16}>
 					<Text>목록</Text>
 				</Box>
 			</ResizablePane>
-			<Box padding="comfortable" grow>
+			<Box padding={16} grow>
 				<Text tone="muted">
 					가장자리를 끌거나, 포커스를 두고 방향키로 너비를 바꿔요. 두 번 누르면 처음 너비로 돌아가요.
 				</Text>

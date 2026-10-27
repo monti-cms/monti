@@ -191,7 +191,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
-			<Inline shrink={false} justify="between" height="control" border="bottom" paddingX="condensed">
+			<Inline shrink={false} justify="between" height="icon" border="bottom" paddingX={8}>
 				<Heading as="h2" variant="label">
 					{t("layout.preview")}
 				</Heading>
@@ -199,7 +199,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 					<X aria-hidden />
 				</Button>
 			</Inline>
-			<Stack gap="none" grow minHeight={0} padding="normal">
+			<Stack gap={0} grow minHeight={0} padding={12}>
 				{preview}
 			</Stack>
 		</aside>
@@ -275,7 +275,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const card = (
 		<Box maxWidth="content" minWidth={0}>
 			<Panel ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
-				<Inline wrap justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
+				<Inline wrap justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
 					<Box minWidth={0}>
 						<Heading as="h4" variant="label">
 							{t("field.title")} <Text tone="muted">{names.length}</Text>
@@ -284,7 +284,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 							{t("fields.hint")}
 						</Text>
 					</Box>
-					<Inline wrap gap="condensed">
+					<Inline wrap gap={8}>
 						<IconButton
 							label={t("layout.preview")}
 							size="icon-sm"
@@ -331,9 +331,9 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					<span>{t("fields.colKind")}</span>
 					{!ctx.compact && <span>{t("fields.colSettings")}</span>}
 				</div>
-				<Box paddingY="condensed">
+				<Box paddingY={8}>
 					{names.length === 0 ? (
-						<Box paddingX="comfortable" paddingY="normal">
+						<Box paddingX={16} paddingY={12}>
 							<Text as="p" variant="caption" tone="muted">
 								{t("field.none")}
 							</Text>
@@ -342,7 +342,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						<LayoutTree editing={editing} ctx={ctx} />
 					)}
 				</Box>
-				<Inline wrap gap="comfortable" border="top" paddingX="comfortable" paddingY="condensed" align="baseline">
+				<Inline wrap gap={16} border="top" paddingX={16} paddingY={8} align="baseline">
 					<Text variant="caption" tone="muted">
 						<Text mono tone="warning">
 							!

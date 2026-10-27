@@ -16,7 +16,7 @@ export const Playground: Story = {};
 /** The admin's message is a quiet bubble; the assistant's answer is plain text. */
 export const Roles: Story = {
 	render: () => (
-		<Stack gap="comfortable" maxWidth="panel">
+		<Stack gap={16} maxWidth="panel">
 			<ChatMessage author="user">Which posts are drafts?</ChatMessage>
 			<ChatMessage author="assistant">Two posts are drafts.</ChatMessage>
 		</Stack>
@@ -31,7 +31,7 @@ export const Streaming: Story = {
 /** Line breaks in the text are kept, and a long word wraps instead of widening the panel. */
 export const LongText: Story = {
 	render: () => (
-		<Stack gap="comfortable" maxWidth="panel">
+		<Stack gap={16} maxWidth="panel">
 			<ChatMessage author="user">
 				{"First line\nSecond line\nhttps://example.com/a/very/long/address/that/has/no/spaces/at/all/and/keeps/going"}
 			</ChatMessage>

@@ -76,7 +76,7 @@ export function EmptyState({
 			</EmptyHeader>
 			{(action || secondaryAction) && (
 				<EmptyContent>
-					<Inline justify="center" gap="condensed">
+					<Inline justify="center" gap={8}>
 						{action && (
 							<Button
 								type="button"

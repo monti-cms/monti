@@ -6,14 +6,5 @@ import { Stack, type StackProps } from "@monti-cms/ui";
  * (a workspace of lists, trees and side panels) uses all the width there is, with the same padding.
  */
 export function PageBody({ wide, ...props }: Omit<StackProps, "className"> & { wide?: boolean }) {
-	return (
-		<Stack
-			gap="spacious"
-			width="full"
-			maxWidth={wide ? undefined : "page"}
-			paddingX="wide"
-			paddingY="wide"
-			{...props}
-		/>
-	);
+	return <Stack gap={24} width="full" maxWidth={wide ? undefined : "content"} paddingX={32} paddingY={32} {...props} />;
 }

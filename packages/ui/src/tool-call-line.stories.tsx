@@ -21,7 +21,7 @@ export const Playground: Story = {};
 /** Where the call stands: running, done, failed. */
 export const Statuses: Story = {
 	render: () => (
-		<Stack gap="tight" maxWidth="panel">
+		<Stack gap={4} maxWidth="panel">
 			<ToolCallLine name="entries.list" status="running" statusLabel="Running" />
 			<ToolCallLine name="entries.list" status="done" statusLabel="Done" details={details} />
 			<ToolCallLine

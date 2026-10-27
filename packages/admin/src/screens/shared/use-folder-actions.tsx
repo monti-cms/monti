@@ -292,7 +292,7 @@ export function useFolderActions({
 					</DialogHeader>
 					<Stack
 						as="form"
-						gap="comfortable"
+						gap={16}
 						onSubmit={(event) => {
 							event.preventDefault();
 							void submitName();
@@ -347,7 +347,7 @@ export function useFolderActions({
 						</List>
 					) : (
 						!shownError && (
-							<Stack gap="condensed" aria-hidden>
+							<Stack gap={8} aria-hidden>
 								<Skeleton width="third" />
 								<Skeleton width="half" />
 							</Stack>

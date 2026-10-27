@@ -88,7 +88,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	const mediaId = typeof value === "string" ? value : "";
 	return (
 		<>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				{mediaId && <MediaThumbnail mediaId={mediaId} size="inline" />}
 				<Box grow>
 					<Button
@@ -165,9 +165,9 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 	};
 	return (
 		<>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				{mediaId && (
-					<Inline gap="tight" grow minWidth={0}>
+					<Inline gap={4} grow minWidth={0}>
 						<FileIcon aria-hidden size={14} />
 						<Text variant="caption" truncate>
 							{filename ?? mediaId}

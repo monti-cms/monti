@@ -88,7 +88,7 @@ export function InspectorPanel({
 		);
 
 	return (
-		<Stack gap="none" height="full" width="full" overflow="hidden" background="page" border="left">
+		<Stack gap={0} height="full" width="full" overflow="hidden" background="page" border="left">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(String(value))} aria-label={t("tab.default")}>
 				<SidePanelHeader onClose={onClose}>
 					<TabsList variant="line">
@@ -101,7 +101,7 @@ export function InspectorPanel({
 					</TabsList>
 				</SidePanelHeader>
 
-				<Box grow minHeight={0} overflow="y" paddingX="comfortable" paddingY="comfortable">
+				<Box grow minHeight={0} overflow="y" paddingX={16} paddingY={16}>
 					<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 					{tabs.map((name) => (
 						<TabsContent key={name} value={name}>

@@ -42,7 +42,7 @@ export function PageActions({ children }: { children: ReactNode }) {
 	const slot = useContext(ActionsSlotContext);
 	return slot
 		? createPortal(
-				<Inline wrap gap="condensed" justify="end">
+				<Inline wrap gap={8} justify="end">
 					{children}
 				</Inline>,
 				slot,
@@ -203,26 +203,26 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset fixed>
-				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden">
-					<Stack gap="none" grow minWidth={0} minHeight={0}>
+				<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+					<Stack gap={0} grow minWidth={0} minHeight={0}>
 						{editorial ? (
-							<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
+							<Box width="full" maxWidth="content" centered paddingX={32} paddingTop={24} shrink={false}>
 								<Inline
 									as="header"
 									container
 									align="end"
 									justify="between"
-									gap="normal"
+									gap={12}
 									border="bottom-strong"
-									paddingBottom="normal"
+									paddingBottom={12}
 								>
-									<Inline gap="condensed" align="baseline" grow minWidth={0}>
+									<Inline gap={8} align="baseline" grow minWidth={0}>
 										<Box hideFrom="md">
 											<SidebarTrigger aria-label={t("shell.openSidebar")} />
 										</Box>
 										<Box minWidth={0}>
 											<Heading as="h1" variant="heading">
-												<Inline as="span" gap="condensed" align="baseline">
+												<Inline as="span" gap={8} align="baseline">
 													<Text truncate>{title}</Text>
 													{count !== undefined && (
 														<Text variant="caption" tone="muted" mono>
@@ -232,7 +232,7 @@ export function AdminShell({
 												</Inline>
 											</Heading>
 										</Box>
-										<Inline gap="condensed" align="center" ref={setMetaSlot} />
+										<Inline gap={8} align="center" ref={setMetaSlot} />
 										{description && (
 											<Box minWidth={0} hideBelowContainer="2xl">
 												<Text as="p" variant="caption" tone="muted" truncate>
@@ -241,7 +241,7 @@ export function AdminShell({
 											</Box>
 										)}
 									</Inline>
-									<Inline gap="condensed">
+									<Inline gap={8}>
 										<div ref={setActionsSlot} />
 										<SidePanelToggle />
 									</Inline>
@@ -252,21 +252,21 @@ export function AdminShell({
 								as="header"
 								container
 								wrap
-								gap="normal"
+								gap={12}
 								shrink={false}
 								border="bottom"
-								paddingX="wide"
-								paddingY="tight"
+								paddingX={32}
+								paddingY={4}
 								minHeight="header"
 							>
 								<Box hideFrom="md">
 									<SidebarTrigger aria-label={t("shell.openSidebar")} />
 								</Box>
-								<Inline gap="condensed" align="baseline" grow>
+								<Inline gap={8} align="baseline" grow>
 									{/* The title and its count keep their width: what gives way, when the page has little room, is the description and the actions. */}
 									<Box shrink={false}>
 										<Heading as="h1" variant="title">
-											<Inline as="span" gap="condensed" align="baseline">
+											<Inline as="span" gap={8} align="baseline">
 												<Text>{title}</Text>
 												{count !== undefined && (
 													<Text variant="caption" tone="muted" mono>
@@ -276,7 +276,7 @@ export function AdminShell({
 											</Inline>
 										</Heading>
 									</Box>
-									<Inline gap="condensed" align="center" ref={setMetaSlot} />
+									<Inline gap={8} align="center" ref={setMetaSlot} />
 									{description && (
 										<Box minWidth={0} hideBelowContainer="2xl">
 											<Text as="p" variant="caption" tone="muted" truncate>
@@ -291,7 +291,7 @@ export function AdminShell({
 						)}
 						<MetaSlotContext.Provider value={metaSlot}>
 							<ActionsSlotContext.Provider value={actionsSlot}>
-								<Stack gap="none" grow minHeight={0} overflow="hidden">
+								<Stack gap={0} grow minHeight={0} overflow="hidden">
 									{children}
 								</Stack>
 							</ActionsSlotContext.Provider>

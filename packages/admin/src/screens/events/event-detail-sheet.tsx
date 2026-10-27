@@ -24,7 +24,7 @@ import { eventsMessages } from "./messages";
 /** One group of the detail: a small heading with its rows, separated from the group before by a hairline. */
 function Band({ title, first = false, children }: { title: string; first?: boolean; children: ReactNode }) {
 	return (
-		<Stack as="section" gap="condensed" padding="comfortable" border={first ? undefined : "top"}>
+		<Stack as="section" gap={8} padding={16} border={first ? undefined : "top"}>
 			<Heading as="h3" variant="label">
 				{title}
 			</Heading>
@@ -65,7 +65,7 @@ export function EventDetailSheet({
 					<SheetDescription>{t("detail.description")}</SheetDescription>
 				</SheetHeader>
 				{item && change && (
-					<Stack gap="none">
+					<Stack gap={0}>
 						<Band first title={t("detail.section.event")}>
 							<DescriptionItem label={t("detail.eventId")}>
 								<Mono>{change.eventId}</Mono>
@@ -97,10 +97,10 @@ export function EventDetailSheet({
 						<Band title={t("detail.section.delivery")}>
 							<DescriptionItem label={t("detail.subscribers")}>
 								{deliveries.some((delivery) => delivery.subscriber !== null) ? (
-									<Stack as="ul" gap="condensed">
+									<Stack as="ul" gap={8}>
 										{deliveries.map((delivery) => (
-											<Stack as="li" key={delivery.subscriber ?? ""} gap="hair">
-												<Inline gap="condensed">
+											<Stack as="li" key={delivery.subscriber ?? ""} gap={2}>
+												<Inline gap={8}>
 													<Mono>{delivery.subscriber ?? ""}</Mono>
 													<StatusIndicator tone={STATE_TONE[delivery.state]} label={t(`state.${delivery.state}`)} />
 												</Inline>

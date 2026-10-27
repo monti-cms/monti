@@ -136,7 +136,7 @@ export function FieldSheet({
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent resizable={resizable} data-testid="field-sheet" showCloseButton>
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
-				<Tabs defaultValue="basic" render={<Stack gap="none" grow minHeight={0} />}>
+				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>
 						<SheetTitle>{label || name}</SheetTitle>
 						<SheetDescription>
@@ -147,11 +147,11 @@ export function FieldSheet({
 						<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 						<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
 					</PageTabs>
-					<Box grow minHeight={0} overflow="y" paddingX="spacious" paddingY="spacious">
+					<Box grow minHeight={0} overflow="y" paddingX={24} paddingY={24}>
 						<IssueList issues={issues} />
 						<TabsContent value="basic">
-							<Stack gap="wide">
-								<Stack as="section" gap="spacious">
+							<Stack gap={32}>
+								<Stack as="section" gap={24}>
 									<TextInput label={t("sheet.label")} value={label} onChange={(value) => setBoth("label", value)} />
 									<TextInput
 										label={t("field.description")}
@@ -160,12 +160,12 @@ export function FieldSheet({
 										onChange={(value) => setBoth("description", orUndefined(value))}
 									/>
 									<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-										<Inline height="control" radius="md" background="neutral" paddingX="normal">
+										<Inline height="icon" radius="md" background="muted" paddingX={12}>
 											<Text as="code">{name}</Text>
 										</Inline>
 									</Labeled>
 								</Stack>
-								<Stack as="section" gap="comfortable" border="top" paddingTop="wide">
+								<Stack as="section" gap={16} border="top" paddingTop={32}>
 									<Heading as="h3" variant="label">
 										{t("sheet.input")}
 									</Heading>
@@ -189,7 +189,7 @@ export function FieldSheet({
 									/>
 								</Stack>
 								{valueKind && (
-									<Stack as="section" gap="comfortable" border="top" paddingTop="wide">
+									<Stack as="section" gap={16} border="top" paddingTop={32}>
 										<Heading as="h3" variant="label">
 											{t("sheet.rules")}
 										</Heading>
@@ -223,7 +223,7 @@ export function FieldSheet({
 							</Stack>
 						</TabsContent>
 						<TabsContent value="advanced">
-							<Stack gap="spacious">
+							<Stack gap={24}>
 								<Pick
 									label={t("field.kind")}
 									description={
@@ -258,7 +258,7 @@ export function FieldSheet({
 						</TabsContent>
 					</Box>
 				</Tabs>
-				<Inline gap="condensed" border="top" paddingX="spacious" paddingY="normal">
+				<Inline gap={8} border="top" paddingX={24} paddingY={12}>
 					<Button
 						type="button"
 						variant="ghost"

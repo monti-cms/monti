@@ -165,8 +165,8 @@ export function AdminEntriesTable({
 	const pageHref = (page: number) => `?page=${page}`;
 
 	return (
-		<Stack as="section" aria-label={t("list.label")} gap="none" grow minHeight={0} overflow="hidden">
-			<Box width="full" maxWidth="content" centered paddingX="wide" shrink={false}>
+		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0} overflow="hidden">
+			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
 				<ListSubToolbar
 					state={state}
 					options={options}
@@ -205,14 +205,14 @@ export function AdminEntriesTable({
 				/>
 				{aboveTable}
 				{errorMessage && (
-					<Box paddingTop="normal">
+					<Box paddingTop={12}>
 						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
 					</Box>
 				)}
 			</Box>
 
-			<Stack gap="none" grow minHeight={0} overflow="auto">
-				<Box ref={scrollRef} width="full" maxWidth="content" centered paddingX="wide">
+			<Stack gap={0} grow minHeight={0} overflow="auto">
+				<Box ref={scrollRef} width="full" maxWidth="content" centered paddingX={32}>
 					<Table density="comfortable" container="none">
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (
@@ -277,7 +277,7 @@ export function AdminEntriesTable({
 														/>
 													</TableCell>
 													<TableCell wrap>
-														<Stack gap="tight" minWidth={0}>
+														<Stack gap={4} minWidth={0}>
 															<EntryCell
 																collection={collection}
 																column="title"
@@ -290,7 +290,7 @@ export function AdminEntriesTable({
 																onOpenRecord={onOpenRecord}
 															/>
 															{subtitleColumns.length > 0 && (
-																<Inline wrap gap="condensed" minWidth={0}>
+																<Inline wrap gap={8} minWidth={0}>
 																	{subtitleColumns.map((column, index) => (
 																		<Fragment key={column}>
 																			{index > 0 && (
@@ -318,7 +318,7 @@ export function AdminEntriesTable({
 														</Stack>
 													</TableCell>
 													<TableCell align="end">
-														<Inline gap="normal" justify="end">
+														<Inline gap={12} justify="end">
 															{!isTrash && visibility.status !== false && (
 																<EntryCell
 																	collection={collection}
@@ -350,7 +350,7 @@ export function AdminEntriesTable({
 																		onOpenRecord={onOpenRecord}
 																	/>
 																))}
-															<Inline gap="tight" justify="end">
+															<Inline gap={4} justify="end">
 																{isTrash && (
 																	<>
 																		<Button
@@ -426,7 +426,7 @@ export function AdminEntriesTable({
 				{blankMenu && (
 					<ActionContextMenu
 						actions={blankMenu}
-						trigger={<Box grow paddingY="comfortable" aria-hidden data-testid="list-blank-area" />}
+						trigger={<Box grow paddingY={16} aria-hidden data-testid="list-blank-area" />}
 					/>
 				)}
 			</Stack>

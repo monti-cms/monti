@@ -18,6 +18,24 @@ describe("design tokens", () => {
 		const generated = generate();
 		expect(read("styles/tokens.css")).toBe(generated.tokens);
 		expect(read("styles/theme.css")).toBe(generated.theme);
+		expect(read("src/tokens.generated.ts")).toBe(generated.layout);
+	});
+
+	it("key the layout options by the design system's names, once, and write each class out whole", async () => {
+		const { generate } = await import(/* @vite-ignore */ script);
+		const json = JSON.parse(read("tokens/tokens.json"));
+		const { layout } = generate();
+		const steps = json.spacing.tokens.map((token: { name: string }) => token.name.replace("space-", ""));
+		for (const step of steps) expect(layout, `gap ${step}`).toContain(`\t${step}: "gap-monti-${step}",`);
+		for (const token of json.width.tokens) {
+			const role = token.name.replace("width-", "");
+			expect(layout, role).toContain(`: "w-monti-${role}",`);
+			expect(layout, role).toContain(`: "max-w-monti-${role}",`);
+		}
+		for (const token of json.radius.tokens)
+			expect(layout).toContain(`"rounded-monti-${token.name.replace("radius-", "")}"`);
+		expect(layout).toContain('page: "bg-monti-page"');
+		expect(layout).not.toMatch(/\b(surface|overlay|inset|neutral|accent|condensed|comfortable|spacious)\b/);
 	});
 
 	it("name every role of the design system once, with the monti prefix", async () => {

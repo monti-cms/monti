@@ -69,7 +69,7 @@ export function GitSyncPage() {
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden">
+		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
 				<PageTabs>
 					<TabsTrigger value="sync">
@@ -113,7 +113,7 @@ export function GitSyncPage() {
 
 function ListSkeleton() {
 	return (
-		<Stack gap="normal" paddingX="wide" paddingY="comfortable" aria-hidden>
+		<Stack gap={12} paddingX={32} paddingY={16} aria-hidden>
 			<Skeleton shape="block" />
 			<Skeleton shape="block" />
 		</Stack>
@@ -165,7 +165,7 @@ function SyncTab({
 	if (loading) return <ListSkeleton />;
 	if (error) {
 		return (
-			<Box paddingX="wide" paddingY="comfortable">
+			<Box paddingX={32} paddingY={16}>
 				<LoadErrorAlert message={error} onRetry={onRetry} />
 			</Box>
 		);
@@ -176,9 +176,9 @@ function SyncTab({
 	}
 
 	return (
-		<Stack gap="none">
+		<Stack gap={0}>
 			{!status.keys.token && (
-				<Box paddingX="wide" paddingTop="comfortable">
+				<Box paddingX={32} paddingTop={16}>
 					<Alert layout="stack">
 						<AlertDescription>{t("sync.noToken")}</AlertDescription>
 					</Alert>
@@ -189,12 +189,12 @@ function SyncTab({
 					as="section"
 					key={target.id}
 					aria-label={target.id}
-					gap="normal"
+					gap={12}
 					border={index === 0 ? "y" : "bottom"}
-					paddingX="wide"
-					paddingY="comfortable"
+					paddingX={32}
+					paddingY={16}
 				>
-					<Inline gap="condensed" wrap>
+					<Inline gap={8} wrap>
 						<Box grow minWidth={0}>
 							<Heading as="h2" variant="label" truncate>
 								<Text mono weight="medium">
@@ -285,7 +285,7 @@ function SyncTab({
 							)}
 						</DescriptionItem>
 					</DescriptionList>
-					<Inline gap="condensed" wrap>
+					<Inline gap={8} wrap>
 						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
 						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
 						{target.conflicts > 0 && (
@@ -293,11 +293,11 @@ function SyncTab({
 						)}
 					</Inline>
 					{target.lastPull && target.lastPull.errors.length > 0 && (
-						<Stack gap="tight">
+						<Stack gap={4}>
 							<Heading as="h3" variant="label">
 								{t("summary.errors")}
 							</Heading>
-							<Stack as="ul" gap="hair">
+							<Stack as="ul" gap={2}>
 								{target.lastPull.errors.map((item) => (
 									<Text as="li" key={item.path} variant="caption" tone="danger">
 										<Text mono variant="caption">
@@ -310,11 +310,11 @@ function SyncTab({
 						</Stack>
 					)}
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
-						<Stack gap="tight">
+						<Stack gap={4}>
 							<Heading as="h3" variant="label">
 								{t("summary.skipped")}
 							</Heading>
-							<Stack as="ul" gap="hair">
+							<Stack as="ul" gap={2}>
 								{target.lastPull.skipped.map((item) => (
 									<Text as="li" key={item.path} variant="caption" tone="muted">
 										<Text mono variant="caption">
@@ -341,8 +341,8 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 	const lines = useMemo(() => lineDiff(serverText ?? "", gitText), [serverText, gitText]);
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
-		<Stack gap="tight">
-			<Inline gap="comfortable">
+		<Stack gap={4}>
+			<Inline gap={16}>
 				<Text variant="caption" tone="muted">
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
@@ -398,7 +398,7 @@ function ConflictsTab({
 	if (loading) return <ListSkeleton />;
 	if (error) {
 		return (
-			<Box paddingX="wide" paddingY="comfortable">
+			<Box paddingX={32} paddingY={16}>
 				<LoadErrorAlert message={error} />
 			</Box>
 		);
@@ -407,18 +407,18 @@ function ConflictsTab({
 		return <EmptyState icon={GitBranch} title={t("conflicts.empty")} />;
 	}
 	return (
-		<Stack gap="none">
+		<Stack gap={0}>
 			{items.map((conflict, index) => (
 				<Stack
 					as="section"
 					key={conflict.id}
 					aria-label={conflict.label}
-					gap="normal"
+					gap={12}
 					border={index === 0 ? "y" : "bottom"}
-					paddingX="wide"
-					paddingY="comfortable"
+					paddingX={32}
+					paddingY={16}
 				>
-					<Stack gap="tight">
+					<Stack gap={4}>
 						<Heading as="h2" variant="label">
 							{conflict.label}
 						</Heading>
@@ -433,7 +433,7 @@ function ConflictsTab({
 						</Text>
 					</Stack>
 					<ConflictDiff serverText={conflict.serverText} gitText={conflict.gitText} />
-					<Inline gap="condensed" wrap>
+					<Inline gap={8} wrap>
 						<Button
 							type="button"
 							size="sm"
@@ -507,9 +507,9 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const secretKey = keys.webhookSecret;
 
 	return (
-		<Stack gap="none" maxWidth="prose" paddingX="wide">
+		<Stack gap={0} maxWidth="reading" paddingX={32}>
 			{!keys.secretsAvailable && (
-				<Box paddingY="comfortable">
+				<Box paddingY={16}>
 					<Alert tone="danger" layout="stack">
 						<AlertDescription>{t("settings.secretMissing")}</AlertDescription>
 					</Alert>
@@ -518,9 +518,9 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 
 			<Stack
 				as="form"
-				gap="condensed"
+				gap={8}
 				border="bottom"
-				paddingY="spacious"
+				paddingY={24}
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (tokenChanged && choiceReady(choice)) assign.mutate({ slot: "token", key: choice });
@@ -536,7 +536,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
 				</Text>
 				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Button
 						type="submit"
 						size="sm"
@@ -560,8 +560,8 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 
 			<Stack
 				as="form"
-				gap="condensed"
-				paddingY="spacious"
+				gap={8}
+				paddingY={24}
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
@@ -573,7 +573,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				<Text as="p" variant="caption">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</Text>
-				<Stack gap="tight">
+				<Stack gap={4}>
 					<Label htmlFor="git-sync-url" size="caption" tone="muted">
 						{t("settings.webhook.url")}
 					</Label>
@@ -582,7 +582,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				<Text as="p" variant="caption" tone="muted">
 					{t("settings.webhook.help")}
 				</Text>
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Box grow minWidth={0}>
 						<Input
 							id="git-sync-secret"
@@ -625,7 +625,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						{t("settings.copy")}
 					</Button>
 				</Inline>
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
 						{tc("save")}
 					</Button>

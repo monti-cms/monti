@@ -39,7 +39,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 		...preview.targets.map((target) => ({ value: target.name, label: target.label })),
 	];
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("collections.title")} data-testid="import-collections">
+		<Stack as="section" gap={8} aria-label={t("collections.title")} data-testid="import-collections">
 			<Heading as="h4" variant="label">
 				{t("collections.title")}
 			</Heading>
@@ -81,7 +81,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 										</SelectContent>
 									</Select>
 									{collection.skipped && (
-										<Box paddingTop="tight">
+										<Box paddingTop={4}>
 											<Text as="p" variant="caption" tone="muted">
 												{collection.skipped.text}
 											</Text>
@@ -101,7 +101,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	const t = useTranslator(importMessages);
 	if (!entry.skipped) {
 		return (
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Badge variant="success">{t("entries.willImport")}</Badge>
 				{entry.notes.map((note) => (
 					<Text key={note.code} variant="caption" tone="muted">
@@ -113,7 +113,7 @@ function EntryStatus({ entry }: { entry: ImportPreviewEntry }) {
 	}
 	const conflict = entry.skipped.code === "slug_exists";
 	return (
-		<Stack gap="tight">
+		<Stack gap={4}>
 			<Badge variant={conflict ? "warning" : "secondary"}>
 				{conflict ? t("entries.conflict") : t("entries.skipped")}
 			</Badge>
@@ -136,7 +136,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 				: entry.collection
 			: (preview.targets.find((target) => target.name === entry.target)?.label ?? entry.target);
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("entries.title")} data-testid="import-entries">
+		<Stack as="section" gap={8} aria-label={t("entries.title")} data-testid="import-entries">
 			<Heading as="h4" variant="label">
 				{t("entries.title")}
 			</Heading>
@@ -154,7 +154,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 						{rows.map((entry) => (
 							<TableRow key={entry.key} data-testid="import-entry" data-status={entry.skipped ? "skipped" : "import"}>
 								<TableCell valign="top" wrap>
-									<Inline gap="condensed" wrap>
+									<Inline gap={8} wrap>
 										<Text weight="medium">{entry.title ?? t("entries.noTitle")}</Text>
 										{entry.isTranslation && <Badge variant="outline">{t("entries.translation")}</Badge>}
 									</Inline>
@@ -191,11 +191,11 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 	const t = useTranslator(importMessages);
 	const { counts } = preview;
 	return (
-		<Stack as="section" gap="condensed" aria-label={t("fields.title")} data-testid="import-leftovers">
+		<Stack as="section" gap={8} aria-label={t("fields.title")} data-testid="import-leftovers">
 			<Heading as="h4" variant="label">
 				{t("fields.title")}
 			</Heading>
-			<Stack as="ul" gap="condensed">
+			<Stack as="ul" gap={8}>
 				<Text as="li" tone="muted">
 					{t("fields.only")}
 				</Text>
@@ -238,8 +238,8 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 	const publishId = useId();
 	const { counts } = preview;
 	return (
-		<Stack gap="spacious" data-testid="import-preview">
-			<Inline gap="normal" wrap align="baseline" data-testid="import-summary">
+		<Stack gap={24} data-testid="import-preview">
+			<Inline gap={12} wrap align="baseline" data-testid="import-summary">
 				<Text variant="title">{t("summary.found", { count: counts.entries })}</Text>
 				<Text tone="muted">
 					{[
@@ -259,13 +259,13 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 			<Leftovers preview={preview} />
 			{counts.publishable > 0 && (
 				<Box as="label" htmlFor={publishId}>
-					<Inline gap="normal" align="start">
+					<Inline gap={12} align="start">
 						<Checkbox
 							id={publishId}
 							checked={form.publish}
 							onCheckedChange={(checked) => form.setPublish(checked === true)}
 						/>
-						<Stack gap="hair">
+						<Stack gap={2}>
 							<Text weight="medium">{t("publish.label")}</Text>
 							<Text variant="caption" tone="muted">
 								{t("publish.hint", { count: counts.publishable })}

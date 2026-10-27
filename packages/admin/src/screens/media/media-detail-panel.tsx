@@ -52,7 +52,7 @@ import { mediaMessages } from "./messages";
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<Stack as="section" gap="normal" border="top" paddingX="comfortable" paddingY="comfortable">
+		<Stack as="section" gap={12} border="top" paddingX={16} paddingY={16}>
 			<Heading as="h3" variant="label">
 				{title}
 			</Heading>
@@ -189,11 +189,11 @@ export function MediaDetailPanel({
 	);
 
 	return (
-		<Stack as="aside" aria-label={t("detail.label")} gap="none" height="full" border="left" background="page">
+		<Stack as="aside" aria-label={t("detail.label")} gap={0} height="full" border="left" background="page">
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
-			<Stack gap="none" grow minHeight={0} overflow="y">
-				<Stack gap="normal" padding="comfortable">
+			<Stack gap={0} grow minHeight={0} overflow="y">
+				<Stack gap={12} padding={16}>
 					<Image
 						src={isImage ? media.publicUrl : undefined}
 						alt=""
@@ -202,7 +202,7 @@ export function MediaDetailPanel({
 						border
 						fallback={fallbackFor(media, isImage)}
 					/>
-					<Inline gap="condensed" wrap>
+					<Inline gap={8} wrap>
 						{media.publicUrl && (
 							<>
 								<Button
@@ -257,13 +257,13 @@ export function MediaDetailPanel({
 										void saveName();
 									}}
 								>
-									<Stack gap="tight">
+									<Stack gap={4}>
 										<FormField data-invalid={problem && nameDirty ? true : undefined}>
-											<Inline gap="condensed" justify="between">
+											<Inline gap={8} justify="between">
 												<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
 												{isImage && trigger}
 											</Inline>
-											<Inline gap="condensed">
+											<Inline gap={8}>
 												<Input
 													id={nameFieldId}
 													size="sm"
@@ -375,11 +375,11 @@ export function MediaDetailPanel({
 								void saveDefaults();
 							}}
 						>
-							<Stack gap="normal">
+							<Stack gap={12}>
 								<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
 									{({ trigger, panel }) => (
 										<FormField>
-											<Inline gap="condensed" justify="between">
+											<Inline gap={8} justify="between">
 												<FormFieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FormFieldLabel>
 												{trigger}
 											</Inline>
@@ -400,7 +400,7 @@ export function MediaDetailPanel({
 								>
 									{({ trigger, panel }) => (
 										<FormField>
-											<Inline gap="condensed" justify="between">
+											<Inline gap={8} justify="between">
 												<FormFieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FormFieldLabel>
 												{trigger}
 											</Inline>
@@ -433,10 +433,10 @@ export function MediaDetailPanel({
 							{t("detail.noUsage")}
 						</Text>
 					) : (
-						<Stack as="ul" gap="tight">
+						<Stack as="ul" gap={4}>
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
-									<Inline gap="condensed" justify="between" paddingX="condensed" paddingY="condensed">
+									<Inline gap={8} justify="between" paddingX={8} paddingY={8}>
 										<TextLink underline="hover" href={withBasePath(entryHref(site, usage.collection, usage.entryId))}>
 											{usage.title || tc("untitled")}
 										</TextLink>
@@ -453,7 +453,7 @@ export function MediaDetailPanel({
 				</Section>
 			</Stack>
 
-			<Stack gap="condensed" shrink={false} border="top" paddingX="comfortable" paddingY="normal">
+			<Stack gap={8} shrink={false} border="top" paddingX={16} paddingY={12}>
 				<Button
 					type="button"
 					variant="secondary"

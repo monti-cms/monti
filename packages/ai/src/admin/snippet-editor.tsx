@@ -78,9 +78,9 @@ export function SnippetManager({
 	const applySaved = (saved: AiSnippetView) => queryClient.setQueryData(aiKeys.snippets(), saved);
 
 	return (
-		<Stack gap="none" grow minHeight={0}>
+		<Stack gap={0} grow minHeight={0}>
 			{query.error && !view && (
-				<Box padding="normal">
+				<Box padding={12}>
 					<LoadErrorAlert
 						message={errorText(site, query.error, t("error.load"))}
 						onRetry={() => void query.refetch()}
@@ -162,8 +162,8 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 		}
 	};
 	return (
-		<Inline gap="tight">
-			<Box as="span" border="all" radius="md" background="neutral" paddingX="condensed" paddingY="tight">
+		<Inline gap={4}>
+			<Box as="span" border="all" radius="md" background="muted" paddingX={8} paddingY={4}>
 				<Text as="code" variant="caption" mono>
 					{text}
 				</Text>
@@ -275,7 +275,7 @@ function SnippetEditor({
 	const shownKey = item?.key ?? draft.key.trim();
 
 	return (
-		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
+		<Stack gap={16} padding={24} maxWidth="reading" width="full" centered>
 			<Box minWidth={0}>
 				<Heading truncate>{(item ? item.label : draft.label.trim()) || t("new.title")}</Heading>
 				{(shownKey || item?.source === "added") && (

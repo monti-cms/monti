@@ -213,13 +213,13 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent size="lg">
-				<Stack as="form" gap="comfortable" onSubmit={handleApply}>
+				<Stack as="form" gap={16} onSubmit={handleApply}>
 					<DialogHeader>
 						<DialogTitle>{t("imageCrop.title")}</DialogTitle>
 					</DialogHeader>
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
-					<Stack gap="condensed" align="center">
+					<Stack gap={8} align="center">
 						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-monti-md border bg-monti-tool p-monti-4">
 							<div
 								ref={containerRef}
@@ -293,7 +293,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</div>
 						</div>
 
-						<Inline width="full" wrap justify="between" gap="condensed">
+						<Inline width="full" wrap justify="between" gap={8}>
 							<Text variant="caption" tone="muted">
 								{isFull
 									? t("imageCrop.full")
@@ -307,20 +307,12 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						</Inline>
 
 						{/* Keyboard numeric input controls */}
-						<Inline
-							width="full"
-							justify="between"
-							gap="condensed"
-							padding="condensed"
-							radius="lg"
-							border="all"
-							background="inset"
-						>
+						<Inline width="full" justify="between" gap={8} padding={8} radius="lg" border="all" background="tool">
 							<Text variant="caption" tone="muted" weight="medium">
 								{t("imageCrop.regionPercent")}
 							</Text>
-							<Grid columns={4} responsive={false} gap="condensed">
-								<Inline gap="tight">
+							<Grid columns={4} responsive={false} gap={8}>
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-x" size="caption" tone="muted">
 										X
 									</Label>
@@ -336,7 +328,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("x", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-y" size="caption" tone="muted">
 										Y
 									</Label>
@@ -352,7 +344,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("y", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-w" size="caption" tone="muted">
 										W
 									</Label>
@@ -368,7 +360,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("width", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-h" size="caption" tone="muted">
 										H
 									</Label>
@@ -389,8 +381,8 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 					</Stack>
 
 					{/* Rotation controls */}
-					<Inline justify="between" padding="condensed" radius="lg" border="all" background="inset">
-						<Inline gap="condensed">
+					<Inline justify="between" padding={8} radius="lg" border="all" background="tool">
+						<Inline gap={8}>
 							<Text variant="caption" weight="medium">
 								{t("imageCrop.rotate")}
 							</Text>
@@ -405,11 +397,11 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 					</Inline>
 
 					<DialogFooter>
-						<Inline width="full" justify="between" gap="condensed">
+						<Inline width="full" justify="between" gap={8}>
 							<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
 								{tc("reset")}
 							</Button>
-							<Inline gap="condensed">
+							<Inline gap={8}>
 								<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 									{tc("cancel")}
 								</Button>

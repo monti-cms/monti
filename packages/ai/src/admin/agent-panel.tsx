@@ -69,7 +69,7 @@ function UnavailableNotice({ reason, model }: { reason: Unavailable; model?: str
 	const t = useTranslator(agentPanelMessages);
 	return (
 		<Alert tone="warning" layout="stack">
-			<Stack gap="tight">
+			<Stack gap={4}>
 				<Text as="p">
 					{reason === "no-connection"
 						? t("unavailable.noConnection")
@@ -213,7 +213,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 				</>
 			}
 			footer={
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					{unavailable && <UnavailableNotice reason={unavailable} model={effective?.model} />}
 					<ChatInput
 						value={text}
@@ -256,7 +256,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			{busy && last?.role === "user" && <Spinner size="sm" />}
 			{failed && (
 				<Alert tone="danger" layout="stack">
-					<Stack gap="tight">
+					<Stack gap={4}>
 						<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
 						<Box>
 							<Button type="button" variant="outline" size="sm" onClick={() => void chat.regenerate()}>

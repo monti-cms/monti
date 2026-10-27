@@ -46,8 +46,8 @@ function AttributeField({
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
-			<Stack gap="tight">
-				<Inline justify="between" gap="condensed">
+			<Stack gap={4}>
+				<Inline justify="between" gap={8}>
 					<Label htmlFor={id} size="caption" tone="muted">
 						{attribute.label}
 					</Label>

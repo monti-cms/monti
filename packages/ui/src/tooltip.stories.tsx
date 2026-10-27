@@ -36,7 +36,7 @@ const SIDES = ["top", "right", "bottom", "left"] as const;
 
 export const Sides: Story = {
 	render: () => (
-		<Stack direction="row" gap="section" align="center" justify="center" className="p-12">
+		<Stack direction="row" gap={48} align="center" justify="center" className="p-12">
 			{SIDES.map((side) => (
 				<Tooltip key={side} open>
 					<TooltipTrigger render={<Button variant="outline" />}>{side}</TooltipTrigger>
@@ -72,7 +72,7 @@ export const LongText: Story = {
 
 export const Alignment: Story = {
 	render: () => (
-		<Stack direction="row" gap="section" className="pt-12 pb-16">
+		<Stack direction="row" gap={48} className="pt-12 pb-16">
 			{(["start", "center", "end"] as const).map((align) => (
 				<Tooltip key={align} open>
 					<TooltipTrigger render={<Button variant="outline" />}>{align}</TooltipTrigger>

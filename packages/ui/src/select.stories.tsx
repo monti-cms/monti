@@ -53,9 +53,9 @@ export const Playground: Story = {
 /** Both trigger sizes, with placeholder and with a value. */
 export const Sizes: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{(["sm", "default"] as const).map((size) => (
-				<Stack key={size} direction="row" gap="condensed" align="center">
+				<Stack key={size} direction="row" gap={8} align="center">
 					<Text variant="caption" tone="muted">
 						{size}
 					</Text>
@@ -79,7 +79,7 @@ export const Sizes: Story = {
 
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Select disabled>
 				<SelectTrigger>
 					<SelectValue placeholder="비활성" />

@@ -205,7 +205,7 @@ function WriteDialog({
 			<DialogContent size="xl">
 				<DialogHeader>
 					<DialogTitle>
-						<Inline gap="condensed">
+						<Inline gap={8}>
 							<Sparkles aria-hidden />
 							{action.label}
 						</Inline>
@@ -214,7 +214,7 @@ function WriteDialog({
 				{askRequest && (
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (!running) void run();
@@ -264,14 +264,14 @@ function WriteDialog({
 					blockProblem && <FormFieldError>{blockProblem}</FormFieldError>
 				)}
 				<DialogFooter>
-					<Inline gap="condensed" justify={askRequest ? "end" : "between"} width="full">
+					<Inline gap={8} justify={askRequest ? "end" : "between"} width="full">
 						{!askRequest && (
 							<Button type="button" variant="ghost" size="sm" disabled={running} onClick={() => void run()}>
 								<RefreshCw aria-hidden />
 								{running ? t("running") : t("runAgain")}
 							</Button>
 						)}
-						<Inline gap="condensed">
+						<Inline gap={8}>
 							<Button type="button" variant="outline" size="sm" onClick={onClose}>
 								{tc("cancel")}
 							</Button>
@@ -314,7 +314,7 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 /** The inset box a rendered text sits in. */
 function ResultPanel({ children }: { children: ReactNode }) {
 	return (
-		<Box maxHeight="half" overflow="y" radius="md" background="inset" padding="normal">
+		<Box maxHeight="half" overflow="y" radius="md" background="tool" padding={12}>
 			{children}
 		</Box>
 	);
@@ -339,8 +339,8 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	);
 	if (job.mode === "insert") return <ResultPanel>{after}</ResultPanel>;
 	return (
-		<Grid columns={2} gap="normal">
-			<Stack as="section" gap="condensed" minWidth={0}>
+		<Grid columns={2} gap={12}>
+			<Stack as="section" gap={8} minWidth={0}>
 				<Heading as="h3" variant="label" tone="muted">
 					{t("now")}
 				</Heading>
@@ -348,7 +348,7 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 					<TextPreview format={format} text={job.source} label={t("now")} />
 				</ResultPanel>
 			</Stack>
-			<Stack as="section" gap="condensed" minWidth={0}>
+			<Stack as="section" gap={8} minWidth={0}>
 				<Heading as="h3" variant="label" tone="muted">
 					{t("after")}
 				</Heading>

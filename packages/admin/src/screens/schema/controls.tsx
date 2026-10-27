@@ -94,7 +94,7 @@ export function ChangeDot() {
 /** A help text under a label or a control: a muted line that stays readable in width. */
 export function Help({ children }: { children: ReactNode }) {
 	return (
-		<Box maxWidth="prose">
+		<Box maxWidth="reading">
 			<Text as="p" variant="label" tone="muted">
 				{children}
 			</Text>
@@ -107,7 +107,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<Inline as="span" gap="hair" data-testid="field-changed">
+		<Inline as="span" gap={2} data-testid="field-changed">
 			<ChangeDot />
 			<IconButton label={t("revert.named", { name })} size="icon-xs" disabled={disabled} onClick={onRevert}>
 				<Undo2 aria-hidden />
@@ -119,10 +119,10 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<Stack as="ul" gap="hair" data-testid="schema-issues">
+		<Stack as="ul" gap={2} data-testid="schema-issues">
 			{issues.map((issue) => (
 				<Text as="li" variant="caption" tone="danger" key={`${issue.path}:${issue.message}`}>
-					<Box as="span" background="danger-muted" radius="sm" paddingX="tight">
+					<Box as="span" background="danger-muted" radius="sm" paddingX={4}>
 						<Text as="code">{issue.path || "(root)"}</Text>
 					</Box>{" "}
 					{issue.message}
@@ -222,15 +222,15 @@ export function FlagSwitch({
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<Box maxWidth={inSectionRow ? undefined : "prose"} paddingY={inSectionRow ? "normal" : undefined}>
-			<Inline align="center" justify="between" gap="comfortable">
-				<Stack gap="hair">
+		<Box maxWidth={inSectionRow ? undefined : "reading"} paddingY={inSectionRow ? 12 : undefined}>
+			<Inline align="center" justify="between" gap={16}>
+				<Stack gap={2}>
 					<Text as="label" htmlFor={id} weight="medium">
 						{label}
 					</Text>
 					{desc && <Help>{desc}</Help>}
 				</Stack>
-				<Inline gap="condensed" shrink={false}>
+				<Inline gap={8} shrink={false}>
 					{revert && <RevertMark name={label} onRevert={revert} />}
 					<Switch
 						id={id}
@@ -264,7 +264,7 @@ export function Segmented({
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Text as="label" id={id} weight="medium">
 				{label}
 			</Text>
@@ -273,12 +273,12 @@ export function Segmented({
 				role="radiogroup"
 				aria-labelledby={id}
 				wrap
-				gap="hair"
+				gap={2}
 				width="fit"
 				maxWidth="full"
-				background="neutral"
+				background="muted"
 				radius="md"
-				padding="hair"
+				padding={2}
 			>
 				{items.map((item) => (
 					<Button
@@ -356,7 +356,7 @@ export function Pick({
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
 							{item.description ? (
-								<Stack gap="hair">
+								<Stack gap={2}>
 									<Text>{item.label}</Text>
 									<Text variant="caption" tone="muted">
 										{item.description}
@@ -454,7 +454,7 @@ export function RowActions({
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<Inline gap="none" shrink={false}>
+		<Inline gap={0} shrink={false}>
 			<IconButton
 				label={t("row.up", { name })}
 				size="icon-xs"

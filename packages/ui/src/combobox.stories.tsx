@@ -52,7 +52,7 @@ export const Playground: Story = {
 
 export const States: Story = {
 	render: () => (
-		<Stack className="max-w-sm" gap="comfortable">
+		<Stack className="max-w-sm" gap={16}>
 			<Text variant="caption" tone="muted">
 				placeholder
 			</Text>
@@ -144,7 +144,7 @@ function ChipsExample({ open, invalid }: { open?: boolean; invalid?: boolean }) 
 /** Multiple selection as chips, closed, open and invalid. */
 export const Chips: Story = {
 	render: () => (
-		<Stack className="max-w-sm" gap="comfortable">
+		<Stack className="max-w-sm" gap={16}>
 			<ChipsExample />
 			<ChipsExample invalid />
 		</Stack>

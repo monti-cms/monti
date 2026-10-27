@@ -97,7 +97,7 @@ function FileRest({ file }: { file: Obj }) {
 			{rest.length > 0 && (
 				<Section wide title={t("file.title")}>
 					{rest.map(([title, value]) => (
-						<Stack key={title} gap="condensed">
+						<Stack key={title} gap={8}>
 							<Heading as="h4" variant="label">
 								{title}
 							</Heading>
@@ -108,15 +108,9 @@ function FileRest({ file }: { file: Obj }) {
 			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
-					<Stack as="ul" gap="none">
+					<Stack as="ul" gap={0}>
 						{migrations.map((migration, index) => (
-							<Inline
-								as="li"
-								key={String(migration.id)}
-								gap="condensed"
-								paddingY="condensed"
-								border={index === 0 ? undefined : "top"}
-							>
+							<Inline as="li" key={String(migration.id)} gap={8} paddingY={8} border={index === 0 ? undefined : "top"}>
 								<Text as="code" variant="caption">
 									{String(migration.id)}
 								</Text>
@@ -136,7 +130,7 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<Box as="span" border="all" radius="sm" background="inset" paddingX="normal" paddingY="hair">
+		<Box as="span" border="all" radius="sm" background="tool" paddingX={12} paddingY={2}>
 			<Text variant="caption" tone="muted" mono>
 				{state.file ?? t("status.noFile")}
 				{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
@@ -304,31 +298,24 @@ function SchemaEditor({
 		: ((state.access.reason as keyof typeof READ_ONLY_KEY | undefined) ?? null);
 	return (
 		<SchemaEditProvider value={context}>
-			<Stack gap="none" grow minHeight={0} data-testid="schema-screen">
+			<Stack gap={0} grow minHeight={0} data-testid="schema-screen">
 				{fileSlot ? createPortal(<FileLine state={state} reason={reason} />, fileSlot) : null}
 				{actions && actionsSlot !== undefined
 					? actionsSlot
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<Inline
-								justify="end"
-								gap="condensed"
-								border="bottom"
-								background="page"
-								paddingX="wide"
-								paddingY="condensed"
-							>
+							<Inline justify="end" gap={8} border="bottom" background="page" paddingX={32} paddingY={8}>
 								{actions}
 							</Inline>
 						)}
-				<Stack ref={scroller} gap="none" grow minHeight={0} overflow="y">
+				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
 								<AlertDescription>
-									<Stack gap="tight">
+									<Stack gap={4}>
 										<Text>{t(READ_ONLY_KEY[reason])}</Text>
 										{reason === "has_code" && (state.access.issue || state.access.detail) && (
 											<Text as="code" variant="caption" data-testid="schema-code-detail">
@@ -353,7 +340,7 @@ function SchemaEditor({
 							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
 								<AlertDescription>
-									<Stack gap="condensed">
+									<Stack gap={8}>
 										<Text>{t("invalid.description")}</Text>
 										<IssueList issues={state.issues} />
 									</Stack>
@@ -378,9 +365,9 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<Inline wrap align="start" gap="wide">
-										<Stack gap="hair" width="panel-sm" shrink={false}>
-											<Inline justify="between" paddingBottom="condensed" paddingX="normal">
+									<Inline wrap align="start" gap={32}>
+										<Stack gap={2} width="menu" shrink={false}>
+											<Inline justify="between" paddingBottom={8} paddingX={12}>
 												<Text variant="caption" weight="medium" tone="muted">
 													{t("collection.railTitle")} {names.length}
 												</Text>
@@ -390,7 +377,7 @@ function SchemaEditor({
 													</IconButton>
 												)}
 											</Inline>
-											<Stack as="nav" aria-label={t("tabs.collections")} gap="hair">
+											<Stack as="nav" aria-label={t("tabs.collections")} gap={2}>
 												<SortableList
 													items={names}
 													onDragEnd={(from, to) => {
@@ -452,7 +439,7 @@ function SchemaEditor({
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && (
-									<Stack gap="section">
+									<Stack gap={48}>
 										<AdminEditor file={draft} update={updateFile} />
 										<FileRest file={draft} />
 									</Stack>
@@ -549,7 +536,7 @@ export function SchemaSettings({
 			/>
 		);
 	return (
-		<Stack gap="normal" padding="wide">
+		<Stack gap={12} padding={32}>
 			{error ? <LoadErrorAlert message={error} onRetry={() => void query.refetch()} /> : <Skeleton shape="block" />}
 		</Stack>
 	);

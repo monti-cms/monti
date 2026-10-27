@@ -15,7 +15,7 @@ export const Playground: Story = {};
 
 export const Underline: Story = {
 	render: () => (
-		<Stack gap="condensed" align="start">
+		<Stack gap={8} align="start">
 			{(["always", "hover", "none"] as const).map((underline) => (
 				<TextLink key={underline} href="#top" underline={underline}>
 					underline {underline}
@@ -27,7 +27,7 @@ export const Underline: Story = {
 
 export const Tone: Story = {
 	render: () => (
-		<Stack gap="condensed" align="start">
+		<Stack gap={8} align="start">
 			{(["default", "muted", "accent"] as const).map((tone) => (
 				<TextLink key={tone} href="#top" tone={tone}>
 					tone {tone}
@@ -39,7 +39,7 @@ export const Tone: Story = {
 
 export const Size: Story = {
 	render: () => (
-		<Stack gap="condensed" align="start">
+		<Stack gap={8} align="start">
 			{(["inherit", "caption", "label", "body"] as const).map((size) => (
 				<TextLink key={size} href="#top" size={size}>
 					size {size}
@@ -51,7 +51,7 @@ export const Size: Story = {
 
 export const Mono: Story = {
 	render: () => (
-		<Stack gap="condensed" align="start">
+		<Stack gap={8} align="start">
 			{[false, true].map((mono) => (
 				<TextLink key={String(mono)} href="#top" mono={mono}>
 					mono {String(mono)}

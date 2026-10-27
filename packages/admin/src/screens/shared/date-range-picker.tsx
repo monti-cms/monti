@@ -63,7 +63,7 @@ export function DateRangePicker({
 				{label}: {summary}
 			</PopoverTrigger>
 			<PopoverContent align="start" width="auto">
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<DateRangeCalendar from={from} to={to} onChange={onChange} />
 					{(from || to) && (
 						<Button type="button" variant="ghost" size="sm" width="full" onClick={() => onChange("", "")}>

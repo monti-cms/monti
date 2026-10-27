@@ -10,9 +10,9 @@ import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./action-
  */
 export function MasterDetail({ list, children }: { list: ReactNode; children: ReactNode }) {
 	return (
-		<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden">
+		<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
 			{list}
-			<Stack gap="none" grow minWidth={0} overflow="y">
+			<Stack gap={0} grow minWidth={0} overflow="y">
 				{children}
 			</Stack>
 		</Inline>
@@ -46,18 +46,18 @@ export function ListPane({
 	return (
 		<ResizablePane resizeKey={`list-pane:${resizeKey}`} defaultWidth={288} min={224} max={384}>
 			{header}
-			<Stack as="ul" gap="none" grow minHeight={0} overflow="y" aria-label={label}>
+			<Stack as="ul" gap={0} grow minHeight={0} overflow="y" aria-label={label}>
 				{loading
 					? Array.from({ length: skeletonRows }, (_, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-							<Box as="li" key={index} padding="normal" aria-hidden>
+							<Box as="li" key={index} padding={12} aria-hidden>
 								<Skeleton shape="control" />
 							</Box>
 						))
 					: hasRows
 						? children
 						: empty && (
-								<Stack as="li" grow align="center" justify="center" padding="comfortable">
+								<Stack as="li" grow align="center" justify="center" padding={16}>
 									{empty}
 								</Stack>
 							)}
@@ -93,7 +93,7 @@ export function ListRow({
 	trailing?: ReactNode;
 }) {
 	const button = (
-		<Stack gap="none" grow minWidth={0}>
+		<Stack gap={0} grow minWidth={0}>
 			<TextLink
 				underline="none"
 				aria-current={current ? "true" : undefined}
@@ -106,8 +106,8 @@ export function ListRow({
 				}}
 				render={<button type="button" />}
 			>
-				<Stack gap="hair">
-					<Inline gap="condensed" justify="between">
+				<Stack gap={2}>
+					<Inline gap={8} justify="between">
 						<Text weight="medium" truncate>
 							{title}
 						</Text>
@@ -128,10 +128,10 @@ export function ListRow({
 	);
 	const rowProps = {
 		as: "li",
-		gap: "condensed",
+		gap: 8,
 		justify: "between",
-		paddingX: "comfortable",
-		paddingY: "condensed",
+		paddingX: 16,
+		paddingY: 8,
 		background: current ? "selected" : undefined,
 		hover: !current,
 	} as const;

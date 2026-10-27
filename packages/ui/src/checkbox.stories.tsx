@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {
 	render: (args) => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Checkbox id="pg" {...args} />
 			<Label htmlFor="pg">댓글 허용</Label>
 		</Stack>
@@ -22,7 +22,7 @@ export const Playground: Story = {
 /** Unchecked, checked, indeterminate, each plain, disabled and invalid. */
 export const States: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[
 				{ name: "unchecked", props: {} },
 				{ name: "checked", props: { defaultChecked: true } },
@@ -32,7 +32,7 @@ export const States: Story = {
 				{ name: "invalid", props: { "aria-invalid": true } },
 				{ name: "invalid · checked", props: { "aria-invalid": true, defaultChecked: true } },
 			].map(({ name, props }) => (
-				<Stack key={name} direction="row" gap="condensed" align="center">
+				<Stack key={name} direction="row" gap={8} align="center">
 					<Checkbox id={name} {...props} />
 					<Label htmlFor={name}>{name}</Label>
 				</Stack>

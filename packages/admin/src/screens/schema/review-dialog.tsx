@@ -83,10 +83,10 @@ function Decision({
 		<Stack
 			role="group"
 			aria-labelledby={`${name}-title`}
-			gap="condensed"
+			gap={8}
 			border="all"
 			radius="lg"
-			padding="normal"
+			padding={12}
 			data-testid={`decision-${decision.key}`}
 		>
 			<Text as="div" id={`${name}-title`} weight="medium">
@@ -95,15 +95,15 @@ function Decision({
 			<Text as="p" variant="caption" tone="muted">
 				{decision.entries === 0 ? t("review.noEntries") : t("review.entriesCount", { count: decision.entries })}
 			</Text>
-			<Inline as="label" align="start" gap="condensed">
+			<Inline as="label" align="start" gap={8}>
 				<input type="radio" name={name} checked={picked === null} onChange={() => onPick(null)} />
 				<Text>{describeNoTransform(decision.change, t)}</Text>
 			</Inline>
 			{decision.suggestions.map((suggestion) => {
 				const checked = sameTransform(picked, suggestion);
 				return (
-					<Stack as="label" key={JSON.stringify(suggestion)} gap="tight">
-						<Inline as="span" align="start" gap="condensed">
+					<Stack as="label" key={JSON.stringify(suggestion)} gap={4}>
+						<Inline as="span" align="start" gap={8}>
 							<input type="radio" name={name} checked={checked} onChange={() => onPick(suggestion)} />
 							<Text>
 								{describeTransform(suggestion, t)}
@@ -118,7 +118,7 @@ function Decision({
 							</Text>
 						</Inline>
 						{checked && freeText && picked?.op === "setDefault" && (
-							<Box paddingX="spacious">
+							<Box paddingX={24}>
 								<Input
 									aria-label={t("transform.defaultValue")}
 									value={picked.value}
@@ -145,11 +145,11 @@ function Sample({
 }) {
 	const t = useTranslator(schemaReviewMessages);
 	return (
-		<Inline wrap align="baseline" gap="tight">
+		<Inline wrap align="baseline" gap={4}>
 			<Text variant="caption" tone="muted">
 				{t("review.sample")}
 			</Text>
-			<Inline as="ul" wrap align="baseline" gap="none">
+			<Inline as="ul" wrap align="baseline" gap={0}>
 				{sample.map((entry, index) => (
 					<Text as="li" variant="caption" key={entry.id}>
 						{index > 0 && ", "}
@@ -179,16 +179,8 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	return (
-		<Stack
-			as="li"
-			gap="tight"
-			border="all"
-			radius="md"
-			paddingX="normal"
-			paddingY="condensed"
-			data-testid={`impact-${impact.key}`}
-		>
-			<Inline wrap gap="condensed">
+		<Stack as="li" gap={4} border="all" radius="md" paddingX={12} paddingY={8} data-testid={`impact-${impact.key}`}>
+			<Inline wrap gap={8}>
 				<Text>{describeChange(impact.change, t)}</Text>
 				{impact.entries > 0 && (
 					<Badge variant={impact.consequence === "deleted" ? "danger" : "secondary"}>
@@ -354,7 +346,7 @@ export function ReviewDialog({
 					<DialogTitle>{t("review.title")}</DialogTitle>
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
-				<Stack gap="comfortable" maxHeight="half" overflow="y" data-testid="review-body">
+				<Stack gap={16} maxHeight="half" overflow="y" data-testid="review-body">
 					{error && (
 						<Alert tone="danger" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
@@ -384,12 +376,12 @@ export function ReviewDialog({
 					{preview?.valid && (
 						<>
 							<Inline
-								gap="condensed"
+								gap={8}
 								border="all"
 								radius="lg"
-								background="inset"
-								paddingX="normal"
-								paddingY="condensed"
+								background="tool"
+								paddingX={12}
+								paddingY={8}
 								data-testid="review-summary"
 							>
 								{dataChanges === 0 ? (
@@ -411,7 +403,7 @@ export function ReviewDialog({
 								</Text>
 							)}
 							{preview.decisions.length > 0 && (
-								<Stack as="section" gap="condensed" aria-label={t("review.decisions")}>
+								<Stack as="section" gap={8} aria-label={t("review.decisions")}>
 									<Heading as="h3" variant="label">
 										{t("review.decisions")}
 									</Heading>
@@ -429,35 +421,35 @@ export function ReviewDialog({
 								</Stack>
 							)}
 							{settings.length > 0 && (
-								<Stack as="section" gap="condensed" aria-label={t("review.settings")} data-testid="review-settings">
+								<Stack as="section" gap={8} aria-label={t("review.settings")} data-testid="review-settings">
 									<Heading as="h3" variant="label">
 										{t("review.settings")}
 									</Heading>
-									<Stack as="ul" gap="condensed">
+									<Stack as="ul" gap={8}>
 										{settings.map((setting) => (
 											<Inline
 												as="li"
 												key={setting.path}
 												wrap
 												justify="between"
-												gap="condensed"
+												gap={8}
 												border="all"
 												radius="md"
-												background="inset"
-												paddingX="normal"
-												paddingY="condensed"
+												background="tool"
+												paddingX={12}
+												paddingY={8}
 											>
 												<Text as="code" variant="caption" mono weight="semibold">
 													{setting.path}:{" "}
 												</Text>
-												<Inline gap="condensed">
+												<Inline gap={8}>
 													<Text variant="caption" mono tone="muted">
 														{settingText(setting.from, t("review.unset"))}
 													</Text>
 													<Text variant="caption" mono>
 														{" -> "}
 													</Text>
-													<Box as="span" background="selected" radius="sm" paddingX="condensed">
+													<Box as="span" background="selected" radius="sm" paddingX={8}>
 														<Text variant="caption" mono weight="medium">
 															{settingText(setting.to, t("review.unset"))}
 														</Text>
@@ -469,11 +461,11 @@ export function ReviewDialog({
 								</Stack>
 							)}
 							{preview.impacts.length > 0 && (
-								<Stack as="section" gap="condensed" aria-label={t("review.changes")}>
+								<Stack as="section" gap={8} aria-label={t("review.changes")}>
 									<Heading as="h3" variant="label">
 										{t("review.changes")}
 									</Heading>
-									<Stack as="ul" gap="condensed">
+									<Stack as="ul" gap={8}>
 										{preview.impacts.map((impact) => (
 											<Impact key={impact.key} impact={impact} />
 										))}

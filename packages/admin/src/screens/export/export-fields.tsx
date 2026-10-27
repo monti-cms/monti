@@ -41,7 +41,7 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 		["count.media", summary.media],
 	];
 	return (
-		<Stack gap="normal" data-testid="export-summary">
+		<Stack gap={12} data-testid="export-summary">
 			{selection && (
 				<Text as="p" variant="title" data-testid="export-headline">
 					{summary.entries === 0
@@ -63,7 +63,7 @@ function SummaryView({ summary, selection, noun }: { summary: ExportSummary; sel
 					</DescriptionItem>
 				))}
 			</DescriptionList>
-			<Stack as="ul" gap="tight">
+			<Stack as="ul" gap={4}>
 				{selection && summary.addedByTranslations > 0 && <NoteLine>{t("note.translations")}</NoteLine>}
 				{selection && summary.scope === "admin" && <NoteLine>{t("note.selection")}</NoteLine>}
 				{summary.notPublished > 0 && <NoteLine>{t("note.notPublished", { count: summary.notPublished })}</NoteLine>}
@@ -86,7 +86,7 @@ function NoteLine({ children }: { children: ReactNode }) {
 /** A choice with its name and a hint under it. */
 function ChoiceText({ name, hint }: { name: string; hint: string }) {
 	return (
-		<Stack gap="hair">
+		<Stack gap={2}>
 			<Text weight="medium">{name}</Text>
 			<Text variant="caption" tone="muted">
 				{hint}
@@ -114,10 +114,10 @@ export function ExportFields({
 	const { summary, summaryQuery, formats, formatsQuery } = form;
 	const busy = form.isExporting;
 	return (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			<Stack
 				as="section"
-				gap="normal"
+				gap={12}
 				dimmed={summaryQuery.isPlaceholderData}
 				aria-label={t("summary.includes")}
 				aria-busy={summaryQuery.isPlaceholderData}
@@ -140,7 +140,7 @@ export function ExportFields({
 				<legend>
 					<Text weight="medium">{t("scope.label")}</Text>
 				</legend>
-				<Box paddingTop="tight">
+				<Box paddingTop={4}>
 					<RadioGroup
 						variant="card"
 						aria-label={t("scope.label")}
@@ -164,14 +164,14 @@ export function ExportFields({
 				<legend>
 					<Text weight="medium">{t("formats.label")}</Text>
 				</legend>
-				<Stack gap="condensed" paddingTop="tight">
-					<Inline gap="normal" align="start">
+				<Stack gap={8} paddingTop={4}>
+					<Inline gap={12} align="start">
 						<Checkbox checked disabled aria-label={t("formats.json")} />
 						<ChoiceText name={t("formats.json")} hint={t("formats.json.hint")} />
 					</Inline>
 					{formats.map((format) => (
 						<Box as="label" key={format.name} htmlFor={`${formatId}-${format.name}`}>
-							<Inline gap="normal" align="start">
+							<Inline gap={12} align="start">
 								<Checkbox
 									id={`${formatId}-${format.name}`}
 									checked={form.format === format.name}
@@ -213,8 +213,8 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 	const percent = phase.kind === "downloading" ? phase.percent : null;
 	return (
 		<output data-testid="export-progress">
-			<Stack gap="condensed">
-				<Inline gap="condensed">
+			<Stack gap={8}>
+				<Inline gap={8}>
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">
 						{phase.kind === "building"

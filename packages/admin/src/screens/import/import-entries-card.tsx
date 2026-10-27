@@ -31,8 +31,8 @@ function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(importMessages);
 	return (
 		<output data-testid="import-progress">
-			<Stack gap="condensed">
-				<Inline gap="condensed">
+			<Stack gap={8}>
+				<Inline gap={8}>
 					<Spinner aria-hidden size="sm" />
 					<Text tone="muted">{t("progress.running", { count })}</Text>
 				</Inline>
@@ -58,8 +58,8 @@ export function ImportEntriesFields() {
 	const running = form.isRunning;
 
 	return (
-		<Stack gap="spacious">
-			<Stack gap="condensed">
+		<Stack gap={24}>
+			<Stack gap={8}>
 				<Text as="p" weight="medium">
 					{t("kinds.label")}
 				</Text>
@@ -77,7 +77,7 @@ export function ImportEntriesFields() {
 				</List>
 			</Stack>
 
-			<Inline gap="normal" wrap>
+			<Inline gap={12} wrap>
 				<Input
 					ref={input}
 					type="file"
@@ -136,7 +136,7 @@ export function ImportEntriesFields() {
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 
 			{preview && !result && (
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Button
 						type="button"
 						disabled={running || previewQuery.isPlaceholderData || preview.counts.imported === 0}

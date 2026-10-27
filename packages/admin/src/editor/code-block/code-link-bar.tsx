@@ -50,11 +50,11 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 			width="full"
 			wrap
 			justify="center"
-			gap="condensed"
+			gap={8}
 			border="top"
 			background="selected"
-			paddingX="comfortable"
-			paddingY="condensed"
+			paddingX={16}
+			paddingY={8}
 		>
 			<Icon icon={Code2} />
 			<Text variant="caption">
@@ -76,7 +76,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 					</>
 				)}
 			</Text>
-			<Inline gap="tight">
+			<Inline gap={4}>
 				<Button
 					type="button"
 					size="xs"

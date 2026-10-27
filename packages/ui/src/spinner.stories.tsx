@@ -16,7 +16,7 @@ export const Playground: Story = {};
 
 export const Sizes: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="center">
+		<Stack direction="row" gap={24} align="center">
 			<Spinner className="size-3" />
 			<Spinner />
 			<Spinner className="size-6" />
@@ -27,7 +27,7 @@ export const Sizes: Story = {
 
 export const InButton: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Button disabled>
 				<Spinner />
 				저장 중
@@ -42,7 +42,7 @@ export const InButton: Story = {
 
 export const WithText: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Spinner />
 			<Text tone="muted">글을 불러오는 중이에요</Text>
 		</Stack>

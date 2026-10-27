@@ -115,7 +115,7 @@ export function BubbleButton({
 /** A decorative icon at the start of a bubble row (what the row is about). */
 function BubbleIcon({ icon }: { icon: LucideIcon }) {
 	return (
-		<Box as="span" paddingX="tight" shrink={false}>
+		<Box as="span" paddingX={4} shrink={false}>
 			<Icon icon={icon} tone="muted" />
 		</Box>
 	);
@@ -320,12 +320,12 @@ export function InlineBubble({
 			const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
-				<Inline key={mark.name} gap="hair">
+				<Inline key={mark.name} gap={2}>
 					<BubbleIcon icon={Link2} />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
-						<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+						<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 							<Text as="div" variant="caption" truncate>
 								<TextLink
 									href={href}
@@ -356,9 +356,9 @@ export function InlineBubble({
 		if (mark.name === CODE_TOOLTIP_MARK_NAME) {
 			const content = String(mark.attrs.content ?? "");
 			return (
-				<Inline key={mark.name} gap="hair">
+				<Inline key={mark.name} gap={2}>
 					<BubbleIcon icon={MessageSquareMore} />
-					<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+					<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 						<Text as="div" variant="caption" tone="muted" truncate title={content}>
 							{content}
 						</Text>
@@ -375,7 +375,7 @@ export function InlineBubble({
 		const Detail = markExtensions.find(({ name }) => name === mark.name)?.extension.detail;
 		if (Detail) {
 			return (
-				<Inline key={mark.name} gap="hair">
+				<Inline key={mark.name} gap={2}>
 					<Detail {...bubbleProps} mark={mark} />
 				</Inline>
 			);
@@ -393,9 +393,9 @@ export function InlineBubble({
 			const publicOpen = mark.attrs.open === true;
 			const type = editor.schema.marks.codeFold;
 			return (
-				<Inline key={mark.name} gap="hair">
+				<Inline key={mark.name} gap={2}>
 					<BubbleIcon icon={ChevronsLeftRightEllipsis} />
-					<Box as="span" paddingX="tight">
+					<Box as="span" paddingX={4}>
 						<Text variant="caption" tone="muted">
 							{t("inlineBubble.fold")}
 						</Text>
@@ -449,9 +449,9 @@ export function InlineBubble({
 		const region = { key: `m:${from}`, kind: "fold" as const, from, to, defaultOpen: true, hiddenLines: 0 };
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
-			<Inline key={rule.id} gap="hair">
+			<Inline key={rule.id} gap={2}>
 				<BubbleIcon icon={Regex} />
-				<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+				<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 					<Text as="div" variant="caption" tone="muted" truncate title={`/${rule.pattern}/${rule.flags}`}>
 						{t("inlineBubble.ruleSummary", { label, count })}
 					</Text>
@@ -490,7 +490,7 @@ export function InlineBubble({
 			...(simple.length ? [<Fragment key="simple">{simple.map(renderMark)}</Fragment>] : []),
 		];
 		return groups.map((group, index) => (
-			<Inline key={group.key} gap="hair">
+			<Inline key={group.key} gap={2}>
 				{index > 0 && <Separator orientation="vertical" length="control" />}
 				{group}
 			</Inline>
@@ -498,9 +498,9 @@ export function InlineBubble({
 	};
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
-		<Inline gap="tight">
+		<Inline gap={4}>
 			<Badge variant="secondary">{target.badge}</Badge>
-			<Box as="span" paddingX="tight" maxWidth="panel-sm" minWidth={0}>
+			<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 				<Text as="div" variant="caption" truncate>
 					<TextLink
 						render={<button type="button" />}

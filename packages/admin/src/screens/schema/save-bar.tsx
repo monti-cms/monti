@@ -29,14 +29,14 @@ export function SaveBar({
 			aria-label={t("bar.label")}
 			data-testid="save-bar"
 			wrap
-			gap="normal"
+			gap={12}
 			shrink={false}
 			border="top"
 			background="page"
-			paddingX="wide"
-			paddingY="normal"
+			paddingX={32}
+			paddingY={12}
 		>
-			<Inline grow gap="condensed">
+			<Inline grow gap={8}>
 				<StatusIndicator tone="accent" size="xs" />
 				<Text>{t("bar.count", { count })}</Text>
 			</Inline>

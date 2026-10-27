@@ -454,7 +454,7 @@ export function MediaLibrary() {
 			}}
 		>
 			<PageActions>
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Label size="caption" tone="muted">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
@@ -499,7 +499,7 @@ export function MediaLibrary() {
 					))}
 				</PageTabs>
 			</Tabs>
-			<Inline gap="condensed" wrap justify="end" paddingX="wide" paddingY="condensed" shrink={false}>
+			<Inline gap={8} wrap justify="end" paddingX={32} paddingY={8} shrink={false}>
 				<Input
 					type="search"
 					size="sm"
@@ -550,28 +550,28 @@ export function MediaLibrary() {
 				</ToggleGroup>
 			</Inline>
 
-			<Stack as="div" direction="row" gap="none" grow minHeight={0} overflow="hidden" position="relative">
-				<Stack gap="none" grow minWidth={0} overflow="hidden">
+			<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">
+				<Stack gap={0} grow minWidth={0} overflow="hidden">
 					{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
 					<Stack
-						gap="none"
+						gap={0}
 						grow
 						minHeight={0}
 						overflow="y"
-						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? "wide" : "none"}
-						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : "none"}
+						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? 32 : 0}
+						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : 0}
 					>
 						{loadError && (
 							<Box
-								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : "comfortable"}
-								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : undefined}
+								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : 16}
+								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : undefined}
 							>
 								<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
 							</Box>
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								<Grid as="ul" columns="tiles" gap="comfortable" aria-hidden>
+								<Grid as="ul" columns="tiles" gap={16} aria-hidden>
 									{Array.from({ length: 6 }, (_, index) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
 										<li key={index}>
@@ -603,7 +603,7 @@ export function MediaLibrary() {
 						) : (
 							<MediaTable {...viewProps} />
 						)}
-						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY="spacious" aria-hidden />} />
+						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY={24} aria-hidden />} />
 					</Stack>
 					<ListPagination
 						total={total}

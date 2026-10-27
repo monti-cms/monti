@@ -103,7 +103,7 @@ export function InternalLinkPopup({
 						as="span"
 						aria-hidden
 						justify="center"
-						padding="condensed"
+						padding={8}
 						border="all"
 						radius="md"
 						background="page"
@@ -111,7 +111,7 @@ export function InternalLinkPopup({
 					>
 						<CollectionIcon collection={item.collection} />
 					</Inline>
-					<Stack as="span" gap="none" minWidth={0}>
+					<Stack as="span" gap={0} minWidth={0}>
 						<Text weight="medium" truncate>
 							{item.title}
 						</Text>
@@ -122,8 +122,8 @@ export function InternalLinkPopup({
 				</div>
 			))}
 			{isLoading ? (
-				<Box as="div" paddingX="condensed" paddingY="condensed">
-					<Inline as="div" gap="condensed" role="status">
+				<Box as="div" paddingX={8} paddingY={8}>
+					<Inline as="div" gap={8} role="status">
 						<Spinner size="sm" />
 						<Text variant="caption" tone="muted">
 							{t("internalLink.searching")}
@@ -131,12 +131,12 @@ export function InternalLinkPopup({
 					</Inline>
 				</Box>
 			) : error ? (
-				<Box paddingX="condensed" paddingY="condensed">
+				<Box paddingX={8} paddingY={8}>
 					<FormFieldError>{error}</FormFieldError>
 				</Box>
 			) : (
 				items.length === 0 && (
-					<Box paddingX="condensed" paddingY="condensed">
+					<Box paddingX={8} paddingY={8}>
 						<Text as="p" variant="caption" tone="muted">
 							{t("internalLink.empty")}
 						</Text>

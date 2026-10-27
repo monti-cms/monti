@@ -482,7 +482,7 @@ export function EntryEditorShell({
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
 			<OpenEditorContext.Provider value={openEditor}>
-				<Stack gap="none" height="screen" overflow="clip" background="page">
+				<Stack gap={0} height="screen" overflow="clip" background="page">
 					<EntryEditorHeader
 						editor={editor}
 						commands={commands}
@@ -498,13 +498,13 @@ export function EntryEditorShell({
 						onCompareSource={() => setIsSourceCompareOpen(true)}
 					/>
 
-					<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
 						{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
 						<Inline
 							ref={setArea}
 							container
 							align="stretch"
-							gap="none"
+							gap={0}
 							grow
 							minWidth={0}
 							minHeight={0}
@@ -533,7 +533,7 @@ export function EntryEditorShell({
 										</>
 									}
 									toolbarAside={
-										<Inline gap="tight">
+										<Inline gap={4}>
 											{site.ADMIN_TEMPLATES && (
 												<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
 											)}

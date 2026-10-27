@@ -210,6 +210,7 @@ export { Textarea } from "./textarea";
 export { ChoiceCard, Tile } from "./tile";
 export { Toggle, toggleVariants } from "./toggle";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
+export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { useIsMobile } from "./use-mobile";

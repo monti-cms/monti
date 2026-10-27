@@ -70,7 +70,7 @@ export function ApiKeyField({
 			<legend id={groupId}>
 				<Text weight="medium">{label ?? t("field.keyLabel")}</Text>
 			</legend>
-			<Box paddingTop="condensed" maxWidth="prose">
+			<Box paddingTop={8} maxWidth="reading">
 				<RadioGroup
 					variant="card"
 					aria-labelledby={groupId}
@@ -90,8 +90,8 @@ export function ApiKeyField({
 									{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
 								</Text>
 							) : saved ? (
-								<Stack gap="condensed">
-									<Box maxWidth="panel-lg">
+								<Stack gap={8}>
+									<Box maxWidth="assistant">
 										<Select
 											value={value.keyId}
 											onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
@@ -103,7 +103,7 @@ export function ApiKeyField({
 											<SelectContent>
 												{keys.map((key) => (
 													<SelectItem key={key.id} value={key.id}>
-														<Inline gap="condensed">
+														<Inline gap={8}>
 															<Text>{key.name}</Text>
 															<Text variant="caption" tone="muted" mono>
 																{key.readable ? mask(key) : t("field.unreadable")}
@@ -129,10 +129,10 @@ export function ApiKeyField({
 						label={<Text weight={value.use === "new" ? "medium" : undefined}>{t("field.useNew")}</Text>}
 						hint={
 							value.use === "new" || !canSave ? (
-								<Stack gap="condensed">
+								<Stack gap={8}>
 									{value.use === "new" && (
 										<>
-											<Box maxWidth="panel-lg">
+											<Box maxWidth="assistant">
 												<Input
 													type="password"
 													autoComplete="off"

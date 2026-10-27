@@ -111,7 +111,7 @@ export function MoveDialog({
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
-				<Stack as="ul" gap="tight">
+				<Stack as="ul" gap={4}>
 					{destinations.map((destination) => (
 						<li key={destination.label}>
 							<Button
@@ -257,7 +257,7 @@ export function Row({
 							</span>
 						)}
 						{changed && (
-							<Box as="span" paddingX="condensed">
+							<Box as="span" paddingX={8}>
 								<ChangeDot />
 							</Box>
 						)}

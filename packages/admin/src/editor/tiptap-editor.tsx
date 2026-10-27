@@ -331,7 +331,7 @@ export function CmsEditor({
 			<Stack
 				role="toolbar"
 				aria-label={t("toolbar.format")}
-				gap="none"
+				gap={0}
 				position="sticky"
 				width="full"
 				shrink={false}

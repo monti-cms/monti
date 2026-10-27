@@ -131,7 +131,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
 			{aside ? (
-				<Inline justify="between" gap="condensed">
+				<Inline justify="between" gap={8}>
 					{labelNode}
 					{aside}
 				</Inline>
@@ -159,12 +159,12 @@ function SlotFieldRow({
 	const { trigger, panel } = useSlot(slot);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
-			<Inline justify="between" gap="condensed">
+			<Inline justify="between" gap={8}>
 				<FormFieldLabel htmlFor={id}>
 					{label} {required && <Text tone="danger">*</Text>}
 				</FormFieldLabel>
 				{aside || trigger ? (
-					<Inline gap="tight">
+					<Inline gap={4}>
 						{aside}
 						{trigger}
 					</Inline>
@@ -402,7 +402,7 @@ function ValueRowView({
 
 	const aside =
 		fillFromBodyButton || Aside ? (
-			<Inline gap="tight">
+			<Inline gap={4}>
 				{fillFromBodyButton}
 				{Aside && <Aside {...props} />}
 			</Inline>
@@ -503,7 +503,7 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 	const selected = typeof choice.value === "string" ? choice.value : field.discriminant.defaultValue;
 	const nested = field.values[selected] ?? {};
 	return (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			<ValueRow name={name} showDescriptions={showDescriptions} />
 			{Object.keys(nested).map((nestedName) => (
 				<ValueRow key={nestedName} name={nestedName} showDescriptions={showDescriptions} />
@@ -618,7 +618,7 @@ export function SchemaFields({
 				const key = `${group.group ?? "group"}-${index}`;
 				if (!group.group) {
 					return (
-						<Stack key={key} gap="comfortable">
+						<Stack key={key} gap={16}>
 							{visible.map(renderField)}
 						</Stack>
 					);
@@ -627,20 +627,13 @@ export function SchemaFields({
 					// If there is only one group (one group in one tab), no title is added.
 					if (groups.length === 1) {
 						return (
-							<Stack key={key} gap="comfortable">
+							<Stack key={key} gap={16}>
 								{visible.map(renderField)}
 							</Stack>
 						);
 					}
 					return (
-						<Stack
-							as="section"
-							key={key}
-							aria-label={group.group}
-							gap="comfortable"
-							border="top"
-							paddingTop="comfortable"
-						>
+						<Stack as="section" key={key} aria-label={group.group} gap={16} border="top" paddingTop={16}>
 							<Heading as="h3" variant="label">
 								{group.group}
 							</Heading>
@@ -694,7 +687,7 @@ function LayoutSection({
 					</CollapsibleTrigger>
 				</FormFieldLegend>
 				<CollapsibleContent>
-					<Stack gap="comfortable">{children}</Stack>
+					<Stack gap={16}>{children}</Stack>
 				</CollapsibleContent>
 			</FormFieldSet>
 		</Collapsible>
@@ -708,7 +701,7 @@ function LayoutSection({
 export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollectionName; locale: Locale }) {
 	const site = useSite();
 	return (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{site.recordLocalizedFields(collection).map((name) => (
 				<RecordLocaleField key={name} collection={collection} name={name} locale={locale} />
 			))}

@@ -121,7 +121,7 @@ export function ConnectionManager({
 	const current = settings?.providers.find((provider) => provider.id === selected) ?? null;
 
 	return (
-		<Stack gap="none" grow minHeight={0}>
+		<Stack gap={0} grow minHeight={0}>
 			{settings && (
 				<AgentModelPicker
 					// Reset when what is saved changes (a saved choice, a deleted connection).
@@ -132,7 +132,7 @@ export function ConnectionManager({
 				/>
 			)}
 			{settingsQuery.error && !settings && (
-				<Box padding="normal">
+				<Box padding={12}>
 					<LoadErrorAlert
 						message={errorText(site, settingsQuery.error, t("error.loadList"))}
 						onRetry={() => void settingsQuery.refetch()}
@@ -148,7 +148,7 @@ export function ConnectionManager({
 						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<Box paddingX="normal" paddingY="condensed" border="bottom">
+								<Box paddingX={12} paddingY={8} border="bottom">
 									<Text variant="caption" tone="muted">
 										{t("badge.fake")}
 									</Text>
@@ -313,7 +313,7 @@ function ProviderEditor({
 	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
-		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
+		<Stack gap={16} padding={24} maxWidth="reading" width="full" centered>
 			<Box minWidth={0}>
 				<Heading truncate>{(provider ? provider.name : draft.name.trim()) || t("new.title")}</Heading>
 				<Text as="p" variant="caption" tone="muted" truncate>
@@ -356,7 +356,7 @@ function ProviderEditor({
 					/>
 					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<ApiKeyField
 						label={t("field.key")}
 						baseName={draft.name.trim() || "API"}

@@ -170,7 +170,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			: undefined);
 
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<RelationCombobox
 				id={id}
 				aria-label={t("entry.editList", { target })}
@@ -192,7 +192,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			) : (
 				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
 					<SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-						<Stack as="ol" gap="tight" aria-label={t("entry.listAria", { target })}>
+						<Stack as="ol" gap={4} aria-label={t("entry.listAria", { target })}>
 							{ids.map((itemId, index) => (
 								<SortableEntryRow
 									key={sortableIds[index]}

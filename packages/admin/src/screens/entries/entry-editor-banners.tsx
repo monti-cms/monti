@@ -36,15 +36,8 @@ export function EntryEditorBanners({
 	return (
 		<>
 			{isTrashed && (
-				<Box
-					as="section"
-					aria-label={t("trash")}
-					background="neutral"
-					border="bottom"
-					paddingX="comfortable"
-					paddingY="condensed"
-				>
-					<Inline wrap gap="condensed">
+				<Box as="section" aria-label={t("trash")} background="muted" border="bottom" paddingX={16} paddingY={8}>
+					<Inline wrap gap={8}>
 						<Text>{t("trashNotice", nounVars(site, collection))}</Text>
 					</Inline>
 				</Box>
@@ -55,7 +48,7 @@ export function EntryEditorBanners({
 				</Alert>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-				<Box border="bottom" paddingX="comfortable" paddingY="condensed">
+				<Box border="bottom" paddingX={16} paddingY={8}>
 					<FormFieldError>{editor.saveError.message}</FormFieldError>
 				</Box>
 			)}
@@ -65,7 +58,7 @@ export function EntryEditorBanners({
 					<Text tone="warning" weight="medium">
 						{t("sourceChanged")}
 					</Text>
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
 							{t("compare")}
 						</Button>

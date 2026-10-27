@@ -77,8 +77,8 @@ export default async function AdminLoginPage({
 	const siteName = site.config.site?.name?.trim() || "Monti";
 
 	return (
-		<Stack align="center" justify="center" gap="spacious" padding="comfortable" minHeight="screen">
-			<Stack as="header" align="center" gap="tight">
+		<Stack align="center" justify="center" gap={24} padding={16} minHeight="screen">
+			<Stack as="header" align="center" gap={4}>
 				<Heading as="h1" variant="heading">
 					{siteName}
 				</Heading>
@@ -86,7 +86,7 @@ export default async function AdminLoginPage({
 					{t("managedWith")}
 				</Text>
 			</Stack>
-			<Box width="full" maxWidth="panel-lg">
+			<Box width="full" maxWidth="assistant">
 				<Card>
 					<CardHeader>
 						{firstAdmin ? (
@@ -120,7 +120,7 @@ export default async function AdminLoginPage({
 									</Text>
 								</AlertDescription>
 								<form method="post" action={adminApiUrl("/v1/session/sign-out")}>
-									<Box paddingTop="normal">
+									<Box paddingTop={12}>
 										<Button type="submit" variant="link" size="xs">
 											{t("signOut")}
 										</Button>
@@ -129,7 +129,7 @@ export default async function AdminLoginPage({
 							</Alert>
 						) : firstAdmin ? (
 							<form method="post" action={adminApiUrl("/v1/session/first-admin")}>
-								<Stack gap="comfortable">
+								<Stack gap={16}>
 									{errorText ? <ErrorAlert text={errorText} /> : null}
 									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 									<TextField
@@ -168,7 +168,7 @@ export default async function AdminLoginPage({
 								</AlertDescription>
 							</Alert>
 						) : (
-							<Stack gap="comfortable">
+							<Stack gap={16}>
 								{errorText ? <ErrorAlert text={errorText} /> : null}
 								{formProviders.map((authProvider) => (
 									<form
@@ -176,7 +176,7 @@ export default async function AdminLoginPage({
 										method="post"
 										action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 									>
-										<Stack gap="comfortable">
+										<Stack gap={16}>
 											<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 											<TextField
 												id="password"
@@ -191,7 +191,7 @@ export default async function AdminLoginPage({
 										</Stack>
 									</form>
 								))}
-								<Stack gap="condensed">
+								<Stack gap={8}>
 									{buttonProviders.map((authProvider) => (
 										<form
 											key={authProvider.id}
@@ -234,7 +234,7 @@ function TextField({
 	...props
 }: { id: string; label: string; hint?: string } & Omit<React.ComponentProps<typeof Input>, "id">) {
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Label htmlFor={id}>{label}</Label>
 			{hint ? (
 				<Text as="p" variant="caption" tone="muted">

@@ -92,7 +92,7 @@ export function MediaGrid({
 				]
 			: [];
 	return (
-		<Grid as="ul" columns="tiles" gap="comfortable" dimmed={dimmed}>
+		<Grid as="ul" columns="tiles" gap={16} dimmed={dimmed}>
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
 				<li>
 					<Tile

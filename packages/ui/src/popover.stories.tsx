@@ -42,7 +42,7 @@ export const TitleOnly: Story = {
 
 export const Sides: Story = {
 	render: () => (
-		<Stack direction="row" gap="section" className="px-40 py-40">
+		<Stack direction="row" gap={48} className="px-40 py-40">
 			{(["top", "right", "bottom", "left"] as const).map((side) => (
 				<Popover key={side} defaultOpen>
 					<PopoverTrigger render={<Button variant="outline" />}>{side}</PopoverTrigger>
@@ -72,10 +72,10 @@ export const LongText: Story = {
 	),
 };
 
-/** The widths: `sm`, `md` (default), `lg`, `auto`; `padding="none"` for content that brings its own rows. */
+/** The widths: `sm`, `md` (default), `lg`, `auto`; `padding={0}` for content that brings its own rows. */
 export const Widths: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="start">
+		<Stack direction="row" gap={24} align="start">
 			{(["sm", "md", "lg"] as const).map((width) => (
 				<Popover key={width} open>
 					<PopoverTrigger render={<Button variant="outline" />}>{width}</PopoverTrigger>

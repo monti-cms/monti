@@ -77,18 +77,10 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
 					)}
 				>
-					<Inline
-						as="span"
-						justify="center"
-						padding="condensed"
-						border="all"
-						radius="md"
-						background="page"
-						shrink={false}
-					>
+					<Inline as="span" justify="center" padding={8} border="all" radius="md" background="page" shrink={false}>
 						<ItemIcon icon={item.icon} />
 					</Inline>
-					<Stack as="span" gap="none" minWidth={0}>
+					<Stack as="span" gap={0} minWidth={0}>
 						<Text weight="medium" truncate>
 							{item.title}
 						</Text>

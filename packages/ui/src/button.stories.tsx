@@ -19,9 +19,9 @@ const SIZES = ["xs", "sm", "default", "lg"] as const;
 /** Every variant at every size, then the disabled state. */
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="condensed" align="center">
+				<Stack key={variant} direction="row" gap={8} align="center">
 					{SIZES.map((size) => (
 						<Button key={size} variant={variant} size={size}>
 							{variant} · {size}
@@ -38,7 +38,7 @@ export const AllVariants: Story = {
 
 export const WithIcon: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed">
+		<Stack direction="row" gap={8}>
 			<Button>
 				<Plus aria-hidden />
 				Post 추가
@@ -57,7 +57,7 @@ export const WithIcon: Story = {
 /** Every look in the danger tone: for steps that remove or overwrite. */
 export const DangerTone: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center" wrap>
+		<Stack direction="row" gap={8} align="center" wrap>
 			{VARIANTS.map((variant) => (
 				<Button key={variant} variant={variant} tone="danger">
 					{variant}
@@ -70,7 +70,7 @@ export const DangerTone: Story = {
 /** Working: a spinner before the label, and the button cannot be pressed again. */
 export const Loading: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Button loading>저장 중…</Button>
 			<Button variant="outline" size="sm" loading>
 				불러오는 중

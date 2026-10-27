@@ -92,10 +92,10 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	const content = String(mark.attrs.content ?? "");
 	return (
 		<>
-			<Box as="span" paddingX="tight" shrink={false}>
+			<Box as="span" paddingX={4} shrink={false}>
 				<Icon icon={MessageSquareMore} size="sm" tone="muted" />
 			</Box>
-			<Box paddingX="tight" maxWidth="panel-sm">
+			<Box paddingX={4} maxWidth="menu">
 				<Text as="div" variant="caption" tone="muted" truncate title={content}>
 					{content}
 				</Text>

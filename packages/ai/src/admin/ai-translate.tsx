@@ -244,7 +244,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const running = progress !== null || busyBlocks.size > 0;
 	const toolbar = feature ? (
 		running ? (
-			<Inline gap="tight">
+			<Inline gap={4}>
 				{progress && (
 					<Text variant="caption" tone="muted">
 						{t("progress", { done: progress.done, total: progress.total })}
@@ -264,7 +264,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 				<PopoverContent align="end" width="md">
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							void translateAll();
