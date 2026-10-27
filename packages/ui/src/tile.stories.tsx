@@ -205,7 +205,7 @@ export const FolderWithMenu: Story = {
 					count={6}
 					selected={open}
 					action={
-						<IconButton label="더 보기" pressed={open}>
+						<IconButton label="더 보기" aria-expanded={open}>
 							<MoreHorizontal aria-hidden />
 						</IconButton>
 					}
