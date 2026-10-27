@@ -344,7 +344,7 @@ export function ReviewDialog({
 					<DialogDescription>{t("review.description")}</DialogDescription>
 				</DialogHeader>
 				<Stack gap={16} maxHeight="half" overflow="y" data-testid="review-body">
-					{error && <Banner role="alert" title={error} />}
+					{error && <Banner role="alert" tone="danger" title={error} />}
 					{loading && !preview && (
 						<Text as="p" tone="subtle" role="status">
 							{tc("loading")}
@@ -352,13 +352,13 @@ export function ReviewDialog({
 					)}
 					{preview && !preview.valid && (
 						<Stack gap={8}>
-							<Banner role="alert" title={t("review.invalid")} />
+							<Banner role="alert" tone="danger" title={t("review.invalid")} />
 							<IssueList issues={preview.issues} />
 						</Stack>
 					)}
 					{problems.length > 0 && (
 						<Stack gap={8}>
-							<Banner role="alert" title={t("review.problems")} />
+							<Banner role="alert" tone="danger" title={t("review.problems")} />
 							<List>
 								{problems.map((problem) => (
 									<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
@@ -472,7 +472,7 @@ export function ReviewDialog({
 							)}
 						</>
 					)}
-					{saveError && <Banner role="alert" title={saveError.message} />}
+					{saveError && <Banner role="alert" tone="danger" title={saveError.message} />}
 				</Stack>
 				<DialogFooter>
 					{saveError?.conflict || saveError?.applyFailed ? (

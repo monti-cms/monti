@@ -72,7 +72,14 @@ function StatusBarCell({
 	const cell = (
 		<>
 			{tone && (
-				<span aria-hidden data-slot="status-bar-dot" className="size-1.5 shrink-0 rounded-monti-full bg-current" />
+				<span
+					aria-hidden
+					data-slot="status-bar-dot"
+					className={cn(
+						"size-1.5 shrink-0 rounded-monti-full",
+						tone === "warning" ? "bg-monti-warning-emphasis" : "bg-current",
+					)}
+				/>
 			)}
 			{children}
 		</>

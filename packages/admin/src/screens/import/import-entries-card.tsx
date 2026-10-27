@@ -120,7 +120,9 @@ export function ImportEntriesFields() {
 				</Box>
 			)}
 
-			{Boolean(form.runError) && <Banner role="alert" title={errorText(site, form.runError, t("error.run"))} />}
+			{Boolean(form.runError) && (
+				<Banner role="alert" tone="danger" title={errorText(site, form.runError, t("error.run"))} />
+			)}
 
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 

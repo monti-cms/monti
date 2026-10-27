@@ -343,7 +343,12 @@ export function RestoreBackupFields() {
 					{preview && <PreviewView preview={preview} />}
 
 					{Boolean(form.runError) && (
-						<Banner role="alert" title={errorText(site, form.runError, t("error.run"))} data-testid="restore-error" />
+						<Banner
+							role="alert"
+							tone="danger"
+							title={errorText(site, form.runError, t("error.run"))}
+							data-testid="restore-error"
+						/>
 					)}
 
 					{running && preview && <RunProgress count={preview.counts.entries} />}

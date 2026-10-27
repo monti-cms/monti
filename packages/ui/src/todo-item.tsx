@@ -65,7 +65,7 @@ function TodoItem({
 					data-slot="todo-mark"
 					data-blocking={blocking || undefined}
 					className={cn(
-						"size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-warning",
+						"size-3.5 shrink-0 rounded-monti-full border-(--monti-bg-warning-emphasis) border-[1.5px]",
 						blocking && "border-monti-danger",
 					)}
 				>

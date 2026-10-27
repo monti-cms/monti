@@ -163,7 +163,7 @@ describe("design system", () => {
 		expect(problem("text-xs", false, false)).toMatch(/text size/);
 		expect(problem("text-sm/relaxed", false, false)).toMatch(/text size/);
 		expect(problem("bg-monti-card", false, false)).toMatch(/unknown role/);
-		expect(problem("bg-monti-warning-emphasis/50", false, false)).toMatch(/unknown role/);
+		expect(problem("bg-monti-warning-strong/50", false, false)).toMatch(/unknown role/);
 		expect(problem("bg-red-500", false, false)).toMatch(/palette/);
 		expect(problem("text-[#fff]", false, false)).toMatch(/arbitrary color/);
 		expect(problem("gap-monti-8", false, false)).toBeNull();

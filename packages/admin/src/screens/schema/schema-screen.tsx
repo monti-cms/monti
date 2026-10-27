@@ -318,17 +318,17 @@ function SchemaEditor({
 							/>
 						)}
 						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
-						{applyFailed && <Banner role="alert" title={t("save.applyFailedNote")} />}
+						{applyFailed && <Banner role="alert" tone="danger" title={t("save.applyFailedNote")} />}
 						{state.issues.length > 0 && (
 							<Stack gap={8} data-testid="schema-file-invalid">
-								<Banner role="alert" title={t("invalid.title")} />
+								<Banner role="alert" tone="danger" title={t("invalid.title")} />
 								<Text tone="muted">{t("invalid.description")}</Text>
 								<IssueList issues={state.issues} />
 							</Stack>
 						)}
 						{issues.length > 0 && !reviewing && (
 							<Stack gap={8}>
-								<Banner role="alert" title={t("issues.title")} />
+								<Banner role="alert" tone="danger" title={t("issues.title")} />
 								<IssueList issues={issues} />
 							</Stack>
 						)}

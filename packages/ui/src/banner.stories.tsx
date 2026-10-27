@@ -26,6 +26,26 @@ export const Playground: Story = {
 	),
 };
 
+/** Warning (the default): the sentence in the warning text color, the dot in the warning mark color. */
+export const Warning: Story = {
+	render: (args) => (
+		<Banner {...args} tone="warning">
+			<TextButton variant="underline">비교</TextButton>
+			<TextButton>확인</TextButton>
+		</Banner>
+	),
+};
+
+/** Danger, for something that failed rather than something to know: the sentence and the dot are red. */
+export const Danger: Story = {
+	render: (args) => (
+		<Banner {...args} tone="danger" title="전송하지 못했어요" meta="10. 26 · 3번 시도">
+			<TextButton variant="underline">다시 보내기</TextButton>
+			<TextButton>닫기</TextButton>
+		</Banner>
+	),
+};
+
 /** Only the sentence, with nothing to do about it. */
 export const TitleOnly: Story = { args: { meta: undefined } };
 

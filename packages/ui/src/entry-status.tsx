@@ -4,7 +4,7 @@ import { cn } from "./cn";
 
 /**
  * Where an entry stands, or a delivery. The meaning is the shape and the name together, never the color alone:
- * `published` a filled dot, `editing` a filled dot in the warning color (published, with changes not published yet), `draft` an empty ring,
+ * `published` a filled dot, `editing` a filled dot in the warning mark color (its name stays in the warning text color) (published, with changes not published yet), `draft` an empty ring,
  * `archived` a short bar, `failed` a filled dot in red.
  */
 type EntryStatusKind = "published" | "editing" | "draft" | "archived" | "failed";
@@ -21,7 +21,7 @@ const markVariants = cva("box-border w-[7px] shrink-0 rounded-monti-full bg-curr
 	variants: {
 		status: {
 			published: "h-[7px]",
-			editing: "h-[7px]",
+			editing: "h-[7px] bg-monti-warning-emphasis",
 			failed: "h-[7px]",
 			draft: "h-[7px] border-[1.5px] border-current bg-transparent",
 			archived: "h-0.5 rounded-none",

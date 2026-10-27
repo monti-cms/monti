@@ -114,6 +114,7 @@ export const BACKGROUND = {
 	emphasis: "bg-monti-emphasis text-monti-on-emphasis",
 	"success-muted": "bg-monti-success-muted",
 	"warning-muted": "bg-monti-warning-muted",
+	"warning-emphasis": "bg-monti-warning-emphasis",
 	"danger-muted": "bg-monti-danger-muted",
 	"proposal-muted": "bg-monti-proposal-muted",
 } as const;

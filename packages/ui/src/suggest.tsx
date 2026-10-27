@@ -19,7 +19,7 @@ function Suggest({
 			data-kind={kind}
 			type="button"
 			className={cn(
-				"flex w-full cursor-pointer items-center gap-monti-10 rounded-monti-lg border-0 bg-transparent px-monti-12 py-[11px] text-left text-monti-body text-monti-default outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&>svg]:shrink-0 [&>svg]:text-monti-subtle",
+				"flex w-full cursor-pointer items-center gap-monti-10 rounded-monti-lg border-0 bg-transparent px-monti-12 py-[7px] text-left text-monti-body text-monti-default outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&>svg]:shrink-0 [&>svg]:text-monti-subtle",
 				className,
 			)}
 			{...props}

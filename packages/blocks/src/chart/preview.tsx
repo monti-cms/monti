@@ -42,7 +42,7 @@ function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
 		<div className="not-prose my-monti-24 flex flex-col gap-monti-8">
-			<Banner title={t("error.title")} />
+			<Banner tone="danger" title={t("error.title")} />
 			<FormFieldError errors={errors.map((error) => ({ message: chartErrorLine(error, t) }))} />
 		</div>
 	);

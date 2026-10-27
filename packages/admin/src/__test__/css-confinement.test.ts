@@ -157,7 +157,8 @@ describe("admin CSS confinement", () => {
 		const steps = [...blocks.light.keys()].filter((name) =>
 			/^--monti-(gray|success|warning|danger|proposal)-\d+$/.test(name),
 		);
-		expect(steps.length).toBe(12 + 4 * 2);
+		// 12 grays, two steps for success, danger and proposal, and three for warning (its mark color, step 9, joins the fill and the text).
+		expect(steps.length).toBe(12 + 3 * 2 + 3);
 		for (const step of steps) expect(blocks.dark.has(step)).toBe(true);
 	});
 

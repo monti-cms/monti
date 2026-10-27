@@ -80,6 +80,7 @@
 	--background-color-monti-emphasis: var(--monti-bg-emphasis);
 	--background-color-monti-success-muted: var(--monti-bg-success-muted);
 	--background-color-monti-warning-muted: var(--monti-bg-warning-muted);
+	--background-color-monti-warning-emphasis: var(--monti-bg-warning-emphasis);
 	--background-color-monti-danger-muted: var(--monti-bg-danger-muted);
 	--background-color-monti-danger-emphasis: var(--monti-bg-danger-emphasis);
 	--background-color-monti-proposal-muted: var(--monti-bg-proposal-muted);

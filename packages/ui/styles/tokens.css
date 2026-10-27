@@ -22,7 +22,8 @@
 	--monti-success-3: #eaf3ee;
 	--monti-success-11: #336a4f;
 	--monti-warning-3: #f8efdc;
-	--monti-warning-11: #8d6218;
+	--monti-warning-9: #aa7406;
+	--monti-warning-11: #9a6200;
 	--monti-danger-3: #f8e8e8;
 	--monti-danger-11: #a8353c;
 	--monti-proposal-3: #e4eaf8;
@@ -49,6 +50,7 @@
 	--monti-fg-danger: var(--monti-danger-11);
 	--monti-bg-success-muted: var(--monti-success-3);
 	--monti-bg-warning-muted: var(--monti-warning-3);
+	--monti-bg-warning-emphasis: var(--monti-warning-9);
 	--monti-bg-danger-muted: var(--monti-danger-3);
 	--monti-bg-danger-emphasis: var(--monti-danger-11);
 	--monti-fg-proposal: var(--monti-proposal-11);
@@ -158,6 +160,7 @@
 	--monti-success-3: #12241b;
 	--monti-success-11: #86c09c;
 	--monti-warning-3: #2a2010;
+	--monti-warning-9: #e2b26b;
 	--monti-warning-11: #d9aa66;
 	--monti-danger-3: #2b1618;
 	--monti-danger-11: #e3918f;

@@ -6,7 +6,7 @@ import { commonMessages } from "../../lib/common.messages";
 export function LoadErrorAlert({ message, onRetry }: { message: string; onRetry?: () => void }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<Banner role="alert" title={message}>
+		<Banner role="alert" tone="danger" title={message}>
 			{onRetry && (
 				<TextButton type="button" variant="underline" onClick={onRetry}>
 					{t("retry")}
