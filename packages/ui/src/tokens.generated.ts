@@ -103,7 +103,7 @@ export const PADDING_BOTTOM = {
 	48: "pb-monti-48",
 } as const;
 
-/** Surfaces, by background role. */
+/** Surfaces, by background role. The black one carries its own text color, so what is written on it can be read. */
 export const BACKGROUND = {
 	page: "bg-monti-page",
 	tool: "bg-monti-tool",
@@ -111,7 +111,7 @@ export const BACKGROUND = {
 	selected: "bg-monti-selected",
 	highlight: "bg-monti-highlight",
 	block: "bg-monti-block",
-	emphasis: "bg-monti-emphasis",
+	emphasis: "bg-monti-emphasis text-monti-on-emphasis",
 	"success-muted": "bg-monti-success-muted",
 	"warning-muted": "bg-monti-warning-muted",
 	"danger-muted": "bg-monti-danger-muted",
@@ -153,9 +153,9 @@ export const MAX_WIDTH = {
 
 /** Heights of controls and bars. */
 export const HEIGHT = {
-	control: "h-monti-control",
+	"control-md": "h-monti-control-md",
 	"control-sm": "h-monti-control-sm",
-	icon: "h-monti-icon",
+	"icon-button": "h-monti-icon-button",
 	header: "h-monti-header",
 	toolbar: "h-monti-toolbar",
 	panebar: "h-monti-panebar",
@@ -164,9 +164,9 @@ export const HEIGHT = {
 
 /** The least height of a box, by the same height tokens. */
 export const MIN_HEIGHT = {
-	control: "min-h-monti-control",
+	"control-md": "min-h-monti-control-md",
 	"control-sm": "min-h-monti-control-sm",
-	icon: "min-h-monti-icon",
+	"icon-button": "min-h-monti-icon-button",
 	header: "min-h-monti-header",
 	toolbar: "min-h-monti-toolbar",
 	panebar: "min-h-monti-panebar",

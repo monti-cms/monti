@@ -1,8 +1,17 @@
 /* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.monti-admin`. */
 
-/* Keeps the app's body background from showing through at the admin edges. */
+/*
+ * The admin's base text, on its root and on the body, because popups (menus, dialogs, tooltips) are portaled to the body: the sans stack, smooth glyphs, and Korean broken between words, not inside them (`keep-all`), except a long
+ * token (an address, an identifier) that has no space and breaks where it must (`anywhere`).
+ * The body also keeps the app's background from showing through at the admin edges.
+ */
 html:has(.monti-admin) body {
 	background-color: var(--monti-bg-page);
+	font-family: var(--monti-font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 /*
@@ -20,6 +29,9 @@ html:has(.monti-admin) body {
 	font-family: var(--monti-font-sans);
 	font-size: 14px;
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 /* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */

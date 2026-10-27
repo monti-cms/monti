@@ -31,7 +31,7 @@ function ThemeToggleButton({ labels }: { labels: { toLight: string; toDark: stri
 	const { resolvedTheme, setTheme } = useTheme();
 	const hydrated = useHydrated();
 	if (!hydrated) {
-		return <span aria-hidden className="inline-flex size-monti-icon shrink-0" />;
+		return <span aria-hidden className="inline-flex size-monti-icon-button shrink-0" />;
 	}
 	const isDark = resolvedTheme === "dark";
 	return (

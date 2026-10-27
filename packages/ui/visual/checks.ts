@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 /** One thing a check found: which check, and where on the page. */
 export interface Finding {
-	readonly check: "overflow" | "clipped" | "type" | "icon" | "center";
+	readonly check: "overflow" | "clipped" | "type" | "mono" | "icon" | "center";
 	readonly detail: string;
 }
 
@@ -13,6 +13,8 @@ export interface Finding {
  *   line clamp that says the cut is meant;
  * - type: an element that carries a `text-monti-<role>` type class does not compute to that role's font size. Line height and weight are left out: a part sets
  *   them on purpose (`leading-none` in a badge, `font-semibold` in a button). An element whose role changes under a variant is left out too;
+ * - mono: mono and sans trade places: an element that asks for fixed-width letters (`font-mono`, or the `text-monti-meta` and `text-monti-micro` roles) computes
+ *   another face, or an element with a sans role and no `font-mono` computes mono (see {@link findWrongMono});
  * - icon: a button, link or tab that holds an icon and visible text puts them on different lines (see {@link findSplitIcons});
  * - center: the text of a fixed-height single-line control (a button, chip, tab, menu row, status bar cell) sits off the vertical center of its box
  *   (see {@link findOffCenterText}).
@@ -20,9 +22,47 @@ export interface Finding {
  */
 export const runPageChecks = async (page: Page): Promise<Finding[]> => [
 	...(await page.evaluate(runBoxChecks)),
+	...(await page.evaluate(findWrongMono)),
 	...(await page.evaluate(findSplitIcons)),
 	...(await page.evaluate(findOffCenterText)),
 ];
+
+/**
+ * Mono and sans must not trade places. An element that asks for fixed-width letters (the class `font-mono`, or the `text-monti-meta` and `text-monti-micro`
+ * roles) must compute to the mono face of the admin (the first family of `--monti-font-mono`); and an element with a sans role (`text-monti-body` and the rest) and
+ * no `font-mono` must not: a type role of another family once beat `font-mono` at wide screens, and a mono parent once handed its face to the sans text in it.
+ * A class behind a variant (`md:font-mono`, `data-[x]:text-monti-meta`) is the design's own exception and is left out, and so is an element that is not shown. The
+ * function runs in the page (and in the unit test), so it holds no outside reference.
+ */
+export const findWrongMono = (): Finding[] => {
+	const findings: Finding[] = [];
+	const family = (value: string) => (value.split(",")[0] ?? "").replace(/["']/g, "").trim();
+	const mono = family(getComputedStyle(document.documentElement).getPropertyValue("--monti-font-mono"));
+	if (!mono) return findings;
+	const MONO_ROLES = ["text-monti-meta", "text-monti-micro"];
+	const SANS_ROLES = ["display", "page", "heading", "reading", "title", "body", "label", "note", "caption"].map(
+		(role) => `text-monti-${role}`,
+	);
+	const selector = [...MONO_ROLES, ...SANS_ROLES, "font-mono"].map((name) => `[class*="${name}"]`).join(", ");
+	for (const el of document.body.querySelectorAll(selector)) {
+		const names = (el.getAttribute("class") ?? "").split(/\s+/);
+		const asksMono = names.includes("font-mono") || names.some((name) => MONO_ROLES.includes(name));
+		const sansRole = names.some((name) => SANS_ROLES.includes(name));
+		if (!asksMono && !sansRole) continue;
+		const style = getComputedStyle(el);
+		const box = el.getBoundingClientRect();
+		if (style.display === "none" || style.visibility === "hidden" || box.width <= 1 || box.height <= 1) continue;
+		const computed = family(style.fontFamily);
+		const cls = names.filter(Boolean).slice(0, 4).join(".");
+		const text = (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 32);
+		const where = `<${el.tagName.toLowerCase()}${cls ? `.${cls}` : ""}> "${text}"`;
+		if (asksMono && computed !== mono)
+			findings.push({ check: "mono", detail: `${where} asks for ${mono} but computes ${computed}` });
+		else if (!asksMono && sansRole && computed === mono)
+			findings.push({ check: "mono", detail: `${where} has a sans role but computes ${mono}` });
+	}
+	return findings;
+};
 
 /**
  * A button, link or tab that holds an svg icon and visible text must draw them on one line: the icon's box and the text's box overlap vertically. A
@@ -160,7 +200,7 @@ const runBoxChecks = (): Finding[] => {
 };
 
 /**
- * The text of a fixed-height, single-line control must sit on the vertical center of its box (within 0.75px). A bottom-padding
+ * The text of a fixed-height, single-line control must sit on the vertical center of its box (within 0.75px; within 1px for Hangul in the mono face, see below). A bottom-padding
  * "nudge" tuned on a canvas that drew another font once left every label about a pixel high.
  *
  * What is measured: the box is the control's padding box (a border is not room). The
@@ -178,6 +218,11 @@ const runBoxChecks = (): Finding[] => {
 export const findOffCenterText = (): Finding[] => {
 	// The controls: anything a pointer or a key picks, and the chips, badges and status bar cells that are sized like one.
 	const tolerance = 0.75;
+	// Hangul set in the mono face is drawn by the system's own Hangul face, whose metrics the page does not know (the design system keeps Korean in its
+	// mono roles as it is), so such a text is measured to a pixel, not to 0.75.
+	const fallbackTolerance = 1;
+	const family = (value: string) => (value.split(",")[0] ?? "").replace(/["']/g, "").trim();
+	const monoFace = family(getComputedStyle(document.documentElement).getPropertyValue("--monti-font-mono"));
 	const maxHeight = 48;
 	const hangul = "가나다라마바사아자차카타파하";
 	const latin = "H";
@@ -204,7 +249,7 @@ export const findOffCenterText = (): Finding[] => {
 		const top = outer.top + px(style.borderTopWidth);
 		const bottom = outer.bottom - px(style.borderBottomWidth);
 
-		const nodes: { text: string; font: string; lines: DOMRect[] }[] = [];
+		const nodes: { text: string; font: string; lines: DOMRect[]; fallback: boolean }[] = [];
 		const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
 		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
 			const text = (node.textContent ?? "").trim();
@@ -219,7 +264,14 @@ export const findOffCenterText = (): Finding[] => {
 			range.selectNodeContents(node);
 			const lines = [...range.getClientRects()].filter((line) => line.width > 0 && line.height > 0);
 			const own = getComputedStyle(node.parentElement);
-			nodes.push({ text, font: `${own.fontStyle} ${own.fontWeight} ${own.fontSize} ${own.fontFamily}`, lines });
+			const fallback =
+				/[\u3131-\u318e\uac00-\ud7a3]/.test(text) && monoFace !== "" && family(own.fontFamily) === monoFace;
+			nodes.push({
+				text,
+				font: `${own.fontStyle} ${own.fontWeight} ${own.fontSize} ${own.fontFamily}`,
+				lines,
+				fallback,
+			});
 		}
 		const lines = nodes.flatMap((node) => node.lines);
 		const first = lines[0];
@@ -246,7 +298,7 @@ export const findOffCenterText = (): Finding[] => {
 			const above = baseline - ink.actualBoundingBoxAscent - top;
 			const below = bottom - (baseline + ink.actualBoundingBoxDescent);
 			const off = (above - below) / 2;
-			if (Math.abs(off) <= tolerance) continue;
+			if (Math.abs(off) <= (node.fallback ? fallbackTolerance : tolerance)) continue;
 			const cls = (control.getAttribute("class") ?? "").split(/\s+/).filter(Boolean).slice(0, 4).join(".");
 			findings.push({
 				check: "center",

@@ -612,7 +612,7 @@ Type roles set size, line height, weight, letter spacing and font family togethe
 | --- | --- |
 | `--monti-space-2` … `--monti-space-48` | The spacing scale: 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48 px (`gap-monti-12`, `px-monti-16`, `-mt-monti-4`) |
 | `--monti-radius-sm`, `-md`, `-lg`, `-xl`, `-full` | Corner radius: 3 px (marks, checkboxes), 6 px (rows, tiles), 8 px (inline boxes), 12 px (floating surfaces), pill (`rounded-monti-md`) |
-| `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | Heights of controls and bars (`h-monti-control` 36, `h-monti-header` 60, …), widths of columns, panels and sheets (`w-monti-sidebar` 232, `w-monti-sheet` 520, …) and icon sizes (`size-monti-icon-md` 16) |
+| `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | Heights of controls and bars (`h-monti-control-md` 36, `h-monti-header` 60, …), widths of columns, panels and sheets (`w-monti-sidebar` 232, `w-monti-sheet` 520, …) and icon sizes (`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code, identifiers and source views (default: IBM Plex Mono, then a system monospace stack) |
 
 **Centering is the font's job.** Pretendard's metrics already center Hangul and Latin text in the admin's controls, so no part nudges its text with padding. If you replace the font in `--monti-font-sans`, balance it where it is declared, with `ascent-override`, `descent-override` and `line-gap-override` in its `@font-face`, not with padding on a part. `pnpm test:visual:audit` (in `@monti-cms/ui`) reports every control whose text sits off center.

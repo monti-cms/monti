@@ -52,6 +52,25 @@ describe("design tokens", () => {
 		expect(theme).not.toMatch(/--[\w-]+-monti-(accent|surface|inset|hair|tight|condensed)\b/);
 	});
 
+	it("give a sans type role its family through `--monti-family`, which `font-mono` sets on its own element, so mono wins at every width and stays off the children", async () => {
+		const { generate } = await import(/* @vite-ignore */ script);
+		const json = JSON.parse(read("tokens/tokens.json"));
+		const { theme } = generate();
+		for (const group of json.type.groups as { family: string; styles: { name: string }[] }[]) {
+			for (const style of group.styles) {
+				const role = style.name.replace("text-", "text-monti-");
+				const block = new RegExp(`@utility ${role} \\{[^}]*\\}`).exec(theme)?.[0] ?? "";
+				// A role that set a fixed sans family would sit after `font-mono` once it is behind a variant (`md:text-monti-body`), and turn every mono value sans.
+				if (group.family === "sans")
+					expect(block, role).toContain("font-family: var(--monti-family, var(--monti-font-sans))");
+				else expect(block, role).toContain(`font-family: var(--monti-font-${group.family})`);
+			}
+		}
+		// `font-mono` sets the property, and the property is not inherited: a sans role inside a mono parent is sans.
+		expect(theme).toContain("@utility font-mono {");
+		expect(theme).toMatch(/@property --monti-family \{[^}]*inherits: false;/);
+	});
+
 	it("resolve references to the scale, and keep one declaration for a role that is the same in both modes", async () => {
 		const { generate } = await import(/* @vite-ignore */ script);
 		const { tokens } = generate();

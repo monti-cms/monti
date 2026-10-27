@@ -6,7 +6,7 @@ import { extendTailwindMerge } from "tailwind-merge";
 // `text-monti-display` and win by CSS order. The same goes for the shadows (`shadow-monti-floating`, else read as a shadow color), the letter spacing
 // (`tracking-caps`), the radii, the heights and the widths.
 const SPACING = [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48].map((step) => `monti-${step}`);
-const CONTROLS = ["monti-control", "monti-control-sm", "monti-icon"];
+const CONTROLS = ["monti-control-md", "monti-control-sm", "monti-icon-button"];
 const ICONS = ["monti-icon-xs", "monti-icon-sm", "monti-icon-md", "monti-icon-lg"];
 const BARS = ["monti-header", "monti-toolbar", "monti-panebar", "monti-statusbar"];
 const COLUMNS = [

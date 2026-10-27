@@ -80,7 +80,7 @@ export function SourcePane({
 				position="sticky"
 				justify="between"
 				gap={8}
-				height="icon"
+				height="icon-button"
 				shrink={false}
 				background="page"
 				border="bottom"

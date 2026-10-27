@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { findOffCenterText, findSplitIcons } from "../../visual/checks";
+import { findOffCenterText, findSplitIcons, findWrongMono } from "../../visual/checks";
 
 /**
  * jsdom lays nothing out, so a test says where things are: an element's box is its `data-box` (`top,height` of a 100px-wide box; none means
@@ -136,6 +136,16 @@ describe("the center check", () => {
 		expect(check(control("0,36", "Save", 11))).toHaveLength(1);
 	});
 
+	it("measures Hangul in the mono face to a pixel, since the system's Hangul face is not the page's to measure", () => {
+		const hangul = (family: string) =>
+			`<button style="display:inline-flex;font-family:${family}" data-box="0,36"><span style="font-family:${family}" data-box="0,36" data-lines="9.2,16">뉴스</span></button>`;
+		document.documentElement.style.setProperty("--monti-font-mono", "'Monti Plex Mono', monospace");
+		// 0.9px above the center: more than 0.75, within 1.
+		expect(check(hangul("'Monti Plex Mono', monospace"))).toEqual([]);
+		expect(check(hangul("'Monti Pretendard', sans-serif"))).toHaveLength(1);
+		document.documentElement.style.removeProperty("--monti-font-mono");
+	});
+
 	it("measures inside the borders, and leaves out an underlined tab", () => {
 		const bordered = (style: string, box: string) =>
 			`<button style="display:inline-flex;${style}" data-box="${box}"><span data-box="${box}" data-lines="11,16">Save</span></button>`;
@@ -184,5 +194,50 @@ describe("the center check", () => {
 		])
 			expect(check(row(attrs)), attrs).toHaveLength(1);
 		expect(check(row('class="not-a-control"'))).toEqual([]);
+	});
+});
+
+describe("the mono check", () => {
+	const SANS = "'Monti Pretendard', sans-serif";
+	const MONO = "'Monti Plex Mono', monospace";
+	const check = (html: string) => {
+		document.documentElement.style.setProperty("--monti-font-mono", MONO);
+		document.body.innerHTML = html;
+		return findWrongMono();
+	};
+	afterEach(() => document.documentElement.style.removeProperty("--monti-font-mono"));
+	// jsdom lays nothing out: every element has a box.
+	beforeEach(() => {
+		vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ width: 40, height: 16 } as DOMRect);
+	});
+
+	it("passes an element that computes to the mono face", () => {
+		expect(
+			check(
+				`<input class="font-mono" style="font-family:${MONO}"><span class="text-monti-meta" style="font-family:${MONO}">/posts</span>`,
+			),
+		).toEqual([]);
+	});
+
+	it("finds a font-mono element that computes sans, as a type role of its own family left it", () => {
+		const findings = check(`<input class="text-monti-body font-mono" style="font-family:${SANS}">`);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.check).toBe("mono");
+		expect(findings[0]?.detail).toContain("Monti Plex Mono");
+		expect(findings[0]?.detail).toContain("Monti Pretendard");
+	});
+
+	it("finds a sans role that computes mono, as a mono parent's face reaching its text once did", () => {
+		const findings = check(`<span class="text-monti-body" style="font-family:${MONO}">라벨</span>`);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.detail).toContain("has a sans role");
+		// With `font-mono` on the same element the mono face is what it asked for.
+		expect(check(`<span class="text-monti-body font-mono" style="font-family:${MONO}">주소</span>`)).toEqual([]);
+	});
+
+	it("finds a mono role that computes sans, and leaves out an element that is not shown or asks only behind a variant", () => {
+		expect(check(`<span class="text-monti-micro" style="font-family:${SANS}">라벨</span>`)).toHaveLength(1);
+		expect(check(`<span class="md:font-mono" style="font-family:${SANS}">주소</span>`)).toEqual([]);
+		expect(check(`<span class="font-mono" style="display:none;font-family:${SANS}">주소</span>`)).toEqual([]);
 	});
 });

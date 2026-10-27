@@ -50,7 +50,7 @@ function SearchBox<T extends string = string>({
 		<div
 			data-slot="search-box"
 			className={cn(
-				"flex h-monti-control w-full max-w-80 items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/20",
+				"flex h-monti-control-md w-full max-w-80 items-center gap-monti-8 rounded-monti-full bg-monti-muted pr-monti-12 text-monti-default focus-within:ring-2 focus-within:ring-monti-contrast/20",
 				targets && current ? "pl-monti-4" : "pl-monti-12",
 				className,
 			)}

@@ -161,7 +161,7 @@ export function FieldSheet({
 										onChange={(value) => setBoth("description", orUndefined(value))}
 									/>
 									<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-										<Inline height="icon" radius="md" background="muted" paddingX={12}>
+										<Inline height="icon-button" radius="md" background="muted" paddingX={12}>
 											<Text as="code">{name}</Text>
 										</Inline>
 									</Labeled>

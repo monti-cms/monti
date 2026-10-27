@@ -9,11 +9,11 @@ const skeletonVariants = cva("animate-pulse bg-monti-muted", {
 			title: "h-6 rounded-monti-sm",
 			/** The large title at the top of a document (the editor's title line). */
 			heading: "h-9 rounded-monti-md",
-			control: "h-monti-icon rounded-monti-md",
+			control: "h-monti-icon-button rounded-monti-md",
 			"control-sm": "h-monti-control-sm rounded-monti-md",
 			block: "h-24 rounded-monti-lg",
 			icon: "size-monti-control-sm rounded-monti-md",
-			avatar: "size-monti-icon rounded-monti-full",
+			avatar: "size-monti-icon-button rounded-monti-full",
 		},
 		/** Fractions follow the box; `chip`, `short` and `medium` are fixed, for a tab, a button or a short label. */
 		width: {

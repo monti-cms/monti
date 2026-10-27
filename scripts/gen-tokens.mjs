@@ -33,10 +33,11 @@ const DARK = ':where(html:is(.dark, [data-theme="dark"]):has(.monti-admin))';
 /** The admin bundle ships its fonts under these names (`bundledFonts` in `scripts/build-styles.mjs`), so they never collide with a site's own copy. */
 const BUNDLED_FACES = { Pretendard: '"Monti Pretendard"', '"IBM Plex Mono"': '"Monti Plex Mono"' };
 
-/** Class names that differ from the token name: the design system says `control-md` and `icon-button`, a class says `control` and `icon`. */
-const HEIGHT_CLASS = { "control-md": "control", "icon-button": "icon" };
-/** The heights of square controls also get a `size-monti-*` class. */
-const SQUARE = new Set(["control", "control-sm", "icon"]);
+/**
+ * A height class carries its token's name whole (`height-icon-button` is `h-monti-icon-button`), so a 32px button size (`size-monti-icon-button`) can never
+ * be mistaken for a 16px glyph size (`size-monti-icon-md`). The heights of square controls also get a `size-monti-*` class.
+ */
+const SQUARE = new Set(["control-md", "control-sm", "icon-button"]);
 
 const ref = (value) => value.replace(/\{([\w-]+)\}/g, "var(--monti-$1)");
 const strip = (name, prefix) => name.slice(prefix.length);
@@ -143,13 +144,12 @@ function themeLines(json) {
 	for (const { name } of json.radius.tokens) add("radius", strip(name, "radius-"), `var(--monti-${name})`);
 
 	section(
-		"Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Icon sizes are size-monti-icon-*.",
+		"Heights of controls and bars (h-monti-*, min-h-monti-*); the square ones also size-monti-*. Glyph sizes are size-monti-icon-xs to -lg; the 32px icon button is size-monti-icon-button.",
 	);
 	for (const { name } of json.height.tokens) {
 		const role = strip(name, "height-");
-		const className = HEIGHT_CLASS[role] ?? role;
-		add("height", className, `var(--monti-${name})`);
-		if (SQUARE.has(className)) add("size", className, `var(--monti-${name})`);
+		add("height", role, `var(--monti-${name})`);
+		if (SQUARE.has(role)) add("size", role, `var(--monti-${name})`);
 	}
 	for (const { name } of json.size.tokens) add("size", strip(name, "size-"), `var(--monti-${name})`);
 
@@ -164,7 +164,12 @@ function themeLines(json) {
 	return out.slice(1);
 }
 
-/** The type roles as utilities: size, line height, weight, letter spacing and font family together (Tailwind's `--text-*` theme cannot set the family). */
+/**
+ * The type roles as utilities: size, line height, weight, letter spacing and font family together (Tailwind's `--text-*` theme cannot set the family). A mono
+ * role is always mono. A sans role takes the family from `--monti-family` (`font-mono` sets it, on its own element only: `theme.css` makes it a property that
+ * is not inherited) and is sans otherwise, so `font-mono` beside `md:text-monti-body` still wins, whatever order the two rules come in, and a sans role inside
+ * a mono parent is sans.
+ */
 function typeUtilities(json) {
 	return json.type.groups.flatMap((group) =>
 		group.styles.map((style) => {
@@ -172,7 +177,9 @@ function typeUtilities(json) {
 			return [
 				`/* ${style.fontSize}/${style.lineHeight} ${style.fontWeight}. ${style.usage} */`,
 				`@utility text-monti-${role} {`,
-				`\tfont-family: var(--monti-font-${group.family});`,
+				group.family === "sans"
+					? "\tfont-family: var(--monti-family, var(--monti-font-sans));"
+					: `\tfont-family: var(--monti-font-${group.family});`,
 				`\tfont-size: var(--monti-text-${role}-size);`,
 				`\tline-height: var(--monti-text-${role}-line);`,
 				`\tfont-weight: var(--monti-text-${role}-weight);`,
@@ -207,7 +214,7 @@ const NOT_A_SURFACE = new Set(["backdrop", "danger-emphasis"]);
 function layoutModule(json) {
 	const spacing = [0, ...json.spacing.tokens.map(({ name }) => Number(strip(name, "space-")))];
 	const names = (group, prefix) => json[group].tokens.map(({ name }) => strip(name, prefix));
-	const heights = names("height", "height-").map((role) => HEIGHT_CLASS[role] ?? role);
+	const heights = names("height", "height-");
 	const widths = names("width", "width-");
 	const surfaces = json.color.tokens
 		.filter(({ name }) => name.startsWith("bg-"))
@@ -236,9 +243,11 @@ function layoutModule(json) {
 		scale("PADDING_TOP", "pt", "Padding above."),
 		scale("PADDING_BOTTOM", "pb", "Padding below."),
 		block(
-			"Surfaces, by background role.",
+			"Surfaces, by background role. The black one carries its own text color, so what is written on it can be read.",
 			"BACKGROUND",
-			entries(surfaces, (role) => `bg-monti-${role}`),
+			entries(surfaces, (role) =>
+				role === "emphasis" ? "bg-monti-emphasis text-monti-on-emphasis" : `bg-monti-${role}`,
+			),
 		),
 		block(
 			"Corner radius.",
