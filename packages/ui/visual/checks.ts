@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 /** One thing a check found: which check, and where on the page. */
 export interface Finding {
-	readonly check: "overflow" | "clipped" | "type" | "icon";
+	readonly check: "overflow" | "clipped" | "type" | "icon" | "center";
 	readonly detail: string;
 }
 
@@ -13,12 +13,15 @@ export interface Finding {
  *   line clamp that says the cut is meant;
  * - type: an element that carries a `text-monti-<role>` type class does not compute to that role's font size. Line height and weight are left out: a part sets
  *   them on purpose (`leading-none` in a badge, `font-semibold` in a button). An element whose role changes under a variant is left out too;
- * - icon: a button, link or tab that holds an icon and visible text puts them on different lines (see {@link findSplitIcons}).
+ * - icon: a button, link or tab that holds an icon and visible text puts them on different lines (see {@link findSplitIcons});
+ * - center: the text of a fixed-height single-line control (a button, chip, tab, menu row, status bar cell) sits off the vertical center of its box
+ *   (see {@link findOffCenterText}).
  * Each runs in the page, so it holds no outside reference.
  */
 export const runPageChecks = async (page: Page): Promise<Finding[]> => [
 	...(await page.evaluate(runBoxChecks)),
 	...(await page.evaluate(findSplitIcons)),
+	...(await page.evaluate(findOffCenterText)),
 ];
 
 /**
@@ -153,5 +156,103 @@ const runBoxChecks = (): Finding[] => {
 		}
 	}
 	probe.remove();
+	return findings;
+};
+
+/**
+ * The text of a fixed-height, single-line control must sit on the vertical center of its box (within 0.75px). A bottom-padding
+ * "nudge" tuned on a canvas that drew another font once left every label about a pixel high.
+ *
+ * What is measured: the box is the control's padding box (a border is not room). The
+ * text is each visible text node of the control. Its font is the computed font of its parent, set on a canvas; the baseline is the top of the node's
+ * Range rect (the inline box's content area) plus the font's `fontBoundingBoxAscent`. The ink is the canvas's `actualBoundingBoxAscent` and
+ * `actualBoundingBoxDescent` of a reference text drawn in that font from that baseline: the syllable table (`가나다라마바사아자차카타파하`, so no single glyph decides the height) when the node has Hangul,
+ * `H` (the cap height) when it has Latin letters; a node of neither (digits, symbols) is not measured. The center of that ink is compared
+ * with the center of the box.
+ *
+ * Left out: a control that is not shown, a control displayed inline (a link in running text has no box of its own), an underlined tab (a border at the bottom only: the underline is not an edge of the text's box), one taller than
+ * 48px (a tile, a card), one with less than 6px of room around its line (a text button is as tall as its line), and one whose text is
+ * on more than one line or on lines that do not overlap (a title over a caption).
+ * The function runs in the page (and in the unit test), so it holds no outside reference.
+ */
+export const findOffCenterText = (): Finding[] => {
+	// The controls: anything a pointer or a key picks, and the chips, badges and status bar cells that are sized like one.
+	const tolerance = 0.75;
+	const maxHeight = 48;
+	const hangul = "가나다라마바사아자차카타파하";
+	const latin = "H";
+	const controls =
+		'button, a[href], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [data-slot="chip"], [data-slot="badge"], [data-slot="status-bar-cell"]';
+	const findings: Finding[] = [];
+	const shown = (el: Element) => {
+		const style = getComputedStyle(el);
+		const box = el.getBoundingClientRect();
+		return style.display !== "none" && style.visibility !== "hidden" && box.width > 1 && box.height > 1;
+	};
+	const context = document.createElement("canvas").getContext("2d");
+	if (!context) return findings;
+	const px = (value: string) => Number.parseFloat(value) || 0;
+
+	for (const control of document.body.querySelectorAll(controls)) {
+		if (!shown(control)) continue;
+		const style = getComputedStyle(control);
+		const outer = control.getBoundingClientRect();
+		if (style.display === "inline" || outer.height > maxHeight) continue;
+		// An underlined tab has a line at the bottom and none at the top: its box ends at the underline, a set distance under the text, so its text is
+		// not meant to sit on the middle of the box.
+		if (px(style.borderBottomWidth) > 0 && px(style.borderTopWidth) === 0) continue;
+		const top = outer.top + px(style.borderTopWidth);
+		const bottom = outer.bottom - px(style.borderBottomWidth);
+
+		const nodes: { text: string; font: string; lines: DOMRect[] }[] = [];
+		const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
+		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+			const text = (node.textContent ?? "").trim();
+			if (!text) continue;
+			let hidden = false;
+			for (let el = node.parentElement; el; el = el.parentElement) {
+				if (el.closest("svg") || !shown(el)) hidden = true;
+				if (el === control) break;
+			}
+			if (hidden || !node.parentElement) continue;
+			const range = document.createRange();
+			range.selectNodeContents(node);
+			const lines = [...range.getClientRects()].filter((line) => line.width > 0 && line.height > 0);
+			const own = getComputedStyle(node.parentElement);
+			nodes.push({ text, font: `${own.fontStyle} ${own.fontWeight} ${own.fontSize} ${own.fontFamily}`, lines });
+		}
+		const lines = nodes.flatMap((node) => node.lines);
+		const first = lines[0];
+		if (!first) continue;
+		const stacked = lines.some((line) => {
+			const middle = (line.top + line.bottom) / 2;
+			return middle < first.top || middle > first.bottom;
+		});
+		if (stacked || nodes.some((node) => node.lines.length > 1)) continue;
+		if (bottom - top < Math.max(...lines.map((line) => line.height)) + 6) continue;
+
+		for (const node of nodes) {
+			const line = node.lines[0];
+			if (!line) continue;
+			const sample = /[\u3131-\u318e\uac00-\ud7a3]/.test(node.text)
+				? hangul
+				: /[A-Za-z]/.test(node.text)
+					? latin
+					: null;
+			if (!sample) continue;
+			context.font = node.font;
+			const baseline = line.top + context.measureText(sample).fontBoundingBoxAscent;
+			const ink = context.measureText(sample);
+			const above = baseline - ink.actualBoundingBoxAscent - top;
+			const below = bottom - (baseline + ink.actualBoundingBoxDescent);
+			const off = (above - below) / 2;
+			if (Math.abs(off) <= tolerance) continue;
+			const cls = (control.getAttribute("class") ?? "").split(/\s+/).filter(Boolean).slice(0, 4).join(".");
+			findings.push({
+				check: "center",
+				detail: `<${control.tagName.toLowerCase()}${cls ? `.${cls}` : ""}> "${node.text.slice(0, 32)}" ink is ${Math.abs(off).toFixed(1)}px ${off < 0 ? "above" : "below"} the center of its ${Math.round(bottom - top)}px box (${above.toFixed(1)}px above, ${below.toFixed(1)}px below)`,
+			});
+		}
+	}
 	return findings;
 };

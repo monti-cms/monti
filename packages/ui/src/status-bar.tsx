@@ -31,7 +31,7 @@ const RULE =
 	"bg-[linear-gradient(var(--monti-border-default),var(--monti-border-default))] bg-size-[1px_14px] bg-no-repeat";
 
 const cellVariants = cva(
-	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 pb-px font-[inherit] text-[length:inherit] text-inherit [&:not([data-slot=status-bar-cell]~*)]:pl-monti-24 data-popup-open:bg-monti-selected [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
+	"flex items-center gap-monti-6 whitespace-nowrap border-0 bg-transparent px-monti-16 font-[inherit] text-[length:inherit] text-inherit [&:not([data-slot=status-bar-cell]~*)]:pl-monti-24 data-popup-open:bg-monti-selected [&:is(a,button):hover]:text-monti-default [&:is(a,button)]:cursor-pointer",
 	{
 		variants: {
 			/** `end` cells sit after the spacer: the rule is on their left, the last one has room at the right edge (the cells are counted, not their neighbors: an open list leaves focus guards beside its trigger), and they hide first on a narrow screen. */

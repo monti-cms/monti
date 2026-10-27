@@ -5,11 +5,11 @@ import { Spinner } from "./spinner";
 
 /**
  * A pill. One `primary` per screen or floating surface, then `secondary` for the one or two common side actions, `danger` only to confirm
- * something that cannot be undone, and `outline-danger` for a quieter version of it. The text sits 2px high in the pill, and a leading icon
- * pulls 2px into the left padding so it centers visually.
+ * something that cannot be undone, and `outline-danger` for a quieter version of it. The text is centered by the font (no padding nudge), and a
+ * leading icon pulls 2px into the left padding so it centers visually.
  */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full border border-transparent pb-[2px] whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px]",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full border border-transparent whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px]",
 	{
 		variants: {
 			variant: {

@@ -215,6 +215,10 @@ export function localizeFonts(css, packageDir) {
  * Pretendard is the variable font in its dynamic subsets (one file per `unicode-range`, so a page only downloads the slices it shows), IBM Plex Mono
  * is the latin subset in 400, 500 and 600. Both are renamed (`Monti Pretendard`, `Monti Plex Mono`) so they never collide with a site's own copy.
  * The fonts are devDependencies of the admin package: only the admin bundle has them, other bundles return `null`.
+ *
+ * No `ascent-override`, `descent-override` or `line-gap-override` is set: Pretendard's own metrics already center Hangul and Latin in the admin's
+ * controls. A font that replaces it must be balanced here, with those descriptors, and never by nudging parts with padding. `pnpm test:visual:audit`
+ * reports a control whose text is off center.
  */
 export function bundledFonts(packageDir) {
 	const require = createRequire(path.join(packageDir, "package.json"));
@@ -247,8 +251,10 @@ export function bundledFonts(packageDir) {
 				`src:url(./fonts/ibm-plex-mono/ibm-plex-mono-latin-${weight}-normal.woff2) format("woff2");unicode-range:${latin}}`,
 		)
 		.join("\n");
+	const note =
+		"/* Pretendard's metrics already center Hangul and Latin in our controls, so no ascent-override or descent-override is set. A replacement font must be balanced here (ascent-override, descent-override, line-gap-override), not by nudging parts with padding. */";
 	return {
-		css: `${pretendardCss}\n${plexCss}\n`,
+		css: `${note}\n${pretendardCss}\n${plexCss}\n`,
 		copies: [
 			{
 				from: subsets,

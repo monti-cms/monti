@@ -9,7 +9,7 @@ import { Spark } from "./spark";
 
 /** The pill of a chip, for parts that draw their own chip (a combobox's selected values). */
 export const CHIP =
-	"inline-flex h-monti-control-sm w-fit items-center gap-monti-6 rounded-monti-full bg-monti-selected px-monti-10 pb-[2px] font-semibold text-monti-default text-monti-note whitespace-nowrap";
+	"inline-flex h-monti-control-sm w-fit items-center gap-monti-6 rounded-monti-full bg-monti-selected px-monti-10 font-semibold text-monti-default text-monti-note whitespace-nowrap";
 
 /** What a chip's remove mark looks like: lighter than the text. */
 export const CHIP_REMOVE =

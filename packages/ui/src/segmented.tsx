@@ -59,7 +59,7 @@ function Segmented<T extends string>({
 					className={cn(
 						"whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:bg-monti-selected data-pressed:font-semibold data-pressed:text-monti-default",
 						inline ? "flex-none px-monti-10" : "flex-1",
-						size === "sm" ? "pt-monti-4 pb-[5px]" : "pt-monti-6 pb-[7px]",
+						size === "sm" ? "py-[5px]" : "py-[7px]",
 					)}
 				>
 					{option.label}

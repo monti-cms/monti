@@ -60,7 +60,7 @@ function SearchBox<T extends string = string>({
 					<DropdownMenuTrigger
 						// The name starts with the visible text (the place now picked), then says what the picker is.
 						aria-label={targetLabel ? `${current.label}, ${targetLabel}` : undefined}
-						className="inline-flex h-monti-control-sm shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pb-[2px] pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+						className="inline-flex h-monti-control-sm shrink-0 cursor-pointer items-center rounded-monti-full border-0 bg-monti-page pr-monti-8 pl-monti-10 text-monti-default text-monti-note outline-none focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
 					>
 						{current.label}
 						<Caret />

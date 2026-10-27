@@ -6,7 +6,7 @@ import { Stack } from "./stack";
 
 /**
  * Pills. One `primary` per screen or floating surface; `secondary` for one or two common side actions; `danger` only to confirm what cannot be
- * undone. Text sits 2px high in the pill and a leading icon pulls 2px into the padding. Switch light and dark with the toolbar.
+ * undone. Text is centered in the pill and a leading icon pulls 2px into the padding. Switch light and dark with the toolbar.
  */
 const meta = {
 	title: "Controls/Button/Button",

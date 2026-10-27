@@ -600,6 +600,8 @@ import "@monti-cms/admin/styles.css";
 | `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | 컨트롤과 바의 높이(`h-monti-control` 36, `h-monti-header` 60 …), 열, 패널, 시트의 너비(`w-monti-sidebar` 232, `w-monti-sheet` 520 …), 아이콘 크기(`size-monti-icon-md` 16) |
 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드, 식별자, 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
 
+**글자를 가운데 맞추는 건 글꼴의 몫이다.** Pretendard의 글꼴 수치는 이미 관리자의 컨트롤 안에서 한글과 영문을 가운데에 놓으므로, 어떤 부품도 패딩으로 글자를 밀지 않는다. `--monti-font-sans`의 글꼴을 바꾸면, 부품에 패딩을 주지 말고 글꼴을 선언하는 곳에서 `@font-face`의 `ascent-override`, `descent-override`, `line-gap-override`로 맞춘다. `pnpm test:visual:audit`(`@monti-cms/ui`)는 글자가 가운데에서 벗어난 컨트롤을 모두 알려 준다.
+
 확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(간격 눈금의 px 단계로 고르는 간격: `gap={8}`)과 위의 클래스로 만든다.
 
 ### shadcn 테마 다시 쓰기

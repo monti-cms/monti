@@ -60,7 +60,7 @@ function SplitButton({
 				disabled={inert}
 				aria-busy={loading || undefined}
 				onClick={onClick}
-				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pb-[2px] pl-[18px]")}
+				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]")}
 			>
 				{loading && <Spinner size="sm" aria-hidden />}
 				{children}
