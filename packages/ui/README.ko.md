@@ -31,12 +31,25 @@ pnpm --filter @monti-cms/ui storybook
 
 이 패키지 카탈로그의 모든 스토리를 밝은 테마와 어두운 테마로 찍어 `visual/baselines`의 PNG와 비교한다. 같은 화면에서 가로 스크롤, 상자에 잘린 글, 글자 크기가 `text-monti-*` 역할과 다른 요소도 검사한다. 관리자 화면 스토리는 `visual` 태그를 달기 전까지 찍지 않고, 카탈로그 스토리를 빼려면 `no-visual`을 단다(규칙은 `visual/stories.ts`).
 
+기준 이미지는 CI가 쓰는 Linux 이미지에서만 만든다. 글자가 시스템마다 다르게 그려지기 때문이다. 그래서 `pnpm test:visual`은 macOS와 Windows에서 실행을 거부하고, 기준 이미지는 CI에서 받는다.
+
+**처음 기준 이미지.** 첫 기준 이미지를 커밋하기 전에는 `visual/baselines/{light,dark}`가 비어 있다. 푸시에서 도는 첫 CI는 PNG를 찾지 못해 아무것도 비교하지 않고, 찍은 이미지를 `visual-baselines` 산출물(`light/`와 `dark/`)로 올린다. 이것을 받아 두 폴더를 `visual/baselines`에 넣는다.
+
 ```bash
-pnpm test:visual:docker           # CI가 쓰는 Linux 이미지에서 비교
-pnpm test:visual:docker --update  # 의도한 변경 뒤 기준 이미지를 다시 쓴다
+gh run download <run-id> --name visual-baselines --dir packages/ui/visual/baselines
+git add packages/ui/visual/baselines && git commit
 ```
 
-기준 이미지는 Linux에서만 만든다(글자가 시스템마다 다르게 그려진다). 그래서 `pnpm test:visual`은 macOS와 Windows에서 실행을 거부한다. CI가 차이를 찾으면 바뀐 이미지를 `visual-baselines` 산출물로 올린다. 받아들이려면 `visual/baselines`를 그 폴더로 바꾼다.
+**그 뒤.** CI는 푸시마다 커밋된 이미지와 비교한다. 차이가 있으면 작업이 실패하고, 새 코드가 찍은 이미지를 같은 산출물로 올린다. 의도한 변경이면 `visual/baselines`의 두 폴더를 지우고(없앤 스토리의 이미지가 남지 않게) 위처럼 산출물을 받아 변경과 함께 커밋한다. 의도한 것이 아니면 코드를 고친다. 차이는 작업의 리포트에 하나씩 나온다.
+
+**내 컴퓨터에서.** Docker가 같은 Linux 이미지(설치된 Playwright 버전, CI와 같은 태그)를 실행한다. 저장소를 컨테이너로 복사하므로 호스트의 `node_modules`는 건드리지 않는다.
+
+```bash
+pnpm test:visual:docker                              # visual/baselines와 비교, 차이 이미지는 visual/test-results에 남는다
+pnpm test:visual:docker --baselines /tmp/shots --update   # 이미지를 내가 고른 폴더에 찍어 눈으로 본다
+```
+
+이렇게 만든 이미지는 커밋하지 않는다. CI 러너와 Apple silicon Mac은 CPU 구조가 달라 글자 가장자리가 조금 다르게 그려진다. 커밋하는 것은 언제나 CI가 만든 이미지다.
 
 ## 개발
 

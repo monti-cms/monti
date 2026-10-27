@@ -31,12 +31,25 @@ The admin's screen states (load failures, empty lists, open dialogs) join the sa
 
 Every story of this package's catalog is shot in light and dark and compared with the PNGs in `visual/baselines`. The same page is checked for a sideways scroll, text cut by its box, and type-role classes (`text-monti-*`) that do not compute to their size. Admin screen stories are not shot until they carry the `visual` tag; a catalog story leaves out with `no-visual` (the rule is `visual/stories.ts`).
 
+The baselines are made on the Linux image CI runs in and nowhere else, because text is drawn differently per system: `pnpm test:visual` refuses to run on macOS and Windows. CI is where they come from.
+
+**First baselines.** `visual/baselines/{light,dark}` is empty until the first ones are committed. The first CI run on a push finds no PNGs, compares nothing, and uploads the shots it took as the `visual-baselines` artifact (`light/` and `dark/`). Download it and put the two folders in `visual/baselines`:
+
 ```bash
-pnpm test:visual:docker           # compare, in the Linux image CI uses
-pnpm test:visual:docker --update  # write the baselines again after a change that is meant
+gh run download <run-id> --name visual-baselines --dir packages/ui/visual/baselines
+git add packages/ui/visual/baselines && git commit
 ```
 
-Baselines are made on Linux only (text is drawn differently per system), so `pnpm test:visual` refuses to run on macOS and Windows. When CI finds a difference it uploads the changed shots as the `visual-baselines` artifact: replace `visual/baselines` with it to accept them.
+**After that,** CI compares every push with the committed shots. A difference fails the job and uploads the shots of the new code as the same artifact. If the change is meant, delete the two folders in `visual/baselines` (so a removed story leaves no shot behind), download the artifact into it as above and commit it with the change. If it is not meant, fix the code; the job's report shows each difference.
+
+**On your machine,** Docker runs the same Linux image (the Playwright version of the install, the tag CI uses). The repo is copied into the container, so the host's `node_modules` is never touched:
+
+```bash
+pnpm test:visual:docker                              # compare with visual/baselines; diff images land in visual/test-results
+pnpm test:visual:docker --baselines /tmp/shots --update   # take shots into a folder of your own, to look at them
+```
+
+Do not commit shots made this way: the CI runner has another CPU architecture than an Apple silicon Mac, and anti-aliasing differs a little between the two. What is committed always comes from CI.
 
 ## Development
 
