@@ -30,7 +30,7 @@ type PaginationLinkProps = {
 	isActive?: boolean;
 	/** The first page's "previous" and the last page's "next": shown, not followed. */
 	disabled?: boolean;
-	/** `icon` a round 32px mark for a page number; `default` wider, with a word and an arrow. */
+	/** `icon` a 32px circle for one digit (a pill for more) for a page number; `default` wider, with a word and an arrow. */
 	size?: "icon" | "default";
 } & React.ComponentProps<"a">;
 
@@ -44,7 +44,9 @@ function PaginationLink({ className, isActive, disabled, size = "icon", ...props
 			data-active={isActive}
 			className={cn(
 				"inline-flex h-monti-icon shrink-0 cursor-pointer items-center justify-center gap-monti-4 rounded-monti-full text-monti-body text-monti-muted no-underline outline-none transition-colors hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-[active=true]:bg-monti-selected data-[active=true]:font-semibold data-[active=true]:text-monti-default [&_svg:not([class*='size-'])]:size-4",
-				size === "icon" ? "min-w-monti-icon px-monti-4" : "px-monti-12",
+				// A page button is never narrower than tall: one digit is a circle, more digits a pill.
+				"min-w-(--size-monti-icon)",
+				size === "icon" ? "px-monti-4" : "px-monti-12",
 				disabled && "pointer-events-none opacity-45",
 				className,
 			)}
