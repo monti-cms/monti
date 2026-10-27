@@ -153,10 +153,7 @@ function Sample({
 				{sample.map((entry, index) => (
 					<Text as="li" variant="caption" key={entry.id}>
 						{index > 0 && ", "}
-						<TextLink
-							render={<AdminLink href={entryHref(site, entry.collection, entry.id)} target="_blank" />}
-							tone="accent"
-						>
+						<TextLink render={<AdminLink href={entryHref(site, entry.collection, entry.id)} target="_blank" />}>
 							{entry.title ?? entry.id.slice(0, 8)}
 						</TextLink>
 						<Text tone="muted">

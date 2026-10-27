@@ -37,7 +37,7 @@ export function SaveBar({
 			paddingY={12}
 		>
 			<Inline grow gap={8}>
-				<StatusIndicator tone="accent" size="xs" />
+				<StatusIndicator tone="warning" size="xs" />
 				<Text>{t("bar.count", { count })}</Text>
 			</Inline>
 			<Button type="button" variant="ghost" size="sm" onClick={onDiscard}>

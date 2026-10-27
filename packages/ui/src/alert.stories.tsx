@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const TONES = ["neutral", "accent", "danger", "warning", "success"] as const;
+const TONES = ["neutral", "danger", "warning", "success"] as const;
 const LAYOUTS = ["grid", "stack", "inline", "strip"] as const;
 
 /** Every tone in every layout. `grid` expects an icon, a title and a description; `stack` is plain text; `inline` and `strip` carry an action. */

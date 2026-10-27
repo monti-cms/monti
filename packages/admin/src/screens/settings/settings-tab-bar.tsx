@@ -56,7 +56,7 @@ export function SettingsTabBar({
 						{t(`tab.${entry.id}` as "tab.collections")}
 						{changed?.[entry.id] && (
 							<Inline as="span" data-testid={`tab-changed-${entry.id}`}>
-								<StatusIndicator tone="accent" size="xs" />
+								<StatusIndicator tone="warning" size="xs" />
 								<Text srOnly>{t("changed")}</Text>
 							</Inline>
 						)}

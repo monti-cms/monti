@@ -248,7 +248,7 @@ function ResultView({ form }: { form: RestoreForm }) {
 			<Warnings warnings={result.warnings} />
 			<NotRestored items={result.notRestored} />
 			<Box>
-				<TextLink tone="accent" href={site.adminHref()} data-testid="restore-open">
+				<TextLink href={site.adminHref()} data-testid="restore-open">
 					{t("result.open")}
 				</TextLink>
 			</Box>

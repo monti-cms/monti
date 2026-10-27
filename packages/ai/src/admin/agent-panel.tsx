@@ -76,9 +76,7 @@ function UnavailableNotice({ reason, model }: { reason: Unavailable; model?: str
 						: t("unavailable.noTools", { model: model ?? "" })}{" "}
 					{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
 				</Text>
-				<TextLink tone="accent" render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>
-					{t("unavailable.link")}
-				</TextLink>
+				<TextLink render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>{t("unavailable.link")}</TextLink>
 			</Stack>
 		</Alert>
 	);

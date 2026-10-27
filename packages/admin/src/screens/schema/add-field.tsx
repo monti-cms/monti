@@ -154,7 +154,6 @@ export function AddFieldDialog({
 						</Text>
 						<TextLink
 							render={<button type="button" />}
-							tone="accent"
 							underline="hover"
 							size="caption"
 							onClick={() => setIsNaming(true)}

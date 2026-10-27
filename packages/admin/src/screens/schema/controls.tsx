@@ -85,7 +85,7 @@ export function ChangeDot() {
 	const t = useTranslator(schemaMessages);
 	return (
 		<Inline as="span" shrink={false} data-testid="change-dot">
-			<StatusIndicator tone="accent" size="xs" />
+			<StatusIndicator tone="warning" size="xs" />
 			<Text srOnly>{t("changed")}</Text>
 		</Inline>
 	);

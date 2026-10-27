@@ -5,7 +5,7 @@ import { cn } from "./cn";
 
 /**
  * Notice for the admin UI. `tone` says what it means: `neutral` for information, `danger` for errors such as a load failure, `warning` and `success`
- * for the states between, `accent` for a pointer to the next step. `layout` says where it sits: a box in the content (`grid`, `stack`, `inline`), or
+ * for the states between. `layout` says where it sits: a box in the content (`grid`, `stack`, `inline`), or
  * a `strip` across the top of a pane, flush with what is below it. The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva(
@@ -22,7 +22,6 @@ export const alertVariants = cva(
 			},
 			tone: {
 				neutral: "border-monti-muted bg-monti-page text-monti-default",
-				accent: "border-monti-emphasis bg-monti-selected text-monti-default",
 				danger: "border-monti-danger/40 bg-monti-danger-muted text-monti-danger",
 				warning: "border-monti-warning/40 bg-monti-warning-muted text-monti-warning",
 				success: "border-monti-success/40 bg-monti-success-muted text-monti-success",

@@ -15,11 +15,11 @@ const textLinkVariants = cva(
 		variants: {
 			/** `none`: a whole row or card that is clickable, where the surface shows the hover instead. */
 			underline: {
-				always: "underline underline-offset-2",
-				hover: "underline-offset-2 hover:underline",
+				always: "underline decoration-monti-strong underline-offset-2",
+				hover: "underline-offset-2 hover:underline hover:decoration-monti-strong",
 				none: "no-underline",
 			},
-			tone: { default: "", muted: "text-monti-muted hover:text-monti-default", accent: "text-monti-default" },
+			tone: { default: "", muted: "text-monti-muted hover:text-monti-default" },
 			mono: { true: "font-mono" },
 			size: { inherit: "", caption: "text-monti-caption", label: "text-monti-label", body: "text-monti-body" },
 		},

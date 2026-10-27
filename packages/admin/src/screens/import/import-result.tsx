@@ -57,7 +57,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				</Text>
 				{entry.publish?.status === "done" && <Badge variant="outline">{t("result.published", { count: 1 })}</Badge>}
 				{entry.id && (
-					<TextLink tone="accent" size="caption" href={site.adminEntryEditHref(entry.id)}>
+					<TextLink size="caption" href={site.adminEntryEditHref(entry.id)}>
 						{t("result.open")}
 					</TextLink>
 				)}

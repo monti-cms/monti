@@ -28,7 +28,7 @@ export const Underline: Story = {
 export const Tone: Story = {
 	render: () => (
 		<Stack gap={8} align="start">
-			{(["default", "muted", "accent"] as const).map((tone) => (
+			{(["default", "muted"] as const).map((tone) => (
 				<TextLink key={tone} href="#top" tone={tone}>
 					tone {tone}
 				</TextLink>

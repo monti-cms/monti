@@ -189,7 +189,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					</Text>
 				</Inline>
 				{issue.url && (
-					<TextLink href={issue.url} target="_blank" rel="noreferrer noopener" tone="accent" size="caption">
+					<TextLink href={issue.url} target="_blank" rel="noreferrer noopener" size="caption">
 						{t("explain")}
 					</TextLink>
 				)}

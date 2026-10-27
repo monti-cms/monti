@@ -270,7 +270,7 @@ export function EntryEditorShell({
 			entry?.source ? (
 				<>
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
-					<TextLink tone="accent" render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
+					<TextLink render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
 						{te("inspector.sourceLink")}
 					</TextLink>
 				</>

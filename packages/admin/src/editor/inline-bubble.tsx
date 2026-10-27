@@ -332,7 +332,6 @@ export function InlineBubble({
 									target="_blank"
 									rel="noreferrer noopener"
 									title={href}
-									tone="accent"
 									// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 									onMouseDown={(event) => event.preventDefault()}
 								>
