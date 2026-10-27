@@ -23,6 +23,23 @@ describe("visual regression setup", () => {
 		expect(script).toContain("-noble");
 	});
 
+	it("audits every story as its own CI step, and keeps the comparison's diffs from the update run", () => {
+		const ci = read(".github/workflows/ci.yml");
+		expect(ci).toContain("visual:audit");
+		// The update run writes elsewhere: Playwright empties its output folder and report at the start of a run.
+		const update = ci.split("\n").find((line) => line.includes("--update-snapshots"));
+		expect(update).toContain("--output=");
+		expect(update).toContain("--reporter=list");
+	});
+
+	it("serves each run's own build, never a server that is already there", async () => {
+		const { shared } = await import("../../visual/shared");
+		expect(shared.webServer.reuseExistingServer).toBe(false);
+		const port = new URL(shared.use.baseURL).port;
+		expect(shared.webServer.command).toContain(`--port ${port} `);
+		expect(shared.webServer.url).toContain(`:${port}/`);
+	});
+
 	describe("which stories are shot", () => {
 		const story = (importPath: string, tags: string[] = []): StoryEntry => ({
 			type: "story",

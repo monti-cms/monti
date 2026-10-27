@@ -8,10 +8,13 @@
  *   pnpm test:visual:docker --baselines <dir> [--update]   # read or write the baselines of another folder (a trial run)
  *
  * The repo is copied into the container (without node_modules, so the host's install is never touched), installed and built there. Only the
- * baselines (after `--update`) and, after a failed comparison, the diff images (packages/ui/visual/test-results) are copied back.
+ * baselines (after `--update`) and, after a failed comparison, the diff images (packages/ui/visual/test-results) are copied back. An update
+ * starts from an empty folder and, once it has succeeded, replaces the light and dark folders of the baselines, so the shot of a story that
+ * was renamed or deleted does not stay behind.
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,16 +65,25 @@ if (created.error) fail(`could not run docker (${created.error.message}). Is Doc
 if (created.status !== 0) fail(`could not create the container:\n${created.stderr}`);
 const container = created.stdout.trim();
 
+// An update writes into an empty folder, not over the old baselines: what it does not write again is gone.
+const fresh = update ? mkdtempSync(path.join(tmpdir(), "monti-visual-")) : null;
+
 let status = 1;
 try {
-	if (docker("cp", baselines, `${container}:/out`).status !== 0)
+	if (docker("cp", fresh ?? baselines, `${container}:/out`).status !== 0)
 		fail("could not copy the baselines into the container.");
 	status = docker("start", "--attach", container).status ?? 1;
-	// The baselines are written back after an update; the diff images after any run.
-	if (update && docker("cp", `${container}:/out/.`, baselines).status !== 0) fail("could not copy the baselines out.");
+	// The baselines are written back after a successful update; the diff images after any run.
+	if (fresh && status === 0) {
+		if (docker("cp", `${container}:/out/.`, fresh).status !== 0) fail("could not copy the baselines out.");
+		// Only the folders a run writes (one per color scheme) are replaced, so a wrong --baselines folder loses nothing else.
+		for (const scheme of ["light", "dark"]) rmSync(path.join(baselines, scheme), { recursive: true, force: true });
+		cpSync(fresh, baselines, { recursive: true });
+	}
 	// There is no such folder after a run with no failure.
 	spawnSync("docker", ["cp", `${container}:/work/packages/ui/visual/test-results/.`, results], { stdio: "ignore" });
 } finally {
 	docker("rm", "--force", "--volumes", container);
+	if (fresh) rmSync(fresh, { recursive: true, force: true });
 }
 process.exit(status);

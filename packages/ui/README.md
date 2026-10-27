@@ -31,7 +31,7 @@ The admin's screen states (load failures, empty lists, open dialogs) join the sa
 
 Every story of this package's catalog is shot in light and dark and compared with the PNGs in `visual/baselines`. The same page is checked for a sideways scroll, text cut by its box, type-role classes (`text-monti-*`) that do not compute to their size, and an icon that sits off the line of the text of its button, link or tab. Admin screen stories are not shot until they carry the `visual` tag; a catalog story leaves out with `no-visual` (the rule is `visual/stories.ts`).
 
-**The audit.** `pnpm test:visual:audit` runs those checks, and only those, over every story of the built Storybook (the admin's screens included, shot or not) in light and dark. It compares no image, so it runs on any system. Run it at the end of each redesign epic: a finding is fixed, or written down under the issue that owns the screen. `MONTI_STORYBOOK_DIR=<a build>` points it at another build (the base branch) to tell what a branch broke from what was already there.
+**The audit.** `pnpm test:visual:audit` runs those checks, and only those, over every story of the built Storybook (the admin's screens included, shot or not) in light and dark. It compares no image, so it runs on any system. Run it at the end of each redesign epic: a finding is fixed, or written down under the issue that owns the screen. `MONTI_STORYBOOK_DIR=<a build>` points it at another build (the base branch) to tell what a branch broke from what was already there. Every run serves its own build on a free port, so two runs never look at each other's Storybook. CI runs it as its own step of the `visual` job, so it gates the job whether or not baselines exist yet.
 
 The baselines are made on the Linux image CI runs in and nowhere else, because text is drawn differently per system: `pnpm test:visual` refuses to run on macOS and Windows. CI is where they come from.
 
@@ -50,6 +50,8 @@ git add packages/ui/visual/baselines && git commit
 pnpm test:visual:docker                              # compare with visual/baselines; diff images land in visual/test-results
 pnpm test:visual:docker --baselines /tmp/shots --update   # take shots into a folder of your own, to look at them
 ```
+
+An `--update` run replaces the `light` and `dark` folders of the target, so the shot of a renamed or deleted story does not stay behind.
 
 Do not commit shots made this way: the CI runner has another CPU architecture than an Apple silicon Mac, and anti-aliasing differs a little between the two. What is committed always comes from CI.
 

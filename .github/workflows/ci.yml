@@ -119,11 +119,12 @@ jobs:
         if: steps.baselines.outputs.exist == 'true'
         run: pnpm --filter @monti-cms/ui visual:run
       # After a failed comparison, or when there are no baselines yet: the same run again, writing the shots. If the change is meant, the
-      # artifact is what goes into packages/ui/visual/baselines (download it and replace the folder).
+      # artifact is what goes into packages/ui/visual/baselines (download it and replace the folder). It keeps its own output folder and
+      # reporter: Playwright empties both at the start of a run, and the failed comparison's diffs and report must survive for the upload below.
       - name: Make the baselines this code would have
         if: failure() || steps.baselines.outputs.exist == 'false'
         continue-on-error: true
-        run: pnpm --filter @monti-cms/ui visual:run --update-snapshots
+        run: pnpm --filter @monti-cms/ui visual:run --update-snapshots --reporter=list --output="$RUNNER_TEMP/visual-update"
         env:
           MONTI_VISUAL_BASELINES: ${{ github.workspace }}/visual-baselines
       - name: Upload the new baselines
@@ -142,3 +143,8 @@ jobs:
             packages/ui/visual/test-results
             packages/ui/visual/report
           if-no-files-found: ignore
+      # The checks over every story (overflow, clipped text, type sizes, an icon off its text's line), with no image compared. They need no
+      # baselines, so they gate the job whether or not any exist yet, and whether or not the comparison above passed.
+      - name: Audit every story
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @monti-cms/ui visual:audit

@@ -31,7 +31,7 @@ pnpm --filter @monti-cms/ui storybook
 
 이 패키지 카탈로그의 모든 스토리를 밝은 테마와 어두운 테마로 찍어 `visual/baselines`의 PNG와 비교한다. 같은 화면에서 가로 스크롤, 상자에 잘린 글, 글자 크기가 `text-monti-*` 역할과 다른 요소, 버튼·링크·탭 안에서 글과 다른 줄에 놓인 아이콘도 검사한다. 관리자 화면 스토리는 `visual` 태그를 달기 전까지 찍지 않고, 카탈로그 스토리를 빼려면 `no-visual`을 단다(규칙은 `visual/stories.ts`).
 
-**점검.** `pnpm test:visual:audit`은 이 검사만, 빌드한 Storybook의 모든 스토리(찍지 않는 관리자 화면 포함)에 밝은 테마와 어두운 테마로 돌린다. 이미지를 비교하지 않으므로 어느 시스템에서나 돈다. 리디자인 에픽이 끝날 때마다 돌려서, 나온 항목은 고치거나 그 화면을 맡은 이슈에 적는다. `MONTI_STORYBOOK_DIR=<빌드 폴더>`로 다른 빌드(기준 브랜치)를 가리키면, 이 브랜치가 깨뜨린 것과 원래 있던 것을 가를 수 있다.
+**점검.** `pnpm test:visual:audit`은 이 검사만, 빌드한 Storybook의 모든 스토리(찍지 않는 관리자 화면 포함)에 밝은 테마와 어두운 테마로 돌린다. 이미지를 비교하지 않으므로 어느 시스템에서나 돈다. 리디자인 에픽이 끝날 때마다 돌려서, 나온 항목은 고치거나 그 화면을 맡은 이슈에 적는다. `MONTI_STORYBOOK_DIR=<빌드 폴더>`로 다른 빌드(기준 브랜치)를 가리키면, 이 브랜치가 깨뜨린 것과 원래 있던 것을 가를 수 있다. 실행마다 비어 있는 포트에 자기 빌드를 띄우므로, 두 실행이 서로의 Storybook을 보는 일은 없다. CI에서는 `visual` 작업의 독립된 단계로 돌아서, 기준 이미지가 아직 없어도 작업을 실패시킬 수 있다.
 
 기준 이미지는 CI가 쓰는 Linux 이미지에서만 만든다. 글자가 시스템마다 다르게 그려지기 때문이다. 그래서 `pnpm test:visual`은 macOS와 Windows에서 실행을 거부하고, 기준 이미지는 CI에서 받는다.
 
@@ -50,6 +50,8 @@ git add packages/ui/visual/baselines && git commit
 pnpm test:visual:docker                              # visual/baselines와 비교, 차이 이미지는 visual/test-results에 남는다
 pnpm test:visual:docker --baselines /tmp/shots --update   # 이미지를 내가 고른 폴더에 찍어 눈으로 본다
 ```
+
+`--update` 실행은 대상 폴더의 `light`와 `dark`를 통째로 바꾸므로, 이름을 바꾸거나 지운 스토리의 이미지가 남지 않는다.
 
 이렇게 만든 이미지는 커밋하지 않는다. CI 러너와 Apple silicon Mac은 CPU 구조가 달라 글자 가장자리가 조금 다르게 그려진다. 커밋하는 것은 언제나 CI가 만든 이미지다.
 
