@@ -39,7 +39,7 @@ export type AdminLayoutProps = {
 	 */
 	themeStorageKey?: string;
 	/**
-	 * Whether to render the admin UI's toast container (the `Toaster` of `@monti-cms/ui`). Default `true`. Set `false` only if the page mounts that `Toaster` itself.
+	 * Whether to render the admin UI's toast container (the `Toaster` of `@monti-cms/ui`). Default `true`. It shows only the admin's toasts, so it can sit beside the site's own `sonner` `Toaster`. Set `false` only if the page mounts that `Toaster` itself.
 	 */
 	toaster?: boolean;
 };

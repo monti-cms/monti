@@ -5,6 +5,12 @@ import type { CSSProperties, ReactNode } from "react";
 import { Toaster as Engine, toast as engine } from "sonner";
 import { cn } from "./cn";
 
+/**
+ * The id of this `Toaster`. Every toast of this file is addressed to it, so a `Toaster` of the site's own (a plain `sonner` one, which shows
+ * the toasts that name no toaster) never shows the admin's toasts as well, and the admin never shows the site's.
+ */
+const TOASTER_ID = "monti-admin";
+
 /** What a toast may carry besides its message. */
 type ToastOptions = {
 	/** One text button after the message (undo, view, open). Clicking it runs `onClick` and closes the toast. */
@@ -48,7 +54,7 @@ function render(message: ReactNode, { action, duration, id }: ToastOptions, erro
 				)}
 			</Frame>
 		),
-		{ id, duration },
+		{ id, duration, toasterId: TOASTER_ID },
 	);
 }
 
@@ -83,7 +89,7 @@ function dropHint(
 				<span className="[&_b]:font-semibold">{message}</span>
 			</Frame>
 		),
-		{ id, duration },
+		{ id, duration, toasterId: TOASTER_ID },
 	);
 }
 
@@ -94,12 +100,14 @@ function dropHint(
 export const toast = Object.assign(show, { error, dropHint, dismiss: engine.dismiss });
 
 /**
- * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center. `duration` is how long a toast stays
+ * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center. It shows only the toasts of this
+ * file, so it can sit beside a `sonner` `Toaster` of the site's own. `duration` is how long a toast stays
  * unless it says otherwise (four seconds; Storybook keeps them up).
  */
 export function Toaster({ duration }: { duration?: number }) {
 	return (
 		<Engine
+			id={TOASTER_ID}
 			position="bottom-center"
 			duration={duration}
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.

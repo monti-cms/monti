@@ -538,7 +538,7 @@ import "@monti-cms/admin/styles.css";
   (사이트 자신의 테마는 건드리지 않고, 같은 루트 레이아웃의 공개 화면이 어둡게 남지도 않는다). 끄면 사이트의 공급자가 `html`에 붙이는
   `.dark`·`[data-theme="dark"]`를 따르며, 관리자의 테마 토글은 사이트의 테마를 바꾼다.
 - `themeStorageKey`(기본 `monti-admin-theme`): 관리자 테마를 담는 `localStorage` 키. `themeProvider`를 켰을 때만 쓴다.
-- `toaster`(기본 `true`): 관리자 화면이 `@monti-cms/ui`의 `Toaster`를 둔다. 페이지가 그 `Toaster`를 직접 둘 때만 끈다.
+- `toaster`(기본 `true`): 관리자 화면이 `@monti-cms/ui`의 `Toaster`를 둔다. 이 `Toaster`는 자기 id가 있고 관리자의 토스트는 그 id로 보내므로, 사이트의 `sonner` `Toaster`와 함께 있어도 서로의 토스트를 보여 주지 않고 같은 토스트가 두 번 뜨지도 않는다. 페이지가 그 `Toaster`를 직접 둘 때만 끈다.
 
 ## 관리자 테마
 

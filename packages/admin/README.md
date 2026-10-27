@@ -553,7 +553,7 @@ The cost is that the admin file carries the classes of first-party plugins an ap
   (the site's own theme is left alone, and public screens in the same root layout do not stay dark). When off, the admin follows the
   `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
 - `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
-- `toaster` (default `true`): the admin UI adds its `Toaster` (from `@monti-cms/ui`). Turn it off only if the page mounts that `Toaster` itself.
+- `toaster` (default `true`): the admin UI adds its `Toaster` (from `@monti-cms/ui`). It has its own id, and the admin's toasts are addressed to it, so it can sit beside the site's own `sonner` `Toaster`: neither shows the other's toasts, and nothing is shown twice. Turn it off only if the page mounts that `Toaster` itself.
 
 ## Admin theme
 
