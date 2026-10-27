@@ -14,7 +14,7 @@ type SegmentedOption<T extends string> = {
 
 /**
  * A short choice of one among a few (every language the same / per language / follow the source): joined cells in a thin rounded frame, the
- * picked cell on the selected background and 600. `size="sm"` for panels and filter rows; `inline` makes it as wide as its cells instead of
+ * picked cell on the selected background and 600 (`value={null}` while none is picked yet). `size="sm"` for panels and filter rows; `inline` makes it as wide as its cells instead of
  * its container.
  */
 function Segmented<T extends string>({
@@ -26,7 +26,7 @@ function Segmented<T extends string>({
 	disabled,
 	"aria-label": ariaLabel,
 }: {
-	value: T;
+	value: T | null;
 	onValueChange: (value: T) => void;
 	options: readonly SegmentedOption<T>[];
 	size?: "md" | "sm";
@@ -39,9 +39,9 @@ function Segmented<T extends string>({
 			data-slot="segmented"
 			aria-label={ariaLabel}
 			disabled={disabled}
-			value={[value]}
+			value={value === null ? [] : [value]}
 			onValueChange={(next) => {
-				// Pressing the picked cell would clear it; one cell is always picked.
+				// Pressing the picked cell would clear it; once a cell is picked, one stays picked.
 				const picked = next[0];
 				if (picked !== undefined) onValueChange(picked as T);
 			}}

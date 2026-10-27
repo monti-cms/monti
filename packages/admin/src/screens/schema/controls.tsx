@@ -4,12 +4,12 @@ import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	ChangeDot,
 	FormFieldError,
 	IconButton,
 	Inline,
 	Input,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -234,8 +234,8 @@ export function FlagSwitch({
 	);
 }
 
-/** A few exclusive choices side by side in one strip with soft ends (a segmented control). */
-export function Segmented({
+/** A few exclusive choices side by side, with the field's name above: the design system's `Segmented` in a labeled row. */
+export function SegmentedField({
 	label,
 	value,
 	items,
@@ -258,32 +258,14 @@ export function Segmented({
 				{label}
 			</Text>
 			{description && <Help>{description}</Help>}
-			<Inline
-				role="radiogroup"
-				aria-labelledby={id}
-				wrap
-				gap={2}
-				width="fit"
-				maxWidth="full"
-				background="muted"
-				radius="md"
-				padding={2}
-			>
-				{items.map((item) => (
-					<Button
-						key={item.value}
-						type="button"
-						role="radio"
-						variant={item.value === value ? "primary" : "secondary"}
-						size="sm"
-						aria-checked={item.value === value}
-						disabled={disabled}
-						onClick={() => onChange(item.value)}
-					>
-						{item.label}
-					</Button>
-				))}
-			</Inline>
+			<Segmented
+				aria-label={label}
+				inline
+				disabled={disabled}
+				value={value}
+				onValueChange={onChange}
+				options={items.map((item) => ({ value: item.value, label: item.label }))}
+			/>
 			{hint && <Help>{hint}</Help>}
 		</Stack>
 	);
@@ -455,14 +437,14 @@ export function RowActions({
 					{/* A disabled button gets no pointer events, so the tooltip hangs on a wrapper that can also take focus. */}
 					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
 					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
-						<IconButton label={t("row.remove", { name })} disabled aria-description={removeBlocked}>
+						<IconButton label={t("row.remove", { name })} tone="danger" disabled aria-description={removeBlocked}>
 							<X aria-hidden />
 						</IconButton>
 					</TooltipTrigger>
 					<TooltipContent side="top">{removeBlocked}</TooltipContent>
 				</Tooltip>
 			) : (
-				<IconButton label={t("row.remove", { name })} disabled={disabled} onClick={onRemove}>
+				<IconButton label={t("row.remove", { name })} tone="danger" disabled={disabled} onClick={onRemove}>
 					<X aria-hidden />
 				</IconButton>
 			)}

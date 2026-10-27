@@ -39,18 +39,25 @@ describe("IconPicker", () => {
 		// Open popover
 		fireEvent.click(screen.getByRole("button", { name: /Icon/ }));
 		expect(screen.getByRole("textbox")).toBeTruthy();
-		expect(screen.getByRole("option", { name: "folder" })).toBeTruthy();
-		expect(screen.getByRole("option", { name: "calendar" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "folder" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "calendar" })).toBeTruthy();
 
 		// Filter
 		fireEvent.change(screen.getByRole("textbox"), { target: { value: "book" } });
-		expect(screen.getByRole("option", { name: "bookmark" })).toBeTruthy();
-		expect(screen.getByRole("option", { name: "book-open" })).toBeTruthy();
-		expect(screen.queryByRole("option", { name: "calendar" })).toBeNull();
+		expect(screen.getByRole("button", { name: "bookmark" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "book-open" })).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "calendar" })).toBeNull();
 
 		// Pick icon
-		fireEvent.click(screen.getByRole("option", { name: "bookmark" }));
+		fireEvent.click(screen.getByRole("button", { name: "bookmark" }));
 		expect(onChange).toHaveBeenCalledWith("bookmark");
+	});
+
+	it("marks the picked icon as pressed, and no other", () => {
+		renderPicker(<IconPicker label="Icon" value="star" kind="document" onChange={() => {}} />);
+		fireEvent.click(screen.getByRole("button", { name: /Icon/ }));
+		expect(screen.getByRole("button", { name: "star" }).getAttribute("aria-pressed")).toBe("true");
+		expect(screen.getByRole("button", { name: "folder" }).getAttribute("aria-pressed")).toBe("false");
 	});
 
 	it("shows clear button when icon is set and clears it to default", () => {

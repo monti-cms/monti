@@ -1416,10 +1416,10 @@ describe("language tabs", () => {
 		serve(() => undefined, source);
 		renderEdit();
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		const current = within(nav).getByRole("button", { name: "한국어 원문 · 발행됨" });
-		expect(current.getAttribute("aria-current")).toBe("page");
-		const other = within(nav).getByRole("button", { name: "영어 · 초안" });
-		expect(other.getAttribute("aria-current")).toBeNull();
+		const current = within(nav).getByRole("tab", { name: "한국어 원문 · 발행됨" });
+		expect(current.getAttribute("aria-selected")).toBe("true");
+		const other = within(nav).getByRole("tab", { name: "영어 · 초안" });
+		expect(other.getAttribute("aria-selected")).toBe("false");
 		expect(within(nav).getByRole("button", { name: "JA 번역 추가" })).toBeTruthy();
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
 		const title = await editorTitle();
@@ -1429,7 +1429,7 @@ describe("language tabs", () => {
 	it("moves to another language by its tab", async () => {
 		serve(() => undefined, source);
 		renderEdit();
-		fireEvent.click(await screen.findByRole("button", { name: "영어 · 초안" }));
+		fireEvent.click(await screen.findByRole("tab", { name: "영어 · 초안" }));
 		expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit");
 	});
 
@@ -1464,7 +1464,7 @@ describe("language tabs", () => {
 		}, translation);
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		expect(within(nav).getByRole("button", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
+		expect(within(nav).getByRole("tab", { name: "영어 · 초안" }).getAttribute("aria-selected")).toBe("true");
 		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동" }));
 		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로 이동" });

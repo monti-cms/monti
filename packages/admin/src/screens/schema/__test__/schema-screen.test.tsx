@@ -1452,7 +1452,7 @@ describe("SchemaScreen", () => {
 		const dialog = await openAddField(tFields("kind.relation"));
 		fireEvent.click(within(dialog).getByRole("combobox", { name: tFields("field.relationTo") }));
 		pressOption(await screen.findByRole("option", { name: "Tag" }));
-		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("field.many") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.many") }));
 		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.more") }));
 		fireEvent.click(await within(dialog).findByRole("switch", { name: tFields("field.opposite") }));
 		confirmAdd(dialog);

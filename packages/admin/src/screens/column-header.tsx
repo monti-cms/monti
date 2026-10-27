@@ -17,6 +17,7 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Segmented,
 	Separator,
 	Stack,
 	Text,
@@ -258,19 +259,10 @@ export function ColumnHeader({
 	const sorted = sortField && state.sortField === sortField ? state.sortDirection : null;
 	if (!sortField && filter.kind === "none") return <span>{config.label}</span>;
 
-	const sortButton = (direction: "asc" | "desc") => (
-		<Button
-			type="button"
-			variant={sorted === direction ? "primary" : "secondary"}
-			size="sm"
-			aria-pressed={sorted === direction}
-			onClick={() => sortField && onChange({ sortField, sortDirection: direction })}
-		>
-			{direction === "asc" ? <ArrowUpNarrowWide /> : <ArrowDownWideNarrow />}
-			{direction === "asc" ? t("filter.sortAsc") : t("filter.sortDesc")}
-		</Button>
-	);
-
+	const directions = [
+		{ value: "asc", label: t("filter.sortAsc") },
+		{ value: "desc", label: t("filter.sortDesc") },
+	] as const;
 	return (
 		<Popover>
 			<PopoverTrigger
@@ -291,10 +283,13 @@ export function ColumnHeader({
 			<PopoverContent align="start" width="md">
 				<Stack gap={12}>
 					{sortField && (
-						<Stack gap={4} role="group" aria-label={t("filter.sortLegend", { label: config.label })}>
-							{sortButton("asc")}
-							{sortButton("desc")}
-						</Stack>
+						<Segmented
+							size="sm"
+							aria-label={t("filter.sortLegend", { label: config.label })}
+							value={sorted}
+							onValueChange={(direction) => onChange({ sortField, sortDirection: direction })}
+							options={directions}
+						/>
 					)}
 					{sortField && filter.kind !== "none" && <Separator />}
 					{filter.kind === "text" && (

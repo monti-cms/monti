@@ -38,6 +38,25 @@ export const Playground: Story = {
 	),
 };
 
+/** A sort direction before any column is sorted: `value={null}` picks none, and the first press picks one. */
+export const NothingPicked: Story = {
+	args: { value: null, onValueChange: () => {}, options: MODES },
+	render: () => (
+		<Stack className="max-w-sm">
+			<Segmented
+				aria-label="정렬"
+				size="sm"
+				value={null}
+				onValueChange={() => {}}
+				options={[
+					{ value: "asc", label: "오름차순" },
+					{ value: "desc", label: "내림차순" },
+				]}
+			/>
+		</Stack>
+	),
+};
+
 /** Full width, small, inline (as wide as its cells), icons only, disabled. */
 export const Variants: Story = {
 	args: { value: "same", onValueChange: () => {}, options: MODES },

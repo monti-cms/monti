@@ -30,7 +30,7 @@ import {
 	orUndefined,
 	Pick,
 	RowActions,
-	Segmented,
+	SegmentedField,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -135,7 +135,7 @@ function RelationOptions({
 					setValue([]);
 				}}
 			/>
-			<Segmented
+			<SegmentedField
 				label={t("field.count")}
 				value={many ? "many" : "one"}
 				items={[

@@ -443,7 +443,6 @@ export function EntryEditorShell({
 	const sourcePaneToggle = translationSource && (
 		<ToolbarToggle
 			label={te("source")}
-			text={te("source")}
 			icon={PanelLeft}
 			pressed={isSourcePaneOpen}
 			onPressedChange={toggleSourcePane}

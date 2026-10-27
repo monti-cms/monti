@@ -5,6 +5,7 @@ import {
 	Box,
 	Button,
 	Grid,
+	IconButton,
 	Inline,
 	Input,
 	Popover,
@@ -101,28 +102,23 @@ export function IconPicker({
 							</TextButton>
 						)}
 						<Box maxHeight="list" overflow="y" padding={2}>
-							<Grid columns={6} responsive={false} gap={4} role="listbox">
+							<Grid columns={6} responsive={false} gap={4} role="group" aria-label={label}>
 								{filtered.map((name) => {
 									const Icon = ICONS[name];
 									if (!Icon) return null;
 									const isSelected = value === name;
 									return (
-										<Button
+										<IconButton
 											key={name}
-											type="button"
-											role="option"
-											variant={isSelected ? "primary" : "secondary"}
-											size="sm"
-											aria-selected={isSelected}
-											title={name}
-											aria-label={name}
+											label={name}
+											pressed={isSelected}
 											onClick={() => {
 												onChange(name);
 												setOpen(false);
 											}}
 										>
 											<Icon aria-hidden />
-										</Button>
+										</IconButton>
 									);
 								})}
 							</Grid>

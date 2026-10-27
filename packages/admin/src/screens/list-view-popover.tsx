@@ -2,7 +2,6 @@
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Checkbox,
 	Heading,
 	IconButton,
@@ -11,6 +10,7 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -120,17 +120,10 @@ export function ListViewPopover({
 		const sortField = columnConfig(site, collection, column).sortField;
 		return sortField ? [{ value: sortField as ListSortField, label: columnLabel(site, collection, column) }] : [];
 	});
-	const directionButton = (direction: "asc" | "desc") => (
-		<Button
-			type="button"
-			size="sm"
-			variant={state.sortDirection === direction ? "primary" : "secondary"}
-			aria-pressed={state.sortDirection === direction}
-			onClick={() => onStateChange({ sortField: state.sortField, sortDirection: direction })}
-		>
-			{direction === "asc" ? t("filter.sortAsc") : t("filter.sortDesc")}
-		</Button>
-	);
+	const directions = [
+		{ value: "asc", label: t("filter.sortAsc") },
+		{ value: "desc", label: t("filter.sortDesc") },
+	] as const;
 	return (
 		<Popover>
 			<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
@@ -160,10 +153,14 @@ export function ListViewPopover({
 									))}
 								</SelectContent>
 							</Select>
-							<Inline gap={2} role="group" aria-label={t("view.sort")}>
-								{directionButton("asc")}
-								{directionButton("desc")}
-							</Inline>
+							<Segmented
+								size="sm"
+								inline
+								aria-label={t("view.sort")}
+								value={state.sortDirection}
+								onValueChange={(direction) => onStateChange({ sortField: state.sortField, sortDirection: direction })}
+								options={directions}
+							/>
 						</Inline>
 					</ViewSection>
 					<ViewSection title={t("list.pageSize")}>

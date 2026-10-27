@@ -29,7 +29,7 @@ import {
 	IssueList,
 	orUndefined,
 	Pick,
-	Segmented,
+	SegmentedField,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -204,7 +204,7 @@ export function FieldSheet({
 											/>
 										)}
 										{LOCALIZED_KINDS.includes(kind) && (
-											<Segmented
+											<SegmentedField
 												label={t("field.localized")}
 												value={
 													field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared"
