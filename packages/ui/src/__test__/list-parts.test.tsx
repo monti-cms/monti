@@ -166,6 +166,17 @@ describe("Tile", () => {
 	});
 });
 
+describe("FolderTile action", () => {
+	it("keeps the ⋯ beside the folder button, not inside it, and shows it with the pointer", () => {
+		render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
+		const folder = screen.getByRole("button", { name: /^covers\s*6/ });
+		const action = screen.getByRole("button", { name: "more" });
+		expect(folder.contains(action)).toBe(false);
+		expect(action.parentElement?.className).toContain("group-hover/folder:opacity-100");
+		expect(action.parentElement?.className).toContain("pointer-coarse:opacity-100");
+	});
+});
+
 describe("DropArea", () => {
 	it("covers the area only while files are over it", () => {
 		const { rerender } = render(<DropArea>tiles</DropArea>);

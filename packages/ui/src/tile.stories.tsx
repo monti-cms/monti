@@ -194,6 +194,27 @@ export const Folders: Story = {
 	),
 };
 
+/** `action` is the ⋯ at the right, shown with the pointer and in place of the count (point at the first folder; the second shows it open). */
+export const FolderWithMenu: Story = {
+	render: () => (
+		<div className="grid w-[640px] grid-cols-3 gap-x-monti-20 gap-y-monti-12">
+			{[false, true].map((open) => (
+				<FolderTile
+					key={String(open)}
+					name={open ? "menu open" : "covers"}
+					count={6}
+					selected={open}
+					action={
+						<IconButton label="더 보기" pressed={open}>
+							<MoreHorizontal aria-hidden />
+						</IconButton>
+					}
+				/>
+			))}
+		</div>
+	),
+};
+
 function RenameDemo() {
 	const [name, setName] = useState("새 폴더");
 	return (

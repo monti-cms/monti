@@ -108,6 +108,7 @@ export function MediaGrid({
 					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li />}>
 						<FolderTile
 							name={folder.name}
+							action={<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />}
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
 						/>

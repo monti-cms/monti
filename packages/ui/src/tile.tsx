@@ -149,7 +149,8 @@ function Tile({
 /**
  * A folder in the grid, beside the files: a low tile with the folder's icon, its name and how many it holds. `selected` is the folder a menu
  * is open on. While files are dragged over it, `dropTarget` takes the selected background and a 1.5px ink ring. With `children` (a
- * {@link RenameField}) they take the place of the name and the count, for a new folder or a rename.
+ * {@link RenameField}) they take the place of the name and the count, for a new folder or a rename. `action` is the ⋯ at the right, the
+ * grid's rule for tiles: shown with the pointer (always on touch), and it takes the place of the count while shown.
  */
 function FolderTile({
 	icon = <Folder aria-hidden />,
@@ -157,6 +158,7 @@ function FolderTile({
 	count,
 	selected = false,
 	dropTarget = false,
+	action,
 	className,
 	children,
 	...props
@@ -168,6 +170,8 @@ function FolderTile({
 	selected?: boolean;
 	/** Files are being dragged over this folder. */
 	dropTarget?: boolean;
+	/** The ⋯ at the right (a button that opens the folder's menu). Not with `children`. */
+	action?: React.ReactNode;
 	/** In place of the name and count. */
 	children?: React.ReactNode;
 }) {
@@ -177,7 +181,17 @@ function FolderTile({
 			{children ?? (
 				<>
 					<span className="min-w-0 grow truncate text-left">{name}</span>
-					{count !== undefined && <Count className="ml-auto shrink-0">{count}</Count>}
+					{count !== undefined && (
+						<Count
+							className={cn(
+								"ml-auto shrink-0",
+								action &&
+									"pointer-coarse:opacity-0 group-focus-within/folder:opacity-0 group-hover/folder:opacity-0 group-has-aria-expanded/folder:opacity-0",
+							)}
+						>
+							{count}
+						</Count>
+					)}
 				</>
 			)}
 		</>
@@ -193,15 +207,27 @@ function FolderTile({
 			{body}
 		</div>
 	) : (
-		<button
-			type="button"
-			data-slot="folder-tile"
-			data-drop-target={dropTarget || undefined}
-			className={cn(look, "cursor-pointer")}
-			{...props}
-		>
-			{body}
-		</button>
+		<div className="group/folder relative min-w-0">
+			<button
+				type="button"
+				data-slot="folder-tile"
+				data-drop-target={dropTarget || undefined}
+				className={cn(look, "cursor-pointer", action && "pr-[44px]")}
+				{...props}
+			>
+				{body}
+			</button>
+			{action && (
+				<span
+					className={cn(
+						"absolute top-1/2 right-monti-8 flex -translate-y-1/2 rounded-monti-full opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/folder:opacity-100 has-aria-expanded:opacity-100",
+						dropTarget || selected ? "bg-monti-selected" : "bg-monti-muted",
+					)}
+				>
+					{action}
+				</span>
+			)}
+		</div>
 	);
 }
 
