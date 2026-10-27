@@ -146,7 +146,7 @@ function FormFieldError({
 		}
 
 		return (
-			<ul className="ml-monti-16 flex list-disc flex-col gap-monti-4">
+			<ul className="ml-monti-16 list-disc">
 				{uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
 			</ul>
 		);
