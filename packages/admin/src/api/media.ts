@@ -24,6 +24,10 @@ export interface MediaItem {
 export interface MediaPage {
 	items: MediaItem[];
 	total: number;
+	/** How many images and files the list's scope holds, ignoring the type and alt text conditions (what the filter menus show). */
+	kinds: { image: number; file: number };
+	/** How many images have no default alt text and how many have one, in the same scope. */
+	alts: { none: number; has: number };
 }
 
 /** What `GET /v1/media/:id` answers, as far as the editor needs it (a file card, an image that is not stored in the document). */
@@ -96,12 +100,9 @@ export const updateMedia = (
 export const trashMedia = (site: Site, ids: readonly string[], fallback?: string) =>
 	adminFetch<MediaTrashResult>(site, "/v1/media/trash", { method: "POST", json: { ids }, fallback });
 
-/** `POST /v1/media/cleanup`: removes the files that are stuck deleting. */
-export const cleanupMedia = (site: Site) =>
-	adminFetch<{ removed: number; failed: string[] }>(site, "/v1/media/cleanup", {
-		method: "POST",
-		json: {},
-	});
+/** `POST /v1/media/:id/replace`: the file uploaded as `fromId` takes the place of this one's file. The id, name, alt text, caption, folder and every use stay. */
+export const replaceMedia = (site: Site, id: string, fromId: string, fallback?: string) =>
+	adminFetch<UploadCompletion>(site, `${mediaUrl(id)}/replace`, { method: "POST", json: { fromId }, fallback });
 
 /** `POST /v1/media/uploads`: asks the server to prepare an upload. */
 export const requestUpload = (site: Site, body: UploadRequest, fallback: string) =>

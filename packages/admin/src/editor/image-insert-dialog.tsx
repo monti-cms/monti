@@ -70,7 +70,7 @@ interface ImageInsertDialogProps {
 }
 
 /**
- * Image insertion. Upload a new file (original kept by default, web optimization optional) or reuse from the library.
+ * Image insertion. Upload a new file (converted to WebP, the original kept) or reuse from the library.
  * The library's default alt and caption are copied on insertion. An image that needs a description must have alt.
  */
 export function ImageInsertDialog({
@@ -93,11 +93,9 @@ export function ImageInsertDialog({
 	const altLaterId = useId();
 	const captionId = useId();
 	const searchId = useId();
-	const optimizeId = useId();
 	const decorativeId = useId();
 	const [tab, setTab] = useState<"upload" | "library">("upload");
 	const [file, setFile] = useState<File | null>(null);
-	const [optimize, setOptimize] = useState(false);
 	const [prepared, setPrepared] = useState<PreparedUpload | null>(null);
 	const [picked, setPicked] = useState<LibraryItem | null>(null);
 	const [alt, setAlt] = useState("");
@@ -113,7 +111,6 @@ export function ImageInsertDialog({
 		if (!open) return;
 		setTab(initialFile ? "upload" : "upload");
 		setFile(initialFile);
-		setOptimize(false);
 		setPrepared(null);
 		setPicked(null);
 		setAlt("");
@@ -130,13 +127,13 @@ export function ImageInsertDialog({
 			setPrepared(null);
 			return;
 		}
-		prepareUpload(site, file, { optimize }).then((result) => {
+		prepareUpload(site, file).then((result) => {
 			if (!cancelled) setPrepared(result);
 		});
 		return () => {
 			cancelled = true;
 		};
-	}, [file, optimize, site]);
+	}, [file, site]);
 
 	// The library list follows the typed name after a pause. The rows already shown stay while the next ones load.
 	const debouncedSearch = useDebounced(search.trim(), 250);
@@ -256,15 +253,6 @@ export function ImageInsertDialog({
 							/>
 							{file && (
 								<>
-									<Label htmlFor={optimizeId} size="body">
-										<Switch
-											id={optimizeId}
-											checked={optimize}
-											disabled={isUploading}
-											onCheckedChange={(checked) => setOptimize(checked)}
-										/>
-										{t("imageDialog.optimize")}
-									</Label>
 									<Text as="p" variant="caption" tone="muted" aria-live="polite">
 										{prepared?.optimized
 											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
