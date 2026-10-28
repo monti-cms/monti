@@ -10,7 +10,7 @@ import { screensMessages } from "../messages";
 import { itemKey } from "./trash-model";
 import { parseTrashState, type TrashState, trashStateToParams, trashStateToSearchParams } from "./trash-state";
 
-/** The values of the 종류 column's filter: every collection in the site's order, then the media, each counted (a kind with nothing is 0). */
+/** The values of the kind column's filter: every collection in the site's order, then the media, each counted (a kind with nothing is 0). */
 export function kindValues(
 	kinds: Readonly<Record<string, number>>,
 	collections: readonly string[],

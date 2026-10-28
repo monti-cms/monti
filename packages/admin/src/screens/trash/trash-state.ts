@@ -2,7 +2,7 @@ import type { PageSize, TrashListParams } from "@monti-cms/core/site";
 import { pageParam, pageSizeParam } from "../../lib/hooks/use-url-state";
 
 /**
- * What the trash screen keeps in its address, so Back restores it: the kinds the 종류 column filters to (collections or `media`), the trashed folder
+ * What the trash screen keeps in its address, so Back restores it: the kinds the kind column filters to (collections or `media`), the trashed folder
  * looked into, the search, the order of the day it was discarded, and the page.
  */
 export interface TrashState {

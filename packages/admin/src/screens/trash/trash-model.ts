@@ -78,16 +78,16 @@ export interface RowMeta {
 	tone: "default" | "warning";
 }
 
-/** The name of a kind as the 종류 column and its filter write it: the collection's noun, or the media. */
+/** The name of a kind as the kind column and its filter write it: the collection's noun, or the media. */
 export function kindLabel(site: Site, kind: string): string {
 	return kind === MEDIA_TRASH_KIND ? site.createTranslator(trashMessages)("kind.media") : collectionNoun(site, kind);
 }
 
-/** What a row is, for the 종류 column: the collection of an entry or an entry folder, and the media for a file or a media folder. */
+/** What a row is, for the kind column: the collection of an entry or an entry folder, and the media for a file or a media folder. */
 export const kindOf = (item: TrashItemJson): string => (item.type === "media" ? MEDIA_TRASH_KIND : item.collection);
 
 /**
- * The second line of a row, without the kind (the 종류 column says it): an entry's languages, a translation's language, what a folder holds, a file's type
+ * The second line of a row, without the kind (the kind column says it): an entry's languages, a translation's language, what a folder holds, a file's type
  * and size and its folder. A search adds where an entry or a folder was; a row kept by the empty says what points at it. An item has no second line
  * of its own.
  */

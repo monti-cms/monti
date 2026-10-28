@@ -66,7 +66,7 @@ function ChangeNote({ danger = false, className, ...props }: ComponentProps<"p">
 	);
 }
 
-/** The name of a part of a change ("지워지는 것", "받아 두기"), over the `ChangeLines` it labels: mono, small, in the subtle ink. */
+/** The name of a part of a change ("what goes", "keep a copy"), over the `ChangeLines` it labels: mono, small, in the subtle ink. */
 function ChangeLabel({ className, ...props }: ComponentProps<"span">) {
 	return (
 		<span
