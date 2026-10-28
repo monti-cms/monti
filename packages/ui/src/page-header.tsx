@@ -36,20 +36,40 @@ function PageHeader({
 }
 
 /**
- * The column every page sits in: centred, 880px at most, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It takes the height
+ * The column every page sits in: centred, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It takes the height
  * the page has. The header and the toolbar keep their place; the body ({@link PageBody}) is what scrolls.
+ *
+ * `width="content"` (the default) is 880px: settings and form pages, where a label must not drift from its value and a line must not grow long.
+ * `width="list"` is for a page of rows (entries, media, trash, the tables of tools): 880px until the page area leaves at least 240px on each side, then it
+ * grows with the area up to 1200px (880 at 1440 wide, 1200 at 1920). The area is what is beside the sidebar and any docked panel, measured on the
+ * nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
  */
-function PageColumn({ className, children, ...props }: React.ComponentProps<"div">) {
+function PageColumn({
+	width = "content",
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div"> & { width?: "content" | "list" }) {
 	return (
 		<div
 			data-slot="page-column"
+			data-width={width}
 			className={cn(
 				"flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 pb-monti-40 md:px-monti-48",
 				className,
 			)}
 			{...props}
 		>
-			<div className="mx-auto flex min-h-0 w-full max-w-monti-content flex-1 flex-col">{children}</div>
+			<div
+				className={cn(
+					"mx-auto flex min-h-0 w-full flex-1 flex-col",
+					width === "list"
+						? "max-w-[clamp(var(--monti-width-content),calc(100cqw_-_480px),var(--monti-width-list))]"
+						: "max-w-monti-content",
+				)}
+			>
+				{children}
+			</div>
 		</div>
 	);
 }

@@ -139,7 +139,7 @@ export function AdminEntriesTable({
 
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0} overflow="hidden">
-			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
+			<Box width="full" shrink={false}>
 				{selectedIds.size > 0 && bulkBar ? (
 					bulkBar(selectAll)
 				) : (
@@ -165,7 +165,7 @@ export function AdminEntriesTable({
 			</Box>
 
 			<Stack gap={0} grow minHeight={0} overflow="auto">
-				<Box ref={scrollRef} width="full" maxWidth="content" centered paddingX={32}>
+				<Box ref={scrollRef} width="full">
 					<Table container="none" layout="fixed">
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (
@@ -279,7 +279,7 @@ export function AdminEntriesTable({
 				)}
 			</Stack>
 
-			<Box width="full" maxWidth="content" centered shrink={false}>
+			<Box width="full" shrink={false}>
 				<ListPagination
 					total={total}
 					shown={items.length}

@@ -12,11 +12,13 @@ import { type ToolsId, toolsTabs } from "./tools-tabs";
 function ToolsPage({
 	tab,
 	count,
+	wide,
 	actions,
 	children,
 }: {
 	tab: ToolsId;
 	count?: number;
+	wide?: boolean;
 	actions?: ReactNode;
 	children: ReactNode;
 }) {
@@ -24,7 +26,7 @@ function ToolsPage({
 	const t = useTranslator(toolsMessages);
 	const { eventsCount } = useAdminNav();
 	return (
-		<PageColumn>
+		<PageColumn width={wide ? "list" : "content"}>
 			<PageHeader title={t("title")}>{actions}</PageHeader>
 			<PageToolbar inset>
 				<Box as="nav" aria-label={t("tabs.label")}>
@@ -62,18 +64,21 @@ function ToolsPage({
 export function ToolsFrame({
 	tab,
 	count,
+	wide,
 	actions,
 	children,
 }: {
 	/** The open tab: a built-in page, or `tools:<path>` for a plugin's page. */
 	tab: ToolsId;
 	count?: number;
+	/** The tab is a page of rows (templates, the activity log, API keys): its column grows on a wide window. Data, plugin pages and forms stay at the content width. */
+	wide?: boolean;
 	actions?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
 		<AdminFrame sidebar={{ activeNav: tab }}>
-			<ToolsPage tab={tab} count={count} actions={actions}>
+			<ToolsPage tab={tab} count={count} wide={wide} actions={actions}>
 				{children}
 			</ToolsPage>
 		</AdminFrame>

@@ -100,6 +100,7 @@ export function ApiKeysSettings() {
 	return (
 		<ToolsFrame
 			tab="api-keys"
+			wide
 			actions={
 				<Button type="button" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
 					<Add aria-hidden />

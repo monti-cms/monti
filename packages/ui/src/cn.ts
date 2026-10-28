@@ -18,6 +18,7 @@ const COLUMNS = [
 	"monti-assistant",
 	"monti-sheet",
 	"monti-content",
+	"monti-list",
 	"monti-reading",
 ];
 

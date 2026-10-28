@@ -138,6 +138,7 @@ export const WIDTH = {
 	assistant: "w-monti-assistant",
 	sheet: "w-monti-sheet",
 	content: "w-monti-content",
+	list: "w-monti-list",
 	reading: "w-monti-reading",
 } as const;
 
@@ -151,6 +152,7 @@ export const MAX_WIDTH = {
 	assistant: "max-w-monti-assistant",
 	sheet: "max-w-monti-sheet",
 	content: "max-w-monti-content",
+	list: "max-w-monti-list",
 	reading: "max-w-monti-reading",
 } as const;
 

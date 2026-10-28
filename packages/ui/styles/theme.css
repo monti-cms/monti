@@ -222,6 +222,7 @@
 	--container-monti-assistant: var(--monti-width-assistant);
 	--container-monti-sheet: var(--monti-width-sheet);
 	--container-monti-content: var(--monti-width-content);
+	--container-monti-list: var(--monti-width-list);
 	--container-monti-reading: var(--monti-width-reading);
 
 	/* Shadows: floating surfaces only. The rest of the design is flat. */
