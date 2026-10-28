@@ -3,13 +3,11 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { pressOption } from "../../test/base-ui";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
 import { columnsFor } from "../list-columns";
 import { parseListState } from "../list-state";
-import { filterChips } from "../list-toolbar";
 import { screensMessages } from "../messages";
 
 afterEach(cleanup);
@@ -36,8 +34,6 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	...fields,
 });
 
-const options = { tagIds: [{ id: "t1", title: "React", slug: "react" }], categoryId: [] };
-
 function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>> = {}) {
 	const props: ComponentProps<typeof AdminEntriesTable> = {
 		collection: "post",
@@ -45,7 +41,6 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 		folders: [],
 		explorer: null,
 		state: parseListState(testSite, new URLSearchParams("collection=post")),
-		options,
 		onStateChange: vi.fn(),
 		onColumnSettingsChange: vi.fn(),
 		selectedIds: new Set(),
@@ -85,47 +80,6 @@ describe("admin entry list", () => {
 		expect(screen.getByText("발행됨 · 수정 중")).toBeTruthy();
 	});
 
-	it("sorts from the view popover in the sub-toolbar", async () => {
-		const props = renderTable();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
-		expect(props.onStateChange).toHaveBeenCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
-	});
-
-	it("filters status like a spreadsheet header and marks the filtered header without relying on color", async () => {
-		const props = renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&changes=1")) });
-		const header = screen.getByRole("button", { name: /^상태, 필터 적용됨/ });
-		fireEvent.click(header);
-		fireEvent.click(await screen.findByRole("checkbox", { name: "초안" }));
-		expect(props.onStateChange).toHaveBeenCalledWith({ statuses: ["draft"] });
-		fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "필터 해제" }));
-		expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
-	});
-
-	it("keeps filters on hidden columns visible as chips", () => {
-		const state = parseListState(
-			testSite,
-			new URLSearchParams("collection=post&slug=react&relation=tagIds:t1&status=draft&changes=1"),
-		);
-		const labels = filterChips(testSite, state, options).map((chip) => chip.label);
-		// The slug column stays as a chip even when hidden by default.
-		expect(labels).toEqual(["상태: 초안, 수정 중", "태그: React", '주소: "react"']);
-	});
-
-	it("persists column visibility and order", async () => {
-		const props = renderTable();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		fireEvent.click(await screen.findByRole("checkbox", { name: "생성일" }));
-		expect(props.onColumnSettingsChange).toHaveBeenLastCalledWith(
-			expect.objectContaining({ visibility: expect.objectContaining({ createdAt: true }) }),
-		);
-		fireEvent.click(screen.getByRole("button", { name: "상태 컬럼 위로" }));
-		expect((props.onColumnSettingsChange as ReturnType<typeof vi.fn>).mock.lastCall?.[0].order.slice(0, 2)).toEqual([
-			"status",
-			"title",
-		]);
-	});
-
 	it("shows non-empty metadata on the second line of each editorial row and omits empty fields", () => {
 		renderTable({
 			items: [
@@ -143,31 +97,11 @@ describe("admin entry list", () => {
 		expect(within(plainRow).queryByText("—")).toBeNull();
 	});
 
-	it("ignores saved column names that are not columns any more (no guessing of old names)", async () => {
-		renderTable({
-			columnSettings: {
-				order: ["tags", "tagIds", "title"],
-				visibility: { category: false, tags: false },
-				sizes: { tags: 240, tagIds: 230 },
-			},
-		});
-		// Old short names (`category`, `tags`) are not guessed and renamed by the core (the reference blog setup moves them with a migration).
-		expect(screen.getByRole("button", { name: /^카테고리/ })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		const dialog = await screen.findByRole("dialog");
-		const labels = within(dialog)
-			.getAllByRole("listitem")
-			.map((li) => li.textContent ?? "");
-		expect(labels.findIndex((text) => text.includes("태그"))).toBeLessThan(
-			labels.findIndex((text) => text.includes("제목")),
-		);
-	});
-
-	it("selects rows through the Data Table checkboxes", () => {
+	it("selects rows through the row checks and the select-all of the toolbar", () => {
 		const props = renderTable();
 		fireEvent.click(screen.getByRole("checkbox", { name: "draft 선택" }));
 		expect(props.onSelectionChange).toHaveBeenCalledWith(new Set(["draft"]));
-		fireEvent.click(screen.getByRole("checkbox", { name: "현재 페이지 전체 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
 		expect(props.onSelectionChange).toHaveBeenLastCalledWith(new Set(["published", "draft"]));
 	});
 
@@ -329,60 +263,6 @@ describe("admin entry list", () => {
 			renderTable({ items: [], total: 0, mode: "trash" });
 			expect(emptyTitle()).toBe(t("list.emptyTrash"));
 			expect(screen.queryByRole("button", { name: t("list.clearFilters") })).toBeNull();
-		});
-	});
-	describe("status segments", () => {
-		const statusGroup = () => within(screen.getByRole("tablist", { name: t("list.statusFilter") }));
-		const seg = (name: string) => statusGroup().getByRole("tab", { name });
-
-		it("sets exactly the picked status and clears the editing filter", () => {
-			const props = renderTable();
-			fireEvent.click(seg("초안"));
-			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: ["draft"], hasChanges: false });
-			cleanup();
-			const filtered = renderTable({
-				state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")),
-			});
-			fireEvent.click(seg(t("list.statusAll")));
-			expect(filtered.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
-		});
-
-		it("highlights All with no status filter and the one status when it is the single filter", () => {
-			renderTable();
-			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("true");
-			cleanup();
-			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")) });
-			expect(seg("초안").getAttribute("aria-selected")).toBe("true");
-			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("false");
-			// The segment already says it, so there is no chip.
-			expect(screen.queryByRole("list", { name: t("toolbar.chips") })).toBeNull();
-		});
-
-		it("highlights nothing for a status set the segments cannot show, and explains it with a chip", () => {
-			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft&changes=1")) });
-			for (const button of statusGroup().getAllByRole("tab"))
-				expect(button.getAttribute("aria-selected")).toBe("false");
-			expect(within(screen.getByRole("list", { name: t("toolbar.chips") })).getByText(/상태/)).toBeTruthy();
-		});
-
-		it("is not drawn for an item collection", () => {
-			renderTable({ collection: "tag", state: parseListState(testSite, new URLSearchParams("collection=tag")) });
-			expect(screen.queryByRole("tablist", { name: t("list.statusFilter") })).toBeNull();
-		});
-	});
-
-	describe("view popover", () => {
-		it("holds the column, page size and sort controls and uses the same handlers as before", async () => {
-			const props = renderTable();
-			fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-			const view = within(await screen.findByRole("dialog"));
-			expect(view.getAllByRole("checkbox").length).toBeGreaterThan(1);
-			expect(view.getByRole("combobox", { name: t("view.sortField") })).toBeTruthy();
-			fireEvent.click(view.getByRole("button", { name: t("filter.sortAsc") }));
-			expect(props.onStateChange).toHaveBeenLastCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
-			fireEvent.click(view.getByRole("combobox", { name: t("list.pageSize") }));
-			pressOption(await screen.findByRole("option", { name: t("list.pageSizeOption", { size: 50 }) }));
-			expect(props.onPageSizeChange).toHaveBeenCalledWith(50);
 		});
 	});
 });

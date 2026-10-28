@@ -66,7 +66,6 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 		folders: [],
 		explorer: null,
 		state: parseListState(site, new URLSearchParams("collection=article")),
-		options: {},
 		onStateChange: vi.fn(),
 		columnSettings: {
 			visibility: Object.fromEntries(
@@ -110,13 +109,9 @@ describe("list columns from fields", () => {
 		expect(available).not.toContain("preview");
 	});
 
-	it("labels field columns by the field label and never filters them", () => {
-		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format", filter: { kind: "none" } });
-		expect(columnConfig(site, "article", "related")).toEqual({
-			label: "Related",
-			filter: { kind: "none" },
-			many: true,
-		});
+	it("labels field columns by the field label", () => {
+		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format" });
+		expect(columnConfig(site, "article", "related")).toEqual({ label: "Related", many: true });
 		expect(fieldColumnOf(site, "article", "format")?.field.kind).toBe("select");
 		expect(fieldColumnOf(site, "article", "status")).toBeUndefined();
 		expect(fieldColumnOf(site, "article", "preview")).toBeUndefined();

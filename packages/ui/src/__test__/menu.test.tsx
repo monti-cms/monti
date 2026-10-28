@@ -3,8 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Command, CommandFooter, CommandInput, CommandItem, CommandList } from "../command";
 import {
 	DropdownMenu,
+	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuReorderGroup,
+	DropdownMenuSearch,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -67,5 +70,114 @@ describe("menus", () => {
 		fireEvent.change(screen.getByPlaceholderText("태그 찾기"), { target: { value: "새 태그" } });
 		fireEvent.click(screen.getByText("새 태그 만들기"));
 		expect(onCreate).toHaveBeenCalledOnce();
+	});
+});
+
+describe("rows with a box", () => {
+	it("are on or off with a click, and say so to screen readers", async () => {
+		const onChange = vi.fn();
+		render(
+			<DropdownMenu defaultOpen>
+				<DropdownMenuTrigger>open</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuCheckboxItem box checked={false} onCheckedChange={onChange}>
+						리액트
+					</DropdownMenuCheckboxItem>
+					<DropdownMenuCheckboxItem box checked>
+						회고
+					</DropdownMenuCheckboxItem>
+				</DropdownMenuContent>
+			</DropdownMenu>,
+		);
+		const off = await screen.findByRole("menuitemcheckbox", { name: "리액트" });
+		expect(off.getAttribute("aria-checked")).toBe("false");
+		expect((await screen.findByRole("menuitemcheckbox", { name: "회고" })).getAttribute("aria-checked")).toBe("true");
+		fireEvent.click(off);
+		expect(onChange).toHaveBeenCalledWith(true, expect.anything());
+	});
+});
+
+describe("the search row of a menu", () => {
+	it("reports what is typed, and keeps the keys a text needs from the menu around it", async () => {
+		const onValueChange = vi.fn();
+		const outside = vi.fn();
+		render(
+			// biome-ignore lint/a11y/noStaticElementInteractions: a stand-in for whatever sits above the menu, to see what reaches it
+			<div onKeyDown={outside}>
+				<DropdownMenu defaultOpen>
+					<DropdownMenuTrigger>open</DropdownMenuTrigger>
+					<DropdownMenuContent>
+						<DropdownMenuSearch label="태그 찾기" value="" onValueChange={onValueChange} />
+						<DropdownMenuItem>리액트</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>,
+		);
+		const field = await screen.findByRole("textbox", { name: "태그 찾기" });
+		fireEvent.change(field, { target: { value: "리" } });
+		expect(onValueChange).toHaveBeenCalledWith("리");
+		fireEvent.keyDown(field, { key: "ArrowRight" });
+		fireEvent.keyDown(field, { key: "a" });
+		expect(outside).not.toHaveBeenCalled();
+	});
+});
+
+describe("rows that can be put in order", () => {
+	const setup = () => {
+		const onReorder = vi.fn();
+		const onMove = vi.fn();
+		render(
+			<DropdownMenu defaultOpen>
+				<DropdownMenuTrigger>open</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuReorderGroup onReorder={onReorder} onMove={onMove}>
+						{["분류", "언어", "상태"].map((name) => (
+							<DropdownMenuCheckboxItem key={name} box reorderId={name} checked>
+								{name}
+							</DropdownMenuCheckboxItem>
+						))}
+					</DropdownMenuReorderGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>,
+		);
+		return { onReorder, onMove };
+	};
+
+	it("move with Alt and the arrow keys, and a plain arrow only walks through the rows", async () => {
+		const { onMove } = setup();
+		const row = await screen.findByRole("menuitemcheckbox", { name: "언어" });
+		fireEvent.keyDown(row, { key: "ArrowDown", altKey: true });
+		expect(onMove).toHaveBeenLastCalledWith("언어", 1);
+		fireEvent.keyDown(row, { key: "ArrowUp", altKey: true });
+		expect(onMove).toHaveBeenLastCalledWith("언어", -1);
+		onMove.mockClear();
+		fireEvent.keyDown(row, { key: "ArrowDown" });
+		expect(onMove).not.toHaveBeenCalled();
+	});
+
+	it("are dragged by the grip onto another row", async () => {
+		const onReorder = vi.fn();
+		render(
+			<DropdownMenu defaultOpen>
+				<DropdownMenuTrigger>open</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuReorderGroup onReorder={onReorder} onMove={vi.fn()}>
+						{["분류", "언어"].map((name) => (
+							<DropdownMenuCheckboxItem key={name} box reorderId={name} checked>
+								{name}
+							</DropdownMenuCheckboxItem>
+						))}
+					</DropdownMenuReorderGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>,
+		);
+		const first = await screen.findByRole("menuitemcheckbox", { name: "분류" });
+		const second = await screen.findByRole("menuitemcheckbox", { name: "언어" });
+		const grip = first.querySelector("[data-slot=menu-grip]") as HTMLElement;
+		const transfer = { setData: vi.fn(), effectAllowed: "" };
+		fireEvent.dragStart(grip, { dataTransfer: transfer });
+		fireEvent.dragOver(second, { dataTransfer: transfer });
+		fireEvent.drop(second, { dataTransfer: transfer });
+		expect(onReorder).toHaveBeenCalledWith("분류", "언어");
 	});
 });

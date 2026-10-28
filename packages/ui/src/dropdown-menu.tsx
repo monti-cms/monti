@@ -1,14 +1,16 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { ChevronRight } from "@carbon/icons-react";
-import type * as React from "react";
+import { ChevronRight, Search } from "@carbon/icons-react";
+import * as React from "react";
 import { cn } from "./cn";
+import { Grip } from "./grip";
 import {
 	MENU_CARD,
 	MENU_ITEM,
 	MENU_LABEL,
 	MENU_MOTION,
+	MENU_SCROLL,
 	MENU_SEPARATOR,
 	MENU_SUB_MARK,
 	MenuTick,
@@ -138,29 +140,179 @@ function DropdownMenuSubContent({
 	);
 }
 
-/** A row that is on or off, with the ✓ at its end while on. */
-function DropdownMenuCheckboxItem({ className, children, checked, ...props }: MenuPrimitive.CheckboxItem.Props) {
+/** What a group of reorderable rows shares: the row being dragged, and what to do when a row is dropped or moved with the keys. */
+const ReorderContext = React.createContext<{
+	dragging: string | null;
+	setDragging: (id: string | null) => void;
+	onReorder: (from: string, to: string) => void;
+	onMove: (id: string, direction: -1 | 1) => void;
+} | null>(null);
+
+/**
+ * A group of rows the writer puts in order (the columns of a list). Each row with a `reorderId` has a grip to drag it by; dropping it on another row
+ * calls `onReorder(from, to)`, and Alt with ↑ or ↓ on a row calls `onMove(id, -1 | 1)`, so the order can be set without a pointer.
+ */
+function DropdownMenuReorderGroup({
+	onReorder,
+	onMove,
+	children,
+}: {
+	onReorder: (from: string, to: string) => void;
+	onMove: (id: string, direction: -1 | 1) => void;
+	children: React.ReactNode;
+}) {
+	const [dragging, setDragging] = React.useState<string | null>(null);
+	const value = React.useMemo(() => ({ dragging, setDragging, onReorder, onMove }), [dragging, onReorder, onMove]);
+	return (
+		<ReorderContext.Provider value={value}>
+			<MenuPrimitive.Group data-slot="dropdown-menu-reorder-group">{children}</MenuPrimitive.Group>
+		</ReorderContext.Provider>
+	);
+}
+
+/** The ✓ in the box of a checked row, drawn so the state does not rest on color alone. */
+const BOX_MARK = (
+	<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5" aria-hidden="true">
+		<path d="M2.3 6.9 5.1 9.7 10.7 4.1" />
+	</svg>
+);
+
+/**
+ * A row that is on or off. By default the ✓ is at its end while on. With `box` the row starts with a 14px check box instead (a list of values where
+ * several can be on: the tags to filter by, the columns to show), and a `MenuShortcut` at the end can carry a count. Inside a
+ * {@link DropdownMenuReorderGroup}, a `reorderId` adds the grip in front and makes the row movable.
+ */
+function DropdownMenuCheckboxItem({
+	className,
+	children,
+	checked,
+	box = false,
+	reorderId,
+	onKeyDown,
+	...props
+}: MenuPrimitive.CheckboxItem.Props & {
+	/** Start the row with a check box (several can be on) instead of ending it with a ✓. */
+	box?: boolean;
+	/** Makes the row movable inside a {@link DropdownMenuReorderGroup}: the id the group reports. */
+	reorderId?: string;
+}) {
+	const reorder = React.useContext(ReorderContext);
+	const movable = reorder !== null && reorderId !== undefined;
 	return (
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
-			className={cn(MENU_ITEM, className)}
+			data-dragging={movable && reorder.dragging === reorderId ? "" : undefined}
+			className={cn(MENU_ITEM, "group/item data-dragging:opacity-45", className)}
 			checked={checked}
+			onKeyDown={(event) => {
+				onKeyDown?.(event);
+				if (movable && event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+					event.preventDefault();
+					event.stopPropagation();
+					reorder.onMove(reorderId, event.key === "ArrowUp" ? -1 : 1);
+				}
+			}}
+			onDragOver={movable ? (event) => reorder.dragging !== null && event.preventDefault() : undefined}
+			onDrop={
+				movable
+					? (event) => {
+							event.preventDefault();
+							if (reorder.dragging !== null && reorder.dragging !== reorderId)
+								reorder.onReorder(reorder.dragging, reorderId);
+							reorder.setDragging(null);
+						}
+					: undefined
+			}
 			{...props}
 		>
+			{movable && (
+				// biome-ignore lint/a11y/noStaticElementInteractions: the grip is a pointer handle for dragging; the keyboard moves the row itself with Alt and the arrow keys
+				<span
+					data-slot="menu-grip"
+					draggable
+					onDragStart={(event) => {
+						event.dataTransfer.effectAllowed = "move";
+						event.dataTransfer.setData("text/plain", reorderId);
+						reorder.setDragging(reorderId);
+					}}
+					onDragEnd={() => reorder.setDragging(null)}
+					className="-mr-monti-4 flex shrink-0 cursor-grab text-monti-faint"
+				>
+					<Grip />
+				</span>
+			)}
+			{box && (
+				<span
+					data-slot="menu-box"
+					className="relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint text-monti-on-emphasis transition-colors group-data-checked/item:border-monti-contrast group-data-checked/item:bg-monti-emphasis"
+				>
+					<MenuPrimitive.CheckboxItemIndicator render={<span className="flex">{BOX_MARK}</span>} />
+				</span>
+			)}
 			{children}
-			<MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />
+			{!box && <MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />}
 		</MenuPrimitive.CheckboxItem>
 	);
+}
+
+/**
+ * The search row on top of a long menu: a magnifier and a text field, then a rule. Typing filters the rows below (the caller does that); ↓ moves into them.
+ * The keys a text needs (letters, ←, →, Home, End) stay in the field, so a menu's own type-ahead and second levels do not take them.
+ */
+function DropdownMenuSearch({
+	value,
+	onValueChange,
+	label,
+	placeholder = label,
+}: {
+	value: string;
+	onValueChange: (value: string) => void;
+	/** The name of the field, for screen readers. */
+	label: string;
+	placeholder?: string;
+}) {
+	return (
+		<div
+			role="search"
+			data-slot="dropdown-menu-search"
+			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-[6px] pb-[9px] text-monti-default"
+		>
+			<Search aria-hidden className="size-3.5 shrink-0 text-monti-subtle" />
+			<input
+				type="text"
+				aria-label={label}
+				placeholder={placeholder}
+				value={value}
+				onChange={(event) => onValueChange(event.target.value)}
+				onKeyDown={(event) => {
+					if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Escape" || event.key === "Tab")
+						return;
+					event.stopPropagation();
+				}}
+				className="min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
+			/>
+		</div>
+	);
+}
+
+/** A long list in a menu: one column, 320px high at most, scrolling inside. */
+function DropdownMenuScroll({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="dropdown-menu-scroll" className={cn(MENU_SCROLL, className)} {...props} />;
 }
 
 function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
 	return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
 }
 
-/** A row of a pick-one list. The current value shows a ✓ at its end, not a background. */
-function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props) {
+/** A row of a pick-one list. The current value shows a ✓ at its end, not a background. Picking one applies it and closes the whole menu. */
+function DropdownMenuRadioItem({ className, children, closeOnClick = true, ...props }: MenuPrimitive.RadioItem.Props) {
 	return (
-		<MenuPrimitive.RadioItem data-slot="dropdown-menu-radio-item" className={cn(MENU_ITEM, className)} {...props}>
+		<MenuPrimitive.RadioItem
+			data-slot="dropdown-menu-radio-item"
+			closeOnClick={closeOnClick}
+			className={cn(MENU_ITEM, className)}
+			{...props}
+		>
 			{children}
 			<MenuPrimitive.RadioItemIndicator render={<MenuTick />} />
 		</MenuPrimitive.RadioItem>
@@ -186,6 +338,9 @@ export {
 	DropdownMenuLabel,
 	DropdownMenuItem,
 	DropdownMenuCheckboxItem,
+	DropdownMenuReorderGroup,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,

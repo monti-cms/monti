@@ -2,17 +2,28 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Checkbox, Inline, Stack, Table, TableBody, TableCell, TableRow, Text, TextButton } from "@monti-cms/ui";
+import {
+	Box,
+	Inline,
+	RowActions,
+	RowCheck,
+	type SelectAllState,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
-import { ColumnHeader } from "./column-header";
 import { EntryCell, hasEntryCellValue } from "./entries-table-cells";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
-import { type AdminListColumn, filterFor, isColumnFiltered } from "./list-columns";
+import type { AdminListColumn } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
-import { ListSubToolbar } from "./list-toolbar";
-import { ListViewPopover } from "./list-view-popover";
+import { ListToolbar } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { EmptyState } from "./shared/empty-state";
@@ -20,7 +31,6 @@ import { writeDraggedEntries } from "./shared/entry-drag";
 import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
 import type { FolderActions } from "./shared/use-folder-actions";
-import type { TaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntriesTable } from "./use-entries-table";
 
 const DATE_COLUMNS = new Set<AdminListColumn>(["updatedAt", "createdAt", "publishedAt"]);
@@ -33,7 +43,6 @@ interface TableProps {
 	/** Subfolders and move-to-parent shown above the list in folder browse mode. */
 	explorer: { folders: Folder[]; parent: string | null } | null;
 	state: ListState;
-	options: TaxonomyOptions;
 	onStateChange: (patch: Partial<ListState>) => void;
 	columnSettings?: AdminColumnSettings;
 	onColumnSettingsChange: (settings: AdminColumnSettings) => void;
@@ -64,8 +73,8 @@ interface TableProps {
 	onRetry: () => void;
 	/** Adds an item. Shown in the empty list as the way to start. */
 	addAction?: { label: string; run: () => void };
-	/** Drawn between the sub-toolbar and the table (the bulk action row). */
-	aboveTable?: ReactNode;
+	/** What replaces the toolbar while rows are picked (the bulk bar). It is given the select-all, which stays where it was. */
+	bulkBar?: (selectAll: { state: SelectAllState; onChange: (all: boolean) => void; label: string }) => ReactNode;
 	/** Name of the collection, for "Write a new …" in the welcome state. */
 	collectionLabel?: string;
 }
@@ -76,7 +85,6 @@ export function AdminEntriesTable({
 	folders,
 	explorer,
 	state,
-	options,
 	onStateChange,
 	columnSettings,
 	onColumnSettingsChange,
@@ -100,7 +108,7 @@ export function AdminEntriesTable({
 	onPageSizeChange,
 	onRetry,
 	addAction,
-	aboveTable,
+	bulkBar,
 	collectionLabel,
 }: TableProps) {
 	const site = useSite();
@@ -109,14 +117,11 @@ export function AdminEntriesTable({
 	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
 	const isRecord = site.isItemCollection(collection);
-	const { table, order, visibility, isShown, scrollRef, moveColumn } = useEntriesTable({
+	const { table, order, visibility, isShown, scrollRef, moveColumn, reorderColumn, toggleColumn } = useEntriesTable({
 		collection,
 		items,
 		folders,
 		explorer,
-		state,
-		options,
-		onStateChange,
 		columnSettings,
 		onColumnSettingsChange,
 		selectedIds,
@@ -129,13 +134,6 @@ export function AdminEntriesTable({
 	});
 
 	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
-	const filterColumns = order.filter((column) => {
-		if (column === "title") return false;
-		const filter = filterFor(site, collection, column, mode);
-		if (filter.kind === "none") return false;
-		if (filter.kind === "date") return isColumnFiltered(state, filter);
-		return visibility[column] !== false || isColumnFiltered(state, filter);
-	});
 	// A date the table has no room for (the post date goes first, then the others) is left out, like a hidden column: the row does not run past the page.
 	const dateColumns = order.filter(
 		(column) => DATE_COLUMNS.has(column) && visibility[column] !== false && isShown(column),
@@ -150,47 +148,37 @@ export function AdminEntriesTable({
 	};
 
 	const pageHref = (page: number) => `?page=${page}`;
+	const selectAllState: SelectAllState = table.getIsAllPageRowsSelected()
+		? "all"
+		: table.getIsSomePageRowsSelected()
+			? "some"
+			: "none";
+	const selectAll = {
+		state: selectAllState,
+		onChange: (all: boolean) => table.toggleAllPageRowsSelected(all),
+		label: t("list.selectAll"),
+	};
 
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0} overflow="hidden">
 			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
-				<ListSubToolbar
-					state={state}
-					options={options}
-					mode={mode}
-					onChange={onStateChange}
-					trailing={
-						<>
-							<Checkbox
-								checked={table.getIsAllPageRowsSelected()}
-								indeterminate={table.getIsSomePageRowsSelected()}
-								onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
-								aria-label={t("list.selectAll")}
-							/>
-							{filterColumns.map((column) => (
-								<ColumnHeader
-									key={column}
-									column={column}
-									filter={filterFor(site, collection, column, mode)}
-									state={state}
-									options={options}
-									onChange={onStateChange}
-								/>
-							))}
-							<ListViewPopover
-								collection={collection}
-								state={state}
-								order={order}
-								visibility={visibility}
-								onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
-								onMove={moveColumn}
-								onStateChange={onStateChange}
-								onPageSizeChange={onPageSizeChange}
-							/>
-						</>
-					}
-				/>
-				{aboveTable}
+				{selectedIds.size > 0 && bulkBar ? (
+					bulkBar(selectAll)
+				) : (
+					<ListToolbar
+						state={state}
+						mode={mode}
+						total={isLoading ? undefined : total}
+						selectAll={selectAll}
+						onChange={onStateChange}
+						order={order}
+						visibility={visibility}
+						onPageSizeChange={onPageSizeChange}
+						onToggleColumn={toggleColumn}
+						onReorderColumn={reorderColumn}
+						onMoveColumn={moveColumn}
+					/>
+				)}
 				{errorMessage && (
 					<Box paddingTop={12}>
 						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
@@ -235,7 +223,6 @@ export function AdminEntriesTable({
 												<TableRow
 													selected={row.getIsSelected() || row.original.id === openRecordId}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}
-													data-state={row.getIsSelected() ? "selected" : undefined}
 													draggable={!isTrash}
 													onDragStart={(event) => {
 														// Dragging a selected row moves the whole selection; otherwise just this row.
@@ -254,14 +241,12 @@ export function AdminEntriesTable({
 												/>
 											}
 										>
-											<TableCell width="xs">
-												<Checkbox
-													checked={row.getIsSelected()}
-													onCheckedChange={(value) => row.toggleSelected(value === true)}
-													aria-label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
-												/>
-											</TableCell>
 											<TableCell wrap>
+												<RowCheck
+													checked={row.getIsSelected()}
+													onCheckedChange={(value) => row.toggleSelected(value)}
+													label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
+												/>
 												<Stack gap={4} minWidth={0}>
 													<EntryCell
 														collection={collection}
@@ -350,10 +335,12 @@ export function AdminEntriesTable({
 																</TextButton>
 															</>
 														)}
-														<MoreActionsButton
-															actions={rowMenu(row.original)}
-															label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
-														/>
+														<RowActions>
+															<MoreActionsButton
+																actions={rowMenu(row.original)}
+																label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
+															/>
+														</RowActions>
 													</Inline>
 												</Inline>
 											</TableCell>
@@ -414,7 +401,6 @@ export function AdminEntriesTable({
 					hrefFor={pageHref}
 					showPageSize={false}
 					hidePagerWhenSingle
-					showRange={false}
 				/>
 			</Box>
 		</Stack>

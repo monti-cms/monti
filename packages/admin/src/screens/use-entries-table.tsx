@@ -3,7 +3,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/site";
-import { Checkbox, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Inline, Text, TextButton } from "@monti-cms/ui";
 import {
 	type ColumnOrderState,
 	type ColumnSizingState,
@@ -21,7 +21,6 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
-import { ColumnHeader } from "./column-header";
 import { EntryCell } from "./entries-table-cells";
 import {
 	DEFAULT_TITLE_SIZE,
@@ -31,12 +30,10 @@ import {
 	MIN_COLUMN_SIZE,
 	TITLE_MIN_WIDTH,
 } from "./entries-table-widths";
-import { type AdminListColumn, columnsFor, filterFor, knownColumnRecord } from "./list-columns";
-import type { ListState } from "./list-state";
+import { type AdminListColumn, columnsFor, knownColumnRecord } from "./list-columns";
 import { screensMessages } from "./messages";
 import { type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { useDebouncedCallback } from "./shared/use-debounced";
-import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
 // Data Table: TanStack Table handles column visibility/order and row selection; the server handles search, sort, filter and paging.
 const features = tableFeatures({
@@ -57,9 +54,6 @@ export function useEntriesTable({
 	items,
 	folders,
 	explorer,
-	state,
-	options,
-	onStateChange,
 	columnSettings,
 	onColumnSettingsChange,
 	selectedIds,
@@ -74,9 +68,6 @@ export function useEntriesTable({
 	items: ListEntriesItem[];
 	folders: Folder[];
 	explorer: { folders: Folder[]; parent: string | null } | null;
-	state: ListState;
-	options: TaxonomyOptions;
-	onStateChange: (patch: Partial<ListState>) => void;
 	columnSettings?: AdminColumnSettings;
 	onColumnSettingsChange: (settings: AdminColumnSettings) => void;
 	selectedIds: Set<string>;
@@ -110,26 +101,6 @@ export function useEntriesTable({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `availableKey` stands in for the contents of `available`
 	const columns = useMemo(() => {
 		return helper.columns([
-			helper.display({
-				id: "select",
-				size: 44,
-				enableResizing: false,
-				header: ({ table }) => (
-					<Checkbox
-						checked={table.getIsAllPageRowsSelected()}
-						indeterminate={table.getIsSomePageRowsSelected()}
-						onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
-						aria-label={t("list.selectAll")}
-					/>
-				),
-				cell: ({ row }) => (
-					<Checkbox
-						checked={row.getIsSelected()}
-						onCheckedChange={(value) => row.toggleSelected(value === true)}
-						aria-label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
-					/>
-				),
-			}),
 			...available.map((column) =>
 				helper.display({
 					id: column,
@@ -137,15 +108,6 @@ export function useEntriesTable({
 					size: defaultColumnSize(site, collection, column),
 					minSize: MIN_COLUMN_SIZE,
 					maxSize: MAX_COLUMN_SIZE,
-					header: () => (
-						<ColumnHeader
-							column={column}
-							filter={filterFor(site, collection, column, mode)}
-							state={state}
-							options={options}
-							onChange={onStateChange}
-						/>
-					),
 					cell: ({ row }) => (
 						<EntryCell
 							collection={collection}
@@ -190,9 +152,6 @@ export function useEntriesTable({
 		mode,
 		availableKey,
 		collection,
-		state,
-		options,
-		onStateChange,
 		isTrash,
 		isRecord,
 		folders,
@@ -205,7 +164,7 @@ export function useEntriesTable({
 	]);
 
 	const rowSelection: RowSelectionState = Object.fromEntries([...selectedIds].map((id) => [id, true]));
-	const columnOrder: ColumnOrderState = ["select", ...order, "actions"];
+	const columnOrder: ColumnOrderState = [...order, "actions"];
 
 	// While dragging, reflect straight into local state; when it stops, save to list settings.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `availableKey` stands in for the contents of `available`
@@ -253,8 +212,7 @@ export function useEntriesTable({
 
 	// Columns to hide when narrow are decided only by default widths and the title's minimum width. User-widened widths do not trigger hiding and become horizontal scroll
 	// (so handles don't jump when another column disappears mid-drag).
-	const defaultSizeOf = (id: string) =>
-		id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(site, collection, id);
+	const defaultSizeOf = (id: string) => (id === "actions" ? 52 : defaultColumnSize(site, collection, id));
 	const visibleIds = columnOrder.filter((id) => visibility[id] !== false);
 	const autoHidden = new Set<string>();
 	const naturalWidth = () =>
@@ -315,13 +273,27 @@ export function useEntriesTable({
 		},
 	});
 
+	// The title is always first and never moved: the others are put in order around nothing but each other.
+	const movable = order.filter((column) => column !== "title");
+	const saveOrder = (others: AdminListColumn[]) =>
+		onColumnSettingsChange({ order: ["title", ...others], visibility, sizes: savedSizes });
+	/** Puts `from` where `to` is. */
+	const reorderColumn = (from: AdminListColumn, to: AdminListColumn) => {
+		const target = movable.indexOf(to);
+		if (target < 0 || from === to || !movable.includes(from)) return;
+		const next = movable.filter((column) => column !== from);
+		next.splice(target, 0, from);
+		saveOrder(next);
+	};
+	const toggleColumn = (column: AdminListColumn, visible: boolean) =>
+		onColumnSettingsChange({ order, visibility: { ...visibility, [column]: visible }, sizes: savedSizes });
 	const moveColumn = (column: AdminListColumn, direction: -1 | 1) => {
-		const index = order.indexOf(column);
+		const index = movable.indexOf(column);
 		const target = index + direction;
-		if (target < 0 || target >= order.length) return;
-		const next = [...order];
+		if (index < 0 || target < 0 || target >= movable.length) return;
+		const next = [...movable];
 		[next[index], next[target]] = [next[target] as AdminListColumn, next[index] as AdminListColumn];
-		onColumnSettingsChange({ order: next, visibility, sizes: savedSizes });
+		saveOrder(next);
 	};
 	const leafColumns = table.getVisibleLeafColumns();
 	const tableWidth =
@@ -346,5 +318,7 @@ export function useEntriesTable({
 		freezeTitle,
 		updateSizing,
 		moveColumn,
+		reorderColumn,
+		toggleColumn,
 	};
 }

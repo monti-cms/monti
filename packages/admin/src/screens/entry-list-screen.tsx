@@ -10,7 +10,7 @@ import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
 import { toSelection } from "./list-row-menu";
-import { ListSearch } from "./list-toolbar";
+import { ListSearch } from "./list-search";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
@@ -66,23 +66,23 @@ function EntryListBody({ list }: { list: EntryList }) {
 			<Inline position="relative" align="stretch" gap={0} grow minHeight={0} overflow="hidden">
 				<Stack gap={0} grow minWidth={0} overflow="hidden">
 					<AdminEntriesTable
-						aboveTable={
+						bulkBar={(selectAll) => (
 							<BulkBar
 								collection={state.collection}
 								mode={mode}
 								selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
 								folders={folders?.list ?? null}
+								selectAll={selectAll}
 								onClearSelection={() => list.setSelectedIds(new Set())}
-								onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
+								onRun={list.mutations.bulk}
 							/>
-						}
+						)}
 						collectionLabel={list.label}
 						collection={state.collection}
 						items={items}
 						folders={data.folders}
 						explorer={list.explorer}
 						state={state}
-						options={list.options}
 						onStateChange={(patch) => {
 							list.update(patch);
 							if (patch.sortField || patch.sortDirection) {
