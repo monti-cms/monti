@@ -7,7 +7,7 @@ import { Tile } from "./tile";
 const meta = {
 	title: "Patterns/List/File preview",
 	component: FilePreview,
-	args: { extension: "pdf" },
+	args: { ext: "PDF" },
 	decorators: [
 		(Story) => (
 			<div className="w-48">
@@ -30,11 +30,11 @@ export const States: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">
 			<div className="w-48">
-				<Tile preview={<FilePreview extension="csv" />} title="subscribers.csv" detail="CSV · 340 KB · 사용 안 함" />
+				<Tile preview={<FilePreview ext="CSV" />} title="subscribers.csv" detail="CSV · 340 KB · 사용 안 함" />
 			</div>
 			<div className="w-48">
 				<Tile
-					preview={<FilePreview extension="pdf" />}
+					preview={<FilePreview ext="PDF" />}
 					title="price-list-2026.pdf"
 					detail="올리는 중 · 64%"
 					status="uploading"
@@ -43,7 +43,7 @@ export const States: Story = {
 			</div>
 			<div className="w-48">
 				<Tile
-					preview={<FilePreview extension="exe" faint />}
+					preview={<FilePreview ext="EXE" />}
 					title="setup.exe"
 					detail="이미지 · PDF · ZIP · 텍스트만"
 					status="failed"

@@ -62,7 +62,7 @@ function UploadTile({ entry, uploads }: { entry: UploadEntry; uploads: MediaUplo
 					isImage ? (
 						<Image src={preview} alt="" ratio="photo" radius="none" fallback={Document} />
 					) : (
-						<FilePreview extension={extensionOf(entry.file.name)} faint={failed} />
+						<FilePreview ext={extensionOf(entry.file.name).toUpperCase()} />
 					)
 				}
 				title={entry.file.name}

@@ -182,7 +182,7 @@ export function MediaPanel({
 			{isImage ? (
 				<Image src={media.publicUrl} alt="" ratio="photo" fit="contain" radius="md" />
 			) : (
-				<FilePreview extension={ext} framed />
+				<FilePreview ext={ext.toUpperCase()} framed />
 			)}
 			{media.publicUrl && (
 				<Inline gap={16}>

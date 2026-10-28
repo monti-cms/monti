@@ -160,7 +160,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 											isImage ? (
 												<Image src={media.publicUrl} alt="" ratio="photo" radius="none" fallback={Document} />
 											) : (
-												<FilePreview extension={extensionOf(media.filename)} />
+												<FilePreview ext={extensionOf(media.filename).toUpperCase()} />
 											)
 										}
 										title={media.filename}

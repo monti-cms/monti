@@ -50,6 +50,12 @@ export const CmsImageNode = Node.create({
 				parseHTML: (element) => element.getAttribute("data-rotate"),
 				renderHTML: (attributes) => (attributes.rotate ? { "data-rotate": String(attributes.rotate) } : {}),
 			},
+			// The image is still going up (the id of the upload). It is in the editor only: the stored document leaves such an image out until the
+			// upload ends and the image gets its media.
+			uploadId: {
+				default: null,
+				rendered: false,
+			},
 		};
 	},
 

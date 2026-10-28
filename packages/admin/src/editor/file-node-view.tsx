@@ -1,19 +1,16 @@
 "use client";
 
-import { Document, TextFont, Zip } from "@carbon/icons-react";
-import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
+import { fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
+import { FileBlock } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getMedia, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
-import { editorMessages } from "./messages";
+import { editorMediaMessages } from "./media.messages";
 
-const ICONS: Record<FileKind, typeof Document> = { pdf: TextFont, archive: Zip, text: Document };
-
-/** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
+/** Edit view of the core file block (`blockViews.file`): the file as the page shows it, and the shown name can be changed in place. */
 export function FileBlockView() {
-	const t = useTranslator(editorMessages);
+	const t = useTranslator(editorMediaMessages);
 	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const block = useBlockEditor();
@@ -26,42 +23,29 @@ export function FileBlockView() {
 		enabled: mediaId !== "",
 		retry: false,
 	});
-	const media = lookup.isError ? "failed" : (lookup.data ?? null);
-
-	const info = media && media !== "failed" ? media : null;
+	const failed = lookup.isError;
+	const info = lookup.data ?? null;
 	const filename = info?.filename ?? "";
-	const Icon = ICONS[fileKindOf(info?.mimeType)];
-	const details =
-		media === "failed"
-			? t("fileNode.notFound")
-			: info
-				? [fileTypeLabel(filename, info.mimeType), info.byteSize ? formatFileSize(info.byteSize) : null]
-						.filter(Boolean)
-						.join(" · ")
-				: tc("loading");
+	const meta = failed
+		? t("fileNode.notFound")
+		: info
+			? [fileTypeLabel(filename, info.mimeType), info.byteSize ? formatFileSize(info.byteSize) : null]
+					.filter(Boolean)
+					.join(" · ")
+			: tc("loading");
 
 	return (
-		<BlockFrame
-			framed={false}
-			data-file-block
-			className="not-prose my-monti-24 flex items-center gap-monti-12 rounded-monti-lg border bg-monti-page px-monti-16 py-monti-12"
-		>
-			<Icon aria-hidden className="size-8 shrink-0 text-monti-muted" strokeWidth={1.5} />
-			<div className="min-w-0 flex-1">
-				<input
-					aria-label={t("fileNode.displayName")}
-					value={label}
-					placeholder={filename || t("fileNode.fallbackName")}
-					disabled={!editable}
-					// Keep typed characters from leaking into the editor document.
-					onKeyDown={(event) => event.stopPropagation()}
-					onChange={(event) => block.setValues({ label: event.target.value || null })}
-					className="w-full truncate bg-transparent font-medium text-monti-body outline-none placeholder:text-monti-default"
-				/>
-				<p className={cn("text-monti-caption text-monti-muted", media === "failed" && "text-monti-danger")}>
-					{details}
-				</p>
-			</div>
+		<BlockFrame framed={false} data-file-block className="not-prose my-monti-24">
+			<FileBlock
+				aria-label={`${t("fileNode.fallbackName")} ${label || filename}`.trim()}
+				name={label}
+				placeholder={filename || t("fileNode.fallbackName")}
+				nameLabel={t("fileNode.displayName")}
+				onNameChange={(next) => block.setValues({ label: next || null })}
+				disabled={!editable}
+				meta={meta}
+				tone={failed ? "danger" : "default"}
+			/>
 		</BlockFrame>
 	);
 }

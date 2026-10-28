@@ -24,7 +24,7 @@ import { documentKey } from "./document-key";
 import { startMarquee } from "./drag";
 import { EditorWidthMenu, useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
-import { ImageInsertDialog } from "./image-insert-dialog";
+import { MediaPickerDialog } from "./image-insert-dialog";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble";
 import { InternalLinkPopup } from "./internal-link-popup";
 import type { LinkDraft } from "./link-form";
@@ -220,17 +220,14 @@ export function CmsEditor({
 	const activeAlign = editor ? ALIGN_TOOLS(t).find((item) => item.isActive?.(editor)) : undefined;
 
 	const { handleSpot, setHandleSpot, handleMouseMove, handleDragStart, handleDragEnd } = useBlockHandle(editor);
-	const {
-		imageDialog,
-		fillsImageText,
-		openImageDialog,
-		closeImageDialog,
-		insertImage,
-		fileInputRef,
-		uploadAttachments,
-		handlePaste,
-		handleDrop,
-	} = useMediaInsertion({ editor, site, t, media, allowance, canEdit });
+	const { pickerProps, openImagePicker, openFilePicker, handlePaste, handleDrop } = useMediaInsertion({
+		editor,
+		site,
+		t,
+		media,
+		allowance,
+		canEdit,
+	});
 	useEffect(() => {
 		editorRef.current = editor;
 		if (!editor || isSourceMode) return;
@@ -295,8 +292,8 @@ export function CmsEditor({
 		activeAlign,
 		linkDraft,
 		setLinkDraft,
-		openImageDialog,
-		openFilePicker: () => fileInputRef.current?.click(),
+		openImageDialog: openImagePicker,
+		openFilePicker,
 	});
 
 	return (
@@ -355,28 +352,7 @@ export function CmsEditor({
 				<div className="mx-auto w-full max-w-(--editor-width) px-monti-16 pt-monti-48 pb-monti-8">{titleField}</div>
 			)}
 
-			<input
-				ref={fileInputRef}
-				type="file"
-				multiple
-				accept={site.api.FILE_ACCEPT}
-				hidden
-				aria-hidden
-				tabIndex={-1}
-				onChange={(event) => {
-					const files = Array.from(event.target.files ?? []);
-					event.target.value = "";
-					void uploadAttachments(files);
-				}}
-			/>
-
-			<ImageInsertDialog
-				open={imageDialog !== null}
-				initialFile={imageDialog?.file ?? null}
-				onClose={() => closeImageDialog()}
-				onInsert={insertImage}
-				altLater={fillsImageText}
-			/>
+			<MediaPickerDialog {...pickerProps} />
 
 			{isSourceMode && (
 				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-monti-16 pt-monti-24 pb-[35vh]">

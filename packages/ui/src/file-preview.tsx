@@ -2,31 +2,32 @@ import { Document } from "@carbon/icons-react";
 import { cn } from "./cn";
 
 /**
- * What a file that is not a picture shows in a tile's preview (`.mt-tile .img.is-file`): a 20px file icon with its extension under it in mono, centered on
- * the neutral fill. It fills the preview box of a `Tile`; a failed file shows it fainter.
+ * What a `Tile` shows for a file that has no picture to show (PDF, CSV, ZIP, text): a 20px file icon in the middle and the extension under it in mono
+ * 11. It takes the tile's ground and goes fainter when the tile failed. Use it as the tile's `preview`.
  */
 function FilePreview({
-	extension,
-	faint = false,
+	ext,
 	framed = false,
+	className,
 }: {
-	extension: string;
-	faint?: boolean;
-	/** Draws its own 4:3 box with rounded corners, for use outside a tile (a panel's preview). */
+	ext: string;
+	/** Draws its own 4:3 box with rounded corners and the neutral fill, for use outside a tile (a panel's preview). */
 	framed?: boolean;
+	className?: string;
 }) {
 	return (
 		<span
 			data-slot="file-preview"
+			// Decorative: the file's name already says what it is, so a tile's name does not start with its extension.
 			aria-hidden
 			className={cn(
-				"flex size-full flex-col items-center justify-center gap-monti-6 bg-monti-muted text-monti-subtle",
-				framed && "aspect-[4/3] w-full rounded-monti-md",
-				faint && "text-monti-faint",
+				"flex size-full flex-col items-center justify-center gap-monti-6 text-monti-subtle group-data-[status=failed]/tile:text-monti-faint",
+				framed && "aspect-[4/3] w-full rounded-monti-md bg-monti-muted",
+				className,
 			)}
 		>
 			<Document aria-hidden className="size-5" />
-			<span className="font-mono text-[11px] leading-[14px] tracking-[0.04em]">{extension.toUpperCase()}</span>
+			<span className="text-monti-micro">{ext}</span>
 		</span>
 	);
 }

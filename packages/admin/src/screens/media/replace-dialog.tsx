@@ -45,7 +45,7 @@ function FileLine({
 			{picture !== undefined ? (
 				<Image src={picture} alt="" ratio="photo" fallback={Document} />
 			) : (
-				<FilePreview extension={extensionOf(name)} framed />
+				<FilePreview ext={extensionOf(name).toUpperCase()} framed />
 			)}
 			<Stack gap={2}>
 				<Text truncate>{name}</Text>
