@@ -1,5 +1,6 @@
 import { defineAdminPlugin } from "@monti-cms/admin";
 import { GitSyncPage } from "./git-sync-page";
+import { gitSyncComponents } from "./provider";
 import { GitSyncStatus } from "./status-item";
 
 /**
@@ -8,5 +9,6 @@ import { GitSyncStatus } from "./status-item";
  */
 export default defineAdminPlugin({
 	pages: { "git-sync": GitSyncPage },
+	components: gitSyncComponents,
 	statusItems: { "git-sync": { align: "start", order: 100, Component: GitSyncStatus } },
 });

@@ -53,7 +53,13 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 							label: (site) => site.createTranslator(settingsMessages)("webhookLabel"),
 						},
 					],
-					nav: [{ path: "git-sync", label: "Git sync" }],
+					nav: [
+						{
+							path: "git-sync",
+							label: "Git sync",
+							icon: "branch",
+						},
+					],
 					// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
 					server: () => import("@monti-cms/git-sync/server"),
 					admin: () => import("@monti-cms/git-sync/admin"),
