@@ -4,6 +4,7 @@ import { Copy, FolderMoveTo, Launch, TrashCan } from "@carbon/icons-react";
 import type { FolderListItem } from "@monti-cms/core/site";
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	DescriptionItem,
 	DescriptionList,
@@ -211,9 +212,11 @@ export function MediaPanel({
 						onChange={(event) => update({ stem: event.target.value })}
 					/>
 					{extension && (
-						<Text as="span" tone="subtle" title={t("panel.extensionKept")}>
-							{extension}
-						</Text>
+						<Box shrink={false}>
+							<Text as="span" tone="subtle" title={t("panel.extensionKept")}>
+								{extension}
+							</Text>
+						</Box>
 					)}
 				</Inline>
 				{nameShown && (

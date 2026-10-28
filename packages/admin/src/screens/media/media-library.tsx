@@ -176,9 +176,7 @@ export function MediaLibrary() {
 					}
 				>
 					{!library.filtered && library.picked.size === 0 && (
-						<TextButton variant="quiet" onClick={newFolderHere}>
-							{t("head.folder")}
-						</TextButton>
+						<TextButton onClick={newFolderHere}>{t("head.folder")}</TextButton>
 					)}
 					<SearchToggle
 						label={t("head.search")}

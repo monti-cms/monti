@@ -92,10 +92,17 @@ const screen =
 
 const tile = (canvasElement: HTMLElement, name: RegExp) => within(canvasElement).findByRole("button", { name });
 const area = () => document.querySelector("[data-slot=drop-area]") as HTMLElement;
-const drop = (files: File[]) => {
+/** A right click on an element, where it is (the menu opens at the pointer). */
+const rightClick = (element: Element) => {
+	const box = element.getBoundingClientRect();
+	fireEvent.contextMenu(element, { clientX: box.x + box.width / 2, clientY: box.y + Math.min(box.height / 2, 40) });
+};
+
+/** Drags files over, or drops them on, an element. `fireEvent` copies a `DataTransfer` into an empty one, so the event is made by hand to keep the files. */
+const drag = (element: Element, type: "dragenter" | "drop", files: File[]) => {
 	const data = new DataTransfer();
 	for (const file of files) data.items.add(file);
-	return { dataTransfer: data };
+	element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }));
 };
 
 // 폴더 안: the sub-folders and the files of Blog Assets.
@@ -132,7 +139,7 @@ export const FolderMenu: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		fireEvent.contextMenu(await tile(canvasElement, /^covers/));
+		rightClick(await tile(canvasElement, /^covers/));
 		await body().findByRole("menuitem", { name: "폴더 지우기" });
 	},
 };
@@ -142,7 +149,7 @@ export const FileMenu: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		fireEvent.contextMenu(await tile(canvasElement, /^desk-morning/));
+		rightClick(await tile(canvasElement, /^desk-morning/));
 		await body().findByRole("menuitem", { name: "쓰는 곳" });
 	},
 };
@@ -153,7 +160,7 @@ export const BlankMenu: Story = {
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
-		fireEvent.contextMenu(area().parentElement?.lastElementChild as HTMLElement);
+		rightClick(document.querySelector("[data-slot=blank-space]") as HTMLElement);
 		await body().findByRole("menuitem", { name: "새 폴더" });
 	},
 };
@@ -164,7 +171,7 @@ export const DraggingOver: Story = {
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
-		fireEvent.dragEnter(area(), drop([new File(["x"], "a.png", { type: "image/png" })]));
+		drag(area(), "dragenter", [new File(["x"], "a.png", { type: "image/png" })]);
 		await waitFor(() => body().getByText("여기에 올려요"));
 	},
 };
@@ -174,7 +181,7 @@ export const DraggingOverFolder: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		fireEvent.dragEnter(await tile(canvasElement, /^covers/), drop([new File(["x"], "a.png", { type: "image/png" })]));
+		drag(await tile(canvasElement, /^covers/), "dragenter", [new File(["x"], "a.png", { type: "image/png" })]);
 		await waitFor(() => body().getByText("covers"));
 	},
 };
@@ -186,14 +193,11 @@ export const Uploading: Story = {
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
 		const png = new File([new Uint8Array(2000)], "hero.png", { type: "image/png" });
-		fireEvent.drop(
-			area(),
-			drop([
-				png,
-				new File(["x"], "price-list-2026.pdf", { type: "application/pdf" }),
-				new File(["x"], "subscribers.csv", { type: "text/csv" }),
-			]),
-		);
+		drag(area(), "drop", [
+			png,
+			new File(["x"], "price-list-2026.pdf", { type: "application/pdf" }),
+			new File(["x"], "subscribers.csv", { type: "text/csv" }),
+		]);
 		await tile(canvasElement, /^subscribers\.csv/);
 	},
 };
@@ -206,14 +210,11 @@ export const UploadsFailed: Story = {
 		await tile(canvasElement, /^desk-morning/);
 		const big = new File(["x"], "panorama.jpg", { type: "image/jpeg" });
 		Object.defineProperty(big, "size", { value: testSite.api.MAX_MEDIA_BYTES + 4_000_000 });
-		fireEvent.drop(
-			area(),
-			drop([
-				new File(["x"], "IMG_2041.HEIC", { type: "image/heic" }),
-				big,
-				new File(["x"], "setup.exe", { type: "application/x-msdownload" }),
-			]),
-		);
+		drag(area(), "drop", [
+			new File(["x"], "IMG_2041.HEIC", { type: "image/heic" }),
+			big,
+			new File(["x"], "setup.exe", { type: "application/x-msdownload" }),
+		]);
 		await tile(canvasElement, /^setup\.exe/);
 	},
 };
@@ -344,7 +345,7 @@ export const MovedToTrash: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		fireEvent.contextMenu(await tile(canvasElement, /^notes-scan/));
+		rightClick(await tile(canvasElement, /^notes-scan/));
 		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통으로/ }));
 		await body().findByText(/휴지통으로 옮겼어요/);
 	},

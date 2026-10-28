@@ -8,6 +8,7 @@ import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { deleteMessages } from "../../shared/delete.messages";
 import { ENTRY_DRAG_TYPE } from "../../shared/entry-drag";
+import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { MediaNotConfigured } from "../media-not-configured";
@@ -45,6 +46,7 @@ const { toast } = ui;
 
 const t = testSite.createTranslator(mediaMessages);
 const tc = testSite.createTranslator(commonMessages);
+const ts = testSite.createTranslator(sharedMessages);
 const td = testSite.createTranslator(deleteMessages);
 
 let nav: ReturnType<typeof createTestRouter>;
@@ -296,7 +298,7 @@ describe("flow: browsing (둘러보기)", () => {
 		expect(screen.queryByRole("dialog")).toBeNull();
 		const field = (await screen.findByRole("textbox", { name: t("folder.nameLabel") })) as HTMLInputElement;
 		expect(document.activeElement).toBe(field);
-		expect(field.value).toBe(t("folder.new"));
+		expect(field.value).toBe(ts("folder.newName"));
 		expect(field.selectionStart).toBe(0);
 		expect(field.selectionEnd).toBe(field.value.length);
 		fireEvent.keyDown(field, { key: "Escape" });

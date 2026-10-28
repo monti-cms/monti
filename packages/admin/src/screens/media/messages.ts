@@ -7,14 +7,12 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		title: "Media",
 		"trail.label": "Path",
 		"load.failed": "Couldn't load the media.",
-		unknownError: "Something went wrong.",
 
 		"head.folder": "+ Folder",
 		"head.search": "Search",
 		"head.searchLabel": "Search file names",
 		"head.upload": "Upload",
 		"folder.up": "Up one folder",
-		"folder.new": "New folder",
 		"folder.nameLabel": "Folder name",
 		"folder.actions": "Actions for folder '{name}'",
 
@@ -142,21 +140,17 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"notConfigured.title": "There is no media storage",
 		"notConfigured.body": "Connect storage and you can upload here.",
 		"notConfigured.link": "How to connect",
-
-		"rename.failed": "Couldn't rename.",
 	},
 	ko: {
 		title: "미디어",
 		"trail.label": "경로",
 		"load.failed": "미디어를 불러오지 못했어요.",
-		unknownError: "오류가 발생했어요.",
 
 		"head.folder": "+ 폴더",
 		"head.search": "검색",
 		"head.searchLabel": "파일 이름 검색",
 		"head.upload": "올리기",
 		"folder.up": "상위 폴더로",
-		"folder.new": "새 폴더",
 		"folder.nameLabel": "폴더 이름",
 		"folder.actions": "'{name}' 폴더 작업",
 
@@ -284,7 +278,5 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"notConfigured.title": "미디어 저장소가 없어요",
 		"notConfigured.body": "저장소를 연결하면 여기서 올릴 수 있어요.",
 		"notConfigured.link": "연결 방법",
-
-		"rename.failed": "이름을 바꾸지 못했어요.",
 	},
 });
