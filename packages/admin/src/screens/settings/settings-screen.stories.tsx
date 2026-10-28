@@ -352,10 +352,7 @@ export const CollectionDeleted = story(
 	{
 		tags: ["visual"],
 		beforeEach: () => {
-			window.sessionStorage.setItem(
-				SAVED_MESSAGE_KEY,
-				tCollection("save.dropped", { name: "메모", count: 23, kind: "document" }),
-			);
+			window.sessionStorage.setItem(SAVED_MESSAGE_KEY, t("save.done"));
 		},
 	},
 );

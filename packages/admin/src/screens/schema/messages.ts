@@ -88,8 +88,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.seed": "Starting data (seed)",
 		"site.name": "Site name",
 		"file.migrations": "Recorded data transforms",
-		"save.done": ({ transforms, entries: rewritten }) =>
-			`Schema saved${Number(transforms) > 0 ? `; ${transforms} data transform(s) ran (${entries(rewritten)} rewritten)` : ""}.`,
+		"save.done": "Applied",
 		"save.applyFailedNote":
 			"The schema file was saved but not applied to the database. Run monti schema:apply, or reload this screen.",
 	},
@@ -175,8 +174,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.seed": "초기 데이터 (seed)",
 		"site.name": "사이트 이름",
 		"file.migrations": "기록된 데이터 변환",
-		"save.done": ({ transforms, entries: rewritten }) =>
-			`스키마를 저장했어요${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했어요(항목 ${rewritten}개 다시 씀)` : ""}.`,
+		"save.done": "적용됐어요",
 		"save.applyFailedNote":
 			"스키마 파일은 저장했지만 데이터베이스에는 적용하지 못했어요. monti schema:apply를 실행하거나 이 화면을 다시 불러오세요.",
 	},

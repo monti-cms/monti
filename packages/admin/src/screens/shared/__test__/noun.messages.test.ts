@@ -7,7 +7,6 @@ import { entryEditorShellMessages } from "../../entries/entry-editor-shell.messa
 import { lifecycleConfirm } from "../../entries/lifecycle-confirm";
 import { entriesMessages } from "../../entries/messages";
 import { screensMessages } from "../../messages";
-import { schemaCollectionMessages } from "../../schema/collection.messages";
 import { collectionNoun, nounVars } from "../noun.messages";
 
 /** The site of the test config with its first content collection relabeled and the admin in `language`. */
@@ -100,12 +99,5 @@ describe("collection label in admin messages", () => {
 				expect(ask).not.toMatch(/post|글/);
 			}
 		}
-	});
-
-	it("names a deleted collection once, with the particle that fits", () => {
-		const { site } = siteLabeled("메모", "ko");
-		expect(
-			site.createTranslator(schemaCollectionMessages)("save.dropped", { name: "메모", count: 23, kind: "document" }),
-		).toBe("메모를 지웠어요 · 글 23편");
 	});
 });

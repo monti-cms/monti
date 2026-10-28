@@ -217,9 +217,8 @@ describe("deleting a collection with its entries (flow 4, steps 15-19)", () => {
 		const put = requests.find((request) => request.method === "PUT");
 		expect(put?.body).toMatchObject({ baseHash: "hash-1", dropCollections: ["memo"], acknowledged: [KEY] });
 		expect(Object.keys((put?.body?.schema as { collections: object }).collections)).toEqual(["post"]);
-		expect(reload.rememberSaved).toHaveBeenCalledWith(
-			tCollection("save.dropped", { name: "Memo", count: 23, kind: "document" }),
-		);
+		// The toast after the save says the save, not one of its changes.
+		expect(reload.rememberSaved).toHaveBeenCalledWith(t("save.done"));
 		// Nothing but the schema was sent: the links are cut by the apply, not by a request of the screen.
 		expect(requests.some((request) => request.url.includes("/references/"))).toBe(false);
 	});

@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorText } from "../../api/client";
-import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
+import { fetchSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
 import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place";
@@ -302,27 +302,6 @@ function SchemaEditor({
 			action: { label: tCollection("collection.deleteUndo"), onClick: () => restore(name) },
 		});
 	};
-	/** What the toast after a save says: what was deleted, else what the data transforms did. */
-	const savedMessage = (saved: SavedSchema): string => {
-		const dropped = saved.dropped ?? [];
-		const [only] = dropped;
-		if (only && dropped.length === 1) {
-			const found = collectionsOf(base)[only.collection];
-			return tCollection("save.dropped", {
-				name: String(found?.label ?? only.collection),
-				count: only.entries,
-				kind: found?.kind === "item" ? "item" : "document",
-			});
-		}
-		if (dropped.length > 1) {
-			return tCollection("save.droppedMany", {
-				collections: dropped.length,
-				count: dropped.reduce((sum, item) => sum + item.entries, 0),
-			});
-		}
-		return t("save.done", { transforms: saved.transforms.length, entries: saved.entriesRewritten });
-	};
-
 	const discard = async () => {
 		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
@@ -501,9 +480,10 @@ function SchemaEditor({
 					baseHash={state.hash}
 					onIssues={setIssues}
 					onApplyFailed={() => setApplyFailed(true)}
-					onSaved={(saved: SavedSchema) => {
+					onSaved={() => {
 						rememberScroll(scroller.current?.scrollTop ?? 0);
-						rememberSaved(savedMessage(saved));
+						// One line for every save: the review already showed what it changes.
+						rememberSaved(t("save.done"));
 						reloadPage();
 					}}
 				/>

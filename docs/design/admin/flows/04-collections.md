@@ -122,4 +122,4 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow4Step19.dc.html`
 - Renders: `Schema` (stage "지운 뒤")
-- After deleting, a notice says "메모를 지웠어요 · 글 23편" and the collection is gone from the settings list.
+- After the save, the notice says "적용됐어요", the same one line every save ends with (the review already showed what the save changes), and the collection is gone from the settings list.

@@ -573,7 +573,7 @@ States (`stage`, default "보통"):
 | "지우기 전" | Basic tab with the delete action and counts. | 4.15 |
 | "지울 예정" | The collection left the list at once; "바뀐 곳 ▾" lists it with undo, and a notice has undo. | 4.16 |
 | "지우기 검토" | Delete review: what goes (links cut on apply) and the export; "지우고 적용" on. | 4.17 |
-| "지운 뒤" | After delete: notice with the post count. | 4.18 |
+| "지운 뒤" | After the save: the notice "적용됐어요" (one line for every save) and the collection gone. | 4.18 |
 | "운영 고침" | Production with the GitHub plugin: field added, button "PR 만들기". | 11.10 |
 | "운영 제안" | A field proposal from the assistant marked "✦ 제안". | 11.11 |
 | "운영 검토" | Review with the file change to monti.schema.ts and "PR 만들기". | 11.12 |

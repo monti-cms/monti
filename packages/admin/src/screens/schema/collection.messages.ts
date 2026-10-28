@@ -39,9 +39,6 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 			]
 				.filter(Boolean)
 				.join(" · "),
-		"save.dropped": ({ name, count }) => `Deleted ${name} · ${plural(count, "entry", "entries")}`,
-		"save.droppedMany": ({ collections, count }) =>
-			`Deleted ${plural(collections, "collection", "collections")} · ${plural(count, "entry", "entries")}`,
 		"collection.tabs.basics": "Basics",
 		"collection.tabs.fields": "Fields",
 		"collection.tabs.editor": "Editor",
@@ -88,9 +85,6 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 				.filter(Boolean)
 				.join(" · ");
 		},
-		"save.dropped": ({ name, count, kind }) =>
-			`${josa(String(name), "을", "를")} 지웠어요 · ${kind === "item" ? `항목 ${count}개` : `글 ${count}편`}`,
-		"save.droppedMany": ({ collections, count }) => `컬렉션 ${collections}개를 지웠어요 · 항목 ${count}개`,
 		"collection.tabs.basics": "기본",
 		"collection.tabs.fields": "필드",
 		"collection.tabs.editor": "에디터",
