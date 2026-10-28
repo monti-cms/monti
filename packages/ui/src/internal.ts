@@ -147,15 +147,19 @@ export { Image } from "./image";
 export { Input } from "./input";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
+export { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
+export { LockMark } from "./lock-mark";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
+export { NavLink, NavLinkHandle } from "./nav-link";
 export { Option } from "./option";
+export { OptionRow, OptionRowHandle, OptionTable } from "./option-table";
 export {
 	PageBody,
 	PageColumn,
@@ -185,6 +189,7 @@ export { ProposalBubble } from "./proposal-bubble";
 export { ProposalCard, ProposalItem } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
+export { RailLayout } from "./rail-layout";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
@@ -210,6 +215,8 @@ export {
 	SheetContent,
 	SheetFooter,
 	SheetHeader,
+	SheetSection,
+	SheetSplit,
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";

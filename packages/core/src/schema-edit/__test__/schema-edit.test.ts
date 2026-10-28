@@ -508,6 +508,69 @@ describe("schema settings API", () => {
 			expect(saved.status).toBe(200);
 		});
 
+		it("moves the translations of a removed language to the trash only when the writer asks: the pick is never a default", async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			await freshDatabase();
+			write(
+				schemaOf(
+					{},
+					{
+						locales: [
+							{ code: "en", name: "English" },
+							{ code: "ko", name: "Korean" },
+						],
+					},
+				),
+			);
+			const cms = newCms();
+			await cms.migrate({ log: () => {} });
+			const service = cms.contentService();
+			const source = (
+				await service.createDraft({
+					collection: "post",
+					slug: "bilingual",
+					metadata: { title: "bilingual" },
+					doc: docOfText("Body"),
+				} as never)
+			).entry;
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: "ko" })).entry;
+			const { hash, schema } = await read(cms);
+			const edited = structuredClone(schema) as unknown as Edit;
+			edited.locales = edited.locales.filter((locale) => (locale as { code: string }).code !== "ko");
+			const removal = (preview: { impacts: { change: { kind: string } }[] }) =>
+				preview.impacts.find((item) => item.change.kind === "locale_removed");
+
+			const kept = await (await call(cms, "POST", "schema/preview", { schema: edited })).json();
+			const decision = kept.decisions.find(
+				(item: { change: { kind: string } }) => item.change.kind === "locale_removed",
+			);
+			expect(decision).toMatchObject({ chosen: null, suggestions: [{ op: "trashLocale", locale: "ko" }] });
+			expect(kept.transforms).toEqual([]);
+			expect(removal(kept)).toMatchObject({ consequence: "orphaned", entries: 1 });
+
+			for (const body of [{ trashLocales: ["ko"] }, { transforms: [{ op: "trashLocale", locale: "ko" }] }]) {
+				const asked = await (await call(cms, "POST", "schema/preview", { schema: edited, ...body })).json();
+				expect(asked.transforms).toMatchObject([{ id: "trash-ko", op: "trashLocale", locale: "ko" }]);
+				expect(removal(asked)).toMatchObject({ consequence: "trashed", entries: 1 });
+			}
+
+			// Moving them to the trash can be undone, so it needs no acknowledgement.
+			const saved = await call(cms, "PUT", "schema", { schema: edited, trashLocales: ["ko"], baseHash: hash });
+			expect(saved.status).toBe(200);
+			expect(await saved.json()).toMatchObject({ saved: true, trashed: [{ locale: "ko", entries: 1 }] });
+			expect(onDiskData().migrations).toMatchObject([{ id: "trash-ko", op: "trashLocale", locale: "ko" }]);
+			expect(onDiskData().locales).toEqual([{ code: "en", name: "English" }]);
+			expect((await cms.store().getEntry(translation.id)).status).toBe("trashed");
+			expect((await cms.store().getEntry(source.id)).status).toBe("draft");
+		});
+
+		it("answers 400 when trashLocales is not a list of language codes", async () => {
+			const cms = await withStoredEntry();
+			const { hash, schema } = await read(cms);
+			const res = await call(cms, "PUT", "schema", { schema, baseHash: hash, trashLocales: [1] });
+			expect(res.status).toBe(400);
+		});
+
 		it("refuses to remove a collection that stored entries belong to, until the previewed impacts are acknowledged", async () => {
 			const cms = await withStoredEntry();
 			const { hash, schema } = await read(cms);

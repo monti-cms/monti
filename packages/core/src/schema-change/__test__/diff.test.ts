@@ -44,6 +44,16 @@ describe("diffSchema", () => {
 		expect(found).toEqual([{ kind: "collection_removed", collection: "tag", handledBy: "drop-tag" }]);
 	});
 
+	it("marks a removed language that a trashLocale transform handles", () => {
+		const found = changes(
+			(schema) => {
+				schema.locales = schema.locales.filter((locale: { code: string }) => locale.code !== "en");
+			},
+			[{ id: "trash-en", op: "trashLocale", locale: "en" }],
+		);
+		expect(found).toEqual([{ kind: "locale_removed", locale: "en", handledBy: "trash-en" }]);
+	});
+
 	it("lists a changed public path of a collection present on both sides", () => {
 		const found = changes((schema) => {
 			schema.collections.post.path = "/blog/:slug";

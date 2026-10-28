@@ -218,3 +218,7 @@ The list of content languages in Settings › Languages. The language name is th
 - **Other rows**: only a drag handle and ×. The × is the same quiet × as the × of the other host-name rows. × strikes the row and adds to the changed places. Removing a language that has translations lets you pick "남겨 두기" (keep) or "휴지통으로" (to trash) in the review.
 - **Adding a language**: "+ 언어 추가" (+ add a language) opens a code search menu (the last item is "직접 입력" (enter by hand)). Picking a code makes the row at once, with no form; the name is filled in and a change dot appears. Only "직접 입력" opens a small dialog (`.mt-dialog`, 420px) that asks once for the code (letters), the native name and the display name ("취소 · 추가" (cancel · add)).
 - On a deployed site without the GitHub plugin the whole section is structure, so the lock goes after the section title (`h2`), and the handle, ×, "바꾸기" and "+ 언어 추가" all go. The bold "원문" at the right of the source row stays as the state, and only the rule and "바꾸기" go. The time zone on the same screen is an admin setting, so it can still be edited.
+
+### In code
+
+`LanguageRow` (name, `code`, `label`, `dot`, `handle` and `handled` for the handle column, `drag` for the sortable's transform) with `LanguageRowHandle` (the grip) and `LanguageSource` (the bold flag, a rule and the one quiet underlined button). The language picker is a `Popover` with a `Command` (`shouldFilter={false}`, the screen filters), the source menu a `DropdownMenu` with a radio group, and the "직접 입력" window a `Dialog` whose `DialogTitle` takes `of` ("새 언어 · tlh").

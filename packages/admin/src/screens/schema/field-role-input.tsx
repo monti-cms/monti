@@ -129,7 +129,6 @@ export function FieldRolePicker({
 		<Stack gap={12}>
 			<Pick
 				label={t("field.role")}
-				description={t("field.roleHint")}
 				value={selectedValue}
 				disabled={disabled}
 				items={items}
@@ -267,7 +266,6 @@ export function FieldCustomInputPicker({
 				<TextInput
 					label={t("field.input")}
 					description={t("field.inputHint")}
-					optional
 					value={value}
 					disabled={disabled}
 					onChange={(val) => onChangeInput(orUndefined(val))}

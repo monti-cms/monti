@@ -247,9 +247,12 @@ const seedTemplate = z.union(
 	{ error: "a template needs either `doc` (a stored document) or both `body` and `format`" },
 );
 
-const migrationBase = {
+const migrationId = {
 	id: text.min(1).describe("Name of the transform, for good: it is recorded when it ran, so it runs once."),
 	note: text.optional().describe("Why, for people reading the file."),
+};
+const migrationBase = {
+	...migrationId,
 	collection: text.describe("Collection of the schema after the change."),
 };
 
@@ -280,6 +283,13 @@ const migration = z.discriminatedUnion(
 			op: z.literal("dropCollection"),
 		}),
 		strict({
+			...migrationId,
+			op: z.literal("trashLocale"),
+			locale: text.describe(
+				"A language the schema no longer lists. Its live translations, in every collection, move to the trash.",
+			),
+		}),
+		strict({
 			...migrationBase,
 			op: z.literal("setDefault"),
 			field: text,
@@ -288,7 +298,9 @@ const migration = z.discriminatedUnion(
 			),
 		}),
 	],
-	{ error: 'a migration needs an "op" of renameField, mapOption, dropField, dropCollection or setDefault' },
+	{
+		error: 'a migration needs an "op" of renameField, mapOption, dropField, dropCollection, trashLocale or setDefault',
+	},
 );
 
 /** The keys of the plain data both the schema file and the code config hold (the file adds `migrations`). */
@@ -312,7 +324,7 @@ const schemaFileShape = strict({
 		.array(migration)
 		.optional()
 		.describe(
-			"Data transforms `monti schema:apply` runs once each, in order (rename a field, map a removed select option, drop a field, set a default). Applied ones stay as history.",
+			"Data transforms `monti schema:apply` runs once each, in order (rename a field, map a removed select option, drop a field, set a default, trash the translations of a removed language). Applied ones stay as history.",
 		),
 	admin: admin.optional(),
 });

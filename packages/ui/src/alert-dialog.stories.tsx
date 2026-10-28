@@ -63,6 +63,24 @@ export const Plain: Story = {
 	),
 };
 
+/** A question about leaving: the risky way out is the danger text button, and the pill keeps things as they are. */
+export const Leave: Story = {
+	render: () => (
+		<AlertDialog defaultOpen>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>저장하지 않은 바뀐 곳이 있어요</AlertDialogTitle>
+					<AlertDialogDescription>나가면 바뀐 곳 2개가 사라져요.</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel variant="danger">저장하지 않고 나가기</AlertDialogCancel>
+					<AlertDialogAction>계속 고치기</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	),
+};
+
 /** Long text wraps between words, and the actions stay one row at the bottom right. */
 export const LongText: Story = {
 	render: () => (

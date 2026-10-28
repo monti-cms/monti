@@ -49,4 +49,4 @@ A list of menu rows placed directly on a screen or in a sheet, without the menu 
 
 ### In code
 
-`PickList` with `PickListItem` rows (a `mark` at the end when picking opens more). The picked row takes the selected background and ink; the others are muted. Name it with `aria-label`.
+`PickList` (a listbox) with `PickListItem` rows, its options (a `mark` at the end when picking opens more). The picked row takes the selected background and ink; the others are muted. Name it with `aria-label`.

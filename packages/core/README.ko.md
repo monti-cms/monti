@@ -1381,6 +1381,7 @@ Stays in code (monti.config.ts):
 | `mapOption` | 더 이상 선택지가 아닌 저장된 선택 값을 필드의 다른 선택지로 바꾼다. 값 목록 안에서도 바꾼다(중복은 없앤다) |
 | `dropField` | 스키마에 더는 없는 필드의 저장된 값을 **지운다**. 스키마에 그 필드가 아직 있으면 오류다 |
 | `dropCollection` | 스키마에 더는 없는 컬렉션을 담긴 것과 함께 **지운다**. 모든 글(휴지통의 글 포함)과 번역, 본문, 참조, 폴더, 주소(옛 주소 포함)를 스키마 기록과 같은 트랜잭션에서 지운다. 컬렉션의 데이터를 지우는 유일한 방법이다. 먼저 이 컬렉션의 글을 다른 컬렉션의 관계 필드에서 뺀다(마지막으로 적용된 스키마의 필드 기준이며, `POST /references/unlink`와 같은 동작을 같은 트랜잭션에서 한다. 바뀐 글마다 버전이 한 번 오르고 `saved` 이벤트가 기록된다). 다른 컬렉션 본문 속 링크는 깨진 링크가 된다. 스키마에 그 컬렉션이 아직 있으면 오류다 |
+| `trashLocale` | 스키마에 더는 없는 언어의 **번역**을 휴지통으로 옮긴다. 그 언어의 모든 컬렉션의 살아 있는 번역을 스키마 기록과 같은 트랜잭션에서 옮긴다. `collection` 대신 `locale`을 받는다(`{ "id": "2026-10-trash-ja", "op": "trashLocale", "locale": "ja" }`). 번역은 휴지통 화면이 버릴 때와 같은 방식으로 옮겨져(상태 `trashed`, 적용한 시각이 `deletedAt`이 되어 30일은 그때부터 센다, 버전이 한 번 오르고 `trashed` 이벤트가 기록된다) 휴지통에서 복원할 수 있다. 원본 글과 이미 휴지통에 있는 번역은 건드리지 않는다. 이 변환이 없으면 지운 언어의 번역은 저장된 그대로 남아 공개 조회에서 숨겨지고, 그 언어를 다시 추가하면 돌아온다. 스키마에 그 언어가 아직 있으면 오류다 |
 | `setDefault` | 텍스트나 선택 필드에 값이 없는 글에 `value`를 넣는다(필수가 된 필드 같은 경우). 조건부 분기 안의 필드는 그 분기가 보이는 글에만 채우고, 번역은 언어별 필드에만 채운다 |
 
 필드를 조건부 분기 안으로 또는 밖으로 옮기는 데에는 변환이 필요 없다. 저장된 값은 필드가 어디 있든 그대로 보존된다(조건부 값은 평평하게 저장된다). 그래서 데이터는 움직이지 않는다. diff가 이를 알리고(`field_moved`), 점검은 새 분기가 값을 보여 주지 않는 글을 센다. **컬렉션** 이름 바꾸기는 변환이 아니다. 컬렉션 이름은 저장된 값(`entries.collection`, 폴더, 주소)이라서 이름을 바꾼 컬렉션은 지운 것과 새로 더한 것의 쌍이다. diff는 닮은 쌍을 짚어 주지만(`renameHints`) 아무것도 적용하지 않는다.
@@ -1393,7 +1394,7 @@ Stays in code (monti.config.ts):
 
 두 명령은 TypeScript 스키마 파일을 tsx로 읽는다.
 
-- `monti schema:diff [--schema <파일>] [--check]`(읽기 전용)는 앱의 스키마를 적용된 스키마와 견주어, 모든 변경을 닿는 글과 그 결과와 함께 보여 준다. 고아 값으로 남음, 변환이 다시 씀, `dropField`·`dropCollection`이 지움, 채우기 전에는 발행할 수 없음 등이다. `--check`를 주면 적용할 것이 있을 때 1로 끝난다.
+- `monti schema:diff [--schema <파일>] [--check]`(읽기 전용)는 앱의 스키마를 적용된 스키마와 견주어, 모든 변경을 닿는 글과 그 결과와 함께 보여 준다. 고아 값으로 남음, 변환이 다시 씀, `dropField`·`dropCollection`이 지움, `trashLocale`이 휴지통으로 옮김, 채우기 전에는 발행할 수 없음 등이다. `--check`를 주면 적용할 것이 있을 때 1로 끝난다.
 - `monti schema:apply [--schema <파일>] [--dry-run]`은 저장소를 이전하고(`monti db:migrate`), 아직 돌지 않은 변환을 돌리고, 스키마를 기록한다. 여러 번 돌려도 같다. `--dry-run`은 되돌리는 트랜잭션 안에서 모든 것을 돌리고 아무것도 쓰지 않는다.
 
 ```text
@@ -1411,7 +1412,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | --- | --- |
 | `diffSchema(old, new, { transforms })` | `{ changes, renameHints }`. 변경은 `collection_added`, `collection_removed`, `collection_kind_changed`, `body_changed`, `allowed_changed`, `field_added`, `field_removed`, `field_renamed`, `field_type_changed`, `field_required_changed`, `field_locale_changed`, `field_moved`, `option_added`, `option_removed`, `option_renamed`, `locale_added`, `locale_removed`, `default_locale_changed` 중 하나다. `renameField`나 `mapOption` 변환은 제거와 추가의 쌍을 이름 바꾸기로 바꾸고, 변환이 맡는 변경에는 `handledBy`가 붙는다. `changeKey(change)`는 목록용 안정된 키, `describeSchemaChange(change)`는 영어 한 문장이다. 순수 함수 |
 | `checkSchemaChange(store, diff, { site, transforms, sampleSize })` | 변경마다 `entries`(글은 한 번만 센다), id와 제목의 `sample`, `consequence`, 그리고 `checked` 여부. 저장된 본문을 한 번 읽고 아무것도 쓰지 않는다. 허용 블록 변경과 분기 안의 필수 필드를 점검하려면 새 스키마의 `site`가 필요하다 |
-| `suggestTransforms(change, { options, renameTo })` | 변경에 맞는 변환(삭제, 이름 바꾸기, 남은 선택지마다의 매핑, 기본값). id는 없고, 화면이 제안하는 데 쓴다 |
+| `suggestTransforms(change, { options, renameTo })` | 변경에 맞는 변환(삭제, 지운 언어의 번역을 휴지통으로, 이름 바꾸기, 남은 선택지마다의 매핑, 기본값). id는 없고, 화면이 제안하는 데 쓴다 |
 | `planSchemaChange({ site, store, migrations })` | 적용된 스키마와의 diff, 남은 변환, `problems`. 읽기 전용 |
 | `applySchemaChange({ site, store, migrations, dryRun })` | 계획을 실행한다. 돈 것, 변환마다 바뀐 글과 본문 수, 이름 바꾸기의 `conflicts`를 돌려준다. 실패하면 `SchemaChangeError`를 던지고 아무것도 바꾸지 않는다 |
 | `applyTransforms`, `checkTransforms` | 순수한 조각. 글 하나의 메타데이터를 변환에 통과시키는 것, 변환을 스키마에 견주어 확인하는 것 |
@@ -1432,7 +1433,9 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `POST /preview` | 본문 `{ schema, transforms?, renames? }`. 편집을 점검하고 아무것도 쓰지 않는다. `valid`와 `issues`(경로와 메시지), 변경마다의 `impacts`(영향받는 글 수, id와 제목 표본, 결과), `decisions`(저장된 값을 여러 방법으로 다룰 수 있는 변경과 `suggestTransforms`의 선택지, 적용 중인 선택), 기록될 `transforms`와 그 `problems` |
 | `PUT` | 본문 `{ schema, transforms?, renames?, baseHash }`. 편집을 저장한다(아래). `baseHash` 뒤로 파일이 바뀌었으면 `409 schema_conflict`, `issues`와 함께 `400 invalid_schema`, `422 invalid_transforms`, `500 schema_apply_failed`(파일은 썼고 데이터베이스는 바뀌지 않았다) |
 
-`transforms`는 작성자의 선택이고 id가 없다(서버가 `<op>-<컬렉션>-<필드>`로 이름 붙인다). 빼면 서버가 결정마다 고른다. 화면이 `renames`로 알려 준 이름 바꾸기(작성자가 이름을 바꾼 필드나 선택지)는 이름 바꾸기, 매핑이나 삭제는 그 값을 가진 **저장된 글이 없을 때만**(값을 지우게 되는 삭제는 작성자 대신 고르지 않는다), 기본값은 값이 있을 때만이다. 선택이 없으면 값은 전처럼 고아로 남는다.
+`dropCollections`(컬렉션 이름)와 `trashLocales`(언어 코드)는 작성자의 나머지 두 선택으로, 기본값이 절대 되지 않는다. 지운 컬렉션은 `dropCollections`에 적었을 때만 글과 함께 삭제되고, 지운 언어의 번역은 `trashLocales`에 적었거나 `transforms`에 `trashLocale`이 있을 때만 휴지통으로 간다. 그때 그 변경의 영향은 `deleted` 또는 `trashed`이며, `trashed`는 휴지통에서 되돌릴 수 있으므로 확인(acknowledged)이 필요 없다. 저장 응답에는 `dropped`와 `trashed`(언어별로 옮긴 번역 수)가 담긴다.
+
+`transforms`는 작성자의 선택이고 id가 없다(서버가 `<op>-<컬렉션>-<필드>`로 이름 붙이고, `trashLocale`은 `trash-<언어>`다). 빼면 서버가 결정마다 고른다. 화면이 `renames`로 알려 준 이름 바꾸기(작성자가 이름을 바꾼 필드나 선택지)는 이름 바꾸기, 매핑이나 삭제는 그 값을 가진 **저장된 글이 없을 때만**(값을 지우게 되는 삭제는 작성자 대신 고르지 않는다), 기본값은 값이 있을 때만이다. 선택이 없으면 값은 전처럼 고아로 남는다.
 
 **저장이 하는 일, 순서대로** (처음 실패에서 멈춘다):
 

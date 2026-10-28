@@ -1,15 +1,18 @@
 "use client";
 
 import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text } from "@monti-cms/ui";
+import { Box, Stack, Text, TodoItem } from "@monti-cms/ui";
 import { Component, type ReactNode, useMemo, useRef, useState } from "react";
 import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
 import { InspectorPanel } from "../entries/inspector-panel";
 import { SchemaFields } from "../entries/schema-fields";
 import { EntryFormProvider } from "../entries/use-field";
+import { placeOfProblem } from "./collection-problems";
+import { useSchemaEdit } from "./controls";
 import { draftSiteOf } from "./draft-site";
 import { schemaFieldsMessages } from "./fields.messages";
-import type { Obj } from "./schema-model";
+import { schemaProblemMessages } from "./problems.messages";
+import { collectionsOf, type FieldPlace, fieldAt, type Obj } from "./schema-model";
 
 /** Catches what the real components throw for a draft that is only half made, so one bad moment does not take the settings page down. */
 class PreviewBoundary extends Component<
@@ -75,6 +78,7 @@ export function LayoutPreview({
 	collection,
 	codeCollections,
 	onClose,
+	onOpenField,
 }: {
 	/** The schema file as edited. */
 	file: Obj;
@@ -82,9 +86,15 @@ export function LayoutPreview({
 	collection: string;
 	codeCollections: readonly string[];
 	onClose: () => void;
+	/** Opens the sheet of a field that has a problem. */
+	onOpenField?: (place: FieldPlace, name: string) => void;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
+	const tp = useTranslator(schemaProblemMessages);
+	const { problems } = useSchemaEdit();
 	const site = useSite();
+	// What stops this collection from being saved: the preview would show a half-made form, so the list of what to fix takes its place.
+	const toFix = problems.filter((problem) => problem.area === "collections" && problem.collection === collection);
 	const made = useMemo(() => draftSiteOf(site, file, codeCollections), [site, file, codeCollections]);
 	// While the draft cannot be made (a half-typed name), the last one that could stays.
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
@@ -111,10 +121,31 @@ export function LayoutPreview({
 		>
 			<Box shrink={false} border="bottom" background="tool" paddingX={16} paddingY={8}>
 				<Text as="p" variant="caption" tone="muted">
-					{t("layout.previewLabel")}
+					{tp("preview.label")}
 				</Text>
 			</Box>
-			{draft?.isCollection(collection) ? (
+			{toFix.length > 0 ? (
+				<Stack gap={8} padding={16} overflow="y" data-testid="layout-preview-problems">
+					<Box paddingX={8}>
+						<Text as="p" variant="note" tone="muted">
+							{tp("preview.fix")}
+						</Text>
+					</Box>
+					{toFix.map((item) => {
+						const where = placeOfProblem(item);
+						const field = where ? fieldAt(collectionsOf(file)[collection] ?? {}, where.place, where.name) : undefined;
+						return (
+							<TodoItem
+								key={`${item.path}:${item.code}`}
+								blocking
+								title={typeof field?.label === "string" && field.label !== "" ? field.label : (item.field ?? item.path)}
+								detail={tp(`problem.${item.code}` as "problem.options")}
+								onOpen={where && onOpenField ? () => onOpenField(where.place, where.name) : undefined}
+							/>
+						);
+					})}
+				</Stack>
+			) : draft?.isCollection(collection) ? (
 				<SiteProvider site={draft}>
 					<PreviewBoundary fallback={problem} resetKey={draft}>
 						<PreviewPanel key={collection} collection={collection} onClose={onClose} />

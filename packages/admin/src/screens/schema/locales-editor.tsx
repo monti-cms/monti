@@ -1,12 +1,10 @@
 "use client";
 
-import { Add, ChevronSort, Draggable, Edit, SubtractAlt } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Combobox,
 	ComboboxContent,
 	ComboboxEmpty,
@@ -19,31 +17,41 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-	cn,
+	CommandSeparator,
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
 	Inline,
 	Input,
+	LanguageRow,
+	LanguageRowHandle,
+	LanguageSource,
+	MenuShortcut,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 	Section,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
 import { Labeled } from "../shared/labeled";
-import { Pick, RevertMark, useSchemaEdit } from "./controls";
+import { schemaChangesMessages } from "./changes.messages";
+import { useFieldChange, useSchemaEdit } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
-import { type RowButton, RowButtons } from "./fields-tree-rows";
+import { customLocaleCode, findLocaleCodes, localeFromCode, localeName, sourceFirst } from "./locale-names";
 import { schemaLocalesMessages } from "./locales.messages";
-import { schemaMessages } from "./messages";
+import { ReadValue } from "./read-value";
 import { type Locale, localesOf, type Obj, sameJson, setProp } from "./schema-model";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
@@ -85,12 +93,9 @@ function TimeZonePick({
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
+	const changed = useFieldChange(t("locales.timeZone"), revert);
 	return (
-		<Labeled
-			label={t("locales.timeZone")}
-			htmlFor={id}
-			aside={revert && <RevertMark name={t("locales.timeZone")} onRevert={revert} />}
-		>
+		<Labeled label={t("locales.timeZone")} htmlFor={id} changed={changed}>
 			<Combobox
 				items={zones}
 				autoHighlight
@@ -100,6 +105,7 @@ function TimeZonePick({
 			>
 				<ComboboxInput
 					id={id}
+					mono
 					aria-label={t("locales.timeZone")}
 					placeholder="Asia/Seoul"
 					showClear={value !== undefined}
@@ -125,427 +131,299 @@ function TimeZonePick({
 	);
 }
 
-/** Common language codes offered while typing a code. Any other valid code can still be typed. */
-const KNOWN_CODES = [
-	"ar",
-	"bn",
-	"cs",
-	"da",
-	"de",
-	"el",
-	"en",
-	"es",
-	"fa",
-	"fi",
-	"fr",
-	"he",
-	"hi",
-	"hu",
-	"id",
-	"it",
-	"ja",
-	"ko",
-	"ms",
-	"nl",
-	"no",
-	"pl",
-	"pt",
-	"pt-BR",
-	"ro",
-	"ru",
-	"sv",
-	"th",
-	"tr",
-	"uk",
-	"vi",
-	"zh",
-	"zh-CN",
-	"zh-TW",
-] as const;
-
-/** The autonym of a language in its own language (for example the localized name for `ko`), or undefined when the runtime does not know the code. */
-function nativeNameOf(code: string): string | undefined {
-	try {
-		const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
-		return name && name !== code ? name : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-/** The dialog that adds a language or edits one. The code of a saved language is a stored value, so editing shows it but does not change it. */
-function LocaleDialog({
-	locale,
-	taken,
-	onSave,
+/** The small window that asks once for a language the list does not know: the code is the one typed, the two names are typed here. */
+function CustomLocaleDialog({
+	code,
+	onAdd,
 	onClose,
 }: {
-	/** The language being edited; none: a new one. */
-	locale?: Locale;
-	taken: readonly string[];
-	onSave: (locale: Locale) => void;
+	code: string;
+	onAdd: (locale: Locale) => void;
 	onClose: () => void;
 }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const tc = useTranslator(commonMessages);
-	const codeId = useId();
-	const [open, setOpen] = useState(false);
-	const [search, setSearch] = useState("");
-	const [code, setCode] = useState(locale?.code ?? "");
-	const [name, setName] = useState(locale?.name ?? "");
-	const [label, setLabel] = useState(locale?.label ?? "");
-	const availableCodes = useMemo(
-		() => (KNOWN_CODES as readonly string[]).filter((known) => !taken.includes(known)),
-		[taken],
-	);
-	const codeOk = locale !== undefined || (LOCALE_CODE.test(code) && !taken.includes(code));
-	const ok = codeOk && name.trim() !== "";
-
-	const handleCodeSelect = (next: string) => {
-		setCode(next);
-		if (!locale && name.trim() === "") {
-			const native = nativeNameOf(next);
-			if (native) setName(native);
-		}
-	};
-
-	const trimmedSearch = search.trim();
-	const isCustom =
-		trimmedSearch.length > 0 &&
-		!availableCodes.includes(trimmedSearch) &&
-		LOCALE_CODE.test(trimmedSearch) &&
-		!taken.includes(trimmedSearch);
-
+	const nameId = useId();
+	const labelId = useId();
+	const [name, setName] = useState("");
+	const [label, setLabel] = useState("");
+	const ok = name.trim() !== "" && label.trim() !== "";
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent data-testid="locale-dialog">
 				<DialogHeader>
-					<DialogTitle>{locale ? t("locales.editTitle", { name: locale.name }) : t("locales.addTitle")}</DialogTitle>
-					{!locale && <DialogDescription>{t("locales.contentNote")}</DialogDescription>}
+					<DialogTitle of={code}>{t("locales.newTitle")}</DialogTitle>
 				</DialogHeader>
 				<Stack
 					as="form"
 					gap={24}
 					onSubmit={(event) => {
 						event.preventDefault();
-						if (!ok) return;
-						onSave({ code, name: name.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
+						if (ok)
+							onAdd({ code, name: name.trim(), ...(label.trim() === name.trim() ? {} : { label: label.trim() }) });
 					}}
 				>
-					<Labeled label={t("locales.code")} htmlFor={codeId}>
-						{locale !== undefined ? (
-							<Input id={codeId} value={code} disabled aria-label={t("locales.code")} />
-						) : (
-							<Box position="relative">
-								<Input
-									id={codeId}
-									srOnly
-									aria-label={t("locales.code")}
-									tabIndex={-1}
-									value={code}
-									onChange={(event) => handleCodeSelect(event.target.value)}
-								/>
-								<Popover
-									open={open}
-									onOpenChange={(nextOpen) => {
-										setOpen(nextOpen);
-										if (!nextOpen) setSearch("");
-									}}
-								>
-									<PopoverTrigger
-										render={
-											<Button
-												type="button"
-												variant={code !== "" && !codeOk ? "outline-danger" : "secondary"}
-												width="full"
-												role="combobox"
-												aria-expanded={open}
-												autoFocus
-											/>
-										}
-									>
-										<Inline as="span" grow justify="between" gap={8} minWidth={0}>
-											{code ? (
-												<Inline as="span" gap={8} minWidth={0}>
-													<Text variant="caption" mono weight="semibold">
-														{code}
-													</Text>
-													{nativeNameOf(code) && (
-														<Text variant="caption" tone="muted">
-															{nativeNameOf(code)}
-														</Text>
-													)}
-												</Inline>
-											) : (
-												<Text tone="muted">{t("locales.codePlaceholder")}</Text>
-											)}
-											<ChevronSort aria-hidden />
-										</Inline>
-									</PopoverTrigger>
-									<PopoverContent align="start" width="anchor" padding="menu">
-										<Command>
-											<CommandInput
-												value={search}
-												onValueChange={setSearch}
-												placeholder={t("locales.codeSearch")}
-												aria-label={t("locales.codeSearch")}
-												autoFocus
-											/>
-											<CommandList>
-												<CommandEmpty>{t("locales.codeNone")}</CommandEmpty>
-												<CommandGroup>
-													{availableCodes.map((known) => {
-														const native = nativeNameOf(known);
-														return (
-															<CommandItem
-																key={known}
-																value={`${known} ${native ?? ""}`}
-																checked={code === known}
-																onSelect={() => {
-																	handleCodeSelect(known);
-																	setOpen(false);
-																}}
-															>
-																<Text variant="caption" mono weight="semibold">
-																	{known}
-																</Text>
-																{native && (
-																	<Text variant="caption" tone="muted">
-																		{native}
-																	</Text>
-																)}
-															</CommandItem>
-														);
-													})}
-												</CommandGroup>
-												{isCustom && (
-													<CommandGroup>
-														<CommandItem
-															value={trimmedSearch}
-															onSelect={() => {
-																handleCodeSelect(trimmedSearch);
-																setOpen(false);
-															}}
-														>
-															<Add size={16} aria-hidden />
-															<Text>{t("locales.codeCustom", { code: trimmedSearch })}</Text>
-														</CommandItem>
-													</CommandGroup>
-												)}
-											</CommandList>
-										</Command>
-									</PopoverContent>
-								</Popover>
-							</Box>
-						)}
-					</Labeled>
-					<Labeled label={t("locales.label")}>
-						<Input
-							autoFocus={locale !== undefined}
-							value={label}
-							aria-label={t("locales.label")}
-							placeholder={name || "English"}
-							onChange={(event) => setLabel(event.target.value)}
-						/>
-					</Labeled>
-					<Labeled label={t("locales.name")}>
-						<Input
-							value={name}
-							aria-label={t("locales.name")}
-							placeholder="English"
-							onChange={(event) => setName(event.target.value)}
-						/>
-					</Labeled>
-					<DialogFormFooter
-						onCancel={onClose}
-						cancelLabel={tc("cancel")}
-						submitLabel={locale ? tc("save") : t("locales.add")}
-						disabled={!ok}
-					/>
+					<Stack gap={16}>
+						<ReadValue label={t("locales.code")}>{code}</ReadValue>
+						<Labeled label={t("locales.name")} htmlFor={nameId}>
+							<Input id={nameId} value={name} onChange={(event) => setName(event.target.value)} />
+						</Labeled>
+						<Labeled label={t("locales.label")} htmlFor={labelId}>
+							<Input id={labelId} value={label} onChange={(event) => setLabel(event.target.value)} />
+						</Labeled>
+					</Stack>
+					<DialogFormFooter onCancel={onClose} cancelLabel={tc("cancel")} submitLabel={tc("add")} disabled={!ok} />
 				</Stack>
 			</DialogContent>
 		</Dialog>
 	);
 }
 
-/** One language of the list: a grip to drag it, and its buttons on hover (the same way a field row is reordered). */
-function LocaleRow({
+/** "+ 언어 추가": a searchable list of language codes. Picking one adds its row at once (the names come from the code); the last row, "직접 입력", asks for the names. */
+function AddLocale({
+	taken,
+	adminLanguage,
+	onPick,
+	onCustom,
+}: {
+	taken: readonly string[];
+	adminLanguage: string;
+	onPick: (code: string) => void;
+	onCustom: (code: string) => void;
+}) {
+	const t = useTranslator(schemaLocalesMessages);
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const codes = useMemo(() => findLocaleCodes(search, taken, adminLanguage), [search, taken, adminLanguage]);
+	const custom = customLocaleCode(search, taken, codes);
+	const close = () => {
+		setOpen(false);
+		setSearch("");
+	};
+	return (
+		<Popover
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (!next) setSearch("");
+			}}
+		>
+			<PopoverTrigger render={<TextButton />}>{t("locales.add")}</PopoverTrigger>
+			<PopoverContent align="start" padding="menu">
+				<Command shouldFilter={false} label={t("locales.search")}>
+					<CommandInput value={search} onValueChange={setSearch} aria-label={t("locales.search")} autoFocus />
+					<CommandList label={t("locales.codes")}>
+						{codes.length === 0 && !custom && <CommandEmpty>{t("locales.none")}</CommandEmpty>}
+						<CommandGroup>
+							{codes.map((code) => (
+								<CommandItem
+									key={code}
+									value={code}
+									onSelect={() => {
+										onPick(code);
+										close();
+									}}
+								>
+									<Text variant="caption" mono weight="semibold">
+										{code}
+									</Text>
+									<Text>{localeName(code, code)}</Text>
+									<MenuShortcut>{localeName(code, adminLanguage)}</MenuShortcut>
+								</CommandItem>
+							))}
+						</CommandGroup>
+						{custom && (
+							<>
+								{codes.length > 0 && <CommandSeparator />}
+								<CommandGroup>
+									<CommandItem
+										value="custom"
+										onSelect={() => {
+											onCustom(custom);
+											close();
+										}}
+									>
+										<Text>{t("locales.custom")}</Text>
+										<MenuShortcut>{custom}</MenuShortcut>
+									</CommandItem>
+								</CommandGroup>
+							</>
+						)}
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+/** One language that is not the source: a handle to drag it by and a × that takes it out. */
+function OtherRow({
 	locale,
-	isDefault,
-	dragDisabled,
-	divided,
-	buttons,
+	dot,
+	editable,
+	onRemove,
 }: {
 	locale: Locale;
-	isDefault: boolean;
-	dragDisabled: boolean;
-	/** A hairline above the row, when it follows another. */
-	divided: boolean;
-	buttons: RowButton[];
+	dot?: string;
+	editable: boolean;
+	onRemove: () => void;
 }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: locale.code,
-		disabled: dragDisabled,
+		disabled: !editable,
 	});
-	const displayName = locale.label ?? locale.name;
-	const hasDistinctNative = Boolean(locale.label && locale.label !== locale.name);
 	return (
-		<li
+		<LanguageRow
 			ref={setNodeRef}
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"group/row relative flex min-h-14 items-center gap-monti-12 bg-monti-page py-monti-8 pr-monti-16 pl-monti-32",
-				divided && "border-t",
-				isDragging && "z-10 opacity-80 shadow-monti-floating",
-			)}
 			data-testid={`locale-${locale.code}`}
+			name={locale.name}
+			code={locale.code}
+			label={locale.label}
+			dot={dot}
+			handled={editable}
+			drag={{ transform: CSS.Translate.toString(transform) ?? undefined, transition, active: isDragging }}
+			handle={
+				editable ? (
+					<LanguageRowHandle
+						ref={setActivatorNodeRef}
+						{...attributes}
+						{...listeners}
+						aria-label={t("locales.drag", { name: locale.name })}
+					/>
+				) : undefined
+			}
 		>
-			<button
-				type="button"
-				ref={setActivatorNodeRef}
-				{...attributes}
-				{...listeners}
-				aria-label={t("locales.drag", { name: displayName })}
-				disabled={dragDisabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
-			>
-				<Draggable aria-hidden className="size-4" />
-			</button>
-			<Box as="span" radius="sm" background="muted" paddingX={8}>
-				<Text variant="caption" mono>
-					{locale.code}
-				</Text>
-			</Box>
-			<Stack gap={0} grow minWidth={0}>
-				<Inline gap={8}>
-					<Text weight="medium" truncate>
-						{displayName}
-					</Text>
-					{isDefault && (
-						<Box as="span" radius="sm" background="selected" paddingX={8}>
-							<Text variant="caption">{t("locales.defaultBadge")}</Text>
-						</Box>
-					)}
-				</Inline>
-				{hasDistinctNative && (
-					<Text as="div" variant="caption" tone="muted" truncate>
-						{t("locales.nativeName", { name: locale.name })}
-					</Text>
-				)}
-			</Stack>
-			<RowButtons buttons={buttons} />
-		</li>
+			{editable && (
+				<TextButton variant="quiet" aria-label={t("locales.remove", { name: locale.name })} onClick={onRemove}>
+					×
+				</TextButton>
+			)}
+		</LanguageRow>
 	);
 }
 
 /** Where the language keys are written when they are new. */
 const FILE_ORDER = ["collections", "migrations", "locales", "defaultLocale", "timeZone"];
 
-/** The content languages (code, name, admin name) as one list, the default one, and the time zone. A saved language's code is a stored value, so it is not editable; add a new language instead. */
+/**
+ * The content languages and the time zone. Names are never typed: a language row is its code with the names Intl gives it, so there is no input and no edit
+ * row. The source language (`defaultLocale`) is pinned on top with "원문" and "바꾸기"; the others have a drag handle and a ×. "+ 언어 추가" picks a code from a
+ * list and adds the row at once.
+ */
 export function LocalesEditor({ file, update }: { file: Obj; update: (change: (file: Obj) => Obj) => void }) {
 	const t = useTranslator(schemaLocalesMessages);
-	const ts = useTranslator(schemaMessages);
+	const tChanges = useTranslator(schemaChangesMessages);
+	const site = useSite();
 	const { disabled, saved } = useSchemaEdit();
 	const locales = localesOf(file);
-	const revertKey = (key: "locales" | "defaultLocale" | "timeZone") =>
+	const savedCodes = localesOf(saved).map((locale) => locale.code);
+	const editable = !disabled;
+	const sourceCode = typeof file.defaultLocale === "string" ? file.defaultLocale : (locales[0]?.code ?? "");
+	const source = locales.find((locale) => locale.code === sourceCode) ?? locales[0];
+	const others = locales.filter((locale) => locale.code !== source?.code);
+	const sourceMoved = !sameJson(saved.defaultLocale, file.defaultLocale);
+	const revertKey = (key: "timeZone") =>
 		sameJson(saved[key], file[key])
 			? undefined
-			: () =>
-					update((current) =>
-						key === "locales" ? { ...current, locales: saved.locales } : setProp(current, key, saved[key], FILE_ORDER),
-					);
-	const [dialog, setDialog] = useState<{ code: string | null } | null>(null);
+			: () => update((current) => setProp(current, key, saved[key], FILE_ORDER));
+	const [custom, setCustom] = useState<string | null>(null);
 	const change = (next: Locale[]) => update((current) => ({ ...current, locales: next }));
-	const defaultLocale = typeof file.defaultLocale === "string" ? file.defaultLocale : "";
-	const taken = locales.map((locale) => locale.code);
-	const editing = dialog?.code ? locales.find((locale) => locale.code === dialog.code) : undefined;
-	const buttons = (locale: Locale, index: number): RowButton[] => {
-		const isDefault = locale.code === defaultLocale;
-		return [
-			{
-				label: t("locales.editNamed", { name: locale.label ?? locale.name }),
-				icon: Edit,
-				disabled,
-				onClick: () => setDialog({ code: locale.code }),
-			},
-			{
-				label: ts("row.remove", { name: locale.code }),
-				icon: SubtractAlt,
-				destructive: true,
-				disabled: disabled || isDefault,
-				title: isDefault ? t("locales.removeBlockedDefault") : undefined,
-				onClick: () => change(locales.filter((_, at) => at !== index)),
-			},
-		];
+	/** The dot of a row: a language that is new, or one of the two whose role as the source changed. */
+	const dotOf = (locale: Locale): string | undefined => {
+		if (!savedCodes.includes(locale.code)) return tChanges("tag.added");
+		if (sourceMoved && (locale.code === sourceCode || locale.code === saved.defaultLocale))
+			return t("locales.sourceChanged");
+		return undefined;
 	};
-	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
+	const add = (locale: Locale) => change([...locales, locale]);
+	const makeSource = (code: string) =>
+		update((current) => ({ ...current, defaultLocale: code, locales: sourceFirst(localesOf(current), code) }));
+	const onDrop = (from: string, to: string) => {
+		const codes = others.map((locale) => locale.code);
+		const moved = moveWithin(others, codes.indexOf(from), codes.indexOf(to));
+		change(source ? [source, ...moved] : moved);
+	};
 	return (
-		<Stack gap={48}>
+		<Stack gap={0}>
 			<Section title={t("locales.contentTitle")} data-testid="locales-content">
-				<Box overflow="hidden">
-					<Inline justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
-						<Inline as="span" gap={8}>
-							<Text tone="muted">{t("locales.count", { count: locales.length })}</Text>
-							{revertKey("locales") && (
-								<RevertMark name={t("locales.contentTitle")} onRevert={() => revertKey("locales")?.()} />
-							)}
-						</Inline>
-						<Button
-							type="button"
-							variant="secondary"
-							size="sm"
-							disabled={disabled}
-							onClick={() => setDialog({ code: null })}
-						>
-							<Add aria-hidden />
-							{t("locales.add")}
-						</Button>
-					</Inline>
-					<ul>
-						<SortableList items={taken} onDragEnd={onDrop}>
-							{locales.map((locale, index) => (
-								<LocaleRow
+				<Stack gap={0}>
+					<Box as="ul">
+						{source && (
+							<LanguageRow
+								data-testid={`locale-${source.code}`}
+								name={source.name}
+								code={source.code}
+								label={source.label}
+								dot={dotOf(source)}
+								handled={editable}
+							>
+								<LanguageSource flag={t("locales.source")}>
+									{editable && locales.length > 1 && (
+										<DropdownMenu>
+											<DropdownMenuTrigger render={<TextButton variant="underline" quiet size="note" />}>
+												{t("locales.sourceChange")}
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end">
+												<DropdownMenuRadioGroup
+													aria-label={t("locales.sourceMenu")}
+													value={source.code}
+													onValueChange={(code) => makeSource(String(code))}
+												>
+													{locales.map((locale) => (
+														<DropdownMenuRadioItem key={locale.code} value={locale.code}>
+															{locale.name}
+														</DropdownMenuRadioItem>
+													))}
+												</DropdownMenuRadioGroup>
+											</DropdownMenuContent>
+										</DropdownMenu>
+									)}
+								</LanguageSource>
+							</LanguageRow>
+						)}
+						<SortableList items={others.map((locale) => locale.code)} onDragEnd={onDrop}>
+							{others.map((locale) => (
+								<OtherRow
 									key={locale.code}
 									locale={locale}
-									isDefault={locale.code === defaultLocale}
-									dragDisabled={disabled}
-									divided={index > 0}
-									buttons={buttons(locale, index)}
+									dot={dotOf(locale)}
+									editable={editable}
+									onRemove={() => change(locales.filter((item) => item.code !== locale.code))}
 								/>
 							))}
 						</SortableList>
-					</ul>
-				</Box>
+					</Box>
+					{editable && (
+						<Box paddingTop={12}>
+							<AddLocale
+								taken={locales.map((locale) => locale.code)}
+								adminLanguage={site.ADMIN_LANGUAGE}
+								onPick={(code) => {
+									const locale = localeFromCode(code, site.ADMIN_LANGUAGE);
+									if (locale) add(locale);
+								}}
+								onCustom={setCustom}
+							/>
+						</Box>
+					)}
+				</Stack>
 			</Section>
-			<Section title={t("locales.defaultTitle")} data-testid="locales-default">
-				<Pick
-					label={t("locales.default")}
-					revert={revertKey("defaultLocale")}
-					value={defaultLocale}
-					items={locales.map((locale) => ({
-						value: locale.code,
-						label: `${locale.label ?? locale.name} (${locale.code})`,
-					}))}
-					onChange={(value) => update((current) => ({ ...current, defaultLocale: value }))}
-				/>
+			<Section last title={t("locales.timeZoneTitle")}>
 				<TimeZonePick
 					revert={revertKey("timeZone")}
 					value={typeof file.timeZone === "string" ? file.timeZone : undefined}
 					onChange={(value) => update((current) => setProp(current, "timeZone", value, FILE_ORDER))}
 				/>
 			</Section>
-			{dialog && (
-				<LocaleDialog
-					key={dialog.code ?? "new"}
-					locale={editing}
-					taken={taken}
-					onClose={() => setDialog(null)}
-					onSave={(locale) => {
-						change(
-							editing ? locales.map((item) => (item.code === editing.code ? locale : item)) : [...locales, locale],
-						);
-						setDialog(null);
+			{custom && (
+				<CustomLocaleDialog
+					key={custom}
+					code={custom}
+					onClose={() => setCustom(null)}
+					onAdd={(locale) => {
+						add(locale);
+						setCustom(null);
 					}}
 				/>
 			)}

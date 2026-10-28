@@ -93,6 +93,13 @@ export interface DroppedCollection {
 	readonly addresses: number;
 }
 
+/** What a `trashLocale` moved to the trash. */
+export interface TrashedLocale {
+	readonly locale: string;
+	/** Translations that moved to the trash (the ones already in the trash are not counted). */
+	readonly entries: number;
+}
+
 export interface ApplySchemaChangeParams {
 	/** Ids of every transform of the schema, in order. The store runs the ones that are not recorded yet, and records them. */
 	readonly transformIds: readonly string[];
@@ -105,6 +112,12 @@ export interface ApplySchemaChangeParams {
 	 * other collections: their reference rows go and the links stay in the text, broken.
 	 */
 	readonly dropCollections?: readonly { readonly id: string; readonly collection: string }[];
+	/**
+	 * The `trashLocale` transforms, by id (a subset of `transformIds`). The ones that are not recorded yet move every live translation in their language, of every
+	 * collection, to the trash in the same transaction: the trash the entry lifecycle uses (status `trashed`, the trash time set to now, the version up once, a
+	 * `trashed` event each). Source entries are never touched.
+	 */
+	readonly trashLocales?: readonly { readonly id: string; readonly locale: string }[];
 	/** The rewrite that takes the entries of a dropped collection out of the relation fields of the others (see `UnlinkParams.rewrite`). */
 	readonly unlinkRewrite: UnlinkParams["rewrite"];
 	/** The schema (as JSON) to record. */
@@ -127,6 +140,8 @@ export interface AppliedSchemaChange {
 	readonly changed: Readonly<Record<string, { readonly entries: number; readonly bodies: number }>>;
 	/** What the dropped collections held, as deleted. */
 	readonly dropped: readonly DroppedCollection[];
+	/** What the `trashLocale` transforms that ran moved to the trash. */
+	readonly trashed: readonly TrashedLocale[];
 	/** Stored bodies rewritten, and the entries they belong to. */
 	readonly bodies: number;
 	readonly entries: number;

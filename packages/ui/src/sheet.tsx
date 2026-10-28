@@ -2,7 +2,7 @@
 
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { Close } from "@carbon/icons-react";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "./cn";
 import { useModalFocus } from "./dialog";
 import { IconButton } from "./icon-button";
@@ -100,19 +100,92 @@ function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
+/**
+ * A sheet body split in two: `list` on the left (150px, a rule down its right edge), the work on the right. The kinds of a new field are the list and the
+ * settings of the picked kind are the work. Put a `SheetBody` in the right side so it scrolls under its own tabs.
+ */
+function SheetSplit({
+	list,
+	className,
+	children,
+	...props
+}: Omit<React.ComponentProps<"div">, "children"> & { list: React.ReactNode; children: React.ReactNode }) {
+	return (
+		<div data-slot="sheet-split" className={cn("flex min-h-0 grow", className)} {...props}>
+			<div
+				data-slot="sheet-split-list"
+				className="flex shrink-0 basis-[150px] flex-col border-monti-muted border-r py-monti-16 pr-monti-16 pl-monti-24"
+			>
+				{list}
+			</div>
+			<div className="flex min-h-0 min-w-0 grow flex-col">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * A titled part of a sheet's body, like View and Structure in the editor of a field: the title in 14px semibold and the fields under it. A later section starts
+ * 8px lower. The title may end in a {@link LockMark} when the whole section cannot be changed.
+ */
+function SheetSection({
+	title,
+	className,
+	children,
+	...props
+}: Omit<React.ComponentProps<"section">, "title" | "aria-labelledby"> & { title: React.ReactNode }) {
+	const titleId = React.useId();
+	return (
+		<section
+			data-slot="sheet-section"
+			aria-labelledby={titleId}
+			className={cn("not-first:mt-monti-8 flex flex-col gap-[18px]", className)}
+			{...props}
+		>
+			<h2 id={titleId} className="m-0 font-semibold text-monti-body">
+				{title}
+			</h2>
+			{children}
+		</section>
+	);
+}
+
 /** Cancel (a text button) and the one pill, right-aligned, at the bottom of the sheet. */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return <div data-slot="sheet-footer" className={cn(PANEL_FOOT, "mt-auto", className)} {...props} />;
 }
 
-/** The title; `of` is what the sheet is about when the title alone does not say (a file name), after it, in mono and quiet, on the same line. */
-function SheetTitle({ className, children, of, ...props }: SheetPrimitive.Title.Props & { of?: React.ReactNode }) {
+/**
+ * The title; `of` is what the sheet is about when the title alone does not say (a file name), after it, in mono and quiet, on the same line. With
+ * `ofMono={false}` it is plain text, for a name and a count ("Review · Posts · 3 changes").
+ */
+function SheetTitle({
+	className,
+	children,
+	of,
+	ofMono = true,
+	...props
+}: SheetPrimitive.Title.Props & { of?: React.ReactNode; ofMono?: boolean }) {
 	return (
 		<SheetPrimitive.Title data-slot="sheet-title" className={cn(PANEL_TITLE, className)} {...props}>
 			{children}
-			{of && <span className="ml-monti-4 font-mono font-normal text-monti-meta text-monti-subtle">{of}</span>}
+			{of && (
+				<span className={cn("ml-monti-4 font-normal text-monti-meta text-monti-subtle", ofMono && "font-mono")}>
+					{of}
+				</span>
+			)}
 		</SheetPrimitive.Title>
 	);
 }
 
-export { Sheet, SheetBody, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger };
+export {
+	Sheet,
+	SheetBody,
+	SheetClose,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetSection,
+	SheetSplit,
+	SheetTitle,
+	SheetTrigger,
+};

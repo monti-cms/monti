@@ -100,13 +100,14 @@ function narrowed(before: AllowedShape, after: AllowedShape): boolean {
 	return false;
 }
 
-const byField = <Op extends SchemaMigration["op"]>(
+const byField = <Op extends Exclude<SchemaMigration["op"], "trashLocale">>(
 	transforms: readonly SchemaMigration[],
 	op: Op,
 	collection: string,
 ): Extract<SchemaMigration, { op: Op }>[] =>
 	transforms.filter(
-		(item): item is Extract<SchemaMigration, { op: Op }> => item.op === op && item.collection === collection,
+		(item): item is Extract<SchemaMigration, { op: Op }> =>
+			item.op === op && "collection" in item && item.collection === collection,
 	);
 
 /**
@@ -126,7 +127,11 @@ export function diffSchema(oldSchema: SchemaLike, newSchema: SchemaLike, options
 	const oldCodes = oldSchema.locales.map((locale) => locale.code);
 	const newCodes = newSchema.locales.map((locale) => locale.code);
 	for (const locale of newCodes) if (!oldCodes.includes(locale)) changes.push({ kind: "locale_added", locale });
-	for (const locale of oldCodes) if (!newCodes.includes(locale)) changes.push({ kind: "locale_removed", locale });
+	for (const locale of oldCodes) {
+		if (newCodes.includes(locale)) continue;
+		const trash = transforms.find((item) => item.op === "trashLocale" && item.locale === locale);
+		changes.push({ kind: "locale_removed", locale, ...(trash && { handledBy: trash.id }) });
+	}
 	if (oldSchema.defaultLocale !== undefined && newSchema.defaultLocale !== undefined) {
 		if (oldSchema.defaultLocale !== newSchema.defaultLocale) {
 			changes.push({ kind: "default_locale_changed", from: oldSchema.defaultLocale, to: newSchema.defaultLocale });

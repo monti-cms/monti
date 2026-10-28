@@ -13,7 +13,7 @@ An on state is shown by shape as well as color: a ✓, a filled circle, a knob o
 
 ### In code
 
-`Checkbox` (14px; a ✓ when on; `indeterminate` for the bar; `proposal` marks a choice the assistant made and nobody has touched, with the same mark in blue; an invalid checkbox keeps a red ring). `RadioGroup` with `RadioItem` rows (a filled ring when picked, an optional mono note at the end of the row, such as "148 posts"). `Option` lays out a row of a control, its text and a note; pressing the text presses the control, and `spread` pushes the control to the far end.
+`Checkbox` (14px; a ✓ when on; `indeterminate` for the bar; `proposal` marks a choice the assistant made and nobody has touched, with the same mark in blue; an invalid checkbox keeps a red ring). `RadioGroup` with `RadioItem` rows (a filled ring when picked, an optional mono note at the end of the row, such as "148 posts", a plain `description` right after the label that says what the choice is ("문서 · 게시글, 노트처럼 본문이 있어요" in the kind of a new collection), and an optional `control` at the far end: the select of "move to another field"). `Option` lays out a row of a control, its text and a note; pressing the text presses the control, and `spread` pushes the control to the far end.
 
 ## Switch
 
@@ -30,3 +30,11 @@ A short choice of one among a few. Example: the language setting "모두 같음"
 ### In code
 
 `Segmented`: joined cells in a thin rounded frame; the picked cell is on the selected background at 600. `size="sm"` is for panels and filter rows; `inline` makes it as wide as its cells. A `tool` ground variant is for tool surfaces (the sidebar), where the selected ground is the hover and the pressed cell takes the current ground. The DS README names this part `ToggleGroup`; that is only the Base UI primitive underneath.
+
+## Choices of a select (`OptionTable`)
+
+The choices of a select field, in the sheet that adds or edits a field: a small table with a head (값 in mono, 라벨), one row per choice and "+ 선택지" under it. The value is what is stored (mono) and the label is what the writer sees; both read as text until pressed. A row has a grip to reorder it by and a × to take it out. The default is picked in a quiet menu at the end of the line ("기본값 · 메모 ▾").
+
+### In code
+
+`OptionTable` (`valueLabel`, `labelLabel`) with `OptionRow` rows (`value`, `label`, `handle` with an `OptionRowHandle`, `action`, `drag` for the sortable's transform).

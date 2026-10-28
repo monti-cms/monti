@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
 import { FormField, FormFieldGroup, FormFieldLabel } from "./field";
 import { Input } from "./input";
+import { LockMark } from "./lock-mark";
+import { PickList, PickListItem } from "./pick-list";
 import {
 	Sheet,
 	SheetBody,
@@ -9,9 +11,12 @@ import {
 	SheetContent,
 	SheetFooter,
 	SheetHeader,
+	SheetSection,
+	SheetSplit,
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
+import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { TextButton } from "./text-button";
 
 function Fields({ count = 2 }: { count?: number }) {
@@ -122,6 +127,97 @@ export const Busy: Story = {
 				</SheetBody>
 				<SheetFooter>
 					<Button loading>가져오는 중</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
+};
+
+/** A body split in two: a list of kinds on the left and the settings of the picked one on the right, under their own tabs (add a field). */
+export const Split: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of="· 노트">필드 추가</SheetTitle>
+				</SheetHeader>
+				<SheetSplit
+					list={
+						<PickList aria-label="종류">
+							<PickListItem selected>글자</PickListItem>
+							<PickListItem>고르기</PickListItem>
+							<PickListItem>미디어</PickListItem>
+							<PickListItem mark="→">관계</PickListItem>
+						</PickList>
+					}
+				>
+					<Tabs defaultValue="basic" render={<div className="flex min-h-0 grow flex-col" />}>
+						<TabsList variant="bar" inset="panel">
+							<TabsTrigger value="basic">기본</TabsTrigger>
+							<TabsTrigger value="advanced">고급</TabsTrigger>
+						</TabsList>
+						<SheetBody>
+							<Fields count={3} />
+						</SheetBody>
+					</Tabs>
+				</SheetSplit>
+				<SheetFooter>
+					<SheetClose render={<TextButton />}>취소</SheetClose>
+					<Button>필드 추가</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
+};
+
+/** The editor of a field in sheet: titled sections one under another, a lock after the title of a section that cannot be changed. */
+export const Sections: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of="· 노트">요약</SheetTitle>
+				</SheetHeader>
+				<SheetBody>
+					<SheetSection title="보기">
+						<Fields count={2} />
+					</SheetSection>
+					<SheetSection
+						title={
+							<>
+								구조
+								<LockMark label="바꿀 수 없음" />
+							</>
+						}
+					>
+						<Fields count={2} />
+					</SheetSection>
+				</SheetBody>
+				<SheetFooter>
+					<SheetClose render={<TextButton />}>취소</SheetClose>
+					<Button>저장</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
+};
+
+/** The quiet part of the title is plain text for a name and a count (`ofMono={false}`); it stays mono for a file name. */
+export const TitleOf: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of="· 게시글 · 바뀐 곳 3" ofMono={false}>
+						검토
+					</SheetTitle>
+				</SheetHeader>
+				<SheetBody>
+					<Fields count={2} />
+				</SheetBody>
+				<SheetFooter>
+					<SheetClose render={<TextButton />}>취소</SheetClose>
+					<Button>적용</Button>
 				</SheetFooter>
 			</SheetContent>
 		</Sheet>

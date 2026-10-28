@@ -1,35 +1,19 @@
 "use client";
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
-import { HOST_PATTERN, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, Input, Section, Stack, Text } from "@monti-cms/ui";
-import { useState } from "react";
-import { Labeled } from "../shared/labeled";
-import {
-	FlagSwitch,
-	orUndefined,
-	Pick,
-	RevertMark,
-	RowActions,
-	TextInput,
-	useSchemaEdit,
-	useSettingRevert,
-} from "./controls";
-import { schemaMessages } from "./messages";
-import { localesOf, moveItem, type Obj, sectionOf, setSetting } from "./schema-model";
+import { useTranslator } from "@monti-cms/core/site";
+import { Box, Section, Stack, Text } from "@monti-cms/ui";
+import { FlagSwitch, orUndefined, Pick, TextInput, useSchemaEdit, useSettingRevert } from "./controls";
+import { HostRows } from "./host-rows";
+import { ReadValue } from "./read-value";
+import { type Obj, sameJson, sectionOf, setSetting } from "./schema-model";
 import { schemaSiteMessages } from "./site.messages";
+import { problemAt } from "./site-problems";
 
 const PREFIX_MODES = ["except-default", "always", "never"] as const;
 type PrefixMode = (typeof PREFIX_MODES)[number];
 
-const URL_NOTE = {
-	env: "site.url.env",
-	schema: "site.url.schema",
-	config: "site.url.config",
-	none: "site.url.none",
-} as const;
-
-/** The `site` settings of the file: name, preview address, how the language shows in addresses, and other host names. The site URL is only shown. */
+/** The `site` settings of the file: name and links, the preview, and the public addresses. The site URL is only shown. */
 export function SiteEditor({
 	file,
 	siteUrl,
@@ -40,46 +24,58 @@ export function SiteEditor({
 	update: (change: (file: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaSiteMessages);
-	const ts = useTranslator(schemaMessages);
-	const { disabled } = useSchemaEdit();
+	const { problems, saved } = useSchemaEdit();
 	const site = sectionOf(file, "site");
 	const set = (key: string, value: unknown) => update((current) => setSetting(current, "site", key, value));
 	const revert = useSettingRevert("site", set);
-	const [host, setHost] = useState("");
 	const aliases = Array.isArray(site.aliases) ? (site.aliases as string[]) : [];
-	const locales = localesOf(file);
-	const defaultCode = typeof file.defaultLocale === "string" ? file.defaultLocale : (locales[0]?.code ?? "en");
-	const otherCode = locales.find((locale) => locale.code !== defaultCode)?.code ?? "fr";
 	const mode = PREFIX_MODES.includes(site.localePrefix as PrefixMode)
 		? (site.localePrefix as PrefixMode)
 		: "except-default";
 	const inPath = site.previewLocaleParam === false;
-	const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
-	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
+	const previewPath = typeof site.previewPath === "string" ? site.previewPath : undefined;
+	// The switch and the query are one setting in the file: the switch carries the mark when it flipped, the query when only its text changed.
+	const savedParam = sectionOf(saved, "site").previewLocaleParam;
+	const queryRevert = savedParam === false ? undefined : revert("previewLocaleParam");
+	const problemText = (path: string) => {
+		const problem = problemAt(problems, path);
+		return problem ? t(`problem.${problem.code}` as "problem.home-link") : undefined;
+	};
 	return (
-		<Stack gap={48} data-testid="site-settings">
+		<Stack gap={0} data-testid="site-settings">
 			<Section title={t("site.identityTitle")}>
 				<TextInput
-					label={ts("site.name")}
+					label={t("site.name")}
 					revert={revert("name")}
 					value={site.name as string | undefined}
 					onChange={(value) => set("name", orUndefined(value))}
 				/>
+				<TextInput
+					mono
+					label={t("site.homeLink")}
+					revert={revert("homeLink")}
+					placeholder="/"
+					value={site.homeLink as string | undefined}
+					error={problemText("site.homeLink")}
+					onChange={(value) => set("homeLink", orUndefined(value))}
+				/>
+				<HostRows
+					hosts={aliases}
+					revert={revert("aliases")}
+					onChange={(hosts) => set("aliases", hosts.length === 0 ? undefined : hosts)}
+				/>
 			</Section>
 			<Section title={t("site.previewTitle")}>
 				<TextInput
+					prefix="/"
 					label={t("site.previewPath")}
 					revert={revert("previewPath")}
-					placeholder="/preview"
-					value={site.previewPath as string | undefined}
-					onChange={(value) => set("previewPath", orUndefined(value))}
-				/>
-				<TextInput
-					label={t("site.previewParam")}
-					revert={revert("previewLocaleParam")}
-					placeholder="locale"
-					value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
-					onChange={(value) => set("previewLocaleParam", orUndefined(value))}
+					placeholder="preview"
+					value={previewPath?.replace(/^\/+/, "")}
+					onChange={(value) => {
+						const path = value.replace(/^\/+/, "");
+						set("previewPath", path === "" ? undefined : `/${path}`);
+					}}
 				/>
 				<FlagSwitch
 					label={t("site.previewInPath")}
@@ -87,90 +83,40 @@ export function SiteEditor({
 					checked={inPath}
 					onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
 				/>
+				{!inPath && (
+					<TextInput
+						mono
+						label={t("site.previewParam")}
+						revert={sameJson(savedParam, site.previewLocaleParam) ? undefined : queryRevert}
+						placeholder="locale"
+						value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
+						error={problemText("site.previewLocaleParam")}
+						onChange={(value) => set("previewLocaleParam", orUndefined(value))}
+					/>
+				)}
 			</Section>
-			<Section title={t("site.addressTitle")}>
+			<Section last title={t("site.addressTitle")}>
 				<Pick
 					label={t("site.localePrefix")}
 					revert={revert("localePrefix")}
-					control="wide"
 					value={mode}
-					items={PREFIX_MODES.map((value) => ({
-						value,
-						label: t(`site.prefix.${value}`),
-						description: t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode }),
-					}))}
+					items={PREFIX_MODES.map((value) => ({ value, label: t(`site.prefix.${value}`) }))}
 					onChange={(value) => set("localePrefix", value)}
 				/>
-				<Labeled
-					label={t("site.aliases")}
-					control="normal"
-					aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
-				>
-					<Stack gap={8}>
-						{aliases.length > 0 && (
-							<Stack as="ul" gap={0} border="all" radius="md" overflow="hidden">
-								{aliases.map((alias, index) => (
-									<Inline
-										as="li"
-										key={alias}
-										gap={8}
-										paddingX={12}
-										paddingY={4}
-										border={index === 0 ? undefined : "top"}
-										data-testid={`alias-${alias}`}
-									>
-										<Box grow>
-											<Text as="code" variant="caption">
-												{alias}
-											</Text>
-										</Box>
-										<RowActions
-											index={index}
-											count={aliases.length}
-											name={alias}
-											onMove={(delta) => setAliases(moveItem(aliases, index, delta))}
-											onRemove={() => setAliases(aliases.filter((_, at) => at !== index))}
-										/>
-									</Inline>
-								))}
-							</Stack>
-						)}
-						{!disabled && (
-							<Inline align="end" gap={8}>
-								<Box grow>
-									<Input
-										value={host}
-										aria-label={t("site.alias.new")}
-										placeholder="www.example.com"
-										onChange={(event) => setHost(event.target.value)}
-									/>
-								</Box>
-								<Button
-									type="button"
-									variant="secondary"
-									size="sm"
-									disabled={!addable}
-									onClick={() => {
-										setAliases([...aliases, host.trim()]);
-										setHost("");
-									}}
-								>
-									{t("site.alias.add")}
-								</Button>
-							</Inline>
-						)}
-					</Stack>
-				</Labeled>
 				<Box data-testid="site-url">
-					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
-						{siteUrl.url ? (
-							<Box background="muted" radius="md" paddingX={12} paddingY={8}>
-								<Text as="code" variant="caption">
-									{siteUrl.url}
+					{siteUrl.url ? (
+						<ReadValue label={t("site.url")}>{siteUrl.url}</ReadValue>
+					) : (
+						<ReadValue label={t("site.url")} mono={false}>
+							<Text tone="warning">
+								{t("site.url.none.before")}
+								<Text mono tone="warning">
+									SITE_URL
 								</Text>
-							</Box>
-						) : null}
-					</Labeled>
+								{t("site.url.none.after")}
+							</Text>
+						</ReadValue>
+					)}
 				</Box>
 			</Section>
 		</Stack>

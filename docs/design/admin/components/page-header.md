@@ -14,7 +14,7 @@ The head of a content page. The title (`text-page`) has an ink rule under it. Th
 
 ### In code
 
-`PageHeader`: `title`, `meta` (the address rule, mono, beside the title), `children` (the actions at the right: the secondary pill first and the one primary pill last) and `trail` (the way back above the title, such as a folder path). The title is 26px bold. `PageColumn` is the column every page sits in: centered, 40px above the title and below the page, 48px at the sides (16px on a narrow screen). It takes the height the page has; the header and the toolbar keep their place, and `PageBody` is what scrolls. `Section` is one section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under; the fields wrap under the title on a narrow screen. `id` is the anchor a link can land on.
+`PageHeader`: `title`, `meta` (the address rule, mono, beside the title), `children` (the actions at the right: the secondary pill first and the one primary pill last) and `trail` (the way back above the title, such as a folder path). The title is 26px bold. `PageColumn` is the column every page sits in: centered, 40px above the title and below the page, 48px at the sides (16px on a narrow screen). It takes the height the page has; the header and the toolbar keep their place, and `PageBody` is what scrolls. `Section` is one section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under; the fields wrap under the title on a narrow screen (`stacked` always puts them under it, for a section in a column that is already narrow: a collection's basics). `id` is the anchor a link can land on.
 
 ## Toolbar
 

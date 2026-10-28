@@ -4,12 +4,15 @@ import { ArrowDown, ArrowUp, Close, Undo } from "@carbon/icons-react";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
+	Affix,
 	Box,
 	ChangeDot,
 	FormFieldError,
+	type FormFieldLabel,
 	IconButton,
 	Inline,
 	Input,
+	Option,
 	Segmented,
 	Select,
 	SelectContent,
@@ -19,11 +22,9 @@ import {
 	Stack,
 	Switch,
 	Text,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
+	Textarea,
 } from "@monti-cms/ui";
-import { createContext, type ReactNode, useContext, useId, useState } from "react";
+import { type ComponentProps, createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
@@ -89,6 +90,27 @@ export function ChangedMark() {
 	return <ChangeDot label={t("changed")} />;
 }
 
+/**
+ * What the label row of a field says while the field differs from the saved file: the change dot and, with `onUndo`, the "되돌리기" button that puts the saved
+ * value back. `undefined` while the field is unchanged. A switch has no undo button (turning it back undoes it), so it asks for the dot only.
+ */
+export function useFieldChange(
+	name: string,
+	revert: (() => void) | undefined,
+	undo = true,
+): ComponentProps<typeof FormFieldLabel>["changed"] {
+	const t = useTranslator(schemaMessages);
+	const { disabled } = useSchemaEdit();
+	if (!revert) return undefined;
+	return {
+		label: t("changed"),
+		undoLabel: t("bar.undo"),
+		undoName: t("revert.named", { name }),
+		onUndo: undo ? revert : undefined,
+		undoDisabled: disabled,
+	};
+}
+
 /** A help text under a label or a control: a muted line that stays readable in width. */
 export function Help({ children }: { children: ReactNode }) {
 	return (
@@ -138,11 +160,17 @@ export function TextInput({
 	description,
 	hint,
 	type = "text",
-	optional,
+	required,
+	mono,
+	prefix,
+	error,
+	aside,
 	disabled: customDisabled,
 	revert,
 }: {
 	label: string;
+	/** Next to the label on the same line (the lock of a value that cannot be changed later). */
+	aside?: ReactNode;
 	/** Puts the saved value back; given only while the field differs from the saved file. */
 	revert?: () => void;
 	value: string | number | undefined;
@@ -151,37 +179,80 @@ export function TextInput({
 	description?: ReactNode;
 	hint?: ReactNode;
 	type?: "text" | "number";
-	/** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
-	optional?: boolean;
+	/** The field must be filled in: a red star ends the label. Only in a form that also has optional fields. */
+	required?: boolean;
+	/** The value is read by a machine (an address, an identifier): fixed-width letters. */
+	mono?: boolean;
+	/** Fixed text before the typed part, like the `/` of a path: the field is an `Affix`. */
+	prefix?: string;
+	/** What is wrong with the value: one line under the field, and the field is marked invalid. */
+	error?: ReactNode;
 	disabled?: boolean;
 }) {
-	const t = useTranslator(schemaMessages);
 	const id = useId();
+	const errorId = useId();
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
+	const changed = useFieldChange(label, revert);
+	const control = {
+		id,
+		type,
+		min: type === "number" ? 1 : undefined,
+		value: value ?? "",
+		placeholder,
+		disabled: isDisabled,
+		required,
+		"aria-invalid": error ? true : undefined,
+		"aria-describedby": error ? errorId : undefined,
+		onChange: (event: { target: { value: string } }) => onChange(event.target.value),
+	};
 	return (
 		<Labeled
-			label={
-				optional ? (
-					<>
-						{label} <Text tone="muted">{t("sheet.optional")}</Text>
-					</>
-				) : (
-					label
-				)
-			}
+			label={label}
 			description={description}
 			hint={hint}
 			htmlFor={id}
-			aside={revert && <RevertMark name={label} onRevert={revert} />}
+			required={required}
+			changed={changed}
+			aside={aside}
 		>
-			<Input
+			{prefix !== undefined ? <Affix prefix={prefix} {...control} /> : <Input mono={mono} {...control} />}
+			{error && <FormFieldError id={errorId}>{error}</FormFieldError>}
+		</Labeled>
+	);
+}
+
+/** Several lines of text under a label (a help text): the same field as {@link TextInput} with an underline, two lines high until it grows. */
+export function TextAreaInput({
+	label,
+	value,
+	onChange,
+	placeholder,
+	required,
+	revert,
+	rows = 2,
+}: {
+	label: string;
+	value: string | undefined;
+	onChange: (value: string) => void;
+	placeholder?: string;
+	required?: boolean;
+	/** Puts the saved value back; given only while the field differs from the saved file. */
+	revert?: () => void;
+	rows?: number;
+}) {
+	const id = useId();
+	const { disabled } = useSchemaEdit();
+	const changed = useFieldChange(label, revert);
+	return (
+		<Labeled label={label} htmlFor={id} required={required} changed={changed}>
+			<Textarea
 				id={id}
-				type={type}
-				min={type === "number" ? 1 : undefined}
+				rows={rows}
 				value={value ?? ""}
 				placeholder={placeholder}
-				disabled={isDisabled}
+				disabled={disabled}
+				required={required}
 				onChange={(event) => onChange(event.target.value)}
 			/>
 		</Labeled>
@@ -202,10 +273,13 @@ export function FlagSwitch({
 	description,
 	hint,
 	locked,
+	mark,
 	revert,
 }: {
 	label: string;
-	/** Puts the saved value back; given only while the switch differs from the saved file. */
+	/** A small quiet sign after the label (the "!" of a required field), left out of the switch's name. */
+	mark?: string;
+	/** Given only while the switch differs from the saved file: the change dot shows next to the label (turning the switch back undoes it). */
 	revert?: () => void;
 	checked: boolean;
 	onChange: (value: boolean) => void;
@@ -214,29 +288,36 @@ export function FlagSwitch({
 	/** The switch cannot be changed here (the value is fixed by something else): shown as it is, disabled. */
 	locked?: boolean;
 }) {
-	const id = useId();
+	const t = useTranslator(schemaMessages);
+	const labelId = useId();
 	const { disabled: readOnly } = useSchemaEdit();
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<Box maxWidth="reading">
-			<Inline align="center" justify="between" gap={16}>
-				<Stack gap={2}>
-					<Text as="label" htmlFor={id} weight="medium">
-						{label}
-					</Text>
-					{desc && <Help>{desc}</Help>}
-				</Stack>
-				<Inline gap={8} shrink={false}>
-					{revert && <RevertMark name={label} onRevert={revert} />}
-					<Switch id={id} checked={checked} disabled={disabled} onCheckedChange={(next) => onChange(next === true)} />
+		<Stack gap={2}>
+			<Option spread>
+				<Inline as="span" gap={6} grow>
+					<Text id={labelId}>{label}</Text>
+					{mark && (
+						<Text variant="meta" tone="subtle" aria-hidden>
+							{mark}
+						</Text>
+					)}
+					{revert && <ChangeDot label={t("changed")} />}
 				</Inline>
-			</Inline>
-		</Box>
+				<Switch
+					aria-labelledby={labelId}
+					checked={checked}
+					disabled={disabled}
+					onCheckedChange={(next) => onChange(next === true)}
+				/>
+			</Option>
+			{desc && <Help>{desc}</Help>}
+		</Stack>
 	);
 }
 
-/** A few exclusive choices side by side, with the field's name above: the design system's `Segmented` in a labeled row. */
+/** A few exclusive choices side by side, with the field's name above (mono 11, like every field's label): the design system's `Segmented` in a labeled row. */
 export function SegmentedField({
 	label,
 	value,
@@ -253,10 +334,9 @@ export function SegmentedField({
 	hint?: ReactNode;
 }) {
 	const { disabled } = useSchemaEdit();
-	const id = useId();
 	return (
-		<Stack gap={8}>
-			<Text as="label" id={id} weight="medium">
+		<Stack gap={6}>
+			<Text variant="micro" tone="subtle">
 				{label}
 			</Text>
 			{description && <Help>{description}</Help>}
@@ -307,15 +387,9 @@ export function Pick({
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
+	const changed = useFieldChange(label, revert);
 	return (
-		<Labeled
-			label={label}
-			description={description}
-			hint={hint}
-			htmlFor={id}
-			control={control}
-			aside={revert && <RevertMark name={label} onRevert={revert} />}
-		>
+		<Labeled label={label} description={description} hint={hint} htmlFor={id} control={control} changed={changed}>
 			<Select
 				value={value}
 				items={items as PickItem[]}
@@ -358,8 +432,11 @@ export function NameInput({
 	disabled: forcedDisabled,
 	description,
 	hint,
+	bare,
 }: {
 	label: string;
+	/** Only the field, named by `label` for a screen reader: a cell of a table, whose head says what the column is. Its value reads as text until pressed, in mono. */
+	bare?: boolean;
 	value: string;
 	/** The other names it must differ from. */
 	taken: readonly string[];
@@ -386,23 +463,37 @@ export function NameInput({
 		}
 		onCommit(text);
 	};
+	const input = (
+		<Input
+			id={id}
+			value={text}
+			aria-label={bare ? label : undefined}
+			appearance={bare ? "inline" : undefined}
+			mono={bare}
+			disabled={disabled || forcedDisabled}
+			aria-invalid={problem ? true : undefined}
+			onChange={(event) => setText(event.target.value)}
+			onBlur={commit}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					commit();
+				}
+			}}
+		/>
+	);
+	const error = problem && <FormFieldError>{t(`name.${problem}`)}</FormFieldError>;
+	if (bare)
+		return (
+			<>
+				{input}
+				{error}
+			</>
+		);
 	return (
 		<Labeled label={label} htmlFor={id} description={description} hint={hint}>
-			<Input
-				id={id}
-				value={text}
-				disabled={disabled || forcedDisabled}
-				aria-invalid={problem ? true : undefined}
-				onChange={(event) => setText(event.target.value)}
-				onBlur={commit}
-				onKeyDown={(event) => {
-					if (event.key === "Enter") {
-						event.preventDefault();
-						commit();
-					}
-				}}
-			/>
-			{problem && <FormFieldError>{t(`name.${problem}`)}</FormFieldError>}
+			{input}
+			{error}
 		</Labeled>
 	);
 }
@@ -421,35 +512,34 @@ export function RowActions({
 	onMove: (delta: number) => void;
 	onRemove: () => void;
 	name: string;
-	/** Why the row cannot be removed: the remove button is disabled and the reason is its tooltip. */
+	/** Why the row cannot be removed: the remove button is disabled and the reason is written beside it. */
 	removeBlocked?: string;
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
 		<Inline gap={0} shrink={false}>
+			{removeBlocked && (
+				<Box paddingX={8}>
+					<Text variant="caption" tone="muted" data-testid="remove-blocked">
+						{removeBlocked}
+					</Text>
+				</Box>
+			)}
 			<IconButton label={t("row.up", { name })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
 				<ArrowUp aria-hidden />
 			</IconButton>
 			<IconButton label={t("row.down", { name })} disabled={disabled || index === count - 1} onClick={() => onMove(1)}>
 				<ArrowDown aria-hidden />
 			</IconButton>
-			{removeBlocked ? (
-				<Tooltip>
-					{/* A disabled button gets no pointer events, so the tooltip hangs on a wrapper that can also take focus. */}
-					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
-					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
-						<IconButton label={t("row.remove", { name })} tone="danger" disabled aria-description={removeBlocked}>
-							<Close aria-hidden />
-						</IconButton>
-					</TooltipTrigger>
-					<TooltipContent side="top">{removeBlocked}</TooltipContent>
-				</Tooltip>
-			) : (
-				<IconButton label={t("row.remove", { name })} tone="danger" disabled={disabled} onClick={onRemove}>
-					<Close aria-hidden />
-				</IconButton>
-			)}
+			<IconButton
+				label={t("row.remove", { name })}
+				tone="danger"
+				disabled={disabled || Boolean(removeBlocked)}
+				onClick={onRemove}
+			>
+				<Close aria-hidden />
+			</IconButton>
 		</Inline>
 	);
 }

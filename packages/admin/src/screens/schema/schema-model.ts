@@ -226,11 +226,6 @@ export function moveKey<T>(record: Record<string, T>, key: string, delta: number
 	return from === -1 ? record : Object.fromEntries(moveWithin(entries, from, from + delta));
 }
 
-/** `list` with the item at `index` moved by `delta` places (negative: up). */
-export function moveItem<T>(list: readonly T[], index: number, delta: number): T[] {
-	return moveWithin(list, index, index + delta);
-}
-
 /** Whether two JSON values are the same, key order included. */
 export function sameJson(a: unknown, b: unknown): boolean {
 	if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length && a.every((item, i) => sameJson(item, b[i]));

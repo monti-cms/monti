@@ -61,6 +61,15 @@ export type SchemaMigration = { readonly id: string; readonly note?: string } & 
 			readonly collection: string;
 	  }
 	| {
+			/**
+			 * The language is gone from the schema's `locales`, and every live translation in it, of every collection, moves to the trash (status `trashed`, restorable
+			 * from the trash screen, expiring like any trashed entry). Never the source rows. Without it a removed language leaves its translations as stored, hidden;
+			 * they come back when the language is added again. It is a problem if the schema still lists `locale`.
+			 */
+			readonly op: "trashLocale";
+			readonly locale: string;
+	  }
+	| {
 			/** An entry with no value for a text or select field (one that became required, say) gets `value`. */
 			readonly op: "setDefault";
 			readonly collection: string;

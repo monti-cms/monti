@@ -15,6 +15,7 @@ import { branchFields, type KindTone, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
 import { SortableList } from "./fields-tree-dnd";
 import { schemaMessages } from "./messages";
+import { schemaProblemMessages } from "./problems.messages";
 import {
 	collectionsOf,
 	type FieldPlace,
@@ -166,7 +167,8 @@ export function Row({
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const ts = useTranslator(schemaMessages);
-	const { disabled, file, saved } = useSchemaEdit();
+	const tp = useTranslator(schemaProblemMessages);
+	const { disabled, file, saved, problems } = useSchemaEdit();
 	const { editing } = ctx;
 	// The field as saved, when it is saved under this name: a field that differs from it can be put back.
 	const savedCollection = collectionsOf(saved)[editing.collectionName];
@@ -177,6 +179,8 @@ export function Row({
 		? `collections.${editing.collectionName}.fields.${place.branch.field}.values.${place.branch.option}.${name}`
 		: `collections.${editing.collectionName}.fields.${name}`;
 	const issues = useIssuesUnder(path);
+	// What stops the draft from being saved at this field: its name turns red and the row says what is missing.
+	const problem = problems.find((item) => item.path === path);
 	const label = typeof field.label === "string" ? field.label : "";
 	const blocked = removeBlock(editing.collection, place, name);
 	const locked = top?.locked ?? null;
@@ -244,7 +248,10 @@ export function Row({
 						<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 							{prefix}
 						</span>
-						<span className="max-w-[70%] shrink-0 truncate font-mono text-monti-label" title={name}>
+						<span
+							className={cn("max-w-[70%] shrink-0 truncate font-mono text-monti-label", problem && "text-monti-danger")}
+							title={name}
+						>
 							{name}
 						</span>
 						{label && (
@@ -253,6 +260,11 @@ export function Row({
 								title={label}
 							>
 								{label}
+							</span>
+						)}
+						{problem && (
+							<span className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-danger">
+								{tp(`mark.${problem.code}` as "mark.options")}
 							</span>
 						)}
 						{changed && (

@@ -14,24 +14,28 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow11Step01.dc.html`
 - Renders: `Settings` (stage "호스트 추가")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - Dev server, Settings › Site. In the host names row the user presses "+ 호스트" and types the new host straight into the row (placeholder blog.example.dev).
 
 ### Step 02: "개발 서버 · 사이트 · 미리보기 경로에 언어 넣기를 끔 → 미리보기 언어 쿼리 칸이 나타남 (비우면 locale)"
 
 - Board: `Flow11Step02.dc.html`
 - Renders: `Settings` (stage "언어 쿼리")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - The user turns off "put the language in the preview path". A field "미리보기 언어 쿼리" (preview language query) appears; left empty it means `locale`.
 
 ### Step 03: "개발 서버 · 사이트 · 칸 오류 · 홈 링크는 주소(/…)나 https:// → 저장 막힘"
 
 - Board: `Flow11Step03.dc.html`
 - Renders: `Settings` (stage "칸 오류")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - Field error: the home link must be an address starting with / or https://. Saving is blocked.
 
 ### Step 04: "개발 서버 · 나가려 할 때 · 저장하지 않은 바뀐 곳 → 확인 (계속 고치기 · 저장하지 않고 나가기)"
 
 - Board: `Flow11Step04.dc.html`
 - Renders: `Settings` (stage "나가기 확인")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - The user tries to leave with unsaved changes. A dialog says leaving drops the 2 changed places, with "계속 고치기" (keep editing) and "저장하지 않고 나가기" (leave without saving).
 
 ## "개발 서버 · 언어" · Dev server, languages
@@ -40,36 +44,43 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow11Step05.dc.html`
 - Renders: `Locales` (stage "언어 찾기")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - Dev server, Settings › Languages. The user presses "+ 언어 추가". A code finder opens (typing zh lists zh-Hans, zh-Hant, zh-HK with native and Korean names); the last item is "직접 입력" (type it yourself).
 
 ### Step 06: "개발 서버 · 언어 · 코드를 고르면 바로 줄이 생김 · 이름은 코드에서 → 바뀐 곳에 더해짐"
 
 - Board: `Flow11Step06.dc.html`
 - Renders: `Locales` (stage "언어 추가됨")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - Picking a code adds the row at once (日本語, ja, name from the code). The change is listed in the changes bar with "모두 되돌리기" and "저장하고 적용".
 
 ### Step 06b: "개발 서버 · 언어 · 직접 입력 → 이름을 한 번 묻는 작은 창"
 
 - Board: `Flow11Step06b.dc.html`
 - Renders: `Locales` (stage "직접 입력")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - Choosing "직접 입력" opens a small dialog asking once for the code, the native name and the display name, with cancel and add.
 
 ### Step 07: "개발 서버 · 언어 · 원문 바꾸기 → 언어 고르기"
 
 - Board: `Flow11Step07.dc.html`
 - Renders: `Locales` (stage "원문 메뉴")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - The user opens the source-language menu ("원문 바꾸기") and the language picker opens.
 
 ### Step 07b: "개발 서버 · 언어 · 고르면 맨 위로 · 원문이 바뀜 · 두 줄에 바뀐 곳 표시 (검토를 거쳐 저장)"
 
 - Board: `Flow11Step07b.dc.html`
 - Renders: `Locales` (stage "원문 바꿈")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
 - After choosing, that language moves to the top and becomes the source. Two rows are marked as changed. The change still goes through review before it is saved.
 
 ### Step 08: "개발 서버 · 언어 · 번역이 있는 언어를 ×로 빼기 → 검토 · 번역 12편 남겨 두기 · 휴지통으로 (흐름 4 · 11과 같은 방식)"
 
 - Board: `Flow11Step08.dc.html`
 - Renders: `Locales` (stage "빼기 검토")
+- Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- Test: `packages/admin/src/screens/schema/__test__/collections-edit-flows.test.tsx`
 - The user removes a language that has translations with ×. A review asks what happens to the 12 English translations: keep them ("남겨 두기") or move them to the trash ("휴지통으로"), noting that adding the language again brings them back. It follows the same pattern as flow 4 and flow 11 reviews. Buttons: cancel, apply.
 
 ## "배포 · GitHub 플러그인 있음" · Production, GitHub plugin present

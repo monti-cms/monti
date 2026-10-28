@@ -1,0 +1,478 @@
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
+import { commonMessages } from "../../../lib/common.messages";
+import { jsonResponse as json } from "../../../test/fetch";
+import { createTestRouter } from "../../../test/router";
+import { schemaChangesMessages } from "../../schema/changes.messages";
+import { schemaLocalesMessages } from "../../schema/locales.messages";
+import { schemaMessages } from "../../schema/messages";
+import { SchemaSettings } from "../../schema/schema-screen";
+import { schemaSiteMessages } from "../../schema/site.messages";
+import { AdminQueryProvider } from "../../shared/query-provider";
+
+// Flow 11 of the canvas, the dev-server rows "사이트" (steps 01-04) and "언어" (steps 05-08): one walk through each checks what a screenshot cannot see: the
+// requests a press sends, focus, names, what is enabled and the order of things. How it looks is the visual stories' job. The review of a removed language
+// (step 08's sheet) belongs to the schema review; here the walk stops at the request the review sends.
+
+const nav = createTestRouter();
+const { render } = nav;
+const t = testSite.createTranslator(schemaMessages);
+const tSite = testSite.createTranslator(schemaSiteMessages);
+const tLocales = testSite.createTranslator(schemaLocalesMessages);
+const tChanges = testSite.createTranslator(schemaChangesMessages);
+const tc = testSite.createTranslator(commonMessages);
+
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
+vi.mock("../../schema/reload", () => ({
+	reloadPage: vi.fn(),
+	rememberSaved: vi.fn(),
+	takeSavedMessage: vi.fn(() => null),
+}));
+
+const post = {
+	label: "Post",
+	kind: "document",
+	path: "/posts/:slug",
+	fields: { title: { kind: "text", label: "Title", required: true } },
+};
+
+const state = {
+	access: { writable: true },
+	file: "monti.schema.ts",
+	hash: "hash-1",
+	schema: {
+		collections: { post },
+		locales: [
+			{ code: "ko", name: "한국어" },
+			{ code: "en", name: "English", label: "영어" },
+		],
+		defaultLocale: "ko",
+		timeZone: "Asia/Seoul",
+		site: {
+			name: "example.dev",
+			homeLink: "/",
+			aliases: ["www.example.dev"],
+			previewPath: "/preview",
+			previewLocaleParam: false,
+			localePrefix: "always",
+		},
+	},
+	source: "file",
+	comments: false,
+	issues: [],
+	applied: { appliedAt: "2026-01-01T00:00:00.000Z" },
+	codeCollections: [],
+	vocabulary: { blocks: [], marks: [] },
+	collections: ["post"],
+	footprints: { post: { entries: 3, trashed: 0, folders: 0 } },
+	siteUrl: { url: null, from: "none" },
+};
+
+let requests: { method: string; url: string; body?: Record<string, unknown> }[];
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	window.history.replaceState(null, "", "/admin/settings/site");
+	requests = [];
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: string, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
+			requests.push({ method, url: input, body });
+			if (input === "/api/monti/v1/schema" && method === "GET") return json(state);
+			if (input === "/api/monti/v1/schema/preview")
+				return json({
+					valid: true,
+					issues: [],
+					changed: true,
+					impacts: [],
+					decisions: [],
+					transforms: [],
+					problems: [],
+					baseline: "applied",
+					bodiesRead: 0,
+				});
+			throw new Error(`Unexpected fetch ${method} ${input}`);
+		}),
+	);
+});
+
+afterEach(() => {
+	cleanup();
+	vi.unstubAllGlobals();
+});
+
+const open = (tab: "site" | "locales", onChanged?: (areas: unknown) => void) =>
+	render(
+		<AdminQueryProvider>
+			<SchemaSettings tab={tab} onChanged={onChanged as never} />
+			<a href="/admin/posts">Posts</a>
+		</AdminQueryProvider>,
+	);
+
+const field = (name: string) => screen.findByRole("textbox", { name });
+const type = (input: HTMLElement, value: string) => fireEvent.change(input, { target: { value } });
+const bar = () => screen.getByTestId("save-bar");
+const changes = (count: number) => within(bar()).getByLabelText(t("bar.count", { count }));
+const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
+/** Presses the save button of the title row and waits for the review to ask what the draft would do. */
+const save = async () => {
+	fireEvent.click(within(bar()).getByRole("button", { name: t("bar.save") }));
+	await waitFor(() => expect(lastPreview()).toBeDefined());
+	return lastPreview()?.body?.schema as {
+		locales: { code: string; name: string; label?: string }[];
+		defaultLocale: string;
+		site: Record<string, unknown>;
+	};
+};
+const saveButton = () => within(bar()).getByRole("button", { name: t("bar.save") }) as HTMLButtonElement;
+
+describe("flow 11 · 개발 서버 · 사이트: the site settings of the file", () => {
+	it("01 + 호스트 adds an empty row with the caret in it, typing writes site.aliases, and × takes a host out", async () => {
+		const onChanged = vi.fn();
+		open("site", onChanged);
+
+		// The saved host is a row of its own, in mono, with a × named after it.
+		const saved = await field(tSite("site.alias.row", { number: 1 }));
+		expect((saved as HTMLInputElement).value).toBe("www.example.dev");
+		expect(saved.className).toContain("font-mono");
+		expect(screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) })).toBeTruthy();
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+
+		// "+ 호스트": an empty row appears under it with the caret in it. An empty row is no change: nothing is listed and nothing would be written.
+		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.add") }));
+		const added = screen.getByRole("textbox", { name: tSite("site.alias.row", { number: 2 }) }) as HTMLInputElement;
+		expect(added.value).toBe("");
+		expect(added.placeholder).toBe("blog.example.dev");
+		expect(document.activeElement).toBe(added);
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+		// There is no separate input for a new host and no Add button.
+		expect(screen.queryByRole("button", { name: /^호스트 추가$|^Add host$/ })).toBeNull();
+
+		// Typing the host is one change: the title row's group says 1, the Site tab is marked, and the field's label row carries the dot and the undo.
+		type(added, "blog.example.dev");
+		expect(changes(1)).toBeTruthy();
+		expect(onChanged).toHaveBeenLastCalledWith(
+			expect.objectContaining({ tabs: expect.objectContaining({ site: true }) }),
+		);
+		expect(screen.getByRole("button", { name: t("revert.named", { name: tSite("site.aliases") }) })).toBeTruthy();
+
+		// The request the review sends has the host in site.aliases, after the saved one.
+		const schema = await save();
+		expect(schema.site.aliases).toEqual(["www.example.dev", "blog.example.dev"]);
+	});
+
+	it("01 · × on a host takes its row out and the host leaves site.aliases", async () => {
+		open("site");
+		await field(tSite("site.alias.row", { number: 1 }));
+		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) }));
+		expect(screen.queryByRole("textbox", { name: tSite("site.alias.row", { number: 1 }) })).toBeNull();
+		expect(changes(1)).toBeTruthy();
+		const schema = await save();
+		expect(schema.site.aliases).toBeUndefined();
+	});
+
+	it("02 turning off 'language in the preview path' shows the query field (empty means locale); turning it on hides it", async () => {
+		open("site");
+		const name = tSite("site.previewInPath");
+		const toggle = await screen.findByRole("switch", { name });
+		expect(toggle.getAttribute("aria-checked")).toBe("true");
+		expect(screen.queryByRole("textbox", { name: tSite("site.previewParam") })).toBeNull();
+
+		fireEvent.click(toggle);
+		const query = (await field(tSite("site.previewParam"))) as HTMLInputElement;
+		expect(query.value).toBe("");
+		expect(query.placeholder).toBe("locale");
+		expect(query.className).toContain("font-mono");
+		expect(changes(1)).toBeTruthy();
+		// The switch carries the change dot; the query field is the same setting and does not repeat it.
+		expect(within(screen.getByTestId("site-settings")).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
+
+		// Turned on again, the field goes and nothing is changed any more.
+		fireEvent.click(screen.getByRole("switch", { name }));
+		await waitFor(() => expect(screen.queryByRole("textbox", { name: tSite("site.previewParam") })).toBeNull());
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+
+		// A query typed in is the value saved.
+		fireEvent.click(screen.getByRole("switch", { name }));
+		type(await field(tSite("site.previewParam")), "lang");
+		expect((await save()).site.previewLocaleParam).toBe("lang");
+	});
+
+	it("02b the preview path is typed after a fixed '/' and stored with it", async () => {
+		open("site");
+		const path = (await field(tSite("site.previewPath"))) as HTMLInputElement;
+		expect(path.value).toBe("preview");
+		type(path, "draft");
+		expect((await save()).site.previewPath).toBe("/draft");
+	});
+
+	it("03 a home link that is not an address shows one error line under the field and blocks saving until it is fixed", async () => {
+		open("site");
+		const home = (await field(tSite("site.homeLink"))) as HTMLInputElement;
+		expect(home.getAttribute("aria-invalid")).toBeNull();
+
+		type(home, "example.dev/blog");
+		expect(home.getAttribute("aria-invalid")).toBe("true");
+		const error = document.getElementById(home.getAttribute("aria-describedby") ?? "");
+		expect(error?.textContent).toBe(tSite("problem.home-link"));
+		expect(screen.getAllByText(tSite("problem.home-link"))).toHaveLength(1);
+		// The group stays (the change is real) but the save button is off.
+		expect(changes(1)).toBeTruthy();
+		expect(saveButton().disabled).toBe(true);
+
+		// The label row's undo puts the saved link back: the error goes with it.
+		fireEvent.click(screen.getByRole("button", { name: t("revert.named", { name: tSite("site.homeLink") }) }));
+		expect(home.value).toBe("/");
+		expect(home.getAttribute("aria-invalid")).toBeNull();
+		expect(screen.queryByText(tSite("problem.home-link"))).toBeNull();
+
+		// A path and an https address are both fine.
+		type(home, "https://example.dev/blog");
+		expect(home.getAttribute("aria-invalid")).toBeNull();
+		expect(saveButton().disabled).toBe(false);
+		type(home, "//other.dev");
+		expect(saveButton().disabled).toBe(true);
+		type(home, "/blog");
+		expect(saveButton().disabled).toBe(false);
+	});
+
+	it("03b a host that is not a host name blocks saving too", async () => {
+		open("site");
+		fireEvent.click(await screen.findByRole("button", { name: tSite("site.alias.add") }));
+		const added = screen.getByRole("textbox", { name: tSite("site.alias.row", { number: 2 }) });
+		type(added, "not a host");
+		expect(added.getAttribute("aria-invalid")).toBe("true");
+		expect(screen.getByText(tSite("problem.host"))).toBeTruthy();
+		expect(saveButton().disabled).toBe(true);
+	});
+
+	it("04 a link clicked with unsaved changes asks first: keep editing stays, leaving without saving goes on", async () => {
+		// Only the clicks that reach the window from the link itself are counted (the dialog's own buttons click too).
+		const clicks = vi.fn((event: MouseEvent) => event.preventDefault());
+		const onWindowClick = (event: MouseEvent) => {
+			if ((event.target as Element).closest("a[href]")) clicks(event);
+		};
+		window.addEventListener("click", onWindowClick);
+		open("site");
+
+		// Nothing changed: the link goes at once.
+		const link = screen.getByRole("link", { name: "Posts" });
+		fireEvent.click(link);
+		expect(clicks).toHaveBeenCalledTimes(1);
+		clicks.mockClear();
+
+		type(await field(tSite("site.name")), "example.dev/2");
+		type(screen.getByRole("textbox", { name: tSite("site.homeLink") }), "/home");
+		fireEvent.click(link);
+		const dialog = await screen.findByRole("alertdialog", { name: tc("leave.title") });
+		expect(dialog.textContent).toContain(tc("leave.description", { count: 2 }));
+		// Two ways out, no "save and leave".
+		const buttons = within(dialog)
+			.getAllByRole("button")
+			.map((button) => button.textContent);
+		expect(buttons).toEqual([tc("leave.confirm"), tc("leave.stay")]);
+		expect(clicks).not.toHaveBeenCalled();
+
+		// 계속 고치기: the dialog goes, the page stays, the draft is intact.
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("leave.stay") }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+		expect(clicks).not.toHaveBeenCalled();
+		expect(changes(2)).toBeTruthy();
+
+		// 저장하지 않고 나가기: the click goes on to the link.
+		fireEvent.click(link);
+		const again = await screen.findByRole("alertdialog");
+		fireEvent.click(within(again).getByRole("button", { name: tc("leave.confirm") }));
+		await waitFor(() => expect(clicks).toHaveBeenCalledTimes(1));
+		window.removeEventListener("click", onWindowClick);
+	});
+});
+
+describe("flow 11 · 개발 서버 · 언어: the content languages of the file", () => {
+	const adminName = (code: string) => new Intl.DisplayNames([testSite.ADMIN_LANGUAGE], { type: "language" }).of(code);
+	const rows = () => screen.getAllByTestId(/^locale-[a-zA-Z-]+$/).map((row) => row.dataset.testid);
+	const row = (code: string) => screen.getByTestId(`locale-${code}`);
+	const searchBox = () => screen.findByRole("combobox", { name: tLocales("locales.search") });
+	const addButton = () => screen.findByRole("button", { name: tLocales("locales.add") });
+
+	it("05 + 언어 추가 opens a code finder: typing zh lists the zh variants with their names, the last item is 직접 입력", async () => {
+		open("locales");
+		fireEvent.click(await addButton());
+		const search = await searchBox();
+		type(search, "zh");
+		const list = await screen.findByRole("listbox", { name: tLocales("locales.codes") });
+		const options = within(list).getAllByRole("option");
+		const texts = options.map((option) => option.textContent ?? "");
+		expect(texts.slice(0, -1).map((text) => text.split(/[^A-Za-z-]/)[0])).toEqual(["zh-Hans", "zh-Hant", "zh-HK"]);
+		for (const option of options.slice(0, -1))
+			expect(option.textContent).toContain(adminName(option.textContent?.match(/zh-\w+/)?.[0] ?? "") ?? "?");
+		// The last one asks for the names, and carries what was typed.
+		const last = options.at(-1) as HTMLElement;
+		expect(last.textContent).toBe(`${tLocales("locales.custom")}zh`);
+		// A language that is already listed is not offered.
+		type(search, "ko");
+		expect(
+			within(list)
+				.queryAllByRole("option")
+				.filter((option) => option.textContent?.startsWith("ko")),
+		).toHaveLength(0);
+	});
+
+	it("06 picking a code adds the row at once with names from the code; it is listed in the changes and undone from there", async () => {
+		open("locales");
+		fireEvent.click(await addButton());
+		type(await searchBox(), "ja");
+		const list = await screen.findByRole("listbox", { name: tLocales("locales.codes") });
+		fireEvent.click(within(list).getByRole("option"));
+		await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+
+		// No form: the row is there, named in its own language, marked new.
+		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-ja"]);
+		expect(row("ja").textContent).toContain("日本語");
+		expect(within(row("ja")).getByRole("img", { name: tChanges("tag.added") })).toBeTruthy();
+		expect(changes(1)).toBeTruthy();
+
+		// The request carries the names from the code: its own name and the admin language's.
+		const schema = await save();
+		const label = adminName("ja");
+		expect(schema.locales.at(-1)).toEqual(
+			label === "日本語" ? { code: "ja", name: "日本語" } : { code: "ja", name: "日本語", label },
+		);
+	});
+
+	it("06 · the list of changes names the new language and undoes it", async () => {
+		open("locales");
+		fireEvent.click(await addButton());
+		type(await searchBox(), "ja");
+		fireEvent.click(within(await screen.findByRole("listbox")).getByRole("option"));
+		await screen.findByTestId("locale-ja");
+		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(tChanges("tag.added")) }));
+		await waitFor(() => expect(screen.queryByTestId("locale-ja")).toBeNull());
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+	});
+
+	it("06b 직접 입력 asks the two names once; 추가 adds the row with them", async () => {
+		open("locales");
+		fireEvent.click(await addButton());
+		type(await searchBox(), "tlh");
+		const custom = within(await screen.findByRole("listbox")).getByRole("option");
+		expect(custom.textContent).toBe(`${tLocales("locales.custom")}tlh`);
+		fireEvent.click(custom);
+
+		// A small window: the code as typed (text, not an input), then the two names. Adding needs both.
+		const dialog = await screen.findByRole("dialog", { name: new RegExp(`${tLocales("locales.newTitle")}.*tlh`) });
+		expect(within(dialog).getByText("tlh")).toBeTruthy();
+		expect(within(dialog).queryByRole("textbox", { name: tLocales("locales.code") })).toBeNull();
+		const add = within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement;
+		expect(add.disabled).toBe(true);
+		type(within(dialog).getByRole("textbox", { name: tLocales("locales.name") }), "tlhIngan Hol");
+		expect(add.disabled).toBe(true);
+		type(within(dialog).getByRole("textbox", { name: tLocales("locales.label") }), "클링온어");
+		expect(add.disabled).toBe(false);
+		fireEvent.click(add);
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-tlh"]);
+		expect(changes(1)).toBeTruthy();
+		expect((await save()).locales.at(-1)).toEqual({ code: "tlh", name: "tlhIngan Hol", label: "클링온어" });
+	});
+
+	it("06b · cancel adds nothing", async () => {
+		open("locales");
+		fireEvent.click(await addButton());
+		type(await searchBox(), "tlh");
+		fireEvent.click(within(await screen.findByRole("listbox")).getByRole("option"));
+		const dialog = await screen.findByRole("dialog");
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(rows()).toEqual(["locale-ko", "locale-en"]);
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+	});
+
+	it("07 the source row says 원문 and has 바꾸기, which opens the list of languages with a tick on the source; the others have no flag", async () => {
+		open("locales");
+		const source = await screen.findByTestId("locale-ko");
+		expect(source.textContent).toContain(tLocales("locales.source"));
+		expect(within(row("en")).queryByText(tLocales("locales.source"))).toBeNull();
+		// The source cannot be taken out; the others can.
+		expect(within(source).queryByRole("button", { name: tLocales("locales.remove", { name: "한국어" }) })).toBeNull();
+		expect(
+			within(row("en")).getByRole("button", { name: tLocales("locales.remove", { name: "English" }) }),
+		).toBeTruthy();
+
+		fireEvent.click(within(source).getByRole("button", { name: tLocales("locales.sourceChange") }));
+		await screen.findByRole("menu");
+		const menu = screen.getByRole("group", { name: tLocales("locales.sourceMenu") });
+		const items = within(menu).getAllByRole("menuitemradio");
+		expect(items.map((item) => item.textContent)).toEqual(["한국어", "English"]);
+		expect(items.map((item) => item.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+	});
+
+	it("07b choosing another language moves it to the top as the source: defaultLocale is saved with it and both rows are marked", async () => {
+		open("locales");
+		fireEvent.click(
+			within(await screen.findByTestId("locale-ko")).getByRole("button", { name: tLocales("locales.sourceChange") }),
+		);
+		fireEvent.click(await screen.findByRole("menuitemradio", { name: "English" }));
+		await waitFor(() => expect(rows()).toEqual(["locale-en", "locale-ko"]));
+
+		expect(row("en").textContent).toContain(tLocales("locales.source"));
+		expect(row("ko").textContent).not.toContain(tLocales("locales.source"));
+		for (const code of ["en", "ko"]) {
+			expect(within(row(code)).getByRole("img", { name: tLocales("locales.sourceChanged") })).toBeTruthy();
+		}
+		// One change in the title row, named "원문", and it is the old source that now has the × and the handle.
+		expect(changes(1)).toBeTruthy();
+		expect(
+			within(row("ko")).getByRole("button", { name: tLocales("locales.remove", { name: "한국어" }) }),
+		).toBeTruthy();
+		expect(
+			within(row("en")).queryByRole("button", { name: tLocales("locales.remove", { name: "English" }) }),
+		).toBeNull();
+
+		// The changes list names it and undoes it: the old source is back on top.
+		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(tChanges("subject.defaultLocale")) }));
+		await waitFor(() => expect(rows()).toEqual(["locale-ko", "locale-en"]));
+		expect(screen.queryByTestId("save-bar")).toBeNull();
+	});
+
+	it("07b · the request has defaultLocale and the new order", async () => {
+		open("locales");
+		fireEvent.click(
+			within(await screen.findByTestId("locale-ko")).getByRole("button", { name: tLocales("locales.sourceChange") }),
+		);
+		fireEvent.click(await screen.findByRole("menuitemradio", { name: "English" }));
+		await waitFor(() => expect(rows()).toEqual(["locale-en", "locale-ko"]));
+		const schema = await save();
+		expect(schema.defaultLocale).toBe("en");
+		expect(schema.locales.map((locale) => locale.code)).toEqual(["en", "ko"]);
+	});
+
+	it("08 × takes a language out of the list and out of the request; the review of what happens to its translations is the schema review's", async () => {
+		open("locales");
+		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
+		expect(rows()).toEqual(["locale-ko"]);
+		expect(changes(1)).toBeTruthy();
+		const schema = await save();
+		expect(schema.locales.map((locale) => locale.code)).toEqual(["ko"]);
+		expect(schema.defaultLocale).toBe("ko");
+		// With one language left there is nothing to take out and nothing to change.
+		expect(screen.queryByRole("button", { name: new RegExp(tLocales("locales.sourceChange")) })).toBeNull();
+		expect(screen.queryByRole("button", { name: /빼기|Remove/ })).toBeNull();
+	});
+
+	it("09 the time zone is a searchable list of its own, in mono", async () => {
+		open("locales");
+		const zone = (await screen.findByRole("combobox", { name: tLocales("locales.timeZone") })) as HTMLInputElement;
+		expect(zone.value).toBe("Asia/Seoul");
+		expect(zone.className).toContain("font-mono");
+		expect(screen.getByRole("heading", { name: tLocales("locales.timeZoneTitle") })).toBeTruthy();
+	});
+});

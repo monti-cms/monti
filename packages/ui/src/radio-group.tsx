@@ -17,18 +17,27 @@ function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
 	);
 }
 
-/** An option row: the round mark (a filled ring when picked), the label and an optional note in mono ("148 posts"). */
+/**
+ * An option row: the round mark (a filled ring when picked), the label and an optional note in mono ("148 posts"). A `control` (the select that says which
+ * field the values move to) sits at the far end of the row.
+ */
 function RadioItem({
 	value,
 	label,
 	hint,
+	description,
+	control,
 	disabled,
 	className,
 }: {
 	value: string;
 	label: React.ReactNode;
-	/** A short note in mono at the end of the row ("148 posts"). Text only, never a control: a control or a longer note goes under the group, not in the row. */
+	/** A short note in mono at the end of the row ("148 posts"). Text only: a longer note goes under the group. */
 	hint?: string;
+	/** A short plain note right after the label that says what the choice is ("Posts, notes: they have a body"): quiet, at the meta size. */
+	description?: string;
+	/** One small control that belongs to this choice, pushed to the end of the row (a select). Pressing it picks the row. */
+	control?: React.ReactNode;
 	disabled?: boolean;
 	className?: string;
 }) {
@@ -40,7 +49,9 @@ function RadioItem({
 				className="size-3.5 shrink-0 rounded-monti-full border-[1.5px] border-monti-faint bg-transparent outline-none transition-[border-width,border-color] focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-checked:border-[4.5px] data-checked:border-monti-contrast"
 			/>
 			<span>{label}</span>
+			{description && <span className="text-monti-meta text-monti-subtle">{description}</span>}
 			{hint && <span className="font-mono text-monti-caption text-monti-subtle">{hint}</span>}
+			{control && <span className="ml-auto">{control}</span>}
 		</Option>
 	);
 }

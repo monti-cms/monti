@@ -1,13 +1,13 @@
 "use client";
 
-import { Add, Close, View } from "@carbon/icons-react";
+import { Add, Close } from "@carbon/icons-react";
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Heading, IconButton, Inline, Stack, Text } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
-import { AddFieldDialog } from "./add-field";
+import { AddFieldSheet } from "./add-field";
 import { useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { FieldSheet } from "./field-sheet";
@@ -165,7 +165,7 @@ function useElementWidth<T extends HTMLElement>(): [(element: T | null) => void,
 const SETTINGS_MIN_WIDTH = 760;
 
 /** Whether the window is wide enough for the preview to sit beside the tree. */
-function useWide(): boolean {
+export function useWide(): boolean {
 	const [wide, setWide] = useState(false);
 	useEffect(() => {
 		const media = window.matchMedia?.(WIDE_QUERY);
@@ -214,7 +214,7 @@ const PREVIEW_OPEN_CODEC: PreferenceCodec<boolean | null> = {
 };
 
 /** Whether the preview is open: remembered in this browser (per device); open on a wide window until the writer closes it. */
-function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
+export function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
 	const [chosen, setChosen] = usePreference("layout-preview-open", PREVIEW_OPEN_CODEC, null);
 	return [chosen ?? wide, setChosen];
 }
@@ -287,9 +287,6 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						</Text>
 					</Box>
 					<Inline wrap gap={8}>
-						<IconButton label={t("layout.preview")} pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
-							<View aria-hidden />
-						</IconButton>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
 							<Add aria-hidden />
 							{t("layout.addTab")}
@@ -370,7 +367,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Text>
 				</Inline>
 				{adding && (
-					<AddFieldDialog
+					<AddFieldSheet
 						editing={editing}
 						place={{}}
 						onClose={() => setAdding(false)}
@@ -395,6 +392,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			collection={editing.collectionName}
 			codeCollections={codeCollections}
 			onClose={() => setPreviewOpen(false)}
+			onOpenField={(place, name) => setSheet({ place, name })}
 		/>
 	);
 	return (

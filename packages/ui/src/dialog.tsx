@@ -118,8 +118,14 @@ function DialogFooter({
 	);
 }
 
-function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-	return <DialogPrimitive.Title data-slot="dialog-title" className={cn(DIALOG_TITLE, className)} {...props} />;
+/** The title of the dialog. `of` is what it is about, after a dot in the regular weight and the subtle ink ("New language · tlh"). */
+function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Title.Props & { of?: React.ReactNode }) {
+	return (
+		<DialogPrimitive.Title data-slot="dialog-title" className={cn(DIALOG_TITLE, className)} {...props}>
+			{children}
+			{of && <span className="font-normal text-monti-subtle"> · {of}</span>}
+		</DialogPrimitive.Title>
+	);
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {

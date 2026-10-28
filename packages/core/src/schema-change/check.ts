@@ -19,6 +19,11 @@ export type ImpactConsequence =
 	| "transformed"
 	/** A `dropField` transform deletes the stored values, or a `dropCollection` transform deletes the collection's entries. */
 	| "deleted"
+	/**
+	 * A `trashLocale` transform moves the translations of the removed language to the trash (restorable from the trash screen). `ChangeImpact.entries` is the
+	 * number of translations that move: the live ones, the ones already in the trash are not counted.
+	 */
+	| "trashed"
 	/** The stored values stay as orphans: kept in the entry, hidden from the public read, listed in a warning at publish. */
 	| "orphaned"
 	/** A select value that is no longer an option stays as stored; publishing warns (`unknown_select_value`). */
@@ -250,7 +255,12 @@ function ruleFor(change: SchemaChange, options: CheckOptions): Rule {
 				consequence: "unknown_value",
 			};
 		case "locale_removed":
-			return { collections: "all", touches: (b) => b.locale === change.locale, consequence: "orphaned" };
+			// Translations only (the entries a trash would move); the ones already in the trash are not live, so they are not counted. An entry counts once for its working and published copies.
+			return {
+				collections: "all",
+				touches: (b) => b.isTranslation && b.locale === change.locale && b.status !== "trashed",
+				consequence: "orphaned",
+			};
 	}
 }
 
@@ -261,6 +271,7 @@ function handledConsequence(
 ): ImpactConsequence | undefined {
 	if (!change.handledBy) return undefined;
 	const handler = transforms?.find((item) => item.id === change.handledBy);
+	if (handler?.op === "trashLocale") return "trashed";
 	return handler?.op === "dropField" || handler?.op === "dropCollection" ? "deleted" : "transformed";
 }
 

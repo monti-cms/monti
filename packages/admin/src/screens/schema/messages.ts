@@ -1,8 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** English: noun matching the count ("1 entry" / "3 entries"). */
-export const entries = (count: unknown) => `${count} ${Number(count) === 1 ? "entry" : "entries"}`;
-
 /** Text shared across the schema settings screen: the tabs, the read-only banner, the status line, the review and save actions, the issues of a schema file, and the words several editors use. Each editor keeps its own text in a dictionary next to it (`site.messages.ts`, `locales.messages.ts`, `collection.messages.ts`, `fields.messages.ts`, `admin.messages.ts`, `review.messages.ts`). */
 export const schemaMessages = defineMessages("cms-admin.schema", {
 	en: {
@@ -74,23 +71,19 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"row.up": "Move {name} up",
 		"row.down": "Move {name} down",
 		"row.remove": "Remove {name}",
-		"collection.new": "New",
-		"collection.create": "New collection",
+		"collection.create": "+ New collection",
 		"collection.drag": "Drag {name} to reorder",
 		"name.idEmpty": "Type an identifier with letters and digits.",
 		"collection.none": "This schema has no collections yet.",
 		"collection.kindDocument": "Document",
 		"collection.kindItem": "Item",
-		"collection.railTitle": "Collections",
-		"sheet.optional": "optional",
 		"file.title": "Edited in monti.schema.ts",
 		"file.messages": "Admin text overrides (admin.messages)",
 		"file.seed": "Starting data (seed)",
-		"site.name": "Site name",
 		"file.migrations": "Recorded data transforms",
 		"save.done": "Applied",
-		"save.applyFailedNote":
-			"The schema file was saved but not applied to the database. Run monti schema:apply, or reload this screen.",
+		"lock.cannotChange": "Cannot be changed",
+		"tabs.collection": "Parts of the collection",
 	},
 	ko: {
 		title: "스키마",
@@ -160,22 +153,18 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"row.up": "{name} 위로 이동",
 		"row.down": "{name} 아래로 이동",
 		"row.remove": "{name} 삭제",
-		"collection.new": "새로 만듦",
-		"collection.create": "새 컬렉션",
+		"collection.create": "+ 새 컬렉션",
 		"collection.drag": "끌어서 순서 바꾸기: {name}",
 		"name.idEmpty": "영문자와 숫자로 식별자를 입력하세요.",
 		"collection.none": "이 스키마에는 아직 컬렉션이 없어요.",
 		"collection.kindDocument": "문서",
 		"collection.kindItem": "항목",
-		"collection.railTitle": "컬렉션",
-		"sheet.optional": "선택",
 		"file.title": "monti.schema.ts에서 고치는 설정",
 		"file.messages": "관리자 문구 덮어쓰기 (admin.messages)",
 		"file.seed": "초기 데이터 (seed)",
-		"site.name": "사이트 이름",
 		"file.migrations": "기록된 데이터 변환",
 		"save.done": "적용됐어요",
-		"save.applyFailedNote":
-			"스키마 파일은 저장했지만 데이터베이스에는 적용하지 못했어요. monti schema:apply를 실행하거나 이 화면을 다시 불러오세요.",
+		"lock.cannotChange": "바꿀 수 없음",
+		"tabs.collection": "컬렉션 구역",
 	},
 });

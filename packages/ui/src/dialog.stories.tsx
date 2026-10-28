@@ -66,6 +66,22 @@ export const CancelFromFooter: Story = {
 	),
 };
 
+/** `of` names what the title is about, after a dot in the regular weight: "새 언어 · tlh". */
+export const TitleOf: Story = {
+	render: () => (
+		<Dialog defaultOpen>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle of="tlh">새 언어</DialogTitle>
+				</DialogHeader>
+				<DialogFooter showCloseButton>
+					<Button>추가</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	),
+};
+
 function FormDemo({ busy = false, disabled = false }: { busy?: boolean; disabled?: boolean }) {
 	const [open, setOpen] = useState(true);
 	return (

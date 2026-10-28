@@ -9,6 +9,7 @@ import {
 	droppedCollections,
 	suggestTransforms,
 	transformCollections,
+	trashedLocales,
 } from "../transforms";
 
 /** The site of the schema after the change the transforms below follow. */
@@ -243,5 +244,27 @@ describe("dropCollection", () => {
 		expect(suggestTransforms({ kind: "collection_removed", collection: "memo" })).toEqual([
 			{ op: "dropCollection", collection: "memo" },
 		]);
+	});
+});
+
+describe("trashLocale", () => {
+	const trash: SchemaMigration = { id: "trash-ja", op: "trashLocale", locale: "ja" };
+
+	it("is for a language the schema no longer lists: a language that is still there is a problem", () => {
+		expect(checkTransforms(site, [trash])).toEqual([]);
+		for (const locale of site.config.locales.map((item) => item.code)) {
+			expect(checkTransforms(site, [{ ...trash, locale }])).toMatchObject([{ id: "trash-ja" }]);
+		}
+	});
+
+	it("rewrites no body: its rows change status in the store, not through a transform", () => {
+		const result = applyTransforms(site, [trash], { collection: "post", isTranslation: true }, { title: "T" });
+		expect(result).toMatchObject({ metadata: { title: "T" }, changedBy: [] });
+		expect(transformCollections([trash])).toEqual([]);
+		expect(trashedLocales([trash, { ...trash, id: "again" }])).toEqual(["ja"]);
+	});
+
+	it("is what a removed language offers", () => {
+		expect(suggestTransforms({ kind: "locale_removed", locale: "ja" })).toEqual([{ op: "trashLocale", locale: "ja" }]);
 	});
 });

@@ -17,6 +17,6 @@ export interface DraftProblem {
  * Every problem of the draft. The title row's save button stays off while there is one; the editors show each as one line under the field it belongs to, and
  * the preview of a collection's fields shows its problems instead of the preview.
  */
-export function draftProblems(file: Obj): DraftProblem[] {
-	return [...siteProblems(file), ...collectionProblems(file)];
+export function draftProblems(file: Obj, codeCollections: readonly string[] = []): DraftProblem[] {
+	return [...siteProblems(file), ...collectionProblems(file, codeCollections)];
 }

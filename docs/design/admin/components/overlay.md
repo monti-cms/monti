@@ -44,7 +44,9 @@ A sheet is for making: work with several inputs that may get long (add a field, 
 
 ### In code
 
-`Sheet` (`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). It opens over a dimmed page with a line down its left edge, square, with `shadow-sheet`. Its width is fixed. `SheetHeader` has no ✦ place; with `closable={false}` (the sheet is busy and cannot be left) there is no close button. The body scrolls when longer than the sheet.
+`Sheet` (`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). It opens over a dimmed page with a line down its left edge, square, with `shadow-sheet`. Its width is fixed. `SheetHeader` has no ✦ place; with `closable={false}` (the sheet is busy and cannot be left) there is no close button. The body scrolls when longer than the sheet. The title can end in what the sheet is about with `SheetTitle of` ("필드 추가 · 노트").
+
+`SheetSection` is a titled part of the body ("보기", then "구조"): the title in 14px semibold, the fields under it, a later section 8px lower; the title can end in a `LockMark`. `SheetSplit` splits the body in two: a list on the left (150px, a rule on its right edge) and the work on the right under its own tabs. "필드 추가" uses it: the kinds are a `PickList` (a listbox) and the settings of the picked kind sit beside it under the tabs "기본" and "고급".
 
 ## Side panel
 

@@ -21,6 +21,11 @@ const SETTINGS = [
 const includes = <const L extends readonly string[]>(list: L, value: string): value is L[number] =>
 	list.includes(value);
 
+/** The name of a setting of the `site` or `admin` section by its path (`site.name`). */
+export function settingName(path: string, t: T): string {
+	return includes(SETTINGS, path) ? t(`subject.${path}`) : t("subject.other");
+}
+
 function subjectName(subject: ChangeSubject, t: T): string {
 	switch (subject.kind) {
 		case "collection":
@@ -34,7 +39,7 @@ function subjectName(subject: ChangeSubject, t: T): string {
 				? t(`subject.collection.${subject.key}`)
 				: t("subject.collection.other");
 		case "setting":
-			return includes(SETTINGS, subject.path) ? t(`subject.${subject.path}`) : t("subject.other");
+			return settingName(subject.path, t);
 		case "body":
 		case "layout":
 		case "fieldOrder":

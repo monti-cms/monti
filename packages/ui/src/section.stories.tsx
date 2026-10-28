@@ -37,7 +37,7 @@ export const Playground: Story = {
 	),
 };
 
-/** Sections one under another. */
+/** Sections one under another; the last one (`last`) has no hairline under it. */
 export const Stacked: Story = {
 	render: () => (
 		<>
@@ -47,12 +47,32 @@ export const Stacked: Story = {
 					<Input id="name" defaultValue="example.dev" />
 				</FormField>
 			</Section>
-			<Section title="언어">
+			<Section title="언어" last>
 				<FormField>
 					<FormFieldLabel htmlFor="lang">기본 언어</FormFieldLabel>
 					<Input id="lang" defaultValue="ko" className="font-mono" />
 				</FormField>
 			</Section>
 		</>
+	),
+};
+
+/** `stacked`: the title over its fields, for a section in a narrow column (the basics of a collection). */
+export const StackedTitle: Story = {
+	render: () => (
+		<div className="max-w-[560px]">
+			<Section title="보기" stacked>
+				<FormField>
+					<FormFieldLabel htmlFor="label">표시 이름</FormFieldLabel>
+					<Input id="label" defaultValue="게시글" />
+				</FormField>
+			</Section>
+			<Section title="구조" stacked last>
+				<FormField>
+					<FormFieldLabel htmlFor="path">공개 주소</FormFieldLabel>
+					<Input id="path" defaultValue="/posts/:slug" className="font-mono" />
+				</FormField>
+			</Section>
+		</div>
 	),
 };

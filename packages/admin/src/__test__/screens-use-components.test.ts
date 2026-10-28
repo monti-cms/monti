@@ -109,8 +109,6 @@ const DRAWING = new Map<string, string>([
 		"admin/src/screens/schema/fields-tree.tsx",
 		"the field list frame: column grid, resizable side panel and preview column",
 	],
-	["admin/src/screens/schema/locales-editor.tsx", "drag handle, shown on hover or focus"],
-	["admin/src/screens/schema/schema-screen.tsx", "the drag handle, placed over the row and shown on hover or focus"],
 	[
 		"admin/src/screens/shared/side-panel.tsx",
 		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
