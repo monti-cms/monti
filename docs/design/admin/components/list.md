@@ -110,7 +110,7 @@ While rows are picked, it takes the place of the column-name row: the same place
 
 ### In code
 
-`BulkBar` replaces the list's head row in the same place, the same 40px with the same line under it. It takes `label` ("3 selected"), `request` (an assistant request: a spark and its label), the most used actions as `children` (text buttons and menu buttons), `more` (a ⋯ with the rest, the dangerous one last, in red), and at the end `clearLabel` and `onClear` (the button that clears the pick). `colSpan` is how many columns the table has, the ⋯ column included. It is a row of the list's table, so it spans the table's `colSpan` columns; the table keeps its widths from its columns, not from this row.
+`BulkToolbar` is the bar of a grid, which has no head row: a `PageToolbar` row (48px, `inset`) with the count in bold, a rule, the actions as `children`, and `clearLabel` at the end; its `selectAll` hangs in the left margin like the table's. `BulkBar` replaces the list's head row in the same place, the same 40px with the same line under it. It takes `label` ("3 selected"), `request` (an assistant request: a spark and its label), the most used actions as `children` (text buttons and menu buttons), `more` (a ⋯ with the rest, the dangerous one last, in red), and at the end `clearLabel` and `onClear` (the button that clears the pick). `colSpan` is how many columns the table has, the ⋯ column included. It is a row of the list's table, so it spans the table's `colSpan` columns; the table keeps its widths from its columns, not from this row.
 
 ## Grid cell
 
@@ -128,7 +128,7 @@ One cell of the media grid. A 4:3 preview, with the file name (14) under it and 
 
 ### In code
 
-`Tile` is a file in a grid, flat (no card, no border). It has `status` (`uploading` with `progress` 0 to 100, or `failed` with `actions`), a mono detail line under the name (size, usage, a path), `picking` (the check shows faintly on every tile while any is picked), `action` (the ⋯ at the top right, shown with the pointer) and `proposal` (the assistant's suggestion in place of the detail line; a picked tile that has one is ringed and checked in blue). A failed tile has a 1px red ring drawn over the preview's edge. `FolderTile` is the low folder cell (it takes `dropTarget`). `Grid` with `columns="tiles"` is the tile grid (`.mt-tiles`): columns of at least 180px, 24px between rows and 20px between columns.
+`Tile` is a file in a grid, flat (no card, no border). It has `status` (`uploading` with `progress` 0 to 100, or `failed` with `actions`), a mono detail line under the name (size, usage, a path), `picking` (the check shows faintly on every tile while any is picked), `action` (the ⋯ at the top right, shown with the pointer) and `proposal` (the assistant's suggestion in place of the detail line; a picked tile that has one is ringed and checked in blue). A failed tile has a 1px red ring drawn over the preview's edge. `current` is the file open in the panel beside the grid: the picked ring without the check. `FilePreview` (`extension`, `faint`, `framed`) is the preview of a file that is not a picture, `.img.is-file`: a 20px file icon over its extension in mono 11. `FolderTile` is the low folder cell (it takes `dropTarget`). `Grid` with `columns="tiles"` is the tile grid (`.mt-tiles`): columns of at least 180px, 24px between rows and 20px between columns; `columns="folders"` is the same columns with 12px between rows, for the folder tiles above it (`.mt-tiles--folders`).
 
 ## Drop target (`.mt-droparea`, `.mt-folder.is-drop`, `.mt-toast--drop`)
 

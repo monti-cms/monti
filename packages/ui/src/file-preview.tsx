@@ -5,12 +5,23 @@ import { cn } from "./cn";
  * What a file that is not a picture shows in a tile's preview (`.mt-tile .img.is-file`): a 20px file icon with its extension under it in mono, centered on
  * the neutral fill. It fills the preview box of a `Tile`; a failed file shows it fainter.
  */
-function FilePreview({ extension, faint = false }: { extension: string; faint?: boolean }) {
+function FilePreview({
+	extension,
+	faint = false,
+	framed = false,
+}: {
+	extension: string;
+	faint?: boolean;
+	/** Draws its own 4:3 box with rounded corners, for use outside a tile (a panel's preview). */
+	framed?: boolean;
+}) {
 	return (
 		<span
 			data-slot="file-preview"
+			aria-hidden
 			className={cn(
 				"flex size-full flex-col items-center justify-center gap-monti-6 bg-monti-muted text-monti-subtle",
+				framed && "aspect-[4/3] w-full rounded-monti-md",
 				faint && "text-monti-faint",
 			)}
 		>

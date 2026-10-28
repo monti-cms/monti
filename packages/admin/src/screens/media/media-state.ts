@@ -1,4 +1,4 @@
-import type { Folder } from "@monti-cms/core/site";
+import type { Folder, PageSize } from "@monti-cms/core/site";
 import { enumParam, pageParam, pageSizeParam, textParam } from "../../lib/hooks/use-url-state";
 
 /** What the library keeps in its address, so a refresh keeps it and the address can be shared. The view (grid or list) is the person's own and lives in the browser. */
@@ -17,7 +17,7 @@ export const MEDIA_PARAMS = {
 
 export interface MediaState {
 	page: number;
-	pageSize: number;
+	pageSize: PageSize;
 	search: string;
 	used: "all" | "used" | "unused";
 	kind: "all" | "image" | "file";
@@ -52,8 +52,20 @@ export function mediaListParams(state: MediaState): URLSearchParams {
 	return params;
 }
 
+/** The query of the counts the filter menus show: the same place as a search or a filter looks in, and the same search words and usage, but not the type and alt text conditions. */
+export function mediaCountsParams(state: MediaState): URLSearchParams {
+	const params = new URLSearchParams({ page: "1", pageSize: "1" });
+	if (state.used !== "all") params.set("used", state.used);
+	if (state.search.trim()) params.set("search", state.search.trim());
+	if (state.folder && state.scope === "here") {
+		params.set("folderId", state.folder);
+		params.set("includeDescendants", "true");
+	}
+	return params;
+}
+
 /** The change a kind pick makes: the alt text condition only applies to pictures, so it goes when the kind is files. */
-export const withKind = (kind: MediaState["kind"]): Partial<MediaState> =>
+export const withKind = (kind: MediaState["kind"]): Partial<Pick<MediaState, "kind" | "alt">> =>
 	kind === "file" ? { kind, alt: "all" } : { kind };
 
 /** The kind after one of the two boxes of the kind menu was pressed: it is the box's kind alone, and pressing it again (or the other box too) means no condition. */

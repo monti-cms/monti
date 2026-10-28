@@ -8,7 +8,7 @@ import { TextButton } from "./text-button";
 /**
  * A file in a grid (the media library, an image to insert): a 4:3 preview, the name over a mono detail line. Flat: no card, no border.
  *
- * - Picked: a 2px ink ring around the preview and the check on. The check shows in the preview's top left when the pointer is on the tile, and
+ * - Picked: a 2px ink ring around the preview and the check on. The file open in a panel (`current`) has the same ring without the check. The check shows in the preview's top left when the pointer is on the tile, and
  *   on every tile (faint) while any are picked (`picking`). `action` is the ⋯ at the top right, shown with the pointer.
  * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known. The detail line says how
  *   far ("Uploading · 64%"). The name is quiet.
@@ -22,6 +22,7 @@ function Tile({
 	title,
 	detail,
 	selected = false,
+	current = false,
 	picking = false,
 	onSelectedChange,
 	selectLabel,
@@ -39,6 +40,8 @@ function Tile({
 	/** The mono line under the name: size, usage, a path. */
 	detail?: React.ReactNode;
 	selected?: boolean;
+	/** The file open in a panel beside the grid: the same ring as a picked tile, with no check. */
+	current?: boolean;
 	/** Some tile of the grid is picked: show this tile's check, faint. */
 	picking?: boolean;
 	/** Adds the check; called with the new state. */
@@ -75,6 +78,7 @@ function Tile({
 					className={cn(
 						"relative block aspect-[4/3] overflow-hidden rounded-monti-md bg-monti-muted",
 						selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
+						current && !selected && "ring-2 ring-monti-contrast",
 					)}
 				>
 					<span className={cn("block size-full", uploading && "opacity-45")}>{preview}</span>

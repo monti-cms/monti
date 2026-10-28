@@ -7,6 +7,7 @@ import {
 	hasScope,
 	isFiltered,
 	type MediaState,
+	mediaCountsParams,
 	mediaListParams,
 	selectAllState,
 	toggleKind,
@@ -75,6 +76,23 @@ describe("what the list asks for", () => {
 		expect(hasScope(state({ folder: "blog" }))).toBe(false);
 		expect(hasScope(state({ folder: "blog", alt: "has" }))).toBe(true);
 		expect(isFiltered(state({ search: "  " }))).toBe(false);
+	});
+});
+
+describe("what the counts ask for", () => {
+	it("count in the place a filter looks in, with the search and usage but without the type and alt text conditions", () => {
+		const params = mediaCountsParams(
+			state({ folder: "blog", search: "cover", kind: "file", alt: "none", used: "used" }),
+		);
+		expect(Object.fromEntries(params)).toEqual({
+			page: "1",
+			pageSize: "1",
+			used: "used",
+			search: "cover",
+			folderId: "blog",
+			includeDescendants: "true",
+		});
+		expect(mediaCountsParams(state({ folder: "blog", scope: "all" })).has("folderId")).toBe(false);
 	});
 });
 

@@ -8,6 +8,7 @@ import {
 	nextToUpload,
 	patchEntry,
 	removeEntry,
+	replaceProblem,
 } from "../media-upload";
 
 const file = (name: string, type: string, size = 10) => {
@@ -71,5 +72,18 @@ describe("extension", () => {
 	it("is the last part of the name, lowercase", () => {
 		expect(extensionOf("Price.List.PDF")).toBe("pdf");
 		expect(extensionOf("README")).toBe("");
+	});
+});
+
+describe("replacing a file", () => {
+	it("lets a picture take a picture's place and a file a file of the same type's", () => {
+		expect(replaceProblem(testSite, { mimeType: "image/jpeg" }, file("v2.png", "image/png"))).toBeNull();
+		expect(replaceProblem(testSite, { mimeType: "application/pdf" }, file("v2.pdf", "application/pdf"))).toBeNull();
+	});
+
+	it("refuses a picture for a file, a file for a picture, and a file of another type", () => {
+		expect(replaceProblem(testSite, { mimeType: "image/jpeg" }, file("v2.pdf", "application/pdf"))).toBe("kind");
+		expect(replaceProblem(testSite, { mimeType: "application/pdf" }, file("v2.png", "image/png"))).toBe("kind");
+		expect(replaceProblem(testSite, { mimeType: "application/pdf" }, file("v2.txt", "text/plain"))).toBe("type");
 	});
 });

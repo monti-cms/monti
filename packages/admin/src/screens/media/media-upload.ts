@@ -7,7 +7,7 @@ export type UploadProblem =
 	/** Over the size limit. A picture can be shrunk and tried again; another file can only be taken out. */
 	| { kind: "size"; bytes: number; limit: number; shrinkable: boolean }
 	/** The upload itself failed (the network, the storage). Trying again may work. */
-	| { kind: "failed"; message: string };
+	| { kind: "failed"; message: string; retry?: boolean };
 
 /** One file the person gave to the library: waiting its turn, going up, or failed and staying in its place. */
 export interface UploadEntry {
@@ -73,3 +73,12 @@ export const removeEntry = (queue: readonly UploadEntry[], id: string): UploadEn
 
 /** The extension shown on a file's tile ("pdf"), or an empty string. */
 export const extensionOf = (name: string): string => /\.([^./\\]{1,8})$/.exec(name)?.[1]?.toLowerCase() ?? "";
+
+/** Why a file cannot take the place of another, or `null`: a picture is replaced by a picture, and any other file by a file of the same type. */
+export function replaceProblem(site: Site, media: { mimeType: string | null }, file: File): "kind" | "type" | null {
+	const replacingImage = site.api.isImageType(media.mimeType);
+	const isImage = isUploadableImage(site, file);
+	if (replacingImage !== isImage) return "kind";
+	if (replacingImage) return null;
+	return site.api.fileTypeFor(file.name) === media.mimeType ? null : "type";
+}

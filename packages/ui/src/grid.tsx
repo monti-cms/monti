@@ -27,6 +27,8 @@ const gridVariants = cva("grid", {
 			"rail-wide": "grid-cols-[260px_minmax(0,1fr)]",
 			/** Equal columns of at least 180px: a grid of tiles (files, images, folders), four across in an 880px column and more in a wider one. */
 			tiles: "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
+			/** The same columns for the folder tiles above a grid of files: closer rows, 12px apart (`.mt-tiles--folders`). */
+			folders: "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		gap: GAP,
@@ -37,6 +39,8 @@ const gridVariants = cva("grid", {
 	compoundVariants: [
 		{ columns: "tiles", class: "gap-x-monti-20 gap-y-monti-24" },
 		{ columns: "tiles", responsive: true, class: "max-md:grid-cols-2" },
+		{ columns: "folders", class: "gap-x-monti-20 gap-y-monti-12" },
+		{ columns: "folders", responsive: true, class: "max-md:grid-cols-2" },
 	],
 	defaultVariants: { columns: 2, responsive: true, gap: 12 },
 });
