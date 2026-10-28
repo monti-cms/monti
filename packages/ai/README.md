@@ -40,6 +40,7 @@ puts the result in at once (the first candidate).
 | `summary` | Text field with the summary role (`role: "summary"`). Length comes from the field's `max` (160 if unset) | It is in a collection with a body |
 | `tags` | Multi-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
 | `category` | Single-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
+| `series` | Backlink field (`fields.backlink`, e.g. the series a post is listed in). Picks one series from the collection the backlink points from, and adds the post to it | It is in a collection with a body |
 | `imageAlt`, `imageCaption` | Alt text and caption in the body image and media screens | Always |
 | `mediaFilename` | File name in the media screen | Always |
 | `translate` | Block translation in the translation editor. The block props to translate come from the block definition (`translatable`) | There are two or more locales |
@@ -224,6 +225,8 @@ ai({
 	},
 });
 ```
+
+`askInstruction` lets the person type an extra request before the run; only the translation, selection, insert and block slots have a place for it (a field, image or media action runs at one press and puts its result in at once), and the config check refuses it elsewhere.
 
 For a streamed MDX result, only a ` ```mdx ` fence wrapping the whole answer is stripped. Fences of other languages, which are the
 block's source, are left as is.

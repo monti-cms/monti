@@ -244,6 +244,39 @@ export function backlinkMembers(
 }
 
 /**
+ * Changes the other record's relation list (`field.via`) and saves it at once, apart from the draft and publish state of the post. For a record collection, saving is
+ * publishing. If the versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
+ */
+export async function changeBacklinkRecord(
+	site: Site,
+	field: BacklinkField,
+	recordId: string,
+	change: (ids: string[]) => string[],
+	failed: string,
+): Promise<void> {
+	for (let attempt = 0; attempt < 2; attempt++) {
+		const record = await getEntry<RecordEntry>(site, recordId);
+		const current = record.working.metadata[field.via];
+		const ids = Array.isArray(current) ? current.filter((id): id is string => typeof id === "string") : [];
+		try {
+			await updateEntry(
+				site,
+				recordId,
+				{
+					expectedVersion: record.version,
+					slug: record.workingSlug,
+					metadata: { ...record.working.metadata, [field.via]: change(ids) },
+				},
+				failed,
+			);
+			return;
+		} catch (saveError) {
+			if (!isConflict(saveError) || attempt === 1) throw saveError;
+		}
+	}
+}
+
+/**
  * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
  * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
  * Relations without a condition are not filtered.
@@ -291,6 +324,7 @@ export function BacklinkInput({
 	targetId,
 	disabled,
 	shared,
+	onChange,
 }: {
 	/** The id of the input, so a label (or the properties list) can point to it. */
 	id?: string;
@@ -300,6 +334,8 @@ export function BacklinkInput({
 	disabled: boolean;
 	/** Usages of the same post loaded by the properties panel. If present, use them; after saving, reload with `refresh`. */
 	shared?: { references: readonly IncomingReference[]; loading: boolean; refresh: () => void };
+	/** The person picked or removed a record. */
+	onChange?: () => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
@@ -350,29 +386,8 @@ export function BacklinkInput({
 			: membersOf(shared.references)
 		: fetched;
 
-	/** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
-	const update = async (recordId: string, change: (ids: string[]) => string[]) => {
-		for (let attempt = 0; attempt < 2; attempt++) {
-			const record = await getEntry<RecordEntry>(site, recordId);
-			const current = record.working.metadata[field.via];
-			const ids = Array.isArray(current) ? current.filter((id): id is string => typeof id === "string") : [];
-			try {
-				await updateEntry(
-					site,
-					recordId,
-					{
-						expectedVersion: record.version,
-						slug: record.workingSlug,
-						metadata: { ...record.working.metadata, [field.via]: change(ids) },
-					},
-					tc("saveFailed"),
-				);
-				return;
-			} catch (saveError) {
-				if (!isConflict(saveError) || attempt === 1) throw saveError;
-			}
-		}
-	};
+	const update = (recordId: string, change: (ids: string[]) => string[]) =>
+		changeBacklinkRecord(site, field, recordId, change, tc("saveFailed"));
 
 	// On pick or remove, reflect on screen first (optimistic) and save in turn in the background. On failure, notify and revert only that change.
 	const [optimistic, setOptimistic] = useState<string[] | null>(null);
@@ -433,6 +448,7 @@ export function BacklinkInput({
 
 	const change = (next: string[]) => {
 		setError(null);
+		onChange?.();
 		const added = next.filter((id) => !shown.includes(id) && !createdRef.current.delete(id));
 		const removed = shown.filter((id) => !next.includes(id));
 		setOptimistic(next);

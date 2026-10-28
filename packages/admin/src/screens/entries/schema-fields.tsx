@@ -54,14 +54,7 @@ import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
-import {
-	BacklinkInput,
-	EntryPicker,
-	type FieldInputProps,
-	type IncomingReference,
-	multilineProps,
-	OrderedEntryList,
-} from "./field-inputs";
+import { BacklinkInput, EntryPicker, type FieldInputProps, multilineProps, OrderedEntryList } from "./field-inputs";
 import { FieldView } from "./field-views";
 import { MediaInput } from "./media-image-input";
 import { entriesMessages } from "./messages";
@@ -71,21 +64,9 @@ import { RelationCombobox } from "./relation-combobox";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
 
-/** Usages of the entry the caller already loaded. A backlink input shows them without fetching again. */
-export interface SchemaFieldsReferences {
-	items: readonly IncomingReference[];
-	loading: boolean;
-	refresh: () => void;
-}
-
 interface SchemaFieldsProps {
-	onSlugChange?: (slug: string) => void;
-	onRegenerateSlug?: () => void;
 	/** Hint text of the slug input. Used when switching to show the value to be generated when empty. */
 	slugPlaceholder?: string;
-	/** Whether to show the always-visible description under the field. */
-	showDescriptions?: boolean;
-	references?: SchemaFieldsReferences;
 }
 
 interface FieldRowProps {
@@ -300,7 +281,6 @@ export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: Fi
 
 interface RowProps {
 	name: string;
-	showDescriptions: boolean;
 }
 
 /** The entry a site registered under the field's `input` name, if any. */
@@ -315,32 +295,20 @@ export function useRegisteredInput(field: FieldState): FieldInputEntry | undefin
  * or read-only state changes. An input a site registered may read the whole form (`FieldInputProps.form`), so only that case
  * subscribes to the form as a whole.
  */
-const ValueRow = memo(function ValueRow({ name, showDescriptions }: RowProps) {
+const ValueRow = memo(function ValueRow({ name }: RowProps) {
 	const field = useField(name);
 	const registered = useRegisteredInput(field);
 	if (!field.definition) return null;
-	return registered ? (
-		<FormBoundRow field={field} showDescriptions={showDescriptions} />
-	) : (
-		<ValueRowView field={field} showDescriptions={showDescriptions} />
-	);
+	return registered ? <FormBoundRow field={field} /> : <ValueRowView field={field} />;
 });
 
-function FormBoundRow({ field, showDescriptions }: { field: FieldState; showDescriptions: boolean }) {
+function FormBoundRow({ field }: { field: FieldState }) {
 	const locked = field.readOnlyReason === "locked";
 	const form = useEntryFormSelector((state) => (locked && state.locked ? state.locked.values : state.form));
-	return <ValueRowView field={field} showDescriptions={showDescriptions} form={form} />;
+	return <ValueRowView field={field} form={form} />;
 }
 
-function ValueRowView({
-	field,
-	showDescriptions,
-	form,
-}: {
-	field: FieldState;
-	showDescriptions: boolean;
-	form?: EntryForm;
-}) {
+function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
@@ -366,7 +334,7 @@ function ValueRowView({
 		context: { entryId, locale, groupId: entry?.translationGroupId, disabled: field.readOnly, entry },
 		onChange: field.setValue,
 	};
-	const help = locked ? field.lockedNote : showDescriptions ? field.description : undefined;
+	const help = locked ? field.lockedNote : field.description;
 	// Input pieces registered by extensions (right of the label row, hint text, input override).
 	const registered = definition.input ? fieldInputs?.[definition.input] : undefined;
 	const parts = registered && isFieldInputParts(registered) ? registered : undefined;
@@ -416,39 +384,17 @@ function ValueRowView({
 	);
 }
 
-const SlugRow = memo(function SlugRow({
-	name,
-	showDescriptions,
-	onSlugChange,
-	onRegenerateSlug,
-	placeholder,
-}: RowProps & {
-	onSlugChange?: (slug: string) => void;
-	onRegenerateSlug?: () => void;
-	placeholder?: string;
-}) {
-	const site = useSite();
-	const t = useTranslator(entriesMessages);
+const SlugRow = memo(function SlugRow({ name, placeholder }: RowProps & { placeholder?: string }) {
 	const field = useField<string>(name);
-	const collection = useEntryFormSelector((state) => state.collection);
 	const definition = field.definition as SlugField;
-	const changeSlug = onSlugChange ?? field.setValue;
-	const request = field.slotRequest;
-	const slot = useMemo(
-		() => (request ? { ...request, apply: (next: string) => changeSlug(next) } : undefined),
-		[request, changeSlug],
-	);
-	const fromLabel = definition.from
-		? (site.schemaOf(collection).fields[definition.from]?.label ?? definition.from)
-		: "";
-	const regenerateLabel = t("relation.regenerate", { label: fromLabel });
+	const slot = field.slotRequest ?? undefined;
 	return (
 		<FieldRow
 			id={field.ids.input}
 			label={field.label}
 			required={field.required}
 			issue={field.error?.issue}
-			help={showDescriptions ? field.description : undefined}
+			help={field.description}
 			slot={slot}
 		>
 			<Affix
@@ -457,22 +403,15 @@ const SlugRow = memo(function SlugRow({
 				aria-invalid={field.inputProps["aria-invalid"]}
 				aria-describedby={field.inputProps["aria-describedby"]}
 				value={field.value ?? ""}
-				onChange={(event) => changeSlug(event.target.value)}
+				onChange={(event) => field.setValue(event.target.value)}
 				placeholder={placeholder ?? definition.placeholder}
-				action={
-					onRegenerateSlug && definition.from ? (
-						<IconButton label={regenerateLabel} side="bottom" disabled={field.readOnly} onClick={onRegenerateSlug}>
-							<Renew aria-hidden />
-						</IconButton>
-					) : undefined
-				}
 			/>
 		</FieldRow>
 	);
 });
 
 /** A conditional field: its choice, then the fields that belong to the chosen option. */
-const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: RowProps) {
+const ConditionalRow = memo(function ConditionalRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const choice = useField<string>(name);
@@ -481,15 +420,15 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 	const nested = field.values[selected] ?? {};
 	return (
 		<Stack gap={12}>
-			<ValueRow name={name} showDescriptions={showDescriptions} />
+			<ValueRow name={name} />
 			{Object.keys(nested).map((nestedName) => (
-				<ValueRow key={nestedName} name={nestedName} showDescriptions={showDescriptions} />
+				<ValueRow key={nestedName} name={nestedName} />
 			))}
 		</Stack>
 	);
 });
 
-const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
+const ViewRow = memo(function ViewRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const form = useEntryFormSelector((state) => state.form);
@@ -497,7 +436,7 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
 	const field = site.schemaOf(collection).fields[name] as ViewField;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
 	return field.label ? (
-		<FieldRow id={`cms-${name}`} label={field.label} help={showDescriptions ? field.description : undefined}>
+		<FieldRow id={`cms-${name}`} label={field.label} help={field.description}>
 			{view}
 		</FieldRow>
 	) : (
@@ -505,11 +444,7 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
 	);
 });
 
-const BacklinkRow = memo(function BacklinkRow({
-	name,
-	showDescriptions,
-	references,
-}: RowProps & { references?: SchemaFieldsReferences }) {
+const BacklinkRow = memo(function BacklinkRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const locked = useEntryFormSelector((state) => state.locked);
@@ -521,21 +456,8 @@ const BacklinkRow = memo(function BacklinkRow({
 	const readOnly = Boolean(locked);
 	const targetId = groupId ?? entryId;
 	return (
-		<FieldRow
-			id={`cms-${name}`}
-			label={field.label}
-			help={locked ? locked.note : showDescriptions ? field.description : undefined}
-		>
-			<BacklinkInput
-				field={field}
-				targetId={targetId}
-				disabled={disabled || readOnly}
-				shared={
-					targetId === entryId && references
-						? { references: references.items, loading: references.loading, refresh: references.refresh }
-						: undefined
-				}
-			/>
+		<FieldRow id={`cms-${name}`} label={field.label} help={locked ? locked.note : field.description}>
+			<BacklinkInput field={field} targetId={targetId} disabled={disabled || readOnly} />
 		</FieldRow>
 	);
 });
@@ -545,13 +467,7 @@ const BacklinkRow = memo(function BacklinkRow({
  * and renders fields not in the layout after the last group in declaration order. For a conditional field, shows its dependent input when the condition holds.
  * The values, issues and read-only state come from the nearest `EntryFormProvider`; each field row reads them with `useField`.
  */
-export function SchemaFields({
-	onSlugChange,
-	onRegenerateSlug,
-	slugPlaceholder,
-	showDescriptions = true,
-	references,
-}: SchemaFieldsProps) {
+export function SchemaFields({ slugPlaceholder }: SchemaFieldsProps) {
 	const site = useSite();
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
@@ -562,24 +478,15 @@ export function SchemaFields({
 		if (!field) return null;
 		switch (field.kind) {
 			case "slug":
-				return (
-					<SlugRow
-						key={name}
-						name={name}
-						showDescriptions={showDescriptions}
-						onSlugChange={onSlugChange}
-						onRegenerateSlug={onRegenerateSlug}
-						placeholder={slugPlaceholder}
-					/>
-				);
+				return <SlugRow key={name} name={name} placeholder={slugPlaceholder} />;
 			case "conditional":
-				return <ConditionalRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ConditionalRow key={name} name={name} />;
 			case "view":
-				return <ViewRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ViewRow key={name} name={name} />;
 			case "backlink":
-				return <BacklinkRow key={name} name={name} showDescriptions={showDescriptions} references={references} />;
+				return <BacklinkRow key={name} name={name} />;
 			default:
-				return <ValueRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ValueRow key={name} name={name} />;
 		}
 	};
 

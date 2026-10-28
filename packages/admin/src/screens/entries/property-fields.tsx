@@ -29,12 +29,18 @@ import { issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
-import { BacklinkInput, backlinkMembers, type FieldInputProps } from "./field-inputs";
+import {
+	BacklinkInput,
+	backlinkMembers,
+	changeBacklinkRecord,
+	type FieldInputProps,
+	type IncomingReference,
+} from "./field-inputs";
 import { FieldView } from "./field-views";
 import { MediaValue } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { PropertyEditContext, usePropertyEdit } from "./property-edit";
-import { DefaultInput, type SchemaFieldsReferences, useRegisteredInput } from "./schema-fields";
+import { DefaultInput, useRegisteredInput } from "./schema-fields";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
 
@@ -83,6 +89,13 @@ interface FocusRequest {
 	/** The field the page asked to bring up (a publish problem). */
 	path: string | null;
 	onFocused: () => void;
+}
+
+/** Usages of the entry the caller already loaded. A backlink row reads its members from them without fetching again. */
+export interface SchemaFieldsReferences {
+	items: readonly IncomingReference[];
+	loading: boolean;
+	refresh: () => void;
 }
 
 interface ShellProps {
@@ -476,16 +489,42 @@ const BacklinkProperty = memo(function BacklinkProperty({
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
+	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const locked = useEntryFormSelector((state) => state.locked);
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const entryId = useEntryFormSelector((state) => state.entryId);
 	const groupId = useEntryFormSelector((state) => state.entry?.translationGroupId);
 	const field = site.schemaOf(collection).fields[name] as BacklinkField;
+	const marked = useField(name);
 	// On a translation, the original's value is only shown (relations point to the original).
 	const targetId = groupId ?? entryId;
 	const shared = targetId === entryId && references ? references : undefined;
 	const names = shared ? backlinkMembers(shared.items, field, tc("untitled")).map((member) => member.title) : [];
+	const refresh = shared?.refresh;
+	// The assistant picks a series: the post goes into it at once (saved apart from the draft), and the row reads it in the assistant's blue until it is changed.
+	const request = marked.slotRequest;
+	const slot = useMemo(
+		() =>
+			request && targetId
+				? {
+						...request,
+						filled: names.length > 0,
+						apply: async (id: string) => {
+							await changeBacklinkRecord(
+								site,
+								field,
+								id,
+								(ids) => (ids.includes(targetId) ? ids : [...ids, targetId]),
+								tc("saveFailed"),
+							);
+							store.getState().setAssisted(name, true);
+							refresh?.();
+						},
+					}
+				: null,
+		[request, targetId, names.length, site, field, tc, store, name, refresh],
+	);
 	return (
 		<PropertyShell
 			name={name}
@@ -500,11 +539,13 @@ const BacklinkProperty = memo(function BacklinkProperty({
 					targetId={targetId}
 					disabled={disabled || Boolean(locked)}
 					shared={shared ? { references: shared.items, loading: shared.loading, refresh: shared.refresh } : undefined}
+					onChange={() => store.getState().setAssisted(name, false)}
 				/>
 			}
-			assisted={false}
+			assisted={marked.assisted}
 			readOnly={disabled || Boolean(locked)}
 			note={locked ? locked.note : undefined}
+			slot={slot}
 			focus={focus}
 		/>
 	);
