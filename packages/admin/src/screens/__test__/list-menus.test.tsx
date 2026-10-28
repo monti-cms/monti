@@ -247,6 +247,7 @@ describe("flow: filter by a date", () => {
 		fetchMock.mockImplementation(async (input: string) => {
 			const url = new URL(input, "http://localhost");
 			if (url.pathname === "/api/monti/v1/preferences") return json({});
+			if (url.pathname === "/api/monti/v1/folders") return json([]);
 			return json({ items: [], total: 0 });
 		});
 		render(

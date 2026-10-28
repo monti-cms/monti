@@ -6,6 +6,8 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuReorderGroup,
 	DropdownMenuSearch,
 	DropdownMenuSub,
@@ -179,5 +181,25 @@ describe("rows that can be put in order", () => {
 		fireEvent.dragOver(second, { dataTransfer: transfer });
 		fireEvent.drop(second, { dataTransfer: transfer });
 		expect(onReorder).toHaveBeenCalledWith("분류", "언어");
+	});
+});
+
+describe("a pick-one list", () => {
+	it("applies the value picked and closes the whole menu", async () => {
+		const onValueChange = vi.fn();
+		render(
+			<DropdownMenu defaultOpen>
+				<DropdownMenuTrigger>open</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuRadioGroup value="recent" onValueChange={onValueChange}>
+						<DropdownMenuRadioItem value="recent">최근 수정</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="title">제목 오름차순</DropdownMenuRadioItem>
+					</DropdownMenuRadioGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>,
+		);
+		fireEvent.click(await screen.findByRole("menuitemradio", { name: "제목 오름차순" }));
+		expect(onValueChange).toHaveBeenCalledWith("title", expect.anything());
+		await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 	});
 });
