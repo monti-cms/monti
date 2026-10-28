@@ -8,10 +8,6 @@ export const formatDateTime = (site: Site, value: string | number | Date, option
 export const formatDateOnly = (site: Site, value: string | number | Date) =>
 	new Date(value).toLocaleDateString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE });
 
-/** Year in the configured time zone. */
-export const zonedYear = (site: Site, value: string | number | Date) =>
-	Number(new Date(value).toLocaleString("en-US", { timeZone: site.CMS_TIME_ZONE, year: "numeric" }));
-
 /** How long ago, in the admin language and in short form ("2 min. ago"). Under a minute it reads "now". */
 export const formatAgo = (site: Site, value: string | number | Date, now: number = Date.now()) => {
 	const seconds = Math.round((new Date(value).getTime() - now) / 1000);

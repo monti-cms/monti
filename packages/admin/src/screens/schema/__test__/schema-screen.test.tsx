@@ -12,10 +12,10 @@ import { entriesMessages } from "../../entries/messages";
 import { rememberScroll, takeScroll } from "../../settings/place";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
-import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
 import { schemaAdminMessages } from "../admin.messages";
 import { schemaCollectionMessages } from "../collection.messages";
 import { schemaFieldsMessages } from "../fields.messages";
+import { LAYOUT_PREVIEW_RESIZE } from "../fields-tree";
 import { schemaLocalesMessages } from "../locales.messages";
 import { schemaMessages } from "../messages";
 import { schemaReviewMessages } from "../review.messages";
@@ -159,11 +159,12 @@ const renderScreen = () =>
 		</AdminQueryProvider>,
 	);
 
-/** The save bar: it shows only while the draft differs from the saved file. */
+/** The save group (on the right of the title row on the Settings page): it shows only while the draft differs from the saved file. */
 const saveBar = () => screen.getByTestId("save-bar");
 const queryBar = () => screen.queryByTestId("save-bar");
-/** The bar's Review button (it opens the review dialog). */
-const review = () => within(saveBar()).getByRole("button", { name: t("bar.review") }) as HTMLButtonElement;
+/** The group's "changes" button (it opens the review dialog); its name starts with the word and ends with the count. */
+const review = () =>
+	within(saveBar()).getByRole("button", { name: new RegExp(`^${t("bar.review")}`) }) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
 /** Opens the dialog of the "Add field" button and picks the kind (text when none is given). */
 async function openAddField(kindName?: string) {
@@ -1270,14 +1271,14 @@ describe("SchemaScreen", () => {
 			vi.unstubAllGlobals();
 		});
 
-		it("opens as wide as the entry editor's properties panel, and can be resized", async () => {
+		it("opens at its own width, and can be resized", async () => {
 			wideWindow();
 			await openFields();
 			const side = await screen.findByTestId("layout-preview-side");
 			const handle = within(side).getByRole("separator");
-			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth);
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(LAYOUT_PREVIEW_RESIZE.defaultWidth);
 			fireEvent.keyDown(handle, { key: "ArrowLeft", shiftKey: true });
-			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth + 64);
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(LAYOUT_PREVIEW_RESIZE.defaultWidth + 64);
 			vi.unstubAllGlobals();
 		});
 
@@ -1476,28 +1477,28 @@ describe("SchemaScreen", () => {
 			expect(queryBar()).toBeNull();
 			fireEvent.click(screen.getByRole("tab", { name: "site" }));
 			type(await screen.findByLabelText(t("site.name")), "Blog");
-			expect(within(saveBar()).getByText(t("bar.count", { count: 1 }))).toBeTruthy();
-			type(screen.getByLabelText(tSite("site.home")), "/start");
-			expect(within(saveBar()).getByText(t("bar.count", { count: 2 }))).toBeTruthy();
+			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 1 }))).toBeTruthy();
+			type(screen.getByLabelText(tSite("site.previewPath")), "/start");
+			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 2 }))).toBeTruthy();
 			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
-			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.home")) }));
+			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.previewPath")) }));
 			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("");
 			expect(queryBar()).toBeNull();
 		});
 
 		it("marks a field that differs from the saved file, and its revert puts back that field only", async () => {
-			state = screenState({ schema: { ...schema(), site: { name: "Blog", home: "/" } } });
+			state = screenState({ schema: { ...schema(), site: { name: "Blog", previewPath: "/" } } });
 			renderScreen();
 			await screen.findByTestId("collection-post");
 			fireEvent.click(screen.getByRole("tab", { name: "site" }));
 			const site = await screen.findByTestId("site-settings");
 			expect(within(site).queryByTestId("field-changed")).toBeNull();
 			type(screen.getByLabelText(t("site.name")), "Journal");
-			type(screen.getByLabelText(tSite("site.home")), "/start");
+			type(screen.getByLabelText(tSite("site.previewPath")), "/start");
 			expect(within(site).getAllByTestId("field-changed")).toHaveLength(2);
 			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
 			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("Blog");
-			expect((screen.getByLabelText(tSite("site.home")) as HTMLInputElement).value).toBe("/start");
+			expect((screen.getByLabelText(tSite("site.previewPath")) as HTMLInputElement).value).toBe("/start");
 			expect(within(site).getAllByTestId("field-changed")).toHaveLength(1);
 		});
 
@@ -1732,7 +1733,6 @@ describe("SchemaScreen", () => {
 	it("edits the site settings: each control writes its own key under site", async () => {
 		await openSettingsTab("site");
 		type(await screen.findByLabelText(t("site.name")), "My blog");
-		type(screen.getByLabelText(tSite("site.home")), "https://example.com");
 		type(screen.getByLabelText(tSite("site.previewPath")), "/preview");
 		type(screen.getByLabelText(tSite("site.previewParam")), "lang");
 		type(screen.getByLabelText(tSite("site.alias.new")), "www.example.com");
@@ -1743,7 +1743,6 @@ describe("SchemaScreen", () => {
 		const file = await reviewedFile();
 		expect(file.site).toEqual({
 			name: "My blog",
-			home: "https://example.com",
 			previewPath: "/preview",
 			previewLocaleParam: "lang",
 			localePrefix: "always",

@@ -109,7 +109,7 @@ const FILE_KEY_ORDER = [
 ] as const;
 /** Where each key of the `site` and `admin` settings is written when it is new. */
 const SECTION_KEY_ORDER = {
-	site: ["url", "name", "home", "previewPath", "previewLocaleParam", "localePrefix", "aliases"],
+	site: ["url", "name", "previewPath", "previewLocaleParam", "localePrefix", "aliases"],
 	admin: ["path", "locale", "templates", "translations", "messages"],
 } as const;
 

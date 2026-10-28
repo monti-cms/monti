@@ -75,6 +75,7 @@
 	--background-color-monti-tool: var(--monti-bg-tool);
 	--background-color-monti-muted: var(--monti-bg-muted);
 	--background-color-monti-selected: var(--monti-bg-selected);
+	--background-color-monti-current: var(--monti-bg-current);
 	--background-color-monti-highlight: var(--monti-bg-highlight);
 	--background-color-monti-block: var(--monti-bg-block);
 	--background-color-monti-emphasis: var(--monti-bg-emphasis);
@@ -215,12 +216,14 @@
 
 	/* Widths of columns, panels and sheets (w-monti-*, min-w-monti-*, max-w-monti-*). */
 	--container-monti-sidebar: var(--monti-width-sidebar);
+	--container-monti-rail: var(--monti-width-rail);
 	--container-monti-menu: var(--monti-width-menu);
 	--container-monti-panel: var(--monti-width-panel);
 	--container-monti-side-panel: var(--monti-width-side-panel);
 	--container-monti-assistant: var(--monti-width-assistant);
 	--container-monti-sheet: var(--monti-width-sheet);
 	--container-monti-content: var(--monti-width-content);
+	--container-monti-list: var(--monti-width-list);
 	--container-monti-reading: var(--monti-width-reading);
 
 	/* Shadows: floating surfaces only. The rest of the design is flat. */

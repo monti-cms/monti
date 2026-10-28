@@ -4,7 +4,6 @@ import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
-import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
 import { eventsMessages } from "../messages";
@@ -67,9 +66,7 @@ afterEach(() => {
 const renderScreen = () =>
 	render(
 		<AdminQueryProvider>
-			<AdminShell title="Events" sidebar={{ activeNav: "events" }}>
-				<EventsScreen />
-			</AdminShell>
+			<EventsScreen />
 		</AdminQueryProvider>,
 	);
 
@@ -92,23 +89,25 @@ describe("EventsScreen", () => {
 		expect(within(failedRow).getByText("slug-e1").closest("a")).not.toBeNull();
 	});
 
-	it("opens the full record of an event from its row without breaking the row's own actions", async () => {
+	it("opens the full record of an event beside the list without breaking the row's own actions", async () => {
 		renderScreen();
 
 		const row = (await screen.findByText("webhook")).closest("tr") as HTMLElement;
 		fireEvent.click(within(row).getByText("Title e2"));
-		const detail = await screen.findByRole("dialog");
+		// A panel beside the list, not a dialog over it: the list stays usable and in place.
+		const detail = await screen.findByRole("complementary", { name: /Title e2/ });
+		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(within(detail).getByText("entry-e2")).toBeTruthy();
 		expect(within(detail).getByText("e2")).toBeTruthy();
 		expect(within(detail).getByText("webhook")).toBeTruthy();
 		expect(within(detail).getByText("boom")).toBeTruthy();
-		fireEvent.keyDown(detail, { key: "Escape" });
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		fireEvent.click(within(detail).getByRole("button", { name: "Close" }));
+		expect(screen.queryByRole("complementary")).toBeNull();
 
 		// Retry in the row still retries and does not open the detail.
 		fireEvent.click(within(row).getByRole("button", { name: t("action.retryLabel", { subscriber: "webhook" }) }));
 		await waitFor(() => expect(posts().length).toBe(1));
-		expect(screen.queryByRole("dialog")).toBeNull();
+		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
 	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
@@ -284,7 +283,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 		await screen.findByText("slug-e0");
 
-		fireEvent.click(screen.getByRole("button", { name: /다음 페이지/ }));
+		fireEvent.click(screen.getByRole("link", { name: /Next page|다음 페이지/ }));
 		expect(await screen.findByText("slug-e25")).toBeTruthy();
 	});
 });

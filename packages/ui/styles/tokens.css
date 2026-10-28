@@ -32,6 +32,7 @@
 	--monti-bg-tool: var(--monti-gray-2);
 	--monti-bg-muted: var(--monti-gray-3);
 	--monti-bg-selected: var(--monti-gray-4);
+	--monti-bg-current: var(--monti-gray-6);
 	--monti-bg-highlight: #e8e1cf;
 	--monti-bg-block: #efe9dc;
 	--monti-bg-emphasis: var(--monti-gray-12);
@@ -81,12 +82,14 @@
 	--monti-height-panebar: 44px;
 	--monti-height-statusbar: 30px;
 	--monti-width-sidebar: 232px;
+	--monti-width-rail: 48px;
 	--monti-width-menu: 240px;
 	--monti-width-panel: 300px;
 	--monti-width-side-panel: 360px;
 	--monti-width-assistant: 380px;
 	--monti-width-sheet: 520px;
 	--monti-width-content: 880px;
+	--monti-width-list: 1200px;
 	--monti-width-reading: 680px;
 	--monti-size-icon-xs: 12px;
 	--monti-size-icon-sm: 14px;

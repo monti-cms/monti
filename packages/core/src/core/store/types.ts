@@ -1,5 +1,5 @@
 import type { StoredDocument } from "../../doc/stored-document";
-import type { ListSortField } from "../api";
+import type { ListSortField, ListStatus } from "../api";
 import type { TranslationState } from "../translation/state";
 import type { ReferenceKind, ReferenceOccurrence } from "../types";
 
@@ -187,6 +187,11 @@ export interface Folder {
 	version: number;
 }
 
+/** A folder as the folder list gives it: with how many things sit directly in it (entries outside the trash, counted once per translation group; or the ready files of a media folder). */
+export interface FolderListItem extends Folder {
+	entryCount: number;
+}
+
 export interface ListEntriesItem {
 	id: string;
 	collection: string;
@@ -242,6 +247,15 @@ export interface ListTranslationMember {
 	hasUnpublishedChanges: boolean;
 }
 
+/** A condition on one stored field of the list. */
+export type FieldCondition =
+	| { readonly kind: "empty" }
+	| { readonly kind: "filled" }
+	| { readonly kind: "is"; readonly value: string };
+
+/** Where a translation group stands, as the list's translation filter tells it apart. */
+export type TranslationFilter = "none" | "changed" | "current";
+
 export interface DateRange {
 	from?: Date;
 	to?: Date;
@@ -251,11 +265,11 @@ export interface ListEntriesParams {
 	collection: string;
 	search?: string;
 	includeBody?: boolean;
-	/** Column header filter: title only (partial match). Combined with `search` using AND. */
-	titleContains?: string;
-	/** Column header filter: slug only (partial match). */
-	slugContains?: string;
-	statuses?: readonly EntryStatus[];
+	/**
+	 * Only entries in one of these states (OR). `published` has no unpublished changes and `editing` is published with changes, so asking for both is every
+	 * published entry. All but the trash if unset.
+	 */
+	statuses?: readonly ListStatus[];
 	/**
 	 * Only these languages. All languages if unset.
 	 * In group view, filters to "groups that have content in this language (outside the trash)".
@@ -268,15 +282,45 @@ export interface ListEntriesParams {
 	groupTranslations?: boolean;
 	folderId?: string | null;
 	includeDescendants?: boolean;
-	/** Relation field name to selected item IDs. Multiple values of the same field are OR; different fields are AND. */
-	relations?: Readonly<Record<string, readonly string[]>>;
-	hasUnpublishedChanges?: boolean;
+	/**
+	 * Conditions on stored fields, by field name. Several conditions on one field are OR; different fields are AND. Which conditions a field accepts depends on its kind:
+	 * text and media take `empty` and `filled`; select and relation take `empty` and `is` (the option, or the id of the item). Anything else is `invalid_input`.
+	 */
+	fields?: Readonly<Record<string, readonly FieldCondition[]>>;
+	/**
+	 * Where a translation group stands (OR). `none`: no translation outside the trash. `changed`: some translation was confirmed against an earlier source.
+	 * `current`: it has translations and none is behind. Only for a collection with translations.
+	 */
+	translations?: readonly TranslationFilter[];
 	createdAt?: DateRange;
 	updatedAt?: DateRange;
 	publishedAt?: DateRange;
 	sort?: { field: ListSortField; direction: "asc" | "desc" };
 	page?: number;
 	pageSize?: 25 | 50 | 100;
+}
+
+/**
+ * How many rows of a list each value of one thing has, for a column's menu: a stored field, the translation filter or the status. The rows counted are those
+ * of the folder given (the same rows the list has before any filter).
+ */
+export interface ListCountsParams {
+	collection: string;
+	facet: { readonly field: string } | "translation" | "status";
+	groupTranslations?: boolean;
+	folderId?: string | null;
+	includeDescendants?: boolean;
+}
+
+export interface ListCounts {
+	/** Rows in scope. */
+	total: number;
+	/** Of a stored field: rows with no value (a text, a media, a select or a relation). */
+	empty?: number;
+	/** Of a text or media field: rows with a value. */
+	filled?: number;
+	/** Of a select or relation: rows per option or item id. Of the translation filter: rows per `none`, `changed` and `current`. Of the status: rows per `published`, `editing`, `draft` and `archived`. */
+	values: Readonly<Record<string, number>>;
 }
 
 /** Largest number of hits one search returns. */

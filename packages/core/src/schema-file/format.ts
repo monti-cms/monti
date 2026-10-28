@@ -212,7 +212,6 @@ const site = strict({
 	previewPath: text.optional().describe("Start of the draft preview URL."),
 	previewLocaleParam: z.union([text, z.literal(false)]).optional(),
 	localePrefix: z.enum(LOCALE_PREFIX_MODES as [string, ...string[]]).optional(),
-	home: text.optional(),
 });
 
 /** Admin settings. A text override is a string in the file; code may also give a function of the placeholders. */

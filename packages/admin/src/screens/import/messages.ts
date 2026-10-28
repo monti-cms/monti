@@ -2,17 +2,12 @@ import { defineMessages } from "@monti-cms/core";
 
 const one = (count: unknown) => Number(count) === 1;
 
-/** Text of the entry import: the Import entries card on the Data page, with its preview and its result. */
+/** Text of the entry import: the Import entries section of the Data page and the sheet it opens, with its preview and its result. */
 export const importMessages = defineMessages("cms-admin.import", {
 	en: {
 		title: "Import entries",
-		description: "Files come in as new entries. Existing entries are not changed.",
-		"kinds.label": "What you can choose",
-		"kinds.export": "A Monti export: the .zip from Site backup above, or from another site.",
-		"kinds.markdown":
-			"A .zip of .md or .mdx files with a front matter that has title and slug. A locale key is optional. The folder a file sits in is its collection.",
+		"kinds.hint": "A Monti backup, or a zip of .md and .mdx files",
 		"file.choose": "Choose a zip file",
-		"file.change": "Choose another file",
 		"file.tooLarge": ({ limit }) => `That file is larger than ${limit}. Split it into smaller archives.`,
 		"preview.loading": "Reading the archive…",
 		"preview.failed": "The archive could not be read.",
@@ -53,20 +48,18 @@ export const importMessages = defineMessages("cms-admin.import", {
 		"publish.label": "Publish entries that were published",
 		"publish.hint": ({ count }) =>
 			`${count} ${one(count) ? "entry was" : "entries were"} published in the archive. Others stay drafts. Off, everything starts as a draft.`,
-		"action.import": "Import",
-		"action.again": "Import another file",
-		"action.cancel": "Start over",
-		"progress.running": ({ count }) => `Importing ${count} ${one(count) ? "entry" : "entries"}…`,
-		"progress.hint": "Drafts first, then bodies, then publishing. Keep this page open.",
+		"action.import": ({ count }) => `Import ${count}`,
+		"action.importing": "Importing…",
+		"action.view": "View list",
 		"nothing.description":
 			"Every entry in this archive is skipped. Check the reasons above, or pick other collections.",
 		"result.title": "Import result",
+		"result.open": "Open",
 		"result.imported": ({ count }) => `${count} imported`,
 		"result.draft": ({ count }) => `${count} left as a draft`,
 		"result.skipped": ({ count }) => `${count} skipped`,
 		"result.failed": ({ count }) => `${count} failed`,
 		"result.published": ({ count }) => `${count} published`,
-		"result.open": "Open",
 		"result.outcome.imported": "Imported",
 		"result.outcome.draft": "Draft only",
 		"result.outcome.skipped": "Skipped",
@@ -81,13 +74,8 @@ export const importMessages = defineMessages("cms-admin.import", {
 	},
 	ko: {
 		title: "글 가져오기",
-		description: "파일은 새 글로 들어오고, 이미 있는 글은 바뀌지 않아요.",
-		"kinds.label": "고를 수 있는 파일",
-		"kinds.export": "Monti 내보내기 파일: 위의 사이트 백업에서 받은 .zip이나 다른 사이트에서 받은 .zip.",
-		"kinds.markdown":
-			"title과 slug가 있는 front matter를 가진 .md, .mdx 파일을 묶은 .zip. locale 키는 없어도 돼요. 파일이 들어 있는 폴더가 컬렉션이에요.",
+		"kinds.hint": "Monti 백업 · .md/.mdx 묶음",
 		"file.choose": "zip 파일 고르기",
-		"file.change": "다른 파일 고르기",
 		"file.tooLarge": ({ limit }) => `파일이 ${limit}보다 커요. 더 작은 보관 파일로 나눠 주세요.`,
 		"preview.loading": "보관 파일을 읽는 중…",
 		"preview.failed": "보관 파일을 읽지 못했어요.",
@@ -127,19 +115,17 @@ export const importMessages = defineMessages("cms-admin.import", {
 		"publish.label": "원래 발행된 글은 발행",
 		"publish.hint": ({ count }) =>
 			`보관 파일에서 발행되어 있던 글은 ${count}개예요. 나머지는 초안으로 남아요. 끄면 모두 초안으로 시작해요.`,
-		"action.import": "가져오기",
-		"action.again": "다른 파일 가져오기",
-		"action.cancel": "처음부터",
-		"progress.running": ({ count }) => `글 ${count}개를 가져오는 중…`,
-		"progress.hint": "초안, 본문, 발행 순서로 진행해요. 이 페이지를 닫지 마세요.",
+		"action.import": ({ count }) => `${count}편 가져오기`,
+		"action.importing": "가져오는 중…",
+		"action.view": "목록에서 보기",
 		"nothing.description": "이 보관 파일의 글이 모두 건너뛰어져요. 위의 이유를 확인하거나 다른 컬렉션을 골라 보세요.",
 		"result.title": "가져오기 결과",
+		"result.open": "열기",
 		"result.imported": ({ count }) => `${count}개 가져옴`,
 		"result.draft": ({ count }) => `${count}개는 초안으로 남음`,
 		"result.skipped": ({ count }) => `${count}개 건너뜀`,
 		"result.failed": ({ count }) => `${count}개 실패`,
 		"result.published": ({ count }) => `${count}개 발행`,
-		"result.open": "열기",
 		"result.outcome.imported": "가져옴",
 		"result.outcome.draft": "초안만",
 		"result.outcome.skipped": "건너뜀",

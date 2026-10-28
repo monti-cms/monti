@@ -8,7 +8,7 @@ export { adminApiUrl, adminHrefWith, CMS_API_PATH, cmsBasePath, normalizeBasePat
 /** The admin addresses of one site. */
 export type SiteAdminPaths = ReturnType<typeof createAdminPaths>;
 
-/** The admin address rules of a site config (`admin.path` and `site.home`). */
+/** The admin address rules of a site config (`admin.path`). */
 export function createAdminPaths(config: Pick<CmsConfig, "admin" | "site">) {
 	/** Admin screen path (`admin.path`, default `/admin`). Must match the app's admin route folder. */
 	const ADMIN_PATH: string = config.admin?.path ?? DEFAULT_ADMIN_PATH;
@@ -26,8 +26,5 @@ export function createAdminPaths(config: Pick<CmsConfig, "admin" | "site">) {
 	/** Address of the entry edit screen inside the admin. */
 	const adminEntryEditHref = (id: string): string => adminHref(`/entries/${id}/edit`);
 
-	/** Address of the admin sidebar "View site" link (`site.home`, default `/`). */
-	const SITE_HOME: string = config.site?.home ?? "/";
-
-	return { ADMIN_PATH, adminHref, adminUrl, adminEntryEditHref, SITE_HOME };
+	return { ADMIN_PATH, adminHref, adminUrl, adminEntryEditHref };
 }

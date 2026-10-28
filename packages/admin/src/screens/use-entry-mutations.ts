@@ -20,6 +20,7 @@ import {
 	type EntriesPage,
 	entriesKeys,
 } from "../api/entries";
+import { foldersKeys } from "../api/folders";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { describeBulkFailure } from "./entries/bulk-bar";
@@ -29,13 +30,20 @@ import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
 /** Reports bulk results as notifications. Failures list the item name and reason. */
-function announce(site: Site, label: string, results: BulkItemResult[], items: BulkSelection[]) {
+function announce(
+	site: Site,
+	label: string,
+	results: BulkItemResult[],
+	items: BulkSelection[],
+	/** Say nothing when everything went through: the change shows in the list itself (a box ticked in a menu). Failures are always told. */
+	quiet = false,
+) {
 	const t = site.createTranslator(screensMessages);
 	const tc = site.createTranslator(commonMessages);
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
-		toast(t("bulk.success", { count: ok, label }));
+		if (!quiet) toast(t("bulk.success", { count: ok, label }));
 		return;
 	}
 	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
@@ -63,15 +71,20 @@ export function useEntryMutations({
 	listKey: ReturnType<typeof entriesKeys.list>;
 	state: ListState;
 	options: TaxonomyOptions;
-	onResults: (results: BulkItemResult[]) => void;
+	/** Per-item results of a change, with the operation that made them. */
+	onResults: (results: BulkItemResult[], op: OptimisticOp) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
 	const queryClient = useQueryClient();
 
-	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
-	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: entriesKeys.all });
+	/** Refetches the list, the trash badge and the folders with their counts (leaving the currently visible rows as they are). */
+	const invalidateEntries = () =>
+		Promise.all([
+			queryClient.invalidateQueries({ queryKey: entriesKeys.all }),
+			queryClient.invalidateQueries({ queryKey: foldersKeys.all }),
+		]);
 
 	/**
 	 * Applies the change to the list first, then sends the request; a failed request rolls the list back, and the list is synced to server
@@ -102,8 +115,8 @@ export function useEntryMutations({
 			update: (page, { op, targets, params }) =>
 				applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
 		},
-		invalidate: [entriesKeys.all],
-		onSuccess: onResults,
+		invalidate: [entriesKeys.all, foldersKeys.all],
+		onSuccess: (results, { op }) => onResults(results, op),
 	});
 
 	// A lifecycle change goes only to the rows that can take it (the store's own rule): archiving a selection that holds archived rows archives the
@@ -120,7 +133,7 @@ export function useEntryMutations({
 	/** Handles the action through the bulk API and reports the result. */
 	const bulk = async (op: BulkOp, label: string, targets: BulkSelection[], params: BulkParams = {}) => {
 		try {
-			announce(site, label, await run(op, targets, params), targets);
+			announce(site, label, await run(op, targets, params), targets, op.startsWith("relation."));
 		} catch (error) {
 			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}

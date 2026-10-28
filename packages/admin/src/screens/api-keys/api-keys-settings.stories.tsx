@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { ApiKeysSettings } from "./api-keys-settings";
 
 const meta = { title: "Screens/API keys/API keys", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
@@ -42,12 +42,12 @@ const list =
 	};
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="API 키" nav="api-keys" pathname="/admin/api-keys">
+	<PageFrame api={fake} pathname="/admin/tools/api-keys">
 		<ApiKeysSettings />
-	</ScreenFrame>
+	</PageFrame>
 );
 
-export const Loaded: Story = { render: screen(list({ items: keys, slots: [emptySlot] })) };
+export const Loaded: Story = { tags: ["visual"], render: screen(list({ items: keys, slots: [emptySlot] })) };
 export const Empty: Story = { render: screen(list({ items: [] })) };
 export const SecretsUnavailable: Story = {
 	render: screen(list({ items: keys, slots: [emptySlot], secretsAvailable: false })),

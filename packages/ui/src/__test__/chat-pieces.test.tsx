@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatInput } from "../chat-input";
 import { ChatMessage } from "../chat-message";
-import { SidePanelFrame } from "../side-panel-frame";
 import { ToolCallLine } from "../tool-call-line";
 
 describe("ChatMessage", () => {
@@ -103,20 +102,5 @@ describe("ChatInput", () => {
 		fireEvent.keyDown(box(), { key: "Enter" });
 		expect(onStop).toHaveBeenCalledTimes(1);
 		expect(onSubmit).not.toHaveBeenCalled();
-	});
-});
-
-describe("SidePanelFrame", () => {
-	it("has a close button only when it is given something to do", () => {
-		const onClose = vi.fn();
-		const { rerender } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
-		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
-		rerender(
-			<SidePanelFrame title="T" onClose={onClose}>
-				x
-			</SidePanelFrame>,
-		);
-		fireEvent.click(screen.getByRole("button", { name: "Close" }));
-		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 });

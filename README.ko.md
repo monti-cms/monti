@@ -32,7 +32,7 @@ allowBuilds:
   esbuild: true
 ```
 
-- **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`). 관리자 로그인 방법도 묻는다: 내장 이메일·비밀번호 로그인(기본, 다른 서비스 불필요) 또는 GitHub(OAuth 앱 필요). 이메일·비밀번호면 배포한 직후 관리자를 열어 첫 관리자 화면에서 첫 관리자를 만들고, 비밀번호를 잊었을 때는 `monti admin:reset-password`로 새로 정한다.
+- **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기), 본문 블록, 관리자 경로(기본 `/studio`). 관리자 로그인 방법도 묻는다: 내장 이메일·비밀번호 로그인(기본, 다른 서비스 불필요) 또는 GitHub(OAuth 앱 필요). 이메일·비밀번호면 배포한 직후 관리자를 열어 첫 관리자 화면에서 첫 관리자를 만들고, 비밀번호를 잊었을 때는 `monti admin:reset-password`로 새로 정한다.
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 주고, `--no-setup`은 `.env.local`·데이터베이스·doctor를 사람에게 맡긴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
 - **안전:** 이미 있는 파일은 (위의 세 가지 수정 말고는) 고치지 않고(건너뛰고 알려 준다), 묻지 않고 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 설치가 실패하면 그렇게 말하고 설치 명령을 그대로 적어 준다. `monti init`을 다시 돌리면 이어서 하고, 있는 파일은 그대로 둔다.
 - **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
@@ -66,9 +66,7 @@ pnpm exec monti doctor
 | [`@monti-cms/blocks`](packages/blocks/README.ko.md) | 블록 확장. 콜아웃, 접기, 탭, 단 나누기, 코드 탐색기, Mermaid, 차트 |
 | [`@monti-cms/ai`](packages/ai/README.ko.md) | AI 확장. 글쓰기·번역 같은 AI 기능 |
 | [`@monti-cms/seo`](packages/seo/README.ko.md) | SEO 확장. 검색·공유 필드와 미리보기 |
-| [`@monti-cms/bareun`](packages/bareun/README.ko.md) | 바른(Bareun) 맞춤법 검사 |
 | [`@monti-cms/storage-s3`](packages/storage-s3/README.ko.md) | S3 API 미디어 저장소(AWS S3, Cloudflare R2, MinIO). `s3Storage()` 하나, `S3_*` 환경 변수로 설정 |
-| [`@monti-cms/git-sync`](packages/git-sync/README.ko.md) | Git 동기화 확장. 발행한 글을 GitHub 저장소의 파일과 양방향으로 동기화하고, 충돌 화면을 제공 |
 | [`@monti-cms/syntax-directive`](packages/syntax-directive/README.ko.md) | 지시자 문법 확장. `:::callout`·`::image{…}`·`:u[글자]`를 읽고 쓴다 |
 | [`@monti-cms/syntax-shiki`](packages/syntax-shiki/README.ko.md) | Shiki 코드 표기 확장. 코드 펜스의 `// [!code ++]` 등을 Monti 코드 주석으로 읽는다 |
 
@@ -94,10 +92,6 @@ pnpm exec monti doctor
 
 MDX(`mdx` 형식, 원문 패널, 문법 확장)와 AI 확장에는 `@monti-cms/mdx`가 필요하며 같은 방식으로 설치한다. 설치 방법과 설정은 각 패키지의 README에 있다. 모두 붙인 예시 앱은 [`examples/blog`](examples/blog/README.ko.md)이며, 설정 파일은 완성된 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나다.
 
-## 레시피
-
-Monti를 확장하는 방법을 다루는 짧은 페이지들로, 각각 작은 예시 스케치가 실려 있다(테스트된 코드는 아니다). 발행할 때 Slack 메시지 보내기, 나만의 블록(정의, 편집기 뷰, 공개 컴포넌트, 검사), 관리자 필드 화면 직접 만들기, 저장 전 슬러그 규칙, 나만의 형식, 공개 사이트의 타입 있는 읽기, 플러그인의 관리자 페이지, 엄격한 404/308 프록시가 있다. [`docs/recipes`](docs/recipes/README.md)에서 시작하면 된다.
-
 ## 개발
 
 ```sh
@@ -105,13 +99,13 @@ pnpm install          # 설치
 pnpm lint             # 코드 검사 (고치려면 pnpm lint:fix)
 pnpm check:korean     # 실행 코드의 한국어 문구가 문구 사전에만 있는지 검사
 pnpm typecheck        # 모든 패키지 타입 검사
-pnpm build            # 모든 패키지 빌드 (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
+pnpm build            # 모든 패키지 빌드 (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → seo)
 pnpm test:run         # 전체 테스트, other-site·configured 재실행 포함 (Postgres 필요)
 pnpm test:quick       # 기본 프로젝트만, 로컬 작업용 (Postgres 필요)
 pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
 ```
 
-커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.
+커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.
 
 테스트는 `.env.local`에 테스트용 DB 주소(`CMS_TEST_DATABASE_URL`)가 있어야 전부 돈다. 테스트는 이 DB에 임시 스키마를 만들고 끝나면 지운다.
 

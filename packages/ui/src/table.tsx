@@ -1,5 +1,7 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
@@ -10,9 +12,16 @@ function Table({
 	layout = "auto",
 	stickyHeader = false,
 	width,
+	columns,
 	style,
+	children,
 	...props
 }: React.ComponentProps<"table"> & {
+	/**
+	 * The width in px of each column, in order (`undefined` for one that takes the room the others leave). A fixed-layout table then takes its widths from
+	 * here and not from its first row, so a row that is one cell across (the bulk bar) leaves the columns where they are.
+	 */
+	columns?: readonly (number | undefined)[];
 	/** A total width in px that the screen computes (the sum of resized columns); without it the table fills its box. */
 	width?: number;
 	/**
@@ -37,7 +46,17 @@ function Table({
 				)}
 				style={width === undefined ? style : { ...style, width }}
 				{...props}
-			/>
+			>
+				{columns && (
+					<colgroup>
+						{columns.map((size, index) => (
+							// The columns are a fixed run of the same table, never reordered.
+							<col key={index} style={size === undefined ? undefined : { width: size }} />
+						))}
+					</colgroup>
+				)}
+				{children}
+			</table>
 		</div>
 	);
 }
@@ -62,9 +81,13 @@ function TableBody({
 }
 
 /**
- * A row of a list. Each row has its rule underneath. A picked row is filled with the muted background inside the table's rectangle (no rounded
+ * A row of a list. Each row has its rule underneath. A picked row is filled with the selected background inside the table's rectangle (no rounded
  * corners, nothing outside it) and its rule goes darker, so a run of picked rows still reads as separate rows; `proposal` makes the fill the
- * proposal tint, for rows the assistant picked. The check and the ⋯ appear when the pointer is on the row ({@link RowCheck}, {@link RowActions}).
+ * proposal tint, for rows the assistant picked. The check appears when the pointer is on the row ({@link RowCheck}); the ⋯ is always there ({@link RowActions}).
+ *
+ * A row that can be opened (it has an `onClick` or a {@link RowLink}) takes the muted background under the pointer, one step lighter than a picked row; a
+ * row of a table that opens nothing takes none. Whatever the row, it keeps that background while its own menu is open (a right click, or its ⋯), so it is
+ * plain which row the menu belongs to. A picked row stays as it is.
  */
 function TableRow({
 	className,
@@ -84,8 +107,8 @@ function TableRow({
 			data-proposal={(selected && proposal) || undefined}
 			aria-selected={selected || undefined}
 			className={cn(
-				props.onClick && "cursor-pointer",
-				"group/row relative border-monti-muted border-b data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-muted",
+				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
+				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				className,
 			)}
 			{...props}
@@ -94,8 +117,8 @@ function TableRow({
 }
 
 /**
- * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin and
- * the ⋯ at the end. On a touch screen it is always shown.
+ * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin. On a
+ * touch screen it is always shown.
  */
 const ON_ROW =
 	"opacity-0 group-hover/row:opacity-100 group-data-selected/row:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100";
@@ -118,7 +141,7 @@ function RowCheck({
 	proposal?: boolean;
 }) {
 	return (
-		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] flex -translate-y-1/2", ON_ROW)}>
+		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2", ON_ROW)}>
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(next) => onCheckedChange(next === true)}
@@ -130,9 +153,47 @@ function RowCheck({
 	);
 }
 
-/** The ⋯ of a row, and anything else that belongs to the pointer being on it: it shows only then. */
+/**
+ * The box a list's rows scroll in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
+ * so scrolling does not cut them off; the rows keep the column's width. Put the table in it (`container="none"`); what holds it and the toolbar above must
+ * not clip either.
+ */
+function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="list-scroll"
+			className={cn("-ml-monti-32 flex min-h-0 flex-1 flex-col overflow-y-auto pl-monti-32", className)}
+			{...props}
+		/>
+	);
+}
+
+/** The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. */
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
-	return <span data-slot="row-actions" className={cn("inline-flex", ON_ROW, className)} {...props} />;
+	return <span data-slot="row-actions" className={cn("relative z-1 inline-flex", className)} {...props} />;
+}
+
+/**
+ * The title of a row as the way into it, in ink: a link (the app's router link goes in `render`), or a button in `render`. What it opens covers the whole
+ * row, so a click anywhere on the row opens it; the row's check and its ⋯ stay above and keep their own clicks. Dragging the row drags the row, not the
+ * link.
+ */
+function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> & React.ComponentProps<"a">) {
+	return useRender({
+		defaultTagName: "a",
+		props: mergeProps<"a">(
+			{
+				draggable: false,
+				className: cn(
+					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/20 focus-visible:after:ring-inset",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: { slot: "row-link" },
+	});
 }
 
 /**
@@ -194,7 +255,7 @@ function TableHead({
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-10 whitespace-nowrap px-monti-10 align-middle text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],
@@ -243,4 +304,16 @@ function TableCell({
 	);
 }
 
-export { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow };
+export {
+	ListScroll,
+	RowActions,
+	RowCheck,
+	RowLink,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+};

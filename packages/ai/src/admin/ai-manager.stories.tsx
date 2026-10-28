@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { answer, type FakeApi, ScreenFrame } from "../../../admin/src/stories/screen-frame";
+import { ToolsFrame } from "../../../admin/src/screens/tools/tools-frame";
+import { answer, type FakeApi, PageFrame } from "../../../admin/src/stories/screen-frame";
 import type { AiActionView } from "../actions";
 import type { AiProviderView, AiSettingsView } from "../connection";
 import type { AiSnippetView } from "../snippets";
@@ -126,9 +127,11 @@ const withConnection = (over: Data = {}) =>
 	ai({ actions: { usable: ["slug", "summary", "category"], items: features }, settings: connected, snippets, ...over });
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="AI" nav="ai" pathname="/admin/ai">
-		<AiManager />
-	</ScreenFrame>
+	<PageFrame api={fake} pathname="/admin/tools/ai">
+		<ToolsFrame tab="tools:ai">
+			<AiManager />
+		</ToolsFrame>
+	</PageFrame>
 );
 
 // --- Play helpers ---

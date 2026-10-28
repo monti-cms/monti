@@ -141,7 +141,7 @@ describe("any site: core content flow", () => {
 
 	it("lists entries by title and names related entries by their title", async () => {
 		const draft = await createContent("Findable headline");
-		const list = await store.listEntries({ collection: contentCollection, titleContains: "Findable" });
+		const list = await store.listEntries({ collection: contentCollection, search: "Findable" });
 		expect(list.items.map((item) => item.id)).toEqual([draft.id]);
 		expect(list.items[0]?.title).toBe("Findable headline");
 		const relation = firstRelationField(contentCollection);

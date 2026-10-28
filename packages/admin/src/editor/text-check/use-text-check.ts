@@ -8,6 +8,7 @@ import { PluginKey, type Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type DocSegment, docRangeToSegment, extractSegments } from "./extract";
+import { fixAllReplacements } from "./findings";
 import { textCheckMessages } from "./messages";
 import { createTextCheckPlugin, type TextCheckMeta, type TextCheckPluginState, textCheckIssues } from "./plugin";
 import { checkSegments, type DocTextIssue, ignoreKey, placeIssues, TextCheckCache } from "./run";
@@ -31,6 +32,8 @@ export interface TextCheckController {
 	readonly close: () => void;
 	readonly jump: (issue: DocTextIssue) => void;
 	readonly apply: (issue: DocTextIssue, suggestion: string) => void;
+	/** Replaces every result that has a suggestion with it, as one change of the document. */
+	readonly applyAll: () => void;
 	readonly ignore: (issue: DocTextIssue) => void;
 }
 
@@ -254,6 +257,17 @@ export function useTextCheck(
 		[editor, pluginKey],
 	);
 
+	const applyAll = useCallback(() => {
+		if (!editor || !editor.isEditable) return;
+		const { tr } = editor.state;
+		for (const { from, to, text } of fixAllReplacements(textCheckIssues(editor.state, pluginKey))) {
+			tr.insertText(text, from, to);
+		}
+		if (!tr.docChanged) return;
+		editor.view.dispatch(tr);
+		setOpen(null);
+	}, [editor, pluginKey]);
+
 	const ignore = useCallback(
 		(issue: DocTextIssue) => {
 			if (!editor) return;
@@ -273,8 +287,21 @@ export function useTextCheck(
 	return useMemo(
 		() =>
 			editor && active
-				? { editor, pluginKey, checkers, running, issues: issues ?? NO_ISSUES, open, run, close, jump, apply, ignore }
+				? {
+						editor,
+						pluginKey,
+						checkers,
+						running,
+						issues: issues ?? NO_ISSUES,
+						open,
+						run,
+						close,
+						jump,
+						apply,
+						applyAll,
+						ignore,
+					}
 				: null,
-		[editor, active, pluginKey, checkers, running, issues, open, run, close, jump, apply, ignore],
+		[editor, active, pluginKey, checkers, running, issues, open, run, close, jump, apply, applyAll, ignore],
 	);
 }

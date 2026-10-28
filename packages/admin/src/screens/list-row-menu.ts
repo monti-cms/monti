@@ -2,6 +2,7 @@ import {
 	Archive,
 	Copy,
 	Edit,
+	Export,
 	Folder as FolderIcon,
 	FolderMoveTo,
 	FolderParent,
@@ -9,22 +10,18 @@ import {
 	Reset,
 	RightPanelOpen,
 	Tag,
-	TagGroup,
 	TrashCan,
+	Upload,
 } from "@carbon/icons-react";
 import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
+import { createElement } from "react";
 import type { BulkParams, BulkSelection } from "../api/entries";
 import { commonMessages } from "../lib/common.messages";
+import { archiveAction, canPublish, changeableRelations, toSelection } from "./entries/bulk-model";
+import { RelationChoice } from "./entries/relation-choice";
+import { exportMessages } from "./export/messages";
 import { screensMessages } from "./messages";
 import type { MenuAction } from "./shared/action-menu";
-import type { TaxonomyOptions } from "./shared/use-taxonomy";
-
-export const toSelection = (item: ListEntriesItem): BulkSelection => ({
-	id: item.id,
-	expectedVersion: item.version,
-	title: item.title,
-	status: item.status,
-});
 
 /**
  * Target of right-click / Delete key. If the pressed row is one of the selected rows and two or more are selected, all selected rows; otherwise just that row.
@@ -46,8 +43,6 @@ export interface RowMenuContext {
 	/** The folders rows can move to; `null` where the list shows no folders (a collection without folders, the trash), which leaves out "Move to folder". */
 	folders: readonly Folder[] | null;
 	collection: string;
-	/** Taxonomy field name -> options. Makes an "Add ○○" submenu for each many-relation taxonomy field (tags etc.). */
-	options: TaxonomyOptions;
 }
 
 /** Action a menu item calls. The target is always the rows chosen by `actionTargets`. */
@@ -57,6 +52,10 @@ export interface RowMenuHandlers {
 	openRecord: (item: ListEntriesItem) => void;
 	duplicate: (item: ListEntriesItem) => void;
 	restore: (targets: BulkSelection[]) => void;
+	/** Publishing several entries asks first. */
+	confirmPublish: (targets: BulkSelection[]) => void;
+	/** Opens the export of these entries. */
+	exportEntries: (ids: string[]) => void;
 	confirmTrash: (targets: BulkSelection[]) => void;
 	/** Archiving takes down a public post, so it asks first (for one or many). */
 	confirmArchive: (targets: BulkSelection[]) => void;
@@ -64,7 +63,11 @@ export interface RowMenuHandlers {
 	bulk: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => void;
 }
 
-/** Row menu. One row gets open and duplicate; several rows get the item count at the top. Trash has only restore and permanent delete. */
+/**
+ * Row menu. One row: open, new tab and duplicate; then the folder and each relation field (a second level of boxes or a single choice, the bar's Change menu
+ * lists); then archive and the trash. Several rows get the item count at the top, then what can be done to all of them: publish (when something is left to
+ * publish), archive, the folder, the relation fields, export and, last, the trash. Trash has only restore and permanent delete.
+ */
 export function rowMenuActions(
 	site: Site,
 	group: readonly ListEntriesItem[],
@@ -93,63 +96,6 @@ export function rowMenuActions(
 		];
 	}
 
-	const open: MenuAction[] = !single
-		? []
-		: context.isRecord
-			? [{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => handlers.openRecord(single) }]
-			: [
-					{ kind: "item", label: tc("open"), icon: Edit, onSelect: () => handlers.openEditor(single) },
-					{
-						kind: "item",
-						label: t("menu.openNewTab"),
-						icon: Launch,
-						onSelect: () => handlers.openInNewTab(single),
-					},
-					{ kind: "item", label: tc("lifecycle.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
-				];
-	const allArchived = group.every((row) => row.status === "archived");
-	const addActions: MenuAction[] = site.taxonomyFieldsOf(context.collection).flatMap((stored): MenuAction[] => {
-		if (stored.field.kind !== "relation" || !stored.field.many) return [];
-		const label = stored.field.label;
-		return [
-			{
-				kind: "sub",
-				label: t("menu.addRelation", { label }),
-				icon: TagGroup,
-				emptyLabel: t("menu.relationEmpty", { label }),
-				items: (context.options[stored.name] ?? []).map((option) => ({
-					kind: "item" as const,
-					label: option.title,
-					icon: Tag,
-					onSelect: () =>
-						handlers.bulk("relation.add", t("bulk.addRelation", { label }), targets, {
-							field: stored.name,
-							ids: [option.id],
-						}),
-				})),
-			},
-		];
-	});
-	const contentActions: MenuAction[] = context.isContent
-		? [
-				...addActions,
-				{ kind: "separator" },
-				allArchived
-					? {
-							kind: "item",
-							label: tc("lifecycle.unarchive"),
-							icon: Archive,
-							onSelect: () => handlers.bulk("unarchive", tc("lifecycle.unarchive"), targets),
-						}
-					: {
-							kind: "item",
-							label: tc("lifecycle.archive"),
-							icon: Archive,
-							onSelect: () => handlers.confirmArchive(targets),
-						},
-			]
-		: [{ kind: "separator" }];
-
 	const folderActions: MenuAction[] =
 		context.folders === null
 			? []
@@ -174,19 +120,89 @@ export function rowMenuActions(
 						],
 					},
 				];
-
+	// Each relation field the entries have is a second level: boxes to tick (for one row just ✓ or empty) or a single choice, as the bar's Change menu shows.
+	const relationActions: MenuAction[] = changeableRelations(site, context.collection).map((field) => ({
+		kind: "choice",
+		label: field.label,
+		icon: Tag,
+		content: createElement(RelationChoice, { field, rows: group, onRun: handlers.bulk }),
+	}));
+	const open: MenuAction[] = single
+		? context.isRecord
+			? [{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => handlers.openRecord(single) }]
+			: [
+					{ kind: "item", label: tc("open"), icon: Edit, onSelect: () => handlers.openEditor(single) },
+					{
+						kind: "item",
+						label: t("menu.openNewTab"),
+						icon: Launch,
+						onSelect: () => handlers.openInNewTab(single),
+					},
+					{ kind: "item", label: tc("lifecycle.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
+				]
+		: [];
+	const publish: MenuAction[] =
+		!single && context.isContent && canPublish(group)
+			? [
+					{
+						kind: "item",
+						label: tc("lifecycle.publish"),
+						icon: Upload,
+						onSelect: () => handlers.confirmPublish(targets),
+					},
+				]
+			: [];
+	const archive: MenuAction[] = !context.isContent
+		? []
+		: [
+				archiveAction(group) === "unarchive"
+					? {
+							kind: "item",
+							label: tc("lifecycle.unarchive"),
+							icon: Archive,
+							onSelect: () => handlers.bulk("unarchive", tc("lifecycle.unarchive"), targets),
+						}
+					: {
+							kind: "item",
+							label: tc("lifecycle.archive"),
+							icon: Archive,
+							onSelect: () => handlers.confirmArchive(targets),
+						},
+			];
+	const trash: MenuAction = {
+		kind: "item",
+		label: tc("lifecycle.trash"),
+		icon: TrashCan,
+		shortcut: "Del",
+		destructive: true,
+		onSelect: () => handlers.confirmTrash(targets),
+	};
+	// One row: open, then the folder and the fields, then archive and the trash. Several rows: what the bar offers, as rows of the same names.
+	if (single) {
+		return [
+			...open,
+			{ kind: "separator" },
+			...folderActions,
+			...relationActions,
+			{ kind: "separator" },
+			...archive,
+			trash,
+		];
+	}
 	return [
 		...header,
-		...open,
-		...(folderActions.length > 0 ? [{ kind: "separator" as const }, ...folderActions] : []),
-		...contentActions,
+		...publish,
+		...archive,
+		...folderActions,
+		...relationActions,
+		{ kind: "separator" },
 		{
 			kind: "item",
-			label: tc("lifecycle.trash"),
-			icon: TrashCan,
-			shortcut: "Del",
-			destructive: true,
-			onSelect: () => handlers.confirmTrash(targets),
+			label: site.createTranslator(exportMessages)("action.selected"),
+			icon: Export,
+			onSelect: () => handlers.exportEntries(group.map((row) => row.id)),
 		},
+		{ kind: "separator" },
+		trash,
 	];
 }

@@ -110,7 +110,7 @@ export type EntryEventHandler<S extends ServerScope = ServerScope> = (
 
 /**
  * One durable subscriber of an entry event: a `name` and the function the outbox delivers each committed change of that kind to. The name keys its
- * delivery state (`<owner>:<name>`, e.g. `plugin:git-sync:sync`), so keep it stable: renaming it starts the subscriber over on the changes that are still
+ * delivery state (`<owner>:<name>`, e.g. `plugin:mailer:sync`), so keep it stable: renaming it starts the subscriber over on the changes that are still
  * undelivered. Lowercase letters, digits and `-`, unique within its owner (across all the lists of `entry`).
  */
 export interface EntrySubscriber<S extends ServerScope = ServerScope> {

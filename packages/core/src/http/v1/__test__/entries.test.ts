@@ -6,13 +6,16 @@ import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
 import { routeCaller } from "../../../testing";
 import { PATCH as patchEntryHandler } from "../entries/[id]/route";
-import { POST as postEntriesHandler } from "../entries/route";
+import { GET as countEntriesHandler } from "../entries/counts/route";
+import { GET as listEntriesHandler, POST as postEntriesHandler } from "../entries/route";
 import { GET as searchEntriesHandler } from "../entries/search/route";
 import { GET as getMetaHandler } from "../meta/route";
 
 const patchEntry = routeCaller(patchEntryHandler);
 const postEntries = routeCaller(postEntriesHandler);
 const searchEntries = routeCaller(searchEntriesHandler);
+const listEntries = routeCaller(listEntriesHandler);
+const countEntries = routeCaller(countEntriesHandler);
 const getMeta = routeCaller(getMetaHandler);
 
 const mockVerifyAdmin = vi.fn();
@@ -27,6 +30,7 @@ const mockStore = {
 		}),
 	),
 	listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
+	countListValues: vi.fn().mockResolvedValue({ total: 3, empty: 1, values: { a: 2 } }),
 	searchEntries: vi.fn().mockResolvedValue([{ id: "e1", title: "Hello", slug: "hello", status: "published" }]),
 	getEntry: vi.fn().mockImplementation((id: string) => {
 		if (id === "00000000-0000-4000-8000-000000000002") {
@@ -226,6 +230,70 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 				`collection=${contentCollection}&id=abc`,
 			]) {
 				expect((await search(query)).status).toBe(400);
+			}
+		});
+	});
+	describe("GET /entries: field conditions and the translation filter", () => {
+		const list = (query: string) => listEntries(new Request(`http://localhost/api/monti/v1/entries?${query}`), { cms });
+		const TAG = "5c1e7a8e-2d0b-4f4b-9d57-3f6a1b9a0c11";
+
+		it("passes repeated field conditions and translation states to the store", async () => {
+			mockStore.listEntries.mockClear();
+			const res = await list(
+				`collection=${contentCollection}&field=tags:empty&field=tags:is:${TAG}&field=summary:filled&translation=none&translation=changed`,
+			);
+			expect(res.status).toBe(200);
+			expect(mockStore.listEntries).toHaveBeenCalledWith(
+				expect.objectContaining({
+					fields: { tags: [{ kind: "empty" }, { kind: "is", value: TAG }], summary: [{ kind: "filled" }] },
+					translations: ["none", "changed"],
+				}),
+			);
+		});
+
+		it("rejects a condition that is not one, and a translation state that is not one", async () => {
+			for (const query of ["field=tags:maybe", "field=tags", "translation=stale"]) {
+				expect((await list(`collection=${contentCollection}&${query}`)).status).toBe(400);
+			}
+		});
+	});
+
+	describe("GET /entries/counts", () => {
+		const count = (query: string) =>
+			countEntries(new Request(`http://localhost/api/monti/v1/entries/counts?${query}`), { cms });
+
+		it("asks the store to count one field in the folder given, and answers the counts", async () => {
+			mockStore.countListValues.mockClear();
+			const res = await count(`collection=${contentCollection}&field=tags&group=translation&folderId=null`);
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({ total: 3, empty: 1, values: { a: 2 } });
+			expect(mockStore.countListValues).toHaveBeenCalledWith({
+				collection: contentCollection,
+				facet: { field: "tags" },
+				groupTranslations: true,
+				folderId: null,
+			});
+		});
+
+		it("asks for the counts of the entry states with facet=status", async () => {
+			mockStore.countListValues.mockClear();
+			await count(`collection=${contentCollection}&facet=status`);
+			expect(mockStore.countListValues).toHaveBeenCalledWith(
+				expect.objectContaining({ collection: contentCollection, facet: "status" }),
+			);
+		});
+
+		it("asks for the translation filter's counts with facet=translation", async () => {
+			mockStore.countListValues.mockClear();
+			await count(`collection=${contentCollection}&facet=translation`);
+			expect(mockStore.countListValues).toHaveBeenCalledWith(
+				expect.objectContaining({ collection: contentCollection, facet: "translation" }),
+			);
+		});
+
+		it("rejects asking for nothing or for both", async () => {
+			for (const query of ["", "&field=tags&facet=translation"]) {
+				expect((await count(`collection=${contentCollection}${query}`)).status).toBe(400);
 			}
 		});
 	});

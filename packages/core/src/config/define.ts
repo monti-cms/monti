@@ -64,11 +64,6 @@ export interface SiteConfig {
 	 * - `never`: no prefix for any locale (when each locale has its own domain or there is only one locale)
 	 */
 	readonly localePrefix?: LocalePrefixMode;
-	/**
-	 * URL opened by the admin sidebar's `View site`. A path (`/`) or a full URL (`https://example.com`). Default `/`
-	 * (the site's home page when the admin lives inside the site app).
-	 */
-	readonly home?: string;
 }
 
 export type { LocalePrefixMode };

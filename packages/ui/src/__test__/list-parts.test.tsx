@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BulkBar } from "../bulk-bar";
 import { DropdownMenuItem } from "../dropdown-menu";
 import { Empty, EmptyStep } from "../empty";
-import { PageToolbar } from "../page-header";
 import { RenameField } from "../rename-field";
 import { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableRow } from "../table";
 import { FolderTile, Tile } from "../tile";
@@ -31,38 +30,36 @@ describe("list rows", () => {
 	});
 });
 
-describe("PageToolbar and BulkBar", () => {
+describe("BulkBar", () => {
+	const inTable = (bar: React.ReactNode) => render(<table>{bar}</table>);
+
 	it("shows the select-all as mixed while some are picked and picks the page when pressed", () => {
 		const onChange = vi.fn();
-		const { rerender } = render(
-			<PageToolbar inset selectAll={{ state: "some", onChange, label: "모두 선택" }}>
-				탭
-			</PageToolbar>,
+		const bar = (state: "none" | "some" | "all") => (
+			<BulkBar
+				label="2개 선택"
+				colSpan={3}
+				selectAll={{ state, onChange, label: "모두 선택" }}
+				clearLabel="선택 해제"
+				onClear={() => {}}
+			/>
 		);
+		const { rerender } = render(<table>{bar("some")}</table>);
 		const check = screen.getByRole("checkbox", { name: "모두 선택" });
 		expect(check.getAttribute("aria-checked")).toBe("mixed");
 		fireEvent.click(check);
 		expect(onChange).toHaveBeenCalledWith(true);
-		rerender(
-			<PageToolbar inset selectAll={{ state: "all", onChange, label: "모두 선택" }}>
-				탭
-			</PageToolbar>,
-		);
+		rerender(<table>{bar("all")}</table>);
 		expect(screen.getByRole("checkbox", { name: "모두 선택" }).getAttribute("aria-checked")).toBe("true");
-		rerender(
-			<PageToolbar inset selectAll={{ state: "none", onChange, label: "모두 선택" }}>
-				탭
-			</PageToolbar>,
-		);
-		expect(screen.getByRole("checkbox", { name: "모두 선택" }).getAttribute("aria-checked")).toBe("false");
 	});
 
 	it("lists the count, the request, the two actions, the rest in ⋯ and the way to let go", async () => {
 		const onRequest = vi.fn();
 		const onClear = vi.fn();
 		const onTrash = vi.fn();
-		render(
+		inTable(
 			<BulkBar
+				colSpan={3}
 				label="2개 선택"
 				request={{ label: "요청", onClick: onRequest }}
 				more={{

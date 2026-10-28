@@ -239,7 +239,7 @@ describe("defineSite", () => {
 		});
 	});
 
-	it("checks the admin path, locale prefix, preview locale param and site home", () => {
+	it("checks the admin path, locale prefix, preview locale param", () => {
 		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
 		expect(() => defineSite({ ...base, admin: { path: "/studio" } })).not.toThrow();
 		expect(() => defineSite({ ...base, admin: { path: "/cms/admin" } })).not.toThrow();
@@ -259,10 +259,6 @@ describe("defineSite", () => {
 			"site.previewLocaleParam",
 			"query-name",
 		);
-		expect(() => defineSite({ ...base, site: { home: "https://example.com" } })).not.toThrow();
-		expect(() => defineSite({ ...base, site: { home: "/blog" } })).not.toThrow();
-		expectIssue(() => defineSite({ ...base, site: { home: "//evil.example" } }), "site.home", "home");
-		expectIssue(() => defineSite({ ...base, site: { home: "javascript:alert(1)" } }), "site.home", "home");
 	});
 
 	it("rejects a default locale outside the list and duplicate locales", () => {

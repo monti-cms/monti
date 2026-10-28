@@ -285,7 +285,7 @@ describe("changeCount", () => {
 		const edited = file();
 		edited.collections = { post: { ...post(), label: "Article" }, memo: post() };
 		edited.timeZone = "Asia/Seoul";
-		edited.site = { name: "Mine", home: "/" };
+		edited.site = { name: "Mine", previewPath: "/" };
 		// post edited, memo added, time zone, two site settings
 		expect(changeCount(file(), edited)).toBe(5);
 	});

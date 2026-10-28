@@ -2,7 +2,6 @@ import type { CmsConfig } from "../define";
 import {
 	HOST_PATTERN,
 	isAdminPath,
-	isHomeHref,
 	isHttpUrl,
 	isTimeZone,
 	LOCALE_CODE,
@@ -92,9 +91,6 @@ function checkSiteOptions(list: IssueList, site: CmsConfig["site"]): void {
 	const param = site.previewLocaleParam;
 	if (param !== undefined && param !== false && !PREVIEW_PARAM_NAME.test(param)) {
 		list.add("site.previewLocaleParam", "query-name", `"${param}" is not a query name`);
-	}
-	if (site.home !== undefined && !isHomeHref(site.home)) {
-		list.add("site.home", "home", `"${site.home}" must be a path ("/") or an http(s) URL`);
 	}
 }
 

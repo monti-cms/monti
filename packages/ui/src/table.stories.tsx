@@ -1,6 +1,8 @@
 import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { Count } from "./count";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { EntryStatus } from "./entry-status";
 import { IconButton } from "./icon-button";
 import { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
@@ -67,7 +69,19 @@ const POSTS: { title: string; address: string; tags: string; status: StatusName;
 	},
 ];
 
-function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; proposal?: boolean }) {
+function ListRows({
+	picked,
+	proposal = false,
+	clickable = false,
+	menu = false,
+}: {
+	picked: ReadonlySet<number>;
+	proposal?: boolean;
+	/** The rows open something, so the pointer lights them. */
+	clickable?: boolean;
+	/** The ⋯ opens a menu. */
+	menu?: boolean;
+}) {
 	return (
 		// The list keeps its columns and scrolls sideways in a narrow window, so the title never shrinks to nothing.
 		<div className="max-w-3xl overflow-x-auto">
@@ -75,7 +89,12 @@ function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; p
 				<Table container="none" layout="fixed">
 					<TableBody>
 						{POSTS.map((post, index) => (
-							<TableRow key={post.address} selected={picked.has(index)} proposal={proposal}>
+							<TableRow
+								key={post.address}
+								selected={picked.has(index)}
+								proposal={proposal}
+								onClick={clickable ? () => {} : undefined}
+							>
 								<TableCell width="md">
 									<RowCheck
 										checked={picked.has(index)}
@@ -95,9 +114,7 @@ function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; p
 									<Status>{post.status}</Status>
 								</TableCell>
 								<TableCell width="xs" align="end">
-									<RowActions>
-										<MoreButton />
-									</RowActions>
+									<RowActions>{menu ? <MoreMenu /> : <MoreButton />}</RowActions>
 								</TableCell>
 							</TableRow>
 						))}
@@ -116,13 +133,40 @@ function MoreButton() {
 	);
 }
 
+function MoreMenu() {
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<IconButton label="더 보기">
+						<OverflowMenuHorizontal aria-hidden />
+					</IconButton>
+				}
+			/>
+			<DropdownMenuContent align="end">
+				<DropdownMenuItem>복제</DropdownMenuItem>
+				<DropdownMenuItem>보관</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 /**
  * A list as the posts screen draws it: each row has its rule, the title is ink over its mono address, the other cells are gray. The check hangs
  * in the left margin and the ⋯ ends the row; both show while the pointer is on the row (point at one). The table does not scroll itself.
  */
 export const List: Story = { render: () => <ListRows picked={new Set()} /> };
 
-/** A picked row is filled with the muted background inside the table, and its rule goes darker; its check stays on. */
+/** The row whose ⋯ menu is open stays lit while the menu is open, so it is plain which row the menu is for; a right click does the same. */
+export const MenuOpen: Story = {
+	render: () => <ListRows picked={new Set()} clickable menu />,
+	play: async ({ canvasElement }) => {
+		const row = within(canvasElement).getByRole("row", { name: /첫 번째 글/ });
+		await userEvent.click(within(row).getByRole("button", { name: "더 보기" }));
+	},
+};
+
+/** A picked row is filled with the selected background inside the table, and its rule goes darker; its check stays on. Pointing at it changes nothing. */
 export const PickedRows: Story = { render: () => <ListRows picked={new Set([1, 2])} /> };
 
 /** Rows the assistant picked: the proposal tint and a blue check. */

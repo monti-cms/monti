@@ -22,6 +22,7 @@ function Segmented<T extends string>({
 	onValueChange,
 	options,
 	size = "md",
+	tone = "default",
 	inline = false,
 	disabled,
 	"aria-label": ariaLabel,
@@ -30,6 +31,8 @@ function Segmented<T extends string>({
 	onValueChange: (value: T) => void;
 	options: readonly SegmentedOption<T>[];
 	size?: "md" | "sm";
+	/** `tool` on a tool surface (the sidebar), where the selected ground is the hover: a cell under the pointer takes it and the pressed cell takes the current ground. */
+	tone?: "default" | "tool";
 	inline?: boolean;
 	disabled?: boolean;
 	"aria-label"?: string;
@@ -57,7 +60,10 @@ function Segmented<T extends string>({
 					value={option.value}
 					aria-label={option["aria-label"]}
 					className={cn(
-						"flex items-center justify-center whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:bg-monti-selected data-pressed:font-semibold data-pressed:text-monti-default",
+						"flex items-center justify-center whitespace-nowrap border-0 bg-transparent px-monti-4 text-center text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:bg-monti-muted disabled:opacity-45 data-pressed:font-semibold data-pressed:text-monti-default",
+						tone === "tool"
+							? "not-data-pressed:hover:bg-monti-selected data-pressed:bg-monti-current"
+							: "data-pressed:bg-monti-selected",
 						inline ? "flex-none px-monti-10" : "flex-1",
 						// The design system's `sm` is 12px type on a 20px line with 5px above and below, 32px tall. The role's 16px line takes 7px to be as tall.
 						"py-[7px]",

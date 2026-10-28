@@ -27,7 +27,9 @@ export const KO_UI_LABELS: UiLabels = {
 	paginationMore: "다른 페이지",
 	sidebarTitle: "사이드바",
 	sidebarDescription: "모바일 사이드바를 보여 줘요.",
-	sidebarToggle: "사이드바 열고 닫기",
+	sidebarToggle: "사이드바 열기",
+	sidebarFold: "사이드바 접기",
+	sidebarUnfold: "사이드바 펼치기",
 	sidebarResize: "사이드바 너비 조절",
 	resize: "패널 너비 조절",
 };

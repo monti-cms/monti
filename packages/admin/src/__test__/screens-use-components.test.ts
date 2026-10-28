@@ -82,16 +82,12 @@ const DRAWING = new Map<string, string>([
 		"the admin root: `monti-admin` scopes the tokens and the screen is centered in the window",
 	],
 	[
-		"admin/src/screens/admin-sidebar.tsx",
-		"the sidebar composition: its header, footer and group chrome follow the icon-rail states, and the folder tree is indented by depth with row actions shown on hover",
-	],
-	[
 		"admin/src/screens/entries/editor-scroller.tsx",
 		"the scrolling body of the editor: its active-block highlight reaches into the editor's own markup",
 	],
 	[
 		"admin/src/screens/entries/entry-editor-side-panels.tsx",
-		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow, a width the writer drags)",
+		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow)",
 	],
 	[
 		"admin/src/screens/entries/scroll-room.tsx",
@@ -116,16 +112,8 @@ const DRAWING = new Map<string, string>([
 	["admin/src/screens/schema/locales-editor.tsx", "drag handle, shown on hover or focus"],
 	["admin/src/screens/schema/schema-screen.tsx", "the drag handle, placed over the row and shown on hover or focus"],
 	[
-		"admin/src/screens/shared/fitting-tags.tsx",
-		"chips measured against their cell width (refs and pixel arithmetic), with a +N rest",
-	],
-	[
 		"admin/src/screens/shared/side-panel.tsx",
-		"the docked side panel: positioned beside the list, its width comes from a drag handle (a CSS variable)",
-	],
-	[
-		"admin/src/screens/shared/status-bar.tsx",
-		"the status bar's popups are dense lists with their own row and header look that no other screen shares (the bar and its cells are design-system parts)",
+		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
 	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],

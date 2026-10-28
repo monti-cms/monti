@@ -24,6 +24,7 @@ export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
 export const Chip = close(open.Chip);
+export const ChipRow = close(open.ChipRow);
 export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
 export const FilterButton = close(open.FilterButton);
@@ -35,7 +36,7 @@ export const FolderTabsList = close(open.FolderTabsList);
 export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
-export const SidePanelFrame = close(open.SidePanelFrame);
+export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
 export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 
@@ -94,6 +95,8 @@ export const DropdownMenuGroup = close(open.DropdownMenuGroup);
 export const DropdownMenuItem = close(open.DropdownMenuItem);
 export const DropdownMenuLabel = close(open.DropdownMenuLabel);
 export const DropdownMenuPortal = close(open.DropdownMenuPortal);
+export const DropdownMenuScroll = close(open.DropdownMenuScroll);
+export const DropdownMenuSearch = close(open.DropdownMenuSearch);
 export const DropdownMenuRadioGroup = close(open.DropdownMenuRadioGroup);
 export const DropdownMenuRadioItem = close(open.DropdownMenuRadioItem);
 export const DropdownMenuSeparator = close(open.DropdownMenuSeparator);
@@ -108,8 +111,12 @@ export const FolderTile = close(open.FolderTile);
 export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
 export const RowActions = close(open.RowActions);
+export const ListScroll = close(open.ListScroll);
 export const RowCheck = close(open.RowCheck);
+export const RowLink = close(open.RowLink);
 export const RowTitle = close(open.RowTitle);
+export const PageBody = close(open.PageBody);
+export const PageColumn = close(open.PageColumn);
 export const PageHeader = close(open.PageHeader);
 export const PageToolbar = close(open.PageToolbar);
 export const PageToolbarEnd = close(open.PageToolbarEnd);
@@ -126,6 +133,9 @@ export const IconButton = close(open.IconButton);
 export const Input = close(open.Input);
 export const Label = close(open.Label);
 export const UiLabelsProvider = close(open.UiLabelsProvider);
+export const ListFooter = close(open.ListFooter);
+export const PageSizeMenu = close(open.PageSizeMenu);
+export const ListHead = close(open.ListHead);
 export const Pagination = close(open.Pagination);
 export const PaginationContent = close(open.PaginationContent);
 export const PaginationEllipsis = close(open.PaginationEllipsis);
@@ -169,6 +179,7 @@ export const SidebarFooter = close(open.SidebarFooter);
 export const SidebarGroup = close(open.SidebarGroup);
 export const SidebarGroupContent = close(open.SidebarGroupContent);
 export const SidebarHeader = close(open.SidebarHeader);
+export const SidebarFoot = close(open.SidebarFoot);
 export const SidebarInset = close(open.SidebarInset);
 export const SidebarMenu = close(open.SidebarMenu);
 export const SidebarMenuBadge = close(open.SidebarMenuBadge);
@@ -177,6 +188,8 @@ export const SidebarMenuItem = close(open.SidebarMenuItem);
 export const SidebarMenuSub = close(open.SidebarMenuSub);
 export const SidebarMenuSubButton = close(open.SidebarMenuSubButton);
 export const SidebarProvider = close(open.SidebarProvider);
+export const SidebarRailToggle = close(open.SidebarRailToggle);
+export const SidebarScreenMode = close(open.SidebarScreenMode);
 export const SidebarTrigger = close(open.SidebarTrigger);
 /** An icon like the Carbon ones, so it is not closed: it goes where an `icon` goes (`<Icon icon={Spark}>`, a panel's or a menu item's icon). */
 export const Spark = open.Spark;
@@ -239,6 +252,7 @@ export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
 export const StatusBar = close(open.StatusBar);
+export const StatusBarAnnouncer = close(open.StatusBarAnnouncer);
 export const StatusBarCell = close(open.StatusBarCell);
 export const StatusBarPluginCell = close(open.StatusBarPluginCell);
 export const StatusBarSpacer = close(open.StatusBarSpacer);
@@ -272,6 +286,8 @@ export type {
 	Background,
 	EntryStatusKind,
 	LayoutProps,
+	ListHeadAdd,
+	ListHeadColumn,
 	SearchTarget,
 	SegmentedOption,
 	SelectAll,

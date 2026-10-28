@@ -16,7 +16,6 @@ export {
 	DEFAULT_ADMIN_PATH,
 	HOST_PATTERN,
 	isAdminPath,
-	isHomeHref,
 	isHttpUrl,
 	isLocalUrl,
 	isTimeZone,
@@ -40,7 +39,7 @@ export type {
 	PageSize,
 	PreferencesBody,
 } from "./core/api";
-export { LIST_SORT_FIELDS, PAGE_SIZES } from "./core/api";
+export { LIST_SORT_FIELDS, PAGE_SIZES, TRANSLATION_FILTERS } from "./core/api";
 export type { ApiKeyChoiceInput, ApiKeyList, ApiKeySlotView, ApiKeyView } from "./core/api-keys";
 export { apiKeyChoiceSchema } from "./core/api-keys";
 export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
@@ -78,11 +77,15 @@ export type {
 	ExportSnapshotBody,
 	ExportSnapshotEntry,
 	ExportSnapshotReference,
+	FieldCondition,
 	Folder,
+	FolderListItem,
 	IncomingReferenceItem,
 	JsonArray,
 	JsonObject,
 	JsonPrimitive,
+	ListCounts,
+	ListCountsParams,
 	ListEntriesItem,
 	ListEntriesParams,
 	ListEntriesResult,
@@ -99,6 +102,7 @@ export type {
 	PublishedPageParams,
 	PublishedSort,
 	SearchEntriesParams,
+	TranslationFilter,
 	TranslationGroup,
 } from "./core/store/types";
 export * from "./core/time";

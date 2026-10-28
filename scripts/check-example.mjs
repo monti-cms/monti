@@ -12,7 +12,7 @@
  *
  * The build needs no DB or login. The HTTP checks do: with `CMS_TEST_DATABASE_URL` (the repo's `.env.local` or the environment) the built app is started on the
  * schema `cms_example_check` of the test database. A known post must answer 200 in both variants. Only with `cacheComponents` off must an unknown post answer a real
- * 404 and an old address a real 308 (`notFound()` and `permanentRedirect()` in a page; with the option on Next has sent a 200 shell by then, see docs/recipes/strict-status.md).
+ * 404 and an old address a real 308 (`notFound()` and `permanentRedirect()` in a page; with the option on Next has sent a 200 shell by then).
  * With no login settings in production, the admin answers with the "Not set up yet" screen that points to `monti doctor`, in both variants.
  * Without that variable the HTTP checks are skipped, and the script says so.
  */

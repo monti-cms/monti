@@ -1,5 +1,11 @@
-import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { bodyExcerpt, confirmedSourceState, fillFromBodyLength, issueText } from "@monti-cms/core/site";
+import type { StoredDocument } from "@monti-cms/core/document";
+import {
+	bodyExcerpt,
+	confirmedSourceState,
+	fillFromBodyLength,
+	issueText,
+	sourceHasChanged,
+} from "@monti-cms/core/site";
 import { CmsApiError, isConflict } from "../../api/client";
 import type { CmsIssue } from "../../api/error-message";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
@@ -49,9 +55,6 @@ export const COMPOSITION_WAIT_MS = 1000;
 
 /** The marker the view carries so `EntryEditorProvider` can find the engine behind a value `useEntryEditor` returned. */
 export const ENTRY_EDITOR_CORE: unique symbol = Symbol("monti.entryEditorCore");
-
-/** What a document says, without its block ids: two documents with the same key read the same. */
-const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
 
 /**
  * The entry editor's engine: the state machine behind `useEntryEditor`, written without React so it can be driven by a test or another UI.
@@ -498,7 +501,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			value = {
 				source,
 				confirmed,
-				sourceChanged: typeof raw === "string" && contentKey(source.doc) !== contentKey(confirmed.baseDoc),
+				sourceChanged: typeof raw === "string" && sourceHasChanged(source.doc, confirmed.baseDoc),
 			};
 		}
 		translationCache = { entry, raw, value };

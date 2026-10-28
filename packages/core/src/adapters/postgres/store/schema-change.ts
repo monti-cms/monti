@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import type { SchemaChangeStore } from "../../../core/store/ports";
 import type { ScannedBody } from "../../../core/store/schema-change";
 import type { EntryMetadata, EntryStatus, JsonObject } from "../../../core/store/types";
+import { documentKeyHash } from "../../../core/translation/state-hash";
 import { readReferenceOccurrences } from "../../../core/types";
 import type { Db } from "../db/kysely";
 import { type StoreContext, withTrx } from "./context";
@@ -251,6 +252,7 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 										metadata: JSON.stringify(result.metadata),
 										doc: JSON.stringify(result.doc),
 										content_hash: result.contentHash,
+										doc_key_hash: documentKeyHash(result.doc),
 										search_text: extractVisibleText(site, result.doc),
 									})
 									.where("entry_id", "=", row.entry_id)

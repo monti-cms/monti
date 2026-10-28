@@ -5,9 +5,9 @@ import { z } from "zod";
  * characters of its value (`tail`), and the value goes in only when a key is added or replaced.
  */
 
-/** One feature that uses a key (an AI connection, the spell checker, git sync). */
+/** One feature that uses a key (an AI connection, a plugin's key slot). */
 export interface ApiKeyUse {
-	/** The plugin that uses the key (`ai`, `text-check-bareun`, `git-sync`). */
+	/** The plugin that uses the key (`ai`, or the name of a plugin). */
 	readonly plugin: string;
 	/** Which item of the plugin uses it (`connection:<id>`). Stable: it is what is stored, never text. */
 	readonly ref: string;
@@ -21,7 +21,7 @@ export interface ApiKeySlotView {
 	readonly slot: string;
 	/** In the admin language. Display only. */
 	readonly label: string;
-	/** The service the key is for, in no language ("Bareun"): what a key entered for this slot is named. */
+	/** The service the key is for, in no language ("Speller"): what a key entered for this slot is named. */
 	readonly service: string;
 	/** The assigned key (name and last characters only), or `null` when none is assigned yet. */
 	readonly key: {

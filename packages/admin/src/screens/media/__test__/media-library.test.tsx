@@ -90,9 +90,10 @@ const renderLibrary = async () => {
 	);
 	await screen.findByRole("button", { name: /^cat\.png/ });
 };
-const openDetail = async (name: RegExp) => {
-	fireEvent.click(screen.getByRole("button", { name }));
-	return screen.findByRole("complementary", { name: t("detail.label") });
+/** Clicks a file in the list; its panel opens beside the list, named by the file's name. */
+const openDetail = async (file: string) => {
+	fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${file.replace(".", "\\.")}`) }));
+	return screen.findByRole("complementary", { name: file });
 };
 
 describe("media library", () => {
@@ -105,10 +106,10 @@ describe("media library", () => {
 		expect(tile(/^guide\.pdf/)).toContain("PDF");
 	});
 
-	it("names what the header counts, and keeps the footer free of a range line when one page holds everything", async () => {
+	it("has one title, and keeps the footer free of a range line when one page holds everything", async () => {
 		await renderLibrary();
-		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toContain(t("library.count", { count: 3 }));
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t("title"));
 		expect(screen.queryByText(/–/)).toBeNull();
 	});
 
@@ -121,7 +122,7 @@ describe("media library", () => {
 
 	it("picking shows name, type, size, upload date and usages in the detail", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/^cat\.png/);
+		const detail = await openDetail("cat.png");
 		expect(within(detail).getAllByText("cat.png").length).toBeGreaterThan(0);
 		expect(within(detail).getByText("image/png")).toBeTruthy();
 		expect(within(detail).getByText(/640×480/)).toBeTruthy();
@@ -136,7 +137,7 @@ describe("media library", () => {
 
 	it("saves the image's default alt text and caption", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/^cat\.png/);
+		const detail = await openDetail("cat.png");
 		const alt = within(detail).getByRole("textbox", { name: t("detail.defaultAlt") }) as HTMLInputElement;
 		expect(alt.value).toBe("고양이");
 		fireEvent.change(alt, { target: { value: "창가의 고양이" } });
@@ -161,7 +162,7 @@ describe("media library", () => {
 
 		it("edits the name without its extension and renames with the extension kept", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/^cat\.png/);
+			const detail = await openDetail("cat.png");
 			expect(nameField(detail).value).toBe("cat");
 			expect(within(detail).getByText(".png")).toBeTruthy();
 			expect(saveName(detail).disabled).toBe(true);
@@ -178,7 +179,7 @@ describe("media library", () => {
 
 		it("does not send an empty name or one with a slash, and says why", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/^cat\.png/);
+			const detail = await openDetail("cat.png");
 			fireEvent.change(nameField(detail), { target: { value: "  " } });
 			expect(within(detail).getByText(t("detail.filename.empty"))).toBeTruthy();
 			expect(saveName(detail).disabled).toBe(true);
@@ -196,7 +197,7 @@ describe("media library", () => {
 					: ok(input, init),
 			);
 			await renderLibrary();
-			const detail = await openDetail(/^cat\.png/);
+			const detail = await openDetail("cat.png");
 			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
 			fireEvent.click(saveName(detail));
 			expect(await within(detail).findByText("The file name must keep the extension .png")).toBeTruthy();
@@ -206,7 +207,7 @@ describe("media library", () => {
 
 		it("asks before leaving the file while the name has an unsaved change", async () => {
 			await renderLibrary();
-			const detail = await openDetail(/^cat\.png/);
+			const detail = await openDetail("cat.png");
 			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
 			fireEvent.click(screen.getByRole("button", { name: /^dog\.png/ }));
 			expect(await screen.findByRole("alertdialog", { name: tc("discard.title") })).toBeTruthy();
@@ -215,7 +216,7 @@ describe("media library", () => {
 
 	it("opening another file with an edited default description asks whether to discard", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/^cat\.png/);
+		const detail = await openDetail("cat.png");
 		fireEvent.change(within(detail).getByRole("textbox", { name: t("detail.defaultCaption") }), {
 			target: { value: "고친 캡션" },
 		});
@@ -227,7 +228,7 @@ describe("media library", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("discard.confirm") }));
 		await waitFor(() =>
 			expect(
-				within(screen.getByRole("complementary", { name: t("detail.label") })).getByRole("heading", {
+				within(screen.getByRole("complementary", { name: "dog.png" })).getByRole("heading", {
 					name: "dog.png",
 				}),
 			).toBeTruthy(),
@@ -236,7 +237,7 @@ describe("media library", () => {
 
 	it("marks the open file", async () => {
 		await renderLibrary();
-		await openDetail(/^cat\.png/);
+		await openDetail("cat.png");
 		await waitFor(() =>
 			expect(screen.getByRole("button", { name: /^cat\.png/ }).getAttribute("aria-current")).toBe("true"),
 		);
@@ -267,14 +268,14 @@ describe("media library", () => {
 
 	it("a file shows its size without a default description field", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/^guide\.pdf/);
+		const detail = await openDetail("guide.pdf");
 		expect(within(detail).queryByRole("textbox", { name: t("detail.defaultAlt") })).toBeNull();
 		expect(within(detail).getByText(/1\.4 ?MB|1\.5 ?MB/)).toBeTruthy();
 	});
 
 	it("an unused file is deleted after confirmation", async () => {
 		await renderLibrary();
-		const detail = await openDetail(/^dog\.png/);
+		const detail = await openDetail("dog.png");
 		fireEvent.click(within(detail).getByRole("button", { name: tc("delete") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("library.delete.title") });
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
@@ -316,7 +317,7 @@ describe("media library", () => {
 		expect(within(dogRow).getByText(t("usage.none"))).toBeTruthy();
 
 		fireEvent.click(dogRow);
-		const detail = await screen.findByRole("complementary", { name: t("detail.label") });
+		const detail = await screen.findByRole("complementary", { name: "dog.png" });
 		expect(within(detail).getByRole("heading", { name: "dog.png" })).toBeTruthy();
 	});
 
@@ -355,7 +356,7 @@ describe("media library", () => {
 			expect(screen.getAllByRole("button", { name: t("library.upload") }).length).toBeGreaterThan(1);
 			// Everything fits on one page, so there is no pager and no range line; the footer keeps the page size control.
 			expect(screen.queryByRole("navigation", { name: /페이지 이동/ })).toBeNull();
-			const footer = screen.getByRole("combobox", { name: "페이지당 행 수" }).closest("div.border-t");
+			const footer = screen.getByRole("button", { name: "페이지당 행 수" }).closest('[data-slot="list-footer"]');
 			expect(footer?.closest('[data-slot="empty"]')).toBeNull();
 			// The footer is the last child of the content column; the empty message sits in the area above it.
 			expect(footer?.nextElementSibling).toBeNull();

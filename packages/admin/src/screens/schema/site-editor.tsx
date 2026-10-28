@@ -30,7 +30,7 @@ const URL_NOTE = {
 	none: "site.url.none",
 } as const;
 
-/** The `site` settings of the file: name, home link, preview address, how the language shows in addresses, and other host names. The site URL is only shown. */
+/** The `site` settings of the file: name, preview address, how the language shows in addresses, and other host names. The site URL is only shown. */
 export function SiteEditor({
 	file,
 	siteUrl,
@@ -65,13 +65,6 @@ export function SiteEditor({
 					revert={revert("name")}
 					value={site.name as string | undefined}
 					onChange={(value) => set("name", orUndefined(value))}
-				/>
-				<TextInput
-					label={t("site.home")}
-					revert={revert("home")}
-					placeholder="/"
-					value={site.home as string | undefined}
-					onChange={(value) => set("home", orUndefined(value))}
 				/>
 			</Section>
 			<Section wide band title={t("site.previewTitle")}>

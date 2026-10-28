@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
-import { ShellPage } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { ApiKeysSettings } from "../api-keys-settings";
 import { apiKeysMessages } from "../messages";
@@ -68,9 +67,7 @@ afterEach(() => {
 const renderTab = () =>
 	render(
 		<AdminQueryProvider>
-			<ShellPage title={t("title")} nav="api-keys">
-				<ApiKeysSettings />
-			</ShellPage>
+			<ApiKeysSettings />
 		</AdminQueryProvider>,
 	);
 
@@ -136,7 +133,7 @@ describe("API keys page", () => {
 		await screen.findByTestId("api-key-Spare");
 		fireEvent.click(screen.getAllByRole("button", { name: t("add") })[0] as HTMLElement);
 		const dialog = within(await screen.findByTestId("api-key-dialog"));
-		fireEvent.change(dialog.getByLabelText(t("field.name")), { target: { value: "Bareun" } });
+		fireEvent.change(dialog.getByLabelText(t("field.name")), { target: { value: "Speller" } });
 		fireEvent.change(dialog.getByLabelText(t("field.value")), { target: { value: "brn-secret-value-1" } });
 		fireEvent.click(dialog.getByRole("button", { name: t("dialog.add.confirm") }));
 		await waitFor(() =>
@@ -145,7 +142,7 @@ describe("API keys page", () => {
 					([url, init]) =>
 						url === "/api/monti/v1/api-keys" &&
 						(init as RequestInit).method === "POST" &&
-						JSON.parse(String((init as RequestInit).body)).name === "Bareun",
+						JSON.parse(String((init as RequestInit).body)).name === "Speller",
 				),
 			).toBe(true),
 		);
@@ -196,21 +193,21 @@ describe("API keys page", () => {
 	});
 
 	it("clears an assigned slot from the key's row menu", async () => {
-		keys = [key("k3", "Bareun", "77e1", [{ plugin: "speller", ref: "key", label: "Spell check" }])];
+		keys = [key("k3", "Speller", "77e1", [{ plugin: "speller", ref: "key", label: "Spell check" }])];
 		slots = [
 			{
 				plugin: "speller",
 				slot: "key",
 				label: "Spell check",
 				service: "Speller",
-				key: { id: "k3", name: "Bareun", tail: "77e1", readable: true },
+				key: { id: "k3", name: "Speller", tail: "77e1", readable: true },
 			},
 		];
 		renderTab();
-		const bareun = await row("Bareun");
-		expect(bareun.getByText(/Spell check/)).toBeTruthy();
+		const speller = await row("Speller");
+		expect(speller.getByText(/Spell check/)).toBeTruthy();
 		expect(screen.queryByTestId("api-key-slot-speller-key")).toBeNull();
-		fireEvent.click(bareun.getByRole("button", { name: t("row.menu", { name: "Bareun" }) }));
+		fireEvent.click(speller.getByRole("button", { name: t("row.menu", { name: "Speller" }) }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.clearSlot", { label: "Spell check" }) }));
 		await waitFor(() => expect(putCalls()).toEqual([{ plugin: "speller", slot: "key", key: { use: "none" } }]));
 	});

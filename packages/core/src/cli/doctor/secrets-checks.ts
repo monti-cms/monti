@@ -16,7 +16,7 @@ const montiSecret: CoreCheck = {
 		if (!available) {
 			return fail("MONTI_SECRET is not set, so login sessions cannot be signed and no key or token can be stored", {
 				where: WHERE_TO_SET_ENV,
-				fix: "generate one with `openssl rand -base64 32` and put it in MONTI_SECRET. Use the same value wherever the site runs, and keep it: values encrypted with it (AI keys, git-sync tokens) cannot be read without it",
+				fix: "generate one with `openssl rand -base64 32` and put it in MONTI_SECRET. Use the same value wherever the site runs, and keep it: values encrypted with it (AI keys, plugin tokens) cannot be read without it",
 			});
 		}
 		if (!value) return ok("set by the `secret` option of monti.config.ts (its strength is not checked)");

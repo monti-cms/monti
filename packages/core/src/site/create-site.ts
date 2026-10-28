@@ -49,7 +49,7 @@ export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n &
 		/** The plugins of the config (an empty list if it has none). */
 		readonly plugins: readonly Plugin[];
 		/**
-		 * The `options` of a plugin in `plugins` of the site config, typed by its id (`site.pluginOptions(GIT_SYNC_PLUGIN)`, see {@link PluginId}). This is how an
+		 * The `options` of a plugin in `plugins` of the site config, typed by its id (`site.pluginOptions(SLACK_ON_PUBLISH)`, see {@link PluginId}). This is how an
 		 * extension reads its own config. `undefined` if that plugin is not in the config.
 		 */
 		pluginOptions<Options>(plugin: PluginId<string, Options>): Options | undefined;

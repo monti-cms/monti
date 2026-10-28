@@ -35,7 +35,7 @@ export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
-export { Chip } from "./chip";
+export { Chip, ChipRow } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -105,6 +105,8 @@ export {
 	DropdownMenuPortal,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
@@ -144,6 +146,7 @@ export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
+export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
@@ -151,6 +154,8 @@ export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
 export { Option } from "./option";
 export {
+	PageBody,
+	PageColumn,
 	PageHeader,
 	PageToolbar,
 	PageToolbarEnd,
@@ -159,6 +164,8 @@ export {
 	ToolbarDivider,
 } from "./page-header";
 export {
+	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,
@@ -203,10 +210,11 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
-export { SidePanelFrame } from "./side-panel-frame";
+export { SidePanel } from "./side-panel";
 export {
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
@@ -219,6 +227,8 @@ export {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarRailToggle,
+	SidebarScreenMode,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
@@ -226,13 +236,15 @@ export { Spark } from "./spark";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
-export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { StatusBarList } from "./status-bar-list";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {
+	ListScroll,
 	RowActions,
 	RowCheck,
+	RowLink,
 	RowTitle,
 	Table,
 	TableBody,

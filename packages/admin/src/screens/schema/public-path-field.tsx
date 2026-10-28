@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { FormFieldError, Inline, Input, Stack, Text } from "@monti-cms/ui";
+import { Affix, FormFieldError, Inline, Stack } from "@monti-cms/ui";
 import { useId, useState } from "react";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
@@ -58,27 +58,20 @@ export function PublicPathField({
 			{hasPage && (
 				<Inline justify="end">
 					<Stack gap={8} width="full" maxWidth="panel">
-						<Inline gap={4}>
-							<Text mono tone="muted" aria-hidden="true">
-								/
-							</Text>
-							<Input
-								id={id}
-								aria-label={t("collection.path")}
-								value={shown}
-								disabled={disabled}
-								autoComplete="off"
-								placeholder="posts"
-								mono
-								onChange={(event) => {
-									setDraft(event.target.value);
-									onChange(pathOfSegment(event.target.value));
-								}}
-							/>
-							<Text mono tone="muted" aria-hidden="true">
-								{segment === "" ? ":slug" : "/:slug"}
-							</Text>
-						</Inline>
+						<Affix
+							id={id}
+							aria-label={t("collection.path")}
+							prefix="/"
+							suffix={segment === "" ? ":slug" : "/:slug"}
+							value={shown}
+							disabled={disabled}
+							autoComplete="off"
+							placeholder="posts"
+							onChange={(event) => {
+								setDraft(event.target.value);
+								onChange(pathOfSegment(event.target.value));
+							}}
+						/>
 						{issue && <FormFieldError>{t(`path.${issue}`)}</FormFieldError>}
 					</Stack>
 				</Inline>

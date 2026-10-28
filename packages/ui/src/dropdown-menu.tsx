@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { ChevronRight } from "@carbon/icons-react";
+import { ChevronRight, Search } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import {
@@ -9,6 +9,7 @@ import {
 	MENU_ITEM,
 	MENU_LABEL,
 	MENU_MOTION,
+	MENU_SCROLL,
 	MENU_SEPARATOR,
 	MENU_SUB_MARK,
 	MenuTick,
@@ -109,11 +110,19 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
  * A row that picks a further value: its name, the current value in a `MenuValue` if there is one, and a ›. Pointing at it, or pressing →,
  * opens the second level at its side; ← closes it. The row keeps the selected background while the second level is open.
  */
-function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive.SubmenuTrigger.Props) {
+function DropdownMenuSubTrigger({
+	className,
+	children,
+	chevron = true,
+	...props
+}: MenuPrimitive.SubmenuTrigger.Props & {
+	/** The › at the end. Off for a row that opens a card with no rows in it (a calendar), where the row says its current value with a `MenuTick` instead. */
+	chevron?: boolean;
+}) {
 	return (
 		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
+			{chevron && <ChevronRight aria-hidden className={MENU_SUB_MARK} />}
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }
@@ -124,11 +133,17 @@ function DropdownMenuSubContent({
 	alignOffset = SUB_ALIGN_OFFSET,
 	side = "right",
 	sideOffset = SUB_SIDE_OFFSET,
+	bare = false,
+	className,
 	...props
-}: React.ComponentProps<typeof DropdownMenuContent>) {
+}: React.ComponentProps<typeof DropdownMenuContent> & {
+	/** No padding of its own: the card holds something that brings its own (a calendar), not menu rows. */
+	bare?: boolean;
+}) {
 	return (
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
+			className={cn(bare && "p-0", className)}
 			align={align}
 			alignOffset={alignOffset}
 			side={side}
@@ -138,29 +153,113 @@ function DropdownMenuSubContent({
 	);
 }
 
-/** A row that is on or off, with the ✓ at its end while on. */
-function DropdownMenuCheckboxItem({ className, children, checked, ...props }: MenuPrimitive.CheckboxItem.Props) {
+/** The ✓ in the box of a checked row, drawn so the state does not rest on color alone. */
+const BOX_MARK = (
+	<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5" aria-hidden="true">
+		<path d="M2.3 6.9 5.1 9.7 10.7 4.1" />
+	</svg>
+);
+
+/**
+ * A row that is on or off. By default the ✓ is at its end while on. With `box` the row starts with a 14px check box instead (a list of values where
+ * several can be on: the tags to filter by, the columns to show), and a `MenuShortcut` at the end can carry a count. `mixed` is the box of a value some of
+ * several things hold: filled with a bar, and read as "mixed" (pressing it turns it on, as for an unchecked row).
+ */
+function DropdownMenuCheckboxItem({
+	className,
+	children,
+	checked,
+	box = false,
+	mixed = false,
+	...props
+}: MenuPrimitive.CheckboxItem.Props & {
+	/** Start the row with a check box (several can be on) instead of ending it with a ✓. */
+	box?: boolean;
+	/** Some, not all: with `box`, a bar in a filled box. Pass `checked={false}`. */
+	mixed?: boolean;
+}) {
 	return (
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
-			className={cn(MENU_ITEM, className)}
+			data-mixed={mixed || undefined}
+			className={cn(MENU_ITEM, "group/item", className)}
 			checked={checked}
 			{...props}
+			{...(mixed ? { "aria-checked": "mixed" as const } : {})}
 		>
+			{box && (
+				<span
+					data-slot="menu-box"
+					className="relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint text-monti-on-emphasis transition-colors group-data-checked/item:border-monti-contrast group-data-mixed/item:border-monti-contrast group-data-checked/item:bg-monti-emphasis group-data-mixed/item:bg-monti-emphasis"
+				>
+					<MenuPrimitive.CheckboxItemIndicator render={<span className="flex">{BOX_MARK}</span>} />
+					{mixed && <span aria-hidden className="h-[1.5px] w-1.5 bg-current" />}
+				</span>
+			)}
 			{children}
-			<MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />
+			{!box && <MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />}
 		</MenuPrimitive.CheckboxItem>
 	);
+}
+
+/**
+ * The search row on top of a long menu: a magnifier and a text field, then a rule. Typing filters the rows below (the caller does that); ↓ moves into them.
+ * The keys a text needs (letters, ←, →, Home, End) stay in the field, so a menu's own type-ahead and second levels do not take them.
+ */
+function DropdownMenuSearch({
+	value,
+	onValueChange,
+	label,
+	placeholder = label,
+}: {
+	value: string;
+	onValueChange: (value: string) => void;
+	/** The name of the field, for screen readers. */
+	label: string;
+	placeholder?: string;
+}) {
+	return (
+		<div
+			role="search"
+			data-slot="dropdown-menu-search"
+			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-[6px] pb-[9px] text-monti-default"
+		>
+			<Search aria-hidden className="size-3.5 shrink-0 text-monti-subtle" />
+			<input
+				type="text"
+				aria-label={label}
+				placeholder={placeholder}
+				value={value}
+				onChange={(event) => onValueChange(event.target.value)}
+				onKeyDown={(event) => {
+					if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Escape" || event.key === "Tab")
+						return;
+					event.stopPropagation();
+				}}
+				className="min-w-0 flex-1 border-0 bg-transparent p-0 text-monti-body text-monti-default outline-none placeholder:text-monti-faint"
+			/>
+		</div>
+	);
+}
+
+/** A long list in a menu: one column, 320px high at most, scrolling inside. */
+function DropdownMenuScroll({ className, ...props }: React.ComponentProps<"div">) {
+	return <div data-slot="dropdown-menu-scroll" className={cn(MENU_SCROLL, className)} {...props} />;
 }
 
 function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
 	return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
 }
 
-/** A row of a pick-one list. The current value shows a ✓ at its end, not a background. */
-function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props) {
+/** A row of a pick-one list. The current value shows a ✓ at its end, not a background. Picking one applies it and closes the whole menu. */
+function DropdownMenuRadioItem({ className, children, closeOnClick = true, ...props }: MenuPrimitive.RadioItem.Props) {
 	return (
-		<MenuPrimitive.RadioItem data-slot="dropdown-menu-radio-item" className={cn(MENU_ITEM, className)} {...props}>
+		<MenuPrimitive.RadioItem
+			data-slot="dropdown-menu-radio-item"
+			closeOnClick={closeOnClick}
+			className={cn(MENU_ITEM, className)}
+			{...props}
+		>
 			{children}
 			<MenuPrimitive.RadioItemIndicator render={<MenuTick />} />
 		</MenuPrimitive.RadioItem>
@@ -186,6 +285,8 @@ export {
 	DropdownMenuLabel,
 	DropdownMenuItem,
 	DropdownMenuCheckboxItem,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,

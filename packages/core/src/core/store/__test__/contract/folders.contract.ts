@@ -279,6 +279,62 @@ export const foldersContract: ContractSuite = (factory) => {
 		}, 30_000);
 
 		// -----------------------------------------------------------------------
+		// 3b  how many things sit directly in a folder
+		// -----------------------------------------------------------------------
+
+		it("3b. listFolders counts the entries directly in each folder, leaving out the trash, the entries of other folders and those of subfolders", async () => {
+			const parent = await store.createFolder({ collection: contentCollection, parentId: null, name: "Counted" });
+			const child = await store.createFolder({ collection: contentCollection, parentId: parent.id, name: "Inside" });
+			const empty = await store.createFolder({ collection: contentCollection, parentId: null, name: "Empty" });
+			const seed = (slug: string, folderId: string | null) =>
+				seedEntry(store, {
+					collection: contentCollection,
+					slug,
+					metadata: { title: slug },
+					contentHash: uniqueHash(),
+					folderId,
+				});
+			await seed("count-a", parent.id);
+			await seed("count-b", parent.id);
+			await seed("count-c", child.id);
+			await seed("count-loose", null);
+			const gone = await seed("count-gone", parent.id);
+			await store.trashEntry({ id: gone.id, expectedVersion: gone.version });
+
+			const counts = Object.fromEntries(
+				(await store.listFolders({ collection: contentCollection })).map((folder) => [folder.id, folder.entryCount]),
+			);
+			expect(counts).toEqual({ [parent.id]: 2, [child.id]: 1, [empty.id]: 0 });
+		});
+
+		it("3c. listFolders counts the ready files of a media folder, not the ones still uploading", async () => {
+			const folder = await store.createFolder({ collection: OTHER_SCOPE, parentId: null, name: "Pictures" });
+			const upload = async (filename: string, ready: boolean) => {
+				const media = await store.createMediaAsset({
+					filename,
+					mimeType: "image/png",
+					byteSize: 10,
+					stagingKey: `staging/${filename}`,
+					folderId: folder.id,
+				});
+				if (ready)
+					await store.completeMediaAsset({
+						id: media.id,
+						storageKey: `media/${filename}`,
+						mimeType: "image/png",
+						byteSize: 10,
+						width: 1,
+						height: 1,
+					});
+			};
+			await upload("count-1.png", true);
+			await upload("count-2.png", true);
+			await upload("count-pending.png", false);
+			const listed = await store.listFolders({ collection: OTHER_SCOPE });
+			expect(listed.find((item) => item.id === folder.id)?.entryCount).toBe(2);
+		});
+
+		// -----------------------------------------------------------------------
 		// 4  move entry to folder: version +1, conflict, cross-collection, timestamps
 		// -----------------------------------------------------------------------
 

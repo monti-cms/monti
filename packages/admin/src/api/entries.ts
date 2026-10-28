@@ -18,6 +18,14 @@ export type EntrySearchResponse = {
 	items: { id: string; title: string | null; slug: string | null; status: string }[];
 };
 
+/** What `GET /v1/entries/counts` answers: how many rows have no value, a value, or each option, item, translation state or entry state. */
+export interface ListCountsResponse {
+	total: number;
+	empty?: number;
+	filled?: number;
+	values: Record<string, number>;
+}
+
 /** Query keys. Everything under `all` is refetched after a write; the trash badge count and the other list-wide numbers sit under it too. */
 export const entriesKeys = {
 	all: ["cms", "entries"] as const,
@@ -25,6 +33,7 @@ export const entriesKeys = {
 	detail: (id: string) => [...entriesKeys.all, "detail", id] as const,
 	relations: (id: string) => [...entriesKeys.all, "relations", id] as const,
 	search: (query: string) => [...entriesKeys.all, "search", query] as const,
+	counts: (query: string) => [...entriesKeys.all, "counts", query] as const,
 	taxonomy: (collection?: string) =>
 		collection === undefined
 			? ([...entriesKeys.all, "taxonomy"] as const)
@@ -67,6 +76,10 @@ export const listEntries = <T = EntriesPage>(
 /** `GET /v1/entries/search?<query>` (relation pickers: title search, or lookup by `id`). */
 export const searchEntries = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
 	adminFetch<EntrySearchResponse>(site, `/v1/entries/search?${query.toString()}`, { signal });
+
+/** `GET /v1/entries/counts?<query>` (the numbers beside the values of the list's filter menu). */
+export const countListValues = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
+	adminFetch<ListCountsResponse>(site, `/v1/entries/counts?${query.toString()}`, { signal });
 
 /** `POST /v1/entries` */
 export const createEntry = <T = EntryWriteResult>(

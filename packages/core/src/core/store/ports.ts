@@ -15,8 +15,11 @@ import type {
 	EntrySearchHit,
 	ExportSnapshot,
 	Folder,
+	FolderListItem,
 	IncomingReferenceItem,
 	JsonObject,
+	ListCounts,
+	ListCountsParams,
 	ListEntriesParams,
 	ListEntriesResult,
 	ListMediaParams,
@@ -136,6 +139,8 @@ export interface LifecycleStore {
 /** The admin list: search, filters, sorting and paging done by the store. */
 export interface ListStore {
 	listEntries(params: ListEntriesParams): Promise<ListEntriesResult>;
+	/** How many rows of the list each value of a field (or of the translation filter) has, for the filter menu. */
+	countListValues(params: ListCountsParams): Promise<ListCounts>;
 	/**
 	 * Finds entries of one collection by title for a picker, so it loads only what it shows. The best matches come first: a title equal to the
 	 * query, then one that starts with it, one with a word that starts with it, one that contains it, and last a slug that contains it; equal
@@ -163,7 +168,8 @@ export interface FolderStore {
 	/** Moves the folder's entries and child folders up to its parent, then deletes it. */
 	deleteFolder(params: { id: string; expectedVersion?: number }): Promise<void>;
 	getFolderContents(params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }>;
-	listFolders(params: { collection: string }): Promise<Folder[]>;
+	/** Every folder of a collection (or of the media library), each with the number of things directly in it. */
+	listFolders(params: { collection: string }): Promise<FolderListItem[]>;
 }
 
 /** Public reads. Never returns drafts, archived or trashed entries. */

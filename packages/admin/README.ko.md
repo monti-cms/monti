@@ -2,7 +2,7 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·휴지통·로그인·설정 화면을 준다(설정에 스키마 편집기가 `/admin/settings/<탭>`으로 들어 있고, 템플릿·이벤트 기록·플러그인 페이지는 각자 주소가 있다).
+`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·휴지통·로그인·설정 화면을 준다(설정에 스키마 편집기가 `/admin/settings/<탭>`으로 들어 있고, 도구에 템플릿·데이터·활동 기록·API 키·플러그인 페이지가 각자 주소를 가진 탭으로 있다).
 프레임워크에 묶이지 않는다. Next.js에서 아무것도 가져오지 않고, 라우터는 받은 어댑터로만 닿는다("라우터 어댑터"). 지금 지원하는 호스트는 `@monti-cms/nextjs`를 통한 Next.js(App Router)다.
 플러그인(예: `@monti-cms/ai`)이 도구 페이지·필드 옆 버튼·편집 화면 동작을 더한다.
 화면은 본체의 관리자 API(`/api/monti/v1/*`)만 부른다. 설치하지 않고 같은 API로 화면을 직접 만들어도 된다.
@@ -15,7 +15,6 @@
   (`app/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
   플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/admin`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/monti/v1`)는 바뀌지 않는다.
-- **사이트 보기.** 사이드바 맨 위 사이트 이름 옆의 외부 링크 아이콘 단추(툴팁 `사이트 보기`)가 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
 - **미리보기.** 편집 화면 `미리보기`는 `site.previewPath` 뒤에 공개 경로를 붙이고 언어는 `site.previewLocaleParam`(기본
   `?locale=`)으로 넘긴다. 검색 미리보기의 주소는 `site.localePrefix`를 따른다.
 
@@ -127,7 +126,7 @@ const components = {
 
 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(첫 탭은 `tab`이 없는 묶음을 담고, SEO 필드처럼 플러그인이 두는 필드는 제 탭을 가진다). 묶음은 core가 계산하고(`site.panelGroupsOf`), 설정 화면의 필드 트리도 같은 묶음으로 그린다. 보기 필드
 (`fields.view({ view })`)는 그 자리에 플러그인 `components`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
-선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)가 그 예다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
+선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/kit`의 `MediaThumbnail`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).
 날짜·시각은 사이트 설정의 `timeZone`으로, 표기는 `admin.locale`(기본 `ko-KR`)로 보인다. 관계 입력의 안내 문구는 대상 컬렉션의
 이름표를 쓴다(예: "게시글 고르기"). 항목 컬렉션(`kind: "item"`)의 항목은 목록의 작은 폼으로 연다. 미디어 사용처처럼 여러
@@ -136,17 +135,18 @@ const components = {
 
 ## 탐색과 설정
 
-사이드바는 다섯 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **글쓰기**(템플릿, 그다음 `nav` 항목에 `group: "writing"`이 있는 플러그인 페이지. 예: AI), **사이트 관리**(데이터, API 키, 이벤트 기록, 그다음 나머지 플러그인 페이지. 예: Git 동기화. 기본으로 접혀 있고 브라우저마다 기억하며, 이 묶음의 화면이 열려 있으면 펼쳐진다. 접혀 있는 동안은 머리글에 실패한 전달 개수가 붙는다), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
+사이드바에는 머리 줄(사이트 이름, 사이트를 여는 링크, 접기 버튼. 버튼이나 ⌘B로 64px 아이콘 사이드바로 접히며, 접히면 아이콘에 마우스를 올릴 때 이름과 숫자가 툴팁에 나오고, 전달 실패가 있으면 도구 아이콘에 점이 붙고, 폴더는 숨는다. 접은 상태는 이 브라우저에 기억된다)과 그 아래 **콘텐츠**(컬렉션마다 하나, 그다음 미디어. 열려 있는 컬렉션이나 미디어는 그 아래에 폴더를 펼친다. 맨 위 폴더와 열린 경로에 놓인 폴더들이다)가 있고, 맨 아래 줄 아래에 **휴지통**(개수가 붙는다), **도구**(실패한 전달 개수가 붙는다), **설정**, 그리고 화면 모드(시스템·라이트·다크, 고르기 전에는 시스템) 아이콘 단추 하나가 있다. 사이드바는 이동만 한다. 폴더는 목록에서 만들고 이름을 바꾸고 지운다. 좁은 화면에서는 서랍이며 접히지 않는다. 화면마다 주소가 따로 있다.
 
 | 화면 | 주소 | 내용 |
 |---|---|---|
 | 사이트·언어·컬렉션·파일·관리자 | `<관리자 경로>/settings`(사이트 탭으로 열린다. `site`·`locales`·`collections`·`file`·`admin`) | 설정, 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
-| API 키 | `<관리자 경로>/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결·git-sync는 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
-| 템플릿 | `<관리자 경로>/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
-| 이벤트 기록 | `<관리자 경로>/events` | 이벤트 전달. |
-| 플러그인 페이지마다 하나 | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
+| API 키(도구의 탭) | `<관리자 경로>/tools/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결과 플러그인의 키 슬롯은 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
+| 템플릿(도구의 탭) | `<관리자 경로>/tools/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
+| 데이터(도구의 탭) | `<관리자 경로>/tools/data` | 백업, zip 하나로 글 가져오기(빈 사이트에 전체 백업이면 복원 시트가 열린다). |
+| 활동 기록(도구의 탭) | `<관리자 경로>/tools/events` | 이벤트 전달. 탭에 실패한 전달 개수가 붙는다. |
+| 플러그인 페이지마다 하나(도구의 탭) | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`). 기본 탭들 뒤의 탭으로 나온다. |
 
-`<관리자 경로>/settings`는 첫 탭으로 간다.
+`<관리자 경로>/settings`는 첫 탭으로, `<관리자 경로>/tools`는 도구의 첫 탭으로 간다.
 
 ## 스키마 화면
 
@@ -204,8 +204,7 @@ function NoticeView() {
 
 이미지는 바로 들어가고, 구독자가 도는 동안 "이미지 글을 쓰는 중…"을 보인다. `fill({ alt?, caption? })`은 칸이 아직 비어 있고 넣은 뒤로 사람이 그 칸에
 입력하지 않았을 때만 쓴다(장식 이미지에는 대체 텍스트를 쓰지 않는다). 이미지가 지워졌으면 아무것도 쓰지 않고, 그때 `signal`도 중단된다. 무엇이든 썼는지를
-돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나이고,
-[이미지 대체 텍스트 레시피](../../docs/recipes/image-alt.md)는 직접 만드는 작은 예다.
+돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나다.
 
 ## 글자 꾸밈
 
@@ -245,7 +244,7 @@ const components = { marks: { note } };
 본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
 등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 도구 모음 버튼(이름 `label`, 아이콘 `icon`)이
 생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
-바른 검사기는 `@monti-cms/bareun`이며, `monti.config.ts`의 `plugins`에 넣는 플러그인이다. 직접 만든 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고).
+검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고). 예제 블로그의 `word-list` 플러그인이 작은 예다.
 
 ```tsx
 "use client";
@@ -285,7 +284,7 @@ API 키는 브라우저에 두지 않는다. 브라우저는 `remoteTextChecker`
 ```ts
 // 플러그인의 관리자 쪽(브라우저)
 import { remoteTextChecker } from "@monti-cms/core";
-const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
+const checker = remoteTextChecker({ id: "speller", label: "맞춤법", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)
 import { textCheckRoute } from "@monti-cms/core/server";
@@ -301,7 +300,6 @@ export const POST = textCheckRoute({
 
 - 위치 단위가 다르면 검사기 쪽에서 UTF-16으로 바꾼다. 바이트(UTF-8)·코드 포인트·문장 기준 위치를 그대로 쓰면 이모지·한글 뒤에서
   밑줄이 어긋난다.
-- 바른(Bareun): 요청에 `encoding_type: UTF16`을 주면 `begin_offset`·`length`를 그대로 쓸 수 있다. 중첩 결과(`nested`)는 펼친다.
 - LanguageTool·Yahoo 같은 위치 기반 API: 문단을 이어 보낼 때는 돌아온 위치를 문단별로 다시 나눈다. 요청 크기·분당 호출 한도는
   `limits`와 서버 경로에서 맞춘다.
 - textlint: `range`(`[start, end]`)를 그대로 쓴다. `fix.text`는 후보로 쓰되 `fix.range`가 표시 범위보다 넓을 수 있다.
@@ -326,7 +324,7 @@ export default defineAdminPlugin({
 });
 ```
 
-페이지는 클라이언트 컴포넌트이고 사이드바의 사이트 관리 묶음(또는 `group`에 따라 글쓰기 묶음)의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon, group }`. `group`은 `"writing"` 또는 `"site"`이고 기본값은 `"site"`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `PageActions`(`@monti-cms/admin/kit`)는 페이지의 주된 동작 하나를 제목 줄 오른쪽에 둔다. 플러그인 API는 `useAdminFetch()`(`@monti-cms/admin`)로 부른다. `adminFetch("/v1/<플러그인>/<경로>", init)`는 `/api/monti` 뒤의 경로를 받고, 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다. 관리자의 사이트가 그 문구의 언어를 정하고, 설정 화면 미리보기에서 쓰기를 막는다. 컴포넌트 밖에서는 `adminFetch(site, path, init)`이 사이트를 직접 받는다.
+페이지는 클라이언트 컴포넌트이고 도구 페이지의 탭으로, 기본 탭들 뒤에 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label }`)이 정하고, 페이지는 본문만 그린다(사이드바와 도구 제목, 탭은 관리자가 이미 둔다). 동작이 있는 페이지는 그 동작을 자기 본문에 둔다. 플러그인 API는 `useAdminFetch()`(`@monti-cms/admin`)로 부른다. `adminFetch("/v1/<플러그인>/<경로>", init)`는 `/api/monti` 뒤의 경로를 받고, 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다. 관리자의 사이트가 그 문구의 언어를 정하고, 설정 화면 미리보기에서 쓰기를 막는다. 컴포넌트 밖에서는 `adminFetch(site, path, init)`이 사이트를 직접 받는다.
 
 ```tsx
 "use client";
@@ -340,13 +338,13 @@ export function StatsPage() {
 }
 ```
 
-부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다. [관리자 페이지 레시피](../../docs/recipes/admin-page.md)가 플러그인 전체이고, [커스텀 블록 레시피](../../docs/recipes/custom-block.md)는 편집기 뷰가 있는 블록이다.
+부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다.
 
 편집 화면 확장(`editorExtensions`)은 툴바 끝 요소·블록 손잡이 옆 동작·선택 영역 메뉴·슬래시 메뉴 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `defineAdminPlugin`의 `slots`로 동작을 붙인다(`SlotSource` 타입과 슬롯 부품은 `@monti-cms/admin/slots`에 있다).
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`),
+`cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`),
 목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`), 상태 부품(`Count`·
 `Banner`·`LoadErrorAlert`·`FormFieldError`), `commonMessages`(저장·취소·다시 시도 등), `useDebounced`, 미디어 미리보기(`MediaThumbnail`), 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. Monti 패키지와 예제가 쓰는 것만 내보내며, 없는 부품은 확장이 필요로 할 때 추가한다. 색은 `--monti-success`·`--monti-warning`·`--monti-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
@@ -354,7 +352,7 @@ export function StatsPage() {
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusItems`·`panel`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
+| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusCells`·`panel`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
@@ -364,55 +362,36 @@ export function StatsPage() {
 
 ### 상태 표시줄
 
-모든 관리자 화면의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 항목은 코어와 플러그인이 채운다. 규칙은 하나다. 항목은 바뀌는 상태 가운데 눌렀을 때 갈 곳이 있는 것만 보여 주고, 할 말이 없으면 아무것도 그리지 않는다. 코어는 편집기의 저장 상태("초안 · 저장됨 2분 전", 누르면 저장), 언어, 본문 글자 수와 읽는 시간(공백을 뺀 글자 수, 분당 약 500자, 최소 1분), 저장된 초안이 발행할 준비가 됐는지("발행 준비됨", "발행 전 2". `POST /api/monti/v1/entries/:id/check`로 알아내며, 글을 열 때와 저장할 때마다 다시 검사하고 발행이 거절되면 이 팝업이 열린다), 실패한 이벤트 전달(이벤트 로그로 연결), 목록의 항목 수를 낸다.
+편집기의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 다른 곳에 없는 것만 왼쪽부터 보여 준다. 글의 저장 상태("저장 전 변경사항", "저장됨 10:42". 누르면 저장하고, 저장이 실패한 뒤에는 다시 시도한다), 발행 전에 고칠 것("할 일 2", 없으면 "할 일 없음". `POST /api/monti/v1/entries/:id/check`로 알아내며, 글을 열 때와 저장할 때마다 다시 검사하고 발행이 거절되면 목록이 열린다), 플러그인이 채운 칸, 그리고 오른쪽 끝의 본문 글자 수(공백 제외)다. 할 일 칸은 문제마다 한 줄씩 목록으로 열고, 줄을 누르면 그 항목이나 블록으로 가며, 구분선 아래에는 이미 맞게 채운 필수 항목이 나온다. 글의 상태 이름은 머리글의 칩에, 언어는 언어 탭에 있다.
 
-플러그인은 `defineAdminPlugin`의 `statusItems`로 이름을 붙여 항목을 더한다. 항목마다 그룹(`align: "start"`는 왼쪽, `"end"`는 오른쪽)과 `order`(오름차순, 코어 항목은 왼쪽 10~80, 오른쪽 10), 그리고 `StatusBarItem` 또는 `null`을 그리는 컴포넌트를 밝힌다.
+플러그인은 `defineAdminPlugin`의 `statusCells`로 이름을 붙여 칸을 채운다. 코어는 할 일 칸 다음에 칸 자리 하나를 주며, 원문 편집기와 번역 편집기 모두에 있다. 칸과 칸에서 열리는 목록은 코어 것(`@monti-cms/admin/kit`의 `StatusBarPluginCell`)이고, 플러그인은 그 안에 들어갈 것만 가져온다. 찾는 것의 이름, 찾은 항목, 동작이다. 칸 컴포넌트는 `StatusBarPluginCell`이나 `null`을 그린다. 할 말이 있는 곳에서만 보이므로, 한 언어만 검사하는 플러그인은 다른 언어에서 아무것도 그리지 않는다.
 
 ```tsx
 "use client";
-import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+import { StatusBarPluginCell, useStatusBarContext } from "@monti-cms/admin/kit";
 
-function DraftsStatus() {
-	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
-	const drafts = useDrafts(collection); // 직접 만든 쿼리
-	if (screen !== "list" || !drafts) return null; // null이면 항목이 빠지고 빈틈도 남지 않는다
-	return <StatusBarItem tone="warning" href="/admin?status=draft" title="초안 열기">초안 {drafts}건</StatusBarItem>;
-}
-
-export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
-```
-
-`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크)·`onClick`(버튼)·`popover`(팝업. `open`과 `onOpenChange`를 주면 호출하는 쪽이 열고 닫는다) 중 하나 이하, `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 본문의 크기, 복원을 권하는 브라우저 사본, 번역 목록, 텍스트 검사기가 찾은 항목과 각 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
-
-`popover`를 주면 항목을 누르거나(Enter, Space도 같다) 항목 위에 팝업이 열린다. 팝업은 `start` 그룹에서는 항목의 왼쪽 끝에, `end` 그룹에서는 오른쪽 끝에 맞춘다. Esc로 닫으면 포커스가 항목으로 돌아온다. 팝업은 너비 320px이고 화면이 낮으면 안에서 스크롤한다. 내용은 `StatusPopoverHeader`(제목과 오른쪽의 선택 동작, `{ label, onClick, keepOpen? }` 또는 `{ label, href, newTab }`. `keepOpen`은 동작 뒤에도 팝업을 닫지 않는다)와 `StatusPopoverRow`(왼쪽 `label`, 오른쪽 mono `value`, `href`를 주면 링크, `onClick`을 주면 버튼이며 둘 다 팝업을 닫는다)로 짠다. 코어는 저장 상태(상태, 마지막 저장, 지금 저장·다시 시도·로그인, 브라우저 사본 복원), 언어(번역 목록과 각 상태), 본문 수치, 발행 전 확인(문제마다 해당 필드나 블록으로 가는 쉬운 할 일 한 줄, 다시 검사), 최근 실패한 전달(모두 다시 시도, 이벤트 로그)에 팝업을 쓴다.
-
-```tsx
-function DraftsStatus() {
-	const { collection } = useStatusBarContext();
-	const drafts = useDrafts(collection); // 직접 만든 쿼리: [{ id, title }]
-	if (!drafts.length) return null;
+function LinksCell() {
+	const { locale, entryId } = useStatusBarContext();
+	const links = useBrokenLinks(entryId); // 직접 만든 쿼리: [{ id, label, where, fix }]
+	if (locale !== "ko" || links.length === 0) return null; // null이면 칸도 틈도 없다
 	return (
-		<StatusBarItem
-			tone="warning"
-			title="초안 보기"
-			popover={
-				<>
-					<StatusPopoverHeader title="초안" action={{ label: "모두 열기", href: "/admin?status=draft" }} />
-					{drafts.map((draft) => (
-						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
-					))}
-				</>
-			}
-		>
-			초안 {drafts.length}건
-		</StatusBarItem>
+		<StatusBarPluginCell
+			label="링크"
+			findings={links.map((link) => ({ id: link.id, title: link.label, detail: link.where, actionLabel: "고치기", onAction: link.fix }))}
+			settings={{ label: "설정", href: "/admin/tools/links" }}
+			fixAll={{ label: "모두 고치기", onClick: fixAllLinks }}
+		/>
 	);
 }
+
+export default defineAdminPlugin({ statusCells: { links: LinksCell } });
 ```
+
+칸에는 `label`과 찾은 항목 수가 보이고, `blocking`인 항목이 있으면 빨갛게 보인다. 목록에는 항목마다 한 줄이다. 제목, 어디인지 한 줄, 동작 하나이며, 줄 자체를 누르면 그 자리로 간다(`onOpen`). 구분선 아래 양쪽 끝에는 `settings`(관리자 안의 주소)와 `fixAll`이 놓인다. 칸이 사이트 설정에 달려 있으면 사이트의 함수(`statusCells: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. `useStatusBarContext()`는 `collection`, `entryId`, 글의 `locale`, 그리고 `textIssues`를 돌려준다. `textIssues`는 텍스트 검사기(`textCheckers`)가 본문에서 찾은 것으로, 항목마다 글자, 제안, 문단 번호와 문장, 그 자리로 가는 방법과 고치는 방법이 있고, 한꺼번에 고치는 `fixAll`도 있다. 
 
 ### 사이드 패널
 
-플러그인은 `defineAdminPlugin`의 `panel`로 모든 화면의 오른쪽에, 글 편집기에도, 패널 하나를 더한다. `label`, `icon`, `Component`를 준다. 관리자는 화면마다 머리글에 이 패널의 버튼을 그리고, 너비를 바꿀 수 있는 창으로 연다(1280px보다 좁으면 시트이고, Ctrl 또는 Cmd와 `.`로도 열고 닫는다). 열렸는지와 너비는 이 브라우저에 기억한다. 지금은 패널을 하나만 보여 주며, 여럿이면 나중에 등록한 플러그인의 것을 쓴다. 이름이 사이트 설정에 달려 있으면 사이트의 함수(`panel: (site) => ({ ... })`)를 준다. 이 함수와 컴포넌트는 `"use client"` 모듈에서 가져온다. 컴포넌트는 자기 틀을 직접 그리고(`/kit`의 `SidePanelFrame`이 머리글, 스크롤되는 본문, 아래에 고정된 바닥을 준다) 패널을 닫을 `onClose`를 받는다.
+플러그인은 `defineAdminPlugin`의 `panel`로 모든 화면의 오른쪽에, 글 편집기에도, 패널 하나를 더한다. `label`, `icon`, `Component`를 준다. 관리자는 화면마다 머리글에 이 패널의 버튼을 그리고, 창으로 연다(1280px보다 좁으면 화면 위에 뜨고, Ctrl 또는 Cmd와 `.`로도 열고 닫는다). 열렸는지는 이 브라우저에 기억한다. 지금은 패널을 하나만 보여 주며, 여럿이면 나중에 등록한 플러그인의 것을 쓴다. 이름이 사이트 설정에 달려 있으면 사이트의 함수(`panel: (site) => ({ ... })`)를 준다. 이 함수와 컴포넌트는 `"use client"` 모듈에서 가져온다. 컴포넌트는 자기 틀을 직접 그리고(`/kit`의 `SidePanel`이 고정된 너비, 머리글, 스크롤되는 본문, 아래에 고정된 바닥을 준다. `width`는 `side`, `panel`, `assistant`) 패널을 닫을 `onClose`를 받는다.
 
 ```tsx
 export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, Component: NotesPanel } });

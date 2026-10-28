@@ -1,10 +1,11 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldSet, Stack, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import { Box, FormFieldSet, IconButton, Inline, Stack, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
-import { SidePanelHeader } from "../shared/side-panel";
+import { commonMessages } from "../../lib/common.messages";
 import { tabLabel } from "./layout-groups";
 import { entriesMessages } from "./messages";
 import { RemovedFieldsNotice } from "./removed-fields-notice";
@@ -45,6 +46,7 @@ export function InspectorPanel({
 	onFocused,
 }: InspectorPanelProps) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const disabled = useEntryFormSelector((state) => state.disabled);
@@ -90,15 +92,20 @@ export function InspectorPanel({
 	return (
 		<Stack gap={0} height="full" width="full" overflow="hidden" background="page" border="left">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(String(value))} aria-label={t("tab.default")}>
-				<SidePanelHeader onClose={onClose}>
-					<TabsList variant="line">
-						{tabs.map((name) => (
-							<TabsTrigger key={name} value={name} dot={issuesIn(name) > 0 ? "warning" : undefined}>
-								{tabLabel(site, name, collection)}
-							</TabsTrigger>
-						))}
-					</TabsList>
-				</SidePanelHeader>
+				<Inline gap={4} shrink={false} border="bottom" paddingY={8} paddingX={16}>
+					<Box grow minWidth={0}>
+						<TabsList variant="line">
+							{tabs.map((name) => (
+								<TabsTrigger key={name} value={name} dot={issuesIn(name) > 0 ? "warning" : undefined}>
+									{tabLabel(site, name, collection)}
+								</TabsTrigger>
+							))}
+						</TabsList>
+					</Box>
+					<IconButton label={tc("close")} side="bottom" onClick={onClose}>
+						<Close aria-hidden />
+					</IconButton>
+				</Inline>
 
 				<Box grow minHeight={0} overflow="y" paddingX={16} paddingY={16}>
 					<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />

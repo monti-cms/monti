@@ -72,17 +72,19 @@ describe("list columns", () => {
 		expect(available).toContain("title");
 	});
 
-	it("until the writer chooses columns the default ones are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, locale, status, updated date and keep the slug beside the title", () => {
+	it("until the writer chooses columns the default ones are used: documents get status, title, taxonomy fields, locale and the updated date; items get status, title, locale, updated date and keep the slug beside the title", () => {
 		for (const collection of ["story", "topic"]) {
 			const defaults = defaultListColumns(site, collection);
-			expect(defaults[0]).toBe("title");
+			expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 			expect(defaults).toContain("status");
 			expect(defaults).toContain("locale");
 			expect(defaults).toContain("updatedAt");
 			expect(columnsFor(site, collection).defaults).toEqual(defaults);
 		}
 		expect(defaultListColumns(site, "story")).toContain("topicId");
-		expect(defaultListColumns(site, "story")).toContain("publishedAt");
+		// One date by default, as the board draws it; the published date is there to turn on in the View menu.
+		expect(defaultListColumns(site, "story")).not.toContain("publishedAt");
+		expect(columnsFor(site, "story").available).toContain("publishedAt");
 		// The slug column exists but is off until the writer turns it on.
 		expect(defaultListColumns(site, "topic")).not.toContain("slug");
 		expect(columnsFor(site, "topic").available).toContain("slug");
@@ -110,7 +112,7 @@ describe("locale column and the translation UI option", () => {
 		const { available, defaults } = columnsFor(make(one), "story");
 		expect(available).not.toContain("locale");
 		expect(defaults).not.toContain("locale");
-		expect(defaults.slice(0, 2)).toEqual(["title", "status"]);
+		expect(defaults.slice(0, 3)).toEqual(["status", "title", "topicId"]);
 		expect(available.indexOf("topicId")).toBe(available.indexOf("status") + 1);
 	});
 

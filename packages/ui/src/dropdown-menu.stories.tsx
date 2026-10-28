@@ -11,12 +11,15 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { FilterButton } from "./filter-button";
 import { MenuShortcut, MenuValue } from "./menu-parts";
 
 /**
@@ -155,38 +158,54 @@ function RadioDemo() {
 /** Pick one: the current value is a ✓ at the end, never a background. */
 export const PickOne: Story = { render: () => <RadioDemo /> };
 
+const SORTS = [
+	"최근 수정",
+	"오래전 수정",
+	"최근 발행",
+	"오래전 발행",
+	"최근 만듦",
+	"오래전 만듦",
+	"제목 오름차순",
+	"제목 내림차순",
+];
+
 function SubmenuDemo() {
-	const [by, setBy] = useState("modified");
-	const [direction, setDirection] = useState("newest");
+	const [sort, setSort] = useState("최근 수정");
 	return (
 		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
-			<DropdownMenuContent className="min-w-64">
+			<DropdownMenuContent className="min-w-60">
 				<DropdownMenuSub defaultOpen>
 					<DropdownMenuSubTrigger>
-						정렬<MenuValue>수정한 날 · 최신순</MenuValue>
+						정렬<MenuValue>{sort}</MenuValue>
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent>
-						<DropdownMenuRadioGroup value={by} onValueChange={setBy}>
-							<DropdownMenuRadioItem value="modified">수정한 날</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="published">발행한 날</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="created">만든 날</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="title">제목</DropdownMenuRadioItem>
-						</DropdownMenuRadioGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuRadioGroup value={direction} onValueChange={setDirection}>
-							<DropdownMenuRadioItem value="newest">최신순</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="oldest">오래된순</DropdownMenuRadioItem>
+						<DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
+							{SORTS.slice(0, 6).map((name) => (
+								<DropdownMenuRadioItem key={name} value={name}>
+									{name}
+								</DropdownMenuRadioItem>
+							))}
+							<DropdownMenuSeparator />
+							{SORTS.slice(6).map((name) => (
+								<DropdownMenuRadioItem key={name} value={name}>
+									{name}
+								</DropdownMenuRadioItem>
+							))}
 						</DropdownMenuRadioGroup>
 					</DropdownMenuSubContent>
 				</DropdownMenuSub>
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
-						열<MenuValue>5개</MenuValue>
+						열<MenuValue>4개</MenuValue>
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent>
-						<DropdownMenuCheckboxItem checked>상태</DropdownMenuCheckboxItem>
-						<DropdownMenuCheckboxItem checked>태그</DropdownMenuCheckboxItem>
+						<DropdownMenuCheckboxItem box checked>
+							분류
+						</DropdownMenuCheckboxItem>
+						<DropdownMenuCheckboxItem box checked>
+							언어
+						</DropdownMenuCheckboxItem>
 					</DropdownMenuSubContent>
 				</DropdownMenuSub>
 				<DropdownMenuSub>
@@ -204,9 +223,124 @@ function SubmenuDemo() {
 
 /**
  * A row that picks a further value ends in a › (after its current value, faint) and opens a second level at the side: pointing at it or →
- * opens, ← closes. The row stays selected while its level is open, and the current value inside is a ✓. There is no third level.
+ * opens, ← closes. The row stays selected while its level is open, and the current value inside is a ✓ (one order, a rule between the date orders
+ * and the title orders). Picking one applies it and closes the whole menu. There is no third level.
  */
 export const SideSubmenu: Story = { render: () => <SubmenuDemo /> };
+
+const TAGS: [string, number][] = [
+	["리액트", 38],
+	["타입스크립트", 21],
+	["넥스트", 17],
+	["회고", 9],
+	["성능", 8],
+	["도구", 6],
+	["디자인", 4],
+];
+
+function FilterDemo() {
+	const [picked, setPicked] = useState<Set<string>>(new Set(["리액트"]));
+	const [text, setText] = useState("");
+	const toggle = (name: string) =>
+		setPicked((current) => {
+			const next = new Set(current);
+			if (!next.delete(name)) next.add(name);
+			return next;
+		});
+	return (
+		<DropdownMenu defaultOpen>
+			<DropdownMenuTrigger render={<FilterButton />}>필터</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="w-55">
+				<DropdownMenuSearch label="필터 찾기" value="" onValueChange={() => undefined} />
+				{["언어", "번역", "날짜"].map((name) => (
+					<DropdownMenuSub key={name}>
+						<DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent>
+							<DropdownMenuItem>{name}</DropdownMenuItem>
+						</DropdownMenuSubContent>
+					</DropdownMenuSub>
+				))}
+				<DropdownMenuSeparator />
+				{["요약", "대표 이미지", "카테고리"].map((name) => (
+					<DropdownMenuSub key={name}>
+						<DropdownMenuSubTrigger>{name}</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent>
+							<DropdownMenuItem>{name}</DropdownMenuItem>
+						</DropdownMenuSubContent>
+					</DropdownMenuSub>
+				))}
+				<DropdownMenuSub defaultOpen>
+					<DropdownMenuSubTrigger>태그</DropdownMenuSubTrigger>
+					<DropdownMenuSubContent className="w-60">
+						<DropdownMenuSearch label="태그 찾기" value={text} onValueChange={setText} />
+						<DropdownMenuCheckboxItem box checked={picked.has("없음")} onCheckedChange={() => toggle("없음")}>
+							없음<MenuShortcut>12</MenuShortcut>
+						</DropdownMenuCheckboxItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuScroll>
+							{TAGS.filter(([name]) => name.includes(text)).map(([name, count]) => (
+								<DropdownMenuCheckboxItem
+									key={name}
+									box
+									checked={picked.has(name)}
+									onCheckedChange={() => toggle(name)}
+								>
+									{name}
+									<MenuShortcut>{count}</MenuShortcut>
+								</DropdownMenuCheckboxItem>
+							))}
+						</DropdownMenuScroll>
+					</DropdownMenuSubContent>
+				</DropdownMenuSub>
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>시리즈</DropdownMenuSubTrigger>
+					<DropdownMenuSubContent>
+						<DropdownMenuItem>시리즈</DropdownMenuItem>
+					</DropdownMenuSubContent>
+				</DropdownMenuSub>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/**
+ * The filter menu of a list: a search row, then only the names of what can be filtered (the common ones, a rule, the schema's fields), each opening its
+ * values at the side. Where several values can be on they are boxes with their number at the end; a long list has its own search row and scrolls inside.
+ */
+export const FilterTwoLevel: Story = { render: () => <FilterDemo /> };
+
+const COLUMNS = ["분류", "언어", "상태", "날짜", "요약", "시리즈"];
+
+function ColumnsDemo() {
+	const [shown, setShown] = useState(new Set(["분류", "언어", "상태", "날짜"]));
+	return (
+		<DropdownMenu defaultOpen>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
+			<DropdownMenuContent className="min-w-55">
+				{COLUMNS.map((name) => (
+					<DropdownMenuCheckboxItem
+						key={name}
+						box
+						checked={shown.has(name)}
+						onCheckedChange={(checked) =>
+							setShown((current) => {
+								const next = new Set(current);
+								if (checked) next.add(name);
+								else next.delete(name);
+								return next;
+							})
+						}
+					>
+						{name}
+					</DropdownMenuCheckboxItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+/** The columns of a list: a box to show or hide each. The title is not in the list: it is always there. Their order is set in the list's head. */
+export const Columns: Story = { render: () => <ColumnsDemo /> };
 
 /** Rows that open a second level next to ordinary rows and a red one. */
 export const MixedRows: Story = {

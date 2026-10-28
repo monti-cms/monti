@@ -109,6 +109,7 @@ export const BACKGROUND = {
 	tool: "bg-monti-tool",
 	muted: "bg-monti-muted",
 	selected: "bg-monti-selected",
+	current: "bg-monti-current",
 	highlight: "bg-monti-highlight",
 	block: "bg-monti-block",
 	emphasis: "bg-monti-emphasis text-monti-on-emphasis",
@@ -131,24 +132,28 @@ export const RADIUS = {
 /** Widths of columns, panels and sheets. */
 export const WIDTH = {
 	sidebar: "w-monti-sidebar",
+	rail: "w-monti-rail",
 	menu: "w-monti-menu",
 	panel: "w-monti-panel",
 	"side-panel": "w-monti-side-panel",
 	assistant: "w-monti-assistant",
 	sheet: "w-monti-sheet",
 	content: "w-monti-content",
+	list: "w-monti-list",
 	reading: "w-monti-reading",
 } as const;
 
 /** The widest a box grows, by the same width tokens. */
 export const MAX_WIDTH = {
 	sidebar: "max-w-monti-sidebar",
+	rail: "max-w-monti-rail",
 	menu: "max-w-monti-menu",
 	panel: "max-w-monti-panel",
 	"side-panel": "max-w-monti-side-panel",
 	assistant: "max-w-monti-assistant",
 	sheet: "max-w-monti-sheet",
 	content: "max-w-monti-content",
+	list: "max-w-monti-list",
 	reading: "max-w-monti-reading",
 } as const;
 

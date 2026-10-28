@@ -34,7 +34,7 @@ export interface Plugin<
 	readonly options: Options;
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
-	/** Pages to add to the Writing or Site group of the admin sidebar (`group`, default Site). `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
+	/** Pages to add as tabs of the admin's Tools page, after the built-in ones. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/**
 	 * The API keys this plugin needs, one slot each. Tools > API keys lists every slot of the installed plugins: assigned (the key's "in use" line names it) or empty
@@ -95,7 +95,7 @@ export interface AdminPluginShape {
 	readonly pages?: Readonly<Record<string, unknown>>;
 	readonly components?: unknown;
 	readonly slots?: readonly unknown[];
-	readonly statusItems?: unknown;
+	readonly statusCells?: unknown;
 	readonly Provider?: unknown;
 	readonly on?: unknown;
 }
@@ -105,8 +105,8 @@ export interface PluginKeySlot {
 	/** Lowercase letters, digits and `-`. Unique within the plugin. */
 	readonly id: string;
 	/**
-	 * The name of the service the key is for, the same in every language ("Bareun", "GitHub"). A key entered for this slot is saved under it (`Bareun`, then
-	 * `Bareun 2` when taken), so the stored name never depends on the admin language.
+	 * The name of the service the key is for, the same in every language ("Speller", "GitHub"). A key entered for this slot is saved under it (`Speller`, then
+	 * `Speller 2` when taken), so the stored name never depends on the admin language.
 	 */
 	readonly service: string;
 	/**
@@ -117,15 +117,10 @@ export interface PluginKeySlot {
 }
 
 export interface PluginNavItem {
+	/** One address segment: the page opens at `<admin path>/tools/<path>`. */
 	readonly path: string;
-	/** The page name in the sidebar. A function of the site follows the admin language. */
+	/** The name of the page's tab on the tools page. A function of the site follows the admin language. */
 	readonly label: PluginLabel;
-	/** The line under the page title, one sentence on what the page is for. A function of the site follows the admin language. */
-	readonly description?: PluginLabel;
-	/** Carbon icon name (e.g. `spark`). */
-	readonly icon?: string;
-	/** The sidebar group the page belongs to: `writing` (next to Templates, for tools used while writing) or `site` (site administration, collapsed by default). Default `site`. */
-	readonly group?: "writing" | "site";
 }
 
 /** Site config as seen by plugin validation. */
@@ -180,7 +175,7 @@ export interface ServerPlugin {
 	readonly routes?: readonly PluginRoute[];
 	/**
 	 * Operations this plugin adds (`defineOperation`): capabilities the admin agent can call as tools, next to the core's. Names are shared with the core and every other
-	 * plugin, so use a segment of your own (`gitSync.status`); a name used twice is a config error.
+	 * plugin, so use a segment of your own (`mailer.status`); a name used twice is a config error.
 	 */
 	readonly operations?: readonly AnyOperation[];
 	/**
@@ -265,8 +260,8 @@ export function definePlugin<
 declare const pluginOptionsType: unique symbol;
 
 /**
- * A plugin's name with the type of its options, for reading them from a site: `site.pluginOptions(GIT_SYNC_PLUGIN)` is `GitSyncOptions | undefined`. A plugin
- * package declares it once, next to its options type: `export const GIT_SYNC_PLUGIN: PluginId<"git-sync", GitSyncOptions> = { name: "git-sync" };`.
+ * A plugin's name with the type of its options, for reading them from a site: `site.pluginOptions(SLACK_ON_PUBLISH)` is `SlackOptions | undefined`. A plugin
+ * package declares it once, next to its options type: `export const SLACK_ON_PUBLISH: PluginId<"slack-on-publish", SlackOptions> = { name: "slack-on-publish" };`.
  */
 export interface PluginId<Name extends string = string, Options = unknown> {
 	readonly name: Name;

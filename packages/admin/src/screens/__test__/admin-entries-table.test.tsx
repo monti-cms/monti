@@ -3,13 +3,11 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { pressOption } from "../../test/base-ui";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
 import { columnsFor } from "../list-columns";
 import { parseListState } from "../list-state";
-import { filterChips } from "../list-toolbar";
 import { screensMessages } from "../messages";
 
 afterEach(cleanup);
@@ -36,8 +34,6 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	...fields,
 });
 
-const options = { tagIds: [{ id: "t1", title: "React", slug: "react" }], categoryId: [] };
-
 function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>> = {}) {
 	const props: ComponentProps<typeof AdminEntriesTable> = {
 		collection: "post",
@@ -45,7 +41,6 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 		folders: [],
 		explorer: null,
 		state: parseListState(testSite, new URLSearchParams("collection=post")),
-		options,
 		onStateChange: vi.fn(),
 		onColumnSettingsChange: vi.fn(),
 		selectedIds: new Set(),
@@ -69,8 +64,7 @@ describe("admin entry list", () => {
 	it("uses the default columns per collection", () => {
 		for (const collection of ["post", "memo", "tag"] as const) {
 			const { defaults, available } = columnsFor(testSite, collection);
-			expect(defaults[0]).toBe("title");
-			expect(defaults).toContain("status");
+			expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 			expect(defaults).toContain("updatedAt");
 			for (const column of defaults) expect(available).toContain(column);
 		}
@@ -80,94 +74,11 @@ describe("admin entry list", () => {
 		expect(columnsFor(testSite, "tag").available).not.toContain("tagIds");
 	});
 
-	it("states status in text, including unpublished changes", () => {
-		renderTable({ items: [item("changed", { status: "published", hasUnpublishedChanges: true })] });
-		expect(screen.getByText("발행됨 · 수정 중")).toBeTruthy();
-	});
-
-	it("sorts from the view popover in the sub-toolbar", async () => {
-		const props = renderTable();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
-		expect(props.onStateChange).toHaveBeenCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
-	});
-
-	it("filters status like a spreadsheet header and marks the filtered header without relying on color", async () => {
-		const props = renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&changes=1")) });
-		const header = screen.getByRole("button", { name: /^상태, 필터 적용됨/ });
-		fireEvent.click(header);
-		fireEvent.click(await screen.findByRole("checkbox", { name: "초안" }));
-		expect(props.onStateChange).toHaveBeenCalledWith({ statuses: ["draft"] });
-		fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "필터 해제" }));
-		expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
-	});
-
-	it("keeps filters on hidden columns visible as chips", () => {
-		const state = parseListState(
-			testSite,
-			new URLSearchParams("collection=post&slug=react&relation=tagIds:t1&status=draft&changes=1"),
-		);
-		const labels = filterChips(testSite, state, options).map((chip) => chip.label);
-		// The slug column stays as a chip even when hidden by default.
-		expect(labels).toEqual(["상태: 초안, 수정 중", "태그: React", '주소: "react"']);
-	});
-
-	it("persists column visibility and order", async () => {
-		const props = renderTable();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		fireEvent.click(await screen.findByRole("checkbox", { name: "생성일" }));
-		expect(props.onColumnSettingsChange).toHaveBeenLastCalledWith(
-			expect.objectContaining({ visibility: expect.objectContaining({ createdAt: true }) }),
-		);
-		fireEvent.click(screen.getByRole("button", { name: "상태 컬럼 위로" }));
-		expect((props.onColumnSettingsChange as ReturnType<typeof vi.fn>).mock.lastCall?.[0].order.slice(0, 2)).toEqual([
-			"status",
-			"title",
-		]);
-	});
-
-	it("shows non-empty metadata on the second line of each editorial row and omits empty fields", () => {
-		renderTable({
-			items: [
-				item("with-tags", {
-					title: "태그 있는 글",
-					relations: { categoryId: [{ id: "c1", title: "가이드" }], tagIds: [{ id: "t1", title: "React" }] },
-				}),
-				item("plain", { title: "태그 없는 글" }),
-			],
-		});
-		const rowWithTags = screen.getByRole("row", { name: /태그 있는 글/ });
-		expect(within(rowWithTags).getByText("가이드")).toBeTruthy();
-		expect(within(rowWithTags).getAllByText("React").length).toBeGreaterThan(0);
-		const plainRow = screen.getByRole("row", { name: /태그 없는 글/ });
-		expect(within(plainRow).queryByText("—")).toBeNull();
-	});
-
-	it("ignores saved column names that are not columns any more (no guessing of old names)", async () => {
-		renderTable({
-			columnSettings: {
-				order: ["tags", "tagIds", "title"],
-				visibility: { category: false, tags: false },
-				sizes: { tags: 240, tagIds: 230 },
-			},
-		});
-		// Old short names (`category`, `tags`) are not guessed and renamed by the core (the reference blog setup moves them with a migration).
-		expect(screen.getByRole("button", { name: /^카테고리/ })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		const dialog = await screen.findByRole("dialog");
-		const labels = within(dialog)
-			.getAllByRole("listitem")
-			.map((li) => li.textContent ?? "");
-		expect(labels.findIndex((text) => text.includes("태그"))).toBeLessThan(
-			labels.findIndex((text) => text.includes("제목")),
-		);
-	});
-
-	it("selects rows through the Data Table checkboxes", () => {
+	it("selects rows through the row checks and the select-all of the toolbar", () => {
 		const props = renderTable();
 		fireEvent.click(screen.getByRole("checkbox", { name: "draft 선택" }));
 		expect(props.onSelectionChange).toHaveBeenCalledWith(new Set(["draft"]));
-		fireEvent.click(screen.getByRole("checkbox", { name: "현재 페이지 전체 선택" }));
+		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
 		expect(props.onSelectionChange).toHaveBeenLastCalledWith(new Set(["published", "draft"]));
 	});
 
@@ -211,7 +122,19 @@ describe("admin entry list", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "TypeScript" }));
 		expect(props.onOpenRecord).toHaveBeenCalledWith(tag);
-		expect(screen.getByText("활성")).toBeTruthy();
+		// A published item is the normal case: it says nothing.
+		expect(screen.queryByText("활성")).toBeNull();
+	});
+
+	it("cuts a long relation to its cell with its whole text in the title, as a block that ends in an ellipsis", () => {
+		const names = ["리액트", "타입스크립트", "넥스트", "회고"];
+		renderTable({
+			items: [item("tagged", { relations: { tagIds: names.map((title, id) => ({ id: `t${id}`, title })) } })],
+		});
+		const cell = screen.getByTitle(names.join(" · "));
+		expect(cell.textContent).toBe(names.join(" · "));
+		// A block, not a flex box, which would ignore the ellipsis.
+		expect(cell.tagName).toBe("DIV");
 	});
 
 	it("shows child folders in explorer mode and navigates up", () => {
@@ -227,7 +150,33 @@ describe("admin entry list", () => {
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
-	it("a taxonomy item shows the locales that have a name in the locale column", () => {
+	it("starts a folder row's name in the title's cell, after the folder icon, with how many things are in it, and no status", () => {
+		renderTable({
+			explorer: {
+				folders: [
+					{ id: "f2", collection: "post", parentId: null, name: "알고리즘", position: 0, version: 1, entryCount: 2 },
+				],
+				parent: "f1",
+			},
+		});
+		const folderRow = screen.getByRole("row", { name: /알고리즘/ });
+		const cells = within(folderRow).getAllByRole("cell");
+		// The status column (first by default) is an empty cell; the title's cell holds the icon, the name and the count.
+		expect(cells[0]?.textContent).toBe("");
+		const titleCell = cells[1] as HTMLElement;
+		expect(titleCell.querySelector("svg")).not.toBeNull();
+		expect(titleCell.textContent).toBe(
+			`알고리즘${t("list.folderCount", { noun: testSite.COLLECTION_DEFINITIONS.post.label, count: 2 })}`,
+		);
+		// It takes the columns after it, so the ⋯ cell is the last one.
+		expect(Number(titleCell.getAttribute("colspan"))).toBe(columnsFor(testSite, "post").defaults.length - 1);
+		// The row to go up has the same shape: empty status, then the icon and the name.
+		const up = within(screen.getByRole("row", { name: /상위 폴더/ })).getAllByRole("cell");
+		expect(up[0]?.textContent).toBe("");
+		expect(up[1]?.querySelector("svg")).not.toBeNull();
+	});
+
+	it("a taxonomy item shows its first language and how many others have a name", () => {
 		const tag = item("tag-1", {
 			collection: "tag",
 			title: "리액트",
@@ -240,9 +189,9 @@ describe("admin entry list", () => {
 			state: parseListState(testSite, new URLSearchParams("collection=tag")),
 		});
 		const row = screen.getByRole("row", { name: /리액트/ });
-		expect(within(row).getByText("한국어 있음")).toBeTruthy();
-		expect(within(row).getByText("영어 있음")).toBeTruthy();
-		expect(within(row).getByText("일본어 없음")).toBeTruthy();
+		// The first language in mono and "+1" for the other one that has a name; the whole list is in its title.
+		const cell = within(row).getByText("KO +1");
+		expect(cell.getAttribute("title")).toBe("한국어, 영어");
 	});
 
 	describe("row drag", () => {
@@ -290,9 +239,9 @@ describe("admin entry list", () => {
 
 		it("welcomes a document collection with no entries, offering to write and to import Markdown", () => {
 			const run = vi.fn();
-			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run }, collectionLabel: "글" });
+			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run } });
 			expect(emptyTitle()).toBe(t("list.welcomeTitle"));
-			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew", { label: "글" }) }));
+			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew") }));
 			expect(run).toHaveBeenCalled();
 			const link = screen.getByRole("link", { name: t("list.importMarkdown") });
 			expect(link.getAttribute("href")).toMatch(/\/data#import-entries$/);
@@ -329,60 +278,6 @@ describe("admin entry list", () => {
 			renderTable({ items: [], total: 0, mode: "trash" });
 			expect(emptyTitle()).toBe(t("list.emptyTrash"));
 			expect(screen.queryByRole("button", { name: t("list.clearFilters") })).toBeNull();
-		});
-	});
-	describe("status segments", () => {
-		const statusGroup = () => within(screen.getByRole("tablist", { name: t("list.statusFilter") }));
-		const seg = (name: string) => statusGroup().getByRole("tab", { name });
-
-		it("sets exactly the picked status and clears the editing filter", () => {
-			const props = renderTable();
-			fireEvent.click(seg("초안"));
-			expect(props.onStateChange).toHaveBeenLastCalledWith({ statuses: ["draft"], hasChanges: false });
-			cleanup();
-			const filtered = renderTable({
-				state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")),
-			});
-			fireEvent.click(seg(t("list.statusAll")));
-			expect(filtered.onStateChange).toHaveBeenLastCalledWith({ statuses: [], hasChanges: false });
-		});
-
-		it("highlights All with no status filter and the one status when it is the single filter", () => {
-			renderTable();
-			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("true");
-			cleanup();
-			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft")) });
-			expect(seg("초안").getAttribute("aria-selected")).toBe("true");
-			expect(seg(t("list.statusAll")).getAttribute("aria-selected")).toBe("false");
-			// The segment already says it, so there is no chip.
-			expect(screen.queryByRole("list", { name: t("toolbar.chips") })).toBeNull();
-		});
-
-		it("highlights nothing for a status set the segments cannot show, and explains it with a chip", () => {
-			renderTable({ state: parseListState(testSite, new URLSearchParams("collection=post&status=draft&changes=1")) });
-			for (const button of statusGroup().getAllByRole("tab"))
-				expect(button.getAttribute("aria-selected")).toBe("false");
-			expect(within(screen.getByRole("list", { name: t("toolbar.chips") })).getByText(/상태/)).toBeTruthy();
-		});
-
-		it("is not drawn for an item collection", () => {
-			renderTable({ collection: "tag", state: parseListState(testSite, new URLSearchParams("collection=tag")) });
-			expect(screen.queryByRole("tablist", { name: t("list.statusFilter") })).toBeNull();
-		});
-	});
-
-	describe("view popover", () => {
-		it("holds the column, page size and sort controls and uses the same handlers as before", async () => {
-			const props = renderTable();
-			fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-			const view = within(await screen.findByRole("dialog"));
-			expect(view.getAllByRole("checkbox").length).toBeGreaterThan(1);
-			expect(view.getByRole("combobox", { name: t("view.sortField") })).toBeTruthy();
-			fireEvent.click(view.getByRole("button", { name: t("filter.sortAsc") }));
-			expect(props.onStateChange).toHaveBeenLastCalledWith({ sortField: "updatedAt", sortDirection: "asc" });
-			fireEvent.click(view.getByRole("combobox", { name: t("list.pageSize") }));
-			pressOption(await screen.findByRole("option", { name: t("list.pageSizeOption", { size: 50 }) }));
-			expect(props.onPageSizeChange).toHaveBeenCalledWith(50);
 		});
 	});
 });

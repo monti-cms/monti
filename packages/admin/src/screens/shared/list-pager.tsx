@@ -1,27 +1,24 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
+	Count,
 	Inline,
+	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
+	PaginationEllipsis,
 	PaginationItem,
+	PaginationLink,
 	PaginationNext,
 	PaginationPrevious,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	Text,
-	TextButton,
 } from "@monti-cms/ui";
-import { uiMessages } from "../../ui/messages";
 import { screensMessages } from "../messages";
+import { pageWindow } from "./page-window";
 
-/** Previous / page of pages / next, as used at the bottom of every paged list. */
+/** Previous, the page buttons (the first, the current with its neighbours, the last), next. The ends dim and cannot be followed when there is nowhere to go. */
 export function ListPager({
 	page,
 	totalPages,
@@ -31,95 +28,44 @@ export function ListPager({
 	page: number;
 	totalPages: number;
 	onPageChange: (page: number) => void;
-	/** Address of a page, so the controls are real links. Without it they are buttons. */
+	/** Address of a page, so the buttons are real links. Without it they only change the page. */
 	hrefFor?: (page: number) => string;
 }) {
-	const t = useTranslator(uiMessages);
-	if (!hrefFor) {
-		// Without addresses the controls are buttons, not anchors that go nowhere.
-		return (
-			<Inline as="nav" gap={4} aria-label={t("pagination.label")}>
-				<TextButton
-					type="button"
-					aria-label={t("pagination.previousPage")}
-					disabled={page <= 1}
-					onClick={() => onPageChange(page - 1)}
-				>
-					<ChevronLeft data-icon="inline-start" />
-					<Box as="span" hideBelow="sm">
-						{t("pagination.previous")}
-					</Box>
-				</TextButton>
-				<Box as="span" paddingX={8}>
-					{page} / {totalPages}
-				</Box>
-				<TextButton
-					type="button"
-					aria-label={t("pagination.nextPage")}
-					disabled={page >= totalPages}
-					onClick={() => onPageChange(page + 1)}
-				>
-					<Box as="span" hideBelow="sm">
-						{t("pagination.next")}
-					</Box>
-					<ChevronRight data-icon="inline-end" />
-				</TextButton>
-			</Inline>
-		);
-	}
+	const go = (target: number) => ({
+		href: hrefFor?.(target) ?? "#",
+		onClick: (event: React.MouseEvent) => {
+			event.preventDefault();
+			if (target >= 1 && target <= totalPages && target !== page) onPageChange(target);
+		},
+	});
 	return (
 		<Pagination>
 			<PaginationContent>
 				<PaginationItem>
-					<PaginationPrevious
-						href={hrefFor(page - 1)}
-						aria-disabled={page <= 1}
-						disabled={page <= 1}
-						onClick={(event) => {
-							event.preventDefault();
-							if (page > 1) onPageChange(page - 1);
-						}}
-					/>
+					<PaginationPrevious disabled={page <= 1} {...go(page - 1)} />
 				</PaginationItem>
+				{pageWindow(page, totalPages).map((entry, index) => (
+					<PaginationItem key={entry === "gap" ? `gap-${index}` : entry}>
+						{entry === "gap" ? (
+							<PaginationEllipsis />
+						) : (
+							<PaginationLink isActive={entry === page} {...go(entry)}>
+								{entry}
+							</PaginationLink>
+						)}
+					</PaginationItem>
+				))}
 				<PaginationItem>
-					<Box as="span" paddingX={8}>
-						{page} / {totalPages}
-					</Box>
-				</PaginationItem>
-				<PaginationItem>
-					<PaginationNext
-						href={hrefFor(page + 1)}
-						aria-disabled={page >= totalPages}
-						disabled={page >= totalPages}
-						onClick={(event) => {
-							event.preventDefault();
-							if (page < totalPages) onPageChange(page + 1);
-						}}
-					/>
+					<PaginationNext disabled={page >= totalPages} {...go(page + 1)} />
 				</PaginationItem>
 			</PaginationContent>
 		</Pagination>
 	);
 }
 
-/** The bar pinned to the bottom of a list screen: a summary on the left, controls on the right. */
-export function ListFooter({
-	children,
-	end,
-}: {
-	children: React.ReactNode /** Only controls: put them at the right. */;
-	end?: boolean;
-}) {
-	return (
-		<Inline gap={12} justify={end ? "end" : "between"} shrink={false} border="top" paddingX={32} paddingY={8}>
-			{children}
-		</Inline>
-	);
-}
-
 /**
- * The footer of every paged list (entries, trash, media, events): the shown range on the left; on the right optional extra controls,
- * the page size and the pager.
+ * The footer of every paged list (entries, trash, media, events): the shown range on the left with the page size beside it (when the screen lets the
+ * writer change it); on the right optional extra controls and the pager.
  */
 export function ListPagination({
 	total,
@@ -130,7 +76,6 @@ export function ListPagination({
 	onPageSizeChange,
 	hrefFor,
 	leading,
-	showPageSize = true,
 	hidePagerWhenSingle = false,
 	showRange = true,
 }: {
@@ -140,13 +85,11 @@ export function ListPagination({
 	page: number;
 	pageSize: PageSize;
 	onPageChange: (page: number) => void;
-	/** Needed only with the page size control. */
+	/** Shows the page size beside the range, and what picking a size does. */
 	onPageSizeChange?: (size: PageSize) => void;
 	hrefFor?: (page: number) => string;
-	/** Screen-specific controls placed before the page size. */
+	/** Screen-specific controls placed before the pager. */
 	leading?: React.ReactNode;
-	/** `false` when the screen offers the page size somewhere else. */
-	showPageSize?: boolean;
 	/** Draw no pager when everything fits on one page. */
 	hidePagerWhenSingle?: boolean;
 	/** `false` when the screen shows the total elsewhere (the status bar): the footer then holds only the controls, and is left out when there are none. */
@@ -155,39 +98,31 @@ export function ListPagination({
 	const t = useTranslator(screensMessages);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const showPager = !(hidePagerWhenSingle && totalPages === 1);
-	if (!showRange && !showPager && !leading && !showPageSize) return null;
+	if (!showRange && !showPager && !leading && !onPageSizeChange) return null;
 	return (
-		<ListFooter end={!showRange}>
-			{showRange && (
-				<Text variant="caption" tone="muted">
-					{t("list.range", {
-						total,
-						range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
-					})}
-				</Text>
-			)}
-			<Inline gap={8}>
-				{leading}
-				{showPageSize && (
-					<Select
-						value={String(pageSize)}
-						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
-					>
-						<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PAGE_SIZES.map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{t("list.pageSizeOption", { size })}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+		<Box shrink={false}>
+			<ListFooter>
+				{showRange && (
+					<Count>
+						{t("list.range", {
+							total,
+							range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
+						})}
+					</Count>
 				)}
-				{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
-			</Inline>
-		</ListFooter>
+				{onPageSizeChange && (
+					<PageSizeMenu
+						label={t("list.pageSize")}
+						value={pageSize}
+						options={PAGE_SIZES.map((size) => ({ value: size, label: t("list.pageSizeOption", { size }) }))}
+						onValueChange={(size) => onPageSizeChange(size as PageSize)}
+					/>
+				)}
+				<Inline gap={8} grow justify="end">
+					{leading}
+					{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
+				</Inline>
+			</ListFooter>
+		</Box>
 	);
 }

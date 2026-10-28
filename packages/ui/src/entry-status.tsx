@@ -36,11 +36,14 @@ const markVariants = cva("box-border w-[7px] shrink-0 rounded-monti-full bg-curr
  */
 function EntryStatus({
 	status,
+	quiet = false,
 	className,
 	children,
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
 	status: EntryStatusKind;
+	/** The usual case in a column of statuses (a published entry in a list): the subtle tone and the normal weight, so the others stand out. */
+	quiet?: boolean;
 	/** The status name. */
 	children?: React.ReactNode;
 }) {
@@ -50,7 +53,7 @@ function EntryStatus({
 			data-status={status}
 			className={cn(
 				"inline-flex items-center gap-[7px] whitespace-nowrap font-medium text-monti-note",
-				COLOR[status],
+				quiet ? "font-normal text-monti-subtle" : COLOR[status],
 				className,
 			)}
 			{...props}

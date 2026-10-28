@@ -66,7 +66,6 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 		folders: [],
 		explorer: null,
 		state: parseListState(site, new URLSearchParams("collection=article")),
-		options: {},
 		onStateChange: vi.fn(),
 		columnSettings: {
 			visibility: Object.fromEntries(
@@ -101,7 +100,7 @@ const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 describe("list columns from fields", () => {
 	it("offers the stored fields as columns, hidden by default", () => {
 		const { available, defaults } = columnsFor(site, "article");
-		expect(defaults[0]).toBe("title");
+		expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 		for (const column of ["format", "subtitle", "accent", "hero", "related", "lead"]) {
 			expect(defaults).not.toContain(column);
 			expect(available).toContain(column);
@@ -110,13 +109,9 @@ describe("list columns from fields", () => {
 		expect(available).not.toContain("preview");
 	});
 
-	it("labels field columns by the field label and never filters them", () => {
-		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format", filter: { kind: "none" } });
-		expect(columnConfig(site, "article", "related")).toEqual({
-			label: "Related",
-			filter: { kind: "none" },
-			many: true,
-		});
+	it("labels field columns by the field label", () => {
+		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format" });
+		expect(columnConfig(site, "article", "related")).toEqual({ label: "Related", many: true });
 		expect(fieldColumnOf(site, "article", "format")?.field.kind).toBe("select");
 		expect(fieldColumnOf(site, "article", "status")).toBeUndefined();
 		expect(fieldColumnOf(site, "article", "preview")).toBeUndefined();
@@ -142,7 +137,7 @@ describe("default list cells", () => {
 		expect(within(row).getByText("A longer subtitle")).toBeTruthy();
 		expect(within(row).getByText("media-1")).toBeTruthy();
 		expect(within(row).getByText("Lead story")).toBeTruthy();
-		expect(within(row).getAllByText("Alpha").length).toBeGreaterThan(0);
+		expect(within(row).getByText("Alpha · Beta")).toBeTruthy();
 	});
 
 	it("leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {

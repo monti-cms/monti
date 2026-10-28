@@ -172,7 +172,7 @@ describe("adding a memo to a collection", () => {
 		fireEvent.input(input, { target: { value: "새 메모 시리즈" }, inputType: "insertText" });
 		fireEvent.click(await screen.findByRole("option", { name: "'새 메모 시리즈' 추가" }));
 		// Does not create from the name alone; opens the add sheet with the name filled in.
-		const panel = await screen.findByRole("complementary", { name: "모음집 추가" });
+		const panel = await screen.findByRole("dialog", { name: "모음집 추가" });
 		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeTruthy();
 		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST")).toBe(
 			false,

@@ -1,9 +1,9 @@
 // Cell renderers of the entries table: title, status label, locale badges, dates, slug, folder and field columns.
 
 import { Folder as FolderIcon } from "@carbon/icons-react";
-import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, EntryStatus, Inline, Text, TextButton } from "@monti-cms/ui";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Box, Inline, RowLink, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
@@ -11,86 +11,6 @@ import { AdminLink as Link } from "../router";
 import { customListCell, DefaultFieldCell } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { screensMessages } from "./messages";
-import { describeEntryStatus, entryStatusKind, statusLabels } from "./shared/entry-status";
-import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
-
-/** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
-const formatDate = (site: Site, value: Date | string | null) => {
-	if (!value) return "—";
-	const sameYear = zonedYear(site, value) === zonedYear(site, Date.now());
-	return sameYear
-		? formatDateTime(site, value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-		: formatDateOnly(site, value);
-};
-
-/**
- * Per-locale state of a translation group, as the list draws it: each locale's code in mono, its tone saying how that language stands (green in sync,
- * orange has a draft or unpublished changes, gray otherwise, faint when there is no translation). Existing locales link to their edit screen. The state
- * is also in words for screen readers, not just color.
- */
-function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	return (
-		<Inline as="span" gap={8}>
-			{site.LOCALES.map((locale) => {
-				const name = site.localeLabel(locale);
-				const member = translations.find((candidate) => candidate.locale === locale);
-				if (!member) {
-					return (
-						<Text key={locale} as="span" variant="meta" tone="faint">
-							<span aria-hidden="true">{locale.toUpperCase()}</span>
-							<Text srOnly>{t("locale.hasNot", { name })}</Text>
-						</Text>
-					);
-				}
-				const tone =
-					member.status === "published" && !member.hasUnpublishedChanges
-						? "success"
-						: member.status === "published" || member.status === "draft"
-							? "warning"
-							: "subtle";
-				return (
-					<TextButton key={locale} render={<Link href={site.adminEntryEditHref(member.id)} />}>
-						<Text as="span" variant="meta" tone={tone}>
-							<span aria-hidden="true">{locale.toUpperCase()}</span>
-							<Text srOnly>
-								{name} · {statusLabels(site)[member.status]}
-							</Text>
-						</Text>
-					</TextButton>
-				);
-			})}
-		</Inline>
-	);
-}
-
-/** Locales of a taxonomy item (category, tag, series): a locale with a name is in ink-gray, one without is faint. */
-function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	return (
-		<Inline as="span" gap={8}>
-			{site.LOCALES.map((locale) => {
-				const named = locales.includes(locale);
-				return (
-					<Text key={locale} as="span" variant="meta" tone={named ? "muted" : "faint"}>
-						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
-					</Text>
-				);
-			})}
-		</Inline>
-	);
-}
-
-/** Shows status with both icon shape and text (not conveyed by color alone). */
-function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: boolean }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	return <EntryStatus status={entryStatusKind(item.status, item.hasUnpublishedChanges)}>{label}</EntryStatus>;
-}
 
 /** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */
 const folderName = (folders: readonly Folder[], id: string | null) => {
@@ -144,7 +64,7 @@ function DefaultEntryCell({
 			const slug =
 				showSlugBesideTitle && formattedSlug ? (
 					<Box minWidth={0}>
-						<Text as="div" variant="caption" tone="muted" mono truncate>
+						<Text as="div" variant="meta" tone="faint" mono truncate>
 							{formattedSlug}
 						</Text>
 					</Box>
@@ -152,7 +72,7 @@ function DefaultEntryCell({
 			// The title does not shrink (it truncates only at the full width), so the slug beside it gives way first.
 			const titleBox = (content: ReactNode) => (
 				<Box maxWidth="full" shrink={false}>
-					<Text as="div" weight="medium" truncate>
+					<Text as="div" truncate>
 						{content}
 					</Text>
 				</Box>
@@ -166,14 +86,12 @@ function DefaultEntryCell({
 				);
 			return isRecord ? (
 				<Inline align="baseline" gap={8} minWidth={0}>
-					{titleBox(
-						<TextButton render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</TextButton>,
-					)}
+					{titleBox(<RowLink render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</RowLink>)}
 					{slug}
 				</Inline>
 			) : (
 				<Inline align="baseline" gap={8} minWidth={0}>
-					{titleBox(<TextButton render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</TextButton>)}
+					{titleBox(<RowLink render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</RowLink>)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
 						<Inline gap={4} minWidth={0}>
@@ -187,33 +105,6 @@ function DefaultEntryCell({
 				</Inline>
 			);
 		}
-		case "status":
-			// Do not convey status by color alone.
-			return <StatusLabel item={item} isRecord={isRecord} />;
-		case "locale":
-			if (item.recordLocales) return <RecordLocaleBadges locales={item.recordLocales} />;
-			if (item.translations) return <LocaleBadges translations={item.translations} />;
-			// Also mark that a translation is not the original.
-			return (
-				<Inline as="span" gap={4}>
-					<Text variant="caption" tone="muted" weight="medium">
-						<abbr title={site.localeLabel(item.locale)}>{item.locale.toUpperCase()}</abbr>
-					</Text>
-					{item.translationGroupId !== item.id && (
-						<Text variant="caption" tone="muted">
-							{t("list.translation")}
-						</Text>
-					)}
-				</Inline>
-			);
-		case "updatedAt":
-		case "createdAt":
-		case "publishedAt":
-			return (
-				<Text variant="caption" tone="muted">
-					{formatDate(site, item[column])}
-				</Text>
-			);
 		case "slug":
 			return (
 				<Text variant="caption" tone="muted" mono>
@@ -229,41 +120,6 @@ function DefaultEntryCell({
 		default:
 			// Field columns: default cells for relations (including taxonomy fields), select and text.
 			return <DefaultFieldCell collection={collection} column={column} entry={item} />;
-	}
-}
-
-/** Whether a metadata column has a non-empty value to show on the editorial subtitle line of a row. */
-export function hasEntryCellValue(
-	site: Site,
-	listCells: ReturnType<typeof useAdminComponents>["listCells"],
-	collection: string,
-	column: AdminListColumn,
-	item: ListEntriesItem,
-	folders: readonly Folder[],
-): boolean {
-	if (customListCell(site, listCells, collection, column)) return true;
-	switch (column) {
-		case "title":
-		case "status":
-			return true;
-		case "updatedAt":
-		case "createdAt":
-		case "publishedAt":
-			return Boolean(item[column]);
-		case "locale":
-			return true;
-		case "slug":
-			return Boolean(item.slug);
-		case "folder":
-			return Boolean(item.folderId && folders.some((candidate) => candidate.id === item.folderId));
-		default: {
-			const stored = fieldColumnOf(site, collection, column);
-			if (!stored) return false;
-			if (stored.field.kind === "relation") {
-				return (item.relations[column] ?? []).some(({ title }) => Boolean(title));
-			}
-			return Boolean(item.values[column]);
-		}
 	}
 }
 

@@ -36,12 +36,9 @@ interface ListEntriesParams {
 	collection: string;
 	search?: string;
 	includeBody?: boolean;
-	titleContains?: string;
-	slugContains?: string;
 	statuses?: readonly ("draft" | "published")[];
 	folderId?: string | null;
 	includeDescendants?: boolean;
-	relations?: Readonly<Record<string, readonly string[]>>;
 	sort?: {
 		field: "updatedAt" | "createdAt" | "title" | "slug";
 		direction: "asc" | "desc";

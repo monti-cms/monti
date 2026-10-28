@@ -5,53 +5,43 @@ import { SidebarProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
-import { commonMessages } from "../../lib/common.messages";
 import { renderInRouter } from "../../test/router";
-import { siteWithFolders, withSite } from "../../test/site";
+import { withSite } from "../../test/site";
+import { AdminUiLabels } from "../../ui/labels";
+import { uiMessages } from "../../ui/messages";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
+import { AdminFeaturesProvider } from "../shared/admin-features";
+import { ENTRY_DRAG_TYPE } from "../shared/entry-drag";
+import { toolsHref } from "../tools/tools-tabs";
 
-afterEach(() => {
-	cleanup();
-	window.localStorage.clear();
-});
+afterEach(cleanup);
 
 const t = testSite.createTranslator(screensMessages);
-const tc = testSite.createTranslator(commonMessages);
+const tui = testSite.createTranslator(uiMessages);
 const site = createSite({
 	...testConfig,
-	plugins: [
-		definePlugin({
-			name: "tools",
-			options: {},
-			nav: [
-				{ path: "tools", label: "Tools page", icon: "plug" },
-				{ path: "more", label: "More page", group: "site" },
-				{ path: "draft", label: "Draft helper", group: "writing" },
-			],
-		}),
-	],
+	plugins: [definePlugin({ name: "stats", options: {}, nav: [{ path: "stats", label: "Post stats" }] })],
 } as CmsConfig);
 
-const renderSidebar = (props: Partial<AdminSidebarProps> = {}, target = site) =>
+const renderRail = (props: Partial<AdminSidebarProps> = {}, target = site) =>
 	renderInRouter(
 		withSite(
-			<SidebarProvider>
-				<AdminSidebar activeNav={target.DEFAULT_COLLECTION} {...props} />
-			</SidebarProvider>,
+			<AdminUiLabels>
+				<SidebarProvider>
+					<AdminSidebar activeNav={target.DEFAULT_COLLECTION} {...props} />
+				</SidebarProvider>
+			</AdminUiLabels>,
 			target,
 		),
 	);
-const labels = (container: HTMLElement) =>
-	within(container)
+const rail = () => screen.getByRole("navigation", { name: t("sidebar.label") });
+const linkNames = () =>
+	within(rail())
 		.getAllByRole("link")
-		.map((link) => link.textContent?.trim());
-const menu = (name: string) => screen.getByRole("list", { name });
-const siteGroup = () => screen.getByRole("button", { name: new RegExp(t("sidebar.site")) });
-/** The Site group starts collapsed; opens it the way a person does. */
-const openSite = () => {
-	if (siteGroup().getAttribute("aria-expanded") !== "true") fireEvent.click(siteGroup());
-};
+		.map((link) => link.textContent?.trim() ?? "");
+const link = (name: string | RegExp) => within(rail()).getByRole("link", { name });
+const labelOf = (collection: string) => site.COLLECTION_DEFINITIONS[collection as typeof site.DEFAULT_COLLECTION].label;
 
 const folder = (id: string, name: string, parentId: string | null = null): Folder => ({
 	id,
@@ -65,290 +55,189 @@ const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {})
 	collection: site.DEFAULT_COLLECTION,
 	currentFolder: "all",
 	folders,
-	folderActions: {
-		requestCreate: vi.fn(),
-		requestRename: vi.fn(),
-		requestDelete: vi.fn(),
-		moveFolder: vi.fn(),
-		createFolderDirect: vi.fn().mockResolvedValue(undefined),
-		renameFolderDirect: vi.fn().mockResolvedValue(undefined),
-	} as unknown as FolderNavigation["folderActions"],
 	onSelectFolder: vi.fn(),
 	onDropEntries: vi.fn(),
-	onCreateEntry: vi.fn(),
 	...overrides,
 });
 
-describe("sidebar structure", () => {
-	it("has Content (each collection, Media), Writing, Site, then Trash, with Settings after them", () => {
-		renderSidebar();
-		openSite();
-		const collections = site.COLLECTIONS.map((collection) => site.COLLECTION_DEFINITIONS[collection].label);
-		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media")]);
-		expect(labels(menu(t("sidebar.trash")))).toEqual([t("sidebar.trash")]);
-		const all = screen.getAllByRole("link").map((link) => link.textContent?.trim());
-		const at = (label: string) => all.indexOf(label);
-		expect(at(t("sidebar.media"))).toBeLessThan(at(t("sidebar.templates")));
-		expect(at(t("sidebar.templates"))).toBeLessThan(at("Draft helper"));
-		expect(at("Draft helper")).toBeLessThan(at(t("sidebar.data")));
-		expect(at(t("sidebar.data"))).toBeLessThan(at(t("sidebar.apiKeys")));
-		expect(at(t("sidebar.apiKeys"))).toBeLessThan(at(t("sidebar.events")));
-		expect(at(t("sidebar.events"))).toBeLessThan(at(t("sidebar.trash")));
-		expect(at(t("sidebar.trash"))).toBeLessThan(at(t("sidebar.settings")));
+describe("moving around by the rail", () => {
+	it("lists the collections, then media, and ends with trash, tools and settings", () => {
+		renderRail();
+		const names = linkNames();
+		const at = (label: string) => names.indexOf(label);
+		const collections = site.COLLECTIONS.map(labelOf);
+		for (const [index, label] of collections.entries()) {
+			expect(at(label)).toBeGreaterThanOrEqual(0);
+			if (index > 0) expect(at(label)).toBeGreaterThan(at(collections[index - 1] as string));
+		}
+		const last = collections.at(-1) as string;
+		expect(at(t("sidebar.media"))).toBeGreaterThan(at(last));
+		expect(at(t("sidebar.trash"))).toBeGreaterThan(at(t("sidebar.media")));
+		expect(at(t("sidebar.tools"))).toBeGreaterThan(at(t("sidebar.trash")));
+		expect(at(t("sidebar.settings"))).toBeGreaterThan(at(t("sidebar.tools")));
+		expect(names.at(-1)).toBe(t("sidebar.settings"));
 	});
 
-	it("puts a plugin page in Writing when its nav item says so, and in Site otherwise", () => {
-		renderSidebar();
-		openSite();
-		const writing = labels(menu(t("sidebar.writing")));
-		const siteItems = labels(menu(t("sidebar.site")));
-		expect(writing).toContain("Draft helper");
-		expect(writing).toContain(t("sidebar.templates"));
-		expect(writing).not.toContain("Tools page");
-		// No `group` and an explicit `group: "site"` both land in Site.
-		expect(siteItems).toEqual(expect.arrayContaining(["Tools page", "More page", t("sidebar.data")]));
-		expect(siteItems).not.toContain("Draft helper");
+	it("has no fold group or other control among the rows: every row is a link", () => {
+		renderRail();
+		const buttons = within(rail())
+			.queryAllByRole("button")
+			.map((button) => button.getAttribute("aria-label"));
+		// The fold button in the head row and the three screen modes at the foot are the only buttons.
+		expect(buttons).toEqual([tui("sidebar.fold"), tui("theme.system"), tui("theme.light"), tui("theme.dark")]);
 	});
 
-	it("keeps the Site group collapsed until opened, and opens it when one of its screens is active", () => {
-		renderSidebar();
-		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
-		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
-		fireEvent.click(siteGroup());
-		expect(screen.getByRole("link", { name: t("sidebar.apiKeys") })).toBeTruthy();
-		cleanup();
-		window.localStorage.clear();
-		renderSidebar({ activeNav: "api-keys" });
-		expect(siteGroup().getAttribute("aria-expanded")).toBe("true");
+	it("keeps the pages of the tools page behind the one tools row", () => {
+		renderRail();
+		for (const name of ["Post stats"]) expect(within(rail()).queryByRole("link", { name })).toBeNull();
+		expect(link(t("sidebar.tools")).getAttribute("href")).toBe(toolsHref(site));
 	});
 
-	it("folds the Site group on request even while one of its screens is open, and then marks the group as the current place", () => {
-		renderSidebar({ activeNav: "api-keys" });
-		expect(siteGroup().hasAttribute("data-active")).toBe(false);
-		fireEvent.click(siteGroup());
-		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
-		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
-		expect(siteGroup().hasAttribute("data-active")).toBe(true);
-	});
-
-	it("keeps Trash and Settings with the theme toggle in the footer", () => {
-		const { container } = renderSidebar();
-		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
-		expect(labels(footer)).toEqual(expect.arrayContaining([t("sidebar.trash"), t("sidebar.settings")]));
-		expect(within(footer).getAllByRole("button").length).toBeGreaterThan(0);
-	});
-
-	it("draws no separate Folders group", () => {
-		renderSidebar({ folderNav: folderNav([folder("f1", "News")]) });
-		expect(screen.queryByText("Folders")).toBeNull();
-	});
-
-	it("links each item to its own address", () => {
-		renderSidebar();
-		openSite();
-		const href = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
-		expect(href(t("sidebar.templates"))).toBe(site.adminHref("/templates"));
-		expect(href(t("sidebar.events"))).toBe(site.adminHref("/events"));
-		expect(href(t("sidebar.apiKeys"))).toBe(site.adminHref("/api-keys"));
-		expect(href("Tools page")).toBe(site.adminHref("/tools/tools"));
-		expect(href("More page")).toBe(site.adminHref("/tools/more"));
+	it("links each row to its own address", () => {
+		renderRail();
+		expect(link(t("sidebar.trash")).getAttribute("href")).toBe(site.adminHref("/trash"));
+		expect(link(t("sidebar.media")).getAttribute("href")).toBe(site.adminHref("/media"));
 		// Settings opens at its first tab, which the page redirects to.
-		expect(href(t("sidebar.settings"))).toBe(site.adminHref("/settings"));
+		expect(link(t("sidebar.settings")).getAttribute("href")).toBe(site.adminHref("/settings"));
 	});
 
-	it("leaves Templates out when the site turns them off", () => {
-		const off = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false } } as CmsConfig);
-		renderSidebar({}, off);
-		expect(screen.queryByRole("link", { name: t("sidebar.templates") })).toBeNull();
+	it("marks the open row, and the tools row for any page of the tools page", () => {
+		for (const [activeNav, row] of [
+			[site.DEFAULT_COLLECTION, labelOf(site.DEFAULT_COLLECTION)],
+			["media", t("sidebar.media")],
+			["trash", t("sidebar.trash")],
+			["settings", t("sidebar.settings")],
+			["templates", t("sidebar.tools")],
+			["data", t("sidebar.tools")],
+			["events", t("sidebar.tools")],
+			["api-keys", t("sidebar.tools")],
+			["tools:stats", t("sidebar.tools")],
+		] as const) {
+			renderRail({ activeNav });
+			const current = within(rail())
+				.getAllByRole("link")
+				.filter((item) => item.getAttribute("aria-current") === "page")
+				.map((item) => item.textContent?.trim());
+			expect(current, activeNav).toEqual([row]);
+			cleanup();
+		}
 	});
 
-	it("marks the screen that is open", () => {
-		window.localStorage.clear();
-		renderSidebar({ activeNav: "tools:more" });
-		const current = screen
-			.getAllByRole("link")
-			.filter((link) => link.getAttribute("aria-current") === "page")
-			.map((link) => link.textContent?.trim());
-		expect(current).toEqual(["More page"]);
+	it("counts what is in the trash, and says nothing when it is empty", () => {
+		renderRail({ trashCount: 7 });
+		expect(within(rail()).getByLabelText(t("sidebar.trashBadge", { count: 7 }))).toBeTruthy();
 		cleanup();
-		renderSidebar({ activeNav: "settings" });
-		expect(screen.getByRole("link", { name: t("sidebar.settings") }).getAttribute("aria-current")).toBe("page");
+		renderRail({ trashCount: 0 });
+		expect(within(rail()).queryByLabelText(/in trash/)).toBeNull();
 	});
 
-	it("puts the failed-delivery badge on the Event log, not on Settings, only when there are failures", () => {
-		renderSidebar({ eventsCount: 4 });
-		openSite();
+	it("counts the failed deliveries on the tools row, and only while there are some", () => {
+		renderRail({ eventsCount: 4 });
 		const badge = t("sidebar.eventsBadge", { count: 4 });
-		expect(within(menu(t("sidebar.site"))).getByLabelText(badge)).toBeTruthy();
-		expect(within(menu(t("sidebar.settings"))).queryByLabelText(badge)).toBeNull();
-		expect(screen.getAllByLabelText(badge)).toHaveLength(1);
+		expect(within(link(new RegExp(t("sidebar.tools")))).getByLabelText(badge)).toBeTruthy();
+		expect(within(rail()).getAllByLabelText(badge)).toHaveLength(1);
 		cleanup();
-		renderSidebar({ eventsCount: 0 });
-		expect(screen.queryByLabelText(/failed event deliveries/)).toBeNull();
+		renderRail({ eventsCount: 0 });
+		expect(within(rail()).queryByLabelText(/failed/)).toBeNull();
 	});
 
-	it("shows the failure count on the collapsed Site header so problems stay visible", () => {
-		window.localStorage.clear();
-		renderSidebar({ eventsCount: 4 });
-		const badge = t("sidebar.eventsBadge", { count: 4 });
-		expect(within(siteGroup()).getByLabelText(badge)).toBeTruthy();
-		fireEvent.click(siteGroup());
-		// Open, the count moves onto the Event log item itself.
-		expect(within(siteGroup()).queryByLabelText(badge)).toBeNull();
-		expect(screen.getAllByLabelText(badge)).toHaveLength(1);
-	});
-
-	it("keeps the trash count badge on Trash", () => {
-		renderSidebar({ trashCount: 7 });
-		expect(within(menu(t("sidebar.trash"))).getByLabelText(t("sidebar.trashBadge", { count: 7 }))).toBeTruthy();
+	it("leaves media out when the site has no storage", () => {
+		renderInRouter(
+			withSite(
+				<AdminFeaturesProvider features={{ media: false }}>
+					<SidebarProvider>
+						<AdminSidebar activeNav={site.DEFAULT_COLLECTION} />
+					</SidebarProvider>
+				</AdminFeaturesProvider>,
+				site,
+			),
+		);
+		expect(linkNames()).not.toContain(t("sidebar.media"));
 	});
 });
 
-describe("folder tree under a collection", () => {
-	const name = site.COLLECTION_DEFINITIONS[site.DEFAULT_COLLECTION].label;
+describe("the site's name", () => {
+	it("links the name to the admin home", () => {
+		renderRail();
+		expect(link(site.SITE_NAME || "CMS").getAttribute("href")).toBe(site.adminHref());
+	});
+});
+
+describe("folders in the rail", () => {
+	const name = labelOf(site.DEFAULT_COLLECTION);
 	const tree = () => screen.getByRole("list", { name: t("sidebar.folderTree", { label: name }) });
-
-	it("opens under the active collection: the folders, nested ones when expanded", () => {
-		const folders = [folder("a", "Dev"), folder("b", "Essays"), folder("c", "Next.js", "a")];
-		renderSidebar({ folderNav: folderNav(folders, { currentFolder: "c" }) });
-		const rows = within(tree())
+	const rows = () =>
+		within(tree())
 			.getAllByRole("button")
-			.map((button) => button.textContent?.trim())
-			.filter(Boolean);
-		expect(rows).toEqual(["Dev", "Next.js", "Essays"]);
-		// Under the collection entry, before the next collection.
-		const content = menu(t("sidebar.content"));
-		const order = [...content.querySelectorAll("a, ul[aria-label]")].map((node) => node.textContent?.trim() ?? "");
-		expect(order.findIndex((text) => text.includes("Dev"))).toBeGreaterThan(order.indexOf(name));
+			.map((button) => button.textContent?.trim());
+
+	it("opens under the open collection, with the folders on the open path", () => {
+		const folders = [folder("a", "Dev"), folder("b", "Essays"), folder("c", "Next.js", "a")];
+		renderRail({ folderNav: folderNav(folders, { currentFolder: "a" }) });
+		expect(rows()).toEqual(["Dev", "Next.js", "Essays"]);
+		const order = within(rail())
+			.getAllByRole("link")
+			.map((item) => item.textContent?.trim());
+		expect(order).toContain(name);
+		expect(tree().compareDocumentPosition(link(name)) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
 	});
 
-	it("hides the subfolders of a collapsed folder, and the chevron opens them", () => {
-		const folders = [folder("a", "Dev"), folder("c", "Next.js", "a")];
-		renderSidebar({ folderNav: folderNav(folders) });
-		expect(within(tree()).queryByText("Next.js")).toBeNull();
-		fireEvent.click(within(tree()).getByRole("button", { name: t("sidebar.folderExpand", { name: "Dev" }) }));
-		expect(within(tree()).getByText("Next.js")).toBeTruthy();
+	it("keeps a folder's subfolders hidden until it is open, and has no fold control", () => {
+		renderRail({ folderNav: folderNav([folder("a", "Dev"), folder("c", "Next.js", "a")]) });
+		expect(rows()).toEqual(["Dev"]);
+		expect(within(tree()).queryByRole("button", { expanded: true })).toBeNull();
+		expect(within(tree()).queryByRole("button", { expanded: false })).toBeNull();
 	});
 
-	it("selects a folder, and selects all on collection link", () => {
+	it("selects a folder, and everything again from the collection row", () => {
 		const nav = folderNav([folder("a", "Dev")]);
-		renderSidebar({ folderNav: nav });
+		renderRail({ folderNav: nav });
 		fireEvent.click(within(tree()).getByRole("button", { name: "Dev" }));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("a");
-		fireEvent.click(screen.getByRole("link", { name }));
+		fireEvent.click(link(name));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("all");
-		expect(within(tree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
 	});
 
 	it("marks the open folder", () => {
-		renderSidebar({ folderNav: folderNav([folder("a", "Dev")], { currentFolder: "a" }) });
+		renderRail({ folderNav: folderNav([folder("a", "Dev"), folder("b", "Essays")], { currentFolder: "a" }) });
 		expect(within(tree()).getByRole("button", { name: "Dev" }).getAttribute("aria-current")).toBe("true");
+		expect(within(tree()).getByRole("button", { name: "Essays" }).getAttribute("aria-current")).toBeNull();
 	});
 
-	it("shows a chevron only on a collection that has folders", () => {
-		const second =
-			site.COLLECTIONS.find(
-				(c) => site.COLLECTION_DEFINITIONS[c].folders ?? site.COLLECTION_DEFINITIONS[c].kind !== "item",
-			) ?? site.COLLECTIONS[1];
-		const first = site.COLLECTIONS.find((c) => c !== second) ?? site.COLLECTIONS[0];
-		renderSidebar({ activeNav: first as string, folderCounts: { [second as string]: 2 } });
-		const row = (collection: string) =>
-			screen.getByRole("link", { name: site.COLLECTION_DEFINITIONS[collection as typeof first].label });
-		// The collection's own icon, plus the chevron on the one with folders.
-		expect(row(second as string).querySelectorAll("svg").length).toBe(
-			row(first as string).querySelectorAll("svg").length + 1,
-		);
-	});
-
-	it("gives the open collection's tree its own fold button, and folds the tree away with it", () => {
-		renderSidebar({ folderNav: folderNav([folder("a", "Dev")]) });
-		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
-		const fold = screen.getByRole("button", { name: t("sidebar.hideFolders") });
-		expect(fold.getAttribute("aria-expanded")).toBe("true");
-		fireEvent.click(fold);
-		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: t("sidebar.showFolders") }));
-		expect(tree()).toBeTruthy();
-	});
-
-	it("does not render tree when the open collection has no folders", () => {
-		renderSidebar({ folderNav: folderNav([]) });
-		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
-		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
-	});
-
-	it("draws no tree and no chevron for an open collection whose folders are off, even with a stale count", () => {
-		const off = siteWithFolders(site.DEFAULT_COLLECTION, false);
-		const label = off.COLLECTION_DEFINITIONS[off.DEFAULT_COLLECTION].label;
-		renderSidebar({ activeNav: off.DEFAULT_COLLECTION }, off);
-		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label }) })).toBeNull();
-		expect(screen.getByRole("link", { name: label }).querySelector("svg[class*=chevron]")).toBeNull();
-		cleanup();
-		const on = siteWithFolders(site.DEFAULT_COLLECTION, true);
-		renderSidebar({ activeNav: on.DEFAULT_COLLECTION, folderNav: folderNav([folder("a", "Dev")]) }, on);
-		expect(screen.getByRole("list", { name: t("sidebar.folderTree", { label }) })).toBeTruthy();
-	});
-
-	it("leaves no empty row under an open collection that has no folders", () => {
-		const on = siteWithFolders(site.DEFAULT_COLLECTION, true);
-		const { container } = renderSidebar({ activeNav: on.DEFAULT_COLLECTION, folderNav: folderNav([]) }, on);
-		const items = container.querySelectorAll('[data-sidebar="menu-item"]');
-		expect(Array.from(items).filter((item) => item.children.length === 0)).toEqual([]);
-	});
-
-	it("provides context menu with subfolder create, rename, and delete without + Add folder button", () => {
+	it("moves dropped entries into the folder they are dropped on", () => {
 		const nav = folderNav([folder("a", "Dev")]);
-		renderSidebar({ folderNav: nav });
-		expect(within(tree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
-		const moreBtn = screen.getByRole("button", { name: t("list.folderActions", { name: "Dev" }) });
-		expect(moreBtn).toBeTruthy();
-	});
-});
-
-describe("view site", () => {
-	it("is an icon button in the header next to the site name, not a footer row", () => {
-		const { container } = renderSidebar();
-		const link = screen.getByRole("link", { name: t("sidebar.viewSite") });
-		expect(link.getAttribute("href")).toBe(site.SITE_HOME);
-		expect(link.getAttribute("target")).toBe("_blank");
-		expect(link.textContent?.trim()).toBe("");
-		const header = container.querySelector('[data-sidebar="header"]') as HTMLElement;
-		expect(header.contains(link)).toBe(true);
-		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
-		expect(footer.contains(link)).toBe(false);
-	});
-});
-
-describe("media folder tree in sidebar", () => {
-	const mediaTree = () => screen.getByRole("list", { name: t("sidebar.folderTree", { label: t("sidebar.media") }) });
-
-	it("does not offer + Add folder button or includeDescendants toggle", () => {
-		const nav = folderNav([folder("m1", "Images")], { collection: "media" });
-		renderSidebar({ activeNav: "media", folderNav: nav });
-		expect(within(mediaTree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
-		expect(screen.queryByRole("checkbox")).toBeNull();
-		expect(screen.queryByRole("switch")).toBeNull();
+		renderRail({ folderNav: nav });
+		const entries = [{ id: "e1", expectedVersion: 3 }];
+		const dataTransfer = { types: [ENTRY_DRAG_TYPE], getData: () => JSON.stringify(entries) };
+		const row = within(tree()).getByRole("button", { name: "Dev" });
+		fireEvent.dragOver(row, { dataTransfer });
+		fireEvent.drop(row, { dataTransfer });
+		expect(nav.onDropEntries).toHaveBeenCalledWith("a", entries);
 	});
 
-	it("handles inline rename with Enter and Escape", () => {
-		const f = folder("m1", "Images");
-		const nav = folderNav([f], { collection: "media" });
-		renderSidebar({ activeNav: "media", folderNav: nav });
-		const folderBtn = within(mediaTree()).getByRole("button", { name: "Images" });
-		fireEvent.keyDown(folderBtn, { key: "F2" });
-		const input = within(mediaTree()).getByRole("textbox");
-		expect(input).toBeDefined();
+	it("shows how many things are in each folder at its right end, and nothing for a folder that has no count yet", () => {
+		const counted = { ...folder("a", "Dev"), entryCount: 12 };
+		renderRail({ folderNav: folderNav([counted, folder("b", "Essays")]) });
+		expect(within(within(tree()).getByRole("button", { name: /Dev/ })).getByText("12")).toBeTruthy();
+		expect(within(tree()).getByRole("button", { name: "Essays" }).textContent).toBe("Essays");
+	});
 
-		// Escape cancels rename
-		fireEvent.keyDown(input, { key: "Escape" });
-		expect(within(mediaTree()).queryByRole("textbox")).toBeNull();
+	it("offers no way to add, rename or delete a folder", () => {
+		renderRail({ folderNav: folderNav([folder("a", "Dev")]) });
+		fireEvent.contextMenu(within(tree()).getByRole("button", { name: "Dev" }));
+		fireEvent.keyDown(within(tree()).getByRole("button", { name: "Dev" }), { key: "F2" });
+		expect(screen.queryByRole("menu")).toBeNull();
+		expect(screen.queryByRole("textbox")).toBeNull();
+	});
 
-		// F2 again and Enter commits rename
-		const folderBtnAgain = within(mediaTree()).getByRole("button", { name: "Images" });
-		fireEvent.keyDown(folderBtnAgain, { key: "F2" });
-		const inputAgain = within(mediaTree()).getByRole("textbox");
-		fireEvent.change(inputAgain, { target: { value: "Photos" } });
-		fireEvent.keyDown(inputAgain, { key: "Enter" });
-		expect(nav.folderActions.renameFolderDirect).toHaveBeenCalledWith(f, "Photos");
+	it("draws no tree for an open collection without folders", () => {
+		renderRail({ folderNav: folderNav([]) });
+		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
+	});
+
+	it("shows the media folders under media", () => {
+		renderRail({ activeNav: "media", folderNav: folderNav([folder("m1", "Blog Assets")], { collection: "media" }) });
+		const media = screen.getByRole("list", { name: t("sidebar.folderTree", { label: t("sidebar.media") }) });
+		expect(within(media).getByRole("button", { name: "Blog Assets" })).toBeTruthy();
 	});
 });

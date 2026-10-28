@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, trash, login and Settings screens (Settings holds the schema editor at `/admin/settings/<tab>`; templates, the event log and plugin pages have their own addresses).
+Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, trash, login and Settings screens (Settings holds the schema editor at `/admin/settings/<tab>`; Tools holds templates, data, the activity log, API keys and plugin pages as tabs with addresses of their own).
 It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
 Plugins (e.g. `@monti-cms/ai`) add Tools pages, field-side buttons and edit screen actions.
 The screens only call the core's admin API (`/api/monti/v1/*`). You can also skip installing it and build your own screens against the same API.
@@ -15,7 +15,6 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
   (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
   plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/admin`).
   The admin API (`/api/monti/v1`) does not change.
-- **View site.** The external-link icon button next to the site name in the sidebar header (tooltip `View site`) opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default
   `?locale=`). The URL in the search preview follows `site.localePrefix`.
 
@@ -128,7 +127,7 @@ const components = {
 ```
 
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
-(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is one.
+(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` from `@monti-cms/admin/kit` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
@@ -138,17 +137,18 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has five parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Writing** (Templates, then the plugin pages whose `nav` item has `group: "writing"`, such as AI), **Site** (Data, API keys, the Event log, then the other plugin pages, e.g. Git sync; collapsed by default, remembered per browser, and open whenever one of its screens is; while collapsed its header carries the failed-delivery count), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+The sidebar has a head row (the site name, a link that opens the site, and a fold button: the button or ⌘B folds it to a 64px icon rail, where hovering an icon names the row and its count, the tools icon carries a dot while deliveries have failed, and the folders are hidden; the folded state is remembered in this browser) and, under it, **Content** (each collection, then Media; the open collection or media opens its folders under it: the top-level folders and the folders along the open path), and at the bottom, under a line, **Trash** (with its count), **Tools** (with the failed-delivery count) and **Settings**, then one icon button for the screen mode (system, light or dark; the system until one is picked). The sidebar only navigates: folders are created, renamed and deleted in the list. On a narrow screen it is a drawer and does not fold. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|
 | Site, Languages, Collections, File, Admin | `<admin path>/settings` (opens the Site tab; `site`, `locales`, `collections`, `file`, `admin`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
-| API keys | `<admin path>/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
-| Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
-| Event log | `<admin path>/events` | Event deliveries. |
-| One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
+| API keys (tab of Tools) | `<admin path>/tools/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and plugin key slots pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
+| Templates (tab of Tools) | `<admin path>/tools/templates` | Body templates (a 404 when `admin.templates` is `false`). |
+| Data (tab of Tools) | `<admin path>/tools/data` | Backup, and entry import from one zip (a full backup on an empty site opens the restore sheet). |
+| Activity log (tab of Tools) | `<admin path>/tools/events` | Event deliveries. The tab carries the failed-delivery count. |
+| One per plugin page (tab of Tools) | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`), as a tab after the built-in ones. |
 
-`<admin path>/settings` goes to the first tab.
+`<admin path>/settings` goes to the first tab, and `<admin path>/tools` to the first tab of Tools.
 
 ## Schema screen
 
@@ -207,7 +207,7 @@ notice without touching the action or the others. A subscriber is a client funct
 The image is in at once and shows "Writing the image text…" while any subscriber runs. `fill({ alt?, caption? })` writes a field only while it is still empty
 and the person has not typed in it since the insert (and no alt text into a decorative image), and writes nothing once the image was removed, when `signal` is
 aborted too. It returns whether it wrote anything. While a plugin subscribes, the image dialog lets the alt text be left empty. `ai({ autoImageText: true })` of
-`@monti-cms/ai` is one subscriber, and the [image alt recipe](../../docs/recipes/image-alt.md) is a small one of your own.
+`@monti-cms/ai` is one subscriber.
 
 ## Text marks
 
@@ -247,7 +247,7 @@ const components = { marks: { note } };
 The core has no checkers; it only renders the buttons, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
 etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a toolbar button (name `label`, icon `icon`),
 and results appear as wavy underlines, a results window and a list. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
-The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `monti.config.ts`. Your own checkers are registered through a plugin's admin side (see "Adding site components").
+Checkers are registered through a plugin's admin side (see "Adding site components"); the `word-list` plugin of the example blog is a small one.
 
 ```tsx
 "use client";
@@ -287,7 +287,7 @@ and returns `{ issues }`. `textCheckRoute` checks the admin login and same origi
 ```ts
 // Admin side of a plugin (browser)
 import { remoteTextChecker } from "@monti-cms/core";
-const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
+const checker = remoteTextChecker({ id: "speller", label: "Speller", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)
 import { textCheckRoute } from "@monti-cms/core/server";
@@ -303,7 +303,6 @@ export const POST = textCheckRoute({
 
 - If the position unit differs, convert to UTF-16 on the checker side. Using byte (UTF-8), code point or sentence-based positions as is makes
   underlines drift after emoji or Hangul.
-- Bareun: pass `encoding_type: UTF16` in the request and `begin_offset` and `length` can be used as is. Expand nested results (`nested`).
 - Position-based APIs such as LanguageTool and Yahoo: when sending paragraphs joined together, split the returned positions back per paragraph. Match request size and per-minute call limits
   with `limits` and the server route.
 - textlint: use `range` (`[start, end]`) as is. Use `fix.text` as a candidate, but `fix.range` may be wider than the displayed range.
@@ -328,7 +327,7 @@ export default defineAdminPlugin({
 });
 ```
 
-A page is a client component and shows as an item of the sidebar's Site group (or Writing, per `group`): the plugin definition's `nav` item (`{ path: "my", label, icon, group }`; `group` is `"writing"` or `"site"`, default `"site"`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `useAdminFetch()` (`@monti-cms/admin`): `adminFetch("/v1/<plugin>/<route>", init)` takes the path after `/api/monti` and throws a `CmsApiError` whose `message` is the text to show. The site of the admin gives the language of that text and stops a write from the settings screen's preview. Outside a component, `adminFetch(site, path, init)` takes the site itself:
+A page is a client component and shows as a tab of the Tools page, after the built-in tabs: the plugin definition's `nav` item (`{ path: "my", label }`) names it, and the page draws only its body (the admin already provides the sidebar, the Tools title and its tabs). A page with an action puts it in its own body. It calls the plugin's API with `useAdminFetch()` (`@monti-cms/admin`): `adminFetch("/v1/<plugin>/<route>", init)` takes the path after `/api/monti` and throws a `CmsApiError` whose `message` is the text to show. The site of the admin gives the language of that text and stops a write from the settings screen's preview. Outside a component, `adminFetch(site, path, init)` takes the site itself:
 
 ```tsx
 "use client";
@@ -342,13 +341,13 @@ export function StatsPage() {
 }
 ```
 
-The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
+The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README).
 
 Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
 attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
+`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`),
 the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Count`,
 `Banner`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
 (`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--monti-success`, `--monti-warning` and `--monti-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
@@ -356,7 +355,7 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`, `panel`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusCells`, `panel`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
@@ -366,55 +365,36 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 ### Status bar
 
-Every admin screen ends with a plain status bar (24px, the sidebar's background, a hairline on top). Core and plugins contribute items; the rule is that an item shows only changing state that leads somewhere when clicked, and renders nothing when there is nothing to say. Core ships the save state of the editor ("Draft · Saved 2 min ago", click to save), the language, the character count and reading time of the body (characters without whitespace, about 500 a minute, at least 1), whether the saved draft is ready to publish ("Ready to publish", "2 to fix before publishing"; from `POST /api/monti/v1/entries/:id/check`, rerun when the entry opens and after each save, and a refused publish opens its popup), failed event deliveries (links to the event log) and the entry count of lists.
+The editor ends with a plain status bar (24px, the sidebar's background, a hairline on top). It holds only what is shown nowhere else, left to right: the save state of the entry ("Unsaved changes", "Saved 10:42"; pressing it saves, and after a failed save it tries again), what is left to fix before publishing ("2 to do", or "Nothing to do"; from `POST /api/monti/v1/entries/:id/check`, rerun when the entry opens and after each save, and a refused publish opens its list), the cells plugins fill, and at the right the character count of the body (without whitespace). The to-do cell opens a list of the problems, each a row with its place that goes to its field or block when pressed, and under a rule the required fields that are right. The status name is the chip in the header and the language is in the language tabs.
 
-A plugin adds items with `statusItems` of `defineAdminPlugin`, by name. Each item declares its group (`align: "start"` is the left group, `"end"` the right one) and its `order` (ascending; the core items use 10 to 80 on the left and 10 on the right), and a component that renders a `StatusBarItem` or `null`:
+A plugin fills a cell with `statusCells` of `defineAdminPlugin`, by name. The core provides one slot for them, after the to-do cell, in the source editor and in the translation editor alike. The cell and the list that opens from it are the core's (`StatusBarPluginCell` from `@monti-cms/admin/kit`); the plugin brings only what goes in them: the name of what it finds, its findings, and the actions. A cell component renders `StatusBarPluginCell` or `null`; it shows only where the plugin has something to say, so a plugin that checks one language draws nothing in another:
 
 ```tsx
 "use client";
-import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+import { StatusBarPluginCell, useStatusBarContext } from "@monti-cms/admin/kit";
 
-function DraftsStatus() {
-	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
-	const drafts = useDrafts(collection); // your own query
-	if (screen !== "list" || !drafts) return null; // null hides the item, with no gap
-	return <StatusBarItem tone="warning" href="/admin?status=draft" title="Open the drafts">{drafts} drafts</StatusBarItem>;
-}
-
-export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
-```
-
-`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), at most one of `href` (a link inside the admin), `onClick` (a button) or `popover` (a popup; with `open` and `onOpenChange` the caller controls it), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, the size of the body, the browser copy on offer, the translations, and the findings of the text checkers with a way to each). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
-
-With `popover`, clicking the item (or Enter and Space) opens a popup above it, lined up with the item's left edge in the `start` group and its right edge in the `end` group; Escape closes it and the focus returns to the item. The popup is 320px wide and scrolls when the screen is short. Build its content from `StatusPopoverHeader` (a title and an optional action on the right, `{ label, onClick, keepOpen? }` or `{ label, href, newTab }`; `keepOpen` leaves the popup open after the action) and `StatusPopoverRow` (a `label` on the left and a `value` in mono on the right; `href` makes it a link, `onClick` a button, and both close the popup). Core uses popups for the save state (status, last save, Save now, Retry, Sign in, restoring the browser copy), the language (the translations and where each stands), the body counts, what to fix before publishing (each problem as a plain to-do that goes to its field or block, and Check again), and the latest failed deliveries (Retry all, the event log):
-
-```tsx
-function DraftsStatus() {
-	const { collection } = useStatusBarContext();
-	const drafts = useDrafts(collection); // your own query: [{ id, title }]
-	if (!drafts.length) return null;
+function LinksCell() {
+	const { locale, entryId } = useStatusBarContext();
+	const links = useBrokenLinks(entryId); // your own query: [{ id, label, where, fix }]
+	if (locale !== "en" || links.length === 0) return null; // null draws no cell, with no gap
 	return (
-		<StatusBarItem
-			tone="warning"
-			title="Show the drafts"
-			popover={
-				<>
-					<StatusPopoverHeader title="Drafts" action={{ label: "Open all", href: "/admin?status=draft" }} />
-					{drafts.map((draft) => (
-						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
-					))}
-				</>
-			}
-		>
-			{drafts.length} drafts
-		</StatusBarItem>
+		<StatusBarPluginCell
+			label="Links"
+			findings={links.map((link) => ({ id: link.id, title: link.label, detail: link.where, actionLabel: "Fix", onAction: link.fix }))}
+			settings={{ label: "Settings", href: "/admin/tools/links" }}
+			fixAll={{ label: "Fix all", onClick: fixAllLinks }}
+		/>
 	);
 }
+
+export default defineAdminPlugin({ statusCells: { links: LinksCell } });
 ```
+
+The cell shows `label` and the number of findings, and is red while a finding has `blocking`. Its list has one row per finding: the title, one line for where it is, and one action; pressing the row itself goes to the place (`onOpen`). Under a rule, `settings` (an address in the admin) and `fixAll` sit at the two ends. Give a function of the site (`statusCells: (site) => ({ ... })`) when the cells depend on the site config; the components come from a `"use client"` module. `useStatusBarContext()` returns the `collection`, the `entryId`, the `locale` of the entry and `textIssues`, what the text checkers (`textCheckers`) found in the body: each with its text, suggestion, paragraph number and sentence, a way to jump to it and a way to fix it, and `fixAll`.
 
 ### Side panel
 
-A plugin adds one panel to the right of every screen, the entry editor included, with `panel` of `defineAdminPlugin`: a `label`, an `icon` and a `Component`. The admin draws a button for it in the header of each screen, opens it as a resizable pane (a sheet below 1280px; Ctrl or Cmd with `.` also opens and closes it) and remembers in this browser whether it is open and how wide. The admin shows one panel for now: with several, the plugin registered last wins. Give a function of the site (`panel: (site) => ({ ... })`) when the label depends on the site config; it and the component come from a `"use client"` module. The component draws its own frame (`SidePanelFrame` from `/kit` has the header, a scrolling body and a pinned footer) and gets `onClose` to close the panel.
+A plugin adds one panel to the right of every screen, the entry editor included, with `panel` of `defineAdminPlugin`: a `label`, an `icon` and a `Component`. The admin draws a button for it in the header of each screen, opens it as a pane (floating over the page below 1280px; Ctrl or Cmd with `.` also opens and closes it) and remembers in this browser whether it is open. The admin shows one panel for now: with several, the plugin registered last wins. Give a function of the site (`panel: (site) => ({ ... })`) when the label depends on the site config; it and the component come from a `"use client"` module. The component draws its own frame (`SidePanel` from `/kit` has a fixed width, the header, a scrolling body and a pinned footer; its `width` is `side`, `panel` or `assistant`) and gets `onClose` to close the panel.
 
 ```tsx
 export default defineAdminPlugin({ panel: { label: "Notes", icon: StickyNote, Component: NotesPanel } });

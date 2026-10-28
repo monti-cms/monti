@@ -33,7 +33,6 @@ Three rules shape the whole design:
   `entry_references` and refuses to delete a file in use with `in_use`), folders, and the publish readiness checks.
 - The schema settings screen edits the schema file. `PUT /v1/schema` answers `schema_read_only` unless the server runs in development and can write the file,
   and every save of a lossy change needs the impacts acknowledged (`schema_unacknowledged`).
-- `git-sync` has a GitHub client (`packages/git-sync/src/github/client.ts`) that can create blobs, trees, commits, branches and pull requests.
 - Monti keeps only the current version of a document (no revision history). Deleted entries go to the trash first; `permanentDelete` is a separate step.
 - Plugins add routes, pages, blocks and contributions to other plugins (`contributes`, which the AI plugin already reads for its actions).
 
@@ -65,7 +64,7 @@ export const moveToFolder = defineOperation({
 - `kind: "code"` operations change files in the site's repository and end in a pull request (section 6).
 - `kind: "editor"` operations run in the browser on the open entry, and their writes are suggestions in the editor (section 5).
 - `describe` is written for the model: what the operation does and when to use it, in English. The admin screens do not show it.
-- Core defines its operations next to its services. Plugins add theirs with `defineServerPlugin({ operations })`, so git-sync, seo or a site's own plugin
+- Core defines its operations next to its services. Plugins add theirs with `defineServerPlugin({ operations })`, so seo or a site's own plugin
   extends what the agent can do. A site customises what the agent can do this way, and how it writes through the schema and the writing voice (section 7).
 - The HTTP router mounts each operation at a path derived from its name, with the guard of its kind. Routes that do not fit (uploads, webhooks, the public
   API, sign-in) stay hand-written and are not tools.
@@ -177,7 +176,7 @@ Some of what the admin may ask for lives in the site's code: the schema file, an
 
 - `kind: "code"` operations produce file changes instead of database writes. The schema edit is the first one: the agent uses the same diff and impact check
   as the settings screen (`forSchema`, the acknowledged impacts) to make the change.
-- Applying a proposal with code items commits them to a new branch and opens a pull request, through the git-sync GitHub client. Reviewing the code is the
+- Applying a proposal with code items commits them to a new branch and opens a pull request through a GitHub client the code-change path brings. Reviewing the code is the
   pull request; the site's CI and preview deployment are how it is checked. The change takes effect when it is merged and deployed. In production the
   schema settings screen offers the same: its button opens a pull request where development has "save and apply".
 - In development, where the file is writable, the same proposal can write the file directly, as the settings screen does.

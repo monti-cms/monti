@@ -1,10 +1,10 @@
 "use client";
 
-// The side panel a plugin adds to the admin (`defineAdminPlugin({ panel })`): a button in the shell header, a resizable pane on the right (a sheet on narrow
-// screens) and a shortcut. The admin shell and the entry editor shell both render it; open or closed and the width are remembered in this browser.
+// The side panel a plugin adds to the admin (`defineAdminPlugin({ panel })`): a button in the shell header, a pane on the right (floating over
+// the page on narrow screens) and a shortcut. The admin shell and the entry editor shell both render it; open or closed is remembered in this browser.
 
 import { useTranslator } from "@monti-cms/core/site";
-import { IconButton, ResizablePane, Sheet, SheetContent, SheetTitle, Text } from "@monti-cms/ui";
+import { IconButton } from "@monti-cms/ui";
 import {
 	createContext,
 	type ReactNode,
@@ -17,6 +17,7 @@ import {
 } from "react";
 import { booleanCodec, usePreference } from "../../lib/hooks/use-preference";
 import type { AdminPanel } from "../../plugins";
+import { PluginPanelSlot } from "./side-panel";
 import { sidePanelSlotMessages } from "./side-panel-slot.messages";
 
 interface AdminPanelState {
@@ -35,11 +36,8 @@ export function AdminPanelProvider({ panel, children }: { panel: AdminPanel; chi
 	return <AdminPanelContext.Provider value={value}>{children}</AdminPanelContext.Provider>;
 }
 
-/** The pane's width on a wide screen (px), until the person drags it. */
-const PANEL_WIDTH = { default: 400, min: 320, max: 640 } as const;
 /**
- * Below this width the panel is a sheet over the screen. Docked, it would leave the page (beside the sidebar and the 400px panel) less than 640px, which is
- * less room than any window with a sidebar gives it.
+ * Below this width the panel floats over the screen. Docked, it would leave the page (beside the sidebar and the panel) too little room.
  */
 const NARROW_QUERY = "(max-width: 1279px)";
 
@@ -114,34 +112,17 @@ export function SidePanelToggle() {
 	);
 }
 
-/** The open panel beside the screen: a resizable pane on a wide screen, a sheet on a narrow one. Nothing while it is closed. */
+/**
+ * The open panel beside the screen: a column on a wide screen, floating over the page's right edge on a narrow one. Nothing while it is closed. The
+ * component draws the panel itself (`SidePanel`), at the width it wants.
+ */
 export function SidePanelPane() {
 	const side = useSidePanel();
-	const t = useTranslator(sidePanelSlotMessages);
 	if (!side?.open) return null;
-	const { label, Component } = side.panel;
-	if (side.narrow) {
-		return (
-			<Sheet open onOpenChange={side.setOpen}>
-				<SheetContent>
-					<SheetTitle render={<Text as="div" srOnly />}>{label}</SheetTitle>
-					<Component onClose={() => side.setOpen(false)} />
-				</SheetContent>
-			</Sheet>
-		);
-	}
+	const { Component } = side.panel;
 	return (
-		<ResizablePane
-			resizeKey="side-panel"
-			edge="start"
-			defaultWidth={PANEL_WIDTH.default}
-			min={PANEL_WIDTH.min}
-			max={PANEL_WIDTH.max}
-			label={t("resize", { label })}
-			aria-label={label}
-			role="complementary"
-		>
+		<PluginPanelSlot overlay={side.narrow}>
 			<Component onClose={() => side.setOpen(false)} />
-		</ResizablePane>
+		</PluginPanelSlot>
 	);
 }

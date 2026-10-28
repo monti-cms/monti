@@ -127,15 +127,12 @@ describe("any site: list screen", () => {
 		);
 		await screen.findByRole("row", { name: /Alpha/ });
 		expect(screen.getByRole("row", { name: /Beta/ })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		const viewDialog = await screen.findByRole("dialog");
+		// Every default column is a name in the head row.
 		for (const column of columnsFor(testSite, content).defaults) {
-			expect(within(viewDialog).getByRole("checkbox", { name: columnLabel(testSite, content, column) })).toBeTruthy();
+			expect(screen.getByRole("columnheader", { name: columnLabel(testSite, content, column) })).toBeTruthy();
 		}
-		// The new item button uses the collection label.
-		expect(
-			screen.getByRole("button", { name: t("list.add", { label: testSite.schemaOf(content).label }) }),
-		).toBeTruthy();
+		// A collection of writing has the one "write a new post" button, whatever its label.
+		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeTruthy();
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {

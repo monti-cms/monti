@@ -2,7 +2,7 @@ import type { CmsConfig } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
-import { taxonomyActions } from "../../entries/bulk-bar";
+import { bulkBarMessages } from "../../entries/bulk-bar.messages";
 import { entryEditorShellMessages } from "../../entries/entry-editor-shell.messages";
 import { lifecycleConfirm } from "../../entries/lifecycle-confirm";
 import { entriesMessages } from "../../entries/messages";
@@ -38,7 +38,6 @@ describe("collection label in admin messages", () => {
 		expect(confirm.description).not.toMatch(/post/i);
 
 		const t = site.createTranslator(entryEditorShellMessages);
-		expect(t("newEntry", noun)).toBe("New memo");
 		expect(t("trashNotice", noun)).toContain("This memo is in the trash");
 		expect(t("permanentDeleteAsk", noun)).toContain("this memo");
 
@@ -53,13 +52,13 @@ describe("collection label in admin messages", () => {
 
 	it("keeps a label with capitals of its own", () => {
 		const { site, name } = siteLabeled("FAQ", "en");
-		expect(site.createTranslator(entryEditorShellMessages)("newEntry", nounVars(site, name))).toBe("New FAQ");
+		expect(site.createTranslator(entryEditorShellMessages)("trashNotice", nounVars(site, name))).toContain("This FAQ");
 	});
 
 	it("uses a neutral word when the collection is unknown", () => {
 		const { site } = siteLabeled("Memo", "en");
 		const noun = nounVars(site, "");
-		expect(site.createTranslator(entryEditorShellMessages)("newEntry", noun)).toBe("New entry");
+		expect(site.createTranslator(entryEditorShellMessages)("trashNotice", noun)).toContain("This entry");
 		expect(site.createTranslator(screensMessages)("archive.askMany", { count: 2, ...noun })).toContain(
 			"2 selected items",
 		);
@@ -71,7 +70,9 @@ describe("collection label in admin messages", () => {
 		const tc = withFinal.site.createTranslator(entriesMessages);
 		// "메모" has no final consonant: 를 and 가; "글" has one: 을.
 		expect(tc("lifecycle.archive.ask", { translation: 0, ...noun })).toBe("이 메모를 보관할까요? 공개가 종료돼요.");
-		expect(withFinal.site.createTranslator(entryEditorShellMessages)("newEntry", noun)).toBe("새 메모");
+		expect(withFinal.site.createTranslator(entryEditorShellMessages)("trashNotice", noun)).toContain(
+			"휴지통에 있는 메모예요",
+		);
 
 		const withBatchim = siteLabeled("글", "ko");
 		const batchim = nounVars(withBatchim.site, withBatchim.name);
@@ -89,8 +90,10 @@ describe("collection label in admin messages", () => {
 			["ko", "메모", "메모"],
 		] as const) {
 			const { site, name } = siteLabeled(label, language);
-			const asks = taxonomyActions(site, name).map((action) => action.ask(2, "x"));
-			expect(asks.length).toBeGreaterThan(0);
+			const t = site.createTranslator(bulkBarMessages);
+			const asks = (["ask.publish", "ask.archive", "ask.unarchive"] as const).map((key) =>
+				t(key, { count: 2, ...nounVars(site, name) }),
+			);
 			for (const ask of asks) {
 				expect(ask).toContain(expected);
 				expect(ask).not.toMatch(/post|글/);

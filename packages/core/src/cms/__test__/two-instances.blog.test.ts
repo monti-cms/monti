@@ -133,7 +133,6 @@ describe("two instances with different site configs", () => {
 		expect([a.adminHref("/media"), b.adminHref("/media")]).toEqual(["/admin/media", "/studio/media"]);
 		expect([a.adminUrl("/login"), b.adminUrl("/login")]).toEqual(["/admin/login", "/studio/login"]);
 		expect([a.SITE_NAME, b.SITE_NAME]).toEqual(["example.dev", "Example site"]);
-		expect([a.SITE_HOME, b.SITE_HOME]).toEqual(["/", "https://example.org/"]);
 		expect([a.CMS_TIME_ZONE, b.CMS_TIME_ZONE]).toEqual(["Asia/Seoul", "UTC"]);
 		expect([a.ADMIN_LANGUAGE, b.ADMIN_LANGUAGE]).toEqual(["ko", "en"]);
 		expect(a.BLOCKS.map((block) => block.name)).toContain("notice");
