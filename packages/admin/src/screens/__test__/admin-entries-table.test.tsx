@@ -235,7 +235,7 @@ describe("admin entry list", () => {
 
 		it("welcomes a document collection with no entries, offering to write and to import Markdown", () => {
 			const run = vi.fn();
-			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run }, collectionLabel: "글" });
+			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run } });
 			expect(emptyTitle()).toBe(t("list.welcomeTitle"));
 			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew") }));
 			expect(run).toHaveBeenCalled();

@@ -69,7 +69,6 @@ function EntryListBody({ list }: { list: EntryList }) {
 								onRun={list.mutations.bulk}
 							/>
 						)}
-						collectionLabel={list.label}
 						collection={state.collection}
 						items={items}
 						folders={data.folders}

@@ -58,8 +58,6 @@ interface TableProps {
 	addAction?: { label: string; run: () => void };
 	/** What replaces the toolbar while rows are picked (the bulk bar). It is given the select-all, which stays where it was. */
 	bulkBar?: (selectAll: { state: SelectAllState; onChange: (all: boolean) => void; label: string }) => ReactNode;
-	/** Name of the collection, for "Write a new …" in the welcome state. */
-	collectionLabel?: string;
 }
 
 export function AdminEntriesTable({
@@ -92,7 +90,6 @@ export function AdminEntriesTable({
 	onRetry,
 	addAction,
 	bulkBar,
-	collectionLabel,
 }: TableProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
