@@ -1,30 +1,15 @@
 "use client";
 
-import { Add, OverflowMenuHorizontal, TrashCan } from "@carbon/icons-react";
+import { Add } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Box,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	EntryStatus,
-	IconButton,
-	Inline,
-	TabLink,
-	TabLinks,
-	Text,
-	TextButton,
-	toast,
-} from "@monti-cms/ui";
+import { Box, EntryStatus, Inline, TabLink, TabLinks, Text, TextButton, toast } from "@monti-cms/ui";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
-import { commonMessages } from "../../lib/common.messages";
 import { AdminLink, useAdminRouter } from "../../router";
 import { entryStatusKind, statusLabels } from "../shared/entry-status";
-import { type EntryData, isTranslationEntry } from "./entry-form";
+import type { EntryData } from "./entry-form";
 import { entriesMessages } from "./messages";
 
 /** Stands in for the locale code while the "add translation" text is split around it. */
@@ -38,21 +23,17 @@ export function LanguageTabs({
 	entry,
 	disabled,
 	onBeforeCreate,
-	onTrashTranslation,
 }: {
 	entry: EntryData;
 	disabled: boolean;
 	/** Blocks translation creation when there are unsaved changes. */
 	onBeforeCreate: () => Promise<boolean>;
-	onTrashTranslation: () => void;
 }) {
 	const t = useTranslator(entriesMessages);
-	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const router = useAdminRouter();
 	const [creating, setCreating] = useState<string | null>(null);
 	const members = entry.translations ?? [];
-	const isTranslation = isTranslationEntry(entry);
 	const createDisabled = disabled || entry.status === "trashed" || creating !== null;
 
 	const translate = useCmsMutation<(typeof site.LOCALES)[number], { entry: { id: string } }>({
@@ -134,19 +115,6 @@ export function LanguageTabs({
 							])}
 					</TextButton>
 				))}
-				{isTranslation && entry.status !== "trashed" && (
-					<DropdownMenu>
-						<IconButton label={t("lang.menu")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
-							<OverflowMenuHorizontal aria-hidden />
-						</IconButton>
-						<DropdownMenuContent align="start">
-							<DropdownMenuItem variant="danger" onClick={onTrashTranslation}>
-								<TrashCan aria-hidden />
-								{tc("lifecycle.trash")}
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				)}
 			</Inline>
 		</Box>
 	);

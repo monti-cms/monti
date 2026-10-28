@@ -196,22 +196,17 @@ export const mediaContract: ContractSuite = (factory) => {
 
 			// Folder contents count
 			const contentsA = await store.getFolderContents({ id: rootFolder });
-			expect(contentsA.entryCount).toBe(1);
+			expect(contentsA.files).toBe(2);
 
 			// Moving media to another folder
 			await store.updateMediaMetadata({ id: rootMedia.id, folderId: rootFolder });
 			const contentsAAfterMove = await store.getFolderContents({ id: rootFolder });
-			expect(contentsAAfterMove.entryCount).toBe(2);
+			expect(contentsAAfterMove.files).toBe(3);
 
 			// Moving back to null
 			await store.updateMediaMetadata({ id: rootMedia.id, folderId: null });
 			const contentsAAfterReset = await store.getFolderContents({ id: rootFolder });
-			expect(contentsAAfterReset.entryCount).toBe(1);
-
-			// Deleting subFolder reparents its media to rootFolder
-			await store.deleteFolder({ id: subFolder, expectedVersion: 1 });
-			const inFolderAAfterDelete = await store.listMediaAssets({ folderId: rootFolder });
-			expect(inFolderAAfterDelete.items.map((m) => m.filename).sort()).toEqual(["folderA.png", "folderB.png"]);
+			expect(contentsAAfterReset.files).toBe(2);
 		});
 	});
 };

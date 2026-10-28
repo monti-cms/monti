@@ -5,7 +5,7 @@ import type { Cms } from "../cms";
 import { hostOf } from "../cms/host";
 import { ConfigError, type ConfigIssue } from "../config/check/issue";
 import type { SchemaChangeStore } from "../core/store/ports";
-import type { SchemaState } from "../core/store/schema-change";
+import type { CollectionFootprint, DroppedCollection, SchemaState } from "../core/store/schema-change";
 import { type BodyVocabulary, bodyVocabulary } from "../schema/allowed";
 import {
 	applySchemaChange,
@@ -70,6 +70,8 @@ export interface SchemaScreenState {
 	readonly vocabulary: BodyVocabulary;
 	/** The admin path, for links to entries. */
 	readonly collections: readonly string[];
+	/** What each collection of the schema holds in the store (the delete block of its settings says it). Empty when the store cannot be read. */
+	readonly footprints: Readonly<Record<string, Pick<CollectionFootprint, "entries" | "trashed" | "folders">>>;
 	/** The public site URL the instance uses and where it comes from (it is not part of what the screen edits). */
 	readonly siteUrl: SiteUrlState;
 }
@@ -100,6 +102,18 @@ async function appliedState(cms: Cms): Promise<SchemaState | null> {
 		return await cms.store().readSchemaState();
 	} catch {
 		return null;
+	}
+}
+
+async function footprintsOf(cms: Cms): Promise<SchemaScreenState["footprints"]> {
+	try {
+		const found = await cms.store().collectionFootprint({ collections: Object.keys(cms.site.config.collections) });
+		return Object.fromEntries(
+			Object.entries(found).map(([name, { entries, trashed, folders }]) => [name, { entries, trashed, folders }]),
+		);
+	} catch {
+		// A store that is not migrated yet holds nothing to count.
+		return {};
 	}
 }
 
@@ -138,6 +152,7 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		};
 	}
 	const applied = await appliedState(cms);
+	const footprints = await footprintsOf(cms);
 	const inFile = isRecord(schema) && isRecord(schema.collections) ? Object.keys(schema.collections) : [];
 	return {
 		access: access.writable
@@ -158,6 +173,7 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		codeCollections: !literal?.ok ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
 		vocabulary: bodyVocabulary(cms.site),
 		collections: Object.keys(config.collections),
+		footprints,
 		siteUrl: siteUrlOf(cms),
 	};
 }
@@ -196,6 +212,11 @@ export interface SchemaEditInput {
 	readonly transforms?: readonly SuggestedTransform[];
 	/** Renames the screen made, so a rename is offered as a rename and not as a removal. */
 	readonly renames?: readonly RenameInput[];
+	/**
+	 * Collections the writer removed and wants deleted with their entries (a `dropCollection` each). A removed collection that is not named here, and not in
+	 * `transforms`, keeps its entries as orphans. Never a default: it is always the writer's pick.
+	 */
+	readonly dropCollections?: readonly string[];
 }
 
 /** A change that has more than one thing the data can do about it: the writer picks. */
@@ -233,24 +254,26 @@ const OPS: Record<SchemaMigration["op"], string> = {
 	renameField: "rename",
 	mapOption: "map",
 	dropField: "drop",
+	dropCollection: "drop",
 	setDefault: "default",
 };
 
 /** The id a new transform gets: `<op>-<collection>-<field>`, with a number added when it is taken. */
 function idFor(transform: SuggestedTransform, taken: Set<string>): string {
 	const subject =
-		transform.op === "renameField" ? transform.from : transform.op === "mapOption" ? transform.field : transform.field;
-	const base = `${OPS[transform.op]}-${transform.collection}-${subject}`;
+		transform.op === "renameField" ? transform.from : transform.op === "dropCollection" ? null : transform.field;
+	const base = [OPS[transform.op], transform.collection, subject].filter((part) => part !== null).join("-");
 	let id = base;
 	for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
 	taken.add(id);
 	return id;
 }
 
-/** The first suggestion that is safe to pick without asking: never a drop that would delete values, and never a default with no value yet. */
+/** The first suggestion that is safe to pick without asking: never a drop that would delete values or entries, and never a default with no value yet. */
 function defaultPick(suggestions: readonly SuggestedTransform[], entries: number): SuggestedTransform | null {
 	const first = suggestions[0];
 	if (!first) return null;
+	if (first.op === "dropCollection") return null;
 	if (first.op === "dropField" && entries > 0) return null;
 	if (first.op === "setDefault" && first.value === "") return null;
 	return first;
@@ -275,6 +298,8 @@ function checkEdit(cms: Cms, schema: unknown): { issues: ConfigIssue[]; checked?
 /** Whether a transform was picked for a decision: it names the same field (and the same removed option). */
 function answers(transform: SuggestedTransform, change: SchemaChange): boolean {
 	switch (change.kind) {
+		case "collection_removed":
+			return transform.op === "dropCollection" && transform.collection === change.collection;
 		case "field_removed":
 			return (
 				transform.collection === change.collection &&
@@ -362,6 +387,7 @@ async function evaluate(
 		return said && options.includes(said) ? [said, ...options.filter((option) => option !== said)] : options;
 	};
 	const suggest = (change: SchemaChange): SuggestedTransform[] => {
+		if (change.kind === "collection_removed") return suggestTransforms(change);
 		if (change.kind === "field_removed") return suggestTransforms(change, { renameTo: hintTargets(change) });
 		if (change.kind === "option_removed") return suggestTransforms(change, { options: optionTargets(change) });
 		if (change.kind === "field_added" || change.kind === "field_required_changed") {
@@ -381,7 +407,14 @@ async function evaluate(
 	);
 
 	const explicit = input.transforms;
+	const dropping = new Set(input.dropCollections ?? []);
 	const picks: (SuggestedTransform | null)[] = asking.map((item, index) => {
+		// A removed collection is deleted only when the writer said so; the pick is theirs, whatever the other picks are.
+		if (item.change.kind === "collection_removed") {
+			const named = explicit?.find((transform) => answers(transform, item.change));
+			if (named) return named;
+			return dropping.has(item.change.collection) ? (item.suggestions[0] ?? null) : null;
+		}
 		if (explicit) return explicit.find((transform) => answers(transform, item.change)) ?? null;
 		return defaultPick(item.suggestions, impactOfBase.impacts[index]?.entries ?? 0);
 	});
@@ -492,6 +525,8 @@ export type SchemaSaveResult =
 			readonly reloaded: boolean;
 			/** Entries where a rename found a value under the new name already: both were kept. */
 			readonly conflicts: number;
+			/** What the collections deleted by a `dropCollection` held, as deleted. */
+			readonly dropped: readonly DroppedCollection[];
 	  }
 	| {
 			/** The file was written but the apply failed: nothing in the database changed; `monti schema:apply` runs it again. */
@@ -607,6 +642,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 		entriesRewritten: applied.result.entries,
 		reloaded: reload.reloaded,
 		conflicts: applied.conflicts.length,
+		dropped: applied.result.dropped,
 	};
 }
 

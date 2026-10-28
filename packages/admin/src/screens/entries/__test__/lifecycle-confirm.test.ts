@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { commonMessages } from "../../../lib/common.messages";
+import { deleteMessages } from "../../shared/delete.messages";
 import { nounVars } from "../../shared/noun.messages";
-import { lifecycleConfirm, lifecycleSuccess } from "../lifecycle-confirm";
+import {
+	lifecycleConfirm,
+	lifecycleSuccess,
+	type TrashSubject,
+	trashConfirm,
+	trashSubjectOfEntry,
+	trashSubjectOfRow,
+} from "../lifecycle-confirm";
 import { entriesMessages } from "../messages";
 
 const t = testSite.createTranslator(entriesMessages);
-const tc = testSite.createTranslator(commonMessages);
+const td = testSite.createTranslator(deleteMessages);
 
 const source = {
 	id: "src",
@@ -35,30 +42,105 @@ describe("status transition confirmation text", () => {
 		);
 	});
 
-	it("moving the original to trash reports translation languages not in trash", () => {
-		const confirm = lifecycleConfirm(testSite, "trash", source, [], collection);
-		expect(confirm).toEqual({
-			title: tc("lifecycle.trash"),
-			description: `${t("lifecycle.trash.ask", { translation: 0, ...noun })}${t("lifecycle.trash.group", { locales: "EN" })}`,
-			confirmLabel: tc("lifecycle.trash"),
-			destructive: true,
-		});
-	});
-
 	it("archiving the original reports that translations are archived too", () => {
 		expect(lifecycleConfirm(testSite, "archive", source, [], collection).description).toBe(
 			`${t("lifecycle.archive.ask", { translation: 0, ...noun })}${t("lifecycle.archive.group")}`,
 		);
 	});
 
-	it("there is no group notice when moving a translation", () => {
-		expect(lifecycleConfirm(testSite, "trash", translation, [], collection).description).toBe(
-			t("lifecycle.trash.ask", { translation: 1, ...noun }),
+	it("there is no group notice when archiving a translation", () => {
+		expect(lifecycleConfirm(testSite, "archive", translation, [], collection).description).toBe(
+			t("lifecycle.archive.ask", { translation: 1, ...noun }),
 		);
 	});
 
 	it("transitions that do not ask also have text to announce when done", () => {
 		expect(lifecycleSuccess(testSite).unarchive).toBe(t("lifecycle.success.unarchive"));
 		expect(lifecycleSuccess(testSite).restore).toBe(t("lifecycle.success.restore"));
+	});
+});
+
+describe("when the trash asks", () => {
+	const subject = (status: string, alongside: TrashSubject["alongside"] = [], title: string | null = "첫 글") => ({
+		title,
+		status,
+		alongside,
+	});
+
+	it("does not ask for a draft, an archived entry or a trashed one", () => {
+		for (const status of ["draft", "archived", "trashed"])
+			expect(trashConfirm(testSite, collection, [subject(status)])).toBeNull();
+	});
+
+	it("asks for a published entry, with or without changes after it, and says it goes off the site", () => {
+		const ask = trashConfirm(testSite, collection, [subject("published")]);
+		expect(ask).toEqual({
+			title: td("trash.ask.title"),
+			description: td("trash.ask.one", { title: "첫 글" }),
+			confirmLabel: td("trash.ask.confirm"),
+			destructive: true,
+		});
+	});
+
+	it("names the translations that go with a published entry, by their language", () => {
+		const ask = trashConfirm(testSite, collection, [
+			subject("published", [
+				{ locale: "en", status: "draft" },
+				{ locale: "ja", status: "published" },
+			]),
+		]);
+		const languages = `${testSite.localeLabel("en")}·${testSite.localeLabel("ja")}`;
+		expect(ask?.description).toBe(
+			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages })}`,
+		);
+	});
+
+	it("asks when only a translation is published, with the same two sentences", () => {
+		const ask = trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "published" }])]);
+		expect(ask?.description).toBe(
+			`${td("trash.ask.one", { title: "첫 글" })}${td("trash.ask.translations", { languages: testSite.localeLabel("en") })}`,
+		);
+	});
+
+	it("does not ask when a draft only has draft translations", () => {
+		expect(trashConfirm(testSite, collection, [subject("draft", [{ locale: "en", status: "draft" }])])).toBeNull();
+	});
+
+	it("asks once for several rows when any is published, counting those that come down", () => {
+		const ask = trashConfirm(testSite, collection, [subject("draft"), subject("published"), subject("published")]);
+		expect(ask?.description).toBe(td("trash.ask.many", { count: 2 }));
+		expect(trashConfirm(testSite, collection, [subject("draft"), subject("archived")])).toBeNull();
+	});
+
+	it("never asks for items such as tags, even though they are published records", () => {
+		const items = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name));
+		expect(items).toBeTruthy();
+		expect(trashConfirm(testSite, items as string, [subject("published")])).toBeNull();
+	});
+
+	it("reads a list row as its title, its status and the other languages of its group", () => {
+		const row = {
+			id: "src",
+			title: "첫 글",
+			status: "published",
+			translations: (source as { translations: never[] }).translations,
+		} as never;
+		expect(trashSubjectOfRow(row)).toEqual({
+			title: "첫 글",
+			status: "published",
+			alongside: [{ id: "en-1", locale: "en", status: "draft", isSource: false }],
+		});
+	});
+
+	it("reads the open original as its group's other languages, and a translation as alone", () => {
+		const original = {
+			...(source as object),
+			collection,
+			status: "published",
+			working: { metadata: { title: "첫 글" } },
+		} as never;
+		expect(trashSubjectOfEntry(testSite, original).alongside.map((member) => member.locale)).toEqual(["en"]);
+		const open = { ...(translation as object), collection, status: "draft", working: { metadata: {} } } as never;
+		expect(trashSubjectOfEntry(testSite, open).alongside).toEqual([]);
 	});
 });

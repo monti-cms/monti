@@ -19,7 +19,7 @@ const row = (id: string, patch: Partial<ListEntriesItem> = {}): ListEntriesItem 
 	publishedAt: null,
 	createdAt: new Date(0),
 	updatedAt: new Date(0),
-	trashedAt: null,
+	deletedAt: null,
 	...patch,
 });
 

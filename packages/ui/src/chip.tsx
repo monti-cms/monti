@@ -59,21 +59,4 @@ function Chip({
 	);
 }
 
-/**
- * The row of the filters that are on, under the page title: each a chip with its ×. It sits 12px inside like the rows, with the rule of the toolbar
- * under it. With no filter on there is no row, and the list's head row sits right under the title.
- */
-function ChipRow({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="chip-row"
-			className={cn(
-				"flex min-h-monti-toolbar flex-wrap items-center gap-monti-8 border-monti-default border-b px-monti-12",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
-
-export { Chip, ChipRow };
+export { Chip };

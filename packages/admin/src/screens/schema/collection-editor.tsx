@@ -1,11 +1,12 @@
 "use client";
 
-import { TrashCan } from "@carbon/icons-react";
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
 	Checkbox,
+	DangerBlock,
+	DangerRow,
 	Grid,
 	Heading,
 	Inline,
@@ -233,6 +234,7 @@ export function CollectionEditor({
 	onSection,
 	collection,
 	onChange,
+	footprint,
 	onRemove,
 	onRename,
 	onFileChange,
@@ -247,6 +249,9 @@ export function CollectionEditor({
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
 	onChange: (change: (collection: Obj) => Obj) => void;
+	/** What the collection holds in the store; none when that is not known. */
+	footprint?: { entries: number; trashed: number; folders: number };
+	/** Takes the collection out of the list (nothing is deleted before the draft is saved). */
 	onRemove: () => void;
 	onRename: (rename: Rename) => void;
 	/** Changes the whole file, for an edit that reaches another collection. */
@@ -378,14 +383,19 @@ export function CollectionEditor({
 								}
 							/>
 						</Section>
-						<Section band title={t("collection.dangerTitle")} card={false}>
-							<Inline justify="end" paddingY={12}>
-								<Button type="button" variant="outline-danger" size="sm" disabled={disabled} onClick={onRemove}>
-									<TrashCan aria-hidden />
-									{ts("collection.remove")}
-								</Button>
-							</Inline>
-						</Section>
+						{!disabled && (
+							<DangerBlock title={t("collection.dangerTitle")} data-testid="collection-delete">
+								<DangerRow
+									name={label}
+									meta={footprint ? t("collection.count", { ...footprint, kind: String(collection.kind) }) : undefined}
+									action={
+										<Button type="button" variant="outline-danger" size="sm" onClick={onRemove}>
+											{t("collection.delete")}
+										</Button>
+									}
+								/>
+							</DangerBlock>
+						)}
 					</Stack>
 				</TabsContent>
 				<TabsContent value="fields">

@@ -2,6 +2,8 @@
 
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import { Close, Search } from "@carbon/icons-react";
+import { type FocusEvent, type KeyboardEvent, useRef, useState } from "react";
+import { Button } from "./button";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import {
@@ -45,6 +47,7 @@ function SearchBox<T extends string = string>({
 	className?: string;
 }) {
 	const labels = useUiLabels();
+	const field = useRef<HTMLInputElement>(null);
 	const current = targets?.find((item) => item.value === target) ?? targets?.[0];
 	return (
 		<div
@@ -78,6 +81,7 @@ function SearchBox<T extends string = string>({
 			)}
 			<Search aria-hidden className="size-4 shrink-0 text-monti-subtle" />
 			<InputPrimitive
+				ref={field}
 				type="search"
 				aria-label={ariaLabel}
 				placeholder={placeholder}
@@ -90,7 +94,11 @@ function SearchBox<T extends string = string>({
 				<button
 					type="button"
 					aria-label={labels.clear}
-					onClick={() => onValueChange("")}
+					// The words go; the box stays, ready for new ones.
+					onClick={() => {
+						onValueChange("");
+						field.current?.focus();
+					}}
 					className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0 text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
 				>
 					<Close aria-hidden className="size-4" />
@@ -100,5 +108,48 @@ function SearchBox<T extends string = string>({
 	);
 }
 
-export { SearchBox };
+/**
+ * The page's "Search" button (a secondary pill with the magnifier), which opens the {@link SearchBox} in its place, the words' field focused. The box
+ * stays while it holds words or has the focus (the × empties it and leaves it open); emptied and left, or emptied and Escape, it is the button again. A
+ * press in the box's own picker does not count as leaving.
+ */
+function SearchToggle<T extends string = string>({
+	label,
+	...box
+}: Parameters<typeof SearchBox<T>>[0] & {
+	/** The button's text ("Search"). */
+	label: string;
+}) {
+	const [open, setOpen] = useState(false);
+	if (!open && box.value === "") {
+		return (
+			<Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+				<Search aria-hidden />
+				{label}
+			</Button>
+		);
+	}
+	const leave = (event: FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget as Element | null;
+		if (next && (event.currentTarget.contains(next) || next.closest("[role=menu]"))) return;
+		if (box.value === "") setOpen(false);
+	};
+	const closeOnEscape = (event: KeyboardEvent<HTMLDivElement>) => {
+		if (event.key === "Escape" && box.value === "") setOpen(false);
+	};
+	return (
+		<div
+			role="search"
+			data-slot="search-toggle"
+			className="w-80 max-w-full"
+			onFocus={() => setOpen(true)}
+			onBlur={leave}
+			onKeyDown={closeOnEscape}
+		>
+			<SearchBox {...box} autoFocus={open || box.autoFocus} />
+		</div>
+	);
+}
+
+export { SearchBox, SearchToggle };
 export type { SearchTarget };

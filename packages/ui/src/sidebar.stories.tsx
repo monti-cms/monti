@@ -40,7 +40,6 @@ function Row({
 	count?: number;
 	countTone?: "default" | "warning";
 	isActive?: boolean;
-	removed?: boolean;
 	changed?: boolean;
 	className?: string;
 	disabled?: boolean;
@@ -218,7 +217,7 @@ export const OtherRows: Story = {
 	),
 };
 
-/** The open row, a plain row, a row someone is pointing at (paler than the open one), a row with an unsaved change, a removed row, a disabled row. */
+/** The open row, a plain row, a row someone is pointing at (paler than the open one), a row with an unsaved change, a disabled row. */
 export const RowStates: Story = {
 	render: () => (
 		<SidebarProvider className="min-h-96">
@@ -234,9 +233,6 @@ export const RowStates: Story = {
 						</Row>
 						<Row icon={<Image aria-hidden />} changed>
 							바뀐 곳이 있는 줄
-						</Row>
-						<Row icon={<SettingsAdjust aria-hidden />} removed count={2}>
-							지운 줄
 						</Row>
 						<Row icon={<TrashCan aria-hidden />} disabled>
 							쓸 수 없는 줄

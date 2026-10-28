@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
+import { applySchemaChange } from "../../schema-change";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { loadSchemaFile } from "../../schema-file/locate";
 import { printSchemaFile } from "../../schema-file/print";
@@ -547,6 +548,131 @@ describe("schema settings API", () => {
 				expect(res.status).toBe(400);
 				expect(await res.json()).toMatchObject({ error: { code: "invalid_input" } });
 			}
+		});
+	});
+
+	describe("removing a collection with its entries", () => {
+		type Edit = { collections: Record<string, unknown> };
+		const memo = { label: "Memo", kind: "document", path: "/memos/:slug", fields: post({}).fields };
+
+		/** A fresh database holding two memos (one in the trash) and a post that points at one of them. */
+		const withMemos = async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			await freshDatabase();
+			write({
+				...schemaOf({ memoId: { kind: "relation", label: "Memo", to: "memo" } }),
+				collections: { memo, post: post({ memoId: { kind: "relation", label: "Memo", to: "memo" } }) },
+			});
+			const cms = newCms();
+			await cms.migrate({ log: () => {} });
+			// The schema as it is now is the one applied: the unlink of a drop reads its relation fields from there.
+			await applySchemaChange({ site: cms.site, store: cms.store(), migrations: [] });
+			const service = cms.contentService();
+			const create = async (collection: string, slug: string, metadata: Record<string, unknown>) =>
+				(await service.createDraft({ collection, slug, metadata, doc: docOfText(slug) } as never)).entry;
+			const first = await create("memo", "first", { title: "first" });
+			const second = await create("memo", "second", { title: "second" });
+			await cms.store().trashEntry({ id: second.id, expectedVersion: second.version });
+			const reader = await create("post", "reader", { title: "reader", memoId: first.id });
+			return { cms, first, second, reader };
+		};
+		const withoutMemo = (schema: Record<string, unknown>) => {
+			const edited = structuredClone(schema) as unknown as Edit;
+			delete edited.collections.memo;
+			const postCollection = edited.collections.post as { fields: Record<string, unknown> };
+			delete postCollection.fields.memoId;
+			return edited;
+		};
+		const memoRows = async () =>
+			Number(
+				(await pool.query<{ n: string }>(`SELECT count(*) AS n FROM "${schemaName}".entries WHERE collection = 'memo'`))
+					.rows[0]?.n,
+			);
+
+		it("tells the screen what each collection holds", async () => {
+			const { cms } = await withMemos();
+			const state = (await (await call(cms, "GET", "schema")).json()) as { footprints: Record<string, unknown> };
+			expect(state.footprints).toEqual({
+				memo: { entries: 2, trashed: 1, folders: 0 },
+				post: { entries: 1, trashed: 0, folders: 0 },
+			});
+		});
+
+		it("deletes the entries only when the writer asks for it: the pick is never a default", async () => {
+			const { cms } = await withMemos();
+			const { schema } = await read(cms);
+			const edited = withoutMemo(schema);
+
+			const kept = await (await call(cms, "POST", "schema/preview", { schema: edited })).json();
+			const decision = kept.decisions.find(
+				(item: { change: { kind: string } }) => item.change.kind === "collection_removed",
+			);
+			expect(decision).toMatchObject({ chosen: null, suggestions: [{ op: "dropCollection", collection: "memo" }] });
+			expect(kept.transforms).toEqual([]);
+
+			const asked = await (
+				await call(cms, "POST", "schema/preview", { schema: edited, dropCollections: ["memo"] })
+			).json();
+			expect(asked.transforms).toMatchObject([{ id: "drop-memo", op: "dropCollection", collection: "memo" }]);
+			const removal = asked.impacts.find(
+				(item: { change: { kind: string } }) => item.change.kind === "collection_removed",
+			);
+			expect(removal).toMatchObject({
+				consequence: "deleted",
+				entries: 2,
+				drop: { entries: 2, trashed: 1, unlinked: { count: 1, sample: [{ title: "reader" }] } },
+			});
+		});
+
+		it("saves a deletion that other collections point at: it cuts those links and deletes everything", async () => {
+			const { cms, first, reader } = await withMemos();
+			const { hash, schema } = await read(cms);
+			// The post still has the relation in the stored data: the edit changes the field, but its value is what points at the memo.
+			const edited = structuredClone(schema) as unknown as Edit;
+			delete edited.collections.memo;
+			const postCollection = edited.collections.post as { fields: Record<string, unknown> };
+			postCollection.fields.memoId = { kind: "text", label: "Memo" };
+			const body = { schema: edited, dropCollections: ["memo"], baseHash: hash };
+			const keys = (
+				(await (await call(cms, "POST", "schema/preview", body)).json()) as { impacts: { key: string }[] }
+			).impacts.map((impact) => impact.key);
+			const was = await cms.store().getEntry(reader.id);
+			expect((await metadataOf("reader"))?.memoId).toBe(first.id);
+
+			const saved = await call(cms, "PUT", "schema", { ...body, acknowledged: keys });
+			expect(saved.status).toBe(200);
+			expect(await saved.json()).toMatchObject({
+				saved: true,
+				dropped: [{ collection: "memo", entries: 2, trashed: 1 }],
+			});
+			expect(await memoRows()).toBe(0);
+			expect(Object.keys(onDiskData().collections)).toEqual(["post"]);
+			expect(onDiskData().migrations).toMatchObject([{ id: "drop-memo", op: "dropCollection", collection: "memo" }]);
+
+			// The post no longer holds the memo, and was saved once for it.
+			const now = await cms.store().getEntry(reader.id);
+			expect((await metadataOf("reader"))?.memoId).toBeUndefined();
+			expect(now.version).toBe(was.version + 1);
+		});
+
+		it("does not save a deletion nobody reviewed", async () => {
+			const { cms } = await withMemos();
+			const { hash, schema } = await read(cms);
+			const refused = await call(cms, "PUT", "schema", {
+				schema: withoutMemo(schema),
+				dropCollections: ["memo"],
+				baseHash: hash,
+			});
+			expect(refused.status).toBe(409);
+			expect(await refused.json()).toMatchObject({ error: { code: "schema_unacknowledged" } });
+			expect(await memoRows()).toBe(2);
+		});
+
+		it("answers 400 when dropCollections is not a list of names", async () => {
+			const { cms } = await withMemos();
+			const { hash, schema } = await read(cms);
+			const res = await call(cms, "PUT", "schema", { schema, baseHash: hash, dropCollections: [1] });
+			expect(res.status).toBe(400);
 		});
 	});
 });

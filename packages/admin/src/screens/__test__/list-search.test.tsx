@@ -19,6 +19,8 @@ describe("search box", () => {
 	it("turns body search on and off with the picker in front of the box", async () => {
 		const onChange = vi.fn();
 		render(withSite(<ListSearch state={stateOf("collection=post")} onChange={onChange} />));
+		// The header shows the "Search" button; pressed, the box opens with its picker.
+		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		fireEvent.click(picker() as HTMLElement);
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("toolbar.targetAll") }));
 		expect(onChange).toHaveBeenLastCalledWith({ includeBody: true });
@@ -27,6 +29,7 @@ describe("search box", () => {
 	it("shows everything picked while body search is on", async () => {
 		const onChange = vi.fn();
 		render(withSite(<ListSearch state={stateOf("collection=post&body=1")} onChange={onChange} />));
+		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()?.textContent).toBe(t("toolbar.targetAll"));
 		expect(picker()?.getAttribute("aria-label")).toBe(`${t("toolbar.targetAll")}, ${t("toolbar.target")}`);
 		fireEvent.click(picker() as HTMLElement);
@@ -36,9 +39,11 @@ describe("search box", () => {
 
 	it("has no picker for an item collection or where body search is not allowed", () => {
 		render(withSite(<ListSearch state={stateOf("collection=tag")} onChange={vi.fn()} />));
+		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()).toBeNull();
 		cleanup();
 		render(withSite(<ListSearch state={stateOf("collection=post")} onChange={vi.fn()} allowBody={false} />));
+		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
 		expect(picker()).toBeNull();
 	});
 });

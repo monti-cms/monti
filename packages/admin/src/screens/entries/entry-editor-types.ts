@@ -116,6 +116,8 @@ export interface StatusOutcome {
 	readonly entry: EntryData | null;
 	/** Moving a translation to the trash: the entry the UI should open instead (the original). */
 	readonly openEntryId?: string;
+	/** The version of the entry the change was made to, as it is after the change. The undo of a move to the trash names it. */
+	readonly version: number;
 }
 
 /** The translation source flow of a translation that received the original's body. */

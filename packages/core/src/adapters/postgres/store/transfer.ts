@@ -27,7 +27,7 @@ export function createTransferOps(ctx: StoreContext) {
 							"e.created_at",
 							"e.updated_at",
 							"e.published_at",
-							"e.trashed_at",
+							"e.deleted_at",
 							"e.changed_by",
 							"e.changed_at",
 							eb
@@ -59,7 +59,7 @@ export function createTransferOps(ctx: StoreContext) {
 
 					const foldersRes = await trx
 						.selectFrom("folders")
-						.select(["id", "collection", "parent_id", "name", "position", "version"])
+						.select(["id", "collection", "parent_id", "name", "position", "version", "deleted_at"])
 						.orderBy("collection", "asc")
 						.orderBy("id", "asc")
 						.execute();
@@ -124,7 +124,7 @@ export function createTransferOps(ctx: StoreContext) {
 							createdAt: row.created_at,
 							updatedAt: row.updated_at,
 							publishedAt: row.published_at,
-							trashedAt: row.trashed_at,
+							deletedAt: row.deleted_at,
 							changedBy: row.changed_by,
 							changedAt: row.changed_at,
 							working,

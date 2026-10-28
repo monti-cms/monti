@@ -3,7 +3,13 @@ import { defineSite } from "../../config/define";
 import { asSchema, blogSchema } from "../../schema-file/__test__/fixture";
 import type { SchemaMigration } from "../../schema-file/types";
 import { createSite } from "../../site";
-import { applyTransforms, checkTransforms, suggestTransforms } from "../transforms";
+import {
+	applyTransforms,
+	checkTransforms,
+	droppedCollections,
+	suggestTransforms,
+	transformCollections,
+} from "../transforms";
 
 /** The site of the schema after the change the transforms below follow. */
 const site = createSite(
@@ -215,5 +221,27 @@ describe("suggestTransforms", () => {
 			suggestTransforms({ kind: "field_required_changed", collection: "post", field: "excerpt", required: false }),
 		).toEqual([]);
 		expect(suggestTransforms({ kind: "locale_added", locale: "ja" })).toEqual([]);
+	});
+});
+
+describe("dropCollection", () => {
+	const drop: SchemaMigration = { id: "drop-memo", op: "dropCollection", collection: "memo" };
+
+	it("is for a collection the schema no longer has: a collection that is still there is a problem", () => {
+		expect(checkTransforms(site, [drop])).toEqual([]);
+		expect(checkTransforms(site, [{ ...drop, collection: "post" }])).toMatchObject([{ id: "drop-memo" }]);
+	});
+
+	it("rewrites no body: its rows are deleted by the store, not changed by a transform", () => {
+		const result = applyTransforms(site, [drop], { collection: "memo" }, { title: "T" });
+		expect(result).toMatchObject({ metadata: { title: "T" }, changedBy: [] });
+		expect(transformCollections([drop])).toEqual([]);
+		expect(droppedCollections([drop, { ...drop, id: "again" }])).toEqual(["memo"]);
+	});
+
+	it("is what a removed collection offers", () => {
+		expect(suggestTransforms({ kind: "collection_removed", collection: "memo" })).toEqual([
+			{ op: "dropCollection", collection: "memo" },
+		]);
 	});
 });

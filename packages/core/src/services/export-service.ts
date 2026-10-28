@@ -63,7 +63,7 @@ export function pickPublicMetadata(
  * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
  * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
  * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
- * Version 6: the backup holds what a restore needs to put a site back as it was. Each manifest entry also has `trashedAt`, `changedBy` and `changedAt`, and each
+ * Version 6: the backup holds what a restore needs to put a site back as it was. Each manifest entry also has `deletedAt`, `changedBy` and `changedAt`, and each
  * record of the backup's `media.json` also has `folderId`, `original`, `defaultAlt` and `defaultCaption`. Nothing reads an older version.
  */
 export const EXPORT_FORMAT_VERSION = 6;
@@ -103,7 +103,7 @@ export interface ExportManifestEntry {
 	updatedAt: string | null;
 	publishedAt: string | null;
 	/** Backup only (`null` in a public archive): when the entry went to the trash, and who made the latest change and when. */
-	trashedAt: string | null;
+	deletedAt: string | null;
 	changedBy: string | null;
 	changedAt: string | null;
 	hasWorking: boolean;
@@ -344,7 +344,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 				createdAt: iso(entry.createdAt),
 				updatedAt: iso(entry.updatedAt),
 				publishedAt: iso(entry.publishedAt),
-				trashedAt: iso(entry.trashedAt),
+				deletedAt: iso(entry.deletedAt),
 				changedBy: entry.changedBy,
 				changedAt: iso(entry.changedAt),
 				hasWorking: true,
@@ -380,7 +380,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			createdAt: null,
 			updatedAt: iso(entry.published?.updatedAt),
 			publishedAt: iso(entry.publishedAt),
-			trashedAt: null,
+			deletedAt: null,
 			changedBy: null,
 			changedAt: null,
 			hasWorking: false,
@@ -395,7 +395,10 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 	const media = exportedMedia(snapshot, scope, new Set(manifestEntries.map((entry) => entry.id)));
 
 	if (scope === "admin") {
-		files.push({ path: "folders.json", data: jsonFile(snapshot.folders.map((folder) => ({ ...folder }))) });
+		files.push({
+			path: "folders.json",
+			data: jsonFile(snapshot.folders.map((folder) => ({ ...folder, deletedAt: iso(folder.deletedAt) }))),
+		});
 		files.push({ path: "addresses.json", data: jsonFile(snapshot.addresses.map((address) => ({ ...address }))) });
 		files.push({
 			path: "templates.json",
@@ -490,6 +493,7 @@ function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedId
 			createdAt: iso(asset.createdAt),
 			updatedAt: iso(asset.updatedAt),
 			readyAt: iso(asset.readyAt),
+			deletedAt: iso(asset.deletedAt ?? null),
 		}));
 	}
 	return sorted

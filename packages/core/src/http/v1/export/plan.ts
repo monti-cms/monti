@@ -16,8 +16,18 @@ import {
 export type ExportOptions = z.output<typeof exportOptionsSchema>;
 
 /** What an export holds, read from the store: the whole site, or the selection with its translation groups. */
-export async function readExportPlan(cms: Cms, options: Pick<ExportOptions, "scope" | "ids">): Promise<ExportPlan> {
-	return planExport(await cms.store().readExportSnapshot(), { scope: options.scope, ids: options.ids });
+export async function readExportPlan(
+	cms: Cms,
+	options: Pick<ExportOptions, "scope" | "ids" | "collection">,
+): Promise<ExportPlan> {
+	const snapshot = await cms.store().readExportSnapshot();
+	if (options.collection === undefined) return planExport(snapshot, { scope: options.scope, ids: options.ids });
+	// A collection is a selection of all its entries: an empty one exports nothing, not the whole site.
+	const asked = options.ids ? new Set(options.ids) : undefined;
+	const ids = snapshot.entries
+		.filter((entry) => entry.collection === options.collection && (!asked || asked.has(entry.id)))
+		.map((entry) => entry.id);
+	return planExport(snapshot, { scope: options.scope, ids });
 }
 
 /** Fails with `unknown_format` before any work is done if no installed format has that name. */

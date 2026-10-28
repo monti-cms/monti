@@ -40,6 +40,41 @@ function placePreview(order: readonly string[], id: string, over: string): strin
 	return next;
 }
 
+/**
+ * The column the held one has passed, or `undefined`: the farthest neighbour whose middle the held name's middle has reached, going the way it is dragged.
+ * The middles, not the pointer over a cell: after a narrow column trades places with a wide one, the pointer can lie over the wide one again, and a test of
+ * the pointer would trade them back on the next move, and back again (the flicker). A middle the held name has reached stays behind it after the trade.
+ */
+function crossedColumn(
+	order: readonly string[],
+	id: string,
+	heldLeft: number,
+	cellOf: (id: string) => HTMLElement | undefined,
+): string | undefined {
+	const width = cellOf(id)?.getBoundingClientRect().width ?? 0;
+	const middle = heldLeft + width / 2;
+	const middleOf = (other: string) => {
+		const box = cellOf(other)?.getBoundingClientRect();
+		return box === undefined ? undefined : box.left + box.width / 2;
+	};
+	const index = order.indexOf(id);
+	let crossed: string | undefined;
+	for (let at = index - 1; at >= 0; at--) {
+		const other = order[at] as string;
+		const otherMiddle = middleOf(other);
+		if (otherMiddle === undefined || middle > otherMiddle) break;
+		crossed = other;
+	}
+	if (crossed !== undefined) return crossed;
+	for (let at = index + 1; at < order.length; at++) {
+		const other = order[at] as string;
+		const otherMiddle = middleOf(other);
+		if (otherMiddle === undefined || middle < otherMiddle) break;
+		crossed = other;
+	}
+	return crossed;
+}
+
 /** How far the pointer moves before a press on a name becomes a drag rather than a click. */
 const DRAG_START = 4;
 
@@ -67,7 +102,6 @@ function ListHead({
 	onPlace,
 	onStep,
 	onPreview,
-	onMenuOpenChange,
 }: {
 	/** The columns shown, in order. */
 	columns: readonly ListHeadColumn[];
@@ -78,12 +112,11 @@ function ListHead({
 	/** The select-all of the page. Leave it out while rows are picked: the bulk bar holds it then. */
 	selectAll?: SelectAll;
 	/** What each name's description says about moving it ("Alt+← → moves the column"). */
-	moveLabel: string;
-	onPlace: (from: string, to: string) => void;
-	onStep: (id: string, direction: -1 | 1) => void;
+	moveLabel?: string;
+	/** Moves a column onto the place of another. Without it (and `onStep`) the names do not move: a list whose columns are fixed. */
+	onPlace?: (from: string, to: string) => void;
+	onStep?: (id: string, direction: -1 | 1) => void;
 	onPreview?: (order: string[] | null) => void;
-	/** Called with `true` when a column's menu opens and `false` when it closes, so what sits above the head can hold still while it is open. */
-	onMenuOpenChange?: (open: boolean) => void;
 }) {
 	const row = React.useRef<HTMLTableRowElement>(null);
 	// The press in progress: where it started, where on the name it took hold, and the order when it started.
@@ -92,8 +125,6 @@ function ListHead({
 	// The column whose menu is open, and whether its card is lined up with the name's right side (a name near the end of the row).
 	const [open, setOpen] = React.useState<{ id: string; flip: boolean } | null>(null);
 	const dragged = React.useRef(false);
-	const menuOpen = open !== null;
-	React.useEffect(() => onMenuOpenChange?.(menuOpen), [menuOpen]);
 	const pointerX = React.useRef(0);
 	const ids = columns.map((column) => column.id);
 	const cellOf = (id: string) =>
@@ -114,6 +145,8 @@ function ListHead({
 
 	/** Opens the menu of `column` under its name, lined up with the name's right side when the card would reach past the end of the row. */
 	const openFor = (column: ListHeadColumn, name: Element | null | undefined) => {
+		// The press that opened the menu is over: the menu takes the pointer from here, and its release never reaches the head.
+		press.current = null;
 		const left = name?.getBoundingClientRect().left ?? 0;
 		const rowEnd = row.current?.getBoundingClientRect().right ?? 0;
 		setOpen({ id: column.id, flip: column.align === "end" || left - MENU_REACH + MENU_WIDTH > rowEnd });
@@ -125,7 +158,7 @@ function ListHead({
 		if (!drag) return;
 		if (held && commit) {
 			const to = held.ids[ids.indexOf(held.id)];
-			if (to !== undefined && to !== held.id) onPlace(held.id, to);
+			if (to !== undefined && to !== held.id) onPlace?.(held.id, to);
 		}
 		onPreview?.(null);
 		setDrag(null);
@@ -139,6 +172,12 @@ function ListHead({
 				onPointerMove={(event) => {
 					const held = press.current;
 					if (!held) return;
+					// The button is not down any more: the press ended where the head did not hear it (in an open menu, outside the window). A name is
+					// only ever dragged while the button is held.
+					if ((event.buttons & 1) === 0) {
+						finish(false);
+						return;
+					}
 					pointerX.current = event.clientX;
 					if (!drag) {
 						if (Math.abs(event.clientX - held.x) < DRAG_START) return;
@@ -148,11 +187,7 @@ function ListHead({
 						setDrag({ id: held.id, offset: lift(held.id, 0) });
 						return;
 					}
-					const over = ids.find((id) => {
-						if (id === held.id) return false;
-						const box = cellOf(id)?.getBoundingClientRect();
-						return box !== undefined && event.clientX >= box.left && event.clientX < box.right;
-					});
+					const over = crossedColumn(ids, held.id, event.clientX - held.grab, cellOf);
 					if (over === undefined) setDrag({ ...drag, offset: lift(held.id, drag.offset) });
 					else onPreview?.(placePreview(ids, held.id, over));
 				}}
@@ -177,13 +212,14 @@ function ListHead({
 						</>
 					);
 					const buttonClass = cn(
-						"inline-flex max-w-full cursor-grab items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&_svg]:size-3 [&_svg]:shrink-0",
+						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",
+						onPlace && "cursor-grab",
 						held && "cursor-grabbing",
 					);
 					const onKeyDown = (event: React.KeyboardEvent) => {
-						if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+						if (!onStep || !event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
 						event.preventDefault();
 						onStep(column.id, event.key === "ArrowLeft" ? -1 : 1);
 					};
@@ -200,7 +236,7 @@ function ListHead({
 							className="relative touch-none select-none font-normal data-held:z-1 data-held:bg-monti-selected data-held:shadow-monti-floating"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							onPointerDown={(event) => {
-								if (event.button !== 0) return;
+								if (event.button !== 0 || !onPlace) return;
 								const box = event.currentTarget.getBoundingClientRect();
 								press.current = { id: column.id, x: event.clientX, grab: event.clientX - box.left, ids };
 								pointerX.current = event.clientX;
@@ -232,7 +268,7 @@ function ListHead({
 									}
 								>
 									<DropdownMenuTrigger
-										aria-description={moveLabel}
+										aria-description={onPlace ? moveLabel : undefined}
 										className={buttonClass}
 										// A press that may become a drag opens nothing; the click that follows a press that did not move opens the menu.
 										onMouseDown={(event) => event.preventBaseUIHandler()}
@@ -256,7 +292,12 @@ function ListHead({
 									</DropdownMenuContent>
 								</DropdownMenu>
 							) : (
-								<button type="button" aria-description={moveLabel} className={buttonClass} onKeyDown={onKeyDown}>
+								<button
+									type="button"
+									aria-description={onPlace ? moveLabel : undefined}
+									className={buttonClass}
+									onKeyDown={onKeyDown}
+								>
 									{name}
 								</button>
 							)}

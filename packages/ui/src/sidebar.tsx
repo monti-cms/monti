@@ -460,13 +460,12 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 /**
  * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the current ground (one step
  * darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground, which is paler than the
- * current one, so a row that is only pointed at is never taken for the open one. `removed` is a row the writer took out in the schema (struck through and faint).
+ * current one, so a row that is only pointed at is never taken for the open one.
  * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
  */
 function SidebarMenuButton({
 	render,
 	isActive = false,
-	removed = false,
 	tooltip,
 	railDot,
 	className,
@@ -475,7 +474,6 @@ function SidebarMenuButton({
 }: useRender.ComponentProps<"button"> &
 	React.ComponentProps<"button"> & {
 		isActive?: boolean;
-		removed?: boolean;
 		/** What the row says when the sidebar is folded to its icons (its name and count, "Tools 1"): a tooltip on the icon. */
 		tooltip?: string;
 		/** Folded, the count cannot show: a dot on the icon takes its place when there is something to look at. The text names it for screen readers. */
@@ -487,7 +485,7 @@ function SidebarMenuButton({
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-current data-active:font-semibold data-removed:text-monti-faint data-removed:line-through group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-current data-active:font-semibold group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -504,7 +502,6 @@ function SidebarMenuButton({
 			slot: "sidebar-menu-button",
 			sidebar: "menu-button",
 			active: isActive,
-			removed,
 		},
 	});
 	if (!rail || !tooltip) return row;
@@ -530,7 +527,7 @@ function SidebarMenuBadge({
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
 			className={cn(
-				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums group-data-removed/menu-button:text-monti-faint",
+				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums",
 				tone === "warning" ? "text-monti-warning" : "text-monti-subtle",
 				className,
 			)}

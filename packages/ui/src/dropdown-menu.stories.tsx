@@ -89,6 +89,24 @@ export const GroupsAndLabels: Story = {
 	),
 };
 
+/** A row can say under its name what it leaves alone. */
+export const WithCaption: Story = {
+	render: () => (
+		<DropdownMenu defaultOpen>
+			<DropdownMenuTrigger render={<Button variant="secondary" />}>
+				<OverflowMenuHorizontal aria-hidden />더 보기
+			</DropdownMenuTrigger>
+			<DropdownMenuContent>
+				<DropdownMenuItem>내보내기</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem variant="danger" caption="한국어 원문은 그대로">
+					이 번역 휴지통으로
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	),
+};
+
 /** A row that cannot be used is faint, and its end says why. */
 export const DisabledItems: Story = {
 	render: () => (

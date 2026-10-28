@@ -23,8 +23,9 @@ export const Banner = close(open.Banner);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
+export const DangerBlock = close(open.DangerBlock);
+export const DangerRow = close(open.DangerRow);
 export const Chip = close(open.Chip);
-export const ChipRow = close(open.ChipRow);
 export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
 export const FilterButton = close(open.FilterButton);
@@ -196,6 +197,8 @@ export const Spark = open.Spark;
 export const StatusBarList = close(open.StatusBarList);
 export const TodoDone = close(open.TodoDone);
 export const TodoItem = close(open.TodoItem);
+export const TrashRowDate = close(open.TrashRowDate);
+export const TrashRowTitle = close(open.TrashRowTitle);
 export const SplitButton = close(open.SplitButton);
 export const Stack = close(open.Stack);
 export const Inline = close(open.Inline);
@@ -221,6 +224,7 @@ export const BlockBarSeparator = close(open.BlockBarSeparator);
 export const BlockHandle = close(open.BlockHandle);
 export const ChangeActions = close(open.ChangeActions);
 export const ChangeGroup = close(open.ChangeGroup);
+export const ChangeLabel = close(open.ChangeLabel);
 export const ChangeLine = close(open.ChangeLine);
 export const ChangeLines = close(open.ChangeLines);
 export const ChangeNote = close(open.ChangeNote);
@@ -273,6 +277,7 @@ export const TabsTrigger = close(open.TabsTrigger);
 export const Heading = close(open.Heading);
 export const Text = close(open.Text);
 export const DescriptionList = close(open.DescriptionList);
+export const DotNote = close(open.DotNote);
 export const DescriptionItem = close(open.DescriptionItem);
 export const TextButton = close(open.TextButton);
 export const Textarea = close(open.Textarea);
@@ -303,6 +308,7 @@ export {
 	cn,
 	DEFAULT_UI_LABELS,
 	SearchBox,
+	SearchToggle,
 	Segmented,
 	Select,
 	stackVariants,

@@ -1,5 +1,5 @@
 import type { SchemaChangeStore } from "../core/store/ports";
-import type { BodyCursor, ScannedBody } from "../core/store/schema-change";
+import type { BodyCursor, CollectionFootprint, ScannedBody } from "../core/store/schema-change";
 import type { BodyAllowed } from "../schema/allowed";
 import { disallowedInDocument } from "../schema/allowed";
 import type { SchemaMigration } from "../schema-file/types";
@@ -17,7 +17,7 @@ export type ImpactConsequence =
 	| "none"
 	/** A transform of the schema file rewrites the stored values. */
 	| "transformed"
-	/** A `dropField` transform deletes the stored values. */
+	/** A `dropField` transform deletes the stored values, or a `dropCollection` transform deletes the collection's entries. */
 	| "deleted"
 	/** The stored values stay as orphans: kept in the entry, hidden from the public read, listed in a warning at publish. */
 	| "orphaned"
@@ -41,6 +41,26 @@ export interface ImpactSample {
 	readonly status: string;
 }
 
+/**
+ * What removing a collection with a `dropCollection` transform deletes and what that leaves pointing nowhere. `ChangeImpact.entries` is `entries` here (the trashed
+ * ones included).
+ */
+export interface CollectionDropImpact {
+	/** Entries (translation groups) deleted, the trashed ones included. */
+	readonly entries: number;
+	/** Of `entries`, the ones in the trash. */
+	readonly trashed: number;
+	/** Translations deleted with their sources. */
+	readonly translations: number;
+	readonly folders: number;
+	/** Addresses deleted, the old ones included. */
+	readonly addresses: number;
+	/** Entries of other collections whose relation fields point into the collection: the apply cuts those links. `sample` lists the first. */
+	readonly unlinked: { readonly count: number; readonly sample: readonly ImpactSample[] };
+	/** Places in bodies of other collections that link into the collection: they become broken links. */
+	readonly bodyLinks: number;
+}
+
 export interface ChangeImpact {
 	readonly change: SchemaChange;
 	/** `changeKey(change)`. */
@@ -52,6 +72,8 @@ export interface ChangeImpact {
 	readonly consequence: ImpactConsequence;
 	/** `false` when the change was not looked at in the data (an allowed-blocks change needs the `site` option); `entries` is then 0. */
 	readonly checked: boolean;
+	/** A removed collection that a `dropCollection` transform handles: what it deletes and what it leaves pointing nowhere. */
+	readonly drop?: CollectionDropImpact;
 }
 
 export interface SchemaImpact {
@@ -124,8 +146,12 @@ function ruleFor(change: SchemaChange, options: CheckOptions): Rule {
 		case "locale_added":
 		case "default_locale_changed":
 			return { collections: null, consequence: "none" };
-		case "collection_removed":
+		case "collection_removed": {
+			const handler = change.handledBy ? options.transforms?.find((item) => item.id === change.handledBy) : undefined;
+			// A handled removal is counted from what the store holds of the collection (`collectionFootprint`), not from a scan of its bodies.
+			if (handler?.op === "dropCollection") return { collections: null, consequence: "deleted" };
 			return { collections: only(change.collection), touches: inCollection, consequence: "orphaned" };
+		}
 		case "collection_kind_changed":
 			return { collections: only(change.collection), touches: inCollection, consequence: "kept" };
 		case "body_changed":
@@ -227,7 +253,7 @@ function handledConsequence(
 ): ImpactConsequence | undefined {
 	if (!change.handledBy) return undefined;
 	const handler = transforms?.find((item) => item.id === change.handledBy);
-	return handler?.op === "dropField" ? "deleted" : "transformed";
+	return handler?.op === "dropField" || handler?.op === "dropCollection" ? "deleted" : "transformed";
 }
 
 /**
@@ -239,7 +265,7 @@ function handledConsequence(
  * - A change that touches nothing in the data (a collection or option added) reports 0.
  */
 export async function checkSchemaChange(
-	store: Pick<SchemaChangeStore, "scanBodies">,
+	store: Pick<SchemaChangeStore, "scanBodies"> & Partial<Pick<SchemaChangeStore, "collectionFootprint">>,
 	diff: SchemaDiff,
 	options: CheckOptions = {},
 ): Promise<SchemaImpact> {
@@ -306,15 +332,40 @@ export async function checkSchemaChange(
 		flush();
 	}
 
+	// A removed collection that a `dropCollection` handles: what the store holds of it, and what points into it from other collections.
+	const dropped = rules.flatMap(({ change, rule }) =>
+		change.kind === "collection_removed" && rule.collections === null && rule.consequence === "deleted"
+			? [change.collection]
+			: [],
+	);
+	const footprints: Readonly<Record<string, CollectionFootprint>> =
+		dropped.length > 0 && store.collectionFootprint
+			? await store.collectionFootprint({ collections: dropped, detail: true, sampleSize })
+			: {};
+
 	return {
 		bodiesRead,
-		impacts: rules.map(({ change, rule }, index) => ({
-			change,
-			key: changeKey(change),
-			entries: counts[index]?.entries ?? 0,
-			sample: counts[index]?.sample ?? [],
-			consequence: handledConsequence(change, options.transforms) ?? rule.consequence,
-			checked: rule.checked ?? true,
-		})),
+		impacts: rules.map(({ change, rule }, index) => {
+			const footprint = change.kind === "collection_removed" ? footprints[change.collection] : undefined;
+			return {
+				change,
+				key: changeKey(change),
+				entries: footprint?.entries ?? counts[index]?.entries ?? 0,
+				sample: counts[index]?.sample ?? [],
+				consequence: handledConsequence(change, options.transforms) ?? rule.consequence,
+				checked: rule.checked ?? true,
+				...(footprint && {
+					drop: {
+						entries: footprint.entries,
+						trashed: footprint.trashed,
+						translations: footprint.translations,
+						folders: footprint.folders,
+						addresses: footprint.addresses,
+						unlinked: { count: footprint.incoming?.relations ?? 0, sample: footprint.incoming?.sample ?? [] },
+						bodyLinks: footprint.incoming?.bodyLinks ?? 0,
+					},
+				}),
+			};
+		}),
 	};
 }

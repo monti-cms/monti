@@ -110,6 +110,7 @@ export * from "./core/translation/hints";
 export * from "./core/translation/skeleton";
 export * from "./core/translation/source-diff";
 export * from "./core/translation/state";
+export * from "./core/trash";
 export type {
 	BodyPosition,
 	Collection,

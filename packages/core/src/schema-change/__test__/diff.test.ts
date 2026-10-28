@@ -34,6 +34,16 @@ describe("diffSchema", () => {
 		expect(found.map(changeKey)).toEqual(["collection_removed:tag", "collection_added:note"]);
 	});
 
+	it("marks a removed collection that a dropCollection transform handles", () => {
+		const found = changes(
+			(schema) => {
+				delete schema.collections.tag;
+			},
+			[{ id: "drop-tag", op: "dropCollection", collection: "tag" }],
+		);
+		expect(found).toEqual([{ kind: "collection_removed", collection: "tag", handledBy: "drop-tag" }]);
+	});
+
 	it("lists fields added and removed, and tells a required one", () => {
 		const found = changes((schema) => {
 			delete schema.collections.post.fields.cover;

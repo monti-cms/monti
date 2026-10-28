@@ -56,9 +56,6 @@ export function assertArchivable(site: Site, collection: string, version: number
 	}
 }
 
-/** A record in use must have its references released before it goes to the trash. */
-export const trashRequiresNoReferences = (site: Site, collection: string): boolean => site.isItemCollection(collection);
-
 /** A record collection is published again on restore (with its prepared draft); a content collection returns to draft. */
 export const restorePublishesAgain = (site: Site, collection: string): boolean => site.isItemCollection(collection);
 
@@ -87,7 +84,7 @@ export function assertDeletable(status: EntryStatus, version: number): void {
 export interface GroupMember {
 	readonly id: string;
 	readonly status: EntryStatus;
-	readonly trashedAt: Date | null;
+	readonly deletedAt: Date | null;
 }
 
 const idsOf = (members: readonly GroupMember[]): string[] => members.map((member) => member.id);
@@ -110,7 +107,7 @@ export function membersToRestore(members: readonly GroupMember[], sourceTrashedA
 	if (!sourceTrashedAt) return [];
 	return idsOf(
 		members.filter(
-			(member) => member.status === "trashed" && member.trashedAt?.getTime() === sourceTrashedAt.getTime(),
+			(member) => member.status === "trashed" && member.deletedAt?.getTime() === sourceTrashedAt.getTime(),
 		),
 	);
 }

@@ -29,7 +29,6 @@ interface EntryCellProps {
 	column: AdminListColumn;
 	item: ListEntriesItem;
 	folders: Folder[];
-	isTrash: boolean;
 	isRecord: boolean;
 	/** Append the folder path small next to the title (flat view with the folder column off). */
 	showFolderBesideTitle: boolean;
@@ -43,7 +42,6 @@ function DefaultEntryCell({
 	column,
 	item,
 	folders,
-	isTrash,
 	isRecord,
 	showFolderBesideTitle,
 	showSlugBesideTitle,
@@ -77,13 +75,6 @@ function DefaultEntryCell({
 					</Text>
 				</Box>
 			);
-			if (isTrash)
-				return (
-					<Inline align="baseline" gap={8} minWidth={0}>
-						{titleBox(title)}
-						{slug}
-					</Inline>
-				);
 			return isRecord ? (
 				<Inline align="baseline" gap={8} minWidth={0}>
 					{titleBox(<RowLink render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</RowLink>)}

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { SearchBox } from "./search-box";
+import { SearchBox, SearchToggle } from "./search-box";
 import { Stack } from "./stack";
 
 /** The pill that opens in place of the page's search button. An optional picker in front chooses where to look; × clears the words. */
@@ -49,4 +49,18 @@ export const States: Story = {
 			<Demo initial="리액트" withTargets={false} />
 		</Stack>
 	),
+};
+
+/** The page's "Search" button: pressed, the box opens in its place; emptied and left, the button comes back. With words, the box stays. */
+export const Toggle: Story = {
+	render: function Render() {
+		const [empty, setEmpty] = useState("");
+		const [held, setHeld] = useState("리액트");
+		return (
+			<Stack gap={16} align="start">
+				<SearchToggle label="검색" aria-label="검색" placeholder="검색" value={empty} onValueChange={setEmpty} />
+				<SearchToggle label="검색" aria-label="검색" placeholder="검색" value={held} onValueChange={setHeld} />
+			</Stack>
+		);
+	},
 };

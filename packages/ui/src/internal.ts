@@ -29,13 +29,13 @@ export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
-export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
+export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
 export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
-export { Chip, ChipRow } from "./chip";
+export { Chip } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -80,6 +80,7 @@ export {
 	ContextMenuTrigger,
 } from "./context-menu";
 export { Count } from "./count";
+export { DangerBlock, DangerRow } from "./danger-block";
 export { DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,
@@ -94,6 +95,7 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
+export { DotNote } from "./dot-note";
 export { DropArea } from "./drop-area";
 export {
 	DropdownMenu,
@@ -184,7 +186,7 @@ export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
-export { SearchBox, type SearchTarget } from "./search-box";
+export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
 export { Section } from "./section";
 export { Segmented, type SegmentedOption } from "./segmented";
 export {
@@ -264,4 +266,5 @@ export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+export { TrashRowDate, TrashRowTitle } from "./trash-row";
 export { useIsMobile } from "./use-mobile";

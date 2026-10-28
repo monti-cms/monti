@@ -24,6 +24,7 @@ import { useConfirm } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { bulkBarMessages } from "./bulk-bar.messages";
 import { archiveAction, canPublish, changeableRelations, toSelection } from "./bulk-model";
+import { trashConfirm, trashSubjectOfRow } from "./lifecycle-confirm";
 import { RelationChoice } from "./relation-choice";
 
 /** Failure reason per action ("distinguish success from failure and rerun only failed items"). Only codes in the dictionary have text. */
@@ -62,22 +63,19 @@ export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult,
  * What the bar offers for the rows picked, by what can be done to them: publish (when something is left to publish), archive (or take the archive off when
  * every row is archived), a folder to move to, and a Change menu for the relations; the ⋯ has export and, last, the trash. Anything that cannot be done to these
  * rows is left out instead of dimmed: a collection of items is not published or archived, a list without folders has no folder to move to, a collection
- * with no relation field has nothing to change. The trash offers only the permanent delete.
+ * with no relation field has nothing to change.
  */
 export function bulkActionsFor({
 	site,
 	collection,
-	mode,
 	rows,
 	hasFolders,
 }: {
 	site: Site;
 	collection: string;
-	mode: "list" | "trash";
 	rows: readonly ListEntriesItem[];
 	hasFolders: boolean;
 }): { primary: ("publish" | "archive" | "unarchive" | "folder.move" | "change")[]; more: ("export" | "trash")[] } {
-	if (mode === "trash") return { primary: [], more: [] };
 	const documents = !site.isItemCollection(collection);
 	return {
 		primary: [
@@ -90,31 +88,28 @@ export function bulkActionsFor({
 	};
 }
 
-type Confirmed = "publish" | "archive" | "unarchive" | "folder.move" | "trash" | "permanentDelete";
+type Confirmed = "publish" | "archive" | "unarchive" | "folder.move";
 
 /**
  * The bar that replaces the list's head row once rows are picked: how many, the actions that fit these rows, a ⋯ with export and the trash, and the way to
- * let go. Publish, archive, a folder, the trash and the permanent delete ask first; a change of a relation (the Change menu) does not: it is a box in a list
+ * let go. Publish, archive, a folder and the trash ask first; a change of a relation (the Change menu) does not: it is a box in a list
  * that undoes itself. Applies only to the rows picked on this page.
  */
 export function BulkBar({
 	collection,
 	rows,
 	folders,
-	mode = "list",
 	selectAll,
 	colSpan,
 	onClearSelection,
 	onRun,
 	onExport,
-	onRestore,
 }: {
 	collection: string;
 	/** The rows picked. */
 	rows: readonly ListEntriesItem[];
 	/** The folders items can move to; `null` where the list shows no folders, which leaves out the folder move. */
 	folders: readonly Folder[] | null;
-	mode?: "list" | "trash";
 	/** The select-all check that moves onto the bar. */
 	selectAll?: { state: SelectAllState; onChange: (all: boolean) => void; label: string };
 	/** How many columns the list's table has, the ⋯ column included. */
@@ -124,8 +119,6 @@ export function BulkBar({
 	onRun: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void> | void;
 	/** Opens the export of the picked rows. */
 	onExport: (ids: string[]) => void;
-	/** Restores the picked rows from the trash. */
-	onRestore: (targets: BulkSelection[]) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
@@ -134,7 +127,7 @@ export function BulkBar({
 	const { confirm, dialog } = useConfirm();
 	const selected = rows.map(toSelection);
 	const noun = nounVars(site, collection);
-	const { primary, more } = bulkActionsFor({ site, collection, mode, rows, hasFolders: folders !== null });
+	const { primary, more } = bulkActionsFor({ site, collection, rows, hasFolders: folders !== null });
 	if (rows.length === 0) return null;
 
 	/** What each action that asks says: its name, its question and whether it is the dangerous kind. */
@@ -149,17 +142,17 @@ export function BulkBar({
 					? t("ask.folder.root", { count: rows.length })
 					: t("ask.folder.move", { count: rows.length, target }),
 		},
-		trash: { label: tc("lifecycle.trash"), ask: () => t("ask.trash", { count: rows.length }), destructive: true },
-		permanentDelete: {
-			label: tc("lifecycle.deletePermanently"),
-			ask: () => t("ask.permanentDelete", { count: rows.length }),
-			destructive: true,
-		},
 	};
 	const apply = async (action: Confirmed, target: string | null = null, params: BulkParams = {}) => {
 		const { label, ask, destructive } = asks[action];
 		const ok = await confirm({ title: label, description: ask(target), confirmLabel: label, destructive });
 		if (ok) await onRun(action, label, selected, params);
+	};
+	/** The trash asks only when a published entry is among the rows (it leaves the site); everything else moves at once, with an undo toast. */
+	const trash = async () => {
+		const ask = trashConfirm(site, collection, rows.map(trashSubjectOfRow));
+		if (ask && !(await confirm(ask))) return;
+		await onRun("trash", tc("lifecycle.trash"), selected);
 	};
 
 	const button = (action: Confirmed) => (
@@ -169,14 +162,6 @@ export function BulkBar({
 	);
 	const relations = changeableRelations(site, collection);
 	const actions = [
-		...(mode === "trash"
-			? [
-					<TextButton key="restore" onClick={() => onRestore(selected)}>
-						{tc("lifecycle.restore")}
-					</TextButton>,
-					button("permanentDelete"),
-				]
-			: []),
 		...primary.map((action) => {
 			if (action === "folder.move") {
 				return (
@@ -243,8 +228,8 @@ export function BulkBar({
 											{tx("action.selected")}
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
-										<DropdownMenuItem variant="danger" onClick={() => void apply("trash")}>
-											{asks.trash.label}
+										<DropdownMenuItem variant="danger" onClick={() => void trash()}>
+											{tc("lifecycle.trash")}
 										</DropdownMenuItem>
 									</>
 								),

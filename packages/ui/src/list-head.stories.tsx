@@ -1,3 +1,4 @@
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
@@ -8,6 +9,7 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 } from "./dropdown-menu";
+import { IconButton } from "./icon-button";
 import { ListHead, type ListHeadColumn } from "./list-head";
 import { MenuShortcut } from "./menu-parts";
 import { RowActions, RowTitle, Table, TableBody, TableCell, TableRow } from "./table";
@@ -56,7 +58,11 @@ function Rows({ ids }: { ids: readonly string[] }) {
 					</TableCell>
 				))}
 				<TableCell align="end">
-					<RowActions>⋯</RowActions>
+					<RowActions>
+						<IconButton label="더보기">
+							<OverflowMenuHorizontal aria-hidden />
+						</IconButton>
+					</RowActions>
 				</TableCell>
 			</TableRow>
 		</TableBody>
@@ -201,4 +207,20 @@ export const SelectAll: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.hover(within(canvasElement).getByRole("button", { name: "제목" }));
 	},
+};
+
+/** A list whose columns are fixed (the trash) gives no `onPlace`: the names do not drag or step, and say nothing about moving. */
+export const FixedColumns: Story = {
+	args: Playground.args,
+	render: () => (
+		<Table container="none" layout="fixed" columns={[undefined, 72, 54]}>
+			<ListHead
+				columns={[
+					{ id: "title", label: "제목", menu: <ColumnMenu /> },
+					{ id: "deletedAt", label: "버린 날", size: 72, align: "end", sort: "desc", menu: <ColumnMenu /> },
+				]}
+				end={54}
+			/>
+		</Table>
+	),
 };

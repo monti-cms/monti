@@ -123,6 +123,27 @@ describe("the search row of a menu", () => {
 	});
 });
 
+describe("a row with a caption", () => {
+	it("puts the caption under the name and still selects as one row", async () => {
+		const onClick = vi.fn();
+		render(
+			<DropdownMenu defaultOpen>
+				<DropdownMenuTrigger>open</DropdownMenuTrigger>
+				<DropdownMenuContent>
+					<DropdownMenuItem variant="danger" caption="한국어 원문은 그대로" onClick={onClick}>
+						이 번역 휴지통으로
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>,
+		);
+		const row = await screen.findByRole("menuitem", { name: /이 번역 휴지통으로/ });
+		expect(row.textContent).toBe("이 번역 휴지통으로한국어 원문은 그대로");
+		expect(row.querySelector("[data-slot=menu-caption]")?.textContent).toBe("한국어 원문은 그대로");
+		fireEvent.click(row);
+		expect(onClick).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe("a pick-one list", () => {
 	it("applies the value picked and closes the whole menu", async () => {
 		const onValueChange = vi.fn();

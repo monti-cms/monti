@@ -16,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Plain, underline (goes somewhere or opens something), quiet (less important) and danger (a risky second choice). */
+/** Plain, underline (goes somewhere or opens something), quiet (less important), danger (a risky second choice), ink (the one thing a row asks for first) and inherit (the color of the line it is in). */
 export const Variants: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center" wrap>
@@ -24,6 +24,10 @@ export const Variants: Story = {
 			<TextButton variant="underline">목록에서 보기 →</TextButton>
 			<TextButton variant="quiet">+ 묶음 추가</TextButton>
 			<TextButton variant="danger">저장하지 않고 나가기</TextButton>
+			<TextButton variant="ink">원문 복원</TextButton>
+			<span className="text-monti-note text-monti-warning">
+				가리키는 글 4편 <TextButton variant="inherit">연결 끊기</TextButton>
+			</span>
 			<TextButton disabled>막힘</TextButton>
 		</Stack>
 	),

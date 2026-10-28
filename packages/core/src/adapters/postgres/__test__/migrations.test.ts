@@ -41,6 +41,7 @@ describe("migrations", () => {
 			"0001_baseline",
 			"0002_media_folders",
 			"0003_translation_source_hashes",
+			"0004_trash",
 		]);
 	});
 

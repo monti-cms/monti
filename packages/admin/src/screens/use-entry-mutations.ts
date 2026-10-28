@@ -21,13 +21,17 @@ import {
 	entriesKeys,
 } from "../api/entries";
 import { foldersKeys } from "../api/folders";
+import { restoreTrash } from "../api/trash";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { describeBulkFailure } from "./entries/bulk-bar";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
+import { deleteMessages } from "./shared/delete.messages";
 import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
+
+type OkResult = Extract<BulkItemResult, { ok: true }>;
 
 /** Reports bulk results as notifications. Failures list the item name and reason. */
 function announce(
@@ -35,24 +39,40 @@ function announce(
 	label: string,
 	results: BulkItemResult[],
 	items: BulkSelection[],
-	/** Say nothing when everything went through: the change shows in the list itself (a box ticked in a menu). Failures are always told. */
-	quiet = false,
+	{
+		quiet = false,
+		success,
+		undo,
+	}: {
+		/** Say nothing when everything went through: the change shows in the list itself (a box ticked in a menu). Failures are always told. */
+		quiet?: boolean;
+		/** What a clean run says, instead of "N items done". */
+		success?: string;
+		/** Takes back what went through. The toast carries it as its action. */
+		undo?: () => void;
+	} = {},
 ) {
 	const t = site.createTranslator(screensMessages);
 	const tc = site.createTranslator(commonMessages);
+	const td = site.createTranslator(deleteMessages);
+	const action = undo ? { action: { label: td("undo"), onClick: undo } } : undefined;
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
-		if (!quiet) toast(t("bulk.success", { count: ok, label }));
+		if (quiet) return;
+		const message = success ?? t("bulk.success", { count: ok, label });
+		if (action) toast(message, action);
+		else toast(message);
 		return;
 	}
 	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
 	const lines = failures.slice(0, 3).map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`);
-	toast.error(
-		[ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), ...lines].join(
-			"\n",
-		),
-	);
+	const message = [
+		ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }),
+		...lines,
+	].join("\n");
+	if (action) toast.error(message, action);
+	else toast.error(message);
 }
 
 const LIFECYCLE_ACTIONS: readonly string[] = ["archive", "unarchive", "trash", "restore"] satisfies LifecycleAction[];
@@ -130,10 +150,75 @@ export function useEntryMutations({
 			params,
 		});
 
-	/** Handles the action through the bulk API and reports the result. */
+	const td = useTranslator(deleteMessages);
+
+	/** Takes the toast's undo: asks the server for `request`, tells it if that failed, and reads the list again either way. */
+	const undoWith = (request: () => Promise<boolean>) => async () => {
+		try {
+			if (!(await request())) toast.error(td("undoFailed"));
+		} catch (error) {
+			toast.error(errorText(site, error, td("undoFailed")));
+		}
+		await invalidateEntries();
+	};
+
+	/** The undo of what the trash just moved: restores each entry at the version the trash made. */
+	const undoTrash = (done: OkResult[]) =>
+		undoWith(async () => {
+			const answer = await restoreTrash(
+				site,
+				done.map(({ id, version }) => ({ type: "entry", id, expectedVersion: version })),
+			);
+			return answer.every((result) => result.ok);
+		});
+
+	/** The undo of a folder move: each entry goes back to the folder it was in, one request per folder. Unknown where from: no undo. */
+	const undoMove = (targets: BulkSelection[], done: OkResult[], to: BulkParams["folderId"]) => {
+		const moved = done.flatMap(({ id, version }) => {
+			const from = targets.find((target) => target.id === id)?.folderId;
+			return from === undefined || from === to ? [] : [{ id, version, from }];
+		});
+		if (moved.length === 0 || moved.length < done.length) return undefined;
+		return undoWith(async () => {
+			const folders = [...new Set(moved.map((entry) => entry.from))];
+			const answers = await Promise.all(
+				folders.map((folderId) =>
+					bulkEntries(
+						site,
+						"folder.move",
+						moved
+							.filter((entry) => entry.from === folderId)
+							.map(({ id, version }) => ({ id, expectedVersion: version })),
+						{ folderId },
+					),
+				),
+			);
+			return answers.every((results) => results.every((result) => result.ok));
+		});
+	};
+
+	/** Handles the action through the bulk API and reports the result. A move to the trash or to a folder carries its undo. */
 	const bulk = async (op: BulkOp, label: string, targets: BulkSelection[], params: BulkParams = {}) => {
 		try {
-			announce(site, label, await run(op, targets, params), targets, op.startsWith("relation."));
+			const results = await run(op, targets, params);
+			const done = results.filter((result): result is OkResult => result.ok);
+			const trashed = op === "trash";
+			announce(site, label, results, targets, {
+				quiet: op.startsWith("relation."),
+				success: trashed
+					? done.length === 1
+						? td("trash.done")
+						: td("trash.done.count", { count: done.length })
+					: undefined,
+				undo:
+					done.length === 0
+						? undefined
+						: trashed
+							? undoTrash(done)
+							: op === "folder.move"
+								? undoMove(targets, done, params.folderId)
+								: undefined,
+			});
 		} catch (error) {
 			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}

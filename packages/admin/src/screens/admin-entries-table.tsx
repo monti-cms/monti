@@ -4,8 +4,6 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Chip,
-	ChipRow,
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
@@ -17,15 +15,14 @@ import {
 	TableRow,
 	Text,
 } from "@monti-cms/ui";
-import { type KeyboardEvent, type ReactNode, useState } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { EntryRowCells } from "./entries-table-row";
-import { actionsSize, columnSize } from "./entries-table-widths";
+import { ACTIONS_SIZE, columnSize } from "./entries-table-widths";
 import { columnMenuOf, hiddenColumns, isColumnFiltered } from "./list-column-menu";
 import { ColumnMenuContent } from "./list-column-values";
-import { type AdminListColumn, columnConfig, columnLabel, TRASH_COLUMNS } from "./list-columns";
-import { filterChipsOf } from "./list-filter-model";
+import { type AdminListColumn, columnConfig, columnLabel } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
@@ -35,11 +32,10 @@ import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
 import { collectionNoun } from "./shared/noun.messages";
 import type { FolderActions } from "./shared/use-folder-actions";
-import { useFilterTitles } from "./use-filter-titles";
 import { useListColumns } from "./use-list-columns";
 
 /** Dates sit at the end of their cells, so the days line up. */
-const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt", "trashedAt"];
+const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt"];
 
 interface TableProps {
 	collection: string;
@@ -58,21 +54,17 @@ interface TableProps {
 	/** Fetching a new list after conditions changed. Keeps the previous rows dimmed. */
 	isRefreshing?: boolean;
 	errorMessage: string | null;
-	/** `trash` means the trash screen: no drag-move or folder browsing, and each row shows restore and permanent delete. */
-	mode?: "list" | "trash";
 	folderActions?: FolderActions;
 	/** Right-click / `⋯` menu of a row. For a selected row, targets the whole selection. */
 	rowMenu: (item: ListEntriesItem) => MenuAction[];
 	/** Right-click menu on empty space in the list. */
 	blankMenu?: MenuAction[];
-	/** Delete key on a row. On the list it moves to trash; in trash it asks about permanent delete. */
+	/** Delete key on a row: moves it to the trash. */
 	onDeleteKey?: (item: ListEntriesItem) => void;
 	onSelectFolder: (folder: string) => void;
 	onOpenRecord: (item: ListEntriesItem) => void;
 	/** Item open in the right taxonomy edit slot. Highlights that row. */
 	openRecordId?: string | null;
-	onRestore?: (item: ListEntriesItem) => void;
-	onPermanentDelete?: (item: ListEntriesItem) => void;
 	onPageChange: (page: number) => void;
 	onPageSizeChange: (size: PageSize) => void;
 	onRetry: () => void;
@@ -103,7 +95,6 @@ export function AdminEntriesTable({
 	isLoading,
 	isRefreshing = false,
 	errorMessage,
-	mode = "list",
 	folderActions,
 	rowMenu,
 	blankMenu,
@@ -111,8 +102,6 @@ export function AdminEntriesTable({
 	onSelectFolder,
 	onOpenRecord,
 	openRecordId = null,
-	onRestore,
-	onPermanentDelete,
 	onPageChange,
 	onPageSizeChange,
 	onRetry,
@@ -122,13 +111,11 @@ export function AdminEntriesTable({
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
-	const isTrash = mode === "trash";
 	const isRecord = site.isItemCollection(collection);
 	const columns = useListColumns({ collection, columnSettings, onColumnSettingsChange });
 	const { order, visibility, scrollRef } = columns;
-	// The trash is a list of what was trashed and when, whatever columns the list has.
-	const shown = isTrash ? TRASH_COLUMNS : columns.shown;
-	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
+	const shown = columns.shown;
+	const showFolderBesideTitle = !explorer && !isRecord && folders.length > 0 && visibility.folder === false;
 	const head: ListHeadColumn[] = shown.map((column) => {
 		const sortField = columnConfig(site, collection, column).sortField;
 		const menu = columnMenuOf(site, collection, column);
@@ -150,18 +137,12 @@ export function AdminEntriesTable({
 				) : undefined,
 		};
 	});
-	const off = isTrash ? [] : hiddenColumns(order, visibility);
+	const off = hiddenColumns(order, visibility);
 	const add = {
 		label: t("column.add"),
 		columns: off.map((column) => ({ id: column, label: columnLabel(site, collection, column) })),
 		onAdd: (column: AdminListColumn) => columns.toggle(column, true),
 	};
-	const titles = useFilterTitles(state);
-	const liveChips = filterChipsOf(site, state, titles);
-	// While a column's menu is open the chips row holds the chips it had when the menu opened (or stays absent): a row that appears or goes pushes the head
-	// and the menu under the pointer. The rows, the counts, the dots and the ticks keep following the filters.
-	const [frozenChips, setFrozenChips] = useState<typeof liveChips | null>(null);
-	const chips = frozenChips ?? liveChips;
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
 		const target = event.target as HTMLElement;
@@ -189,19 +170,6 @@ export function AdminEntriesTable({
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0}>
 			<Box width="full" shrink={false}>
-				{chips.length > 0 && (
-					<ChipRow>
-						{chips.map((chip) => (
-							<Chip
-								key={chip.key}
-								onRemove={() => onStateChange(chip.clear)}
-								removeLabel={t("listMenu.chipRemove", { label: chip.label })}
-							>
-								{chip.label}
-							</Chip>
-						))}
-					</ChipRow>
-				)}
 				{errorMessage && (
 					<Box paddingTop={12}>
 						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
@@ -214,21 +182,20 @@ export function AdminEntriesTable({
 					<Table
 						container="none"
 						layout="fixed"
-						columns={[...shown.map((column) => columnSize(site, collection, column)), actionsSize(isTrash)]}
+						columns={[...shown.map((column) => columnSize(site, collection, column)), ACTIONS_SIZE]}
 					>
 						{picking ? (
 							bulkBar({ selectAll, colSpan: shown.length + 1 })
 						) : (
 							<ListHead
 								columns={head}
-								end={actionsSize(isTrash)}
+								end={ACTIONS_SIZE}
 								add={add}
 								selectAll={selectAll}
 								moveLabel={t("list.columnMove")}
 								onPlace={columns.place}
 								onStep={columns.step}
 								onPreview={columns.setPreview}
-								onMenuOpenChange={(open) => setFrozenChips(open ? liveChips : null)}
 							/>
 						)}
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
@@ -260,7 +227,7 @@ export function AdminEntriesTable({
 											<TableRow
 												selected={selectedIds.has(item.id) || item.id === openRecordId}
 												aria-current={item.id === openRecordId ? "true" : undefined}
-												draggable={!isTrash}
+												draggable
 												onDragStart={(event) => {
 													// Dragging a selected row moves the whole selection; otherwise just this row.
 													const group = selectedIds.has(item.id)
@@ -283,7 +250,6 @@ export function AdminEntriesTable({
 											item={item}
 											columns={shown}
 											folders={folders}
-											isTrash={isTrash}
 											isRecord={isRecord}
 											showFolderBesideTitle={showFolderBesideTitle}
 											showSlugBesideTitle={visibility.slug === false}
@@ -291,8 +257,6 @@ export function AdminEntriesTable({
 											onSelect={(on) => select(item, on)}
 											menu={rowMenu(item)}
 											onOpenRecord={onOpenRecord}
-											onRestore={onRestore}
-											onPermanentDelete={onPermanentDelete}
 										/>
 									</ActionContextMenu>
 								))
@@ -303,9 +267,7 @@ export function AdminEntriesTable({
 						!errorMessage &&
 						items.length === 0 &&
 						!explorer?.folders.length &&
-						(isTrash ? (
-							<EmptyState title={t("list.emptyTrash")} />
-						) : isFiltered(state) ? (
+						(isFiltered(state) ? (
 							<EmptyState
 								title={t("list.emptyNoMatch")}
 								description={t("list.emptyNoMatchHint")}

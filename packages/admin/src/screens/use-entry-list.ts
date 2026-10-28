@@ -14,6 +14,7 @@ import { useAdminRouter, useAdminSearchParams } from "../router";
 import { bulkBarMessages } from "./entries/bulk-bar.messages";
 import { toSelection } from "./entries/bulk-model";
 import { copyTitle } from "./entries/entry-form";
+import { trashConfirm, trashSubjectOfRow } from "./entries/lifecycle-confirm";
 import { actionTargets, rowMenuActions } from "./list-row-menu";
 import {
 	isExplorerMode,
@@ -27,23 +28,21 @@ import type { MenuAction } from "./shared/action-menu";
 import { useConfirm } from "./shared/confirm-dialog";
 import type { DraggedEntry } from "./shared/entry-drag";
 import { nounVars } from "./shared/noun.messages";
-import { useFolderActions } from "./shared/use-folder-actions";
+import { isInsideFolder, useFolderActions } from "./shared/use-folder-actions";
 import { useTaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntryMutations } from "./use-entry-mutations";
 import { useRecordPanel } from "./use-record-panel";
-
-export type ListMode = "list" | "trash";
 
 /**
  * List state in the address bar. When the address has no page size or sort, uses the saved per-collection settings,
  * and saves when sort, page size or column settings change.
  */
-function useListState(mode: ListMode) {
+function useListState() {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const router = useAdminRouter();
 	const searchParams = useAdminSearchParams();
-	const basePath = mode === "trash" ? site.adminHref("/trash") : site.adminHref();
+	const basePath = site.adminHref();
 	const parsed = useMemo(
 		() => parseListState(site, new URLSearchParams(searchParams.toString())),
 		[searchParams, site],
@@ -58,21 +57,15 @@ function useListState(mode: ListMode) {
 	const preferences = preferencesQuery.data ?? null;
 
 	const collectionPrefs: CollectionPreferences = preferences?.collections?.[parsed.collection] ?? {};
-	const isTrash = mode === "trash";
-	// The trash starts with what was trashed last, and keeps no sort of its own in the settings: the list's saved sort is not its.
-	const sortPrefs = isTrash ? undefined : collectionPrefs.sort;
+	const sortPrefs = collectionPrefs.sort;
 	const state: ListState = useMemo(
 		() => ({
 			...parsed,
 			pageSize: parsed.explicit.pageSize ? parsed.pageSize : (collectionPrefs.pageSize ?? parsed.pageSize),
-			sortField: parsed.explicit.sort
-				? parsed.sortField
-				: isTrash
-					? "trashedAt"
-					: (sortPrefs?.field ?? parsed.sortField),
+			sortField: parsed.explicit.sort ? parsed.sortField : (sortPrefs?.field ?? parsed.sortField),
 			sortDirection: parsed.explicit.sort ? parsed.sortDirection : (sortPrefs?.direction ?? parsed.sortDirection),
 		}),
-		[parsed, collectionPrefs, sortPrefs, isTrash],
+		[parsed, collectionPrefs, sortPrefs],
 	);
 
 	const navigate = useCallback(
@@ -109,10 +102,9 @@ function useListState(mode: ListMode) {
  * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
-function useEntriesData(state: ListState, mode: ListMode, ready: boolean, showsFolders: boolean) {
+function useEntriesData(state: ListState, ready: boolean, showsFolders: boolean) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const isTrash = mode === "trash";
 	const collection = state.collection;
 
 	const foldersQuery = useQuery({
@@ -122,7 +114,7 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean, showsF
 	});
 	const folders = useMemo(() => (showsFolders ? (foldersQuery.data ?? []) : []), [showsFolders, foldersQuery.data]);
 
-	const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
+	const apiQuery = listStateToApiQuery(site, state).toString();
 	const listKey = entriesKeys.list(apiQuery);
 	const entriesQuery = useQuery({
 		queryKey: listKey,
@@ -162,26 +154,25 @@ function explorerOf(state: ListState, folders: readonly Folder[], showsFolders: 
 }
 
 /**
- * State, data and actions of the list and trash screens. Draws no UI pieces.
+ * State, data and actions of the list screen. Draws no UI pieces.
  * Shared by the sidebar folder navigation (list screen) and the body.
  */
-export function useEntryList(mode: ListMode) {
+export function useEntryList() {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
 	const router = useAdminRouter();
 	const queryClient = useQueryClient();
-	const isTrash = mode === "trash";
-	const { state, ready, update, columnSettings, savePreferences } = useListState(mode);
+	const { state, ready, update, columnSettings, savePreferences } = useListState();
 	const collection = state.collection;
 	const isRecord = site.isItemCollection(collection);
 	const isContent = site.isDocumentCollection(collection);
 	// The one answer to "does this list show folders": the collection uses them (the rule the server checks every folder write against) and this is
-	// not the trash. Folder menus, dialogs, drop targets and the bulk move all hang off `folders` below, which is `null` where this is false.
-	const showsFolders = site.foldersEnabled(collection) && !isTrash;
-	const options = useTaxonomyOptions(collection, !isTrash);
+	// Folder menus, dialogs, drop targets and the bulk move all hang off `folders` below, which is `null` where this is false.
+	const showsFolders = site.foldersEnabled(collection);
+	const options = useTaxonomyOptions(collection);
 
-	const data = useEntriesData(state, mode, ready, showsFolders);
+	const data = useEntriesData(state, ready, showsFolders);
 	const { items, folders } = data;
 
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -193,7 +184,6 @@ export function useEntryList(mode: ListMode) {
 	const [exportIds, setExportIds] = useState<string[] | null>(null);
 	const { recordTarget, openRecord, showRecord, closeRecord, setRecordDirty, guardDialog } = useRecordPanel({
 		collection,
-		mode,
 		confirmDiscard,
 	});
 
@@ -207,16 +197,19 @@ export function useEntryList(mode: ListMode) {
 				setSelectedIds(new Set(results.filter((result) => !result.ok).map((result) => result.id)));
 		},
 	});
-	const { bulk, restore, invalidateEntries } = mutations;
+	const { bulk, invalidateEntries } = mutations;
 
 	const folderActions = useFolderActions({
 		collection,
 		folders,
-		onChanged: async (deletedId) => {
+		onChanged: async (change) => {
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list(collection) });
-			// If the folder being viewed was deleted, go back to the all view.
-			if (deletedId && state.folder === deletedId) update({ folder: "all" });
-			else await invalidateEntries();
+			// If the folder being viewed (or one inside it) went to the trash, go up to the folder it was in, or to the all view.
+			const { deleted } = change ?? {};
+			if (deleted && state.folder !== "all" && isInsideFolder(folders, state.folder, deleted.id)) {
+				update({ folder: deleted.parentId ?? "all" });
+			}
+			await invalidateEntries();
 		},
 	});
 
@@ -224,23 +217,21 @@ export function useEntryList(mode: ListMode) {
 		void bulk(
 			"folder.move",
 			t("bulk.move"),
-			entries.map((entry) => ({ ...entry, title: items.find((item) => item.id === entry.id)?.title })),
+			entries.map((entry) => {
+				const row = items.find((item) => item.id === entry.id);
+				return { ...entry, title: row?.title, folderId: row?.folderId };
+			}),
 			{ folderId },
 		);
 
 	const titleOf = (targets: BulkSelection[]) => `'${targets[0]?.title || tc("untitled")}'`;
 
+	/** Moves to the trash at once; a published entry (or one with a published translation) asks first, because it leaves the site. */
 	const confirmTrash = async (targets: BulkSelection[]) => {
-		const ok = await confirm({
-			title: tc("lifecycle.trash"),
-			description:
-				targets.length === 1
-					? t("trash.askOne", { title: titleOf(targets) })
-					: t("trash.askMany", { count: targets.length }),
-			confirmLabel: tc("lifecycle.trash"),
-			destructive: true,
-		});
-		if (ok) await bulk("trash", tc("lifecycle.trash"), targets);
+		const rows = targets.flatMap((target) => items.filter((item) => item.id === target.id));
+		const ask = trashConfirm(site, collection, rows.map(trashSubjectOfRow));
+		if (ask && !(await confirm(ask))) return;
+		await bulk("trash", tc("lifecycle.trash"), targets);
 	};
 
 	const tb = useTranslator(bulkBarMessages);
@@ -263,19 +254,6 @@ export function useEntryList(mode: ListMode) {
 			confirmLabel: tc("lifecycle.archive"),
 		});
 		if (ok) await bulk("archive", tc("lifecycle.archive"), targets);
-	};
-
-	const confirmPermanentDelete = async (targets: BulkSelection[]) => {
-		const ok = await confirm({
-			title: tc("lifecycle.deletePermanently"),
-			description:
-				targets.length === 1
-					? t("delete.askOne", { title: titleOf(targets) })
-					: t("delete.askMany", { count: targets.length }),
-			confirmLabel: tc("lifecycle.deletePermanently"),
-			destructive: true,
-		});
-		if (ok) await bulk("permanentDelete", tc("lifecycle.deletePermanently"), targets);
 	};
 
 	const duplicateMutation = useCmsMutation<ListEntriesItem, EntryWriteResult>({
@@ -302,31 +280,26 @@ export function useEntryList(mode: ListMode) {
 		rowMenuActions(
 			site,
 			actionTargets(item, items, selectedIds),
-			{ mode, isRecord, isContent, folders: showsFolders ? folders : null, collection },
+			{ isRecord, isContent, folders: showsFolders ? folders : null, collection },
 			{
 				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
 				openRecord: (target) => void openRecord({ collection, id: target.id }),
 				duplicate: (target) => duplicate(target),
-				restore: (targets) => void restore(targets),
 				confirmPublish: (targets) => void confirmPublish(targets),
 				exportEntries: (ids) => setExportIds(ids),
 				confirmTrash: (targets) => void confirmTrash(targets),
 				confirmArchive: (targets) => void confirmArchive(targets),
-				confirmPermanentDelete: (targets) => void confirmPermanentDelete(targets),
 				bulk: (op, label, targets, params) => void bulk(op, label, targets, params),
 			},
 		);
 
-	/** Delete key on a row. On the list it moves to trash; in trash it asks about permanent delete. */
+	/** Delete key on a row: moves it to the trash. */
 	const onDeleteKey = (item: ListEntriesItem) => {
-		const targets = actionTargets(item, items, selectedIds).map(toSelection);
-		if (isTrash) void confirmPermanentDelete(targets);
-		else void confirmTrash(targets);
+		void confirmTrash(actionTargets(item, items, selectedIds).map(toSelection));
 	};
 
 	return {
-		mode,
 		state,
 		update,
 		label: site.COLLECTION_DEFINITIONS[collection].label,
@@ -335,7 +308,7 @@ export function useEntryList(mode: ListMode) {
 		savePreferences,
 		data,
 		/**
-		 * The folders of this list and what can be done with them; `null` where the list shows no folders (a collection without folders, the trash).
+		 * The folders of this list and what can be done with them; `null` where the list shows no folders (a collection without folders).
 		 * Every folder entry point (the sidebar tree, folder rows, the blank-area and row menus, the bulk move, dropping rows on a folder) reads this,
 		 * so none of them can offer folders the server would refuse.
 		 */
@@ -351,7 +324,7 @@ export function useEntryList(mode: ListMode) {
 		showRecord,
 		closeRecord,
 		setRecordDirty,
-		/** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
+		/** Confirm dialogs of this list (move to trash, archive, discard changes). Render once per screen. */
 		confirmDialog,
 		/** The discard dialog of a link clicked while the panel has changes. Render once per screen. */
 		guardDialog,
@@ -365,8 +338,6 @@ export function useEntryList(mode: ListMode) {
 		createNew,
 		rowMenu,
 		onDeleteKey,
-		restore,
-		confirmPermanentDelete: (targets: BulkSelection[]) => void confirmPermanentDelete(targets),
 	};
 }
 

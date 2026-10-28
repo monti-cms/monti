@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/site";
+import type { MediaTrashResult, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** One item of the media list API. */
@@ -92,9 +92,9 @@ export const updateMedia = (
 	fallback?: string,
 ) => adminFetch<void>(site, mediaUrl(id), { method: "PATCH", json: patch, fallback });
 
-/** `DELETE /v1/media/:id` */
-export const deleteMedia = (site: Site, id: string, fallback?: string) =>
-	adminFetch<void>(site, mediaUrl(id), { method: "DELETE", fallback });
+/** `POST /v1/media/trash`: moves the files to the trash. A file something uses stays where it is; the answer lists what went and what stayed. */
+export const trashMedia = (site: Site, ids: readonly string[], fallback?: string) =>
+	adminFetch<MediaTrashResult>(site, "/v1/media/trash", { method: "POST", json: { ids }, fallback });
 
 /** `POST /v1/media/cleanup`: removes the files that are stuck deleting. */
 export const cleanupMedia = (site: Site) =>

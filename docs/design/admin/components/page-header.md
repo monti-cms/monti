@@ -20,13 +20,13 @@ The head of a content page. The title (`text-page`) has an ink rule under it. Th
 
 The row under the title (height `height-toolbar`, 48px). What it holds differs by screen. Picking rows does not change it. The bulk bar appears in the column-name row.
 
-- A collection list: only the row of chips for the filters that are on (`.mt-chips`). With no filter on, there is no row, and the column-name row sits directly under the title row. There are no status tabs, no "필터 ▾" (filter) and no "보기 ▾" (view); filtering, sorting and columns are done from the column names (see List).
+- A collection list: nothing, so the column-name row sits directly under the title row; filters that are on show as the dot after a column's name, not as chips. Only a search inside a folder adds the search-place row (`.mt-chips`). There are no status tabs, no "필터 ▾" (filter) and no "보기 ▾" (view); filtering, sorting and columns are done from the column names (see List).
 - The trash mixes kinds, but it has no kind tabs either: its one column-name row is "제목 · 종류 · 버린 날" (title · kind · discarded), and the "종류" column's menu filters by kind ("게시글" (posts) · "메모" (memos) · "카테고리" · "태그" · "미디어", with counts, several at once). Sorting is done from the column names there too.
 - Between the left group and the right group is a short vertical rule.
 
 ### In code
 
-`PageToolbar` (and `PageToolbarEnd` for the right group, `ToolbarDivider` for the short rule). `ChipRow` is the chip row (see Tabs).
+`PageToolbar` (and `PageToolbarEnd` for the right group, `ToolbarDivider` for the short rule). There is no chip row part: filters show as the dot after a column's name.
 
 ## Wide windows
 

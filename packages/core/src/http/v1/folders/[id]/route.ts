@@ -1,12 +1,7 @@
 import { updateFolderBodySchema } from "../../../../core/api";
-import { adminRoute, deleted, ok, readVersionedBody, readVersionQuery } from "../../handler";
+import { adminRoute, ok, readVersionedBody, readVersionQuery } from "../../handler";
 
 type IdParams = { id: string };
-
-/** Preview before deleting: the number of entries directly in it and its child folders. The operation `folders.get`. */
-export const GET = adminRoute<IdParams>(async ({ params, cms, auth }) =>
-	ok(await cms.runOperation("folders.get", { id: params.id }, { auth })),
-);
 
 /** Rename, reorder, and move a folder. Rejects cycles and duplicate names within the same parent. */
 export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
@@ -14,8 +9,10 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	return ok(await cms.store().updateFolder({ id: params.id, ...body }));
 });
 
-/** Deletes a folder. Entries directly in it and child folders move to the parent; entries are not deleted. */
-export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) => {
-	await cms.store().deleteFolder({ id: params.id, expectedVersion: readVersionQuery(request) });
-	return deleted();
-});
+/**
+ * Moves a folder to the trash with everything in it, as one unit (`FolderTrashResult`). An entry folder always goes whole. A media folder goes whole unless a
+ * file in it is in use: then only the unused files go and `folder` is null. Putting it back is `POST /v1/trash/restore`.
+ */
+export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) =>
+	ok(await cms.trashService().trashFolder({ id: params.id, expectedVersion: readVersionQuery(request) })),
+);

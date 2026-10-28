@@ -75,7 +75,7 @@ export interface Entry {
 	/** Who made that change (see `core/actor`). Absent when it was made outside an admin request, or before changes were recorded. */
 	changedBy?: string;
 	publishedAt?: Date;
-	trashedAt?: Date;
+	deletedAt?: Date;
 	workingSlug: string | null;
 	publishedSlug: string | null;
 	working: EntryBody;
@@ -107,7 +107,7 @@ export interface MediaOriginalFile {
 export interface MediaAssetRecord {
 	id: string;
 	folderId: string | null;
-	status: "pending" | "ready" | "failed" | "deleting";
+	status: "pending" | "ready" | "failed" | "deleting" | "trashed";
 	filename: string;
 	mimeType: string | null;
 	byteSize: number | null;
@@ -122,6 +122,8 @@ export interface MediaAssetRecord {
 	createdAt: Date;
 	updatedAt: Date;
 	readyAt: Date | null;
+	/** When the file was moved to the trash (status `trashed`), else `null`. */
+	deletedAt?: Date | null;
 }
 
 export interface CreateMediaAssetInput {
@@ -185,6 +187,8 @@ export interface Folder {
 	name: string;
 	position: number;
 	version: number;
+	/** When the folder was moved to the trash, else `null`. A trashed folder is read only through the trash (`TrashStore`). */
+	deletedAt?: Date | null;
 }
 
 /** A folder as the folder list gives it: with how many things sit directly in it (entries outside the trash, counted once per translation group; or the ready files of a media folder). */
@@ -218,7 +222,7 @@ export interface ListEntriesItem {
 	publishedAt: Date | null;
 	createdAt: Date;
 	updatedAt: Date;
-	trashedAt: Date | null;
+	deletedAt: Date | null;
 	/**
 	 * Filled only in group view (`groupTranslations`). Holds the content in the same translation group that is not in
 	 * the trash (including the source), in `LOCALES` order.
@@ -368,6 +372,8 @@ export interface IncomingReferenceItem {
 	sourceCollection: string;
 	sourceTitle: string | null;
 	sourceSlug: string | null;
+	/** `trashed`: the entry that refers is in the trash (only given with `includeTrashed`). */
+	sourceStatus: EntryStatus;
 	kind: ReferenceKind;
 	isStale: boolean;
 	occurrences: readonly ReferenceOccurrence[];
@@ -397,7 +403,7 @@ export interface ExportSnapshotEntry {
 	updatedAt: Date;
 	publishedAt: Date | null;
 	/** When the entry went to the trash (translations trashed together share it). `null` for an entry that is not in the trash. */
-	trashedAt: Date | null;
+	deletedAt: Date | null;
 	/** Who made the latest change that raised the version, and when. Both `null` for an entry no change was recorded for. */
 	changedBy: string | null;
 	changedAt: Date | null;

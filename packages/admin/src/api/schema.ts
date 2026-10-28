@@ -28,6 +28,8 @@ export interface EditRequest {
 	readonly schema: unknown;
 	readonly transforms?: readonly SuggestedTransform[];
 	readonly renames: readonly RenameInput[];
+	/** Collections the draft removed whose entries are deleted with them (a `dropCollection` each). */
+	readonly dropCollections?: readonly string[];
 }
 
 export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSignal) =>
@@ -40,7 +42,7 @@ export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSi
 export const saveSchema = (
 	site: Site,
 	request: EditRequest & { readonly baseHash: string; readonly acknowledged: readonly string[] },
-) =>
+): Promise<SavedSchema | { saved: false; reason: "unchanged" }> =>
 	adminFetch<SavedSchema | { saved: false; reason: "unchanged" }>(site, "/v1/schema", {
 		method: "PUT",
 		json: request,

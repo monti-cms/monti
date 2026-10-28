@@ -1,12 +1,23 @@
+import type { FolderContents, MediaTrashResult, TrashListParams, TrashTarget } from "../trash";
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
 import type { ClaimedDelivery, ContentChangeKind, EventDelivery, EventDeliveryCounts, EventLogState } from "./events";
 import type {
 	AppliedSchemaChange,
 	ApplySchemaChangeParams,
 	BodyCursor,
+	CollectionFootprint,
 	ScannedBody,
 	SchemaState,
 } from "./schema-change";
+import type {
+	DeleteTrashedOutcome,
+	FolderRestoreOutcome,
+	FolderTrashOutcome,
+	TrashListRead,
+	TrashUnit,
+	UnlinkOutcome,
+	UnlinkParams,
+} from "./trash";
 import type {
 	BodyTemplate,
 	CompleteMediaAssetInput,
@@ -109,8 +120,11 @@ export interface EntryStore {
 	resolveLinkTargets(params: {
 		addresses: readonly { collection: string; slug: string; locale?: string }[];
 	}): Promise<{ collection: string; slug: string; locale: string; entryId: string }[]>;
-	/** Field relations and body references that point at an entry, split into draft and published. */
-	getIncomingReferences(params: { targetId: string }): Promise<IncomingReferenceItem[]>;
+	/**
+	 * Field relations and body references that point at an entry, split into draft and published. Entries in the trash are left out unless `includeTrashed`
+	 * (the trash shows what points at a trashed item, trashed entries included).
+	 */
+	getIncomingReferences(params: { targetId: string; includeTrashed?: boolean }): Promise<IncomingReferenceItem[]>;
 	/**
 	 * Slugs already used in the same collection and language: current, reserved, former and deleted-entry slugs, which are the same slugs that cause
 	 * a `slug_conflict` on save. An empty `slugs` returns an empty set.
@@ -130,9 +144,18 @@ export interface LifecycleStore {
 	archiveEntry(params: { id: string; expectedVersion: number }): Promise<Entry>;
 	/** Archived to draft. */
 	unarchiveEntry(params: { id: string; expectedVersion: number }): Promise<Entry>;
+	/** Discards an entry (with its translations) even while others point at it. */
 	trashEntry(params: { id: string; expectedVersion: number }): Promise<Entry>;
-	/** A record collection is published again on restore, so it needs its prepared draft (`snapshot`). */
-	restoreEntry(params: { id: string; expectedVersion: number; snapshot?: PreparedSnapshot }): Promise<Entry>;
+	/**
+	 * A record collection is published again on restore, so it needs its prepared draft (`snapshot`). An entry from a trashed folder goes to the live folder of
+	 * the same path, and `onPlaced` is told whether a folder had to be made again.
+	 */
+	restoreEntry(params: {
+		id: string;
+		expectedVersion: number;
+		snapshot?: PreparedSnapshot;
+		onPlaced?: (placed: { recreated: boolean }) => void;
+	}): Promise<Entry>;
 	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
 }
 
@@ -165,10 +188,9 @@ export interface FolderStore {
 		parentId?: string | null;
 		position?: number;
 	}): Promise<Folder>;
-	/** Moves the folder's entries and child folders up to its parent, then deletes it. */
-	deleteFolder(params: { id: string; expectedVersion?: number }): Promise<void>;
-	getFolderContents(params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }>;
-	/** Every folder of a collection (or of the media library), each with the number of things directly in it. */
+	/** What a live folder holds, its subfolders included (the entries once per translation group, the published ones, the media files and those in use). */
+	getFolderContents(params: { id: string }): Promise<FolderContents>;
+	/** Every live folder of a collection (or of the media library), each with the number of things directly in it. Discarding a folder is `TrashStore.trashFolder`. */
 	listFolders(params: { collection: string }): Promise<FolderListItem[]>;
 }
 
@@ -215,12 +237,50 @@ export interface MediaMetadataStore {
 	getMediaAsset(id: string): Promise<MediaAssetRecord | null>;
 	/** The ready media files stored under these keys (the keys of public URLs). A key no ready file holds is left out. Core turns image URLs of an imported body into media ids with it. */
 	findReadyMediaByStorageKeys(params: { keys: readonly string[] }): Promise<{ id: string; storageKey: string }[]>;
-	/** Delete step 1: checks the media is not in use and sets it to `deleting`. */
-	beginMediaDelete(id: string): Promise<MediaAssetRecord>;
-	/** Delete step 2: removes the row after the file was deleted. */
+	/** Removes the row of a file after its stored files were deleted: a trashed file deleted for good, an unfinished upload, or a delete left half done. */
 	finalizeMediaDelete(id: string): Promise<void>;
 	/** Incomplete and failed uploads older than the cutoff time. */
 	listStaleUploads(params: { before: Date }): Promise<MediaAssetRecord[]>;
+}
+
+/**
+ * The trash (`core/trash.ts`): discarding folders and media files, putting them back, the list, and deleting for good. Entries are discarded and put back with the
+ * `LifecycleStore` (a restore there also puts an entry from a trashed folder back in a live folder). Every unit carries the time it was discarded; what a folder
+ * took with it carries the same time, so a restore finds it. The rules are in `core/domain/trash.ts`.
+ */
+export interface TrashStore {
+	/**
+	 * Discards a folder with everything in it as one unit. An entry folder always goes whole. A media folder goes whole unless a file in it is in use: then
+	 * only the unused files go (each a unit of its own) and the folder stays (`folder` is `null`).
+	 */
+	trashFolder(params: { id: string; expectedVersion?: number }): Promise<FolderTrashOutcome>;
+	/** The entries a restore of this folder would bring back; an item among them needs its prepared draft in `restoreFolder`. */
+	folderRestoreEntries(params: { id: string }): Promise<{ id: string; collection: string }[]>;
+	/**
+	 * Puts a trashed folder back with what was discarded with it; what was discarded earlier stays in the trash. It goes where it was (made again up its path),
+	 * merging into a live folder of the same name. Entries come back as drafts, an item published again with its prepared draft (`snapshots`).
+	 */
+	restoreFolder(params: {
+		id: string;
+		expectedVersion?: number;
+		snapshots?: ReadonlyMap<string, PreparedSnapshot>;
+	}): Promise<FolderRestoreOutcome>;
+	/** Discards media files; those in use stay. */
+	trashMedia(params: { ids: readonly string[] }): Promise<MediaTrashResult>;
+	/** Puts a trashed file back in its folder, made again where that is in the trash. */
+	restoreMedia(params: { id: string }): Promise<{ media: MediaAssetRecord; recreated: boolean }>;
+	/** The trash: the units at the top, the inside of a trashed folder, or everything that matches a search. */
+	listTrash(params: TrashListParams): Promise<TrashListRead>;
+	/** The units at the top of the trash with the day each was discarded, for emptying and the purge. */
+	listTrashUnits(): Promise<TrashUnit[]>;
+	/**
+	 * Deletes trashed units for good, one transaction each. A unit that an entry outside it points at from a relation field stays (`in_use` with those entries);
+	 * a body link never holds one back. A unit held back by another unit of the same request is tried again after the others. The stored files of deleted
+	 * media files are the caller's to delete (`files`), then `finalizeMediaDelete`.
+	 */
+	deleteTrashed(params: { targets: readonly TrashTarget[] }): Promise<DeleteTrashedOutcome>;
+	/** Takes entries out of the relation fields of every entry that is not one of them, in the working and the published bodies. */
+	unlinkReferences(params: UnlinkParams): Promise<UnlinkOutcome>;
 }
 
 /** Body templates picked from "New post". */
@@ -274,6 +334,15 @@ export interface SchemaChangeStore {
 		after?: BodyCursor;
 		limit?: number;
 	}): Promise<{ bodies: readonly ScannedBody[]; next: BodyCursor | null }>;
+	/**
+	 * What each of the collections holds: entries (the trashed ones counted too), translations, folders and addresses. With `detail`, also what points into it from
+	 * other collections (`incoming`: relation fields, which block a drop, and body links, which do not). Read-only; a collection the store holds nothing of counts zero.
+	 */
+	collectionFootprint(params: {
+		collections: readonly string[];
+		detail?: boolean;
+		sampleSize?: number;
+	}): Promise<Readonly<Record<string, CollectionFootprint>>>;
 	/**
 	 * Runs the transforms that are not recorded yet over the bodies of `collections`, records them, and records the schema and its version, in one transaction under the
 	 * lock the migrations use, so a second run (or a concurrent one) runs nothing again. `version` and `updated_at` of entries and bodies stay as they are, and
@@ -359,6 +428,7 @@ export interface ContentStore
 		LifecycleStore,
 		ListStore,
 		FolderStore,
+		TrashStore,
 		PublicReadStore,
 		MediaMetadataStore,
 		TemplateStore,

@@ -39,10 +39,14 @@ function DropdownMenuContent({
 	side = "bottom",
 	sideOffset = 4,
 	anchor,
+	width = "menu",
 	className,
 	...props
 }: MenuPrimitive.Popup.Props &
-	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor">) {
+	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
+		/** `menu` (240px, growing for a longer row) or `panel` (300px, for a menu of whole lines such as the list of unsaved changes). */
+		width?: "menu" | "panel";
+	}) {
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
@@ -59,7 +63,10 @@ function DropdownMenuContent({
 						MENU_CARD,
 						"p-monti-6",
 						MENU_MOTION,
-						"z-50 max-h-(--available-height) w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))] overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						"z-50 max-h-(--available-height) overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						width === "panel"
+							? "w-monti-panel max-w-(--available-width)"
+							: "w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))]",
 						className,
 					)}
 					{...props}
@@ -86,19 +93,34 @@ function DropdownMenuItem({
 	className,
 	variant = "default",
 	swatch = false,
+	caption,
+	children,
 	...props
 }: MenuPrimitive.Item.Props & {
 	variant?: "default" | "danger";
 	/** A small square row in a grid of rows (a color sample), its content centered. */
 	swatch?: boolean;
+	/** A second line under the name that says what the row leaves alone ("The Korean original stays"), small and faint. */
+	caption?: React.ReactNode;
 }) {
 	return (
 		<MenuPrimitive.Item
 			data-slot="dropdown-menu-item"
 			data-variant={variant}
-			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", className)}
+			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", caption && "items-start", className)}
 			{...props}
-		/>
+		>
+			{caption ? (
+				<span className="flex min-w-0 flex-col items-start gap-monti-2">
+					<span>{children}</span>
+					<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
+						{caption}
+					</span>
+				</span>
+			) : (
+				children
+			)}
+		</MenuPrimitive.Item>
 	);
 }
 

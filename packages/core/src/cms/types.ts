@@ -19,6 +19,7 @@ import type { CmsEvents } from "../services/events";
 import type { MediaService } from "../services/media-service";
 import type { PreferencesService } from "../services/preferences-service";
 import type { HookSource } from "../services/reactions";
+import type { TrashService } from "../services/trash-service";
 import type { Site } from "../site";
 
 /** The content service of any site: input is checked at run time only. */
@@ -126,6 +127,8 @@ export interface Cms<
 	bulkService(): BulkService;
 	/** Deleting media files and cleaning up uploads that never completed. */
 	mediaService(): MediaService;
+	/** The trash: discarding folders and media, the list, restoring, deleting for good, and unlinking. */
+	trashService(): TrashService;
 	/** The admin's saved settings (list columns, sort, editor layout), per user. */
 	preferencesService(): PreferencesService;
 	/** Whether the server config has a media store. Without one, the admin hides the media menu and uploads. */

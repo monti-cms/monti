@@ -16,20 +16,20 @@ States (`mode`, default "처음 화면"):
 | State | Shows | Used in |
 |---|---|---|
 | "처음 화면" | The default list: post rows, status, title, address, tags, language, modified date; 25 per page. | 1.01, 2.01, 2.02, 2.06, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26 |
-| "찾는 중" | Search text typed ("리액트"); the list is cut to the matches and a search chip shows. | - |
+| "찾는 중" | Search text typed ("리액트"); the list is cut to the matches; the words stay in the search box, with no chip. | - |
 | "여러 개 선택" | Two rows selected. A bulk bar replaces the column header: request, publish, archive, move to folder, change, clear selection. | - |
 | "바꾸기 메뉴" | Bulk bar with the "바꾸기" menu open: tags with a tri-state mark (all selected, some such as 1/2, none). | 7.10 |
 | "어시스턴트가 거름" | The assistant filtered the list; the filter chip "요약 비어 있음" is blue and two rows remain. | 2.03, 2.11, 2.16 |
 | "거른 뒤 선택" | The assistant-filtered list with both rows selected by the user. | - |
 | "AI가 고름" | Two rows selected by the assistant (blue) with the bulk bar. | 2.10 |
-| "상태 메뉴" | Status column menu: published, editing, draft, archived with counts; a chip "상태: 수정 중" and a dot on the column name; hide column. | 7.04 |
-| "여러 필터" | Several filters at once: status "수정 중, 초안" and modified date "최근 30일", one chip each, dots on both column names. | 7.04e |
+| "상태 메뉴" | Status column menu: published, editing, draft, archived with counts; a dot on the column name; hide column. | 7.04 |
+| "여러 필터" | Several filters at once: status "수정 중, 초안" and modified date "최근 30일", a dot on each column name and no chip row. | 7.04e |
 | "태그 메뉴" | Tag column menu: tag search, "없음" on top, each tag with its post count, hide column. | 7.04b |
-| "언어 메뉴" | Language column menu: languages with counts (KO, EN, JA) and the translation filter (none, source changed, up to date); chip "번역: 원문 바뀜". | 3.12, 7.04c |
-| "수정일 메뉴" | Modified-date column menu: newest first, oldest first, today, last 7 days, last 30 days, pick a range; chip for the range. | 7.05 |
+| "언어 메뉴" | Language column menu: languages with counts (KO, EN, JA) and the translation filter (none, source changed, up to date); a dot on the column name. | 3.12, 7.04c |
+| "수정일 메뉴" | Modified-date column menu: newest first, oldest first, today, last 7 days, last 30 days, pick a range; a dot on the column name. | 7.05 |
 | "기간 고르기" | The range calendar opens beside the date menu; first click starts the range. | 7.05b |
-| "기간 걸림" | Second click applied: the chip reads "수정한 날: 10. 05 – 10. 16" and the calendar stays open showing the range. | 7.05c |
-| "검색 설명 메뉴" | SEO description column (turned on with +) menu: "비어 있음" (empty); chip "검색 설명 비어 있음". | 7.04d |
+| "기간 걸림" | Second click applied: the column has its dot and the calendar stays open showing the range. | 7.05c |
+| "검색 설명 메뉴" | SEO description column (turned on with +) menu: "비어 있음" (empty); a dot on the column name. | 7.04d |
 | "제목 메뉴" | Title column menu: ascending, descending. | 7.01 |
 | "제목 오름차순" | Sorted ascending: the menu is closed and the title name is ink-colored with an up arrow. | 7.01b |
 | "열 추가" | The + menu at the end of the header lists only the hidden columns. | 7.02 |
@@ -314,11 +314,11 @@ States (`stage`, default "보통"):
 
 | State | Shows | Used in |
 |---|---|---|
-| "보통" | The trash: head row title, kind, deleted date; rows with days left; folders as one row (default). | - |
+| "보통" | The trash: one head row title, kind, deleted date (the cell shows the day alone, "10. 27"); rows with days left; folders as one row (default). | - |
 | "종류 메뉴" | The kind column menu: every kind with its count, several choosable, stays open. | 5.11 |
 | "행 메뉴" | Right-click menu on a row: restore, permanent delete. | 5.16 |
-| "어시스턴트" | Items the assistant discarded are marked "✦ 버림". | 5.15 |
-| "미디어" | Filtered by kind "미디어": chip "종류: 미디어 ×" and media rows only. | 5.17 |
+| "어시스턴트" | Items the assistant discarded have a ✦ before their day. | 5.15 |
+| "미디어" | Filtered by kind "미디어": a dot after "종류" and media rows only; no chip row. | 5.17 |
 | "항목 열기" | Side panel for a trashed item (a tag): read-only, posts that point to it, restore, delete. | 5.19 |
 | "미디어 열기" | Side panel for a trashed media file: preview, details, used in, restore, delete. | 5.20 |
 | "복원함" | Notice after restore: back as a draft, with open. | 5.21 |
@@ -331,7 +331,7 @@ States (`stage`, default "보통"):
 | "빔" | Empty trash message. | 5.28 |
 | "휴지통 폴더 안" | Inside a deleted folder: contents, path, folder restore, delete. | 5.12 |
 | "폴더에서 하나 복원" | One post restored from a deleted folder: folder recreated, post back as draft. | 5.13 |
-| "휴지통 찾기" | Search in the trash includes items inside deleted folders, with their path. | 5.14 |
+| "휴지통 찾기" | Search in the trash includes items inside deleted folders, with their path; the words stay in the search box, with no chip. | 5.14 |
 
 <a id="imageinsert"></a>
 ## ImageInsert: "글 편집기 · 이미지 넣기"
@@ -571,10 +571,9 @@ States (`stage`, default "보통"):
 | "주소 바꿈" | Basic tab: public address edited. | 4.13 |
 | "주소 검토" | Review: address before and after, published posts affected. | 4.14 |
 | "지우기 전" | Basic tab with the delete action and counts. | 4.15 |
-| "지울 예정" | Collection struck through until saved, with undo. | 4.16 |
-| "지우기 검토" | Delete review: data deleted, pointers blocking, cut links. | 4.17 |
-| "지우기 확인" | Type the identifier to confirm; "지우고 적용". | 4.18 |
-| "지운 뒤" | After delete: notice with the post count. | 4.19 |
+| "지울 예정" | The collection left the list at once; "바뀐 곳 ▾" lists it with undo, and a notice has undo. | 4.16 |
+| "지우기 검토" | Delete review: what goes (links cut on apply) and the export; "지우고 적용" on. | 4.17 |
+| "지운 뒤" | After the save: the notice "적용됐어요" (one line for every save) and the collection gone. | 4.18 |
 | "운영 고침" | Production with the GitHub plugin: field added, button "PR 만들기". | 11.10 |
 | "운영 제안" | A field proposal from the assistant marked "✦ 제안". | 11.11 |
 | "운영 검토" | Review with the file change to monti.schema.ts and "PR 만들기". | 11.12 |

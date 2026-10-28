@@ -690,7 +690,8 @@ describe("status changes, duplicate and delete", () => {
 		const { editor, client } = await opened({ server: translation });
 		client.get.mockClear();
 		const result = await editor().changeStatus("trash");
-		expect(result).toEqual({ ok: true, value: { entry: null, openEntryId: "entry-1" } });
+		// The version after the trash is told, so the undo can name it.
+		expect(result).toEqual({ ok: true, value: { entry: null, openEntryId: "entry-1", version: ENTRY.version + 1 } });
 		expect(client.get).not.toHaveBeenCalled();
 	});
 

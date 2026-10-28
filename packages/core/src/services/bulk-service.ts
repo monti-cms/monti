@@ -33,12 +33,12 @@ export type BulkRequest = {
 };
 
 const RELATION_LIST_OPS: readonly BulkOp[] = ["relation.add", "relation.remove"];
-/** References (usages) that blocked permanent deletion. The trash screen shows them as a reason (e.g. "in use: X"). */
+/** Entries whose relation fields blocked a permanent deletion (`trashed`: the pointing entry is in the trash itself). */
 export type BulkUsage = {
 	readonly entryId: string;
 	readonly title: string | null;
 	readonly collection: string;
-	readonly state: string;
+	readonly trashed: boolean;
 };
 export type BulkItemResult =
 	| {

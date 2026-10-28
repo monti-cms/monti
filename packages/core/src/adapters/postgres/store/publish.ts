@@ -15,7 +15,6 @@ import type { Entry } from "../../../core/store/types";
 import { type Issue, type PreparedSnapshot, type Reference, ServiceError } from "../../../core/types";
 import type { StoreContext } from "./context";
 import { type AddressRow, loadEntry, lockEntryForUpdate, readBody, readReferences, writeBody } from "./rows";
-import { ROW_COLLECTION, titleExpr } from "./title-sql";
 
 export interface PublishOptions {
 	expectedVersion: number;
@@ -366,54 +365,11 @@ export function createPublishing(ctx: StoreContext) {
 		return references.filter((ref) => ref.kind === "media" || !onlyLinks(ref) || found.has(ref.targetId.toLowerCase()));
 	};
 
-	/**
-	 * Rejects if other content references this entry (both draft and published).
-	 * References from a `trashed` source can be ignored only on permanent delete, so the caller chooses.
-	 */
-	const assertNotReferenced = async (
-		client: PoolClient,
-		id: string,
-		options: { ignoreTrashedSources: boolean },
-	): Promise<void> => {
-		const usage = await ctx
-			.db(client)
-			.selectFrom("entry_references as r")
-			.innerJoin("entries as e", "e.id", "r.entry_id")
-			.leftJoin("entry_bodies as b", (join) =>
-				join.onRef("b.entry_id", "=", "r.entry_id").onRef("b.state", "=", "r.state"),
-			)
-			.select([
-				"r.entry_id as source_id",
-				titleExpr(site, "b.metadata", ROW_COLLECTION).as("title"),
-				"e.collection",
-				"r.state",
-			])
-			.distinct()
-			.where("r.target_entry_id", "=", id)
-			.where("r.entry_id", "<>", id)
-			.$if(options.ignoreTrashedSources, (qb) => qb.where("e.status", "<>", "trashed"))
-			.orderBy("source_id")
-			.execute();
-		if (usage.length > 0) {
-			throw new CmsError("Other entries still reference this entry", "in_use", {
-				details: {
-					usages: usage.map((row) => ({
-						entryId: row.source_id,
-						title: row.title,
-						collection: row.collection,
-						state: row.state,
-					})),
-				},
-			});
-		}
-	};
-
 	return {
 		validatePreparedForPublish,
 		checkWithinTransaction,
 		publishWithinTransaction,
 		lockDraftReferenceTargets,
-		assertNotReferenced,
 	};
 }
 

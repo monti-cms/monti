@@ -1,17 +1,9 @@
 "use client";
 
-import { Edit, FolderAdd, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@carbon/icons-react";
-import type { Folder } from "@monti-cms/core/site";
+import { Edit, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@carbon/icons-react";
+import type { Folder, FolderTrashResult } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	AlertDialog,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -22,18 +14,19 @@ import {
 	FormFieldError,
 	Input,
 	Label,
-	List,
-	ListItem,
 	Stack,
-	Text,
+	toast,
 } from "@monti-cms/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
+import { restoreTrash } from "../../api/trash";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import type { MenuAction } from "./action-menu";
+import { useConfirm } from "./confirm-dialog";
+import { deleteMessages } from "./delete.messages";
 import { sharedMessages } from "./messages";
 
 type NameDialog = { mode: "create"; parentId: string | null } | { mode: "rename"; folder: Folder };
@@ -54,25 +47,68 @@ export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
 	return folders.filter((candidate) => !blocked.has(candidate.id) && candidate.id !== folder.parentId);
 }
 
+/** Whether `folderId` is `ancestorId` or lies inside it. A screen that shows a folder which goes to the trash leaves it. */
+export function isInsideFolder(folders: readonly Folder[], folderId: string, ancestorId: string): boolean {
+	const seen = new Set<string>();
+	for (
+		let at: string | null = folderId;
+		at && !seen.has(at);
+		at = folders.find((folder) => folder.id === at)?.parentId ?? null
+	) {
+		if (at === ancestorId) return true;
+		seen.add(at);
+	}
+	return false;
+}
+
 /**
- * Right-click / `⋯` menu of a folder. The sidebar tree and the list's folder rows use the same menu.
- * Move targets are folders excluding itself and its descendants.
+ * What the toast says after a folder went to the trash, and what its button does: an undo for a folder that went whole, and "view" when files that
+ * are in use stayed behind.
+ */
+export function folderTrashNotice(
+	site: Site,
+	folder: Pick<Folder, "name" | "collection">,
+	result: FolderTrashResult,
+): { message: string; action: "undo" | "view" } {
+	const t = site.createTranslator(deleteMessages);
+	const name = folder.name;
+	if (result.folder === null) {
+		// A media folder with files in use stays, and only its other files went.
+		return {
+			message:
+				result.files > 0 ? t("folder.partial", { name, moved: result.files, kept: result.kept }) : t("folder.keptAll"),
+			action: "view",
+		};
+	}
+	const message =
+		folder.collection === "media"
+			? result.files > 0
+				? t("folder.done.files", { name, files: result.files })
+				: t("folder.done.empty", { name })
+			: result.entries > 0
+				? t("folder.done", { name, entries: result.entries })
+				: t("folder.done.empty", { name });
+	return { message, action: "undo" };
+}
+
+/**
+ * Right-click / `⋯` menu of a folder. The list's folder rows and the media library's folders use the same menu: rename, move, and the trash last.
+ * (Subfolders are made with "add folder" inside a folder, not from its menu.) Move targets are folders excluding itself and its descendants.
  */
 export function folderMenuActions(site: Site, folder: Folder, folders: Folder[], actions: FolderActions): MenuAction[] {
 	const t = site.createTranslator(sharedMessages);
-	const tc = site.createTranslator(commonMessages);
+	const td = site.createTranslator(deleteMessages);
 	const targets = moveTargetsFor(folder, folders);
 	return [
-		{ kind: "item", label: tc("addSubfolder"), icon: FolderAdd, onSelect: () => actions.requestCreate(folder.id) },
 		{
 			kind: "item",
-			label: tc("rename"),
+			label: td("folder.menu.rename"),
 			icon: Edit,
 			onSelect: () => actions.requestRename(folder),
 		},
 		{
 			kind: "sub",
-			label: tc("move"),
+			label: td("folder.menu.move"),
 			icon: FolderMoveTo,
 			emptyLabel: t("folder.moveEmpty"),
 			items: [
@@ -97,7 +133,7 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: tc("delete"),
+			label: td("folder.menu.delete"),
 			icon: TrashCan,
 			destructive: true,
 			onSelect: () => void actions.requestDelete(folder),
@@ -106,24 +142,31 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 }
 
 /**
- * Virtual folder create, rename, move and delete. The sidebar tree and the list's folder rows share the same state and dialogs.
- * Delete proceeds after previewing the contents. Posts and child folders directly inside move to the parent, and posts are not deleted.
+ * Virtual folder create, rename, move and delete. The list's folder rows and the media library's folders share the same state and dialogs.
+ * Delete moves the folder with everything inside to the trash as one unit and says so in a toast with an undo. It asks first only when the folder holds
+ * a published entry, which leaves the site.
  */
 export function useFolderActions({
 	collection,
 	folders,
 	onChanged,
+	onViewKept,
 }: {
 	collection: string;
 	folders: Folder[];
-	onChanged: (deletedId?: string) => Promise<void> | void;
+	/** Called after a folder changed. `deleted` is the folder that went to the trash, so a screen showing it (or something inside it) can leave. */
+	onChanged: (change?: { deleted?: Folder }) => Promise<void> | void;
+	/** Shows the files that stayed in a media folder because something uses them (the toast's "View"). */
+	onViewKept?: (folder: Folder) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
+	const td = useTranslator(deleteMessages);
 	const tc = useTranslator(commonMessages);
+	const queryClient = useQueryClient();
+	const { confirm, dialog: confirmDialog } = useConfirm();
 	const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
 	const [name, setName] = useState("");
-	const [deleteDialog, setDeleteDialog] = useState<{ folder: Folder } | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	// Closing the dialog returns focus to the button that opened it. If that button is gone (deleted folder), follow the browser default.
 	const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -159,25 +202,6 @@ export function useFolderActions({
 		setName(folder.name);
 		setNameDialog({ mode: "rename", folder });
 	};
-
-	const requestDelete = (folder: Folder) => {
-		rememberFocus();
-		setError(null);
-		setDeleteDialog({ folder });
-	};
-
-	// What the delete would move to the parent, read while the dialog is open.
-	const contentsQuery = useQuery({
-		queryKey: foldersKeys.contents(deleteDialog?.folder.id ?? ""),
-		queryFn: ({ signal }) => getFolderContents(site, deleteDialog?.folder.id ?? "", signal),
-		enabled: deleteDialog !== null,
-		gcTime: 0,
-		retry: false,
-	});
-	const contents = deleteDialog ? (contentsQuery.data ?? null) : null;
-	const shownError =
-		error ??
-		(deleteDialog && contentsQuery.error ? errorText(site, contentsQuery.error, t("folder.loadFailed")) : null);
 
 	/** Moves a folder to another parent (or the top level). If the same name exists, the server rejects and explains. */
 	const move = useCmsMutation({
@@ -218,28 +242,63 @@ export function useFolderActions({
 		save.mutate(nameDialog);
 	};
 
-	const remove = useCmsMutation({
-		fn: ({ folder }: { folder: Folder }, { site }) =>
-			deleteFolder(site, folder.id, folder.version, t("folder.deleteFailed")),
-		success: (_result, { folder }) =>
-			contents && contents.entryCount + contents.childFolders.length > 0
-				? t("folder.deletedMoved", { name: folder.name, destination: toFolder(folder.parentId) })
-				: t("folder.deleted", { name: folder.name }),
-		failure: t("folder.deleteFailed"),
-		inline: true,
-		onSuccess: (_result, { folder }) => {
-			setDeleteDialog(null);
-			void onChanged(folder.id);
-		},
-		// If a child folder name collides in the parent, guide the user to rename first.
-		onError: (err) => setError(errorText(site, err, t("folder.deleteFailed"))),
-	});
-	const isBusy = save.isPending || remove.isPending;
+	/** Puts a folder back from the trash (the toast's undo). */
+	const undoTrash = async (folder: Folder) => {
+		try {
+			const answer = await restoreTrash(site, [{ type: "folder", id: folder.id }]);
+			if (!answer.every((result) => result.ok)) toast.error(td("undoFailed"));
+		} catch (err) {
+			toast.error(errorText(site, err, td("undoFailed")));
+		}
+		await onChanged();
+	};
 
-	const confirmDelete = () => {
-		if (!deleteDialog) return;
-		setError(null);
-		remove.mutate(deleteDialog);
+	const remove = useCmsMutation<Folder, FolderTrashResult>({
+		fn: (folder, { site }) => deleteFolder(site, folder.id, folder.version, t("folder.deleteFailed")),
+		failure: t("folder.deleteFailed"),
+		onSuccess: (result, folder) => {
+			const notice = folderTrashNotice(site, folder, result);
+			toast(notice.message, {
+				action:
+					notice.action === "undo"
+						? { label: td("undo"), onClick: () => void undoTrash(folder) }
+						: onViewKept
+							? { label: td("view"), onClick: () => onViewKept(folder) }
+							: undefined,
+			});
+			void onChanged({ deleted: folder });
+		},
+	});
+
+	/**
+	 * Moves the folder to the trash. A folder of entries is read first and asks only when it holds a published entry; a media folder never asks
+	 * (files are not public pages). Everything else goes at once.
+	 */
+	const requestDelete = async (folder: Folder) => {
+		if (collection !== "media") {
+			try {
+				const contents = await queryClient.fetchQuery({
+					queryKey: foldersKeys.contents(folder.id),
+					queryFn: ({ signal }) => getFolderContents(site, folder.id, signal),
+					staleTime: 0,
+					gcTime: 0,
+				});
+				if (
+					contents.published > 0 &&
+					!(await confirm({
+						title: td("folder.ask.title", { name: folder.name }),
+						description: td("folder.ask.body", { entries: contents.entries, published: contents.published }),
+						confirmLabel: td("trash.ask.confirm"),
+						destructive: true,
+					}))
+				)
+					return;
+			} catch (err) {
+				toast.error(errorText(site, err, t("folder.loadFailed")));
+				return;
+			}
+		}
+		remove.mutate(folder);
 	};
 
 	const createDirectMutation = useCmsMutation({
@@ -270,8 +329,6 @@ export function useFolderActions({
 		await renameDirectMutation.mutateAsync({ folder, name: trimmed });
 	};
 
-	const destination = deleteDialog ? toFolder(deleteDialog.folder.parentId) : "";
-
 	const dialogs = (
 		<>
 			<Dialog open={nameDialog !== null} onOpenChange={(open) => !open && setNameDialog(null)}>
@@ -298,7 +355,7 @@ export function useFolderActions({
 							void submitName();
 						}}
 					>
-						<FormField data-invalid={Boolean(shownError) || undefined}>
+						<FormField data-invalid={Boolean(error) || undefined}>
 							<Label htmlFor="folder-name" hidden>
 								{t("folder.nameLabel")}
 							</Label>
@@ -307,7 +364,7 @@ export function useFolderActions({
 								autoFocus
 								value={name}
 								maxLength={100}
-								aria-invalid={Boolean(shownError) || undefined}
+								aria-invalid={Boolean(error) || undefined}
 								onChange={(e) => setName(e.target.value)}
 								onKeyDown={(event) => {
 									// While composing Hangul, Enter is the key that finishes the character. Do not submit the form.
@@ -316,56 +373,20 @@ export function useFolderActions({
 									}
 								}}
 							/>
-							{shownError && <FormFieldError>{shownError}</FormFieldError>}
+							{error && <FormFieldError>{error}</FormFieldError>}
 						</FormField>
 						<DialogFormFooter
 							onCancel={() => setNameDialog(null)}
 							cancelLabel={tc("cancel")}
 							submitLabel={tc("save")}
 							busyLabel={tc("saving")}
-							busy={isBusy}
+							busy={save.isPending}
 							disabled={!name.trim()}
 						/>
 					</Stack>
 				</DialogContent>
 			</Dialog>
-
-			<AlertDialog open={deleteDialog !== null} onOpenChange={(open) => !open && setDeleteDialog(null)}>
-				<AlertDialogContent finalFocus={restoreFocus}>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("folder.deleteTitle", { name: deleteDialog?.folder.name ?? "" })}</AlertDialogTitle>
-						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
-					</AlertDialogHeader>
-					{contents ? (
-						<List>
-							<ListItem>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</ListItem>
-							<ListItem>
-								{t("folder.childCount", { count: contents.childFolders.length })}
-								{contents.childFolders.length > 0 &&
-									`: ${contents.childFolders.map((folder) => folder.name).join(", ")}`}
-							</ListItem>
-						</List>
-					) : (
-						!shownError && (
-							<Text as="p" tone="subtle" role="status">
-								{tc("loading")}
-							</Text>
-						)
-					)}
-					{shownError && <FormFieldError>{shownError}</FormFieldError>}
-					<AlertDialogFooter>
-						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
-						<Button
-							type="button"
-							variant="outline-danger"
-							disabled={!contents || isBusy}
-							onClick={() => void confirmDelete()}
-						>
-							{isBusy ? tc("deleting") : tc("delete")}
-						</Button>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{confirmDialog}
 		</>
 	);
 
@@ -385,7 +406,7 @@ export type FolderActions = Pick<
 	"requestCreate" | "requestRename" | "requestDelete" | "moveFolder" | "createFolderDirect" | "renameFolderDirect"
 >;
 
-/** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). For the keydown of a folder row. */
+/** Like a file explorer: F2 opens rename, Delete moves the folder to the trash (asking only if it holds a published entry). For the keydown of a folder row. */
 export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 	return (event: KeyboardEvent) => {
 		if (event.key === "F2") {

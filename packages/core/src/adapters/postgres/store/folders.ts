@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "kysely";
+import { MEDIA_FOLDER_SCOPE } from "../../../core/collections";
 import {
 	assertFolderInCollection,
 	assertFoldersEnabled,
@@ -8,12 +10,15 @@ import {
 } from "../../../core/domain/folders";
 import { CmsError } from "../../../core/store/errors";
 import type { Folder, FolderListItem } from "../../../core/store/types";
+import type { FolderContents } from "../../../core/trash";
 import type { Db } from "../db/kysely";
 import { type StoreContext, withTrx } from "./context";
 import { isTransactionConflict, isUniqueViolation } from "./errors";
+import { subtreeOf } from "./folder-tree";
+import { mediaInUse } from "./media-use";
 import { mapFolderRow } from "./rows";
 
-const COLUMNS = ["id", "collection", "parent_id", "name", "position", "version"] as const;
+const COLUMNS = ["id", "collection", "parent_id", "name", "position", "version", "deleted_at"] as const;
 
 const mapFolderError = (err: unknown) => {
 	// A duplicate name under the same parent asks the user to rename.
@@ -35,25 +40,42 @@ export async function assertFolderTarget(
 ): Promise<void> {
 	if (!folderId) return;
 	assertFoldersEnabled(site, collection);
-	const folder = await db.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
+	// A folder in the trash is no place to put anything.
+	const folder = await db
+		.selectFrom("folders")
+		.select("collection")
+		.where("id", "=", folderId)
+		.where("deleted_at", "is", null)
+		.executeTakeFirst();
 	assertFolderInCollection(folder?.collection, collection);
 }
 
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export function createFolderOps(ctx: StoreContext) {
-	const { site } = ctx;
+	const { site, qSchema } = ctx;
 	const db = ctx.db();
 
-	/** The collection of an existing folder, checked to use folders. */
+	/** The collection of an existing live folder, checked to use folders. */
 	const collectionOf = async (trx: Db, id: string): Promise<string> => {
-		const folder = await trx.selectFrom("folders").select("collection").where("id", "=", id).executeTakeFirst();
+		const folder = await trx
+			.selectFrom("folders")
+			.select("collection")
+			.where("id", "=", id)
+			.where("deleted_at", "is", null)
+			.executeTakeFirst();
 		if (!folder) throw new CmsError("Not found", "not_found");
 		assertFoldersEnabled(site, folder.collection);
 		return folder.collection;
 	};
 
+	/** A parent is a live folder of the same collection: nothing is put under a folder in the trash. */
 	const assertParent = async (trx: Db, parentId: string, collection: string) => {
-		const parent = await trx.selectFrom("folders").select("collection").where("id", "=", parentId).executeTakeFirst();
+		const parent = await trx
+			.selectFrom("folders")
+			.select("collection")
+			.where("id", "=", parentId)
+			.where("deleted_at", "is", null)
+			.executeTakeFirst();
 		assertParentInCollection(parent?.collection, collection);
 	};
 
@@ -76,6 +98,7 @@ export function createFolderOps(ctx: StoreContext) {
 						name: params.name,
 						position: params.position ?? 0,
 						version: 1,
+						deletedAt: null,
 					};
 					await trx
 						.insertInto("folders")
@@ -108,6 +131,7 @@ export function createFolderOps(ctx: StoreContext) {
 						.selectFrom("folders")
 						.select(COLUMNS)
 						.where("id", "=", params.id)
+						.where("deleted_at", "is", null)
 						.forUpdate()
 						.executeTakeFirst();
 					if (!curr) throw new CmsError("Not found", "not_found");
@@ -158,70 +182,45 @@ export function createFolderOps(ctx: StoreContext) {
 			),
 
 		/**
-		 * Deletes a folder. Moves its direct entries and child folders up to the parent. Entries are not deleted.
-		 * If a moved child folder's name collides in the parent, rejects with 409 so the user renames first.
+		 * What a live folder holds before it is discarded, its subfolders included: the entries (once per translation group) with the published ones, the
+		 * folders below it, and the media files with those in use. Only live things count.
 		 */
-		deleteFolder: async (params: { id: string; expectedVersion?: number }): Promise<void> =>
-			withTrx(
-				ctx,
-				async (trx) => {
-					const curr = await trx
-						.selectFrom("folders")
-						.select(["collection", "parent_id", "version"])
-						.where("id", "=", params.id)
-						.forUpdate()
-						.executeTakeFirst();
-					if (!curr) throw new CmsError("Not found", "not_found");
-					assertFoldersEnabled(site, curr.collection);
-					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
-						throw new CmsError("Conflict", "conflict", { serverVersion: curr.version });
-					}
-
-					await trx
-						.updateTable("folders")
-						.set({ parent_id: curr.parent_id })
-						.where("parent_id", "=", params.id)
-						.execute();
-					await trx
-						.updateTable("entries")
-						.set({ folder_id: curr.parent_id })
-						.where("folder_id", "=", params.id)
-						.execute();
-					await trx
-						.updateTable("media_assets")
-						.set({ folder_id: curr.parent_id })
-						.where("folder_id", "=", params.id)
-						.execute();
-					await trx.deleteFrom("folders").where("id", "=", params.id).execute();
-				},
-				{ mapError: mapFolderError },
-			),
-
-		/** Preview before folder deletion: the number of direct entries and child folders. */
-		getFolderContents: async (params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }> => {
-			await collectionOf(db, params.id);
-			const [entries, media, children] = await Promise.all([
-				db
-					.selectFrom("entries")
-					.select((eb) => eb.fn.countAll<string>().as("count"))
-					.where("folder_id", "=", params.id)
-					.executeTakeFirst(),
-				db
+		getFolderContents: async (params: { id: string }): Promise<FolderContents> => {
+			const collection = await collectionOf(db, params.id);
+			const folders = (await subtreeOf(db, qSchema, params.id)).filter((folder) => folder.deleted_at === null);
+			const ids = folders.map((folder) => folder.id);
+			const inFolders = sql<string>`any(${ids}::uuid[])`;
+			if (collection === MEDIA_FOLDER_SCOPE) {
+				const files = await db
 					.selectFrom("media_assets")
-					.select((eb) => eb.fn.countAll<string>().as("count"))
-					.where("folder_id", "=", params.id)
-					.executeTakeFirst(),
-				db
-					.selectFrom("folders")
-					.select(COLUMNS)
-					.where("parent_id", "=", params.id)
-					.orderBy("position", "asc")
-					.orderBy("id", "asc")
-					.execute(),
-			]);
+					.select("id")
+					.where("folder_id", "=", inFolders)
+					.where("status", "=", "ready")
+					.execute();
+				const used = await mediaInUse(
+					db,
+					qSchema,
+					files.map((file) => file.id),
+				);
+				return { entries: 0, published: 0, folders: folders.length - 1, files: files.length, filesInUse: used.size };
+			}
+			// One row per translation group: the source decides whether the group is published.
+			const groups = await db
+				.selectFrom("entries")
+				.select((eb) => [
+					eb.fn.countAll<string>().as("entries"),
+					eb.fn.count<string>("id").filterWhere("status", "=", "published").as("published"),
+				])
+				.where("folder_id", "=", inFolders)
+				.where("status", "<>", "trashed")
+				.where((eb) => eb.or([eb("translation_group_id", "is", null), eb("translation_group_id", "=", eb.ref("id"))]))
+				.executeTakeFirst();
 			return {
-				entryCount: Number(entries?.count ?? 0) + Number(media?.count ?? 0),
-				childFolders: children.map(mapFolderRow),
+				entries: Number(groups?.entries ?? 0),
+				published: Number(groups?.published ?? 0),
+				folders: folders.length - 1,
+				files: 0,
+				filesInUse: 0,
 			};
 		},
 
@@ -252,6 +251,7 @@ export function createFolderOps(ctx: StoreContext) {
 						.as("media_count"),
 				])
 				.where("collection", "=", params.collection)
+				.where("deleted_at", "is", null)
 				.orderBy("parent_id", (order) => order.asc().nullsFirst())
 				.orderBy("position", "asc")
 				.orderBy("id", "asc")

@@ -8,7 +8,6 @@ import type { MenuAction } from "../shared/action-menu";
 const item = (id: string, status: ListEntriesItem["status"] = "draft", changed = false) =>
 	({ id, title: id, status, version: 2, hasUnpublishedChanges: changed, relations: {} }) as ListEntriesItem;
 const context: RowMenuContext = {
-	mode: "list",
 	isRecord: false,
 	isContent: true,
 	folders: [{ id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 }],
@@ -19,12 +18,10 @@ const handlers = (): RowMenuHandlers => ({
 	openInNewTab: vi.fn(),
 	openRecord: vi.fn(),
 	duplicate: vi.fn(),
-	restore: vi.fn(),
 	confirmPublish: vi.fn(),
 	exportEntries: vi.fn(),
 	confirmTrash: vi.fn(),
 	confirmArchive: vi.fn(),
-	confirmPermanentDelete: vi.fn(),
 	bulk: vi.fn(),
 });
 const labels = (actions: MenuAction[]) => actions.map((action) => ("label" in action ? action.label : "—"));
@@ -170,18 +167,5 @@ describe("row menu items", () => {
 		select(actions, "폴더로", "뉴스");
 		expect(on.bulk).toHaveBeenNthCalledWith(1, "folder.move", "옮김", targets, { folderId: null });
 		expect(on.bulk).toHaveBeenNthCalledWith(2, "folder.move", "옮김", targets, { folderId: "f1" });
-	});
-
-	it("trash has only restore and permanent delete", () => {
-		const on = handlers();
-		const actions = rowMenuActions(testSite, [item("a", "trashed")], { ...context, mode: "trash" }, on);
-		const list = labels(actions);
-		expect(list).toContain("복원");
-		expect(list).toContain("영구 삭제");
-		for (const label of ["보관", "폴더로", "태그"]) expect(list).not.toContain(label);
-		select(actions, "영구 삭제");
-		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([
-			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
-		]);
 	});
 });

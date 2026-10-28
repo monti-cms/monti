@@ -13,7 +13,6 @@ function setup(options: { failFor?: readonly string[]; stale?: readonly ReturnTy
 	const deleted: string[] = [];
 	const finalized: string[] = [];
 	const store = {
-		beginMediaDelete: vi.fn(async (id: string) => media(id, { original: { storageKey: "o/key", stagingKey: null } })),
 		finalizeMediaDelete: vi.fn(async (id: string) => {
 			finalized.push(id);
 		}),
@@ -38,14 +37,14 @@ function setup(options: { failFor?: readonly string[]; stale?: readonly ReturnTy
 describe("media service", () => {
 	it("deletes every file of an asset, then its row", async () => {
 		const { service, deleted, finalized } = setup();
-		await service.delete("a");
+		await service.remove(media("a", { original: { storageKey: "o/key", stagingKey: null } }));
 		expect(deleted).toEqual(["media/a.png", "staging/a.png", "o/key"]);
 		expect(finalized).toEqual(["a"]);
 	});
 
 	it("keeps the row when a file cannot be deleted, so the delete can be repeated", async () => {
 		const { service, finalized } = setup({ failFor: ["staging/"] });
-		await expect(service.delete("a")).rejects.toThrow("storage down");
+		await expect(service.remove(media("a"))).rejects.toThrow("storage down");
 		expect(finalized).toEqual([]);
 	});
 

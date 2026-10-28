@@ -380,7 +380,6 @@ export function EntryEditorShell({
 				entry={entry}
 				disabled={isReadOnly}
 				onBeforeCreate={async () => !editor.getSnapshot().hasUnsavedChanges}
-				onTrashTranslation={() => commands.confirmLifecycle("trash")}
 			/>
 		) : null;
 	// The title field is the one with the title role. The label is decided by the site.

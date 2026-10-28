@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorText } from "../../api/client";
-import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
+import { fetchSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
 import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place";
@@ -22,6 +22,7 @@ import { PageBody } from "../shared/page-body";
 import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
+import { schemaCollectionMessages } from "./collection.messages";
 import { CollectionEditor } from "./collection-editor";
 import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
@@ -30,7 +31,7 @@ import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
-import { ReviewDialog } from "./review-dialog";
+import { type Removal, ReviewDialog } from "./review-dialog";
 import { SaveGroup } from "./save-group";
 import {
 	addCollection,
@@ -47,6 +48,7 @@ import {
 	sameJson,
 	setCollection,
 	settingChanges,
+	withoutCollections,
 } from "./schema-model";
 import { SiteEditor } from "./site-editor";
 
@@ -213,6 +215,7 @@ function SchemaEditor({
 	onChanged?: (areas: ChangedAreas | null) => void;
 }) {
 	const t = useTranslator(schemaMessages);
+	const tCollection = useTranslator(schemaCollectionMessages);
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
@@ -221,8 +224,13 @@ function SchemaEditor({
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [creating, setCreating] = useState(false);
+	// Collections taken out of the list and not saved yet: they stay in the draft (so taking one back loses nothing) and go out of what is checked and saved.
+	const [removed, setRemoved] = useState<string[]>([]);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
+	const liveNames = names.filter((name) => !removed.includes(name));
+	// What the file would be if saved now.
+	const pendingDraft = useMemo(() => withoutCollections(draft, removed), [draft, removed]);
 	// Which collection is open and which of its parts live in the address, so a reload after saving comes back to the same place.
 	const [selectedName, setSelectedName] = useSettingsParam("collection");
 	const [section, setSection] = useSettingsParam("section");
@@ -231,13 +239,13 @@ function SchemaEditor({
 		setSection(undefined);
 	};
 	const scroller = useRef<HTMLElement>(null);
-	const selected = selectedName && selectedName in collections ? selectedName : names[0];
+	const selected = selectedName && liveNames.includes(selectedName) ? selectedName : liveNames[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
-	const dirty = !sameJson(draft, base);
+	const dirty = !sameJson(pendingDraft, base);
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
-	const pending = changeCount(base, draft);
-	const areas = useMemo(() => changedAreas(base, draft), [base, draft]);
+	const pending = changeCount(base, pendingDraft);
+	const areas = useMemo(() => changedAreas(base, pendingDraft), [base, pendingDraft]);
 	const savedNames = Object.keys(collectionsOf(base));
 
 	// The page draws the marks of its tabs, so it is told where the draft differs.
@@ -261,18 +269,44 @@ function SchemaEditor({
 			disabled: !writable,
 			vocabulary: state.vocabulary,
 			issues,
-			collectionNames: names,
+			collectionNames: liveNames,
 			codeCollections: state.codeCollections,
 			file: draft,
 			saved: base,
 		}),
-		[writable, state.vocabulary, issues, names, state.codeCollections, draft, base],
+		[writable, state.vocabulary, issues, liveNames, state.codeCollections, draft, base],
 	);
 
+	const removals: Removal[] = removed.flatMap((name) => {
+		const found = collectionsOf(base)[name];
+		return found
+			? [
+					{
+						name,
+						label: String(found.label ?? name),
+						kind: found.kind === "item" ? ("item" as const) : ("document" as const),
+					},
+				]
+			: [];
+	});
+	const restore = (name: string) => setRemoved((current) => current.filter((item) => item !== name));
+	/** A saved collection goes out of the list at once and stays in the file until the draft is saved; the toast and the changes menu bring it back. */
+	const remove = (name: string) => {
+		if (!savedNames.includes(name)) {
+			// A collection that was never saved holds nothing: it simply goes.
+			updateFile((file) => removeCollection(file, name));
+			return;
+		}
+		setRemoved((current) => [...current, name]);
+		toast(tCollection("collection.deleted", { name: String(collections[name]?.label ?? name) }), {
+			action: { label: tCollection("collection.deleteUndo"), onClick: () => restore(name) },
+		});
+	};
 	const discard = async () => {
 		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
 		setDraft(base);
+		setRemoved([]);
 		setRenames([]);
 		setIssues([]);
 	};
@@ -288,6 +322,7 @@ function SchemaEditor({
 	) : dirty ? (
 		<SaveGroup
 			count={pending}
+			removed={removals.map((item) => ({ name: item.name, label: item.label, onRestore: () => restore(item.name) }))}
 			disabled={state.hash === null}
 			onReview={() => setReviewing(true)}
 			onSave={() => setReviewing(true)}
@@ -351,7 +386,7 @@ function SchemaEditor({
 										<Stack gap={2} width="fit" shrink={false}>
 											<Inline justify="between" paddingBottom={8} paddingX={12}>
 												<Text variant="caption" weight="medium" tone="muted">
-													{t("collection.railTitle")} {names.length}
+													{t("collection.railTitle")} {liveNames.length}
 												</Text>
 												{writable && (
 													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
@@ -361,16 +396,16 @@ function SchemaEditor({
 											</Inline>
 											<Stack as="nav" aria-label={t("tabs.collections")} gap={2}>
 												<SortableList
-													items={names}
+													items={liveNames}
 													onDragEnd={(from, to) => {
-														const fromIndex = names.indexOf(from);
-														const toIndex = names.indexOf(to);
+														const fromIndex = liveNames.indexOf(from);
+														const toIndex = liveNames.indexOf(to);
 														if (fromIndex !== -1 && toIndex !== -1) {
-															updateFile((file) => reorderCollections(file, moveWithin(names, fromIndex, toIndex)));
+															updateFile((file) => reorderCollections(file, moveWithin(liveNames, fromIndex, toIndex)));
 														}
 													}}
 												>
-													{names.map((name) => (
+													{liveNames.map((name) => (
 														<CollectionNavItem
 															key={name}
 															name={name}
@@ -397,18 +432,8 @@ function SchemaEditor({
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
 													onFileChange={updateFile}
-													onRemove={async () => {
-														if (savedNames.includes(selected)) {
-															const ok = await confirm({
-																title: t("collection.removeTitle", { name: selected }),
-																description: t("collection.removeDescription"),
-																confirmLabel: t("collection.remove"),
-																destructive: true,
-															});
-															if (!ok) return;
-														}
-														updateFile((file) => removeCollection(file, selected));
-													}}
+													footprint={state.footprints?.[selected]}
+													onRemove={() => remove(selected)}
 												/>
 											) : (
 												<Text as="p" tone="muted">
@@ -448,20 +473,17 @@ function SchemaEditor({
 				<ReviewDialog
 					open={reviewing}
 					onOpenChange={setReviewing}
-					draft={draft}
+					draft={pendingDraft}
 					renames={renames}
-					settings={settingChanges(base, draft)}
+					settings={settingChanges(base, pendingDraft)}
+					removals={removals}
 					baseHash={state.hash}
 					onIssues={setIssues}
 					onApplyFailed={() => setApplyFailed(true)}
-					onSaved={(saved: SavedSchema) => {
+					onSaved={() => {
 						rememberScroll(scroller.current?.scrollTop ?? 0);
-						rememberSaved(
-							t("save.done", {
-								transforms: saved.transforms.length,
-								entries: saved.entriesRewritten,
-							}),
-						);
+						// One line for every save: the review already showed what it changes.
+						rememberSaved(t("save.done"));
 						reloadPage();
 					}}
 				/>

@@ -1,8 +1,7 @@
+import { Download } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
+import { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 import { Checkbox } from "./checkbox";
-import { FormField, FormFieldLabel } from "./field";
-import { Input } from "./input";
 import { Option } from "./option";
 import { RadioGroup, RadioItem } from "./radio-group";
 import { TextButton } from "./text-button";
@@ -64,24 +63,38 @@ export const Drop: Story = {
 	),
 };
 
-/** A removed collection: what goes with it, what blocks it (with the button that clears it), and the identifier to type. */
+/** A removed collection: what is deleted, what is cut and what breaks, a copy to take first, and the note that it cannot be undone. */
 export const DropCollection: Story = {
 	args: { kind: "drop", tag: "지움", title: "메모", identifier: "memo" },
 	render: (args) => (
 		<ChangeGroup {...args}>
+			<ChangeLabel>지워지는 것</ChangeLabel>
 			<ChangeLines>
 				<ChangeLine what="글 23편 · 휴지통 2편 포함" then="영구 삭제" tone="danger" />
+				<ChangeLine what="폴더 2개 · 옛 주소 31개" then="삭제" tone="danger" />
 				<ChangeLine
-					what="가리키는 글 4편"
-					then={<TextButton className="text-[length:inherit] text-inherit">연결 끊기</TextButton>}
-					tone="warning"
+					what={
+						<>
+							가리키는 글 4편 · <TextButton variant="underline">첫 번째 글</TextButton> 외 3편
+						</>
+					}
+					then="연결 끊김"
 				/>
 				<ChangeLine what="본문 링크 2곳" then="깨진 링크로 표시" />
 			</ChangeLines>
-			<FormField>
-				<FormFieldLabel htmlFor="confirm-memo">식별자 입력</FormFieldLabel>
-				<Input id="confirm-memo" placeholder="memo" className="font-mono" />
-			</FormField>
+			<ChangeLabel>받아 두기</ChangeLabel>
+			<ChangeLines>
+				<ChangeLine
+					what="글 23편 · 휴지통 2편 포함 · 폴더 2개"
+					then={
+						<TextButton variant="underline">
+							<Download aria-hidden />
+							내보내기
+						</TextButton>
+					}
+				/>
+			</ChangeLines>
+			<ChangeNote danger>되돌릴 수 없어요. 운영 사이트는 배포할 때 지워져요.</ChangeNote>
 		</ChangeGroup>
 	),
 };

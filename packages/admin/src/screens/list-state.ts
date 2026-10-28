@@ -15,7 +15,7 @@ import { filterFieldOf, readCondition, takesCondition, writeCondition } from "./
 
 /**
  * The states of the status column a list can be filtered by (the order of the column's menu). `published` has no unpublished changes and `editing` is
- * published with changes. The trash is seen only in its dedicated screen.
+ * published with changes. The trash is seen only in its own screen.
  */
 export type ListStatus = "published" | "editing" | "draft" | "archived";
 export const LIST_STATUS_ORDER: readonly ListStatus[] = ["published", "editing", "draft", "archived"];
@@ -166,14 +166,9 @@ const zonedDayBoundary = (site: Site, date: string, end: boolean) => {
 
 /**
  * List API (`GET /entries`) query. Multiple values of the same filter are OR; different filters are AND.
- * With `trash`, requests only trashed items.
- * Publishable collections (`kind: "document"`) are requested one row per translation group. Trash lists items individually so a single translation can be restored.
+ * Publishable collections (`kind: "document"`) are requested one row per translation group.
  */
-export function listStateToApiQuery(
-	site: Site,
-	state: ListState,
-	options: { trash?: boolean; now?: Date } = {},
-): URLSearchParams {
+export function listStateToApiQuery(site: Site, state: ListState, options: { now?: Date } = {}): URLSearchParams {
 	const query = new URLSearchParams({
 		collection: state.collection,
 		sortField: state.sortField,
@@ -181,9 +176,9 @@ export function listStateToApiQuery(
 		page: String(state.page),
 		pageSize: String(state.pageSize),
 	});
-	if (!options.trash && site.schemaOf(state.collection).kind === "document") query.set("group", "translation");
+	if (site.schemaOf(state.collection).kind === "document") query.set("group", "translation");
 	// A collection without folders lists everything: entries filed in folders before its folders were turned off stay in the list.
-	if (!options.trash && site.foldersEnabled(state.collection)) {
+	if (site.foldersEnabled(state.collection)) {
 		// Browse mode shows only items directly in the current location; search, filters or "include subfolders" show everything under the current location.
 		const flat = !isExplorerMode(state);
 		if (state.folder === "all") {
@@ -195,8 +190,7 @@ export function listStateToApiQuery(
 	}
 	if (state.search.trim()) query.set("search", state.search.trim());
 	if (state.includeBody) query.set("includeBody", "true");
-	if (options.trash) query.append("status", "trashed");
-	else for (const status of state.statuses) query.append("status", status);
+	for (const status of state.statuses) query.append("status", status);
 	for (const [name, conditions] of Object.entries(state.fields))
 		for (const condition of conditions) query.append("field", writeCondition(name, condition));
 	for (const locale of state.locales) query.append("locale", locale);

@@ -243,19 +243,23 @@ describe("links by entry id", () => {
 		expect(error.issues?.map((issue) => issue.code)).toContain("unresolved_internal_link");
 	});
 
-	it("a post that other posts link to cannot be deleted while they do", async () => {
+	it("a post that other posts link to can be deleted: the link only stays in their text, and its reference goes", async () => {
 		const target = await publish("links-in-use");
 		const source = await draft("links-in-use-source", `[x](${pathOf("links-in-use")})`);
 
 		const trashed = await store.trashEntry({ id: target.id, expectedVersion: target.version });
-		const removal = await store
-			.permanentDeleteEntry({ id: target.id, expectedVersion: trashed.version })
-			.catch((e) => e);
-
-		expect(removal).toMatchObject({ code: "in_use" });
 		// The draft that links to a trashed post can still be saved, and published: a link to a trashed post is a warning, like an unpublished one.
 		const published = await publishDraft(testSite, store, { id: source.id, expectedVersion: source.version });
 		expect(published.status).toBe("published");
+		const linkedTo = async () =>
+			(await store.getWorkingReferences({ entryId: source.id })).filter(
+				(reference) => reference.targetId === target.id,
+			);
+		expect(await linkedTo()).toHaveLength(1);
+
+		await store.permanentDeleteEntry({ id: target.id, expectedVersion: trashed.version });
+		await expect(store.getEntry(target.id)).rejects.toMatchObject({ code: "not_found" });
+		expect(await linkedTo()).toEqual([]);
 	});
 
 	it("the read API gives each link the address and title of its target for this reader", async () => {

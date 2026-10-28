@@ -26,8 +26,8 @@ export const LIST_STATUSES = ["draft", "published", "editing", "archived", "tras
 export type ListStatus = (typeof LIST_STATUSES)[number];
 export const listStatusSchema = z.enum(LIST_STATUSES);
 
-/** What a list can be sorted by. `trashedAt` is the day an entry was moved to the trash: the trash is sorted by it. */
-export const LIST_SORT_FIELDS = ["updatedAt", "createdAt", "publishedAt", "trashedAt", "title", "slug"] as const;
+/** What a list can be sorted by. `deletedAt` is the day an entry was moved to the trash: the trash is sorted by it. */
+export const LIST_SORT_FIELDS = ["updatedAt", "createdAt", "publishedAt", "deletedAt", "title", "slug"] as const;
 export type ListSortField = (typeof LIST_SORT_FIELDS)[number];
 export const listSortFieldSchema = z.enum(LIST_SORT_FIELDS);
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
@@ -203,6 +203,11 @@ export const exportOptionsSchema = z.object({
 			z.array(z.string().uuid()).min(1).max(MAX_EXPORT_IDS),
 		)
 		.optional(),
+	/**
+	 * Limits the export to the entries of this collection, the trashed ones included, with their translations. It is how a whole collection is exported (the review of
+	 * deleting one offers it) without listing every id; with `ids` too, only those of them that belong to the collection are exported.
+	 */
+	collection: z.string().min(1).optional(),
 });
 
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
@@ -258,6 +263,47 @@ export const mediaListQuerySchema = z.object({
 	page: z.coerce.number().int().min(1).default(1),
 	pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+/** Trash query keys that may appear several times (`kind`: the kinds to show, any of them). */
+export const TRASH_ARRAY_QUERY_KEYS = ["kind"] as const;
+
+/** The trash list: some kinds (`kind`, repeatable), the inside of a trashed folder (`folder`), or a search (`q`); by the day each unit was discarded (`sort`). */
+export const trashListQuerySchema = z.object({
+	kind: z.array(z.string().min(1).max(200)).max(50).optional(),
+	folder: z.uuid().optional(),
+	q: z.string().max(200).optional(),
+	sort: sortDirectionSchema.default("desc"),
+	page: z.coerce.number().int().min(1).default(1),
+	pageSize: pageSizeSchema.default(25),
+});
+
+/** Units of the trash a request names. Entries and folders may carry the version the screen saw. */
+export const trashItemsBodySchema = z.object({
+	items: z
+		.array(
+			z.object({
+				type: z.enum(["entry", "folder", "media"]),
+				id: z.uuid(),
+				expectedVersion: expectedVersionSchema.optional(),
+			}),
+		)
+		.min(1)
+		.max(500),
+});
+
+/** Takes entries out of the relation fields that point at them: the ones named, or every entry of a collection. */
+export const unlinkBodySchema = z
+	.object({
+		targetIds: z.array(z.uuid()).min(1).max(500).optional(),
+		collection: z.string().min(1).max(200).optional(),
+	})
+	.refine((body) => (body.targetIds === undefined) !== (body.collection === undefined), {
+		message: "Send either targetIds or collection",
+		path: ["targetIds"],
+	});
+
+/** Media files to move to the trash. */
+export const mediaTrashBodySchema = z.object({ ids: z.array(z.uuid()).min(1).max(500) });
 
 /** The request contract that depends on one site's config: its collections and locales, and its upload limits (`media`). */
 export type SiteApi = ReturnType<typeof createApi>;

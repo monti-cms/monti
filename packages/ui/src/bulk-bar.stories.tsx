@@ -1,3 +1,4 @@
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { BulkBar } from "./bulk-bar";
@@ -14,6 +15,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { IconButton } from "./icon-button";
 import { ListHead } from "./list-head";
 import { MenuShortcut } from "./menu-parts";
 import type { SelectAllState } from "./page-header";
@@ -155,7 +157,11 @@ function List({ initial, changeOpen = false }: { initial: number[]; changeOpen?:
 								<RowTitle title={row.title} address={row.address} />
 							</TableCell>
 							<TableCell align="end">
-								<RowActions>⋯</RowActions>
+								<RowActions>
+									<IconButton label="더보기">
+										<OverflowMenuHorizontal aria-hidden />
+									</IconButton>
+								</RowActions>
 							</TableCell>
 						</TableRow>
 					))}

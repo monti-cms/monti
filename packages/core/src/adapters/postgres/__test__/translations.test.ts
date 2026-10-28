@@ -53,7 +53,7 @@ describe("translation groups (postgres storage)", () => {
 			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
 
 			// Legacy data where only the source is in the trash and the translation is alive.
-			await pool.query(`UPDATE "${schemaName}".entries SET status = 'draft', trashed_at = NULL WHERE id = $1`, [
+			await pool.query(`UPDATE "${schemaName}".entries SET status = 'draft', deleted_at = NULL WHERE id = $1`, [
 				translation.id,
 			]);
 			await expect(

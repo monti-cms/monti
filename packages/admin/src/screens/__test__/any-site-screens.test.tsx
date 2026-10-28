@@ -85,7 +85,7 @@ const item = (id: string, title: string): ListEntriesItem => ({
 	publishedAt: null,
 	createdAt: new Date("2026-01-01T00:00:00Z"),
 	updatedAt: new Date("2026-01-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 });
 
 beforeEach(() => {

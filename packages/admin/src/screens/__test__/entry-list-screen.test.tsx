@@ -6,7 +6,7 @@ import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
 import { toast } from "../../test/ui-toast";
-import { EntryListScreen, TrashScreen } from "../entry-list-screen";
+import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
@@ -14,7 +14,7 @@ import { ScreenContextProvider, useScreenContext } from "../shared/screen-contex
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
 const { render } = nav;
-const t = testSite.createTranslator(screensMessages);
+const _t = testSite.createTranslator(screensMessages);
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
@@ -35,7 +35,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	publishedAt: null,
 	createdAt: new Date("2026-01-01T00:00:00Z"),
 	updatedAt: new Date("2026-01-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 	...fields,
 });
 const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 };
@@ -63,7 +63,7 @@ const entryRequests = () =>
 				!url.searchParams.getAll("status").includes("trashed"),
 		);
 /** The requests for the trash: the same list, asked for the trashed status. */
-const trashRequests = () =>
+const _trashRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
 		.filter(
@@ -113,12 +113,6 @@ const renderList = () =>
 	render(
 		<AdminQueryProvider>
 			<EntryListScreen />
-		</AdminQueryProvider>,
-	);
-const renderTrash = () =>
-	render(
-		<AdminQueryProvider>
-			<TrashScreen />
 		</AdminQueryProvider>,
 	);
 const row = (title: string) => screen.getByRole("row", { name: new RegExp(title) });
@@ -233,7 +227,16 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("2개 항목을 보관했어요."));
 	});
 
-	it("the Delete key asks whether to move all selected rows to trash", async () => {
+	it("the Delete key moves all selected draft rows to the trash at once", async () => {
+		server.handle = (url, init) =>
+			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
+				? json({
+						results: [
+							{ id: "가", ok: true, version: 4 },
+							{ id: "다", ok: true, version: 4 },
+						],
+					})
+				: undefined;
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -241,7 +244,12 @@ describe("list screen — row menu and bulk actions", () => {
 
 		fireEvent.keyDown(screen.getByRole("checkbox", { name: "다 선택" }), { key: "Delete" });
 
-		expect(await screen.findByRole("alertdialog", { name: "휴지통으로" })).toBeTruthy();
+		await waitFor(() => expect(calls("POST", "/api/monti/v1/bulk")).toHaveLength(1));
+		expect(bodyOf(calls("POST", "/api/monti/v1/bulk")[0]).items.map((entry: { id: string }) => entry.id)).toEqual([
+			"가",
+			"다",
+		]);
+		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
 	it("actions are applied to the list first, and failed rows stay selected", async () => {
@@ -258,7 +266,6 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
 		await openRowMenu("가");
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		// Two rows drop out before the response.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /가/ })).toBeNull());
@@ -280,7 +287,11 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."));
+		// The one that did move can still be taken back from the toast.
+		expect(toast.error).toHaveBeenCalledWith(
+			expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."),
+			expect.objectContaining({ action: expect.objectContaining({ label: "되돌리기" }) }),
+		);
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -323,7 +334,6 @@ describe("list screen — row menu and bulk actions", () => {
 		await screen.findByRole("row", { name: /가/ });
 		await openRowMenu("가");
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();
@@ -411,67 +421,6 @@ describe("list screen — a collection without folders", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		await waitFor(() => expect(folderRequests().length).toBeGreaterThan(0));
-	});
-});
-
-describe("trash screen", () => {
-	it("requests only trash items and the menu has only restore and permanent delete", async () => {
-		server.trashed = [item("버린 글", { status: "trashed" })];
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		expect(entryRequests().every((url) => url.searchParams.getAll("status").includes("trashed"))).toBe(true);
-		expect(menuLabels(await openRowMenu("버린 글"))).toEqual(["복원", "영구 삭제Del"]);
-	});
-
-	it("lists the title and the day it was trashed, sorted by that day with the last one first, and the collection tabs stay", async () => {
-		server.trashed = [item("버린 글", { status: "trashed", trashedAt: new Date("2026-10-15T00:00:00Z") })];
-		server.preferences = { collections: { post: { sort: { field: "title", direction: "asc" } } } };
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		const head = within(screen.getAllByRole("rowgroup")[0] as HTMLElement);
-		expect(head.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-			t("column.title"),
-			t("column.trashedAt"),
-		]);
-		expect(head.getByRole("columnheader", { name: t("column.trashedAt") }).getAttribute("aria-sort")).toBe(
-			"descending",
-		);
-		// What the list was sorted by is not the trash's order, and there are no columns to add.
-		const last = trashRequests().at(-1);
-		expect(last?.searchParams.get("sortField")).toBe("trashedAt");
-		expect(last?.searchParams.get("sortDirection")).toBe("desc");
-		expect(head.queryByRole("button", { name: t("column.add") })).toBeNull();
-		expect(within(row("버린 글")).getByText("10. 15")).toBeTruthy();
-		expect(screen.getAllByRole("tab").length).toBeGreaterThan(1);
-		// No page of the trash shows the list's filter or view controls.
-		expect(screen.queryByRole("button", { name: /^(필터|보기)$/ })).toBeNull();
-	});
-
-	it("keeps the trash's sort out of the list's saved settings", async () => {
-		server.trashed = [item("버린 글", { status: "trashed" })];
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-		fireEvent.click(
-			within(screen.getAllByRole("rowgroup")[0] as HTMLElement).getByRole("button", { name: t("column.title") }),
-		);
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
-		await waitFor(() => expect(trashRequests().at(-1)?.searchParams.get("sortField")).toBe("title"));
-		expect(calls("PUT", "/api/monti/v1/preferences")).toHaveLength(0);
-	});
-
-	it("restore requests per item and reports the result", async () => {
-		server.trashed = [item("trashed-1", { title: "버린 글", status: "trashed" })];
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/entries/trashed-1/restore" && init?.method === "POST" ? json({}) : undefined;
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		fireEvent.click(within(row("버린 글")).getByRole("button", { name: "복원" }));
-
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("1개 항목을 복원했어요."));
-		expect(bodyOf(calls("POST", "/api/monti/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
 	});
 });
 

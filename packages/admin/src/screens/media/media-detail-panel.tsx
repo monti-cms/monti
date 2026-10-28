@@ -80,7 +80,7 @@ function folderPath(folder: Folder, folders: Folder[]): string {
 
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
- * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
+ * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> trash.
  * The file name (its stem; the extension stays) and the default description are inputs with an AI button beside them (file name, alt text, caption
  * suggestions). A suggestion only fills the input. The name is saved by its own button and the default description by pressing `Save`;
  * unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
@@ -92,7 +92,7 @@ export function MediaDetailPanel({
 	onSaveDefaults,
 	onRename,
 	onMoveFolder,
-	onRequestDelete,
+	onTrash,
 	onDirtyChange,
 }: {
 	media: MediaItem;
@@ -104,7 +104,8 @@ export function MediaDetailPanel({
 	onRename: (filename: string) => Promise<void>;
 	/** Moves the file to another folder (or null for root). */
 	onMoveFolder?: (folderId: string | null) => Promise<void>;
-	onRequestDelete: () => void;
+	/** Moves the file to the trash. It does not ask: the toast that follows can undo it. */
+	onTrash: () => void;
 	onDirtyChange?: (dirty: boolean) => void;
 }) {
 	const site = useSite();
@@ -195,21 +196,9 @@ export function MediaDetailPanel({
 			bleed
 			footer={
 				<Stack gap={8} grow>
-					<Button
-						type="button"
-						variant="outline-danger"
-						size="sm"
-						width="full"
-						disabled={media.referencesCount > 0}
-						onClick={onRequestDelete}
-					>
-						{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
+					<Button type="button" variant="outline-danger" size="sm" width="full" onClick={onTrash}>
+						{tc("lifecycle.trash")}
 					</Button>
-					{media.referencesCount > 0 && (
-						<Text as="p" variant="caption" tone="muted">
-							{t("detail.inUse")}
-						</Text>
-					)}
 				</Stack>
 			}
 		>

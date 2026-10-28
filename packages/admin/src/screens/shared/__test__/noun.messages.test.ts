@@ -77,8 +77,8 @@ describe("collection label in admin messages", () => {
 		const withBatchim = siteLabeled("글", "ko");
 		const batchim = nounVars(withBatchim.site, withBatchim.name);
 		expect(
-			withBatchim.site.createTranslator(entriesMessages)("lifecycle.trash.ask", { translation: 0, ...batchim }),
-		).toBe("이 글을 휴지통으로 이동할까요? 공개가 종료돼요.");
+			withBatchim.site.createTranslator(entriesMessages)("lifecycle.archive.ask", { translation: 0, ...batchim }),
+		).toBe("이 글을 보관할까요? 공개가 종료돼요.");
 		expect(withBatchim.site.createTranslator(screensMessages)("archive.askMany", { count: 2, ...batchim })).toBe(
 			"선택한 글 2개를 보관할까요? 공개가 종료돼요.",
 		);

@@ -78,6 +78,7 @@ export function createRestoreOps(ctx: StoreContext) {
 							name: folder.name,
 							position: folder.position,
 							version: folder.version,
+							deleted_at: folder.deletedAt ?? null,
 						})
 						.execute();
 				}
@@ -107,6 +108,7 @@ export function createRestoreOps(ctx: StoreContext) {
 							original_byte_size: asset.original?.byteSize ?? null,
 							original_width: asset.original?.width ?? null,
 							original_height: asset.original?.height ?? null,
+							deleted_at: asset.deletedAt ?? null,
 						})
 						.execute();
 				}
@@ -127,7 +129,7 @@ export function createRestoreOps(ctx: StoreContext) {
 							working_slug: entry.workingSlug,
 							folder_id: entry.folderId,
 							status: entry.status as "draft",
-							trashed_at: entry.trashedAt,
+							deleted_at: entry.deletedAt,
 							locale: entry.locale,
 							translation_group_id: isSource(entry) ? null : entry.translationGroupId,
 							changed_by: entry.changedBy,

@@ -1,0 +1,68 @@
+import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/site";
+
+/**
+ * Text of the safe delete: the question asked before a published entry goes to the trash, the toasts that follow every move to the trash (with the
+ * undo and "view" actions), the folder menu and the translation tab's trash item.
+ */
+export const deleteMessages = defineMessages("cms-admin.delete", {
+	en: {
+		undo: "Undo",
+		view: "View",
+		undoFailed: "Couldn't undo.",
+		"trash.ask.title": "Move to the trash?",
+		"trash.ask.confirm": "Move to trash",
+		"trash.ask.one": "{title} will no longer be public.",
+		"trash.ask.translations": " The {languages} translation moves too.",
+		"trash.ask.many": (vars) =>
+			`${vars.count} ${Number(vars.count) === 1 ? "entry comes" : "entries come"} down from the site right away.`,
+		"trash.done": "Moved to the trash",
+		"trash.done.count": "Moved {count} to the trash",
+		"folder.menu.rename": "Rename",
+		"folder.menu.move": "Move",
+		"folder.menu.delete": "Delete folder",
+		"folder.ask.title": "Move '{name}' to the trash?",
+		"folder.ask.body": "The {entries} entries inside move too. {published} published will come down from the site.",
+		"folder.done": "Moved the folder '{name}' and {entries} entries to the trash",
+		"folder.done.empty": "Moved the folder '{name}' to the trash",
+		"folder.done.files": "Moved the folder '{name}' and {files} files to the trash",
+		"folder.partial": "Moved {moved} from {name} · kept {kept} that are in use",
+		"folder.keptAll": "Kept the files that are in use",
+		"media.done.one": "Moved {name} to the trash",
+		"media.done.many": "Moved {count} to the trash",
+		"media.partial": "Moved {moved} · kept {kept} that are in use",
+		"media.keptAll": "Kept the files that are in use",
+		"media.trashFailed": "Couldn't move to the trash.",
+		"translation.trash": "Move this translation to the trash",
+		"translation.caption": "The {language} original stays",
+	},
+	ko: {
+		undo: "되돌리기",
+		view: "보기",
+		undoFailed: "되돌리지 못했어요.",
+		"trash.ask.title": "휴지통으로 옮길까요?",
+		"trash.ask.confirm": "휴지통으로",
+		"trash.ask.one": ({ title }) => `${title}의 공개가 끝나요.`,
+		"trash.ask.translations": " {languages} 번역도 함께 옮겨요.",
+		"trash.ask.many": "글 {count}개가 사이트에서 바로 내려가요.",
+		"trash.done": "휴지통으로 옮겼어요",
+		"trash.done.count": "{count}개를 휴지통으로 옮겼어요",
+		"folder.menu.rename": "이름 바꾸기",
+		"folder.menu.move": "옮기기",
+		"folder.menu.delete": "폴더 지우기",
+		"folder.ask.title": ({ name }) => `${josa(String(name), "을", "를")} 휴지통으로 옮길까요?`,
+		"folder.ask.body": "안의 글 {entries}편도 함께 옮겨요. 공개 중인 {published}편은 사이트에서 내려가요.",
+		"folder.done": "{name} 폴더와 글 {entries}편을 휴지통으로 옮겼어요",
+		"folder.done.empty": "{name} 폴더를 휴지통으로 옮겼어요",
+		"folder.done.files": "{name} 폴더와 파일 {files}개를 휴지통으로 옮겼어요",
+		"folder.partial": "{name}에서 {moved}개를 옮겼어요 · {kept}개는 쓰는 곳이 있어 남겼어요",
+		"folder.keptAll": "쓰는 곳이 있어 남겼어요",
+		"media.done.one": ({ name }) => `${josa(String(name), "을", "를")} 휴지통으로 옮겼어요`,
+		"media.done.many": "{count}개를 휴지통으로 옮겼어요",
+		"media.partial": "{moved}개를 옮겼어요 · {kept}개는 쓰는 곳이 있어 남겼어요",
+		"media.keptAll": "쓰는 곳이 있어 남겼어요",
+		"media.trashFailed": "휴지통으로 옮기지 못했어요.",
+		"translation.trash": "이 번역 휴지통으로",
+		"translation.caption": "{language} 원문은 그대로",
+	},
+});

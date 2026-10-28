@@ -84,7 +84,18 @@ function Text({
 		<InsideRole.Provider value={true}>
 			<Tag
 				className={cn(
-					textVariants({ variant: role, tone, weight, mono, truncate, srOnly, lines, italic, preserveLines, align }),
+					textVariants({
+						variant: role,
+						tone,
+						weight,
+						mono,
+						truncate,
+						srOnly,
+						lines,
+						italic,
+						preserveLines,
+						align,
+					}),
 					className,
 				)}
 				{...props}

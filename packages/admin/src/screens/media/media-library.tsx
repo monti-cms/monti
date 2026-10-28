@@ -14,7 +14,7 @@ import {
 	TrashCan,
 	Upload,
 } from "@carbon/icons-react";
-import { type Folder, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { type Folder, type MediaTrashResult, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
@@ -46,15 +46,8 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useCallback, useMemo, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { foldersKeys, listFolders } from "../../api/folders";
-import {
-	cleanupMedia,
-	deleteMedia,
-	listMedia,
-	type MediaItem,
-	type MediaPage,
-	mediaKeys,
-	updateMedia,
-} from "../../api/media";
+import { cleanupMedia, listMedia, type MediaItem, mediaKeys, trashMedia, updateMedia } from "../../api/media";
+import { restoreTrash } from "../../api/trash";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
@@ -66,6 +59,7 @@ import { ActionContextMenu, type MenuAction } from "../shared/action-menu";
 import { AdminFrame } from "../shared/admin-frame";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
+import { deleteMessages } from "../shared/delete.messages";
 import { EmptyState } from "../shared/empty-state";
 import type { DraggedEntry } from "../shared/entry-drag";
 import { entryHref } from "../shared/entry-href";
@@ -73,10 +67,11 @@ import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
-import { useFolderActions } from "../shared/use-folder-actions";
+import { isInsideFolder, useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { MediaDetailPanel } from "./media-detail-panel";
 import { mediaUsages, usageNoteLabel } from "./media-item";
+import { keptFilesFolder, mediaTrashNotice } from "./media-trash";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
 
@@ -119,6 +114,7 @@ export function MediaLibrary() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	const tc = useTranslator(commonMessages);
+	const td = useTranslator(deleteMessages);
 	const router = useAdminRouter();
 	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder }, update] =
 		useUrlState(LIBRARY_PARAMS);
@@ -129,7 +125,7 @@ export function MediaLibrary() {
 	const detailDirtyRef = useRef(false);
 	const [optimize, setOptimize] = useState(false);
 	const [upload, setUpload] = useState<{ current: number; total: number; percent: number } | null>(null);
-	const { confirm, confirmDiscard, dialog } = useConfirm();
+	const { confirmDiscard, dialog } = useConfirm();
 	// The view is a per-device choice (browser preference), unlike the filters, which belong to the address.
 	const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -170,11 +166,17 @@ export function MediaLibrary() {
 	const folderActions = useFolderActions({
 		collection: "media",
 		folders,
-		onChanged: async (deletedId) => {
+		onChanged: async (change) => {
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
-			if (deletedId && folder === deletedId) update({ folder: "all" });
-			else await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+			// If the folder being viewed (or one inside it) went to the trash, go up to the folder it was in, or to the whole library.
+			const { deleted } = change ?? {};
+			if (deleted && folder && folder !== "all" && isInsideFolder(folders, folder, deleted.id)) {
+				update({ folder: deleted.parentId ?? "all", page: 1 });
+			}
+			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
 		},
+		// The files that stayed in a folder because something uses them: the library, filtered to those in that folder.
+		onViewKept: (kept) => update({ folder: kept.id, used: "used", search: "", kind: "all", page: 1 }),
 	});
 
 	const moveMediaToFolder = async (media: MediaItem, targetFolderId: string | null) => {
@@ -262,30 +264,56 @@ export function MediaLibrary() {
 		}
 	};
 
-	const deleteMutation = useCmsMutation<MediaItem, void, MediaPage>({
-		fn: (media, { site }) => deleteMedia(site, media.id, tc("deleteFailed")),
-		success: (_result, media) => t("library.deleted", { name: media.filename }),
-		failure: tc("deleteFailed"),
-		// Remove from the list first, then send the request. On failure it reverts; when done, the list syncs to the server value.
-		optimistic: {
-			queryKey: mediaKeys.lists(),
-			update: (data, media) =>
-				data.items.some((item) => item.id === media.id)
-					? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
-					: data,
+	/** Puts files back from the trash (the toast's undo). */
+	const undoTrash = async (ids: readonly string[]) => {
+		try {
+			const answer = await restoreTrash(
+				site,
+				ids.map((id) => ({ type: "media", id })),
+			);
+			if (!answer.every((result) => result.ok)) toast.error(td("undoFailed"));
+		} catch (error) {
+			toast.error(errorText(site, error, td("undoFailed")));
+		}
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: mediaKeys.all }),
+			queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") }),
+		]);
+	};
+
+	/**
+	 * Moves files to the trash at once, with no question: they come back with the toast's undo. A file something uses stays where it is, and the toast says
+	 * so with a "view" of the ones that stayed.
+	 */
+	const trashMutation = useCmsMutation<MediaItem[], MediaTrashResult>({
+		fn: (files, { site }) =>
+			trashMedia(
+				site,
+				files.map((file) => file.id),
+				td("media.trashFailed"),
+			),
+		failure: td("media.trashFailed"),
+		onSuccess: (result, files) => {
+			const notice = mediaTrashNotice(site, files, result);
+			toast(notice.message, {
+				action:
+					notice.action === "undo"
+						? { label: td("undo"), onClick: () => void undoTrash(result.trashed) }
+						: {
+								label: td("view"),
+								onClick: () => update({ folder: keptFilesFolder(files, result), used: "used", page: 1 }),
+							},
+			});
+			// If the file being moved is open, close it. Its edited default description goes with it.
+			setSelectedId((current) => {
+				if (current === null || !result.trashed.includes(current)) return current;
+				detailDirtyRef.current = false;
+				return null;
+			});
 		},
 		invalidate: [mediaKeys.all, foldersKeys.list("media")],
 	});
-
-	const removeMedia = (media: MediaItem) => {
-		// If the file being deleted is open, close it. Its edited default description is discarded with it.
-		setSelectedId((current) => {
-			if (current !== media.id) return current;
-			detailDirtyRef.current = false;
-			return null;
-		});
-		deleteMutation.mutate(media);
-	};
+	const trashFiles = (files: MediaItem[]) => trashMutation.mutate(files);
 
 	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
 	const saveDefaultsMutation = useCmsMutation({
@@ -328,16 +356,6 @@ export function MediaLibrary() {
 		detailDirtyRef.current = dirty;
 		setDetailDirtyState(dirty);
 	}, []);
-
-	const requestDelete = async (media: MediaItem) => {
-		const ok = await confirm({
-			title: media.status === "deleting" ? t("library.delete.retryTitle") : t("library.delete.title"),
-			description: t("library.delete.ask", { name: media.filename }),
-			confirmLabel: tc("delete"),
-			destructive: true,
-		});
-		if (ok) removeMedia(media);
-	};
 
 	/** Right-click and `⋯` menu of a media tile. */
 	const mediaMenu = (media: MediaItem): MenuAction[] => [
@@ -386,12 +404,11 @@ export function MediaLibrary() {
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: tc("delete"),
+			label: tc("lifecycle.trash"),
 			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
-			disabled: media.referencesCount > 0,
-			onSelect: () => void requestDelete(media),
+			onSelect: () => trashFiles([media]),
 		},
 	];
 
@@ -425,7 +442,7 @@ export function MediaLibrary() {
 		dimmed: mediaQuery.isPlaceholderData,
 		onSelect: (media: MediaItem) => void openDetail(media.id),
 		menuFor: mediaMenu,
-		onDeleteKey: (media: MediaItem) => void requestDelete(media),
+		onDeleteKey: (media: MediaItem) => trashFiles([media]),
 		explorer,
 		folders,
 		folderActions,
@@ -637,7 +654,7 @@ export function MediaLibrary() {
 									onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
 									onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
 									onMoveFolder={(targetFolderId) => moveMediaToFolder(selected, targetFolderId)}
-									onRequestDelete={() => void requestDelete(selected)}
+									onTrash={() => trashFiles([selected])}
 									onDirtyChange={setDetailDirty}
 								/>
 							</DockedPanel>

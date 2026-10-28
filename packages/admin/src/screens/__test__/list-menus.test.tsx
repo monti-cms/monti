@@ -40,7 +40,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	publishedAt: null,
 	createdAt: new Date("2026-01-01T00:00:00Z"),
 	updatedAt: new Date("2026-01-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 	...fields,
 });
 
@@ -162,7 +162,7 @@ const addColumn = async (label: string) => {
 };
 const menuOpen = () => screen.queryAllByRole("menu").length > 0;
 const menuClosed = () => waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
-/** Escape closes the menu; the chips row, held still while it was open, then shows the filters that are on. */
+/** Escape closes the menu. */
 const closeMenu = async () => {
 	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 	await menuClosed();
@@ -171,7 +171,6 @@ const closeMenu = async () => {
 const PAGER = /Pagination|페이지 이동/;
 const NEXT = /Next page|다음 페이지/;
 const PREVIOUS = /Previous page|이전 페이지/;
-const chipNamed = (label: string) => screen.getByRole("button", { name: t("listMenu.chipRemove", { label }) });
 const dotsIn = (column: string) =>
 	within(headRow()).getByRole("columnheader", { name: column, hidden: true }).querySelectorAll("[data-slot=column-dot]")
 		.length;
@@ -190,14 +189,13 @@ describe("flow: the list's head", () => {
 		}
 	});
 
-	it("has no chips row while nothing is filtered, and a chip for each filter that is on", async () => {
+	it("shows a filter that is on only by the dot after its column's name: there is no chip row to push the list", async () => {
+		nav.setSearch("collection=post&status=draft");
 		await renderList();
-		expect(document.querySelector("[data-slot=chip-row]")).toBeNull();
-		cleanup();
-		nav.setSearch("collection=post&status=draft&field=summary:empty");
-		await renderList();
-		expect(document.querySelector("[data-slot=chip-row]")).not.toBeNull();
-		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
+		await screen.findAllByRole("columnheader");
+		expect(dotsIn(t("column.status"))).toBe(1);
+		expect(dotsIn(t("column.title"))).toBe(0);
+		expect(document.querySelector("[data-slot=chip]")).toBeNull();
 	});
 });
 
@@ -316,8 +314,8 @@ describe("flow: columns and page size", () => {
 			const from = centre(t("column.updatedAt"));
 			const to = centre(t("column.title"));
 			fireEvent.pointerDown(cell(t("column.updatedAt")), { button: 0, pointerId: 1, clientX: from });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: from - 10 });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: to });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: from - 10 });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: to });
 			// While held, the head already shows it before the title, and nothing is saved yet.
 			expect(names().indexOf(t("column.updatedAt"))).toBeLessThan(names().indexOf(t("column.title")));
 			const savesBefore = saved().length;
@@ -328,6 +326,36 @@ describe("flow: columns and page size", () => {
 			// The press that ended a drag opened no menu and sorted nothing.
 			expect(menuOpen()).toBe(false);
 			expect(lastList().searchParams.get("sortDirection")).not.toBe("asc");
+		} finally {
+			box.mockRestore();
+		}
+	});
+
+	it("does not pick a column up when the press only opened its menu: moving over the head afterwards moves nothing", async () => {
+		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+			this: HTMLElement,
+		) {
+			const left =
+				[...(this.parentElement?.children ?? [])].filter((cell) => cell.tagName === this.tagName).indexOf(this) * 100;
+			return { left, right: left + 100, top: 0, bottom: 40, width: 100, height: 40, x: left, y: 0 } as DOMRect;
+		});
+		try {
+			await renderList();
+			await screen.findAllByRole("columnheader");
+			const before = names();
+			const cell = head().getByRole("columnheader", { name: t("column.updatedAt") });
+			const from = cell.getBoundingClientRect().left + 50;
+			// The press opens the menu; its release goes to the menu, not the head.
+			fireEvent.pointerDown(cell, { button: 0, buttons: 1, pointerId: 1, clientX: from });
+			fireEvent.click(within(cell).getByRole("button", { name: t("column.updatedAt") }));
+			expect(menuOpen()).toBe(true);
+			fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+			await waitFor(() => expect(menuOpen()).toBe(false));
+			const savesBefore = saved().length;
+			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 150 });
+			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 300 });
+			expect(names()).toEqual(before);
+			expect(saved().length).toBe(savesBefore);
 		} finally {
 			box.mockRestore();
 		}
@@ -344,7 +372,7 @@ describe("flow: columns and page size", () => {
 });
 
 describe("flow: filter by value", () => {
-	it("ticks 'editing' and 'draft' on the status menu, which stays open, and the chip and the dot say it until the chip's × takes it off", async () => {
+	it("ticks 'editing' and 'draft' on the status menu, which stays open, and the dot says it until they are unticked", async () => {
 		await renderList();
 		openColumn(t("column.status"));
 		const editing = await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
@@ -357,52 +385,15 @@ describe("flow: filter by value", () => {
 		expect(menuOpen()).toBe(true);
 		expect(dotsIn(t("column.status"))).toBe(1);
 		await closeMenu();
-		const chip = chipNamed(`${t("column.status")}: ${t("filter.editing")}, ${statusName("draft")}`);
 		expect(dotsIn(t("column.title"))).toBe(0);
-		fireEvent.click(chip.querySelector("button") ?? chip);
+		openColumn(t("column.status"));
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) }));
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
 		await waitFor(() => expect(lastList().searchParams.has("status")).toBe(false));
 		expect(dotsIn(t("column.status"))).toBe(0);
 	});
 
-	it("holds the chips row still while a column menu is open, so ticking one value after another never moves the menu, and shows the chips once it closes", async () => {
-		await renderList();
-		const chipRow = () => document.querySelector("[data-slot=chip-row]");
-		openColumn(t("column.status"));
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["draft"]));
-		// The filter is on, the dot and the ✓ say so, but no row has appeared above the head.
-		expect(chipRow()).toBeNull();
-		expect(dotsIn(t("column.status"))).toBe(1);
-		const editing = screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
-		fireEvent.click(editing);
-		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["draft", "editing"]));
-		expect(chipRow()).toBeNull();
-		expect(
-			screen
-				.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) })
-				.getAttribute("aria-checked"),
-		).toBe("true");
-		expect(
-			screen
-				.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) })
-				.getAttribute("aria-checked"),
-		).toBe("true");
-		await closeMenu();
-		expect(chipNamed(`${t("column.status")}: ${t("filter.editing")}, ${statusName("draft")}`)).toBeTruthy();
-	});
-
-	it("keeps the chips it had while a menu is open when the last filter is cleared from it, and drops them when it closes", async () => {
-		nav.setSearch("collection=post&status=draft");
-		await renderList();
-		openColumn(t("column.status"));
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		await waitFor(() => expect(lastList().searchParams.has("status")).toBe(false));
-		expect(document.querySelector("[data-slot=chip-row]")).not.toBeNull();
-		await closeMenu();
-		await waitFor(() => expect(document.querySelector("[data-slot=chip-row]")).toBeNull());
-	});
-
-	it("ticks none and a tag on the tag menu, narrows the list to them, shows one chip and takes it off with its ×", async () => {
+	it("ticks none and a tag on the tag menu, narrows the list to them, and the dot says so until they are unticked", async () => {
 		await renderList();
 		openColumn("태그");
 		const react = await screen.findByRole("menuitemcheckbox", { name: /^리액트/ });
@@ -413,11 +404,10 @@ describe("flow: filter by value", () => {
 		expect(menuOpen()).toBe(true);
 		expect(nav.search.getAll("field")).toEqual(["tagIds:empty", "tagIds:is:t-react"]);
 		expect(dotsIn("태그")).toBe(1);
-		await closeMenu();
-		fireEvent.click(
-			await screen.findByRole("button", { name: t("listMenu.chipRemove", { label: "태그: 없음, 리액트" }) }),
-		);
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("listMenu.none")}`) }));
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /^리액트/ }));
 		await waitFor(() => expect(lastList().searchParams.has("field")).toBe(false));
+		expect(dotsIn("태그")).toBe(0);
 	});
 
 	it("narrows the items of a relation to what the search row types", async () => {
@@ -441,10 +431,10 @@ describe("flow: filter by value", () => {
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["tagIds:is:t-react"]));
 		expect(lastList().searchParams.getAll("status")).toEqual(["draft"]);
 		await closeMenu();
-		expect(screen.getAllByRole("button", { name: /지우기|Remove/ })).toHaveLength(2);
+		expect([dotsIn(t("column.status")), dotsIn("태그")]).toEqual([1, 1]);
 	});
 
-	it("sets the translation state from the language menu, under the languages, and the chip says it", async () => {
+	it("sets the translation state from the language menu, under the languages, and the dot says it", async () => {
 		await renderList();
 		openColumn(t("column.locale"));
 		const changed = await screen.findByRole("menuitemcheckbox", {
@@ -459,7 +449,7 @@ describe("flow: filter by value", () => {
 		);
 		await waitFor(() => expect(lastList().searchParams.getAll("locale")).toEqual([testSite.LOCALES[0]]));
 		await closeMenu();
-		expect(chipNamed(`${t("listMenu.translation")}: ${t("listMenu.translationChanged")}`)).toBeTruthy();
+		expect(dotsIn(t("column.locale"))).toBe(1);
 	});
 
 	it("filters a text column by 'empty' alone, after it is turned on with +", async () => {
@@ -471,8 +461,6 @@ describe("flow: filter by value", () => {
 		fireEvent.click(rows[0] as HTMLElement);
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["summary:empty"]));
 		expect(dotsIn("요약")).toBe(1);
-		await closeMenu();
-		expect(chipNamed(t("listMenu.chipEmpty", { label: "요약" }))).toBeTruthy();
 	});
 
 	it("filters a select by its options, with 'none' first", async () => {
@@ -484,7 +472,7 @@ describe("flow: filter by value", () => {
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^지원 중단/ }));
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["policy:is:deprecated"]));
 		await closeMenu();
-		expect(chipNamed("정책: 지원 중단")).toBeTruthy();
+		expect(dotsIn("정책")).toBe(1);
 	});
 
 	it("has nothing to filter by on the address column, only sort and hide", async () => {
@@ -498,7 +486,7 @@ describe("flow: filter by value", () => {
 });
 
 describe("flow: filter by date", () => {
-	it("picks 'last 30 days' on the updated date, which leaves the menu open with a ✓ on it, and shows a chip and a dot", async () => {
+	it("picks 'last 30 days' on the updated date, which leaves the menu open with a ✓ on it, and shows a dot", async () => {
 		await renderList();
 		openColumn(t("column.updatedAt"));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("listMenu.last30") }));
@@ -516,7 +504,6 @@ describe("flow: filter by date", () => {
 		await waitFor(() => expect(radio.getAttribute("aria-checked")).toBe("true"));
 		expect(screen.getByRole("menuitemradio", { name: t("listMenu.today") }).getAttribute("aria-checked")).toBe("false");
 		await closeMenu();
-		expect(chipNamed(`${t("listMenu.updated")}: ${t("listMenu.last30")}`)).toBeTruthy();
 	});
 
 	it("filters the created date once its column is on, as it does the updated date", async () => {
@@ -528,7 +515,7 @@ describe("flow: filter by date", () => {
 		expect(lastList().searchParams.has("updatedFrom")).toBe(false);
 		expect(nav.search.get("created")).toBe("last7");
 		await closeMenu();
-		expect(chipNamed(`${t("listMenu.created")}: ${t("listMenu.last7")}`)).toBeTruthy();
+		expect(dotsIn(t("column.createdAt"))).toBe(1);
 	});
 
 	/** Opens the updated date's menu and the calendar card of its "pick a period" row beside it, which leaves the menu open behind it. */
@@ -550,16 +537,14 @@ describe("flow: filter by date", () => {
 	});
 
 	// jsdom moves focus out of the card once the days re-render, which a browser does not; that the calendar stays open is checked by the UpdatedRangeSet story.
-	it("picks a period on the calendar: the first day starts it, the second sets it, and a chip says it", async () => {
+	it("picks a period on the calendar: the first day starts it, the second sets it, and the dot says it", async () => {
 		await openCalendar();
 		fireEvent.click(day("10"));
 		expect(nav.search.has("updated")).toBe(false);
 		fireEvent.click(day("20"));
 		await waitFor(() => expect(nav.search.get("updated")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
 		expect(lastList().searchParams.get("updatedFrom")).not.toBeNull();
-		expect(
-			await screen.findByRole("button", { name: new RegExp(`${t("listMenu.updated")}: \\d\\d\\. 10 – \\d\\d\\. 20`) }),
-		).toBeTruthy();
+		expect(dotsIn(t("column.updatedAt"))).toBe(1);
 	});
 
 	it("takes the same day twice as that one day", async () => {
@@ -600,8 +585,7 @@ describe("flow: pick rows and act", () => {
 		});
 		expect(within(headRow()).queryByRole("columnheader", { name: t("column.title"), hidden: true })).toBeNull();
 		expect(screen.queryByRole("button", { name: t("column.add") })).toBeNull();
-		// The chips row above stays, and the select-all moved onto the bar and shows that only some are picked.
-		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
+		// The select-all moved onto the bar and shows that only some are picked.
 		expect(screen.getAllByRole("checkbox", { name: t("list.selectAll") })).toHaveLength(1);
 		expect(
 			within(bar)
@@ -623,7 +607,7 @@ describe("flow: pick rows and act", () => {
 		);
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
 		expect(head().getByRole("button", { name: t("column.title") })).toBeTruthy();
-		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
+		expect(dotsIn(t("column.status"))).toBe(1);
 		expect(
 			head()
 				.getByRole("checkbox", { name: t("list.selectAll") })
@@ -638,15 +622,17 @@ describe("flow: pick rows and act", () => {
 		expect(screen.queryByRole("button", { name: /요청/ })).toBeNull();
 	});
 
-	it("moves the picked rows to the trash from the menu after asking, and the list is requested again", async () => {
+	it("moves the picked draft rows to the trash from the menu at once, and the list is requested again", async () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
 		await screen.findByRole("toolbar");
 		fireEvent.click(screen.getByRole("button", { name: "더보기" }));
 		const rows = await screen.findAllByRole("menuitem");
 		expect(rows.at(-1)?.textContent).toBe(tc("lifecycle.trash"));
+		const before = listRequests().length;
 		fireEvent.click(rows.at(-1) as HTMLElement);
-		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
+		await waitFor(() => expect(listRequests().length).toBeGreaterThan(before));
+		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 });
 

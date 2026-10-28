@@ -93,6 +93,8 @@ export interface EntryData {
 		doc?: StoredDocument;
 	};
 	status: "draft" | "published" | "archived" | "trashed";
+	/** When it went to the trash, while it is there. */
+	deletedAt?: string;
 	version: number;
 	folderId: string | null;
 	/** When the latest change that raised `version` was made, and who made it (absent when it was made outside an admin request). The conflict dialog shows both. */

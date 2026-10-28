@@ -2,7 +2,7 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { answer, type FakeApi, PageFrame } from "../stories/screen-frame";
-import { EntryListScreen, TrashScreen } from "./entry-list-screen";
+import { EntryListScreen } from "./entry-list-screen";
 
 const meta = { title: "Screens/Entry list", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
@@ -26,7 +26,7 @@ const entry = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIt
 	publishedAt: null,
 	createdAt: new Date("2026-09-01T00:00:00Z"),
 	updatedAt: new Date("2026-10-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 	...fields,
 });
 
@@ -67,17 +67,12 @@ const folders = [
 	folder("f-notes", "노트", 1, null, 2),
 	folder("f-weekly", "주간 정리", 0, "f-news", 5),
 ];
-const trashed = [
-	entry("버린 글", { status: "trashed", trashedAt: new Date("2026-10-15T00:00:00Z") }),
-	entry("오래된 초안", { status: "trashed", trashedAt: new Date("2026-10-10T00:00:00Z") }),
-];
 
 type ListOptions = {
 	items?: ListEntriesItem[];
 	/** The total the list API answers with, when the page shown is only part of it. */
 	total?: number;
 	folders?: Folder[];
-	trashed?: ListEntriesItem[];
 	/** Answers for the list request itself (loading, failure). */
 	list?: (url: URL) => unknown;
 	/** Anything else: runs first, `undefined` falls through to the defaults. */
@@ -86,7 +81,7 @@ type ListOptions = {
 
 /** The admin API of the list screens: entries (list and trash), folders and saved list settings. */
 const server =
-	({ items = posts, total, folders: folderList = [], trashed: trash = [], list, extra }: ListOptions = {}): FakeApi =>
+	({ items = posts, total, folders: folderList = [], list, extra }: ListOptions = {}): FakeApi =>
 	(path, method) => {
 		const extraAnswer = extra?.(path, method);
 		if (extraAnswer !== undefined) return extraAnswer;
@@ -102,13 +97,11 @@ const server =
 		}
 		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const collection = url.searchParams.get("collection");
-			const inTrash = url.searchParams.getAll("status").includes("trashed");
-			// The sidebar's trash badge asks for trashed rows of the same collection; only the list itself goes through `list`.
-			if (list && !inTrash && collection === "post") return list(url);
+			if (list && collection === "post") return list(url);
 			// The tags the bulk bar adds or takes away: every tag a row holds, and the ones the filter menu lists.
-			if (collection === "tag" && !inTrash) return { items: tagEntries, total: tagEntries.length };
-			const rows = collection !== "post" ? [] : inTrash ? trash : items;
-			return { items: rows, total: inTrash || collection !== "post" ? rows.length : (total ?? rows.length) };
+			if (collection === "tag") return { items: tagEntries, total: tagEntries.length };
+			const rows = collection !== "post" ? [] : items;
+			return { items: rows, total: collection !== "post" ? rows.length : (total ?? rows.length) };
 		}
 		return undefined;
 	};
@@ -172,44 +165,42 @@ const selectRows = async (canvasElement: HTMLElement, ...titles: string[]) => {
 	}
 };
 
-/** The stories that show the list screen itself are shot by the visual checks. */
-const visual = { tags: ["visual"] };
-
-export const Loaded: Story = { ...visual, render: listScreen(server({ trashed, total: 148 })) };
+// The stories that show the list screen itself are shot by the visual checks.
+export const Loaded: Story = { tags: ["visual"], render: listScreen(server({ total: 148 })) };
 
 export const WithFolders: Story = {
-	...visual,
-	render: listScreen(server({ folders, trashed, total: 148 })),
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 148 })),
 };
 
 export const Empty: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ items: [] })),
 };
 
 export const NoSearchResults: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ items: [] }), "collection=post&search=없는 검색어"),
 };
 
 export const Loading: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ list: () => "pending" })),
 };
 
 export const LoadFailed: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ list: () => serverError() })),
 };
 
 export const RowsSelected: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: ({ canvasElement }) => selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글"),
 };
 
 export const RowMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "첫 번째 글");
@@ -225,12 +216,12 @@ const openColumn = async (canvasElement: HTMLElement, name: string) => {
 
 /** Every state of the status column is one of four values, ticked in the status menu, which stays open for the next. */
 export const StatusMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 3 }), "collection=post&status=editing"),
 	play: ({ canvasElement }) => openColumn(canvasElement, "상태"),
 };
 
-/** The chips row holds still while a column menu is open: ticking a value does not push the head and the menu down, so the next tick lands on its row. */
+/** Ticking values never moves the menu: nothing appears above the head (there is no chip row), so the next tick lands on its row. */
 export const StatusMenuHoldsStill: Story = {
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
@@ -243,45 +234,43 @@ export const StatusMenuHoldsStill: Story = {
 		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked());
 		await new Promise((resolve) => setTimeout(resolve, 300));
 		await expect(top()).toBe(before);
-		await expect(canvasElement.querySelector("[data-slot=chip-row]")).toBeNull();
 		await userEvent.click(body().getByRole("menuitemcheckbox", { name: /^수정 중/ }));
 		await expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked();
 		await expect(body().getByRole("menuitemcheckbox", { name: /^수정 중/ })).toBeChecked();
 		await expect(body().getByRole("menuitemcheckbox", { name: /^발행됨/ })).not.toBeChecked();
 		await userEvent.keyboard("{Escape}");
-		await waitFor(() => expect(canvasElement.querySelector("[data-slot=chip-row]")).not.toBeNull());
 	},
 };
 
 /** A relation's menu: a search row, "none", a rule, then the items with how many rows each has. */
 export const TagMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "태그"),
 };
 
 /** The languages, a rule, and the translation state under its own name. */
 export const LanguageMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 3 }), "collection=post&translation=changed"),
 	play: ({ canvasElement }) => openColumn(canvasElement, "언어"),
 };
 
 export const TitleMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "제목"),
 };
 
 /** The sorted column's name is in ink with its arrow; the menu is closed. */
 export const TitleSorted: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&sortField=title&sortDirection=asc"),
 };
 
 /** The date menu: sort, then today, the last 7 and 30 days and a period, one at a time with the ✓. */
 export const UpdatedMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
 };
@@ -295,19 +284,19 @@ const openCalendar = async (canvasElement: HTMLElement) => {
 
 /** "Pick a period": the first day clicked starts it, the second sets it and the calendar stays open showing it. */
 export const UpdatedRangeOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
-/** A period that is on: the calendar shows its two days filled and the days between banded, and the chip says it. */
+/** A period that is on: the calendar shows its two days filled and the days between banded, and the column has its dot. */
 export const UpdatedRangePicked: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
-/** The second day sets the period: the chip appears, and the calendar stays open showing it (a press outside or Escape closes it). */
+/** The second day sets the period: the column gets its dot, and the calendar stays open showing it (a press outside or Escape closes it). */
 export const UpdatedRangeSet: Story = {
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
@@ -315,21 +304,15 @@ export const UpdatedRangeSet: Story = {
 		const day = (n: string) => within(body().getByRole("grid")).getByRole("button", { name: new RegExp(`${n}일`) });
 		await userEvent.click(day("10"));
 		await userEvent.click(day("20"));
-		await within(canvasElement).findByRole("button", { name: /수정한 날: \d\d\. 10 – \d\d\. 20 지우기/ });
+		await waitFor(() => expect(canvasElement.querySelector("[data-slot=column-dot]")).not.toBeNull());
 		await expect(body().getByRole("grid")).toBeVisible();
 		await expect(body().getAllByRole("menu").length).toBeGreaterThanOrEqual(2);
 	},
 };
 
-/** The period as a chip alone, the menus closed. */
-export const UpdatedRangeChip: Story = {
-	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
-};
-
 /** The + at the end of the head row lists only the columns that are off, as plain rows. */
 export const ColumnAddOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		const head = within((await within(canvasElement).findAllByRole("rowgroup"))[0] as HTMLElement);
@@ -338,9 +321,9 @@ export const ColumnAddOpen: Story = {
 	},
 };
 
-/** The filters that are on are chips under the title, each with its ×, and the columns they filter have a dot after the name. */
+/** Filters that are on: each column they filter has a dot after its name, and nothing is added above the head. */
 export const Filtered: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(
 		server({ total: 12 }),
 		"collection=post&status=published&status=editing&field=tagIds:empty&updated=last30&translation=none",
@@ -349,7 +332,7 @@ export const Filtered: Story = {
 
 /** The footer holds the range, the page size beside it (its menu opens upward) and the pager. */
 export const PageSizeOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "페이지당 행 수" }));
@@ -383,7 +366,7 @@ export const BulkBarHoldsRows: Story = {
 
 /** The bulk bar's ⋯ has the rest of the actions, the trash last in red. */
 export const BulkMoreOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -410,7 +393,7 @@ const tagRows = [
 
 /** 바꾸기 › 태그: a tag every picked row holds is ticked, one only some hold is a bar with how many, the rest are empty; picking one changes all the rows. */
 export const BulkChangeOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ items: tagRows, folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -422,7 +405,7 @@ export const BulkChangeOpen: Story = {
 
 /** The right-click menu of several picked rows: the same actions by the same names, the fields at the second level with no 바꾸기 above them. */
 export const RowMenuSeveralOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ items: tagRows, folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -433,7 +416,7 @@ export const RowMenuSeveralOpen: Story = {
 };
 
 export const BulkFolderMenuOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
@@ -444,17 +427,108 @@ export const BulkFolderMenuOpen: Story = {
 
 /** The pager on a later page: first and last, the current page with its neighbours, gaps between. */
 export const PagerOnPageFour: Story = {
-	...visual,
+	tags: ["visual"],
 	render: listScreen(server({ total: 148 }), "collection=post&page=4"),
 };
 
-/** The row menu's "Move to trash" asks first. */
-export const DeleteDialog: Story = {
+/** The published post with an English translation, for the states where the trash asks. */
+const postsWithTranslation = posts.map((post) =>
+	post.id === "첫 번째 글"
+		? {
+				...post,
+				translations: [
+					{
+						id: post.id,
+						locale: "ko",
+						status: "published" as const,
+						version: 3,
+						isSource: true,
+						hasUnpublishedChanges: false,
+					},
+					{
+						id: "first-en",
+						locale: "en",
+						status: "draft" as const,
+						version: 1,
+						isSource: false,
+						hasUnpublishedChanges: false,
+					},
+				],
+			}
+		: post,
+);
+
+/** Main board mode 휴지통 확인: a published post asks, and says the English translation goes with it. */
+export const TrashDialog: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ items: postsWithTranslation })),
+	play: async ({ canvasElement }) => {
+		await openRowMenu(canvasElement, "첫 번째 글");
+		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통/ }));
+		await body().findByRole("alertdialog");
+	},
+};
+
+/** Main board mode 휴지통으로 옮김: a draft goes at once, and the toast can undo it. */
+export const RowTrashed: Story = {
+	tags: ["visual"],
 	render: listScreen(server()),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "쓰는 중인 글");
 		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통/ }));
+		await body().findByText("휴지통으로 옮겼어요");
+	},
+};
+
+/** Opens a folder row's menu the way a right click does. */
+const openFolderRowMenu = async (canvasElement: HTMLElement, name: string) => {
+	const row = (await within(canvasElement).findAllByRole("row", { name: new RegExp(name) }))[0] as HTMLElement;
+	const box = row.getBoundingClientRect();
+	fireEvent.contextMenu(row, { clientX: box.left + 200, clientY: box.top + box.height / 2 });
+	await body().findAllByRole("menuitem");
+};
+
+/** Main board mode 폴더 우클릭: open, rename, move, and 폴더 지우기 last in red. */
+export const FolderMenuOpen: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+	},
+};
+
+/** The folder answers: twelve entries inside, one published. */
+const folderServer = (published: number) =>
+	server({
+		folders,
+		extra: (path, method) => {
+			if (path.startsWith("/api/monti/v1/folders/f-news/contents"))
+				return { entries: 12, published, folders: 1, files: 0, filesInUse: 0 };
+			if (path.startsWith("/api/monti/v1/folders/f-news") && method === "DELETE")
+				return { folder: {}, entries: 12, folders: 1, files: 0, kept: 0 };
+			return undefined;
+		},
+	});
+
+/** Main board mode 폴더 지우기 확인: a folder that holds a published post asks, and says how many come down. */
+export const FolderTrashDialog: Story = {
+	tags: ["visual"],
+	render: listScreen(folderServer(1)),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
 		await body().findByRole("alertdialog");
+	},
+};
+
+/** Main board mode 폴더 지움: a folder of drafts goes at once, and the toast can undo it. */
+export const FolderTrashed: Story = {
+	tags: ["visual"],
+	render: listScreen(folderServer(0)),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
+		await body().findByText("뉴스 폴더와 글 12편을 휴지통으로 옮겼어요");
 	},
 };
 
@@ -466,7 +540,7 @@ export const BulkActionFailed: Story = {
 	),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
-		// The Delete key asks to move every selected row to the trash.
+		// The Delete key asks to move the selected rows to the trash, because one of them is published.
 		fireEvent.keyDown(await within(canvasElement).findByRole("checkbox", { name: "쓰는 중인 글 선택" }), {
 			key: "Delete",
 		});
@@ -576,75 +650,5 @@ export const RecordPanelDiscardDialog: Story = {
 		fireEvent.change(name, { target: { value: "리액트 2" } });
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "프론트엔드" }));
 		await body().findByRole("alertdialog", { name: "저장하지 않은 내용" });
-	},
-};
-
-// The trash screen.
-const trashScreen = (api: FakeApi) => () => (
-	<PageFrame api={api} pathname="/admin/trash" search="collection=post">
-		<TrashScreen />
-	</PageFrame>
-);
-export const TrashLoaded: Story = {
-	...visual,
-	render: trashScreen(server({ trashed })),
-};
-
-export const TrashEmpty: Story = {
-	...visual,
-	render: trashScreen(server()),
-};
-
-export const TrashLoadFailed: Story = {
-	render: trashScreen(server({ extra: (path) => (path.includes("status=trashed") ? serverError() : undefined) })),
-};
-
-export const TrashRowsSelected: Story = {
-	...visual,
-	render: trashScreen(server({ trashed })),
-	play: ({ canvasElement }) => selectRows(canvasElement, "버린 글", "오래된 초안"),
-};
-
-export const TrashRowMenuOpen: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await openRowMenu(canvasElement, "버린 글");
-	},
-};
-
-/** Restoring needs no confirmation; deleting forever asks, for one row or for the selected rows. */
-export const DeleteForeverSelectedDialog: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await selectRows(canvasElement, "버린 글", "오래된 초안");
-		// The bulk bar sits above the table, so its button comes before the rows' own.
-		const [bulkDelete] = await within(canvasElement).findAllByRole("button", { name: "영구 삭제" });
-		await userEvent.click(bulkDelete as HTMLElement);
-		await body().findByRole("alertdialog");
-	},
-};
-
-export const DeleteForeverDialog: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await openRowMenu(canvasElement, "버린 글");
-		await userEvent.click(await body().findByRole("menuitem", { name: /영구 삭제/ }));
-		await body().findByRole("alertdialog");
-	},
-};
-
-export const RestoreFailed: Story = {
-	render: trashScreen(
-		server({
-			trashed,
-			extra: (path, method) =>
-				path.endsWith("/restore") && method === "POST"
-					? answer(409, { error: { code: "conflict", message: "다른 곳에서 먼저 바뀌었어요." } })
-					: undefined,
-		}),
-	),
-	play: async ({ canvasElement }) => {
-		const row = await within(canvasElement).findByRole("row", { name: /버린 글/ });
-		await userEvent.click(within(row).getByRole("button", { name: "복원" }));
 	},
 };

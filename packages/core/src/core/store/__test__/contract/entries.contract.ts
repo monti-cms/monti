@@ -1456,11 +1456,11 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			const trashed = await store.trashEntry({ id: tagged.id, expectedVersion: changed.version });
 			expect((await store.listEntries({ collection: contentCollection, fields })).items).toHaveLength(0);
 			const trash = await store.listEntries({ collection: contentCollection, statuses: ["trashed"] });
-			expect(trash.items.find((item) => item.id === tagged.id)?.trashedAt).toBeInstanceOf(Date);
+			expect(trash.items.find((item) => item.id === tagged.id)?.deletedAt).toBeInstanceOf(Date);
 			expect(trashed.status).toBe("trashed");
 		});
 
-		it("refuses to delete media that an unparsed draft or a template still mentions", async () => {
+		it("keeps media out of the trash that an unparsed draft or a template still mentions", async () => {
 			const media = await store.createMediaAsset({
 				filename: "a.png",
 				mimeType: "image/png",
@@ -1479,10 +1479,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				name: unique("tpl"),
 				doc: imageDoc(media.id, "a"),
 			});
-			await expect(store.beginMediaDelete(media.id)).rejects.toMatchObject({
-				code: "in_use",
-				details: { templates: 1 },
-			});
+			expect(await store.trashMedia({ ids: [media.id] })).toEqual({ trashed: [], kept: [media.id] });
 			expect((await store.getMediaAsset(media.id))?.status).toBe("ready");
 		});
 	});
