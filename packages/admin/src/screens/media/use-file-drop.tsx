@@ -1,5 +1,6 @@
 "use client";
 
+import { Upload } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { toast } from "@monti-cms/ui";
 import { type DragEvent, useEffect, useState } from "react";
@@ -41,7 +42,7 @@ export function useFileDrop({
 					{t("drop.intoAfter")}
 				</>
 			),
-			{ id: HINT },
+			{ id: HINT, icon: <Upload aria-hidden size={16} /> },
 		);
 	}, [dragging, target, t, folderName]);
 	useEffect(() => () => void toast.dismiss(HINT), []);
