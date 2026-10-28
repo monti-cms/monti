@@ -11,7 +11,7 @@ A list row sits on a fixed-column grid, so a long title is cut and columns do no
 - The column-name row (`.mt-list-head`) uses the same grid as the rows. It is 40px high with the same pale line under it as the rows. A name is `.mt-col` (`text-caption`, `fg-subtle`, weight 400). The ⋯ column and the checkbox column have no name.
 - There are no status tabs, no "필터 ▾" (filter) and no "보기 ▾" (view) above the list. Filtering, sorting and hiding columns are all done from the name of that column. There is one place for each job, so filtering by status is also done from the status column's name. A name is a button (`.mt-col`, wrapped in `.mt-col-wrap`). Pressing it opens that column's menu (`.mt-col-menu`, 220px) under the name. The text of the menu rows starts on the same vertical line as the name. The last column (the date, `.is-end`) and columns near the right edge (`.is-flip`) align the menu's right edge instead.
 - A column with a filter on has a 5px ink dot (`.dot`) after its name. A column whose menu is open has its name in ink (`.is-open`).
-- Filters that are on appear in the chip row under the title row (`.mt-chips`), one chip each: "상태: 수정 중 ×" (status: editing), "수정한 날: 최근 30일 ×" (edited date: last 30 days), "검색 설명 비어 있음 ×" (search description empty). The × of a chip removes that one filter. The search words and the place not to search in a folder ("시리즈 원고" (series drafts) · "모든 폴더" (all folders)) are in this row too. With nothing on, there is no chip row, and the column-name row sits directly under the title row.
+- Filters that are on are not repeated as chips. The dot after the column's name and the ticks in its menu show them, and unticking in the menu removes one. A chip row would only say the same again and push the list down as it comes and goes. The search words stay in the search box and are not a chip either. Only a search inside a folder adds one row under the title row (`.mt-chips`): the place to search, "시리즈 원고" (series drafts) · "모든 폴더" (all folders).
 
 ### Column menu
 
@@ -47,7 +47,7 @@ The filter values in a column menu follow the kind of value that is stored, not 
 | Conditional | the fields inside each follow this rule |
 
 - If the column to filter is hidden, turn it on first with the +. Once on, the filtered result shows in that column right away.
-- Picking a value does not close the menu (several are applied at once). The period calendar also applies the period when the second day is pressed, and stays open showing the picked period. Esc or a press outside closes it. An applied filter becomes a chip in the chip row at once.
+- Picking a value does not close the menu (several are applied at once). The period calendar also applies the period when the second day is pressed, and stays open showing the picked period. Esc or a press outside closes it. An applied filter shows at once as the dot after the column's name.
 - Sort is chosen at the top of the column menu. The title mixes Korean and English, so it is not called "가나다순" (alphabetical in Korean); it is "오름차순 · 내림차순" (ascending · descending). The English admin says "A → Z · Z → A", and for dates "Newest first · Oldest first". The order of titles follows the sort rules of the admin screen language.
 - Folders are filtered by the sidebar, so they are not in the column menu.
 
@@ -71,14 +71,14 @@ The filter values in a column menu follow the kind of value that is stored, not 
 - The ⋯ is always shown. The checkbox is shown only when the pointer is over the row and on picked rows. The checkbox hangs in the left outer margin of the table (-26px). The scrolling box of the list reaches 32px further into the left margin, so the checkbox is not cut and no horizontal scroll appears.
 - The ⋯ column is 54px (the 32px button and the column padding).
 - A grid list (media) follows the same rules. A tile grid is `.mt-tiles` (12px padding at the left and right), and the tool row above is `.mt-table-head`. So the first letters of the posts table and the media grid are on the same vertical line.
-- A table list is wrapped in `.mt-table`. The rows get 12px padding at the left and right, so the picked row's background does not touch the first column's text. The rows above and below the table (the chip row, the column-name row, the bulk bar, group names, pagination) follow the same 12px inside (`.mt-chips`, `.mt-list-head` and `.mt-bulk` do it by themselves; other rows use `.mt-table-head`). The rules go all the way to the end.
+- A table list is wrapped in `.mt-table`. The rows get 12px padding at the left and right, so the picked row's background does not touch the first column's text. The rows above and below the table (the search-place row, the column-name row, the bulk bar, group names, pagination) follow the same 12px inside (`.mt-chips`, `.mt-list-head` and `.mt-bulk` do it by themselves; other rows use `.mt-table-head`). The rules go all the way to the end.
 - When rows are picked, the bulk bar (`.mt-bulk`) replaces the column-name row. See "Bulk bar".
 - A picked row (`.mt-row.is-on`) is painted only inside the rectangle of the table: no rounded corners and no margin going out of the table. The background is `bg-selected` and the rule under it is `border-default`, so the lines do not merge into one when picked rows are next to each other.
 - A row under the pointer (`.mt-row:hover`; `.is-hover` in the drawings) is `bg-muted`, one step paler than a picked row, so the two are not confused. When a menu is opened by right-clicking a row (a folder row too), that row stays `bg-muted` while the menu is open, so you can see which row the menu is for. A menu opened from ⋯ does the same.
 
 ### In code
 
-`Table` (with `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) draws a fixed-layout table. Options: `columns` widths in px, a total width, `scroll` (the table scrolls sideways in its own box) or `none` (the page or a parent scrolls it, needed for a sticky header and for the row check that hangs in the left margin), `layout="fixed"` for resizable columns, a sticky header, and a quieter "stale" state while new rows load. Row parts: `RowCheck`, `RowLink`, `RowTitle` (the title in ink over its address in mono, one line each; the other columns are gray), `RowActions`, `ListScroll`. `ListHead` draws the column-name row: each column has a `ListHeadColumn` with `width` in px (without it the column takes the room the others leave), `sorted` (name in ink with ↓ or ↑), `filtered` (a dot follows the name) and `menu` (the rows of a menu: sort, values to filter by, hide). `ListHeadAdd` gives the columns that are off, offered by the + at the end, and the + button's name ("Add column"). The menu card is 220px, with row text starting on the name's line (the card reaches 15px past the name's side). A drag starts after a small pointer movement, so a press stays a click. `Chip` and `ChipRow` draw the applied filters (see Tabs).
+`Table` (with `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) draws a fixed-layout table. Options: `columns` widths in px, a total width, `scroll` (the table scrolls sideways in its own box) or `none` (the page or a parent scrolls it, needed for a sticky header and for the row check that hangs in the left margin), `layout="fixed"` for resizable columns, a sticky header, and a quieter "stale" state while new rows load. Row parts: `RowCheck`, `RowLink`, `RowTitle` (the title in ink over its address in mono, one line each; the other columns are gray), `RowActions`, `ListScroll`. `ListHead` draws the column-name row: each column has a `ListHeadColumn` with `width` in px (without it the column takes the room the others leave), `sorted` (name in ink with ↓ or ↑), `filtered` (a dot follows the name) and `menu` (the rows of a menu: sort, values to filter by, hide). `ListHeadAdd` gives the columns that are off, offered by the + at the end, and the + button's name ("Add column"). The menu card is 220px, with row text starting on the name's line (the card reaches 15px past the name's side). A drag starts after a small pointer movement and only while the button is held, so a press stays a click and a press that opened a menu never becomes a drag. A dragged name takes a neighbour's place when its middle reaches the neighbour's middle, so two columns never trade back and forth.
 
 `List` and `ListItem` in `@monti-cms/ui` are a different part: a list of short lines (`bullet` marks each with a dot; `none` is a plain column), for what a step will do or what a folder holds.
 
@@ -92,7 +92,7 @@ A checkbox in the left outer margin at -26px, on the same vertical line as the r
 
 ## Bulk bar (`.mt-bulk`)
 
-While rows are picked, it takes the place of the column-name row: the same place, the same 40px and the same bottom line (`border-muted`), so the rows below do not move. The select-all check is in the same left outer position as the row checks. The chip row (applied filters) stays above it. When everything picked is released, the column names come back.
+While rows are picked, it takes the place of the column-name row: the same place, the same 40px and the same bottom line (`border-muted`), so the rows below do not move. The select-all check is in the same left outer position as the row checks. When everything picked is released, the column names come back.
 
 `☑ N개 선택 │ ✦ 요청 │ 발행 · 보관 · 폴더로 ▾ · 바꾸기 ▾ │ ⋯` … and at the end `선택 해제`. (N selected │ ✦ request │ publish · archive · to folder ▾ · change ▾ │ ⋯ … deselect.)
 
@@ -183,7 +183,7 @@ Pressing "+ 폴더" makes a new folder on the spot with no dialog, and the name 
 ## Inside a folder (posts and media)
 
 - Above is the path ("게시글 /" (posts /), "미디어 /" (media /)), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
-- Search and filters look in the current folder and its subfolders. When applied, after the chip is the toggle for where to look, "folder name | 모든 폴더". At the top level it is already everything, so there is no toggle.
+- Search and filters look in the current folder and its subfolders. When applied, the search-place row shows the toggle for where to look, "folder name | 모든 폴더". At the top level it is already everything, so there is no toggle.
 - Deleting a folder moves the folder and what is in it to the trash as one lump. It asks for confirmation only if a published post is inside; otherwise it shows a toast with "되돌리기" (undo).
 
 ## Pagination (`.mt-pager`, `.mt-page`)

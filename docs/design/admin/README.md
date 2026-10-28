@@ -50,7 +50,7 @@ A part belongs to a group. Parts in one group share rules (height, line, color).
 | Notices | Status | Entry status, count, progress bar, notice strip |
 | Surfaces | Menu | The floating menu card |
 | | Overlay | Modal, sheet, side panel, name and value |
-| Page | PageHeader | Title row, toolbar (chip row, bulk bar) |
+| Page | PageHeader | Title row, toolbar (bulk bar) |
 | | List | List rows, grid cells, empty state |
 | | Sidebar, StatusBar | Navigation, the bar under the editor |
 | Editor | EditorTools | Block handle, format card |

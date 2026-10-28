@@ -33,6 +33,6 @@ A filter that is on, or a condition that was picked. A × on the right removes i
 
 ### In code
 
-`Chip` (`onRemove` adds the ×, `removeLabel` names it for screen readers, `proposal` is the AI-set look) and `ChipRow` (the row under a title, 12px inside like the rows, with the toolbar rule under it; with no filter on there is no row). `FilterButton` is a condition that is not on yet: its name and a caret that opens a list of values; once a value is picked it becomes a `Chip`.
+`Chip` (`onRemove` adds the ×, `removeLabel` names it for screen readers, `proposal` is the AI-set look). There is no chip row: a list shows its filters as the dot after a column's name. `FilterButton` is a condition that is not on yet: its name and a caret that opens a list of values; once a value is picked it becomes a `Chip`.
 
 The DS README names the chip part `Badge(filter)`. No such export exists.

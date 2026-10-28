@@ -30,9 +30,9 @@ Not in `@monti-cms/ui` yet.
 
 Deleting a collection permanently deletes its entries too. It does not go through the trash.
 
-- Impact: the entries (the trash included), folders and old addresses, entries that point to it, and links in the body.
-- If other entries point to it, it is blocked. Pressing "연결 끊기" (cut the link) leaves the pointing entries as they are and takes out only the target from their relation field (from the published copy too; it remains in the activity log). If an entry in the trash points to it, "같이 삭제" (delete together) can also be picked.
-- Export is recommended first, and "지우고 적용" turns on only after the identifier is typed.
+- The block has two labeled parts. "지워지는 것" (what goes): the entries (the trash included), the folders and old addresses, the entries of other collections that point to it ("연결 끊김", links cut), and the links in the body (shown as broken links). "받아 두기" (keep a copy): the export of the collection.
+- Nothing has to be resolved first. The apply cuts the links that point to it: the pointing entries stay, and only the target leaves their relation field (from the published copy too; it remains in the activity log).
+- "지우고 적용" is on from the start: the review itself is the last check, and there is no identifier to type.
 - A development database deletes at once; a production site deletes when deployed.
 
 Not in `@monti-cms/ui` yet.
@@ -55,8 +55,7 @@ On a deployed site too, settings are edited directly on the screen (the assistan
 ## Collection list display
 
 - A collection that has changed: `.mt-change-dot` beside its name.
-- A collection to be deleted: `.mt-nav.is-removed` (struck through and dimmed). It can be undone until it is saved.
-- The "컬렉션 지우기" (delete collection) row of that collection also gets the same strike (`.mt-removed`) on its name, and only the button changes, to "되돌리기" (undo). No explanation text is added.
+- A collection to be deleted leaves the list at once; nothing is struck through. Until it is saved it can be taken back from "바뀐 곳 ▾" (the row "메모 · 컬렉션 지움 · 되돌리기") or from the notice "메모를 지웠어요 · 되돌리기".
 
 ### In code
 

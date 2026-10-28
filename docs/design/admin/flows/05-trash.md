@@ -78,7 +78,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow5Step11.dc.html`
 - Renders: `Trash` (stage "종류 메뉴")
-- The trash screen. A head row reads title, kind ("종류"), deleted date ("버린 날", sorted newest first). Each row shows the title, a kind column (posts, notes, tags, media), the day it was deleted and days left out of 30; a deleted folder is one row. The user opens the "종류" column menu to filter by kind: it lists every kind with its count (posts 5, notes 1, categories 0, tags 1, media 2), several can be chosen at once, and the menu stays open. The header has search and "비우기" (empty trash). The row meta line does not start with the kind; the kind has its own column.
+- The trash screen. A head row reads title, kind ("종류"), deleted date ("버린 날", sorted newest first). Each row shows the title, a kind column (posts, notes, tags, media), the day it was deleted (the day alone, "10. 27"; the column's name says what it is) and days left out of 30; a deleted folder is one row. The user opens the "종류" column menu to filter by kind: it lists every kind with its count (posts 5, notes 1, categories 0, tags 1, media 2), several can be chosen at once, and the menu stays open. A filter that is on shows only as the dot after "종류"; there is no chip row. The header has search and "비우기" (empty trash). The row meta line does not start with the kind; the kind has its own column.
 
 ### Step 12: "휴지통 · 폴더를 누르면 안으로 · 경로 · 상위 폴더로 · 폴더 복원 · 영구 삭제"
 
@@ -96,13 +96,13 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow5Step14.dc.html`
 - Renders: `Trash` (stage "휴지통 찾기")
-- Searching the trash also finds items inside deleted folders. The result row shows its path ("시리즈 원고 폴더 안 · 게시글 · KO") and days left.
+- Searching the trash also finds items inside deleted folders. The result row shows its path ("시리즈 원고 폴더 안 · KO") and days left. The words stay in the search box; there is no search chip.
 
 ### Step 15: "휴지통 · 어시스턴트가 버린 것은 ✦ 버림 · 누르면 그 대화 · 영구 삭제는 사람만"
 
 - Board: `Flow5Step15.dc.html`
 - Renders: `Trash` (stage "어시스턴트")
-- Items deleted by the assistant carry a "✦ 버림" (discarded by ✦) mark. Clicking it opens that conversation. Permanent deletion is for people only; the assistant cannot do it.
+- Items deleted by the assistant carry a ✦ before their day in the date column (in the proposal blue). Clicking it opens that conversation. Permanent deletion is for people only; the assistant cannot do it.
 
 ### Step 16: "휴지통 · 행을 우클릭 → 복원 · 영구 삭제"
 
@@ -114,7 +114,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow5Step17.dc.html`
 - Renders: `Trash` (stage "미디어")
-- The user filters the trash by kind "미디어" (media). The chip "종류: 미디어 ×" appears and only media rows show (a deleted folder with 3 files, an image). Restoring puts a file back in its original folder; after 30 days the file itself is deleted.
+- The user filters the trash by kind "미디어" (media). The "종류" name gets its dot and only media rows show (a deleted folder with 3 files, an image). Restoring puts a file back in its original folder; after 30 days the file itself is deleted.
 
 ### Step 18: "휴지통 · 글을 열면 읽기 전용 · 복원 · 영구 삭제"
 

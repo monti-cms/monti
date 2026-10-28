@@ -106,25 +106,19 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Renders: `Schema` (stage "지우기 전")
 - On the collection's basic tab, the bottom has a "지우기" (delete) action with a count (23 posts, 2 of them in the trash).
 
-### Step 16: "컬렉션 지우기 · 저장 전까진 줄 그은 채 · 되돌리기"
+### Step 16: "컬렉션 지우기 · 목록에서 바로 빠짐 · 바뀐 곳 · 되돌리기"
 
 - Board: `Flow4Step16.dc.html`
 - Renders: `Schema` (stage "지울 예정")
-- After the user presses delete, the collection stays in the list struck through until saved, with "되돌리기" (undo).
+- After the user presses delete, the collection leaves the collection list at once and the screen shows the next collection. Nothing is deleted before the save. "바뀐 곳 ▾" (changes) lists "메모 · 컬렉션 지움" with "되돌리기" (undo), and a notice "메모를 지웠어요" has "되돌리기" too.
 
-### Step 17: "컬렉션 지우기 · 검토 · 가리키는 글이 있으면 막힘 → 연결 끊기"
+### Step 17: "컬렉션 지우기 · 검토 · 지워지는 것 · 받아 두기 → 지우고 적용"
 
 - Board: `Flow4Step17.dc.html`
 - Renders: `Schema` (stage "지우기 검토")
-- Review for the deletion of the collection "메모": 23 posts (2 in the trash) are permanently deleted, with 2 folders and 31 old addresses. If other content points to it (4 posts, for example "첫 번째 글" and 3 more, and 2 body links that would show as broken links), deleting is blocked until the user cuts the links with "연결 끊기". There is an export action. A field asks for the identifier.
+- Review for the deletion of the collection "메모", in two labeled parts. "지워지는 것" (what goes): 23 posts (2 in the trash) are permanently deleted, 2 folders and 31 old addresses are deleted, the 4 posts that point to it ("첫 번째 글" and 3 more) get those links cut ("연결 끊김", done by the apply, with no button), and 2 body links show as broken links. "받아 두기" (keep a copy): the export of the collection. The danger note says this cannot be undone and that a production site deletes it on deploy. "지우고 적용" (delete and apply) is on from the start; there is no identifier to type.
 
-### Step 18: "컬렉션 지우기 · 식별자 입력 → 지우고 적용"
-
-- Board: `Flow4Step18.dc.html`
-- Renders: `Schema` (stage "지우기 확인")
-- The user types the identifier ("memo") into the confirm field. The text says this cannot be undone and that a production site deletes it on deploy. The apply button reads "지우고 적용".
-
-### Step 19: "컬렉션 지우기 · 지운 뒤"
+### Step 18: "컬렉션 지우기 · 지운 뒤"
 
 - Board: `Flow4Step19.dc.html`
 - Renders: `Schema` (stage "지운 뒤")
