@@ -28,7 +28,11 @@ function PropertyPanel({
 	children?: ReactNode;
 }) {
 	return (
-		<Tabs fill className="h-full" value={value} onValueChange={(next) => onValueChange(String(next))}>
+		<Tabs
+			className="h-full w-full shrink-0 gap-0 sm:w-monti-panel"
+			value={value}
+			onValueChange={(next) => onValueChange(String(next))}
+		>
 			<SidePanel
 				width="panel"
 				bleed
