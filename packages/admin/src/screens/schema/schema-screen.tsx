@@ -38,6 +38,7 @@ import { type ChangeItem, changeItems, type DraftState } from "./change-list";
 import { schemaCollectionMessages } from "./collection.messages";
 import { CollectionEditor } from "./collection-editor";
 import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
+import { draftProblems } from "./draft-problems";
 import { SortableList } from "./fields-tree-dnd";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
@@ -256,6 +257,7 @@ function SchemaEditor({
 	const { confirm, dialog } = useConfirm();
 	const items = useMemo(() => changeItems(base, { draft, renames, removed }), [base, draft, renames, removed]);
 	const dirty = items.length > 0;
+	const problems = useMemo(() => draftProblems(pendingDraft), [pendingDraft]);
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
 	const areas = useMemo(() => changedAreas(base, pendingDraft), [base, pendingDraft]);
 	const savedNames = Object.keys(collectionsOf(base));
@@ -281,12 +283,13 @@ function SchemaEditor({
 			disabled: !writable,
 			vocabulary: state.vocabulary,
 			issues,
+			problems,
 			collectionNames: liveNames,
 			codeCollections: state.codeCollections,
 			file: draft,
 			saved: base,
 		}),
-		[writable, state.vocabulary, issues, liveNames, state.codeCollections, draft, base],
+		[writable, state.vocabulary, issues, problems, liveNames, state.codeCollections, draft, base],
 	);
 
 	const removals: Removal[] = removed.flatMap((name) => {
@@ -341,7 +344,7 @@ function SchemaEditor({
 			items={items}
 			collectionLabel={(name) => String(collectionsOf(draft)[name]?.label ?? name)}
 			onRevert={revertItem}
-			disabled={state.hash === null}
+			disabled={state.hash === null || problems.length > 0}
 			onSave={() => setReviewing(true)}
 			onDiscard={() => void discard()}
 		/>

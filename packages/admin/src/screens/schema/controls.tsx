@@ -25,6 +25,7 @@ import {
 } from "@monti-cms/ui";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
+import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
@@ -33,6 +34,8 @@ export interface SchemaEditContext {
 	readonly disabled: boolean;
 	readonly vocabulary: { readonly blocks: readonly string[]; readonly marks: readonly string[] };
 	readonly issues: readonly ConfigIssue[];
+	/** What stops the draft from being saved; each editor shows the ones that are under its fields. */
+	readonly problems: readonly DraftProblem[];
 	readonly collectionNames: readonly string[];
 	/** Collections defined in code: the preview keeps them next to the file's. */
 	readonly codeCollections: readonly string[];
@@ -46,6 +49,7 @@ const Context = createContext<SchemaEditContext>({
 	disabled: true,
 	vocabulary: { blocks: [], marks: [] },
 	issues: [],
+	problems: [],
 	collectionNames: [],
 	codeCollections: [],
 	file: {},
