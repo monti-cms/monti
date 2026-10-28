@@ -23,7 +23,7 @@ import {
 	Popover,
 	PopoverContent,
 } from "@monti-cms/ui";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import type { TranslatorFor } from "../translator";
 import { adminCalendarLocale } from "../ui/calendar-locale";
 import { useRelationSearch } from "./entries/use-relation-search";
@@ -234,26 +234,28 @@ function DateValues({
 	return (
 		<>
 			{keys.map((key, index) => (
-				<DropdownMenuGroup key={key}>
+				<Fragment key={key}>
 					{index > 0 && <DropdownMenuSeparator />}
-					<DropdownMenuLabel>{t(`listMenu.${key}`)}</DropdownMenuLabel>
-					<DropdownMenuRadioGroup
-						value={dateValue(state[key])}
-						onValueChange={(value) => {
-							const preset = DATE_PRESETS.find((candidate) => candidate === value);
-							if (preset) onChange({ [key]: { kind: "preset", preset } });
-						}}
-					>
-						{DATE_PRESETS.map((preset) => (
-							<DropdownMenuRadioItem key={preset} value={preset}>
-								{t(`listMenu.${preset}`)}
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{t(`listMenu.${key}`)}</DropdownMenuLabel>
+						<DropdownMenuRadioGroup
+							value={dateValue(state[key])}
+							onValueChange={(value) => {
+								const preset = DATE_PRESETS.find((candidate) => candidate === value);
+								if (preset) onChange({ [key]: { kind: "preset", preset } });
+							}}
+						>
+							{DATE_PRESETS.map((preset) => (
+								<DropdownMenuRadioItem key={preset} value={preset}>
+									{t(`listMenu.${preset}`)}
+								</DropdownMenuRadioItem>
+							))}
+							<DropdownMenuRadioItem value="range" onClick={() => onPickRange(key)}>
+								{t("listMenu.range")}
 							</DropdownMenuRadioItem>
-						))}
-						<DropdownMenuRadioItem value="range" onClick={() => onPickRange(key)}>
-							{t("listMenu.range")}
-						</DropdownMenuRadioItem>
-					</DropdownMenuRadioGroup>
-				</DropdownMenuGroup>
+						</DropdownMenuRadioGroup>
+					</DropdownMenuGroup>
+				</Fragment>
 			))}
 		</>
 	);
@@ -312,7 +314,7 @@ function Row({
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger>{row.label}</DropdownMenuSubTrigger>
-			<DropdownMenuSubContent>
+			<DropdownMenuSubContent side="left">
 				{row.kind === "locale" && <LocaleValues state={state} onChange={onChange} />}
 				{row.kind === "translation" && <TranslationValues state={state} onChange={onChange} />}
 				{row.kind === "date" && <DateValues state={state} onChange={onChange} onPickRange={onPickRange} />}

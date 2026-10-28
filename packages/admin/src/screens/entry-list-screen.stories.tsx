@@ -67,6 +67,8 @@ const trashed = [
 
 type ListOptions = {
 	items?: ListEntriesItem[];
+	/** The total the list API answers with, when the page shown is only part of it. */
+	total?: number;
 	folders?: Folder[];
 	trashed?: ListEntriesItem[];
 	/** Answers for the list request itself (loading, failure). */
@@ -77,23 +79,47 @@ type ListOptions = {
 
 /** The admin API of the list screens: entries (list and trash), folders and saved list settings. */
 const server =
-	({ items = posts, folders: folderList = [], trashed: trash = [], list, extra }: ListOptions = {}): FakeApi =>
+	({ items = posts, total, folders: folderList = [], trashed: trash = [], list, extra }: ListOptions = {}): FakeApi =>
 	(path, method) => {
 		const extraAnswer = extra?.(path, method);
 		if (extraAnswer !== undefined) return extraAnswer;
 		const url = new URL(path, "http://admin");
 		if (url.pathname === "/api/monti/v1/preferences") return {};
 		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return folderList;
+		if (url.pathname === "/api/monti/v1/entries/counts")
+			return countsOf(url.searchParams.get("field") ?? "translation");
+		if (url.pathname === "/api/monti/v1/entries/search") {
+			const ids = url.searchParams.getAll("id");
+			const found = filterTags.filter((tag) => ids.length === 0 || ids.includes(tag.id));
+			return { items: found.map(({ id, title }) => ({ id, title, slug: id, status: "published" })) };
+		}
 		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const collection = url.searchParams.get("collection");
 			const inTrash = url.searchParams.getAll("status").includes("trashed");
 			// The sidebar's trash badge asks for trashed rows of the same collection; only the list itself goes through `list`.
 			if (list && !inTrash && collection === "post") return list(url);
 			const rows = collection !== "post" ? [] : inTrash ? trash : items;
-			return { items: rows, total: rows.length };
+			return { items: rows, total: inTrash || collection !== "post" ? rows.length : (total ?? rows.length) };
 		}
 		return undefined;
 	};
+
+/** The tags the filter menu lists, and the numbers beside every value of the filters. */
+const filterTags = [
+	{ id: "tag-react", title: "리액트", count: 38 },
+	{ id: "tag-typescript", title: "타입스크립트", count: 21 },
+	{ id: "tag-next", title: "넥스트", count: 17 },
+	{ id: "tag-retro", title: "회고", count: 9 },
+	{ id: "tag-perf", title: "성능", count: 8 },
+	{ id: "tag-tools", title: "도구", count: 6 },
+	{ id: "tag-design", title: "디자인", count: 4 },
+];
+const countsOf = (facet: string) =>
+	facet === "tagIds"
+		? { total: 148, empty: 12, values: Object.fromEntries(filterTags.map((tag) => [tag.id, tag.count])) }
+		: facet === "translation"
+			? { total: 148, values: { none: 41, changed: 3, current: 104 } }
+			: { total: 148, empty: 20, filled: 128, values: {} };
 
 const listScreen =
 	(api: FakeApi, search = "collection=post") =>
@@ -126,40 +152,152 @@ const selectRows = async (canvasElement: HTMLElement, ...titles: string[]) => {
 	}
 };
 
-export const Loaded: Story = { render: listScreen(server({ trashed })) };
+/** The stories that show the list screen itself are shot by the visual checks. */
+const visual = { tags: ["visual"] };
 
-export const WithFolders: Story = { render: listScreen(server({ folders, trashed })) };
+export const Loaded: Story = { ...visual, render: listScreen(server({ trashed, total: 148 })) };
 
-export const Empty: Story = { render: listScreen(server({ items: [] })) };
+export const WithFolders: Story = {
+	...visual,
+	render: listScreen(server({ folders, trashed, total: 148 })),
+};
+
+export const Empty: Story = {
+	...visual,
+	render: listScreen(server({ items: [] })),
+};
 
 export const NoSearchResults: Story = {
+	...visual,
 	render: listScreen(server({ items: [] }), "collection=post&search=없는 검색어"),
 };
 
-export const Loading: Story = { render: listScreen(server({ list: () => "pending" })) };
+export const Loading: Story = {
+	...visual,
+	render: listScreen(server({ list: () => "pending" })),
+};
 
-export const LoadFailed: Story = { render: listScreen(server({ list: () => serverError() })) };
+export const LoadFailed: Story = {
+	...visual,
+	render: listScreen(server({ list: () => serverError() })),
+};
 
 export const RowsSelected: Story = {
+	...visual,
 	render: listScreen(server({ folders })),
 	play: ({ canvasElement }) => selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글"),
 };
 
 export const RowMenuOpen: Story = {
+	...visual,
 	render: listScreen(server({ folders })),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "첫 번째 글");
 	},
 };
 
-export const ViewPopoverOpen: Story = {
-	render: listScreen(server()),
+/** Presses a button of the toolbar, and opens one of the rows of its menu at the side (→, as a keyboard does). */
+const openToolbarMenu = async (canvasElement: HTMLElement, button: string, row?: RegExp | string) => {
+	await userEvent.click(await within(canvasElement).findByRole("button", { name: button }));
+	if (!row) return;
+	fireEvent.keyDown(await body().findByRole("menuitem", { name: row }), { key: "ArrowRight" });
+};
+
+export const FilterMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "태그"),
+};
+
+/** The first level names fields only; the fields' values open at the side, with how many rows have each. */
+export const FilterTranslationOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&translation=changed"),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "번역"),
+};
+
+export const FilterDateOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&updated=last30"),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "날짜"),
+};
+
+/** "Pick a period" opens a calendar at the filter button: the first day starts the period, the second ends it. */
+export const FilterDateRangeOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: /보기/ }));
+		await openToolbarMenu(canvasElement, "필터", "날짜");
+		const ranges = await body().findAllByRole("menuitemradio", { name: "기간 고르기" });
+		await userEvent.click(ranges[0] as HTMLElement);
+		await body().findByRole("grid");
 	},
 };
 
-export const StatusFiltered: Story = { render: listScreen(server(), "collection=post&status=published") };
+export const FilterSearchOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
+	play: async ({ canvasElement }) => {
+		await openToolbarMenu(canvasElement, "필터");
+		await userEvent.type(await body().findByRole("textbox", { name: "필터 찾기" }), "카");
+	},
+};
+
+/** The filters that are on are chips before the Filter menu. */
+export const Filtered: Story = {
+	...visual,
+	render: listScreen(server({ total: 12 }), "collection=post&field=tagIds:empty&updated=last30&translation=none"),
+};
+
+export const ViewMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /정렬/),
+};
+
+export const TitleSorted: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&sortField=title&sortDirection=asc"),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /정렬/),
+};
+
+export const ViewColumnsOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /^열/),
+};
+
+/** The bulk bar's ⋯ has the rest of the actions, the trash last in red. */
+export const BulkMoreOpen: Story = {
+	...visual,
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더보기" }));
+		await body().findAllByRole("menuitem");
+	},
+};
+
+export const BulkFolderMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "폴더로" }));
+		await body().findAllByRole("menuitem");
+	},
+};
+
+/** The pager on a later page: first and last, the current page with its neighbours, gaps between. */
+export const PagerOnPageFour: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&page=4"),
+};
+
+export const StatusFiltered: Story = {
+	...visual,
+	render: listScreen(server(), "collection=post&status=published"),
+};
 
 /** The row menu's "Move to trash" asks first. */
 export const DeleteDialog: Story = {
@@ -282,15 +420,22 @@ const trashScreen = (api: FakeApi) => () => (
 		<TrashScreen />
 	</PageFrame>
 );
-export const TrashLoaded: Story = { render: trashScreen(server({ trashed })) };
+export const TrashLoaded: Story = {
+	...visual,
+	render: trashScreen(server({ trashed })),
+};
 
-export const TrashEmpty: Story = { render: trashScreen(server()) };
+export const TrashEmpty: Story = {
+	...visual,
+	render: trashScreen(server()),
+};
 
 export const TrashLoadFailed: Story = {
 	render: trashScreen(server({ extra: (path) => (path.includes("status=trashed") ? serverError() : undefined) })),
 };
 
 export const TrashRowsSelected: Story = {
+	...visual,
 	render: trashScreen(server({ trashed })),
 	play: ({ canvasElement }) => selectRows(canvasElement, "버린 글", "오래된 초안"),
 };

@@ -2,6 +2,7 @@
 
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Count,
 	Inline,
 	ListFooter,
@@ -106,37 +107,39 @@ export function ListPagination({
 	const showPager = !(hidePagerWhenSingle && totalPages === 1);
 	if (!showRange && !showPager && !leading && !showPageSize) return null;
 	return (
-		<ListFooter>
-			{showRange && (
-				<Count>
-					{t("list.range", {
-						total,
-						range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
-					})}
-				</Count>
-			)}
-			<Inline gap={8} grow justify="end">
-				{leading}
-				{showPageSize && (
-					<Select
-						value={String(pageSize)}
-						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
-					>
-						<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PAGE_SIZES.map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{t("list.pageSizeOption", { size })}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+		<Box paddingX={32} shrink={false}>
+			<ListFooter>
+				{showRange && (
+					<Count>
+						{t("list.range", {
+							total,
+							range: shown > 0 ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}` : "0",
+						})}
+					</Count>
 				)}
-				{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
-			</Inline>
-		</ListFooter>
+				<Inline gap={8} grow justify="end">
+					{leading}
+					{showPageSize && (
+						<Select
+							value={String(pageSize)}
+							items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
+							onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
+						>
+							<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{PAGE_SIZES.map((size) => (
+									<SelectItem key={size} value={String(size)}>
+										{t("list.pageSizeOption", { size })}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					)}
+					{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
+				</Inline>
+			</ListFooter>
+		</Box>
 	);
 }

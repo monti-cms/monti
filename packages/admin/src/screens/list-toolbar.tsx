@@ -1,20 +1,11 @@
 "use client";
 
 import { type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Chip,
-	PageToolbar,
-	PageToolbarEnd,
-	type SelectAllState,
-	Tabs,
-	TabsList,
-	TabsTrigger,
-	TextButton,
-} from "@monti-cms/ui";
+import { Chip, PageToolbar, PageToolbarEnd, type SelectAllState, Tabs, TabsList, TabsTrigger } from "@monti-cms/ui";
 import type { AdminListColumn } from "./list-columns";
 import { ListFilterMenu } from "./list-filter-menu";
 import { filterChipsOf } from "./list-filter-model";
-import { clearFiltersPatch, type ListState } from "./list-state";
+import type { ListState } from "./list-state";
 import { ListViewMenu } from "./list-view-menu";
 import { screensMessages } from "./messages";
 import { statusLabels } from "./shared/entry-status";
@@ -103,11 +94,6 @@ export function ListToolbar({
 						{chip.label}
 					</Chip>
 				))}
-				{chips.length >= 2 && (
-					<TextButton type="button" variant="quiet" onClick={() => onChange(clearFiltersPatch(state))}>
-						{t("filter.clearAll")}
-					</TextButton>
-				)}
 				<ListFilterMenu state={state} onChange={onChange} />
 				<ListViewMenu
 					state={state}

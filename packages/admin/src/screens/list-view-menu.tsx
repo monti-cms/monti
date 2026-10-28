@@ -62,7 +62,7 @@ export function ListViewMenu({
 						{t("listMenu.sort")}
 						<MenuValue>{sortLabel(site, state.sortField, state.sortDirection)}</MenuValue>
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
+					<DropdownMenuSubContent side="left">
 						<DropdownMenuRadioGroup
 							value={key(state.sortField, state.sortDirection)}
 							onValueChange={(value) => {
@@ -87,7 +87,7 @@ export function ListViewMenu({
 						{t("listMenu.columns")}
 						<MenuValue>{t("listMenu.columnsCount", { count: shown })}</MenuValue>
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
+					<DropdownMenuSubContent side="left">
 						<DropdownMenuReorderGroup onReorder={onReorderColumn} onMove={onMoveColumn}>
 							{columns.map((column) => (
 								<DropdownMenuCheckboxItem
@@ -109,7 +109,7 @@ export function ListViewMenu({
 						{t("listMenu.perPage")}
 						<MenuValue>{state.pageSize}</MenuValue>
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent>
+					<DropdownMenuSubContent side="left">
 						<DropdownMenuRadioGroup
 							value={String(state.pageSize)}
 							onValueChange={(value) => onPageSizeChange(Number(value) as PageSize)}
