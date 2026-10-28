@@ -38,6 +38,8 @@ export const imageConverter: BlockConverter = {
 	},
 	toCms(node) {
 		const source = node.attrs ?? {};
+		// An image that is still going up has no media yet: it is not part of the document.
+		if (source.uploadId) return [];
 		const attrs: Record<string, CmsJsonValue> = {};
 		for (const key of IMAGE_ATTRS) {
 			const value = (source as Record<string, unknown>)[key];
