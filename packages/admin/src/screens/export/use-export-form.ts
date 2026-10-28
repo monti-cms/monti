@@ -21,9 +21,9 @@ export type ExportPhase = { kind: "building" } | { kind: "downloading"; percent:
 
 /**
  * The state of one export, shared by the Site backup card, the dialog of selected entries and the dialog of one entry: the scope, the text format,
- * the summary of what the archive would hold, and the download. `ids` limits it to those entries (their translations come along); without it the export is the whole site.
+ * the summary of what the archive would hold, and the download. `ids` limits it to those entries (their translations come along), `collection` to the entries of one collection; without either the export is the whole site.
  */
-export function useExportForm({ ids }: { ids?: readonly string[] } = {}) {
+export function useExportForm({ ids, collection }: { ids?: readonly string[]; collection?: string } = {}) {
 	const site = useSite();
 	const t = useTranslator(exportMessages);
 	const [scope, setScope] = useState<ExportScope>("admin");
@@ -40,8 +40,8 @@ export function useExportForm({ ids }: { ids?: readonly string[] } = {}) {
 	const format = picked === undefined ? formats[0]?.name : (picked ?? undefined);
 
 	const summaryQuery = useQuery({
-		queryKey: exportKeys.summary({ scope, ids }),
-		queryFn: ({ signal }) => getExportSummary(site, { scope, ids }, signal),
+		queryKey: exportKeys.summary({ scope, ids, collection }),
+		queryFn: ({ signal }) => getExportSummary(site, { scope, ids, collection }, signal),
 		placeholderData: keepPreviousData,
 		// What the archive holds changes as people write, so a dialog opened again counts again.
 		staleTime: 0,
@@ -53,7 +53,7 @@ export function useExportForm({ ids }: { ids?: readonly string[] } = {}) {
 			try {
 				return await downloadExport(
 					site,
-					{ scope, ...(ids ? { ids } : {}), ...(format ? { format } : {}) },
+					{ scope, ...(ids ? { ids } : {}), ...(collection ? { collection } : {}), ...(format ? { format } : {}) },
 					{ onProgress: setProgress, fallback: t("error.export") },
 				);
 			} finally {

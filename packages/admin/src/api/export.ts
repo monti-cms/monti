@@ -7,6 +7,8 @@ export type ExportScope = "admin" | "public";
 export interface ExportRequest {
 	scope: ExportScope;
 	ids?: readonly string[];
+	/** Limits the export to the entries of one collection (the trashed ones included). */
+	collection?: string;
 	format?: string;
 }
 
@@ -38,8 +40,8 @@ export interface ExportFormat {
 export const exportKeys = {
 	all: ["cms", "export"] as const,
 	formats: () => [...exportKeys.all, "formats"] as const,
-	summary: (request: Pick<ExportRequest, "scope" | "ids">) =>
-		[...exportKeys.all, "summary", request.scope, request.ids?.join(",") ?? null] as const,
+	summary: (request: Pick<ExportRequest, "scope" | "ids" | "collection">) =>
+		[...exportKeys.all, "summary", request.scope, request.ids?.join(",") ?? null, request.collection ?? null] as const,
 };
 
 /** The text formats installed on the server. */
@@ -55,13 +57,17 @@ export const listExportFormats = async (
 /** What an export of `request` would hold. Nothing is built. (A `POST`, so a long list of ids fits.) */
 export const getExportSummary = (
 	site: Site,
-	request: Pick<ExportRequest, "scope" | "ids">,
+	request: Pick<ExportRequest, "scope" | "ids" | "collection">,
 	signal?: AbortSignal,
 	fallback?: string,
 ) =>
 	adminFetch<ExportSummary>(site, "/v1/export/summary", {
 		method: "POST",
-		json: { scope: request.scope, ...(request.ids ? { ids: request.ids } : {}) },
+		json: {
+			scope: request.scope,
+			...(request.ids ? { ids: request.ids } : {}),
+			...(request.collection ? { collection: request.collection } : {}),
+		},
 		signal,
 		fallback,
 	});
@@ -119,6 +125,7 @@ export async function downloadExport(
 		body: JSON.stringify({
 			scope: request.scope,
 			...(request.ids ? { ids: request.ids } : {}),
+			...(request.collection ? { collection: request.collection } : {}),
 			...(request.format ? { format: request.format } : {}),
 		}),
 		signal: options.signal,

@@ -22,6 +22,7 @@ import { PageBody } from "../shared/page-body";
 import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
+import { schemaCollectionMessages } from "./collection.messages";
 import { CollectionEditor } from "./collection-editor";
 import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
@@ -30,7 +31,7 @@ import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
-import { ReviewDialog } from "./review-dialog";
+import { type Removal, ReviewDialog } from "./review-dialog";
 import { SaveGroup } from "./save-group";
 import {
 	addCollection,
@@ -47,6 +48,7 @@ import {
 	sameJson,
 	setCollection,
 	settingChanges,
+	withoutCollections,
 } from "./schema-model";
 import { SiteEditor } from "./site-editor";
 
@@ -130,6 +132,7 @@ function CollectionNavItem({
 	active,
 	isNew,
 	changed,
+	removed,
 	writable,
 	onSelect,
 }: {
@@ -139,6 +142,8 @@ function CollectionNavItem({
 	isNew: boolean;
 	/** The collection holds draft changes. */
 	changed: boolean;
+	/** The collection is struck out: it is deleted with its entries when the draft is saved. */
+	removed: boolean;
 	writable: boolean;
 	onSelect: () => void;
 }) {
@@ -172,24 +177,28 @@ function CollectionNavItem({
 			<button
 				type="button"
 				aria-current={active ? "true" : undefined}
+				data-removed={removed ? "" : undefined}
 				className={cn(
 					"flex h-8 w-full shrink-0 items-center gap-monti-8 rounded-monti-md border border-transparent px-monti-12 text-left text-monti-body outline-none transition-colors hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 					writable && "group-focus-within/row:pl-monti-32 group-hover/row:pl-monti-32",
 					active && "border-monti-muted bg-monti-page font-medium hover:bg-monti-page",
+					removed && "text-monti-faint line-through",
 				)}
 				onClick={onSelect}
 			>
 				<Box grow minWidth={0}>
-					<Text truncate>{label}</Text>
+					<Text truncate removed={removed}>
+						{label}
+					</Text>
 				</Box>
 				{isNew ? (
 					<Text variant="meta" tone="subtle">
 						{t("collection.new")}
 					</Text>
 				) : (
-					changed && <ChangedMark />
+					changed && !removed && <ChangedMark />
 				)}
-				<Text variant="caption" tone="muted">
+				<Text variant="caption" tone="muted" removed={removed}>
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</Text>
 			</button>
@@ -213,6 +222,7 @@ function SchemaEditor({
 	onChanged?: (areas: ChangedAreas | null) => void;
 }) {
 	const t = useTranslator(schemaMessages);
+	const tCollection = useTranslator(schemaCollectionMessages);
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
@@ -221,8 +231,13 @@ function SchemaEditor({
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [creating, setCreating] = useState(false);
+	// Collections struck out of the list and not saved yet: they stay in the draft (so taking one back loses nothing) and go out of what is checked and saved.
+	const [removed, setRemoved] = useState<string[]>([]);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
+	const liveNames = names.filter((name) => !removed.includes(name));
+	// What the file would be if saved now.
+	const pendingDraft = useMemo(() => withoutCollections(draft, removed), [draft, removed]);
 	// Which collection is open and which of its parts live in the address, so a reload after saving comes back to the same place.
 	const [selectedName, setSelectedName] = useSettingsParam("collection");
 	const [section, setSection] = useSettingsParam("section");
@@ -234,10 +249,10 @@ function SchemaEditor({
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
-	const dirty = !sameJson(draft, base);
+	const dirty = !sameJson(pendingDraft, base);
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
-	const pending = changeCount(base, draft);
-	const areas = useMemo(() => changedAreas(base, draft), [base, draft]);
+	const pending = changeCount(base, pendingDraft);
+	const areas = useMemo(() => changedAreas(base, pendingDraft), [base, pendingDraft]);
 	const savedNames = Object.keys(collectionsOf(base));
 
 	// The page draws the marks of its tabs, so it is told where the draft differs.
@@ -261,18 +276,52 @@ function SchemaEditor({
 			disabled: !writable,
 			vocabulary: state.vocabulary,
 			issues,
-			collectionNames: names,
+			collectionNames: liveNames,
 			codeCollections: state.codeCollections,
 			file: draft,
 			saved: base,
 		}),
-		[writable, state.vocabulary, issues, names, state.codeCollections, draft, base],
+		[writable, state.vocabulary, issues, liveNames, state.codeCollections, draft, base],
 	);
+
+	const removals: Removal[] = removed.flatMap((name) => {
+		const found = collectionsOf(base)[name];
+		return found
+			? [
+					{
+						name,
+						label: String(found.label ?? name),
+						kind: found.kind === "item" ? ("item" as const) : ("document" as const),
+					},
+				]
+			: [];
+	});
+	/** What the toast after a save says: what was deleted, else what the data transforms did. */
+	const savedMessage = (saved: SavedSchema): string => {
+		const dropped = saved.dropped ?? [];
+		const [only] = dropped;
+		if (only && dropped.length === 1) {
+			const found = collectionsOf(base)[only.collection];
+			return tCollection("save.dropped", {
+				name: String(found?.label ?? only.collection),
+				count: only.entries,
+				kind: found?.kind === "item" ? "item" : "document",
+			});
+		}
+		if (dropped.length > 1) {
+			return tCollection("save.droppedMany", {
+				collections: dropped.length,
+				count: dropped.reduce((sum, item) => sum + item.entries, 0),
+			});
+		}
+		return t("save.done", { transforms: saved.transforms.length, entries: saved.entriesRewritten });
+	};
 
 	const discard = async () => {
 		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
 		setDraft(base);
+		setRemoved([]);
 		setRenames([]);
 		setIssues([]);
 	};
@@ -378,6 +427,7 @@ function SchemaEditor({
 															active={name === selected}
 															isNew={!savedNames.includes(name)}
 															changed={name in areas.collections}
+															removed={removed.includes(name)}
 															writable={writable}
 															onSelect={() => setSelected(name)}
 														/>
@@ -397,18 +447,14 @@ function SchemaEditor({
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
 													onFileChange={updateFile}
-													onRemove={async () => {
-														if (savedNames.includes(selected)) {
-															const ok = await confirm({
-																title: t("collection.removeTitle", { name: selected }),
-																description: t("collection.removeDescription"),
-																confirmLabel: t("collection.remove"),
-																destructive: true,
-															});
-															if (!ok) return;
-														}
-														updateFile((file) => removeCollection(file, selected));
+													removed={removed.includes(selected)}
+													footprint={state.footprints?.[selected]}
+													onRemove={() => {
+														// A collection that was never saved holds nothing: it simply goes. A saved one is struck out until the draft is saved.
+														if (savedNames.includes(selected)) setRemoved((current) => [...current, selected]);
+														else updateFile((file) => removeCollection(file, selected));
 													}}
+													onRestore={() => setRemoved((current) => current.filter((name) => name !== selected))}
 												/>
 											) : (
 												<Text as="p" tone="muted">
@@ -448,20 +494,16 @@ function SchemaEditor({
 				<ReviewDialog
 					open={reviewing}
 					onOpenChange={setReviewing}
-					draft={draft}
+					draft={pendingDraft}
 					renames={renames}
-					settings={settingChanges(base, draft)}
+					settings={settingChanges(base, pendingDraft)}
+					removals={removals}
 					baseHash={state.hash}
 					onIssues={setIssues}
 					onApplyFailed={() => setApplyFailed(true)}
 					onSaved={(saved: SavedSchema) => {
 						rememberScroll(scroller.current?.scrollTop ?? 0);
-						rememberSaved(
-							t("save.done", {
-								transforms: saved.transforms.length,
-								entries: saved.entriesRewritten,
-							}),
-						);
+						rememberSaved(savedMessage(saved));
 						reloadPage();
 					}}
 				/>

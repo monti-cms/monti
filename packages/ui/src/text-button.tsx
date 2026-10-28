@@ -24,6 +24,8 @@ const textButtonVariants = cva(
 				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
+				/** Takes the ink and size of the line it stands in (the button at the end of a `ChangeLine`). */
+				inherit: "text-[length:inherit] text-inherit",
 			},
 			/** Fixed-width letters, for an address or an identifier. */
 			mono: { true: "font-mono" },

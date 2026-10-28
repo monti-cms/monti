@@ -328,6 +328,10 @@ export function removeCollection(file: Obj, name: string): Obj {
 	return { ...file, collections: rest };
 }
 
+/** `file` without the collections `names`: what is sent to be checked and saved while some are struck out of the list and not saved yet. */
+export const withoutCollections = (file: Obj, names: readonly string[]): Obj =>
+	names.reduce((current, name) => removeCollection(current, name), file);
+
 /** `file` with its `collections` keys arranged in `newOrder`. */
 export function reorderCollections(file: Obj, newOrder: readonly string[]): Obj {
 	const collections = collectionsOf(file);

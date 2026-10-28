@@ -87,6 +87,8 @@ export function describeTransform(transform: SuggestedTransform, t: T): string {
 			return t("transform.renameField", { to: transform.to });
 		case "dropField":
 			return t("transform.dropField");
+		case "dropCollection":
+			return t("transform.dropCollection");
 		case "mapOption":
 			return t("transform.mapOption", { from: transform.from, to: transform.to });
 		case "setDefault":
