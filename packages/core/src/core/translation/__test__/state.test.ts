@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../doc/stored-document";
-import { confirmedSourceState, MAX_TRANSLATION_BYTES, parseTranslationState } from "../state";
+import { confirmedSourceState, MAX_TRANSLATION_BYTES, parseTranslationState, sourceHasChanged } from "../state";
 
 const doc = docOf("하나\n\n둘\n");
 
@@ -69,5 +69,20 @@ describe("translation state", () => {
 		expect(confirmedSourceState(doc)).toEqual({ version: 4, baseDoc: doc });
 		const unparsed = unparsedDocument("원문 <Box");
 		expect(parseTranslationState(confirmedSourceState(unparsed))).toEqual({ version: 4, baseDoc: unparsed });
+	});
+});
+
+describe("whether the source changed since a translation was confirmed", () => {
+	it("is false for the same text, even when the block ids differ", () => {
+		const withIds = { ...doc, content: doc.content.map((node, index) => ({ ...node, id: `block00${index}` })) };
+		expect(sourceHasChanged(doc, withIds)).toBe(false);
+	});
+
+	it("is true when the text changed", () => {
+		expect(sourceHasChanged(docOf("하나\n\n셋\n"), doc)).toBe(true);
+	});
+
+	it("is true when a block was added", () => {
+		expect(sourceHasChanged(docOf("하나\n\n둘\n\n셋\n"), doc)).toBe(true);
 	});
 });

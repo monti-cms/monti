@@ -453,7 +453,7 @@ export const referencesContract: ContractSuite = (factory) => {
 
 			const sameSlug = await store.listEntries({
 				collection: snapshot1.collection,
-				slugContains: "collision-slug",
+				search: "collision-slug",
 				pageSize: 100,
 			});
 			expect(sameSlug.items.filter((item) => item.slug === "collision-slug").map((item) => item.id)).toEqual([

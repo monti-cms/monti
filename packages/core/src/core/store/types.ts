@@ -242,6 +242,15 @@ export interface ListTranslationMember {
 	hasUnpublishedChanges: boolean;
 }
 
+/** A condition on one stored field of the list. */
+export type FieldCondition =
+	| { readonly kind: "empty" }
+	| { readonly kind: "filled" }
+	| { readonly kind: "is"; readonly value: string };
+
+/** Where a translation group stands, as the list's translation filter tells it apart. */
+export type TranslationFilter = "none" | "changed" | "current";
+
 export interface DateRange {
 	from?: Date;
 	to?: Date;
@@ -251,10 +260,6 @@ export interface ListEntriesParams {
 	collection: string;
 	search?: string;
 	includeBody?: boolean;
-	/** Column header filter: title only (partial match). Combined with `search` using AND. */
-	titleContains?: string;
-	/** Column header filter: slug only (partial match). */
-	slugContains?: string;
 	statuses?: readonly EntryStatus[];
 	/**
 	 * Only these languages. All languages if unset.
@@ -268,8 +273,16 @@ export interface ListEntriesParams {
 	groupTranslations?: boolean;
 	folderId?: string | null;
 	includeDescendants?: boolean;
-	/** Relation field name to selected item IDs. Multiple values of the same field are OR; different fields are AND. */
-	relations?: Readonly<Record<string, readonly string[]>>;
+	/**
+	 * Conditions on stored fields, by field name. Several conditions on one field are OR; different fields are AND. Which conditions a field accepts depends on its kind:
+	 * text and media take `empty` and `filled`; select and relation take `empty` and `is` (the option, or the id of the item). Anything else is `invalid_input`.
+	 */
+	fields?: Readonly<Record<string, readonly FieldCondition[]>>;
+	/**
+	 * Where a translation group stands (OR). `none`: no translation outside the trash. `changed`: some translation was confirmed against an earlier source.
+	 * `current`: it has translations and none is behind. Only for a collection with translations.
+	 */
+	translations?: readonly TranslationFilter[];
 	hasUnpublishedChanges?: boolean;
 	createdAt?: DateRange;
 	updatedAt?: DateRange;
@@ -277,6 +290,30 @@ export interface ListEntriesParams {
 	sort?: { field: ListSortField; direction: "asc" | "desc" };
 	page?: number;
 	pageSize?: 25 | 50 | 100;
+}
+
+/**
+ * How many rows of a list each value of one thing has, for the filter menu: a stored field, or the translation filter. The rows counted are those of the
+ * folder and the statuses given (the same rows the list has before any other filter).
+ */
+export interface ListCountsParams {
+	collection: string;
+	facet: { readonly field: string } | "translation";
+	groupTranslations?: boolean;
+	folderId?: string | null;
+	includeDescendants?: boolean;
+	statuses?: readonly EntryStatus[];
+}
+
+export interface ListCounts {
+	/** Rows in scope. */
+	total: number;
+	/** Of a stored field: rows with no value (a text, a media, a select or a relation). */
+	empty?: number;
+	/** Of a text or media field: rows with a value. */
+	filled?: number;
+	/** Of a select or relation: rows per option or item id. Of the translation filter: rows per `none`, `changed` and `current`. */
+	values: Readonly<Record<string, number>>;
 }
 
 /** Largest number of hits one search returns. */

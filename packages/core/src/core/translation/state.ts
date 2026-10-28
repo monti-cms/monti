@@ -1,3 +1,4 @@
+import { withoutBlockIds } from "../../doc/block-ids";
 import { readStoredDocument, type StoredDocument } from "../../doc/stored-document";
 
 /**
@@ -31,3 +32,13 @@ export function parseTranslationState(value: unknown): TranslationState | null |
 	const state: TranslationState = { version: 4, baseDoc };
 	return byteLength(state) > MAX_TRANSLATION_BYTES ? undefined : state;
 }
+
+/** What a document says, without its block ids: two documents with the same key read the same. */
+const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
+
+/**
+ * Whether the source's document differs from the one a translation was confirmed against (`TranslationState.baseDoc`). Block ids do not count: they say
+ * which block is which, not what the body says. The translation editor and the list's translation filter both ask this, so they never disagree.
+ */
+export const sourceHasChanged = (source: StoredDocument, confirmed: StoredDocument): boolean =>
+	contentKey(source) !== contentKey(confirmed);

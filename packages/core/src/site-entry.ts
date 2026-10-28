@@ -78,11 +78,14 @@ export type {
 	ExportSnapshotBody,
 	ExportSnapshotEntry,
 	ExportSnapshotReference,
+	FieldCondition,
 	Folder,
 	IncomingReferenceItem,
 	JsonArray,
 	JsonObject,
 	JsonPrimitive,
+	ListCounts,
+	ListCountsParams,
 	ListEntriesItem,
 	ListEntriesParams,
 	ListEntriesResult,
@@ -99,6 +102,7 @@ export type {
 	PublishedPageParams,
 	PublishedSort,
 	SearchEntriesParams,
+	TranslationFilter,
 	TranslationGroup,
 } from "./core/store/types";
 export * from "./core/time";
