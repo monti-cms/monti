@@ -10,6 +10,9 @@ import {
 	listStateToCountsQuery,
 	listStateToSearchParams,
 	parseListState,
+	searchPatch,
+	searchScopeChoice,
+	searchWidened,
 } from "../list-state";
 
 const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
@@ -238,5 +241,41 @@ describe("the query for the numbers beside a column menu's values", () => {
 		expect(query.has("folderId")).toBe(false);
 		for (const key of ["updatedFrom", "search", "field:tagIds"]) expect(query.has(key)).toBe(false);
 		expect(query.getAll("field")).toEqual(["tagIds"]);
+	});
+});
+
+describe("where a search inside a folder looks", () => {
+	const state = (query: string) => parseListState(testSite, new URLSearchParams(query));
+	const api = (query: string) => listStateToApiQuery(testSite, state(query));
+
+	it("looks in the folder and the folders below it, unless widened to all folders", () => {
+		const here = api("collection=post&folder=f1&search=a");
+		expect([here.get("folderId"), here.get("includeDescendants")]).toEqual(["f1", "true"]);
+		const everywhere = api("collection=post&folder=f1&search=a&scope=all");
+		expect(everywhere.has("folderId")).toBe(false);
+		expect(everywhere.has("includeDescendants")).toBe(false);
+		expect(everywhere.get("search")).toBe("a");
+	});
+
+	it("offers the choice only for words typed in a folder", () => {
+		expect(searchScopeChoice(state("collection=post&folder=f1&search=a"))).toBe(true);
+		expect(searchScopeChoice(state("collection=post&folder=f1"))).toBe(false);
+		expect(searchScopeChoice(state("collection=post&folder=f1&search=%20"))).toBe(false);
+		expect(searchScopeChoice(state("collection=post&search=a"))).toBe(false);
+	});
+
+	it("widens nothing without the words or the folder, and keeps scope=all out of the address then", () => {
+		expect(searchWidened(state("collection=post&folder=f1&scope=all"))).toBe(false);
+		expect(api("collection=post&folder=f1&scope=all").get("folderId")).toBe("f1");
+		expect(searchWidened(state("collection=post&search=a&scope=all"))).toBe(false);
+		expect(listStateToSearchParams(state("collection=post&folder=f1&scope=all")).has("scope")).toBe(false);
+		expect(listStateToSearchParams(state("collection=post&folder=f1&search=a&scope=all")).get("scope")).toBe("all");
+	});
+
+	it("drops the widening when the words are emptied, and not before", () => {
+		expect(searchPatch("a")).toEqual({ search: "a" });
+		expect(searchPatch("  ")).toEqual({ search: "  ", searchAll: false });
+		const widened = state("collection=post&folder=f1&search=a&scope=all");
+		expect({ ...widened, ...clearFiltersPatch(widened) }.searchAll).toBe(false);
 	});
 });

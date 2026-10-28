@@ -178,12 +178,14 @@ Pressing "+ 폴더" makes a new folder on the spot with no dialog, and the name 
 
 ### In code
 
+In the list, `useFolderActions` holds the naming (`naming`, `commitName`, `cancelName`) and `FolderNameField` is the field a row or tile shows while it is set. A new folder's row comes right after "상위 폴더로"; an empty or unchanged name only closes the field. Focus goes back to "+ 폴더" after Escape, and to the folder's own name after a make or a rename. A search or a filter hides the folder rows, so "+ 폴더" clears them first.
+
 `RenameField`: the name of a new folder, or of one being renamed, edited where it stands. It opens with the whole name selected, so typing replaces it. Enter and leaving the field keep the name (`onCommit`, called once); Escape drops the change (`onCancel`). In a folder tile it fills the tile (`fill`); in a row it sits 200px wide with its text on the line of the other names.
 
 ## Inside a folder (posts and media)
 
-- Above is the path ("게시글 /" (posts /), "미디어 /" (media /)), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
-- Search and filters look in the current folder and its subfolders. When applied, the search-place row shows the toggle for where to look, "folder name | 모든 폴더". At the top level it is already everything, so there is no toggle.
+- Above is the path ("게시글 /" (posts /), "미디어 /" (media /); in a folder inside a folder every folder on the way is a button: "게시글 / 뉴스 /"), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
+- Search and filters look in the current folder and its subfolders. When applied, the search-place row shows the toggle for where to look, "folder name | 모든 폴더" (`PageToolbar inset` holding `Segmented size="sm" inline`, named "찾는 곳"). At the top level it is already everything, so there is no toggle. In the address it is `scope=all`; it counts only while words are typed in a folder, and emptying the words drops it.
 - Deleting a folder moves the folder and what is in it to the trash as one lump. It asks for confirmation only if a published post is inside; otherwise it shows a toast with "되돌리기" (undo).
 
 ## Pagination (`.mt-pager`, `.mt-page`)

@@ -2,7 +2,7 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { SearchToggle } from "@monti-cms/ui";
-import type { ListState } from "./list-state";
+import { type ListState, searchPatch } from "./list-state";
 import { screensMessages } from "./messages";
 import { useDebouncedInput } from "./shared/use-debounced";
 
@@ -21,7 +21,7 @@ export function ListSearch({
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
+	const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange(searchPatch(text)));
 
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
