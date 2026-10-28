@@ -79,14 +79,15 @@ export function createLifecycle(ctx: EditorContext, deps: LifecycleDeps) {
 		if (action !== "restore" && m.changeSeq > m.ackSeq) return editorFailure("invalid_state", t("editor.unsaved"));
 		commit({ busy: "status" });
 		try {
-			await client.changeStatus(entry.id, action, { expectedVersion: m.version });
+			const before = m.version;
+			await client.changeStatus(entry.id, action, { expectedVersion: before });
 			// A translation sent to the trash: the UI opens the original instead, so there is nothing to reload.
 			if (action === "trash" && isTranslationEntry(entry) && entry.translationGroupId) {
-				return { ok: true, value: { entry: null, openEntryId: entry.translationGroupId } };
+				return { ok: true, value: { entry: null, openEntryId: entry.translationGroupId, version: before + 1 } };
 			}
 			const loaded = await fetchAndApply(entry.id);
 			if (loaded) callbacks().onSaved?.(loaded, { created: false });
-			return { ok: true, value: { entry: loaded } };
+			return { ok: true, value: { entry: loaded, version: loaded?.version ?? before + 1 } };
 		} catch (caught) {
 			return failed(failureOf(site, caught, statusFailed(t)[action]));
 		} finally {

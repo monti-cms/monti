@@ -44,7 +44,7 @@ export interface MediaViewProps {
 	dimmed: boolean;
 	onSelect: (media: MediaItem) => void;
 	menuFor: (media: MediaItem) => MenuAction[];
-	/** Delete key. Only unused files can be deleted. */
+	/** Delete key: moves the file to the trash. */
 	onDeleteKey: (media: MediaItem) => void;
 	explorer?: { folders: Folder[]; parent: string | null } | null;
 	folders?: Folder[];
@@ -53,7 +53,7 @@ export interface MediaViewProps {
 }
 
 const deleteKey = (media: MediaItem, onDeleteKey: (media: MediaItem) => void) => (event: KeyboardEvent) => {
-	if (event.key === "Delete" && media.referencesCount === 0) {
+	if (event.key === "Delete") {
 		event.preventDefault();
 		onDeleteKey(media);
 	}

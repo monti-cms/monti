@@ -6,11 +6,14 @@ import { toast } from "@monti-cms/ui";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
+import { errorText } from "../../api/client";
 import { type CmsIssue, issueLine } from "../../api/error-message";
+import { restoreTrashed } from "../../api/trash-restore";
 import { commonMessages } from "../../lib/common.messages";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
 import { useConfirm } from "../shared/confirm-dialog";
+import { deleteMessages } from "../shared/delete.messages";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
@@ -19,6 +22,8 @@ import {
 	type LifecycleAction,
 	lifecycleConfirm,
 	lifecycleSuccess,
+	trashConfirm,
+	trashSubjectOfEntry,
 } from "./lifecycle-confirm";
 
 /** "Save first" hint. The same words are used wherever on the edit screen an action is blocked. */
@@ -53,6 +58,7 @@ export function useEntryLifecycleCommands({
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
 	const tc = useTranslator(commonMessages);
+	const td = useTranslator(deleteMessages);
 	const router = useAdminRouter();
 	const { confirm, dialog } = useConfirm();
 	const { entry, collection, busy } = editor;
@@ -169,15 +175,43 @@ export function useEntryLifecycleCommands({
 			toast.error(changed.error.message);
 			return;
 		}
-		toast(lifecycleSuccess(site)[action]);
+		if (action === "trash") {
+			const trashedId = entry.id;
+			// The undo puts the entry back at the version the trash made. A translation left the screen (the original opened), so it opens again.
+			const undo = async () => {
+				try {
+					const answer = await restoreTrashed(site, [
+						{ type: "entry", id: trashedId, expectedVersion: changed.value.version },
+					]);
+					if (!answer.every((result) => result.ok)) {
+						toast.error(td("undoFailed"));
+						return;
+					}
+				} catch (error) {
+					toast.error(errorText(site, error, td("undoFailed")));
+					return;
+				}
+				if (changed.value.openEntryId) router.navigate(site.adminEntryEditHref(trashedId));
+				else await editor.reload();
+			};
+			toast(td("trash.done"), { action: { label: td("undo"), onClick: () => void undo() } });
+		} else toast(lifecycleSuccess(site)[action]);
 		// Sending a translation to the trash returns to the original's edit screen.
 		if (changed.value.openEntryId) router.navigate(site.adminEntryEditHref(changed.value.openEntryId));
 	};
 
-	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
+	/** Archiving a published post takes it down, so it asks. Unarchive and restore happen right away. */
 	const confirmLifecycle = async (action: ConfirmedLifecycleAction) => {
 		const ok = await confirm(lifecycleConfirm(site, action, entry, incomingItems, collection));
 		if (ok) await runLifecycle(action);
+	};
+
+	/** Moves the entry to the trash at once, with an undo; a published entry (or one whose translation is published) asks first. */
+	const trashEntry = async () => {
+		if (!entry) return;
+		const ask = trashConfirm(site, collection, [trashSubjectOfEntry(site, entry)]);
+		if (ask && !(await confirm(ask))) return;
+		await runLifecycle("trash");
 	};
 
 	const confirmPermanentDelete = async () => {
@@ -217,6 +251,7 @@ export function useEntryLifecycleCommands({
 		handlePublish,
 		runLifecycle,
 		confirmLifecycle,
+		trashEntry,
 		confirmPermanentDelete,
 		handleDuplicate,
 	};

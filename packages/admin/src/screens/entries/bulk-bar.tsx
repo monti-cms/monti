@@ -24,6 +24,7 @@ import { useConfirm } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { bulkBarMessages } from "./bulk-bar.messages";
 import { archiveAction, canPublish, changeableRelations, toSelection } from "./bulk-model";
+import { trashConfirm, trashSubjectOfRow } from "./lifecycle-confirm";
 import { RelationChoice } from "./relation-choice";
 
 /** Failure reason per action ("distinguish success from failure and rerun only failed items"). Only codes in the dictionary have text. */
@@ -90,7 +91,7 @@ export function bulkActionsFor({
 	};
 }
 
-type Confirmed = "publish" | "archive" | "unarchive" | "folder.move" | "trash" | "permanentDelete";
+type Confirmed = "publish" | "archive" | "unarchive" | "folder.move" | "permanentDelete";
 
 /**
  * The bar that replaces the list's head row once rows are picked: how many, the actions that fit these rows, a ⋯ with export and the trash, and the way to
@@ -149,7 +150,6 @@ export function BulkBar({
 					? t("ask.folder.root", { count: rows.length })
 					: t("ask.folder.move", { count: rows.length, target }),
 		},
-		trash: { label: tc("lifecycle.trash"), ask: () => t("ask.trash", { count: rows.length }), destructive: true },
 		permanentDelete: {
 			label: tc("lifecycle.deletePermanently"),
 			ask: () => t("ask.permanentDelete", { count: rows.length }),
@@ -160,6 +160,12 @@ export function BulkBar({
 		const { label, ask, destructive } = asks[action];
 		const ok = await confirm({ title: label, description: ask(target), confirmLabel: label, destructive });
 		if (ok) await onRun(action, label, selected, params);
+	};
+	/** The trash asks only when a published entry is among the rows (it leaves the site); everything else moves at once, with an undo toast. */
+	const trash = async () => {
+		const ask = trashConfirm(site, collection, rows.map(trashSubjectOfRow));
+		if (ask && !(await confirm(ask))) return;
+		await onRun("trash", tc("lifecycle.trash"), selected);
 	};
 
 	const button = (action: Confirmed) => (
@@ -243,8 +249,8 @@ export function BulkBar({
 											{tx("action.selected")}
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
-										<DropdownMenuItem variant="danger" onClick={() => void apply("trash")}>
-											{asks.trash.label}
+										<DropdownMenuItem variant="danger" onClick={() => void trash()}>
+											{tc("lifecycle.trash")}
 										</DropdownMenuItem>
 									</>
 								),

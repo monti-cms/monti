@@ -20,7 +20,6 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"ask.archive": (vars) => `Archive ${enSelected(vars)}? They will no longer be public.`,
 		"ask.unarchive": (vars) =>
 			`Unarchive ${enSelected(vars)}? They go back to draft and aren't republished automatically.`,
-		"ask.trash": ({ count }) => `Move ${selected(count, "item")} to the trash? They will no longer be public.`,
 		"ask.permanentDelete": ({ count }) =>
 			`Permanently delete ${selected(count, "item")}? This can't be undone. Items used by other content aren't deleted; the reason is shown instead.`,
 		"failure.conflict": "It was changed elsewhere first. Refresh the list and try again.",
@@ -60,7 +59,6 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"ask.archive": (vars) => `${koSelected(vars)}를 보관할까요? 공개가 종료돼요.`,
 		"ask.unarchive": (vars) =>
 			`${koSelected(vars)}의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않아요.`,
-		"ask.trash": "선택한 항목 {count}개를 휴지통으로 이동할까요? 공개가 종료돼요.",
 		"ask.permanentDelete":
 			"선택한 항목 {count}개를 영구 삭제할까요? 되돌릴 수 없어요. 다른 콘텐츠가 쓰는 항목은 삭제하지 않고 사유를 보여 줘요.",
 		"failure.conflict": "다른 곳에서 먼저 바뀌었어요. 목록을 새로고침한 뒤 다시 실행하세요.",

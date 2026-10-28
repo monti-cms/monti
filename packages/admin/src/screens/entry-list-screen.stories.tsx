@@ -448,13 +448,104 @@ export const PagerOnPageFour: Story = {
 	render: listScreen(server({ total: 148 }), "collection=post&page=4"),
 };
 
-/** The row menu's "Move to trash" asks first. */
-export const DeleteDialog: Story = {
+/** The published post with an English translation, for the states where the trash asks. */
+const postsWithTranslation = posts.map((post) =>
+	post.id === "첫 번째 글"
+		? {
+				...post,
+				translations: [
+					{
+						id: post.id,
+						locale: "ko",
+						status: "published" as const,
+						version: 3,
+						isSource: true,
+						hasUnpublishedChanges: false,
+					},
+					{
+						id: "first-en",
+						locale: "en",
+						status: "draft" as const,
+						version: 1,
+						isSource: false,
+						hasUnpublishedChanges: false,
+					},
+				],
+			}
+		: post,
+);
+
+/** Main board mode 휴지통 확인: a published post asks, and says the English translation goes with it. */
+export const TrashDialog: Story = {
+	...visual,
+	render: listScreen(server({ items: postsWithTranslation })),
+	play: async ({ canvasElement }) => {
+		await openRowMenu(canvasElement, "첫 번째 글");
+		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통/ }));
+		await body().findByRole("alertdialog");
+	},
+};
+
+/** Main board mode 휴지통으로 옮김: a draft goes at once, and the toast can undo it. */
+export const RowTrashed: Story = {
+	...visual,
 	render: listScreen(server()),
 	play: async ({ canvasElement }) => {
 		await openRowMenu(canvasElement, "쓰는 중인 글");
 		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통/ }));
+		await body().findByText("휴지통으로 옮겼어요");
+	},
+};
+
+/** Opens a folder row's menu the way a right click does. */
+const openFolderRowMenu = async (canvasElement: HTMLElement, name: string) => {
+	const row = (await within(canvasElement).findAllByRole("row", { name: new RegExp(name) }))[0] as HTMLElement;
+	const box = row.getBoundingClientRect();
+	fireEvent.contextMenu(row, { clientX: box.left + 200, clientY: box.top + box.height / 2 });
+	await body().findAllByRole("menuitem");
+};
+
+/** Main board mode 폴더 우클릭: open, rename, move, and 폴더 지우기 last in red. */
+export const FolderMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+	},
+};
+
+/** The folder answers: twelve entries inside, one published. */
+const folderServer = (published: number) =>
+	server({
+		folders,
+		extra: (path, method) => {
+			if (path.startsWith("/api/monti/v1/folders/f-news/contents"))
+				return { entries: 12, published, folders: 1, files: 0, filesInUse: 0 };
+			if (path.startsWith("/api/monti/v1/folders/f-news") && method === "DELETE")
+				return { folder: {}, entries: 12, folders: 1, files: 0, kept: 0 };
+			return undefined;
+		},
+	});
+
+/** Main board mode 폴더 지우기 확인: a folder that holds a published post asks, and says how many come down. */
+export const FolderTrashDialog: Story = {
+	...visual,
+	render: listScreen(folderServer(1)),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
 		await body().findByRole("alertdialog");
+	},
+};
+
+/** Main board mode 폴더 지움: a folder of drafts goes at once, and the toast can undo it. */
+export const FolderTrashed: Story = {
+	...visual,
+	render: listScreen(folderServer(0)),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
+		await body().findByText("뉴스 폴더와 글 12편을 휴지통으로 옮겼어요");
 	},
 };
 
@@ -466,7 +557,7 @@ export const BulkActionFailed: Story = {
 	),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
-		// The Delete key asks to move every selected row to the trash.
+		// The Delete key asks to move the selected rows to the trash, because one of them is published.
 		fireEvent.keyDown(await within(canvasElement).findByRole("checkbox", { name: "쓰는 중인 글 선택" }), {
 			key: "Delete",
 		});

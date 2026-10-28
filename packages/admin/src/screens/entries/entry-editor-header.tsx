@@ -40,6 +40,7 @@ import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
 import { ExportDialog } from "../export/export-dialog";
 import { exportMessages } from "../export/messages";
+import { deleteMessages } from "../shared/delete.messages";
 import { entryStatusKind, statusLabels } from "../shared/entry-status";
 import { collectionNoun } from "../shared/noun.messages";
 import { SidePanelToggle } from "../shared/side-panel-slot";
@@ -60,13 +61,21 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
 	const tc = useTranslator(commonMessages);
+	const td = useTranslator(deleteMessages);
 	const tx = useTranslator(exportMessages);
 	const [isExporting, setIsExporting] = useState(false);
 	const { resolvedTheme, setTheme } = useTheme();
 	const { entry, collection, busy } = editor;
 	const { isPublishing, isSubmitting } = commands;
-	const { handlePreview, handlePublish, runLifecycle, confirmLifecycle, confirmPermanentDelete, handleDuplicate } =
-		commands;
+	const {
+		handlePreview,
+		handlePublish,
+		runLifecycle,
+		confirmLifecycle,
+		trashEntry,
+		confirmPermanentDelete,
+		handleDuplicate,
+	} = commands;
 	const isTrashed = entry?.status === "trashed";
 	const canResetPublishedAt = Boolean(entry?.publishedAt);
 	// A translation can share a slug with the original, so the language is passed along.
@@ -241,8 +250,23 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 										<TrashCan aria-hidden />
 										{tc("lifecycle.deletePermanently")}
 									</DropdownMenuItem>
+								) : isTranslationEntry(entry) ? (
+									// Only this translation goes; the menu says which language stays.
+									<DropdownMenuItem
+										variant="danger"
+										caption={td("translation.caption", {
+											language: site.localeLabel(
+												entry.translations?.find((member) => member.isSource)?.locale ??
+													entry.source?.locale ??
+													site.DEFAULT_LOCALE,
+											),
+										})}
+										onClick={() => void trashEntry()}
+									>
+										{td("translation.trash")}
+									</DropdownMenuItem>
 								) : (
-									<DropdownMenuItem variant="danger" onClick={() => confirmLifecycle("trash")}>
+									<DropdownMenuItem variant="danger" onClick={() => void trashEntry()}>
 										<TrashCan aria-hidden />
 										{lifecycleLabel(site).trash}
 									</DropdownMenuItem>

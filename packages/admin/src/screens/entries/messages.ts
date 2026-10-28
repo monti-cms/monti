@@ -25,7 +25,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.archive.group": " Its translations are archived too.",
 		"lifecycle.trash.ask": ({ translation, ...vars }) =>
 			`Move this ${translation ? "translation" : enNoun(vars)} to the trash? It will no longer be public.`,
-		"lifecycle.trash.group": ({ locales }) => ` The ${locales} translations are moved to the trash too.`,
 
 		"save.new": "Not saved",
 		"save.saved": "Saved to server",
@@ -62,7 +61,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lang.addTab": "Add {code} translation",
 		"lang.current": "{lang} · {status}",
 		"lang.currentSource": "{lang} source · {status}",
-		"lang.menu": "Translation menu",
 
 		"sourceChange.changed": "Changed",
 		"sourceChange.added": "Added",
@@ -160,7 +158,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.archive.group": " 번역본도 함께 보관해요.",
 		"lifecycle.trash.ask": ({ translation, ...vars }) =>
 			`${translation ? "이 번역본을" : `이 ${koObject(vars)}`} 휴지통으로 이동할까요? 공개가 종료돼요.`,
-		"lifecycle.trash.group": " {locales} 번역본도 함께 휴지통으로 이동해요.",
 
 		"save.new": "저장 전",
 		"save.saved": "서버에 저장됨",
@@ -197,7 +194,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lang.addTab": "{code} 번역 추가",
 		"lang.current": "{lang} · {status}",
 		"lang.currentSource": "{lang} 원문 · {status}",
-		"lang.menu": "번역본 메뉴",
 
 		"sourceChange.changed": "바뀜",
 		"sourceChange.added": "추가",

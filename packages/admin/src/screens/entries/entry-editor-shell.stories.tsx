@@ -273,7 +273,7 @@ export const MoreMenuOpen: Story = {
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
-		await within(document.body).findByText(/^휴지통으로 이동$/, undefined, LONG);
+		await within(document.body).findByText(/^휴지통으로$/, undefined, LONG);
 	},
 };
 
@@ -383,11 +383,30 @@ export const TranslationEditing: Story = {
 	),
 };
 
-export const DeleteConfirm: Story = {
-	render: screen(() => server()),
+/** EditorTranslate board stage 번역 지우기: in a translation the header's ⋯ ends with 이 번역 휴지통으로 and the language that stays. */
+export const TranslationTrashMenu: Story = {
+	tags: ["visual"],
+	render: screen(
+		() =>
+			server({
+				entry: translation,
+				more: (path, method) => (method === "GET" && path.endsWith("/entry-en") ? translation : undefined),
+			}),
+		"entry-en",
+	),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
-		await userEvent.click(await within(document.body).findByText(/^휴지통으로 이동$/, undefined, LONG));
+		await within(document.body).findByText("한국어 원문은 그대로", undefined, LONG);
+	},
+};
+
+/** A published post asks before it goes to the trash (a draft goes at once). */
+export const DeleteConfirm: Story = {
+	tags: ["visual"],
+	render: screen(() => server({ entry: published })),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await headerMore(canvasElement));
+		await userEvent.click(await within(document.body).findByText(/^휴지통으로$/, undefined, LONG));
 		await within(document.body).findByRole("alertdialog", { hidden: true }, LONG);
 	},
 };

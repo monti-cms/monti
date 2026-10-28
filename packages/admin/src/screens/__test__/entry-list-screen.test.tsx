@@ -233,7 +233,16 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("2개 항목을 보관했어요."));
 	});
 
-	it("the Delete key asks whether to move all selected rows to trash", async () => {
+	it("the Delete key moves all selected draft rows to the trash at once", async () => {
+		server.handle = (url, init) =>
+			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
+				? json({
+						results: [
+							{ id: "가", ok: true, version: 4 },
+							{ id: "다", ok: true, version: 4 },
+						],
+					})
+				: undefined;
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
@@ -241,7 +250,12 @@ describe("list screen — row menu and bulk actions", () => {
 
 		fireEvent.keyDown(screen.getByRole("checkbox", { name: "다 선택" }), { key: "Delete" });
 
-		expect(await screen.findByRole("alertdialog", { name: "휴지통으로" })).toBeTruthy();
+		await waitFor(() => expect(calls("POST", "/api/monti/v1/bulk")).toHaveLength(1));
+		expect(bodyOf(calls("POST", "/api/monti/v1/bulk")[0]).items.map((entry: { id: string }) => entry.id)).toEqual([
+			"가",
+			"다",
+		]);
+		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
 	it("actions are applied to the list first, and failed rows stay selected", async () => {
@@ -258,7 +272,6 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
 		await openRowMenu("가");
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		// Two rows drop out before the response.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /가/ })).toBeNull());
@@ -280,7 +293,11 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."));
+		// The one that did move can still be taken back from the toast.
+		expect(toast.error).toHaveBeenCalledWith(
+			expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."),
+			expect.objectContaining({ action: expect.objectContaining({ label: "되돌리기" }) }),
+		);
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -323,7 +340,6 @@ describe("list screen — row menu and bulk actions", () => {
 		await screen.findByRole("row", { name: /가/ });
 		await openRowMenu("가");
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();

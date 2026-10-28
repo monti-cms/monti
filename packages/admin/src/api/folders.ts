@@ -1,11 +1,5 @@
-import type { Folder, FolderListItem, Site } from "@monti-cms/core/site";
+import type { FolderContents, FolderListItem, FolderTrashResult, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
-
-/** What deleting a folder moves up to its parent: the entries and child folders directly inside. */
-export interface FolderContents {
-	entryCount: number;
-	childFolders: Folder[];
-}
 
 /** Query keys. Everything under `all` is refetched after a folder changes. */
 export const foldersKeys = {
@@ -18,9 +12,9 @@ export const foldersKeys = {
 export const listFolders = (site: Site, collection: string, signal?: AbortSignal) =>
 	adminFetch<FolderListItem[]>(site, `/v1/folders?${new URLSearchParams({ collection })}`, { signal });
 
-/** What deleting `id` would move to the parent folder. */
+/** What `id` holds, its subfolders included: how many entries are published and how many files are in use. Read before the folder goes to the trash. */
 export const getFolderContents = (site: Site, id: string, signal?: AbortSignal) =>
-	adminFetch<FolderContents>(site, `/v1/folders/${encodeURIComponent(id)}`, { signal });
+	adminFetch<FolderContents>(site, `/v1/folders/${encodeURIComponent(id)}/contents`, { signal });
 
 export const createFolder = (
 	site: Site,
@@ -36,8 +30,12 @@ export const updateFolder = (
 	fallback?: string,
 ) => adminFetch(site, `/v1/folders/${encodeURIComponent(id)}`, { method: "PATCH", json: input, fallback });
 
+/**
+ * `DELETE /v1/folders/:id`: moves the folder, its subfolders and its entries to the trash as one unit. A media folder that holds files in use stays,
+ * and only its other files go (`folder` is `null` then).
+ */
 export const deleteFolder = (site: Site, id: string, expectedVersion: number, fallback?: string) =>
-	adminFetch(
+	adminFetch<FolderTrashResult>(
 		site,
 		`/v1/folders/${encodeURIComponent(id)}?${new URLSearchParams({ expectedVersion: String(expectedVersion) })}`,
 		{
