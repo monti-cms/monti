@@ -5,7 +5,8 @@ import { Count } from "./count";
 /**
  * A one-line notice across the top of a pane, under its header, for something the writer should know about the whole page ("The Korean source
  * changed"): cream background and one rule below. A 6px dot leads the sentence, 8px before its words. `tone="warning"` (the default) sets the sentence in the warning text color and the dot in the
- * warning mark color; `tone="danger"` is for something that failed (a delivery, a save) and makes both red. `title` is the sentence, `meta` the small detail after it in mono, which is cut with "…" when the line is short (the sentence and the actions never wrap); `children`
+ * warning mark color; `tone="danger"` is for something that failed (a delivery, a save) and makes both red; `tone="neutral"` is a state that is neither (an
+ * entry in the trash): both are subtle, and `meta` is a plain sentence. `title` is the sentence, `meta` the small detail after it in mono, which is cut with "…" when the line is short (the sentence and the actions never wrap); `children`
  * are what can be done about it, at the right end (text buttons: the one that goes there underlined, then the one that dismisses).
  */
 function Banner({
@@ -18,8 +19,8 @@ function Banner({
 }: Omit<React.ComponentProps<"div">, "title"> & {
 	title: React.ReactNode;
 	meta?: React.ReactNode;
-	/** `warning` for something to know, `danger` for something that failed. */
-	tone?: "warning" | "danger";
+	/** `warning` for something to know, `danger` for something that failed, `neutral` for a state that is neither. */
+	tone?: "warning" | "danger" | "neutral";
 }) {
 	return (
 		<div
@@ -35,7 +36,7 @@ function Banner({
 			<span
 				className={cn(
 					"inline-flex shrink-0 items-center gap-monti-8 whitespace-nowrap font-semibold",
-					tone === "danger" ? "text-monti-danger" : "text-monti-warning",
+					tone === "danger" ? "text-monti-danger" : tone === "neutral" ? "text-monti-subtle" : "text-monti-warning",
 				)}
 			>
 				<span
@@ -43,12 +44,21 @@ function Banner({
 					data-slot="banner-dot"
 					className={cn(
 						"size-1.5 shrink-0 rounded-monti-full",
-						tone === "danger" ? "bg-(--monti-fg-danger)" : "bg-monti-warning-emphasis",
+						tone === "danger"
+							? "bg-(--monti-fg-danger)"
+							: tone === "neutral"
+								? "bg-current"
+								: "bg-monti-warning-emphasis",
 					)}
 				/>
 				{title}
 			</span>
-			{meta && <Count className="min-w-0 truncate">{meta}</Count>}
+			{meta &&
+				(tone === "neutral" ? (
+					<span className="min-w-0 truncate text-monti-subtle">{meta}</span>
+				) : (
+					<Count className="min-w-0 truncate">{meta}</Count>
+				))}
 			{children && (
 				<span className="ml-auto flex shrink-0 items-center gap-monti-16 whitespace-nowrap">{children}</span>
 			)}

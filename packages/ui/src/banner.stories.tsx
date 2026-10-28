@@ -46,6 +46,11 @@ export const Danger: Story = {
 	),
 };
 
+/** Neutral, for a state that is neither a warning nor a failure (an entry in the trash): the sentence, the dot and a plain detail are subtle. */
+export const Neutral: Story = {
+	args: { tone: "neutral", title: "휴지통에 있는 글이에요", meta: "복원하면 초안으로 돌아와요 · 23일 남음" },
+};
+
 /** Only the sentence, with nothing to do about it. */
 export const TitleOnly: Story = { args: { meta: undefined } };
 
