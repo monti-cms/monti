@@ -64,9 +64,13 @@ function TableBody({
 }
 
 /**
- * A row of a list. Each row has its rule underneath. A picked row is filled with the muted background inside the table's rectangle (no rounded
+ * A row of a list. Each row has its rule underneath. A picked row is filled with the selected background inside the table's rectangle (no rounded
  * corners, nothing outside it) and its rule goes darker, so a run of picked rows still reads as separate rows; `proposal` makes the fill the
  * proposal tint, for rows the assistant picked. The check appears when the pointer is on the row ({@link RowCheck}); the ⋯ is always there ({@link RowActions}).
+ *
+ * A row that can be opened (it has an `onClick` or a {@link RowLink}) takes the muted background under the pointer, one step lighter than a picked row; a
+ * row of a table that opens nothing takes none. Whatever the row, it keeps that background while its own menu is open (a right click, or its ⋯), so it is
+ * plain which row the menu belongs to. A picked row stays as it is.
  */
 function TableRow({
 	className,
@@ -86,8 +90,8 @@ function TableRow({
 			data-proposal={(selected && proposal) || undefined}
 			aria-selected={selected || undefined}
 			className={cn(
-				props.onClick && "cursor-pointer",
-				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
+				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
+				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				className,
 			)}
 			{...props}
