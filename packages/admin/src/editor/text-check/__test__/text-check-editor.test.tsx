@@ -12,13 +12,11 @@ import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
-import { editorMessages } from "../../messages";
 import { textCheckMessages } from "../messages";
 import { type TextCheckPluginState, textCheckIssues } from "../plugin";
 import { AUTO_CHECK_DELAY } from "../use-text-check";
 
 const t = testSite.createTranslator(textCheckMessages);
-const tEditor = testSite.createTranslator(editorMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -122,7 +120,7 @@ const renderEditor = async (content: string, checkers: readonly TextChecker[], l
 			/>
 		</AdminComponentsProvider>,
 	);
-	await screen.findByRole("toolbar", { name: tEditor("toolbar.format") });
+	await screen.findByRole("toolbar", { name: "확장 도구" });
 	await waitFor(() => expect(editor).not.toBeNull());
 	return { editor: editor as unknown as Editor, onChange, findings };
 };
@@ -172,7 +170,7 @@ describe("spellcheck button", () => {
 				</AdminComponentsProvider>
 			</AdminComponentsProvider>,
 		);
-		await screen.findByRole("toolbar", { name: tEditor("toolbar.format") });
+		await screen.findByRole("toolbar", { name: "확장 도구" });
 		await waitFor(() => expect(checkButton()).not.toBeNull());
 		expect(checkButton("다른 검사")).not.toBeNull();
 	});

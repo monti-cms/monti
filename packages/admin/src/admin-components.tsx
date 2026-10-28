@@ -41,7 +41,7 @@ export interface EditorExtensionContext {
 	};
 }
 
-/** An action added to the format bar that appears when text is selected (e.g. polishing the writing style). It is drawn as a "✦ label" button. */
+/** An action added to the format card that appears when text is selected (e.g. polishing the writing style). It is drawn as a "✦ label" button at the card's end. */
 export interface EditorSelectionAction {
 	readonly id: string;
 	readonly label: string;
@@ -60,15 +60,13 @@ export interface EditorInsertAction {
 }
 
 /**
- * What an edit screen extension adds: an element at the end of the toolbar, an action next to the block handle, actions for the selection menu and slash menu,
+ * What an edit screen extension adds: an element in the row of document tools at the top right of the body, an action in the block menu, actions for the selection menu and slash menu,
  * and functions to receive when the editor is created and destroyed.
  */
 export interface EditorExtensionResult {
+	/** Document-wide tools (a button that writes a draft, translates everything): a row of buttons at the top right of the body. */
 	readonly toolbar?: ReactNode;
-	/**
-	 * An element rendered once outside the toolbar (dialog, etc.). Toolbar elements may be re-rendered depending on width,
-	 * so anything that must keep its state while open belongs here.
-	 */
+	/** An element rendered once, apart from the tools (dialog, etc.), for anything that must keep its state while open. */
 	readonly overlay?: ReactNode;
 	readonly blockActions?: readonly BlockAction[];
 	readonly selectionActions?: readonly EditorSelectionAction[];
@@ -100,6 +98,24 @@ export interface EditorBubbleProps {
 	readonly act: (run: () => void) => () => void;
 }
 
+/**
+ * One row of the `⋯` menu of the format card: a format a site added (text color, tooltip, a link to a code line). The card draws the row (icon, name, a ✓ while the
+ * format is on the selection) and calls `run` when it is picked; the extension only says what the row is and what it does.
+ */
+export interface EditorFormatItem {
+	/** Stable name of the row, unique within the site. `runFormatItem(id)` (`@monti-cms/admin/editor`) runs it from elsewhere, such as a slash menu item. */
+	readonly id: string;
+	/** The row's name, in the admin language. A function when it follows the selection ("Add tooltip", "Edit tooltip"). */
+	readonly label: string | ((editor: Editor) => string);
+	readonly icon?: MontiIcon;
+	/** Whether the row is offered for this selection (default: always). Say no where the format cannot work, such as in a code block, so the row is not listed. */
+	readonly isAvailable?: (props: EditorBubbleProps) => boolean;
+	/** Whether the selection has the format; the row then ends in a ✓. */
+	readonly isActive?: (editor: Editor) => boolean;
+	/** What picking the row does. To ask for input, expand a panel in the card with `props.openPanel`. */
+	readonly run: (props: EditorBubbleProps) => void;
+}
+
 /** Values received by the content to render in the bubble when the cursor is inside a mark. `mark` is that mark and its range around the cursor. */
 export interface EditorMarkDetailProps extends EditorBubbleProps {
 	readonly mark: ActiveInlineMark;
@@ -111,27 +127,13 @@ export interface EditorMarkDetailProps extends EditorBubbleProps {
  */
 export interface EditorMarkExtension extends EditorMarkSpec {
 	/**
-	 * Formatting tool button. `format` goes after the text marks (bold...), `link` after the link. If `priority` is set, when space is tight the larger values go first into
-	 * the "More" menu (`MenuItems`); without it, the button is never hidden.
+	 * Formats this extension adds to the format card. They sit under the card's `⋯`, one row each, in the order given (extensions in the order they are
+	 * registered). A row that is not available for the selection is left out, and with no row left there is no `⋯`.
 	 */
-	readonly toolbar?: {
-		readonly group: "format" | "link";
-		readonly priority?: number;
-		readonly Button: ComponentType<{ readonly editor: Editor }>;
-		readonly MenuItems?: ComponentType<{ readonly editor: Editor }>;
-	};
-	/**
-	 * A button to add to the inline bubble when text is selected. `format` goes after the text marks, `link` goes in the link group in `order`
-	 * (link is 0, default 1).
-	 */
-	readonly bubble?: {
-		readonly group: "format" | "link";
-		readonly order?: number;
-		readonly Button: ComponentType<EditorBubbleProps>;
-	};
+	readonly formatItems?: readonly EditorFormatItem[];
 	/** Content to render in the bubble when the cursor is inside this mark (description, edit, remove). If absent, nothing appears in the bubble. */
 	readonly detail?: ComponentType<EditorMarkDetailProps>;
-	/** Slash (`/`) menu items. Placed after the default text format items and before the block items. */
+	/** Slash (`/`) menu items. Placed under "Insert", after the default items of that group. */
 	readonly insertActions?: readonly EditorInsertAction[];
 }
 

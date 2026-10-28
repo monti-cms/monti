@@ -1,98 +1,200 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Copy, Draggable, TrashCan } from "@carbon/icons-react";
-import { useTranslator } from "@monti-cms/core/site";
+import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@carbon/icons-react";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	BlockHandle,
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-	IconButton,
+	Icon,
 	MenuShortcut,
 } from "@monti-cms/ui";
+import type { Editor } from "@tiptap/core";
 import type React from "react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { createPortal } from "react-dom";
 import { commonMessages } from "../lib/common.messages";
+import { allowanceOfState } from "./allowed-extension";
+import { addBlockBelow, canMoveBlock, deleteBlock, duplicateBlock, moveBlock } from "./block-commands";
+import {
+	ALIGNMENTS,
+	alignBlock,
+	type BlockAlign,
+	type BlockKindId,
+	blockAlignAt,
+	blockKindAt,
+	blockKinds,
+	blockNameAt,
+	turnBlockInto,
+} from "./block-kinds";
+import { markBlockMenu } from "./block-menu-mark";
 import { editorMessages } from "./messages";
+import type { HandleSpot } from "./use-block-handle";
 
-interface BlockHandleOverlayProps {
-	coords: { top: number; left: number };
-	onMoveUp: () => void;
-	onMoveDown: () => void;
-	onDuplicate: () => void;
-	onDelete: () => void;
-	onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
-	onDragEnd?: (event: React.DragEvent<HTMLElement>) => void;
-	/** Action buttons attached beside the handle (translate, etc.). */
-	actions?: ReadonlyArray<{ id: string; label: string; icon: React.ReactNode; busy: boolean; onClick: () => void }>;
+/** Action an extension adds to the block menu (translate this block, ...). Shown only on a block it can act on. */
+export interface BlockMenuAction {
+	id: string;
+	label: string;
+	icon: ReactNode;
+	/** The action is running on this block. */
+	busy: boolean;
+	onClick: () => void;
 }
 
-/** The ⋮⋮ handle on the left of a block and the block menu. The menu is a shadcn DropdownMenu (Base UI render prop) so it is keyboard operable too, and dragging the handle moves the block. */
+interface BlockHandleOverlayProps {
+	editor: Editor;
+	/** The block the handle is beside: where it floats and the position of the block. */
+	spot: HandleSpot;
+	onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+	onDragEnd?: (event: React.DragEvent<HTMLElement>) => void;
+	/** The block was deleted from the menu, so the handle has nothing to point at. */
+	onDeleted: () => void;
+	actions?: readonly BlockMenuAction[];
+}
+
+/** The + and the grip in the left margin of the pointed block. The grip opens the block menu and dragging it moves the block; the + adds a line below and opens the "/" list. */
 export function BlockHandleOverlay({
-	coords,
-	onMoveUp,
-	onMoveDown,
-	onDuplicate,
-	onDelete,
+	editor,
+	spot,
 	onDragStart,
 	onDragEnd,
+	onDeleted,
 	actions = [],
 }: BlockHandleOverlayProps) {
+	const site = useSite();
 	const t = useTranslator(editorMessages);
 	const tc = useTranslator(commonMessages);
 	const [open, setOpen] = useState(false);
 	if (typeof window === "undefined") return null;
 
+	const { doc } = editor.state;
+	const { pos } = spot;
+	const allowance = allowanceOfState(editor.state);
+	const kind = blockKindAt(doc, pos);
+	const align = blockAlignAt(doc, pos, allowance);
+	const name = blockNameAt(site, t, doc, pos);
+	const kinds = blockKinds(t, allowance);
+	const canUp = canMoveBlock(doc, pos, -1);
+	const canDown = canMoveBlock(doc, pos, 1);
+	const choose = (run: () => unknown) => () => {
+		editor.commands.focus();
+		run();
+	};
+	const changeOpen = (next: boolean) => {
+		setOpen(next);
+		markBlockMenu(editor, next ? pos : null);
+	};
+
 	return createPortal(
 		<div
-			style={{
-				position: "fixed",
-				top: `${coords.top}px`,
-				// If there are action buttons, shift left that much more to keep room for the handle.
-				left: `${Math.max(8, coords.left - 32 - actions.length * 24)}px`,
-				zIndex: 40,
-			}}
+			style={{ position: "fixed", top: `${spot.top + 4}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
 			className="flex items-center"
 		>
-			{actions.map((action) => (
-				<IconButton key={action.id} label={action.label} side="bottom" disabled={action.busy} onClick={action.onClick}>
-					{action.icon}
-				</IconButton>
-			))}
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}
-			<DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
-				<IconButton
-					label={t("blockHandle.label")}
-					side="bottom"
+			<DropdownMenu open={open} onOpenChange={changeOpen} modal={false}>
+				<BlockHandle
+					addLabel={t("blockHandle.add")}
+					gripLabel={t("blockHandle.label")}
+					active={open}
+					onAdd={() => addBlockBelow(editor, pos)}
 					draggable
 					onDragStart={(event) => {
 						// A menu opened on press closes when dragging starts.
-						setOpen(false);
+						changeOpen(false);
 						onDragStart?.(event);
 					}}
 					onDragEnd={onDragEnd}
-					trigger={(button) => <DropdownMenuTrigger render={button} />}
-				>
-					<Draggable aria-hidden />
-				</IconButton>
-				<DropdownMenuContent align="start" side="right">
-					<DropdownMenuItem onClick={onMoveUp}>
-						<ArrowUp aria-hidden />
-						{t("blockHandle.moveUp")}
-						<MenuShortcut>⌥↑</MenuShortcut>
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={onMoveDown}>
-						<ArrowDown aria-hidden />
-						{t("blockHandle.moveDown")}
-						<MenuShortcut>⌥↓</MenuShortcut>
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={onDuplicate}>
+					trigger={(grip) => <DropdownMenuTrigger render={grip} />}
+				/>
+				<DropdownMenuContent side="right" align="start">
+					<DropdownMenuGroup>
+						{name && <DropdownMenuLabel>{name}</DropdownMenuLabel>}
+						{kind && (
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger>
+									<Repeat aria-hidden />
+									{t("blockHandle.turnInto")}
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									<DropdownMenuRadioGroup
+										value={kind}
+										onValueChange={(next) => choose(() => turnBlockInto(editor, pos, next as BlockKindId))()}
+									>
+										{kinds.map((item) => (
+											<DropdownMenuRadioItem key={item.id} value={item.id}>
+												{item.label}
+												{item.shortcut && <MenuShortcut>{item.shortcut}</MenuShortcut>}
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+						)}
+						{align && (
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger>
+									<TextAlignLeft aria-hidden />
+									{t("blockHandle.align")}
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									<DropdownMenuRadioGroup
+										value={align}
+										onValueChange={(next) => choose(() => alignBlock(editor, pos, next as BlockAlign))()}
+									>
+										{ALIGNMENTS.map((item) => (
+											<DropdownMenuRadioItem key={item.id} value={item.id}>
+												<Icon icon={item.icon} tone="muted" />
+												{t(item.key)}
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+						)}
+						{actions.map((action) => (
+							<DropdownMenuItem key={action.id} disabled={action.busy} onClick={action.onClick}>
+								{action.icon}
+								{action.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuGroup>
+					<DropdownMenuSeparator />
+					{canUp && (
+						<DropdownMenuItem onClick={choose(() => moveBlock(editor, pos, -1))}>
+							<ArrowUp aria-hidden />
+							{t("blockHandle.moveUp")}
+							<MenuShortcut>⌥↑</MenuShortcut>
+						</DropdownMenuItem>
+					)}
+					{canDown && (
+						<DropdownMenuItem onClick={choose(() => moveBlock(editor, pos, 1))}>
+							<ArrowDown aria-hidden />
+							{t("blockHandle.moveDown")}
+							<MenuShortcut>⌥↓</MenuShortcut>
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuItem onClick={choose(() => duplicateBlock(editor, pos))}>
 						<Copy aria-hidden />
 						{t("blockHandle.duplicate")}
 						<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
-					<DropdownMenuItem variant="danger" onClick={onDelete}>
+					<DropdownMenuItem
+						variant="danger"
+						onClick={choose(() => {
+							deleteBlock(editor, pos);
+							onDeleted();
+						})}
+					>
 						<TrashCan aria-hidden />
 						{tc("delete")}
 						<MenuShortcut>⇧⌘⌫</MenuShortcut>

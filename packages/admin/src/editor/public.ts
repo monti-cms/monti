@@ -5,6 +5,7 @@
 export type {
 	EditorBubblePanel,
 	EditorBubbleProps,
+	EditorFormatItem,
 	EditorMarkDetailProps,
 	EditorMarkExtension,
 } from "../admin-components";
@@ -15,10 +16,10 @@ export { BLOCK_NODES } from "./block-views";
 export { blockNodeName } from "./blocks/added";
 export { findAnchor, startLinkFromText, unlinkRef } from "./code-block/link-commands";
 export { buildEditorExtensions } from "./extensions";
-export { BubbleButton } from "./inline-bubble";
+export { BubbleButton, runFormatItem } from "./inline-bubble";
 export { type ActiveInlineMark, allowsMark, removeInlineMark } from "./inline-marks";
 export { collapseToEnd } from "./link-form";
-export { MarkTextForm, type MarkTextLabels, MarkTextPopover } from "./mark-text-form";
+export { MarkTextForm, type MarkTextLabels } from "./mark-text-form";
 export { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "./tiptap-content";
 export { type BlockAction, CmsEditor } from "./tiptap-editor";
 export { UNTRANSLATED_MARK_NAME } from "./untranslated-mark";

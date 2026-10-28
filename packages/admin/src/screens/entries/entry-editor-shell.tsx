@@ -5,7 +5,7 @@ import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
+import { FormFieldLabel, IconButton, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminComponents, useEditorExtensions } from "../../admin-components";
@@ -36,14 +36,12 @@ import { EntryEditorRecoveryStrips } from "./entry-editor-recovery";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import { InspectorSidePanel, TranslationSourcePanel } from "./entry-editor-side-panels";
 import { EntryEditorLoadError, EntryEditorLoading } from "./entry-editor-states";
-import { ToolbarToggle } from "./entry-editor-toolbar";
 import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { readOpenEntry, readOpenSelection } from "./open-editor-read";
 import { SourceChangeDialog } from "./source-change-dialog";
 import { useSourceSync } from "./source-sync";
-import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
 import { usePublishReadiness, useResolvedTodos } from "./use-publish-readiness";
@@ -460,22 +458,26 @@ export function EntryEditorShell({
 		</>
 	);
 	const sourcePaneToggle = translationSource && (
-		<ToolbarToggle
+		<IconButton
 			label={te("source")}
-			icon={OpenPanelLeft}
+			side="bottom"
 			pressed={isSourcePaneOpen}
-			onPressedChange={toggleSourcePane}
-		/>
+			onClick={() => toggleSourcePane(!isSourcePaneOpen)}
+		>
+			<OpenPanelLeft aria-hidden />
+		</IconButton>
 	);
 	const sourceModeToggle = sourcePanel && (
-		<ToolbarToggle
+		<IconButton
 			label={sourcePanel.label}
-			icon={CodeReference}
+			side="bottom"
 			pressed={isSourceMode}
 			// A body that could not be read cannot return to visual mode.
 			disabled={isSourceMode && !canUseVisual}
-			onPressedChange={(pressed) => setEditorMode(pressed ? "source" : "visual")}
-		/>
+			onClick={() => setEditorMode(isSourceMode ? "visual" : "source")}
+		>
+			<CodeReference aria-hidden />
+		</IconButton>
 	);
 	const sourceEditor = sourcePanel && (
 		<>
@@ -554,16 +556,14 @@ export function EntryEditorShell({
 											{titleInput}
 										</>
 									}
-									toolbarAside={
-										<Inline gap={4}>
-											{site.ADMIN_TEMPLATES && (
-												<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
-											)}
+									tools={
+										<>
 											{extensions.toolbar}
 											{sourcePaneToggle}
 											{sourceModeToggle}
-										</Inline>
+										</>
 									}
+									templates
 									sourceView={isSourceMode ? sourceEditor : undefined}
 									editable={!isReadOnly}
 									onChange={editor.setBody}

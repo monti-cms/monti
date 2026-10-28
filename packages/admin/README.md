@@ -74,7 +74,7 @@ involved in loading it into the editor or saving it from there.
   replaces what it shows (the same words with other block ids or key order leave it alone). `storedToTiptap(doc)` and `tiptapToStored(json)` in `@monti-cms/admin/editor`
   convert directly. A node the editor has no edit view for, and a body that could not be read as a document (one `unparsed` node), is kept whole in a read-only box
   (`cmsOpaqueBlock`), so nothing is lost.
-- `CmsEditor` takes `allowed` (the object form of a collection's `body`: `blocks`, `marks`, `headings`; the edit screen passes the collection's). It then offers and accepts only those (toolbar, slash and component menus, the text bubble, input rules, shortcuts, paste), while a body that already holds something else still opens and saves unchanged. See "Allowed blocks and marks per body" in the `@monti-cms/core` README.
+- `CmsEditor` takes `allowed` (the object form of a collection's `body`: `blocks`, `marks`, `headings`; the edit screen passes the collection's). It then offers and accepts only those (the slash menu, the block menu, the format card, input rules, shortcuts, paste), while a body that already holds something else still opens and saves unchanged. See "Allowed blocks and marks per body" in the `@monti-cms/core` README.
 - The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
   block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are kept as an `unparsed` document, and the source panel of the `mdx()` plugin (`@monti-cms/mdx`) reads them again when it is open.
 - `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.
@@ -82,7 +82,7 @@ involved in loading it into the editor or saving it from there.
 
 ### Source panels
 
-The source toggle at the end of the toolbar edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
+The source toggle in the document tools (the row of buttons at the top right of the body; there is no toolbar over it) edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
 same provider as the other site components (`useAdminComponents().sourcePanels`). With several registered, the first one is used.
 
 ```tsx
@@ -147,7 +147,8 @@ The sidebar has a head row (the site name, a link that opens the site, and a fol
 |---|---|---|
 | Site, Languages, Collections, File, Admin | `<admin path>/settings` (opens the Site tab; `site`, `locales`, `collections`, `file`, `admin`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
 | API keys (tab of Tools) | `<admin path>/tools/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and plugin key slots pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
-| Templates (tab of Tools) | `<admin path>/tools/templates` | Body templates (a 404 when `admin.templates` is `false`). |
+| Templates (tab of Tools) | `<admin path>/tools/templates` | Body templates, a row each (name, its headings, the day it was edited, a menu with duplicate and delete); "Add template" in the header (a 404 when `admin.templates` is `false`). |
+| A template | `<admin path>/templates/new`, `<admin path>/templates/<id>/edit` | The page of one template, outside the Tools page: the name over the body, "Unsaved" and the save button (⌘S) in the header once something changed, and a status bar with the character count. Its back link returns to the Templates tab. |
 | Data (tab of Tools) | `<admin path>/tools/data` | Backup, and entry import from one zip (a full backup on an empty site opens the restore sheet). |
 | Activity log (tab of Tools) | `<admin path>/tools/events` | Event deliveries. The tab carries the failed-delivery count. |
 | One per plugin page (tab of Tools) | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`), as a tab after the built-in ones. |
@@ -209,16 +210,19 @@ import type { EditorMarkExtension } from "@monti-cms/admin/editor";
 const note: EditorMarkExtension = {
 	inclusive: false, // whether text typed at the end of the mark inherits it (default false)
 	render: (attrs) => ({ class: "underline decoration-wavy" }), // HTML attributes to add to the span
-	toolbar: { group: "format", priority: 3, Button: NoteButton, MenuItems: NoteMenuItems }, // format: after text marks, link: after the link
-	bubble: { group: "link", order: -1, Button: NoteBubbleButton }, // bubble button when text is selected (before the link)
+	formatItems: [noteFormat], // rows under the ⋯ of the format card (see below)
 	detail: NoteDetail, // bubble content when the cursor is inside the mark (description, edit, remove)
 	insertActions: [{ id: "note", title: "Note", description: "…", keywords: ["note"], run: (editor, range) => {} }], // slash menu
 };
 const components = { marks: { note } };
 ```
 
-- Bubble buttons and content receive `{ editor, inCode, openPanel, closePanel, act }`. `openPanel({ label, size, content })` expands an
-  input panel inside the bubble. To get the same look, use `BubbleButton`, `MarkTextForm`, `MarkTextPopover`,
+- The format card has no button for a site-added format. Each one is a row under the card's `⋯` (`formatItems`, the `EditorFormatItem` type): `id` (unique in the
+  site), `label` (a string, or a function of the editor when it follows the selection, like "Add tooltip" / "Edit tooltip"), `icon`, `isAvailable(props)` (say no
+  where the format cannot work, such as inside code; with no row left the `⋯` is not drawn), `isActive(editor)` (the row ends in a ✓) and `run(props)`.
+  `props` is `{ editor, inCode, openPanel, closePanel, act }`: `openPanel({ label, size, content })` expands an input panel inside the card, `closePanel` closes it.
+  `runFormatItem(id)` (`@monti-cms/admin/editor`) runs a row by its `id` on the selection from elsewhere, such as a slash menu item that selects sample text first.
+  Content for the cursor inside a mark (`detail`) gets the same props plus `mark`; to get the card's look there, use `BubbleButton`, `MarkTextForm`,
   `removeInlineMark` and `allowsMark` from `@monti-cms/admin/editor`.
 - In HTML it is `span[data-monti-mark="name"]` with `data-mark-<attribute>` for each attribute. The mark name in the stored document (CmsNode) is the block name,
   and only the attributes in the definition are kept (`markAttrsOf`).
@@ -227,13 +231,13 @@ const components = { marks: { note } };
   linking commands used in the bubble (`findAnchor`, `startLinkFromText`, `unlinkRef`) are in the same entry point.
 - The character tooltip inside a code block (code fence comment `// @char Tooltip`) is a core code block feature, separate from the body tooltip (mark `codeTooltip`).
 - The code block tools follow the site config `codeBlock` (`@monti-cms/core` README): `omitLineEffects` and `features` (`rules`, `fold`, `tooltip`, `textStyles`) hide line effects, regex rules, folding,
-  the tooltip and bold, italic, strikethrough and underline from the line menu, the rules panel, the bubble, the toolbar and the shortcuts inside code, and `themes` and `languages` set the highlighting themes and the language list.
+  the tooltip and bold, italic, strikethrough and underline from the line menu, the rules panel, the format card and the shortcuts inside code, and `themes` and `languages` set the highlighting themes and the language list.
   A body that already uses a tool that is off still loads and saves unchanged, and its effects stay visible so they can be removed.
 
 ## Text checking (spelling, etc.)
 
 The core has no checkers; it only renders the buttons, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
-etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a toolbar button (name `label`, icon `icon`),
+etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a button in the document tools (name `label`, icon `icon`),
 and results appear as wavy underlines, a results window and a list. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
 Checkers are registered through a plugin's admin side (see "Adding site components"); the `word-list` plugin of the example blog is a small one.
 
@@ -244,7 +248,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
 	id: "my-words",
-	label: "Banned words", // toolbar button name
+	label: "Banned words", // button name
 	icon: "flag", // Carbon icon name or component. Defaults to the spelling icon
 	locales: ["ko"], // all languages if omitted
 	limits: { maxChars: 10_000, maxSegments: 50 }, // split before sending if exceeded
@@ -331,7 +335,7 @@ export function StatsPage() {
 
 The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README).
 
-Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
+Edit screen extensions (`editorExtensions`) are hooks that add an element to the document tools (a row of buttons at the top right of the body), an action in the block menu, and actions for the format card and the slash menu. For the field side, body images, media and code blocks,
 attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,

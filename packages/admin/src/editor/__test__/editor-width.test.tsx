@@ -39,7 +39,7 @@ const renderEditor = async (editorConfig?: { widths: typeof widths }) => {
 			</SiteProvider>,
 		);
 	else renderWithSite(editor);
-	await screen.findByRole("toolbar", { name: t("toolbar.format") });
+	await screen.findByRole("button", { name: t("editorWidth.label") });
 };
 /** Body width applied to the editor frame. The title, body and source all use this value. */
 const editorWidth = () =>

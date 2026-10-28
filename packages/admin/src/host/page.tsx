@@ -5,6 +5,7 @@ import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
 import EntryListPage from "../screens/page";
 import SettingsPage from "../screens/settings/page";
+import TemplateEditPage from "../screens/templates/edit-page";
 import ToolsPage from "../screens/tools/page";
 import TrashPage from "../screens/trash/page";
 import type { AdminServer } from "./server";
@@ -26,6 +27,7 @@ export interface AdminPageProps {
  * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file)
  * - `/admin/tools/<tab>` Tools, one tab per address: `templates` (body templates), `data` (backup, import and restore), `events` (activity log), `api-keys`, and a plugin's
  *   page for each `nav` item (e.g. the AI plugin's `/admin/tools/ai`). `/admin/tools` goes to the first tab.
+ * - `/admin/templates/new` new template · `/admin/templates/<id>/edit` edit one (a page of its own; the list is the tools page's `templates` tab)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */
 export async function AdminPage({ cms, server, params, searchParams }: AdminPageProps) {
@@ -50,6 +52,12 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 	}
 	if (first === "tools" && path.length <= 2) {
 		return <ToolsPage cms={cms} server={server} path={second} />;
+	}
+	if (first === "templates" && second === "new" && third === undefined) {
+		return <TemplateEditPage cms={cms} server={server} id={undefined} />;
+	}
+	if (first === "templates" && second && third === "edit") {
+		return <TemplateEditPage cms={cms} server={server} id={second} />;
 	}
 	if (first === "entries" && second === "new" && third === undefined) {
 		const query = await searchParams;

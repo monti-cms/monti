@@ -5,11 +5,14 @@ import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
 import { cmsAllowedGuard, restrictExtensions } from "./allowed-extension";
 import { CmsBlockKeymap } from "./block-commands";
 import { CmsBlockIds } from "./block-ids";
+import { CmsBlockMenuMark } from "./block-menu-mark";
 import { BLOCK_NODES } from "./block-views";
 import { addedBlockNodes } from "./blocks/added";
 import { codeTextStyleKeys } from "./code-block/text-style-keys";
 import { CmsBlockDrag } from "./drag";
+import { EmptyLineHint } from "./empty-hint";
 import { CmsLinkEntryId } from "./link-entry-id";
+import { editorMessages } from "./messages";
 import { cmsSchemaExtensions } from "./tiptap-schema";
 
 /**
@@ -39,6 +42,8 @@ export function buildEditorExtensions(
 		// Text styles added by block extensions or site config. The look is provided by the extension (`marks`, block name → look).
 		...[...addedMarksOf(site).values()].map((block) => createAddedMark(block, marks[block.name])),
 		CmsBlockKeymap,
+		CmsBlockMenuMark,
+		EmptyLineHint.configure({ text: site.createTranslator(editorMessages)("emptyHint") }),
 		// Before the text style extensions above, so it can swallow their shortcuts inside code.
 		codeTextStyleKeys(site),
 		CmsBlockDrag,

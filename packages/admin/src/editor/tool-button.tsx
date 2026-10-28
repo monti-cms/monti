@@ -15,7 +15,7 @@ export interface ToolbarItem {
 	run: (editor: Editor) => void;
 }
 
-/** Icon button for formatting tools and table tools. Does not steal the editor selection when pressed. */
+/** Icon button for the table tools. Does not steal the editor selection when pressed. */
 export function ToolbarButton({
 	editor,
 	item,

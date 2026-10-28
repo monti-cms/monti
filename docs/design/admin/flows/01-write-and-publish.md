@@ -21,24 +21,28 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step02.dc.html`
 - Renders: `EditorNotion` (doc "새 글"; state "템플릿 고르기"; pub "초안"; todo-open off)
 - A new post opens with an empty title (0 characters, not yet saved). The user types `/` and the template list opens in place: "기본 글" (intro, body, conclusion), "책 리뷰" (one-line review, plot, quote, thoughts) and "튜토리얼" (needs, steps, code, wrap-up). The footer says the address is made from the title when the post is published.
+- Test: `packages/admin/src/editor/__test__/writing-flow.test.tsx` ("flow: write (steps 02–05)")
 
 ### Step 03: "쓰기 · 블록 손잡이와 서식 카드"
 
 - Board: `Flow1Step03.dc.html`
 - Renders: `EditorNotion` (default state "글자 고름 + 블록 메뉴"; pub "초안"; todo-open off)
 - The user selects text. The format card (bold, italic, underline, strike, code, link, ✦ request) appears over it, and the block handle menu is open: turn into another block, align, move up (⌥↑), move down (⌥↓), duplicate (⇧⌘D), delete (⇧⌘⌫). The status shows unsaved changes.
+- Test: `packages/admin/src/editor/__test__/writing-flow.test.tsx` ("flow: write (steps 02–05)")
 
 ### Step 04: "쓰기 · 손잡이 → 다른 블록으로 바꾸기"
 
 - Board: `Flow1Step04.dc.html`
 - Renders: `EditorNotion` (state "블록 바꾸기"; pub "초안"; todo-open off)
 - From the block handle menu the user opens "turn into another block". A submenu lists the block types (heading 2, 3, 4, lists and so on).
+- Test: `packages/admin/src/editor/__test__/writing-flow.test.tsx` ("flow: write (steps 02–05)")
 
 ### Step 05: "쓰기 · 손잡이 → 정렬"
 
 - Board: `Flow1Step05.dc.html`
 - Renders: `EditorNotion` (state "블록 정렬"; pub "초안"; todo-open off)
 - From the block handle menu the user opens "align". A submenu offers left, center and right.
+- Test: `packages/admin/src/editor/__test__/writing-flow.test.tsx` ("flow: write (steps 02–05)")
 
 ### Step 06: "쓰기 · 하단 플러그인 칸 → 판에서 하나씩 고치기"
 
