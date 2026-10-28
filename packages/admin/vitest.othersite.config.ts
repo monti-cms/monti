@@ -15,7 +15,6 @@ const BLOG_FIXTURE_TESTS = [
 	"src/screens/__test__/entry-list-screen.test.tsx",
 	"src/screens/__test__/admin-entries-table.test.tsx",
 	"src/screens/__test__/admin-list-rows.test.tsx",
-	"src/screens/__test__/blog-list-defaults.test.ts",
 	"src/screens/__test__/list-menus.test.tsx",
 	"src/screens/__test__/list-row-menu.test.ts",
 	"src/screens/__test__/list-state.test.ts",
