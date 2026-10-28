@@ -15,7 +15,7 @@ import {
 	TableRow,
 	Text,
 } from "@monti-cms/ui";
-import { type KeyboardEvent, type ReactNode, useState } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { EntryRowCells } from "./entries-table-row";
