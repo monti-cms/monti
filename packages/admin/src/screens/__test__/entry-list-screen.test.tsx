@@ -7,7 +7,6 @@ import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
 import { toast } from "../../test/ui-toast";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
-import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
 
@@ -118,45 +117,31 @@ const openRowMenu = async (title: string) => {
 };
 const menuLabels = (items: HTMLElement[]) => items.map((menuItem) => menuItem.textContent);
 
-describe("list screen — page header", () => {
-	const publicAt = testSite.createTranslator(screensMessages)("list.publicAt");
-
-	it("shows the title with the count and, for a collection with a public route, where it is public", async () => {
+describe("list screen — title row", () => {
+	it("shows the title and, for a collection with a public route, its address rule beside it", async () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
 		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toContain(testSite.COLLECTION_DEFINITIONS.post.label);
-		expect(heading.textContent).toContain(String(server.posts.length));
-		const route = screen.getByText(testSite.schemaOf("post").path as string);
-		expect(route.tagName).toBe("CODE");
-		expect(route.parentElement?.textContent).toContain(publicAt);
+		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.post.label);
+		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeTruthy();
 	});
 
-	it("shows no count in the header until the first load finishes, never a false 0", async () => {
-		let release: (() => void) | undefined;
-		const gate = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		server.handle = async (url) => {
-			if (url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "post") await gate;
-			return undefined;
-		};
+	it("has one title, whatever the list is doing", async () => {
 		renderList();
-		const heading = await screen.findByRole("heading", { level: 1 });
-		expect(heading.textContent).not.toMatch(/\d/);
-		release?.();
 		await screen.findByRole("row", { name: /가/ });
-		expect(heading.textContent).toContain(String(server.posts.length));
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 	});
 
-	it("shows no description for a collection without a public route", async () => {
+	it("shows no address rule for a collection without a public route", async () => {
 		nav.setSearch("collection=tag");
 		renderList();
 		await screen.findByRole("heading", { level: 1 });
 
 		expect(testSite.schemaOf("tag").path).toBeUndefined();
-		expect(screen.queryByText(publicAt, { exact: false })).toBeNull();
+		const heading = screen.getByRole("heading", { level: 1 });
+		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.tag.label);
+		expect(heading.nextElementSibling?.matches("span.font-mono")).not.toBe(true);
 	});
 });
 
@@ -337,33 +322,9 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		fireEvent.click(screen.getByRole("button", { name: "게시글 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: "새 글 쓰기" }));
 
 		expect(nav.navigate).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
-	});
-});
-
-describe("list screen — folders", () => {
-	it("deleting the folder being viewed returns to the all view", async () => {
-		nav.setSearch("collection=post&folder=f1");
-		server.folders = [folder];
-		server.handle = (url, init) => {
-			if (url.pathname === "/api/monti/v1/folders/f1" && !init?.method)
-				return json({ entryCount: 0, childFolders: [] });
-			if (url.pathname === "/api/monti/v1/folders/f1" && init?.method === "DELETE") return json({});
-			return undefined;
-		};
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		fireEvent.click(screen.getByRole("button", { name: "'뉴스' 폴더 작업" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
-		const dialog = await screen.findByRole("alertdialog", { name: "'뉴스' 폴더 삭제" });
-		await waitFor(() => expect(within(dialog).getByRole("button", { name: "삭제" })).toHaveProperty("disabled", false));
-		fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
-
-		await waitFor(() => expect(nav.search.get("folder")).toBeNull());
-		expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1);
 	});
 });
 

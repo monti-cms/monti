@@ -3,7 +3,7 @@
 import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
+import { Button, Inline, PageColumn, PageHeader, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
@@ -13,37 +13,29 @@ import { toSelection } from "./list-row-menu";
 import { ListSearch } from "./list-search";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
-import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
+import { AdminFrame, AdminNavProvider } from "./shared/admin-frame";
 import { usePublishScreenContext } from "./shared/screen-context";
 import { DockedPanel } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
-/** Top right above the list: search and add button (trash has no add). */
+/**
+ * Top right above the list: search, then the one add button (the trash has none). A collection of writing is "+ New post" in the one primary pill;
+ * a collection of items (categories, tags) is "+ Add category" in a secondary pill.
+ */
 function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
+	const site = useSite();
 	const isTrash = list.mode === "trash";
+	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
 			<ListSearch state={list.state} onChange={list.update} allowBody={!isTrash} />
 			{!isTrash && (
-				<Button type="button" size="sm" onClick={list.createNew}>
+				<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 					<Add aria-hidden />
-					{t("list.add", { label: list.label })}
+					{isItems ? t("list.add", { label: list.label }) : t("list.writeNew")}
 				</Button>
 			)}
-		</>
-	);
-}
-
-/** The line under the list title: where the collection is public (`Public at /posts/:slug`). */
-function RouteDescription({ path }: { path: string }) {
-	const t = useTranslator(screensMessages);
-	return (
-		<>
-			{t("list.publicAt")}{" "}
-			<Text as="code" variant="caption" tone="default" mono>
-				{path}
-			</Text>
 		</>
 	);
 }
@@ -211,16 +203,11 @@ function TrashPage() {
 	const list = useEntryList("trash");
 	const { state } = list;
 	return (
-		<AdminShell
-			editorial
-			title={t("dashboard.trash")}
-			count={list.data.isLoading ? undefined : list.data.total}
-			sidebar={{ activeNav: "trash" }}
-		>
-			<PageActions>
-				<EntryListHeaderActions list={list} />
-			</PageActions>
-			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
+		<AdminFrame sidebar={{ activeNav: "trash" }}>
+			<PageColumn>
+				<PageHeader title={t("dashboard.trash")}>
+					<EntryListHeaderActions list={list} />
+				</PageHeader>
 				<Tabs value={state.collection}>
 					<TabsList variant="bar" inset="none" aria-label={t("dashboard.trashCollections")}>
 						{site.COLLECTIONS.map((item) => (
@@ -235,9 +222,9 @@ function TrashPage() {
 						))}
 					</TabsList>
 				</Tabs>
-			</Box>
-			<EntryListBody list={list} />
-		</AdminShell>
+				<EntryListBody list={list} />
+			</PageColumn>
+		</AdminFrame>
 	);
 }
 
@@ -251,32 +238,26 @@ function ListPage() {
 			? ` · ${folders.list.find((folder) => folder.id === state.folder)?.name ?? ""}`
 			: "";
 	return (
-		<AdminShell
-			editorial
-			title={`${list.label}${folderLabel}`}
-			count={list.data.isLoading ? undefined : list.data.total}
-			description={routePath ? <RouteDescription path={routePath} /> : undefined}
+		<AdminFrame
 			sidebar={{
 				activeNav: state.collection,
 				folderNav: folders
 					? {
 							collection: state.collection,
 							currentFolder: state.folder,
-							includeDescendants: state.includeDescendants,
 							folders: folders.list,
-							folderActions: folders.actions,
 							onSelectFolder: (folder) => update({ folder }),
-							onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
 							onDropEntries: folders.moveEntries,
-							onCreateEntry: list.createNew,
 						}
 					: undefined,
 			}}
 		>
-			<PageActions>
-				<EntryListHeaderActions list={list} />
-			</PageActions>
-			<EntryListBody list={list} />
-		</AdminShell>
+			<PageColumn>
+				<PageHeader title={`${list.label}${folderLabel}`} meta={routePath || undefined}>
+					<EntryListHeaderActions list={list} />
+				</PageHeader>
+				<EntryListBody list={list} />
+			</PageColumn>
+		</AdminFrame>
 	);
 }

@@ -159,11 +159,12 @@ const renderScreen = () =>
 		</AdminQueryProvider>,
 	);
 
-/** The save bar: it shows only while the draft differs from the saved file. */
+/** The save group (on the right of the title row on the Settings page): it shows only while the draft differs from the saved file. */
 const saveBar = () => screen.getByTestId("save-bar");
 const queryBar = () => screen.queryByTestId("save-bar");
-/** The bar's Review button (it opens the review dialog). */
-const review = () => within(saveBar()).getByRole("button", { name: t("bar.review") }) as HTMLButtonElement;
+/** The group's "changes" button (it opens the review dialog); its name starts with the word and ends with the count. */
+const review = () =>
+	within(saveBar()).getByRole("button", { name: new RegExp(`^${t("bar.review")}`) }) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
 /** Opens the dialog of the "Add field" button and picks the kind (text when none is given). */
 async function openAddField(kindName?: string) {
@@ -1476,9 +1477,9 @@ describe("SchemaScreen", () => {
 			expect(queryBar()).toBeNull();
 			fireEvent.click(screen.getByRole("tab", { name: "site" }));
 			type(await screen.findByLabelText(t("site.name")), "Blog");
-			expect(within(saveBar()).getByText(t("bar.count", { count: 1 }))).toBeTruthy();
+			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 1 }))).toBeTruthy();
 			type(screen.getByLabelText(tSite("site.home")), "/start");
-			expect(within(saveBar()).getByText(t("bar.count", { count: 2 }))).toBeTruthy();
+			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 2 }))).toBeTruthy();
 			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
 			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.home")) }));
 			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("");

@@ -21,13 +21,12 @@ import {
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
-import { folderKeyHandler } from "../admin-sidebar";
 import { EntriesTableFolderRows } from "../entries-table-folder-rows";
 import { screensMessages } from "../messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { writeDraggedEntries } from "../shared/entry-drag";
 import { formatDateTime } from "../shared/format-date";
-import { type FolderActions, folderMenuActions } from "../shared/use-folder-actions";
+import { type FolderActions, folderKeyHandler, folderMenuActions } from "../shared/use-folder-actions";
 import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 

@@ -154,6 +154,8 @@ export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
 export { Option } from "./option";
 export {
+	PageBody,
+	PageColumn,
 	PageHeader,
 	PageToolbar,
 	PageToolbarEnd,
@@ -211,10 +213,12 @@ export { SidePanel } from "./side-panel";
 export {
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
+	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -223,6 +227,7 @@ export {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarRailToggle,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";

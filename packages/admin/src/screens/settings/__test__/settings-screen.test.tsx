@@ -5,6 +5,7 @@ import { createTestRouter, renderInRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
+import { toolsMessages } from "../../tools/messages";
 import { settingsMessages } from "../messages";
 import { SettingsScreen } from "../settings-screen";
 import { SCHEMA_TABS, type SchemaTab } from "../tabs";
@@ -38,6 +39,7 @@ vi.mock("../../schema/schema-screen", () => ({
 
 const t = testSite.createTranslator(settingsMessages);
 const sidebarText = testSite.createTranslator(screensMessages);
+const toolsText = testSite.createTranslator(toolsMessages);
 
 afterEach(() => {
 	cleanup();
@@ -73,14 +75,13 @@ describe("settings tabs", () => {
 		expect(current.map((link) => link.textContent)).toEqual([t("tab.site")]);
 	});
 
-	it("has no tab for Data, templates, the event log or a plugin page: they are in the sidebar", () => {
+	it("has no tab for the pages of the tools page: they have their own", () => {
 		renderSettings("collections");
 		const names = within(tabBar())
 			.getAllByRole("tab")
 			.map((link) => link.textContent);
-		expect(names).not.toContain(sidebarText("sidebar.templates"));
-		expect(names).not.toContain(sidebarText("sidebar.events"));
-		expect(names).not.toContain(sidebarText("sidebar.data"));
+		for (const key of ["tab.templates", "tab.events", "tab.data", "tab.apiKeys"] as const)
+			expect(names).not.toContain(toolsText(key));
 	});
 
 	it("moves between tabs in place: the address changes, the editor and its draft stay, and no navigation is asked of the router", () => {

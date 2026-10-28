@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
-import { ShellPage } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { ApiKeysSettings } from "../api-keys-settings";
 import { apiKeysMessages } from "../messages";
@@ -68,9 +67,7 @@ afterEach(() => {
 const renderTab = () =>
 	render(
 		<AdminQueryProvider>
-			<ShellPage title={t("title")} nav="api-keys">
-				<ApiKeysSettings />
-			</ShellPage>
+			<ApiKeysSettings />
 		</AdminQueryProvider>,
 	);
 

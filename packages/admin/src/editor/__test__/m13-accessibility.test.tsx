@@ -1,13 +1,9 @@
-import type { Folder } from "@monti-cms/core/site";
 import { image } from "@monti-cms/core/site";
-import { SidebarProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { AdminSidebar } from "../../screens/admin-sidebar";
-import { type FolderActions, useFolderActions } from "../../screens/shared/use-folder-actions";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderInRouter as render } from "../../test/router";
 import { BlockHandleOverlay } from "../block-handle-overlay";
@@ -107,124 +103,6 @@ describe("editor accessibility", () => {
 		}
 		expect(new Set(widthIds).size).toBe(2);
 		expect(new Set(altIds).size).toBe(2);
-	});
-
-	const folderNav = (folders: Folder[], folderActions: FolderActions, onSelectFolder = vi.fn()) => ({
-		collection: "memo" as const,
-		currentFolder: "all",
-		includeDescendants: false,
-		folders,
-		folderActions,
-		onSelectFolder,
-		onIncludeDescendantsChange: vi.fn(),
-		onDropEntries: vi.fn(),
-		onCreateEntry: vi.fn(),
-	});
-	const fakeActions = (): FolderActions => ({
-		requestCreate: vi.fn(),
-		requestRename: vi.fn(),
-		requestDelete: vi.fn(),
-		moveFolder: vi.fn(),
-		createFolderDirect: vi.fn(),
-		renameFolderDirect: vi.fn(),
-	});
-
-	it("keeps folder tree controls named and keyboard-operable", async () => {
-		const onSelectFolder = vi.fn();
-		const actions = fakeActions();
-		const folders: Folder[] = [
-			{ id: "folder-1", collection: "memo", parentId: null, name: "문서", position: 0, version: 1 },
-			{ id: "folder-2", collection: "memo", parentId: "folder-1", name: "하위", position: 0, version: 1 },
-		];
-		render(
-			<SidebarProvider>
-				<AdminSidebar activeNav="memo" folderNav={folderNav(folders, actions, onSelectFolder)} />
-			</SidebarProvider>,
-		);
-		const expand = screen.getByRole("button", { name: "문서 하위 폴더 펼치기" });
-		expect(expand.getAttribute("aria-expanded")).toBe("false");
-		fireEvent.click(expand);
-		expect(screen.getByRole("button", { name: "문서 하위 폴더 접기" }).getAttribute("aria-expanded")).toBe("true");
-		fireEvent.click(await screen.findByRole("button", { name: "하위" }));
-		// Clicking the active collection link resets to the collection's top level ("all").
-		fireEvent.click(screen.getByRole("link", { name: "메모" }));
-		expect(onSelectFolder).toHaveBeenCalledWith("all");
-
-		const folderButton = screen.getByRole("button", { name: "문서" });
-		fireEvent.keyDown(folderButton, { key: "Delete" });
-		expect(actions.requestDelete).toHaveBeenCalledWith(folders[0]);
-		fireEvent.keyDown(folderButton, { key: "F2" });
-		expect(screen.getByDisplayValue("문서")).toBeTruthy();
-
-		// The same items as the right-click menu also open from an always-visible ⋯ button.
-		fireEvent.click(screen.getByRole("button", { name: "'문서' 폴더 작업" }));
-		expect(await screen.findByRole("menuitem", { name: "하위 폴더 추가" })).toBeTruthy();
-		expect(screen.getByRole("menuitem", { name: /이름 변경/ })).toBeTruthy();
-		expect(screen.getByRole("menuitem", { name: /삭제/ })).toBeTruthy();
-	});
-
-	it("does not show add button or empty message when there are no folders under the collection", () => {
-		render(
-			<SidebarProvider>
-				<AdminSidebar activeNav="memo" folderNav={folderNav([], fakeActions())} />
-			</SidebarProvider>,
-		);
-		expect(screen.getByRole("link", { name: "메모" })).toBeTruthy();
-		expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
-		expect(screen.queryByRole("button", { name: "폴더 추가" })).toBeNull();
-		expect(screen.queryByText(/폴더가 없습니다/)).toBeNull();
-	});
-
-	it("previews folder contents before deleting and returns focus to the folder on cancel", async () => {
-		const folder: Folder = {
-			id: "folder-1",
-			collection: "memo",
-			parentId: null,
-			name: "문서",
-			position: 0,
-			version: 1,
-		};
-		const fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
-			if (init?.method === "DELETE") return { ok: true, status: 200, json: async () => ({ success: true }) };
-			return {
-				ok: true,
-				status: 200,
-				json: async () => ({ entryCount: 3, childFolders: [{ ...folder, id: "c1", name: "자식" }] }),
-			};
-		});
-		vi.stubGlobal("fetch", fetchMock);
-		const onChanged = vi.fn();
-		function Harness() {
-			const actions = useFolderActions({ collection: "memo", folders: [folder], onChanged });
-			return (
-				<SidebarProvider>
-					<AdminSidebar activeNav="memo" folderNav={folderNav([folder], actions)} />
-					{actions.dialogs}
-				</SidebarProvider>
-			);
-		}
-		render(<Harness />);
-		const trigger = screen.getByRole("button", { name: "문서" });
-		trigger.focus();
-		fireEvent.keyDown(trigger, { key: "Delete" });
-		const dialog = await screen.findByRole("alertdialog", { name: /'문서' 폴더 삭제/ });
-		expect(await screen.findByText("바로 든 메모 3개")).toBeTruthy();
-		expect(screen.getByText(/하위 폴더 1개: 자식/)).toBeTruthy();
-		expect(dialog.textContent).toContain(folder.name);
-		await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
-		fireEvent.click(screen.getByRole("button", { name: "취소" }));
-		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-		await waitFor(() => expect(document.activeElement).toBe(trigger));
-
-		fireEvent.keyDown(trigger, { key: "Delete" });
-		await screen.findByText("바로 든 메모 3개");
-		fireEvent.click(screen.getByRole("button", { name: "삭제" }));
-		await waitFor(() => expect(onChanged).toHaveBeenCalledWith("folder-1"));
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/monti/v1/folders/folder-1?expectedVersion=1",
-			expect.objectContaining({ method: "DELETE" }),
-		);
-		vi.unstubAllGlobals();
 	});
 
 	it("lets keyboard-focused suggestions activate and close", async () => {

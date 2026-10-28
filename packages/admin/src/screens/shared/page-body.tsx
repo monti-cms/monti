@@ -1,10 +1,9 @@
 import { Stack, type StackProps } from "@monti-cms/ui";
 
 /**
- * The body of a settings or tools page: left-aligned under the page header, one maximum width and one padding, so no page can drift from the others.
- * Cards inside it take the full width; their texts keep a readable measure on their own. A form-like page keeps the readable width; a `wide` page
- * (a workspace of lists, trees and side panels) uses all the width there is, with the same padding.
+ * The content of a settings page: a column of sections under the page's toolbar, full width of the page column (the column sets the width and the side
+ * padding), so no page can drift from the others.
  */
-export function PageBody({ wide, ...props }: Omit<StackProps, "className"> & { wide?: boolean }) {
-	return <Stack gap={24} width="full" maxWidth={wide ? undefined : "content"} paddingX={32} paddingY={32} {...props} />;
+export function PageBody(props: Omit<StackProps, "className">) {
+	return <Stack gap={24} width="full" {...props} />;
 }

@@ -4,7 +4,7 @@ import { Button } from "./button";
 import { Caret } from "./caret";
 import { Count } from "./count";
 import { FilterButton } from "./filter-button";
-import { PageHeader, PageToolbar, PageToolbarEnd, ToolbarDivider } from "./page-header";
+import { PageBody, PageColumn, PageHeader, PageToolbar, PageToolbarEnd, ToolbarDivider } from "./page-header";
 import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { TextButton } from "./text-button";
 
@@ -98,26 +98,47 @@ export const Picked: Story = {
 	),
 };
 
-/** The header and the toolbar together, as a list page starts. */
-export const Page: Story = {
+/** A page inside a folder: the way back sits above the title, and the title row keeps its 36px. */
+export const Trail: Story = {
+	args: { title: "Blog Assets", meta: undefined },
 	render: (args) => (
-		<div className="mx-auto max-w-content px-monti-32 pt-monti-24">
-			<PageHeader {...args}>
-				<Button variant="secondary">검색</Button>
-				<Button>+ 새 글 쓰기</Button>
-			</PageHeader>
-			<PageToolbar inset>
-				<Tabs defaultValue="all">
-					<TabsList variant="toolbar" aria-label="상태">
-						<TabsTrigger value="all" count={148}>
-							전체
-						</TabsTrigger>
-						<TabsTrigger value="published">발행됨</TabsTrigger>
-						<TabsTrigger value="draft">초안</TabsTrigger>
-					</TabsList>
-				</Tabs>
-				<Filters />
-			</PageToolbar>
+		<PageHeader {...args} trail={<span>미디어 /</span>}>
+			<Button variant="secondary">검색</Button>
+			<Button>올리기</Button>
+		</PageHeader>
+	),
+};
+
+/** The header and the toolbar together, as a list page starts, in the column every page sits in. The body under them is what scrolls. */
+export const Page: Story = {
+	parameters: { bleed: true },
+	render: (args) => (
+		<div className="flex h-96">
+			<PageColumn>
+				<PageHeader {...args}>
+					<Button variant="secondary">검색</Button>
+					<Button>+ 새 글 쓰기</Button>
+				</PageHeader>
+				<PageToolbar inset>
+					<Tabs defaultValue="all">
+						<TabsList variant="toolbar" aria-label="상태">
+							<TabsTrigger value="all" count={148}>
+								전체
+							</TabsTrigger>
+							<TabsTrigger value="published">발행됨</TabsTrigger>
+							<TabsTrigger value="draft">초안</TabsTrigger>
+						</TabsList>
+					</Tabs>
+					<Filters />
+				</PageToolbar>
+				<PageBody>
+					{Array.from({ length: 12 }, (_, index) => (
+						<p key={index} className="m-0 border-monti-muted border-b py-monti-12 text-monti-body">
+							{index + 1}번째 줄
+						</p>
+					))}
+				</PageBody>
+			</PageColumn>
 		</div>
 	),
 };

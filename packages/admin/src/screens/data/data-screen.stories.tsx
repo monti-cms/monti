@@ -168,7 +168,7 @@ const emptySiteRestore = (preview: unknown, run: () => unknown) => {
 };
 
 const screen = (api: FakeApi) => () => (
-	<PageFrame api={api} pathname="/admin/data">
+	<PageFrame api={api} pathname="/admin/tools/data">
 		<DataScreen />
 	</PageFrame>
 );
@@ -182,7 +182,7 @@ const sheet = (name: RegExp) => within(document.body).findByRole("dialog", { nam
 const importSheet = () => sheet(/글 가져오기/);
 const restoreSheet = () => sheet(/있던 그대로 복원/);
 
-export const Loaded: Story = { render: screen(serve()) };
+export const Loaded: Story = { tags: ["visual"], render: screen(serve()) };
 
 /** The site backup is still counting what it would hold. */
 export const Counting: Story = {

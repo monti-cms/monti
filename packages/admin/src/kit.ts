@@ -101,7 +101,6 @@ export { type ApiKeyChoice, ApiKeyField, choiceReady } from "./screens/api-keys/
 export type { EntryData, EntryForm } from "./screens/entries/entry-form";
 export { EMPTY_FORM } from "./screens/entries/entry-form";
 export { MediaThumbnail } from "./screens/entries/media-image-input";
-export { PageActions } from "./screens/shared/admin-shell";
 export { useConfirm } from "./screens/shared/confirm-dialog";
 export { EditorFooter } from "./screens/shared/editor-footer";
 export { EmptyState } from "./screens/shared/empty-state";

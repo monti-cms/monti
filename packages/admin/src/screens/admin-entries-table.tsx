@@ -258,12 +258,12 @@ export function AdminEntriesTable({
 								title={t("list.welcomeTitle")}
 								description={t("list.welcomeHint")}
 								action={{
-									label: t("list.writeNew", { label: collectionLabel ?? collection }),
+									label: t("list.writeNew"),
 									onClick: addAction.run,
 								}}
 								secondaryAction={{
 									label: t("list.importMarkdown"),
-									href: `${site.adminHref("/data")}#import-entries`,
+									href: `${site.adminHref("/tools/data")}#import-entries`,
 								}}
 							/>
 						) : (

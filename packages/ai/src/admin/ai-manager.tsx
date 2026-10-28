@@ -45,7 +45,6 @@ import {
 	ListRow,
 	LoadErrorAlert,
 	MasterDetail,
-	PageActions,
 	Spark,
 	Stack,
 	Switch,
@@ -515,7 +514,9 @@ export function AiManager() {
 		);
 	return (
 		<Stack gap={0} grow minHeight={0} overflow="hidden">
-			<PageActions>{headerActions}</PageActions>
+			<Inline justify="end" paddingY={8} shrink={false}>
+				{headerActions}
+			</Inline>
 			<Tabs fill value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
 				<TabsList variant="bar">
 					<TabsTrigger value="features">

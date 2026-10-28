@@ -23,7 +23,6 @@ import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { isComposingKey } from "../../lib/keyboard";
 import type { TranslatorFor } from "../../translator";
 import type { MenuAction } from "../shared/action-menu";
-import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EditorFooter } from "../shared/editor-footer";
 import { EmptyState } from "../shared/empty-state";
@@ -32,6 +31,7 @@ import { LoadErrorAlert } from "../shared/load-error-alert";
 import { ListPane, ListRow, MasterDetail } from "../shared/master-detail";
 import { useDraftEditor } from "../shared/use-draft-editor";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
+import { ToolsFrame } from "../tools/tools-frame";
 import { templatesMessages } from "./messages";
 
 const textNode = (text: string): CmsNode => ({ type: "text", text });
@@ -249,57 +249,62 @@ export function TemplateManager() {
 	];
 
 	return (
-		<Stack gap={0} grow minHeight={0} overflow="hidden" border="top">
-			<PageActions>
-				<Button type="button" size="sm" onClick={() => void openNew()}>
+		<ToolsFrame
+			tab="templates"
+			count={templatesQuery.data ? templates.length : undefined}
+			actions={
+				<Button type="button" onClick={() => void openNew()}>
 					<Add aria-hidden />
 					{t("add")}
 				</Button>
-			</PageActions>
-			{error && (
-				<Box paddingX={32} paddingY={12}>
-					<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} />
-				</Box>
-			)}
-			<MasterDetail
-				list={
-					<ListPane
-						resizeKey="templates"
-						label={t("list.label")}
-						loading={templatesQuery.isPending}
-						empty={error ? null : <EmptyState compact title={t("list.empty")} />}
-					>
-						{templates.map((row) => (
-							<ListRow
-								key={row.id}
-								title={row.name}
-								detail={formatDateOnly(site, row.updatedAt)}
-								current={activeTemplate?.id === row.id}
-								onClick={() => void openTemplate(row)}
-								actions={templateMenu(row)}
-								actionsLabel={t("list.itemActions", { name: row.name })}
-								onDelete={() => void requestDelete(row)}
-							/>
-						))}
-					</ListPane>
-				}
-			>
-				{activeTemplate ? (
-					<TemplateEditPanel
-						key={activeTemplate.id ?? `new-${newCount}`}
-						template={activeTemplate}
-						onSaved={saved}
-						onCancel={() => void closeEditor()}
-						onDirtyChange={setDirty}
-					/>
-				) : (
-					<Box paddingX={24}>
-						<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
+			}
+		>
+			<Stack gap={0} grow minHeight={0} overflow="hidden">
+				{error && (
+					<Box paddingX={32} paddingY={12}>
+						<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} />
 					</Box>
 				)}
-			</MasterDetail>
-			{dialog}
-			{guardDialog}
-		</Stack>
+				<MasterDetail
+					list={
+						<ListPane
+							resizeKey="templates"
+							label={t("list.label")}
+							loading={templatesQuery.isPending}
+							empty={error ? null : <EmptyState compact title={t("list.empty")} />}
+						>
+							{templates.map((row) => (
+								<ListRow
+									key={row.id}
+									title={row.name}
+									detail={formatDateOnly(site, row.updatedAt)}
+									current={activeTemplate?.id === row.id}
+									onClick={() => void openTemplate(row)}
+									actions={templateMenu(row)}
+									actionsLabel={t("list.itemActions", { name: row.name })}
+									onDelete={() => void requestDelete(row)}
+								/>
+							))}
+						</ListPane>
+					}
+				>
+					{activeTemplate ? (
+						<TemplateEditPanel
+							key={activeTemplate.id ?? `new-${newCount}`}
+							template={activeTemplate}
+							onSaved={saved}
+							onCancel={() => void closeEditor()}
+							onDirtyChange={setDirty}
+						/>
+					) : (
+						<Box paddingX={24}>
+							<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
+						</Box>
+					)}
+				</MasterDetail>
+				{dialog}
+				{guardDialog}
+			</Stack>
+		</ToolsFrame>
 	);
 }

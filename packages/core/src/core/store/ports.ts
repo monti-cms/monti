@@ -15,6 +15,7 @@ import type {
 	EntrySearchHit,
 	ExportSnapshot,
 	Folder,
+	FolderListItem,
 	IncomingReferenceItem,
 	JsonObject,
 	ListCounts,
@@ -167,7 +168,8 @@ export interface FolderStore {
 	/** Moves the folder's entries and child folders up to its parent, then deletes it. */
 	deleteFolder(params: { id: string; expectedVersion?: number }): Promise<void>;
 	getFolderContents(params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }>;
-	listFolders(params: { collection: string }): Promise<Folder[]>;
+	/** Every folder of a collection (or of the media library), each with the number of things directly in it. */
+	listFolders(params: { collection: string }): Promise<FolderListItem[]>;
 }
 
 /** Public reads. Never returns drafts, archived or trashed entries. */

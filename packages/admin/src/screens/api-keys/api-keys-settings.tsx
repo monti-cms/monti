@@ -26,11 +26,11 @@ import { errorText } from "../../api/client";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
-import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { Labeled } from "../shared/labeled";
 import { LoadErrorAlert } from "../shared/load-error-alert";
+import { ToolsFrame } from "../tools/tools-frame";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
 import { apiKeysMessages } from "./messages";
 
@@ -98,55 +98,59 @@ export function ApiKeysSettings() {
 	];
 
 	return (
-		<Stack gap={0} grow minHeight={0} overflow="y" data-testid="api-keys-settings">
-			<PageActions>
-				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
+		<ToolsFrame
+			tab="api-keys"
+			actions={
+				<Button type="button" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
 					<Add aria-hidden />
 					{t("add")}
 				</Button>
-			</PageActions>
-			{list && !list.secretsAvailable && <Banner role="alert" title={t("secret.description")} />}
-			<Inline border="y" paddingX={32} paddingY={8} shrink={false}>
-				<Text variant="caption" tone="muted">
-					{list
-						? [
-								t("count.keys", { count: list.items.length }),
-								...(list.slots.some((slot) => !slot.key)
-									? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
-									: []),
-							].join(" · ")
-						: "\u00a0"}
-				</Text>
-			</Inline>
-			<KeyRows
-				query={query}
-				menu={rowMenu}
-				onAssign={setSlotEditing}
-				onRetry={() => void query.refetch()}
-				onAdd={() => setEditing({ mode: "add" })}
-			/>
-			<Box paddingX={32} paddingY={16}>
-				<Text as="p" variant="caption" tone="muted">
-					{t("note")}
-				</Text>
-			</Box>
-			{editing && (
-				<KeyDialog
-					key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
-					editing={editing}
-					taken={(list?.items ?? []).filter((item) => editing.mode === "add" || item.id !== editing.key.id)}
-					onClose={() => setEditing(null)}
+			}
+		>
+			<Stack gap={0} grow minHeight={0} overflow="y" data-testid="api-keys-settings">
+				{list && !list.secretsAvailable && <Banner role="alert" title={t("secret.description")} />}
+				<Inline border="y" paddingX={32} paddingY={8} shrink={false}>
+					<Text variant="caption" tone="muted">
+						{list
+							? [
+									t("count.keys", { count: list.items.length }),
+									...(list.slots.some((slot) => !slot.key)
+										? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
+										: []),
+								].join(" · ")
+							: "\u00a0"}
+					</Text>
+				</Inline>
+				<KeyRows
+					query={query}
+					menu={rowMenu}
+					onAssign={setSlotEditing}
+					onRetry={() => void query.refetch()}
+					onAdd={() => setEditing({ mode: "add" })}
 				/>
-			)}
-			{slotEditing && (
-				<SlotDialog
-					key={`${slotEditing.plugin}:${slotEditing.slot}`}
-					slot={slotEditing}
-					onClose={() => setSlotEditing(null)}
-				/>
-			)}
-			{dialog}
-		</Stack>
+				<Box paddingX={32} paddingY={16}>
+					<Text as="p" variant="caption" tone="muted">
+						{t("note")}
+					</Text>
+				</Box>
+				{editing && (
+					<KeyDialog
+						key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
+						editing={editing}
+						taken={(list?.items ?? []).filter((item) => editing.mode === "add" || item.id !== editing.key.id)}
+						onClose={() => setEditing(null)}
+					/>
+				)}
+				{slotEditing && (
+					<SlotDialog
+						key={`${slotEditing.plugin}:${slotEditing.slot}`}
+						slot={slotEditing}
+						onClose={() => setSlotEditing(null)}
+					/>
+				)}
+				{dialog}
+			</Stack>
+		</ToolsFrame>
 	);
 }
 

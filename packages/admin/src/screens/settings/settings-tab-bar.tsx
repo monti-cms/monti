@@ -31,7 +31,7 @@ export function SettingsTabBar({
 
 	return (
 		<Tabs value={active}>
-			<TabsList variant="bar" aria-label={t("tabs.label")}>
+			<TabsList variant="toolbar" aria-label={t("tabs.label")}>
 				{tabs.map((entry) => (
 					<TabsTrigger
 						key={entry.id}

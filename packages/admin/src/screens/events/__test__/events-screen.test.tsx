@@ -4,7 +4,6 @@ import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
-import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
 import { eventsMessages } from "../messages";
@@ -67,9 +66,7 @@ afterEach(() => {
 const renderScreen = () =>
 	render(
 		<AdminQueryProvider>
-			<AdminShell title="Events" sidebar={{ activeNav: "events" }}>
-				<EventsScreen />
-			</AdminShell>
+			<EventsScreen />
 		</AdminQueryProvider>,
 	);
 

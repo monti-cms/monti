@@ -48,14 +48,14 @@ function Affix({
 				className,
 			)}
 		>
-			{prefix && <span className="whitespace-nowrap py-monti-6 text-monti-subtle">{prefix}</span>}
+			{prefix && <span className="shrink-0 whitespace-nowrap py-monti-6 text-monti-subtle">{prefix}</span>}
 			<InputPrimitive
 				data-slot="affix-input"
 				aria-description={useProposalDescription(proposal)}
 				className="field-sizing-content min-w-[3ch] flex-initial rounded-none border-0 border-monti-default border-b bg-transparent px-px py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus:border-monti-contrast aria-[invalid=true]:border-monti-danger group-data-proposal/affix:border-monti-proposal group-data-proposal/affix:border-b-[1.5px] group-data-proposal/affix:text-monti-proposal"
 				{...props}
 			/>
-			{suffix && <span className="whitespace-nowrap py-monti-6 text-monti-subtle">{suffix}</span>}
+			{suffix && <span className="shrink-0 whitespace-nowrap py-monti-6 text-monti-subtle">{suffix}</span>}
 			{action && <span className="ml-auto cursor-auto self-center">{action}</span>}
 		</div>
 	);

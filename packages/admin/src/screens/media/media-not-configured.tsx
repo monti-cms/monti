@@ -1,9 +1,9 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box } from "@monti-cms/ui";
+import { PageBody, PageColumn, PageHeader } from "@monti-cms/ui";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
-import { AdminShell } from "../shared/admin-shell";
+import { AdminFrame } from "../shared/admin-frame";
 import { EmptyState } from "../shared/empty-state";
 import { mediaMessages } from "./messages";
 
@@ -12,10 +12,13 @@ export function MediaNotConfigured() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	return (
-		<AdminShell title={t("title")} sidebar={{ activeNav: "media" }}>
-			<Box paddingX={32}>
-				<EmptyState title={mediaNotConfiguredMessage(site)} description={t("notConfigured.hint")} />
-			</Box>
-		</AdminShell>
+		<AdminFrame sidebar={{ activeNav: "media" }}>
+			<PageColumn>
+				<PageHeader title={t("title")} />
+				<PageBody>
+					<EmptyState title={mediaNotConfiguredMessage(site)} description={t("notConfigured.hint")} />
+				</PageBody>
+			</PageColumn>
+		</AdminFrame>
 	);
 }

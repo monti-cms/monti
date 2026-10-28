@@ -7,14 +7,13 @@ import { testConfig, testSite } from "../../../../core/test/site";
 import type { AdminServer } from "../../host/server";
 import SettingsPage from "../settings/page";
 import { SCHEMA_TABS, settingsTabs } from "../settings/tabs";
-import TemplatesPage from "../templates/page";
 
 vi.mock("../require-admin", () => ({ requireAdminPage: async () => undefined }));
 vi.mock("../settings/settings-screen", () => ({ SettingsScreen: () => <p>settings screen</p> }));
 
 afterEach(cleanup);
 
-const withAdmin = (admin: Record<string, unknown>) =>
+const _withAdmin = (admin: Record<string, unknown>) =>
 	createSite({ ...testConfig, admin: { ...testConfig.admin, ...admin } } as CmsConfig);
 const cms = (site: typeof testSite) => ({ site }) as unknown as Cms;
 const server = (): AdminServer => ({
@@ -51,21 +50,5 @@ describe("settings page", () => {
 		for (const tab of ["nope", "schema", "templates", "events", "ai", "api-keys"]) {
 			await expect(SettingsPage({ cms: cms(testSite), server: server(), tab })).rejects.toThrow("not-found");
 		}
-	});
-});
-
-describe("templates page", () => {
-	it("opens by default", async () => {
-		const stop = server();
-		await expect(TemplatesPage({ cms: cms(testSite), server: stop })).resolves.toBeTruthy();
-		expect(stop.notFound).not.toHaveBeenCalled();
-	});
-
-	it("is a 404 when the site turns templates off", async () => {
-		const stop = server();
-		await expect(TemplatesPage({ cms: cms(withAdmin({ templates: false })), server: stop })).rejects.toThrow(
-			"not-found",
-		);
-		expect(stop.notFound).toHaveBeenCalled();
 	});
 });

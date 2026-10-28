@@ -1,9 +1,8 @@
 import { SiteProvider } from "@monti-cms/core/site";
 import { Toaster } from "@monti-cms/ui";
-import { type ComponentProps, type ReactNode, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 import { testSite } from "../../../core/test/site";
 import { type AdminLinkProps, type AdminRouter, AdminRouterProvider } from "../router";
-import { AdminShell } from "../screens/shared/admin-shell";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
 
 /**
@@ -91,34 +90,5 @@ export function PageFrame({
 				</AdminQueryProvider>
 			</AdminRouterProvider>
 		</SiteProvider>
-	);
-}
-
-/** A screen in Storybook inside the admin frame: the sidebar with `nav` active and `title` in the title bar. */
-export function ScreenFrame({
-	api,
-	title,
-	nav,
-	pathname = "/admin",
-	search = "",
-	shell,
-	children,
-}: {
-	api: FakeApi;
-	title: string;
-	nav: NonNullable<ComponentProps<typeof AdminShell>["sidebar"]>["activeNav"];
-	/** The admin address the screen reads (`/admin/settings/collections`). */
-	pathname?: string;
-	search?: string;
-	/** Further options of the frame (`count`, `description`). */
-	shell?: Omit<ComponentProps<typeof AdminShell>, "title" | "sidebar" | "children">;
-	children: ReactNode;
-}) {
-	return (
-		<PageFrame api={api} pathname={pathname} search={search}>
-			<AdminShell {...shell} title={title} sidebar={{ activeNav: nav }}>
-				{children}
-			</AdminShell>
-		</PageFrame>
 	);
 }

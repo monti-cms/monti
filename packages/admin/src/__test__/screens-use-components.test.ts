@@ -82,10 +82,6 @@ const DRAWING = new Map<string, string>([
 		"the admin root: `monti-admin` scopes the tokens and the screen is centered in the window",
 	],
 	[
-		"admin/src/screens/admin-sidebar.tsx",
-		"the sidebar composition: its header, footer and group chrome follow the icon-rail states, and the folder tree is indented by depth with row actions shown on hover",
-	],
-	[
 		"admin/src/screens/entries/editor-scroller.tsx",
 		"the scrolling body of the editor: its active-block highlight reaches into the editor's own markup",
 	],

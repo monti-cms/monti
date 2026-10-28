@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { EventsScreen } from "./events-screen";
 
 const meta = { title: "Screens/Event log", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
@@ -30,12 +30,13 @@ const list =
 		path.startsWith("/api/monti/v1/events") ? { items, total: items.length, counts: c } : undefined;
 
 const screen = (api: FakeApi) => () => (
-	<ScreenFrame api={api} title="이벤트 기록" nav="events">
+	<PageFrame api={api} pathname="/admin/tools/events">
 		<EventsScreen />
-	</ScreenFrame>
+	</PageFrame>
 );
 
 export const WithDeliveries: Story = {
+	tags: ["visual"],
 	render: screen(
 		list([
 			item("e1", "search-index", "failed"),

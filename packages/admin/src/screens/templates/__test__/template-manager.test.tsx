@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
-import { renderWithSite as render } from "../../../test/site";
+import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
 
+const { render } = createTestRouter();
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 

@@ -28,7 +28,7 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
 import { useCmsMutation } from "../../api/use-cms-mutation";
@@ -384,3 +384,16 @@ export type FolderActions = Pick<
 	ReturnType<typeof useFolderActions>,
 	"requestCreate" | "requestRename" | "requestDelete" | "moveFolder" | "createFolderDirect" | "renameFolderDirect"
 >;
+
+/** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). For the keydown of a folder row. */
+export function folderKeyHandler(folder: Folder, actions: FolderActions) {
+	return (event: KeyboardEvent) => {
+		if (event.key === "F2") {
+			event.preventDefault();
+			actions.requestRename(folder);
+		} else if (event.key === "Delete") {
+			event.preventDefault();
+			void actions.requestDelete(folder);
+		}
+	};
+}

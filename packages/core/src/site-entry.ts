@@ -80,6 +80,7 @@ export type {
 	ExportSnapshotReference,
 	FieldCondition,
 	Folder,
+	FolderListItem,
 	IncomingReferenceItem,
 	JsonArray,
 	JsonObject,

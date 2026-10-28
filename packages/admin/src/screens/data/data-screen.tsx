@@ -6,10 +6,8 @@ import { ExportButton, ExportFields, ExportProgressLine } from "../export/export
 import { exportMessages } from "../export/messages";
 import { useExportForm } from "../export/use-export-form";
 import { importMessages } from "../import/messages";
-import { ShellPage } from "../shared/admin-shell";
-import { PageBody } from "../shared/page-body";
 import { Section } from "../shared/section";
-import { dataMessages } from "./messages";
+import { ToolsFrame } from "../tools/tools-frame";
 import { ZipImport } from "./zip-import";
 
 /**
@@ -18,28 +16,23 @@ import { ZipImport } from "./zip-import";
  * zip opens the import sheet.
  */
 export function DataScreen() {
-	const t = useTranslator(dataMessages);
 	const te = useTranslator(exportMessages);
 	const ti = useTranslator(importMessages);
 	const form = useExportForm();
 	return (
-		<ShellPage title={t("title")} nav="data">
-			<Box grow minHeight={0} overflow="y">
-				<PageBody data-testid="data-screen">
-					<Stack gap={48}>
-						<Section wide band rows={false} title={te("data.title")} testId="site-backup">
-							<ExportFields form={form} />
-							<ExportProgressLine phase={form.phase} />
-							<Box>
-								<ExportButton form={form} label={te("action.all")} />
-							</Box>
-						</Section>
-						<Section wide band rows={false} title={ti("title")} testId="import-entries" id="import-entries">
-							<ZipImport />
-						</Section>
-					</Stack>
-				</PageBody>
-			</Box>
-		</ShellPage>
+		<ToolsFrame tab="data">
+			<Stack gap={48} data-testid="data-screen">
+				<Section wide band rows={false} title={te("data.title")} testId="site-backup">
+					<ExportFields form={form} />
+					<ExportProgressLine phase={form.phase} />
+					<Box>
+						<ExportButton form={form} label={te("action.all")} />
+					</Box>
+				</Section>
+				<Section wide band rows={false} title={ti("title")} testId="import-entries" id="import-entries">
+					<ZipImport />
+				</Section>
+			</Stack>
+		</ToolsFrame>
 	);
 }

@@ -299,9 +299,11 @@ export function MediaDetailPanel({
 													}}
 												/>
 												{extension && (
-													<Text as="span" tone="muted" title={t("detail.filename.extensionKept")}>
-														{extension}
-													</Text>
+													<Box shrink={false}>
+														<Text as="span" tone="muted" truncate title={t("detail.filename.extensionKept")}>
+															{extension}
+														</Text>
+													</Box>
 												)}
 												<IconButton
 													type="submit"

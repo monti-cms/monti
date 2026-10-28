@@ -131,6 +131,7 @@ export const RADIUS = {
 /** Widths of columns, panels and sheets. */
 export const WIDTH = {
 	sidebar: "w-monti-sidebar",
+	rail: "w-monti-rail",
 	menu: "w-monti-menu",
 	panel: "w-monti-panel",
 	"side-panel": "w-monti-side-panel",
@@ -143,6 +144,7 @@ export const WIDTH = {
 /** The widest a box grows, by the same width tokens. */
 export const MAX_WIDTH = {
 	sidebar: "max-w-monti-sidebar",
+	rail: "max-w-monti-rail",
 	menu: "max-w-monti-menu",
 	panel: "max-w-monti-panel",
 	"side-panel": "max-w-monti-side-panel",

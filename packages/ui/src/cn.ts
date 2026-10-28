@@ -11,6 +11,7 @@ const ICONS = ["monti-icon-xs", "monti-icon-sm", "monti-icon-md", "monti-icon-lg
 const BARS = ["monti-header", "monti-toolbar", "monti-panebar", "monti-statusbar"];
 const COLUMNS = [
 	"monti-sidebar",
+	"monti-rail",
 	"monti-menu",
 	"monti-panel",
 	"monti-side-panel",

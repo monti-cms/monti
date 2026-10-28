@@ -20,6 +20,7 @@ import {
 	type EntriesPage,
 	entriesKeys,
 } from "../api/entries";
+import { foldersKeys } from "../api/folders";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { describeBulkFailure } from "./entries/bulk-bar";
@@ -70,8 +71,12 @@ export function useEntryMutations({
 	const tc = useTranslator(commonMessages);
 	const queryClient = useQueryClient();
 
-	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
-	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: entriesKeys.all });
+	/** Refetches the list, the trash badge and the folders with their counts (leaving the currently visible rows as they are). */
+	const invalidateEntries = () =>
+		Promise.all([
+			queryClient.invalidateQueries({ queryKey: entriesKeys.all }),
+			queryClient.invalidateQueries({ queryKey: foldersKeys.all }),
+		]);
 
 	/**
 	 * Applies the change to the list first, then sends the request; a failed request rolls the list back, and the list is synced to server
@@ -102,7 +107,7 @@ export function useEntryMutations({
 			update: (page, { op, targets, params }) =>
 				applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
 		},
-		invalidate: [entriesKeys.all],
+		invalidate: [entriesKeys.all, foldersKeys.all],
 		onSuccess: onResults,
 	});
 
