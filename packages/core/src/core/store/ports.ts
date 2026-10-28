@@ -39,6 +39,7 @@ import type {
 	PublishedEntryLookup,
 	PublishedEntryRecord,
 	PublishedPageParams,
+	ReleasedMediaFiles,
 	RestorePlan,
 	RestoreResult,
 	SearchEntriesParams,
@@ -235,6 +236,16 @@ export interface MediaMetadataStore {
 	}): Promise<MediaAssetRecord>;
 	listMediaAssets(params?: ListMediaParams): Promise<ListMediaResult>;
 	getMediaAsset(id: string): Promise<MediaAssetRecord | null>;
+	/**
+	 * Moves the stored file of the ready media file `fromId` into the ready media file `id` and removes the row `fromId`, in one transaction. `id` keeps its
+	 * filename, folder, default alt and caption, creation date and every reference; it takes the storage key, type, size, dimensions and the original file
+	 * (all `original` fields, `null` when `fromId` has none) from `fromId`. A file that is not `ready` (or is missing) is `not_found`; a different kind of
+	 * file is `unsupported_media_type`; a `fromId` that something refers to is `conflict`. `released` holds the keys `id` gave up: the caller deletes those stored files.
+	 */
+	replaceMediaFile(params: {
+		id: string;
+		fromId: string;
+	}): Promise<{ media: MediaAssetRecord; released: ReleasedMediaFiles }>;
 	/** The ready media files stored under these keys (the keys of public URLs). A key no ready file holds is left out. Core turns image URLs of an imported body into media ids with it. */
 	findReadyMediaByStorageKeys(params: { keys: readonly string[] }): Promise<{ id: string; storageKey: string }[]>;
 	/** Removes the row of a file after its stored files were deleted: a trashed file deleted for good, an unfinished upload, or a delete left half done. */

@@ -247,10 +247,15 @@ export const mediaPatchBodySchema = z.object({
 	folderId: z.uuid().nullable().optional(),
 });
 
+/** Replaces the stored file of a media file with the file of another, already uploaded and completed, media file (`fromId`). */
+export const mediaReplaceBodySchema = z.object({ fromId: z.uuid() });
+
 export const mediaListQuerySchema = z.object({
 	search: z.string().optional(),
 	mimeType: z.string().optional(),
 	kind: z.enum(["all", "image", "file"]).default("all"),
+	/** Alt text: images without (`none`, empty or only spaces) or with (`has`) a default alt. Alt text only exists for images, so `none` and `has` show images only. */
+	alt: z.enum(["all", "none", "has"]).default("all"),
 	used: z.enum(["all", "used", "unused"]).default("all"),
 	folderId: z
 		.union([z.string(), z.null()])

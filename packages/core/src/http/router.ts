@@ -34,6 +34,7 @@ import { type RouteAccess, runRoute } from "./v1/handler";
 import * as rImportEntries from "./v1/import/entries/route";
 import * as rImportRestore from "./v1/import/restore/route";
 import * as rMediaComplete from "./v1/media/[id]/complete/route";
+import * as rMediaReplace from "./v1/media/[id]/replace/route";
 import * as rMediaItem from "./v1/media/[id]/route";
 import * as rMediaCleanup from "./v1/media/cleanup/route";
 import * as rMedia from "./v1/media/route";
@@ -119,6 +120,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/media/uploads", module: rMediaUploads },
 	{ pattern: "v1/media/[id]", module: rMediaItem },
 	{ pattern: "v1/media/[id]/complete", module: rMediaComplete },
+	{ pattern: "v1/media/[id]/replace", module: rMediaReplace },
 	{ pattern: "v1/meta", module: rMeta },
 	{ pattern: "v1/references/unlink", module: rUnlink },
 	{ pattern: "v1/preferences", module: rPreferences },

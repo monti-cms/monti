@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import { MEDIA_FOLDER_SCOPE } from "../../../core/collections";
+import { replaceMismatch } from "../../../core/domain/media";
 import { CmsError } from "../../../core/store/errors";
 import type {
 	CompleteMediaAssetInput,
@@ -10,15 +11,20 @@ import type {
 	ListMediaResult,
 	MediaAssetRecord,
 	MediaReferenceItem,
+	ReleasedMediaFiles,
 } from "../../../core/store/types";
-import type { StoreContext } from "./context";
+import { type StoreContext, withTrx } from "./context";
 import { assertFolderTarget } from "./folders";
+import { mediaInUse } from "./media-use";
 import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows";
 import { likeContainsPattern, likePrefixPattern } from "./sql";
 import { ROW_COLLECTION, titleExpr } from "./title-sql";
 
 /** `MEDIA_COLUMN_NAMES` as columns of the alias `m` (`listMediaAssets`). */
 const MEDIA_COLUMNS_OF_M = MEDIA_COLUMN_NAMES.map((column) => `m.${column}` as const);
+
+/** A default alt that is empty or only white space, as a condition on the alias `m`. */
+const ALT_IS_BLANK = sql<boolean>`m.default_alt ~ '^[[:space:]]*$'`;
 
 /** Media metadata. The file itself is handled by `MediaStore` (R2). */
 export function createMediaOps(ctx: StoreContext) {
@@ -139,12 +145,16 @@ export function createMediaOps(ctx: StoreContext) {
 			return mapMediaRow(row);
 		},
 
-		/** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job; files in the trash are read through the trash. */
+		/**
+		 * Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job; files in the trash are read through the trash.
+		 * `kinds` and `alts` count the files of the same scope as the list, but ignore `kind` and `alt`, so a menu can show the number of every choice.
+		 */
 		listMediaAssets: async (params: ListMediaParams = {}): Promise<ListMediaResult> => {
 			const page = Math.max(1, params.page || 1);
 			const pageSize = Math.max(1, Math.min(params.pageSize || 25, 100));
 
-			let grouped = db
+			/** The files that match everything but `kind` and `alt`, one row each (grouped by file, with the references joined). */
+			let scope = db
 				.selectFrom("media_assets as m")
 				.leftJoin("entry_references as r", (join) =>
 					join.on("r.kind", "=", "media").onRef("r.target_media_id", "=", "m.id"),
@@ -156,10 +166,10 @@ export function createMediaOps(ctx: StoreContext) {
 				.where("m.status", "in", ["ready", "deleting"])
 				.groupBy("m.id");
 			if (params.folderId === null) {
-				grouped = grouped.where("m.folder_id", "is", null);
+				scope = scope.where("m.folder_id", "is", null);
 			} else if (params.folderId !== undefined) {
 				const folderId = params.folderId;
-				grouped = grouped.where(
+				scope = scope.where(
 					params.includeDescendants
 						? sql<boolean>`m.folder_id in (
 							with recursive descendants as (
@@ -173,26 +183,45 @@ export function createMediaOps(ctx: StoreContext) {
 				);
 			}
 			if (params.search?.trim()) {
-				grouped = grouped.where("m.filename", "ilike", likeContainsPattern(params.search.trim()));
+				scope = scope.where("m.filename", "ilike", likeContainsPattern(params.search.trim()));
 			}
 			// Compare by prefix so that giving only the leading part, such as `image/`, still filters.
 			if (params.mimeType?.trim()) {
-				grouped = grouped.where("m.mime_type", "like", likePrefixPattern(params.mimeType.trim()));
+				scope = scope.where("m.mime_type", "like", likePrefixPattern(params.mimeType.trim()));
 			}
+			if (params.uploadedFrom) scope = scope.where("m.created_at", ">=", params.uploadedFrom);
+			if (params.uploadedTo) scope = scope.where("m.created_at", "<=", params.uploadedTo);
+			if (params.used === "used") scope = scope.having((eb) => eb(eb.fn.count("r.entry_id"), ">", 0));
+			if (params.used === "unused") scope = scope.having((eb) => eb(eb.fn.count("r.entry_id"), "=", 0));
+
+			let grouped = scope;
 			if (params.kind === "image") grouped = grouped.where("m.mime_type", "like", "image/%");
 			if (params.kind === "file") {
 				grouped = grouped.where((eb) =>
 					eb.or([eb("m.mime_type", "is", null), eb("m.mime_type", "not like", "image/%")]),
 				);
 			}
-			if (params.uploadedFrom) grouped = grouped.where("m.created_at", ">=", params.uploadedFrom);
-			if (params.uploadedTo) grouped = grouped.where("m.created_at", "<=", params.uploadedTo);
-			if (params.used === "used") grouped = grouped.having((eb) => eb(eb.fn.count("r.entry_id"), ">", 0));
-			if (params.used === "unused") grouped = grouped.having((eb) => eb(eb.fn.count("r.entry_id"), "=", 0));
+			// Alt text only exists for images.
+			if (params.alt === "none") grouped = grouped.where("m.mime_type", "like", "image/%").where(ALT_IS_BLANK);
+			if (params.alt === "has")
+				grouped = grouped.where("m.mime_type", "like", "image/%").where(sql<boolean>`not (${ALT_IS_BLANK})`);
 
 			const count = await db
 				.selectFrom(grouped.select("m.id").as("sub"))
 				.select((eb) => eb.fn.countAll<string>().as("count"))
+				.executeTakeFirst();
+			const counts = await db
+				.selectFrom(scope.select(["m.id", "m.mime_type", "m.default_alt"]).as("s"))
+				.select([
+					sql<string>`count(*) filter (where s.mime_type like 'image/%')`.as("image"),
+					sql<string>`count(*) filter (where s.mime_type is null or s.mime_type not like 'image/%')`.as("file"),
+					sql<string>`count(*) filter (where s.mime_type like 'image/%' and s.default_alt ~ '^[[:space:]]*$')`.as(
+						"none",
+					),
+					sql<string>`count(*) filter (where s.mime_type like 'image/%' and s.default_alt !~ '^[[:space:]]*$')`.as(
+						"has",
+					),
+				])
 				.executeTakeFirst();
 			const rows = await grouped
 				.select(MEDIA_COLUMNS_OF_M)
@@ -213,7 +242,71 @@ export function createMediaOps(ctx: StoreContext) {
 				referencesCount: Number(row.ref_count),
 				references: row.references_json ?? [],
 			}));
-			return { items, total: Number(count?.count ?? 0), page, pageSize };
+			return {
+				items,
+				total: Number(count?.count ?? 0),
+				page,
+				pageSize,
+				kinds: { image: Number(counts?.image ?? 0), file: Number(counts?.file ?? 0) },
+				alts: { none: Number(counts?.none ?? 0), has: Number(counts?.has ?? 0) },
+			};
+		},
+
+		replaceMediaFile: async (params: {
+			id: string;
+			fromId: string;
+		}): Promise<{ media: MediaAssetRecord; released: ReleasedMediaFiles }> => {
+			if (params.id === params.fromId) throw new CmsError("A media file cannot replace itself", "invalid_input");
+			return withTrx(ctx, async (trx) => {
+				// Locked in id order, so two replaces that name the same files cannot wait on each other.
+				const rows = await trx
+					.selectFrom("media_assets")
+					.select(MEDIA_COLUMN_NAMES)
+					.where("id", "in", [params.id, params.fromId])
+					.orderBy("id")
+					.forUpdate()
+					.execute();
+				const target = rows.find((row) => row.id === params.id);
+				const source = rows.find((row) => row.id === params.fromId);
+				if (!target || target.status !== "ready") throw new CmsError("Media asset not found", "not_found");
+				if (!source || source.status !== "ready") throw new CmsError("Replacement media asset not found", "not_found");
+				const mismatch = replaceMismatch(target.mime_type, source.mime_type);
+				if (mismatch) {
+					throw new CmsError("The replacement is not the same kind of file", "unsupported_media_type", {
+						notice: { key: mismatch },
+					});
+				}
+				// A file that something refers to cannot give its stored file away; the reference would lose its file.
+				if ((await mediaInUse(trx, qSchema, [params.fromId])).size > 0) {
+					throw new CmsError("The replacement media asset is in use", "conflict");
+				}
+				// The row goes first: it frees the storage key before the target takes it.
+				await trx.deleteFrom("media_assets").where("id", "=", params.fromId).execute();
+				const row = await trx
+					.updateTable("media_assets")
+					.set({
+						storage_key: source.storage_key,
+						mime_type: source.mime_type,
+						byte_size: source.byte_size,
+						width: source.width,
+						height: source.height,
+						original_storage_key: source.original_storage_key,
+						// The staged original of the old file is gone; a leftover key would show an original that the new file does not have.
+						original_staging_key: null,
+						original_mime_type: source.original_mime_type,
+						original_byte_size: source.original_byte_size,
+						original_width: source.original_width,
+						original_height: source.original_height,
+						updated_at: sql<Date>`now()`,
+					})
+					.where("id", "=", params.id)
+					.returning(MEDIA_COLUMN_NAMES)
+					.executeTakeFirstOrThrow();
+				return {
+					media: mapMediaRow(row),
+					released: { storageKey: target.storage_key, originalStorageKey: target.original_storage_key },
+				};
+			});
 		},
 
 		/**

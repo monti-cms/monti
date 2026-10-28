@@ -3,10 +3,11 @@ import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
 import { noticeMessages } from "../../../../core/error-notice";
-import type { NoticeKey } from "../../../../core/store/errors";
+import { CmsError, type NoticeKey } from "../../../../core/store/errors";
 import type { MessageVars } from "../../../../i18n/define";
 import { routeCaller } from "../../../../testing";
 import { POST as handleCompleteHandler } from "../[id]/complete/route";
+import { POST as handleReplaceHandler } from "../[id]/replace/route";
 import * as mediaItemRoute from "../[id]/route";
 import { PATCH as handlePatchMediaHandler } from "../[id]/route";
 import { renameProblem, typeNames } from "../media-files";
@@ -15,6 +16,7 @@ import { POST as handleTrashMediaHandler } from "../trash/route";
 import { POST as handleUploadsHandler } from "../uploads/route";
 
 const handleComplete = routeCaller(handleCompleteHandler);
+const handleReplace = routeCaller(handleReplaceHandler);
 const handleTrashMedia = routeCaller(handleTrashMediaHandler);
 const handlePatchMedia = routeCaller(handlePatchMediaHandler);
 const handleListMedia = routeCaller(handleListMediaHandler);
@@ -30,6 +32,7 @@ const mockListMediaAssets = vi.fn();
 const mockTrashMedia = vi.fn();
 const mockFinalizeMediaDelete = vi.fn();
 const mockUpdateMediaMetadata = vi.fn();
+const mockReplaceMediaFile = vi.fn();
 
 const mockPrepareUpload = vi.fn();
 const mockHeadFile = vi.fn();
@@ -49,6 +52,7 @@ const cms = fakeCms({
 		trashMedia: mockTrashMedia,
 		finalizeMediaDelete: mockFinalizeMediaDelete,
 		updateMediaMetadata: mockUpdateMediaMetadata,
+		replaceMediaFile: mockReplaceMediaFile,
 	},
 	mediaStore: {
 		prepareUpload: mockPrepareUpload,
@@ -481,6 +485,32 @@ describe("Media Upload API Endpoints", () => {
 		expect(json.items[0].references[0].title).toBe("First Post");
 	});
 
+	it("GET /media passes alt, folderId and includeDescendants to the store as typed values, and answers the counts", async () => {
+		const folderId = "00000000-0000-4000-8000-0000000000f1";
+		mockListMediaAssets.mockResolvedValue({
+			items: [],
+			total: 0,
+			page: 1,
+			pageSize: 25,
+			kinds: { image: 4, file: 1 },
+			alts: { none: 3, has: 1 },
+		});
+		const get = (query: string) => handleListMedia(new Request(`http://localhost/api/monti/v1/media${query}`), { cms });
+
+		const res = await get(`?alt=none&folderId=${folderId}&includeDescendants=true&kind=image`);
+		expect(res.status).toBe(200);
+		expect(mockListMediaAssets).toHaveBeenCalledWith(
+			expect.objectContaining({ alt: "none", folderId, includeDescendants: true, kind: "image" }),
+		);
+		expect(await res.json()).toMatchObject({ kinds: { image: 4, file: 1 }, alts: { none: 3, has: 1 } });
+
+		await get("");
+		expect(mockListMediaAssets).toHaveBeenLastCalledWith(expect.objectContaining({ alt: "all", kind: "all" }));
+		expect(mockListMediaAssets.mock.lastCall?.[0].includeDescendants).not.toBe(true);
+
+		expect((await get("?alt=maybe")).status).toBe(400);
+	});
+
 	it("POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
 		mockTrashMedia.mockResolvedValue({
 			trashed: ["00000000-0000-4000-8000-000000000009"],
@@ -699,5 +729,156 @@ describe("attachment upload", () => {
 			expect(res.status).toBe(200);
 			expect(mockGetMediaAsset).not.toHaveBeenCalled();
 		});
+	});
+});
+
+describe("POST /media/:id/replace", () => {
+	const id = "00000000-0000-4000-8000-0000000000a1";
+	const fromId = "00000000-0000-4000-8000-0000000000a2";
+	const asset = (assetId: string, mimeType: string, extra: Record<string, unknown> = {}) => ({
+		id: assetId,
+		status: "ready",
+		filename: "photo.png",
+		mimeType,
+		...extra,
+	});
+	const replace = (body: unknown = { fromId }, target = id) =>
+		handleReplace(
+			new Request(`http://localhost/api/monti/v1/media/${target}/replace`, {
+				method: "POST",
+				headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+				body: JSON.stringify(body),
+			}),
+			{ params: Promise.resolve({ id: target }), cms },
+		);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockVerifyAdmin.mockResolvedValue({ id: "admin-1", email: "admin@example.com" });
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png") : assetId === fromId ? asset(fromId, "image/webp") : null,
+		);
+		mockReplaceMediaFile.mockResolvedValue({
+			media: {
+				id,
+				status: "ready",
+				storageKey: `media/${fromId}.webp`,
+				mimeType: "image/webp",
+				byteSize: 2048,
+				width: 20,
+				height: 10,
+				defaultAlt: "Kept alt",
+				defaultCaption: "Kept caption",
+			},
+			released: { storageKey: `media/${id}.png`, originalStorageKey: `media/${id}-original.png` },
+		});
+		mockGetPublicUrl.mockImplementation((key: string) => `https://media.example.com/${key}`);
+		mockDeleteFile.mockResolvedValue(undefined);
+	});
+
+	it("moves the new file into the target, deletes the files it gave up, and answers like a completed upload", async () => {
+		const res = await replace();
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({
+			mediaId: id,
+			status: "ready",
+			publicUrl: `https://media.example.com/media/${fromId}.webp`,
+			width: 20,
+			height: 10,
+			byteSize: 2048,
+			mimeType: "image/webp",
+			defaultAlt: "Kept alt",
+			defaultCaption: "Kept caption",
+		});
+		expect(mockReplaceMediaFile).toHaveBeenCalledWith({ id, fromId });
+		expect(mockDeleteFile.mock.calls.map(([arg]) => arg.key)).toEqual([`media/${id}.png`, `media/${id}-original.png`]);
+	});
+
+	it("does not delete a file the target did not have", async () => {
+		mockReplaceMediaFile.mockResolvedValue({
+			media: { id, status: "ready", storageKey: "media/new.webp", mimeType: "image/webp" },
+			released: { storageKey: `media/${id}.png`, originalStorageKey: null },
+		});
+		expect((await replace()).status).toBe(200);
+		expect(mockDeleteFile).toHaveBeenCalledTimes(1);
+	});
+
+	it("still answers 200 when deleting an old file fails", async () => {
+		mockDeleteFile.mockRejectedValue(new Error("storage down"));
+		const res = await replace();
+		expect(res.status).toBe(200);
+		expect((await res.json()).mediaId).toBe(id);
+		expect(mockDeleteFile).toHaveBeenCalledTimes(2);
+	});
+
+	it("answers 404 for a target or a replacement that does not exist or is not ready", async () => {
+		const other = "00000000-0000-4000-8000-0000000000a3";
+		expect((await replace({ fromId }, other)).status).toBe(404);
+		expect((await replace({ fromId: other })).status).toBe(404);
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png") : asset(fromId, "image/webp", { status: "pending" }),
+		);
+		expect((await replace()).status).toBe(404);
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png", { status: "trashed" }) : asset(fromId, "image/webp"),
+		);
+		expect((await replace()).status).toBe(404);
+		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
+		expect(mockDeleteFile).not.toHaveBeenCalled();
+	});
+
+	it("answers 400 for the same file, or a body without a valid fromId", async () => {
+		const same = await replace({ fromId: id });
+		expect(same.status).toBe(400);
+		expect((await same.json()).error.code).toBe("invalid_input");
+		expect((await replace({})).status).toBe(400);
+		expect((await replace({ fromId: "not-an-id" })).status).toBe(400);
+		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
+	});
+
+	it("answers 415 with a notice when an image would be replaced by a file or the other way round", async () => {
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png") : asset(fromId, "application/pdf"),
+		);
+		const res = await replace();
+		expect(res.status).toBe(415);
+		expect((await res.json()).error).toMatchObject({ code: "unsupported_media_type", ...notice("media.replace.kind") });
+
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "application/pdf") : asset(fromId, "image/png"),
+		);
+		expect((await replace()).status).toBe(415);
+		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
+		expect(mockDeleteFile).not.toHaveBeenCalled();
+	});
+
+	it("answers 415 with a notice when a file would be replaced by a file of another type", async () => {
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "application/pdf") : asset(fromId, "text/markdown"),
+		);
+		const res = await replace();
+		expect(res.status).toBe(415);
+		expect((await res.json()).error).toMatchObject(notice("media.replace.type"));
+		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
+	});
+
+	it("replaces a file by a file of the same type", async () => {
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "application/pdf") : asset(fromId, "application/pdf"),
+		);
+		expect((await replace()).status).toBe(200);
+		expect(mockReplaceMediaFile).toHaveBeenCalledWith({ id, fromId });
+	});
+
+	it("keeps the old files when the store refuses, and shows its error", async () => {
+		mockReplaceMediaFile.mockRejectedValue(new CmsError("The replacement media asset is in use", "conflict"));
+		expect((await replace()).status).toBe(409);
+		expect(mockDeleteFile).not.toHaveBeenCalled();
+	});
+
+	it("rejects unauthenticated calls with 401", async () => {
+		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
+		expect((await replace()).status).toBe(401);
+		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
 	});
 });

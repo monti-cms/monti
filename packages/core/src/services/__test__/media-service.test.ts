@@ -59,4 +59,23 @@ describe("media service", () => {
 		expect(deleted).toEqual(["staging/ok.png"]);
 		expect(finalized).toEqual(["ok"]);
 	});
+
+	describe("release", () => {
+		it("deletes the stored file and the original a replaced media file gave up, and leaves out the one it never had", async () => {
+			const { service, deleted, finalized } = setup();
+			await service.release({ storageKey: "media/old.png", originalStorageKey: "media/old-original.png" });
+			await service.release({ storageKey: "media/old2.png", originalStorageKey: null });
+			expect(deleted).toEqual(["media/old.png", "media/old-original.png", "media/old2.png"]);
+			// Only files go; rows are not touched.
+			expect(finalized).toEqual([]);
+		});
+
+		it("swallows a failed delete and still tries the next file", async () => {
+			const { service, deleted } = setup({ failFor: ["old.png"] });
+			await expect(
+				service.release({ storageKey: "media/old.png", originalStorageKey: "media/old-original.png" }),
+			).resolves.toBeUndefined();
+			expect(deleted).toEqual(["media/old-original.png"]);
+		});
+	});
 });

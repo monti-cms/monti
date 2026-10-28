@@ -1,5 +1,5 @@
 import type { ContentStore } from "../core/store";
-import type { MediaAssetRecord } from "../core/store/types";
+import type { MediaAssetRecord, ReleasedMediaFiles } from "../core/store/types";
 import type { MediaStore } from "../media/store";
 
 /** Uploads that never completed are cleaned up after this long. */
@@ -19,6 +19,11 @@ export interface MediaService {
 	 */
 	remove(media: Pick<MediaAssetRecord, "id" | "storageKey" | "stagingKey" | "original">): Promise<void>;
 	/**
+	 * Deletes the stored files a replaced media file gave up, after the replace was committed. Best effort: a file that cannot be deleted stays behind as a
+	 * stray file, and the replace stays done.
+	 */
+	release(files: ReleasedMediaFiles): Promise<void>;
+	/**
 	 * Removes incomplete or failed uploads older than 24 hours. An upload whose file deletion fails is kept and retried at the next cleanup; the ids that
 	 * failed are in `failed`.
 	 */
@@ -36,6 +41,17 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
 	};
 
 	return {
+		release: async (files) => {
+			const mediaStore = deps.mediaStore();
+			for (const key of [files.storageKey, files.originalStorageKey]) {
+				if (!key) continue;
+				try {
+					await mediaStore.deleteFile({ key });
+				} catch {
+					// The replace is committed; a stray file does not undo it.
+				}
+			}
+		},
 		remove: (media) =>
 			purge(media.id, [media.storageKey, media.stagingKey, media.original?.storageKey, media.original?.stagingKey]),
 		cleanup: async () => {
