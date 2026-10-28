@@ -33,8 +33,6 @@ export default {
 				"mdx",
 				"seo",
 				"registry",
-				"bareun",
-				"git-sync",
 				"syntax",
 				"example",
 				"scripts",

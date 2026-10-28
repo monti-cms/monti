@@ -144,7 +144,7 @@ const screen =
 		</PageFrame>
 	);
 
-/** A plugin's spell-check cell with two findings, as a plugin fills the slot. Like the Bareun plugin it checks Korean only, so it leaves the cell out of any other language. */
+/** A plugin's spell-check cell with two findings, as a plugin fills the slot. It checks Korean only, so it leaves the cell out of any other language. */
 const SpellingCell = () =>
 	useStatusBarContext().locale !== "ko" ? null : (
 		<StatusBarPluginCell

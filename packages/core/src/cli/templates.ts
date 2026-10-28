@@ -60,7 +60,6 @@ export function configTemplate(answers: InitAnswers): string {
 	];
 	if (answers.directiveSyntax) imports.push({ from: "@monti-cms/syntax-directive", names: ["directiveSyntax"] });
 	if (answers.ai) imports.push({ from: "@monti-cms/ai", names: ["ai"] });
-	if (answers.gitSync) imports.push({ from: "@monti-cms/git-sync", names: ["gitSync"] });
 	if (answers.storage === "s3") imports.push({ from: "@monti-cms/storage-s3", names: ["s3Storage"] });
 	const light = blocks.filter((block) => !block.needs);
 	if (light.length > 0) {
@@ -98,13 +97,6 @@ export function configTemplate(answers: InitAnswers): string {
 		plugins.push(
 			"// AI writing: polish, draft and translate buttons, and the AI screen. It renders without a key; a connection is saved on the admin AI screen.",
 			"ai(),",
-		);
-	}
-	if (answers.gitSync) {
-		plugins.push(
-			"// Two-way sync of published entries with files in a GitHub repo. It syncs nothing until `targets` names a repo:",
-			'//   gitSync({ targets: [{ repo: "you/content", branch: "main", folder: "content", collections: ["post"], mode: "commit" }] })',
-			"gitSync(),",
 		);
 	}
 	const pluginLines = plugins.map((line) => `\t\t${line}`);
@@ -155,7 +147,7 @@ export function configTemplate(answers: InitAnswers): string {
 		"",
 		...storage,
 		"",
-		"\t// The one secret, MONTI_SECRET, signs the login session and encrypts stored values (AI keys, git-sync tokens).",
+		"\t// The one secret, MONTI_SECRET, signs the login session and encrypts stored values (AI keys).",
 		"});",
 	].join("\n")}\n`;
 }
@@ -253,7 +245,7 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"",
 		"# --- Secret ---",
 		"",
-		"# A long random value that signs login sessions and encrypts stored values (AI keys, git-sync tokens).",
+		"# A long random value that signs login sessions and encrypts stored values (AI keys).",
 		"# Generate one:  openssl rand -base64 32",
 		"# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
 		"# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",

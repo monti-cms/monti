@@ -127,7 +127,7 @@ const components = {
 
 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(첫 탭은 `tab`이 없는 묶음을 담고, SEO 필드처럼 플러그인이 두는 필드는 제 탭을 가진다). 묶음은 core가 계산하고(`site.panelGroupsOf`), 설정 화면의 필드 트리도 같은 묶음으로 그린다. 보기 필드
 (`fields.view({ view })`)는 그 자리에 플러그인 `components`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
-선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)가 그 예다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
+선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/kit`의 `MediaThumbnail`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).
 날짜·시각은 사이트 설정의 `timeZone`으로, 표기는 `admin.locale`(기본 `ko-KR`)로 보인다. 관계 입력의 안내 문구는 대상 컬렉션의
 이름표를 쓴다(예: "게시글 고르기"). 항목 컬렉션(`kind: "item"`)의 항목은 목록의 작은 폼으로 연다. 미디어 사용처처럼 여러
@@ -136,15 +136,15 @@ const components = {
 
 ## 탐색과 설정
 
-사이드바는 다섯 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **글쓰기**(템플릿, 그다음 `nav` 항목에 `group: "writing"`이 있는 플러그인 페이지. 예: AI), **사이트 관리**(데이터, API 키, 이벤트 기록, 그다음 나머지 플러그인 페이지. 예: Git 동기화. 기본으로 접혀 있고 브라우저마다 기억하며, 이 묶음의 화면이 열려 있으면 펼쳐진다. 접혀 있는 동안은 머리글에 실패한 전달 개수가 붙는다), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
+사이드바는 다섯 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **글쓰기**(템플릿, 그다음 `nav` 항목에 `group: "writing"`이 있는 플러그인 페이지. 예: AI), **사이트 관리**(데이터, API 키, 이벤트 기록, 그다음 나머지 플러그인 페이지. 예: AI. 기본으로 접혀 있고 브라우저마다 기억하며, 이 묶음의 화면이 열려 있으면 펼쳐진다. 접혀 있는 동안은 머리글에 실패한 전달 개수가 붙는다), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
 
 | 화면 | 주소 | 내용 |
 |---|---|---|
 | 사이트·언어·컬렉션·파일·관리자 | `<관리자 경로>/settings`(사이트 탭으로 열린다. `site`·`locales`·`collections`·`file`·`admin`) | 설정, 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
-| API 키 | `<관리자 경로>/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결·git-sync는 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
+| API 키 | `<관리자 경로>/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결과 플러그인의 키 슬롯은 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
 | 템플릿 | `<관리자 경로>/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
 | 이벤트 기록 | `<관리자 경로>/events` | 이벤트 전달. |
-| 플러그인 페이지마다 하나 | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
+| 플러그인 페이지마다 하나 | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`). |
 
 `<관리자 경로>/settings`는 첫 탭으로 간다.
 
@@ -204,8 +204,7 @@ function NoticeView() {
 
 이미지는 바로 들어가고, 구독자가 도는 동안 "이미지 글을 쓰는 중…"을 보인다. `fill({ alt?, caption? })`은 칸이 아직 비어 있고 넣은 뒤로 사람이 그 칸에
 입력하지 않았을 때만 쓴다(장식 이미지에는 대체 텍스트를 쓰지 않는다). 이미지가 지워졌으면 아무것도 쓰지 않고, 그때 `signal`도 중단된다. 무엇이든 썼는지를
-돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나이고,
-[이미지 대체 텍스트 레시피](../../docs/recipes/image-alt.md)는 직접 만드는 작은 예다.
+돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나다.
 
 ## 글자 꾸밈
 
@@ -245,7 +244,7 @@ const components = { marks: { note } };
 본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
 등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 도구 모음 버튼(이름 `label`, 아이콘 `icon`)이
 생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
-바른 검사기는 `@monti-cms/bareun`이며, `monti.config.ts`의 `plugins`에 넣는 플러그인이다. 직접 만든 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고).
+검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고). 예제 블로그의 `word-list` 플러그인이 작은 예다.
 
 ```tsx
 "use client";
@@ -285,7 +284,7 @@ API 키는 브라우저에 두지 않는다. 브라우저는 `remoteTextChecker`
 ```ts
 // 플러그인의 관리자 쪽(브라우저)
 import { remoteTextChecker } from "@monti-cms/core";
-const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
+const checker = remoteTextChecker({ id: "speller", label: "맞춤법", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)
 import { textCheckRoute } from "@monti-cms/core/server";
@@ -301,7 +300,6 @@ export const POST = textCheckRoute({
 
 - 위치 단위가 다르면 검사기 쪽에서 UTF-16으로 바꾼다. 바이트(UTF-8)·코드 포인트·문장 기준 위치를 그대로 쓰면 이모지·한글 뒤에서
   밑줄이 어긋난다.
-- 바른(Bareun): 요청에 `encoding_type: UTF16`을 주면 `begin_offset`·`length`를 그대로 쓸 수 있다. 중첩 결과(`nested`)는 펼친다.
 - LanguageTool·Yahoo 같은 위치 기반 API: 문단을 이어 보낼 때는 돌아온 위치를 문단별로 다시 나눈다. 요청 크기·분당 호출 한도는
   `limits`와 서버 경로에서 맞춘다.
 - textlint: `range`(`[start, end]`)를 그대로 쓴다. `fix.text`는 후보로 쓰되 `fix.range`가 표시 범위보다 넓을 수 있다.
@@ -340,7 +338,7 @@ export function StatsPage() {
 }
 ```
 
-부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다. [관리자 페이지 레시피](../../docs/recipes/admin-page.md)가 플러그인 전체이고, [커스텀 블록 레시피](../../docs/recipes/custom-block.md)는 편집기 뷰가 있는 블록이다.
+부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다.
 
 편집 화면 확장(`editorExtensions`)은 툴바 끝 요소·블록 손잡이 옆 동작·선택 영역 메뉴·슬래시 메뉴 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `defineAdminPlugin`의 `slots`로 동작을 붙인다(`SlotSource` 타입과 슬롯 부품은 `@monti-cms/admin/slots`에 있다).
@@ -389,7 +387,7 @@ function LinksCell() {
 export default defineAdminPlugin({ statusCells: { links: LinksCell } });
 ```
 
-칸에는 `label`과 찾은 항목 수가 보이고, `blocking`인 항목이 있으면 빨갛게 보인다. 목록에는 항목마다 한 줄이다. 제목, 어디인지 한 줄, 동작 하나이며, 줄 자체를 누르면 그 자리로 간다(`onOpen`). 구분선 아래 양쪽 끝에는 `settings`(관리자 안의 주소)와 `fixAll`이 놓인다. 칸이 사이트 설정에 달려 있으면 사이트의 함수(`statusCells: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. `useStatusBarContext()`는 `collection`, `entryId`, 글의 `locale`, 그리고 `textIssues`를 돌려준다. `textIssues`는 텍스트 검사기(`textCheckers`)가 본문에서 찾은 것으로, 항목마다 글자, 제안, 문단 번호와 문장, 그 자리로 가는 방법과 고치는 방법이 있고, 한꺼번에 고치는 `fixAll`도 있다. `@monti-cms/bareun`이 이렇게 칸을 채운다.
+칸에는 `label`과 찾은 항목 수가 보이고, `blocking`인 항목이 있으면 빨갛게 보인다. 목록에는 항목마다 한 줄이다. 제목, 어디인지 한 줄, 동작 하나이며, 줄 자체를 누르면 그 자리로 간다(`onOpen`). 구분선 아래 양쪽 끝에는 `settings`(관리자 안의 주소)와 `fixAll`이 놓인다. 칸이 사이트 설정에 달려 있으면 사이트의 함수(`statusCells: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. `useStatusBarContext()`는 `collection`, `entryId`, 글의 `locale`, 그리고 `textIssues`를 돌려준다. `textIssues`는 텍스트 검사기(`textCheckers`)가 본문에서 찾은 것으로, 항목마다 글자, 제안, 문단 번호와 문장, 그 자리로 가는 방법과 고치는 방법이 있고, 한꺼번에 고치는 `fixAll`도 있다. 
 
 ### 사이드 패널
 

@@ -7,7 +7,6 @@ const PACKAGES = path.resolve(__dirname, "../../../..");
 const ALLOWED = [
 	/\/core\/src\//,
 	/\/(plugin|server)\.ts$/,
-	/\/bareun\/src\/(route|options|index)\.ts$/,
 	// The Next adapter mounts the server routes and the login API, so it names their paths.
 	/\/nextjs\/src\/(route-handler\.ts|auth\/)/,
 	// The login package serves the login API, so it names its default path.

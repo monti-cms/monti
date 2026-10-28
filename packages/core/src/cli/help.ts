@@ -10,7 +10,7 @@ import { COMMANDS, findCommand } from "./commands";
 /** Where the text of a command starts, after its name. */
 const SUMMARY_INDENT = " ".repeat(12);
 
-const PLUGIN_SECTION = `  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for db:migrate (for example git-sync:pull). Add --help for its options
+const PLUGIN_SECTION = `  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for db:migrate (for example my-plugin:pull). Add --help for its options
 `;
 
 /** The help section of one command: its name and summary, then its options (and the app options, for a command that loads the app). */

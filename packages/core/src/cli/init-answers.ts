@@ -20,7 +20,6 @@ export interface InitAnswers {
 	readonly timeZoneSource: "flag" | "computer" | "fallback";
 	readonly storage: "none" | "s3";
 	readonly ai: boolean;
-	readonly gitSync: boolean;
 	/** Ids of {@link BLOCK_CHOICES}. */
 	readonly blocks: readonly string[];
 	readonly adminPath: string;

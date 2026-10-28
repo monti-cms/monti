@@ -128,7 +128,7 @@ const components = {
 ```
 
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
-(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is one.
+(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` from `@monti-cms/admin/kit` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
@@ -138,15 +138,15 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has five parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Writing** (Templates, then the plugin pages whose `nav` item has `group: "writing"`, such as AI), **Site** (Data, API keys, the Event log, then the other plugin pages, e.g. Git sync; collapsed by default, remembered per browser, and open whenever one of its screens is; while collapsed its header carries the failed-delivery count), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+The sidebar has five parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Writing** (Templates, then the plugin pages whose `nav` item has `group: "writing"`, such as AI), **Site** (Data, API keys, the Event log, then the other plugin pages, e.g. AI; collapsed by default, remembered per browser, and open whenever one of its screens is; while collapsed its header carries the failed-delivery count), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|
 | Site, Languages, Collections, File, Admin | `<admin path>/settings` (opens the Site tab; `site`, `locales`, `collections`, `file`, `admin`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
-| API keys | `<admin path>/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
+| API keys | `<admin path>/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and plugin key slots pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
 | Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
 | Event log | `<admin path>/events` | Event deliveries. |
-| One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
+| One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`). |
 
 `<admin path>/settings` goes to the first tab.
 
@@ -207,7 +207,7 @@ notice without touching the action or the others. A subscriber is a client funct
 The image is in at once and shows "Writing the image text…" while any subscriber runs. `fill({ alt?, caption? })` writes a field only while it is still empty
 and the person has not typed in it since the insert (and no alt text into a decorative image), and writes nothing once the image was removed, when `signal` is
 aborted too. It returns whether it wrote anything. While a plugin subscribes, the image dialog lets the alt text be left empty. `ai({ autoImageText: true })` of
-`@monti-cms/ai` is one subscriber, and the [image alt recipe](../../docs/recipes/image-alt.md) is a small one of your own.
+`@monti-cms/ai` is one subscriber.
 
 ## Text marks
 
@@ -247,7 +247,7 @@ const components = { marks: { note } };
 The core has no checkers; it only renders the buttons, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
 etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a toolbar button (name `label`, icon `icon`),
 and results appear as wavy underlines, a results window and a list. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
-The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `monti.config.ts`. Your own checkers are registered through a plugin's admin side (see "Adding site components").
+Checkers are registered through a plugin's admin side (see "Adding site components"); the `word-list` plugin of the example blog is a small one.
 
 ```tsx
 "use client";
@@ -287,7 +287,7 @@ and returns `{ issues }`. `textCheckRoute` checks the admin login and same origi
 ```ts
 // Admin side of a plugin (browser)
 import { remoteTextChecker } from "@monti-cms/core";
-const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
+const checker = remoteTextChecker({ id: "speller", label: "Speller", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)
 import { textCheckRoute } from "@monti-cms/core/server";
@@ -303,7 +303,6 @@ export const POST = textCheckRoute({
 
 - If the position unit differs, convert to UTF-16 on the checker side. Using byte (UTF-8), code point or sentence-based positions as is makes
   underlines drift after emoji or Hangul.
-- Bareun: pass `encoding_type: UTF16` in the request and `begin_offset` and `length` can be used as is. Expand nested results (`nested`).
 - Position-based APIs such as LanguageTool and Yahoo: when sending paragraphs joined together, split the returned positions back per paragraph. Match request size and per-minute call limits
   with `limits` and the server route.
 - textlint: use `range` (`[start, end]`) as is. Use `fix.text` as a candidate, but `fix.range` may be wider than the displayed range.
@@ -342,7 +341,7 @@ export function StatsPage() {
 }
 ```
 
-The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
+The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README).
 
 Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
 attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
@@ -391,7 +390,7 @@ function LinksCell() {
 export default defineAdminPlugin({ statusCells: { links: LinksCell } });
 ```
 
-The cell shows `label` and the number of findings, and is red while a finding has `blocking`. Its list has one row per finding: the title, one line for where it is, and one action; pressing the row itself goes to the place (`onOpen`). Under a rule, `settings` (an address in the admin) and `fixAll` sit at the two ends. Give a function of the site (`statusCells: (site) => ({ ... })`) when the cells depend on the site config; the components come from a `"use client"` module. `useStatusBarContext()` returns the `collection`, the `entryId`, the `locale` of the entry and `textIssues`, what the text checkers (`textCheckers`) found in the body: each with its text, suggestion, paragraph number and sentence, a way to jump to it and a way to fix it, and `fixAll`. `@monti-cms/bareun` fills its cell this way.
+The cell shows `label` and the number of findings, and is red while a finding has `blocking`. Its list has one row per finding: the title, one line for where it is, and one action; pressing the row itself goes to the place (`onOpen`). Under a rule, `settings` (an address in the admin) and `fixAll` sit at the two ends. Give a function of the site (`statusCells: (site) => ({ ... })`) when the cells depend on the site config; the components come from a `"use client"` module. `useStatusBarContext()` returns the `collection`, the `entryId`, the `locale` of the entry and `textIssues`, what the text checkers (`textCheckers`) found in the body: each with its text, suggestion, paragraph number and sentence, a way to jump to it and a way to fix it, and `fixAll`.
 
 ### Side panel
 

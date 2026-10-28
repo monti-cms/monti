@@ -20,7 +20,7 @@ import { useApiKeys } from "../../api/api-keys";
 import { apiKeysMessages } from "./messages";
 
 /**
- * What a form picks for the API key of one place (an AI connection, the spell checker, git sync). `saved` uses a key of the store, `new` saves the value as a
+ * What a form picks for the API key of one place (an AI connection, a plugin's key slot). `saved` uses a key of the store, `new` saves the value as a
  * new key in the store (named after the place) and uses that, `none` uses no key. Sent to the plugin's route as it is; the route resolves it on the server.
  */
 export type ApiKeyChoice =
