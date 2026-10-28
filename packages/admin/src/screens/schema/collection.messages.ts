@@ -87,7 +87,7 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 				.join(" · ");
 		},
 		"save.dropped": ({ name, count, kind }) =>
-			`${String(name)}${josa(String(name), "을", "를")} 지웠어요 · ${kind === "item" ? `항목 ${count}개` : `글 ${count}편`}`,
+			`${josa(String(name), "을", "를")} 지웠어요 · ${kind === "item" ? `항목 ${count}개` : `글 ${count}편`}`,
 		"save.droppedMany": ({ collections, count }) => `컬렉션 ${collections}개를 지웠어요 · 항목 ${count}개`,
 		"collection.tabs.basics": "기본",
 		"collection.tabs.fields": "필드",
