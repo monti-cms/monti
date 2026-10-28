@@ -129,5 +129,3 @@ export function useMediaActions(library: MediaLibraryView) {
 
 	return { move, trash, save, replaceFile };
 }
-
-export type MediaActions = ReturnType<typeof useMediaActions>;

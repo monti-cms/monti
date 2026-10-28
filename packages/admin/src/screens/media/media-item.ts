@@ -71,12 +71,6 @@ export function splitFilename(filename: string): { stem: string; extension: stri
 	return { stem: filename.slice(0, filename.length - extension.length), extension };
 }
 
-/** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */
-export function withExtension(name: string, original: string): string {
-	const extension = extensionOf(original);
-	return extension && !name.toLowerCase().endsWith(extension.toLowerCase()) ? `${name}${extension}` : name;
-}
-
 /** Why a stem cannot be a file name, or `null`. The server checks the same rules. */
 export function stemProblem(stem: string): "empty" | "invalid" | null {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this rejects

@@ -252,13 +252,11 @@ export function ImageInsertDialog({
 								onChange={(event) => setFile(event.target.files?.[0] ?? null)}
 							/>
 							{file && (
-								<>
-									<Text as="p" variant="caption" tone="muted" aria-live="polite">
-										{prepared?.optimized
-											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
-											: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
-									</Text>
-								</>
+								<Text as="p" variant="caption" tone="muted" aria-live="polite">
+									{prepared?.optimized
+										? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
+										: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
+								</Text>
 							)}
 						</Stack>
 					) : (
