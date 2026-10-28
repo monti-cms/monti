@@ -15,36 +15,42 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow5Step01.dc.html`
 - Renders: `Main` (mode "새 폴더")
 - In the post list the user presses "+ 폴더". A new folder row appears at the top with its name selected, ready to type over.
+- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
 ### Step 02: "목록 · 폴더 안 · 경로 · 상위 폴더로"
 
 - Board: `Flow5Step02.dc.html`
 - Renders: `Main` (mode "폴더 안")
 - The user opens a folder. The list shows only that folder's posts, a path above the list, and a "상위 폴더로" (up one folder) row.
+- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
 ### Step 03: "목록 · 폴더 안에서 찾기 → 찾는 곳 시리즈 원고 | 모든 폴더"
 
 - Board: `Flow5Step03.dc.html`
 - Renders: `Main` (mode "폴더 안 검색")
 - Searching inside a folder. The search covers the current folder by default; a scope switch reads "찾는 곳 시리즈 원고 | 모든 폴더" (search in: this folder | all folders) and the user can widen it.
+- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
 ### Step 04: "목록 · 폴더 행을 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
 
 - Board: `Flow5Step04.dc.html`
 - Renders: `Main` (mode "폴더 우클릭")
 - The user right-clicks a folder row. The menu offers open, rename, move to ▸ and delete folder.
+- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
 ### Step 05: "목록 · 폴더 지우기 → 공개 중인 글이 있으면 확인"
 
 - Board: `Flow5Step05.dc.html`
 - Renders: `Main` (mode "폴더 지우기 확인")
 - The user deletes a folder that holds published posts. A confirm dialog says the folder's 2 posts move to the trash too and the 1 published post comes off the site; buttons are cancel and "휴지통으로" (to trash).
+- Test: `packages/admin/src/screens/__test__/safe-delete.test.tsx` (the confirm) and `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
 ### Step 06: "목록 · 폴더와 글을 휴지통으로 · 되돌리기 (초안만 있으면 확인 없이 바로)"
 
 - Board: `Flow5Step06.dc.html`
 - Renders: `Main` (mode "폴더 지움")
 - The folder and its posts are moved to the trash. A notice says so with "되돌리기" (undo). A folder that holds only drafts skips the confirm and goes straight to this step.
+- Test: `packages/admin/src/screens/__test__/safe-delete.test.tsx`
 
 ## "버리기" · Discard
 
