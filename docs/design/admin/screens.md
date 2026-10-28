@@ -352,15 +352,15 @@ States (`stage`, default "라이브러리"):
 ## Templates: "도구 · 템플릿"
 
 - Board: `Templates.dc.html` (canvas row: "도구")
-- Purpose: Tools › Templates: the list of post templates with the last edit date.
-- Used in flows: none.
+- Purpose: Tools › Templates: the list of post templates. A row holds the name (the way into the template's page), its headings in one line, the day it was edited ("10. 20 고침") and a ⋯ with duplicate and delete. "+ 템플릿 추가" is in the page header. The page is the content width (880), not a wide list.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
 
 <a id="templateeditor"></a>
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
 - Board: `TemplateEditor.dc.html` (canvas row: "도구")
-- Purpose: The template editor: the editor with a template name field, saved with ⌘S.
-- Used in flows: none.
+- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" and the primary "저장 ⌘S" (both only while something is changed), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field over the reading-width body, and a status bar with the character count only.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>
 ## Data: "도구 · 데이터"

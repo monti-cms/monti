@@ -25,7 +25,7 @@ An icon (✦, the magnifier) is pointed or round, so with equal padding it looks
 
 ### In code
 
-`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring.
+`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring; `shortcut` puts a key combination after the label ("저장 ⌘S"): micro type, a little faint, 8px from the label.
 
 `outline-danger` is not in the DS README. It is a quieter `danger` with a 1px line. The side padding of the filled pills is 18px, 16px for `secondary` and 12px for `sm`.
 

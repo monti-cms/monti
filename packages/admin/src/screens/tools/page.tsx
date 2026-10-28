@@ -5,7 +5,7 @@ import { ApiKeysSettings } from "../api-keys/api-keys-settings";
 import { DataScreen } from "../data/data-screen";
 import { EventsScreen } from "../events/events-screen";
 import { requireAdminPage } from "../require-admin";
-import { TemplateManager } from "../templates/template-manager";
+import { TemplatesScreen } from "../templates/templates-screen";
 import { PluginToolPage } from "./plugin-page";
 import { toolsHref, toolsTabs } from "./tools-tabs";
 
@@ -28,7 +28,7 @@ export default async function AdminToolsPage({
 	if (!tab) return server.notFound();
 	switch (tab.id) {
 		case "templates":
-			return <TemplateManager />;
+			return <TemplatesScreen />;
 		case "data":
 			return <DataScreen />;
 		case "events":
