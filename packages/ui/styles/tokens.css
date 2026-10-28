@@ -32,6 +32,7 @@
 	--monti-bg-tool: var(--monti-gray-2);
 	--monti-bg-muted: var(--monti-gray-3);
 	--monti-bg-selected: var(--monti-gray-4);
+	--monti-bg-current: var(--monti-gray-6);
 	--monti-bg-highlight: #e8e1cf;
 	--monti-bg-block: #efe9dc;
 	--monti-bg-emphasis: var(--monti-gray-12);

@@ -360,6 +360,7 @@ function SidebarScreenMode({
 			<div className="min-w-0 flex-1">
 				<Segmented
 					aria-label={labels.label}
+					tone="tool"
 					value={value}
 					onValueChange={onValueChange}
 					options={SCREEN_MODES.map((mode) => {
@@ -457,9 +458,9 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 /**
- * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the selected ground and
- * semibold; there is no bar beside it. Pointing at any other row gives it the muted ground, which is paler than the selected one, so a row
- * that is only pointed at is never taken for the open one. `removed` is a row the writer took out in the schema (struck through and faint).
+ * One row of the rail: 36px, an icon, the name, and at the end a count ({@link SidebarMenuBadge}). The open one is on the current ground (one step
+ * darker than the selected one) and semibold; there is no bar beside it. Pointing at any other row gives it the selected ground, which is paler than the
+ * current one, so a row that is only pointed at is never taken for the open one. `removed` is a row the writer took out in the schema (struck through and faint).
  * Put a `ChangeDot` after the name for an unsaved change; it sits 6px from it.
  */
 function SidebarMenuButton({
@@ -486,7 +487,7 @@ function SidebarMenuButton({
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-muted focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-selected data-active:font-semibold data-removed:text-monti-faint data-removed:line-through group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-current data-active:font-semibold data-removed:text-monti-faint data-removed:line-through group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
 				),
 				children: (
@@ -538,14 +539,14 @@ function SidebarMenuBadge({
 	);
 }
 
-/** The folders under an open row: 36px in from the edge, 13px muted. Rows are {@link SidebarMenuSubButton}s. */
+/** The folders under an open row, 13px muted. Each row keeps its own 36px in from the edge, so its hover ground spans the whole row. Rows are {@link SidebarMenuSubButton}s. */
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	return (
 		<ul
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-9 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
+				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-0 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
 				className,
 			)}
 			{...props}
@@ -553,11 +554,11 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-const SUB_DEPTH = ["", "pl-[14px]", "pl-7", "pl-[42px]"] as const;
+const SUB_DEPTH = ["pl-9", "pl-[50px]", "pl-16", "pl-[78px]"] as const;
 
 /**
- * A folder under a row: its name and, at the end, its count. The open one is ink and semibold. `depth` indents a folder inside another by 14px a
- * level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ * A folder under a row: its name and, at the end, its count. The open one is ink and semibold, with no ground of its own; pointing at one gives it
+ * the selected ground. A row starts 36px in from the edge, and `depth` indents a folder inside another by 14px a level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
  */
 function SidebarMenuSubButton({
 	render,
@@ -573,7 +574,7 @@ function SidebarMenuSubButton({
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex w-full cursor-pointer items-center justify-between gap-monti-8 border-0 bg-transparent py-[5px] pr-monti-10 text-left no-underline outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-drop-target:rounded-monti-sm data-drop-target:ring-2 data-drop-target:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 rounded-monti-md border-0 bg-transparent py-[5px] pr-monti-10 text-left no-underline outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-droptarget:ring-2 data-droptarget:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
 					SUB_DEPTH[depth],
 					className,
 				),

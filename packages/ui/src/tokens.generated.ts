@@ -109,6 +109,7 @@ export const BACKGROUND = {
 	tool: "bg-monti-tool",
 	muted: "bg-monti-muted",
 	selected: "bg-monti-selected",
+	current: "bg-monti-current",
 	highlight: "bg-monti-highlight",
 	block: "bg-monti-block",
 	emphasis: "bg-monti-emphasis text-monti-on-emphasis",
