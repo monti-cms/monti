@@ -65,6 +65,10 @@ export const isHttpUrl = (value: string): boolean => {
 	}
 };
 
+/** Whether the value is where the site name can link to (`site.homeLink`): a path starting with `/` (not `//`, which is another host) or an http(s) URL. */
+export const isHomeLink = (value: string): boolean =>
+	(value.startsWith("/") && !value.startsWith("//")) || isHttpUrl(value);
+
 /** Whether the name is an IANA time zone this runtime knows. */
 export const isTimeZone = (timeZone: string): boolean => {
 	try {

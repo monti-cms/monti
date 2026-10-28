@@ -44,6 +44,49 @@ describe("diffSchema", () => {
 		expect(found).toEqual([{ kind: "collection_removed", collection: "tag", handledBy: "drop-tag" }]);
 	});
 
+	it("lists a changed public path of a collection present on both sides", () => {
+		const found = changes((schema) => {
+			schema.collections.post.path = "/blog/:slug";
+		});
+		expect(found).toEqual([
+			{ kind: "collection_path_changed", collection: "post", from: "/posts/:slug", to: "/blog/:slug" },
+		]);
+		expect(found.map(changeKey)).toEqual(["collection_path_changed:post:/posts/:slug:/blog/:slug"]);
+		expect(found[0] && describeSchemaChange(found[0])).toBe(
+			'collection "post" public path changed from /posts/:slug to /blog/:slug',
+		);
+	});
+
+	it("lists no path change when the path is equal, and none for an added or removed collection", () => {
+		expect(
+			changes((schema) => {
+				schema.collections.post.path = "/posts/:slug";
+			}),
+		).toEqual([]);
+		expect(
+			changes((schema) => {
+				delete schema.collections.post;
+			}).map((change) => change.kind),
+		).not.toContain("collection_path_changed");
+	});
+
+	it("treats a missing and an empty path alike as no public path", () => {
+		const found = changes((schema) => {
+			schema.collections.post.path = "";
+		});
+		expect(found).toEqual([{ kind: "collection_path_changed", collection: "post", from: "/posts/:slug", to: null }]);
+		const withoutPath = cloneSchema();
+		delete withoutPath.collections.post.path;
+		const emptyPath = cloneSchema();
+		emptyPath.collections.post.path = "";
+		expect(diffSchema(withoutPath as never, emptyPath as never).changes).toEqual([]);
+		const gained = diffSchema(withoutPath as never, old as never).changes;
+		expect(gained).toEqual([{ kind: "collection_path_changed", collection: "post", from: null, to: "/posts/:slug" }]);
+		expect(gained[0] && describeSchemaChange(gained[0])).toBe(
+			'collection "post" public path changed from none to /posts/:slug',
+		);
+	});
+
 	it("lists fields added and removed, and tells a required one", () => {
 		const found = changes((schema) => {
 			delete schema.collections.post.fields.cover;

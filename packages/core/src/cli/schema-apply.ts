@@ -32,6 +32,7 @@ const CONSEQUENCE: Record<ImpactConsequence, string> = {
 	warned: "content kept; every save and publish warns",
 	invalid_values: "stored values may not fit the new type; saving may be rejected",
 	kept: "data kept as it is",
+	address_changed: "public address of published entries changes; the old address stops working (no redirect)",
 };
 
 const quote = (title: string | null, id: string) => (title ? `"${title}"` : id.slice(0, 8));

@@ -6,7 +6,20 @@ import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, Box, CodeBlock, cn, Heading, Icon, IconButton, Inline, Stack, Text, toast } from "@monti-cms/ui";
+import {
+	Banner,
+	Box,
+	CodeBlock,
+	cn,
+	Heading,
+	Icon,
+	IconButton,
+	Inline,
+	Section,
+	Stack,
+	Text,
+	toast,
+} from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -19,9 +32,9 @@ import type { SchemaTab } from "../settings/tabs";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PageBody } from "../shared/page-body";
-import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
+import { type ChangeItem, changeItems, type DraftState } from "./change-list";
 import { schemaCollectionMessages } from "./collection.messages";
 import { CollectionEditor } from "./collection-editor";
 import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
@@ -36,7 +49,6 @@ import { SaveGroup } from "./save-group";
 import {
 	addCollection,
 	type ChangedAreas,
-	changeCount,
 	changedAreas,
 	collectionsOf,
 	isObj,
@@ -82,7 +94,7 @@ function FileRest({ file }: { file: Obj }) {
 		<>
 			{/* One section whose title says these are edited in the file, rather than the same note under each of them. */}
 			{rest.length > 0 && (
-				<Section wide title={t("file.title")}>
+				<Section title={t("file.title")}>
 					{rest.map(([title, value]) => (
 						<Stack key={title} gap={8}>
 							<Heading as="h4" variant="label">
@@ -94,7 +106,7 @@ function FileRest({ file }: { file: Obj }) {
 				</Section>
 			)}
 			{migrations.length > 0 && (
-				<Section wide title={t("file.migrations")}>
+				<Section title={t("file.migrations")}>
 					<Stack as="ul" gap={0}>
 						{migrations.map((migration, index) => (
 							<Inline as="li" key={String(migration.id)} gap={8} paddingY={8} border={index === 0 ? undefined : "top"}>
@@ -242,9 +254,9 @@ function SchemaEditor({
 	const selected = selectedName && liveNames.includes(selectedName) ? selectedName : liveNames[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
-	const dirty = !sameJson(pendingDraft, base);
+	const items = useMemo(() => changeItems(base, { draft, renames, removed }), [base, draft, renames, removed]);
+	const dirty = items.length > 0;
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
-	const pending = changeCount(base, pendingDraft);
 	const areas = useMemo(() => changedAreas(base, pendingDraft), [base, pendingDraft]);
 	const savedNames = Object.keys(collectionsOf(base));
 
@@ -302,13 +314,18 @@ function SchemaEditor({
 			action: { label: tCollection("collection.deleteUndo"), onClick: () => restore(name) },
 		});
 	};
+	const setState = (state: DraftState) => {
+		setDraft(state.draft);
+		setRenames([...state.renames]);
+		setRemoved([...state.removed]);
+		setIssues([]);
+	};
+	/** Puts one change back: the rest of the draft stays. */
+	const revertItem = (item: ChangeItem) => setState(item.revert({ draft, renames, removed }));
 	const discard = async () => {
 		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
-		setDraft(base);
-		setRemoved([]);
-		setRenames([]);
-		setIssues([]);
+		setState({ draft: base, renames: [], removed: [] });
 	};
 
 	// What sits on the right of the title row: the read-only note, or the save group while the draft has changes.
@@ -321,10 +338,10 @@ function SchemaEditor({
 		</Inline>
 	) : dirty ? (
 		<SaveGroup
-			count={pending}
-			removed={removals.map((item) => ({ name: item.name, label: item.label, onRestore: () => restore(item.name) }))}
+			items={items}
+			collectionLabel={(name) => String(collectionsOf(draft)[name]?.label ?? name)}
+			onRevert={revertItem}
 			disabled={state.hash === null}
-			onReview={() => setReviewing(true)}
 			onSave={() => setReviewing(true)}
 			onDiscard={() => void discard()}
 		/>

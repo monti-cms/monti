@@ -31,6 +31,7 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Section,
 	Stack,
 	Text,
 } from "@monti-cms/ui";
@@ -38,7 +39,6 @@ import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
 import { Labeled } from "../shared/labeled";
-import { Section } from "../shared/section";
 import { Pick, RevertMark, useSchemaEdit } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { type RowButton, RowButtons } from "./fields-tree-rows";
@@ -482,7 +482,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
 		<Stack gap={48}>
-			<Section wide band card={false} title={t("locales.contentTitle")} testId="locales-content">
+			<Section title={t("locales.contentTitle")} data-testid="locales-content">
 				<Box overflow="hidden">
 					<Inline justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
 						<Inline as="span" gap={8}>
@@ -518,7 +518,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 					</ul>
 				</Box>
 			</Section>
-			<Section wide band title={t("locales.defaultTitle")} testId="locales-default">
+			<Section title={t("locales.defaultTitle")} data-testid="locales-default">
 				<Pick
 					label={t("locales.default")}
 					revert={revertKey("defaultLocale")}

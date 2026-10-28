@@ -1,8 +1,7 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text } from "@monti-cms/ui";
-import { Section } from "../shared/section";
+import { Box, Section, Stack, Text } from "@monti-cms/ui";
 import { schemaAdminMessages } from "./admin.messages";
 import { FlagSwitch, Pick, useSettingRevert } from "./controls";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
@@ -31,7 +30,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
 		<Stack gap={48} data-testid="admin-settings">
-			<Section wide band title={t("admin.languageTitle")}>
+			<Section title={t("admin.languageTitle")}>
 				<Box>
 					<Pick
 						label={t("admin.locale")}
@@ -45,7 +44,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					/>
 				</Box>
 			</Section>
-			<Section wide band title={t("admin.featuresTitle")}>
+			<Section title={t("admin.featuresTitle")}>
 				<FlagSwitch
 					label={t("admin.templates")}
 					revert={revert("templates")}
@@ -59,7 +58,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					onChange={(on) => set("translations", on ? undefined : false)}
 				/>
 			</Section>
-			<Section wide band rows={false} title={t("admin.addressTitle")}>
+			<Section title={t("admin.addressTitle")}>
 				<Stack gap={8}>
 					<Box width="fit" background="muted" radius="md" paddingX={12} paddingY={8}>
 						<Text as="code" data-testid="admin-path">

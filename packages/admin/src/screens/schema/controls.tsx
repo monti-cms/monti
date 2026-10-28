@@ -25,7 +25,6 @@ import {
 } from "@monti-cms/ui";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
-import { useInSectionRow } from "../shared/section";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
@@ -213,11 +212,10 @@ export function FlagSwitch({
 }) {
 	const id = useId();
 	const { disabled: readOnly } = useSchemaEdit();
-	const inSectionRow = useInSectionRow();
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<Box maxWidth={inSectionRow ? undefined : "reading"} paddingY={inSectionRow ? 12 : undefined}>
+		<Box maxWidth="reading">
 			<Inline align="center" justify="between" gap={16}>
 				<Stack gap={2}>
 					<Text as="label" htmlFor={id} weight="medium">

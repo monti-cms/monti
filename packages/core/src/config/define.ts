@@ -47,6 +47,8 @@ export interface SiteConfig {
 	readonly aliases?: readonly string[];
 	/** Site name shown in the admin UI (sidebar, search preview, window title). Falls back to the host name of `url`. */
 	readonly name?: string;
+	/** Where the site name links to: a path starting with `/` or an http(s) URL. Default `/`. */
+	readonly homeLink?: string;
 	/**
 	 * Start of the draft preview URL (e.g. `/preview`). The `Preview` button in the editor appends the public path (collection `path`) to it.
 	 * For a non-default locale, the locale is passed in the `previewLocaleParam` query. Without it there is no preview button.

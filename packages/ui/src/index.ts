@@ -23,6 +23,7 @@ export const Banner = close(open.Banner);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
+export const ChangesGroup = close(open.ChangesGroup);
 export const DangerBlock = close(open.DangerBlock);
 export const DangerRow = close(open.DangerRow);
 export const Chip = close(open.Chip);
@@ -39,7 +40,7 @@ export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
 export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
-export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
+export type { ChangesItem, FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
 export const Checkbox = close(open.Checkbox);

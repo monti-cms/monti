@@ -261,6 +261,17 @@ describe("defineSite", () => {
 		);
 	});
 
+	it("checks the home link of the site name", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
+		for (const homeLink of ["/", "/en", "https://example.com", "http://localhost:3000/home"]) {
+			expect(() => defineSite({ ...base, site: { homeLink } })).not.toThrow();
+		}
+		expect(() => defineSite(base)).not.toThrow();
+		for (const homeLink of ["", "home", "//example.com", "ftp://example.com", "mailto:a@b.c"]) {
+			expectIssue(() => defineSite({ ...base, site: { homeLink } }), "site.homeLink", "home-link");
+		}
+	});
+
 	it("rejects a default locale outside the list and duplicate locales", () => {
 		expectIssue(
 			() => defineSite({ collections: { topic }, locales, defaultLocale: "ko" as "en" }),

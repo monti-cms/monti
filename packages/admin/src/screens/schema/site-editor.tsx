@@ -2,10 +2,9 @@
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
 import { HOST_PATTERN, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, Input, Stack, Text } from "@monti-cms/ui";
+import { Box, Button, Inline, Input, Section, Stack, Text } from "@monti-cms/ui";
 import { useState } from "react";
 import { Labeled } from "../shared/labeled";
-import { Section } from "../shared/section";
 import {
 	FlagSwitch,
 	orUndefined,
@@ -59,7 +58,7 @@ export function SiteEditor({
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
 		<Stack gap={48} data-testid="site-settings">
-			<Section wide band title={t("site.identityTitle")}>
+			<Section title={t("site.identityTitle")}>
 				<TextInput
 					label={ts("site.name")}
 					revert={revert("name")}
@@ -67,7 +66,7 @@ export function SiteEditor({
 					onChange={(value) => set("name", orUndefined(value))}
 				/>
 			</Section>
-			<Section wide band title={t("site.previewTitle")}>
+			<Section title={t("site.previewTitle")}>
 				<TextInput
 					label={t("site.previewPath")}
 					revert={revert("previewPath")}
@@ -89,7 +88,7 @@ export function SiteEditor({
 					onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
 				/>
 			</Section>
-			<Section wide band title={t("site.addressTitle")}>
+			<Section title={t("site.addressTitle")}>
 				<Pick
 					label={t("site.localePrefix")}
 					revert={revert("localePrefix")}

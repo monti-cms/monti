@@ -25,6 +25,8 @@ interface FieldShape {
 
 interface CollectionShape {
 	readonly kind: string;
+	/** The public address shape, `null` for none. */
+	readonly path: string | null;
 	readonly body: boolean;
 	readonly allowed: AllowedShape;
 	readonly fields: ReadonlyMap<string, FieldShape>;
@@ -79,6 +81,7 @@ function collectionShape(value: unknown): CollectionShape {
 	const { enabled, allowed } = bodyShape(collection);
 	return {
 		kind: typeof collection.kind === "string" ? collection.kind : "document",
+		path: typeof collection.path === "string" && collection.path !== "" ? collection.path : null,
 		body: enabled,
 		allowed,
 		fields: new Map(valueFieldsOf({ fields }).map((stored) => [stored.name, fieldShape(stored)])),
@@ -159,6 +162,9 @@ export function diffSchema(oldSchema: SchemaLike, newSchema: SchemaLike, options
 		if (!after) continue;
 		if (before.kind !== after.kind) {
 			changes.push({ kind: "collection_kind_changed", collection, from: before.kind, to: after.kind });
+		}
+		if (before.path !== after.path) {
+			changes.push({ kind: "collection_path_changed", collection, from: before.path, to: after.path });
 		}
 		if (before.body !== after.body)
 			changes.push({ kind: "body_changed", collection, from: before.body, to: after.body });
@@ -300,6 +306,8 @@ export function describeSchemaChange(change: SchemaChange): string {
 			return `collection "${change.collection}" removed`;
 		case "collection_kind_changed":
 			return `collection "${change.collection}" changed from ${change.from} to ${change.to}`;
+		case "collection_path_changed":
+			return `collection "${change.collection}" public path changed from ${change.from ?? "none"} to ${change.to ?? "none"}`;
 		case "body_changed":
 			return `${where}: body ${change.to ? "added" : "removed"}`;
 		case "allowed_changed":

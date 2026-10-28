@@ -11,6 +11,7 @@ import {
 	Heading,
 	Inline,
 	Label,
+	Section,
 	Stack,
 	Tabs,
 	TabsContent,
@@ -21,7 +22,6 @@ import {
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
-import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {
 	FlagSwitch,
@@ -197,7 +197,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section band rows={false} title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
+		<Section title={t("allowed.title")}>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
@@ -320,7 +320,7 @@ export function CollectionEditor({
 				</Inline>
 				<TabsContent value="basics">
 					<Stack gap={48} maxWidth="content">
-						<Section band title={t("collection.basicsTitle")}>
+						<Section title={t("collection.basicsTitle")}>
 							<TextInput
 								label={t("collection.label")}
 								revert={revert("label")}
@@ -349,7 +349,7 @@ export function CollectionEditor({
 								onChange={(value) => set("icon", value)}
 							/>
 						</Section>
-						<Section band title={t("collection.featuresTitle")}>
+						<Section title={t("collection.featuresTitle")}>
 							<FlagSwitch
 								label={t("collection.folders")}
 								revert={revert("folders")}

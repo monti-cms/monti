@@ -30,7 +30,9 @@ export type ImpactConsequence =
 	/** The stored values do not fit the field's new type; saving the entry may be rejected until they are fixed. */
 	| "invalid_values"
 	/** The data is kept as it is; the screen shows it differently. */
-	| "kept";
+	| "kept"
+	/** The public address of the published entries changes; the old address stops working and there is no redirect. */
+	| "address_changed";
 
 export interface ImpactSample {
 	readonly id: string;
@@ -154,6 +156,12 @@ function ruleFor(change: SchemaChange, options: CheckOptions): Rule {
 		}
 		case "collection_kind_changed":
 			return { collections: only(change.collection), touches: inCollection, consequence: "kept" };
+		case "collection_path_changed":
+			return {
+				collections: only(change.collection),
+				touches: (body) => inCollection(body) && body.state === "published",
+				consequence: "address_changed",
+			};
 		case "body_changed":
 			return change.to
 				? { collections: null, consequence: "none" }

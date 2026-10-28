@@ -38,6 +38,13 @@ export type SchemaChange =
 			readonly to: string;
 	  } & Handled)
 	| ({
+			/** The public address shape (`path`) of the collection changed. `null`: the collection had no public path before, or has none now. */
+			readonly kind: "collection_path_changed";
+			readonly collection: string;
+			readonly from: string | null;
+			readonly to: string | null;
+	  } & Handled)
+	| ({
 			/** The collection got a body or lost it. */
 			readonly kind: "body_changed";
 			readonly collection: string;
@@ -155,6 +162,7 @@ export function changeKey(change: SchemaChange): string {
 	if ("collection" in change) parts.push(change.collection);
 	if ("field" in change) parts.push(change.field);
 	if (change.kind === "field_renamed" || change.kind === "option_renamed") parts.push(change.from, change.to);
+	if (change.kind === "collection_path_changed") parts.push(change.from ?? "", change.to ?? "");
 	if (change.kind === "option_added" || change.kind === "option_removed") parts.push(change.option);
 	if (change.kind === "locale_added" || change.kind === "locale_removed") parts.push(change.locale);
 	if (change.kind === "default_locale_changed") parts.push(change.from, change.to);
