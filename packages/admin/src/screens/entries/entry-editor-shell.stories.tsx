@@ -405,7 +405,7 @@ export const ArchiveConfirm: Story = {
 const trashedDraft = {
 	...draft,
 	status: "trashed" as const,
-	trashedAt: new Date(Date.now() - 7 * 86_400_000).toISOString(),
+	deletedAt: new Date(Date.now() - 7 * 86_400_000).toISOString(),
 };
 
 export const TrashedEntry: Story = {

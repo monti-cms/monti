@@ -41,8 +41,8 @@ export function EntryEditorBanners({
 					aria-label={t("trash")}
 					title={t("trashNotice", nounVars(site, collection))}
 					meta={
-						entry?.trashedAt
-							? t("trashNoticeMeta", { days: trashDaysLeft(new Date(entry.trashedAt), new Date()) })
+						entry?.deletedAt
+							? t("trashNoticeMeta", { days: trashDaysLeft(new Date(entry.deletedAt), new Date()) })
 							: undefined
 					}
 				/>
