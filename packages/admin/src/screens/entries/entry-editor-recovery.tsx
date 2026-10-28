@@ -1,9 +1,9 @@
 "use client";
 
+import { toast } from "@monti-cms/ui";
 // The recovery-copy and conflict dialogs of the entry editor screen. Closing one hides it without answering it.
 
 import { useState } from "react";
-import { toast } from "sonner";
 import type { ConflictInfo, EntryEditor, RecoveryOffer } from "./entry-editor-types";
 import { ConflictDialog, RecoveryDialog } from "./recovery-dialogs";
 

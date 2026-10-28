@@ -1,10 +1,10 @@
 "use client";
 
 import { apiErrorOf, CmsApiError, type Site, useSite, useTranslator } from "@monti-cms/admin";
+import { Spark } from "@monti-cms/admin/kit";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import type { AiActionView } from "../actions";
 import type { AiRunContext, AiRunResult } from "../definition";
@@ -189,7 +189,7 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 				.map((action) => ({
 					id: action.key,
 					label: action.label,
-					icon: <Sparkles aria-hidden />,
+					icon: <Spark aria-hidden />,
 					menuLabel: t("slotMenu"),
 					apply: action.apply,
 					askInstruction: action.askInstruction,

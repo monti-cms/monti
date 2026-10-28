@@ -1,29 +1,27 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
-import { Button } from "./button";
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { type ReactNode, useRef } from "react";
+import { Caret } from "./caret";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
-import { IconButton } from "./icon-button";
+import { Spinner } from "./spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
-type Size = "xs" | "sm" | "default" | "lg";
-
-/** The chevron half is a square of the main half's height. */
-const MENU_SIZE = { xs: "icon-xs", sm: "icon-sm", default: "icon", lg: "icon-lg" } as const;
+// The pill is one shape, so its focus ring goes round the whole pill (the container, which `overflow-hidden` does not clip: it clips what is inside it),
+// and the half that has the focus is marked by a lighter fill, not by a line of its own.
+const HALF =
+	"inline-flex items-center border-0 bg-transparent font-semibold text-current outline-none transition-colors focus-visible:bg-[color-mix(in_srgb,var(--monti-fg-on-emphasis)_16%,transparent)] disabled:pointer-events-none";
 
 /**
- * A main action with a menu of its variants ("Publish" + "Republish with today's date"), joined into one control. Both halves share height, look
- * and outer radius; the chevron half is a square of the same height. Use this, not `ButtonGroup`, whenever one half opens a menu.
- * `menuLabel` names the chevron for screen readers and its tooltip; `menu` is the menu's items (`DropdownMenuItem`s).
- * `disabled` and `loading` apply to both halves.
+ * A main action with a menu of its variants ("Publish" + "Republish with today's date") in one ink pill. The menu holds only other ways of
+ * the same action; a first publish has no menu and is a plain primary `Button`. `menuLabel` names the caret half for screen readers and its
+ * tooltip; `menu` is the menu's items (`DropdownMenuItem`s). `disabled` and `loading` apply to both halves; a loading pill keeps its fill, and its label says what is happening.
  */
 function SplitButton({
 	children,
 	onClick,
 	id,
-	variant = "default",
-	size = "default",
 	disabled,
 	loading,
 	menuLabel,
@@ -35,49 +33,63 @@ function SplitButton({
 	onClick?: () => void;
 	/** The main button's `id`, for a skip link or a keyboard shortcut to find it. */
 	id?: string;
-	/** `default` solid, `secondary` a soft fill, `outline`. */
-	variant?: "default" | "secondary" | "outline";
-	size?: Size;
 	disabled?: boolean;
 	/** The main action is running: a spinner on the main half, and neither half can be pressed. */
 	loading?: boolean;
-	/** The chevron's name for screen readers, also shown as its tooltip. */
+	/** The caret half's name for screen readers, also shown as its tooltip. */
 	menuLabel: string;
 	/** The menu's items. */
 	menu: ReactNode;
 	/** Which edge of the control the menu lines up with. */
 	align?: "start" | "center" | "end";
 }) {
-	const outline = variant === "outline";
+	const inert = disabled || loading;
+	// The menu hangs under the whole pill, not under the caret half: its edge lines up with the pill's edge.
+	const pill = useRef<HTMLDivElement>(null);
 	return (
-		<div role="group" data-slot="split-button" className="inline-flex shrink-0 items-stretch">
-			<Button
+		<div
+			ref={pill}
+			role="group"
+			data-slot="split-button"
+			className={cn(
+				"inline-flex h-monti-control-md shrink-0 items-stretch overflow-hidden rounded-monti-full bg-monti-emphasis text-monti-body text-monti-on-emphasis has-focus-visible:ring-3 has-focus-visible:ring-monti-contrast/20",
+				disabled && "opacity-45",
+			)}
+		>
+			<ButtonPrimitive
 				id={id}
 				type="button"
-				variant={variant}
-				size={size}
-				disabled={disabled}
-				loading={loading}
+				data-slot="button"
+				disabled={inert}
+				aria-busy={loading || undefined}
 				onClick={onClick}
-				className="rounded-r-none"
+				className={cn(HALF, "gap-monti-6 rounded-l-monti-full pr-monti-12 pl-[18px]", loading && "gap-[7px] pl-[13px]")}
 			>
+				{loading && <Spinner />}
 				{children}
-			</Button>
-			{/* Solid halves are parted by a 1px strip of the page; outline halves share one border instead. */}
-			{!outline && <span aria-hidden className="w-px shrink-0 bg-monti-page" />}
+			</ButtonPrimitive>
 			<DropdownMenu>
-				<IconButton
-					label={menuLabel}
-					side="bottom"
-					variant={variant}
-					size={MENU_SIZE[size]}
-					disabled={disabled || loading}
-					className={cn("rounded-l-none", outline && "border-l-0")}
-					trigger={(button) => <DropdownMenuTrigger render={button} />}
-				>
-					<ChevronDown aria-hidden />
-				</IconButton>
-				<DropdownMenuContent align={align} width="md">
+				<Tooltip>
+					<TooltipTrigger
+						render={
+							<DropdownMenuTrigger
+								render={
+									<ButtonPrimitive
+										type="button"
+										aria-label={menuLabel}
+										disabled={inert}
+										className={cn(HALF, "relative rounded-r-monti-full pr-[13px] pl-monti-12")}
+									/>
+								}
+							/>
+						}
+					>
+						<span aria-hidden className="absolute top-1/2 left-0 h-3.5 -translate-y-1/2 border-monti-faint border-l" />
+						<Caret solo ink />
+					</TooltipTrigger>
+					<TooltipContent side="bottom">{menuLabel}</TooltipContent>
+				</Tooltip>
+				<DropdownMenuContent align={align} anchor={pill}>
 					{menu}
 				</DropdownMenuContent>
 			</DropdownMenu>

@@ -14,6 +14,16 @@ export interface UiLabels {
 	loading: string;
 	clear: string;
 	deselect: string;
+	aiFill: string;
+	aiAgain: string;
+	/** What the assistant's action says while its request runs. */
+	aiWorking: string;
+	/** What a control in the `proposal` state says besides its blue: the assistant set this value and nobody has touched it. */
+	proposal: string;
+	/** What a to-do row marked `blocking` says besides its red ring. */
+	blocking: string;
+	/** The footnote button of the format bar: a short word with its number raised ("Note¹"). */
+	footnoteMark: string;
 	paginationLabel: string;
 	paginationPrevious: string;
 	paginationPreviousPage: string;
@@ -35,6 +45,12 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	loading: "Loading",
 	clear: "Clear",
 	deselect: "Remove",
+	aiFill: "Fill",
+	aiAgain: "Again",
+	aiWorking: "Writing…",
+	proposal: "AI suggestion",
+	blocking: "Blocks publishing",
+	footnoteMark: "Note¹",
 	paginationLabel: "Pagination",
 	paginationPrevious: "Previous",
 	paginationPreviousPage: "Previous page",

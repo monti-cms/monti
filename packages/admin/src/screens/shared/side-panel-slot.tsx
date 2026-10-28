@@ -123,7 +123,7 @@ export function SidePanelPane() {
 	if (side.narrow) {
 		return (
 			<Sheet open onOpenChange={side.setOpen}>
-				<SheetContent showCloseButton={false} size="lg">
+				<SheetContent>
 					<SheetTitle render={<Text as="div" srOnly />}>{label}</SheetTitle>
 					<Component onClose={() => side.setOpen(false)} />
 				</SheetContent>

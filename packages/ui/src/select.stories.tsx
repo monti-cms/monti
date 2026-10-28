@@ -10,11 +10,20 @@ import {
 	SelectValue,
 } from "./select";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
+
+/** The label of each value: the closed select shows the chosen item's label, so it needs the list before it is ever opened. */
+const CATEGORIES = [
+	{ value: "notice", label: "공지사항" },
+	{ value: "dev", label: "개발 노트" },
+	{ value: "life", label: "일상 (비활성)" },
+	{ value: "etc", label: "그 외" },
+];
 
 const meta = {
-	title: "Controls/Select",
+	title: "Controls/Field/Select",
 	component: Select,
+	args: { items: CATEGORIES },
 } satisfies Meta<typeof Select>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -53,19 +62,17 @@ export const Playground: Story = {
 /** Both trigger sizes, with placeholder and with a value. */
 export const Sizes: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{(["sm", "default"] as const).map((size) => (
-				<Stack key={size} direction="row" gap="condensed" align="center">
-					<Text variant="caption" tone="muted">
-						{size}
-					</Text>
-					<Select>
+				<Stack key={size} direction="row" gap={8} align="center">
+					<StoryCaption>{size}</StoryCaption>
+					<Select items={CATEGORIES}>
 						<SelectTrigger size={size}>
 							<SelectValue placeholder="카테고리 고르기" />
 						</SelectTrigger>
 						<Items />
 					</Select>
-					<Select defaultValue="dev">
+					<Select items={CATEGORIES} defaultValue="dev">
 						<SelectTrigger size={size}>
 							<SelectValue />
 						</SelectTrigger>
@@ -77,16 +84,23 @@ export const Sizes: Story = {
 	),
 };
 
+/** Disabled, proposal (the assistant picked it: blue), invalid (red underline). */
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
-			<Select disabled>
+		<Stack direction="row" gap={16} align="center">
+			<Select items={CATEGORIES} disabled>
 				<SelectTrigger>
 					<SelectValue placeholder="비활성" />
 				</SelectTrigger>
 				<Items />
 			</Select>
-			<Select defaultValue="notice">
+			<Select items={CATEGORIES} defaultValue="notice">
+				<SelectTrigger proposal>
+					<SelectValue />
+				</SelectTrigger>
+				<Items />
+			</Select>
+			<Select items={CATEGORIES} defaultValue="notice">
 				<SelectTrigger aria-invalid>
 					<SelectValue />
 				</SelectTrigger>
@@ -100,7 +114,7 @@ export const States: Story = {
 export const Open: Story = {
 	render: () => (
 		<Stack className="min-h-72">
-			<Select defaultOpen defaultValue="dev">
+			<Select items={CATEGORIES} defaultOpen defaultValue="dev">
 				<SelectTrigger>
 					<SelectValue />
 				</SelectTrigger>

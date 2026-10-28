@@ -1,8 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/admin";
-import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { AlertOctagon } from "lucide-react";
+import { Banner, cn, FormFieldError } from "@monti-cms/admin/kit";
 import { useMemo, useState } from "react";
 import {
 	Area,
@@ -42,20 +41,9 @@ import {
 function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
-		<div className="not-prose my-spacious">
-			<Alert tone="danger">
-				<AlertOctagon />
-				<AlertTitle>{t("error.title")}</AlertTitle>
-				<AlertDescription>
-					<ul className="ml-comfortable list-disc space-y-tight">
-						{errors.map((error) => (
-							<li key={`${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`}>
-								{chartErrorLine(error, t)}
-							</li>
-						))}
-					</ul>
-				</AlertDescription>
-			</Alert>
+		<div className="not-prose my-monti-24 flex flex-col gap-monti-8">
+			<Banner tone="danger" title={t("error.title")} />
+			<FormFieldError errors={errors.map((error) => ({ message: chartErrorLine(error, t) }))} />
 		</div>
 	);
 }
@@ -126,7 +114,7 @@ function CartesianPreview({ spec, className }: { spec: CartesianChartSpec; class
 	const Chart = CARTESIAN[spec.type];
 	const [legendHeight, setLegendHeight] = useState(CHART_LEGEND_HEIGHT);
 	return (
-		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-spacious w-full min-w-0", className)}>
+		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-monti-24 w-full min-w-0", className)}>
 			<Chart
 				accessibilityLayer
 				data={spec.data}
@@ -160,7 +148,7 @@ function CartesianPreview({ spec, className }: { spec: CartesianChartSpec; class
 function PiePreview({ spec, className }: { spec: PieChartSpec; className?: string }) {
 	const [legendHeight, setLegendHeight] = useState(CHART_LEGEND_HEIGHT);
 	return (
-		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-spacious w-full min-w-0", className)}>
+		<ChartContainer config={toChartConfig(spec)} className={cn("not-prose my-monti-24 w-full min-w-0", className)}>
 			<PieChart>
 				<ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey={spec.labelKey} />} />
 				{spec.options.showLegend ? (

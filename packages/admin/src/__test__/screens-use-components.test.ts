@@ -125,7 +125,7 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/shared/status-bar.tsx",
-		"the status bar is a dense strip with its own item, popup row and header look that no other screen shares",
+		"the status bar's popups are dense lists with their own row and header look that no other screen shares (the bar and its cells are design-system parts)",
 	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],

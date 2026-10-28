@@ -3,17 +3,15 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 import { cn } from "./cn";
 
-/** How far a long step is: a bar that fills to `value` (0–100), or moves on its own while the amount is unknown (`value` null). */
-function Progress({ value, label, className }: { value: number | null; label: string; className?: string }) {
+/**
+ * How far a long step is: a 3px bar that fills to `value` (0–100), on a `border-default` track, radius 2. A step whose length cannot be measured
+ * (getting ready, finishing up) has no bar: it says so in words instead.
+ */
+function Progress({ value, label, className }: { value: number; label: string; className?: string }) {
 	return (
 		<ProgressPrimitive.Root value={value} aria-label={label} data-slot="progress" className={cn("w-full", className)}>
-			<ProgressPrimitive.Track className="relative h-1 w-full overflow-hidden rounded-full bg-monti-neutral">
-				<ProgressPrimitive.Indicator
-					className={cn(
-						"h-full rounded-full bg-monti-accent-emphasis transition-[width] duration-300",
-						value === null && "absolute w-1/3 animate-monti-progress",
-					)}
-				/>
+			<ProgressPrimitive.Track className="relative h-[3px] w-full overflow-hidden rounded-[2px] bg-(--monti-border-default)">
+				<ProgressPrimitive.Indicator className="h-full bg-(--monti-fg-default) transition-[width] duration-300" />
 			</ProgressPrimitive.Track>
 		</ProgressPrimitive.Root>
 	);

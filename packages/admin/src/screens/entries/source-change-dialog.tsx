@@ -59,15 +59,15 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	const after = change.kind === "removed" ? null : change.after;
 	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
-		<Stack as="li" gap="condensed" border="all" radius="md" padding="normal">
-			<Box background="neutral" radius="sm" paddingX="condensed" paddingY="hair" width="fit">
+		<Stack as="li" gap={8} border="all" radius="md" padding={12}>
+			<Box background="muted" radius="sm" paddingX={8} paddingY={2} width="fit">
 				<Text variant="caption" weight="medium">
 					{label}
 				</Text>
 			</Box>
-			<Grid columns={2} gap="normal">
+			<Grid columns={2} gap={12}>
 				{before && (
-					<Stack gap="tight" minWidth={0}>
+					<Stack gap={4} minWidth={0}>
 						<Text as="p" variant="caption" tone="muted">
 							{t("sourceChange.before")}
 						</Text>
@@ -75,7 +75,7 @@ function ChangeItem({ change }: { change: SourceChange }) {
 					</Stack>
 				)}
 				{after && (
-					<Stack gap="tight" minWidth={0}>
+					<Stack gap={4} minWidth={0}>
 						<Text as="p" variant="caption" tone="muted">
 							{t("sourceChange.after")}
 						</Text>
@@ -119,7 +119,7 @@ export function SourceChangeDialog({
 						{t("sourceChange.none")}
 					</Text>
 				) : (
-					<Stack as="ol" gap="normal">
+					<Stack as="ol" gap={12}>
 						{changes.map((change, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: the change list's identity is document order
 							<ChangeItem key={index} change={change} />

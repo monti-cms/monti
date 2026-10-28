@@ -24,7 +24,7 @@ export const chartBlock = defineBlock({
 		get keywords() {
 			return ["chart", ...keywordList(t("keywords"))];
 		},
-		icon: "chart-column",
+		icon: "chart--column",
 		get placeholder() {
 			return t("placeholder");
 		},

@@ -13,8 +13,8 @@ function List({
 		<Tag
 			data-slot="list"
 			className={cn(
-				"flex flex-col gap-tight text-monti-label",
-				marker === "bullet" && (ordered ? "list-decimal pl-comfortable" : "list-disc pl-comfortable"),
+				"flex flex-col gap-monti-4 text-monti-label",
+				marker === "bullet" && (ordered ? "list-decimal pl-monti-16" : "list-disc pl-monti-16"),
 				className,
 			)}
 			{...props}

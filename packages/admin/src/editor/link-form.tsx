@@ -1,10 +1,10 @@
 "use client";
 
+import { Unlink } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, FormFieldError, Inline, Input, Label, Stack, Text } from "@monti-cms/ui";
+import { Button, FormFieldError, Inline, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
-import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
@@ -85,15 +85,15 @@ export function PopoverFormFooter({
 }) {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline gap="condensed" justify={onRemove ? "between" : "end"}>
+		<Inline gap={8} justify={onRemove ? "between" : "end"}>
 			{onRemove && (
-				<Button type="button" variant="ghost" tone="danger" size="sm" onClick={onRemove}>
+				<TextButton type="button" variant="danger" onClick={onRemove}>
 					{removeIcon}
 					{removeLabel}
-				</Button>
+				</TextButton>
 			)}
-			<Inline gap="condensed">
-				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
+			<Inline gap={8}>
+				<Button type="button" variant="secondary" size="sm" onClick={onCancel}>
 					{tc("cancel")}
 				</Button>
 				<Button type="submit" size="sm">
@@ -167,13 +167,13 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 	};
 
 	return (
-		<Stack as="form" gap="normal" onSubmit={submit} onKeyDown={submitOnEnter}>
+		<Stack as="form" gap={12} onSubmit={submit} onKeyDown={submitOnEnter}>
 			<Text as="p" weight="medium">
 				{draft.existing ? t("link.edit") : t("link.add")}
 			</Text>
 			{draft.entryId && <LinkTargetSummary entryId={draft.entryId} />}
 			{needsText && (
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<Label htmlFor={`${id}-text`} size="caption">
 						{t("link.text")}
 					</Label>
@@ -185,7 +185,7 @@ export function LinkForm({ editor, draft, onDone }: LinkFormProps) {
 					/>
 				</Stack>
 			)}
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				<Label htmlFor={`${id}-href`} size="caption">
 					{t("link.href")}
 				</Label>

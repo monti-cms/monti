@@ -2,8 +2,8 @@ import { Box, FormFieldDescription, FormFieldLabel, Inline, Stack, Text, FormFie
 import type { ReactNode } from "react";
 import { useInSectionRow } from "./section";
 
-/** How wide the control of a field is: controls share a unified editorial column width (`prose`), while `full` spans the whole container. */
-const CONTROL_MAX_WIDTH = { narrow: "prose", normal: "prose", wide: "prose", full: undefined } as const;
+/** How wide the control of a field is: controls share a unified editorial column width (`reading`), while `full` spans the whole container. */
+const CONTROL_MAX_WIDTH = { narrow: "reading", normal: "reading", wide: "reading", full: undefined } as const;
 export type ControlWidth = keyof typeof CONTROL_MAX_WIDTH;
 
 export function Labeled({
@@ -14,6 +14,7 @@ export function Labeled({
 	htmlFor,
 	control = "normal",
 	aside,
+	required,
 }: {
 	label: ReactNode;
 	/** A field description explaining what the setting is, placed between label and control. */
@@ -25,10 +26,12 @@ export function Labeled({
 	control?: ControlWidth;
 	/** Next to the label on the same line (a change marker, a revert button). */
 	aside?: ReactNode;
+	/** The field must be filled in: the label ends with a red star. Only in a form that also has optional fields; the control carries the real `required`. */
+	required?: boolean;
 }) {
 	const inSectionRow = useInSectionRow();
 	const labelNode = (
-		<FormFieldLabel htmlFor={htmlFor}>
+		<FormFieldLabel htmlFor={htmlFor} required={required}>
 			<Text variant="body" weight="medium">
 				{label}
 			</Text>
@@ -38,10 +41,10 @@ export function Labeled({
 	if (inSectionRow && control !== "full") {
 		return (
 			<UiField>
-				<Inline align="center" justify="between" gap="spacious" paddingY="normal">
-					<Stack gap="hair" minWidth={0}>
+				<Inline align="center" justify="between" gap={24} paddingY={12}>
+					<Stack gap={2} minWidth={0}>
 						{aside ? (
-							<Inline gap="condensed">
+							<Inline gap={8}>
 								{labelNode}
 								{aside}
 							</Inline>
@@ -49,12 +52,12 @@ export function Labeled({
 							labelNode
 						)}
 						{description && (
-							<Box maxWidth="prose">
+							<Box maxWidth="reading">
 								<FormFieldDescription>{description}</FormFieldDescription>
 							</Box>
 						)}
 					</Stack>
-					<Stack gap="tight" width="full" maxWidth="panel">
+					<Stack gap={4} width="full" maxWidth="panel">
 						<Box width="full">{children}</Box>
 						{hint && <FormFieldDescription>{hint}</FormFieldDescription>}
 					</Stack>
@@ -65,9 +68,9 @@ export function Labeled({
 
 	return (
 		<UiField>
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				{aside ? (
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						{labelNode}
 						{aside}
 					</Inline>
@@ -75,7 +78,7 @@ export function Labeled({
 					labelNode
 				)}
 				{description && (
-					<Box maxWidth="prose">
+					<Box maxWidth="reading">
 						<FormFieldDescription>{description}</FormFieldDescription>
 					</Box>
 				)}
@@ -83,7 +86,7 @@ export function Labeled({
 					{children}
 				</Box>
 				{hint && (
-					<Box maxWidth="prose">
+					<Box maxWidth="reading">
 						<FormFieldDescription>{hint}</FormFieldDescription>
 					</Box>
 				)}

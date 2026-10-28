@@ -1,8 +1,8 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline } from "@monti-cms/ui";
-import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
@@ -46,7 +46,7 @@ export function SidePanelHeader({
 }) {
 	const t = useTranslator(commonMessages);
 	return (
-		<Inline gap="tight" shrink={false} border="bottom" paddingY="condensed" paddingX="comfortable">
+		<Inline gap={4} shrink={false} border="bottom" paddingY={8} paddingX={16}>
 			{title !== undefined && (
 				<Box grow minWidth={0}>
 					<Heading as="h2" variant="label" truncate>
@@ -56,7 +56,7 @@ export function SidePanelHeader({
 			)}
 			{children}
 			<IconButton label={t("close")} side="bottom" onClick={onClose}>
-				<X aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 		</Inline>
 	);

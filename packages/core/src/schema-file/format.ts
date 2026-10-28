@@ -179,7 +179,7 @@ const collectionShape = {
 			"Field name -> definition. One text field is the title: the one with role `title`, or, when none has it, the one named `title`.",
 		),
 	path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
-	icon: text.optional().describe("Admin sidebar icon name (lucide)."),
+	icon: text.optional().describe("Admin sidebar icon name (Carbon)."),
 	folders: flag.optional().describe("Whether entries can be organized into virtual folders."),
 	defaultTab: text.optional().describe("Custom title for the default properties tab."),
 	layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),

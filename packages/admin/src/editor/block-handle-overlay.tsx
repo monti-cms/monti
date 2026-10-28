@@ -1,17 +1,15 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Copy, Draggable, TrashCan } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 	IconButton,
-	Spinner,
+	MenuShortcut,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -58,15 +56,8 @@ export function BlockHandleOverlay({
 			className="flex items-center"
 		>
 			{actions.map((action) => (
-				<IconButton
-					key={action.id}
-					label={action.label}
-					side="bottom"
-					size="icon-xs"
-					disabled={action.busy}
-					onClick={action.onClick}
-				>
-					{action.busy ? <Spinner size="sm" /> : action.icon}
+				<IconButton key={action.id} label={action.label} side="bottom" disabled={action.busy} onClick={action.onClick}>
+					{action.icon}
 				</IconButton>
 			))}
 			{/* Must not be modal: clicking the handle opens the menu, and a modal backdrop intercepting dragover/drop would keep the drag from ending. */}
@@ -74,7 +65,6 @@ export function BlockHandleOverlay({
 				<IconButton
 					label={t("blockHandle.label")}
 					side="bottom"
-					size="icon-xs"
 					draggable
 					onDragStart={(event) => {
 						// A menu opened on press closes when dragging starts.
@@ -84,29 +74,28 @@ export function BlockHandleOverlay({
 					onDragEnd={onDragEnd}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
-					<GripVertical aria-hidden />
+					<Draggable aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="start" side="right" width="lg">
+				<DropdownMenuContent align="start" side="right">
 					<DropdownMenuItem onClick={onMoveUp}>
 						<ArrowUp aria-hidden />
 						{t("blockHandle.moveUp")}
-						<DropdownMenuShortcut>⌥↑</DropdownMenuShortcut>
+						<MenuShortcut>⌥↑</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={onMoveDown}>
 						<ArrowDown aria-hidden />
 						{t("blockHandle.moveDown")}
-						<DropdownMenuShortcut>⌥↓</DropdownMenuShortcut>
+						<MenuShortcut>⌥↓</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={onDuplicate}>
 						<Copy aria-hidden />
 						{t("blockHandle.duplicate")}
-						<DropdownMenuShortcut>⇧⌘D</DropdownMenuShortcut>
+						<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
-					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="danger" onClick={onDelete}>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 						{tc("delete")}
-						<DropdownMenuShortcut>⇧⌘⌫</DropdownMenuShortcut>
+						<MenuShortcut>⇧⌘⌫</MenuShortcut>
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

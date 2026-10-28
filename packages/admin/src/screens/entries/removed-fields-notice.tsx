@@ -18,9 +18,9 @@ export function RemovedFieldsNotice({
 	const keys = site.isCollection(collection) ? site.orphanedMetadataKeys(collection, metadata ?? {}) : [];
 	if (keys.length === 0) return null;
 	return (
-		<Box paddingBottom="comfortable">
-			<Box role="note" padding="normal" border="dashed" radius="md">
-				<Stack gap="tight">
+		<Box paddingBottom={16}>
+			<Box role="note" padding={12} border="dashed" radius="md">
+				<Stack gap={4}>
 					<Text as="p" variant="caption" tone="muted" weight="medium">
 						{t("inspector.removed.title")}
 					</Text>

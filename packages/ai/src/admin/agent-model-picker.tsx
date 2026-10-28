@@ -12,6 +12,7 @@ import {
 	Inline,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/admin/kit";
 import { useState } from "react";
 import type { AiProviderView, AiSettingsView } from "../connection";
@@ -82,12 +83,12 @@ export function AgentModelPicker({
 
 	if (chatConnections.length === 0) return null;
 	return (
-		<Box border="bottom" paddingX="comfortable" paddingY="normal" shrink={false}>
-			<Stack gap="condensed">
+		<Box border="bottom" paddingX={16} paddingY={12} shrink={false}>
+			<Stack gap={8}>
 				<Heading as="h2" variant="label">
 					{t("picker.title")}
 				</Heading>
-				<Grid gap="comfortable" columns={2}>
+				<Grid gap={16} columns={2}>
 					<FormField>
 						<FormFieldLabel htmlFor="agent-connection">{t("picker.connection")}</FormFieldLabel>
 						<OptionSelect
@@ -124,25 +125,23 @@ export function AgentModelPicker({
 						)}
 					</FormField>
 				</Grid>
-				<Inline gap="condensed" justify="between">
+				<Inline gap={8} justify="between">
 					<Text variant="caption" tone={tools === false ? "danger" : "muted"}>
 						{provider && model
 							? t(tools === undefined ? "picker.tools.unknown" : tools ? "picker.tools.yes" : "picker.tools.no")
 							: ""}
 					</Text>
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						{chosen && (
-							<Button
+							<TextButton
 								type="button"
-								variant="ghost"
-								size="sm"
 								onClick={() => {
 									setProviderId(DEFAULT_CONNECTION);
 									setModel("");
 								}}
 							>
 								{t("picker.reset")}
-							</Button>
+							</TextButton>
 						)}
 						<Button type="button" size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate(undefined)}>
 							{t("picker.save")}

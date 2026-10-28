@@ -28,7 +28,7 @@ export function DataScreen() {
 		<ShellPage title={t("title")} nav="data">
 			<Box grow minHeight={0} overflow="y">
 				<PageBody data-testid="data-screen">
-					<Stack gap="section">
+					<Stack gap={48}>
 						<Section wide band rows={false} title={te("data.title")} testId="site-backup">
 							<ExportFields form={form} />
 							<ExportProgressLine phase={form.phase} />

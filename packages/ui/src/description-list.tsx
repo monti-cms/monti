@@ -2,15 +2,17 @@ import type * as React from "react";
 import { cn } from "./cn";
 
 /**
- * Label and value rows (an event's details, a file's information). The label column has one width, so values line up; long values wrap.
- * `layout="stacked"` puts each label above its value, for a narrow panel.
+ * Label and value rows (an event's details, a file's information). The label column is 76px wide, so values line up; long values wrap. Labels are quiet,
+ * values a step darker, both at the regular weight.
  */
-function DescriptionList({
-	className,
-	layout = "columns",
-	...props
-}: React.ComponentProps<"dl"> & { layout?: "columns" | "stacked" }) {
-	return <dl data-slot="description-list" data-layout={layout} className={cn("flex flex-col", className)} {...props} />;
+function DescriptionList({ className, ...props }: React.ComponentProps<"dl">) {
+	return (
+		<dl
+			data-slot="description-list"
+			className={cn("m-0 flex flex-col gap-y-monti-8 text-monti-note", className)}
+			{...props}
+		/>
+	);
 }
 
 function DescriptionItem({
@@ -22,14 +24,11 @@ function DescriptionItem({
 	return (
 		<div
 			data-slot="description-item"
-			className={cn(
-				"grid grid-cols-[8rem_minmax(0,1fr)] in-data-[layout=stacked]:grid-cols-1 gap-normal in-data-[layout=stacked]:gap-tight py-condensed text-monti-label",
-				className,
-			)}
+			className={cn("grid grid-cols-[76px_minmax(0,1fr)] gap-x-monti-12", className)}
 			{...props}
 		>
-			<dt className="text-monti-muted">{label}</dt>
-			<dd className="min-w-0 break-words">{children}</dd>
+			<dt className="text-monti-subtle">{label}</dt>
+			<dd className="m-0 min-w-0 break-words text-monti-muted">{children}</dd>
 		</div>
 	);
 }

@@ -1,137 +1,70 @@
 import { cva, type VariantProps } from "class-variance-authority";
+import {
+	BACKGROUND,
+	HEIGHT,
+	MAX_WIDTH,
+	MIN_HEIGHT,
+	PADDING,
+	PADDING_BOTTOM,
+	PADDING_TOP,
+	PADDING_X,
+	PADDING_Y,
+	RADIUS,
+	WIDTH,
+} from "./tokens.generated";
 
 /**
  * The options every layout part shares (Box, Stack, Inline, Grid): padding, a surface, a border, a radius, a size and how it grows, all by
- * token name. A screen arranges with these and never writes a class; anything they cannot say belongs in a component of its own.
+ * the design system's token names (`padding={16}`, `background="tool"`, `radius="lg"`, `width="sheet"`). A screen arranges with these and never
+ * writes a class; anything they cannot say belongs in a component of its own.
  */
-/** Written out in full so Tailwind finds every class in this file. */
+/** Every class is written out in full (here or in `tokens.generated.ts`) so Tailwind finds it. */
 export const LAYOUT = {
-	padding: {
-		none: "p-0",
-		hair: "p-hair",
-		tight: "p-tight",
-		condensed: "p-condensed",
-		normal: "p-normal",
-		comfortable: "p-comfortable",
-		spacious: "p-spacious",
-		wide: "p-wide",
-		section: "p-section",
-	},
-	paddingX: {
-		none: "px-0",
-		hair: "px-hair",
-		tight: "px-tight",
-		condensed: "px-condensed",
-		normal: "px-normal",
-		comfortable: "px-comfortable",
-		spacious: "px-spacious",
-		wide: "px-wide",
-		section: "px-section",
-	},
-	paddingY: {
-		none: "py-0",
-		hair: "py-hair",
-		tight: "py-tight",
-		condensed: "py-condensed",
-		normal: "py-normal",
-		comfortable: "py-comfortable",
-		spacious: "py-spacious",
-		wide: "py-wide",
-		section: "py-section",
-	},
-	paddingTop: {
-		none: "pt-0",
-		hair: "pt-hair",
-		tight: "pt-tight",
-		condensed: "pt-condensed",
-		normal: "pt-normal",
-		comfortable: "pt-comfortable",
-		spacious: "pt-spacious",
-		wide: "pt-wide",
-		section: "pt-section",
-	},
-	paddingBottom: {
-		none: "pb-0",
-		hair: "pb-hair",
-		tight: "pb-tight",
-		condensed: "pb-condensed",
-		normal: "pb-normal",
-		comfortable: "pb-comfortable",
-		spacious: "pb-spacious",
-		wide: "pb-wide",
-		section: "pb-section",
-	},
-	background: {
-		page: "bg-monti-page",
-		surface: "bg-monti-surface",
-		inset: "bg-monti-inset",
-		overlay: "bg-monti-overlay",
-		neutral: "bg-monti-neutral",
-		selected: "bg-monti-selected",
-		"accent-muted": "bg-monti-accent-muted",
-		"danger-muted": "bg-monti-danger-muted",
-		"warning-muted": "bg-monti-warning-muted",
-		"success-muted": "bg-monti-success-muted",
-	},
-	/** A hairline on every side, or on one; `default` is the stronger line of a control. */
+	padding: PADDING,
+	paddingX: PADDING_X,
+	paddingY: PADDING_Y,
+	paddingTop: PADDING_TOP,
+	paddingBottom: PADDING_BOTTOM,
+	background: BACKGROUND,
+	/** A hairline on every side, or on one; `bottom-contrast` is the ink rule under a page title (1px, the design system's `border-contrast`). */
 	border: {
 		all: "border border-monti-muted",
 		top: "border-t border-monti-muted",
 		bottom: "border-b border-monti-muted",
-		"bottom-strong": "border-b-[1.5px] border-monti-accent",
+		"bottom-contrast": "border-b border-monti-contrast",
 		left: "border-l border-monti-muted",
 		right: "border-r border-monti-muted",
 		y: "border-y border-monti-muted",
 		x: "border-x border-monti-muted",
-		default: "border border-monti-default",
-		danger: "border border-monti-danger-muted",
+		danger: "border border-monti-danger/40",
 		dashed: "border border-dashed border-monti-default",
 	},
 	/** A 1px hairline between each child in a column. */
 	divided: { true: "divide-y divide-monti-muted" },
-	radius: { sm: "rounded-sm", md: "rounded-md", lg: "rounded-lg", xl: "rounded-xl", full: "rounded-full" },
-	width: {
-		full: "w-full",
-		auto: "w-auto",
-		fit: "w-fit",
-		"panel-sm": "w-panel-sm",
-		panel: "w-panel",
-		"panel-lg": "w-panel-lg",
-		sidebar: "w-sidebar",
-	},
-	maxWidth: {
-		full: "max-w-full",
-		"panel-sm": "max-w-panel-sm",
-		panel: "max-w-panel",
-		"panel-lg": "max-w-panel-lg",
-		prose: "max-w-prose",
-		content: "max-w-content",
-		page: "max-w-page",
-		/** A detail pane's readable column (768px). */
-		detail: "max-w-3xl",
-	},
+	radius: RADIUS,
+	/** `full`, `auto` and `fit` are sizes of their own; the rest are the width tokens. */
+	width: { full: "w-full", auto: "w-auto", fit: "w-fit", ...WIDTH },
+	maxWidth: { full: "max-w-full", ...MAX_WIDTH },
 	/** `0` lets a flex child shrink below its content (long text truncates instead of pushing the row wider). */
 	minWidth: { 0: "min-w-0" },
-	height: {
-		full: "h-full",
-		auto: "h-auto",
-		screen: "h-svh",
-		control: "h-control",
-		"control-sm": "h-control-sm",
-		header: "h-header",
-	},
+	/** `full`, `auto` and `screen` are sizes of their own; the rest are the height tokens. */
+	height: { full: "h-full", auto: "h-auto", screen: "h-svh", ...HEIGHT },
 	/** A scrolling area's limit: `list` 384px (a list in a card or dialog), `half` half the window, `menu` 320px. Pair with `overflow="y"`. */
 	maxHeight: { list: "max-h-96", half: "max-h-[50vh]", menu: "max-h-80" },
-	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", header: "min-h-header" },
+	minHeight: { 0: "min-h-0", full: "min-h-full", screen: "min-h-svh", empty: "min-h-64", ...MIN_HEIGHT },
 	grow: { true: "flex-1" },
 	shrink: { false: "shrink-0" },
-	/** `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). */
+	/**
+	 * `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). A scrolling box (`auto`, `y`,
+	 * `x`) is `relative`: the screen-reader-only inputs inside it (a radio, a combobox) are placed in the box and scroll with it, instead of in the page around it,
+	 * where they would stretch the page past its window.
+	 */
 	overflow: {
-		auto: "overflow-auto",
+		auto: "relative overflow-auto",
 		hidden: "overflow-hidden",
 		clip: "overflow-clip",
-		y: "overflow-y-auto",
-		x: "overflow-x-auto",
+		y: "relative overflow-y-auto",
+		x: "relative overflow-x-auto",
 	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */
 	hideBelow: { sm: "max-sm:hidden", md: "max-md:hidden", lg: "max-lg:hidden" },
@@ -146,12 +79,12 @@ export const LAYOUT = {
 	position: { relative: "relative", sticky: "sticky top-0 z-10" },
 	/** Pinned to a corner of the nearest `position="relative"` parent (a badge or an action on a tile). */
 	place: {
-		"top-left": "absolute top-condensed left-condensed",
-		"top-right": "absolute top-condensed right-condensed",
-		"bottom-right": "absolute right-condensed bottom-condensed",
+		"top-left": "absolute top-monti-8 left-monti-8",
+		"top-right": "absolute top-monti-8 right-monti-8",
+		"bottom-right": "absolute right-monti-8 bottom-monti-8",
 	},
 	/** A row or item that reacts to the pointer. */
-	hover: { true: "transition-colors hover:bg-monti-hover" },
+	hover: { true: "transition-colors hover:bg-monti-selected" },
 	/** Inside a `Grid`: spans every column (a wide field in a two-column form). */
 	span: { all: "col-span-full" },
 	/** Out of date while new content loads, or not available: shown, but quieter. */
@@ -159,7 +92,7 @@ export const LAYOUT = {
 	/** Centered in a wider parent (a detail pane's column under its list). */
 	centered: { true: "mx-auto" },
 	/** One of a run of bands: a hairline and space above every one but the first. */
-	band: { true: "border-t border-monti-muted pt-wide first:border-t-0 first:pt-0" },
+	band: { true: "border-t border-monti-muted pt-monti-32 first:border-t-0 first:pt-0" },
 } as const;
 
 export const layoutVariants = cva("", { variants: LAYOUT });

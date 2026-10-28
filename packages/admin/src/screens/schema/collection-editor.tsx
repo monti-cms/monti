@@ -1,5 +1,6 @@
 "use client";
 
+import { TrashCan } from "@carbon/icons-react";
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -16,14 +17,12 @@ import {
 	TabsTrigger,
 	Text,
 } from "@monti-cms/ui";
-import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import {
-	ChangeDot,
 	FlagSwitch,
 	IssueList,
 	orUndefined,
@@ -111,16 +110,16 @@ function LimitList<T extends string | number>({
 		<Stack
 			role="group"
 			aria-label={label}
-			gap="normal"
+			gap={12}
 			border={divided ? "top" : undefined}
-			paddingTop={divided ? "spacious" : undefined}
+			paddingTop={divided ? 24 : undefined}
 		>
 			<Inline justify="between">
-				<Inline as="span" gap="condensed">
+				<Inline as="span" gap={8}>
 					<Text weight="medium">{label}</Text>
 					{revert && <RevertMark name={label} onRevert={revert} />}
 				</Inline>
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Checkbox
 						id={allId}
 						checked={allAllowed}
@@ -133,12 +132,12 @@ function LimitList<T extends string | number>({
 					</Label>
 				</Inline>
 			</Inline>
-			<Grid as="ul" columns={3} gap="condensed">
+			<Grid as="ul" columns={3} gap={8}>
 				{all.map((item) => {
 					const id = `allowed-${label}-${item}`;
 					const checked = value === undefined || value.includes(item);
 					return (
-						<Inline as="li" key={String(item)} gap="condensed">
+						<Inline as="li" key={String(item)} gap={8}>
 							<Checkbox
 								id={id}
 								checked={checked}
@@ -285,12 +284,12 @@ export function CollectionEditor({
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<Stack gap="spacious" minWidth={0} data-testid={`collection-${name}`}>
+		<Stack gap={24} minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
 			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
-				<Inline align="end" justify="between" gap="comfortable" border="bottom-strong" paddingBottom="normal">
+				<Inline align="end" justify="between" gap={16} border="bottom-contrast" paddingBottom={12}>
 					<Box minWidth={0}>
-						<Inline align="baseline" gap="condensed">
+						<Inline align="baseline" gap={8}>
 							<Heading as="h3">{label}</Heading>
 							<Text as="code" variant="caption" tone="muted">
 								{name}
@@ -301,24 +300,21 @@ export function CollectionEditor({
 						</Text>
 					</Box>
 					<TabsList variant="line">
-						<TabsTrigger value="basics">
+						<TabsTrigger value="basics" dot={changes?.basics ? "warning" : undefined} dotLabel={ts("changed")}>
 							{t("collection.tabs.basics")}
-							{changes?.basics && <ChangeDot />}
 						</TabsTrigger>
-						<TabsTrigger value="fields">
+						<TabsTrigger value="fields" dot={changes?.fields ? "warning" : undefined} dotLabel={ts("changed")}>
 							{t("collection.tabs.fields")}
-							{changes?.fields && <ChangeDot />}
 						</TabsTrigger>
 						{isEditorAvailable && (
-							<TabsTrigger value="editor">
+							<TabsTrigger value="editor" dot={changes?.editor ? "warning" : undefined} dotLabel={ts("changed")}>
 								{t("collection.tabs.editor")}
-								{changes?.editor && <ChangeDot />}
 							</TabsTrigger>
 						)}
 					</TabsList>
 				</Inline>
 				<TabsContent value="basics">
-					<Stack gap="section" maxWidth="page">
+					<Stack gap={48} maxWidth="content">
 						<Section band title={t("collection.basicsTitle")}>
 							<TextInput
 								label={t("collection.label")}
@@ -383,9 +379,9 @@ export function CollectionEditor({
 							/>
 						</Section>
 						<Section band title={t("collection.dangerTitle")} card={false}>
-							<Inline justify="end" paddingY="normal">
-								<Button type="button" variant="outline" tone="danger" size="sm" disabled={disabled} onClick={onRemove}>
-									<Trash2 aria-hidden />
+							<Inline justify="end" paddingY={12}>
+								<Button type="button" variant="outline-danger" size="sm" disabled={disabled} onClick={onRemove}>
+									<TrashCan aria-hidden />
 									{ts("collection.remove")}
 								</Button>
 							</Inline>
@@ -397,7 +393,7 @@ export function CollectionEditor({
 				</TabsContent>
 				{isEditorAvailable && (
 					<TabsContent value="editor">
-						<Box maxWidth="page">
+						<Box maxWidth="content">
 							<AllowedEditor collection={collection} saved={savedCollection} update={onChange} />
 						</Box>
 					</TabsContent>

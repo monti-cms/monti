@@ -1,24 +1,36 @@
+"use client";
+
 import type * as React from "react";
 import { cn } from "./cn";
+import { useProposalDescription } from "./proposal-cue";
 
+/** Several lines, drawn like `Input`: an underline, never a box. `proposal` marks text the assistant wrote and nobody has touched. */
 function Textarea({
 	className,
 	size = "default",
 	mono = false,
+	proposal = false,
 	...props
 }: React.ComponentProps<"textarea"> & {
-	/** `sm` writes at the label size, for compact panels; `default` at the reading size on a phone and body size above. */
+	/** `sm` writes at the note size, for compact panels; `default` at the reading size on a phone and body size above. */
 	size?: "sm" | "default";
 	/** Fixed-width letters for code and source text. */
 	mono?: boolean;
+	/** The assistant wrote this text and nobody has touched it yet. Turn it off when the text is edited. */
+	proposal?: boolean;
 }) {
 	return (
 		<textarea
 			data-slot="textarea"
 			data-size={size}
+			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"field-sizing-content flex min-h-16 w-full rounded-md border border-monti-default bg-monti-surface px-2.5 py-2 shadow-monti-control outline-none transition-[color,border-color,box-shadow] placeholder:text-monti-subtle hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft",
-				size === "sm" ? "text-monti-label" : "text-monti-reading md:text-monti-body",
+				"field-sizing-content flex w-full resize-none rounded-none border-0 border-monti-default border-b bg-transparent py-monti-6 text-monti-default outline-none transition-colors placeholder:text-monti-faint focus-visible:border-monti-contrast disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal",
+				// The design system's textarea sets lines 1.6 times its size; the type role's own line height comes first, so the rule follows it.
+				size === "sm"
+					? "text-monti-note leading-[1.6]"
+					: "text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
 				className,
 			)}

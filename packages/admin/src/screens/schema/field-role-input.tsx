@@ -126,7 +126,7 @@ export function FieldRolePicker({
 	];
 
 	return (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			<Pick
 				label={t("field.role")}
 				description={t("field.roleHint")}
@@ -243,7 +243,7 @@ export function FieldCustomInputPicker({
 	];
 
 	return (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{registered.length > 0 ? (
 				<Pick
 					label={t("field.input")}

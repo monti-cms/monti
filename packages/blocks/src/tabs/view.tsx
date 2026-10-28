@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Pen, Star, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,15 +11,14 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import { cn } from "@monti-cms/admin/kit";
-import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";
 
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER =
-	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-tight whitespace-nowrap rounded-md border border-transparent px-condensed py-tight font-medium text-monti-muted text-monti-body transition-all hover:text-monti-default monti-dark:text-monti-muted monti-dark:hover:text-monti-default";
+	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-monti-4 whitespace-nowrap rounded-monti-md border border-transparent px-monti-8 py-monti-4 font-medium text-monti-muted text-monti-body transition-all hover:text-monti-default monti-dark:text-monti-muted monti-dark:hover:text-monti-default";
 const TAB_TRIGGER_ACTIVE =
-	"border-monti-border! bg-monti-page text-monti-default shadow-monti-floating monti-dark:border-monti-default monti-dark:text-monti-default";
+	"!border-monti-default bg-monti-page text-monti-default shadow-monti-floating monti-dark:border-monti-default monti-dark:text-monti-default";
 
 const labelOf = (values: Readonly<Record<string, unknown>>) => (typeof values.label === "string" ? values.label : "");
 
@@ -78,12 +78,12 @@ export function TabsNodeView() {
 	};
 
 	return (
-		<BlockFrame className="my-spacious rounded-lg">
+		<BlockFrame className="my-monti-24 rounded-monti-lg">
 			<div contentEditable={false} className="not-prose">
 				<div
 					role="tablist"
 					aria-label={t("list")}
-					className="relative inline-flex h-9 w-fit max-w-full items-center rounded-lg rounded-b-none border bg-monti-neutral p-[3px] text-monti-muted"
+					className="relative inline-flex h-9 w-fit max-w-full items-center rounded-monti-lg rounded-b-none border bg-monti-muted p-[3px] text-monti-muted"
 				>
 					{labels.map((label, index) =>
 						renaming === index ? (
@@ -119,20 +119,20 @@ export function TabsNodeView() {
 							</button>
 						),
 					)}
-					<span className="pointer-events-none absolute right-0 -bottom-1 left-0 inline-block h-1 bg-monti-neutral" />
+					<span className="pointer-events-none absolute right-0 -bottom-1 left-0 inline-block h-1 bg-monti-muted" />
 				</div>
 			</div>
 			<Content
 				visibleChild={current}
-				className="rounded-b-lg rounded-tr-lg border bg-monti-neutral px-comfortable py-normal text-monti-body"
+				className="rounded-b-monti-lg rounded-tr-monti-lg border bg-monti-muted px-monti-16 py-monti-12 text-monti-body"
 			/>
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addTab}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("rename")} onClick={() => setRenaming(current)}>
-						<PencilLine aria-hidden />
+						<Pen aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("default")} pressed={current === defaultIndex} onClick={() => toggleDefault(current)}>
 						<Star aria-hidden fill={current === defaultIndex ? "currentColor" : "none"} />
@@ -143,7 +143,7 @@ export function TabsNodeView() {
 						disabled={!block.canRemoveChild(current)}
 						onClick={() => removeTab(current)}
 					>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}

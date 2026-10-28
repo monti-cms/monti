@@ -46,14 +46,13 @@ function AttributeField({
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
-			<Stack gap="tight">
-				<Inline justify="between" gap="condensed">
+			<Stack gap={4}>
+				<Inline justify="between" gap={8}>
 					<Label htmlFor={id} size="caption" tone="muted">
 						{attribute.label}
 					</Label>
 					<Switch
 						id={id}
-						size="sm"
 						checked={value === true}
 						disabled={!editable}
 						onCheckedChange={(checked) => setValue(name, checked)}
@@ -113,7 +112,7 @@ export function DefaultBlockView() {
 	const names = Object.keys(definition.attributes);
 	const container = isContainer(definition);
 	return (
-		<BlockFrame data-monti-custom-block={definition.name} className="my-spacious rounded-md border">
+		<BlockFrame data-monti-custom-block={definition.name} className="my-monti-24 rounded-monti-md border">
 			{editable && names.length > 0 && (
 				<ContainerToolbar label={t("added.toolbar", { label: definition.label })}>
 					<BlockSettings>
@@ -133,14 +132,14 @@ export function DefaultBlockView() {
 			<div
 				contentEditable={false}
 				className={cn(
-					"not-prose px-normal py-condensed font-medium text-monti-caption text-monti-muted",
+					"not-prose px-monti-12 py-monti-8 font-medium text-monti-caption text-monti-muted",
 					container && "border-b",
 				)}
 			>
 				{definition.label}
 			</div>
 			{container && (
-				<div className="px-normal">
+				<div className="px-monti-12">
 					<Content />
 				</div>
 			)}

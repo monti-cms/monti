@@ -5,12 +5,14 @@ import type { ImportPreview, ImportRun } from "../../../api/import";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { DataScreen } from "../../data/data-screen";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { importMessages } from "../messages";
 
-const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success, error } }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const t = testSite.createTranslator(importMessages);
 
@@ -281,7 +283,7 @@ describe("the Import entries card", () => {
 		expect(runForm.get("mode")).toBe("run");
 		expect(runForm.get("publish")).toBe("true");
 		expect(JSON.parse(String(runForm.get("mapping")))).toEqual({ memo: "memo", tag: null });
-		expect(success).toHaveBeenCalledWith(t("toast.done", { count: 2 }));
+		expect(toast).toHaveBeenCalledWith(t("toast.done", { count: 2 }));
 
 		const rows = within(result).getAllByTestId("import-result");
 		expect(rows.map((row) => row.getAttribute("data-outcome"))).toEqual(["imported", "skipped", "draft"]);

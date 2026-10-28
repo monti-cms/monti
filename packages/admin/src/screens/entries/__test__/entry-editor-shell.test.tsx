@@ -1,7 +1,7 @@
+import { RightPanelOpen } from "@carbon/icons-react";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { createSite, issueText } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { PanelRight } from "lucide-react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
@@ -16,6 +16,7 @@ import type { AdminPanel } from "../../../plugins";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { statusLabels } from "../../shared/entry-status";
 import { formatDateTime } from "../../shared/format-date";
 import { useOpenEditor } from "../../shared/open-editor";
@@ -25,14 +26,10 @@ import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
-const { getLocalBackup, deleteLocalBackup, saveLocalBackup, success, warning, message, error } = vi.hoisted(() => ({
+const { getLocalBackup, deleteLocalBackup, saveLocalBackup } = vi.hoisted(() => ({
 	getLocalBackup: vi.fn(),
 	deleteLocalBackup: vi.fn(),
 	saveLocalBackup: vi.fn(),
-	success: vi.fn(),
-	warning: vi.fn(),
-	message: vi.fn(),
-	error: vi.fn(),
 }));
 // The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
@@ -119,7 +116,9 @@ function MockEditor({
 		</>
 	);
 }
-vi.mock("sonner", () => ({ Toaster: () => null, toast: { success, warning, message, error } }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
@@ -331,7 +330,7 @@ describe("entry editor shell", () => {
 		fireEvent.compositionStart(title);
 		pressSave();
 		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1), { timeout: 3000 });
-		await waitFor(() => expect(success).toHaveBeenCalledWith("저장했어요."));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
 	});
 
 	it("shows why an explicit save failed instead of doing nothing", async () => {
@@ -342,7 +341,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
 		pressSave();
-		await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("제목이 너무 길어요.")));
 	});
 
 	it("saves pending changes before opening the preview", async () => {
@@ -564,7 +563,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(screen.getByRole("button", { name: "발행" }));
 			const popup = within(await screen.findByRole("dialog"));
 			expect(popup.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
-			expect(error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
+			expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
 			expect(await (await bar()).findByRole("button", { name: "발행 전 1" })).toBeTruthy();
 			// The list under the header is gone: the popup is where the problems are.
 			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
@@ -1168,7 +1167,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
 	});
 
@@ -1267,7 +1266,7 @@ describe("entry editor shell", () => {
 			fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: label }));
 			expect(screen.queryByRole("alertdialog")).toBeNull();
 			await waitFor(() => expect(methodCalls("POST", `/${action}`)).toHaveLength(1));
-			await waitFor(() => expect(success).toHaveBeenCalledWith(message));
+			await waitFor(() => expect(toast).toHaveBeenCalledWith(message));
 			cleanup();
 		}
 	});
@@ -1279,7 +1278,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		await waitFor(() => expect(error).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
@@ -1416,9 +1415,9 @@ describe("language tabs", () => {
 		serve(() => undefined, source);
 		renderEdit();
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		const current = within(nav).getByRole("button", { name: "한국어 원문 · 발행됨" });
+		const current = within(nav).getByRole("link", { name: "한국어 원문 · 발행됨" });
 		expect(current.getAttribute("aria-current")).toBe("page");
-		const other = within(nav).getByRole("button", { name: "영어 · 초안" });
+		const other = within(nav).getByRole("link", { name: "영어 · 초안" });
 		expect(other.getAttribute("aria-current")).toBeNull();
 		expect(within(nav).getByRole("button", { name: "JA 번역 추가" })).toBeTruthy();
 		expect(within(nav).queryByRole("button", { name: "번역본 메뉴" })).toBeNull();
@@ -1426,11 +1425,12 @@ describe("language tabs", () => {
 		expect(nav.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 	});
 
-	it("moves to another language by its tab", async () => {
+	it("moves to another language by its link, and has no tab list without panels", async () => {
 		serve(() => undefined, source);
 		renderEdit();
-		fireEvent.click(await screen.findByRole("button", { name: "영어 · 초안" }));
-		expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit");
+		const link = await screen.findByRole("link", { name: "영어 · 초안" });
+		expect(link.getAttribute("href")).toBe("/admin/entries/entry-en/edit");
+		expect(within(screen.getByRole("navigation", { name: "언어" })).queryByRole("tablist")).toBeNull();
 	});
 
 	it("creates a translation from the missing-language button and opens it", async () => {
@@ -1443,7 +1443,7 @@ describe("language tabs", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
 		expect(JSON.parse(String(methodCalls("POST", "/translations")[0]?.[1]?.body))).toEqual({ locale: "ja" });
-		expect(success).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
+		expect(toast).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
 	});
 
 	it("blocks translation creation while there are unsaved changes", async () => {
@@ -1451,7 +1451,7 @@ describe("language tabs", () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
 		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
-		await waitFor(() => expect(error).toHaveBeenCalled());
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		expect(methodCalls("POST", "/translations")).toHaveLength(0);
 	});
 
@@ -1464,7 +1464,7 @@ describe("language tabs", () => {
 		}, translation);
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		const nav = await screen.findByRole("navigation", { name: "언어" });
-		expect(within(nav).getByRole("button", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
+		expect(within(nav).getByRole("link", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
 		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동" }));
 		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로 이동" });
@@ -1752,7 +1752,7 @@ describe("side panel over the editor", () => {
 			</>
 		);
 	}
-	const PANEL: AdminPanel = { label: "Helper", icon: PanelRight, Component: Probe };
+	const PANEL: AdminPanel = { label: "Helper", icon: RightPanelOpen, Component: Probe };
 	const renderWithPanel = () =>
 		render(
 			withSite(

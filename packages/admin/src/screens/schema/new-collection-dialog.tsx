@@ -83,7 +83,7 @@ function NewCollectionForm({
 		<Grid
 			as="form"
 			columns={1}
-			gap="comfortable"
+			gap={16}
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
@@ -92,18 +92,20 @@ function NewCollectionForm({
 			<DialogHeader>
 				<DialogTitle>{t("collection.createTitle")}</DialogTitle>
 			</DialogHeader>
-			<Labeled label={t("collection.newName")} htmlFor={nameId}>
+			<Labeled label={t("collection.newName")} htmlFor={nameId} required>
 				<Input
 					id={nameId}
+					required
 					value={name}
 					placeholder="Blog posts"
 					autoComplete="off"
 					onChange={(event) => setName(event.target.value)}
 				/>
 			</Labeled>
-			<Labeled label={t("collection.newId")} htmlFor={idFieldId} description={t("collection.newIdHint")}>
+			<Labeled label={t("collection.newId")} htmlFor={idFieldId} description={t("collection.newIdHint")} required>
 				<Input
 					id={idFieldId}
+					required
 					value={id}
 					placeholder="blog-posts"
 					autoComplete="off"
@@ -112,7 +114,7 @@ function NewCollectionForm({
 				/>
 				{idIssue && <FormFieldError>{ts(`name.${idIssue}`)}</FormFieldError>}
 			</Labeled>
-			<Stack role="group" aria-labelledby={kindLabelId} gap="condensed">
+			<Stack role="group" aria-labelledby={kindLabelId} gap={8}>
 				<Text as="div" id={kindLabelId} variant="caption" weight="medium">
 					{t("collection.kind")}
 				</Text>
@@ -122,10 +124,10 @@ function NewCollectionForm({
 						key={item.value}
 						border="all"
 						radius="lg"
-						padding="condensed"
+						padding={8}
 						background={kind === item.value ? "selected" : undefined}
 					>
-						<Inline align="start" gap="condensed">
+						<Inline align="start" gap={8}>
 							<input
 								type="radio"
 								name="new-collection-kind"
@@ -133,7 +135,7 @@ function NewCollectionForm({
 								checked={kind === item.value}
 								onChange={() => setKind(item.value)}
 							/>
-							<Stack gap="hair">
+							<Stack gap={2}>
 								<Text weight="medium">{item.label}</Text>
 								<Text variant="caption" tone="muted">
 									{item.explain}

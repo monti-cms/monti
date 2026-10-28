@@ -11,12 +11,6 @@ const renderSplit = (props: Partial<Parameters<typeof SplitButton>[0]> = {}) =>
 	);
 
 describe("SplitButton", () => {
-	it("renders the main action and the menu trigger as two buttons", () => {
-		renderSplit();
-		expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Publish options" })).toBeTruthy();
-	});
-
 	it("fires onClick from the main half only", () => {
 		const onClick = vi.fn();
 		renderSplit({ onClick });
@@ -26,7 +20,7 @@ describe("SplitButton", () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
-	it("opens the menu from the trigger, by click and by ArrowDown, and both halves are in the tab order", async () => {
+	it("is two buttons, both in the tab order, and opens the menu from the trigger", async () => {
 		renderSplit();
 		for (const name of ["Publish", "Publish options"])
 			expect(screen.getByRole("button", { name }).getAttribute("tabindex")).not.toBe("-1");

@@ -22,7 +22,7 @@ export function ai<const Config extends AiConfig>(config: Config = {} as Config)
 			{
 				path: "ai",
 				label: "AI",
-				icon: "sparkles",
+				icon: "spark",
 				group: "writing",
 			},
 		],

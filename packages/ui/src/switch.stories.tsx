@@ -4,7 +4,7 @@ import { Stack } from "./stack";
 import { Switch } from "./switch";
 
 const meta = {
-	title: "Controls/Switch",
+	title: "Controls/Choice/Switch",
 	component: Switch,
 } satisfies Meta<typeof Switch>;
 export default meta;
@@ -12,33 +12,33 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {
 	render: (args) => (
-		<Stack direction="row" gap="condensed" align="center">
+		<Stack direction="row" gap={8} align="center">
 			<Switch id="pg" {...args} />
-			<Label htmlFor="pg">공개</Label>
+			<Label htmlFor="pg" size="body" tone="default">
+				공개
+			</Label>
 		</Stack>
 	),
 };
 
-/** Both sizes, off and on, plus disabled and invalid. */
+/** Off, on, AI-turned-on (blue) and disabled. Off is a `border-default` track with a page-colored knob, as the design system draws it. */
 export const States: Story = {
 	render: () => (
-		<Stack gap="normal">
-			{(["default", "sm"] as const).map((size) =>
-				[
-					{ name: "off", props: {} },
-					{ name: "on", props: { defaultChecked: true } },
-					{ name: "disabled", props: { disabled: true } },
-					{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
-					{ name: "invalid", props: { "aria-invalid": true } },
-				].map(({ name, props }) => (
-					<Stack key={`${size}-${name}`} direction="row" gap="condensed" align="center">
-						<Switch id={`${size}-${name}`} size={size} {...props} />
-						<Label htmlFor={`${size}-${name}`}>
-							{size} · {name}
-						</Label>
-					</Stack>
-				)),
-			)}
+		<Stack gap={12}>
+			{[
+				{ name: "off", props: {} },
+				{ name: "on", props: { defaultChecked: true } },
+				{ name: "proposal · on", props: { defaultChecked: true, proposal: true } },
+				{ name: "disabled", props: { disabled: true } },
+				{ name: "disabled · on", props: { disabled: true, defaultChecked: true } },
+			].map(({ name, props }) => (
+				<Stack key={name} direction="row" gap={8} align="center">
+					<Switch id={name} {...props} />
+					<Label htmlFor={name} size="body" tone="default">
+						{name}
+					</Label>
+				</Stack>
+			))}
 		</Stack>
 	),
 };

@@ -1,8 +1,17 @@
 /* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.monti-admin`. */
 
-/* Keeps the app's body background from showing through at the admin edges. */
+/*
+ * The admin's base text, on its root and on the body, because popups (menus, dialogs, tooltips) are portaled to the body: the sans stack, smooth glyphs, and Korean broken between words, not inside them (`keep-all`), except a long
+ * token (an address, an identifier) that has no space and breaks where it must (`anywhere`).
+ * The body also keeps the app's background from showing through at the admin edges.
+ */
 html:has(.monti-admin) body {
 	background-color: var(--monti-bg-page);
+	font-family: var(--monti-font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 /*
@@ -12,7 +21,7 @@ html:has(.monti-admin) body {
 @layer base {
 	:where(html:has(.monti-admin)) * {
 		border-color: var(--monti-border-muted);
-		outline-color: var(--monti-focus-soft);
+		outline-color: color-mix(in srgb, var(--monti-border-contrast) 20%, transparent);
 	}
 }
 
@@ -20,6 +29,9 @@ html:has(.monti-admin) body {
 	font-family: var(--monti-font-sans);
 	font-size: 14px;
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 /* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */
@@ -58,18 +70,18 @@ html:has(.monti-admin) body {
 	text-decoration-thickness: 1px;
 	text-decoration-skip-ink: none;
 	text-underline-offset: 3px;
-	text-decoration-color: var(--monti-warning-9);
+	text-decoration-color: var(--monti-fg-warning);
 	cursor: pointer;
 }
 .monti-admin .monti-text-issue[data-severity="error"] {
-	text-decoration-color: var(--monti-danger-9);
+	text-decoration-color: var(--monti-fg-danger);
 }
 .monti-admin .monti-text-issue[data-severity="info"] {
-	text-decoration-color: var(--monti-accent-9);
+	text-decoration-color: var(--monti-fg-subtle);
 }
 
-/* The text selection in the editor body takes the accent's tint. */
+/* The text selection in the editor body takes the selected-row tint. */
 .monti-admin .ProseMirror ::selection,
 .monti-admin .ProseMirror::selection {
-	background: var(--monti-bg-accent-muted);
+	background: var(--monti-bg-selected);
 }

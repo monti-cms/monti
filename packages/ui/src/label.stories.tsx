@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
-	title: "Controls/Label",
+	title: "Primitives/Label",
 	component: Label,
-	args: { children: "글 제목", size: "label", tone: "default", hidden: false },
+	args: { children: "글 제목", size: "micro", tone: "subtle", hidden: false, required: false },
 } satisfies Meta<typeof Label>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -16,12 +16,10 @@ export const Playground: Story = {};
 
 export const Sizes: Story = {
 	render: () => (
-		<Stack gap="normal">
-			{(["label", "caption", "body"] as const).map((size) => (
-				<Stack key={size} gap="tight">
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+		<Stack gap={12}>
+			{(["micro", "label", "caption", "body"] as const).map((size) => (
+				<Stack key={size} gap={4}>
+					<StoryCaption>size {size}</StoryCaption>
 					<Label size={size}>글 제목</Label>
 				</Stack>
 			))}
@@ -31,12 +29,10 @@ export const Sizes: Story = {
 
 export const Tones: Story = {
 	render: () => (
-		<Stack gap="normal">
-			{(["default", "muted"] as const).map((tone) => (
-				<Stack key={tone} gap="tight">
-					<Text variant="label" tone="muted">
-						tone {tone}
-					</Text>
+		<Stack gap={12}>
+			{(["subtle", "muted", "default"] as const).map((tone) => (
+				<Stack key={tone} gap={4}>
+					<StoryCaption>tone {tone}</StoryCaption>
 					<Label tone={tone}>글 제목</Label>
 				</Stack>
 			))}
@@ -47,12 +43,10 @@ export const Tones: Story = {
 /** `hidden` keeps the label for screen readers only; the input is still named. */
 export const Hidden: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[false, true].map((hidden) => (
-				<Stack key={String(hidden)} gap="tight">
-					<Text variant="label" tone="muted">
-						hidden {String(hidden)}
-					</Text>
+				<Stack key={String(hidden)} gap={4}>
+					<StoryCaption>hidden {String(hidden)}</StoryCaption>
 					<Label htmlFor={`hidden-${hidden}`} hidden={hidden}>
 						글 제목
 					</Label>

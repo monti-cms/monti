@@ -1,7 +1,7 @@
 "use client";
 
 import { type Site, useTranslator } from "@monti-cms/core/site";
-import { Inline, PageTabs, StatusIndicator, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
+import { Tabs, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useRef } from "react";
 import { AdminLink as Link } from "../../router";
 import { settingsMessages } from "./messages";
@@ -31,11 +31,13 @@ export function SettingsTabBar({
 
 	return (
 		<Tabs value={active}>
-			<PageTabs aria-label={t("tabs.label")}>
+			<TabsList variant="bar" aria-label={t("tabs.label")}>
 				{tabs.map((entry) => (
 					<TabsTrigger
 						key={entry.id}
 						value={entry.id}
+						dot={changed?.[entry.id] ? "warning" : undefined}
+						dotLabel={t("changed")}
 						nativeButton={false}
 						render={
 							<Link
@@ -54,15 +56,9 @@ export function SettingsTabBar({
 						}
 					>
 						{t(`tab.${entry.id}` as "tab.collections")}
-						{changed?.[entry.id] && (
-							<Inline as="span" data-testid={`tab-changed-${entry.id}`}>
-								<StatusIndicator tone="accent" size="xs" />
-								<Text srOnly>{t("changed")}</Text>
-							</Inline>
-						)}
 					</TabsTrigger>
 				))}
-			</PageTabs>
+			</TabsList>
 		</Tabs>
 	);
 }

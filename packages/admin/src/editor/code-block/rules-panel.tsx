@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, TrashCan, TypePattern } from "@carbon/icons-react";
 import {
 	CODE_CHAR_EFFECTS,
 	type CodeCharEffectName,
@@ -29,7 +30,6 @@ import {
 	Text,
 	Textarea,
 } from "@monti-cms/ui";
-import { Plus, Regex, Trash2 } from "lucide-react";
 import { useSlot } from "../../slots/slots";
 import type { TranslatorFor } from "../../translator";
 import { codeBlockMessages } from "./messages";
@@ -89,13 +89,13 @@ function RuleRow({
 	return (
 		<Stack
 			as="li"
-			gap="condensed"
-			padding="condensed"
+			gap={8}
+			padding={8}
 			border="all"
 			radius="md"
 			aria-label={t("rulesPanel.rule", { pattern: rule.pattern })}
 		>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				<Select
 					value={rule.name}
 					items={options}
@@ -150,12 +150,12 @@ function RuleRow({
 					/>
 				)}
 				<Inline grow justify="end">
-					<IconButton label={t("rulesPanel.remove")} size="icon-xs" tone="danger" onClick={onRemove}>
-						<Trash2 aria-hidden />
+					<IconButton label={t("rulesPanel.remove")} tone="danger" onClick={onRemove}>
+						<TrashCan aria-hidden />
 					</IconButton>
 				</Inline>
 			</Inline>
-			<Inline gap="tight">
+			<Inline gap={4}>
 				<Text variant="caption" tone="muted" mono>
 					/
 				</Text>
@@ -193,7 +193,6 @@ function RuleRow({
 				<Label htmlFor={`${rule.id}-open`} size="caption">
 					<Switch
 						id={`${rule.id}-open`}
-						size="sm"
 						checked={rule.attrs.open === true}
 						onCheckedChange={(checked) => onChange({ ...rule, attrs: { ...rule.attrs, open: checked || undefined } })}
 					/>
@@ -242,17 +241,12 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 
 	return (
 		<Popover>
-			<IconButton
-				label={t("rulesPanel.title")}
-				size="sm"
-				variant={rules.length > 0 ? "ghost" : "quiet"}
-				trigger={(button) => <PopoverTrigger render={button} />}
-			>
-				<Regex aria-hidden />
+			<IconButton label={t("rulesPanel.title")} trigger={(button) => <PopoverTrigger render={button} />}>
+				<TypePattern aria-hidden />
 				{rules.length > 0 && <Text variant="caption">{rules.length}</Text>}
 			</IconButton>
 			<PopoverContent align="end" width="lg" scroll data-code-ui="">
-				<Inline justify="between" gap="condensed">
+				<Inline justify="between" gap={8}>
 					<Text as="p" weight="semibold">
 						{t("rulesPanel.title")}
 					</Text>
@@ -260,7 +254,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				</Inline>
 				{canAdd && site.offersCharEffect("fold") && foldSlot.panel}
 				{rules.length > 0 && (
-					<Stack as="ul" gap="condensed">
+					<Stack as="ul" gap={8}>
 						{rules.map((rule) => (
 							<RuleRow
 								key={rule.id}
@@ -275,8 +269,8 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				)}
 				{canAdd && (
 					<Inline justify="start">
-						<Button type="button" variant="outline" size="sm" onClick={addRule}>
-							<Plus aria-hidden />
+						<Button type="button" variant="secondary" size="sm" onClick={addRule}>
+							<Add aria-hidden />
 							{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
 						</Button>
 					</Inline>

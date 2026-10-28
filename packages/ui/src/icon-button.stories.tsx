@@ -1,72 +1,71 @@
+import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Pencil, Settings, Trash2 } from "lucide-react";
-import { IconButton } from "./icon-button";
+import { ICON_BUTTON, IconButton } from "./icon-button";
+import { Spark } from "./spark";
 import { Stack } from "./stack";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
+/** Round, 32px: the header's more (⋯), properties and assistant, a panel's close. The label is the screen reader name and the tooltip. */
 const meta = {
-	title: "Controls/IconButton",
+	title: "Controls/Button/IconButton",
 	component: IconButton,
-	args: { label: "편집", children: <Pencil aria-hidden /> },
+	args: { label: "더보기", children: <OverflowMenuHorizontal aria-hidden /> },
 } satisfies Meta<typeof IconButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-const SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
-const VARIANTS = ["quiet", "ghost", "outline", "secondary", "default"] as const;
-
-/** Every variant at every size. */
-export const AllVariants: Story = {
-	render: () => (
-		<Stack gap="spacious">
-			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="condensed" align="center">
-					{SIZES.map((size) => (
-						<IconButton key={size} label={`${variant} ${size}`} variant={variant} size={size}>
-							<Settings aria-hidden />
-						</IconButton>
-					))}
-					<IconButton label="비활성" variant={variant} disabled>
-						<Settings aria-hidden />
-					</IconButton>
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-/** Pressed (toggle) on and off, danger, invalid. */
+/** Rest, pressed (the properties panel is open), disabled. */
 export const States: Story = {
 	render: () => (
-		<Stack direction="row" gap="condensed" align="center">
-			<IconButton label="고정 해제" pressed={false}>
-				<Pencil aria-hidden />
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="더보기">
+				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
-			<IconButton label="고정됨" pressed>
-				<Pencil aria-hidden />
+			<IconButton label="속성" pressed>
+				<RightPanelOpen aria-hidden />
 			</IconButton>
-			<IconButton label="삭제" tone="danger">
-				<Trash2 aria-hidden />
+			<IconButton label="어시스턴트 열기">
+				<Spark className="size-monti-icon-md" />
 			</IconButton>
-			<IconButton label="유효하지 않음" aria-invalid>
-				<Pencil aria-hidden />
+			<IconButton label="닫기">
+				<Close aria-hidden />
 			</IconButton>
 			<IconButton label="비활성" disabled>
-				<Pencil aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 		</Stack>
 	),
 };
 
-/** The tooltip appears on hover; side picks where. */
+/** `tone="danger"` is for a button that deletes or removes something: a red icon, and the red wash on hover. */
+export const Danger: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<IconButton label="규칙 지우기" tone="danger">
+				<TrashCan aria-hidden />
+			</IconButton>
+			<IconButton label="비활성" tone="danger" disabled>
+				<TrashCan aria-hidden />
+			</IconButton>
+		</Stack>
+	),
+};
+
+/** The name shows on hover; `side` picks where. Here each side is held open on its own button, far enough apart that none covers another. */
 export const TooltipSides: Story = {
 	render: () => (
-		<Stack direction="row" gap="spacious" align="center">
-			{(["top", "bottom", "left", "right"] as const).map((side) => (
-				<IconButton key={side} label={`툴팁 ${side}`} side={side}>
-					<Pencil aria-hidden />
-				</IconButton>
+		<Stack direction="row" gap={0} justify="center" className="px-monti-32 py-monti-48">
+			{(["top", "right", "bottom", "left"] as const).map((side) => (
+				<div key={side} className="flex w-48 justify-center">
+					<Tooltip open>
+						<TooltipTrigger render={<button type="button" aria-label={side} className={ICON_BUTTON} />}>
+							<OverflowMenuHorizontal aria-hidden />
+						</TooltipTrigger>
+						<TooltipContent side={side}>{side}</TooltipContent>
+					</Tooltip>
+				</div>
 			))}
 		</Stack>
 	),

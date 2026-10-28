@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Edit, TrashCan } from "@carbon/icons-react";
 import {
 	assignBlockIds,
 	type CmsNode,
@@ -11,7 +12,6 @@ import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, FormFieldError, Inline, Input, Stack } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTemplate } from "../../api/templates";
@@ -114,12 +114,12 @@ function TemplateEditPanel({
 		<Stack
 			as="section"
 			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
-			gap="none"
+			gap={0}
 			height="full"
 			grow
 			overflow="hidden"
 		>
-			<Inline gap="normal" wrap justify="between" border="bottom" paddingX="spacious" paddingY="normal">
+			<Inline gap={12} wrap justify="between" border="bottom" paddingX={24} paddingY={12}>
 				<Input
 					type="text"
 					size="sm"
@@ -137,11 +137,11 @@ function TemplateEditPanel({
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</Inline>
 			{saveError && (
-				<Box border="bottom" background="danger-muted" paddingX="spacious" paddingY="condensed">
+				<Box border="bottom" background="danger-muted" paddingX={24} paddingY={8}>
 					<FormFieldError>{saveError}</FormFieldError>
 				</Box>
 			)}
-			<Stack gap="none" grow minHeight={0} overflow="y">
+			<Stack gap={0} grow minHeight={0} overflow="y">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
 			</Stack>
 		</Stack>
@@ -236,12 +236,12 @@ export function TemplateManager() {
 
 	/** Right-click and `⋯` menu of a template list row. */
 	const templateMenu = (template: BodyTemplate): MenuAction[] => [
-		{ kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => void openTemplate(template) },
+		{ kind: "item", label: tc("open"), icon: Edit, onSelect: () => void openTemplate(template) },
 		{ kind: "separator" },
 		{
 			kind: "item",
 			label: tc("delete"),
-			icon: Trash2,
+			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
 			onSelect: () => void requestDelete(template),
@@ -249,15 +249,15 @@ export function TemplateManager() {
 	];
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden" border="top">
+		<Stack gap={0} grow minHeight={0} overflow="hidden" border="top">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("add")}
 				</Button>
 			</PageActions>
 			{error && (
-				<Box paddingX="wide" paddingY="normal">
+				<Box paddingX={32} paddingY={12}>
 					<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} />
 				</Box>
 			)}
@@ -293,11 +293,9 @@ export function TemplateManager() {
 						onDirtyChange={setDirty}
 					/>
 				) : (
-					<EmptyState
-						icon={LayoutTemplate}
-						title={t("edit.empty")}
-						action={{ label: t("add"), icon: Plus, onClick: () => void openNew() }}
-					/>
+					<Box paddingX={24}>
+						<EmptyState title={t("edit.empty")} action={{ label: t("add"), onClick: () => void openNew() }} />
+					</Box>
 				)}
 			</MasterDetail>
 			{dialog}

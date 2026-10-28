@@ -1,22 +1,19 @@
-import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2Icon } from "lucide-react";
 import { cn } from "./cn";
-import { useUiLabels } from "./labels";
 
-const spinnerVariants = cva("animate-spin", {
-	variants: { size: { sm: "size-3", md: "size-4", lg: "size-6" } },
-	defaultVariants: { size: "md" },
-});
-
-function Spinner({ className, size, ...props }: React.ComponentProps<"svg"> & VariantProps<typeof spinnerVariants>) {
-	const labels = useUiLabels();
+/**
+ * The working mark: a 14px ring in the ink of the text beside it, with its right quarter open, turning once a second (once every three seconds
+ * when the system asks for less motion). It is decorative: the words beside it say what is happening, and the control that shows it carries
+ * `aria-busy`. A `Button`, a `SplitButton` and an `AiAction` show it themselves while they are `loading`; use it directly only next to a status line.
+ */
+function Spinner({ className }: { className?: string }) {
 	return (
-		<Loader2Icon
+		<span
 			data-slot="spinner"
-			role="status"
-			aria-label={labels.loading}
-			className={cn(spinnerVariants({ size }), className)}
-			{...props}
+			aria-hidden="true"
+			className={cn(
+				"inline-block size-3.5 shrink-0 animate-spin rounded-monti-full border-[1.5px] border-current border-r-transparent motion-reduce:[animation-duration:3s]",
+				className,
+			)}
 		/>
 	);
 }

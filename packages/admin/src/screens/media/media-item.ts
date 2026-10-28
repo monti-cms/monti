@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@monti-cms/ui";
 import type { MediaItem } from "../../api/media";
 import type { TranslatorFor } from "../../translator";
 import type { mediaMessages } from "./messages";
@@ -56,7 +56,7 @@ export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: Non
 export async function copyText(text: string, success: string, failure: string) {
 	try {
 		await navigator.clipboard.writeText(text);
-		toast.success(success);
+		toast(success);
 	} catch {
 		toast.error(failure);
 	}

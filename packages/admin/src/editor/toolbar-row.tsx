@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, OverflowMenuHorizontal } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -14,7 +15,6 @@ import {
 	Separator,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { Check, MoreHorizontal } from "lucide-react";
 import {
 	createContext,
 	type ReactNode,
@@ -68,7 +68,7 @@ export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: Toolba
 			<Box as="span" grow>
 				{item.title ?? item.label}
 			</Box>
-			{active && <Check aria-hidden />}
+			{active && <Checkmark aria-hidden />}
 		</DropdownMenuItem>
 	);
 }
@@ -109,11 +109,9 @@ function OverflowMenu({ editor, children }: { editor: Editor; children: ReactNod
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<MoreHorizontal aria-hidden />
+				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="md">
-				{children}
-			</DropdownMenuContent>
+			<DropdownMenuContent align="end">{children}</DropdownMenuContent>
 		</DropdownMenu>
 	);
 }
@@ -189,26 +187,26 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 		<div ref={areaRef} className="relative min-w-0 flex-1">
 			{/* For measuring widths. Render every tool once and keep it invisible (confined to height 0 so it does not widen the scroll width). */}
 			<div aria-hidden inert className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden">
-				<div ref={measureRef} className="flex w-max items-center gap-tight">
+				<div ref={measureRef} className="flex w-max items-center gap-monti-4">
 					{entries.map((entry) =>
 						isDivider(entry) ? (
-							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap={0}>
 								<ToolbarDivider />
 							</Inline>
 						) : entry.fixed ? null : (
-							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap="none">
+							<Inline key={entry.key} data-measure-key={entry.key} shrink={false} gap={0}>
 								{entry.render()}
 							</Inline>
 						),
 					)}
 				</div>
 			</div>
-			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-tight">
+			<div ref={rowRef} className="flex flex-nowrap items-center justify-center gap-monti-4">
 				{entries.map((entry) => {
 					if (!shown.has(entry.key)) return null;
 					if (isDivider(entry)) return <ToolbarDivider key={entry.key} />;
 					return (
-						<Inline key={entry.key} data-slot-key={entry.fixed ? entry.key : undefined} shrink={false} gap="none">
+						<Inline key={entry.key} data-slot-key={entry.fixed ? entry.key : undefined} shrink={false} gap={0}>
 							{entry.render()}
 						</Inline>
 					);
@@ -223,7 +221,7 @@ export function ToolbarRow({ editor, entries, end }: { editor: Editor; entries: 
 					</OverflowMenu>
 				)}
 				{end && (
-					<Inline data-slot-key={END_KEY} shrink={false} gap="none">
+					<Inline data-slot-key={END_KEY} shrink={false} gap={0}>
 						{end}
 					</Inline>
 				)}

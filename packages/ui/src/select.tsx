@@ -1,14 +1,27 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import type * as React from "react";
+import { Caret } from "./caret";
 import { cn } from "./cn";
+import { MENU_CARD, MENU_ITEM, MENU_LABEL, MENU_MOTION, MENU_SEPARATOR, MenuTick } from "./menu-parts";
+import { useProposalDescription } from "./proposal-cue";
 
-const Select = SelectPrimitive.Root;
+/**
+ * The select. `items` is every value with its label: the closed trigger shows the chosen item's label, and Base UI only knows the labels once the list has been
+ * opened, so without `items` the trigger would show the raw value ("dev" for "Dev notes"). It is required, so that cannot be written.
+ */
+function Select<Value, Multiple extends boolean | undefined = false>(
+	props: SelectPrimitive.Root.Props<Value, Multiple> & {
+		items: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["items"]>;
+	},
+) {
+	return <SelectPrimitive.Root {...props} />;
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
-	return <SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1 p-1", className)} {...props} />;
+	return <SelectPrimitive.Group data-slot="select-group" className={cn("scroll-my-1", className)} {...props} />;
 }
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
@@ -17,35 +30,41 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 	);
 }
 
+/**
+ * The closed select: an underline with a chevron at the end, like `Input`. With many choices (language codes, time zones) use a `Combobox`,
+ * which can search. `proposal` marks a value the assistant picked and nobody has touched.
+ */
 function SelectTrigger({
 	className,
 	size = "default",
 	width = "fit",
-	variant = "default",
+	proposal = false,
 	children,
 	...props
 }: SelectPrimitive.Trigger.Props & {
 	size?: "sm" | "default";
 	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter. */
 	width?: "fit" | "full";
-	/** `ghost` drops the border until hovered (a select in a footer or a sentence). */
-	variant?: "default" | "ghost";
+	/** The assistant picked this value and nobody has touched it yet. Turn it off when the value is changed. */
+	proposal?: boolean;
 }) {
 	return (
 		<SelectPrimitive.Trigger
 			data-slot="select-trigger"
 			data-size={size}
+			data-proposal={proposal || undefined}
+			aria-description={useProposalDescription(proposal)}
 			className={cn(
-				"flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-monti-default bg-monti-surface py-1.5 pr-2 pl-2.5 text-monti-label shadow-monti-control outline-none transition-[color,border-color,box-shadow] hover:border-monti-emphasis focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft data-[size=default]:h-control data-[size=sm]:h-control-sm data-[size=sm]:text-monti-label data-placeholder:text-monti-subtle *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				width === "full" ? "w-full" : "w-fit",
-				variant === "ghost" &&
-					"border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-monti-hover",
 				className,
 			)}
 			{...props}
 		>
 			{children}
-			<SelectPrimitive.Icon render={<ChevronDownIcon className="pointer-events-none size-4 text-monti-muted" />} />
+			<SelectPrimitive.Icon className="flex">
+				<Caret solo className="size-3.5" />
+			</SelectPrimitive.Icon>
 		</SelectPrimitive.Trigger>
 	);
 }
@@ -55,9 +74,9 @@ function SelectContent({
 	children,
 	side = "bottom",
 	sideOffset = 4,
-	align = "center",
+	align = "start",
 	alignOffset = 0,
-	alignItemWithTrigger = true,
+	alignItemWithTrigger = false,
 	...props
 }: SelectPrimitive.Popup.Props &
 	Pick<SelectPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger">) {
@@ -75,7 +94,9 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-max min-w-[max(9rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay text-monti-default shadow-monti-floating duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
+						MENU_CARD,
+						MENU_MOTION,
+						"relative isolate z-50 max-h-(--available-height) w-max min-w-[max(var(--monti-width-menu),var(--anchor-width))] max-w-(--available-width) overflow-y-auto overflow-x-hidden p-monti-6 data-[align-trigger=true]:animate-none",
 						className,
 					)}
 					{...props}
@@ -90,33 +111,16 @@ function SelectContent({
 }
 
 function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) {
-	return (
-		<SelectPrimitive.GroupLabel
-			data-slot="select-label"
-			className={cn("px-2 py-1.5 text-monti-caption text-monti-muted", className)}
-			{...props}
-		/>
-	);
+	return <SelectPrimitive.GroupLabel data-slot="select-label" className={cn(MENU_LABEL, className)} {...props} />;
 }
 
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
-		<SelectPrimitive.Item
-			data-slot="select-item"
-			className={cn(
-				"relative flex w-full cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-				className,
-			)}
-			{...props}
-		>
-			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+		<SelectPrimitive.Item data-slot="select-item" className={cn(MENU_ITEM, "w-full", className)} {...props}>
+			<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-monti-8 whitespace-nowrap">
 				{children}
 			</SelectPrimitive.ItemText>
-			<SelectPrimitive.ItemIndicator
-				render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}
-			>
-				<CheckIcon className="pointer-events-none" />
-			</SelectPrimitive.ItemIndicator>
+			<SelectPrimitive.ItemIndicator render={<MenuTick />} />
 		</SelectPrimitive.Item>
 	);
 }
@@ -125,7 +129,7 @@ function SelectSeparator({ className, ...props }: SelectPrimitive.Separator.Prop
 	return (
 		<SelectPrimitive.Separator
 			data-slot="select-separator"
-			className={cn("pointer-events-none -mx-1 my-1 h-px bg-monti-divider", className)}
+			className={cn("pointer-events-none", MENU_SEPARATOR, className)}
 			{...props}
 		/>
 	);
@@ -136,12 +140,12 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
 		<SelectPrimitive.ScrollUpArrow
 			data-slot="select-scroll-up-button"
 			className={cn(
-				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
+				"top-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-monti-4 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
 		>
-			<ChevronUpIcon />
+			<ChevronUp />
 		</SelectPrimitive.ScrollUpArrow>
 	);
 }
@@ -151,12 +155,12 @@ function SelectScrollDownButton({ className, ...props }: React.ComponentProps<ty
 		<SelectPrimitive.ScrollDownArrow
 			data-slot="select-scroll-down-button"
 			className={cn(
-				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
+				"bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-monti-page py-monti-4 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
 		>
-			<ChevronDownIcon />
+			<ChevronDown />
 		</SelectPrimitive.ScrollDownArrow>
 	);
 }

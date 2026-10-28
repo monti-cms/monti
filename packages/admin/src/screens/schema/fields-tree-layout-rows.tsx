@@ -2,11 +2,11 @@
 
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
+import { ArrowDown, ArrowRight, ArrowUp, CollapseAll, Draggable, TrashCan } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, cn, Input, Text } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tabLabel } from "../entries/layout-groups";
 import { schemaFieldsMessages } from "./fields.messages";
@@ -105,7 +105,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 		},
 		{
 			label: t("layout.removeTab", { name: currentName }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: ops.disabled || !canRemove,
 			onClick: () => ops.change((tree) => removeTab(tree, index)),
@@ -116,7 +116,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			className="group/row relative mt-normal flex items-center gap-tight border-y bg-monti-neutral py-condensed pr-comfortable pl-wide first:mt-0"
+			className="group/row relative mt-monti-12 flex items-center gap-monti-4 border-y bg-monti-muted py-monti-8 pr-monti-16 pl-monti-32 first:mt-0"
 		>
 			<InlineName
 				value={currentName}
@@ -154,7 +154,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 	const buttons: RowButton[] = [
 		{
 			label: t("layout.collapseToggle", { name: group.title }),
-			icon: ChevronsDownUp,
+			icon: CollapseAll,
 			pressed: group.collapsed === true,
 			disabled: ops.disabled,
 			onClick: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
@@ -163,7 +163,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			? [
 					{
 						label: t("layout.moveGroup", { name: group.title }),
-						icon: MoveRight,
+						icon: ArrowRight,
 						disabled: ops.disabled,
 						onClick: () => setMoving(true),
 					},
@@ -171,7 +171,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			: []),
 		{
 			label: t("layout.removeGroup", { name: group.title }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: ops.disabled,
 			onClick: () => ops.change((tree) => removeGroup(tree, ref)),
@@ -182,12 +182,12 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative mt-normal border-y bg-monti-inset first:mt-0",
-				isDragging && "z-10 bg-monti-surface opacity-80",
+				"group/row relative mt-monti-12 border-y bg-monti-tool first:mt-0",
+				isDragging && "z-10 bg-monti-page opacity-80",
 			)}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-tight py-condensed pr-comfortable pl-wide">
+			<div className="flex items-center gap-monti-4 py-monti-8 pr-monti-16 pl-monti-32">
 				<InlineName
 					value={group.title}
 					label={t("layout.groupTitle")}
@@ -226,9 +226,9 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 				{...listeners}
 				aria-label={t("layout.dragGroup", { name: group.title })}
 				disabled={ops.disabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 			>
-				<GripVertical aria-hidden className="size-4" />
+				<Draggable aria-hidden className="size-4" />
 			</button>
 		</div>
 	);
@@ -242,8 +242,8 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"pr-comfortable pl-wide text-monti-caption text-monti-muted",
-				label ? "py-condensed" : "-mb-condensed h-2",
+				"pr-monti-16 pl-monti-32 text-monti-caption text-monti-muted",
+				label ? "py-monti-8" : "-mb-monti-8 h-2",
 			)}
 			data-testid={testId}
 		>

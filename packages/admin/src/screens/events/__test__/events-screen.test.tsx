@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
+import { toast } from "../../../test/ui-toast";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -10,8 +11,9 @@ import { eventsMessages } from "../messages";
 
 const t = testSite.createTranslator(eventsMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (
@@ -186,7 +188,7 @@ describe("EventsScreen", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
 
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
-		await waitFor(() => expect(toast.success).toHaveBeenCalled());
+		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
 		// Nothing pending or failed is left to retry.
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();

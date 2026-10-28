@@ -1,7 +1,7 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, FormFieldError, Inline, Spinner, Stack, Text } from "@monti-cms/ui";
+import { Box, cn, FormFieldError, Inline, Stack, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CollectionIcon } from "../screens/shared/collection-icon";
@@ -80,7 +80,7 @@ export function InternalLinkPopup({
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-tight text-monti-default shadow-monti-floating"
+			className="max-h-80 w-72 overflow-y-auto rounded-monti-lg border bg-monti-page p-monti-4 text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -95,15 +95,15 @@ export function InternalLinkPopup({
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
-						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
+						"flex cursor-pointer items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-8 outline-none",
+						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
 					)}
 				>
 					<Inline
 						as="span"
 						aria-hidden
 						justify="center"
-						padding="condensed"
+						padding={8}
 						border="all"
 						radius="md"
 						background="page"
@@ -111,7 +111,7 @@ export function InternalLinkPopup({
 					>
 						<CollectionIcon collection={item.collection} />
 					</Inline>
-					<Stack as="span" gap="none" minWidth={0}>
+					<Stack as="span" gap={0} minWidth={0}>
 						<Text weight="medium" truncate>
 							{item.title}
 						</Text>
@@ -122,21 +122,18 @@ export function InternalLinkPopup({
 				</div>
 			))}
 			{isLoading ? (
-				<Box as="div" paddingX="condensed" paddingY="condensed">
-					<Inline as="div" gap="condensed" role="status">
-						<Spinner size="sm" />
-						<Text variant="caption" tone="muted">
-							{t("internalLink.searching")}
-						</Text>
-					</Inline>
+				<Box as="div" paddingX={8} paddingY={8}>
+					<Text as="p" variant="caption" tone="muted" role="status">
+						{t("internalLink.searching")}
+					</Text>
 				</Box>
 			) : error ? (
-				<Box paddingX="condensed" paddingY="condensed">
+				<Box paddingX={8} paddingY={8}>
 					<FormFieldError>{error}</FormFieldError>
 				</Box>
 			) : (
 				items.length === 0 && (
-					<Box paddingX="condensed" paddingY="condensed">
+					<Box paddingX={8} paddingY={8}>
 						<Text as="p" variant="caption" tone="muted">
 							{t("internalLink.empty")}
 						</Text>

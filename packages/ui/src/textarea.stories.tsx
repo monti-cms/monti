@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 import { Textarea } from "./textarea";
 
 const meta = {
-	title: "Controls/Textarea",
+	title: "Controls/Field/Textarea",
 	component: Textarea,
 	args: { placeholder: "글 요약" },
 	decorators: [
@@ -22,43 +22,39 @@ export const Playground: Story = {};
 
 export const States: Story = {
 	render: () => (
-		<Stack gap="comfortable">
-			<Stack gap="tight">
-				<Text variant="caption" tone="muted">
-					placeholder
-				</Text>
+		<Stack gap={16}>
+			<Stack gap={4}>
+				<StoryCaption>placeholder</StoryCaption>
 				<Textarea placeholder="글 요약" />
 			</Stack>
-			<Stack gap="tight">
-				<Text variant="caption" tone="muted">
-					filled, grows with content
-				</Text>
+			<Stack gap={4}>
+				<StoryCaption>filled, grows with content</StoryCaption>
 				<Textarea
 					defaultValue={
 						"검색 결과와 공유 카드에 보이는 요약이에요.\n두 줄이 넘어가면 입력창이 같이 늘어납니다.\n세 번째 줄."
 					}
 				/>
 			</Stack>
-			<Stack gap="tight">
-				<Text variant="caption" tone="muted">
-					disabled
-				</Text>
+			<Stack gap={4}>
+				<StoryCaption>disabled</StoryCaption>
 				<Textarea disabled defaultValue="수정할 수 없는 요약" />
 			</Stack>
-			<Stack gap="tight">
-				<Text variant="caption" tone="muted">
-					invalid
-				</Text>
+			<Stack gap={4}>
+				<StoryCaption>proposal (written by the assistant, not yet touched)</StoryCaption>
+				<Textarea proposal defaultValue="어시스턴트가 쓴 요약" />
+			</Stack>
+			<Stack gap={4}>
+				<StoryCaption>invalid</StoryCaption>
 				<Textarea aria-invalid defaultValue="너무 긴 요약" />
 			</Stack>
 		</Stack>
 	),
 };
 
-/** `sm` writes at the label size for compact panels; `mono` for code and source text. */
+/** `sm` writes at the note size for compact panels; `mono` for code and source text. */
 export const SizesAndMono: Story = {
 	render: () => (
-		<Stack gap="normal" className="max-w-sm">
+		<Stack gap={12} className="max-w-sm">
 			<Textarea size="sm" placeholder="작게: 패널 안의 메모" />
 			<Textarea mono defaultValue={"export const a = 1;\nexport const b = 2;"} />
 		</Stack>

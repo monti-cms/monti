@@ -38,7 +38,7 @@ export const collapsibleBlock = defineBlock({
 		get keywords() {
 			return ["collapsible", ...keywordList(t("keywords"))];
 		},
-		icon: "chevrons-up-down",
+		icon: "square--outline",
 		get insert() {
 			return { values: { title: t("insert.title") }, text: t("insert.text") };
 		},

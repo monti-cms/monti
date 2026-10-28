@@ -1,15 +1,15 @@
 "use client";
 
+import { Document, TextFont, Zip } from "@carbon/icons-react";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { FileArchive, FileText, FileType } from "lucide-react";
 import { getMedia, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
 
-const ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
+const ICONS: Record<FileKind, typeof Document> = { pdf: TextFont, archive: Zip, text: Document };
 
 /** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
 export function FileBlockView() {
@@ -44,7 +44,7 @@ export function FileBlockView() {
 		<BlockFrame
 			framed={false}
 			data-file-block
-			className="not-prose my-spacious flex items-center gap-normal rounded-lg border bg-monti-surface px-comfortable py-normal"
+			className="not-prose my-monti-24 flex items-center gap-monti-12 rounded-monti-lg border bg-monti-page px-monti-16 py-monti-12"
 		>
 			<Icon aria-hidden className="size-8 shrink-0 text-monti-muted" strokeWidth={1.5} />
 			<div className="min-w-0 flex-1">

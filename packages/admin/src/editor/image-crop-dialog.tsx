@@ -1,5 +1,6 @@
 "use client";
 
+import { Restart } from "@carbon/icons-react";
 import {
 	type CropBox,
 	formatCrop,
@@ -23,8 +24,8 @@ import {
 	Label,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
-import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -213,14 +214,14 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent size="lg">
-				<Stack as="form" gap="comfortable" onSubmit={handleApply}>
+				<Stack as="form" gap={16} onSubmit={handleApply}>
 					<DialogHeader>
 						<DialogTitle>{t("imageCrop.title")}</DialogTitle>
 					</DialogHeader>
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
-					<Stack gap="condensed" align="center">
-						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border bg-monti-inset p-tight">
+					<Stack gap={8} align="center">
+						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-monti-md border bg-monti-tool p-monti-4">
 							<div
 								ref={containerRef}
 								onPointerDown={(e) => handlePointerDown(e)}
@@ -231,7 +232,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 									ref={imgRef}
 									src={src}
 									alt={t("imageCrop.target")}
-									className="pointer-events-none block max-h-[360px] max-w-full select-none rounded-md"
+									className="pointer-events-none block max-h-[360px] max-w-full select-none rounded-monti-md"
 									draggable={false}
 								/>
 
@@ -263,28 +264,28 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 												type="button"
 												data-slot="crop-handle-nw"
 												onPointerDown={(e) => handlePointerDown(e, "nw")}
-												className="absolute -top-1.5 -left-1.5 size-3.5 cursor-nwse-resize rounded-sm border border-monti-default bg-monti-emphasis p-0"
+												className="absolute -top-1.5 -left-1.5 size-3.5 cursor-nwse-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
 												aria-label={t("imageCrop.handleNw")}
 											/>
 											<button
 												type="button"
 												data-slot="crop-handle-ne"
 												onPointerDown={(e) => handlePointerDown(e, "ne")}
-												className="absolute -top-1.5 -right-1.5 size-3.5 cursor-nesw-resize rounded-sm border border-monti-default bg-monti-emphasis p-0"
+												className="absolute -top-1.5 -right-1.5 size-3.5 cursor-nesw-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
 												aria-label={t("imageCrop.handleNe")}
 											/>
 											<button
 												type="button"
 												data-slot="crop-handle-sw"
 												onPointerDown={(e) => handlePointerDown(e, "sw")}
-												className="absolute -bottom-1.5 -left-1.5 size-3.5 cursor-nesw-resize rounded-sm border border-monti-default bg-monti-emphasis p-0"
+												className="absolute -bottom-1.5 -left-1.5 size-3.5 cursor-nesw-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
 												aria-label={t("imageCrop.handleSw")}
 											/>
 											<button
 												type="button"
 												data-slot="crop-handle-se"
 												onPointerDown={(e) => handlePointerDown(e, "se")}
-												className="absolute -right-1.5 -bottom-1.5 size-3.5 cursor-nwse-resize rounded-sm border border-monti-default bg-monti-emphasis p-0"
+												className="absolute -right-1.5 -bottom-1.5 size-3.5 cursor-nwse-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
 												aria-label={t("imageCrop.handleSe")}
 											/>
 										</div>
@@ -293,7 +294,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</div>
 						</div>
 
-						<Inline width="full" wrap justify="between" gap="condensed">
+						<Inline width="full" wrap justify="between" gap={8}>
 							<Text variant="caption" tone="muted">
 								{isFull
 									? t("imageCrop.full")
@@ -307,20 +308,12 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 						</Inline>
 
 						{/* Keyboard numeric input controls */}
-						<Inline
-							width="full"
-							justify="between"
-							gap="condensed"
-							padding="condensed"
-							radius="lg"
-							border="all"
-							background="inset"
-						>
+						<Inline width="full" justify="between" gap={8} padding={8} radius="lg" border="all" background="tool">
 							<Text variant="caption" tone="muted" weight="medium">
 								{t("imageCrop.regionPercent")}
 							</Text>
-							<Grid columns={4} responsive={false} gap="condensed">
-								<Inline gap="tight">
+							<Grid columns={4} responsive={false} gap={8}>
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-x" size="caption" tone="muted">
 										X
 									</Label>
@@ -336,7 +329,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("x", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-y" size="caption" tone="muted">
 										Y
 									</Label>
@@ -352,7 +345,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("y", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-w" size="caption" tone="muted">
 										W
 									</Label>
@@ -368,7 +361,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										onChange={(e) => handleNumericCropChange("width", Number(e.target.value))}
 									/>
 								</Inline>
-								<Inline gap="tight">
+								<Inline gap={4}>
 									<Label htmlFor="crop-input-h" size="caption" tone="muted">
 										H
 									</Label>
@@ -389,8 +382,8 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 					</Stack>
 
 					{/* Rotation controls */}
-					<Inline justify="between" padding="condensed" radius="lg" border="all" background="inset">
-						<Inline gap="condensed">
+					<Inline justify="between" padding={8} radius="lg" border="all" background="tool">
+						<Inline gap={8}>
 							<Text variant="caption" weight="medium">
 								{t("imageCrop.rotate")}
 							</Text>
@@ -398,19 +391,19 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 								{rotateDraft}°
 							</Text>
 						</Inline>
-						<Button type="button" variant="outline" size="sm" onClick={handleRotate90}>
-							<RotateCw aria-hidden />
+						<Button type="button" variant="secondary" size="sm" onClick={handleRotate90}>
+							<Restart aria-hidden />
 							{t("imageCrop.rotate90")}
 						</Button>
 					</Inline>
 
 					<DialogFooter>
-						<Inline width="full" justify="between" gap="condensed">
-							<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
+						<Inline width="full" justify="between" gap={8}>
+							<TextButton type="button" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
 								{tc("reset")}
-							</Button>
-							<Inline gap="condensed">
-								<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+							</TextButton>
+							<Inline gap={8}>
+								<Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
 									{tc("cancel")}
 								</Button>
 								<Button type="submit">{tc("apply")}</Button>

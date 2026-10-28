@@ -164,7 +164,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 	const fieldValue =
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<FormField>
 				<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 				<Input
@@ -175,7 +175,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 					size="sm"
 				/>
 			</FormField>
-			<Grid columns={2} gap="comfortable">
+			<Grid columns={2} gap={16}>
 				<FormField>
 					<FormFieldLabel htmlFor={ids.place}>{t("field.place")}</FormFieldLabel>
 					<OptionSelect

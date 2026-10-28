@@ -13,10 +13,10 @@ import {
 	useComboboxAnchor,
 } from "./combobox";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
-	title: "Controls/Combobox",
+	title: "Controls/Field/Combobox",
 	component: Combobox,
 } satisfies Meta<typeof Combobox>;
 export default meta;
@@ -52,38 +52,28 @@ export const Playground: Story = {
 
 export const States: Story = {
 	render: () => (
-		<Stack className="max-w-sm" gap="comfortable">
-			<Text variant="caption" tone="muted">
-				placeholder
-			</Text>
+		<Stack className="max-w-sm" gap={16}>
+			<StoryCaption>placeholder</StoryCaption>
 			<Combobox items={TAGS}>
 				<ComboboxInput placeholder="태그 고르기" />
 				<Popup />
 			</Combobox>
-			<Text variant="caption" tone="muted">
-				filled, with clear button
-			</Text>
+			<StoryCaption>filled, with clear button</StoryCaption>
 			<Combobox items={TAGS} defaultValue="개발 노트">
 				<ComboboxInput showClear />
 				<Popup />
 			</Combobox>
-			<Text variant="caption" tone="muted">
-				no trigger button
-			</Text>
+			<StoryCaption>no trigger button</StoryCaption>
 			<Combobox items={TAGS}>
 				<ComboboxInput placeholder="태그 검색" showTrigger={false} />
 				<Popup />
 			</Combobox>
-			<Text variant="caption" tone="muted">
-				disabled
-			</Text>
+			<StoryCaption>disabled</StoryCaption>
 			<Combobox items={TAGS} defaultValue="일상">
 				<ComboboxInput disabled />
 				<Popup />
 			</Combobox>
-			<Text variant="caption" tone="muted">
-				invalid
-			</Text>
+			<StoryCaption>invalid</StoryCaption>
 			<Combobox items={TAGS}>
 				<ComboboxInput aria-invalid placeholder="태그 고르기" />
 				<Popup />
@@ -144,7 +134,7 @@ function ChipsExample({ open, invalid }: { open?: boolean; invalid?: boolean }) 
 /** Multiple selection as chips, closed, open and invalid. */
 export const Chips: Story = {
 	render: () => (
-		<Stack className="max-w-sm" gap="comfortable">
+		<Stack className="max-w-sm" gap={16}>
 			<ChipsExample />
 			<ChipsExample invalid />
 		</Stack>

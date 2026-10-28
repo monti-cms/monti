@@ -1,22 +1,19 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	IconButton,
 	Inline,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-	PageTabs,
+	SearchBox,
 	Stack,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
-	Toggle,
+	TextButton,
 } from "@monti-cms/ui";
-import { AlignLeft, Search, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
@@ -105,32 +102,23 @@ export function ListSearch({
 	const withBody = site.isDocumentCollection(state.collection) && allowBody;
 	return (
 		<Box width="panel">
-			<InputGroup>
-				<InputGroupAddon>
-					<Search aria-hidden />
-				</InputGroupAddon>
-				<InputGroupInput
-					type="search"
-					aria-label={t("toolbar.searchLabel")}
-					value={search}
-					onChange={(event) => setSearch(event.target.value)}
-					placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
-				/>
-				{withBody && (
-					<InputGroupAddon align="inline-end">
-						<Toggle
-							size="sm"
-							aria-label={t("toolbar.includeBody")}
-							title={t("toolbar.includeBody")}
-							pressed={state.includeBody}
-							onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						>
-							<AlignLeft aria-hidden />
-							{t("toolbar.includeBodyShort")}
-						</Toggle>
-					</InputGroupAddon>
-				)}
-			</InputGroup>
+			<SearchBox
+				aria-label={t("toolbar.searchLabel")}
+				value={search}
+				onValueChange={setSearch}
+				placeholder={state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder")}
+				targets={
+					withBody
+						? [
+								{ value: "fields", label: t("toolbar.targetFields") },
+								{ value: "all", label: t("toolbar.targetAll") },
+							]
+						: undefined
+				}
+				target={state.includeBody ? "all" : "fields"}
+				onTargetChange={(target) => onChange({ includeBody: target === "all" })}
+				targetLabel={t("toolbar.target")}
+			/>
 		</Box>
 	);
 }
@@ -156,13 +144,13 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 			value={active ?? ""}
 			onValueChange={(key) => onChange({ statuses: key === "all" ? [] : [key as ListStatus], hasChanges: false })}
 		>
-			<PageTabs inset="none" aria-label={t("list.statusFilter")}>
+			<TabsList variant="bar" inset="none" aria-label={t("list.statusFilter")}>
 				{segments.map(({ key, label }) => (
 					<TabsTrigger key={key} value={key}>
 						{label}
 					</TabsTrigger>
 				))}
-			</PageTabs>
+			</TabsList>
 		</Tabs>
 	);
 }
@@ -192,26 +180,26 @@ export function ListSubToolbar({
 	);
 	const chipList =
 		chips.length === 0 ? null : (
-			<Inline as="ul" wrap gap="condensed" grow minWidth={0} paddingY="condensed" aria-label={t("toolbar.chips")}>
+			<Inline as="ul" wrap gap={8} grow minWidth={0} paddingY={8} aria-label={t("toolbar.chips")}>
 				{chips.map((chip) => (
 					<Box as="li" key={chip.key}>
-						<Inline as="span" gap="tight" background="selected" radius="sm" paddingX="condensed">
-							<Box as="span" minWidth={0} maxWidth="panel-lg">
+						<Inline as="span" gap={4} background="selected" radius="sm" paddingX={8}>
+							<Box as="span" minWidth={0} maxWidth="assistant">
 								<Text variant="caption" weight="medium" tone="default" truncate>
 									{chip.label}
 								</Text>
 							</Box>
-							<IconButton size="icon-xs" label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
-								<X aria-hidden />
+							<IconButton label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
+								<Close aria-hidden />
 							</IconButton>
 						</Inline>
 					</Box>
 				))}
 				{chips.length >= 2 && (
 					<Box as="li">
-						<Button type="button" variant="quiet" size="xs" onClick={() => onChange(clearFiltersPatch(state))}>
+						<TextButton type="button" variant="quiet" onClick={() => onChange(clearFiltersPatch(state))}>
 							{t("filter.clearAll")}
-						</Button>
+						</TextButton>
 					</Box>
 				)}
 			</Inline>
@@ -219,13 +207,13 @@ export function ListSubToolbar({
 	if (hasSegments) {
 		// The status tabs draw the line under the row; the chips, when there are any, get a row of their own below.
 		return (
-			<Stack gap="none" shrink={false}>
-				<Inline align="stretch" gap="none">
+			<Stack gap={0} shrink={false}>
+				<Inline align="stretch" gap={0}>
 					<Box grow minWidth={0}>
 						<StatusSegments state={state} onChange={onChange} />
 					</Box>
 					{trailing && (
-						<Inline gap="tight" border="bottom">
+						<Inline gap={4} border="bottom">
 							{trailing}
 						</Inline>
 					)}
@@ -235,9 +223,9 @@ export function ListSubToolbar({
 		);
 	}
 	return (
-		<Inline align="stretch" gap="comfortable" shrink={false} border="bottom" paddingY="tight">
+		<Inline align="stretch" gap={16} shrink={false} border="bottom" paddingY={4}>
 			{chipList ?? <Box grow />}
-			{trailing && <Inline gap="tight">{trailing}</Inline>}
+			{trailing && <Inline gap={4}>{trailing}</Inline>}
 		</Inline>
 	);
 }

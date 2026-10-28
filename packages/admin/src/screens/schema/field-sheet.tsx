@@ -6,17 +6,19 @@ import {
 	Button,
 	Heading,
 	Inline,
-	PageTabs,
 	Sheet,
+	SheetBody,
 	SheetContent,
-	SheetDescription,
+	SheetFooter,
 	SheetHeader,
 	SheetTitle,
 	Stack,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
@@ -28,7 +30,7 @@ import {
 	IssueList,
 	orUndefined,
 	Pick,
-	Segmented,
+	SegmentedField,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -134,24 +136,21 @@ export function FieldSheet({
 	const resizable = useResizableSheet(FIELD_SHEET_RESIZE);
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent resizable={resizable} data-testid="field-sheet" showCloseButton>
+			<SheetContent resizable={resizable} data-testid="field-sheet">
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
-				<Tabs defaultValue="basic" render={<Stack gap="none" grow minHeight={0} />}>
+				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>
 						<SheetTitle>{label || name}</SheetTitle>
-						<SheetDescription>
-							<Text as="code">{name}</Text> · {t(`kind.${kind}`)}
-						</SheetDescription>
 					</SheetHeader>
-					<PageTabs inset="panel">
+					<TabsList variant="bar" inset="panel">
 						<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 						<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
-					</PageTabs>
-					<Box grow minHeight={0} overflow="y" paddingX="spacious" paddingY="spacious">
+					</TabsList>
+					<SheetBody>
 						<IssueList issues={issues} />
 						<TabsContent value="basic">
-							<Stack gap="wide">
-								<Stack as="section" gap="spacious">
+							<Stack gap={32}>
+								<Stack as="section" gap={24}>
 									<TextInput label={t("sheet.label")} value={label} onChange={(value) => setBoth("label", value)} />
 									<TextInput
 										label={t("field.description")}
@@ -160,12 +159,12 @@ export function FieldSheet({
 										onChange={(value) => setBoth("description", orUndefined(value))}
 									/>
 									<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-										<Inline height="control" radius="md" background="neutral" paddingX="normal">
+										<Inline height="icon-button" radius="md" background="muted" paddingX={12}>
 											<Text as="code">{name}</Text>
 										</Inline>
 									</Labeled>
 								</Stack>
-								<Stack as="section" gap="comfortable" border="top" paddingTop="wide">
+								<Stack as="section" gap={16} border="top" paddingTop={32}>
 									<Heading as="h3" variant="label">
 										{t("sheet.input")}
 									</Heading>
@@ -189,7 +188,7 @@ export function FieldSheet({
 									/>
 								</Stack>
 								{valueKind && (
-									<Stack as="section" gap="comfortable" border="top" paddingTop="wide">
+									<Stack as="section" gap={16} border="top" paddingTop={32}>
 										<Heading as="h3" variant="label">
 											{t("sheet.rules")}
 										</Heading>
@@ -203,7 +202,7 @@ export function FieldSheet({
 											/>
 										)}
 										{LOCALIZED_KINDS.includes(kind) && (
-											<Segmented
+											<SegmentedField
 												label={t("field.localized")}
 												value={
 													field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared"
@@ -223,7 +222,7 @@ export function FieldSheet({
 							</Stack>
 						</TabsContent>
 						<TabsContent value="advanced">
-							<Stack gap="spacious">
+							<Stack gap={24}>
 								<Pick
 									label={t("field.kind")}
 									description={
@@ -256,28 +255,26 @@ export function FieldSheet({
 								)}
 							</Stack>
 						</TabsContent>
-					</Box>
+					</SheetBody>
 				</Tabs>
-				<Inline gap="condensed" border="top" paddingX="spacious" paddingY="normal">
-					<Button
+				<SheetFooter>
+					<TextButton
 						type="button"
-						variant="ghost"
-						tone="danger"
-						size="sm"
+						variant="danger"
 						disabled={disabled || blocked !== null}
 						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
 						onClick={remove}
 					>
 						{t("sheet.delete")}
-					</Button>
+					</TextButton>
 					<Box as="span" grow />
-					<Button type="button" variant="outline" size="sm" onClick={onClose}>
+					<TextButton type="button" onClick={onClose}>
 						{tc("cancel")}
-					</Button>
-					<Button type="button" size="sm" disabled={disabled} onClick={apply}>
+					</TextButton>
+					<Button type="button" disabled={disabled} onClick={apply}>
 						{tc("apply")}
 					</Button>
-				</Inline>
+				</SheetFooter>
 			</SheetContent>
 		</Sheet>
 	);

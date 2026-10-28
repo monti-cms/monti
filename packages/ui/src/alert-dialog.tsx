@@ -4,6 +4,16 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 import type * as React from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import {
+	DIALOG_ACTIONS,
+	DIALOG_BACKDROP,
+	DIALOG_DESCRIPTION,
+	DIALOG_HEADER,
+	DIALOG_SURFACE,
+	DIALOG_TITLE,
+	useModalFocus,
+} from "./dialog";
+import { TextButton } from "./text-button";
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
 	return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
@@ -21,32 +31,23 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 	return (
 		<AlertDialogPrimitive.Backdrop
 			data-slot="alert-dialog-overlay"
-			className={cn(
-				"data-open:fade-in-0 data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-monti-backdrop duration-100 data-closed:animate-out data-open:animate-in supports-backdrop-filter:backdrop-blur-xs",
-				className,
-			)}
+			className={cn(DIALOG_BACKDROP, className)}
 			{...props}
 		/>
 	);
 }
 
-function AlertDialogContent({
-	className,
-	size = "default",
-	...props
-}: AlertDialogPrimitive.Popup.Props & {
-	size?: "default" | "sm";
-}) {
+/** The same modal as `Dialog`: a question that must be answered before anything else, closed only by its own buttons or Escape. */
+function AlertDialogContent({ className, ...props }: AlertDialogPrimitive.Popup.Props) {
+	const { popup, initialFocus } = useModalFocus();
 	return (
 		<AlertDialogPortal>
 			<AlertDialogOverlay />
 			<AlertDialogPrimitive.Popup
+				ref={popup}
+				initialFocus={initialFocus}
 				data-slot="alert-dialog-content"
-				data-size={size}
-				className={cn(
-					"group/alert-dialog-content data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl border border-monti-muted bg-monti-overlay p-6 text-monti-default shadow-monti-floating outline-none duration-100 data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-closed:animate-out data-open:animate-in data-[size=default]:sm:max-w-lg",
-					className,
-				)}
+				className={cn(DIALOG_SURFACE, className)}
 				{...props}
 			/>
 		</AlertDialogPortal>
@@ -54,54 +55,16 @@ function AlertDialogContent({
 }
 
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="alert-dialog-header"
-			className={cn(
-				"grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <div data-slot="alert-dialog-header" className={cn(DIALOG_HEADER, className)} {...props} />;
 }
 
 function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="alert-dialog-footer"
-			className={cn(
-				"flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
-
-function AlertDialogMedia({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="alert-dialog-media"
-			className={cn(
-				"mb-2 inline-flex size-16 items-center justify-center rounded-md bg-monti-neutral sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
-				className,
-			)}
-			{...props}
-		/>
-	);
+	return <div data-slot="alert-dialog-footer" className={cn(DIALOG_ACTIONS, className)} {...props} />;
 }
 
 function AlertDialogTitle({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
 	return (
-		<AlertDialogPrimitive.Title
-			data-slot="alert-dialog-title"
-			className={cn(
-				"text-monti-title sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
-				className,
-			)}
-			{...props}
-		/>
+		<AlertDialogPrimitive.Title data-slot="alert-dialog-title" className={cn(DIALOG_TITLE, className)} {...props} />
 	);
 }
 
@@ -112,10 +75,7 @@ function AlertDialogDescription({
 	return (
 		<AlertDialogPrimitive.Description
 			data-slot="alert-dialog-description"
-			className={cn(
-				"text-balance text-monti-body text-monti-muted md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-monti-default",
-				className,
-			)}
+			className={cn(DIALOG_DESCRIPTION, className)}
 			{...props}
 		/>
 	);
@@ -125,17 +85,12 @@ function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof 
 	return <Button data-slot="alert-dialog-action" className={cn(className)} {...props} />;
 }
 
-function AlertDialogCancel({
-	className,
-	variant = "outline",
-	size = "default",
-	...props
-}: AlertDialogPrimitive.Close.Props & Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+function AlertDialogCancel({ className, ...props }: AlertDialogPrimitive.Close.Props) {
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
 			className={cn(className)}
-			render={<Button variant={variant} size={size} />}
+			render={<TextButton />}
 			{...props}
 		/>
 	);
@@ -149,7 +104,6 @@ export {
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
-	AlertDialogMedia,
 	AlertDialogOverlay,
 	AlertDialogPortal,
 	AlertDialogTitle,

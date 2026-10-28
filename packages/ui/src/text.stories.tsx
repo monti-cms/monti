@@ -1,24 +1,30 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ComponentProps } from "react";
+import { tokens } from "./foundations/shared";
 import { Stack } from "./stack";
 import { Heading, Text } from "./text";
 
 const meta = {
-	title: "Layout/Text",
+	title: "Primitives/Text",
 	component: Text,
 	args: { children: "처음 쓰는 블로그 글", variant: "body", tone: "default", weight: "role" },
 } satisfies Meta<typeof Text>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+type Role = NonNullable<ComponentProps<typeof Text>["variant"]>;
 
 export const Playground: Story = {};
 
-const VARIANTS = ["micro", "caption", "label", "body", "reading", "title", "heading", "display"] as const;
-const TONES = ["default", "muted", "subtle", "accent", "danger", "warning", "success", "inherit"] as const;
+// Every role of the design system, from tokens.json, so a role added there shows up here.
+const VARIANTS = tokens.type.groups.flatMap((group) =>
+	group.styles.map((style) => style.name.replace("text-", "") as Role),
+);
+const TONES = ["default", "muted", "subtle", "faint", "proposal", "danger", "warning", "success", "inherit"] as const;
 const WEIGHTS = ["role", "medium", "semibold"] as const;
 
 export const AllVariants: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{VARIANTS.map((variant) => (
 				<Text key={variant} as="div" variant={variant}>
 					{variant} · 글을 쓰고 발행해 보세요
@@ -31,9 +37,9 @@ export const AllVariants: Story = {
 /** Every variant in every tone. */
 export const VariantsByTone: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{VARIANTS.map((variant) => (
-				<Stack key={variant} direction="row" gap="spacious" wrap align="baseline">
+				<Stack key={variant} direction="row" gap={24} wrap align="baseline">
 					{TONES.map((tone) => (
 						<Text key={tone} variant={variant} tone={tone}>
 							{variant} {tone}
@@ -47,7 +53,7 @@ export const VariantsByTone: Story = {
 
 export const Weights: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{WEIGHTS.map((weight) => (
 				<Text key={weight} as="div" weight={weight}>
 					weight {weight} · 발행됨
@@ -77,7 +83,7 @@ export const Truncate: Story = {
 
 export const Elements: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Text as="label" htmlFor="title" variant="label">
 				제목
 			</Text>
@@ -91,11 +97,11 @@ export const Elements: Story = {
 	),
 };
 
-const HEADING_VARIANTS = ["title", "heading", "display"] as const;
+const HEADING_VARIANTS = ["label", "title", "page", "heading", "display"] as const;
 
 export const Headings: Story = {
 	render: () => (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			{HEADING_VARIANTS.map((variant) => (
 				<Heading key={variant} variant={variant}>
 					{variant} · 여름 여행 기록
@@ -107,7 +113,7 @@ export const Headings: Story = {
 
 export const HeadingsByTone: Story = {
 	render: () => (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{TONES.map((tone) => (
 				<Heading key={tone} tone={tone}>
 					title {tone}
@@ -119,8 +125,8 @@ export const HeadingsByTone: Story = {
 
 export const HeadingLevelsAndTruncate: Story = {
 	render: () => (
-		<Stack gap="condensed" className="max-w-xs">
-			<Heading as="h1" variant="heading">
+		<Stack gap={8} className="max-w-xs">
+			<Heading as="h1" variant="page">
 				h1 · 글
 			</Heading>
 			<Heading as="h3">h3 · 설정</Heading>

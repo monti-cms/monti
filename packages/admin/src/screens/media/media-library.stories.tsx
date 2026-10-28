@@ -7,7 +7,7 @@ import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { MediaLibrary } from "./media-library";
 import { MediaNotConfigured } from "./media-not-configured";
 
-const meta = { title: "Screens/Media library", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Media library", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

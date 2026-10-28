@@ -42,12 +42,9 @@ function ToolLine({ part }: { part: ToolPart }) {
 			: []),
 	];
 	return (
-		<ToolCallLine
-			name={operationOf(getToolName(part))}
-			status={status}
-			statusLabel={t(`tool.${status}`)}
-			details={details}
-		/>
+		<ToolCallLine status={status} statusLabel={t(`tool.${status}`)} details={details}>
+			{operationOf(getToolName(part))}
+		</ToolCallLine>
 	);
 }
 

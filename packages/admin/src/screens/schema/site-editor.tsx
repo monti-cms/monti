@@ -58,7 +58,7 @@ export function SiteEditor({
 	const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
-		<Stack gap="section" data-testid="site-settings">
+		<Stack gap={48} data-testid="site-settings">
 			<Section wide band title={t("site.identityTitle")}>
 				<TextInput
 					label={ts("site.name")}
@@ -114,16 +114,16 @@ export function SiteEditor({
 					control="normal"
 					aside={revert("aliases") && <RevertMark name={t("site.aliases")} onRevert={() => revert("aliases")?.()} />}
 				>
-					<Stack gap="condensed">
+					<Stack gap={8}>
 						{aliases.length > 0 && (
-							<Stack as="ul" gap="none" border="all" radius="md" overflow="hidden">
+							<Stack as="ul" gap={0} border="all" radius="md" overflow="hidden">
 								{aliases.map((alias, index) => (
 									<Inline
 										as="li"
 										key={alias}
-										gap="condensed"
-										paddingX="normal"
-										paddingY="tight"
+										gap={8}
+										paddingX={12}
+										paddingY={4}
 										border={index === 0 ? undefined : "top"}
 										data-testid={`alias-${alias}`}
 									>
@@ -144,7 +144,7 @@ export function SiteEditor({
 							</Stack>
 						)}
 						{!disabled && (
-							<Inline align="end" gap="condensed">
+							<Inline align="end" gap={8}>
 								<Box grow>
 									<Input
 										value={host}
@@ -155,7 +155,7 @@ export function SiteEditor({
 								</Box>
 								<Button
 									type="button"
-									variant="outline"
+									variant="secondary"
 									size="sm"
 									disabled={!addable}
 									onClick={() => {
@@ -172,7 +172,7 @@ export function SiteEditor({
 				<Box data-testid="site-url">
 					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
 						{siteUrl.url ? (
-							<Box background="neutral" radius="md" paddingX="normal" paddingY="condensed">
+							<Box background="muted" radius="md" paddingX={12} paddingY={8}>
 								<Text as="code" variant="caption">
 									{siteUrl.url}
 								</Text>

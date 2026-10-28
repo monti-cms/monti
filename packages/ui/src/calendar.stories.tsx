@@ -4,7 +4,7 @@ import { Calendar } from "./calendar";
 import { Stack } from "./stack";
 
 const meta = {
-	title: "Controls/Calendar",
+	title: "Controls/Field/Calendar",
 	component: Calendar,
 	args: { locale: ko, defaultMonth: new Date(2026, 9, 1) },
 } satisfies Meta<typeof Calendar>;
@@ -39,17 +39,15 @@ export const Disabled: Story = {
 
 export const Layouts: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
+			<Calendar locale={ko} defaultMonth={new Date(2026, 9, 1)} mode="single" showOutsideDays={false} />
 			<Calendar
 				locale={ko}
 				defaultMonth={new Date(2026, 9, 1)}
 				mode="single"
-				captionLayout="dropdown"
-				startMonth={new Date(2020, 0)}
-				endMonth={new Date(2030, 11)}
+				numberOfMonths={2}
+				showOutsideDays={false}
 			/>
-			<Calendar locale={ko} defaultMonth={new Date(2026, 9, 1)} mode="single" showOutsideDays={false} />
-			<Calendar locale={ko} defaultMonth={new Date(2026, 9, 1)} mode="single" numberOfMonths={2} />
 			<Calendar locale={ko} defaultMonth={new Date(2026, 9, 1)} mode="single" showWeekNumber />
 		</Stack>
 	),

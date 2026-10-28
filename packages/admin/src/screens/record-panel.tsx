@@ -9,7 +9,7 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { Box, PageTabs, Stack, StatusIndicator, Tabs, TabsContent, TabsTrigger, Text } from "@monti-cms/ui";
+import { Box, EntryStatus, Stack, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
@@ -184,11 +184,11 @@ export function RecordPanel({
 	};
 
 	return (
-		<Stack as="aside" aria-label={heading} gap="none" height="full" border="left" background="page">
+		<Stack as="aside" aria-label={heading} gap={0} height="full" border="left" background="page">
 			<SidePanelHeader title={heading} onClose={() => void close()} />
 			<Stack
 				as="form"
-				gap="none"
+				gap={0}
 				grow
 				minHeight={0}
 				onSubmit={(event) => {
@@ -199,7 +199,7 @@ export function RecordPanel({
 				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
 					<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
 						{translated && (
-							<PageTabs inset="panel">
+							<TabsList variant="bar" inset="panel">
 								{site.LOCALES.map((option) => {
 									const filled = hasLocaleValues(site, collection, form, option);
 									const name = site.localeLabel(option);
@@ -214,20 +214,14 @@ export function RecordPanel({
 											}
 										>
 											{name}
-											{option !== site.DEFAULT_LOCALE && (
-												<StatusIndicator
-													size="xs"
-													tone={filled ? "success" : "neutral"}
-													shape={filled ? "dot" : "ring"}
-												/>
-											)}
+											{option !== site.DEFAULT_LOCALE && <EntryStatus status={filled ? "published" : "draft"} />}
 										</TabsTrigger>
 									);
 								})}
-							</PageTabs>
+							</TabsList>
 						)}
 						<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
-							<Stack gap="comfortable" padding="comfortable">
+							<Stack gap={16} padding={16}>
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
 								{id && (
 									<Text as="p" variant="caption" tone="muted">
@@ -238,7 +232,7 @@ export function RecordPanel({
 						</TabsContent>
 						{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
 							<TabsContent key={option} value={option} fill scroll>
-								<Stack gap="comfortable" padding="comfortable">
+								<Stack gap={16} padding={16}>
 									<Text as="p" variant="caption" tone="muted">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
 									</Text>
@@ -248,7 +242,7 @@ export function RecordPanel({
 						))}
 					</Tabs>
 				</EntryFormProvider>
-				<Box shrink={false} border="top" paddingX="comfortable" paddingY="normal">
+				<Box shrink={false} border="top" paddingX={16} paddingY={12}>
 					<EditorFooter
 						// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
 						dirty={dirty || isNew}

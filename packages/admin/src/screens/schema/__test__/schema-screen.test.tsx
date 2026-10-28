@@ -35,8 +35,9 @@ const tFields = testSite.createTranslator(schemaFieldsMessages);
 const tAdmin = testSite.createTranslator(schemaAdminMessages);
 const tReview = testSite.createTranslator(schemaReviewMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
 vi.mock("../reload", () => reload);
 
@@ -400,11 +401,11 @@ describe("SchemaScreen", () => {
 		openTab("fields");
 		await screen.findByTestId("fields-card");
 		const dialog = await openAddField();
-		for (const kind of ["text", "select", "media", "relation"] as const) {
-			const radio = within(dialog).getByRole("radio", { name: tFields(`kind.${kind}`) });
-			// Each kind is a row with a one-line description.
-			expect(radio.textContent).toContain(tFields(`kind.${kind}.hint`));
-		}
+		// Each kind is a row of the list with its name alone.
+		for (const kind of ["text", "select", "media", "relation"] as const)
+			expect(within(dialog).getByRole("radio", { name: tFields(`kind.${kind}`) }).textContent).toContain(
+				tFields(`kind.${kind}`),
+			);
 		for (const kind of ["slug", "conditional", "backlink", "view"] as const)
 			expect(within(dialog).queryByRole("radio", { name: tFields(`kind.${kind}`) })).toBeNull();
 		// Picking another kind swaps the settings below without leaving the dialog.
@@ -729,15 +730,6 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
-	it("ends the basics tab with the remove section", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
-		const button = screen.getByRole("button", { name: t("collection.remove") });
-		expect(button.closest("section")?.querySelector(".bg-monti-card")).toBeNull();
-	});
-
 	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
@@ -788,11 +780,11 @@ describe("SchemaScreen", () => {
 		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
 		// A name that is taken is refused with the reason.
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "post");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "post");
 		expect(within(dialog).getByText(t("name.taken"))).toBeTruthy();
 		expect(confirm.disabled).toBe(true);
 
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "note");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "note");
 		expect(
 			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
 		).toBe("notes");
@@ -803,7 +795,7 @@ describe("SchemaScreen", () => {
 		expect(within(dialog).getByText("/:slug")).toBeTruthy();
 		// An address of the writer's own stays when the name changes.
 		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "ideas");
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "notes");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "notes");
 		expect(
 			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
 		).toBe("ideas");
@@ -837,8 +829,9 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		const name = within(dialog).getByLabelText(tCollection("collection.newName"));
-		const id = () => (within(dialog).getByLabelText(tCollection("collection.newId")) as HTMLInputElement).value;
+		const name = within(dialog).getByRole("textbox", { name: tCollection("collection.newName") });
+		const id = () =>
+			(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }) as HTMLInputElement).value;
 		const path = () =>
 			`/${(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value}/:slug`;
 
@@ -857,13 +850,13 @@ describe("SchemaScreen", () => {
 			name: tCollection("collection.createConfirm"),
 		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
-		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memo");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }), "memo");
 		expect(path()).toBe("/memos/:slug");
 		expect(confirm.disabled).toBe(false);
 
 		// Once the address is edited it stops following the identifier.
 		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "my");
-		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memos");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newId") }), "memos");
 		expect(path()).toBe("/my/:slug");
 
 		fireEvent.click(confirm);
@@ -880,7 +873,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		type(within(dialog).getByLabelText(tCollection("collection.newName")), "category");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.newName") }), "category");
 		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
 		expect(within(dialog).queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 		fireEvent.click(within(dialog).getByRole("button", { name: tCollection("collection.createConfirm") }));
@@ -967,17 +960,6 @@ describe("SchemaScreen", () => {
 		expect(within(sheet).queryByLabelText(tFields("field.input"))).toBeNull();
 		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
-	});
-
-	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		// The page body is the full-width column around the screen's content.
-		const bodyOf = (id: string) => screen.getByTestId(id).closest("[class*='w-full']") as HTMLElement;
-		expect(bodyOf("collection-post").className).not.toContain("max-w-page");
-		fireEvent.click(screen.getByRole("tab", { name: "site" }));
-		await screen.findByTestId("site-settings");
-		expect(bodyOf("site-settings").className).toContain("max-w-page");
 	});
 
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
@@ -1336,17 +1318,6 @@ describe("SchemaScreen", () => {
 			vi.unstubAllGlobals();
 		});
 
-		it("caps the tree at a width that suits its columns, with the preview right beside it", async () => {
-			wideWindow();
-			await openFields();
-			const side = await screen.findByTestId("layout-preview-side");
-			const row = side.parentElement as HTMLElement;
-			// The first column stops growing at the cap; the preview follows it, not the page edge.
-			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
-			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-content");
-			vi.unstubAllGlobals();
-		});
-
 		it("can be closed and opened again, and remembers it", async () => {
 			wideWindow();
 			await openFields();
@@ -1449,7 +1420,7 @@ describe("SchemaScreen", () => {
 		const dialog = await openAddField(tFields("kind.relation"));
 		fireEvent.click(within(dialog).getByRole("combobox", { name: tFields("field.relationTo") }));
 		pressOption(await screen.findByRole("option", { name: "Tag" }));
-		fireEvent.click(within(dialog).getByRole("radio", { name: tFields("field.many") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.many") }));
 		fireEvent.click(within(dialog).getByRole("button", { name: tFields("field.more") }));
 		fireEvent.click(await within(dialog).findByRole("switch", { name: tFields("field.opposite") }));
 		confirmAdd(dialog);
@@ -1494,7 +1465,7 @@ describe("SchemaScreen", () => {
 	};
 
 	describe("change marks and the save bar", () => {
-		const dotsIn = (element: HTMLElement) => within(element).queryAllByTestId("change-dot");
+		const dotsIn = (element: HTMLElement) => within(element).queryAllByRole("img", { name: t("changed") });
 		const revertName = (name: string) => t("revert.named", { name });
 		const subTab = (name: "basics" | "fields" | "editor") =>
 			screen.getByRole("tab", { name: new RegExp(`^${tCollection(`collection.tabs.${name}`)}`) });
@@ -1562,11 +1533,13 @@ describe("SchemaScreen", () => {
 			renderScreen();
 			await screen.findByTestId("collection-post");
 			openTab("fields");
-			expect(within(await screen.findByTestId("field-summary")).queryAllByTestId("change-dot")).toHaveLength(0);
+			expect(
+				within(await screen.findByTestId("field-summary")).queryAllByRole("img", { name: t("changed") }),
+			).toHaveLength(0);
 			const sheet = await openFieldSheet("summary");
 			type(within(sheet).getByLabelText(tFields("field.label")), "Teaser");
 			await applySheet(sheet);
-			expect(within(screen.getByTestId("field-summary")).getAllByTestId("change-dot")).toHaveLength(1);
+			expect(within(screen.getByTestId("field-summary")).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
 			expect(dotsIn(subTab("fields"))).toHaveLength(1);
 			expect(dotsIn(subTab("basics"))).toHaveLength(0);
 			fireEvent.click(

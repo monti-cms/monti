@@ -6,7 +6,7 @@ import type { AiProviderView, AiSettingsView } from "../connection";
 import type { AiSnippetView } from "../snippets";
 import { AiManager } from "./ai-manager";
 
-const meta = { title: "Screens/AI/AI screen", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/AI/AI screen", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

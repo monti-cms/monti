@@ -48,7 +48,7 @@ export function PublicPathField({
 	const shown = pathOfSegment(draft) === path ? draft : segment;
 	const issue = hasPage ? pathProblem(path) : null;
 	return (
-		<Stack gap="tight" paddingBottom={hasPage ? "normal" : undefined}>
+		<Stack gap={4} paddingBottom={hasPage ? 12 : undefined}>
 			<FlagSwitch
 				label={t("collection.path")}
 				revert={revert}
@@ -57,8 +57,8 @@ export function PublicPathField({
 			/>
 			{hasPage && (
 				<Inline justify="end">
-					<Stack gap="condensed" width="full" maxWidth="panel">
-						<Inline gap="tight">
+					<Stack gap={8} width="full" maxWidth="panel">
+						<Inline gap={4}>
 							<Text mono tone="muted" aria-hidden="true">
 								/
 							</Text>

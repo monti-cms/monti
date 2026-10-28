@@ -34,9 +34,8 @@
 		"@tiptap/core": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
-		"lucide-react": ">=0.562.0",
-		"react": ">=19",
-		"sonner": "^2.0.8"
+		"@carbon/icons-react": ">=11.90.0",
+		"react": ">=19"
 	},
 	"devDependencies": {
 		"@monti-cms/admin": "workspace:*",
@@ -55,12 +54,11 @@
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"jsdom": "^27.4.0",
-		"lucide-react": "^0.562.0",
+		"@carbon/icons-react": "11.90.0",
 		"next-themes": "^0.4.6",
 		"pg": "^8.23.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
-		"sonner": "^2.0.8",
 		"storybook": "10.6.1",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.0",

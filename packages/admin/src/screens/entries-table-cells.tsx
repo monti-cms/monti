@@ -1,9 +1,9 @@
 // Cell renderers of the entries table: title, status label, locale badges, dates, slug, folder and field columns.
 
+import { Folder as FolderIcon } from "@carbon/icons-react";
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, Inline, StatusIndicator, Text, TextLink } from "@monti-cms/ui";
-import { Folder as FolderIcon } from "lucide-react";
+import { Box, EntryStatus, Inline, Text, TextButton } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
@@ -11,8 +11,7 @@ import { AdminLink as Link } from "../router";
 import { customListCell, DefaultFieldCell } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { screensMessages } from "./messages";
-import { describeEntryStatus, statusLabels } from "./shared/entry-status";
-import { entryStatusMarker } from "./shared/entry-status-marker";
+import { describeEntryStatus, entryStatusKind, statusLabels } from "./shared/entry-status";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 
 /** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
@@ -24,55 +23,61 @@ const formatDate = (site: Site, value: Date | string | null) => {
 		: formatDateOnly(site, value);
 };
 
-/** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
+/**
+ * Per-locale state of a translation group, as the list draws it: each locale's code in mono, its tone saying how that language stands (green in sync,
+ * orange has a draft or unpublished changes, gray otherwise, faint when there is no translation). Existing locales link to their edit screen. The state
+ * is also in words for screen readers, not just color.
+ */
 function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap="tight">
+		<Inline as="span" gap={8}>
 			{site.LOCALES.map((locale) => {
 				const name = site.localeLabel(locale);
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<Badge key={locale} variant="dashed" mono>
+						<Text key={locale} as="span" variant="meta" tone="faint">
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<Text srOnly>{t("locale.hasNot", { name })}</Text>
-						</Badge>
+						</Text>
 					);
 				}
-				const variant =
+				const tone =
 					member.status === "published" && !member.hasUnpublishedChanges
 						? "success"
 						: member.status === "published" || member.status === "draft"
 							? "warning"
-							: "secondary";
+							: "subtle";
 				return (
-					<Badge key={locale} variant={variant} mono render={<Link href={site.adminEntryEditHref(member.id)} />}>
-						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<Text srOnly>
-							{name} · {statusLabels(site)[member.status]}
+					<TextButton key={locale} render={<Link href={site.adminEntryEditHref(member.id)} />}>
+						<Text as="span" variant="meta" tone={tone}>
+							<span aria-hidden="true">{locale.toUpperCase()}</span>
+							<Text srOnly>
+								{name} · {statusLabels(site)[member.status]}
+							</Text>
 						</Text>
-					</Badge>
+					</TextButton>
 				);
 			})}
 		</Inline>
 	);
 }
 
-/** Locales of a taxonomy item (category, tag, series). Locales with a name are filled badges, others are dashed badges. */
+/** Locales of a taxonomy item (category, tag, series): a locale with a name is in ink-gray, one without is faint. */
 function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Inline as="span" gap="tight">
+		<Inline as="span" gap={8}>
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					<Badge key={locale} variant={named ? "success" : "dashed"} mono>
+					<Text key={locale} as="span" variant="meta" tone={named ? "muted" : "faint"}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<Text srOnly>{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}</Text>
-					</Badge>
+					</Text>
 				);
 			})}
 		</Inline>
@@ -84,7 +89,7 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	return <StatusIndicator {...entryStatusMarker(item.status, item.hasUnpublishedChanges)} label={label} />;
+	return <EntryStatus status={entryStatusKind(item.status, item.hasUnpublishedChanges)}>{label}</EntryStatus>;
 }
 
 /** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */
@@ -154,30 +159,24 @@ function DefaultEntryCell({
 			);
 			if (isTrash)
 				return (
-					<Inline align="baseline" gap="condensed" minWidth={0}>
+					<Inline align="baseline" gap={8} minWidth={0}>
 						{titleBox(title)}
 						{slug}
 					</Inline>
 				);
 			return isRecord ? (
-				<Inline align="baseline" gap="condensed" minWidth={0}>
+				<Inline align="baseline" gap={8} minWidth={0}>
 					{titleBox(
-						<TextLink underline="hover" render={<button type="button" onClick={() => onOpenRecord(item)} />}>
-							{title}
-						</TextLink>,
+						<TextButton render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</TextButton>,
 					)}
 					{slug}
 				</Inline>
 			) : (
-				<Inline align="baseline" gap="condensed" minWidth={0}>
-					{titleBox(
-						<TextLink underline="hover" render={<Link href={site.adminEntryEditHref(item.id)} />}>
-							{title}
-						</TextLink>,
-					)}
+				<Inline align="baseline" gap={8} minWidth={0}>
+					{titleBox(<TextButton render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</TextButton>)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
-						<Inline gap="tight" minWidth={0}>
+						<Inline gap={4} minWidth={0}>
 							<FolderIcon aria-hidden size={12} />
 							<Text as="div" variant="caption" tone="muted" truncate>
 								<Text srOnly>{t("list.folderSr")}</Text>
@@ -196,7 +195,7 @@ function DefaultEntryCell({
 			if (item.translations) return <LocaleBadges translations={item.translations} />;
 			// Also mark that a translation is not the original.
 			return (
-				<Inline as="span" gap="tight">
+				<Inline as="span" gap={4}>
 					<Text variant="caption" tone="muted" weight="medium">
 						<abbr title={site.localeLabel(item.locale)}>{item.locale.toUpperCase()}</abbr>
 					</Text>

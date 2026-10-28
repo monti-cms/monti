@@ -10,7 +10,7 @@ export interface ToolsPage {
 	readonly label: string;
 	/** The line under the page title. */
 	readonly description?: string;
-	/** Icon name (lucide). */
+	/** Icon name (Carbon). */
 	readonly icon?: string;
 	readonly group: "writing" | "site";
 }

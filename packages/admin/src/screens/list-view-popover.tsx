@@ -1,8 +1,9 @@
 // "View" popover of the entry list: which columns show and in what order, how many rows a page holds, and how the list is sorted.
+
+import { ArrowDown, ArrowUp, SettingsAdjust } from "@carbon/icons-react";
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Checkbox,
 	Heading,
 	IconButton,
@@ -11,14 +12,15 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 	Stack,
+	TextButton,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { type AdminListColumn, columnConfig, columnLabel, columnsFor } from "./list-columns";
 import type { ListState } from "./list-state";
@@ -41,18 +43,9 @@ export function ColumnSettingsPanel({
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack as="ul" gap="hair">
+		<Stack as="ul" gap={2}>
 			{order.map((column, index) => (
-				<Inline
-					as="li"
-					key={column}
-					justify="between"
-					gap="condensed"
-					radius="md"
-					paddingX="tight"
-					paddingY="hair"
-					hover
-				>
+				<Inline as="li" key={column} justify="between" gap={8} radius="md" paddingX={4} paddingY={2} hover>
 					<Label>
 						<Checkbox
 							checked={visibility[column] ?? false}
@@ -61,10 +54,8 @@ export function ColumnSettingsPanel({
 						/>
 						{columnLabel(site, collection, column)}
 					</Label>
-					<Inline as="span" gap="tight">
+					<Inline as="span" gap={4}>
 						<IconButton
-							size="icon-xs"
-							variant="ghost"
 							label={t("list.columnUp", { label: columnLabel(site, collection, column) })}
 							disabled={index === 0}
 							onClick={() => onMove(column, -1)}
@@ -72,8 +63,6 @@ export function ColumnSettingsPanel({
 							<ArrowUp aria-hidden />
 						</IconButton>
 						<IconButton
-							size="icon-xs"
-							variant="ghost"
 							label={t("list.columnDown", { label: columnLabel(site, collection, column) })}
 							disabled={index === order.length - 1}
 							onClick={() => onMove(column, 1)}
@@ -90,7 +79,7 @@ export function ColumnSettingsPanel({
 /** A titled part of the View popover. `scroll` lets it take the remaining height and scroll on its own (the column list). */
 function ViewSection({ title, scroll = false, children }: { title: string; scroll?: boolean; children: ReactNode }) {
 	return (
-		<Stack as="section" gap="condensed" minHeight={scroll ? 0 : undefined}>
+		<Stack as="section" gap={8} minHeight={scroll ? 0 : undefined}>
 			<Heading as="h4" variant="label" tone="muted">
 				{title}
 			</Heading>
@@ -132,28 +121,21 @@ export function ListViewPopover({
 		const sortField = columnConfig(site, collection, column).sortField;
 		return sortField ? [{ value: sortField as ListSortField, label: columnLabel(site, collection, column) }] : [];
 	});
-	const directionButton = (direction: "asc" | "desc") => (
-		<Button
-			type="button"
-			size="xs"
-			variant={state.sortDirection === direction ? "secondary" : "ghost"}
-			aria-pressed={state.sortDirection === direction}
-			onClick={() => onStateChange({ sortField: state.sortField, sortDirection: direction })}
-		>
-			{direction === "asc" ? t("filter.sortAsc") : t("filter.sortDesc")}
-		</Button>
-	);
+	const directions = [
+		{ value: "asc", label: t("filter.sortAsc") },
+		{ value: "desc", label: t("filter.sortDesc") },
+	] as const;
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="quiet" size="xs" />}>
-				<SlidersHorizontal aria-hidden />
+			<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
+				<SettingsAdjust aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>
 			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}
 			<PopoverContent side="bottom" align="end" width="md" scroll>
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<ViewSection title={t("view.sort")}>
-						<Inline gap="condensed">
+						<Inline gap={8}>
 							<Select
 								value={state.sortField}
 								items={sortable}
@@ -172,10 +154,14 @@ export function ListViewPopover({
 									))}
 								</SelectContent>
 							</Select>
-							<Inline gap="hair" role="group" aria-label={t("view.sort")}>
-								{directionButton("asc")}
-								{directionButton("desc")}
-							</Inline>
+							<Segmented
+								size="sm"
+								inline
+								aria-label={t("view.sort")}
+								value={state.sortDirection}
+								onValueChange={(direction) => onStateChange({ sortField: state.sortField, sortDirection: direction })}
+								options={directions}
+							/>
 						</Inline>
 					</ViewSection>
 					<ViewSection title={t("list.pageSize")}>

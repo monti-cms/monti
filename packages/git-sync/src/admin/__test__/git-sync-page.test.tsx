@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import { jsonResponse as json } from "../../../../admin/src/test/fetch";
 import { SiteWrapper } from "../../../../admin/src/test/site";
+import { toast } from "../../../../admin/src/test/ui-toast";
 import config from "../../../test/cms.config";
 import { ConflictDiff, GitSyncPage } from "../git-sync-page";
 import { gitSyncMessages } from "../page.messages";
@@ -16,8 +17,12 @@ const common = site.createTranslator(commonMessages);
 /** The API key field belongs to the admin package; its texts are looked up by their English wording (the test site is English). */
 const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew" ? "Enter a new key" : "New API key");
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+// The admin's own hooks toast too: the mock covers `@monti-cms/ui` wherever it is imported.
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../../admin/src/test/ui-toast")).withToast(
+		await importOriginal<typeof import("@monti-cms/ui")>(),
+	),
+);
 vi.mock("../../../../admin/src/screens/admin-sidebar", () => ({ AdminSidebar: () => null }));
 
 const target = {
@@ -149,7 +154,7 @@ describe("Git sync screen: sync tab", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("pull.now") }));
 		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/pull", { target: "site" }]));
 		await waitFor(() =>
-			expect(toast.success).toHaveBeenCalledWith(t("pull.done", { created: 2, applied: 1, conflicts: 1, errors: 1 })),
+			expect(toast).toHaveBeenCalledWith(t("pull.done", { created: 2, applied: 1, conflicts: 1, errors: 1 })),
 		);
 	});
 
@@ -182,8 +187,8 @@ describe("Git sync screen: conflicts tab", () => {
 		const section = await screen.findByRole("region", { name: "Hello" });
 		expect(within(section).getByText(t("conflicts.reason.both-changed"))).toBeTruthy();
 		expect(within(section).getByText("content/memo/hello.en.mdx")).toBeTruthy();
-		expect(within(section).getByText("title: Server title").parentElement?.textContent).toBe("-title: Server title");
-		expect(within(section).getByText("title: Git title").parentElement?.textContent).toBe("+title: Git title");
+		expect(within(section).getByText("title: Server title").textContent).toBe("- title: Server title");
+		expect(within(section).getByText("title: Git title").textContent).toBe("+ title: Git title");
 	});
 
 	it('"Use git version" asks first, then sends the decision with the file the person looked at', async () => {
@@ -199,7 +204,7 @@ describe("Git sync screen: conflicts tab", () => {
 				{ target: "site", entryId: "e1", resolution: "git", gitSha: "a".repeat(40) },
 			]),
 		);
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("conflicts.resolved.git")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("conflicts.resolved.git")));
 	});
 
 	it('"Use server version" sends the other decision', async () => {
@@ -246,7 +251,7 @@ describe("Git sync screen: settings tab", () => {
 				{ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_brand_new" } },
 			]),
 		);
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(common("saved")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(common("saved")));
 	});
 
 	it("shows the webhook URL, makes a webhook secret that can be seen and copied, and saves it into its slot", async () => {
@@ -308,15 +313,15 @@ describe("ConflictDiff", () => {
 	it("marks a removed server version and says when the two are the same", () => {
 		const { rerender } = render(
 			<SiteProvider site={site}>
-				<ConflictDiff serverText={null} gitText={"a\nb"} />
+				<ConflictDiff path="posts/a.mdx" serverText={null} gitText={"a\nb"} />
 			</SiteProvider>,
 		);
 		expect(screen.getByText(new RegExp(t("conflicts.serverRemoved").replace(/[()]/g, "\\$&")))).toBeTruthy();
-		expect(screen.getByText("a").parentElement?.textContent).toBe("+a");
-		expect(screen.getByText("b").parentElement?.textContent).toBe("+b");
+		expect(screen.getByText("a").textContent).toBe("+ a");
+		expect(screen.getByText("b").textContent).toBe("+ b");
 		rerender(
 			<SiteProvider site={site}>
-				<ConflictDiff serverText={"a\nb"} gitText={"a\nb"} />
+				<ConflictDiff path="posts/a.mdx" serverText={"a\nb"} gitText={"a\nb"} />
 			</SiteProvider>,
 		);
 		expect(screen.getByText(t("conflicts.same"))).toBeTruthy();

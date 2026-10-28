@@ -1,8 +1,8 @@
 "use client";
 
+import { Close, Flash, Renew } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
 	Button,
 	DropdownMenu,
@@ -11,12 +11,11 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 	Inline,
-	Spinner,
 	Stack,
 	Text,
 	Textarea,
+	TextButton,
 } from "@monti-cms/ui";
-import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
@@ -45,7 +44,7 @@ export {
  */
 
 /** Icon used when an action does not provide one. */
-const defaultIcon = <Zap aria-hidden />;
+const defaultIcon = <Flash aria-hidden />;
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -61,19 +60,14 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 
 	const busy = state.status === "running";
 	const first = actions[0];
-	const triggerIcon = busy ? (
-		<Spinner size="sm" />
-	) : actions.length === 1 ? (
-		(first?.icon ?? defaultIcon)
-	) : (
-		(first?.menuIcon ?? first?.icon ?? defaultIcon)
-	);
+	const triggerIcon =
+		actions.length === 1 ? (first?.icon ?? defaultIcon) : (first?.menuIcon ?? first?.icon ?? defaultIcon);
 	const trigger =
 		actions.length === 1 ? (
 			<IconButton
 				label={first?.label ?? ""}
-				size="icon-xs"
 				side="bottom"
+				pressed={busy}
 				disabled={disabled}
 				onClick={() => first && start(first.id)}
 			>
@@ -83,8 +77,8 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 			<DropdownMenu>
 				<IconButton
 					label={first?.menuLabel ?? first?.label ?? ""}
-					size="icon-xs"
 					side="bottom"
+					pressed={busy}
 					disabled={disabled}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
@@ -101,11 +95,11 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 			</DropdownMenu>
 		);
 
-	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
+	// While generating, the button shows as pressed. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
-			<Stack gap="condensed" padding="condensed" radius="md" border="all" background="inset" aria-live="polite">
-				<Inline gap="tight">
+			<Stack gap={8} padding={8} radius="md" border="all" background="tool" aria-live="polite">
+				<Inline gap={4}>
 					<Box as="span" shrink={false}>
 						{state.action.icon ?? defaultIcon}
 					</Box>
@@ -114,19 +108,19 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 					</Text>
 					<Inline as="span" grow justify="end">
 						{state.status !== "running" && state.status !== "asking" && (
-							<IconButton label={t("rerun")} size="icon-xs" onClick={() => void rerun()}>
-								<RefreshCw aria-hidden />
+							<IconButton label={t("rerun")} onClick={() => void rerun()}>
+								<Renew aria-hidden />
 							</IconButton>
 						)}
-						<IconButton label={tc("close")} size="icon-xs" onClick={cancel}>
-							<X aria-hidden />
+						<IconButton label={tc("close")} onClick={cancel}>
+							<Close aria-hidden />
 						</IconButton>
 					</Inline>
 				</Inline>
 				{state.action.askInstruction && (
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (state.status !== "running") void run(state.action.id);
@@ -152,7 +146,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 							size="sm"
 						/>
 						<Inline justify="end">
-							<Button type="submit" variant="outline" size="xs" disabled={state.status === "running"}>
+							<Button type="submit" variant="secondary" size="sm" disabled={state.status === "running"}>
 								{state.action.icon ?? defaultIcon}
 								{state.status === "running" ? t("running") : t("run")}
 							</Button>
@@ -184,37 +178,33 @@ function SlotResult({
 				</Text>
 			);
 		return (
-			<Inline as="ul" wrap gap="tight">
+			<Inline as="ul" wrap gap={12}>
 				{result.items.map((item) => (
 					<Box as="li" key={item.value} maxWidth="full">
-						<Badge
-							variant="outline"
-							render={<button type="button" />}
-							onClick={() => onApply(item.value)}
-							title={item.label}
-						>
-							<Text truncate>{item.label}</Text>
+						<TextButton onClick={() => onApply(item.value)} title={item.label}>
+							{item.label}
 							{item.detail && (
-								<Text tone="muted" variant="caption">
+								<Text as="span" tone="subtle" variant="caption">
+									{" "}
 									{item.detail}
 								</Text>
 							)}
-						</Badge>
+						</TextButton>
 					</Box>
 				))}
 			</Inline>
 		);
 	}
 	return (
-		<Stack gap="condensed">
-			<Box padding="condensed" radius="lg" border="all" background="page">
+		<Stack gap={8}>
+			<Box padding={8} radius="lg" border="all" background="page">
 				<Text as="p" variant="caption" tone="default">
 					{result.text}
 				</Text>
 			</Box>
 			{result.kind === "text" && action.apply !== "none" && (
 				<Inline justify="start">
-					<Button type="button" size="xs" variant="outline" onClick={() => onApply(result.text)}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => onApply(result.text)}>
 						{action.apply === "append" ? t("insert") : t("replace")}
 					</Button>
 				</Inline>

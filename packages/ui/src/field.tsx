@@ -1,10 +1,8 @@
 "use client";
 
-import { cva, type VariantProps } from "class-variance-authority";
 import { useMemo } from "react";
 import { cn } from "./cn";
 import { Label } from "./label";
-import { Separator } from "./separator";
 
 function FormFieldSet({
 	className,
@@ -15,8 +13,8 @@ function FormFieldSet({
 		<fieldset
 			data-slot="field-set"
 			className={cn(
-				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
-				density === "compact" ? "gap-comfortable" : "gap-spacious",
+				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-monti-12 has-[>[data-slot=radio-group]]:gap-monti-12",
+				density === "compact" ? "gap-monti-16" : "gap-monti-24",
 				className,
 			)}
 			{...props}
@@ -33,7 +31,10 @@ function FormFieldLegend({
 		<legend
 			data-slot="field-legend"
 			data-variant={variant}
-			className={cn("mb-3 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title", className)}
+			className={cn(
+				"mb-monti-12 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -44,7 +45,7 @@ function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-group"
 			className={cn(
-				"group/field-group @container/field-group flex w-full flex-col gap-7 data-[slot=checkbox-group]:gap-3 *:data-[slot=field-group]:gap-4",
+				"group/field-group @container/field-group flex w-full flex-col gap-monti-24 data-[slot=checkbox-group]:gap-monti-12 *:data-[slot=field-group]:gap-monti-16",
 				className,
 			)}
 			{...props}
@@ -52,58 +53,44 @@ function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:text-monti-danger", {
-	variants: {
-		orientation: {
-			vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
-			horizontal:
-				"flex-row items-center has-[>[data-slot=field-content]]:items-start *:data-[slot=field-label]:flex-auto has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
-			responsive:
-				"flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto @md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:*:data-[slot=field-label]:flex-auto [&>.sr-only]:w-auto @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
-		},
-	},
-	defaultVariants: {
-		orientation: "vertical",
-	},
-});
-
-function FormField({
-	className,
-	orientation = "vertical",
-	...props
-}: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+/**
+ * A labeled field: the label above (mono 11), the control, then at most one line of error. The assistant's fill action sits on the label row
+ * and shows only while the pointer or the keyboard is in this field.
+ */
+function FormField({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			role="group"
 			data-slot="field"
-			data-orientation={orientation}
-			className={cn(fieldVariants({ orientation }), className)}
-			{...props}
-		/>
-	);
-}
-
-function FormFieldContent({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="field-content"
-			className={cn("group/field-content flex flex-1 flex-col gap-1", className)}
-			{...props}
-		/>
-	);
-}
-
-function FormFieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
-	return (
-		<Label
-			data-slot="field-label"
 			className={cn(
-				"group/field-label peer/field-label flex w-fit gap-2 has-[>[data-slot=field]]:has-[:focus-visible]:border-monti-focus has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-monti-focus-soft has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border has-data-checked:border-monti-emphasis monti-dark:has-data-checked:border-monti-emphasis has-data-checked:bg-monti-neutral monti-dark:has-data-checked:bg-monti-neutral has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-monti-hover *:data-[slot=field]:p-3 group-data-[disabled=true]/field:opacity-50",
-				"has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
+				"group/field flex w-full flex-col gap-monti-2 data-[invalid=true]:text-monti-danger **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
 				className,
 			)}
 			{...props}
 		/>
+	);
+}
+
+function FormFieldLabel({
+	className,
+	action,
+	...props
+}: React.ComponentProps<typeof Label> & { action?: React.ReactNode }) {
+	const label = (
+		<Label
+			data-slot="field-label"
+			size="micro"
+			tone="subtle"
+			className={cn("peer/field-label w-fit group-data-[disabled=true]/field:opacity-45", className)}
+			{...props}
+		/>
+	);
+	if (!action) return label;
+	return (
+		<div className="flex items-baseline justify-between gap-monti-8">
+			{label}
+			{action}
+		</div>
 	);
 }
 
@@ -112,7 +99,7 @@ function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="field-label"
 			className={cn(
-				"flex w-fit items-center gap-2 text-monti-label group-data-[disabled=true]/field:opacity-50",
+				"flex w-fit items-center gap-monti-8 text-monti-label group-data-[disabled=true]/field:opacity-50",
 				className,
 			)}
 			{...props}
@@ -125,40 +112,13 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 		<p
 			data-slot="field-description"
 			className={cn(
-				"text-left text-monti-label text-monti-muted group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
-				"nth-last-2:-mt-1 last:mt-0",
-				"[&>a]:text-monti-accent [&>a]:underline [&>a]:underline-offset-4",
+				"text-left text-monti-label text-monti-muted [[data-variant=legend]+&]:-mt-monti-6",
+				"nth-last-2:-mt-monti-4 last:mt-0",
+				"[&>a]:text-monti-default [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
 			{...props}
 		/>
-	);
-}
-
-function FormFieldSeparator({
-	children,
-	className,
-	...props
-}: React.ComponentProps<"div"> & {
-	children?: React.ReactNode;
-}) {
-	return (
-		<div
-			data-slot="field-separator"
-			data-content={!!children}
-			className={cn("relative -my-2 h-5 text-monti-body group-data-[variant=outline]/field-group:-mb-2", className)}
-			{...props}
-		>
-			<Separator className="absolute inset-0 top-1/2" />
-			{children && (
-				<span
-					className="relative mx-auto block w-fit bg-monti-page px-2 text-monti-muted"
-					data-slot="field-separator-content"
-				>
-					{children}
-				</span>
-			)}
-		</div>
 	);
 }
 
@@ -186,7 +146,7 @@ function FormFieldError({
 		}
 
 		return (
-			<ul className="ml-4 flex list-disc flex-col gap-1">
+			<ul className="ml-monti-16 list-disc">
 				{uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
 			</ul>
 		);
@@ -200,7 +160,7 @@ function FormFieldError({
 		<div
 			role="alert"
 			data-slot="field-error"
-			className={cn("whitespace-pre-wrap text-monti-danger text-monti-label", className)}
+			className={cn("whitespace-pre-wrap font-normal text-monti-danger text-monti-label", className)}
 			{...props}
 		>
 			{content}
@@ -215,8 +175,6 @@ export {
 	FormFieldError,
 	FormFieldGroup,
 	FormFieldLegend,
-	FormFieldSeparator,
 	FormFieldSet,
-	FormFieldContent,
 	FormFieldTitle,
 };

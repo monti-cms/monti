@@ -1,9 +1,9 @@
 "use client";
 
+import { Branch, WarningAlt } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { Box, formatAgo, StatusBarItem, StatusPopoverHeader, StatusPopoverRow } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, TriangleAlert } from "lucide-react";
 import { getGitSyncStatus, gitSyncKeys, type StatusView } from "./api";
 import { gitSyncMessages } from "./page.messages";
 
@@ -30,7 +30,7 @@ function GitSyncPopover({ status }: { status: StatusView }) {
 			{status.targets.map((target) => {
 				const { lastAt } = syncSummary({ ...status, targets: [target] });
 				return (
-					<Box key={target.id} paddingY="tight">
+					<Box key={target.id} paddingY={4}>
 						<StatusPopoverRow label={target.repo} value={target.branch} />
 						<StatusPopoverRow
 							label={t("status.popover.lastSync")}
@@ -69,19 +69,19 @@ export function GitSyncStatus() {
 	const popover = <GitSyncPopover status={data} />;
 	if (conflicts > 0)
 		return (
-			<StatusBarItem tone="danger" icon={<TriangleAlert />} popover={popover} title={t("status.title")}>
+			<StatusBarItem tone="danger" icon={<WarningAlt />} popover={popover} title={t("status.title")}>
 				{t("status.conflicts", { count: conflicts })}
 			</StatusBarItem>
 		);
 	if (queued > 0)
 		return (
-			<StatusBarItem tone="warning" icon={<GitBranch />} popover={popover} title={t("status.title")}>
+			<StatusBarItem tone="warning" icon={<Branch />} popover={popover} title={t("status.title")}>
 				{t("status.queued", { count: queued })}
 			</StatusBarItem>
 		);
 	if (lastAt === null) return null;
 	return (
-		<StatusBarItem icon={<GitBranch />} popover={popover} title={t("status.title")}>
+		<StatusBarItem icon={<Branch />} popover={popover} title={t("status.title")}>
 			{t("status.synced", { ago: formatAgo(site, lastAt) })}
 		</StatusBarItem>
 	);

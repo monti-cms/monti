@@ -1,8 +1,21 @@
 "use client";
 
+import { ChevronDown, Document, Tag } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Grid, Inline, Input, Popover, PopoverContent, PopoverTrigger, Stack, Text } from "@monti-cms/ui";
-import { ChevronDown, FileText, Tag } from "lucide-react";
+import {
+	Box,
+	Button,
+	Grid,
+	IconButton,
+	Inline,
+	Input,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Stack,
+	Text,
+	TextButton,
+} from "@monti-cms/ui";
 import { useId, useMemo, useState } from "react";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
 import { Labeled } from "../shared/labeled";
@@ -33,8 +46,8 @@ export function IconPicker({
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
 
-	const defaultIconName = kind === "item" ? "tag" : "file-text";
-	const DefaultIcon = kind === "item" ? Tag : FileText;
+	const defaultIconName = kind === "item" ? "tag" : "document";
+	const DefaultIcon = kind === "item" ? Tag : Document;
 	const CurrentIcon = value && ICONS[value] ? ICONS[value] : DefaultIcon;
 
 	const filtered = useMemo(() => {
@@ -51,14 +64,14 @@ export function IconPicker({
 						<Button
 							id={id}
 							type="button"
-							variant="outline"
+							variant="secondary"
 							width="full"
 							disabled={disabled}
 							aria-label={`${label}: ${value || t("collection.iconDefault")}`}
 						/>
 					}
 				>
-					<Inline as="span" gap="condensed" grow minWidth={0}>
+					<Inline as="span" gap={8} grow minWidth={0}>
 						<Text as="span" tone="muted">
 							<CurrentIcon aria-hidden />
 						</Text>
@@ -69,7 +82,7 @@ export function IconPicker({
 					</Text>
 				</PopoverTrigger>
 				<PopoverContent align="start" width="md">
-					<Stack gap="condensed">
+					<Stack gap={8}>
 						<Input
 							value={query}
 							size="sm"
@@ -78,47 +91,40 @@ export function IconPicker({
 							autoFocus
 						/>
 						{value && (
-							<Button
+							<TextButton
 								type="button"
-								variant="ghost"
-								size="xs"
 								onClick={() => {
 									onChange(undefined);
 									setOpen(false);
 								}}
 							>
 								{t("collection.iconClear")} ({defaultIconName})
-							</Button>
+							</TextButton>
 						)}
-						<Box maxHeight="list" overflow="y" padding="hair">
-							<Grid columns={6} responsive={false} gap="tight" role="listbox">
+						<Box maxHeight="list" overflow="y" padding={2}>
+							<Grid columns={6} responsive={false} gap={4} role="group" aria-label={label}>
 								{filtered.map((name) => {
 									const Icon = ICONS[name];
 									if (!Icon) return null;
 									const isSelected = value === name;
 									return (
-										<Button
+										<IconButton
 											key={name}
-											type="button"
-											role="option"
-											variant={isSelected ? "secondary" : "ghost"}
-											size="icon"
-											aria-selected={isSelected}
-											title={name}
-											aria-label={name}
+											label={name}
+											pressed={isSelected}
 											onClick={() => {
 												onChange(name);
 												setOpen(false);
 											}}
 										>
 											<Icon aria-hidden />
-										</Button>
+										</IconButton>
 									);
 								})}
 							</Grid>
 						</Box>
 						{filtered.length === 0 && (
-							<Box paddingY="comfortable">
+							<Box paddingY={16}>
 								<Text as="p" variant="caption" tone="muted">
 									{t("collection.iconNone")}
 								</Text>

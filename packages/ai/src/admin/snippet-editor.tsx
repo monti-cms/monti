@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, Copy, Reset, Save } from "@carbon/icons-react";
 import { errorText, type Translator, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Box,
@@ -26,7 +27,6 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";
 import type { AiSnippetItem, AiSnippetView } from "../snippets";
 import { aiKeys, createAiSnippet, deleteAiSnippet, getAiSnippets, updateAiSnippet } from "./api";
@@ -78,9 +78,9 @@ export function SnippetManager({
 	const applySaved = (saved: AiSnippetView) => queryClient.setQueryData(aiKeys.snippets(), saved);
 
 	return (
-		<Stack gap="none" grow minHeight={0}>
+		<Stack gap={0} grow minHeight={0}>
 			{query.error && !view && (
-				<Box padding="normal">
+				<Box padding={12}>
 					<LoadErrorAlert
 						message={errorText(site, query.error, t("error.load"))}
 						onRetry={() => void query.refetch()}
@@ -93,7 +93,6 @@ export function SnippetManager({
 						resizeKey="ai-snippets"
 						label={t("list.label")}
 						loading={query.isPending}
-						skeletonRows={2}
 						empty={view?.items.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
 					>
 						{view?.items.map((item) => (
@@ -127,11 +126,9 @@ export function SnippetManager({
 					/>
 				) : (
 					view && (
-						<EmptyState
-							icon={Quote}
-							title={t("empty.title")}
-							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
-						/>
+						<Box paddingX={24}>
+							<EmptyState title={t("empty.title")} action={{ label: t("action.add"), onClick: () => onOpen("new") }} />
+						</Box>
 					)
 				)}
 			</MasterDetail>
@@ -162,14 +159,14 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 		}
 	};
 	return (
-		<Inline gap="tight">
-			<Box as="span" border="all" radius="md" background="neutral" paddingX="condensed" paddingY="tight">
+		<Inline gap={4}>
+			<Box as="span" border="all" radius="md" background="muted" paddingX={8} paddingY={4}>
 				<Text as="code" variant="caption" mono>
 					{text}
 				</Text>
 			</Box>
-			<IconButton label={copied ? t("copy.done") : t("copy.label")} size="icon-xs" onClick={() => void copy()}>
-				{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+			<IconButton label={copied ? t("copy.done") : t("copy.label")} onClick={() => void copy()}>
+				{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 			</IconButton>
 		</Inline>
 	);
@@ -275,7 +272,7 @@ function SnippetEditor({
 	const shownKey = item?.key ?? draft.key.trim();
 
 	return (
-		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
+		<Stack gap={16} padding={24} maxWidth="reading" width="full" centered>
 			<Box minWidth={0}>
 				<Heading truncate>{(item ? item.label : draft.label.trim()) || t("new.title")}</Heading>
 				{(shownKey || item?.source === "added") && (
@@ -287,9 +284,12 @@ function SnippetEditor({
 
 			<FormFieldGroup>
 				<FormField>
-					<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.label} required>
+						{t("field.name")}
+					</FormFieldLabel>
 					<Input
 						id={ids.label}
+						required
 						value={draft.label}
 						maxLength={40}
 						disabled={fromConfig}
@@ -304,9 +304,12 @@ function SnippetEditor({
 					</FormField>
 				) : (
 					<FormField>
-						<FormFieldLabel htmlFor={ids.key}>{t("field.key")}</FormFieldLabel>
+						<FormFieldLabel htmlFor={ids.key} required>
+							{t("field.key")}
+						</FormFieldLabel>
 						<Input
 							id={ids.key}
+							required
 							value={draft.key}
 							maxLength={40}
 							autoComplete="off"
@@ -344,11 +347,11 @@ function SnippetEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={draft.text === item.defaultText}
 						onClick={() => set({ text: item.defaultText })}
 					>
-						<RotateCcw aria-hidden />
+						<Reset aria-hidden />
 						{t("action.resetDefault")}
 					</Button>
 				)}

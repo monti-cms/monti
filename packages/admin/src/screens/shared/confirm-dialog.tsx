@@ -38,8 +38,7 @@ export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | 
 					<AlertDialogCancel type="button">{t("cancel")}</AlertDialogCancel>
 					<AlertDialogAction
 						type="button"
-						variant={request?.destructive ? "secondary" : "default"}
-						tone={request?.destructive ? "danger" : "neutral"}
+						variant={request?.destructive ? "danger" : "primary"}
 						onClick={() => {
 							const action = request?.onConfirm;
 							onClose();

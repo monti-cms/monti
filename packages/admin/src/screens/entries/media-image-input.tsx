@@ -1,9 +1,9 @@
 "use client";
 
+import { DocumentBlank, Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, FormFieldError, Image, Inline, Text } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Text, TextButton } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { errorText } from "../../api/client";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
@@ -88,14 +88,14 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	const mediaId = typeof value === "string" ? value : "";
 	return (
 		<>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				{mediaId && <MediaThumbnail mediaId={mediaId} size="inline" />}
 				<Box grow>
 					<Button
 						id={id}
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						width="full"
 						disabled={context.disabled || !media}
 						title={media ? undefined : mediaNotConfiguredMessage(site)}
@@ -107,9 +107,9 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 					</Button>
 				</Box>
 				{mediaId && (
-					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
+					<TextButton type="button" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
-					</Button>
+					</TextButton>
 				)}
 			</Inline>
 			<ImageInsertDialog
@@ -165,10 +165,10 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 	};
 	return (
 		<>
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				{mediaId && (
-					<Inline gap="tight" grow minWidth={0}>
-						<FileIcon aria-hidden size={14} />
+					<Inline gap={4} grow minWidth={0}>
+						<DocumentBlank aria-hidden size={14} />
 						<Text variant="caption" truncate>
 							{filename ?? mediaId}
 						</Text>
@@ -179,7 +179,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 						id={id}
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						width={mediaId ? undefined : "full"}
 						disabled={context.disabled || progress !== null || !media}
 						title={media ? undefined : mediaNotConfiguredMessage(site)}
@@ -195,9 +195,9 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 					</Button>
 				</Box>
 				{mediaId && (
-					<Button type="button" size="sm" variant="ghost" disabled={context.disabled} onClick={() => onChange("")}>
+					<TextButton type="button" disabled={context.disabled} onClick={() => onChange("")}>
 						{t("media.remove")}
-					</Button>
+					</TextButton>
 				)}
 			</Inline>
 			<input

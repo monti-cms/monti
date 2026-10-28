@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Progress } from "./progress";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
-	title: "Feedback/Progress",
+	title: "Controls/Status/Progress",
 	component: Progress,
 	args: { value: 40, label: "업로드 진행률" },
 	decorators: [
@@ -22,20 +22,13 @@ export const Playground: Story = {};
 
 export const Values: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[0, 25, 50, 75, 100].map((value) => (
-				<Stack key={value} gap="tight">
-					<Text variant="label" tone="muted">
-						value {value}
-					</Text>
+				<Stack key={value} gap={4}>
+					<StoryCaption>value {value}</StoryCaption>
 					<Progress value={value} label={`업로드 진행률 ${value}%`} />
 				</Stack>
 			))}
 		</Stack>
 	),
-};
-
-/** `value` null: the amount is unknown, so the bar moves on its own. */
-export const Indeterminate: Story = {
-	args: { value: null },
 };

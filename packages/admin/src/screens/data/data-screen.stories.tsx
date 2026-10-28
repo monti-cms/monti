@@ -5,7 +5,7 @@ import type { RestoreCounts, RestorePreview, RestoreRun } from "../../api/restor
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { DataScreen } from "./data-screen";
 
-const meta = { title: "Screens/Data", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Data", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

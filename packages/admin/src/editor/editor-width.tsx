@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowsHorizontal } from "@carbon/icons-react";
 import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -10,7 +11,6 @@ import {
 	DropdownMenuTrigger,
 	IconButton,
 } from "@monti-cms/ui";
-import { MoveHorizontal } from "lucide-react";
 import { useMemo } from "react";
 import { stringCodec, usePreference } from "../lib/hooks/use-preference";
 import type { TranslatorFor } from "../translator";
@@ -82,9 +82,9 @@ export function EditorWidthMenu({
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<MoveHorizontal aria-hidden />
+				<ArrowsHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="sm">
+			<DropdownMenuContent align="end">
 				<DropdownMenuRadioGroup
 					aria-label={t("editorWidth.label")}
 					value={value.key}

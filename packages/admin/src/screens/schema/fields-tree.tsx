@@ -1,8 +1,8 @@
 "use client";
 
+import { Add, Close, View } from "@carbon/icons-react";
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, cn, Heading, IconButton, Inline, Panel, Stack, Text } from "@monti-cms/ui";
-import { Eye, Plus, X } from "lucide-react";
+import { Box, Button, cn, Heading, IconButton, Inline, Stack, Text } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
@@ -187,19 +187,19 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 		<aside
 			aria-label={t("layout.previewTitle")}
 			style={resize.style}
-			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-overlay sm:w-[var(--panel-width)]"
+			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-page sm:w-[var(--panel-width)]"
 			data-testid="layout-preview-drawer"
 		>
 			<PanelResizeHandle resize={resize} />
-			<Inline shrink={false} justify="between" height="control" border="bottom" paddingX="condensed">
+			<Inline shrink={false} justify="between" height="icon-button" border="bottom" paddingX={8}>
 				<Heading as="h2" variant="label">
 					{t("layout.preview")}
 				</Heading>
-				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
-					<X aria-hidden />
-				</Button>
+				<IconButton label={t("layout.previewClose")} onClick={onClose}>
+					<Close aria-hidden />
+				</IconButton>
 			</Inline>
-			<Stack gap="none" grow minHeight={0} padding="normal">
+			<Stack gap={0} grow minHeight={0} padding={12}>
 				{preview}
 			</Stack>
 		</aside>
@@ -274,8 +274,8 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<Box maxWidth="content" minWidth={0}>
-			<Panel ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
-				<Inline wrap justify="between" gap="comfortable" border="bottom" paddingX="comfortable" paddingY="normal">
+			<Box ref={cardRef} minWidth={0} overflow="hidden" data-testid="fields-card">
+				<Inline wrap justify="between" gap={16} border="bottom" paddingX={16} paddingY={12}>
 					<Box minWidth={0}>
 						<Heading as="h4" variant="label">
 							{t("field.title")} <Text tone="muted">{names.length}</Text>
@@ -284,21 +284,16 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 							{t("fields.hint")}
 						</Text>
 					</Box>
-					<Inline wrap gap="condensed">
-						<IconButton
-							label={t("layout.preview")}
-							size="icon-sm"
-							pressed={previewOpen}
-							onClick={() => setPreviewOpen(!previewOpen)}
-						>
-							<Eye aria-hidden />
+					<Inline wrap gap={8}>
+						<IconButton label={t("layout.preview")} pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
+							<View aria-hidden />
 						</IconButton>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("layout.addTab")}
 						</Button>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addGroupRow}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("layout.addGroup")}
 						</Button>
 						{offeredSets.map((set) => (
@@ -310,12 +305,12 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 								disabled={disabled}
 								onClick={() => addSet(set)}
 							>
-								<Plus aria-hidden />
+								<Add aria-hidden />
 								{t("fields.addSet", { name: set.label })}
 							</Button>
 						))}
-						<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
-							<Plus aria-hidden />
+						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
+							<Add aria-hidden />
 							{t("field.add")}
 						</Button>
 					</Inline>
@@ -323,7 +318,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				<div
 					className={cn(
 						columnsOf(ctx.compact),
-						"border-b py-condensed pr-comfortable pl-wide text-monti-caption text-monti-muted",
+						"border-b py-monti-8 pr-monti-16 pl-monti-32 text-monti-caption text-monti-muted",
 					)}
 					aria-hidden
 				>
@@ -331,9 +326,9 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					<span>{t("fields.colKind")}</span>
 					{!ctx.compact && <span>{t("fields.colSettings")}</span>}
 				</div>
-				<Box paddingY="condensed">
+				<Box paddingY={8}>
 					{names.length === 0 ? (
-						<Box paddingX="comfortable" paddingY="normal">
+						<Box paddingX={16} paddingY={12}>
 							<Text as="p" variant="caption" tone="muted">
 								{t("field.none")}
 							</Text>
@@ -342,7 +337,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						<LayoutTree editing={editing} ctx={ctx} />
 					)}
 				</Box>
-				<Inline wrap gap="comfortable" border="top" paddingX="comfortable" paddingY="condensed" align="baseline">
+				<Inline wrap gap={16} border="top" paddingX={16} paddingY={8} align="baseline">
 					<Text variant="caption" tone="muted">
 						<Text mono tone="warning">
 							!
@@ -350,19 +345,19 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						{t("fields.legendRequired")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-blue">
+						<Text mono tone="muted">
 							→
 						</Text>{" "}
 						{t("fields.legendRelation")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-teal">
+						<Text mono tone="muted">
 							←
 						</Text>{" "}
 						{t("fields.legendBacklink")}
 					</Text>
 					<Text variant="caption" tone="muted">
-						<Text mono tone="kind-orange">
+						<Text mono tone="muted">
 							= "…"
 						</Text>{" "}
 						{t("fields.legendOption")}
@@ -389,7 +384,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						onClose={() => setSheet(null)}
 					/>
 				)}
-			</Panel>
+			</Box>
 		</Box>
 	);
 	const preview = (
@@ -404,7 +399,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		<>
 			{wide && previewOpen ? (
 				<div
-					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-spacious"
+					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-monti-24"
 					style={sideResize.style}
 				>
 					{card}

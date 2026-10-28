@@ -1,9 +1,20 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { CheckIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import {
+	MENU_CARD,
+	MENU_ITEM,
+	MENU_LABEL,
+	MENU_MOTION,
+	MENU_SEPARATOR,
+	MENU_SUB_MARK,
+	MenuTick,
+	SUB_ALIGN_OFFSET,
+	SUB_SIDE_OFFSET,
+} from "./menu-parts";
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -17,21 +28,20 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 	return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
-const MENU_WIDTH = { auto: "min-w-0", sm: "min-w-36", md: "min-w-48", lg: "min-w-56" } as const;
-
+/**
+ * The menu card, the design system's 240px (`--width-menu`); wider only for a longer row (20rem at most; a longer name is cut). A row that picks a further value opens a second
+ * level at its side ({@link DropdownMenuSub}); a third level is not drawn.
+ */
 function DropdownMenuContent({
 	align = "start",
 	alignOffset = 0,
 	side = "bottom",
 	sideOffset = 4,
-	width,
+	anchor,
 	className,
 	...props
 }: MenuPrimitive.Popup.Props &
-	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
-		/** The menu's minimum width: `sm` 144px, `md` 192px, `lg` 224px, `auto` none; it grows with its longest item otherwise. */
-		width?: keyof typeof MENU_WIDTH;
-	}) {
+	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor">) {
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
@@ -40,12 +50,15 @@ function DropdownMenuContent({
 				alignOffset={alignOffset}
 				side={side}
 				sideOffset={sideOffset}
+				anchor={anchor}
 			>
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-32 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating outline-none duration-100 data-closed:animate-out data-open:animate-in data-closed:overflow-hidden",
-						width && MENU_WIDTH[width],
+						MENU_CARD,
+						"p-monti-6",
+						MENU_MOTION,
+						"z-50 max-h-(--available-height) w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))] overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
 						className,
 					)}
 					{...props}
@@ -59,45 +72,30 @@ function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
 	return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-function DropdownMenuLabel({
-	className,
-	inset,
-	...props
-}: MenuPrimitive.GroupLabel.Props & {
-	inset?: boolean;
-}) {
-	return (
-		<MenuPrimitive.GroupLabel
-			data-slot="dropdown-menu-label"
-			data-inset={inset}
-			className={cn("px-2 py-1.5 font-medium text-monti-caption text-monti-muted data-inset:pl-8", className)}
-			{...props}
-		/>
-	);
+/** A group's name; give it room for a count by putting it in a child. */
+function DropdownMenuLabel({ className, ...props }: MenuPrimitive.GroupLabel.Props) {
+	return <MenuPrimitive.GroupLabel data-slot="dropdown-menu-label" className={cn(MENU_LABEL, className)} {...props} />;
 }
 
+/**
+ * A row. An icon first, a name, a `MenuShortcut` at the end. `variant="danger"` is for what cannot be undone or takes something down, and goes
+ * at the bottom of the menu. A row that cannot be used is faint and can say why in its `MenuShortcut`.
+ */
 function DropdownMenuItem({
 	className,
-	inset,
 	variant = "default",
 	swatch = false,
 	...props
 }: MenuPrimitive.Item.Props & {
-	inset?: boolean;
 	variant?: "default" | "danger";
-	/** A small square item in a grid of items (a color sample), its content centered. */
+	/** A small square row in a grid of rows (a color sample), its content centered. */
 	swatch?: boolean;
 }) {
 	return (
 		<MenuPrimitive.Item
 			data-slot="dropdown-menu-item"
-			data-inset={inset}
 			data-variant={variant}
-			className={cn(
-				"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=danger]:focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-[variant=danger]:text-monti-danger data-disabled:opacity-50 data-[variant=danger]:focus:bg-monti-danger-muted monti-dark:data-[variant=danger]:focus:bg-monti-danger-muted data-[variant=danger]:focus:text-monti-danger [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[variant=danger]:*:[svg]:text-monti-danger",
-				swatch && "justify-center p-hair",
-				className,
-			)}
+			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", className)}
 			{...props}
 		/>
 	);
@@ -107,45 +105,30 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
 	return <MenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />;
 }
 
-function DropdownMenuSubTrigger({
-	className,
-	inset,
-	children,
-	...props
-}: MenuPrimitive.SubmenuTrigger.Props & {
-	inset?: boolean;
-}) {
+/**
+ * A row that picks a further value: its name, the current value in a `MenuValue` if there is one, and a ›. Pointing at it, or pressing →,
+ * opens the second level at its side; ← closes it. The row keeps the selected background while the second level is open.
+ */
+function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive.SubmenuTrigger.Props) {
 	return (
-		<MenuPrimitive.SubmenuTrigger
-			data-slot="dropdown-menu-sub-trigger"
-			data-inset={inset}
-			className={cn(
-				"flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default not-data-[variant=danger]:focus:**:text-monti-default data-open:bg-monti-selected data-popup-open:bg-monti-selected data-inset:pl-8 data-open:text-monti-default data-popup-open:text-monti-default [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				className,
-			)}
-			{...props}
-		>
+		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			<ChevronRightIcon className="ml-auto" />
+			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }
 
+/** The second level. It opens toward the side with room, and its first row lines up with the row that opened it. */
 function DropdownMenuSubContent({
 	align = "start",
-	alignOffset = -3,
+	alignOffset = SUB_ALIGN_OFFSET,
 	side = "right",
-	sideOffset = 0,
-	className,
+	sideOffset = SUB_SIDE_OFFSET,
 	...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
 	return (
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
-			className={cn(
-				"data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 max-h-80 w-auto min-w-[96px] rounded-lg border border-monti-muted bg-monti-overlay p-1 text-monti-default shadow-monti-floating duration-100 data-closed:animate-out data-open:animate-in",
-				className,
-			)}
 			align={align}
 			alignOffset={alignOffset}
 			side={side}
@@ -155,35 +138,17 @@ function DropdownMenuSubContent({
 	);
 }
 
-function DropdownMenuCheckboxItem({
-	className,
-	children,
-	checked,
-	inset,
-	...props
-}: MenuPrimitive.CheckboxItem.Props & {
-	inset?: boolean;
-}) {
+/** A row that is on or off, with the ✓ at its end while on. */
+function DropdownMenuCheckboxItem({ className, children, checked, ...props }: MenuPrimitive.CheckboxItem.Props) {
 	return (
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
-			data-inset={inset}
-			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				className,
-			)}
+			className={cn(MENU_ITEM, className)}
 			checked={checked}
 			{...props}
 		>
-			<span
-				className="pointer-events-none absolute right-2 flex items-center justify-center"
-				data-slot="dropdown-menu-checkbox-item-indicator"
-			>
-				<MenuPrimitive.CheckboxItemIndicator>
-					<CheckIcon />
-				</MenuPrimitive.CheckboxItemIndicator>
-			</span>
 			{children}
+			<MenuPrimitive.CheckboxItemIndicator render={<MenuTick />} />
 		</MenuPrimitive.CheckboxItem>
 	);
 }
@@ -192,33 +157,12 @@ function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
 	return <MenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
 }
 
-function DropdownMenuRadioItem({
-	className,
-	children,
-	inset,
-	...props
-}: MenuPrimitive.RadioItem.Props & {
-	inset?: boolean;
-}) {
+/** A row of a pick-one list. The current value shows a ✓ at its end, not a background. */
+function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props) {
 	return (
-		<MenuPrimitive.RadioItem
-			data-slot="dropdown-menu-radio-item"
-			data-inset={inset}
-			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-monti-label outline-hidden focus:bg-monti-hover focus:text-monti-default focus:**:text-monti-default data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				className,
-			)}
-			{...props}
-		>
-			<span
-				className="pointer-events-none absolute right-2 flex items-center justify-center"
-				data-slot="dropdown-menu-radio-item-indicator"
-			>
-				<MenuPrimitive.RadioItemIndicator>
-					<CheckIcon />
-				</MenuPrimitive.RadioItemIndicator>
-			</span>
+		<MenuPrimitive.RadioItem data-slot="dropdown-menu-radio-item" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
+			<MenuPrimitive.RadioItemIndicator render={<MenuTick />} />
 		</MenuPrimitive.RadioItem>
 	);
 }
@@ -227,20 +171,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 	return (
 		<MenuPrimitive.Separator
 			data-slot="dropdown-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-monti-divider first:hidden last:hidden", className)}
-			{...props}
-		/>
-	);
-}
-
-function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
-	return (
-		<span
-			data-slot="dropdown-menu-shortcut"
-			className={cn(
-				"ml-auto text-monti-caption text-monti-muted tracking-caps group-focus/dropdown-menu-item:text-monti-default",
-				className,
-			)}
+			className={cn(MENU_SEPARATOR, "first:hidden last:hidden", className)}
 			{...props}
 		/>
 	);
@@ -258,7 +189,6 @@ export {
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubTrigger,
 	DropdownMenuSubContent,

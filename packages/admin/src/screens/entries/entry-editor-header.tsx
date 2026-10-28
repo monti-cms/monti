@@ -2,6 +2,18 @@
 
 // The header of the entry editor screen: back link, the slug, the preview and publish actions and the properties and "more" menus. The save state lives in the status bar.
 
+import {
+	Archive,
+	CalendarSettings,
+	ChevronLeft,
+	Contrast,
+	Copy,
+	Download,
+	OverflowMenuHorizontal,
+	RightPanelOpen,
+	TrashCan,
+	View,
+} from "@carbon/icons-react";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
@@ -11,37 +23,24 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	EntryStatus,
 	IconButton,
 	Inline,
 	Separator,
 	SplitButton,
-	StatusIndicator,
 	Text,
+	TextButton,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/ui";
-import {
-	Archive,
-	CalendarSync,
-	ChevronLeft,
-	Copy,
-	Download,
-	Eye,
-	MoreHorizontal,
-	PanelRight,
-	SunMoon,
-	Trash,
-	Trash2,
-} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
 import { ExportDialog } from "../export/export-dialog";
 import { exportMessages } from "../export/messages";
-import { statusLabels } from "../shared/entry-status";
-import { entryStatusMarker } from "../shared/entry-status-marker";
+import { entryStatusKind, statusLabels } from "../shared/entry-status";
 import { collectionNoun } from "../shared/noun.messages";
 import { SidePanelToggle } from "../shared/side-panel-slot";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -82,31 +81,23 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 			as="header"
 			wrap
 			justify="between"
-			gap="tight"
+			gap={4}
 			shrink={false}
 			border="bottom"
 			background="page"
-			paddingX="comfortable"
-			paddingY="condensed"
+			paddingX={16}
+			paddingY={8}
 		>
-			<Inline gap="condensed" minWidth={0}>
-				<Tooltip>
-					<TooltipTrigger
-						render={
-							// A link stays a link: Button would give a non-<button> role="button", so the role is kept.
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								nativeButton={false}
-								aria-label={t("backToList")}
-								render={<Link role="link" href={site.adminHref(`?collection=${collection}`)} />}
-							>
-								<ChevronLeft aria-hidden />
-							</Button>
-						}
-					/>
-					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
-				</Tooltip>
+			<Inline gap={8} minWidth={0}>
+				{/* A link stays a link: the button would give a non-<button> role="button", so the role is kept. */}
+				<IconButton
+					label={t("backToList")}
+					side="bottom"
+					nativeButton={false}
+					render={<Link role="link" href={site.adminHref(`?collection=${collection}`)} />}
+				>
+					<ChevronLeft aria-hidden />
+				</IconButton>
 				{entry?.workingSlug && (
 					<Box hideBelow="sm" minWidth={0}>
 						<Text variant="caption" tone="muted" mono truncate>
@@ -115,39 +106,36 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					</Box>
 				)}
 				{entry && (
-					<StatusIndicator
-						data-testid="entry-status-chip"
-						{...entryStatusMarker(entry.status)}
-						label={statusLabels(site)[entry.status]}
-						chip
-					/>
+					<EntryStatus data-testid="entry-status-chip" status={entryStatusKind(entry.status)}>
+						{statusLabels(site)[entry.status]}
+					</EntryStatus>
 				)}
 			</Inline>
 
-			<Inline gap="tight" justify="end">
+			<Inline gap={4} justify="end">
 				{/* There is no server autosave, so unsaved changes get a visible save button (⌘S does the same); the status bar says the rest. */}
 				{editor.hasUnsavedChanges && !isTrashed && (
 					<Tooltip>
 						<TooltipTrigger
 							render={
-								<Button
+								<TextButton
 									type="button"
-									variant="ghost"
-									size="sm"
 									disabled={busy !== null || isSubmitting}
 									onClick={() => void commands.handleSaveNow()}
 								>
 									{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
-								</Button>
+								</TextButton>
 							}
 						/>
-						<TooltipContent side="bottom">⌘S</TooltipContent>
+						<TooltipContent side="bottom" shortcut="⌘S">
+							{tc("save")}
+						</TooltipContent>
 					</Tooltip>
 				)}
 				{previewHref && !editor.hasUnsavedChanges ? (
 					// A link stays a link (open in new tab, copy URL).
 					<Button
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						nativeButton={false}
 						// A link stays a link: Button gives a non-<button> role="button", so the role is set back (the content is the child below).
@@ -156,12 +144,12 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						// biome-ignore lint/a11y/noRedundantRoles: Button adds role="button" to a non-<button>, so the link role is needed
 						render={<a role="link" href={previewHref} target="_blank" rel="noopener noreferrer" />}
 					>
-						<Eye aria-hidden />
+						<View aria-hidden />
 						{t("preview")}
 					</Button>
 				) : previewHref ? (
-					<Button type="button" variant="outline" size="sm" onClick={() => void handlePreview(previewHref)}>
-						<Eye aria-hidden />
+					<Button type="button" variant="secondary" size="sm" onClick={() => void handlePreview(previewHref)}>
+						<View aria-hidden />
 						{t("preview")}
 					</Button>
 				) : (
@@ -169,8 +157,8 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
 						<TooltipTrigger
 							render={
-								<Button type="button" variant="outline" size="sm" aria-disabled>
-									<Eye aria-hidden />
+								<Button type="button" variant="secondary" size="sm" aria-disabled>
+									<View aria-hidden />
 									{t("preview")}
 								</Button>
 							}
@@ -195,14 +183,13 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					// For an already published post, publish and "republish with today's date" sit side by side as one split button.
 					<SplitButton
 						id="cms-publish"
-						size="sm"
 						disabled={isSubmitting}
 						onClick={() => void handlePublish()}
 						menuLabel={t("publishOptions")}
 						menu={
 							// Keeping the original publish date is the default. Choose it only when re-posting an edited post as new.
 							<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
-								<CalendarSync aria-hidden />
+								<CalendarSettings aria-hidden />
 								{t("republish")}
 							</DropdownMenuItem>
 						}
@@ -210,18 +197,18 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 					</SplitButton>
 				)}
-				<Inline height="control-sm" paddingX="tight">
+				<Inline height="control-sm" paddingX={4}>
 					<Separator orientation="vertical" aria-hidden />
 				</Inline>
 				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>
-					<PanelRight aria-hidden />
+					<RightPanelOpen aria-hidden />
 				</IconButton>
 				<SidePanelToggle />
 				<DropdownMenu>
 					<IconButton label={t("more")} side="bottom" trigger={(button) => <DropdownMenuTrigger render={button} />}>
-						<MoreHorizontal aria-hidden />
+						<OverflowMenuHorizontal aria-hidden />
 					</IconButton>
-					<DropdownMenuContent align="end" width="lg">
+					<DropdownMenuContent align="end">
 						{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 						{entry && !isTrashed && (
 							<>
@@ -251,12 +238,12 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								{!isTrashed && <DropdownMenuSeparator />}
 								{isTrashed ? (
 									<DropdownMenuItem variant="danger" onClick={confirmPermanentDelete}>
-										<Trash aria-hidden />
+										<TrashCan aria-hidden />
 										{tc("lifecycle.deletePermanently")}
 									</DropdownMenuItem>
 								) : (
 									<DropdownMenuItem variant="danger" onClick={() => confirmLifecycle("trash")}>
-										<Trash2 aria-hidden />
+										<TrashCan aria-hidden />
 										{lifecycleLabel(site).trash}
 									</DropdownMenuItem>
 								)}
@@ -264,7 +251,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						)}
 						{entry && <DropdownMenuSeparator />}
 						<DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
-							<SunMoon aria-hidden />
+							<Contrast aria-hidden />
 							{t("toggleTheme")}
 						</DropdownMenuItem>
 					</DropdownMenuContent>

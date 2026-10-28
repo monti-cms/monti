@@ -3,7 +3,9 @@
  * their hide priority, how each renders in the bar and in the "More" menu, and the final placement order.
  */
 
+import { DocumentBlank, Image, Link, ListBulleted, TextAlignLeft, TextSuperscript, Upload } from "@carbon/icons-react";
 import type { Site } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
 	Box,
 	DropdownMenu,
@@ -14,13 +16,8 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-	Toggle,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { AlignLeft, ImageIcon, Link2, List, type LucideIcon, Paperclip, Superscript, Upload } from "lucide-react";
 import type { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import type { EditorAllowance } from "./allowed";
@@ -93,7 +90,7 @@ export const buildToolbarEntries = ({
 		priority: number,
 		label: string,
 		items: ToolbarItem[],
-		icon: LucideIcon,
+		icon: MontiIcon,
 		menuLabel = label,
 	): ToolbarEntry => ({
 		key,
@@ -105,7 +102,7 @@ export const buildToolbarEntries = ({
 		<>
 			{allowance.allowsBlock("image") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openImageDialog()}>
-					<ImageIcon aria-hidden />
+					<Image aria-hidden />
 					<Box as="span" grow>
 						{t("toolbar.image")}
 					</Box>
@@ -113,7 +110,7 @@ export const buildToolbarEntries = ({
 			)}
 			{allowance.allowsBlock("file") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openFilePicker()}>
-					<Paperclip aria-hidden />
+					<DocumentBlank aria-hidden />
 					<Box as="span" grow>
 						{t("toolbar.file")}
 					</Box>
@@ -131,7 +128,7 @@ export const buildToolbarEntries = ({
 			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES(t, allowance)} />,
 		},
 		...(allowance.allowsBlock("text-align")
-			? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft)]
+			? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? TextAlignLeft)]
 			: []),
 		{ key: "divider-block", divider: true },
 		...inlineTools(site, allowance).map((tool) =>
@@ -153,7 +150,7 @@ export const buildToolbarEntries = ({
 			];
 		}),
 		...(scriptTools(site, allowance).length > 0
-			? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), Superscript)]
+			? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), TextSuperscript)]
 			: []),
 		{ key: "divider-inline", divider: true },
 		{ key: "divider-list", divider: true },
@@ -163,7 +160,7 @@ export const buildToolbarEntries = ({
 			2,
 			activeList?.title ?? t("toolbar.list"),
 			LIST_STYLES(t, allowance),
-			activeList?.icon ?? List,
+			activeList?.icon ?? ListBulleted,
 			t("toolbar.list"),
 		),
 		...INSERT_TOOLS(t, allowance).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),
@@ -198,7 +195,7 @@ export const buildToolbarEntries = ({
 								>
 									<Upload aria-hidden />
 								</IconButton>
-								<DropdownMenuContent align="start" width="sm">
+								<DropdownMenuContent align="start">
 									<UploadMenuItems />
 								</DropdownMenuContent>
 							</DropdownMenu>
@@ -218,26 +215,16 @@ export const buildToolbarEntries = ({
 								open={linkDraft !== null}
 								onOpenChange={(open) => setLinkDraft(open ? linkDraftFromSelection(editor) : null)}
 							>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<PopoverTrigger
-												render={
-													<Toggle
-														size="icon-sm"
-														pressed={editor.isActive("link")}
-														disabled={!canEdit}
-														aria-label={t("toolbar.link")}
-														onMouseDown={(event) => event.preventDefault()}
-													/>
-												}
-											>
-												<Link2 aria-hidden />
-											</PopoverTrigger>
-										}
-									/>
-									<TooltipContent side="bottom">{t("toolbar.link")}</TooltipContent>
-								</Tooltip>
+								<IconButton
+									label={t("toolbar.link")}
+									side="bottom"
+									pressed={editor.isActive("link")}
+									disabled={!canEdit}
+									onMouseDown={(event) => event.preventDefault()}
+									trigger={(button) => <PopoverTrigger render={button} />}
+								>
+									<Link aria-hidden />
+								</IconButton>
 								<PopoverContent align="start" width="md">
 									{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}
 								</PopoverContent>

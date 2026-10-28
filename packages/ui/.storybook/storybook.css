@@ -1,6 +1,7 @@
 /*
  * What the admin bundle compiles (packages/admin/styles/index.css), without its build-time confinement: Storybook is the whole page.
  * The admin's own rules come in whole (`admin.css`: the default border color, scrollbars, selection), so a story looks like the admin.
+ * The fonts are not here: `main.ts` adds the admin's own `@font-face` rules (`Monti Pretendard`, `Monti Plex Mono`) to the page head.
  */
 @layer theme, base, components, utilities;
 
@@ -9,16 +10,6 @@
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @import "../styles/tokens.css";
 @import "../../admin/styles/admin.css";
-
-/* The admin's fonts. The bundle renames them (Monti Pretendard, Monti Plex Mono); here the packages' own names are pointed at instead. */
-@import "../../admin/node_modules/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
-@import "../../admin/node_modules/@fontsource/ibm-plex-mono/400.css";
-@import "../../admin/node_modules/@fontsource/ibm-plex-mono/500.css";
-@import "../../admin/node_modules/@fontsource/ibm-plex-mono/600.css";
-:root {
-	--monti-font-sans: "Pretendard Variable", ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
-	--monti-font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-}
 
 @source "../src";
 @source "../../admin/src";

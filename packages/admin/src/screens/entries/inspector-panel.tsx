@@ -2,7 +2,7 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, FormFieldSet, Stack, StatusIndicator, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
+import { Box, FormFieldSet, Stack, Tabs, TabsContent, TabsList, TabsTrigger } from "@monti-cms/ui";
 import { useEffect, useMemo, useState } from "react";
 import { SidePanelHeader } from "../shared/side-panel";
 import { tabLabel } from "./layout-groups";
@@ -88,20 +88,19 @@ export function InspectorPanel({
 		);
 
 	return (
-		<Stack gap="none" height="full" width="full" overflow="hidden" background="page" border="left">
+		<Stack gap={0} height="full" width="full" overflow="hidden" background="page" border="left">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(String(value))} aria-label={t("tab.default")}>
 				<SidePanelHeader onClose={onClose}>
 					<TabsList variant="line">
 						{tabs.map((name) => (
-							<TabsTrigger key={name} value={name}>
+							<TabsTrigger key={name} value={name} dot={issuesIn(name) > 0 ? "warning" : undefined}>
 								{tabLabel(site, name, collection)}
-								{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="danger" />}
 							</TabsTrigger>
 						))}
 					</TabsList>
 				</SidePanelHeader>
 
-				<Box grow minHeight={0} overflow="y" paddingX="comfortable" paddingY="comfortable">
+				<Box grow minHeight={0} overflow="y" paddingX={16} paddingY={16}>
 					<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 					{tabs.map((name) => (
 						<TabsContent key={name} value={name}>

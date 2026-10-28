@@ -3,6 +3,7 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type * as React from "react";
 import { cn } from "./cn";
+import { MENU_CARD, MENU_MOTION } from "./menu-parts";
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -13,11 +14,11 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 }
 
 const POPOVER_WIDTH = {
-	sm: "w-panel-sm",
-	md: "w-panel",
-	lg: "w-panel-lg",
+	sm: "w-monti-menu",
+	md: "w-monti-panel",
+	lg: "w-monti-assistant",
 	auto: "w-auto",
-	anchor: "w-(--anchor-width) min-w-panel-sm",
+	anchor: "w-(--anchor-width) min-w-monti-menu",
 } as const;
 
 function PopoverContent({
@@ -33,10 +34,10 @@ function PopoverContent({
 	...props
 }: PopoverPrimitive.Popup.Props &
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
-		/** `sm` 224px, `md` 288px (default), `lg` 384px, `auto` as wide as its content, `anchor` as wide as what opened it. */
+		/** `sm` 240px (the width of a menu), `md` 300px (default, a panel), `lg` 380px (the assistant), `auto` as wide as its content, `anchor` as wide as what opened it. */
 		width?: keyof typeof POPOVER_WIDTH;
-		/** `none` when the content brings its own rows (a list, a calendar) and runs to the edge. */
-		padding?: "default" | "none";
+		/** `menu` for a list of rows (6px, as a menu card); `default` for a small form or a note (12px above, 16 at the sides and below); `none` when the content brings its own rows (a calendar) and runs to the edge. */
+		padding?: "default" | "menu" | "none";
 		/** Scrolls inside when taller than the space left on screen. */
 		scroll?: boolean;
 	}) {
@@ -53,9 +54,12 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex origin-(--transform-origin) flex-col gap-4 rounded-lg border border-monti-muted bg-monti-overlay text-monti-body text-monti-default shadow-monti-floating outline-hidden duration-100 data-closed:animate-out data-open:animate-in",
+						MENU_CARD,
+						MENU_MOTION,
+						"z-50 gap-monti-12",
 						POPOVER_WIDTH[width],
-						padding === "default" && "p-4",
+						padding === "default" && "px-monti-16 pt-monti-12 pb-monti-16",
+						padding === "menu" && "gap-0 p-monti-6",
 						scroll && "max-h-(--available-height) overflow-y-auto",
 						className,
 					)}
@@ -67,11 +71,13 @@ function PopoverContent({
 }
 
 function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return <div data-slot="popover-header" className={cn("flex flex-col gap-1 text-monti-body", className)} {...props} />;
+	return (
+		<div data-slot="popover-header" className={cn("flex flex-col gap-monti-4 text-monti-body", className)} {...props} />
+	);
 }
 
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
-	return <PopoverPrimitive.Title data-slot="popover-title" className={cn("font-medium", className)} {...props} />;
+	return <PopoverPrimitive.Title data-slot="popover-title" className={cn("font-semibold", className)} {...props} />;
 }
 
 function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {

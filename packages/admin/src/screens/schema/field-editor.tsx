@@ -1,8 +1,8 @@
 "use client";
 
+import { Add, ChevronDown, ChevronRight } from "@carbon/icons-react";
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
 	Button,
 	Collapsible,
@@ -11,12 +11,10 @@ import {
 	Grid,
 	Inline,
 	Input,
-	Panel,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
@@ -30,7 +28,7 @@ import {
 	orUndefined,
 	Pick,
 	RowActions,
-	Segmented,
+	SegmentedField,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -124,7 +122,7 @@ function RelationOptions({
 	const [moreOpen, setMoreOpen] = useState(false);
 	const options = [...previewOptions(collectionLabel(file, target)), ...created];
 	return (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<Pick
 				label={t("field.relationTo")}
 				value={target}
@@ -135,7 +133,7 @@ function RelationOptions({
 					setValue([]);
 				}}
 			/>
-			<Segmented
+			<SegmentedField
 				label={t("field.count")}
 				value={many ? "many" : "one"}
 				items={[
@@ -147,7 +145,7 @@ function RelationOptions({
 					setValue((current) => (next === "many" ? current : current.slice(0, 1)));
 				}}
 			/>
-			<Stack gap="condensed" radius="md" background="inset" padding="normal" data-testid="relation-preview">
+			<Stack gap={8} radius="md" background="tool" padding={12} data-testid="relation-preview">
 				<Text variant="caption" tone="muted">
 					{t("field.preview")}
 				</Text>
@@ -173,13 +171,13 @@ function RelationOptions({
 			</Stack>
 			<Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
 				<Box width="fit">
-					<CollapsibleTrigger render={<Button variant="quiet" size="sm" />}>
+					<CollapsibleTrigger render={<TextButton variant="quiet" />}>
 						{moreOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						{t("field.more")}
 					</CollapsibleTrigger>
 				</Box>
 				<CollapsibleContent>
-					<Stack gap="comfortable" paddingTop="comfortable">
+					<Stack gap={16} paddingTop={16}>
 						<FlagSwitch
 							label={t("field.createInline")}
 							checked={field.createInline === true}
@@ -231,23 +229,13 @@ function OptionsEditor({
 	const taken = (value: string) => values.filter((item) => item !== value);
 	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
 	return (
-		<Stack role="group" aria-labelledby={`options-${fieldName}`} gap="condensed">
+		<Stack role="group" aria-labelledby={`options-${fieldName}`} gap={8}>
 			<Text as="div" id={`options-${fieldName}`} variant="caption" weight="medium">
 				{t("options.title")}
 			</Text>
-			<Stack as="ul" gap="condensed">
+			<Stack as="ul" gap={8}>
 				{values.map((value, index) => (
-					<Inline
-						as="li"
-						key={value}
-						wrap
-						align="end"
-						gap="condensed"
-						border="all"
-						radius="md"
-						background="page"
-						padding="condensed"
-					>
+					<Inline as="li" key={value} wrap align="end" gap={8} border="all" radius="md" background="page" padding={8}>
 						<Box grow>
 							<NameInput
 								label={t("options.value")}
@@ -272,7 +260,7 @@ function OptionsEditor({
 								onChange={(label) => change((current) => setOptionLabel(current, value, label))}
 							/>
 						</Box>
-						<Inline as="label" gap="condensed" paddingBottom="condensed">
+						<Inline as="label" gap={8} paddingBottom={8}>
 							<input
 								type="radio"
 								name={`default-${fieldName}`}
@@ -293,15 +281,15 @@ function OptionsEditor({
 				))}
 			</Stack>
 			{!disabled && (
-				<Inline align="end" gap="condensed">
-					<Box width="panel-sm">
+				<Inline align="end" gap={8}>
+					<Box width="menu">
 						<Labeled label={t("options.newValue")}>
 							<Input value={draftValue} placeholder="value" onChange={(event) => setDraftValue(event.target.value)} />
 						</Labeled>
 					</Box>
 					<Button
 						type="button"
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						disabled={!addable}
 						onClick={() => {
@@ -363,7 +351,7 @@ export function KindOptions({
 		case "text": {
 			const fill = field.fillFromBody;
 			return (
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<FlagSwitch
 						label={t("field.multiline")}
 						checked={field.multiline === true}
@@ -414,7 +402,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "text")
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<Pick
 						label={t("field.slugFrom")}
 						description={t("field.slugFromHint")}
@@ -430,14 +418,14 @@ export function KindOptions({
 			return <RelationOptions field={field} set={set} change={change} opposite={opposite} more={more} />;
 		case "select":
 			return (
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
 				</Stack>
 			);
 		case "media":
 			return (
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<Pick
 						label={t("field.accept")}
 						value={(field.accept as string | undefined) ?? "image"}
@@ -457,7 +445,7 @@ export function KindOptions({
 				.filter(([, item]) => item.kind === "relation" && item.many === true)
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<Stack gap="comfortable">
+				<Stack gap={16}>
 					<Pick
 						label={t("field.backlinkFrom")}
 						value={from}
@@ -493,12 +481,12 @@ export function KindOptions({
 			const options = optionsOf(field);
 			const values = isObj(field.values) ? (field.values as Record<string, Record<string, Obj>>) : {};
 			return (
-				<Stack gap="normal">
+				<Stack gap={12}>
 					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
 					{optionFields}
-					<Stack gap="condensed">
+					<Stack gap={8}>
 						{Object.keys(options).map((option) => (
-							<Stack key={option} gap="condensed" border="dashed" radius="md" padding="condensed">
+							<Stack key={option} gap={8} border="dashed" radius="md" padding={8}>
 								<Text variant="caption" weight="medium">
 									{t("field.whenOption", { option: options[option] ?? option })}
 								</Text>
@@ -567,10 +555,12 @@ export function FieldEditor({
 	const blocked = removeBlock(editing.collection, place, name);
 
 	return (
-		<Collapsible open={open} onOpenChange={setOpen} render={<Panel />} data-testid={`field-${name}`}>
-			<Inline gap="tight" paddingX="tight">
-				<CollapsibleTrigger render={<Button variant="ghost" width="full" aria-label={t("field.toggle", { name })} />}>
-					<Inline as="span" grow gap="condensed" minWidth={0}>
+		<Collapsible open={open} onOpenChange={setOpen} render={<Box border="bottom" />} data-testid={`field-${name}`}>
+			<Inline gap={4} paddingX={4}>
+				<CollapsibleTrigger
+					render={<Button variant="secondary" width="full" aria-label={t("field.toggle", { name })} />}
+				>
+					<Inline as="span" grow gap={8} minWidth={0}>
 						{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 						<Text as="code" weight="medium">
 							{name}
@@ -578,14 +568,24 @@ export function FieldEditor({
 						<Text variant="caption" tone="muted" truncate>
 							{label}
 						</Text>
-						<Badge variant="secondary">{t(`kind.${kind}`)}</Badge>
+						<Text variant="meta" tone="subtle">
+							{t(`kind.${kind}`)}
+						</Text>
 						{isTitle && (
-							<Badge variant="outline" data-testid="title-badge">
+							<Text variant="meta" tone="subtle" data-testid="title-badge">
 								{t("field.titleBadge")}
-							</Badge>
+							</Text>
 						)}
-						{field.required === true && <Badge variant="outline">{t("field.requiredBadge")}</Badge>}
-						{issues.length > 0 && <Badge variant="danger">{t("field.problems", { count: issues.length })}</Badge>}
+						{field.required === true && (
+							<Text variant="meta" tone="subtle">
+								{t("field.requiredBadge")}
+							</Text>
+						)}
+						{issues.length > 0 && (
+							<Text variant="meta" tone="danger">
+								{t("field.problems", { count: issues.length })}
+							</Text>
+						)}
 					</Inline>
 				</CollapsibleTrigger>
 				<RowActions
@@ -598,9 +598,9 @@ export function FieldEditor({
 				/>
 			</Inline>
 			<CollapsibleContent>
-				<Stack gap="normal" border="top" padding="normal">
+				<Stack gap={12} border="top" padding={12}>
 					<IssueList issues={issues} />
-					<Grid columns={2} gap="normal">
+					<Grid columns={2} gap={12}>
 						<NameInput
 							label={t("field.name")}
 							value={name}
@@ -627,7 +627,7 @@ export function FieldEditor({
 						/>
 					</Grid>
 					{valueKind && (
-						<Grid columns={2} gap="normal">
+						<Grid columns={2} gap={12}>
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
@@ -663,14 +663,12 @@ export function FieldEditor({
 						</Grid>
 					)}
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} place={place} />
-					<Collapsible render={<Box border="dashed" radius="md" paddingX="normal" paddingY="condensed" />}>
-						<CollapsibleTrigger
-							render={<TextLink render={<button type="button" />} tone="muted" size="caption" underline="hover" />}
-						>
+					<Collapsible render={<Box border="dashed" radius="md" paddingX={12} paddingY={8} />}>
+						<CollapsibleTrigger render={<TextButton variant="quiet" render={<button type="button" />} />}>
 							{t("field.advanced")}
 						</CollapsibleTrigger>
 						<CollapsibleContent>
-							<Stack gap="comfortable" paddingTop="normal">
+							<Stack gap={16} paddingTop={12}>
 								{!isSlug && valueKind && (
 									<FieldRolePicker
 										role={field.role as string | undefined}
@@ -712,7 +710,7 @@ export function FieldList({
 	const names = Object.keys(fields);
 	const [adding, setAdding] = useState(false);
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			{names.length === 0 && (
 				<Text as="p" variant="caption" tone="muted">
 					{t("field.none")}
@@ -731,8 +729,8 @@ export function FieldList({
 			))}
 			{!disabled && (
 				<Box width="fit">
-					<Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
-						<Plus aria-hidden />
+					<Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)}>
+						<Add aria-hidden />
 						{t("field.add")}
 					</Button>
 				</Box>

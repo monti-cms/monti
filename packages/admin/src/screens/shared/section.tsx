@@ -1,4 +1,4 @@
-import { Box, Grid, Heading, Panel, Stack, Text } from "@monti-cms/ui";
+import { Box, Grid, Heading, Stack, Text } from "@monti-cms/ui";
 import { createContext, type ReactNode, useContext } from "react";
 
 const SectionRowContext = createContext(false);
@@ -53,11 +53,11 @@ export function Section({
 			data-testid={testId}
 			aria-labelledby={titleId}
 			columns={wide ? "rail-wide" : "rail"}
-			gap="wide"
+			gap={32}
 			align="start"
 			band={band}
 		>
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				<Heading as="h3" id={titleId} tone={danger ? "danger" : undefined}>
 					{title}
 				</Heading>
@@ -73,25 +73,25 @@ export function Section({
 				)}
 			</Stack>
 			{danger ? (
-				<Stack gap="comfortable" minWidth={0} border="danger" radius="lg" padding="comfortable">
+				<Stack gap={16} minWidth={0} border="danger" radius="lg" padding={16}>
 					{children}
 				</Stack>
 			) : isRowBand ? (
 				<SectionRowContext.Provider value={true}>
-					<Stack gap="none" divided minWidth={0}>
+					<Stack gap={0} divided minWidth={0}>
 						{children}
 					</Stack>
 				</SectionRowContext.Provider>
 			) : band ? (
-				<Stack gap="spacious" minWidth={0}>
+				<Stack gap={24} minWidth={0}>
 					{children}
 				</Stack>
 			) : card ? (
-				<Panel padding="comfortable">
-					<Stack gap="spacious" minWidth={0}>
+				<Box padding={16}>
+					<Stack gap={24} minWidth={0}>
 						{children}
 					</Stack>
-				</Panel>
+				</Box>
 			) : (
 				<Box minWidth={0}>{children}</Box>
 			)}

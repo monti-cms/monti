@@ -1,48 +1,43 @@
 "use client";
 
+import {
+	Document,
+	FolderAdd,
+	Folder as FolderIcon,
+	FolderMoveTo,
+	FolderParent,
+	Grid,
+	Link,
+	List,
+	Renew,
+	RightPanelOpen,
+	TrashCan,
+	Upload,
+} from "@carbon/icons-react";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
-	Grid,
 	IconButton,
 	Inline,
 	Input,
 	Label,
-	PageTabs,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	Skeleton,
-	Spinner,
 	Stack,
 	Switch,
 	Tabs,
+	TabsList,
 	TabsTrigger,
-	ToggleGroup,
-	ToggleGroupItem,
+	Text,
+	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	FileText,
-	Folder as FolderIcon,
-	FolderInput,
-	FolderPlus,
-	FolderUp,
-	Image as ImageIcon,
-	LayoutGrid,
-	Link2,
-	List,
-	PanelRightOpen,
-	RefreshCw,
-	SearchX,
-	Trash2,
-	Upload,
-} from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { foldersKeys, listFolders } from "../../api/folders";
 import {
@@ -181,7 +176,7 @@ export function MediaLibrary() {
 		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
 		try {
 			await updateMedia(site, media.id, { folderId: targetFolderId });
-			toast.success(t("library.moved", { name: media.filename, destination }));
+			toast(t("library.moved", { name: media.filename, destination }));
 			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
 		} catch (error) {
@@ -198,7 +193,7 @@ export function MediaLibrary() {
 				entries.length === 1
 					? (items.find((item) => item.id === entries[0].id)?.filename ?? "File")
 					: `${entries.length} files`;
-			toast.success(t("library.moved", { name: label, destination }));
+			toast(t("library.moved", { name: label, destination }));
 			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
 		} catch (error) {
@@ -315,7 +310,7 @@ export function MediaLibrary() {
 				? t("library.cleanup.doneWithFailed", { removed: result.removed, failed: result.failed.length })
 				: t("library.cleanup.done", { removed: result.removed });
 			if (result.failed.length) toast.error(text);
-			else toast.success(text);
+			else toast(text);
 		},
 		invalidate: [mediaKeys.all],
 	});
@@ -340,16 +335,16 @@ export function MediaLibrary() {
 
 	/** Right-click and `⋯` menu of a media tile. */
 	const mediaMenu = (media: MediaItem): MenuAction[] => [
-		{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => void openDetail(media.id) },
+		{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => void openDetail(media.id) },
 		{
 			kind: "sub",
 			label: t("library.menu.usage"),
-			icon: Link2,
+			icon: Link,
 			emptyLabel: t("library.menu.usageEmpty"),
 			items: mediaUsages(media).map((usage) => ({
 				kind: "item" as const,
 				label: `${usage.title || tc("untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
-				icon: FileText,
+				icon: Document,
 				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			})),
 		},
@@ -358,14 +353,14 @@ export function MediaLibrary() {
 					{
 						kind: "sub" as const,
 						label: t("library.menu.moveToFolder"),
-						icon: FolderInput,
+						icon: FolderMoveTo,
 						items: [
 							...(media.folderId
 								? [
 										{
 											kind: "item" as const,
 											label: t("detail.folder.none"),
-											icon: FolderUp,
+											icon: FolderParent,
 											onSelect: () => void moveMediaToFolder(media, null),
 										},
 									]
@@ -386,7 +381,7 @@ export function MediaLibrary() {
 		{
 			kind: "item",
 			label: tc("delete"),
-			icon: Trash2,
+			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
 			disabled: media.referencesCount > 0,
@@ -407,7 +402,7 @@ export function MediaLibrary() {
 		{
 			kind: "item",
 			label: folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder"),
-			icon: FolderPlus,
+			icon: FolderAdd,
 			onSelect: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder),
 		},
 		{
@@ -454,9 +449,9 @@ export function MediaLibrary() {
 			}}
 		>
 			<PageActions>
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Label size="caption" tone="muted">
-						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
+						<Switch checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>
 					<input
@@ -476,30 +471,30 @@ export function MediaLibrary() {
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
 					>
-						<FolderPlus aria-hidden />
+						<FolderAdd aria-hidden />
 						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
-					<IconButton label={tc("refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
-						{mediaQuery.isFetching ? <Spinner size="sm" aria-hidden /> : <RefreshCw aria-hidden />}
+					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
+						<Renew aria-hidden />
 					</IconButton>
 				</Inline>
 			</PageActions>
 			<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
-				<PageTabs aria-label={t("library.kindLabel")}>
+				<TabsList variant="bar" aria-label={t("library.kindLabel")}>
 					{kindOptions(t).map((option) => (
 						<TabsTrigger key={option.value} value={option.value}>
 							{option.label}
 						</TabsTrigger>
 					))}
-				</PageTabs>
+				</TabsList>
 			</Tabs>
-			<Inline gap="condensed" wrap justify="end" paddingX="wide" paddingY="condensed" shrink={false}>
+			<Inline gap={8} wrap justify="end" paddingX={32} paddingY={8} shrink={false}>
 				<Input
 					type="search"
 					size="sm"
@@ -530,70 +525,55 @@ export function MediaLibrary() {
 					to={uploadedTo}
 					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
 				/>
-				<ToggleGroup
+				<Segmented
 					aria-label={t("library.view")}
-					variant="outline"
 					size="sm"
-					spacing={0}
-					value={[view]}
-					onValueChange={(next: unknown[]) => {
-						const picked = next[0];
-						if (picked === "grid" || picked === "list") setView(picked);
-					}}
-				>
-					<ToggleGroupItem value="grid" aria-label={t("library.viewGrid")}>
-						<LayoutGrid aria-hidden />
-					</ToggleGroupItem>
-					<ToggleGroupItem value="list" aria-label={t("library.viewList")}>
-						<List aria-hidden />
-					</ToggleGroupItem>
-				</ToggleGroup>
+					inline
+					value={view}
+					onValueChange={setView}
+					options={[
+						{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("library.viewGrid") },
+						{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
+					]}
+				/>
 			</Inline>
 
-			<Stack as="div" direction="row" gap="none" grow minHeight={0} overflow="hidden" position="relative">
-				<Stack gap="none" grow minWidth={0} overflow="hidden">
+			<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">
+				<Stack gap={0} grow minWidth={0} overflow="hidden">
 					{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
 					<Stack
-						gap="none"
+						gap={0}
 						grow
 						minHeight={0}
 						overflow="y"
-						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? "wide" : "none"}
-						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : "none"}
+						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? 32 : 0}
+						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : 0}
 					>
 						{loadError && (
 							<Box
-								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : "comfortable"}
-								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? "comfortable" : undefined}
+								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : 16}
+								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : undefined}
 							>
 								<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
 							</Box>
 						)}
 						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
-								<Grid as="ul" columns="tiles" gap="comfortable" aria-hidden>
-									{Array.from({ length: 6 }, (_, index) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-										<li key={index}>
-											<Skeleton shape="block" />
-										</li>
-									))}
-								</Grid>
+								<Text as="p" variant="note" tone="subtle" role="status">
+									{tc("loading")}
+								</Text>
 							) : filtered ? (
 								<EmptyState
-									icon={SearchX}
 									title={t("library.emptyNoMatch")}
 									description={t("library.emptyNoMatchHint")}
 									action={{ label: t("library.clearFilters"), onClick: clearFilters }}
 								/>
 							) : (
 								<EmptyState
-									icon={ImageIcon}
 									title={t("library.emptyYet")}
 									description={t("library.emptyYetHint")}
 									action={{
 										label: t("library.upload"),
-										icon: Upload,
 										onClick: () => fileInputRef.current?.click(),
 									}}
 								/>
@@ -603,7 +583,7 @@ export function MediaLibrary() {
 						) : (
 							<MediaTable {...viewProps} />
 						)}
-						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY="spacious" aria-hidden />} />
+						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY={24} aria-hidden />} />
 					</Stack>
 					<ListPagination
 						total={total}

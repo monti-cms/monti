@@ -1,9 +1,8 @@
 "use client";
 
+import { Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
 	Button,
 	Dialog,
 	DialogContent,
@@ -15,28 +14,25 @@ import {
 	FormFieldError,
 	Grid,
 	Image,
-	Inline,
 	Input,
 	Label,
-	PageTabs,
-	Skeleton,
-	Spinner,
 	Stack,
 	Switch,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
 	Textarea,
 	Tile,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ImageIcon } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import { LoadErrorAlert } from "../screens/shared/load-error-alert";
 import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
 import { submitOnEnter } from "./link-form";
@@ -208,13 +204,13 @@ export function ImageInsertDialog({
 	if (!media) {
 		return (
 			<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-				<DialogContent size="md">
+				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{mediaNotConfiguredMessage(site)}</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
+						<Button type="button" variant="secondary" onClick={onClose}>
 							{tc("close")}
 						</Button>
 					</DialogFooter>
@@ -225,10 +221,10 @@ export function ImageInsertDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && !isUploading && onClose()}>
-			<DialogContent size="md" scroll showCloseButton={!isUploading}>
+			<DialogContent scroll>
 				<Stack
 					as="form"
-					gap="comfortable"
+					gap={16}
 					onSubmit={(event) => void confirm(event)}
 					// Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
 					onKeyDown={submitOnEnter}
@@ -239,18 +235,18 @@ export function ImageInsertDialog({
 					</DialogHeader>
 
 					<Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
-						<PageTabs inset="none" aria-label={t("imageDialog.sourceLabel")}>
+						<TabsList variant="bar" inset="none" aria-label={t("imageDialog.sourceLabel")}>
 							<TabsTrigger value="upload" disabled={isUploading}>
 								{tc("upload")}
 							</TabsTrigger>
 							<TabsTrigger value="library" disabled={isUploading}>
 								{t("imageDialog.library")}
 							</TabsTrigger>
-						</PageTabs>
+						</TabsList>
 					</Tabs>
 
 					{tab === "upload" ? (
-						<Stack gap="condensed">
+						<Stack gap={8}>
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
@@ -278,7 +274,7 @@ export function ImageInsertDialog({
 							)}
 						</Stack>
 					) : (
-						<Stack gap="condensed">
+						<Stack gap={8}>
 							<Label htmlFor={searchId} hidden>
 								{t("imageDialog.search")}
 							</Label>
@@ -288,30 +284,26 @@ export function ImageInsertDialog({
 								placeholder={t("imageDialog.search")}
 								onChange={(event) => setSearch(event.target.value)}
 							/>
-							<Stack gap="condensed" aria-busy={isLibraryLoading}>
+							<Stack gap={8} aria-busy={isLibraryLoading}>
 								{isLibraryLoading && library.length === 0 && (
-									<Grid columns={3} responsive={false} gap="condensed">
-										{["a", "b", "c"].map((key) => (
-											<Skeleton key={key} shape="block" />
-										))}
-									</Grid>
+									<Text as="p" variant="note" tone="subtle" role="status">
+										{tc("loading")}
+									</Text>
 								)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert tone="danger" layout="inline">
-										<AlertDescription>{t("imageDialog.libraryFailed")}</AlertDescription>
-										<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
-											{tc("retry")}
-										</Button>
-									</Alert>
+									<LoadErrorAlert
+										message={t("imageDialog.libraryFailed")}
+										onRetry={() => void libraryQuery.refetch()}
+									/>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<Stack gap="none" paddingY="spacious" align="center">
+									<Stack gap={0} paddingY={24} align="center">
 										<Text as="p" tone="muted">
 											{t("imageDialog.libraryEmpty")}
 										</Text>
 									</Stack>
 								)}
-								<Grid columns={3} responsive={false} gap="condensed">
+								<Grid columns={3} responsive={false} gap={8}>
 									{library.map((item) => (
 										<Tile
 											key={item.id}
@@ -335,7 +327,7 @@ export function ImageInsertDialog({
 						</Stack>
 					)}
 
-					<Stack gap="condensed" hidden={picking}>
+					<Stack gap={8} hidden={picking}>
 						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
 						<Textarea
 							id={altId}
@@ -377,10 +369,9 @@ export function ImageInsertDialog({
 					</Stack>
 
 					{isUploading && (
-						<Inline as="div" role="status" gap="condensed">
-							<Spinner />
-							<Text>{t("imageDialog.uploading", { percent: progress ?? 0 })}</Text>
-						</Inline>
+						<Text as="p" role="status">
+							{t("imageDialog.uploading", { percent: progress ?? 0 })}
+						</Text>
 					)}
 					{error && <FormFieldError>{error}</FormFieldError>}
 

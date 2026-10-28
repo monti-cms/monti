@@ -1,9 +1,9 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
 	Inline,
 	Pagination,
 	PaginationContent,
@@ -16,8 +16,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { uiMessages } from "../../ui/messages";
 import { screensMessages } from "../messages";
 
@@ -38,25 +38,23 @@ export function ListPager({
 	if (!hrefFor) {
 		// Without addresses the controls are buttons, not anchors that go nowhere.
 		return (
-			<Inline as="nav" gap="tight" aria-label={t("pagination.label")}>
-				<Button
+			<Inline as="nav" gap={4} aria-label={t("pagination.label")}>
+				<TextButton
 					type="button"
-					variant="ghost"
 					aria-label={t("pagination.previousPage")}
 					disabled={page <= 1}
 					onClick={() => onPageChange(page - 1)}
 				>
-					<ChevronLeftIcon data-icon="inline-start" />
+					<ChevronLeft data-icon="inline-start" />
 					<Box as="span" hideBelow="sm">
 						{t("pagination.previous")}
 					</Box>
-				</Button>
-				<Box as="span" paddingX="condensed">
+				</TextButton>
+				<Box as="span" paddingX={8}>
 					{page} / {totalPages}
 				</Box>
-				<Button
+				<TextButton
 					type="button"
-					variant="ghost"
 					aria-label={t("pagination.nextPage")}
 					disabled={page >= totalPages}
 					onClick={() => onPageChange(page + 1)}
@@ -64,8 +62,8 @@ export function ListPager({
 					<Box as="span" hideBelow="sm">
 						{t("pagination.next")}
 					</Box>
-					<ChevronRightIcon data-icon="inline-end" />
-				</Button>
+					<ChevronRight data-icon="inline-end" />
+				</TextButton>
 			</Inline>
 		);
 	}
@@ -84,7 +82,7 @@ export function ListPager({
 					/>
 				</PaginationItem>
 				<PaginationItem>
-					<Box as="span" paddingX="condensed">
+					<Box as="span" paddingX={8}>
 						{page} / {totalPages}
 					</Box>
 				</PaginationItem>
@@ -113,14 +111,7 @@ export function ListFooter({
 	end?: boolean;
 }) {
 	return (
-		<Inline
-			gap="normal"
-			justify={end ? "end" : "between"}
-			shrink={false}
-			border="top"
-			paddingX="wide"
-			paddingY="condensed"
-		>
+		<Inline gap={12} justify={end ? "end" : "between"} shrink={false} border="top" paddingX={32} paddingY={8}>
 			{children}
 		</Inline>
 	);
@@ -175,7 +166,7 @@ export function ListPagination({
 					})}
 				</Text>
 			)}
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				{leading}
 				{showPageSize && (
 					<Select
@@ -183,7 +174,7 @@ export function ListPagination({
 						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
 						onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
 					>
-						<SelectTrigger size="sm" variant="ghost" aria-label={t("list.pageSize")}>
+						<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

@@ -2,18 +2,17 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
+	Banner,
 	Box,
 	Button,
+	FormFieldError,
 	Inline,
 	Input,
 	List,
 	ListItem,
-	Progress,
-	Spinner,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useRef } from "react";
 import { errorText } from "../../api/client";
@@ -26,17 +25,13 @@ import { useImportEntries } from "./use-import-entries";
 const formatBytes = (bytes: number): string =>
 	bytes >= 1024 * 1024 ? `${Math.round(bytes / (1024 * 1024))} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
-/** What the run is doing: the server writes drafts, then bodies, then publishes, and answers when it is done, so the bar does not claim a percentage. */
+/** What the run is doing: the server writes drafts, then bodies, then publishes, and answers when it is done, so there is no bar, only the words (a step that cannot be measured has none). */
 function RunProgress({ count }: { count: number }) {
 	const t = useTranslator(importMessages);
 	return (
 		<output data-testid="import-progress">
-			<Stack gap="condensed">
-				<Inline gap="condensed">
-					<Spinner aria-hidden size="sm" />
-					<Text tone="muted">{t("progress.running", { count })}</Text>
-				</Inline>
-				<Progress value={null} label={t("progress.running", { count })} />
+			<Stack gap={8}>
+				<Text tone="muted">{t("progress.running", { count })}</Text>
 				<Text as="p" variant="caption" tone="muted">
 					{t("progress.hint")}
 				</Text>
@@ -58,8 +53,8 @@ export function ImportEntriesFields() {
 	const running = form.isRunning;
 
 	return (
-		<Stack gap="spacious">
-			<Stack gap="condensed">
+		<Stack gap={24}>
+			<Stack gap={8}>
 				<Text as="p" weight="medium">
 					{t("kinds.label")}
 				</Text>
@@ -77,7 +72,7 @@ export function ImportEntriesFields() {
 				</List>
 			</Stack>
 
-			<Inline gap="normal" wrap>
+			<Inline gap={12} wrap>
 				<Input
 					ref={input}
 					type="file"
@@ -93,7 +88,7 @@ export function ImportEntriesFields() {
 						event.target.value = "";
 					}}
 				/>
-				<Button type="button" variant="outline" disabled={running} onClick={() => input.current?.click()}>
+				<Button type="button" variant="secondary" disabled={running} onClick={() => input.current?.click()}>
 					{form.file ? t("file.change") : t("file.choose")}
 				</Button>
 				{form.file && (
@@ -104,9 +99,7 @@ export function ImportEntriesFields() {
 			</Inline>
 
 			{form.tooLarge && form.limit !== undefined && (
-				<Alert tone="danger" layout="stack">
-					<AlertDescription>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</AlertDescription>
-				</Alert>
+				<FormFieldError>{t("file.tooLarge", { limit: formatBytes(form.limit) })}</FormFieldError>
 			)}
 
 			{form.file && !form.tooLarge && !preview && previewQuery.isPending && (
@@ -128,15 +121,13 @@ export function ImportEntriesFields() {
 			)}
 
 			{Boolean(form.runError) && (
-				<Alert tone="danger" layout="stack">
-					<AlertDescription>{errorText(site, form.runError, t("error.run"))}</AlertDescription>
-				</Alert>
+				<Banner role="alert" tone="danger" title={errorText(site, form.runError, t("error.run"))} />
 			)}
 
 			{running && preview && <RunProgress count={preview.counts.imported} />}
 
 			{preview && !result && (
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Button
 						type="button"
 						disabled={running || previewQuery.isPlaceholderData || preview.counts.imported === 0}
@@ -144,9 +135,9 @@ export function ImportEntriesFields() {
 					>
 						{t("action.import")}
 					</Button>
-					<Button type="button" variant="ghost" disabled={running} onClick={form.reset}>
+					<TextButton type="button" disabled={running} onClick={form.reset}>
 						{t("action.cancel")}
-					</Button>
+					</TextButton>
 					{preview.counts.imported === 0 && (
 						<Text variant="caption" tone="muted">
 							{t("nothing.description")}
@@ -159,7 +150,7 @@ export function ImportEntriesFields() {
 				<>
 					<ResultView result={result} />
 					<Box>
-						<Button type="button" variant="outline" onClick={form.reset}>
+						<Button type="button" variant="secondary" onClick={form.reset}>
 							{t("action.again")}
 						</Button>
 					</Box>

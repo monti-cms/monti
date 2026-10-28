@@ -1,8 +1,8 @@
 "use client";
 
+import { Add, Draggable, SplitScreen, TrashCan } from "@carbon/icons-react";
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
 import { Box, cn, Text } from "@monti-cms/admin/kit";
-import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {
 	columnsGridTemplate,
@@ -129,14 +129,14 @@ export function ColumnsNodeView() {
 	};
 
 	return (
-		<BlockFrame ref={wrapperRef} className="my-spacious rounded-md">
+		<BlockFrame ref={wrapperRef} className="my-monti-24 rounded-monti-md">
 			<Content
 				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
 				// The top padding keeps the toolbar (-top-3.5) from covering the first line of text.
 				// Write the classes out literally instead of assembling them so Tailwind can find them.
 				className={cn(
-					"pt-normal [&>*]:flex [&>*]:flex-col [&>*]:gap-comfortable",
-					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-spacious md:[&>*]:[grid-template-columns:var(--monti-columns)]",
+					"pt-monti-12 [&>*]:flex [&>*]:flex-col [&>*]:gap-monti-16",
+					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-monti-24 md:[&>*]:[grid-template-columns:var(--monti-columns)]",
 					"[&>*>*]:min-w-0",
 				)}
 			/>
@@ -153,7 +153,7 @@ export function ColumnsNodeView() {
 							<span
 								aria-hidden
 								className={cn(
-									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-sm bg-monti-emphasis opacity-0 transition-opacity group-hover/container:opacity-30",
+									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-monti-sm bg-monti-emphasis opacity-0 transition-opacity group-hover/container:opacity-30",
 									draft && "opacity-100 group-hover/container:opacity-100",
 								)}
 							/>
@@ -167,28 +167,28 @@ export function ColumnsNodeView() {
 									nudge(boundary.index, event.key === "ArrowLeft" ? -5 : 5);
 								}}
 								className={cn(
-									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm border bg-monti-overlay opacity-0 shadow-monti-floating transition-opacity",
-									"focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-monti-focus group-hover/container:opacity-100",
+									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-monti-sm border bg-monti-page opacity-0 shadow-monti-floating transition-opacity",
+									"focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-monti-contrast group-hover/container:opacity-100",
 									draft && "opacity-100",
 								)}
 							>
-								<GripVertical aria-hidden className="size-2.5 rotate-90 text-monti-muted" />
+								<Draggable aria-hidden className="size-2.5 rotate-90 text-monti-muted" />
 							</button>
 						</div>
 					))
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<Box as="span" paddingX="condensed">
+					<Box as="span" paddingX={8}>
 						<Text variant="caption" tone="muted">
 							{widths ? widths.join(" : ") : t("count", { count })}
 						</Text>
 					</Box>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
-						<Columns2 aria-hidden />
+						<SplitScreen aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addColumn}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton
 						label={selectedIndex === -1 ? t("deleteLast") : t("delete")}
@@ -196,7 +196,7 @@ export function ColumnsNodeView() {
 						disabled={!block.canRemoveChild(selectedIndex === -1 ? count - 1 : selectedIndex)}
 						onClick={removeColumn}
 					>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}
@@ -210,9 +210,9 @@ export function ColumnNodeView() {
 		<BlockFrame
 			framed={false}
 			selectedRing={false}
-			className="h-full rounded-md outline-dashed outline-1 outline-transparent transition-colors focus-within:outline-monti-focus group-hover/container:outline-monti-focus"
+			className="h-full rounded-monti-md outline-dashed outline-1 outline-transparent transition-colors focus-within:outline-monti-contrast group-hover/container:outline-monti-contrast"
 		>
-			<Content className="min-h-8 px-condensed py-tight [&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
+			<Content className="min-h-8 px-monti-8 py-monti-4 [&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
 		</BlockFrame>
 	);
 }

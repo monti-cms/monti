@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, ChevronRight, Copy, Information, ListNumbered, Row } from "@carbon/icons-react";
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -13,13 +14,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Text,
-	Toggle,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/ui";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
-import { Check, ChevronRight, Copy, Info, ListOrdered, Rows3 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { codeAnchorRef } from "../added-marks";
 import { useEditorEditable } from "../blocks/shared";
@@ -41,7 +40,7 @@ import { RulesPanel } from "./rules-panel";
 
 /** Height of one line (px). The code (``), the line number gutter and the line background share this height. */
 const LINE_HEIGHT = 24;
-/** Vertical padding of the code (`py-normal`). */
+/** Vertical padding of the code (`py-monti-12`). */
 const PAD_TOP = 12;
 
 const effectsOnLine = (effects: readonly CodeLineEffect[], line: number) =>
@@ -225,7 +224,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	return (
 		<NodeViewWrapper
-			className="not-prose group/code relative my-comfortable flex w-full flex-col rounded-md border bg-monti-inset text-monti-body"
+			className="not-prose group/code relative my-monti-16 flex w-full flex-col rounded-monti-md border bg-monti-tool text-monti-body"
 			data-code-block-wrapper=""
 		>
 			<Inline
@@ -233,14 +232,14 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 				contentEditable={false}
 				wrap
 				justify="between"
-				gap="condensed"
-				paddingX="condensed"
-				paddingY="tight"
+				gap={8}
+				paddingX={8}
+				paddingY={4}
 				border="bottom"
-				background="inset"
+				background="tool"
 			>
 				{editable ? (
-					<Inline wrap gap="condensed">
+					<Inline wrap gap={8}>
 						<Select
 							value={language}
 							// The name list must be passed so a closed slot shows the name (`TypeScript`) rather than the value (`ts`).
@@ -267,7 +266,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						/>
 					</Inline>
 				) : (
-					<Inline gap="condensed" paddingX="tight">
+					<Inline gap={8} paddingX={4}>
 						<Text variant="caption" tone="muted">
 							{languageOptions.find((option) => option.value === language)?.label ?? language}
 						</Text>
@@ -278,11 +277,11 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						)}
 					</Inline>
 				)}
-				<Inline gap="hair">
+				<Inline gap={2}>
 					{!editable ? null : rawMode ? (
 						<Tooltip>
-							<TooltipTrigger render={<Inline as="span" gap="tight" paddingX="tight" />}>
-								<Info aria-hidden />
+							<TooltipTrigger render={<Inline as="span" gap={4} paddingX={4} />}>
+								<Information aria-hidden />
 								<Text variant="caption" tone="muted">
 									{t("view.rawMode")}
 								</Text>
@@ -294,7 +293,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 							{lineMenuOffered && (
 								<IconButton
 									label={t("view.lineEffects")}
-									size="icon-xs"
 									disabled={!(picked ?? selectedLines)}
 									onMouseDown={(event) => event.preventDefault()}
 									onClick={() => {
@@ -302,7 +300,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										if (lines) setMenu({ start: lines.start, end: lines.end });
 									}}
 								>
-									<Rows3 aria-hidden />
+									<Row aria-hidden />
 								</IconButton>
 							)}
 							{rulesOffered && (
@@ -325,34 +323,26 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</>
 					)}
 					{editable && (
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<Toggle
-										size="icon-sm"
-										pressed={parsedMeta.showLineNumbers}
-										onPressedChange={(pressed) => setMeta({ showLineNumbers: pressed })}
-										aria-label={t("view.lineNumbers")}
-									/>
-								}
-							>
-								<ListOrdered aria-hidden />
-							</TooltipTrigger>
-							<TooltipContent>{t("view.lineNumbers")}</TooltipContent>
-						</Tooltip>
+						<IconButton
+							label={t("view.lineNumbers")}
+							pressed={parsedMeta.showLineNumbers}
+							onClick={() => setMeta({ showLineNumbers: !parsedMeta.showLineNumbers })}
+						>
+							<ListNumbered aria-hidden />
+						</IconButton>
 					)}
-					<IconButton label={copied ? t("view.copied") : t("view.copy")} size="icon-xs" onClick={handleCopy}>
-						{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+					<IconButton label={copied ? t("view.copied") : t("view.copy")} onClick={handleCopy}>
+						{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 					</IconButton>
 				</Inline>
 			</Inline>
 
-			<div ref={bodyRef} className="relative flex rounded-b-md">
+			<div ref={bodyRef} className="relative flex rounded-b-monti-md">
 				<div
 					data-code-ui=""
 					data-code-gutter=""
 					contentEditable={false}
-					className="shrink-0 select-none rounded-bl-md border-r bg-monti-inset py-normal font-mono text-monti-caption text-monti-muted"
+					className="shrink-0 select-none rounded-bl-monti-md border-r bg-monti-tool py-monti-12 font-mono text-monti-caption text-monti-muted"
 				>
 					{rows.map((line) => {
 						const effects = effectsOnLine(lineEffects, line);
@@ -373,11 +363,11 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								onMouseEnter={() => extendLineDrag(line)}
 								onContextMenu={(event) => openLineMenuAt(line, event)}
 								className={cn(
-									"flex h-6 cursor-pointer items-center gap-hair pr-condensed pl-hair hover:bg-monti-hover",
+									"flex h-6 cursor-pointer items-center gap-monti-2 pr-monti-8 pl-monti-2 hover:bg-monti-selected",
 									selected && "bg-monti-selected text-monti-default",
 									whole && "bg-monti-selected",
 									// A line linked to the body gets a line drawn on the left of the line number gutter.
-									anchored && "shadow-[inset_2px_0_0_0_var(--monti-accent-9)]",
+									anchored && "shadow-[inset_2px_0_0_0_var(--monti-border-contrast)]",
 								)}
 							>
 								<span className="flex w-4 justify-center">
@@ -385,7 +375,6 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										<IconButton
 											label={t(collapse.open ? "view.collapseFrom" : "view.expandFrom", { line: line + 1 })}
 											side="left"
-											size="icon-xs"
 											aria-expanded={collapse.open}
 											onMouseDown={(event) => {
 												event.preventDefault();
@@ -431,14 +420,14 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										className={cn(
 											"h-6",
 											...effects.map((effect) => editorLookOf(site, effect)?.background ?? ""),
-											(whole || pending || hovered) && "bg-monti-accent-muted",
+											(whole || pending || hovered) && "bg-monti-selected",
 										)}
 									>
 										{/* Draw the wavy underline once across the whole line so it is not broken per text fragment (syntax color). Overlay the same text transparently to match the length. */}
 										{wavy && (
 											<span
 												className={cn(
-													"block w-max whitespace-pre px-comfortable text-transparent underline decoration-wavy",
+													"block w-max whitespace-pre px-monti-16 text-transparent underline decoration-wavy",
 													wavy,
 												)}
 											>
@@ -451,7 +440,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</div>
 						<pre
 							className={cn(
-								"relative m-0 whitespace-pre bg-transparent px-comfortable py-normal font-mono text-monti-body text-monti-default",
+								"relative m-0 whitespace-pre bg-transparent px-monti-16 py-monti-12 font-mono text-monti-body text-monti-default",
 								// Syntax colors are inlined as light theme colors. In the dark theme they switch to --shiki-dark.
 								"monti-dark:[&_.shiki-token]:text-(--shiki-dark)!",
 								// Hide the cursor while lines are picked by line number (picked lines are shown by the line background).

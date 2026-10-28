@@ -30,7 +30,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 		locale && !dictionaryLanguages.includes(locale) ? [...dictionaryLanguages, locale] : dictionaryLanguages;
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
-		<Stack gap="section" data-testid="admin-settings">
+		<Stack gap={48} data-testid="admin-settings">
 			<Section wide band title={t("admin.languageTitle")}>
 				<Box>
 					<Pick
@@ -60,13 +60,13 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 				/>
 			</Section>
 			<Section wide band rows={false} title={t("admin.addressTitle")}>
-				<Stack gap="condensed">
-					<Box width="fit" background="neutral" radius="md" paddingX="normal" paddingY="condensed">
+				<Stack gap={8}>
+					<Box width="fit" background="muted" radius="md" paddingX={12} paddingY={8}>
 						<Text as="code" data-testid="admin-path">
 							{path}
 						</Text>
 					</Box>
-					<Box maxWidth="prose">
+					<Box maxWidth="reading">
 						<Text as="p" variant="label" tone="muted">
 							{t("admin.pathNote")}
 						</Text>

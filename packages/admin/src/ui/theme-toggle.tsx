@@ -1,10 +1,9 @@
 "use client";
 
+import { Moon, Sun } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Button, buttonVariants, cn } from "@monti-cms/ui/internal";
-import { Moon, Sun } from "lucide-react";
+import { IconButton } from "@monti-cms/ui/internal";
 import { useTheme } from "next-themes";
-import type { ComponentProps } from "react";
 import { useHydrated } from "../lib/hooks/use-hydrated";
 import { uiMessages } from "./messages";
 
@@ -15,42 +14,29 @@ import { uiMessages } from "./messages";
  */
 export function ThemeToggle({
 	labels,
-	...props
-}: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
+}: {
 	/** Button name. A public site passes a message in its own display language (it then needs no site). */
 	labels?: { toLight: string; toDark: string };
 }) {
-	return labels ? <ThemeToggleButton labels={labels} {...props} /> : <AdminThemeToggle {...props} />;
+	return labels ? <ThemeToggleButton labels={labels} /> : <AdminThemeToggle />;
 }
 
 /** The toggle with the admin's own button names, which follow the admin language of the site. */
-function AdminThemeToggle(props: Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
+function AdminThemeToggle() {
 	const t = useTranslator(uiMessages);
-	return <ThemeToggleButton labels={{ toLight: t("theme.toLight"), toDark: t("theme.toDark") }} {...props} />;
+	return <ThemeToggleButton labels={{ toLight: t("theme.toLight"), toDark: t("theme.toDark") }} />;
 }
 
-function ThemeToggleButton({
-	className,
-	labels,
-	...props
-}: Omit<ComponentProps<typeof Button>, "onClick" | "children"> & { labels: { toLight: string; toDark: string } }) {
+function ThemeToggleButton({ labels }: { labels: { toLight: string; toDark: string } }) {
 	const { resolvedTheme, setTheme } = useTheme();
 	const hydrated = useHydrated();
 	if (!hydrated) {
-		return <span aria-hidden className={cn(buttonVariants({ variant: "ghost", size: "icon" }), className)} />;
+		return <span aria-hidden className="inline-flex size-monti-icon-button shrink-0" />;
 	}
 	const isDark = resolvedTheme === "dark";
 	return (
-		<Button
-			type="button"
-			variant="ghost"
-			size="icon"
-			onClick={() => setTheme(isDark ? "light" : "dark")}
-			aria-label={isDark ? labels.toLight : labels.toDark}
-			className={className}
-			{...props}
-		>
-			{isDark ? <Moon aria-hidden className="h-5 w-5" /> : <Sun aria-hidden className="h-5 w-5" />}
-		</Button>
+		<IconButton label={isDark ? labels.toLight : labels.toDark} onClick={() => setTheme(isDark ? "light" : "dark")}>
+			{isDark ? <Moon aria-hidden /> : <Sun aria-hidden />}
+		</IconButton>
 	);
 }

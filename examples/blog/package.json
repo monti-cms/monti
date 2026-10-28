@@ -29,14 +29,13 @@
 		"@tiptap/core": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
-		"lucide-react": "^0.562.0",
+		"@carbon/icons-react": "11.90.0",
 		"mermaid": "^11.12.2",
 		"next": "16.4.0",
 		"next-themes": "^0.4.6",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
-		"recharts": "^3.8.1",
-		"sonner": "^2.0.8"
+		"recharts": "^3.8.1"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4",

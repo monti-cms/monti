@@ -46,7 +46,7 @@ export interface CollectionSchema<
 	 */
 	readonly path?: string;
 	/**
-	 * Admin sidebar icon name (lucide, e.g. `file-text`, `notebook-pen`, `tag`, `shapes`, `layers`, `folder`, `image`).
+	 * Admin sidebar icon name (Carbon icon name, e.g. `document`, `notebook`, `tag`, `shapes`, `layers`, `folder`, `image`).
 	 * If absent or unknown, it is the default icon for the kind.
 	 */
 	readonly icon?: string;

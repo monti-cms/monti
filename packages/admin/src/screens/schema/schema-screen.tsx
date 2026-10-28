@@ -1,30 +1,15 @@
 "use client";
 
+import { Add, Draggable, Locked } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-	Badge,
-	Box,
-	CodeBlock,
-	cn,
-	Heading,
-	IconButton,
-	Inline,
-	Skeleton,
-	Stack,
-	Text,
-} from "@monti-cms/ui";
+import { Banner, Box, CodeBlock, cn, Heading, Icon, IconButton, Inline, Stack, Text, toast } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
@@ -38,7 +23,7 @@ import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
-import { ChangeDot, IssueList, SchemaEditProvider } from "./controls";
+import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
@@ -97,7 +82,7 @@ function FileRest({ file }: { file: Obj }) {
 			{rest.length > 0 && (
 				<Section wide title={t("file.title")}>
 					{rest.map(([title, value]) => (
-						<Stack key={title} gap="condensed">
+						<Stack key={title} gap={8}>
 							<Heading as="h4" variant="label">
 								{title}
 							</Heading>
@@ -108,15 +93,9 @@ function FileRest({ file }: { file: Obj }) {
 			)}
 			{migrations.length > 0 && (
 				<Section wide title={t("file.migrations")}>
-					<Stack as="ul" gap="none">
+					<Stack as="ul" gap={0}>
 						{migrations.map((migration, index) => (
-							<Inline
-								as="li"
-								key={String(migration.id)}
-								gap="condensed"
-								paddingY="condensed"
-								border={index === 0 ? undefined : "top"}
-							>
+							<Inline as="li" key={String(migration.id)} gap={8} paddingY={8} border={index === 0 ? undefined : "top"}>
 								<Text as="code" variant="caption">
 									{String(migration.id)}
 								</Text>
@@ -136,7 +115,7 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<Box as="span" border="all" radius="sm" background="inset" paddingX="normal" paddingY="hair">
+		<Box as="span" border="all" radius="sm" background="tool" paddingX={12} paddingY={2}>
 			<Text variant="caption" tone="muted" mono>
 				{state.file ?? t("status.noFile")}
 				{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
@@ -185,25 +164,31 @@ function CollectionNavItem({
 					{...attributes}
 					{...listeners}
 					aria-label={t("collection.drag", { name: label })}
-					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft group-hover/row:opacity-100"
+					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 group-hover/row:opacity-100"
 				>
-					<GripVertical aria-hidden className="size-3.5" />
+					<Draggable aria-hidden className="size-3.5" />
 				</button>
 			)}
 			<button
 				type="button"
 				aria-current={active ? "true" : undefined}
 				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-condensed rounded-md border border-transparent px-normal text-left text-monti-body outline-none transition-colors hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft",
-					writable && "group-focus-within/row:pl-wide group-hover/row:pl-wide",
-					active && "border-monti-muted bg-monti-surface font-medium hover:bg-monti-surface",
+					"flex h-8 w-full shrink-0 items-center gap-monti-8 rounded-monti-md border border-transparent px-monti-12 text-left text-monti-body outline-none transition-colors hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+					writable && "group-focus-within/row:pl-monti-32 group-hover/row:pl-monti-32",
+					active && "border-monti-muted bg-monti-page font-medium hover:bg-monti-page",
 				)}
 				onClick={onSelect}
 			>
 				<Box grow minWidth={0}>
 					<Text truncate>{label}</Text>
 				</Box>
-				{isNew ? <Badge variant="outline">{t("collection.new")}</Badge> : changed && <ChangeDot />}
+				{isNew ? (
+					<Text variant="meta" tone="subtle">
+						{t("collection.new")}
+					</Text>
+				) : (
+					changed && <ChangedMark />
+				)}
 				<Text variant="caption" tone="muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</Text>
@@ -262,7 +247,7 @@ function SchemaEditor({
 	}, [areas, onChanged]);
 	useEffect(() => {
 		const message = takeSavedMessage();
-		if (message) toast.success(message);
+		if (message) toast(message);
 	}, []);
 	// After the reload that follows a save, scroll back to where the writer was.
 	useLayoutEffect(() => {
@@ -293,10 +278,12 @@ function SchemaEditor({
 	};
 
 	const actions = !writable ? (
-		<Badge variant="outline">
-			<Lock aria-hidden />
-			{t("status.readOnly")}
-		</Badge>
+		<Inline gap={4}>
+			<Icon icon={Locked} size="sm" tone="subtle" />
+			<Text variant="meta" tone="subtle">
+				{t("status.readOnly")}
+			</Text>
+		</Inline>
 	) : null;
 
 	const reason = state.access.writable
@@ -304,93 +291,66 @@ function SchemaEditor({
 		: ((state.access.reason as keyof typeof READ_ONLY_KEY | undefined) ?? null);
 	return (
 		<SchemaEditProvider value={context}>
-			<Stack gap="none" grow minHeight={0} data-testid="schema-screen">
+			<Stack gap={0} grow minHeight={0} data-testid="schema-screen">
 				{fileSlot ? createPortal(<FileLine state={state} reason={reason} />, fileSlot) : null}
 				{actions && actionsSlot !== undefined
 					? actionsSlot
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<Inline
-								justify="end"
-								gap="condensed"
-								border="bottom"
-								background="page"
-								paddingX="wide"
-								paddingY="condensed"
-							>
+							<Inline justify="end" gap={8} border="bottom" background="page" paddingX={32} paddingY={8}>
 								{actions}
 							</Inline>
 						)}
-				<Stack ref={scroller} gap="none" grow minHeight={0} overflow="y">
+				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
-							<Alert layout="stack" data-testid="schema-read-only">
-								<AlertTitle>{t("readonly.title")}</AlertTitle>
-								<AlertDescription>
-									<Stack gap="tight">
-										<Text>{t(READ_ONLY_KEY[reason])}</Text>
-										{reason === "has_code" && (state.access.issue || state.access.detail) && (
-											<Text as="code" variant="caption" data-testid="schema-code-detail">
-												{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
-											</Text>
-										)}
-									</Stack>
-								</AlertDescription>
-							</Alert>
+							<Banner
+								title={t(READ_ONLY_KEY[reason])}
+								meta={
+									reason === "has_code" && (state.access.issue || state.access.detail) ? (
+										<span data-testid="schema-code-detail">
+											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
+										</span>
+									) : undefined
+								}
+								data-testid="schema-read-only"
+							/>
 						)}
-						{writable && state.comments && (
-							<Alert layout="stack" data-testid="schema-comments-note">
-								<AlertDescription>{t("comments.note")}</AlertDescription>
-							</Alert>
-						)}
-						{applyFailed && (
-							<Alert tone="danger" layout="stack">
-								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
-							</Alert>
-						)}
+						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
+						{applyFailed && <Banner role="alert" tone="danger" title={t("save.applyFailedNote")} />}
 						{state.issues.length > 0 && (
-							<Alert tone="danger" layout="stack" data-testid="schema-file-invalid">
-								<AlertTitle>{t("invalid.title")}</AlertTitle>
-								<AlertDescription>
-									<Stack gap="condensed">
-										<Text>{t("invalid.description")}</Text>
-										<IssueList issues={state.issues} />
-									</Stack>
-								</AlertDescription>
-							</Alert>
+							<Stack gap={8} data-testid="schema-file-invalid">
+								<Banner role="alert" tone="danger" title={t("invalid.title")} />
+								<Text tone="muted">{t("invalid.description")}</Text>
+								<IssueList issues={state.issues} />
+							</Stack>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert tone="danger" layout="stack">
-								<AlertTitle>{t("issues.title")}</AlertTitle>
-								<AlertDescription>
-									<IssueList issues={issues} />
-								</AlertDescription>
-							</Alert>
+							<Stack gap={8}>
+								<Banner role="alert" tone="danger" title={t("issues.title")} />
+								<IssueList issues={issues} />
+							</Stack>
 						)}
 						{state.codeCollections.length > 0 && (
-							<Alert layout="stack">
-								<AlertDescription>
-									{t("code.collections", { names: state.codeCollections.join(", ") })}
-								</AlertDescription>
-							</Alert>
+							<Banner title={t("code.collections", { names: state.codeCollections.join(", ") })} />
 						)}
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<Inline wrap align="start" gap="wide">
-										<Stack gap="hair" width="panel-sm" shrink={false}>
-											<Inline justify="between" paddingBottom="condensed" paddingX="normal">
+									<Inline wrap align="start" gap={32}>
+										<Stack gap={2} width="menu" shrink={false}>
+											<Inline justify="between" paddingBottom={8} paddingX={12}>
 												<Text variant="caption" weight="medium" tone="muted">
 													{t("collection.railTitle")} {names.length}
 												</Text>
 												{writable && (
-													<IconButton label={t("collection.create")} size="icon-xs" onClick={() => setCreating(true)}>
-														<Plus aria-hidden />
+													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
+														<Add aria-hidden />
 													</IconButton>
 												)}
 											</Inline>
-											<Stack as="nav" aria-label={t("tabs.collections")} gap="hair">
+											<Stack as="nav" aria-label={t("tabs.collections")} gap={2}>
 												<SortableList
 													items={names}
 													onDragEnd={(from, to) => {
@@ -452,7 +412,7 @@ function SchemaEditor({
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && (
-									<Stack gap="section">
+									<Stack gap={48}>
 										<AdminEditor file={draft} update={updateFile} />
 										<FileRest file={draft} />
 									</Stack>
@@ -528,6 +488,7 @@ export function SchemaSettings({
 }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
+	const tc = useTranslator(commonMessages);
 	const query = useQuery({
 		queryKey: schemaKeys.state(),
 		queryFn: ({ signal }) => fetchSchema(site, signal),
@@ -549,8 +510,14 @@ export function SchemaSettings({
 			/>
 		);
 	return (
-		<Stack gap="normal" padding="wide">
-			{error ? <LoadErrorAlert message={error} onRetry={() => void query.refetch()} /> : <Skeleton shape="block" />}
+		<Stack gap={12} padding={32}>
+			{error ? (
+				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
+			) : (
+				<Text as="p" tone="subtle" role="status">
+					{tc("loading")}
+				</Text>
+			)}
 		</Stack>
 	);
 }

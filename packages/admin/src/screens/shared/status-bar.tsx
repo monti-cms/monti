@@ -3,10 +3,20 @@
 // The status bar at the bottom of every admin screen. Core and plugins contribute items; an item shows changing state that leads somewhere when clicked,
 // and renders nothing when there is nothing to say.
 
+import { Checkmark, Translate, WarningAlt } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, Popover, PopoverContent, PopoverTrigger } from "@monti-cms/ui";
+import {
+	Box,
+	cn,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	Spinner,
+	StatusBarCell,
+	StatusBar as StatusBarFrame,
+	StatusBarSpacer,
+} from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Languages, LoaderCircle, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import type { CmsIssue } from "../../api/error-message";
 import { countFailedEvents, eventsKeys, listEvents, retryAllEvents } from "../../api/events";
@@ -168,7 +178,6 @@ interface StatusBarItemBase {
 	readonly tone?: Tone;
 	/** What the item means, as a tooltip and for assistive technology. */
 	readonly title: string;
-	readonly className?: string;
 	readonly children: ReactNode;
 }
 
@@ -210,17 +219,12 @@ export type StatusBarItemProps = StatusBarItemBase &
 		  }
 	);
 
-const itemClass =
-	"flex h-5 shrink-0 items-center gap-tight rounded-sm px-condensed text-monti-caption whitespace-nowrap tabular-nums";
-const interactiveClass =
-	"cursor-pointer outline-none hover:bg-monti-hover hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-focus data-popup-open:bg-monti-selected data-popup-open:text-monti-default";
-
 // Which group the item sits in decides which edge its popup lines up with.
 const AlignContext = createContext<"start" | "end">("start");
 // Lets what is inside a popup (a row, a header action) close it.
 const PopoverCloseContext = createContext<() => void>(() => {});
 
-/** One item of the status bar: an optional icon and a short text, a link, a button or a popup when it leads somewhere. */
+/** One item of the status bar, drawn as a cell: an optional icon and a short text, a link, a button or a popup when it leads somewhere. */
 export function StatusBarItem({
 	icon,
 	tone = "default",
@@ -231,14 +235,13 @@ export function StatusBarItem({
 	open: controlledOpen,
 	onOpenChange,
 	title,
-	className,
 	children,
 }: StatusBarItemProps) {
 	const align = useContext(AlignContext);
 	const [ownOpen, setOwnOpen] = useState(false);
 	const open = controlledOpen ?? ownOpen;
 	const setOpen = onOpenChange ?? setOwnOpen;
-	const classes = cn(itemClass, toneClass[tone], (href || onClick || popover) && interactiveClass, className);
+	const cellProps = { end: align === "end", tone: tone === "default" ? undefined : tone, title } as const;
 	const content = (
 		<>
 			{icon && (
@@ -252,12 +255,10 @@ export function StatusBarItem({
 	if (popover) {
 		return (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger title={title} render={<button type="button" data-slot="status-bar-item" className={classes} />}>
-					{content}
-				</PopoverTrigger>
+				<PopoverTrigger render={<StatusBarCell {...cellProps} />}>{content}</PopoverTrigger>
 				<PopoverContent side="top" align={align} sideOffset={6} width="md" padding="none" scroll>
 					<PopoverCloseContext.Provider value={() => setOpen(false)}>
-						<Box paddingY="tight">{popover}</Box>
+						<Box paddingY={4}>{popover}</Box>
 					</PopoverCloseContext.Provider>
 				</PopoverContent>
 			</Popover>
@@ -266,33 +267,26 @@ export function StatusBarItem({
 	if (href) {
 		const external = newTab || /^https?:/.test(href);
 		return external ? (
-			<a
-				href={href}
-				target="_blank"
-				rel="noopener noreferrer"
-				title={title}
-				data-slot="status-bar-item"
-				className={classes}
-			>
+			<StatusBarCell {...cellProps} href={href} target="_blank" rel="noopener noreferrer">
 				{content}
-			</a>
+			</StatusBarCell>
 		) : (
-			<AdminLink href={href} title={title} data-slot="status-bar-item" className={classes}>
+			<StatusBarCell {...cellProps} render={<AdminLink href={href} />}>
 				{content}
-			</AdminLink>
+			</StatusBarCell>
 		);
 	}
 	if (onClick) {
 		return (
-			<button type="button" title={title} onClick={onClick} data-slot="status-bar-item" className={classes}>
+			<StatusBarCell {...cellProps} onClick={onClick}>
 				{content}
-			</button>
+			</StatusBarCell>
 		);
 	}
 	return (
-		<span title={title} data-slot="status-bar-item" className={classes}>
+		<StatusBarCell {...cellProps} render={<span />}>
 			{content}
-		</span>
+		</StatusBarCell>
 	);
 }
 
@@ -313,9 +307,9 @@ export function StatusPopoverHeader({
 }) {
 	const close = useContext(PopoverCloseContext);
 	const buttonClass =
-		"h-6 shrink-0 rounded-sm px-condensed font-medium text-monti-accent outline-none hover:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus";
+		"h-6 shrink-0 rounded-monti-sm px-monti-8 font-medium text-monti-default outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast";
 	return (
-		<div className="flex items-center justify-between gap-normal px-normal py-condensed">
+		<div className="flex items-center justify-between gap-monti-12 px-monti-12 py-monti-8">
 			<h2 className="min-w-0 truncate font-medium">{title}</h2>
 			{action?.href ? (
 				<a
@@ -365,8 +359,8 @@ export function StatusPopoverRow({
 }) {
 	const close = useContext(PopoverCloseContext);
 	const classes = cn(
-		"flex w-full items-baseline justify-between gap-normal px-normal py-tight text-left",
-		(href || onClick) && "cursor-pointer outline-none hover:bg-monti-hover focus-visible:bg-monti-hover",
+		"flex w-full items-baseline justify-between gap-monti-12 px-monti-12 py-monti-4 text-left",
+		(href || onClick) && "cursor-pointer outline-none hover:bg-monti-selected focus-visible:bg-monti-selected",
 	);
 	const body = (
 		<>
@@ -516,13 +510,13 @@ function PublishReadinessPopover({ readiness }: { readiness: NonNullable<EditorS
 				title={t("title")}
 				action={{ label: t("recheck"), onClick: readiness.recheck, keepOpen: true }}
 			/>
-			{stale && <p className="px-normal py-tight text-monti-muted">{t("staleHint")}</p>}
+			{stale && <p className="px-monti-12 py-monti-4 text-monti-muted">{t("staleHint")}</p>}
 			{checking && <StatusPopoverRow label={<span className="text-monti-muted">{t("checking")}</span>} />}
 			{!checking && result && result.issues.length === 0 && <StatusPopoverRow label={t("nothingToFix")} />}
 			{result?.issues.map((issue) => row(issue, "warning"))}
 			{result && result.warnings.length > 0 && (
 				<>
-					<p className="px-normal pt-condensed pb-hair text-monti-muted">{t("warningsHeading")}</p>
+					<p className="px-monti-12 pt-monti-8 pb-monti-2 text-monti-muted">{t("warningsHeading")}</p>
 					{result.warnings.map((issue) => row(issue, "default"))}
 				</>
 			)}
@@ -549,7 +543,7 @@ function PublishReadinessItem() {
 		<>
 			<StatusBarItem
 				tone={!checking && blocking > 0 ? "warning" : "default"}
-				icon={checking ? <LoaderCircle className="animate-spin" /> : blocking > 0 ? <TriangleAlert /> : <Check />}
+				icon={checking ? <Spinner /> : blocking > 0 ? <WarningAlt /> : <Checkmark />}
 				title={t("itemTitle")}
 				{...(readiness.open !== undefined && readiness.onOpenChange
 					? { open: readiness.open, onOpenChange: readiness.onOpenChange }
@@ -575,7 +569,7 @@ function LocaleItem() {
 	const translations = editor.translations;
 	if (!translations) {
 		return (
-			<StatusBarItem icon={<Languages />} title={title} className="font-mono">
+			<StatusBarItem icon={<Translate />} title={title}>
 				{locale}
 			</StatusBarItem>
 		);
@@ -583,9 +577,8 @@ function LocaleItem() {
 	const labels = statusLabels(site);
 	return (
 		<StatusBarItem
-			icon={<Languages />}
+			icon={<Translate />}
 			title={title}
-			className="font-mono"
 			popover={
 				<>
 					<StatusPopoverHeader title={t("popover.locale.title")} />
@@ -633,7 +626,7 @@ function BodyStatsItem() {
 					<StatusPopoverRow label={t("popover.body.paragraphs")} value={bodyStats.paragraphs.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.headings")} value={bodyStats.headings.toLocaleString()} />
 					<StatusPopoverRow label={t("popover.body.reading", { minutes: editor.readingMinutes })} />
-					<p className="px-normal py-tight text-monti-muted">
+					<p className="px-monti-12 py-monti-4 text-monti-muted">
 						{t("popover.body.rule", { rate: READING_CHARS_PER_MINUTE })}
 					</p>
 				</>
@@ -707,7 +700,7 @@ function FailedDeliveriesItem() {
 	return (
 		<StatusBarItem
 			tone="danger"
-			icon={<TriangleAlert />}
+			icon={<WarningAlt />}
 			title={t("deliveries.title")}
 			popover={<FailedDeliveriesPopover />}
 		>
@@ -744,27 +737,20 @@ export function StatusBar({ context }: { context: StatusBarContextValue }) {
 	}, [plugin]);
 	return (
 		<StatusBarContext.Provider value={context}>
-			<section
-				aria-label={t("label")}
-				data-slot="status-bar"
-				// Shown only while some item has something to say: on most screens outside the editor that is nothing.
-				className="hidden h-6 shrink-0 items-center justify-between gap-condensed overflow-hidden whitespace-nowrap border-t bg-monti-inset px-condensed has-[[data-slot=status-bar-item]]:flex"
-			>
-				<div className="flex min-w-0 items-center gap-tight overflow-hidden">
-					<AlignContext.Provider value="start">
-						{start.map(([name, { Component }]) => (
-							<Component key={name} />
-						))}
-					</AlignContext.Provider>
-				</div>
-				<div className="flex shrink-0 items-center gap-tight max-sm:hidden">
-					<AlignContext.Provider value="end">
-						{end.map(([name, { Component }]) => (
-							<Component key={name} />
-						))}
-					</AlignContext.Provider>
-				</div>
-			</section>
+			{/* Drawn only while some item has something to say: on most screens outside the editor that is nothing. */}
+			<StatusBarFrame aria-label={t("label")}>
+				<AlignContext.Provider value="start">
+					{start.map(([name, { Component }]) => (
+						<Component key={name} />
+					))}
+				</AlignContext.Provider>
+				<StatusBarSpacer />
+				<AlignContext.Provider value="end">
+					{end.map(([name, { Component }]) => (
+						<Component key={name} />
+					))}
+				</AlignContext.Provider>
+			</StatusBarFrame>
 		</StatusBarContext.Provider>
 	);
 }

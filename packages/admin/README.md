@@ -54,14 +54,14 @@ Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugin
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
 The admin package includes only the commonly used icons, so register other names with `icons` of the same `components`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
 ```tsx
-import { Eye } from "lucide-react";
+import { View } from "@carbon/icons-react";
 
-export default defineAdminPlugin({ components: { icons: { eye: Eye } } });
+export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
 Each block of `@monti-cms/blocks` and `@monti-cms/ai` declare theirs the same way.
@@ -257,7 +257,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 const myChecker = defineTextChecker({
 	id: "my-words",
 	label: "Banned words", // toolbar button name
-	icon: "ban", // lucide name or component. Defaults to the spelling icon
+	icon: "flag", // Carbon icon name or component. Defaults to the spelling icon
 	locales: ["ko"], // all languages if omitted
 	limits: { maxChars: 10_000, maxSegments: 50 }, // split before sending if exceeded
 	// auto: true, // when typing pauses, checks only changed paragraphs automatically (off by default)
@@ -349,8 +349,8 @@ attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
 `cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
-the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Badge`,
-`Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
+the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Count`,
+`Banner`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
 (`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--monti-success`, `--monti-warning` and `--monti-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
@@ -525,14 +525,14 @@ How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm b
 
 What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
-- **The design system, and nothing else.** Color roles per property (`bg-monti-surface`, `text-monti-muted`, `border-monti-default`, ...), type roles (`text-monti-caption`, ...), one shadow
-  (`shadow-monti-floating`), four radii and three weights. Tailwind's own palette, text sizes, weights, shadows, letter spacing and line heights are left out of the bundle, so a class outside
+- **The design system, and nothing else.** Color roles per property (`bg-monti-page`, `text-monti-muted`, `border-monti-default`, ...), type roles (`text-monti-caption`, ...), the spacing, radius, height and width scales,
+  three shadows and four weights. Tailwind's own palette, text sizes, weights, shadows, letter spacing and line heights are left out of the bundle, so a class outside
   the system (`text-xs`, `bg-red-500`) compiles to nothing; a test names any such class in the admin or a first-party plugin. The app's shadcn names (`bg-background`, etc.) and variables
   (`--background`, etc.) are left untouched. `--monti-*` apply only to documents that contain the admin UI.
 - **Variants.** `monti-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `monti-horizontal:` and `monti-vertical:` apply for Base UI's
   `data-orientation`. They are independent of the app's `dark` and `data-horizontal` definitions. Whatever theme mechanism the app uses (class or `data-theme`), the admin UI's
   dark theme follows it.
-- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--monti-radius`; the `rounded-*` utilities of the bundle are computed from it).
+- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the focus outline color.
 
 Plugins that add admin UI: the admin bundle also compiles the sources of the first-party plugins (`@monti-cms/ai`, `@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`; see the `@source` lines of `styles/index.css`),
 so the shared utilities, `prose`, the theme and the reset are defined in **one** file. That is the point: a second file that defined `.prose` again would load later and reset what the admin's dark variant had set.
@@ -540,7 +540,7 @@ so the shared utilities, `prose`, the theme and the reset are defined in **one**
 A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `monti-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
 The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
-`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
+`CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider, turn it off to avoid duplicates.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
@@ -553,69 +553,71 @@ The cost is that the admin file carries the classes of first-party plugins an ap
   (the site's own theme is left alone, and public screens in the same root layout do not stay dark). When off, the admin follows the
   `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
 - `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
-- `toaster` (default `true`): the admin UI adds `sonner`'s `Toaster`. When off, admin notifications appear in the site's `Toaster` (when using the same `sonner`).
+- `toaster` (default `true`): the admin UI adds its `Toaster` (from `@monti-cms/ui`). It has its own id, and the admin's toasts are addressed to it, so it can sit beside the site's own `sonner` `Toaster`: neither shows the other's toasts, and nothing is shown twice. Turn it off only if the page mounts that `Toaster` itself.
 
 ## Admin theme
 
-The admin is built from one design system, `@monti-cms/ui` (names in its `styles/theme.css`, values in `styles/tokens.css`). A site themes it by overriding its CSS custom properties; the names below are the public contract.
+The admin is built from one design system, `@monti-cms/ui` (names in its `styles/theme.css`, values in `styles/tokens.css`, both generated from its `tokens/tokens.json`). A site themes it by overriding its CSS custom properties; the names below are the public contract.
 
 The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
 `.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line.
 
 ### Colors: scales, then roles
 
-Colors come in two tiers.
+The names and values are the design system's own (`packages/ui/tokens/tokens.json`); `pnpm gen:tokens` writes `styles/tokens.css` and `styles/theme.css` from that file. Colors come in two tiers.
 
-1. **Scales**, the raw values: `--monti-gray-1` to `--monti-gray-12` (1 lightest tint, 2 sunken areas, 3 element fill and hover, 4 pressed and selected, 6 control borders, 8 strong borders, 9 placeholder text,
-   11 secondary text, 12 text and the solid button), and four hues at five steps each: `--monti-accent-*`, `--monti-danger-*`, `--monti-warning-*`, `--monti-success-*` with `3` soft fill, `6` soft border,
-   `9` solid, `10` solid hover, `11` text. The accent is cobalt (`#2f54eb`, dark `#7b93ff`) and is for interactive states only: links, focus, the current tab and sidebar item, checked controls, the editor selection.
+1. **Scales**, the raw values: `--monti-gray-1` to `--monti-gray-12` (1 paper, the page ground; 2 tool surfaces; 3 pill fill; 4 selected rows; 5 dividers; 6 borders of floating surfaces; 7 quiet strokes; 9 faint text;
+   10 subtle text; 11 muted text; 12 ink), and four tones at two steps each: `--monti-success-*`, `--monti-warning-*`, `--monti-danger-*`, `--monti-proposal-*` with `3` soft fill and `11` text.
+   There is no accent color. The proposal blue marks what an AI proposal adds and nothing else.
 2. **Roles**, what the screens use. A role that points at a scale is declared once, so **overriding a scale step restyles every role on it, in both modes**:
 
 | Property | Roles (`--monti-…`) | Classes |
 | --- | --- | --- |
-| Background | `bg-page`, `bg-surface` (cards), `bg-inset` (sidebar, sunken areas), `bg-overlay` (menus, dialogs), `bg-emphasis` and `bg-emphasis-hover` (the solid button), `bg-hover`, `bg-active`, `bg-selected`, `bg-neutral` (chips), `bg-{accent,danger,warning,success}-muted` and `-emphasis` | `bg-monti-page`, `bg-monti-surface`, … |
-| Text | `fg-default`, `fg-muted`, `fg-subtle` (placeholder and disabled only), `fg-on-emphasis`, `fg-{accent,danger,warning,success}` | `text-monti-default`, `text-monti-muted`, … |
-| Border | `border-muted` (hairlines), `border-default` (controls), `border-emphasis`, `border-focus`, `border-accent`, `border-danger`, `border-{accent,danger,warning,success}-muted` | `border-monti-muted`, `ring-monti-focus`, … |
-| Shadow | `shadow-floating` (menus, popovers, dialogs, toasts; cards rest on a border) | `shadow-monti-floating` |
+| Background | `bg-page` (lists, the editor, dialogs, menus), `bg-tool` (sidebar, panels, sheets, status bar), `bg-muted`, `bg-selected`, `bg-highlight`, `bg-block`, `bg-emphasis` (the black pill), `bg-{success,warning,danger,proposal}-muted`, `bg-danger-emphasis`, `bg-backdrop` | `bg-monti-page`, `bg-monti-tool`, … and `bg-monti-divider` (a 1px divider drawn as a box) |
+| Text | `fg-default`, `fg-muted`, `fg-subtle`, `fg-faint` (placeholders and meta only), `fg-on-emphasis`, `fg-{success,warning,danger,proposal}` | `text-monti-default`, `text-monti-faint`, … (also `fill-`, `stroke-`, `caret-`) |
+| Border | `border-muted` (list rows), `border-default` (section lines), `border-emphasis` (menus, dialogs), `border-strong` (link underlines), `border-contrast` (the ink rule) | `border-monti-muted`, `ring-monti-contrast`, `divide-monti-muted`, `decoration-monti-strong`; the text roles also color borders, rings and outlines (`border-monti-danger`) |
+| Shadow | `shadow-floating` (menus, popovers), `shadow-overlay` (dialogs), `shadow-sheet` (sheets from the right edge); everything else is flat | `shadow-monti-floating`, `shadow-monti-overlay`, `shadow-monti-sheet` |
 
-The roles with their own value in each mode are `bg-page`, `bg-surface`, `bg-overlay`, `bg-emphasis-hover`, `fg-on-emphasis` and `shadow-floating`. Colors are any CSS color.
+The roles with their own value in dark are `bg-page` and `bg-tool` (they swap: the tool ground is the darker one), `bg-highlight`, `bg-block`, `bg-backdrop`, `fg-on-emphasis` and the shadows. Colors are any CSS color.
 
 ```css
 /* app/globals.css: any stylesheet of the site, loaded before or after @monti-cms/admin/styles.css */
 :root {
-	/* A teal accent: every link, focus ring, current tab and selection follows. */
-	--monti-accent-3: light-dark(#e6f7f5, #0d2624);
-	--monti-accent-6: light-dark(#a6e0d9, #1c4a45);
-	--monti-accent-9: light-dark(#0d9488, #2dd4bf);
-	--monti-accent-10: light-dark(#0b7f75, #5eead4);
-	--monti-accent-11: light-dark(#0f766e, #5eead4);
-	--monti-radius: 0.5rem;
+	/* A greener paper: the page ground and every role on it follow. */
+	--monti-gray-1: light-dark(#f8faf4, #121411);
+	--monti-gray-2: light-dark(#f0f3ea, #171a15);
 }
 ```
 
 **A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-gray-12: #111; }` also replaces the dark default. Either write the value with `light-dark()`
 as above, or set it again under `.dark, [data-theme="dark"]`.
 
-### Type, radius and fonts
+### Type, spacing, radius and fonts
 
-Type roles set size, line height and weight together. Sizes are px, so the root font-size of the site cannot rescale the admin. They are classes, not tokens a site overrides:
+Type roles set size, line height, weight, letter spacing and font family together, as one class each. Sizes are px, so the root font-size of the site cannot rescale the admin. They are classes, not tokens a site overrides:
 
-- `micro` (11/14, 500): counters, keyboard hints and badge counts only
-- `caption` (12/16, 400): meta, timestamps, helper and hint text, table headers
-- `label` (13/18, 500): buttons, menu items, tabs, sidebar items, field labels
-- `body` (14/20, 400): default text, inputs, descriptions
-- `reading` (16/28, 400): long-form text: the editor body and the source pane
-- `title` (16/22, 600): section, panel, dialog and card titles
-- `heading` (20/28, 600): the screen heading
-- `display` (34/40, 600): the post title in the editor and the source pane
+- `display` (36/45, 700): the entry title in the editor
+- `page` (26/32, 700): a content page title
+- `heading` (22/30, 700): headings in the editor body and dialog titles
+- `reading` (17/30, 400): the editor body text
+- `title` (16/22, 600): panel, sheet and settings section titles
+- `body` (14/20, 400): default text, buttons, inputs, list row titles
+- `label` (13/18, 500): tabs, filters, small buttons
+- `note` (13/20, 400): secondary lines under a row title
+- `caption` (12/16, 400): captions and timestamps
+- `meta` (12/16, 400, mono): addresses, identifiers, counts, file sizes
+- `micro` (11/14, 400, mono): field labels and group labels in menus and panels
 
 | Token | What it sets |
 | --- | --- |
-| `--monti-radius` | Base corner radius (default `6px`): chips 2px, controls 4px, cards and menus 6px, dialogs 8px are computed from it. Set once in `:root`, there is no dark value |
-| `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code and source views (default: IBM Plex Mono, then a system monospace stack) |
+| `--monti-space-2` … `--monti-space-48` | The spacing scale: 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48 px (`gap-monti-12`, `px-monti-16`, `-mt-monti-4`) |
+| `--monti-radius-sm`, `-md`, `-lg`, `-xl`, `-full` | Corner radius: 3 px (marks, checkboxes), 6 px (rows, tiles), 8 px (inline boxes), 12 px (floating surfaces), pill (`rounded-monti-md`) |
+| `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | Heights of controls and bars (`h-monti-control-md` 36, `h-monti-header` 60, …), widths of columns, panels and sheets (`w-monti-sidebar` 232, `w-monti-sheet` 520, …) and icon sizes (`size-monti-icon-md` 16) |
+| `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: sans for the chrome (default: Pretendard, then a system stack with Korean fallbacks), mono for code, identifiers and source views (default: IBM Plex Mono, then a system monospace stack) |
 
-Spacing uses a 4px scale (0, 2, 4, 8, 12, 16, 24, 32, 48px). An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by meaning: tight, condensed, normal,
-comfortable, spacious, section) and the classes above.
+**Centering is the font's job.** Monti sets `ascent-override: 92.4%`, `descent-override: 19%` and `line-gap-override: 0%` on its bundled Pretendard (in the `@font-face` rules the admin build writes), which puts Hangul and Latin text on the center of the admin's controls within half a pixel at every size, so no part nudges its text with padding. If you replace the font in `--monti-font-sans`, balance it the same way where it is declared, with `ascent-override`, `descent-override` and `line-gap-override` in its `@font-face`, not with padding on a part. `pnpm test:visual:audit` (in `@monti-cms/ui`) reports every control whose text sits off center.
+
+An extension builds with the kit's `Text`, `Heading` (a role and a tone) and `Stack` (a gap by the px step of the spacing scale: `gap={8}`) and the classes above.
 
 ### Reusing a shadcn theme
 
@@ -624,20 +626,17 @@ A site that has a shadcn theme can point the roles at it. shadcn swaps its varia
 ```css
 :root {
 	--monti-bg-page: var(--background);
-	--monti-bg-surface: var(--card);
-	--monti-bg-overlay: var(--popover);
+	--monti-bg-tool: var(--sidebar);
 	--monti-bg-emphasis: var(--primary);
 	--monti-fg-on-emphasis: var(--primary-foreground);
 	--monti-fg-default: var(--foreground);
 	--monti-fg-muted: var(--muted-foreground);
-	--monti-bg-neutral: var(--muted);
-	--monti-bg-hover: var(--accent);
-	--monti-bg-inset: var(--sidebar);
+	--monti-bg-muted: var(--muted);
+	--monti-bg-selected: var(--accent);
 	--monti-border-muted: var(--border);
 	--monti-border-default: var(--input);
-	--monti-border-focus: var(--ring);
-	--monti-danger-9: var(--destructive);
-	--monti-radius: var(--radius);
+	--monti-fg-danger: var(--destructive);
+	--monti-radius-md: var(--radius);
 }
 ```
 

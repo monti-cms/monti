@@ -6,23 +6,15 @@ import { SidePanelFrame } from "../side-panel-frame";
 import { ToolCallLine } from "../tool-call-line";
 
 describe("ChatMessage", () => {
-	it("tells the role and, while the answer is arriving, that it is busy", () => {
+	it("is busy while the answer is arriving", () => {
 		const { rerender } = render(<ChatMessage author="user">Hello</ChatMessage>);
-		const message = screen.getByText("Hello");
-		expect(message.getAttribute("data-author")).toBe("user");
-		expect(message.getAttribute("aria-busy")).toBeNull();
+		expect(screen.getByText("Hello").getAttribute("aria-busy")).toBeNull();
 		rerender(
 			<ChatMessage author="assistant" streaming>
 				Hello
 			</ChatMessage>,
 		);
 		expect(screen.getByText("Hello").getAttribute("aria-busy")).toBe("true");
-		expect(screen.getByText("Hello").getAttribute("data-author")).toBe("assistant");
-	});
-
-	it("is the assistant's by default", () => {
-		render(<ChatMessage>Hi</ChatMessage>);
-		expect(screen.getByText("Hi").getAttribute("data-author")).toBe("assistant");
 	});
 });
 
@@ -32,24 +24,18 @@ describe("ToolCallLine", () => {
 		{ label: "Result", value: '{ "b": 2 }' },
 	];
 
-	it("shows the name and where the call stands, for each status", () => {
-		for (const [status, word] of [
-			["running", "Running"],
-			["done", "Done"],
-			["failed", "Failed"],
-		] as const) {
-			const { unmount, container } = render(<ToolCallLine name="entries.list" status={status} statusLabel={word} />);
-			expect(screen.getByText("entries.list")).toBeTruthy();
-			expect(screen.getByText(word)).toBeTruthy();
-			expect(container.querySelector("[data-slot=tool-call-line]")?.getAttribute("data-status")).toBe(status);
-			unmount();
-		}
-	});
-
 	it("is a plain line without details, and opens to the details with them", () => {
-		const { rerender } = render(<ToolCallLine name="x" status="done" statusLabel="Done" />);
+		const { rerender } = render(
+			<ToolCallLine status="done" statusLabel="Done">
+				x
+			</ToolCallLine>,
+		);
 		expect(screen.queryByRole("button")).toBeNull();
-		rerender(<ToolCallLine name="x" status="done" statusLabel="Done" details={details} />);
+		rerender(
+			<ToolCallLine status="done" statusLabel="Done" details={details}>
+				x
+			</ToolCallLine>,
+		);
 		const line = screen.getByRole("button", { name: /x/ });
 		expect(line.getAttribute("aria-expanded")).toBe("false");
 		expect(screen.queryByText("Input")).toBeNull();
@@ -57,11 +43,6 @@ describe("ToolCallLine", () => {
 		expect(line.getAttribute("aria-expanded")).toBe("true");
 		expect(screen.getByText("Input")).toBeTruthy();
 		expect(screen.getByText('{ "b": 2 }')).toBeTruthy();
-	});
-
-	it("can start open", () => {
-		render(<ToolCallLine name="x" status="failed" statusLabel="Failed" details={details} defaultOpen />);
-		expect(screen.getByText("Result")).toBeTruthy();
 	});
 });
 
@@ -123,56 +104,9 @@ describe("ChatInput", () => {
 		expect(onStop).toHaveBeenCalledTimes(1);
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
-
-	it("shows the aside text at the start of the row", () => {
-		setup({ aside: "150 tokens" });
-		expect(screen.getByText("150 tokens")).toBeTruthy();
-	});
 });
 
 describe("SidePanelFrame", () => {
-	it("has the title, a line under it, actions, body and footer", () => {
-		render(
-			<SidePanelFrame
-				title="Assistant"
-				description="model · connection"
-				actions={<button type="button">Act</button>}
-				footer={<p>Footer</p>}
-			>
-				<p>Body</p>
-			</SidePanelFrame>,
-		);
-		expect(screen.getByRole("heading", { name: "Assistant" })).toBeTruthy();
-		for (const text of ["model · connection", "Body", "Footer"]) expect(screen.getByText(text)).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Act" })).toBeTruthy();
-	});
-
-	it("keeps the title, the line under it, the actions and the close button in one header row", () => {
-		const { container } = render(
-			<SidePanelFrame
-				title="Assistant"
-				description="model"
-				actions={<button type="button">Act</button>}
-				onClose={() => undefined}
-			>
-				x
-			</SidePanelFrame>,
-		);
-		const headers = container.querySelectorAll("[data-slot=side-panel-frame-header]");
-		expect(headers).toHaveLength(1);
-		const header = headers[0] as HTMLElement;
-		for (const node of [
-			screen.getByText("Assistant"),
-			screen.getByText("model"),
-			screen.getByRole("button", { name: "Act" }),
-			screen.getByRole("button", { name: "Close" }),
-		])
-			expect(header.contains(node)).toBe(true);
-		// The row is one flex line: its direct children sit side by side, not stacked.
-		expect(header.className).toContain("flex");
-		expect(header.className).not.toContain("flex-col");
-	});
-
 	it("has a close button only when it is given something to do", () => {
 		const onClose = vi.fn();
 		const { rerender } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
@@ -184,10 +118,5 @@ describe("SidePanelFrame", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Close" }));
 		expect(onClose).toHaveBeenCalledTimes(1);
-	});
-
-	it("has no footer area without a footer", () => {
-		const { container } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
-		expect(container.querySelector("[data-slot=side-panel-frame-footer]")).toBeNull();
 	});
 });

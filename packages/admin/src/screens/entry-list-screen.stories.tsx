@@ -4,7 +4,7 @@ import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { answer, type FakeApi, PageFrame } from "../stories/screen-frame";
 import { EntryListScreen, TrashScreen } from "./entry-list-screen";
 
-const meta = { title: "Screens/Entry list", parameters: { layout: "fullscreen" } } satisfies Meta;
+const meta = { title: "Screens/Entry list", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

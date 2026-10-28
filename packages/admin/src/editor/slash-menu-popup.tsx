@@ -1,8 +1,8 @@
 "use client";
 
+import { AppConnectivity } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
-import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIconByName } from "../screens/shared/collection-icon";
@@ -20,7 +20,7 @@ interface SlashMenuPopupProps {
 /** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
-	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
+	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? AppConnectivity;
 	return <Icon icon={Glyph} tone="muted" />;
 }
 
@@ -58,7 +58,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 					onClose();
 				}
 			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-overlay p-tight text-monti-default shadow-monti-floating"
+			className="max-h-80 w-72 overflow-y-auto rounded-monti-lg border bg-monti-page p-monti-4 text-monti-default shadow-monti-floating"
 		>
 			{items.map((item, index) => (
 				<div
@@ -73,22 +73,14 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 						if (event.key === "Enter") onSelect(item);
 					}}
 					className={cn(
-						"flex cursor-pointer items-center gap-condensed rounded-md px-condensed py-condensed outline-none",
-						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-hover",
+						"flex cursor-pointer items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-8 outline-none",
+						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
 					)}
 				>
-					<Inline
-						as="span"
-						justify="center"
-						padding="condensed"
-						border="all"
-						radius="md"
-						background="page"
-						shrink={false}
-					>
+					<Inline as="span" justify="center" padding={8} border="all" radius="md" background="page" shrink={false}>
 						<ItemIcon icon={item.icon} />
 					</Inline>
-					<Stack as="span" gap="none" minWidth={0}>
+					<Stack as="span" gap={0} minWidth={0}>
 						<Text weight="medium" truncate>
 							{item.title}
 						</Text>

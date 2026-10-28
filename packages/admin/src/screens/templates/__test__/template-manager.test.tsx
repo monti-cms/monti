@@ -4,6 +4,7 @@ import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
@@ -11,8 +12,9 @@ import { TemplateManager } from "../template-manager";
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 vi.mock("../../../editor/tiptap-editor", () => ({ CmsEditor: () => null }));
 
 const DOC = {
@@ -85,7 +87,7 @@ describe("TemplateManager", () => {
 		fireEvent.change(name, { target: { value: "긴 글" } });
 		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
 
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith(tc("saved")));
 		expect((screen.getByRole("textbox", { name: t("edit.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
 	});
 

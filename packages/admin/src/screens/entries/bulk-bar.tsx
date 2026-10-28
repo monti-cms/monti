@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "@carbon/icons-react";
 import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -24,8 +25,8 @@ import {
 	SelectValue,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
-import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
@@ -216,7 +217,7 @@ function ManyPicker({
 				render={
 					<Button
 						type="button"
-						variant="outline"
+						variant="secondary"
 						size="sm"
 						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
 					/>
@@ -225,9 +226,9 @@ function ManyPicker({
 				<Text truncate tone={names.length === 0 ? "muted" : undefined}>
 					{summary}
 				</Text>
-				<ChevronDownIcon aria-hidden />
+				<ChevronDown aria-hidden />
 			</PopoverTrigger>
-			<PopoverContent align="start" width="md" padding="none">
+			<PopoverContent align="start" width="md" padding="menu">
 				<Command>
 					<CommandInput placeholder={t("picker.search", { label })} aria-label={t("picker.search", { label })} />
 					<CommandList>
@@ -387,12 +388,12 @@ export function BulkBar({
 			];
 
 	return (
-		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX="wide" paddingY="condensed">
-			<Inline wrap gap="condensed">
+		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX={32} paddingY={8}>
+			<Inline wrap gap={8}>
 				<Text weight="medium">{t("count", { count: selected.length })}</Text>
-				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
+				<TextButton type="button" onClick={onClearSelection}>
 					{t("clear")}
-				</Button>
+				</TextButton>
 
 				{actions.length > 1 ? (
 					<Select
@@ -444,8 +445,7 @@ export function BulkBar({
 				<Button
 					type="button"
 					size="sm"
-					variant={activeAction?.destructive ? "secondary" : "default"}
-					tone={activeAction?.destructive ? "danger" : "neutral"}
+					variant={activeAction?.destructive ? "danger" : "primary"}
 					disabled={!canRun}
 					onClick={start}
 				>
@@ -462,8 +462,8 @@ export function BulkBar({
 				{failures.length > 0 && (
 					<Button
 						type="button"
-						variant="outline"
-						size="xs"
+						variant="secondary"
+						size="sm"
 						onClick={() => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id)))}
 					>
 						{t("retry")}
@@ -472,12 +472,12 @@ export function BulkBar({
 			</Inline>
 
 			{error && (
-				<Box paddingTop="condensed">
+				<Box paddingTop={8}>
 					<FormFieldError>{error}</FormFieldError>
 				</Box>
 			)}
 			{failures.length > 0 && (
-				<Stack as="ul" gap="tight" paddingTop="condensed">
+				<Stack as="ul" gap={4} paddingTop={8}>
 					{failures.map((failure) => (
 						<Text as="li" key={failure.id} variant="caption" tone="danger">
 							<Text weight="medium">{titleOf(failure.id)}</Text> — {describeBulkFailure(site, failure)}

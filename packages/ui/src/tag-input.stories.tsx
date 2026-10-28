@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { Stack } from "./stack";
+import { StoryCaption } from "./story-caption";
 import { TagInput } from "./tag-input";
-import { Text } from "./text";
 
 const meta = {
-	title: "Controls/TagInput",
+	title: "Controls/Field/TagInput",
 	component: TagInput,
 	args: {
 		items: ["여행", "일상"],
@@ -31,10 +31,8 @@ export const Playground: Story = {};
 
 function Static({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<Stack gap="tight">
-			<Text variant="label" tone="muted">
-				{label}
-			</Text>
+		<Stack gap={4}>
+			<StoryCaption>{label}</StoryCaption>
 			<div className="max-w-sm">{children}</div>
 		</Stack>
 	);
@@ -54,7 +52,7 @@ export const Disabled: Story = {
 
 export const Mono: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[false, true].map((mono) => (
 				<Static key={String(mono)} label={`mono ${mono}`}>
 					<TagInput

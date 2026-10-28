@@ -3,13 +3,13 @@
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
+import { ArrowRight, type ArrowUp, Draggable, TrashCan, Undo } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton, Stack } from "@monti-cms/ui";
-import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
-import { ChangeDot, useIssuesUnder, useSchemaEdit } from "./controls";
+import { ChangedMark, useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
@@ -31,19 +31,19 @@ import {
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export const TONE: Record<KindTone, string> = {
 	text: "text-monti-muted",
-	slug: "text-monti-kind-teal",
-	relation: "text-monti-kind-blue",
-	backlink: "text-monti-kind-teal",
-	select: "text-monti-kind-violet",
-	conditional: "text-monti-kind-orange",
-	media: "text-monti-kind-green",
+	slug: "text-monti-muted",
+	relation: "text-monti-muted",
+	backlink: "text-monti-muted",
+	select: "text-monti-muted",
+	conditional: "text-monti-muted",
+	media: "text-monti-muted",
 	view: "text-monti-subtle",
 };
 export const REQUIRED = "text-monti-warning";
-export const OPTION = "text-monti-kind-orange";
-const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-comfortable";
+export const OPTION = "text-monti-muted";
+const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-monti-16";
 /** Two columns only, for when the preview takes the room beside the tree; the kind column is narrower so the names keep their room. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_6.5rem] items-center gap-x-comfortable";
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_6.5rem] items-center gap-x-monti-16";
 export const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
 
 export interface TreeContext {
@@ -76,12 +76,11 @@ export interface RowButton {
 
 export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 	return (
-		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-hair rounded-md bg-monti-surface opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-monti-2 rounded-monti-md bg-monti-page opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
 			{buttons.map((button) => (
 				<IconButton
 					key={button.label}
 					label={button.label}
-					size="icon-xs"
 					tone={button.destructive ? "danger" : undefined}
 					pressed={button.pressed}
 					disabled={button.disabled}
@@ -107,16 +106,16 @@ export function MoveDialog({
 }) {
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="sm" scroll data-testid="move-dialog">
+			<DialogContent scroll data-testid="move-dialog">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
-				<Stack as="ul" gap="tight">
+				<Stack as="ul" gap={4}>
 					{destinations.map((destination) => (
 						<li key={destination.label}>
 							<Button
 								type="button"
-								variant="ghost"
+								variant="secondary"
 								size="sm"
 								width="full"
 								disabled={destination.disabled}
@@ -201,18 +200,18 @@ export function Row({
 			? [
 					{
 						label: t("field.revert", { name }),
-						icon: Undo2,
+						icon: Undo,
 						disabled,
 						onClick: () => editing.update((collection) => setField(collection, place, name, () => savedField)),
 					},
 				]
 			: []),
 		...(top && !locked
-			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
+			? [{ label: t("layout.move", { name }), icon: ArrowRight, disabled, onClick: () => setMoving(true) }]
 			: []),
 		{
 			label: ts("row.remove", { name }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: disabled || blocked !== null,
 			onClick: () => editing.update((collection) => removeField(collection, place, name)),
@@ -223,7 +222,7 @@ export function Row({
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("relative", isDragging && "z-10 bg-monti-surface opacity-80")}
+			className={cn("relative", isDragging && "z-10 bg-monti-page opacity-80")}
 			data-testid={`field-${name}`}
 		>
 			<div className="group/row relative">
@@ -236,8 +235,8 @@ export function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer py-condensed pr-comfortable pl-wide outline-none hover:bg-monti-hover focus-visible:bg-monti-hover focus-visible:ring-2 focus-visible:ring-monti-focus-soft focus-visible:ring-inset",
-						nested && "bg-monti-inset",
+						"min-h-[30px] cursor-pointer py-monti-8 pr-monti-16 pl-monti-32 outline-none hover:bg-monti-selected focus-visible:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 focus-visible:ring-inset",
+						nested && "bg-monti-tool",
 					)}
 				>
 					{/* Clipped to its column: in a narrow pane the notes shorten with "…" (before the label does) instead of running over the kind beside them. */}
@@ -250,20 +249,20 @@ export function Row({
 						</span>
 						{label && (
 							<span
-								className="ml-condensed max-w-[40%] shrink-0 truncate text-monti-caption text-monti-muted"
+								className="ml-monti-8 max-w-[40%] shrink-0 truncate text-monti-caption text-monti-muted"
 								title={label}
 							>
 								{label}
 							</span>
 						)}
 						{changed && (
-							<Box as="span" paddingX="condensed">
-								<ChangeDot />
+							<Box as="span" paddingX={8}>
+								<ChangedMark />
 							</Box>
 						)}
 						{locked?.kind === "panel" && (
 							<span
-								className="ml-condensed min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
+								className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
 								title={t("layout.notInPanel.title")}
 							>
 								{t("layout.notInPanel")}
@@ -271,7 +270,7 @@ export function Row({
 						)}
 						{locked?.kind === "plugin" && (
 							<span
-								className="ml-condensed min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
+								className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
 								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
 							>
 								{t("layout.pluginPlaced")}
@@ -281,7 +280,7 @@ export function Row({
 							<span
 								role="img"
 								aria-label={t("field.problems", { count: issues.length })}
-								className="ml-condensed size-1.5 shrink-0 rounded-full bg-monti-danger-emphasis"
+								className="ml-monti-8 size-1.5 shrink-0 rounded-monti-full bg-monti-danger-emphasis"
 							/>
 						)}
 					</div>
@@ -296,7 +295,7 @@ export function Row({
 					</div>
 					<div
 						className={cn(
-							"hidden min-w-0 truncate pr-wide font-mono text-monti-caption text-monti-muted",
+							"hidden min-w-0 truncate pr-monti-32 font-mono text-monti-caption text-monti-muted",
 							!ctx.compact && "block",
 						)}
 					>
@@ -316,9 +315,9 @@ export function Row({
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
 					disabled={noDrag}
-					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-focus-soft disabled:hidden group-hover/row:opacity-100"
+					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 				>
-					<GripVertical aria-hidden className="size-4" />
+					<Draggable aria-hidden className="size-4" />
 				</button>
 				<RowButtons buttons={buttons} />
 				{moving && top && (
@@ -334,7 +333,7 @@ export function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-condensed pr-comfortable pl-wide")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-monti-8 pr-monti-16 pl-monti-32")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 									{childLead}

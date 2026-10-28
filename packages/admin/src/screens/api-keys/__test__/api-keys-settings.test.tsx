@@ -13,7 +13,9 @@ const t = testSite.createTranslator(apiKeysMessages);
 vi.mock("../../../router", () => ({
 	AdminLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
 }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const key = (
 	id: string,
@@ -117,7 +119,7 @@ describe("API keys page", () => {
 	it("cannot add a key while the server has no secret, and says why", async () => {
 		secretsAvailable = false;
 		renderTab();
-		expect(await screen.findByText(t("secret.title"))).toBeTruthy();
+		expect(await screen.findByText(t("secret.description"))).toBeTruthy();
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 

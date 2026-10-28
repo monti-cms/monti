@@ -1,12 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DescriptionItem, DescriptionList } from "./description-list";
-import { Stack } from "./stack";
-import { Text } from "./text";
 
+/** Label and value rows: a 76px label column, 8px between rows, labels quiet and values a step darker. */
 const meta = {
-	title: "Layout/DescriptionList",
+	title: "Patterns/List/DescriptionList",
 	component: DescriptionList,
-	args: { layout: "columns" },
 	render: (args) => (
 		<DescriptionList {...args} className="max-w-md">
 			<DescriptionItem label="이름">여름 여행 기록</DescriptionItem>
@@ -19,25 +17,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
-
-export const Layouts: Story = {
-	render: () => (
-		<Stack gap="spacious">
-			{(["columns", "stacked"] as const).map((layout) => (
-				<Stack key={layout} gap="tight">
-					<Text variant="label" tone="muted">
-						layout {layout}
-					</Text>
-					<DescriptionList layout={layout} className="max-w-md">
-						<DescriptionItem label="이름">여름 여행 기록</DescriptionItem>
-						<DescriptionItem label="상태">초안</DescriptionItem>
-						<DescriptionItem label="수정일">2026-09-18</DescriptionItem>
-					</DescriptionList>
-				</Stack>
-			))}
-		</Stack>
-	),
-};
 
 /** Long values wrap inside the value column. */
 export const LongValues: Story = {

@@ -5,6 +5,7 @@ import { testSite } from "../../../../core/test/site";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
+import { toast } from "../../test/ui-toast";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { formatDateOnly } from "../shared/format-date";
@@ -14,8 +15,9 @@ import { ScreenContextProvider, useScreenContext } from "../shared/screen-contex
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
 const { render } = nav;
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
@@ -245,7 +247,7 @@ describe("list screen — row menu and bulk actions", () => {
 				{ id: "나", expectedVersion: 3 },
 			],
 		});
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2개 항목을 보관했어요."));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith("2개 항목을 보관했어요."));
 	});
 
 	it("the Delete key asks whether to move all selected rows to trash", async () => {
@@ -295,7 +297,7 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast.error).toHaveBeenCalledWith("1개는 휴지통으로 이동했고 1개는 하지 못했어요.", expect.anything());
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로 이동했고 1개는 하지 못했어요."));
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -472,7 +474,7 @@ describe("trash screen", () => {
 
 		fireEvent.click(within(row("버린 글")).getByRole("button", { name: "복원" }));
 
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("1개 항목을 복원했어요."));
+		await waitFor(() => expect(toast).toHaveBeenCalledWith("1개 항목을 복원했어요."));
 		expect(bodyOf(calls("POST", "/api/monti/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
 	});
 });

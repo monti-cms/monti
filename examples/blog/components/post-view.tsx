@@ -15,7 +15,7 @@ function Neighbor({ entry, label, align }: { entry: ReadEntry; label: string; al
 	return (
 		<Link
 			href={entry.path ?? `/${entry.locale}/posts/${entry.slug}`}
-			className={`block rounded-lg border border-neutral-300 p-4 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900 ${align === "right" ? "text-right" : ""}`}
+			className={`block rounded-monti-lg border border-neutral-300 p-4 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900 ${align === "right" ? "text-right" : ""}`}
 		>
 			<span className="block text-neutral-600 text-xs dark:text-neutral-400">{label}</span>
 			<span className="font-medium">{entry.title ?? entry.slug}</span>

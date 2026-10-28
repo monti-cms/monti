@@ -17,7 +17,12 @@
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs",
 		"storybook": "storybook dev -p 6006 --no-open",
-		"build-storybook": "storybook build -o storybook-static"
+		"build-storybook": "storybook build -o storybook-static",
+		"visual:run": "playwright test --config visual/playwright.config.ts",
+		"test:visual": "pnpm build-storybook && pnpm visual:run",
+		"visual:audit": "playwright test --config visual/audit.config.ts",
+		"test:visual:audit": "pnpm build-storybook && pnpm visual:audit",
+		"test:visual:update": "pnpm build-storybook && pnpm visual:run --update-snapshots"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.8.0",
@@ -25,14 +30,16 @@
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
 		"react-day-picker": "^10.0.1",
+		"sonner": "^2.0.8",
 		"tailwind-merge": "^3.4.0"
 	},
 	"peerDependencies": {
-		"lucide-react": ">=0.562.0",
+		"@carbon/icons-react": ">=11.90.0",
 		"react": ">=19",
 		"react-dom": ">=19"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.64.1",
 		"@storybook/addon-themes": "10.6.1",
 		"@storybook/react-vite": "10.6.1",
 		"@tailwindcss/vite": "^4.3.3",
@@ -43,7 +50,7 @@
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"jsdom": "^27.4.0",
-		"lucide-react": "^0.562.0",
+		"@carbon/icons-react": "11.90.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",

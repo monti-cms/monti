@@ -1,5 +1,6 @@
 "use client";
 
+import { Document, Renew, Settings, Template as TemplateIcon } from "@carbon/icons-react";
 import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
@@ -13,7 +14,6 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
 import { listTemplates, templatesKeys } from "../../api/templates";
 import { commonMessages } from "../../lib/common.messages";
@@ -80,14 +80,14 @@ export function TemplateMenu({
 					disabled={disabled}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
-					<LayoutTemplate aria-hidden />
+					<TemplateIcon aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="end" width="lg">
+				<DropdownMenuContent align="end">
 					{loadFailed ? (
 						<>
 							<DropdownMenuItem disabled>{t("template.loadFailed")}</DropdownMenuItem>
 							<DropdownMenuItem closeOnClick={false} onClick={() => void templatesQuery.refetch()}>
-								<RefreshCw aria-hidden />
+								<Renew aria-hidden />
 								{t("retry")}
 							</DropdownMenuItem>
 						</>
@@ -98,7 +98,7 @@ export function TemplateMenu({
 					) : (
 						templates.map((template) => (
 							<DropdownMenuItem key={template.id} onClick={() => void choose(template)}>
-								<FileText aria-hidden />
+								<Document aria-hidden />
 								<Text truncate>{template.name}</Text>
 							</DropdownMenuItem>
 						))

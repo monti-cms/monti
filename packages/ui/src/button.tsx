@@ -3,73 +3,56 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./cn";
 import { Spinner } from "./spinner";
 
+/**
+ * A pill. One `primary` per screen or floating surface, then `secondary` for the one or two common side actions, `danger` only to confirm
+ * something that cannot be undone, and `outline-danger` for a quieter version of it. The text is centered by the font (no padding nudge), and a
+ * leading icon pulls 2px into the left padding so it centers visually. The filled pills have no border, so their text starts at the padding the
+ * design system gives (18px, 16px for `secondary`, 12px for `sm`); only `outline-danger` draws a 1px line.
+ * A button that is `loading` keeps its fill and its place: a spinner comes first, in place of the button's own leading icon, set by eye: 13px from the left edge at `md`
+ * (2px more than from the top and bottom) and 10px at `sm`, with 7px to the words and a tighter right side (15px, 13px for `secondary`, 9px at `sm`). The caller changes the label to say what is happening ("Saving…", "Uploading 64%"); it cannot be pressed again, its cursor says so, and it is `aria-busy`.
+ */
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-monti-label whitespace-nowrap transition-all outline-none select-none focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-invalid:border-monti-danger aria-invalid:ring-3 aria-invalid:ring-monti-danger-soft [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center gap-monti-6 rounded-monti-full whitespace-nowrap outline-none transition-colors select-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:cursor-default aria-disabled:opacity-45 data-loading:pointer-events-auto data-loading:cursor-not-allowed data-loading:opacity-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&>svg:first-child]:-ml-[2px] data-loading:gap-[7px] data-loading:[&>[data-slot=spinner]+svg]:hidden",
 	{
 		variants: {
-			/** How it looks: `default` solid, `outline`, `secondary` a soft fill, `ghost` no fill, `quiet` grey text that darkens on hover, `link`, `dashed` for an empty slot to fill. */
 			variant: {
-				default: "bg-monti-emphasis text-monti-on-emphasis shadow-monti-btn hover:bg-monti-emphasis-hover",
-				outline:
-					"border-monti-default bg-monti-surface shadow-monti-control hover:border-monti-emphasis hover:bg-monti-hover hover:text-monti-default aria-expanded:bg-monti-hover aria-expanded:text-monti-default",
-				secondary:
-					"border-monti-muted bg-monti-neutral text-monti-default hover:bg-monti-active aria-expanded:bg-monti-neutral aria-expanded:text-monti-default",
-				ghost:
-					"hover:bg-monti-hover hover:text-monti-default aria-expanded:bg-monti-hover aria-expanded:text-monti-default",
-				quiet:
-					"text-monti-muted hover:bg-monti-hover hover:text-monti-default aria-expanded:bg-monti-hover aria-expanded:text-monti-default",
-				link: "text-monti-accent underline-offset-4 hover:underline",
-				/** A place for something not there yet ("+ EN translation"). */
-				dashed: "border-monti-default border-dashed text-monti-muted hover:bg-monti-hover hover:text-monti-default",
+				/** The one main action of a screen or a floating surface. */
+				primary:
+					"bg-monti-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:hover:bg-monti-emphasis/90",
+				/** A common side action. */
+				secondary: "bg-monti-muted px-[16px] font-normal text-monti-muted not-data-loading:hover:bg-monti-selected",
+				/** Confirms something that cannot be undone. Only inside a confirmation. */
+				danger:
+					"bg-monti-danger-emphasis px-[18px] font-semibold text-monti-on-emphasis not-data-loading:hover:bg-monti-danger-emphasis/90",
+				/** The quiet version of `danger`. */
+				"outline-danger":
+					"border border-monti-danger px-[18px] font-medium text-monti-danger not-data-loading:hover:bg-monti-danger-muted",
 			},
-			/** What it means. `danger` is for steps that remove or overwrite; it works with every look. */
-			tone: { neutral: "", danger: "" },
+			/** `md` 36px; `sm` 28px inside cards and panels. */
 			size: {
-				default:
-					"h-control gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
-				xs: "h-control-xs gap-1 rounded-sm px-2 text-monti-caption in-data-[slot=button-group]:rounded-sm has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-				sm: "h-control-sm gap-1 rounded-md px-2 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-				lg: "h-control-lg gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-				icon: "size-control [&_svg:not([class*='size-'])]:size-3.5",
-				"icon-xs":
-					"size-control-xs rounded-sm in-data-[slot=button-group]:rounded-sm [&_svg:not([class*='size-'])]:size-3",
-				"icon-sm":
-					"size-control-sm rounded-md in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3.5",
-				"icon-lg": "size-control-lg",
+				md: "h-monti-control-md text-monti-body",
+				sm: "h-monti-control-sm px-[12px] text-monti-note",
 			},
 		},
+		// A loading pill pads by eye, not by a formula: the spinner sits 2px further from the left edge than from the top and bottom, and the right side is
+		// tighter than the resting padding, so the pill does not look empty on the right.
 		compoundVariants: [
 			{
-				tone: "danger",
-				variant: "default",
-				class: "bg-monti-danger-emphasis text-monti-on-emphasis shadow-monti-btn hover:bg-monti-danger-emphasis-hover",
+				size: "md",
+				variant: ["primary", "danger", "outline-danger"],
+				class: "data-loading:pr-[15px] data-loading:pl-[13px]",
 			},
-			{
-				tone: "danger",
-				variant: "secondary",
-				class: "bg-monti-danger-muted text-monti-danger hover:bg-monti-danger-muted",
-			},
-			{
-				tone: "danger",
-				variant: ["outline", "ghost", "quiet"],
-				class: "text-monti-danger hover:bg-monti-danger-muted hover:text-monti-danger",
-			},
-			{ tone: "danger", variant: "outline", class: "border-monti-danger-muted" },
-			{ tone: "danger", variant: "link", class: "text-monti-danger" },
+			{ size: "md", variant: "secondary", class: "data-loading:pr-[13px] data-loading:pl-[13px]" },
+			{ size: "sm", class: "data-loading:pr-[9px] data-loading:pl-[10px]" },
 		],
-		defaultVariants: {
-			variant: "default",
-			tone: "neutral",
-			size: "default",
-		},
+		defaultVariants: { variant: "primary", size: "md" },
 	},
 );
 
 function Button({
 	className,
-	variant = "default",
-	tone = "neutral",
-	size = "default",
+	variant,
+	size,
 	loading = false,
 	width,
 	disabled,
@@ -77,7 +60,7 @@ function Button({
 	...props
 }: ButtonPrimitive.Props &
 	VariantProps<typeof buttonVariants> & {
-		/** Working on it: a spinner before the label, and the button cannot be pressed again. */
+		/** Working on it: a spinner replaces the leading icon, the button keeps its fill (it is not dimmed like a disabled one) and cannot be pressed again. Put the progress in the label. */
 		loading?: boolean;
 		/** `full` spans its container (a stacked form, a narrow panel). */
 		width?: "full";
@@ -88,13 +71,13 @@ function Button({
 			data-loading={loading || undefined}
 			aria-busy={loading || undefined}
 			disabled={disabled || loading}
-			className={cn(buttonVariants({ variant, tone, size }), width === "full" && "w-full", className)}
+			className={cn(buttonVariants({ variant, size }), width === "full" && "w-full", className)}
 			{...props}
 		>
-			{loading && <Spinner size="sm" aria-hidden />}
+			{loading && <Spinner className={size === "sm" ? "size-3" : "size-3.5"} />}
 			{children}
 		</ButtonPrimitive>
 	);
 }
 
-export { Button, buttonVariants };
+export { Button };

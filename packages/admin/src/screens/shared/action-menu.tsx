@@ -1,6 +1,8 @@
 "use client";
 
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -8,7 +10,6 @@ import {
 	ContextMenuItem,
 	ContextMenuLabel,
 	ContextMenuSeparator,
-	ContextMenuShortcut,
 	ContextMenuSub,
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
@@ -19,14 +20,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
+	MenuShortcut,
 } from "@monti-cms/ui";
-import { type LucideIcon, MoreHorizontal } from "lucide-react";
 import { cloneElement, type ReactElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
 import { sharedMessages } from "./messages";
@@ -40,14 +40,14 @@ export type MenuAction =
 			kind: "item";
 			label: string;
 			/** Icon before the item. Every menu item has an icon. */
-			icon?: LucideIcon;
+			icon?: MontiIcon;
 			onSelect: () => void;
 			destructive?: boolean;
 			disabled?: boolean;
 			/** Shortcut hint shown on screen. The caller handles the actual key handling. */
 			shortcut?: string;
 	  }
-	| { kind: "sub"; label: string; icon?: LucideIcon; items: MenuAction[]; emptyLabel?: string; disabled?: boolean }
+	| { kind: "sub"; label: string; icon?: MontiIcon; items: MenuAction[]; emptyLabel?: string; disabled?: boolean }
 	| { kind: "label"; label: string }
 	| { kind: "separator" };
 
@@ -101,7 +101,7 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 					>
 						{action.icon && <action.icon aria-hidden />}
 						{action.label}
-						{action.shortcut && <ContextMenuShortcut>{action.shortcut}</ContextMenuShortcut>}
+						{action.shortcut && <MenuShortcut>{action.shortcut}</MenuShortcut>}
 					</ContextMenuItem>
 				);
 			default:
@@ -149,7 +149,7 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 					>
 						{action.icon && <action.icon aria-hidden />}
 						{action.label}
-						{action.shortcut && <DropdownMenuShortcut>{action.shortcut}</DropdownMenuShortcut>}
+						{action.shortcut && <MenuShortcut>{action.shortcut}</MenuShortcut>}
 					</DropdownMenuItem>
 				);
 			default:
@@ -181,7 +181,7 @@ export function ActionContextMenu({
 	return (
 		<ContextMenu onOpenChange={onOpenChange} disabled={items.length === 0}>
 			<ContextMenuTrigger render={trigger}>{children}</ContextMenuTrigger>
-			<ContextMenuContent width="md">
+			<ContextMenuContent>
 				<ContextItems actions={items} />
 			</ContextMenuContent>
 		</ContextMenu>
@@ -202,9 +202,9 @@ export function MoreActionsButton({
 	return (
 		<DropdownMenu>
 			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
-				<MoreHorizontal aria-hidden />
+				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="md">
+			<DropdownMenuContent align="end">
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>
 		</DropdownMenu>

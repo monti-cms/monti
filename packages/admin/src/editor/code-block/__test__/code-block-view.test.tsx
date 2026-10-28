@@ -127,7 +127,9 @@ describe("code block edit view", () => {
 		expect(editor.state.selection.empty).toBe(true);
 		expect(editor.state.selection.from).toBe(1 + "const a = 1;\n".length);
 		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-accent-muted")).toHaveLength(1),
+			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
+				1,
+			),
 		);
 		await openLineMenu(1);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 2 }) });
@@ -143,7 +145,9 @@ describe("code block edit view", () => {
 		expect(savedAnnotations(editor).lines).toMatchObject([{ name: "highlight", start: 1, end: 2 }]);
 		// Changing the effect keeps the selected lines (another effect can be turned on next).
 		await waitFor(() =>
-			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-accent-muted")).toHaveLength(1),
+			expect(document.querySelectorAll("[data-code-block-wrapper] .bg-monti-selected:not([data-line])")).toHaveLength(
+				1,
+			),
 		);
 	});
 
@@ -179,6 +183,8 @@ describe("code block edit view", () => {
 		act(() => fireEvent.click(add));
 		fireEvent.change(await screen.findByLabelText(t("rulesPanel.pattern")), { target: { value: "const" } });
 		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeTruthy();
+
+		// The rule's delete button is red.
 
 		const rules = block(editor).attrs.rules as CodeRule[];
 		// A new rule starts with the first offered text effect (bold by default).

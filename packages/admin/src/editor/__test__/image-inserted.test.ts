@@ -4,10 +4,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import type { ImageInserted, ImageInsertedEvent } from "../../events";
+import { toast } from "../../test/ui-toast";
 import { BLOCK_ID_ATTRIBUTE, CmsBlockIds, findBlock } from "../block-ids";
 import { runImageInserted } from "../image-inserted";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 /** The attributes of the core image node that `editor.imageInserted` reads and fills. */
 const Image = Node.create({
@@ -104,7 +107,6 @@ describe("editor.imageInserted", () => {
 	});
 
 	it("runs every subscriber on its own: a failing one leaves the image and the others alone", async () => {
-		const { toast } = await import("sonner");
 		const failing: ImageInserted = async () => {
 			throw new Error("The model is down");
 		};
@@ -113,6 +115,6 @@ describe("editor.imageInserted", () => {
 		await settle();
 		await settle();
 		expect(attrs()).toMatchObject({ alt: "", caption: "From the other one", mediaId: "m1" });
-		expect(toast.error).toHaveBeenCalledWith("Could not fill it in.", expect.anything());
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Could not fill it in."));
 	});
 });

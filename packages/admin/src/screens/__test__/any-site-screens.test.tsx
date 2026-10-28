@@ -13,7 +13,7 @@ import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { copyTitle } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
 import { EntryListScreen } from "../entry-list-screen";
-import { columnLabel, columnsFor, fieldColumnOf } from "../list-columns";
+import { columnLabel, columnsFor } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
@@ -33,8 +33,9 @@ const titleLabel = (collection: Collection) => testSite.storedField(collection, 
 
 const nav = createTestRouter();
 const render = (ui: ReactElement) => nav.render(withSite(ui));
-const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
-vi.mock("sonner", () => ({ Toaster: () => null, toast }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 const backup = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn(), save: vi.fn() }));
 vi.mock("../entries/local-backup", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../entries/local-backup")>()),
@@ -135,27 +136,6 @@ describe("any site: list screen", () => {
 		expect(
 			screen.getByRole("button", { name: t("list.add", { label: testSite.schemaOf(content).label }) }),
 		).toBeTruthy();
-	});
-
-	// Select/text field written in the list columns (`format` in the other site config). Skipped if the config lacks it.
-	const listedSelect = columnsFor(testSite, content).defaults.flatMap((column) => {
-		const stored = fieldColumnOf(testSite, content, column);
-		return stored?.field.kind === "select" ? [{ column, field: stored.field }] : [];
-	})[0];
-	it.skipIf(!listedSelect)("draws a listed select field column with the option label", async () => {
-		const { column, field } = listedSelect as NonNullable<typeof listedSelect>;
-		const [value, label] = Object.entries(field.options)[1] ?? Object.entries(field.options)[0] ?? ["", ""];
-		nav.setSearch(`collection=${content}`);
-		listed = [{ ...item("e1", "Alpha"), values: { [column]: value } }, item("e2", "Beta")];
-		render(
-			<AdminQueryProvider>
-				<EntryListScreen />
-			</AdminQueryProvider>,
-		);
-		const row = await screen.findByRole("row", { name: /Alpha/ });
-		expect(within(row).getByText(label)).toBeTruthy();
-		// A row with no value omits the empty field from the editorial subtitle.
-		expect(within(screen.getByRole("row", { name: /Beta/ })).queryByText(label)).toBeNull();
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {

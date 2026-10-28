@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, RecentlyViewed } from "@carbon/icons-react";
 import {
 	type AdminPanel,
 	type AdminPanelProps,
@@ -11,9 +12,7 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import {
-	Alert,
-	Box,
-	Button,
+	ChatError,
 	ChatInput,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -24,15 +23,14 @@ import {
 	EmptyState,
 	IconButton,
 	SidePanelFrame,
-	Spinner,
+	Spark,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 	usePreference,
 } from "@monti-cms/admin/kit";
 import { AdminLink } from "@monti-cms/admin/router";
 import { useQuery } from "@tanstack/react-query";
-import { History, Sparkles, SquarePen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AiAgentModelView } from "../connection";
 import { MessageView } from "./agent-conversation";
@@ -68,19 +66,18 @@ function UnavailableNotice({ reason, model }: { reason: Unavailable; model?: str
 	const site = useSite();
 	const t = useTranslator(agentPanelMessages);
 	return (
-		<Alert tone="warning" layout="stack">
-			<Stack gap="tight">
-				<Text as="p">
-					{reason === "no-connection"
-						? t("unavailable.noConnection")
-						: t("unavailable.noTools", { model: model ?? "" })}{" "}
-					{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
-				</Text>
-				<TextLink tone="accent" render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>
+		<ChatError
+			title={
+				reason === "no-connection" ? t("unavailable.noConnection") : t("unavailable.noTools", { model: model ?? "" })
+			}
+			actions={
+				<TextButton variant="underline" render={<AdminLink href={site.adminHref(AI_SCREEN)} />}>
 					{t("unavailable.link")}
-				</TextLink>
-			</Stack>
-		</Alert>
+				</TextButton>
+			}
+		>
+			{reason === "no-connection" ? t("unavailable.noConnection.fix") : t("unavailable.noTools.fix")}
+		</ChatError>
 	);
 }
 
@@ -103,16 +100,12 @@ function HistoryMenu({ onPick }: { onPick: (id: string) => void }) {
 				side="bottom"
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<History aria-hidden />
+				<RecentlyViewed aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="end" width="lg">
+			<DropdownMenuContent align="end">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>{t("history.label")}</DropdownMenuLabel>
-					{runs.isPending && (
-						<DropdownMenuItem disabled>
-							<Spinner size="sm" />
-						</DropdownMenuItem>
-					)}
+					{runs.isPending && <DropdownMenuItem disabled>{t("history.loading")}</DropdownMenuItem>}
 					{runs.error && (
 						<DropdownMenuItem disabled>{errorText(site, runs.error, t("history.failed"))}</DropdownMenuItem>
 					)}
@@ -193,9 +186,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 		<SidePanelFrame
 			data-testid="agent-panel"
 			title={t("label")}
-			description={
-				effective ? t("model.use", { model: effective.model, connection: effective.providerName }) : undefined
-			}
 			onClose={onClose}
 			actions={
 				<>
@@ -208,12 +198,12 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 							rememberRun("");
 						}}
 					>
-						<SquarePen aria-hidden />
+						<Add aria-hidden />
 					</IconButton>
 				</>
 			}
 			footer={
-				<Stack gap="condensed">
+				<Stack gap={8} grow>
 					{unavailable && <UnavailableNotice reason={unavailable} model={effective?.model} />}
 					<ChatInput
 						value={text}
@@ -227,11 +217,18 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 						sendLabel={t("send")}
 						stopLabel={t("stop")}
 						aside={
-							chat.usage && chat.usage.totalTokens > 0 ? (
-								<Text variant="caption" tone="muted">
-									{t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })}
-								</Text>
-							) : undefined
+							<Stack direction="row" gap={8} align="center">
+								{effective && (
+									<Text variant="caption" tone="subtle" mono truncate>
+										{t("model.use", { model: effective.model, connection: effective.providerName })}
+									</Text>
+								)}
+								{chat.usage && chat.usage.totalTokens > 0 && (
+									<Text variant="caption" tone="muted">
+										{t("usage.tokens", { count: chat.usage.totalTokens.toLocaleString() })}
+									</Text>
+								)}
+							</Stack>
 						}
 					/>
 				</Stack>
@@ -240,7 +237,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			{chat.messages.length === 0 ? (
 				<EmptyState
 					compact
-					icon={Sparkles}
 					title={t("empty.title")}
 					description={screen.screen === "entry" ? t("empty.entry") : t("empty.default")}
 				/>
@@ -253,24 +249,22 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 					/>
 				))
 			)}
-			{busy && last?.role === "user" && <Spinner size="sm" />}
+			{busy && last?.role === "user" && (
+				<Text as="p" variant="meta" tone="subtle" role="status" aria-label={t("tool.running")}>
+					…
+				</Text>
+			)}
 			{failed && (
-				<Alert tone="danger" layout="stack">
-					<Stack gap="tight">
-						<Text as="p">{errorText(site, failed, t("error.failed"))}</Text>
-						<Box>
-							<Button type="button" variant="outline" size="sm" onClick={() => void chat.regenerate()}>
-								{t("error.retry")}
-							</Button>
-						</Box>
-					</Stack>
-				</Alert>
+				<ChatError
+					title={errorText(site, failed, t("error.failed"))}
+					actions={
+						<TextButton type="button" variant="underline" onClick={() => void chat.regenerate()}>
+							{t("error.retry")}
+						</TextButton>
+					}
+				/>
 			)}
-			{openError && (
-				<Alert tone="danger" layout="stack">
-					<Text as="p">{openError}</Text>
-				</Alert>
-			)}
+			{openError && <ChatError title={openError} />}
 			<div ref={endRef} />
 		</SidePanelFrame>
 	);
@@ -279,6 +273,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 /** The assistant as the admin's side panel (`defineAdminPlugin({ panel })`). A function of the site for the label's language; it lives here, in a client module, so the browser can call it. */
 export const agentPanel = (site: Site): AdminPanel => ({
 	label: site.createTranslator(agentPanelMessages)("label"),
-	icon: Sparkles,
+	icon: Spark,
 	Component: AgentPanel,
 });

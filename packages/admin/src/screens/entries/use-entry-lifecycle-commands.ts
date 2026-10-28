@@ -1,11 +1,11 @@
 "use client";
 
+import { toast } from "@monti-cms/ui";
 // The command handlers of the entry editor screen: save, preview, publish, the lifecycle transitions (with their confirmations) and duplicate.
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
-import { toast } from "sonner";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { useAdminRouter } from "../../router";
@@ -92,7 +92,7 @@ export function useEntryLifecycleCommands({
 	const handleSaveNow = async () => {
 		if (isReadOnly) return;
 		const saved = await editor.save();
-		if (saved.ok) toast.success(tc("saved"));
+		if (saved.ok) toast(tc("saved"));
 		// On failure, always show the reason (a conflict opens its own conflict dialog).
 		else if (saved.error.code !== "conflict") toast.error(saved.error.message || tc("saveFailed"));
 	};
@@ -122,9 +122,9 @@ export function useEntryLifecycleCommands({
 			toast.error(filled.error.message);
 			return;
 		}
-		for (const { label } of filled.value) toast.message(t("fillDone", { label }));
+		for (const { label } of filled.value) toast(t("fillDone", { label }));
 		// This does not block. It only warns when leaving with unconfirmed source changes.
-		if (sourceChanged) toast.warning(t("sourceUnreviewed"));
+		if (sourceChanged) toast(t("sourceUnreviewed"));
 		setIsPreparingPublish(true);
 		try {
 			const id = await ensureSaved("publish", { saveChanges: true });
@@ -142,18 +142,15 @@ export function useEntryLifecycleCommands({
 			void refreshIncoming(id);
 			const { warnings } = published.value;
 			if (warnings.length > 0) {
-				toast.warning(t("publishedWithWarnings", { count: warnings.length }), {
-					description: warnings
-						.slice(0, 5)
-						.map((issue) => issueLine(issue))
-						.join("\n"),
+				const lines = warnings.slice(0, 5).map((issue) => issueLine(issue));
+				toast([t("publishedWithWarnings", { count: warnings.length }), ...lines].join("\n"), {
 					duration: 10000,
 					action: warnings[0]?.position
 						? { label: t("go"), onClick: () => focusIssue(warnings[0] as CmsIssue) }
 						: undefined,
 				});
 			} else {
-				toast.success(t("published"));
+				toast(t("published"));
 			}
 		} finally {
 			setIsPreparingPublish(false);
@@ -172,7 +169,7 @@ export function useEntryLifecycleCommands({
 			toast.error(changed.error.message);
 			return;
 		}
-		toast.success(lifecycleSuccess(site)[action]);
+		toast(lifecycleSuccess(site)[action]);
 		// Sending a translation to the trash returns to the original's edit screen.
 		if (changed.value.openEntryId) router.navigate(site.adminEntryEditHref(changed.value.openEntryId));
 	};

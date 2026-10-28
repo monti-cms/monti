@@ -25,3 +25,7 @@ npm-debug.log*
 pnpm-debug.log*
 .vercel
 storybook-static
+
+# Visual regression run output (the diffs and the report; the baselines in packages/ui/visual/baselines are committed)
+packages/ui/visual/test-results
+packages/ui/visual/report

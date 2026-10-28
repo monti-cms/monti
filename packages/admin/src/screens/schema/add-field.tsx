@@ -2,7 +2,6 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import {
-	ChoiceCard,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -12,11 +11,12 @@ import {
 	Grid,
 	Inline,
 	Input,
+	PickList,
+	PickListItem,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
-import { Image, Link2, ListChecks, type LucideIcon, Type } from "lucide-react";
 import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { Labeled } from "../shared/labeled";
@@ -44,13 +44,6 @@ import {
 } from "./schema-model";
 
 type AddableKind = (typeof ADDABLE_KINDS)[number];
-
-const KIND_ICONS: Readonly<Record<AddableKind, LucideIcon>> = {
-	text: Type,
-	select: ListChecks,
-	media: Image,
-	relation: Link2,
-};
 
 /**
  * Adds a field in one step: the kinds are a list on the left and the settings of the picked kind sit beside it, so a wrong pick is fixed by picking another. The identifier follows the label (a
@@ -125,7 +118,7 @@ export function AddFieldDialog({
 	};
 
 	const naming = (
-		<Stack gap="comfortable">
+		<Stack gap={16}>
 			<TextInput
 				label={t("field.label")}
 				value={label}
@@ -148,19 +141,13 @@ export function AddFieldDialog({
 						onChange={(event) => setTypedName(event.target.value)}
 					/>
 				) : (
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						<Text as="code" variant="label" mono>
 							{name}
 						</Text>
-						<TextLink
-							render={<button type="button" />}
-							tone="accent"
-							underline="hover"
-							size="caption"
-							onClick={() => setIsNaming(true)}
-						>
+						<TextButton render={<button type="button" />} onClick={() => setIsNaming(true)}>
 							{t("field.identifierChange")}
-						</TextLink>
+						</TextButton>
 					</Inline>
 				)}
 			</Labeled>
@@ -176,32 +163,27 @@ export function AddFieldDialog({
 				</DialogHeader>
 				<Stack
 					as="form"
-					gap="spacious"
+					gap={24}
 					onSubmit={(event) => {
 						event.preventDefault();
 						add();
 					}}
 				>
-					<Grid columns="sidebar" gap="spacious" align="start">
-						<Stack role="radiogroup" aria-label={t("field.kind")} gap="tight">
-							{ADDABLE_KINDS.map((item) => {
-								const Icon = KIND_ICONS[item];
-								return (
-									<ChoiceCard
-										key={item}
-										role="radio"
-										aria-checked={item === kind}
-										aria-label={t(`kind.${item}`)}
-										icon={<Icon aria-hidden />}
-										title={t(`kind.${item}`)}
-										hint={t(`kind.${item}.hint`)}
-										selected={item === kind}
-										onClick={() => pickKind(item)}
-									/>
-								);
-							})}
-						</Stack>
-						<Stack gap="spacious" minWidth={0} border="left" paddingX="spacious">
+					<Grid columns="sidebar" gap={24} align="start">
+						<PickList aria-label={t("field.kind")}>
+							{ADDABLE_KINDS.map((item) => (
+								<PickListItem
+									key={item}
+									selected={item === kind}
+									aria-label={t(`kind.${item}`)}
+									mark={item === "relation" ? "→" : undefined}
+									onClick={() => pickKind(item)}
+								>
+									{t(`kind.${item}`)}
+								</PickListItem>
+							))}
+						</PickList>
+						<Stack gap={24} minWidth={0} border="left" paddingX={24}>
 							{kind !== "relation" && naming}
 							<KindOptions
 								name={name}
@@ -214,7 +196,7 @@ export function AddFieldDialog({
 								more={kind === "relation" ? naming : undefined}
 							/>
 							{problems.length > 0 && (
-								<Stack as="ul" gap="hair" data-testid="new-field-problems">
+								<Stack as="ul" gap={2} data-testid="new-field-problems">
 									{problems.map((item) => (
 										<Text as="li" variant="caption" tone="muted" key={item}>
 											{t(`field.needs.${item}`)}

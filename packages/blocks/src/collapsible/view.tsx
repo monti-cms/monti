@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,7 +11,6 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import { cn, IconButton, Inline, Label, Switch } from "@monti-cms/admin/kit";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";
 
@@ -43,20 +43,15 @@ export function CollapsibleNodeView() {
 	};
 
 	return (
-		<BlockFrame className="my-spacious rounded-md border bg-monti-page">
+		<BlockFrame className="my-monti-24 rounded-monti-md border bg-monti-page">
 			<div
 				contentEditable={false}
 				className={cn(
-					"not-prose flex w-full items-center gap-condensed rounded-md px-normal py-condensed font-medium text-monti-body text-monti-default",
-					open && "bg-monti-neutral",
+					"not-prose flex w-full items-center gap-monti-8 rounded-monti-md px-monti-12 py-monti-8 font-medium text-monti-body text-monti-default",
+					open && "bg-monti-muted",
 				)}
 			>
-				<IconButton
-					label={open ? t("toggle.close") : t("toggle.open")}
-					size="icon-xs"
-					aria-expanded={open}
-					onClick={toggle}
-				>
+				<IconButton label={open ? t("toggle.close") : t("toggle.open")} aria-expanded={open} onClick={toggle}>
 					{open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 				</IconButton>
 				<AttributeInput
@@ -74,7 +69,7 @@ export function CollapsibleNodeView() {
 			</div>
 			<Content
 				className={cn(
-					"px-normal pt-condensed pb-normal text-monti-default",
+					"px-monti-12 pt-monti-8 pb-monti-12 text-monti-default",
 					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
 					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
 					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
@@ -92,7 +87,6 @@ export function CollapsibleNodeView() {
 							</Label>
 							<Switch
 								id={defaultOpenId}
-								size="sm"
 								checked={defaultOpen}
 								onCheckedChange={(checked) => setValue("defaultOpen", checked)}
 							/>

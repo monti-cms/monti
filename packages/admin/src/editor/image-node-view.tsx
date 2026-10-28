@@ -1,10 +1,10 @@
 "use client";
 
+import { Crop, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { cn, FormFieldError, Inline, Input, Label, Separator, Skeleton, Stack, Switch, Textarea } from "@monti-cms/ui";
+import { cn, FormFieldError, Inline, Input, Label, Separator, Spinner, Switch, Text, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getMedia, mediaKeys } from "../api/media";
@@ -40,9 +40,9 @@ const text = (value: string | boolean | undefined, fallback = "") => (typeof val
 
 const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>) =>
 	[
-		{ value: "left", label: t("toolbar.alignLeftTitle"), icon: AlignLeft },
-		{ value: "center", label: t("toolbar.alignCenterTitle"), icon: AlignCenter },
-		{ value: "right", label: t("toolbar.alignRightTitle"), icon: AlignRight },
+		{ value: "left", label: t("toolbar.alignLeftTitle"), icon: TextAlignLeft },
+		{ value: "center", label: t("toolbar.alignCenterTitle"), icon: TextAlignCenter },
+		{ value: "right", label: t("toolbar.alignRightTitle"), icon: TextAlignRight },
 	] as const;
 
 /** Edit view of the core image block (`blockViews.image`). */
@@ -248,7 +248,7 @@ export function ImageBlockView() {
 			data-image-block
 			className={cn(
 				// Keep the 2em top/bottom margin of img in the editor body (prose) from showing as an empty strip inside the gray box.
-				"group group/container relative my-spacious flex flex-col rounded-lg transition-all [&_img]:m-0",
+				"group group/container relative my-monti-24 flex flex-col rounded-monti-lg transition-all [&_img]:m-0",
 				alignClasses,
 			)}
 			style={{ width: previewWidth || width || "100%", maxWidth: "100%" }}
@@ -303,13 +303,12 @@ export function ImageBlockView() {
 							{altMissing && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
-						<Inline justify="between" gap="condensed">
+						<Inline justify="between" gap={8}>
 							<Label htmlFor={decorativeId} size="caption" tone="muted">
 								{t("imageDialog.decorative")}
 							</Label>
 							<Switch
 								id={decorativeId}
-								size="sm"
 								checked={decorative}
 								onCheckedChange={(checked) =>
 									block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })
@@ -330,7 +329,7 @@ export function ImageBlockView() {
 				transform.isTransformed ? (
 					<div
 						data-slot="image-transform-wrapper"
-						className="relative w-full max-w-full overflow-hidden rounded-md bg-monti-neutral"
+						className="relative w-full max-w-full overflow-hidden rounded-monti-md bg-monti-muted"
 						style={{
 							width: previewWidth || width || "100%",
 							maxWidth: "100%",
@@ -340,7 +339,7 @@ export function ImageBlockView() {
 						<img
 							src={resolved && "url" in resolved ? resolved.url : ""}
 							alt={alt || ""}
-							className="rounded-md"
+							className="rounded-monti-md"
 							onLoad={(e) => {
 								const { naturalWidth, naturalHeight } = e.currentTarget;
 								if (naturalWidth > 0 && naturalHeight > 0) {
@@ -351,11 +350,11 @@ export function ImageBlockView() {
 						/>
 					</div>
 				) : (
-					<div className="relative overflow-hidden rounded-md bg-monti-neutral">
+					<div className="relative overflow-hidden rounded-monti-md bg-monti-muted">
 						<img
 							src={resolved && "url" in resolved ? resolved.url : ""}
 							alt={alt || ""}
-							className="h-auto w-full rounded-md object-contain"
+							className="h-auto w-full rounded-monti-md object-contain"
 							onLoad={(e) => {
 								const { naturalWidth, naturalHeight } = e.currentTarget;
 								if (naturalWidth > 0 && naturalHeight > 0) {
@@ -366,21 +365,20 @@ export function ImageBlockView() {
 					</div>
 				)
 			) : isChecking ? (
-				<Stack gap="none" role="status" aria-label={t("imageNode.loading")}>
-					<Skeleton shape="block" />
-					<Skeleton shape="block" />
-				</Stack>
+				<Text as="p" tone="subtle" role="status">
+					{t("imageNode.loading")}
+				</Text>
 			) : (
-				<div className="flex h-48 w-full items-center justify-center rounded-md bg-monti-neutral text-monti-body text-monti-muted">
+				<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
 					{t("imageNode.unavailable")}
 				</div>
 			)}
 			{resolveReason ? (
-				<p className="mt-tight text-center text-monti-caption text-monti-danger">{resolveReason}</p>
+				<p className="mt-monti-4 text-center text-monti-caption text-monti-danger">{resolveReason}</p>
 			) : null}
 
 			{/* Caption Input / Display */}
-			<figcaption className={cn("mt-condensed flex items-center gap-tight", captionAlignClass)}>
+			<figcaption className={cn("mt-monti-8 flex items-center gap-monti-4", captionAlignClass)}>
 				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
 				<div className="relative w-full">
 					<Input
@@ -397,18 +395,18 @@ export function ImageBlockView() {
 					{generating && (
 						<output
 							className={cn(
-								"pointer-events-none absolute inset-0 flex items-center gap-condensed text-monti-caption text-monti-subtle",
+								"pointer-events-none absolute inset-0 flex items-center gap-monti-8 text-monti-caption text-monti-subtle",
 								caption ? "sr-only" : captionJustifyClass,
 							)}
 						>
-							<Loader2 aria-hidden className="size-3 shrink-0 animate-spin" />
+							<Spinner />
 							{t("imageNode.generating")}
 						</output>
 					)}
 				</div>
 				{isEditable && captionSlot.trigger}
 			</figcaption>
-			{captionSlot.panel && <div className="mt-tight text-left">{captionSlot.panel}</div>}
+			{captionSlot.panel && <div className="mt-monti-4 text-left">{captionSlot.panel}</div>}
 
 			{/* Corner (bottom left/right) width resize handles */}
 			{isEditable && (
@@ -418,14 +416,14 @@ export function ImageBlockView() {
 						data-slot="resize-handle-left"
 						aria-label={t("imageNode.resizeLeft")}
 						onPointerDown={(e) => handleResizeStart(e, "left")}
-						className="absolute -bottom-1 -left-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
+						className="absolute -bottom-1 -left-1 z-20 size-3 cursor-ew-resize rounded-monti-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
 					/>
 					<button
 						type="button"
 						data-slot="resize-handle-right"
 						aria-label={t("imageNode.resizeRight")}
 						onPointerDown={(e) => handleResizeStart(e, "right")}
-						className="absolute -right-1 -bottom-1 z-20 size-3 cursor-ew-resize rounded-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
+						className="absolute -right-1 -bottom-1 z-20 size-3 cursor-ew-resize rounded-monti-sm border border-monti-muted bg-monti-page p-0 opacity-0 transition-opacity hover:scale-125 group-focus-within:opacity-100 group-hover:opacity-100"
 					/>
 				</>
 			)}

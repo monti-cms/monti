@@ -54,14 +54,14 @@ export default defineAdminPlugin({
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
+블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 `components`의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
 ```tsx
-import { Eye } from "lucide-react";
+import { View } from "@carbon/icons-react";
 
-export default defineAdminPlugin({ components: { icons: { eye: Eye } } });
+export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
 `@monti-cms/blocks`의 각 블록과 `@monti-cms/ai`도 같은 방식으로 선언한다.
@@ -255,7 +255,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 const myChecker = defineTextChecker({
 	id: "my-words",
 	label: "금지어 검사", // 도구 모음 버튼 이름
-	icon: "ban", // lucide 이름이나 컴포넌트. 없으면 맞춤법 아이콘
+	icon: "flag", // Carbon 아이콘 이름이나 컴포넌트. 없으면 맞춤법 아이콘
 	locales: ["ko"], // 없으면 모든 언어
 	limits: { maxChars: 10_000, maxSegments: 50 }, // 넘으면 나눠 보낸다
 	// auto: true, // 입력을 멈추면 바뀐 문단만 저절로 검사(기본은 끔)
@@ -347,8 +347,8 @@ export function StatsPage() {
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
 `cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`),
-목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`), 상태 부품(`Badge`·
-`Alert`·`LoadErrorAlert`·`FormFieldError`), `commonMessages`(저장·취소·다시 시도 등), `useDebounced`, 미디어 미리보기(`MediaThumbnail`), 글 입력값 타입
+목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`), 상태 부품(`Count`·
+`Banner`·`LoadErrorAlert`·`FormFieldError`), `commonMessages`(저장·취소·다시 시도 등), `useDebounced`, 미디어 미리보기(`MediaThumbnail`), 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. Monti 패키지와 예제가 쓰는 것만 내보내며, 없는 부품은 확장이 필요로 할 때 추가한다. 색은 `--monti-success`·`--monti-warning`·`--monti-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
@@ -510,14 +510,14 @@ import "@monti-cms/admin/styles.css";
 
 묶음이 주는 것(모두 `monti` 이름표가 붙어 앱의 이름과 겹치지 않는다):
 
-- **디자인 시스템, 그것만.** 속성마다 나뉜 색 역할(`bg-monti-surface`, `text-monti-muted`, `border-monti-default` 등), 글자 역할(`text-monti-caption` 등), 그림자 하나
-  (`shadow-monti-floating`), 모서리 네 단계, 굵기 세 단계다. Tailwind 자체의 팔레트·글자 크기·굵기·그림자·자간·줄 간격은 묶음에서 뺐으므로, 시스템 밖의 클래스(`text-xs`, `bg-red-500`)는
+- **디자인 시스템, 그것만.** 속성마다 나뉜 색 역할(`bg-monti-page`, `text-monti-muted`, `border-monti-default` 등), 글자 역할(`text-monti-caption` 등), 간격·모서리·높이·너비 단계,
+  그림자 셋, 굵기 네 단계다. Tailwind 자체의 팔레트·글자 크기·굵기·그림자·자간·줄 간격은 묶음에서 뺐으므로, 시스템 밖의 클래스(`text-xs`, `bg-red-500`)는
   아무 CSS도 만들지 않는다. 관리자와 1차 플러그인에 그런 클래스가 있으면 테스트가 그 자리를 짚는다. 앱의 shadcn 이름(`bg-background` 등)과 변수(`--background` 등)는 건드리지 않는다.
   `--monti-*`는 관리자 화면이 있는 문서에만 걸린다.
 - **변형.** `monti-dark:`는 `html`(또는 상위 요소)의 `.dark` 또는 `[data-theme="dark"]`일 때, `monti-horizontal:`·`monti-vertical:`은 Base UI의
   `data-orientation`일 때다. 앱의 `dark`·`data-horizontal` 정의와 따로 논다. 앱이 어떤 테마 방식(클래스·`data-theme`)을 쓰든 관리자 화면의
   어두운 테마가 따라간다.
-- **그 밖에.** 테두리·포커스 윤곽 기본색, `color-scheme`, 얇은 스크롤바, 관리자의 모서리 둥글기(`--monti-radius`, 묶음의 `rounded-*`는 이 값으로 계산된다).
+- **그 밖에.** 테두리·포커스 윤곽 기본색, `color-scheme`, 얇은 스크롤바, 포커스 윤곽선 색.
 
 관리자 화면을 더하는 플러그인: 관리자 묶음이 자체 제공 플러그인(`@monti-cms/ai`·`@monti-cms/blocks`·`@monti-cms/mdx`·`@monti-cms/seo`, `styles/index.css`의 `@source` 줄 참고)의 소스도 함께 컴파일한다.
 그래서 공유 유틸리티·`prose`·테마·리셋이 **한 파일**에만 정의된다. 이것이 핵심이다. `.prose`를 다시 정의하는 파일이 뒤에 불러와지면 관리자의 다크 변형이 정한 값을 되돌려 버린다.
@@ -525,7 +525,7 @@ import "@monti-cms/admin/styles.css";
 서드파티 플러그인은 자기 클래스(`monti-` 접두 이름)만 담은 미리 만든 CSS를 내고 공유 유틸리티나 `prose`는 다시 정의하지 않는다. 같은 선택자가 두 묶음에 정의되면 한계 검사 테스트가 실패한다.
 대신 관리자 파일에는 앱이 설치하지 않은 자체 제공 플러그인의 클래스도 들어 있다(몇 KB).
 
-`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `monti.config.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자나 `sonner` `Toaster`를 두었다면 겹치지 않게 끈다.
+`CmsAdminLayout`(`@monti-cms/nextjs/admin`)은 CMS 인스턴스(`cms`, 앱의 `monti.config.ts`가 내보낸다)를 받고, 선택 속성으로 관리자가 두는 공급자를 끌 수 있다. 사이트가 이미 `next-themes` 공급자를 두었다면 겹치지 않게 끈다.
 
 ```tsx
 <CmsAdminLayout cms={cms} themeProvider={false} toaster={false}>
@@ -538,69 +538,71 @@ import "@monti-cms/admin/styles.css";
   (사이트 자신의 테마는 건드리지 않고, 같은 루트 레이아웃의 공개 화면이 어둡게 남지도 않는다). 끄면 사이트의 공급자가 `html`에 붙이는
   `.dark`·`[data-theme="dark"]`를 따르며, 관리자의 테마 토글은 사이트의 테마를 바꾼다.
 - `themeStorageKey`(기본 `monti-admin-theme`): 관리자 테마를 담는 `localStorage` 키. `themeProvider`를 켰을 때만 쓴다.
-- `toaster`(기본 `true`): 관리자 화면이 `sonner`의 `Toaster`를 둔다. 끄면 사이트의 `Toaster`에 관리자 알림이 뜬다(같은 `sonner`를 쓸 때).
+- `toaster`(기본 `true`): 관리자 화면이 `@monti-cms/ui`의 `Toaster`를 둔다. 이 `Toaster`는 자기 id가 있고 관리자의 토스트는 그 id로 보내므로, 사이트의 `sonner` `Toaster`와 함께 있어도 서로의 토스트를 보여 주지 않고 같은 토스트가 두 번 뜨지도 않는다. 페이지가 그 `Toaster`를 직접 둘 때만 끈다.
 
 ## 관리자 테마
 
-관리자는 디자인 시스템 하나, `@monti-cms/ui`로 만든다(이름은 그 패키지의 `styles/theme.css`, 값은 `styles/tokens.css`). 사이트는 그 CSS 사용자 정의 속성을 덮어써서 테마를 바꾼다. 아래 이름이 공개 계약이다.
+관리자는 디자인 시스템 하나, `@monti-cms/ui`로 만든다(이름은 그 패키지의 `styles/theme.css`, 값은 `styles/tokens.css`이고, 둘 다 `tokens/tokens.json`에서 만든다). 사이트는 그 CSS 사용자 정의 속성을 덮어써서 테마를 바꾼다. 아래 이름이 공개 계약이다.
 
 기본값은 우선순위가 0이다(`:where(...)`). 그래서 사이트의 평범한 `:root { ... }` 규칙이 스타일시트를 어떤 순서로 불러오든 이긴다. 관리자는 `color-scheme`도 정한다(`light`, 그리고 `html`의
 `.dark` 또는 `[data-theme="dark"]` 아래에서는 `dark`. 관리자가 어두운 테마를 알아보는 두 방식이다). 그래서 `light-dark()`가 모드마다 알맞은 값을 고르고, 두 모드를 한 줄에 쓸 수 있다.
 
 ### 색: 단계, 그다음 역할
 
-색은 두 층이다.
+이름과 값은 디자인 시스템 자체의 것이다(`packages/ui/tokens/tokens.json`). `pnpm gen:tokens`가 이 파일에서 `styles/tokens.css`와 `styles/theme.css`를 만든다. 색은 두 층이다.
 
-1. **단계**, 원래 값이다. `--monti-gray-1`~`--monti-gray-12`(1 가장 옅은 바탕, 2 들어간 영역, 3 요소 바탕과 마우스 올림, 4 누름과 선택, 6 입력 칸 테두리, 8 진한 테두리, 9 안내 글자,
-   11 보조 글자, 12 글자와 채운 버튼), 그리고 색 네 가지를 다섯 단계씩: `--monti-accent-*`, `--monti-danger-*`, `--monti-warning-*`, `--monti-success-*`. `3` 옅은 바탕, `6` 옅은 테두리,
-   `9` 채움, `10` 채움 위 마우스, `11` 글자다. 강조색은 코발트(`#2f54eb`, 어두운 테마 `#7b93ff`)이고 조작 상태에만 쓴다: 링크, 포커스, 현재 탭과 사이드바 항목, 체크된 컨트롤, 에디터 선택.
+1. **단계**, 원래 값이다. `--monti-gray-1`~`--monti-gray-12`(1 종이색, 페이지 바탕. 2 도구 영역. 3 알약 바탕. 4 선택된 행. 5 구분선. 6 떠 있는 면의 테두리. 7 조용한 선. 9 흐린 글자.
+   10 보조 글자. 11 부드러운 글자. 12 잉크), 그리고 색 네 가지를 두 단계씩: `--monti-success-*`, `--monti-warning-*`, `--monti-danger-*`, `--monti-proposal-*`. `3` 옅은 바탕, `11` 글자다.
+   강조색은 없다. 제안의 파란색은 AI 제안이 더한 것만 나타내고 다른 곳에는 쓰지 않는다.
 2. **역할**, 화면이 쓰는 이름이다. 단계를 가리키는 역할은 한 번만 선언하므로, **단계 하나를 덮어쓰면 그 단계를 쓰는 모든 역할이 두 모드 모두에서 바뀐다**.
 
 | 속성 | 역할(`--monti-…`) | 클래스 |
 | --- | --- | --- |
-| 바탕 | `bg-page`, `bg-surface`(카드), `bg-inset`(사이드바, 들어간 영역), `bg-overlay`(메뉴, 대화상자), `bg-emphasis`와 `bg-emphasis-hover`(채운 버튼), `bg-hover`, `bg-active`, `bg-selected`, `bg-neutral`(칩), `bg-{accent,danger,warning,success}-muted`와 `-emphasis` | `bg-monti-page`, `bg-monti-surface`, … |
-| 글자 | `fg-default`, `fg-muted`, `fg-subtle`(안내 글자와 비활성만), `fg-on-emphasis`, `fg-{accent,danger,warning,success}` | `text-monti-default`, `text-monti-muted`, … |
-| 테두리 | `border-muted`(가는 선), `border-default`(입력 칸), `border-emphasis`, `border-focus`, `border-accent`, `border-danger`, `border-{accent,danger,warning,success}-muted` | `border-monti-muted`, `ring-monti-focus`, … |
-| 그림자 | `shadow-floating`(메뉴, 팝오버, 대화상자, 알림. 카드는 테두리만 쓴다) | `shadow-monti-floating` |
+| 바탕 | `bg-page`(목록, 에디터, 대화상자, 메뉴), `bg-tool`(사이드바, 패널, 시트, 상태 표시줄), `bg-muted`, `bg-selected`, `bg-highlight`, `bg-block`, `bg-emphasis`(검은 알약), `bg-{success,warning,danger,proposal}-muted`, `bg-danger-emphasis`, `bg-backdrop` | `bg-monti-page`, `bg-monti-tool`, … 그리고 `bg-monti-divider`(상자로 그린 1px 구분선) |
+| 글자 | `fg-default`, `fg-muted`, `fg-subtle`, `fg-faint`(안내 글자와 메타만), `fg-on-emphasis`, `fg-{success,warning,danger,proposal}` | `text-monti-default`, `text-monti-faint`, … (`fill-`, `stroke-`, `caret-`도) |
+| 테두리 | `border-muted`(목록 행), `border-default`(구역 선), `border-emphasis`(메뉴, 대화상자), `border-strong`(링크 밑줄), `border-contrast`(잉크 선) | `border-monti-muted`, `ring-monti-contrast`, `divide-monti-muted`, `decoration-monti-strong`. 글자 역할은 테두리, 링, 윤곽선 색으로도 쓴다(`border-monti-danger`) |
+| 그림자 | `shadow-floating`(메뉴, 팝오버), `shadow-overlay`(대화상자), `shadow-sheet`(오른쪽에서 나오는 시트). 나머지는 평평하다 | `shadow-monti-floating`, `shadow-monti-overlay`, `shadow-monti-sheet` |
 
-모드마다 자기 값을 갖는 역할은 `bg-page`, `bg-surface`, `bg-overlay`, `bg-emphasis-hover`, `fg-on-emphasis`, `shadow-floating`이다. 색은 어떤 CSS 색이든 된다.
+어두운 테마에서 자기 값을 갖는 역할은 `bg-page`와 `bg-tool`(서로 바뀐다. 도구 영역이 더 어둡다), `bg-highlight`, `bg-block`, `bg-backdrop`, `fg-on-emphasis`, 그림자다. 색은 어떤 CSS 색이든 된다.
 
 ```css
 /* app/globals.css: 사이트의 아무 스타일시트나 된다. @monti-cms/admin/styles.css 앞뒤 어느 쪽이든 괜찮다 */
 :root {
-	/* 청록 강조색: 링크, 포커스 링, 현재 탭, 선택이 모두 따라온다. */
-	--monti-accent-3: light-dark(#e6f7f5, #0d2624);
-	--monti-accent-6: light-dark(#a6e0d9, #1c4a45);
-	--monti-accent-9: light-dark(#0d9488, #2dd4bf);
-	--monti-accent-10: light-dark(#0b7f75, #5eead4);
-	--monti-accent-11: light-dark(#0f766e, #5eead4);
-	--monti-radius: 0.5rem;
+	/* 더 푸른 종이색: 페이지 바탕과 그 위의 모든 역할이 따라온다. */
+	--monti-gray-1: light-dark(#f8faf4, #121411);
+	--monti-gray-2: light-dark(#f0f3ea, #171a15);
 }
 ```
 
 **평범한 값은 두 모드에 다 걸린다.** 기본값은 밝은 테마와 어두운 테마 *둘 다* 우선순위가 0이라서, `:root { --monti-gray-12: #111; }`는 어두운 테마의 기본값도 바꾼다. 위처럼 `light-dark()`로 쓰거나,
 `.dark, [data-theme="dark"]` 아래에서 한 번 더 정한다.
 
-### 글자, 모서리, 글꼴
+### 글자, 간격, 모서리, 글꼴
 
-글자 역할은 크기, 줄 간격, 굵기를 한 번에 정한다. 크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 사이트가 덮어쓰는 토큰이 아니라 클래스다.
+글자 역할은 크기, 줄 간격, 굵기, 자간, 글꼴을 클래스 하나로 한 번에 정한다. 크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 사이트가 덮어쓰는 토큰이 아니라 클래스다.
 
-- `micro`(11/14, 500): 개수, 단축키 안내, 배지 숫자만
-- `caption`(12/16, 400): 메타 정보, 시간, 도움말, 표 머리
-- `label`(13/18, 500): 버튼, 메뉴 항목, 탭, 사이드바 항목, 입력 칸 이름
-- `body`(14/20, 400): 기본 글자, 입력 칸, 설명
-- `reading`(16/28, 400): 긴 글: 에디터 본문과 소스 창
-- `title`(16/22, 600): 섹션, 패널, 대화상자, 카드 제목
-- `heading`(20/28, 600): 화면 제목
-- `display`(34/40, 600): 에디터와 소스 창의 글 제목
+- `display`(36/45, 700): 에디터의 글 제목
+- `page`(26/32, 700): 내용 페이지 제목
+- `heading`(22/30, 700): 에디터 본문의 제목과 대화상자 제목
+- `reading`(17/30, 400): 에디터 본문 글자
+- `title`(16/22, 600): 패널, 시트, 설정 구역 제목
+- `body`(14/20, 400): 기본 글자, 버튼, 입력 칸, 목록 행 제목
+- `label`(13/18, 500): 탭, 필터, 작은 버튼
+- `note`(13/20, 400): 행 제목 아래의 보조 줄
+- `caption`(12/16, 400): 설명과 시간
+- `meta`(12/16, 400, 고정폭): 주소, 식별자, 개수, 파일 크기
+- `micro`(11/14, 400, 고정폭): 입력 칸 이름, 메뉴와 패널의 묶음 이름
 
 | 토큰 | 정하는 것 |
 | --- | --- |
-| `--monti-radius` | 기본 모서리 반경(기본값 `6px`). 칩 2px, 컨트롤 4px, 카드와 메뉴 6px, 대화상자 8px이 여기서 계산된다. `:root`에 한 번만 정하고 어두운 테마 값은 없다 |
-| `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드와 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
+| `--monti-space-2` … `--monti-space-48` | 간격 단계: 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48px (`gap-monti-12`, `px-monti-16`, `-mt-monti-4`) |
+| `--monti-radius-sm`, `-md`, `-lg`, `-xl`, `-full` | 모서리 반경: 3px(표시, 체크박스), 6px(행, 타일), 8px(안쪽 상자), 12px(떠 있는 면), 알약(`rounded-monti-md`) |
+| `--monti-height-*`, `--monti-width-*`, `--monti-size-icon-*` | 컨트롤과 바의 높이(`h-monti-control-md` 36, `h-monti-header` 60 …), 열, 패널, 시트의 너비(`w-monti-sidebar` 232, `w-monti-sheet` 520 …), 아이콘 크기(`size-monti-icon-md` 16) |
+| `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴: sans는 화면 틀(기본값: Pretendard, 그다음 한국어 대체 글꼴이 들어간 시스템 글꼴), mono는 코드, 식별자, 소스 화면(기본값: IBM Plex Mono, 그다음 시스템 고정폭 글꼴) |
 
-간격은 4px 단계(0, 2, 4, 8, 12, 16, 24, 32, 48px)를 쓴다. 확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(뜻으로 고르는 간격: tight, condensed, normal, comfortable, spacious,
-section)과 위의 클래스로 만든다.
+**글자를 가운데 맞추는 건 글꼴의 몫이다.** Monti는 함께 싣는 Pretendard에 `ascent-override: 92.4%`, `descent-override: 19%`, `line-gap-override: 0%`를 건다(관리자 빌드가 쓰는 `@font-face`). 그래서 글꼴 크기에 상관없이 한글과 영문이 컨트롤 가운데에서 반 픽셀 안에 놓이고, 어떤 부품도 패딩으로 글자를 밀지 않는다. `--monti-font-sans`의 글꼴을 바꾸면, 부품에 패딩을 주지 말고 글꼴을 선언하는 곳에서 같은 방식으로 `@font-face`의 `ascent-override`, `descent-override`, `line-gap-override`로 맞춘다. `pnpm test:visual:audit`(`@monti-cms/ui`)는 글자가 가운데에서 벗어난 컨트롤을 모두 알려 준다.
+
+확장은 키트의 `Text`, `Heading`(역할과 톤), `Stack`(간격 눈금의 px 단계로 고르는 간격: `gap={8}`)과 위의 클래스로 만든다.
 
 ### shadcn 테마 다시 쓰기
 
@@ -609,20 +611,17 @@ shadcn 테마가 있는 사이트는 역할이 그 테마를 가리키게 할 �
 ```css
 :root {
 	--monti-bg-page: var(--background);
-	--monti-bg-surface: var(--card);
-	--monti-bg-overlay: var(--popover);
+	--monti-bg-tool: var(--sidebar);
 	--monti-bg-emphasis: var(--primary);
 	--monti-fg-on-emphasis: var(--primary-foreground);
 	--monti-fg-default: var(--foreground);
 	--monti-fg-muted: var(--muted-foreground);
-	--monti-bg-neutral: var(--muted);
-	--monti-bg-hover: var(--accent);
-	--monti-bg-inset: var(--sidebar);
+	--monti-bg-muted: var(--muted);
+	--monti-bg-selected: var(--accent);
 	--monti-border-muted: var(--border);
 	--monti-border-default: var(--input);
-	--monti-border-focus: var(--ring);
-	--monti-danger-9: var(--destructive);
-	--monti-radius: var(--radius);
+	--monti-fg-danger: var(--destructive);
+	--monti-radius-md: var(--radius);
 }
 ```
 

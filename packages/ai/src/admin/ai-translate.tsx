@@ -1,5 +1,6 @@
 "use client";
 
+import { StopFilledAlt, Translate } from "@carbon/icons-react";
 import { type EditorExtension, errorText, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import {
@@ -12,11 +13,11 @@ import {
 	Stack,
 	Text,
 	Textarea,
+	TextButton,
+	toast,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
-import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { runAiActionMany, useAiActions } from "./ai-slot-provider";
 import { aiTranslateMessages } from "./ai-translate.messages";
 import { applyTranslation, collectUnits, type TranslateUnit, unitAt } from "./ai-translate-units";
@@ -151,10 +152,10 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 					return;
 				}
 				const applied = applyTranslation(site, format, editor, unit, result.mdx, pos);
-				if (applied === "changed") toast.message(t("toast.blockChanged"));
+				if (applied === "changed") toast(t("toast.blockChanged"));
 				else if (applied === "invalid") toast.error(t("toast.invalidOne"));
 			} catch (error) {
-				if (controller.signal.aborted) toast.message(t("toast.stopped"));
+				if (controller.signal.aborted) toast(t("toast.stopped"));
 				else toast.error(errorText(site, error, t("runFailed")));
 			} finally {
 				if (blockAbortRef.current.get(pos) === controller) blockAbortRef.current.delete(pos);
@@ -174,7 +175,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			}),
 		);
 		if (blocks.length === 0) {
-			toast.message(t("toast.noBlocks"));
+			toast(t("toast.noBlocks"));
 			return;
 		}
 		const controller = new AbortController();
@@ -218,13 +219,13 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 		await Promise.all(Array.from({ length: Math.min(PARALLEL_REQUESTS, groups.length) }, worker));
 		setProgress(null);
 		abortRef.current = null;
-		if (controller.signal.aborted) toast.message(t("toast.stoppedKeep"));
+		if (controller.signal.aborted) toast(t("toast.stoppedKeep"));
 		else if (fatal) toast.error(fatal);
 		else if (failures.length > 0 || skipped > 0) {
-			toast.warning(
+			toast(
 				`${t("toast.partial", { done: blocks.length - failures.length - skipped, kept: failures.length + skipped })}${failures[0] ? ` · ${failures[0]}` : ""}`,
 			);
-		} else toast.success(t("toast.all", { count: blocks.length }));
+		} else toast(t("toast.all", { count: blocks.length }));
 	}, [locales, request, actionKey, format, site, t]);
 
 	const blockActions = useMemo<BlockAction[]>(
@@ -232,7 +233,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			features.map((item) => ({
 				id: `ai-translate:${item.key}`,
 				label: item.label,
-				icon: <Languages aria-hidden />,
+				icon: <Translate aria-hidden />,
 				isAvailable: (editor, pos) =>
 					!!format && unitAt(site, format, editor.state.doc, pos) !== null && progress === null,
 				isBusy: (pos) => busyBlocks.has(pos),
@@ -244,27 +245,27 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const running = progress !== null || busyBlocks.size > 0;
 	const toolbar = feature ? (
 		running ? (
-			<Inline gap="tight">
+			<Inline gap={4}>
 				{progress && (
 					<Text variant="caption" tone="muted">
 						{t("progress", { done: progress.done, total: progress.total })}
 					</Text>
 				)}
-				<Button type="button" size="sm" variant="quiet" onClick={stop}>
-					<Square aria-hidden />
+				<TextButton type="button" variant="quiet" onClick={stop}>
+					<StopFilledAlt aria-hidden />
 					{t("stop")}
-				</Button>
+				</TextButton>
 			</Inline>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger render={<Button type="button" size="sm" variant="quiet" />}>
-					<Languages aria-hidden />
+				<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
+					<Translate aria-hidden />
 					{t("all")}
 				</PopoverTrigger>
 				<PopoverContent align="end" width="md">
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							void translateAll();
@@ -297,7 +298,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 						)}
 						<Inline justify="end">
 							<Button type="submit" size="sm">
-								<Languages aria-hidden />
+								<Translate aria-hidden />
 								{t("run")}
 							</Button>
 						</Inline>

@@ -1,6 +1,6 @@
 import { type Site, useSite } from "@monti-cms/core/site";
+import { toast } from "@monti-cms/ui";
 import { type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { errorText } from "./client";
 
 /** An optimistic change: `update` rewrites every cached query under `queryKey`, and the old values come back if the call fails. */
@@ -57,7 +57,7 @@ export function useCmsMutation<TVariables = void, TResult = unknown, TData = unk
 		},
 		onSuccess: (result, variables) => {
 			const message = typeof options.success === "function" ? options.success(result, variables) : options.success;
-			if (message) toast.success(message);
+			if (message) toast(message);
 			options.onSuccess?.(result, variables);
 		},
 		// The refetch is not awaited: the mutation settles (and the caller's button re-enables) without waiting for a slow list to come back.

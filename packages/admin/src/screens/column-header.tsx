@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, Filter, SortAscending, SortDescending } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -17,11 +18,12 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
+	Segmented,
 	Separator,
 	Stack,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { type AdminListColumn, type ColumnFilter, columnConfig, isColumnFiltered } from "./list-columns";
@@ -49,7 +51,7 @@ function TextFilter({
 	return (
 		<Inline
 			as="form"
-			gap="condensed"
+			gap={8}
 			onSubmit={(event) => {
 				event.preventDefault();
 				onApply(draft);
@@ -79,7 +81,7 @@ function CheckRow({
 	onChange: (next: boolean) => void;
 }) {
 	return (
-		<Box radius="sm" padding="condensed" hover>
+		<Box radius="sm" padding={8} hover>
 			<Label>
 				<Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
 				{label}
@@ -94,7 +96,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const toggle = (status: (typeof LIST_STATUSES)[number], on: boolean) =>
 		onChange({ statuses: on ? [...state.statuses, status] : state.statuses.filter((item) => item !== status) });
 	return (
-		<Stack gap="hair" role="group" aria-label={t("column.status")}>
+		<Stack gap={2} role="group" aria-label={t("column.status")}>
 			{LIST_STATUSES.map((status) => (
 				<CheckRow
 					key={status}
@@ -103,7 +105,7 @@ function StatusFilter({ state, onChange }: { state: ListState; onChange: (patch:
 					onChange={(on) => toggle(status, on)}
 				/>
 			))}
-			<Box paddingY="tight">
+			<Box paddingY={4}>
 				<Separator />
 			</Box>
 			<CheckRow
@@ -120,7 +122,7 @@ function LocaleFilter({ state, onChange }: { state: ListState; onChange: (patch:
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack gap="hair" role="group" aria-label={t("column.locale")}>
+		<Stack gap={2} role="group" aria-label={t("column.locale")}>
 			{site.LOCALES.map((locale) => (
 				<CheckRow
 					key={locale}
@@ -150,7 +152,7 @@ function TaxonomyFilter({
 	const toggle = (id: string) =>
 		onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Command>
 				<CommandInput placeholder={t("filter.search", { label })} aria-label={t("filter.search", { label })} />
 				<CommandList>
@@ -166,12 +168,12 @@ function TaxonomyFilter({
 				</CommandList>
 			</Command>
 			<Inline justify="between">
-				<Button type="button" variant="ghost" size="sm" onClick={() => onChange(options.map((option) => option.id))}>
+				<TextButton type="button" onClick={() => onChange(options.map((option) => option.id))}>
 					{t("filter.selectAll")}
-				</Button>
-				<Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+				</TextButton>
+				<TextButton type="button" onClick={() => onChange([])}>
 					{t("filter.clearAll")}
-				</Button>
+				</TextButton>
 			</Inline>
 		</Stack>
 	);
@@ -190,14 +192,14 @@ function DateFilter({
 }) {
 	const t = useTranslator(screensMessages);
 	return (
-		<Stack gap="condensed">
-			<Box paddingX="tight">
+		<Stack gap={8}>
+			<Box paddingX={4}>
 				<Text as="p" variant="caption" tone="muted">
 					{label}
 				</Text>
 			</Box>
 			<DateRangeCalendar from={from} to={to} onChange={onChange} />
-			<Box paddingX="tight">
+			<Box paddingX={4}>
 				<Text as="p" variant="caption" aria-live="polite">
 					{from || to ? `${from || t("filter.rangeStart")} ~ ${to || t("filter.rangeEnd")}` : t("filter.noRange")}
 				</Text>
@@ -257,43 +259,37 @@ export function ColumnHeader({
 	const sorted = sortField && state.sortField === sortField ? state.sortDirection : null;
 	if (!sortField && filter.kind === "none") return <span>{config.label}</span>;
 
-	const sortButton = (direction: "asc" | "desc") => (
-		<Button
-			type="button"
-			variant={sorted === direction ? "secondary" : "ghost"}
-			size="sm"
-			aria-pressed={sorted === direction}
-			onClick={() => sortField && onChange({ sortField, sortDirection: direction })}
-		>
-			{direction === "asc" ? <ArrowUpNarrowWide /> : <ArrowDownWideNarrow />}
-			{direction === "asc" ? t("filter.sortAsc") : t("filter.sortDesc")}
-		</Button>
-	);
-
+	const directions = [
+		{ value: "asc", label: t("filter.sortAsc") },
+		{ value: "desc", label: t("filter.sortDesc") },
+	] as const;
 	return (
 		<Popover>
 			<PopoverTrigger
 				render={
-					<Button
-						type="button"
-						variant={filtered ? "ghost" : "quiet"}
-						size="xs"
+					<TextButton
+						variant={filtered ? "plain" : "quiet"}
 						aria-label={`${config.label}${sorted ? t("filter.sortedSuffix", { direction: sorted === "asc" ? t("filter.sortAsc") : t("filter.sortDesc") }) : ""}${filtered ? t("filter.filteredSuffix") : ""}`}
 					/>
 				}
 			>
-				{config.label}
-				{sorted === "asc" && <ArrowUpNarrowWide aria-hidden size={14} />}
-				{sorted === "desc" && <ArrowDownWideNarrow aria-hidden size={14} />}
-				{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
+				<Inline as="span" gap={4}>
+					{config.label}
+					{sorted === "asc" && <SortAscending aria-hidden size={14} />}
+					{sorted === "desc" && <SortDescending aria-hidden size={14} />}
+					{filtered ? <Filter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
+				</Inline>
 			</PopoverTrigger>
 			<PopoverContent align="start" width="md">
-				<Stack gap="normal">
+				<Stack gap={12}>
 					{sortField && (
-						<Stack gap="tight" role="group" aria-label={t("filter.sortLegend", { label: config.label })}>
-							{sortButton("asc")}
-							{sortButton("desc")}
-						</Stack>
+						<Segmented
+							size="sm"
+							aria-label={t("filter.sortLegend", { label: config.label })}
+							value={sorted}
+							onValueChange={(direction) => onChange({ sortField, sortDirection: direction })}
+							options={directions}
+						/>
 					)}
 					{sortField && filter.kind !== "none" && <Separator />}
 					{filter.kind === "text" && (
@@ -325,7 +321,7 @@ export function ColumnHeader({
 					{filtered && (
 						<Button
 							type="button"
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							width="full"
 							onClick={() => onChange(clearPatchFor(filter, state))}

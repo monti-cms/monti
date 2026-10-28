@@ -28,7 +28,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"menu.delete": "Delete",
 		"empty.title": "No keys yet",
 		"empty.description": "Add a key here, or enter one when you set up an AI connection.",
-		"secret.title": "Keys can't be saved yet",
 		"secret.description":
 			"MONTI_SECRET is not set, so there is nothing to encrypt keys with. Set it to a long random value (openssl rand -base64 32) in .env.local and in your host's environment, then restart the server.",
 		"load.failed": "Couldn't load the keys.",
@@ -97,7 +96,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"menu.delete": "지우기",
 		"empty.title": "아직 키가 없어요",
 		"empty.description": "여기서 키를 추가하거나, AI 연결을 만들 때 바로 넣을 수 있어요.",
-		"secret.title": "아직 키를 저장할 수 없어요",
 		"secret.description":
 			"MONTI_SECRET이 없어서 키를 암호화할 수 없어요. 긴 무작위 값(openssl rand -base64 32)으로 .env.local과 호스팅 환경 변수에 넣고 서버를 다시 켜 주세요.",
 		"load.failed": "키를 불러오지 못했어요.",

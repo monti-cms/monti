@@ -48,7 +48,7 @@ function PreviewPanel({ collection, onClose }: { collection: string; onClose: ()
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<Box grow minHeight={0} overflow="y" padding="comfortable" data-testid="layout-preview-record">
+				<Box grow minHeight={0} overflow="y" padding={16} data-testid="layout-preview-record">
 					<SchemaFields />
 				</Box>
 			) : (
@@ -91,7 +91,7 @@ export function LayoutPreview({
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
 	const problem = (
-		<Box padding="comfortable">
+		<Box padding={16}>
 			<Text as="p" variant="caption" tone="muted">
 				{t("layout.previewUnavailable")}
 			</Text>
@@ -100,7 +100,7 @@ export function LayoutPreview({
 
 	return (
 		<Stack
-			gap="none"
+			gap={0}
 			grow
 			minHeight={0}
 			overflow="hidden"
@@ -109,7 +109,7 @@ export function LayoutPreview({
 			background="page"
 			data-testid="layout-preview"
 		>
-			<Box shrink={false} border="bottom" background="inset" paddingX="comfortable" paddingY="condensed">
+			<Box shrink={false} border="bottom" background="tool" paddingX={16} paddingY={8}>
 				<Text as="p" variant="caption" tone="muted">
 					{t("layout.previewLabel")}
 				</Text>

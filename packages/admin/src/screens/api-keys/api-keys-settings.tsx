@@ -1,11 +1,9 @@
 "use client";
 
+import { Add, Edit, Plug, Renew, TrashCan } from "@carbon/icons-react";
 import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-	Badge,
+	Banner,
 	Box,
 	Button,
 	Dialog,
@@ -19,15 +17,14 @@ import {
 	Input,
 	List,
 	ListItem,
-	Skeleton,
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
 import { errorText } from "../../api/client";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -67,7 +64,7 @@ export function ApiKeysSettings() {
 		const ok = await confirm({
 			title: t("delete.title", { name: key.name }),
 			description: used ? (
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<Text as="p">{t("delete.usedDescription", { count: key.uses.length })}</Text>
 					<List data-testid="delete-dependents">
 						{key.uses.map((use) => (
@@ -86,37 +83,30 @@ export function ApiKeysSettings() {
 	};
 
 	const rowMenu = (key: ApiKeyView): MenuAction[] => [
-		{ kind: "item", label: t("menu.rename"), icon: Pencil, onSelect: () => setEditing({ mode: "rename", key }) },
-		{ kind: "item", label: t("menu.replace"), icon: RefreshCw, onSelect: () => setEditing({ mode: "replace", key }) },
+		{ kind: "item", label: t("menu.rename"), icon: Edit, onSelect: () => setEditing({ mode: "rename", key }) },
+		{ kind: "item", label: t("menu.replace"), icon: Renew, onSelect: () => setEditing({ mode: "replace", key }) },
 		...key.slots.map(
 			(use): MenuAction => ({
 				kind: "item",
 				label: t("menu.clearSlot", { label: use.label }),
-				icon: Unplug,
+				icon: Plug,
 				onSelect: () => clearSlot.mutate({ plugin: use.plugin, slot: use.ref, label: use.label }),
 			}),
 		),
 		{ kind: "separator" },
-		{ kind: "item", label: t("menu.delete"), icon: Trash2, destructive: true, onSelect: () => askDelete(key) },
+		{ kind: "item", label: t("menu.delete"), icon: TrashCan, destructive: true, onSelect: () => askDelete(key) },
 	];
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="y" data-testid="api-keys-settings">
+		<Stack gap={0} grow minHeight={0} overflow="y" data-testid="api-keys-settings">
 			<PageActions>
 				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("add")}
 				</Button>
 			</PageActions>
-			{list && !list.secretsAvailable && (
-				<Box paddingX="wide" paddingBottom="comfortable">
-					<Alert tone="danger" layout="stack">
-						<AlertTitle>{t("secret.title")}</AlertTitle>
-						<AlertDescription>{t("secret.description")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
-			<Inline border="y" paddingX="wide" paddingY="condensed" shrink={false}>
+			{list && !list.secretsAvailable && <Banner role="alert" title={t("secret.description")} />}
+			<Inline border="y" paddingX={32} paddingY={8} shrink={false}>
 				<Text variant="caption" tone="muted">
 					{list
 						? [
@@ -135,7 +125,7 @@ export function ApiKeysSettings() {
 				onRetry={() => void query.refetch()}
 				onAdd={() => setEditing({ mode: "add" })}
 			/>
-			<Box paddingX="wide" paddingY="comfortable">
+			<Box paddingX={32} paddingY={16}>
 				<Text as="p" variant="caption" tone="muted">
 					{t("note")}
 				</Text>
@@ -174,54 +164,58 @@ function KeyRows({
 	onAdd: () => void;
 }) {
 	const t = useTranslator(apiKeysMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const list = query.data;
 	if (!list) {
 		if (query.error) {
 			return (
-				<Box paddingX="wide" paddingY="normal">
+				<Box paddingX={32} paddingY={12}>
 					<LoadErrorAlert message={errorText(site, query.error, t("load.failed"))} onRetry={onRetry} />
 				</Box>
 			);
 		}
 		return (
-			<Box paddingX="wide" paddingY="comfortable">
-				<Skeleton shape="control" />
+			<Box paddingX={32} paddingY={16}>
+				<Text as="p" variant="note" tone="subtle" role="status">
+					{tc("loading")}
+				</Text>
 			</Box>
 		);
 	}
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
 		return (
-			<EmptyState
-				icon={KeyRound}
-				title={t("empty.title")}
-				description={t("empty.description")}
-				action={{ label: t("add"), icon: Plus, onClick: onAdd, disabled: !list.secretsAvailable }}
-			/>
+			<Box paddingX={32}>
+				<EmptyState
+					title={t("empty.title")}
+					description={t("empty.description")}
+					action={{ label: t("add"), onClick: onAdd, disabled: !list.secretsAvailable }}
+				/>
+			</Box>
 		);
 	}
 	return (
-		<Stack as="ul" gap="none" border="bottom" aria-label={t("title")}>
+		<Stack as="ul" gap={0} border="bottom" aria-label={t("title")}>
 			{list.items.map((key) => (
 				<Inline
 					as="li"
 					key={key.id}
-					gap="normal"
-					paddingX="wide"
-					paddingY="normal"
+					gap={12}
+					paddingX={32}
+					paddingY={12}
 					border="top"
 					data-testid={`api-key-${key.name}`}
 				>
-					<Stack gap="hair" grow minWidth={0}>
-						<Inline gap="condensed">
+					<Stack gap={2} grow minWidth={0}>
+						<Inline gap={8}>
 							<Text weight="medium" truncate>
 								{key.name}
 							</Text>
 							{!key.readable && (
-								<Badge variant="danger" title={t("row.unreadableHint")}>
+								<Text variant="meta" tone="danger" title={t("row.unreadableHint")}>
 									{t("row.unreadable")}
-								</Badge>
+								</Text>
 							)}
 						</Inline>
 						{!key.readable ? (
@@ -229,15 +223,15 @@ function KeyRows({
 								{t("row.unreadableHint")}
 							</Text>
 						) : key.uses.length > 0 ? (
-							<Inline as="ul" aria-label={t("row.usedBy")} gap="tight" wrap paddingTop="condensed">
+							<Inline as="ul" aria-label={t("row.usedBy")} gap={4} wrap paddingTop={8}>
 								{key.uses.map((use) => (
 									<Box
 										as="li"
 										key={`${use.plugin}:${use.ref}`}
 										background="selected"
 										radius="sm"
-										paddingX="condensed"
-										paddingY="hair"
+										paddingX={8}
+										paddingY={2}
 									>
 										<Text variant="caption" weight="medium">
 											{use.label}
@@ -267,13 +261,13 @@ function KeyRows({
 				<Inline
 					as="li"
 					key={`${slot.plugin}:${slot.slot}`}
-					gap="normal"
-					paddingX="wide"
-					paddingY="normal"
+					gap={12}
+					paddingX={32}
+					paddingY={12}
 					border="top"
 					data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 				>
-					<Inline gap="condensed" grow minWidth={0}>
+					<Inline gap={8} grow minWidth={0}>
 						<Text weight="medium" truncate>
 							{slot.label}
 						</Text>
@@ -283,8 +277,8 @@ function KeyRows({
 					</Inline>
 					<Button
 						type="button"
-						variant="outline"
-						size="xs"
+						variant="secondary"
+						size="sm"
 						disabled={!list.secretsAvailable}
 						onClick={() => onAssign(slot)}
 					>
@@ -325,7 +319,7 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 			<DialogContent data-testid="api-key-slot-dialog">
 				<Stack
 					as="form"
-					gap="comfortable"
+					gap={16}
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();
@@ -418,7 +412,7 @@ function KeyDialog({
 			<DialogContent data-testid="api-key-dialog">
 				<Stack
 					as="form"
-					gap="comfortable"
+					gap={16}
 					onSubmit={(event) => {
 						event.preventDefault();
 						void save();

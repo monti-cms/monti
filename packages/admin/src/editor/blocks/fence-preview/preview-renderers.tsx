@@ -39,7 +39,7 @@ export class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
 				return this.props.fallback(this.state.error);
 			}
 			return (
-				<div className="rounded-md border border-monti-danger-muted bg-monti-danger-muted p-normal font-mono text-monti-caption text-monti-danger">
+				<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
 					{this.state.error.message}
 				</div>
 			);
@@ -96,20 +96,20 @@ export function LazyFencePreview({
 	}
 	if (loadError) {
 		return (
-			<div className="rounded-md border border-monti-danger-muted bg-monti-danger-muted p-normal font-mono text-monti-caption text-monti-danger">
+			<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
 				{t("preview.loadFailed", { label, error: loadError })}
 			</div>
 		);
 	}
 	if (!Renderer) {
 		return (
-			<div className="py-condensed text-center text-monti-caption text-monti-muted">
+			<div className="py-monti-8 text-center text-monti-caption text-monti-muted">
 				{t("preview.loading", { label })}
 			</div>
 		);
 	}
 	if (!trimmed) {
-		return <div className="py-condensed text-center text-monti-caption text-monti-muted italic">{emptyText}</div>;
+		return <div className="py-monti-8 text-center text-monti-caption text-monti-muted italic">{emptyText}</div>;
 	}
 	return (
 		<PreviewErrorBoundary resetKey={trimmed}>
@@ -169,7 +169,7 @@ export function MathPreview({ value, className }: { value: string; className?: s
 
 	if (error) {
 		return (
-			<div className="rounded-md border border-monti-danger-muted bg-monti-danger-muted p-normal font-mono text-monti-caption text-monti-danger">
+			<div className="rounded-monti-md border border-monti-danger/40 bg-monti-danger-muted p-monti-12 font-mono text-monti-caption text-monti-danger">
 				{error}
 			</div>
 		);
@@ -177,14 +177,14 @@ export function MathPreview({ value, className }: { value: string; className?: s
 
 	if (!value.trim()) {
 		return (
-			<div className="py-condensed text-center text-monti-caption text-monti-muted italic">{t("math.placeholder")}</div>
+			<div className="py-monti-8 text-center text-monti-caption text-monti-muted italic">{t("math.placeholder")}</div>
 		);
 	}
 
 	return (
 		<PreviewErrorBoundary resetKey={trimmed}>
 			<div
-				className={cn("overflow-x-auto py-condensed text-center", className)}
+				className={cn("overflow-x-auto py-monti-8 text-center", className)}
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: katex produces safe display math markup
 				dangerouslySetInnerHTML={{ __html: html }}
 			/>

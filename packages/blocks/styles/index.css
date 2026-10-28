@@ -17,8 +17,8 @@
 	--monti-callout-note: var(--monti-fg-muted);
 	--monti-callout-tip: oklch(0.6 0.15 155);
 	--monti-callout-info: oklch(0.6 0.14 240);
-	--monti-callout-warning: var(--monti-warning-9);
-	--monti-callout-danger: var(--monti-danger-9);
+	--monti-callout-warning: var(--monti-fg-warning);
+	--monti-callout-danger: var(--monti-fg-danger);
 	--monti-chart-1: var(--chart-1, oklch(0.65 0.17 265));
 	--monti-chart-2: var(--chart-2, oklch(0.7 0.14 160));
 	--monti-chart-3: var(--chart-3, oklch(0.75 0.15 70));

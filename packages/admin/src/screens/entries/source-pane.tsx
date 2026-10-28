@@ -1,10 +1,10 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline, Stack } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
 import { useAdminComponents, useSourceFormat } from "../../admin-components";
 import { documentKey } from "../../editor/document-key";
@@ -68,7 +68,7 @@ export function SourcePane({
 			as="aside"
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			gap="none"
+			gap={0}
 			height="full"
 			minWidth={0}
 			overflow="y"
@@ -79,26 +79,26 @@ export function SourcePane({
 				data-source-header
 				position="sticky"
 				justify="between"
-				gap="condensed"
-				height="control"
+				gap={8}
+				height="icon-button"
 				shrink={false}
 				background="page"
 				border="bottom"
-				paddingX="comfortable"
+				paddingX={16}
 			>
 				<Heading as="h2" variant="label">
 					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
 				</Heading>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
-					<X aria-hidden />
+					<Close aria-hidden />
 				</IconButton>
 			</Inline>
-			<Box paddingX="spacious" paddingTop="section" paddingBottom="comfortable">
+			<Box paddingX={24} paddingTop={48} paddingBottom={16}>
 				<Heading as="h1" variant="display" tone={title ? undefined : "subtle"}>
 					{title || tc("untitled")}
 				</Heading>
 			</Box>
-			<Box paddingX="spacious" paddingTop="spacious">
+			<Box paddingX={24} paddingTop={24}>
 				<ScrollRoom>
 					<DocPreview doc={doc} label={t("sourcePane.body")} />
 				</ScrollRoom>

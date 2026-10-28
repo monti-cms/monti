@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CodeBlock, DiffMark, DiffView } from "./code-block";
+import { CodeBlock } from "./code-block";
 import { Stack } from "./stack";
-import { Text } from "./text";
+import { StoryCaption } from "./story-caption";
 
 const meta = {
-	title: "Layout/CodeBlock",
+	title: "Primitives/CodeBlock",
 	component: CodeBlock,
 	args: { wrap: true, maxHeight: "list", size: "caption", children: SAMPLE() },
 } satisfies Meta<typeof CodeBlock>;
@@ -22,12 +22,10 @@ export const Playground: Story = {};
 
 export const Wrap: Story = {
 	render: () => (
-		<Stack gap="normal">
+		<Stack gap={12}>
 			{[true, false].map((wrap) => (
-				<Stack key={String(wrap)} gap="tight">
-					<Text variant="label" tone="muted">
-						wrap {String(wrap)}
-					</Text>
+				<Stack key={String(wrap)} gap={4}>
+					<StoryCaption>wrap {String(wrap)}</StoryCaption>
 					<CodeBlock wrap={wrap}>{LONG_LINE}</CodeBlock>
 				</Stack>
 			))}
@@ -37,12 +35,12 @@ export const Wrap: Story = {
 
 export const MaxHeight: Story = {
 	render: () => (
-		<Stack direction="row" gap="normal" align="start">
+		<Stack gap={24}>
 			{(["list", "half", "none"] as const).map((maxHeight) => (
-				<Stack key={maxHeight} gap="tight" className="min-w-0 flex-1">
-					<Text variant="label" tone="muted">
-						maxHeight {maxHeight}
-					</Text>
+				<Stack key={maxHeight} gap={4}>
+					<StoryCaption>
+						maxHeight {maxHeight} ({{ list: "384px", half: "half the window", none: "no limit" }[maxHeight]})
+					</StoryCaption>
 					<CodeBlock maxHeight={maxHeight}>{MANY_LINES}</CodeBlock>
 				</Stack>
 			))}
@@ -52,68 +50,13 @@ export const MaxHeight: Story = {
 
 export const Size: Story = {
 	render: () => (
-		<Stack gap="normal">
-			{(["caption", "label"] as const).map((size) => (
-				<Stack key={size} gap="tight">
-					<Text variant="label" tone="muted">
-						size {size}
-					</Text>
+		<Stack gap={12}>
+			{(["caption", "note"] as const).map((size) => (
+				<Stack key={size} gap={4}>
+					<StoryCaption>size {size}</StoryCaption>
 					<CodeBlock size={size}>{SAMPLE()}</CodeBlock>
 				</Stack>
 			))}
-		</Stack>
-	),
-};
-
-const DIFF_LINES = [
-	{ type: "same", text: "---" },
-	{ type: "remove", text: "title: 여름 여행" },
-	{ type: "add", text: "title: 여름 여행 기록" },
-	{ type: "same", text: "status: 초안" },
-	{ type: "add", text: "tags: [여행, 일상]" },
-	{ type: "same", text: "---" },
-	{ type: "remove", text: "오래된 첫 문단입니다." },
-	{ type: "add", text: "새로 고쳐 쓴 첫 문단입니다." },
-] as const;
-
-/** Every line type: same, remove, add. */
-export const Diff: Story = {
-	render: () => <DiffView lines={DIFF_LINES} />,
-};
-
-export const DiffLineTypes: Story = {
-	render: () => (
-		<Stack gap="normal">
-			{(["same", "remove", "add"] as const).map((type) => (
-				<Stack key={type} gap="tight">
-					<Text variant="label" tone="muted">
-						type {type}
-					</Text>
-					<DiffView lines={[{ type, text: "여름 여행 기록" }]} />
-				</Stack>
-			))}
-		</Stack>
-	),
-};
-
-/** Marks inside a sentence: a suggested rewrite. */
-export const Marks: Story = {
-	render: () => (
-		<Stack gap="normal">
-			{(["remove", "add"] as const).map((type) => (
-				<Stack key={type} gap="tight">
-					<Text variant="label" tone="muted">
-						DiffMark {type}
-					</Text>
-					<Text>
-						오늘은 <DiffMark type={type}>맑은 하루</DiffMark>였다.
-					</Text>
-				</Stack>
-			))}
-			<Text>
-				오늘은 <DiffMark type="remove">흐린</DiffMark>
-				<DiffMark type="add">맑은</DiffMark> 하루였다.
-			</Text>
 		</Stack>
 	),
 };

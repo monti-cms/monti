@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text, TextLink } from "@monti-cms/ui";
+import { Box, Stack, Text, TextButton } from "@monti-cms/ui";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { type LinkTarget, useLinkTarget } from "./link-targets";
@@ -19,7 +19,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	const state = useLinkTarget(entryId);
 	if (!state || state.status === "loading") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="muted">
 					{t("link.targetLoading")}
 				</Text>
@@ -28,7 +28,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	}
 	if (state.status === "missing") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="danger">
 					{t("link.targetMissing")}
 				</Text>
@@ -37,7 +37,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 	}
 	if (state.status === "error") {
 		return (
-			<Box as="span" paddingX="tight">
+			<Box as="span" paddingX={4}>
 				<Text variant="caption" tone="muted">
 					{t("link.targetUnavailable")}
 				</Text>
@@ -49,8 +49,9 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 		? t("link.targetOpenSite", { title: nameOf(tc, target) })
 		: t("link.targetOpenAdmin", { title: nameOf(tc, target) });
 	return (
-		<Box as="span" paddingX="tight" minWidth={0} maxWidth="panel-sm">
-			<TextLink
+		<Box as="span" paddingX={4} minWidth={0} maxWidth="menu">
+			<TextButton
+				variant="underline"
 				href={target.href}
 				target="_blank"
 				rel="noreferrer noopener"
@@ -59,8 +60,8 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 				// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 				onMouseDown={(event) => event.preventDefault()}
 			>
-				<Stack as="span" gap="none">
-					<Text variant="caption" tone="accent" truncate>
+				<Stack as="span" gap={0}>
+					<Text variant="caption" tone="default" truncate>
 						{nameOf(tc, target)}
 					</Text>
 					<Text variant="caption" tone="muted" truncate>
@@ -68,7 +69,7 @@ export function LinkTargetAnchor({ entryId }: { entryId: string }) {
 						{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}
 					</Text>
 				</Stack>
-			</TextLink>
+			</TextButton>
 		</Box>
 	);
 }
@@ -85,7 +86,7 @@ export function LinkTargetSummary({ entryId }: { entryId: string }) {
 	else text = t("link.target", { title: nameOf(tc, state.target) });
 	const path = state?.status === "ready" ? state.target.path : null;
 	return (
-		<Stack gap="hair">
+		<Stack gap={2}>
 			<Text as="p" variant="caption" tone={state?.status === "missing" ? "danger" : "default"}>
 				{text}
 			</Text>

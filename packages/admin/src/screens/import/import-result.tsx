@@ -1,14 +1,14 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Badge, Box, Heading, Inline, Stack, Text, TextLink } from "@monti-cms/ui";
+import { Box, Count, Heading, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ImportResultEntry, ImportRun, ImportStep } from "../../api/import";
 import { importMessages } from "./messages";
 
-const OUTCOME_VARIANT = {
+const OUTCOME_TONE = {
 	imported: "success",
 	draft: "warning",
-	skipped: "secondary",
+	skipped: "subtle",
 	failed: "danger",
 } as const;
 
@@ -42,35 +42,30 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	// What the editor checks said about the saved body, once each.
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
-		<Stack
-			as="li"
-			gap="condensed"
-			paddingY="normal"
-			border="bottom"
-			data-testid="import-result"
-			data-outcome={entry.outcome}
-		>
-			<Inline gap="condensed" wrap>
-				<Badge variant={OUTCOME_VARIANT[entry.outcome]}>{t(`result.outcome.${entry.outcome}`)}</Badge>
+		<Stack as="li" gap={8} paddingY={12} border="bottom" data-testid="import-result" data-outcome={entry.outcome}>
+			<Inline gap={8} wrap>
+				<Text variant="label" tone={OUTCOME_TONE[entry.outcome]}>
+					{t(`result.outcome.${entry.outcome}`)}
+				</Text>
 				{entry.id ? (
-					<TextLink underline="hover" href={site.adminEntryEditHref(entry.id)}>
+					<TextButton href={site.adminEntryEditHref(entry.id)}>
 						<Text weight="medium">{entry.title ?? entry.slug ?? entry.key}</Text>
-					</TextLink>
+					</TextButton>
 				) : (
 					<Text weight="medium">{entry.title ?? entry.slug ?? entry.key}</Text>
 				)}
 				<Text variant="caption" tone="muted">
 					{site.localeLabel(entry.locale)}
 				</Text>
-				{entry.publish?.status === "done" && <Badge variant="outline">{t("result.published", { count: 1 })}</Badge>}
+				{entry.publish?.status === "done" && <Count>{t("result.published", { count: 1 })}</Count>}
 				{entry.id && (
-					<TextLink tone="accent" size="caption" href={site.adminEntryEditHref(entry.id)}>
+					<TextButton variant="underline" href={site.adminEntryEditHref(entry.id)}>
 						{t("result.open")}
-					</TextLink>
+					</TextButton>
 				)}
 			</Inline>
 			{(problems.length > 0 || entry.notes.length > 0 || warnings.length > 0) && (
-				<Stack as="ul" gap="hair" paddingX="tight">
+				<Stack as="ul" gap={2} paddingX={4}>
 					{problems.map(([label, step]) => (
 						<StepLine key={label ?? "create"} label={label} step={step} />
 					))}
@@ -95,7 +90,7 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const t = useTranslator(importMessages);
 	const { counts } = result;
 	return (
-		<Stack gap="comfortable" data-testid="import-run-result">
+		<Stack gap={16} data-testid="import-run-result">
 			<Heading as="h4">{t("result.title")}</Heading>
 			<Text as="p" tone="muted" data-testid="import-result-summary">
 				{[
@@ -108,8 +103,8 @@ export function ResultView({ result }: { result: ImportRun }) {
 					.filter(Boolean)
 					.join(" · ")}
 			</Text>
-			<Box radius="md" border="all" paddingX="normal" maxHeight="list" overflow="y">
-				<Stack as="ul" gap="none">
+			<Box radius="md" border="all" paddingX={12} maxHeight="list" overflow="y">
+				<Stack as="ul" gap={0}>
 					{result.results.map((entry) => (
 						<ResultRow key={entry.key} entry={entry} />
 					))}

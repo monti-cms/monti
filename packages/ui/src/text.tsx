@@ -14,29 +14,27 @@ export const textVariants = cva("", {
 	variants: {
 		variant: {
 			micro: "text-monti-micro",
+			meta: "text-monti-meta",
 			caption: "text-monti-caption",
+			note: "text-monti-note",
 			label: "text-monti-label",
 			body: "text-monti-body",
-			reading: "text-monti-reading",
 			title: "text-monti-title",
+			reading: "text-monti-reading",
 			heading: "text-monti-heading",
+			page: "text-monti-page",
 			display: "text-monti-display",
 		},
 		tone: {
 			default: "text-monti-default",
 			muted: "text-monti-muted",
 			subtle: "text-monti-subtle",
-			accent: "text-monti-accent",
+			faint: "text-monti-faint",
+			proposal: "text-monti-proposal",
 			danger: "text-monti-danger",
 			warning: "text-monti-warning",
 			success: "text-monti-success",
 			inherit: "",
-			/** The field list's kind colors (component tokens of the collection settings). */
-			"kind-teal": "text-monti-kind-teal",
-			"kind-blue": "text-monti-kind-blue",
-			"kind-violet": "text-monti-kind-violet",
-			"kind-orange": "text-monti-kind-orange",
-			"kind-green": "text-monti-kind-green",
 		},
 		weight: { role: "", medium: "font-medium", semibold: "font-semibold" },
 		mono: { true: "font-mono" },
@@ -95,7 +93,7 @@ function Text({
 	);
 }
 
-/** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `heading` for the screen, `display` for the post title. */
+/** A heading in a heading role (`variant`): `title` for sections, panels and dialogs (the default), `page` for the screen's title, `heading` for a heading in a text, `display` for the post title. */
 function Heading({
 	as: Tag = "h2",
 	variant = "title",
@@ -105,8 +103,8 @@ function Heading({
 	...props
 }: React.HTMLAttributes<HTMLHeadingElement> & {
 	as?: "h1" | "h2" | "h3" | "h4";
-	/** `label` for a small heading inside a panel or sheet; `title` for sections, panels and dialogs; `heading` the screen; `display` the post title. */
-	variant?: "label" | "title" | "heading" | "display";
+	/** `label` for a small heading inside a panel or sheet; `title` for sections, panels and dialogs; `page` the title of a screen; `heading` a heading in a text; `display` the post title. */
+	variant?: "label" | "title" | "page" | "heading" | "display";
 	tone?: VariantProps<typeof textVariants>["tone"];
 	truncate?: boolean;
 }) {

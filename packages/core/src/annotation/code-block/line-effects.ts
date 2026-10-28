@@ -27,7 +27,7 @@ export interface CodeLineEffectDefinition {
 	readonly name: string;
 	/** Line effect menu label. Keep it short. */
 	readonly label: string;
-	/** Menu icon (lucide name). Must be a name registered in the admin UI. */
+	/** Menu icon (Carbon icon name, e.g. `text--highlight`). Must be a name registered in the admin UI. */
 	readonly icon?: string;
 	/** Class the public view adds to that line. */
 	readonly class: string;
@@ -81,7 +81,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.highlight");
 		},
-		icon: "highlighter",
+		icon: "text--highlight",
 		class: "inline-block w-full anno-mark-base bg-gray-400/20",
 		editor: { background: "bg-gray-400/20" },
 	},
@@ -91,7 +91,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.focus");
 		},
-		icon: "focus",
+		icon: "center--circle",
 		class: "code-focus",
 		editor: {
 			background: "bg-sky-400/10",
@@ -103,7 +103,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.plus");
 		},
-		icon: "plus",
+		icon: "add",
 		class:
 			"inline-block w-full anno-mark-base anno-mark:content-['+'] anno-mark:text-gray-400 bg-green-400/10 shadow-[inset_2px_0_0_0_rgba(74,222,128,1)]",
 		editor: {
@@ -116,7 +116,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.minus");
 		},
-		icon: "minus",
+		icon: "subtract",
 		class:
 			"inline-block w-full anno-mark-base anno-mark:content-['-'] anno-mark:text-gray-400 bg-red-400/10 shadow-[inset_2px_0_0_0_rgba(239,68,68,1)]",
 		editor: {
@@ -129,7 +129,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.warning");
 		},
-		icon: "triangle-alert",
+		icon: "warning--alt",
 		class: "underline decoration-wavy decoration-yellow-400/80",
 		editor: { wavy: "decoration-yellow-400/80" },
 	},
@@ -138,7 +138,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		get label() {
 			return t("lineEffect.error");
 		},
-		icon: "circle-x",
+		icon: "close--outline",
 		class: "underline decoration-wavy decoration-red-500",
 		editor: { wavy: "decoration-red-500" },
 	},

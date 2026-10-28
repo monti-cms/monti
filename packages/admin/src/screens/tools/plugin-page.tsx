@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+import { Box } from "@monti-cms/ui";
 import type { AdminPlugin } from "../../plugins";
 import { EmptyState } from "../shared/empty-state";
 import { toolsMessages } from "./messages";
@@ -18,5 +19,9 @@ export function PluginToolPage({
 	const t = useTranslator(toolsMessages);
 	const Page = plugin?.pages?.[path];
 	if (Page) return <Page />;
-	return <EmptyState title={t("missingTitle")} description={t("missingBody", { plugin: name, path })} />;
+	return (
+		<Box paddingX={32}>
+			<EmptyState title={t("missingTitle")} description={t("missingBody", { plugin: name, path })} />
+		</Box>
+	);
 }

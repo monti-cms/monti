@@ -1,5 +1,6 @@
 "use client";
 
+import { AppConnectivity } from "@carbon/icons-react";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	DropdownMenu,
@@ -11,7 +12,6 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { Puzzle } from "lucide-react";
 import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { allowanceOfState } from "./allowed-extension";
@@ -31,7 +31,7 @@ export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 	const customBlocks = useMemo(() => offeredBlocks(site, editor), [site, editor]);
 	return customBlocks.map((block) => {
 		// The block definition's icon (`editor.icon`). Falls back to a puzzle icon.
-		const Icon = (typeof block.icon === "string" ? iconByName(block.icon) : block.icon) ?? Puzzle;
+		const Icon = (typeof block.icon === "string" ? iconByName(block.icon) : block.icon) ?? AppConnectivity;
 		return (
 			<DropdownMenuItem
 				key={block.id ?? block.title}
@@ -43,7 +43,7 @@ export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 				}}
 			>
 				<Icon aria-hidden />
-				<Stack as="span" gap="none" minWidth={0} grow>
+				<Stack as="span" gap={0} minWidth={0} grow>
 					<Text truncate>{block.title}</Text>
 					<Text variant="caption" tone="muted" truncate>
 						{block.description}
@@ -66,9 +66,9 @@ export function CustomBlockMenu({ editor }: { editor: Editor }) {
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<Puzzle aria-hidden />
+				<AppConnectivity aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="start" width="lg">
+			<DropdownMenuContent align="start">
 				<CustomBlockMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

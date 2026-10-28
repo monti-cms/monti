@@ -1,8 +1,8 @@
 "use client";
 
+import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
-import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
 import { BLOCK_TOOLBAR } from "./block-model";
@@ -100,7 +100,7 @@ export function AttributeInput({
 			className={cn(
 				"min-w-0 border-0 bg-transparent p-0 outline-none placeholder:text-current placeholder:opacity-50 focus-visible:ring-0",
 				boxed &&
-					"h-7 w-full rounded-md border border-monti-default px-condensed text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-focus focus-visible:ring-3 focus-visible:ring-monti-focus-soft",
+					"h-7 w-full rounded-monti-md border border-monti-default px-monti-8 text-monti-caption placeholder:text-monti-muted placeholder:opacity-100 focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
 			)}
 		/>
 	);
@@ -138,7 +138,7 @@ export function ContainerToolbar({
 
 /** Icon button of the toolbar. Its name shows on mouse hover. */
 export function ToolbarButton(props: ComponentProps<typeof IconButton>) {
-	return <IconButton size="icon-xs" {...props} />;
+	return <IconButton {...props} />;
 }
 
 /**
@@ -161,7 +161,7 @@ export function BlockSettings({
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
 			<ToolbarButton label={label} trigger={(button) => <PopoverTrigger render={button} />}>
-				<Settings2 aria-hidden />
+				<SettingsAdjust aria-hidden />
 			</ToolbarButton>
 			<PopoverContent align="end" width="md">
 				{children}
@@ -184,8 +184,8 @@ export function BlockSettingsField({
 	children: ReactNode;
 }) {
 	return (
-		<Stack gap="tight">
-			<Inline justify="between" gap="condensed">
+		<Stack gap={4}>
+			<Inline justify="between" gap={8}>
 				<Label htmlFor={htmlFor} size="caption" tone="muted">
 					{label}
 				</Label>

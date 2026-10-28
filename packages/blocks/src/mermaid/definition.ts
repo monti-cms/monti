@@ -24,7 +24,7 @@ export const mermaidBlock = defineBlock({
 		get keywords() {
 			return ["mermaid", ...keywordList(t("keywords"))];
 		},
-		icon: "workflow",
+		icon: "workflow-automation",
 		get placeholder() {
 			return t("placeholder");
 		},

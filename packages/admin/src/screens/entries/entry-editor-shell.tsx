@@ -1,12 +1,12 @@
 "use client";
 
+import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, Inline, Input, Stack, Text, TextLink } from "@monti-cms/ui";
+import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminComponents, useEditorExtensions } from "../../admin-components";
 import { adminEntryClient } from "../../api/entries";
@@ -270,9 +270,9 @@ export function EntryEditorShell({
 			entry?.source ? (
 				<>
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
-					<TextLink tone="accent" render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
+					<TextButton variant="underline" render={<Link href={site.adminEntryEditHref(entry.source.id)} />}>
 						{te("inspector.sourceLink")}
-					</TextLink>
+					</TextButton>
 				</>
 			) : undefined,
 		[entry?.source, site.adminEntryEditHref, site.localeLabel, te],
@@ -443,8 +443,7 @@ export function EntryEditorShell({
 	const sourcePaneToggle = translationSource && (
 		<ToolbarToggle
 			label={te("source")}
-			text={te("source")}
-			icon={PanelLeft}
+			icon={OpenPanelLeft}
 			pressed={isSourcePaneOpen}
 			onPressedChange={toggleSourcePane}
 		/>
@@ -452,7 +451,7 @@ export function EntryEditorShell({
 	const sourceModeToggle = sourcePanel && (
 		<ToolbarToggle
 			label={sourcePanel.label}
-			icon={FileCode}
+			icon={CodeReference}
 			pressed={isSourceMode}
 			// A body that could not be read cannot return to visual mode.
 			disabled={isSourceMode && !canUseVisual}
@@ -482,7 +481,7 @@ export function EntryEditorShell({
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
 			<OpenEditorContext.Provider value={openEditor}>
-				<Stack gap="none" height="screen" overflow="clip" background="page">
+				<Stack gap={0} height="screen" overflow="clip" background="page">
 					<EntryEditorHeader
 						editor={editor}
 						commands={commands}
@@ -498,13 +497,13 @@ export function EntryEditorShell({
 						onCompareSource={() => setIsSourceCompareOpen(true)}
 					/>
 
-					<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden" position="relative">
+					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
 						{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
 						<Inline
 							ref={setArea}
 							container
 							align="stretch"
-							gap="none"
+							gap={0}
 							grow
 							minWidth={0}
 							minHeight={0}
@@ -533,7 +532,7 @@ export function EntryEditorShell({
 										</>
 									}
 									toolbarAside={
-										<Inline gap="tight">
+										<Inline gap={4}>
 											{site.ADMIN_TEMPLATES && (
 												<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
 											)}

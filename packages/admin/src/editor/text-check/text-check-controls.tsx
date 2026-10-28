@@ -1,10 +1,12 @@
 "use client";
 
+import { Information, SpellCheck, ViewOff, Warning, WarningAlt } from "@carbon/icons-react";
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
-	Badge,
 	Button,
+	Count,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -14,13 +16,11 @@ import {
 	Inline,
 	Popover,
 	PopoverContent,
-	Spinner,
 	Stack,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
-import { CircleAlert, EyeOff, Info, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { useIconByName } from "../../screens/shared/collection-icon";
@@ -29,11 +29,11 @@ import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";
 import type { TextCheckController } from "./use-text-check";
 
-const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; tone: "danger" | "warning" | "inherit" }>> =
+const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: MontiIcon; tone: "danger" | "warning" | "inherit" }>> =
 	{
-		error: { icon: CircleAlert, tone: "danger" },
-		warning: { icon: TriangleAlert, tone: "warning" },
-		info: { icon: Info, tone: "inherit" },
+		error: { icon: Warning, tone: "danger" },
+		warning: { icon: WarningAlt, tone: "warning" },
+		info: { icon: Information, tone: "inherit" },
 	};
 
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
@@ -56,7 +56,7 @@ function CheckerButton({ checker, controller }: { checker: TextChecker; controll
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={() => void controller.run(checker.id)}
 		>
-			{running ? <Spinner /> : <Glyph aria-hidden />}
+			<Glyph aria-hidden />
 		</IconButton>
 	);
 }
@@ -67,7 +67,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 	const { issues } = controller;
 	const count = issues.length;
 	return (
-		<Inline gap="hair">
+		<Inline gap={2}>
 			{controller.checkers.map((checker) => (
 				<CheckerButton key={checker.id} checker={checker} controller={controller} />
 			))}
@@ -76,17 +76,16 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 					<IconButton
 						label={t("results")}
 						side="bottom"
-						size="sm"
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<Badge variant="secondary">{count > 99 ? "99+" : count}</Badge>
+						<Count>{count > 99 ? "99+" : count}</Count>
 					</IconButton>
-					<DropdownMenuContent align="end" width="lg">
+					<DropdownMenuContent align="end">
 						{issues.map((issue) => (
 							<DropdownMenuItem key={issue.key} onClick={() => controller.jump(issue)}>
 								<SeverityIcon severity={issue.severity} />
-								<Stack as="span" gap="none" minWidth={0} grow>
+								<Stack as="span" gap={0} minWidth={0} grow>
 									<Text weight="medium" truncate>
 										{issue.text.trim() || issue.message}
 									</Text>
@@ -162,17 +161,17 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 	const editable = controller.editor.isEditable;
 	return (
 		<>
-			<Inline align="start" gap="condensed">
+			<Inline align="start" gap={8}>
 				<SeverityIcon severity={issue.severity} />
 				<Text as="p">{issue.message || issue.text}</Text>
 			</Inline>
 			{issue.suggestions.length > 0 && (
-				<Inline wrap gap="tight">
+				<Inline wrap gap={4}>
 					{issue.suggestions.slice(0, 6).map((suggestion) => (
 						<Button
 							key={suggestion}
 							type="button"
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							disabled={!editable}
 							onClick={() => controller.apply(issue, suggestion)}
@@ -182,21 +181,21 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					))}
 				</Inline>
 			)}
-			<Inline gap="condensed">
+			<Inline gap={8}>
 				<Inline grow minWidth={0}>
 					<Text variant="caption" tone="muted" truncate>
 						{checker?.label ?? issue.source}
 					</Text>
 				</Inline>
 				{issue.url && (
-					<TextLink href={issue.url} target="_blank" rel="noreferrer noopener" tone="accent" size="caption">
+					<TextButton variant="underline" href={issue.url} target="_blank" rel="noreferrer noopener">
 						{t("explain")}
-					</TextLink>
+					</TextButton>
 				)}
-				<Button type="button" variant="ghost" size="sm" onClick={() => controller.ignore(issue)}>
-					<EyeOff aria-hidden />
+				<TextButton type="button" onClick={() => controller.ignore(issue)}>
+					<ViewOff aria-hidden />
 					{t("ignore")}
-				</Button>
+				</TextButton>
 			</Inline>
 		</>
 	);

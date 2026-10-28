@@ -3,7 +3,7 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Checkbox, Inline, Text } from "@monti-cms/ui";
+import { Checkbox, Inline, Text, TextButton } from "@monti-cms/ui";
 import {
 	type ColumnOrderState,
 	type ColumnSizingState,
@@ -167,21 +167,15 @@ export function useEntriesTable({
 				enableResizing: false,
 				header: () => <Text srOnly>{t("list.actions")}</Text>,
 				cell: ({ row }) => (
-					<Inline gap="tight" justify="end">
+					<Inline gap={4} justify="end">
 						{isTrash && (
 							<>
-								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>
+								<TextButton type="button" onClick={() => onRestore?.(row.original)}>
 									{tc("lifecycle.restore")}
-								</Button>
-								<Button
-									type="button"
-									variant="ghost"
-									tone="danger"
-									size="xs"
-									onClick={() => onPermanentDelete?.(row.original)}
-								>
+								</TextButton>
+								<TextButton type="button" variant="danger" onClick={() => onPermanentDelete?.(row.original)}>
 									{tc("lifecycle.deletePermanently")}
-								</Button>
+								</TextButton>
 							</>
 						)}
 						<MoreActionsButton

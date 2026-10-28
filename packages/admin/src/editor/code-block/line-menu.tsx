@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, ChevronSort, Code, CollapseAll, TextHighlight, View } from "@carbon/icons-react";
 import {
 	COLLAPSE,
 	type CodeLineEffect,
@@ -10,7 +11,6 @@ import {
 } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { cn } from "@monti-cms/ui";
-import { Check, ChevronsDownUp, ChevronsUpDown, Code2, Eye, Highlighter } from "lucide-react";
 import { type CSSProperties, useEffect, useRef } from "react";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { codeBlockMessages } from "./messages";
@@ -28,7 +28,7 @@ interface LineMenuProps {
 }
 
 const ITEM_CLASS =
-	"flex w-full items-center gap-condensed rounded-md px-condensed py-tight text-left text-monti-caption hover:bg-monti-hover disabled:pointer-events-none disabled:opacity-50";
+	"flex w-full items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-4 text-left text-monti-caption hover:bg-monti-selected disabled:pointer-events-none disabled:opacity-50";
 
 interface ItemProps {
 	disabled?: boolean;
@@ -64,7 +64,7 @@ function CheckItem({ checked, onSelect, children }: ItemProps & { checked: boole
 			className={ITEM_CLASS}
 		>
 			{children}
-			<Check aria-hidden className={cn("ml-auto size-3.5", !checked && "invisible")} />
+			<Checkmark aria-hidden className={cn("ml-auto size-3.5", !checked && "invisible")} />
 		</button>
 	);
 }
@@ -147,11 +147,11 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 			data-code-ui=""
 			contentEditable={false}
 			style={style}
-			className="absolute z-20 flex w-44 flex-col gap-hair rounded-md border bg-monti-overlay p-tight font-sans text-monti-default shadow-monti-floating"
+			className="absolute z-20 flex w-44 flex-col gap-monti-2 rounded-monti-md border bg-monti-page p-monti-4 font-sans text-monti-default shadow-monti-floating"
 		>
 			{listed.map((effect) => {
 				const active = hasLineEffect(lineEffects, effect.name, start, end);
-				const Icon = iconByName(effect.icon) ?? Highlighter;
+				const Icon = iconByName(effect.icon) ?? TextHighlight;
 				return (
 					<CheckItem
 						key={effect.name}
@@ -163,11 +163,11 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 					</CheckItem>
 				);
 			})}
-			{listed.length > 0 && showFold && <div aria-hidden className="my-hair h-px bg-monti-divider" />}
+			{listed.length > 0 && showFold && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
 			{collapse ? (
 				<>
 					<MenuItem onSelect={() => onChange(lineEffects.filter((effect) => effect !== collapse))}>
-						<ChevronsUpDown aria-hidden className="size-3.5" />
+						<ChevronSort aria-hidden className="size-3.5" />
 						{t("lineMenu.uncollapse")}
 						<span className="ml-auto text-monti-muted">
 							{t("lineMenu.collapsedRange", { start: collapse.start + 1, end: collapse.end })}
@@ -177,7 +177,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 						checked={collapse.attrs.open === true}
 						onSelect={() => setCollapseOpen(collapse.attrs.open !== true)}
 					>
-						<Eye aria-hidden className="size-3.5" />
+						<View aria-hidden className="size-3.5" />
 						{t("lineMenu.openFromStart")}
 					</CheckItem>
 				</>
@@ -193,15 +193,15 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 						)
 					}
 				>
-					<ChevronsDownUp aria-hidden className="size-3.5" />
+					<CollapseAll aria-hidden className="size-3.5" />
 					{t("lineMenu.collapse")}
 				</MenuItem>
 			) : null}
 			{onLinkText && (
 				<>
-					{(listed.length > 0 || showFold) && <div aria-hidden className="my-hair h-px bg-monti-divider" />}
+					{(listed.length > 0 || showFold) && <div aria-hidden className="my-monti-2 h-px bg-monti-divider" />}
 					<MenuItem onSelect={onLinkText}>
-						<Code2 aria-hidden className="size-3.5" />
+						<Code aria-hidden className="size-3.5" />
 						{t("lineMenu.linkText")}
 					</MenuItem>
 				</>

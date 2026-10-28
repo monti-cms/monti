@@ -35,7 +35,7 @@ export const tabsBlock = defineBlock({
 		get keywords() {
 			return ["tabs", ...keywordList(t("keywords"))];
 		},
-		icon: "square-stack",
+		icon: "square--outline",
 		get insert() {
 			return {
 				children: [

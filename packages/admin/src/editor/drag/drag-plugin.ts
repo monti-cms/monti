@@ -48,7 +48,7 @@ function createDropIndicatorView(editorView: EditorView) {
 			element = document.createElement("div");
 			element.setAttribute("aria-hidden", "true");
 			element.dataset.montiDropIndicator = "";
-			element.className = "pointer-events-none absolute z-50 h-0.5 -translate-y-1/2 rounded-sm bg-monti-emphasis";
+			element.className = "pointer-events-none absolute z-50 h-0.5 -translate-y-1/2 rounded-monti-sm bg-monti-emphasis";
 			parent.appendChild(element);
 		}
 		element.style.left = `${box.left - parentRect.left + parent.scrollLeft}px`;

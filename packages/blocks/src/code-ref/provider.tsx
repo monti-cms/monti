@@ -1,5 +1,6 @@
 "use client";
 
+import { Code, Unlink } from "@carbon/icons-react";
 import { type AdminComponents, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
@@ -14,7 +15,6 @@ import {
 } from "@monti-cms/admin/editor";
 import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
-import { Code2, Unlink } from "lucide-react";
 import { codeRefBlock } from "./definition";
 import { codeRefMessages } from "./messages";
 
@@ -42,7 +42,7 @@ function CodeRefBubbleButton({ editor, inCode }: EditorBubbleProps) {
 				startLinkFromText(editor.view, from, to);
 			}}
 		>
-			<Code2 aria-hidden />
+			<Code aria-hidden />
 		</BubbleButton>
 	);
 }
@@ -60,10 +60,10 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 		: null;
 	return (
 		<>
-			<Box as="span" paddingX="tight" shrink={false}>
-				<Icon icon={Code2} size="sm" tone="muted" />
+			<Box as="span" paddingX={4} shrink={false}>
+				<Icon icon={Code} size="sm" tone="muted" />
 			</Box>
-			<Box paddingX="tight" maxWidth="panel-sm">
+			<Box paddingX={4} maxWidth="menu">
 				<Text as="div" variant="caption" tone={where ? "muted" : "danger"} truncate>
 					{where ? t("where", { where }) : t("none")}
 				</Text>
@@ -80,7 +80,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 
 /** Editor registration of the code-ref mark. Shown with an underline in the theme accent color. */
 export const codeRefMarkExtension: EditorMarkExtension = {
-	render: () => ({ class: "underline decoration-monti-accent decoration-solid underline-offset-4" }),
+	render: () => ({ class: "underline decoration-monti-strong decoration-solid underline-offset-4" }),
 	bubble: { group: "link", order: 1, Button: CodeRefBubbleButton },
 	detail: CodeRefDetail,
 };

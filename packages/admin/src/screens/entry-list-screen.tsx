@@ -1,11 +1,10 @@
 "use client";
 
+import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, Inline, PageTabs, Skeleton, Stack, Tabs, TabsTrigger, Text } from "@monti-cms/ui";
-import { FolderPlus, Plus } from "lucide-react";
+import { Box, Button, Inline, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
@@ -28,7 +27,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 			<ListSearch state={list.state} onChange={list.update} allowBody={!isTrash} />
 			{!isTrash && (
 				<Button type="button" size="sm" onClick={list.createNew}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("list.add", { label: list.label })}
 				</Button>
 			)}
@@ -64,8 +63,8 @@ function EntryListBody({ list }: { list: EntryList }) {
 	});
 	return (
 		<>
-			<Inline position="relative" align="stretch" gap="none" grow minHeight={0} overflow="hidden">
-				<Stack gap="none" grow minWidth={0} overflow="hidden">
+			<Inline position="relative" align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+				<Stack gap={0} grow minWidth={0} overflow="hidden">
 					<AdminEntriesTable
 						aboveTable={
 							<BulkBar
@@ -115,12 +114,12 @@ function EntryListBody({ list }: { list: EntryList }) {
 													{
 														kind: "item" as const,
 														label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
-														icon: FolderPlus,
+														icon: FolderAdd,
 														onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
 													},
 												]
 											: []),
-										{ kind: "item", label: t("list.add", { label: list.label }), icon: Plus, onSelect: list.createNew },
+										{ kind: "item", label: t("list.add", { label: list.label }), icon: Add, onSelect: list.createNew },
 									]
 						}
 						onDeleteKey={list.onDeleteKey}
@@ -148,7 +147,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 							onSaved={(saved) => {
 								// Keep the saved item open as is. For a new item, switch to editing the created item.
 								if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
-								toast.success(tc("saved"));
+								toast(tc("saved"));
 								void list.invalidateEntries();
 								list.reloadTaxonomies();
 							}}
@@ -170,71 +169,17 @@ function useMounted() {
 	return mounted;
 }
 
-/** Placeholder before the first render, in the places and sizes of the sidebar, the list header, its tabs and table, so nothing jumps. */
+/** Before the first render: a quiet line in the middle of the page, with nothing drawn in the shape of what will come. */
 function ListLoading() {
 	const tc = useTranslator(commonMessages);
 	return (
-		<Inline align="stretch" gap="none" height="screen" overflow="clip" aria-busy="true">
-			<Text srOnly>{tc("loading")}</Text>
-			<Stack
-				gap="condensed"
-				width="sidebar"
-				shrink={false}
-				border="right"
-				background="inset"
-				padding="condensed"
-				hideBelow="md"
-				aria-hidden
-			>
-				<Skeleton shape="control-sm" width="medium" />
-				<Stack gap="tight" paddingTop="normal">
-					{PLACEHOLDER_ROWS.map((row) => (
-						<Skeleton key={row} shape="control-sm" />
-					))}
-				</Stack>
-			</Stack>
-			<Stack gap="none" grow minWidth={0} aria-hidden>
-				<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious">
-					{/* The title bar: title and address on the left, search and the add button on the right. */}
-					<Inline justify="between" gap="normal" shrink={false} border="bottom-strong" paddingBottom="normal">
-						<Inline gap="condensed">
-							<Skeleton shape="line" width="short" />
-							<Skeleton shape="line" width="medium" />
-						</Inline>
-						<Inline gap="condensed">
-							<Skeleton shape="control-sm" width="medium" />
-							<Skeleton shape="control-sm" width="short" />
-						</Inline>
-					</Inline>
-					{/* Status tabs. */}
-					<Inline gap="comfortable" shrink={false} border="bottom" paddingY="condensed">
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-						<Skeleton shape="line" width="chip" />
-					</Inline>
-					{/* Editorial index rows. */}
-					<Stack gap="none">
-						{PLACEHOLDER_ROWS.slice(0, 6).map((row) => (
-							<Inline key={row} justify="between" gap="spacious" border="bottom" paddingY="comfortable">
-								<Stack gap="tight" grow>
-									<Skeleton shape="line" width="third" />
-									<Skeleton shape="line" width="short" />
-								</Stack>
-								<Inline gap="normal">
-									<Skeleton shape="line" width="chip" />
-									<Skeleton shape="line" width="short" />
-								</Inline>
-							</Inline>
-						))}
-					</Stack>
-				</Box>
-			</Stack>
-		</Inline>
+		<Stack height="screen" align="center" justify="center" aria-busy="true">
+			<Text as="p" tone="subtle" role="status">
+				{tc("loading")}
+			</Text>
+		</Stack>
 	);
 }
-
-const PLACEHOLDER_ROWS = Array.from({ length: 8 }, (_, index) => index);
 
 /** List screen. Opens the collection list, with no separate stats dashboard. */
 export function EntryListScreen() {
@@ -275,9 +220,9 @@ function TrashPage() {
 			<PageActions>
 				<EntryListHeaderActions list={list} />
 			</PageActions>
-			<Box width="full" maxWidth="content" centered paddingX="wide" shrink={false}>
+			<Box width="full" maxWidth="content" centered paddingX={32} shrink={false}>
 				<Tabs value={state.collection}>
-					<PageTabs inset="none" aria-label={t("dashboard.trashCollections")}>
+					<TabsList variant="bar" inset="none" aria-label={t("dashboard.trashCollections")}>
 						{site.COLLECTIONS.map((item) => (
 							<TabsTrigger
 								key={item}
@@ -288,7 +233,7 @@ function TrashPage() {
 								{site.COLLECTION_DEFINITIONS[item].label}
 							</TabsTrigger>
 						))}
-					</PageTabs>
+					</TabsList>
 				</Tabs>
 			</Box>
 			<EntryListBody list={list} />

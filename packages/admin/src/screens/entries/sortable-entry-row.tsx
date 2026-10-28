@@ -1,11 +1,11 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Close, Draggable } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Text } from "@monti-cms/ui";
 import { IconButton } from "@monti-cms/ui/internal";
-import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
 import type { RelationEntry } from "./use-relation-search";
@@ -42,20 +42,19 @@ export function SortableEntryRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"flex items-center gap-tight rounded-md border border-monti-muted bg-monti-page px-tight py-tight text-monti-caption",
+				"flex items-center gap-monti-4 rounded-monti-md border border-monti-muted bg-monti-page px-monti-4 py-monti-4 text-monti-caption",
 				isDragging && "relative z-10 shadow-monti-floating",
 			)}
 		>
 			<IconButton
 				ref={setActivatorNodeRef}
-				size="icon-xs"
 				label={t("entry.drag", { title })}
 				disabled={disabled}
 				className="cursor-grab touch-none active:cursor-grabbing"
 				{...attributes}
 				{...listeners}
 			>
-				<GripVertical />
+				<Draggable />
 			</IconButton>
 			<Text variant="caption" truncate>
 				{index + 1}. {title}
@@ -64,24 +63,18 @@ export function SortableEntryRow({
 					<Text tone="warning"> {t("entry.unpublished")}</Text>
 				)}
 			</Text>
-			<IconButton
-				size="icon-xs"
-				label={t("entry.up", { title })}
-				disabled={disabled || index === 0}
-				onClick={() => onMove(-1)}
-			>
+			<IconButton label={t("entry.up", { title })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
 				<ArrowUp />
 			</IconButton>
 			<IconButton
-				size="icon-xs"
 				label={t("entry.down", { title })}
 				disabled={disabled || index === count - 1}
 				onClick={() => onMove(1)}
 			>
 				<ArrowDown />
 			</IconButton>
-			<IconButton size="icon-xs" label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
-				<X />
+			<IconButton label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
+				<Close />
 			</IconButton>
 		</li>
 	);

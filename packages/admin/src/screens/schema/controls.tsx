@@ -1,28 +1,28 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Close, Undo } from "@carbon/icons-react";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Button,
+	ChangeDot,
 	FormFieldError,
 	IconButton,
 	Inline,
 	Input,
+	Segmented,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 	Stack,
-	StatusIndicator,
 	Switch,
 	Text,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import { useInSectionRow } from "../shared/section";
@@ -80,21 +80,16 @@ export function useSettingRevert(
 	};
 }
 
-/** A small dot that says "this has changes", with the word for a screen reader. */
-export function ChangeDot() {
+/** A small dot that says "this has changes", named for a screen reader. */
+export function ChangedMark() {
 	const t = useTranslator(schemaMessages);
-	return (
-		<Inline as="span" shrink={false} data-testid="change-dot">
-			<StatusIndicator tone="accent" size="xs" />
-			<Text srOnly>{t("changed")}</Text>
-		</Inline>
-	);
+	return <ChangeDot label={t("changed")} />;
 }
 
 /** A help text under a label or a control: a muted line that stays readable in width. */
 export function Help({ children }: { children: ReactNode }) {
 	return (
-		<Box maxWidth="prose">
+		<Box maxWidth="reading">
 			<Text as="p" variant="label" tone="muted">
 				{children}
 			</Text>
@@ -107,10 +102,10 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<Inline as="span" gap="hair" data-testid="field-changed">
-			<ChangeDot />
-			<IconButton label={t("revert.named", { name })} size="icon-xs" disabled={disabled} onClick={onRevert}>
-				<Undo2 aria-hidden />
+		<Inline as="span" gap={2} data-testid="field-changed">
+			<ChangedMark />
+			<IconButton label={t("revert.named", { name })} disabled={disabled} onClick={onRevert}>
+				<Undo aria-hidden />
 			</IconButton>
 		</Inline>
 	);
@@ -119,10 +114,10 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<Stack as="ul" gap="hair" data-testid="schema-issues">
+		<Stack as="ul" gap={2} data-testid="schema-issues">
 			{issues.map((issue) => (
 				<Text as="li" variant="caption" tone="danger" key={`${issue.path}:${issue.message}`}>
-					<Box as="span" background="danger-muted" radius="sm" paddingX="tight">
+					<Box as="span" background="danger-muted" radius="sm" paddingX={4}>
 						<Text as="code">{issue.path || "(root)"}</Text>
 					</Box>{" "}
 					{issue.message}
@@ -222,31 +217,25 @@ export function FlagSwitch({
 	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
-		<Box maxWidth={inSectionRow ? undefined : "prose"} paddingY={inSectionRow ? "normal" : undefined}>
-			<Inline align="center" justify="between" gap="comfortable">
-				<Stack gap="hair">
+		<Box maxWidth={inSectionRow ? undefined : "reading"} paddingY={inSectionRow ? 12 : undefined}>
+			<Inline align="center" justify="between" gap={16}>
+				<Stack gap={2}>
 					<Text as="label" htmlFor={id} weight="medium">
 						{label}
 					</Text>
 					{desc && <Help>{desc}</Help>}
 				</Stack>
-				<Inline gap="condensed" shrink={false}>
+				<Inline gap={8} shrink={false}>
 					{revert && <RevertMark name={label} onRevert={revert} />}
-					<Switch
-						id={id}
-						size="sm"
-						checked={checked}
-						disabled={disabled}
-						onCheckedChange={(next) => onChange(next === true)}
-					/>
+					<Switch id={id} checked={checked} disabled={disabled} onCheckedChange={(next) => onChange(next === true)} />
 				</Inline>
 			</Inline>
 		</Box>
 	);
 }
 
-/** A few exclusive choices side by side in one strip with soft ends (a segmented control). */
-export function Segmented({
+/** A few exclusive choices side by side, with the field's name above: the design system's `Segmented` in a labeled row. */
+export function SegmentedField({
 	label,
 	value,
 	items,
@@ -264,37 +253,19 @@ export function Segmented({
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	return (
-		<Stack gap="condensed">
+		<Stack gap={8}>
 			<Text as="label" id={id} weight="medium">
 				{label}
 			</Text>
 			{description && <Help>{description}</Help>}
-			<Inline
-				role="radiogroup"
-				aria-labelledby={id}
-				wrap
-				gap="hair"
-				width="fit"
-				maxWidth="full"
-				background="neutral"
-				radius="md"
-				padding="hair"
-			>
-				{items.map((item) => (
-					<Button
-						key={item.value}
-						type="button"
-						role="radio"
-						variant={item.value === value ? "outline" : "ghost"}
-						size="sm"
-						aria-checked={item.value === value}
-						disabled={disabled}
-						onClick={() => onChange(item.value)}
-					>
-						{item.label}
-					</Button>
-				))}
-			</Inline>
+			<Segmented
+				aria-label={label}
+				inline
+				disabled={disabled}
+				value={value}
+				onValueChange={onChange}
+				options={items.map((item) => ({ value: item.value, label: item.label }))}
+			/>
 			{hint && <Help>{hint}</Help>}
 		</Stack>
 	);
@@ -356,7 +327,7 @@ export function Pick({
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
 							{item.description ? (
-								<Stack gap="hair">
+								<Stack gap={2}>
 									<Text>{item.label}</Text>
 									<Text variant="caption" tone="muted">
 										{item.description}
@@ -454,21 +425,11 @@ export function RowActions({
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	return (
-		<Inline gap="none" shrink={false}>
-			<IconButton
-				label={t("row.up", { name })}
-				size="icon-xs"
-				disabled={disabled || index === 0}
-				onClick={() => onMove(-1)}
-			>
+		<Inline gap={0} shrink={false}>
+			<IconButton label={t("row.up", { name })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
 				<ArrowUp aria-hidden />
 			</IconButton>
-			<IconButton
-				label={t("row.down", { name })}
-				size="icon-xs"
-				disabled={disabled || index === count - 1}
-				onClick={() => onMove(1)}
-			>
+			<IconButton label={t("row.down", { name })} disabled={disabled || index === count - 1} onClick={() => onMove(1)}>
 				<ArrowDown aria-hidden />
 			</IconButton>
 			{removeBlocked ? (
@@ -476,29 +437,15 @@ export function RowActions({
 					{/* A disabled button gets no pointer events, so the tooltip hangs on a wrapper that can also take focus. */}
 					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
 					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
-						<Button
-							type="button"
-							variant="ghost"
-							tone="danger"
-							size="icon-xs"
-							disabled
-							aria-label={t("row.remove", { name })}
-							aria-description={removeBlocked}
-						>
-							<X aria-hidden />
-						</Button>
+						<IconButton label={t("row.remove", { name })} tone="danger" disabled aria-description={removeBlocked}>
+							<Close aria-hidden />
+						</IconButton>
 					</TooltipTrigger>
 					<TooltipContent side="top">{removeBlocked}</TooltipContent>
 				</Tooltip>
 			) : (
-				<IconButton
-					label={t("row.remove", { name })}
-					size="icon-xs"
-					tone="danger"
-					disabled={disabled}
-					onClick={onRemove}
-				>
-					<X aria-hidden />
+				<IconButton label={t("row.remove", { name })} tone="danger" disabled={disabled} onClick={onRemove}>
+					<Close aria-hidden />
 				</IconButton>
 			)}
 		</Inline>

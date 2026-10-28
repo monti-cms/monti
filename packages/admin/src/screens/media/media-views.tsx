@@ -1,10 +1,11 @@
 "use client";
 
+import { Document, DocumentBlank, FolderOpen, FolderParent, TextFont, Zip } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Badge,
 	Box,
+	FolderTile,
 	Grid,
 	Image,
 	Table,
@@ -14,10 +15,9 @@ import {
 	TableHeader,
 	TableRow,
 	Text,
-	TextLink,
+	TextButton,
 	Tile,
 } from "@monti-cms/ui";
-import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
@@ -31,11 +31,11 @@ import { type FolderActions, folderMenuActions } from "../shared/use-folder-acti
 import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 
-const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
+const FILE_ICONS: Record<FileKind, typeof Document> = { pdf: TextFont, archive: Zip, text: Document };
 
 /** The icon an image frame shows in place of a picture: the type of a file, or a plain file when an image has no address yet. */
 export const fallbackFor = (media: MediaItem, isImage: boolean) =>
-	isImage ? File : FILE_ICONS[fileKindOf(media.mimeType)];
+	isImage ? DocumentBlank : FILE_ICONS[fileKindOf(media.mimeType)];
 
 export interface MediaViewProps {
 	items: readonly MediaItem[];
@@ -92,12 +92,12 @@ export function MediaGrid({
 				]
 			: [];
 	return (
-		<Grid as="ul" columns="tiles" gap="comfortable" dimmed={dimmed}>
+		<Grid as="ul" columns="tiles" dimmed={dimmed}>
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
 				<li>
-					<Tile
-						preview={<Image alt="" ratio="square" radius="none" fallback={FolderUp} />}
-						title={ts("list.folderUp")}
+					<FolderTile
+						icon={<FolderParent aria-hidden />}
+						name={ts("list.folderUp")}
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
 					/>
 				</li>
@@ -106,9 +106,8 @@ export function MediaGrid({
 				const actions = folderRowMenu(folder);
 				return (
 					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li />}>
-						<Tile
-							preview={<Image alt="" ratio="square" radius="none" fallback={FolderIcon} />}
-							title={folder.name}
+						<FolderTile
+							name={folder.name}
 							action={<MoreActionsButton actions={actions} label={ts("list.folderActions", { name: folder.name })} />}
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
@@ -131,14 +130,15 @@ export function MediaGrid({
 								<Image
 									src={isImage ? media.publicUrl : undefined}
 									alt=""
-									ratio="square"
+									ratio="photo"
 									radius="none"
 									fallback={fallbackFor(media, isImage)}
 								/>
 							}
 							title={media.filename}
-							detail={isImage ? undefined : fileTypeLabel(media.filename, media.mimeType)}
-							badge={<Badge variant="secondary">{usageLabel(t, media)}</Badge>}
+							detail={[isImage ? null : fileTypeLabel(media.filename, media.mimeType), usageLabel(t, media)]
+								.filter(Boolean)
+								.join(" · ")}
 							action={
 								<MoreActionsButton actions={menuFor(media)} label={t("views.itemActions", { name: media.filename })} />
 							}
@@ -169,7 +169,7 @@ export function MediaTable({
 	const t = useTranslator(mediaMessages);
 	return (
 		<Box dimmed={dimmed}>
-			<Table aria-label={t("views.table")} inset="page" layout="fixed" stickyHeader container="none">
+			<Table aria-label={t("views.table")} layout="fixed" stickyHeader container="none">
 				<TableHeader>
 					<TableRow>
 						<TableHead width="sm">
@@ -224,9 +224,8 @@ export function MediaTable({
 									/>
 								</TableCell>
 								<TableCell truncate>
-									<TextLink
+									<TextButton
 										render={<button type="button" />}
-										underline="hover"
 										mono
 										aria-current={isSelected ? "true" : undefined}
 										onClick={(event) => {
@@ -236,7 +235,7 @@ export function MediaTable({
 										onKeyDown={deleteKey(media, onDeleteKey)}
 									>
 										{media.filename}
-									</TextLink>
+									</TextButton>
 								</TableCell>
 								<TableCell tone="muted">
 									{site.api.isImageType(media.mimeType)

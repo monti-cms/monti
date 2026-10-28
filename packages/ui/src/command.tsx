@@ -1,102 +1,67 @@
 "use client";
 
+import { Search } from "@carbon/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
-import { CheckIcon, SearchIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
-import { InputGroup, InputGroupAddon } from "./input-group";
+import { COMMAND_ITEM, MENU_SCROLL, MENU_SEPARATOR, MenuTick } from "./menu-parts";
 
+/**
+ * A menu you can search: a search line on top, the rows under it, and the keyboard never leaves the line. It is the content of a card (a
+ * `PopoverContent` with `padding="menu"`); typing filters the rows across groups.
+ */
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
 	return (
 		<CommandPrimitive
 			data-slot="command"
-			className={cn(
-				"flex size-full flex-col overflow-hidden rounded-dialog! bg-monti-overlay p-1 text-monti-default",
-				className,
-			)}
+			className={cn("flex size-full flex-col text-monti-body text-monti-default", className)}
 			{...props}
 		/>
 	);
 }
 
-function CommandDialog({
-	title = "Command Palette",
-	description = "Search for a command to run...",
-	children,
-	className,
-	showCloseButton = false,
-	...props
-}: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
-	title?: string;
-	description?: string;
-	className?: string;
-	showCloseButton?: boolean;
-	children: React.ReactNode;
-}) {
-	return (
-		<Dialog {...props}>
-			<DialogContent
-				className={cn("top-1/3 translate-y-0 overflow-hidden rounded-dialog! p-0", className)}
-				showCloseButton={showCloseButton}
-			>
-				<DialogHeader className="sr-only">
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>{description}</DialogDescription>
-				</DialogHeader>
-				{/* The palette's items read their list from a `Command` around them. */}
-				<Command>{children}</Command>
-			</DialogContent>
-		</Dialog>
-	);
-}
-
+/** The search line: a magnifier and the words, with a rule under it. */
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
-		<div data-slot="command-input-wrapper" className="p-1 pb-0">
-			<InputGroup className="h-8! rounded-md! border-monti-default shadow-none! *:data-[slot=input-group-addon]:pl-2!">
-				<CommandPrimitive.Input
-					data-slot="command-input"
-					className={cn(
-						"w-full text-monti-label outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-						className,
-					)}
-					{...props}
-				/>
-				<InputGroupAddon>
-					<SearchIcon className="size-4 shrink-0 opacity-50" />
-				</InputGroupAddon>
-			</InputGroup>
+		<div
+			data-slot="command-input-wrapper"
+			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-monti-6 pb-[9px]"
+		>
+			<Search className="size-3.5 shrink-0 text-monti-subtle" aria-hidden />
+			<CommandPrimitive.Input
+				data-slot="command-input"
+				className={cn(
+					"w-full bg-transparent text-monti-body text-monti-default outline-hidden placeholder:text-monti-faint disabled:cursor-not-allowed disabled:opacity-45",
+					className,
+				)}
+				{...props}
+			/>
 		</div>
 	);
 }
 
+/** The rows: one column, 320px high at most, scrolling inside. */
 function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
-	return (
-		<CommandPrimitive.List
-			data-slot="command-list"
-			className={cn("no-scrollbar max-h-72 scroll-py-1 overflow-y-auto overflow-x-hidden outline-none", className)}
-			{...props}
-		/>
-	);
+	return <CommandPrimitive.List data-slot="command-list" className={cn(MENU_SCROLL, className)} {...props} />;
 }
 
 function CommandEmpty({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
 	return (
 		<CommandPrimitive.Empty
 			data-slot="command-empty"
-			className={cn("py-6 text-center text-monti-body", className)}
+			className={cn("px-[9px] py-monti-12 text-center text-monti-body text-monti-subtle", className)}
 			{...props}
 		/>
 	);
 }
 
+/** Rows under a name (the `heading`), in the mono group-name look. */
 function CommandGroup({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Group>) {
 	return (
 		<CommandPrimitive.Group
 			data-slot="command-group"
 			className={cn(
-				"overflow-hidden p-1 text-monti-default **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-monti-caption **:[[cmdk-group-heading]]:text-monti-muted",
+				"**:[[cmdk-group-heading]]:px-[9px] **:[[cmdk-group-heading]]:pt-monti-6 **:[[cmdk-group-heading]]:pb-[3px] **:[[cmdk-group-heading]]:text-monti-micro **:[[cmdk-group-heading]]:text-monti-subtle",
 				className,
 			)}
 			{...props}
@@ -106,60 +71,47 @@ function CommandGroup({ className, ...props }: React.ComponentProps<typeof Comma
 
 function CommandSeparator({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Separator>) {
 	return (
-		<CommandPrimitive.Separator
-			data-slot="command-separator"
-			className={cn("-mx-1 h-px w-auto bg-monti-divider", className)}
-			{...props}
-		/>
+		<CommandPrimitive.Separator data-slot="command-separator" className={cn(MENU_SEPARATOR, className)} {...props} />
 	);
 }
 
+/**
+ * A row. `checked` marks the current value of a pick-one list with a ✓ at its end (cmdk itself only tracks the row the keyboard is on, which
+ * takes the selected background). `variant="danger"` is for what cannot be undone: red, and the last row of its group.
+ */
 function CommandItem({
 	className,
 	children,
 	checked,
+	variant = "default",
 	...props
 }: React.ComponentProps<typeof CommandPrimitive.Item> & {
-	/** Shows the check mark: the item is the current choice (cmdk itself only tracks the highlighted item). */
 	checked?: boolean;
+	variant?: "default" | "danger";
 }) {
 	return (
 		<CommandPrimitive.Item
 			data-slot="command-item"
+			data-variant={variant}
 			data-checked={checked ? "true" : undefined}
-			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-monti-label outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-hover data-[selected=true]:text-monti-default data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-default",
-				className,
-			)}
+			className={cn(COMMAND_ITEM, className)}
 			{...props}
 		>
 			{children}
-			<CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
+			{checked && <MenuTick />}
 		</CommandPrimitive.Item>
 	);
 }
 
-function CommandShortcut({ className, ...props }: React.ComponentProps<"span">) {
+/** A row under the list for what belongs to the whole list ("+ New tag"), set off by a rule and always in view. */
+function CommandFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return (
-		<span
-			data-slot="command-shortcut"
-			className={cn(
-				"ml-auto text-monti-caption text-monti-muted tracking-caps group-data-[selected=true]/command-item:text-monti-default",
-				className,
-			)}
+		<div
+			data-slot="command-footer"
+			className={cn("mt-monti-4 flex flex-col border-monti-muted border-t pt-monti-4", className)}
 			{...props}
 		/>
 	);
 }
 
-export {
-	Command,
-	CommandDialog,
-	CommandInput,
-	CommandList,
-	CommandEmpty,
-	CommandGroup,
-	CommandItem,
-	CommandShortcut,
-	CommandSeparator,
-};
+export { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandFooter, CommandSeparator };

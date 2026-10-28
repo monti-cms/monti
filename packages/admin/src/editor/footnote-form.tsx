@@ -1,9 +1,9 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Badge, Inline, Label, Stack, Text, Textarea } from "@monti-cms/ui";
+import { Inline, Label, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { FOOTNOTE_DEFINITION_NAME, FOOTNOTE_REFERENCE_NAME, footnoteKey, labelOf } from "./footnote-nodes";
 import type { InlineBubbleTarget } from "./inline-marks";
@@ -122,12 +122,14 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	};
 
 	return (
-		<Stack as="form" gap="normal" onSubmit={handleApply} onKeyDown={submitOnEnter}>
-			<Inline gap="condensed">
-				<Badge variant="secondary">{target.badge}</Badge>
+		<Stack as="form" gap={12} onSubmit={handleApply} onKeyDown={submitOnEnter}>
+			<Inline gap={8}>
+				<Text variant="meta" tone="subtle">
+					{target.badge}
+				</Text>
 				<Text weight="medium">{t("inlineBubble.footnotePanel")}</Text>
 			</Inline>
-			<Stack gap="condensed">
+			<Stack gap={8}>
 				<Label htmlFor={`${id}-content`} size="caption">
 					{t("inlineBubble.footnoteField")}
 				</Label>
@@ -148,7 +150,7 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 			{error && <PopoverFormError id={`${id}-error`}>{error}</PopoverFormError>}
 			<PopoverFormFooter
 				removeLabel={t("inlineBubble.footnoteRemove")}
-				removeIcon={<X aria-hidden />}
+				removeIcon={<Close aria-hidden />}
 				onRemove={handleRemove}
 				onCancel={onDone}
 			/>

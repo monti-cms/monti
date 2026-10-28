@@ -240,7 +240,7 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 			box = document.createElement("div");
 			box.setAttribute("aria-hidden", "true");
 			box.dataset.montiMarquee = "";
-			box.className = "pointer-events-none fixed z-50 rounded-sm border border-monti-accent bg-monti-accent-muted";
+			box.className = "pointer-events-none fixed z-50 rounded-monti-sm border border-monti-contrast bg-monti-selected";
 			document.body.appendChild(box);
 		}
 		box.style.left = `${left}px`;

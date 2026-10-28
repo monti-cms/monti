@@ -60,7 +60,7 @@ export function useRecordCreator() {
 					if (!open) void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
 				}}
 			>
-				<SheetContent showCloseButton={false} resizable={panel}>
+				<SheetContent resizable={panel}>
 					<SheetTitle render={<Text as="div" srOnly />}>{t("record.add")}</SheetTitle>
 					{request && (
 						<RecordPanel

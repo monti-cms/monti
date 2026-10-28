@@ -124,18 +124,17 @@ describe("sidebar structure", () => {
 
 	it("folds the Site group on request even while one of its screens is open, and then marks the group as the current place", () => {
 		renderSidebar({ activeNav: "api-keys" });
-		expect(siteGroup().className).not.toContain("font-semibold");
+		expect(siteGroup().hasAttribute("data-active")).toBe(false);
 		fireEvent.click(siteGroup());
 		expect(siteGroup().getAttribute("aria-expanded")).toBe("false");
 		expect(screen.queryByRole("link", { name: t("sidebar.apiKeys") })).toBeNull();
-		expect(siteGroup().className).toContain("font-semibold");
+		expect(siteGroup().hasAttribute("data-active")).toBe(true);
 	});
 
-	it("keeps Settings and the theme toggle in the footer, and Trash out of it", () => {
+	it("keeps Trash and Settings with the theme toggle in the footer", () => {
 		const { container } = renderSidebar();
 		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
-		expect(labels(footer)).toEqual([t("sidebar.settings")]);
-		expect(within(footer).queryByText(t("sidebar.trash"))).toBeNull();
+		expect(labels(footer)).toEqual(expect.arrayContaining([t("sidebar.trash"), t("sidebar.settings")]));
 		expect(within(footer).getAllByRole("button").length).toBeGreaterThan(0);
 	});
 
@@ -255,8 +254,10 @@ describe("folder tree under a collection", () => {
 		renderSidebar({ activeNav: first as string, folderCounts: { [second as string]: 2 } });
 		const row = (collection: string) =>
 			screen.getByRole("link", { name: site.COLLECTION_DEFINITIONS[collection as typeof first].label });
-		expect(row(second as string).querySelector("svg.lucide-chevron-right")).not.toBeNull();
-		expect(row(first as string).querySelector("svg[class*=chevron]")).toBeNull();
+		// The collection's own icon, plus the chevron on the one with folders.
+		expect(row(second as string).querySelectorAll("svg").length).toBe(
+			row(first as string).querySelectorAll("svg").length + 1,
+		);
 	});
 
 	it("gives the open collection's tree its own fold button, and folds the tree away with it", () => {

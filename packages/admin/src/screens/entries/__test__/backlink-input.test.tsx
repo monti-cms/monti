@@ -1,13 +1,15 @@
 import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { BacklinkInput } from "../field-inputs";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 afterEach(() => {
 	cleanup();

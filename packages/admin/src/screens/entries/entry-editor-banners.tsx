@@ -4,7 +4,7 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { Alert, Box, Button, FormFieldError, Inline, Text } from "@monti-cms/ui";
+import { Banner, Box, FormFieldError, Inline, Text, TextButton } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -36,50 +36,33 @@ export function EntryEditorBanners({
 	return (
 		<>
 			{isTrashed && (
-				<Box
-					as="section"
-					aria-label={t("trash")}
-					background="neutral"
-					border="bottom"
-					paddingX="comfortable"
-					paddingY="condensed"
-				>
-					<Inline wrap gap="condensed">
+				<Box as="section" aria-label={t("trash")} background="muted" border="bottom" paddingX={16} paddingY={8}>
+					<Inline wrap gap={8}>
 						<Text>{t("trashNotice", nounVars(site, collection))}</Text>
 					</Inline>
 				</Box>
 			)}
 			{visualUnavailable && (
-				<Alert role="status" tone="warning" layout="strip">
-					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
-				</Alert>
+				<Banner
+					title={t("visualUnavailable")}
+					meta={sourceProblem ? issueLine(issueText(site, sourceProblem)) : undefined}
+				/>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-				<Box border="bottom" paddingX="comfortable" paddingY="condensed">
+				<Box border="bottom" paddingX={16} paddingY={8}>
 					<FormFieldError>{editor.saveError.message}</FormFieldError>
 				</Box>
 			)}
 
 			{sourceChanged && (
-				<Alert role="status" tone="warning" layout="strip">
-					<Text tone="warning" weight="medium">
-						{t("sourceChanged")}
-					</Text>
-					<Inline gap="condensed">
-						<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
-							{t("compare")}
-						</Button>
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							disabled={isReadOnly}
-							onClick={editor.confirmTranslationSource}
-						>
-							{t("confirm")}
-						</Button>
-					</Inline>
-				</Alert>
+				<Banner title={t("sourceChanged")}>
+					<TextButton variant="underline" onClick={onCompareSource}>
+						{t("compare")}
+					</TextButton>
+					<TextButton disabled={isReadOnly} onClick={editor.confirmTranslationSource}>
+						{t("confirm")}
+					</TextButton>
+				</Banner>
 			)}
 		</>
 	);

@@ -8,8 +8,8 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
+import { toast } from "@monti-cms/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { CmsApiError, errorText } from "../api/client";
 import {
 	type BulkItemResult,
@@ -35,16 +35,16 @@ function announce(site: Site, label: string, results: BulkItemResult[], items: B
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
-		toast.success(t("bulk.success", { count: ok, label }));
+		toast(t("bulk.success", { count: ok, label }));
 		return;
 	}
 	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
-	toast.error(ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), {
-		description: failures
-			.slice(0, 3)
-			.map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`)
-			.join("\n"),
-	});
+	const lines = failures.slice(0, 3).map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`);
+	toast.error(
+		[ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), ...lines].join(
+			"\n",
+		),
+	);
 }
 
 const LIFECYCLE_ACTIONS: readonly string[] = ["archive", "unarchive", "trash", "restore"] satisfies LifecycleAction[];

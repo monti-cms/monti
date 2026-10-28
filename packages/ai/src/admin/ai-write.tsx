@@ -1,5 +1,6 @@
 "use client";
 
+import { Renew } from "@carbon/icons-react";
 import {
 	type BrowserFormat,
 	type EditorExtension,
@@ -17,26 +18,28 @@ import {
 	Button,
 	CodeBlock,
 	commonMessages,
+	Del,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DiffMark,
 	ErrorNoticeView,
 	FormFieldError,
 	Grid,
 	Heading,
 	Inline,
+	Ins,
 	isComposingKey,
+	Spark,
 	Stack,
 	Tabs,
 	TabsList,
 	TabsTrigger,
 	Textarea,
+	TextButton,
 } from "@monti-cms/admin/kit";
 import type { Editor, JSONContent } from "@tiptap/core";
-import { RefreshCw, Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
@@ -205,8 +208,8 @@ function WriteDialog({
 			<DialogContent size="xl">
 				<DialogHeader>
 					<DialogTitle>
-						<Inline gap="condensed">
-							<Sparkles aria-hidden />
+						<Inline gap={8}>
+							<Spark aria-hidden />
 							{action.label}
 						</Inline>
 					</DialogTitle>
@@ -214,7 +217,7 @@ function WriteDialog({
 				{askRequest && (
 					<Stack
 						as="form"
-						gap="condensed"
+						gap={8}
 						onSubmit={(event) => {
 							event.preventDefault();
 							if (!running) void run();
@@ -237,7 +240,7 @@ function WriteDialog({
 						/>
 						<Inline justify="end">
 							<Button type="submit" size="sm" disabled={running}>
-								{state.status === "idle" ? <Sparkles aria-hidden /> : <RefreshCw aria-hidden />}
+								{state.status === "idle" ? <Spark aria-hidden /> : <Renew aria-hidden />}
 								{running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")}
 							</Button>
 						</Inline>
@@ -264,15 +267,15 @@ function WriteDialog({
 					blockProblem && <FormFieldError>{blockProblem}</FormFieldError>
 				)}
 				<DialogFooter>
-					<Inline gap="condensed" justify={askRequest ? "end" : "between"} width="full">
+					<Inline gap={8} justify={askRequest ? "end" : "between"} width="full">
 						{!askRequest && (
-							<Button type="button" variant="ghost" size="sm" disabled={running} onClick={() => void run()}>
-								<RefreshCw aria-hidden />
+							<TextButton type="button" disabled={running} onClick={() => void run()}>
+								<Renew aria-hidden />
 								{running ? t("running") : t("runAgain")}
-							</Button>
+							</TextButton>
 						)}
-						<Inline gap="condensed">
-							<Button type="button" variant="outline" size="sm" onClick={onClose}>
+						<Inline gap={8}>
+							<Button type="button" variant="secondary" size="sm" onClick={onClose}>
 								{tc("cancel")}
 							</Button>
 							<Button
@@ -299,14 +302,10 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<DiffMark key={index} type="remove">
-				{part.text}
-			</DiffMark>
+			<Del key={index}>{part.text}</Del>
 		) : (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<DiffMark key={index} type="add">
-				{part.text}
-			</DiffMark>
+			<Ins key={index}>{part.text}</Ins>
 		),
 	);
 }
@@ -314,7 +313,7 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 /** The inset box a rendered text sits in. */
 function ResultPanel({ children }: { children: ReactNode }) {
 	return (
-		<Box maxHeight="half" overflow="y" radius="md" background="inset" padding="normal">
+		<Box maxHeight="half" overflow="y" radius="md" background="tool" padding={12}>
 			{children}
 		</Box>
 	);
@@ -339,8 +338,8 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	);
 	if (job.mode === "insert") return <ResultPanel>{after}</ResultPanel>;
 	return (
-		<Grid columns={2} gap="normal">
-			<Stack as="section" gap="condensed" minWidth={0}>
+		<Grid columns={2} gap={12}>
+			<Stack as="section" gap={8} minWidth={0}>
 				<Heading as="h3" variant="label" tone="muted">
 					{t("now")}
 				</Heading>
@@ -348,7 +347,7 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 					<TextPreview format={format} text={job.source} label={t("now")} />
 				</ResultPanel>
 			</Stack>
-			<Stack as="section" gap="condensed" minWidth={0}>
+			<Stack as="section" gap={8} minWidth={0}>
 				<Heading as="h3" variant="label" tone="muted">
 					{t("after")}
 				</Heading>
@@ -401,7 +400,6 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			usable.selection.map((action) => ({
 				id: `ai:${action.key}`,
 				label: action.label,
-				icon: <Sparkles aria-hidden />,
 				run: (current) => {
 					const { from, to } = current.state.selection;
 					if (from === to || !format) return;
@@ -425,7 +423,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				title: action.label,
 				description: t("insertDescription"),
 				keywords: ["ai", action.label],
-				icon: "sparkles",
+				icon: "spark",
 				run: (current, range) => setJob({ mode: "insert", action, editor: current, from: range.from, to: range.to }),
 			})),
 		[usable.insert, t],
@@ -441,7 +439,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				return {
 					id: `ai:${action.key}`,
 					label: action.label,
-					icon: <Sparkles aria-hidden />,
+					icon: <Spark aria-hidden />,
 					isAvailable: (current, pos) => nodes.has(current.state.doc.nodeAt(pos)?.type.name ?? ""),
 					run: (current, pos) => {
 						const node = current.state.doc.nodeAt(pos);
@@ -468,18 +466,17 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 			<>
 				{/* In an empty document, the toolbar writes a draft directly. */}
 				{empty && editor && firstInsert && (
-					<Button
+					<TextButton
 						type="button"
 						variant="quiet"
-						size="sm"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });
 						}}
 					>
-						<Sparkles aria-hidden />
+						<Spark aria-hidden />
 						{firstInsert.label}
-					</Button>
+					</TextButton>
 				)}
 			</>
 		),

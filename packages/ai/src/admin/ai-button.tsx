@@ -1,11 +1,9 @@
 "use client";
 
 import { errorText, useSite, useTranslator } from "@monti-cms/admin";
-import { Button, Spinner } from "@monti-cms/admin/kit";
+import { Button, Spark, toast } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
-import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { toast } from "sonner";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";
 import { aiCommonMessages } from "./ai-common.messages";
 import { useAiAction } from "./use-ai-action";
@@ -44,7 +42,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 	return (
 		<Button
 			type="button"
-			variant="outline"
+			variant="secondary"
 			size="sm"
 			disabled={running}
 			onClick={async () => {
@@ -58,7 +56,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				}
 			}}
 		>
-			{running ? <Spinner /> : <Sparkles aria-hidden />}
+			<Spark aria-hidden />
 			{running ? t("running") : (children ?? label)}
 		</Button>
 	);

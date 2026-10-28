@@ -26,7 +26,7 @@ export const CodeFoldMark = Mark.create({
 			"span",
 			mergeAttributes(HTMLAttributes, {
 				"data-code-fold": "",
-				class: "rounded-sm outline-1 outline-monti-focus outline-dashed -outline-offset-1",
+				class: "rounded-monti-sm outline-1 outline-monti-contrast outline-dashed -outline-offset-1",
 			}),
 			0,
 		];

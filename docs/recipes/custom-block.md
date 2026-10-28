@@ -33,7 +33,7 @@ export const noticeBlock = defineBlock({
 	editor: {
 		view: "node",
 		insertable: true,
-		icon: "message-square",
+		icon: "chat",
 		insert: { values: { level: "info" }, text: "Content" },
 	},
 	// Findings are warnings: they show under the block and come back as `warnings`, but never block the save.

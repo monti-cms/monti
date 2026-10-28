@@ -1,8 +1,8 @@
 "use client";
 
+import { Calendar as CalendarIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Calendar, Panel, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
-import { CalendarRange } from "lucide-react";
+import { Button, Calendar, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { adminCalendarLocale } from "../../ui/calendar-locale";
 import { dateRangeMessages } from "./date-range.messages";
 
@@ -30,15 +30,13 @@ export function DateRangeCalendar({
 }) {
 	const site = useSite();
 	return (
-		<Panel>
-			<Calendar
-				mode="range"
-				numberOfMonths={1}
-				selected={{ from: dayToDate(from), to: dayToDate(to) }}
-				onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
-				locale={adminCalendarLocale(site)}
-			/>
-		</Panel>
+		<Calendar
+			mode="range"
+			numberOfMonths={1}
+			selected={{ from: dayToDate(from), to: dayToDate(to) }}
+			onSelect={(range) => onChange(dateToDay(range?.from), dateToDay(range?.to ?? range?.from))}
+			locale={adminCalendarLocale(site)}
+		/>
 	);
 }
 
@@ -58,15 +56,17 @@ export function DateRangePicker({
 	const summary = from || to ? `${from || t("start")} ~ ${to || t("end")}` : t("all");
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="outline" size="sm" aria-label={`${label}: ${summary}`} />}>
-				<CalendarRange aria-hidden />
+			<PopoverTrigger
+				render={<Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${summary}`} />}
+			>
+				<CalendarIcon aria-hidden />
 				{label}: {summary}
 			</PopoverTrigger>
 			<PopoverContent align="start" width="auto">
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<DateRangeCalendar from={from} to={to} onChange={onChange} />
 					{(from || to) && (
-						<Button type="button" variant="ghost" size="sm" width="full" onClick={() => onChange("", "")}>
+						<Button type="button" variant="secondary" size="sm" width="full" onClick={() => onChange("", "")}>
 							{t("clear")}
 						</Button>
 					)}

@@ -1,10 +1,10 @@
 "use client";
 
+import { Code } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Button, Icon, Inline, Text } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
-import { Code2 } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
 import { codeEffectsKey } from "./effects-plugin";
@@ -50,13 +50,13 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 			width="full"
 			wrap
 			justify="center"
-			gap="condensed"
+			gap={8}
 			border="top"
 			background="selected"
-			paddingX="comfortable"
-			paddingY="condensed"
+			paddingX={16}
+			paddingY={8}
 		>
-			<Icon icon={Code2} />
+			<Icon icon={Code} />
 			<Text variant="caption">
 				{status.kind === "text" ? (
 					<>
@@ -76,10 +76,10 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 					</>
 				)}
 			</Text>
-			<Inline gap="tight">
+			<Inline gap={4}>
 				<Button
 					type="button"
-					size="xs"
+					size="sm"
 					disabled={!ready}
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={() => commitLink(site, editor.view)}
@@ -88,8 +88,8 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 				</Button>
 				<Button
 					type="button"
-					variant="outline"
-					size="xs"
+					variant="secondary"
+					size="sm"
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={() => cancelLink(editor.view)}
 				>

@@ -1,14 +1,13 @@
 "use client";
 
+import { Restart } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	EntryStatus,
 	Inline,
-	PageTabs,
-	Skeleton,
 	Stack,
-	StatusIndicator,
 	Table,
 	TableBody,
 	TableCell,
@@ -16,12 +15,12 @@ import {
 	TableHeader,
 	TableRow,
 	Tabs,
+	TabsList,
 	TabsTrigger,
 	Text,
-	TextLink,
+	TextButton,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { BellRing, RotateCw, SearchX } from "lucide-react";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
@@ -47,7 +46,7 @@ import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { EventDetailSheet } from "./event-detail-sheet";
-import { eventCollectionLabel, eventEntryLabel, STATE_TONE } from "./event-display";
+import { eventCollectionLabel, eventEntryLabel, STATE_STATUS } from "./event-display";
 import { eventsMessages } from "./messages";
 
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
@@ -73,13 +72,13 @@ function FilterTabs({
 	const t = useTranslator(eventsMessages);
 	return (
 		<Tabs value={filter} onValueChange={(value) => onChange(value as EventsFilter)}>
-			<PageTabs aria-label={t("filter.label")}>
+			<TabsList variant="bar" aria-label={t("filter.label")}>
 				{options.map((option) => (
 					<TabsTrigger key={option.value} value={option.value}>
 						{option.label}
 					</TabsTrigger>
 				))}
-			</PageTabs>
+			</TabsList>
 		</Tabs>
 	);
 }
@@ -141,48 +140,50 @@ export function EventsScreen() {
 	};
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden">
+		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			{waiting > 0 && (
 				<PageActions>
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={retryAll.isPending}
 						onClick={() => retryAll.mutate()}
 					>
-						<RotateCw aria-hidden />
+						<Restart aria-hidden />
 						{t("action.retryAll")}
 					</Button>
 				</PageActions>
 			)}
 			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
 			{error && (
-				<Box paddingX="wide" paddingTop="normal">
+				<Box paddingX={32} paddingTop={12}>
 					<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} />
 				</Box>
 			)}
-			<Stack gap="none" grow minHeight={0} overflow="auto">
+			<Stack gap={0} grow minHeight={0} overflow="auto">
 				{listQuery.isPending ? (
-					<Stack gap="condensed" paddingX="wide" paddingY="comfortable" aria-hidden>
-						<Skeleton shape="control-sm" />
-						<Skeleton shape="control-sm" />
-						<Skeleton shape="control-sm" />
-					</Stack>
+					<Box paddingX={32} paddingY={16}>
+						<Text as="p" variant="note" tone="subtle" role="status">
+							{tc("loading")}
+						</Text>
+					</Box>
 				) : items.length === 0 ? (
-					!error &&
-					(filter === "all" ? (
-						<EmptyState icon={BellRing} title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
-					) : (
-						<EmptyState
-							icon={SearchX}
-							title={t("list.emptyNoMatch")}
-							description={t("list.emptyNoMatchHint")}
-							action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
-						/>
-					))
+					!error && (
+						<Box paddingX={32}>
+							{filter === "all" ? (
+								<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
+							) : (
+								<EmptyState
+									title={t("list.emptyNoMatch")}
+									description={t("list.emptyNoMatchHint")}
+									action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
+								/>
+							)}
+						</Box>
+					)
 				) : (
-					<Table aria-label={t("list.label")} inset="page">
+					<Table aria-label={t("list.label")}>
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("column.state")}</TableHead>
@@ -206,7 +207,7 @@ export function EventsScreen() {
 								return (
 									<TableRow key={rowKey(item)} onClick={() => setOpenedKey(rowKey(item))}>
 										<TableCell>
-											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
+											<EntryStatus status={STATE_STATUS[item.state]}>{t(`state.${item.state}`)}</EntryStatus>
 										</TableCell>
 										<TableCell>{formatDateTime(site, change.occurredAt)}</TableCell>
 										{!recordedOnly && (
@@ -217,11 +218,9 @@ export function EventsScreen() {
 											</TableCell>
 										)}
 										<TableCell>
-											<TextLink
+											<TextButton
 												render={<button type="button" />}
-												underline="hover"
 												mono
-												size="caption"
 												aria-label={t("detail.open", {
 													kind: t(`kind.${change.kind}`),
 													entry: eventEntryLabel(change),
@@ -232,19 +231,20 @@ export function EventsScreen() {
 												}}
 											>
 												{t(`kind.${change.kind}`)}
-											</TextLink>
+											</TextButton>
 										</TableCell>
 										<TableCell>
 											<Text tone="muted">{eventCollectionLabel(site, change.collection)} · </Text>
 											{change.kind === "deleted" ? (
 												<Text>{eventEntryLabel(change)}</Text>
 											) : (
-												<TextLink
+												<TextButton
+													variant="underline"
 													render={<Link href={entryHref(site, change.collection, change.entryId)} />}
 													onClick={(event) => event.stopPropagation()}
 												>
 													{eventEntryLabel(change)}
-												</TextLink>
+												</TextButton>
 											)}
 										</TableCell>
 										<TableCell>{change.actor ?? ""}</TableCell>
@@ -263,26 +263,24 @@ export function EventsScreen() {
 										)}
 										<TableCell align="end" onClick={(event) => event.stopPropagation()}>
 											{(item.state === "failed" || item.state === "dead") && (
-												<Inline gap="tight" justify="end">
+												<Inline gap={4} justify="end">
 													<Button
 														type="button"
-														variant="outline"
-														size="xs"
+														variant="secondary"
+														size="sm"
 														aria-label={t("action.retryLabel", { subscriber: item.subscriber ?? "" })}
 														disabled={retry.isPending}
 														onClick={() => retry.mutate(key)}
 													>
 														{tc("retry")}
 													</Button>
-													<Button
+													<TextButton
 														type="button"
-														variant="ghost"
-														size="xs"
 														aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
 														onClick={() => void requestDismiss(key)}
 													>
 														{t("action.dismiss")}
-													</Button>
+													</TextButton>
 												</Inline>
 											)}
 										</TableCell>

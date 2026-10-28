@@ -1,5 +1,5 @@
+import { RightPanelOpen } from "@carbon/icons-react";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import { PanelRight } from "lucide-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { preferenceKey } from "../../../lib/utils/site-storage";
@@ -16,7 +16,7 @@ const { render } = createTestRouter();
 function Where() {
 	return <output aria-label="where">{JSON.stringify(useScreenContext())}</output>;
 }
-const PANEL: AdminPanel = { label: "Helper", icon: PanelRight, Component: Where };
+const PANEL: AdminPanel = { label: "Helper", icon: RightPanelOpen, Component: Where };
 
 const whereIs = () => JSON.parse(screen.getByLabelText("where").textContent ?? "{}");
 const toggle = () => screen.getByRole("button", { name: /Helper/ });

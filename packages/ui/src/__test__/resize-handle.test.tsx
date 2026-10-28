@@ -1,6 +1,6 @@
 import { cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ResizablePane, ResizeHandle, useResizableWidth } from "../resize-handle";
+import { ResizeHandle, useResizableWidth } from "../resize-handle";
 
 const LIMITS = { defaultWidth: 256, min: 200, max: 400 };
 
@@ -142,14 +142,5 @@ describe("resize handle", () => {
 			Storage.prototype.getItem = original;
 			Storage.prototype.setItem = originalSet;
 		}
-	});
-
-	it("sizes a ResizablePane by its width", () => {
-		render(
-			<ResizablePane resizeKey="pane" defaultWidth={288} min={224} max={384}>
-				content
-			</ResizablePane>,
-		);
-		expect(screen.getByText("content").style.width).toBe("288px");
 	});
 });

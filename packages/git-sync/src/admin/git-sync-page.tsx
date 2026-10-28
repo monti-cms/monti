@@ -1,40 +1,39 @@
 "use client";
 
+import { Branch, Password, PullRequest, Renew, WarningAlt } from "@carbon/icons-react";
 import { adminApiUrl, errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Alert,
-	AlertDescription,
 	type ApiKeyChoice,
 	ApiKeyField,
 	apiKeysKeys,
-	Badge,
+	Banner,
 	Box,
 	Button,
+	Count,
 	choiceReady,
 	commonMessages,
 	DescriptionItem,
 	DescriptionList,
-	DiffView,
 	EmptyState,
 	Heading,
+	Icon,
 	Inline,
 	Input,
 	Label,
 	LoadErrorAlert,
-	PageTabs,
-	Skeleton,
+	Patch,
 	Stack,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	Text,
-	TextLink,
+	TextButton,
+	toast,
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { lineDiff } from "../diff";
 import {
 	assignGitSyncKey,
@@ -69,23 +68,22 @@ export function GitSyncPage() {
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden">
+		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
-				<PageTabs>
+				<TabsList variant="bar">
 					<TabsTrigger value="sync">
-						<GitBranch aria-hidden />
+						<Branch aria-hidden />
 						{t("tab.sync")}
 					</TabsTrigger>
-					<TabsTrigger value="conflicts">
-						<TriangleAlert aria-hidden />
+					<TabsTrigger value="conflicts" count={conflictCount > 0 ? conflictCount : undefined}>
+						<WarningAlt aria-hidden />
 						{t("tab.conflicts")}
-						{conflictCount > 0 && <Badge variant="danger">{conflictCount}</Badge>}
 					</TabsTrigger>
 					<TabsTrigger value="settings">
-						<KeyRound aria-hidden />
+						<Password aria-hidden />
 						{t("tab.settings")}
 					</TabsTrigger>
-				</PageTabs>
+				</TabsList>
 				<TabsContent value="sync" scroll>
 					<SyncTab
 						status={status.data}
@@ -111,12 +109,14 @@ export function GitSyncPage() {
 	);
 }
 
-function ListSkeleton() {
+function ListLoading() {
+	const tc = useTranslator(commonMessages);
 	return (
-		<Stack gap="normal" paddingX="wide" paddingY="comfortable" aria-hidden>
-			<Skeleton shape="block" />
-			<Skeleton shape="block" />
-		</Stack>
+		<Box paddingX={32} paddingY={16}>
+			<Text as="p" variant="note" tone="subtle" role="status">
+				{tc("loading")}
+			</Text>
+		</Box>
 	);
 }
 
@@ -162,39 +162,37 @@ function SyncTab({
 		invalidate: [gitSyncKeys.all],
 	});
 
-	if (loading) return <ListSkeleton />;
+	if (loading) return <ListLoading />;
 	if (error) {
 		return (
-			<Box paddingX="wide" paddingY="comfortable">
+			<Box paddingX={32} paddingY={16}>
 				<LoadErrorAlert message={error} onRetry={onRetry} />
 			</Box>
 		);
 	}
 	if (!status) return null;
 	if (status.targets.length === 0) {
-		return <EmptyState icon={GitBranch} title={t("sync.empty")} />;
+		return (
+			<Box paddingX={32}>
+				<EmptyState title={t("sync.empty")} />
+			</Box>
+		);
 	}
 
 	return (
-		<Stack gap="none">
-			{!status.keys.token && (
-				<Box paddingX="wide" paddingTop="comfortable">
-					<Alert layout="stack">
-						<AlertDescription>{t("sync.noToken")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
+		<Stack gap={0}>
+			{!status.keys.token && <Banner title={t("sync.noToken")} />}
 			{status.targets.map((target, index) => (
 				<Stack
 					as="section"
 					key={target.id}
 					aria-label={target.id}
-					gap="normal"
+					gap={12}
 					border={index === 0 ? "y" : "bottom"}
-					paddingX="wide"
-					paddingY="comfortable"
+					paddingX={32}
+					paddingY={16}
 				>
-					<Inline gap="condensed" wrap>
+					<Inline gap={8} wrap>
 						<Box grow minWidth={0}>
 							<Heading as="h2" variant="label" truncate>
 								<Text mono weight="medium">
@@ -205,25 +203,27 @@ function SyncTab({
 								</Text>
 							</Heading>
 						</Box>
-						<Badge variant="secondary">
-							{target.mode === "pr" ? <GitPullRequest aria-hidden /> : <GitBranch aria-hidden />}
-							{t(`target.mode.${target.mode}`)}
-						</Badge>
+						<Inline gap={4}>
+							<Icon icon={target.mode === "pr" ? PullRequest : Branch} size="sm" tone="subtle" />
+							<Text variant="meta" tone="subtle">
+								{t(`target.mode.${target.mode}`)}
+							</Text>
+						</Inline>
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={pull.isPending}
 							onClick={() => pull.mutate(target.id)}
 						>
-							<RefreshCw aria-hidden />
+							<Renew aria-hidden />
 							{t("pull.now")}
 						</Button>
 						{target.queued > 0 && (
 							<Button
 								type="button"
 								size="sm"
-								variant="outline"
+								variant="secondary"
 								disabled={flush.isPending}
 								onClick={() => flush.mutate(target.id)}
 							>
@@ -269,9 +269,14 @@ function SyncTab({
 									{target.lastFlush.pullRequestUrl && (
 										<>
 											{" · "}
-											<TextLink href={target.lastFlush.pullRequestUrl} target="_blank" rel="noreferrer">
+											<TextButton
+												variant="underline"
+												href={target.lastFlush.pullRequestUrl}
+												target="_blank"
+												rel="noreferrer"
+											>
 												{t("target.pullRequest")}
-											</TextLink>
+											</TextButton>
 										</>
 									)}
 									{target.lastFlush.note && (
@@ -285,19 +290,17 @@ function SyncTab({
 							)}
 						</DescriptionItem>
 					</DescriptionList>
-					<Inline gap="condensed" wrap>
-						<Badge variant="outline">{t("target.synced", { count: target.synced })}</Badge>
-						{target.queued > 0 && <Badge variant="outline">{t("target.queued", { count: target.queued })}</Badge>}
-						{target.conflicts > 0 && (
-							<Badge variant="danger">{t("target.conflicts", { count: target.conflicts })}</Badge>
-						)}
+					<Inline gap={8} wrap>
+						<Count>{t("target.synced", { count: target.synced })}</Count>
+						{target.queued > 0 && <Count tone="warning">{t("target.queued", { count: target.queued })}</Count>}
+						{target.conflicts > 0 && <Count tone="danger">{t("target.conflicts", { count: target.conflicts })}</Count>}
 					</Inline>
 					{target.lastPull && target.lastPull.errors.length > 0 && (
-						<Stack gap="tight">
+						<Stack gap={4}>
 							<Heading as="h3" variant="label">
 								{t("summary.errors")}
 							</Heading>
-							<Stack as="ul" gap="hair">
+							<Stack as="ul" gap={2}>
 								{target.lastPull.errors.map((item) => (
 									<Text as="li" key={item.path} variant="caption" tone="danger">
 										<Text mono variant="caption">
@@ -310,11 +313,11 @@ function SyncTab({
 						</Stack>
 					)}
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
-						<Stack gap="tight">
+						<Stack gap={4}>
 							<Heading as="h3" variant="label">
 								{t("summary.skipped")}
 							</Heading>
-							<Stack as="ul" gap="hair">
+							<Stack as="ul" gap={2}>
 								{target.lastPull.skipped.map((item) => (
 									<Text as="li" key={item.path} variant="caption" tone="muted">
 										<Text mono variant="caption">
@@ -336,13 +339,21 @@ function SyncTab({
 // Conflicts tab
 
 /** The server text against the git text as a line diff: `-` lines are only on the server, `+` lines only in git. */
-export function ConflictDiff({ serverText, gitText }: { serverText: string | null; gitText: string }) {
+export function ConflictDiff({
+	path,
+	serverText,
+	gitText,
+}: {
+	path: string;
+	serverText: string | null;
+	gitText: string;
+}) {
 	const t = useTranslator(gitSyncMessages);
 	const lines = useMemo(() => lineDiff(serverText ?? "", gitText), [serverText, gitText]);
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
-		<Stack gap="tight">
-			<Inline gap="comfortable">
+		<Stack gap={4}>
+			<Inline gap={16}>
 				<Text variant="caption" tone="muted">
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
@@ -356,7 +367,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 					{t("conflicts.same")}
 				</Text>
 			) : (
-				<DiffView lines={lines} />
+				<Patch file={path} lines={lines} />
 			)}
 			<Text as="p" variant="caption" tone="muted">
 				{t("conflicts.legend")}
@@ -395,49 +406,50 @@ function ConflictsTab({
 		if (ok) resolve.mutate({ conflict, resolution });
 	};
 
-	if (loading) return <ListSkeleton />;
+	if (loading) return <ListLoading />;
 	if (error) {
 		return (
-			<Box paddingX="wide" paddingY="comfortable">
+			<Box paddingX={32} paddingY={16}>
 				<LoadErrorAlert message={error} />
 			</Box>
 		);
 	}
 	if (!items || items.length === 0) {
-		return <EmptyState icon={GitBranch} title={t("conflicts.empty")} />;
+		return (
+			<Box paddingX={32}>
+				<EmptyState title={t("conflicts.empty")} />
+			</Box>
+		);
 	}
 	return (
-		<Stack gap="none">
+		<Stack gap={0}>
 			{items.map((conflict, index) => (
 				<Stack
 					as="section"
 					key={conflict.id}
 					aria-label={conflict.label}
-					gap="normal"
+					gap={12}
 					border={index === 0 ? "y" : "bottom"}
-					paddingX="wide"
-					paddingY="comfortable"
+					paddingX={32}
+					paddingY={16}
 				>
-					<Stack gap="tight">
+					<Stack gap={4}>
 						<Heading as="h2" variant="label">
 							{conflict.label}
 						</Heading>
 						<Text as="p" variant="caption" tone="muted">
-							<Text mono variant="caption">
-								{conflict.path}
-							</Text>{" "}
-							· {conflict.repo}
+							{conflict.repo}
 						</Text>
 						<Text as="p" variant="caption">
 							{t(`conflicts.reason.${conflict.reason}`)}
 						</Text>
 					</Stack>
-					<ConflictDiff serverText={conflict.serverText} gitText={conflict.gitText} />
-					<Inline gap="condensed" wrap>
+					<ConflictDiff path={conflict.path} serverText={conflict.serverText} gitText={conflict.gitText} />
+					<Inline gap={8} wrap>
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={resolve.isPending}
 							onClick={() => void decide(conflict, "git")}
 						>
@@ -446,7 +458,7 @@ function ConflictsTab({
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={resolve.isPending}
 							onClick={() => void decide(conflict, "server")}
 						>
@@ -496,7 +508,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 		},
 	});
 
-	if (!status) return <ListSkeleton />;
+	if (!status) return <ListLoading />;
 	const { keys } = status;
 	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${adminApiUrl("/v1/git-sync/webhook")}`;
 	const tokenKey = keys.token;
@@ -507,20 +519,14 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const secretKey = keys.webhookSecret;
 
 	return (
-		<Stack gap="none" maxWidth="prose" paddingX="wide">
-			{!keys.secretsAvailable && (
-				<Box paddingY="comfortable">
-					<Alert tone="danger" layout="stack">
-						<AlertDescription>{t("settings.secretMissing")}</AlertDescription>
-					</Alert>
-				</Box>
-			)}
+		<Stack gap={0} maxWidth="reading" paddingX={32}>
+			{!keys.secretsAvailable && <Banner title={t("settings.secretMissing")} />}
 
 			<Stack
 				as="form"
-				gap="condensed"
+				gap={8}
 				border="bottom"
-				paddingY="spacious"
+				paddingY={24}
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (tokenChanged && choiceReady(choice)) assign.mutate({ slot: "token", key: choice });
@@ -536,7 +542,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
 				</Text>
 				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Button
 						type="submit"
 						size="sm"
@@ -548,7 +554,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={assign.isPending}
 							onClick={() => assign.mutate({ slot: "token", key: { use: "none" } })}
 						>
@@ -560,8 +566,8 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 
 			<Stack
 				as="form"
-				gap="condensed"
-				paddingY="spacious"
+				gap={8}
+				paddingY={24}
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
@@ -573,7 +579,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				<Text as="p" variant="caption">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</Text>
-				<Stack gap="tight">
+				<Stack gap={4}>
 					<Label htmlFor="git-sync-url" size="caption" tone="muted">
 						{t("settings.webhook.url")}
 					</Label>
@@ -582,7 +588,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				<Text as="p" variant="caption" tone="muted">
 					{t("settings.webhook.help")}
 				</Text>
-				<Inline gap="condensed" wrap>
+				<Inline gap={8} wrap>
 					<Box grow minWidth={0}>
 						<Input
 							id="git-sync-secret"
@@ -598,7 +604,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						onClick={() => {
 							setSecret(generateSecret());
 							// A generated value has to be seen once: it goes into GitHub, and the store does not show it again.
@@ -607,17 +613,17 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					>
 						{t("settings.generate")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => setRevealed((shown) => !shown)}>
+					<Button type="button" size="sm" variant="secondary" onClick={() => setRevealed((shown) => !shown)}>
 						{revealed ? t("settings.hide") : t("settings.show")}
 					</Button>
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={!secret}
 						onClick={() =>
 							void navigator.clipboard.writeText(secret).then(
-								() => toast.success(t("settings.copied")),
+								() => toast(t("settings.copied")),
 								() => toast.error(tc("copyFailed")),
 							)
 						}
@@ -625,7 +631,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						{t("settings.copy")}
 					</Button>
 				</Inline>
-				<Inline gap="condensed">
+				<Inline gap={8}>
 					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
 						{tc("save")}
 					</Button>
@@ -633,7 +639,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						<Button
 							type="button"
 							size="sm"
-							variant="outline"
+							variant="secondary"
 							disabled={assign.isPending}
 							onClick={() => assign.mutate({ slot: "webhook-secret", key: { use: "none" } })}
 						>

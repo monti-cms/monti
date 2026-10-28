@@ -1,5 +1,6 @@
 "use client";
 
+import { PlugFilled, Save } from "@carbon/icons-react";
 import { errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	type ApiKeyChoice,
@@ -28,7 +29,6 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, PlugZap, Plus, Save } from "lucide-react";
 import { useId, useState } from "react";
 import {
 	AI_PROVIDER_KINDS,
@@ -121,7 +121,7 @@ export function ConnectionManager({
 	const current = settings?.providers.find((provider) => provider.id === selected) ?? null;
 
 	return (
-		<Stack gap="none" grow minHeight={0}>
+		<Stack gap={0} grow minHeight={0}>
 			{settings && (
 				<AgentModelPicker
 					// Reset when what is saved changes (a saved choice, a deleted connection).
@@ -132,7 +132,7 @@ export function ConnectionManager({
 				/>
 			)}
 			{settingsQuery.error && !settings && (
-				<Box padding="normal">
+				<Box padding={12}>
 					<LoadErrorAlert
 						message={errorText(site, settingsQuery.error, t("error.loadList"))}
 						onRetry={() => void settingsQuery.refetch()}
@@ -145,10 +145,9 @@ export function ConnectionManager({
 						resizeKey="ai-connections"
 						label={t("list.label")}
 						loading={settingsQuery.isPending}
-						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<Box paddingX="normal" paddingY="condensed" border="bottom">
+								<Box paddingX={12} paddingY={8} border="bottom">
 									<Text variant="caption" tone="muted">
 										{t("badge.fake")}
 									</Text>
@@ -189,11 +188,12 @@ export function ConnectionManager({
 					/>
 				) : (
 					settings && (
-						<EmptyState
-							icon={Plug}
-							title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
-							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
-						/>
+						<Box paddingX={24}>
+							<EmptyState
+								title={settings.providers.length === 0 ? t("empty.none") : t("empty.title")}
+								action={{ label: t("action.add"), onClick: () => onOpen("new") }}
+							/>
+						</Box>
 					)
 				)}
 			</MasterDetail>
@@ -313,7 +313,7 @@ function ProviderEditor({
 	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
-		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
+		<Stack gap={16} padding={24} maxWidth="reading" width="full" centered>
 			<Box minWidth={0}>
 				<Heading truncate>{(provider ? provider.name : draft.name.trim()) || t("new.title")}</Heading>
 				<Text as="p" variant="caption" tone="muted" truncate>
@@ -323,9 +323,12 @@ function ProviderEditor({
 
 			<FormFieldGroup>
 				<FormField>
-					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
+					<FormFieldLabel htmlFor={ids.name} required>
+						{t("field.name")}
+					</FormFieldLabel>
 					<Input
 						id={ids.name}
+						required
 						value={draft.name}
 						placeholder="OpenRouter"
 						onChange={(event) => set({ name: event.target.value })}
@@ -356,7 +359,7 @@ function ProviderEditor({
 					/>
 					<FormFieldDescription>{t("field.url.hint")}</FormFieldDescription>
 				</FormField>
-				<Stack gap="condensed">
+				<Stack gap={8}>
 					<ApiKeyField
 						label={t("field.key")}
 						baseName={draft.name.trim() || "API"}
@@ -396,11 +399,11 @@ function ProviderEditor({
 				<Button
 					type="button"
 					size="sm"
-					variant="outline"
+					variant="secondary"
 					disabled={checking || !draft.url || !draft.defaultModel}
 					onClick={() => void runCheck()}
 				>
-					<PlugZap aria-hidden />
+					<PlugFilled aria-hidden />
 					{checking ? t("action.checking") : t("action.check")}
 				</Button>
 			</EditorFooter>

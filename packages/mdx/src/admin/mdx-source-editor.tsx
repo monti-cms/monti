@@ -96,7 +96,7 @@ export function MdxSourceEditor({
 				{...props}
 				value={value}
 				spellCheck={false}
-				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-monti-default outline-none selection:bg-monti-neutral selection:text-transparent placeholder:text-monti-muted"
+				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-monti-default outline-none selection:bg-monti-muted selection:text-transparent placeholder:text-monti-muted"
 			/>
 		</div>
 	);

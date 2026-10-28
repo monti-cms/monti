@@ -1,7 +1,17 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Heading, Inline, SidebarInset, SidebarProvider, SidebarTrigger, Stack, Text } from "@monti-cms/ui";
+import {
+	Box,
+	Heading,
+	Inline,
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+	Stack,
+	Text,
+	useSidebar,
+} from "@monti-cms/ui";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -42,7 +52,7 @@ export function PageActions({ children }: { children: ReactNode }) {
 	const slot = useContext(ActionsSlotContext);
 	return slot
 		? createPortal(
-				<Inline wrap gap="condensed" justify="end">
+				<Inline wrap gap={8} justify="end">
 					{children}
 				</Inline>,
 				slot,
@@ -156,8 +166,14 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	return <AdminNavContext.Provider value={nav}>{children}</AdminNavContext.Provider>;
 }
 
+/** The way back to the sidebar: on a narrow screen it opens the drawer, on a wide one it shows only while the sidebar is slid away. */
+function ShellSidebarTrigger({ label }: { label: string }) {
+	const { isMobile, state } = useSidebar();
+	return isMobile || state === "collapsed" ? <SidebarTrigger aria-label={label} /> : null;
+}
+
 /**
- * Frame of every admin page but the editor. Left is the shadcn Sidebar (a sheet on narrow screens); on the right one quiet title bar (the title, its count,
+ * Frame of every admin page but the editor. Left is the Sidebar (a drawer on narrow screens); on the right one quiet title bar (the title, its count,
  * a short description and the page's actions in a single row, so the content starts high) over the page. Tabs a page has sit right under it.
  */
 export function AdminShell({
@@ -173,7 +189,7 @@ export function AdminShell({
 	count?: number | string;
 	/** A short muted line after the title (where the collection is public); hidden on narrow screens. */
 	description?: ReactNode;
-	/** Centered editorial index header with a deep ink rule (`border="bottom-strong"`). */
+	/** Centered editorial index header with a deep ink rule (`border="bottom-contrast"`). */
 	editorial?: boolean;
 	sidebar: AdminSidebarProps;
 	children: ReactNode;
@@ -203,26 +219,24 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset fixed>
-				<Inline align="stretch" gap="none" grow minHeight={0} overflow="hidden">
-					<Stack gap="none" grow minWidth={0} minHeight={0}>
+				<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+					<Stack gap={0} grow minWidth={0} minHeight={0}>
 						{editorial ? (
-							<Box width="full" maxWidth="content" centered paddingX="wide" paddingTop="spacious" shrink={false}>
+							<Box width="full" maxWidth="content" centered paddingX={32} paddingTop={24} shrink={false}>
 								<Inline
 									as="header"
 									container
 									align="end"
 									justify="between"
-									gap="normal"
-									border="bottom-strong"
-									paddingBottom="normal"
+									gap={12}
+									border="bottom-contrast"
+									paddingBottom={12}
 								>
-									<Inline gap="condensed" align="baseline" grow minWidth={0}>
-										<Box hideFrom="md">
-											<SidebarTrigger aria-label={t("shell.openSidebar")} />
-										</Box>
+									<Inline gap={8} align="baseline" grow minWidth={0}>
+										<ShellSidebarTrigger label={t("shell.openSidebar")} />
 										<Box minWidth={0}>
-											<Heading as="h1" variant="heading">
-												<Inline as="span" gap="condensed" align="baseline">
+											<Heading as="h1" variant="page">
+												<Inline as="span" gap={8} align="baseline">
 													<Text truncate>{title}</Text>
 													{count !== undefined && (
 														<Text variant="caption" tone="muted" mono>
@@ -232,7 +246,7 @@ export function AdminShell({
 												</Inline>
 											</Heading>
 										</Box>
-										<Inline gap="condensed" align="center" ref={setMetaSlot} />
+										<Inline gap={8} align="center" ref={setMetaSlot} />
 										{description && (
 											<Box minWidth={0} hideBelowContainer="2xl">
 												<Text as="p" variant="caption" tone="muted" truncate>
@@ -241,7 +255,7 @@ export function AdminShell({
 											</Box>
 										)}
 									</Inline>
-									<Inline gap="condensed">
+									<Inline gap={8}>
 										<div ref={setActionsSlot} />
 										<SidePanelToggle />
 									</Inline>
@@ -252,21 +266,19 @@ export function AdminShell({
 								as="header"
 								container
 								wrap
-								gap="normal"
+								gap={12}
 								shrink={false}
 								border="bottom"
-								paddingX="wide"
-								paddingY="tight"
+								paddingX={32}
+								paddingY={4}
 								minHeight="header"
 							>
-								<Box hideFrom="md">
-									<SidebarTrigger aria-label={t("shell.openSidebar")} />
-								</Box>
-								<Inline gap="condensed" align="baseline" grow>
+								<ShellSidebarTrigger label={t("shell.openSidebar")} />
+								<Inline gap={8} align="baseline" grow>
 									{/* The title and its count keep their width: what gives way, when the page has little room, is the description and the actions. */}
 									<Box shrink={false}>
 										<Heading as="h1" variant="title">
-											<Inline as="span" gap="condensed" align="baseline">
+											<Inline as="span" gap={8} align="baseline">
 												<Text>{title}</Text>
 												{count !== undefined && (
 													<Text variant="caption" tone="muted" mono>
@@ -276,7 +288,7 @@ export function AdminShell({
 											</Inline>
 										</Heading>
 									</Box>
-									<Inline gap="condensed" align="center" ref={setMetaSlot} />
+									<Inline gap={8} align="center" ref={setMetaSlot} />
 									{description && (
 										<Box minWidth={0} hideBelowContainer="2xl">
 											<Text as="p" variant="caption" tone="muted" truncate>
@@ -291,7 +303,7 @@ export function AdminShell({
 						)}
 						<MetaSlotContext.Provider value={metaSlot}>
 							<ActionsSlotContext.Provider value={actionsSlot}>
-								<Stack gap="none" grow minHeight={0} overflow="hidden">
+								<Stack gap={0} grow minHeight={0} overflow="hidden">
 									{children}
 								</Stack>
 							</ActionsSlotContext.Provider>

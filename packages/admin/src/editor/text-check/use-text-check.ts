@@ -2,11 +2,11 @@
 
 import { supportsLocale, type TextChecker } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
+import { toast } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { PluginKey, type Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { type DocSegment, docRangeToSegment, extractSegments } from "./extract";
 import { textCheckMessages } from "./messages";
 import { createTextCheckPlugin, type TextCheckMeta, type TextCheckPluginState, textCheckIssues } from "./plugin";
@@ -163,8 +163,8 @@ export function useTextCheck(
 				const count = done.length > 0 ? place(editor, done, new Set(segments.map((segment) => segment.id)), scopes) : 0;
 				const [first] = failed;
 				if (first) {
-					toast.error(t("failed", { label: first.checker.label }), { description: errorMessage(first.error) });
-				} else if (count === 0) toast.success(t("nothingToFix"));
+					toast.error(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
+				} else if (count === 0) toast(t("nothingToFix"));
 			} finally {
 				if (manualRef.current === controller) {
 					manualRef.current = null;
@@ -209,7 +209,7 @@ export function useTextCheck(
 			const [first] = failed;
 			if (first && !failedOnce) {
 				failedOnce = true;
-				toast.error(t("failed", { label: first.checker.label }), { description: errorMessage(first.error) });
+				toast.error(`${t("failed", { label: first.checker.label })}\n${errorMessage(first.error)}`);
 			}
 		};
 		const onTransaction = ({ transaction }: { transaction: Transaction }) => {

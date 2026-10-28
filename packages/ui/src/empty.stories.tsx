@@ -1,81 +1,52 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FileText, Search } from "lucide-react";
-import { Button } from "./button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
-import { Stack } from "./stack";
+import { Empty, EmptyStep } from "./empty";
 
+/**
+ * What a list shows when it is empty: a line that says so and then what can be done, in order. No box, no explanation. The numbers are only for steps
+ * whose order really matters.
+ */
 const meta = {
-	title: "Feedback/Empty",
+	title: "Patterns/List/Empty",
 	component: Empty,
-	args: {},
-	render: (args) => (
-		<Empty {...args}>
-			<EmptyHeader>
-				<EmptyMedia variant="icon">
-					<FileText aria-hidden />
-				</EmptyMedia>
-				<EmptyTitle>아직 글이 없어요</EmptyTitle>
-				<EmptyDescription>첫 글을 써서 블로그를 시작해 보세요.</EmptyDescription>
-			</EmptyHeader>
-			<EmptyContent>
-				<Button>새 글 쓰기</Button>
-			</EmptyContent>
-		</Empty>
-	),
+	args: { title: "아직 글이 없어요." },
+	decorators: [
+		(Story) => (
+			<div className="max-w-xl">
+				<Story />
+			</div>
+		),
+	],
 } satisfies Meta<typeof Empty>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
-
-export const MediaVariants: Story = {
-	render: () => (
-		<Stack gap="spacious">
-			<Empty>
-				<EmptyHeader>
-					<EmptyMedia variant="default">
-						<Search aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle>variant default</EmptyTitle>
-				</EmptyHeader>
-			</Empty>
-			<Empty>
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<Search aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle>variant icon</EmptyTitle>
-				</EmptyHeader>
-			</Empty>
-		</Stack>
-	),
-};
-
-export const TitleOnly: Story = {
-	render: () => (
-		<Empty>
-			<EmptyHeader>
-				<EmptyTitle>휴지통이 비어 있어요</EmptyTitle>
-			</EmptyHeader>
+export const Playground: Story = {
+	render: (args) => (
+		<Empty {...args}>
+			<EmptyStep number="01">첫 글 쓰기</EmptyStep>
+			<EmptyStep number="02">쓰던 글 가져오기</EmptyStep>
+			<EmptyStep number="03">템플릿으로 쓰기</EmptyStep>
 		</Empty>
 	),
 };
 
-export const SearchWithNoResult: Story = {
-	render: () => (
-		<Empty>
-			<EmptyHeader>
-				<EmptyMedia variant="icon">
-					<Search aria-hidden />
-				</EmptyMedia>
-				<EmptyTitle>"여름 여행"과 맞는 글이 없어요</EmptyTitle>
-				<EmptyDescription>
-					다른 단어로 찾아보거나 <a href="#top">필터를 지워</a> 보세요.
-				</EmptyDescription>
-			</EmptyHeader>
-			<EmptyContent>
-				<Button variant="outline">필터 지우기</Button>
-			</EmptyContent>
+/** No numbers when there is no order; a step can be a link (`href`, or the router's link in `render`). */
+export const WithoutNumbers: Story = {
+	render: (args) => (
+		<Empty {...args}>
+			<EmptyStep>첫 글 쓰기</EmptyStep>
+			<EmptyStep href="#top">쓰던 글 가져오기</EmptyStep>
 		</Empty>
 	),
 };
+
+/** A search or filter that matches nothing: one step, to clear it. */
+export const NothingMatches: Story = {
+	render: () => (
+		<Empty title="맞는 글이 없어요.">
+			<EmptyStep>필터 지우기</EmptyStep>
+		</Empty>
+	),
+};
+
+export const TitleOnly: Story = { render: () => <Empty title="휴지통이 비어 있어요." /> };

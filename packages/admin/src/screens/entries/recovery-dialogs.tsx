@@ -15,8 +15,9 @@ import {
 	Grid,
 	Stack,
 	Text,
+	TextButton,
+	toast,
 } from "@monti-cms/ui";
-import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -44,7 +45,7 @@ export function RecoveryDialog({
 	const site = useSite();
 	return (
 		<Dialog open={recovery !== null} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="md">
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{t("recovery.title")}</DialogTitle>
 					<DialogDescription>
@@ -53,7 +54,7 @@ export function RecoveryDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={onKeepServer}>
+					<Button type="button" variant="secondary" onClick={onKeepServer}>
 						{t("recovery.keepServer")}
 					</Button>
 					<Button type="button" onClick={onRestore}>
@@ -126,13 +127,13 @@ export function ConflictDialog({
 					/>
 				)}
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={onClose}>
+					<Button type="button" variant="secondary" onClick={onClose}>
 						{tc("close")}
 					</Button>
-					<Button type="button" variant="outline" onClick={onReload}>
+					<Button type="button" variant="secondary" onClick={onReload}>
 						{t("conflict.reload")}
 					</Button>
-					<Button type="button" variant="secondary" tone="danger" onClick={() => void overwrite()}>
+					<Button type="button" variant="outline-danger" onClick={() => void overwrite()}>
 						{t("conflict.overwriteMine")}
 					</Button>
 				</DialogFooter>
@@ -163,7 +164,7 @@ function ComparePanes({
 	const copy = async (body: string) => {
 		try {
 			await navigator.clipboard.writeText(body);
-			toast.success(t("conflict.copied"));
+			toast(t("conflict.copied"));
 		} catch {
 			toast.error(tc("copyFailed"));
 		}
@@ -171,7 +172,7 @@ function ComparePanes({
 	const pane = (label: string, value: EntryForm) => {
 		const body = bodyText(value.doc);
 		return (
-			<Stack gap="condensed" border="all" radius="lg" padding="normal">
+			<Stack gap={8} border="all" radius="lg" padding={12}>
 				<Text as="p" weight="semibold">
 					{label}
 				</Text>
@@ -182,16 +183,16 @@ function ComparePanes({
 					})}
 				</Text>
 				<Box>
-					<Button type="button" variant="link" size="xs" onClick={() => void copy(body)}>
+					<TextButton type="button" variant="underline" onClick={() => void copy(body)}>
 						{t("conflict.copyBody")}
-					</Button>
+					</TextButton>
 				</Box>
 				<CodeBlock>{body}</CodeBlock>
 			</Stack>
 		);
 	};
 	return (
-		<Grid columns={2} gap="normal">
+		<Grid columns={2} gap={12}>
 			{pane(t("conflict.mine"), local)}
 			{pane(t("conflict.server", { version: serverVersion }), server)}
 		</Grid>

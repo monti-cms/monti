@@ -1,9 +1,20 @@
 "use client";
 
+import {
+	Add,
+	ChevronDown,
+	ChevronRight,
+	Plug,
+	Quotes,
+	Reset,
+	Save,
+	TrashCan,
+	View,
+	ViewOff,
+} from "@carbon/icons-react";
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
-	Alert,
-	Badge,
+	Banner,
 	Box,
 	Button,
 	booleanCodec,
@@ -35,15 +46,17 @@ import {
 	LoadErrorAlert,
 	MasterDetail,
 	PageActions,
-	PageTabs,
+	Spark,
 	Stack,
 	Switch,
 	Tabs,
 	TabsContent,
+	TabsList,
 	TabsTrigger,
 	TagInput,
 	Text,
 	Textarea,
+	TextButton,
 	useConfirm,
 	useDraftEditor,
 	useHydratedQuery,
@@ -51,19 +64,6 @@ import {
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	ChevronRight,
-	Eye,
-	EyeOff,
-	Plug,
-	Plus,
-	Quote,
-	RotateCcw,
-	Save,
-	Sparkles,
-	Trash2,
-} from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -131,9 +131,13 @@ const advancedEdited = (
 	JSON.stringify({ prompt: action.prompt, send: action.send, checks: action.checks }) !==
 		JSON.stringify({ prompt: defaults.prompt, send: defaults.send, checks: defaults.checks });
 
-/** The small muted chip that marks an action whose advanced values were edited. */
+/** The small quiet word that marks an action whose advanced values were edited. */
 function ModifiedChip({ label }: { label: string }) {
-	return <Badge variant="secondary">{label}</Badge>;
+	return (
+		<Text variant="meta" tone="subtle">
+			{label}
+		</Text>
+	);
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -495,27 +499,27 @@ export function AiManager() {
 	const headerActions =
 		tab === "features" ? (
 			<Button type="button" size="sm" onClick={() => void startNew()}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.feature")}
 			</Button>
 		) : tab === "connections" ? (
 			<Button type="button" size="sm" onClick={() => void openConnection("new")}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.connection")}
 			</Button>
 		) : (
 			<Button type="button" size="sm" onClick={() => void openSnippet("new")}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.snippet")}
 			</Button>
 		);
 	return (
-		<Stack gap="none" grow minHeight={0} overflow="hidden">
+		<Stack gap={0} grow minHeight={0} overflow="hidden">
 			<PageActions>{headerActions}</PageActions>
 			<Tabs fill value={tab} onValueChange={(value) => void changeTab(value as AiTab)}>
-				<PageTabs>
+				<TabsList variant="bar">
 					<TabsTrigger value="features">
-						<Sparkles aria-hidden />
+						<Spark aria-hidden />
 						{t("tab.features")}
 					</TabsTrigger>
 					<TabsTrigger value="connections">
@@ -523,22 +527,21 @@ export function AiManager() {
 						{t("tab.connections")}
 					</TabsTrigger>
 					<TabsTrigger value="snippets">
-						<Quote aria-hidden />
+						<Quotes aria-hidden />
 						{t("tab.snippets")}
 					</TabsTrigger>
-				</PageTabs>
+				</TabsList>
 				<TabsContent value="features" fill>
 					{featuresQuery.data && usable.size === 0 && (
-						// A strip across the page under the tabs, flush with the list below, so it reads as the state of this tab.
-						<Alert tone="warning" layout="strip" role="status">
-							<Text>{t("banner.needsConnection")}</Text>
-							<Button type="button" size="xs" variant="outline" onClick={() => void changeTab("connections")}>
+						// A banner across the page under the tabs, flush with the list below, so it reads as the state of this tab.
+						<Banner title={t("banner.needsConnection")}>
+							<TextButton variant="underline" onClick={() => void changeTab("connections")}>
 								{t("banner.goToConnections")}
-							</Button>
-						</Alert>
+							</TextButton>
+						</Banner>
 					)}
 					{featuresQuery.error && !featuresQuery.data && (
-						<Box padding="normal">
+						<Box padding={12}>
 							<LoadErrorAlert
 								message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
 								onRetry={() => void featuresQuery.refetch()}
@@ -551,7 +554,6 @@ export function AiManager() {
 								resizeKey="ai-features"
 								label={t("list.label")}
 								loading={featuresQuery.isPending}
-								skeletonRows={4}
 								empty={
 									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
 										<EmptyState compact title={t("list.empty")} />
@@ -563,9 +565,15 @@ export function AiManager() {
 									if (groupFeatures.length === 0) return [];
 									const isCollapsed = collapsedGroups.has(group);
 									return [
-										<Box key={`group-${group}`} as="li" position="sticky" border="y" background="neutral">
-											<Button type="button" variant="ghost" size="sm" width="full" onClick={() => toggleGroup(group)}>
-												<Inline gap="condensed" width="full">
+										<Box key={`group-${group}`} as="li" position="sticky" border="y" background="muted">
+											<Button
+												type="button"
+												variant="secondary"
+												size="sm"
+												width="full"
+												onClick={() => toggleGroup(group)}
+											>
+												<Inline gap={8} width="full">
 													{isCollapsed ? <ChevronRight aria-hidden /> : <ChevronDown aria-hidden />}
 													<Text variant="caption" weight="semibold">
 														{t(`group.${group}`)}
@@ -589,7 +597,6 @@ export function AiManager() {
 														onClick={() => void openFeature(feature)}
 														trailing={
 															<Switch
-																size="sm"
 																checked={feature.enabled && connected}
 																disabled={!connected}
 																aria-label={t("toggle.enableAction", { label: feature.label })}
@@ -619,7 +626,6 @@ export function AiManager() {
 												onClick={() => void openFeature(feature)}
 												trailing={
 													<Switch
-														size="sm"
 														checked={feature.enabled && connected}
 														disabled={!connected}
 														aria-label={t("toggle.enableAction", { label: feature.label })}
@@ -640,15 +646,8 @@ export function AiManager() {
 									/>
 								)}
 								{features.some((feature) => feature.hidden) && (
-									<Inline
-										as="li"
-										key="hidden-toggle"
-										gap="condensed"
-										justify="between"
-										border="top"
-										padding="condensed"
-									>
-										<Button type="button" size="xs" variant="quiet" onClick={() => setShowHidden(!showHidden)}>
+									<Inline as="li" key="hidden-toggle" gap={8} justify="between" border="top" padding={8}>
+										<TextButton type="button" variant="quiet" onClick={() => setShowHidden(!showHidden)}>
 											{showHidden
 												? t("list.hideHidden", {
 														count: features.filter((feature) => feature.hidden).length,
@@ -656,10 +655,10 @@ export function AiManager() {
 												: t("list.showHidden", {
 														count: features.filter((feature) => feature.hidden).length,
 													})}
-										</Button>
+										</TextButton>
 										{showHidden && (
-											<Button type="button" size="xs" variant="outline" onClick={() => void restoreAllHidden()}>
-												<RotateCcw aria-hidden />
+											<Button type="button" size="sm" variant="secondary" onClick={() => void restoreAllHidden()}>
+												<Reset aria-hidden />
 												{t("button.restoreHidden")}
 											</Button>
 										)}
@@ -694,11 +693,12 @@ export function AiManager() {
 							/>
 						) : (
 							featuresQuery.data && (
-								<EmptyState
-									icon={Sparkles}
-									title={t("empty.pick")}
-									action={{ label: t("add.feature"), onClick: () => void startNew(), icon: Plus }}
-								/>
+								<Box paddingX={24}>
+									<EmptyState
+										title={t("empty.pick")}
+										action={{ label: t("add.feature"), onClick: () => void startNew() }}
+									/>
+								</Box>
 							)
 						)}
 					</MasterDetail>
@@ -738,7 +738,7 @@ function OneOfInput({
 }) {
 	const t = useTranslator(aiManagerMessages);
 	return (
-		<Box grow maxWidth="panel-lg">
+		<Box grow maxWidth="assistant">
 			<TagInput
 				items={items}
 				disabled={disabled}
@@ -767,17 +767,12 @@ function CheckRow({
 	const id = useId();
 	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
-		<Inline as="li" gap="condensed" align={multiline ? "start" : "center"} paddingTop={multiline ? "tight" : undefined}>
-			<Switch
-				id={id}
-				size="sm"
-				checked={check.enabled}
-				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
-			/>
+		<Inline as="li" gap={8} align={multiline ? "start" : "center"} paddingTop={multiline ? 4 : undefined}>
+			<Switch id={id} checked={check.enabled} onCheckedChange={(enabled) => onChange({ ...check, enabled })} />
 			<Label htmlFor={id} size="caption">
 				{label}
 			</Label>
-			<Inline gap="condensed" grow minWidth={0} maxWidth="panel-lg">
+			<Inline gap={8} grow minWidth={0} maxWidth="assistant">
 				{check.kind === "pattern" && (
 					<Box grow minWidth={0}>
 						<Input
@@ -791,7 +786,7 @@ function CheckRow({
 					</Box>
 				)}
 				{check.kind === "maxLength" && (
-					<Inline gap="condensed">
+					<Inline gap={8}>
 						<Input
 							type="number"
 							width="number"
@@ -819,12 +814,12 @@ function CheckRow({
 				)}
 			</Inline>
 			{onRemove ? (
-				<IconButton label={t("check.remove", { label })} size="icon-xs" tone="danger" onClick={onRemove}>
-					<Trash2 aria-hidden />
+				<IconButton label={t("check.remove", { label })} tone="danger" onClick={onRemove}>
+					<TrashCan aria-hidden />
 				</IconButton>
 			) : (
 				// Keeps the rows aligned with the ones that have a remove button.
-				<Box paddingX="normal" shrink={false} aria-hidden />
+				<Box paddingX={12} shrink={false} aria-hidden />
 			)}
 		</Inline>
 	);
@@ -941,9 +936,9 @@ function FeatureEditor({
 	};
 
 	return (
-		<Stack gap="comfortable" padding="spacious" maxWidth="detail" width="full" centered>
-			<Inline gap="comfortable" wrap>
-				<Stack gap="hair" grow minWidth={0}>
+		<Stack gap={16} padding={24} maxWidth="reading" width="full" centered>
+			<Inline gap={16} wrap>
+				<Stack gap={2} grow minWidth={0}>
 					<Heading truncate>
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
 					</Heading>
@@ -955,20 +950,20 @@ function FeatureEditor({
 					</Text>
 				</Stack>
 				<Label size="caption">
-					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
+					<Switch checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
 					{t("toggle.on")}
 				</Label>
 			</Inline>
 
 			{custom && (
-				<Box as="section" aria-label={t("section.basics")} border="y" paddingY="comfortable">
+				<Box as="section" aria-label={t("section.basics")} border="y" paddingY={16}>
 					<CustomBaseFields base={custom.base} onChange={custom.onBaseChange} />
 				</Box>
 			)}
 
 			<FormField>
 				<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
-				<Inline gap="condensed" minWidth={0}>
+				<Inline gap={8} minWidth={0}>
 					<Box grow minWidth={0}>
 						<OptionSelect
 							id={ids.provider}
@@ -993,21 +988,21 @@ function FeatureEditor({
 
 			<Stack
 				as="section"
-				gap="condensed"
+				gap={8}
 				radius="md"
-				background="inset"
-				padding="normal"
+				background="tool"
+				padding={12}
 				aria-label={t("test.title")}
 				data-testid="ai-try"
 			>
-				<Inline gap="normal">
+				<Inline gap={12}>
 					<Box grow minWidth={0}>
 						<Text as="p" variant="caption" tone="muted">
 							{t("test.hint")}
 						</Text>
 					</Box>
-					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
-						<Sparkles aria-hidden />
+					<Button type="button" size="sm" variant="secondary" disabled={testDisabled} onClick={() => void runTest()}>
+						<Spark aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
 					</Button>
 				</Inline>
@@ -1042,9 +1037,9 @@ function FeatureEditor({
 								{t("test.noResults")}
 							</Text>
 						) : (
-							<Inline as="ul" gap="tight" wrap>
+							<Inline as="ul" gap={12} wrap>
 								{test.result.items.map((item) => (
-									<Badge key={item.value} variant="secondary" render={<li />}>
+									<Inline as="li" key={item.value} gap={4}>
 										<Text variant="caption" truncate>
 											{item.label}
 										</Text>
@@ -1053,7 +1048,7 @@ function FeatureEditor({
 												{item.detail}
 											</Text>
 										)}
-									</Badge>
+									</Inline>
 								))}
 							</Inline>
 						)
@@ -1062,13 +1057,10 @@ function FeatureEditor({
 					))}
 			</Stack>
 
-			<Box border="top" paddingTop="comfortable">
+			<Box border="top" paddingTop={16}>
 				<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced}>
-					<CollapsibleTrigger
-						render={<Button type="button" variant="quiet" size="sm" />}
-						data-testid="ai-advanced-toggle"
-					>
-						<Inline gap="condensed">
+					<CollapsibleTrigger render={<TextButton type="button" variant="quiet" />} data-testid="ai-advanced-toggle">
+						<Inline gap={8}>
 							{advancedOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
 							<Text weight="medium">{t("advanced.title")}</Text>
 							{advancedEdited(spec, defaults) && <ModifiedChip label={t("status.modified")} />}
@@ -1078,7 +1070,7 @@ function FeatureEditor({
 						</Inline>
 					</CollapsibleTrigger>
 					<CollapsibleContent data-testid="ai-advanced">
-						<Box paddingTop="comfortable">
+						<Box paddingTop={16}>
 							<FormFieldGroup>
 								{!custom && (
 									<FormField>
@@ -1094,10 +1086,9 @@ function FeatureEditor({
 									</FormField>
 								)}
 
-								<Inline gap="spacious" wrap>
+								<Inline gap={24} wrap>
 									<Label size="caption">
 										<Switch
-											size="sm"
 											checked={spec.askInstruction}
 											onCheckedChange={(askInstruction) => set({ askInstruction })}
 										/>
@@ -1105,7 +1096,7 @@ function FeatureEditor({
 									</Label>
 									{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
 										<Label size="caption">
-											<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
+											<Switch checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
 											{t("toggle.instant")}
 										</Label>
 									)}
@@ -1114,7 +1105,7 @@ function FeatureEditor({
 								{inputs.length > 0 && (
 									<FormField role="group" aria-labelledby={ids.sendTitle}>
 										<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
-										<Inline gap="normal" wrap>
+										<Inline gap={12} wrap>
 											{inputs.map(([name, input]) => (
 												<Label key={name} size="caption">
 													<Checkbox
@@ -1137,7 +1128,7 @@ function FeatureEditor({
 								{deciding && (
 									<FormField>
 										<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
-										<Inline gap="condensed">
+										<Inline gap={8}>
 											<Input
 												id={ids.threshold}
 												type="number"
@@ -1174,8 +1165,8 @@ function FeatureEditor({
 
 								<FormField role="group" aria-labelledby={ids.checksTitle}>
 									<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
-									<Stack gap="condensed">
-										<Stack as="ul" gap="condensed" aria-label={t("field.checks")}>
+									<Stack gap={8}>
+										<Stack as="ul" gap={8} aria-label={t("field.checks")}>
 											{spec.checks.map((check, index) => (
 												<CheckRow
 													key={checkKey(check)}
@@ -1199,17 +1190,17 @@ function FeatureEditor({
 										{addableChecks.length > 0 && (
 											<Inline>
 												<DropdownMenu>
-													<DropdownMenuTrigger render={<Button type="button" size="xs" variant="quiet" />}>
-														<Plus aria-hidden />
+													<DropdownMenuTrigger render={<TextButton type="button" variant="quiet" />}>
+														<Add aria-hidden />
 														{t("field.addCheck")}
 													</DropdownMenuTrigger>
-													<DropdownMenuContent align="start" width="sm">
+													<DropdownMenuContent align="start">
 														{addableChecks.map((kind) => (
 															<DropdownMenuItem
 																key={kind}
 																onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
 															>
-																<Plus aria-hidden />
+																<Add aria-hidden />
 																{checkLabel(kind)}
 															</DropdownMenuItem>
 														))}
@@ -1253,11 +1244,11 @@ function FeatureEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={saving}
 						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
 					>
-						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+						{spec.hidden ? <View aria-hidden /> : <ViewOff aria-hidden />}
 						{spec.hidden ? t("button.unhide") : t("button.hide")}
 					</Button>
 				)}
@@ -1265,11 +1256,11 @@ function FeatureEditor({
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
+						variant="secondary"
 						disabled={atDefaults}
 						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
 					>
-						<RotateCcw aria-hidden />
+						<Reset aria-hidden />
 						{t("button.reset")}
 					</Button>
 				)}

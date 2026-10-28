@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Stack } from "./stack";
+import { StoryCaption } from "./story-caption";
 import { Text } from "./text";
 
 const meta = {
-	title: "Layout/Stack",
+	title: "Primitives/Stack",
 	component: Stack,
-	args: { gap: "normal", direction: "column" },
+	args: { gap: 12, direction: "column" },
 	render: (args) => (
 		<Stack {...args}>
 			<Box>첫째</Box>
@@ -19,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 function Box({ children, tall }: { children: string; tall?: boolean }) {
 	return (
-		<div className={tall ? "rounded-md bg-monti-neutral p-4" : "rounded-md bg-monti-neutral p-2"}>
+		<div className={tall ? "h-16 rounded-monti-md bg-monti-selected p-2" : "rounded-monti-md bg-monti-selected p-2"}>
 			<Text variant="caption">{children}</Text>
 		</div>
 	);
@@ -27,18 +28,16 @@ function Box({ children, tall }: { children: string; tall?: boolean }) {
 
 export const Playground: Story = {};
 
-const GAPS = ["none", "tight", "condensed", "normal", "comfortable", "spacious", "section"] as const;
+const GAPS = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48] as const;
 const ALIGNS = ["start", "center", "end", "baseline", "stretch"] as const;
 const JUSTIFIES = ["start", "center", "end", "between"] as const;
 
 export const AllGaps: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{GAPS.map((gap) => (
-				<Stack key={gap} gap="tight">
-					<Text variant="label" tone="muted">
-						gap {gap}
-					</Text>
+				<Stack key={gap} gap={4}>
+					<StoryCaption>gap {gap}</StoryCaption>
 					<Stack direction="row" gap={gap}>
 						<Box>첫째</Box>
 						<Box>둘째</Box>
@@ -52,12 +51,10 @@ export const AllGaps: Story = {
 
 export const ColumnGaps: Story = {
 	render: () => (
-		<Stack direction="row" gap="section" align="start">
+		<Stack direction="row" gap={32} align="start" wrap>
 			{GAPS.map((gap) => (
-				<Stack key={gap} gap="tight">
-					<Text variant="label" tone="muted">
-						{gap}
-					</Text>
+				<Stack key={gap} gap={4}>
+					<StoryCaption>{gap}</StoryCaption>
 					<Stack gap={gap}>
 						<Box>첫째</Box>
 						<Box>둘째</Box>
@@ -70,13 +67,11 @@ export const ColumnGaps: Story = {
 
 export const Align: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{ALIGNS.map((align) => (
-				<Stack key={align} gap="tight">
-					<Text variant="label" tone="muted">
-						align {align}
-					</Text>
-					<Stack direction="row" align={align} className="rounded-md bg-monti-inset p-2">
+				<Stack key={align} gap={4}>
+					<StoryCaption>align {align}</StoryCaption>
+					<Stack direction="row" align={align} className="rounded-monti-md border border-monti-default p-2">
 						<Box>짧음</Box>
 						<Box tall>높음</Box>
 						<Box>짧음</Box>
@@ -89,13 +84,11 @@ export const Align: Story = {
 
 export const Justify: Story = {
 	render: () => (
-		<Stack gap="spacious">
+		<Stack gap={24}>
 			{JUSTIFIES.map((justify) => (
-				<Stack key={justify} gap="tight">
-					<Text variant="label" tone="muted">
-						justify {justify}
-					</Text>
-					<Stack direction="row" justify={justify} className="rounded-md bg-monti-inset p-2">
+				<Stack key={justify} gap={4}>
+					<StoryCaption>justify {justify}</StoryCaption>
+					<Stack direction="row" justify={justify} className="rounded-monti-md border border-monti-default p-2">
 						<Box>첫째</Box>
 						<Box>둘째</Box>
 					</Stack>
@@ -107,7 +100,7 @@ export const Justify: Story = {
 
 export const Wrap: Story = {
 	render: () => (
-		<Stack direction="row" wrap gap="condensed" className="max-w-xs">
+		<Stack direction="row" wrap gap={8} className="max-w-xs">
 			{["일상", "여행", "맛집", "독서", "개발", "사진", "음악", "영화"].map((tag) => (
 				<Box key={tag}>{tag}</Box>
 			))}
@@ -117,9 +110,9 @@ export const Wrap: Story = {
 
 export const Elements: Story = {
 	render: () => (
-		<Stack as="ul" gap="tight">
+		<Stack as="ul" gap={4}>
 			{["첫째", "둘째", "셋째"].map((item) => (
-				<Stack as="li" key={item} direction="row" gap="tight">
+				<Stack as="li" key={item} direction="row" gap={4}>
 					<Text>{item}</Text>
 				</Stack>
 			))}

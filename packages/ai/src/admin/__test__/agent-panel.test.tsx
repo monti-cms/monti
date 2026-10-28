@@ -130,9 +130,9 @@ const renderPanel = (
 		</SiteWrapper>,
 	);
 };
-/** An element whose own text holds `part` (a message in the dictionary is plain text, not a pattern). */
-const includes = (part: string) => (_: string, element: Element | null) =>
-	element?.tagName === "P" && (element.textContent ?? "").includes(part);
+/** The text of the alert a panel that cannot run shows (a message in the dictionary is plain text, not a pattern). */
+const alertText = () => screen.getByRole("alert").textContent ?? "";
+const findAlertText = async () => (await screen.findByRole("alert")).textContent ?? "";
 const ask = async (message: string) => {
 	const box = await screen.findByRole("textbox", { name: t("input.label") });
 	await waitFor(() => expect(box).not.toBeDisabled());
@@ -424,8 +424,8 @@ describe("assistant panel — when it cannot run", () => {
 	it("says there is no connection, with a link to the AI screen, and keeps the box off", async () => {
 		server.settings = settings({ agent: { setting: null, effective: null } });
 		renderPanel();
-		expect(await screen.findByText(includes(t("unavailable.noConnection")))).toBeTruthy();
-		expect(screen.getByText(includes(t("unavailable.noConnection.fix")))).toBeTruthy();
+		expect(await findAlertText()).toContain(t("unavailable.noConnection"));
+		expect(alertText()).toContain(t("unavailable.noConnection.fix"));
 		expect(link().getAttribute("href")).toBe(testSite.adminHref("/tools/ai"));
 		expect(screen.getByRole("textbox", { name: t("input.label") })).toBeDisabled();
 		expect(screen.getByRole("button", { name: t("send") })).toBeDisabled();
@@ -439,7 +439,7 @@ describe("assistant panel — when it cannot run", () => {
 			},
 		});
 		renderPanel();
-		expect(await screen.findByText(includes(t("unavailable.noTools", { model: "small-model" })))).toBeTruthy();
+		expect(await findAlertText()).toContain(t("unavailable.noTools", { model: "small-model" }));
 		expect(link().getAttribute("href")).toBe(testSite.adminHref("/tools/ai"));
 	});
 
@@ -459,7 +459,7 @@ describe("assistant panel — when it cannot run", () => {
 		server.agent.push(() => refusal("agent_unavailable", 422));
 		renderPanel();
 		await ask("hi");
-		expect(await screen.findByText(includes(t("unavailable.noTools", { model: "big-model" })))).toBeTruthy();
+		expect(await findAlertText()).toContain(t("unavailable.noTools", { model: "big-model" }));
 		expect(link()).toBeTruthy();
 	});
 
@@ -467,7 +467,7 @@ describe("assistant panel — when it cannot run", () => {
 		server.agent.push(() => refusal("service_unavailable", 503));
 		renderPanel();
 		await ask("hi");
-		expect(await screen.findByText(includes(t("unavailable.noConnection")))).toBeTruthy();
+		expect(await findAlertText()).toContain(t("unavailable.noConnection"));
 	});
 
 	it("tells another failure apart: it says so and offers to try again", async () => {

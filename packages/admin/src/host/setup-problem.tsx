@@ -1,5 +1,5 @@
 import type { Cms } from "@monti-cms/core/server";
-import { Alert, AlertDescription, AlertTitle, Box } from "@monti-cms/ui";
+import { Box, Heading, Stack, Text } from "@monti-cms/ui";
 import { layoutMessages } from "./messages";
 
 const REPORTED = Symbol.for("monti.admin.setup-problem.reported");
@@ -31,12 +31,16 @@ export function setupProblemOf(cms: Pick<Cms, "auth">): string | undefined {
 export function SetupProblemScreen({ cms }: { cms: Pick<Cms, "site"> }) {
 	const t = cms.site.createTranslator(layoutMessages);
 	return (
-		<div className="monti-admin flex min-h-screen items-center justify-center bg-monti-page p-comfortable text-monti-default">
+		<div className="monti-admin flex min-h-screen items-center justify-center bg-monti-page p-monti-16 text-monti-default">
 			<Box maxWidth="panel">
-				<Alert tone="danger" layout="stack">
-					<AlertTitle>{t("setupTitle")}</AlertTitle>
-					<AlertDescription>{t("setupBody")}</AlertDescription>
-				</Alert>
+				<Stack gap={8}>
+					<Heading as="h1" variant="title">
+						{t("setupTitle")}
+					</Heading>
+					<Text as="p" tone="muted">
+						{t("setupBody")}
+					</Text>
+				</Stack>
 			</Box>
 		</div>
 	);

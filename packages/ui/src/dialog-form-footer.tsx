@@ -1,10 +1,11 @@
 import { Button } from "./button";
 import { DialogFooter } from "./dialog";
 import { useUiLabels } from "./labels";
+import { TextButton } from "./text-button";
 
 /**
- * The footer of a dialog that holds a form: Cancel and a submit button. The submit button shows `busyLabel` (default "Saving…") while the
- * request runs. Put it inside the `<form>`; the dialog closes through `onCancel`.
+ * The footer of a dialog that holds a form: a Cancel text button and one pill, right-aligned like every modal's actions. The pill shows `busyLabel`
+ * (the labels' "saving") while the request runs. Put it inside the `<form>`; the dialog closes through `onCancel`.
  */
 export function DialogFormFooter({
 	onCancel,
@@ -24,9 +25,7 @@ export function DialogFormFooter({
 	const labels = useUiLabels();
 	return (
 		<DialogFooter>
-			<Button type="button" variant="outline" onClick={onCancel}>
-				{cancelLabel ?? labels.cancel}
-			</Button>
+			<TextButton onClick={onCancel}>{cancelLabel ?? labels.cancel}</TextButton>
 			<Button type="submit" disabled={disabled || busy}>
 				{busy ? (busyLabel ?? labels.saving) : (submitLabel ?? labels.save)}
 			</Button>

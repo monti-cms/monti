@@ -87,7 +87,7 @@ export interface BlockEditing {
 	readonly insertable?: boolean;
 	/** Slash menu search terms. */
 	readonly keywords?: readonly string[];
-	/** Menu icon (lucide name, e.g. `workflow`). If absent, a puzzle icon. */
+	/** Menu icon (Carbon icon name, e.g. `workflow-automation`). If absent, a puzzle icon. */
 	readonly icon?: string;
 	/** Initial values when inserted from the slash menu. */
 	readonly insert?: BlockInsert;

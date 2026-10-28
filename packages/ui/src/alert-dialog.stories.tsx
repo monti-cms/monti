@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Trash2 } from "lucide-react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -8,27 +7,30 @@ import {
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
-	AlertDialogMedia,
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "./alert-dialog";
 import { Button } from "./button";
 
+/**
+ * The same modal as `Dialog`, for a question that has to be answered: the Cancel text button and one pill, which is the danger pill when the
+ * decision is a destructive one. Escape cancels. There is one layout: no icon, no small version.
+ */
 const meta = {
-	title: "Overlays/AlertDialog",
+	title: "Controls/Overlay/AlertDialog",
 	component: AlertDialog,
 	args: {},
 	render: (args) => (
 		<AlertDialog {...args}>
-			<AlertDialogTrigger render={<Button tone="danger" />}>휴지통으로 이동</AlertDialogTrigger>
+			<AlertDialogTrigger render={<Button variant="danger" />}>휴지통으로 이동</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>이 글을 휴지통으로 옮길까요?</AlertDialogTitle>
-					<AlertDialogDescription>30일 안에는 휴지통에서 되돌릴 수 있어요.</AlertDialogDescription>
+					<AlertDialogTitle>휴지통으로 옮길까요?</AlertDialogTitle>
+					<AlertDialogDescription>글 2개가 사이트에서 바로 내려가요.</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction tone="danger">이동</AlertDialogAction>
+					<AlertDialogAction variant="danger">휴지통으로</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -41,10 +43,11 @@ export const Playground: Story = {};
 
 export const Open: Story = { args: { defaultOpen: true }, render: meta.render };
 
-export const Small: Story = {
+/** A decision that is not destructive: the pill is the ink one. */
+export const Plain: Story = {
 	render: () => (
 		<AlertDialog defaultOpen>
-			<AlertDialogContent size="sm">
+			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>발행을 취소할까요?</AlertDialogTitle>
 					<AlertDialogDescription>글이 초안으로 돌아가요.</AlertDialogDescription>
@@ -58,46 +61,7 @@ export const Small: Story = {
 	),
 };
 
-export const WithMedia: Story = {
-	render: () => (
-		<AlertDialog defaultOpen>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogMedia>
-						<Trash2 aria-hidden />
-					</AlertDialogMedia>
-					<AlertDialogTitle>글을 완전히 지울까요?</AlertDialogTitle>
-					<AlertDialogDescription>지운 글은 되돌릴 수 없어요.</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction tone="danger">완전히 삭제</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
-	),
-};
-
-export const SmallWithMedia: Story = {
-	render: () => (
-		<AlertDialog defaultOpen>
-			<AlertDialogContent size="sm">
-				<AlertDialogHeader>
-					<AlertDialogMedia>
-						<Trash2 aria-hidden />
-					</AlertDialogMedia>
-					<AlertDialogTitle>글을 지울까요?</AlertDialogTitle>
-					<AlertDialogDescription>되돌릴 수 없어요.</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction tone="danger">삭제</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
-	),
-};
-
+/** Long text wraps between words, and the actions stay one row at the bottom right. */
 export const LongText: Story = {
 	render: () => (
 		<AlertDialog defaultOpen>
@@ -111,7 +75,7 @@ export const LongText: Story = {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
-					<AlertDialogAction tone="danger">이동</AlertDialogAction>
+					<AlertDialogAction variant="danger">휴지통으로</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

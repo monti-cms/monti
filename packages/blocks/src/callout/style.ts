@@ -1,4 +1,4 @@
-import { AlertCircle, AlertOctagon, AlertTriangle, Info, Lightbulb } from "lucide-react";
+import { Idea, Information, Warning, WarningAlt, WarningHex } from "@carbon/icons-react";
 import type { ComponentType } from "react";
 
 /** Callout block variants (the options of the block definition's `callout.variant`). */
@@ -6,11 +6,11 @@ export type CalloutVariant = "note" | "tip" | "info" | "warning" | "danger";
 
 /** Callout icon in the editor. The public page look is decided by the site's renderer. */
 export const CALLOUT_ICON_BY_VARIANT: Record<CalloutVariant, ComponentType<{ className?: string }>> = {
-	note: AlertCircle,
-	tip: Lightbulb,
-	info: Info,
-	warning: AlertTriangle,
-	danger: AlertOctagon,
+	note: Warning,
+	tip: Idea,
+	info: Information,
+	warning: WarningAlt,
+	danger: WarningHex,
 };
 
 const TITLE_BY_VARIANT: Record<CalloutVariant, string> = {
@@ -26,7 +26,7 @@ const TITLE_BY_VARIANT: Record<CalloutVariant, string> = {
  * `.monti-callout`, accent color variable `--monti-callout-<variant>`). The public callout is drawn by the site.
  */
 export const CALLOUT_BOX_CLASS = [
-	"monti-callout relative block w-full rounded-lg border px-comfortable py-normal text-monti-body",
+	"monti-callout relative block w-full rounded-monti-lg border px-monti-16 py-monti-12 text-monti-body",
 	"[&>svg]:size-4 [&>svg]:translate-y-0.5",
 ].join(" ");
 

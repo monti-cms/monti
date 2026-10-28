@@ -70,9 +70,8 @@ export function ApiKeyField({
 			<legend id={groupId}>
 				<Text weight="medium">{label ?? t("field.keyLabel")}</Text>
 			</legend>
-			<Box paddingTop="condensed" maxWidth="prose">
+			<Stack gap={12} paddingTop={8} maxWidth="reading">
 				<RadioGroup
-					variant="card"
 					aria-labelledby={groupId}
 					value={value.use === "none" ? "" : value.use}
 					onValueChange={(next) => {
@@ -84,80 +83,78 @@ export function ApiKeyField({
 						value="saved"
 						disabled={keys.length === 0}
 						label={<Text weight={saved ? "medium" : undefined}>{t("field.useSaved")}</Text>}
-						hint={
-							keys.length === 0 ? (
-								<Text variant="caption" tone="muted">
-									{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
-								</Text>
-							) : saved ? (
-								<Stack gap="condensed">
-									<Box maxWidth="panel-lg">
-										<Select
-											value={value.keyId}
-											onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
-											items={keys.map((key) => ({ value: key.id, label: key.name }))}
-										>
-											<SelectTrigger aria-label={t("field.savedPick")} width="full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{keys.map((key) => (
-													<SelectItem key={key.id} value={key.id}>
-														<Inline gap="condensed">
-															<Text>{key.name}</Text>
-															<Text variant="caption" tone="muted" mono>
-																{key.readable ? mask(key) : t("field.unreadable")}
-															</Text>
-														</Inline>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</Box>
-									{chosen && chosen.uses.length > 0 && (
-										<Text variant="caption" tone="muted">
-											{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
-										</Text>
-									)}
-								</Stack>
-							) : undefined
-						}
 					/>
 					<RadioItem
 						value="new"
 						disabled={!canSave}
 						label={<Text weight={value.use === "new" ? "medium" : undefined}>{t("field.useNew")}</Text>}
-						hint={
-							value.use === "new" || !canSave ? (
-								<Stack gap="condensed">
-									{value.use === "new" && (
-										<>
-											<Box maxWidth="panel-lg">
-												<Input
-													type="password"
-													autoComplete="off"
-													aria-label={t("field.newInput")}
-													mono
-													value={value.value}
-													onChange={(event) => onChange({ use: "new", value: event.target.value })}
-												/>
-											</Box>
-											<Text variant="caption" tone="muted">
-												{t("field.newHelp", { name: freeName(baseName, keys) })}
-											</Text>
-										</>
-									)}
-									{!canSave && (
-										<Text variant="caption" tone="muted">
-											{t("field.secretMissing")}
-										</Text>
-									)}
-								</Stack>
-							) : undefined
-						}
 					/>
 				</RadioGroup>
-			</Box>
+				{/* The picked option's control and its note go under the group, as the design's change panel does: the rows hold only their labels. */}
+				{saved && keys.length > 0 && (
+					<Stack gap={8}>
+						<Box maxWidth="assistant">
+							<Select
+								value={value.keyId}
+								onValueChange={(keyId) => typeof keyId === "string" && onChange({ use: "saved", keyId })}
+								items={keys.map((key) => ({ value: key.id, label: key.name }))}
+							>
+								<SelectTrigger aria-label={t("field.savedPick")} width="full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{keys.map((key) => (
+										<SelectItem key={key.id} value={key.id}>
+											<Inline gap={8}>
+												<Text>{key.name}</Text>
+												<Text variant="caption" tone="muted" mono>
+													{key.readable ? mask(key) : t("field.unreadable")}
+												</Text>
+											</Inline>
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</Box>
+						{chosen && chosen.uses.length > 0 && (
+							<Text variant="caption" tone="muted">
+								{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
+							</Text>
+						)}
+					</Stack>
+				)}
+				{value.use === "new" && (
+					<Stack gap={8}>
+						<Box maxWidth="assistant">
+							<Input
+								type="password"
+								autoComplete="off"
+								aria-label={t("field.newInput")}
+								mono
+								value={value.value}
+								onChange={(event) => onChange({ use: "new", value: event.target.value })}
+							/>
+						</Box>
+						<Text variant="caption" tone="muted">
+							{t("field.newHelp", { name: freeName(baseName, keys) })}
+						</Text>
+					</Stack>
+				)}
+				{(keys.length === 0 || !canSave) && (
+					<Stack gap={8}>
+						{keys.length === 0 && (
+							<Text variant="caption" tone="muted">
+								{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
+							</Text>
+						)}
+						{!canSave && (
+							<Text variant="caption" tone="muted">
+								{t("field.secretMissing")}
+							</Text>
+						)}
+					</Stack>
+				)}
+			</Stack>
 		</fieldset>
 	);
 }
