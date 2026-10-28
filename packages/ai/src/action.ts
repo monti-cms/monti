@@ -29,6 +29,7 @@ import {
 	isAddableCheck,
 	MAX_PROMPT_LENGTH,
 	MAX_REQUEST_LENGTH,
+	slotsAsk,
 } from "./definition";
 
 /**
@@ -231,7 +232,6 @@ export const aiActionOverrideSchemaOf = (t: CoreText) =>
 			hidden: z.boolean(),
 			label: z.string().trim().min(1).max(60),
 			askInstruction: z.boolean(),
-			instant: z.boolean(),
 			/** Id of the connection to use. If `null`, the first connection matching the mode. */
 			providerId: z.string().max(60).nullable(),
 			/** Model name to use. If empty, the connection's default model. */
@@ -269,7 +269,6 @@ export interface ResolvedAiAction {
 	/** Code check name -> check. Pointed to by the `{ kind: "code" }` entries of `checks`. */
 	readonly validators: Readonly<Record<string, AiValidator>>;
 	readonly askInstruction: boolean;
-	readonly instant: boolean;
 	readonly stream: boolean;
 	readonly enabled: boolean;
 	readonly providerId: string | null;
@@ -285,7 +284,6 @@ export const EDITABLE_KEYS = [
 	"hidden",
 	"label",
 	"askInstruction",
-	"instant",
 	"providerId",
 	"modelName",
 	"prompt",
@@ -347,8 +345,9 @@ export function resolveAction(
 		],
 		definedChecks: base.map(checkKey),
 		validators: Object.fromEntries((definition.checks ?? []).filter(isValidator).map((check) => [check.name, check])),
-		askInstruction: override.askInstruction ?? definition.askInstruction ?? false,
-		instant: override.instant ?? definition.instant ?? false,
+		// Only a slot that has a place to type a request asks for one; on a field, image or media it is always off.
+		askInstruction:
+			(override.askInstruction ?? definition.askInstruction ?? false) && slotsAsk(definition.attach ?? []),
 		stream: definition.stream ?? false,
 		enabled: override.enabled ?? definition.enabled ?? true,
 		providerId: override.providerId ?? null,
@@ -615,6 +614,13 @@ export function checkAiConfig(
 			if (!Object.keys(collections).some((collection) => findField(collections, collection, attach.field))) {
 				bad(where, "attach", `attach uses unknown field "${attach.field}"`);
 			}
+		}
+		if (action.askInstruction && (action.attach ?? []).length > 0 && !slotsAsk(action.attach ?? [])) {
+			bad(
+				where,
+				"askInstruction",
+				`only the translation, selection, insert and block slots can ask for an extra request`,
+			);
 		}
 	}
 	return list.issues;

@@ -69,6 +69,32 @@ describe("current config: default field actions attach by field kind, role, and 
 		expect(summary?.checks).toContainEqual({ kind: "maxLength", max });
 	});
 
+	it("series suggestion attaches to a backlink field and picks the one series the post is part of, from the collection the backlink points from", () => {
+		const backlinks = bodyCollections.flatMap(([name, schema]) =>
+			Object.entries(schema.fields).flatMap(([field, definition]) =>
+				definition.kind === "backlink" ? [{ pair: `${name}.${field}`, from: definition.from }] : [],
+			),
+		);
+		const series = AI_ACTIONS.series;
+		if (backlinks.length === 0) {
+			expect(series).toBeUndefined();
+			return;
+		}
+		const from = backlinks[0]?.from;
+		expect(series).toMatchObject({
+			engine: "decide",
+			pick: "one",
+			apply: "append",
+			choices: { from: "collection", collection: from },
+		});
+		expect(pairs(series)).toEqual(
+			backlinks
+				.filter((backlink) => backlink.from === from)
+				.map(({ pair }) => pair)
+				.sort(),
+		);
+	});
+
 	it("tag/category suggestion attaches to many/one relation fields pointing to a classification (record) collection, and the options are that target", () => {
 		for (const [key, many] of [
 			["tags", true],

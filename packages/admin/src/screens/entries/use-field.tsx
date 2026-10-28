@@ -120,6 +120,8 @@ interface EntryFormState {
 	fillForm: (patch: EntryFormPatch) => void;
 	/** The keys the assistant filled and nobody has edited since. Owned by the provider, not by the form owner. */
 	assisted: ReadonlySet<string>;
+	/** Marks a value that is not in the form (a series the post was added to) as the assistant's, or takes the mark off. */
+	setAssisted: (name: string, on: boolean) => void;
 }
 
 const NO_KEYS: ReadonlySet<string> = new Set();
@@ -162,6 +164,11 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 				store.setState({ assisted: new Set([...store.getState().assisted, ...Object.keys(patch)]) });
 			},
 			assisted: NO_KEYS,
+			setAssisted: (name, on) => {
+				const marked = store.getState().assisted;
+				if (marked.has(name) === on) return;
+				store.setState({ assisted: new Set(on ? [...marked, name] : [...marked].filter((key) => key !== name)) });
+			},
 			issues: value.issues ?? NO_ISSUES,
 			disabled: Boolean(value.disabled),
 			entryId: value.entryId,
@@ -180,6 +187,7 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 		setForm: state.setForm,
 		fillForm: state.fillForm,
 		assisted: state.assisted,
+		setAssisted: state.setAssisted,
 		issues: stableIssues(state.issues, value.issues ?? NO_ISSUES),
 		disabled: Boolean(value.disabled),
 		entryId: value.entryId,

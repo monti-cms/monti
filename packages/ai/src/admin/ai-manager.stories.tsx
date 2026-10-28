@@ -18,7 +18,6 @@ const editable = (label: string, prompt: string, checks: AiActionView["checks"] 
 	hidden: false,
 	label,
 	askInstruction: false,
-	instant: false,
 	providerId: null,
 	modelName: "",
 	prompt,

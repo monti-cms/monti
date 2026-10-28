@@ -114,7 +114,7 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 					runs.set(key, { status: "error", action, error });
 					return { ok: false, error };
 				}
-				for (const value of values) optionsRef.current.apply(value, action.apply);
+				for (const value of values) await optionsRef.current.apply(value, action.apply);
 				runs.set(key, IDLE);
 				return { ok: true, value: result };
 			} catch (thrown) {

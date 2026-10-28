@@ -94,7 +94,6 @@ export const viewOf = (
 	enabled: action.enabled,
 	hidden: action.hidden,
 	askInstruction: action.askInstruction,
-	instant: action.instant,
 	providerId: action.providerId,
 	modelName: action.modelName,
 	prompt: action.prompt,

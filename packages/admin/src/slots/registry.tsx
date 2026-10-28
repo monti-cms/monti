@@ -71,8 +71,8 @@ export interface SlotRequest {
 	collection?: string;
 	/** The current context, read on click. */
 	getContext: () => SlotContext;
-	/** Puts a value in. Called once per value the action produced, as soon as the action ends. */
-	apply: (value: string, mode: SlotApplyMode) => void;
+	/** Puts a value in. Called once per value the action produced, as soon as the action ends; one that fails (a save) rejects, and the run fails with it. */
+	apply: (value: string, mode: SlotApplyMode) => void | Promise<void>;
 	/** The target already has a value: the action asks again ("↻ Again") instead of filling. */
 	filled?: boolean;
 	disabled?: boolean;

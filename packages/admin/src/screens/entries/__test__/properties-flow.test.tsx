@@ -57,6 +57,7 @@ const SERIES = [{ id: "series-1", title: "리액트 다시 만들기", slug: "re
 
 beforeEach(() => {
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+		if (init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1") return json({ version: 2 });
 		if (init?.method === "PATCH") {
 			const body = JSON.parse(String(init.body));
 			return json({
@@ -96,13 +97,25 @@ const fill: SlotAction = {
 	run: vi.fn(async () => ({ kind: "text" as const, text: "리액트로 블로그를 다시 만들며 덜어낸 것과 남긴 것." })),
 };
 const summarySource: SlotSource = (request) => (request.slot === "field" && request.target === "summary" ? [fill] : []);
+/** The series action picks one existing series, as the decide model does. */
+const pickSeries: SlotAction = {
+	id: "series",
+	label: "시리즈 추천",
+	apply: "append",
+	run: vi.fn(async () => ({
+		kind: "candidates" as const,
+		items: [{ value: "series-1", label: "리액트 다시 만들기" }],
+	})),
+};
+const seriesSource: SlotSource = (request) =>
+	request.slot === "field" && request.target === "series" ? [pickSeries] : [];
 
 const renderEdit = () =>
 	render(
 		withSite(
 			<AdminUiLabels>
 				<AdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>
-					<SlotRegistryProvider sources={[summarySource]}>
+					<SlotRegistryProvider sources={[summarySource, seriesSource]}>
 						<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
 					</SlotRegistryProvider>
 				</AdminComponentsProvider>
@@ -240,5 +253,22 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(() => expect(saved()).toHaveLength(1));
 		expect(JSON.parse(String(saved()[0]?.[1]?.body)).metadata.summary).toContain("리액트로 블로그를");
 		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBeNull());
+	});
+
+	it("fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
+		renderEdit();
+		fireEvent.click((await row("모음집")).getByRole("button", { name: /채우기/ }));
+		await waitFor(() =>
+			expect(
+				fetchMock.mock.calls.filter(
+					([input, init]) => init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1",
+				),
+			).toHaveLength(1),
+		);
+		const sent = fetchMock.mock.calls.find(
+			([input, init]) => init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1",
+		);
+		expect(JSON.parse(String(sent?.[1]?.body)).metadata.itemIds).toEqual(["entry-1"]);
+		await waitFor(async () => expect((await valueButton("모음집")).getAttribute("aria-description")).toBe("AI 제안"));
 	});
 });
