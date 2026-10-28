@@ -138,7 +138,7 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has the site name (with a link that opens the site) and, under it, **Content** (each collection, then Media; the open collection or media opens its folders under it: the top-level folders and the folders along the open path), and at the bottom, under a line, **Trash** (with its count), **Tools** (with the failed-delivery count) and **Settings**. The sidebar only navigates: folders are created, renamed and deleted in the list. On a narrow screen it is a drawer. Every screen has its own address:
+The sidebar has a head row (the site name, a link that opens the site, and a fold button: the button or ⌘B folds it to a 64px icon rail, where hovering an icon names the row and its count, the tools icon carries a dot while deliveries have failed, and the folders are hidden; the folded state is remembered in this browser) and, under it, **Content** (each collection, then Media; the open collection or media opens its folders under it: the top-level folders and the folders along the open path), and at the bottom, under a line, **Trash** (with its count), **Tools** (with the failed-delivery count) and **Settings**, then one icon button for the screen mode (system, light or dark; the system until one is picked). The sidebar only navigates: folders are created, renamed and deleted in the list. On a narrow screen it is a drawer and does not fold. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|

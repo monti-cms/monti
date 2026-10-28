@@ -33,6 +33,8 @@ export interface UiLabels {
 	sidebarTitle: string;
 	sidebarDescription: string;
 	sidebarToggle: string;
+	sidebarFold: string;
+	sidebarUnfold: string;
 	sidebarResize: string;
 	resize: string;
 }
@@ -60,6 +62,8 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	sidebarTitle: "Sidebar",
 	sidebarDescription: "Shows the mobile sidebar.",
 	sidebarToggle: "Open sidebar",
+	sidebarFold: "Collapse sidebar",
+	sidebarUnfold: "Expand sidebar",
 	sidebarResize: "Resize sidebar",
 	resize: "Resize",
 };

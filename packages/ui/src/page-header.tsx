@@ -46,17 +46,17 @@ function PageColumn({ className, children, ...props }: React.ComponentProps<"div
 			className={cn("flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
 			{...props}
 		>
-			<div className="mx-auto flex min-h-0 w-full max-w-content flex-1 flex-col">{children}</div>
+			<div className="mx-auto flex min-h-0 w-full max-w-monti-content flex-1 flex-col">{children}</div>
 		</div>
 	);
 }
 
-/** What is under the header and the toolbar of a page: it takes the height left and scrolls by itself. */
+/** What is under the header and the toolbar of a page: it takes the height left and scrolls by itself (`relative`, so the screen-reader-only inputs inside scroll with it). */
 function PageBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="page-body"
-			className={cn("flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-48", className)}
+			className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-48", className)}
 			{...props}
 		/>
 	);
@@ -131,7 +131,11 @@ function PageToolbar({
 /** The right group of a toolbar: filters, or the way to let go of a pick. */
 function PageToolbarEnd({ className, ...props }: React.ComponentProps<"span">) {
 	return (
-		<span data-slot="page-toolbar-end" className={cn("ml-auto flex items-center gap-monti-20", className)} {...props} />
+		<span
+			data-slot="page-toolbar-end"
+			className={cn("ml-auto flex flex-wrap items-center justify-end gap-x-monti-20 gap-y-monti-8", className)}
+			{...props}
+		/>
 	);
 }
 

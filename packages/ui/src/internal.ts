@@ -209,10 +209,12 @@ export { SidePanelFrame } from "./side-panel-frame";
 export {
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
+	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -221,6 +223,7 @@ export {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarRailToggle,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";

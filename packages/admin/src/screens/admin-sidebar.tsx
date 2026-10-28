@@ -5,24 +5,27 @@ import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	IconButton,
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
+	SidebarIconLink,
 	SidebarMenu,
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSub,
 	SidebarMenuSubButton,
+	SidebarRailToggle,
 	Text,
 	useSidebar,
 } from "@monti-cms/ui";
 import { type DragEvent, Fragment, type ReactNode, useState } from "react";
 import { AdminLink as Link } from "../router";
+import { ThemeMenu } from "../ui/theme-menu";
 import { screensMessages } from "./messages";
 import { railFolders } from "./rail-folders";
 import { useAdminFeatures } from "./shared/admin-features";
@@ -110,7 +113,7 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: AdminSidebarProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const { isMobile, setOpenMobile } = useSidebar();
+	const { isMobile, setOpenMobile, rail } = useSidebar();
 	const features = useAdminFeatures();
 	const closeMobile = () => {
 		if (isMobile) setOpenMobile(false);
@@ -122,6 +125,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 		label,
 		icon,
 		badge,
+		tooltip,
+		railDot,
 		onOpen,
 	}: {
 		href: string;
@@ -129,11 +134,17 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 		label: string;
 		icon: ReactNode;
 		badge?: ReactNode;
+		/** What the row says folded to its icon: its name, and its count when it has one. */
+		tooltip: string;
+		/** The name of the dot an icon shows folded when something needs a look. */
+		railDot?: string;
 		onOpen?: () => void;
 	}) => (
 		<SidebarMenuItem key={href}>
 			<SidebarMenuButton
 				isActive={current}
+				tooltip={tooltip}
+				railDot={railDot}
 				render={
 					<Link
 						href={href}
@@ -162,10 +173,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 					href,
 					current: open && (!nav || nav.currentFolder === "all" || nav.currentFolder === ""),
 					label,
+					tooltip: label,
 					icon,
 					onOpen: () => nav?.onSelectFolder("all"),
 				})}
-				{nav && <FolderList nav={nav} label={label} closeMobile={closeMobile} />}
+				{nav && !rail && <FolderList nav={nav} label={label} closeMobile={closeMobile} />}
 			</Fragment>
 		);
 	};
@@ -173,22 +185,25 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 	return (
 		<Sidebar label={t("sidebar.label")}>
 			<SidebarHeader>
-				<Box grow minWidth={0}>
-					<Link href={site.adminHref()} onClick={closeMobile}>
-						<Text variant="title" truncate>
-							{site.SITE_NAME || "CMS"}
-						</Text>
-					</Link>
-				</Box>
-				{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. Opens in a new tab so the admin stays. */}
-				<IconButton
-					label={t("sidebar.viewSite")}
-					side="right"
-					nativeButton={false}
-					render={<Link role="link" href={site.SITE_HOME} target="_blank" rel="noopener noreferrer" />}
-				>
-					<Launch aria-hidden />
-				</IconButton>
+				{!rail && (
+					<>
+						<Box grow minWidth={0}>
+							<Link href={site.adminHref()} onClick={closeMobile}>
+								<Text variant="title" truncate>
+									{site.SITE_NAME || "CMS"}
+								</Text>
+							</Link>
+						</Box>
+						{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. Opens in a new tab so the admin stays. */}
+						<SidebarIconLink
+							label={t("sidebar.viewSite")}
+							render={<Link role="link" href={site.SITE_HOME} target="_blank" rel="noopener noreferrer" />}
+						>
+							<Launch aria-hidden />
+						</SidebarIconLink>
+					</>
+				)}
+				<SidebarRailToggle />
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
@@ -214,6 +229,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 						href: site.adminHref("/trash"),
 						current: activeNav === "trash",
 						label: t("sidebar.trash"),
+						tooltip: trashCount ? `${t("sidebar.trash")} ${trashCount}` : t("sidebar.trash"),
 						icon: <TrashCan aria-hidden />,
 						badge: trashCount ? (
 							<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
@@ -225,6 +241,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 						href: toolsHref(site),
 						current: isToolsNav(activeNav),
 						label: t("sidebar.tools"),
+						tooltip: eventsCount ? `${t("sidebar.tools")} ${eventsCount}` : t("sidebar.tools"),
+						railDot: eventsCount ? t("sidebar.eventsBadge", { count: eventsCount }) : undefined,
 						icon: <Tools aria-hidden />,
 						badge: eventsCount ? (
 							<SidebarMenuBadge tone="warning" aria-label={t("sidebar.eventsBadge", { count: eventsCount })}>
@@ -236,9 +254,13 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 						href: site.adminHref("/settings"),
 						current: activeNav === "settings",
 						label: t("sidebar.settings"),
+						tooltip: t("sidebar.settings"),
 						icon: <SettingsAdjust aria-hidden />,
 					})}
 				</SidebarMenu>
+				<SidebarFoot>
+					<ThemeMenu />
+				</SidebarFoot>
 			</SidebarFooter>
 		</Sidebar>
 	);

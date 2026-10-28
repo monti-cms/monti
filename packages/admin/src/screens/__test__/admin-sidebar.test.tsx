@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { renderInRouter } from "../../test/router";
 import { withSite } from "../../test/site";
+import { AdminUiLabels } from "../../ui/labels";
+import { uiMessages } from "../../ui/messages";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
 import { AdminFeaturesProvider } from "../shared/admin-features";
@@ -16,6 +18,7 @@ import { toolsHref } from "../tools/tools-tabs";
 afterEach(cleanup);
 
 const t = testSite.createTranslator(screensMessages);
+const tui = testSite.createTranslator(uiMessages);
 const site = createSite({
 	...testConfig,
 	plugins: [definePlugin({ name: "stats", options: {}, nav: [{ path: "stats", label: "Post stats" }] })],
@@ -24,9 +27,11 @@ const site = createSite({
 const renderRail = (props: Partial<AdminSidebarProps> = {}, target = site) =>
 	renderInRouter(
 		withSite(
-			<SidebarProvider>
-				<AdminSidebar activeNav={target.DEFAULT_COLLECTION} {...props} />
-			</SidebarProvider>,
+			<AdminUiLabels>
+				<SidebarProvider>
+					<AdminSidebar activeNav={target.DEFAULT_COLLECTION} {...props} />
+				</SidebarProvider>
+			</AdminUiLabels>,
 			target,
 		),
 	);
@@ -73,9 +78,15 @@ describe("moving around by the rail", () => {
 		expect(names.at(-1)).toBe(t("sidebar.settings"));
 	});
 
-	it("has no fold or other button: every row is a link", () => {
+	it("has no fold group or other control among the rows: every row is a link", () => {
 		renderRail();
-		expect(within(rail()).queryAllByRole("button")).toEqual([]);
+		const buttons = within(rail())
+			.queryAllByRole("button")
+			.map((button) => button.getAttribute("aria-label"));
+		// The fold button in the head row and the screen mode at the foot are the only buttons.
+		expect(buttons).toHaveLength(2);
+		expect(buttons).toContain(tui("sidebar.fold"));
+		expect(buttons).toContain(tui("theme.label"));
 	});
 
 	it("keeps the pages of the tools page behind the one tools row", () => {
@@ -184,8 +195,8 @@ describe("folders in the rail", () => {
 	it("keeps a folder's subfolders hidden until it is open, and has no fold control", () => {
 		renderRail({ folderNav: folderNav([folder("a", "Dev"), folder("c", "Next.js", "a")]) });
 		expect(rows()).toEqual(["Dev"]);
-		expect(within(rail()).queryByRole("button", { expanded: true })).toBeNull();
-		expect(within(rail()).queryByRole("button", { expanded: false })).toBeNull();
+		expect(within(tree()).queryByRole("button", { expanded: true })).toBeNull();
+		expect(within(tree()).queryByRole("button", { expanded: false })).toBeNull();
 	});
 
 	it("selects a folder, and everything again from the collection row", () => {

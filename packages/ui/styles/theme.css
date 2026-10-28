@@ -215,6 +215,7 @@
 
 	/* Widths of columns, panels and sheets (w-monti-*, min-w-monti-*, max-w-monti-*). */
 	--container-monti-sidebar: var(--monti-width-sidebar);
+	--container-monti-rail: var(--monti-width-rail);
 	--container-monti-menu: var(--monti-width-menu);
 	--container-monti-panel: var(--monti-width-panel);
 	--container-monti-side-panel: var(--monti-width-side-panel);

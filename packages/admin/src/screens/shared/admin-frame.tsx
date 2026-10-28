@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { entriesKeys, listEntries } from "../../api/entries";
 import { countFailedEvents, eventsKeys } from "../../api/events";
+import { booleanCodec, usePreference } from "../../lib/hooks/use-preference";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useNavQueriesReady } from "./nav-queries";
 import { type ScreenContextValue, usePublishScreenContext } from "./screen-context";
@@ -79,6 +80,8 @@ export function AdminFrame({ sidebar, children }: { sidebar: AdminSidebarProps; 
 	const site = useSite();
 	const nav = useContext(AdminNavContext);
 	usePublishScreenContext(frameScreenContext(site, sidebar.activeNav));
+	// Folded to the icon rail or not: remembered in this browser.
+	const [rail, setRail] = usePreference("sidebar-rail", booleanCodec, false);
 	if (!nav) {
 		return (
 			<AdminNavProvider>
@@ -88,7 +91,7 @@ export function AdminFrame({ sidebar, children }: { sidebar: AdminSidebarProps; 
 	}
 
 	return (
-		<SidebarProvider fixed>
+		<SidebarProvider fixed rail={rail} onRailChange={setRail}>
 			<AdminSidebar {...sidebar} trashCount={nav.trashCount} eventsCount={nav.eventsCount} />
 			<SidebarInset fixed corner={<SidePanelToggle />}>
 				<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">

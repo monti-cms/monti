@@ -5,6 +5,7 @@ import {
 	Image,
 	Launch,
 	ListBulleted,
+	Screen,
 	SettingsAdjust,
 	Tag,
 	Tools,
@@ -15,11 +16,21 @@ import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { Count } from "./count";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "./dropdown-menu";
+import { IconButton } from "./icon-button";
+import {
 	Sidebar,
 	SidebarContent,
+	SidebarFoot,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarHeader,
+	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -28,6 +39,8 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarRailToggle,
+	useSidebar,
 } from "./sidebar";
 import { Heading, Text } from "./text";
 
@@ -37,8 +50,11 @@ function Row({
 	count,
 	countTone,
 	changed,
+	railDot,
 	...props
 }: {
+	railDot?: string;
+	tooltip?: string;
 	icon: React.ReactNode;
 	children: React.ReactNode;
 	count?: number;
@@ -51,7 +67,7 @@ function Row({
 }) {
 	return (
 		<SidebarMenuItem>
-			<SidebarMenuButton {...props}>
+			<SidebarMenuButton railDot={railDot} {...props}>
 				{icon}
 				<span>{children}</span>
 				{changed && <ChangeDot label="바뀐 곳" />}
@@ -61,19 +77,43 @@ function Row({
 	);
 }
 
+/** The screen mode at the foot: one icon button that shows the current mode and opens the three modes upward, a ✓ on the current one. */
+function ScreenMode({ open }: { open?: boolean }) {
+	return (
+		<DropdownMenu defaultOpen={open}>
+			<IconButton label="화면 모드" side="right" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+				<Screen aria-hidden />
+			</IconButton>
+			<DropdownMenuContent side="top" align="start">
+				<DropdownMenuRadioGroup value="system">
+					<DropdownMenuRadioItem value="system">시스템</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="light">라이트</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="dark">다크</DropdownMenuRadioItem>
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 type Open = "posts" | "folder" | "media" | "trash" | "tools" | "settings";
 
 /** The rail the admin draws: the site's name, the content rows (the open one has its folders under it), and at the bottom, under a line, the trash, tools and settings. */
-function AdminSidebar({ active = "posts" }: { active?: Open }) {
+function AdminSidebar({ active = "posts", themeOpen = false }: { active?: Open; themeOpen?: boolean }) {
+	const { rail } = useSidebar();
 	return (
 		<Sidebar label="관리 메뉴">
 			<SidebarHeader>
-				<Text variant="title" className="grow">
-					example.dev
-				</Text>
-				<a href="#top" aria-label="사이트 열기" className="flex text-monti-subtle">
-					<Launch aria-hidden className="size-4" />
-				</a>
+				{!rail && (
+					<>
+						<Text variant="title" className="grow truncate">
+							example.dev
+						</Text>
+						<SidebarIconLink href="#top" label="사이트 열기">
+							<Launch aria-hidden />
+						</SidebarIconLink>
+					</>
+				)}
+				<SidebarRailToggle />
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
@@ -138,13 +178,23 @@ function AdminSidebar({ active = "posts" }: { active?: Open }) {
 					<Row icon={<TrashCan aria-hidden />} count={3} isActive={active === "trash"}>
 						휴지통
 					</Row>
-					<Row icon={<Tools aria-hidden />} count={1} countTone="warning" isActive={active === "tools"}>
+					<Row
+						icon={<Tools aria-hidden />}
+						count={1}
+						countTone="warning"
+						tooltip="도구 1"
+						railDot="전송 실패 1건"
+						isActive={active === "tools"}
+					>
 						도구
 					</Row>
 					<Row icon={<SettingsAdjust aria-hidden />} isActive={active === "settings"}>
 						설정
 					</Row>
 				</SidebarMenu>
+				<SidebarFoot>
+					<ScreenMode open={themeOpen} />
+				</SidebarFoot>
 			</SidebarFooter>
 		</Sidebar>
 	);
@@ -271,6 +321,30 @@ export const DropTarget: Story = {
 					</SidebarMenu>
 				</SidebarContent>
 			</Sidebar>
+		</SidebarProvider>
+	),
+};
+
+/** Folded to the icon rail (⌘B or the button in the head row): 64px, the icons where they were, names and counts gone, the tools icon with its dot, the unfold button alone in the head. */
+export const Rail: Story = {
+	render: () => (
+		<SidebarProvider rail>
+			<AdminSidebar active="tools" />
+			<SidebarInset className="gap-monti-16 p-monti-32">
+				<Heading variant="page">도구</Heading>
+			</SidebarInset>
+		</SidebarProvider>
+	),
+};
+
+/** The screen mode menu open: system, light and dark, a ✓ on the current one. The default is the system. */
+export const ScreenModeMenu: Story = {
+	render: () => (
+		<SidebarProvider>
+			<AdminSidebar themeOpen />
+			<SidebarInset className="gap-monti-16 p-monti-32">
+				<Heading variant="page">게시글</Heading>
+			</SidebarInset>
 		</SidebarProvider>
 	),
 };

@@ -1,14 +1,17 @@
 "use client";
 
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { OpenPanelLeft } from "@carbon/icons-react";
+import { OpenPanelLeft, SidePanelClose, SidePanelOpen } from "@carbon/icons-react";
 import * as React from "react";
+import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
-import { IconButton } from "./icon-button";
+import { ICON_BUTTON, IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useIsMobile } from "./use-mobile";
 
 /** Where the width starts (232px, the same as the `w-monti-sidebar` token, which a loading placeholder uses), and the limits the person can drag it between. */
@@ -16,7 +19,13 @@ const SIDEBAR_WIDTH_DEFAULT = 232;
 const SIDEBAR_WIDTH_MIN = 200;
 const SIDEBAR_WIDTH_MAX = 400;
 
+const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+
 type SidebarContextProps = {
+	/** Folded to the icon rail (desktop only; never while the sidebar is a drawer). */
+	rail: boolean;
+	setRail: (rail: boolean) => void;
+	toggleRail: () => void;
 	openMobile: boolean;
 	setOpenMobile: (open: boolean) => void;
 	isMobile: boolean;
@@ -39,11 +48,16 @@ function useSidebar() {
 function SidebarProvider({
 	fixed = false,
 	resizeKey = "sidebar",
+	rail: railProp,
+	onRailChange,
 	className,
 	style,
 	children,
 	...props
 }: React.ComponentProps<"div"> & {
+	/** Whether the sidebar is folded to its icons. Give it with `onRailChange` to keep the state outside (the admin remembers it in the browser). */
+	rail?: boolean;
+	onRailChange?: (rail: boolean) => void;
 	/** Names the remembered width of the sidebar (between 200px and 400px, 232px until it is dragged). */
 	resizeKey?: string;
 	/** The frame takes exactly the window and never scrolls, not even to bring a focused field into view; the panes inside scroll on their own (the admin's app frame). */
@@ -59,9 +73,38 @@ function SidebarProvider({
 	});
 	const toggleSidebar = React.useCallback(() => setOpenMobile((open) => !open), []);
 
+	const [ownRail, setOwnRail] = React.useState(false);
+	const folded = (railProp ?? ownRail) && !isMobile;
+	const setRail = React.useCallback(
+		(next: boolean) => {
+			setOwnRail(next);
+			onRailChange?.(next);
+		},
+		[onRailChange],
+	);
+	const toggleRail = React.useCallback(() => setRail(!folded), [setRail, folded]);
+
+	// ⌘B (Ctrl+B) folds and unfolds the sidebar, where it is a sidebar and not a drawer.
+	React.useEffect(() => {
+		if (isMobile) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (
+				event.key !== SIDEBAR_KEYBOARD_SHORTCUT ||
+				!(event.metaKey || event.ctrlKey) ||
+				event.altKey ||
+				event.shiftKey
+			)
+				return;
+			event.preventDefault();
+			toggleRail();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [isMobile, toggleRail]);
+
 	const contextValue = React.useMemo<SidebarContextProps>(
-		() => ({ isMobile, openMobile, setOpenMobile, toggleSidebar, resize }),
-		[isMobile, openMobile, toggleSidebar, resize],
+		() => ({ rail: folded, setRail, toggleRail, isMobile, openMobile, setOpenMobile, toggleSidebar, resize }),
+		[folded, setRail, toggleRail, isMobile, openMobile, toggleSidebar, resize],
 	);
 
 	return (
@@ -98,7 +141,7 @@ function Sidebar({
 	label: string;
 }) {
 	const labels = useUiLabels();
-	const { isMobile, openMobile, setOpenMobile, resize } = useSidebar();
+	const { isMobile, openMobile, setOpenMobile, resize, rail } = useSidebar();
 	const rows = (
 		<nav aria-label={label} data-slot="sidebar-nav" className="flex min-h-0 flex-1 flex-col gap-monti-2">
 			{children}
@@ -132,24 +175,28 @@ function Sidebar({
 	return (
 		<div
 			data-slot="sidebar"
+			data-rail={rail ? "" : undefined}
 			className={cn(
 				RAIL,
-				"relative w-(--sidebar-width) shrink-0 self-stretch border-monti-default border-r",
+				"group/rail relative shrink-0 self-stretch border-monti-default border-r",
+				rail ? "w-monti-rail" : "w-(--sidebar-width)",
 				className,
 			)}
 			{...props}
 		>
 			{rows}
-			<ResizeHandle
-				value={resize.width}
-				min={resize.min}
-				max={resize.max}
-				onChange={resize.setWidth}
-				onReset={resize.reset}
-				label={labels.sidebarResize}
-				edge="end"
-				resizing={resize.resizing}
-			/>
+			{!rail && (
+				<ResizeHandle
+					value={resize.width}
+					min={resize.min}
+					max={resize.max}
+					onChange={resize.setWidth}
+					onReset={resize.reset}
+					label={labels.sidebarResize}
+					edge="end"
+					resizing={resize.resizing}
+				/>
+			)}
 		</div>
 	);
 }
@@ -214,13 +261,90 @@ function SidebarInset({
 	);
 }
 
-/** The site's name (and what sits beside it), 6px in from the rows' edge and 20px above them. */
+/**
+ * The head row, 32px: the site's name (cut with an ellipsis when it is long), what sits beside it (the way to the site, {@link SidebarIconLink}) and the
+ * fold button ({@link SidebarRailToggle}). Folded, the row holds the unfold button alone.
+ */
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sidebar-header"
 			data-sidebar="header"
-			className={cn("flex items-center gap-monti-12 px-monti-6 pb-monti-20", className)}
+			className={cn(
+				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-[2px]",
+				className,
+			)}
+			{...props}
+		/>
+	);
+}
+
+/**
+ * A quiet icon link in the head row, next to the site's name (the way to the site): a 32px round target around a 16px icon. `label` names it. A link
+ * by default; the app's router link goes in `render`.
+ */
+function SidebarIconLink({
+	label,
+	render,
+	className,
+	...props
+}: useRender.ComponentProps<"a"> & React.ComponentProps<"a"> & { label: string }) {
+	return useRender({
+		defaultTagName: "a",
+		props: mergeProps<"a">(
+			{
+				"aria-label": label,
+				className: cn(
+					"flex size-monti-icon-button shrink-0 items-center justify-center rounded-monti-full text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 [&_svg]:size-4",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: { slot: "sidebar-icon-link" },
+	});
+}
+
+/**
+ * The fold button of the head row: folds the sidebar to its icons, or unfolds it. Its name and its tooltip say which; the tooltip shows ⌘B, which
+ * does the same. Nothing while the sidebar is a drawer (a narrow screen opens it with the button of the page).
+ */
+function SidebarRailToggle({ className, ...props }: Omit<ButtonPrimitive.Props, "aria-label" | "children">) {
+	const labels = useUiLabels();
+	const { rail, toggleRail, isMobile } = useSidebar();
+	if (isMobile) return null;
+	const label = rail ? labels.sidebarUnfold : labels.sidebarFold;
+	return (
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<ButtonPrimitive
+						data-slot="sidebar-rail-toggle"
+						type="button"
+						aria-label={label}
+						className={cn(ICON_BUTTON, "text-monti-subtle", className)}
+						onClick={toggleRail}
+						{...props}
+					/>
+				}
+			>
+				{rail ? <SidePanelOpen /> : <SidePanelClose />}
+			</TooltipTrigger>
+			<TooltipContent side={rail ? "right" : "bottom"} shortcut="⌘B">
+				{label}
+			</TooltipContent>
+		</Tooltip>
+	);
+}
+
+/** The last row of the sidebar, under the bottom group: a place for one icon button (the screen mode), at the same spot folded and unfolded. */
+function SidebarFoot({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sidebar-foot"
+			data-sidebar="foot"
+			className={cn("flex px-[2px] pt-monti-8", className)}
 			{...props}
 		/>
 	);
@@ -303,20 +427,34 @@ function SidebarMenuButton({
 	render,
 	isActive = false,
 	removed = false,
+	tooltip,
+	railDot,
 	className,
+	children,
 	...props
 }: useRender.ComponentProps<"button"> &
 	React.ComponentProps<"button"> & {
 		isActive?: boolean;
 		removed?: boolean;
+		/** What the row says when the sidebar is folded to its icons (its name and count, "Tools 1"): a tooltip on the icon. */
+		tooltip?: string;
+		/** Folded, the count cannot show: a dot on the icon takes its place when there is something to look at. The text names it for screen readers. */
+		railDot?: string;
 	}) {
-	return useRender({
+	const { rail } = useSidebar();
+	const row = useRender({
 		defaultTagName: "button",
 		props: mergeProps<"button">(
 			{
 				className: cn(
-					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-muted focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-selected data-active:font-semibold data-removed:text-monti-faint data-removed:line-through [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+					"peer/menu-button group/menu-button flex h-9 w-full min-w-0 items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body text-monti-default no-underline outline-none group-has-data-[sidebar=menu-action]/menu-item:pr-monti-32 hover:bg-monti-muted focus-visible:ring-3 focus-visible:ring-monti-contrast/20 disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45 data-active:bg-monti-selected data-active:font-semibold data-removed:text-monti-faint data-removed:line-through group-data-[rail]/rail:relative group-data-[rail]/rail:w-9 group-data-[rail]/rail:[&>[data-slot=sidebar-menu-badge]]:hidden group-data-[rail]/rail:[&>span:not([data-slot])]:hidden [&>[data-slot=change-dot]]:-ml-monti-4 [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 					className,
+				),
+				children: (
+					<>
+						{children}
+						{rail && railDot && <ChangeDot label={railDot} className="absolute top-[7px] right-[7px] m-0" />}
+					</>
 				),
 			},
 			props,
@@ -329,6 +467,13 @@ function SidebarMenuButton({
 			removed,
 		},
 	});
+	if (!rail || !tooltip) return row;
+	return (
+		<Tooltip>
+			<TooltipTrigger render={row} />
+			<TooltipContent side="right">{tooltip}</TooltipContent>
+		</Tooltip>
+	);
 }
 
 /** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
@@ -361,7 +506,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-9 text-monti-muted text-monti-note",
+				"m-0 flex list-none flex-col pt-monti-2 pr-0 pb-monti-6 pl-9 text-monti-muted text-monti-note group-data-[rail]/rail:hidden",
 				className,
 			)}
 			{...props}
@@ -408,6 +553,8 @@ export {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
+	SidebarFoot,
+	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -416,6 +563,7 @@ export {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarProvider,
+	SidebarRailToggle,
 	SidebarTrigger,
 	useSidebar,
 };

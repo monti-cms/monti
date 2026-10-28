@@ -35,6 +35,8 @@ export function AdminUiLabels({ children }: { children: ReactNode }) {
 				sidebarTitle: t("sidebar.title"),
 				sidebarDescription: t("sidebar.description"),
 				sidebarToggle: t("sidebar.toggle"),
+				sidebarFold: t("sidebar.fold"),
+				sidebarUnfold: t("sidebar.unfold"),
 				sidebarResize: t("sidebar.resize"),
 				resize: t("panel.resize"),
 			}}

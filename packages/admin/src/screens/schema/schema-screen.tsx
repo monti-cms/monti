@@ -338,8 +338,8 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<Inline wrap align="start" gap={32}>
-										<Stack gap={2} width="menu" shrink={false}>
+									<Inline wrap align="start" gap={24}>
+										<Stack gap={2} width="fit" shrink={false}>
 											<Inline justify="between" paddingBottom={8} paddingX={12}>
 												<Text variant="caption" weight="medium" tone="muted">
 													{t("collection.railTitle")} {names.length}
