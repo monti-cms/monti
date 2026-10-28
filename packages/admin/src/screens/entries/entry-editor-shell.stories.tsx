@@ -401,15 +401,22 @@ export const ArchiveConfirm: Story = {
 	},
 };
 
+/** Flow 5 · 18: a trashed entry opens read-only, with the days it has left and only restore and the permanent delete in the head. */
+const trashedDraft = {
+	...draft,
+	status: "trashed" as const,
+	trashedAt: new Date(Date.now() - 7 * 86_400_000).toISOString(),
+};
+
 export const TrashedEntry: Story = {
-	render: screen(() => server({ entry: { ...draft, status: "trashed" } })),
+	tags: ["visual"],
+	render: screen(() => server({ entry: trashedDraft })),
 };
 
 export const PermanentDeleteConfirm: Story = {
-	render: screen(() => server({ entry: { ...draft, status: "trashed" } })),
+	render: screen(() => server({ entry: trashedDraft })),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await headerMore(canvasElement));
-		await userEvent.click(await within(document.body).findByText(/^영구/, undefined, LONG));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^영구/ }, LONG));
 		await within(document.body).findByRole("alertdialog", { hidden: true }, LONG);
 	},
 };

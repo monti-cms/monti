@@ -3,8 +3,8 @@
 // The banners under the header of the entry editor screen: trash notice, unreadable body, save error and "source changed".
 
 import type { FormatIssue } from "@monti-cms/core/format";
-import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, Box, FormFieldError, Inline, Text, TextButton } from "@monti-cms/ui";
+import { issueText, trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
+import { Banner, Box, FormFieldError, TextButton } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -36,11 +36,16 @@ export function EntryEditorBanners({
 	return (
 		<>
 			{isTrashed && (
-				<Box as="section" aria-label={t("trash")} background="muted" border="bottom" paddingX={16} paddingY={8}>
-					<Inline wrap gap={8}>
-						<Text>{t("trashNotice", nounVars(site, collection))}</Text>
-					</Inline>
-				</Box>
+				<Banner
+					tone="neutral"
+					aria-label={t("trash")}
+					title={t("trashNotice", nounVars(site, collection))}
+					meta={
+						entry?.trashedAt
+							? t("trashNoticeMeta", { days: trashDaysLeft(new Date(entry.trashedAt), new Date()) })
+							: undefined
+					}
+				/>
 			)}
 			{visualUnavailable && (
 				<Banner

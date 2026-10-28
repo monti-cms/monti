@@ -194,7 +194,7 @@ export function useEntryLifecycleCommands({
 			toast.error(deleted.error.message);
 			return;
 		}
-		router.navigate(site.adminHref(`?collection=${entry.collection}&status=trashed`));
+		router.navigate(site.adminHref("/trash"));
 	};
 
 	const handleDuplicate = async () => {

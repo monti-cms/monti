@@ -132,7 +132,12 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 						</TooltipContent>
 					</Tooltip>
 				)}
-				{previewHref && !editor.hasUnsavedChanges ? (
+				{isTrashed ? (
+					// A trashed entry is read-only: the head holds only what can be done with it, deleting it for good or bringing it back.
+					<TextButton variant="danger" onClick={confirmPermanentDelete}>
+						{tc("lifecycle.deletePermanently")}
+					</TextButton>
+				) : previewHref && !editor.hasUnsavedChanges ? (
 					// A link stays a link (open in new tab, copy URL).
 					<Button
 						variant="secondary"
@@ -233,20 +238,13 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								{tx("menu.exportEntry")}
 							</DropdownMenuItem>
 						)}
-						{entry && (
+						{entry && !isTrashed && (
 							<>
-								{!isTrashed && <DropdownMenuSeparator />}
-								{isTrashed ? (
-									<DropdownMenuItem variant="danger" onClick={confirmPermanentDelete}>
-										<TrashCan aria-hidden />
-										{tc("lifecycle.deletePermanently")}
-									</DropdownMenuItem>
-								) : (
-									<DropdownMenuItem variant="danger" onClick={() => confirmLifecycle("trash")}>
-										<TrashCan aria-hidden />
-										{lifecycleLabel(site).trash}
-									</DropdownMenuItem>
-								)}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem variant="danger" onClick={() => confirmLifecycle("trash")}>
+									<TrashCan aria-hidden />
+									{lifecycleLabel(site).trash}
+								</DropdownMenuItem>
 							</>
 						)}
 						{entry && <DropdownMenuSeparator />}

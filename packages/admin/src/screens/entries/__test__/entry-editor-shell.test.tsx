@@ -1230,11 +1230,10 @@ describe("entry editor shell", () => {
 	it("shows trashed entries read-only with restore and permanent delete", async () => {
 		serve(() => undefined, { ...entry, status: "trashed" });
 		renderEdit();
-		const banner = await screen.findByRole("region", { name: "휴지통" });
+		const banner = await screen.findByRole("status", { name: "휴지통" });
 		const toolbar = screen.getByRole("banner");
 		expect(within(toolbar).getByRole("button", { name: "복원" })).toBeTruthy();
-		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
-		expect(screen.getByRole("menuitem", { name: "영구 삭제" })).toBeTruthy();
+		expect(within(toolbar).getByRole("button", { name: "영구 삭제" })).toBeTruthy();
 		expect(within(banner).queryByRole("button")).toBeNull();
 		expect((screen.getByLabelText("시각 본문") as HTMLTextAreaElement).readOnly).toBe(true);
 	});

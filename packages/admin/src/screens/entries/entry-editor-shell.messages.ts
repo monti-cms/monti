@@ -58,7 +58,9 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		more: "More",
 		toggleTheme: "Toggle theme",
 		trash: "Trash",
-		trashNotice: (vars) => `This ${enNoun(vars)} is in the trash. Restore it before editing.`,
+		trashNotice: (vars) => `This ${enNoun(vars)} is in the trash`,
+		trashNoticeMeta: ({ days }) =>
+			`Restoring brings it back as a draft · ${days} ${Number(days) === 1 ? "day" : "days"} left`,
 		visualUnavailable:
 			"Part of the body can't be parsed, so you can only edit in source mode. You can save, but publishing is blocked —",
 		sourceChanged: "The source changed",
@@ -99,7 +101,8 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		more: "더보기",
 		toggleTheme: "테마 전환",
 		trash: "휴지통",
-		trashNotice: (vars) => `휴지통에 있는 ${josa(koNoun(vars), "이에요", "예요")}. 복원하기 전에는 편집할 수 없어요.`,
+		trashNotice: (vars) => `휴지통에 있는 ${josa(koNoun(vars), "이에요", "예요")}`,
+		trashNoticeMeta: ({ days }) => `복원하면 초안으로 돌아와요 · ${days}일 남음`,
 		visualUnavailable: "해석할 수 없는 본문이 있어 원문 모드로만 편집해요. 저장은 되지만 발행은 막혀요 —",
 		sourceChanged: "원문이 바뀌었어요",
 		compare: "비교",
