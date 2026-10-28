@@ -2,9 +2,10 @@
 
 import type { SiteUrlState } from "@monti-cms/core/internal/schema-edit";
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Section, Stack, Text } from "@monti-cms/ui";
+import { Box, LockMark, Section, Stack, Text } from "@monti-cms/ui";
 import { FlagSwitch, orUndefined, Pick, TextInput, useSchemaEdit, useSettingRevert } from "./controls";
 import { HostRows } from "./host-rows";
+import { schemaMessages } from "./messages";
 import { ReadValue } from "./read-value";
 import { type Obj, sameJson, sectionOf, setSetting } from "./schema-model";
 import { schemaSiteMessages } from "./site.messages";
@@ -24,7 +25,10 @@ export function SiteEditor({
 	update: (change: (file: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaSiteMessages);
-	const { problems, saved } = useSchemaEdit();
+	const ts = useTranslator(schemaMessages);
+	const { problems, saved, disabled } = useSchemaEdit();
+	// What cannot be changed carries the lock beside its title and is written as text, not drawn as a field.
+	const lock = disabled ? <LockMark label={ts("lock.cannotChange")} /> : null;
 	const site = sectionOf(file, "site");
 	const set = (key: string, value: unknown) => update((current) => setSetting(current, "site", key, value));
 	const revert = useSettingRevert("site", set);
@@ -65,7 +69,14 @@ export function SiteEditor({
 					onChange={(hosts) => set("aliases", hosts.length === 0 ? undefined : hosts)}
 				/>
 			</Section>
-			<Section title={t("site.previewTitle")}>
+			<Section
+				title={
+					<>
+						{t("site.previewTitle")}
+						{lock}
+					</>
+				}
+			>
 				<TextInput
 					prefix="/"
 					label={t("site.previewPath")}
@@ -95,7 +106,15 @@ export function SiteEditor({
 					/>
 				)}
 			</Section>
-			<Section last title={t("site.addressTitle")}>
+			<Section
+				last
+				title={
+					<>
+						{t("site.addressTitle")}
+						{lock}
+					</>
+				}
+			>
 				<Pick
 					label={t("site.localePrefix")}
 					revert={revert("localePrefix")}

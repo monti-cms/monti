@@ -363,7 +363,7 @@ function SchemaEditor({
 							</Inline>
 						)}
 				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
-					<PageBody paddingTop={tab === "collections" ? undefined : 24}>
+					<PageBody>
 						{reason && (
 							<Banner
 								title={t(READ_ONLY_KEY[reason])}
@@ -452,7 +452,6 @@ function SchemaEditor({
 												section={section}
 												onSection={setSection}
 												collection={collections[selected]}
-												changes={areas.collections[selected]}
 												onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 												onRename={(rename) => setRenames((current) => recordRename(current, rename))}
 												onFileChange={updateFile}

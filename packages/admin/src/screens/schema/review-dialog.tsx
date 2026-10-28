@@ -6,6 +6,7 @@ import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
+	Box,
 	Button,
 	ChangeGroup,
 	ChangeLabel,
@@ -794,21 +795,23 @@ export function ReviewDialog({
 							{t("review.title")}
 						</SheetTitle>
 					</SheetHeader>
-					<SheetBody data-testid="review-body">
+					<SheetBody data-testid="review-body" blocks>
 						<Stack gap={0}>
 							{saveError && (
-								<ChatError
-									title={saveError.conflict ? t("save.conflict.title") : saveError.message}
-									actions={
-										saveError.conflict ? (
-											<TextButton type="button" onClick={reloadPage}>
-												{t("save.reload")}
-											</TextButton>
-										) : undefined
-									}
-								>
-									{saveError.conflict ? saveError.message : undefined}
-								</ChatError>
+								<Box paddingTop={16} paddingBottom={4}>
+									<ChatError
+										title={saveError.conflict ? t("save.conflict.title") : saveError.message}
+										actions={
+											saveError.conflict ? (
+												<TextButton type="button" onClick={reloadPage}>
+													{t("save.reload")}
+												</TextButton>
+											) : undefined
+										}
+									>
+										{saveError.conflict ? saveError.message : undefined}
+									</ChatError>
+								</Box>
 							)}
 							{error && <ChatError title={error} />}
 							{loading && !preview && (

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
+import { ChangeGroup, ChangeNote } from "./change";
 import { FormField, FormFieldGroup, FormFieldLabel } from "./field";
 import { Input } from "./input";
 import { LockMark } from "./lock-mark";
@@ -214,6 +215,30 @@ export const TitleOf: Story = {
 				</SheetHeader>
 				<SheetBody>
 					<Fields count={2} />
+				</SheetBody>
+				<SheetFooter>
+					<SheetClose render={<TextButton />}>취소</SheetClose>
+					<Button>적용</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
+};
+
+/** A body of change blocks (`blocks`): the first block brings its own 16px, so only 4px of the body's 20 stay above it. */
+export const Blocks: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of="· 게시글 · 바뀐 곳 1" ofMono={false}>
+						검토
+					</SheetTitle>
+				</SheetHeader>
+				<SheetBody blocks>
+					<ChangeGroup kind="edit" tag="주소" title="공개 주소" identifier="게시글">
+						<ChangeNote>옛 주소는 404가 돼요.</ChangeNote>
+					</ChangeGroup>
 				</SheetBody>
 				<SheetFooter>
 					<SheetClose render={<TextButton />}>취소</SheetClose>

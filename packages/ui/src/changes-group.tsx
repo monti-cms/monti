@@ -17,8 +17,8 @@ interface ChangesItem {
 }
 
 /**
- * The save group in the title row of a settings screen while the draft has changes: "바뀐 곳 N ▾" opens the list of changes, each with its own undo; then
- * "모두 되돌리기" and the one primary pill ("저장하고 적용"). The pill is disabled (not hidden) while something blocks saving. The list hangs from the whole
+ * The save group in the title row of a settings screen while the draft has changes: "changes N" opens the list of changes, each with its own undo; then
+ * "undo all" and the one primary pill ("save and apply"). The pill is disabled (not hidden) while something blocks saving. The list hangs from the whole
  * group, its right edge on the group's.
  */
 function ChangesGroup({
@@ -35,14 +35,14 @@ function ChangesGroup({
 	saveDanger,
 	...props
 }: {
-	/** "바뀐 곳". */
+	/** "changes". */
 	label: string;
 	/** The name of the list for a screen reader. */
 	listLabel: string;
-	/** The count spoken ("바뀐 곳 3개"). */
+	/** The count spoken ("3 changes"). */
 	countLabel: string;
 	items: readonly ChangesItem[];
-	/** "되돌리기". */
+	/** "undo". */
 	undoLabel: string;
 	discardLabel: string;
 	onDiscard: () => void;

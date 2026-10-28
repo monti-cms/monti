@@ -15,7 +15,7 @@ interface Row {
 }
 
 /**
- * The other host names of the site, edited in place: one mono input per host with a quiet × that takes it out, and "+ 호스트" that adds an empty row and puts
+ * The other host names of the site, edited in place: one mono input per host with a quiet × that takes it out, and "add host" that adds an empty row and puts
  * the caret in it. An empty row is not written to the file. `onChange` gets the filled-in names; when they change from outside (a revert) the rows follow.
  */
 export function HostRows({

@@ -147,8 +147,6 @@ export const ICONS: Readonly<Record<string, MontiIcon>> = {
 	spark: Spark,
 };
 
-export const COLLECTION_ICON_NAMES = Object.keys(ICONS);
-
 /**
  * Function that picks an icon by name. Looks at registered icons (`AdminComponents.icons`) first, then the built-in icons.
  * `undefined` for an unknown name.

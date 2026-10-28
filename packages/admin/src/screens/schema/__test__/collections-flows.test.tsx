@@ -418,8 +418,7 @@ describe("flow 4 · 필드 시트", () => {
 			.getAllByRole("heading", { level: 2 })
 			.map((heading) => heading.textContent);
 		expect(headings.slice(1)).toEqual([tFields("sheet.view"), tFields("sheet.structure")]);
-		expect(within(sheet).queryByRole("textbox", { name: tFields("field.name") })).toBeNull();
-		expect(within(sheet).getByRole("img", { name: t("lock.cannotChange") })).toBeTruthy();
+		expect(within(sheet).getByRole("textbox", { name: tFields("field.name") })).toBeTruthy();
 		const label = within(sheet).getByRole("textbox", { name: tFields("field.label") }) as HTMLInputElement;
 		expect(label.required).toBe(true);
 
@@ -441,6 +440,22 @@ describe("flow 4 · 필드 시트", () => {
 		fireEvent.click(within(again).getByRole("button", { name: tFields("sheet.save") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		expect(hasChangeCount(1)).toBe(true);
+	});
+
+	it("renames a field on Save: the name is taken when the input is left, and the rename joins the changes as one", async () => {
+		open();
+		const editor = await screen.findByTestId("collection-post");
+		fireEvent.click(within(editor).getByRole("tab", { name: new RegExp(`^${tCollection("collection.tabs.fields")}`) }));
+		fireEvent.click(await within(editor).findByRole("button", { name: tFields("field.toggle", { name: "title" }) }));
+		const sheet = await screen.findByRole("dialog");
+		const name = within(sheet).getByRole("textbox", { name: tFields("field.name") });
+		fireEvent.change(name, { target: { value: "heading" } });
+		fireEvent.blur(name);
+		fireEvent.click(within(sheet).getByRole("button", { name: tFields("sheet.save") }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(hasChangeCount(1)).toBe(true);
+		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.list") }));
+		expect(await screen.findByRole("menuitem", { name: /^Title/ })).toBeTruthy();
 	});
 });
 

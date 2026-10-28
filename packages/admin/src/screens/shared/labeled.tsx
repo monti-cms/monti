@@ -53,9 +53,10 @@ export function Labeled({
 						<FormFieldDescription>{description}</FormFieldDescription>
 					</Box>
 				)}
-				<Box width="full" maxWidth={CONTROL_MAX_WIDTH[control]}>
+				{/* The control and its error line are one column, the error 2px under the control like every field's label row. */}
+				<Stack gap={2} width="full" maxWidth={CONTROL_MAX_WIDTH[control]}>
 					{children}
-				</Box>
+				</Stack>
 				{hint && (
 					<Box maxWidth="reading">
 						<FormFieldDescription>{hint}</FormFieldDescription>

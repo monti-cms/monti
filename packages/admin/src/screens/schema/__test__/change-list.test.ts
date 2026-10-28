@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changeItems, type DraftState, savedState } from "../change-list";
+import { changeItems, type DraftState } from "../change-list";
 import {
 	addCollection,
 	addField,
@@ -8,6 +8,7 @@ import {
 	recordRename,
 	removeField,
 	renameField,
+	reorderCollections,
 	setCollection,
 	setSetting,
 } from "../schema-model";
@@ -33,7 +34,7 @@ const saved: Obj = {
 	defaultLocale: "ko",
 };
 
-const start = savedState(saved);
+const start: DraftState = { draft: saved, renames: [], removed: [] };
 const items = (state: DraftState) => changeItems(saved, state);
 const edit = (state: DraftState, change: (file: Obj) => Obj): DraftState => ({ ...state, draft: change(state.draft) });
 
@@ -90,6 +91,25 @@ describe("the list of changes", () => {
 		expect(undone.draft).toEqual(saved);
 	});
 
+	it("does not count the slug that follows a renamed source field", () => {
+		const withSlug: Obj = {
+			...saved,
+			collections: {
+				...(saved.collections as Obj),
+				post: { ...post, fields: { ...post.fields, slug: { kind: "slug", label: "Slug", from: "title" } } },
+			},
+		};
+		let state: DraftState = { draft: withSlug, renames: [], removed: [] };
+		state = edit(state, (file) =>
+			setCollection(file, "post", (collection) => renameField(collection, {}, "title", "heading")),
+		);
+		state = {
+			...state,
+			renames: recordRename(state.renames, { kind: "field", collection: "post", from: "title", to: "heading" }),
+		};
+		expect(changeItems(withSlug, state).map((item) => item.tag)).toEqual(["renamed"]);
+	});
+
 	it("counts a collection that was never saved once, however many fields it has", () => {
 		let state = edit(start, (file) => addCollection(file, "note", "document", "/notes/:slug", "Notes"));
 		state = edit(state, (file) =>
@@ -120,6 +140,13 @@ describe("the list of changes", () => {
 		let undone = state;
 		for (const item of list) undone = item.revert(undone);
 		expect(undone.draft).toEqual(saved);
+	});
+
+	it("counts a new order of the collections as one change", () => {
+		const state = edit(start, (file) => reorderCollections(file, ["memo", "post"]));
+		const list = items(state);
+		expect(list.map((item) => item.subject.kind)).toEqual(["collectionOrder"]);
+		expect((list[0]?.revert(state) as DraftState).draft).toEqual(saved);
 	});
 
 	it("calls a change of the source language one change", () => {

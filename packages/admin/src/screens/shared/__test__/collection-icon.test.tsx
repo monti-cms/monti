@@ -3,7 +3,9 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { AdminComponentsProvider } from "../../../admin-components";
-import { COLLECTION_ICON_NAMES, ICONS, useIconByName } from "../collection-icon";
+import { ICONS, useIconByName } from "../collection-icon";
+
+const COLLECTION_ICON_NAMES = Object.keys(ICONS);
 
 describe("icon picked by name", () => {
 	it("picks built-in and provider-registered icons, a registered one first; unknown names give none", () => {

@@ -8,8 +8,8 @@ import { describeChangeItem } from "./describe-change-item";
 import { schemaMessages } from "./messages";
 
 /**
- * The save group on the right of the Settings title row while the draft differs from the saved file: "바뀐 곳 N ▾" lists the changes (each with its own
- * undo), then "모두 되돌리기" and the one primary pill. The pill is off while an error stops saving, and red when applying deletes values.
+ * The save group on the right of the Settings title row while the draft differs from the saved file: "changes N" lists the changes (each with its own
+ * undo), then "undo all" and the one primary pill. The pill is off while an error stops saving, and red when applying deletes values.
  */
 export function SaveGroup({
 	items,

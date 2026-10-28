@@ -1,6 +1,6 @@
 /**
  * The changes of a schema draft as a list: one item per field, per collection setting, per language and per site or admin setting. The screen counts the items
- * ("바뀐 곳 N"), lists them in the title row's menu and puts one back at a time. The functions here are pure: they read the saved file, the draft and the
+ * (the changes count), lists them in the title row's menu and puts one back at a time. The functions here are pure: they read the saved file, the draft and the
  * writer's renames, and each item carries the function that puts its part of the draft back.
  */
 
@@ -108,6 +108,12 @@ function restoreInLayout(current: Obj, saved: Obj, name: string): Obj {
 	return { ...current, layout };
 }
 
+/** The field as if the fields it points at had their saved names: a slug follows a renamed source field, which is no change of the slug. */
+function withOldReference(field: Obj, renamedFrom: ReadonlyMap<string, string>): Obj {
+	const source = typeof field.from === "string" ? renamedFrom.get(field.from) : undefined;
+	return field.kind === "slug" && source !== undefined ? { ...field, from: source } : field;
+}
+
 function collectionItems(name: string, saved: Obj, draft: Obj, renames: readonly Rename[]): ChangeItem[] {
 	const items: ChangeItem[] = [];
 	const area = "collections";
@@ -171,7 +177,7 @@ function collectionItems(name: string, saved: Obj, draft: Obj, renames: readonly
 					}),
 				}),
 			);
-		} else if (!sameJson(before, field)) {
+		} else if (!sameJson(before, withOldReference(field, renamedFrom))) {
 			items.push(
 				base({
 					id: `field:${name}:${fieldName}`,
@@ -426,6 +432,3 @@ export function changeItems(saved: Obj, state: DraftState): ChangeItem[] {
 	}
 	return items;
 }
-
-/** The state with every item put back (the saved file, no renames, nothing taken out). */
-export const savedState = (saved: Obj): DraftState => ({ draft: saved, renames: [], removed: [] });

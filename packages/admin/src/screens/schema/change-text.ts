@@ -91,7 +91,7 @@ export function describeChange(change: SchemaChange, t: T): string {
 export interface ChoiceContext {
 	/** The removed field was renamed by the writer: the values follow it, or the new field starts empty. */
 	readonly renamed?: boolean;
-	/** How many entries the choice touches, already written with its unit ("148편"). */
+	/** How many entries the choice touches, already written with its unit ("148 posts"). */
 	readonly count?: string;
 	/** `item` for a collection of short records, anything else for documents. */
 	readonly kind?: string;

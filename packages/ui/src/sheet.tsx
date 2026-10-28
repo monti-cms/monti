@@ -94,9 +94,20 @@ function SheetHeader({
 }
 
 /** What the sheet is for; it scrolls when it is longer than the sheet. */
-function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
+function SheetBody({
+	className,
+	blocks = false,
+	...props
+}: React.ComponentProps<"div"> & {
+	/** The body is a run of change blocks, which bring their own 16px above: only 4px of the body's 20 stay over the first. */
+	blocks?: boolean;
+}) {
 	return (
-		<div data-slot="sheet-body" className={cn(PANEL_BODY, "min-h-0 grow overflow-y-auto", className)} {...props} />
+		<div
+			data-slot="sheet-body"
+			className={cn(PANEL_BODY, "min-h-0 grow overflow-y-auto", blocks && "pt-monti-4", className)}
+			{...props}
+		/>
 	);
 }
 

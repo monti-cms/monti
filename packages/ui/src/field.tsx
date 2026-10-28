@@ -75,11 +75,11 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 
 /** What a label row says about a field that differs from the saved value: the dot's name, the undo button's text and what it puts back. */
 interface FormFieldChange {
-	/** The dot's name for a screen reader ("바뀜"). */
+	/** The dot's name for a screen reader ("changed"). */
 	label: string;
-	/** The undo button's text ("되돌리기"). */
+	/** The undo button's text ("undo"). */
 	undoLabel: string;
-	/** The name the undo button is announced with, which starts with the field's name ("사이트 이름 되돌리기"). */
+	/** The name the undo button is announced with, which starts with the field's name ("site name undo"). */
 	undoName?: string;
 	/** Puts the saved value back. Without it the row has the dot only (a switch, which is undone by turning it back). */
 	onUndo?: () => void;

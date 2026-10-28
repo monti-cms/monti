@@ -36,7 +36,6 @@ import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
-	type CollectionChange,
 	collectionsOf,
 	defaultPath,
 	fieldsOf,
@@ -183,7 +182,6 @@ function AllowedEditor({
 		if (key) return te(key);
 		return site.BLOCK_BY_NAME.get(id)?.label ?? id;
 	};
-	const limited = Object.values(allowed).some((list) => Array.isArray(list));
 	const setAllowed = (key: keyof Allowed, value: unknown[] | undefined) =>
 		update((current) => {
 			const next = { ...allowedOf(current) } as Record<string, unknown>;
@@ -233,11 +231,8 @@ export function CollectionEditor({
 	onRemove,
 	onRename,
 	onFileChange,
-	changes,
 }: {
 	name: string;
-	/** Which of its tabs hold a change against the saved file. */
-	changes?: CollectionChange;
 	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
 	section: string | undefined;
 	onSection: (section: string) => void;
@@ -276,25 +271,14 @@ export function CollectionEditor({
 	return (
 		<Stack gap={0} minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
+			<Tabs fill value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
 				<PageToolbar>
 					<TabsList variant="toolbar" aria-label={ts("tabs.collection")}>
-						<TabsTrigger value="basics" dot={changes?.basics ? "warning" : undefined} dotLabel={ts("changed")}>
-							{t("collection.tabs.basics")}
-						</TabsTrigger>
-						<TabsTrigger
-							value="fields"
-							count={fieldCount}
-							dot={changes?.fields ? "warning" : undefined}
-							dotLabel={ts("changed")}
-						>
+						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
+						<TabsTrigger value="fields" count={fieldCount}>
 							{t("collection.tabs.fields")}
 						</TabsTrigger>
-						{isEditorAvailable && (
-							<TabsTrigger value="editor" dot={changes?.editor ? "warning" : undefined} dotLabel={ts("changed")}>
-								{t("collection.tabs.editor")}
-							</TabsTrigger>
-						)}
+						{isEditorAvailable && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
 					{tab === "fields" && (
 						<PageToolbarEnd>

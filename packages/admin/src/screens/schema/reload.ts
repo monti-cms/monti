@@ -1,6 +1,6 @@
 /** The key under which a saved schema leaves its message for the page that opens after the reload. */
 export const SAVED_MESSAGE_KEY = "monti.schema.saved";
-/** The key of the address the message offers to open ("보기"), when it offers one. */
+/** The key of the address the message offers to open ("view"), when it offers one. */
 export const SAVED_HREF_KEY = "monti.schema.saved.href";
 
 /** What a save leaves for the page after the reload: the line of the toast and, when it has one, where its action goes. */
@@ -14,7 +14,7 @@ export const reloadPage = (): void => {
 	window.location.reload();
 };
 
-/** Leaves `message` for the page that opens after the reload (shown once as a toast), with the address its "보기" action opens when `href` is given. */
+/** Leaves `message` for the page that opens after the reload (shown once as a toast), with the address its "view" action opens when `href` is given. */
 export function rememberSaved(message: string, href?: string): void {
 	try {
 		window.sessionStorage.setItem(SAVED_MESSAGE_KEY, message);

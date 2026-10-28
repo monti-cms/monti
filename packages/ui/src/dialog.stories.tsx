@@ -82,6 +82,28 @@ export const TitleOf: Story = {
 	),
 };
 
+/** A dialog that holds fields (`form`): they sit 16px under the title, like the text of a question, not the 24px between the other parts. */
+export const WithFields: Story = {
+	render: () => (
+		<Dialog defaultOpen>
+			<DialogContent form>
+				<DialogHeader>
+					<DialogTitle of="tlh">새 언어</DialogTitle>
+				</DialogHeader>
+				<Stack gap={24}>
+					<FormField>
+						<FormFieldLabel htmlFor="native">원어 이름</FormFieldLabel>
+						<Input id="native" />
+					</FormField>
+					<DialogFooter showCloseButton>
+						<Button>추가</Button>
+					</DialogFooter>
+				</Stack>
+			</DialogContent>
+		</Dialog>
+	),
+};
+
 function FormDemo({ busy = false, disabled = false }: { busy?: boolean; disabled?: boolean }) {
 	const [open, setOpen] = useState(true);
 	return (

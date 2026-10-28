@@ -33,6 +33,7 @@ import {
 	LanguageRow,
 	LanguageRowHandle,
 	LanguageSource,
+	LockMark,
 	MenuShortcut,
 	Popover,
 	PopoverContent,
@@ -51,6 +52,7 @@ import { useFieldChange, useSchemaEdit } from "./controls";
 import { SortableList } from "./fields-tree-dnd";
 import { customLocaleCode, findLocaleCodes, localeFromCode, localeName, sourceFirst } from "./locale-names";
 import { schemaLocalesMessages } from "./locales.messages";
+import { schemaMessages } from "./messages";
 import { ReadValue } from "./read-value";
 import { type Locale, localesOf, type Obj, sameJson, setProp } from "./schema-model";
 
@@ -94,6 +96,7 @@ function TimeZonePick({
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
 	const changed = useFieldChange(t("locales.timeZone"), revert);
+	if (disabled) return <ReadValue label={t("locales.timeZone")}>{value ?? ""}</ReadValue>;
 	return (
 		<Labeled label={t("locales.timeZone")} htmlFor={id} changed={changed}>
 			<Combobox
@@ -103,14 +106,7 @@ function TimeZonePick({
 				value={value ?? null}
 				onValueChange={(next: string | null) => onChange(next ?? undefined)}
 			>
-				<ComboboxInput
-					id={id}
-					mono
-					aria-label={t("locales.timeZone")}
-					placeholder="Asia/Seoul"
-					showClear={value !== undefined}
-					disabled={disabled}
-				/>
+				<ComboboxInput id={id} mono aria-label={t("locales.timeZone")} placeholder="Asia/Seoul" disabled={disabled} />
 				<ComboboxContent>
 					<ComboboxEmpty>{t("locales.timeZoneNone")}</ComboboxEmpty>
 					<ComboboxList>
@@ -150,7 +146,7 @@ function CustomLocaleDialog({
 	const ok = name.trim() !== "" && label.trim() !== "";
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent data-testid="locale-dialog">
+			<DialogContent data-testid="locale-dialog" form>
 				<DialogHeader>
 					<DialogTitle of={code}>{t("locales.newTitle")}</DialogTitle>
 				</DialogHeader>
@@ -179,7 +175,7 @@ function CustomLocaleDialog({
 	);
 }
 
-/** "+ 언어 추가": a searchable list of language codes. Picking one adds its row at once (the names come from the code); the last row, "직접 입력", asks for the names. */
+/** "add language": a searchable list of language codes. Picking one adds its row at once (the names come from the code); the last row, "type it yourself", asks for the names. */
 function AddLocale({
 	taken,
 	adminLanguage,
@@ -224,7 +220,7 @@ function AddLocale({
 										close();
 									}}
 								>
-									<Text variant="caption" mono weight="semibold">
+									<Text variant="caption" mono>
 										{code}
 									</Text>
 									<Text>{localeName(code, code)}</Text>
@@ -234,7 +230,7 @@ function AddLocale({
 						</CommandGroup>
 						{custom && (
 							<>
-								{codes.length > 0 && <CommandSeparator />}
+								{codes.length > 0 && <CommandSeparator alwaysRender />}
 								<CommandGroup>
 									<CommandItem
 										value="custom"
@@ -308,12 +304,13 @@ const FILE_ORDER = ["collections", "migrations", "locales", "defaultLocale", "ti
 
 /**
  * The content languages and the time zone. Names are never typed: a language row is its code with the names Intl gives it, so there is no input and no edit
- * row. The source language (`defaultLocale`) is pinned on top with "원문" and "바꾸기"; the others have a drag handle and a ×. "+ 언어 추가" picks a code from a
+ * row. The source language (`defaultLocale`) is pinned on top with the source flag and the change button; the others have a drag handle and a ×. "add language" picks a code from a
  * list and adds the row at once.
  */
 export function LocalesEditor({ file, update }: { file: Obj; update: (change: (file: Obj) => Obj) => void }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const tChanges = useTranslator(schemaChangesMessages);
+	const ts = useTranslator(schemaMessages);
 	const site = useSite();
 	const { disabled, saved } = useSchemaEdit();
 	const locales = localesOf(file);
@@ -322,6 +319,13 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	const sourceCode = typeof file.defaultLocale === "string" ? file.defaultLocale : (locales[0]?.code ?? "");
 	const source = locales.find((locale) => locale.code === sourceCode) ?? locales[0];
 	const others = locales.filter((locale) => locale.code !== source?.code);
+	// A language taken out stays in the list, struck through, until the draft is saved: it sits where it was among the others.
+	const goneRows = localesOf(saved)
+		.map((locale, index) => ({ locale, index }))
+		.filter(({ locale }) => !locales.some((item) => item.code === locale.code));
+	const otherRows: { locale: Locale; gone: boolean }[] = others.map((locale) => ({ locale, gone: false }));
+	for (const { locale, index } of goneRows)
+		otherRows.splice(Math.max(0, Math.min(index - 1, otherRows.length)), 0, { locale, gone: true });
 	const sourceMoved = !sameJson(saved.defaultLocale, file.defaultLocale);
 	const revertKey = (key: "timeZone") =>
 		sameJson(saved[key], file[key])
@@ -346,7 +350,15 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 	};
 	return (
 		<Stack gap={0}>
-			<Section title={t("locales.contentTitle")} data-testid="locales-content">
+			<Section
+				title={
+					<>
+						{t("locales.contentTitle")}
+						{!editable && <LockMark label={ts("lock.cannotChange")} />}
+					</>
+				}
+				data-testid="locales-content"
+			>
 				<Stack gap={0}>
 					<Box as="ul">
 						{source && (
@@ -383,15 +395,28 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 							</LanguageRow>
 						)}
 						<SortableList items={others.map((locale) => locale.code)} onDragEnd={onDrop}>
-							{others.map((locale) => (
-								<OtherRow
-									key={locale.code}
-									locale={locale}
-									dot={dotOf(locale)}
-									editable={editable}
-									onRemove={() => change(locales.filter((item) => item.code !== locale.code))}
-								/>
-							))}
+							{otherRows.map(({ locale, gone }) =>
+								gone ? (
+									<LanguageRow
+										key={locale.code}
+										data-testid={`gone-locale-${locale.code}`}
+										name={locale.name}
+										code={locale.code}
+										label={locale.label}
+										dot={t("locales.removed")}
+										gone
+										handled={editable}
+									/>
+								) : (
+									<OtherRow
+										key={locale.code}
+										locale={locale}
+										dot={dotOf(locale)}
+										editable={editable}
+										onRemove={() => change(locales.filter((item) => item.code !== locale.code))}
+									/>
+								),
+							)}
 						</SortableList>
 					</Box>
 					{editable && (

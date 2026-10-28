@@ -148,7 +148,9 @@ export function AddFieldSheet({
 					}}
 				>
 					<SheetHeader>
-						<SheetTitle of={`· ${collectionTitle}`}>{t("field.addTitle")}</SheetTitle>
+						<SheetTitle of={`· ${collectionTitle}`} ofMono={false}>
+							{t("field.addTitle")}
+						</SheetTitle>
 					</SheetHeader>
 					<SheetSplit
 						list={
@@ -167,7 +169,7 @@ export function AddFieldSheet({
 							</PickList>
 						}
 					>
-						<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
+						<Tabs fill defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 							<TabsList variant="bar" inset="panel">
 								<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
 								<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>

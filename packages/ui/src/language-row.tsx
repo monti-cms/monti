@@ -5,15 +5,16 @@ import { Grip } from "./grip";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
- * language ("English en · 영어"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the quiet × that
+ * language ("English en · display name"). Names come from the code and are never edited, so a row has no input. At the end of the row sits `children`: the quiet × that
  * takes the language out, or the {@link LanguageSource} mark on the source row. `handle` is the drag handle (a {@link LanguageRowHandle}); a list whose rows can
- * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("새로", "원문 바뀜").
+ * be moved sets `handled` on every row, so a row without a handle (the source) keeps its column. `dot` is the name of the change dot ("new", "source changed").
  */
 function LanguageRow({
 	name,
 	code,
 	label,
 	dot,
+	gone = false,
 	handle,
 	handled = false,
 	drag,
@@ -27,6 +28,8 @@ function LanguageRow({
 	/** The display name; shown only when it differs from `name`. */
 	label?: string;
 	dot?: string;
+	/** The language is taken out and the file is not saved yet: the row stays, struck through and faint, with the dot saying so. */
+	gone?: boolean;
 	handle?: React.ReactNode;
 	handled?: boolean;
 	/** While the row is dragged: where the drag has moved it (the sortable's transform and transition) and whether it is the row in hand. */
@@ -46,8 +49,8 @@ function LanguageRow({
 			{...props}
 		>
 			{handled && <span className="flex items-center justify-center">{handle}</span>}
-			<span className="min-w-0 truncate whitespace-nowrap">
-				<span className="text-monti-body text-monti-default">{name}</span>{" "}
+			<span className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
+				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
 				<span className="font-mono text-monti-caption text-monti-faint">{code}</span>
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}

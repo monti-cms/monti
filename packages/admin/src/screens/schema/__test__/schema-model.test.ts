@@ -4,7 +4,6 @@ import {
 	addField,
 	addOption,
 	allowedOf,
-	changeCount,
 	changedAreas,
 	collectionNameProblem,
 	collectionsOf,
@@ -274,23 +273,6 @@ describe("reorderField", () => {
 	});
 });
 
-describe("changeCount", () => {
-	const file = (): Obj => ({
-		collections: { post: post() },
-		locales: [{ code: "en", name: "English" }],
-		defaultLocale: "en",
-	});
-	it("is zero for an untouched draft and counts each edited part once", () => {
-		expect(changeCount(file(), file())).toBe(0);
-		const edited = file();
-		edited.collections = { post: { ...post(), label: "Article" }, memo: post() };
-		edited.timeZone = "Asia/Seoul";
-		edited.site = { name: "Mine", previewPath: "/" };
-		// post edited, memo added, time zone, two site settings
-		expect(changeCount(file(), edited)).toBe(5);
-	});
-});
-
 describe("changedAreas", () => {
 	const file = (): Obj => ({
 		collections: { post: post(), tag: post() },
@@ -336,11 +318,6 @@ describe("collection reordering", () => {
 	it("reorders collections to a specified order", () => {
 		const reordered = reorderCollections(file(), ["tag", "post", "memo"]);
 		expect(Object.keys(collectionsOf(reordered))).toEqual(["tag", "post", "memo"]);
-	});
-
-	it("counts collection order change as one pending change", () => {
-		const reordered = reorderCollections(file(), ["memo", "post", "tag"]);
-		expect(changeCount(file(), reordered)).toBe(1);
 	});
 });
 

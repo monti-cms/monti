@@ -27,6 +27,7 @@ import { commonMessages } from "../../lib/common.messages";
 import {
 	FlagSwitch,
 	IssueList,
+	NameInput,
 	orUndefined,
 	Pick,
 	SegmentedField,
@@ -41,6 +42,7 @@ import { schemaFieldsMessages } from "./fields.messages";
 import { schemaMessages } from "./messages";
 import { ReadValue } from "./read-value";
 import {
+	allFieldNames,
 	FIELD_KEY_ORDER,
 	type FieldKindName,
 	type FieldPlace,
@@ -51,6 +53,7 @@ import {
 	type Rename,
 	removeBlock,
 	removeField,
+	renameField,
 	setField,
 	setProp,
 	setTitleField,
@@ -83,6 +86,8 @@ export function FieldSheet({
 	const [draft, setDraft] = useState<Obj>(editing.collection);
 	// Renames of options made in the copy are recorded for the review only when the copy is applied.
 	const renames = useRef<Rename[]>([]);
+	// The name the field has after Apply: the rename is made on the file then, with the copy's other edits.
+	const [newName, setNewName] = useState(name);
 	const field = fieldAt(draft, place, name) ?? {};
 	const kind = String(field.kind) as FieldKindName;
 	const path = place.branch
@@ -128,7 +133,9 @@ export function FieldSheet({
 	const localized = field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared";
 
 	const apply = () => {
-		editing.update(() => draft);
+		const renamed = newName !== name && !place.branch;
+		editing.update(() => (renamed ? renameField(draft, place, name, newName) : draft));
+		if (renamed) editing.onRename({ kind: "field", collection: editing.collectionName, from: name, to: newName });
 		const shown = opposite && field.kind === "relation" && field.many === true;
 		if (shown !== savedOpposite)
 			editing.updateFile?.((current) => withOpposite(current, editing.collectionName, name, target, shown));
@@ -144,9 +151,11 @@ export function FieldSheet({
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent data-testid="field-sheet">
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
-				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
+				<Tabs fill defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>
-						<SheetTitle of={`· ${collectionTitle}`}>{label || name}</SheetTitle>
+						<SheetTitle of={`· ${collectionTitle}`} ofMono={false}>
+							{label || name}
+						</SheetTitle>
 					</SheetHeader>
 					{hasAdvanced && (
 						<TabsList variant="bar" inset="panel">
@@ -188,10 +197,16 @@ export function FieldSheet({
 										</>
 									}
 								>
-									<ReadValue label={t("field.name")}>
-										{name}
-										{!disabled && <LockMark label={ts("lock.cannotChange")} />}
-									</ReadValue>
+									{disabled || place.branch ? (
+										<ReadValue label={t("field.name")}>{name}</ReadValue>
+									) : (
+										<NameInput
+											label={t("field.name")}
+											value={newName}
+											taken={allFieldNames(editing.collection).filter((item) => item !== name)}
+											onCommit={setNewName}
+										/>
+									)}
 									{disabled ? (
 										<ReadValue label={t("field.kind")} mono={false}>
 											{t(`kind.${kind}`)}

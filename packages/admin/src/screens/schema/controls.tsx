@@ -28,6 +28,7 @@ import { type ComponentProps, createContext, type ReactNode, useContext, useId, 
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
+import { ReadValue } from "./read-value";
 import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */
@@ -91,7 +92,7 @@ export function ChangedMark() {
 }
 
 /**
- * What the label row of a field says while the field differs from the saved file: the change dot and, with `onUndo`, the "되돌리기" button that puts the saved
+ * What the label row of a field says while the field differs from the saved file: the change dot and, with `onUndo`, the undo button that puts the saved
  * value back. `undefined` while the field is unchanged. A switch has no undo button (turning it back undoes it), so it asks for the dot only.
  */
 export function useFieldChange(
@@ -194,6 +195,13 @@ export function TextInput({
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
 	const changed = useFieldChange(label, revert);
+	// A file that cannot be written shows its values as text, not as fields that look broken.
+	if (disabled && customDisabled === undefined)
+		return (
+			<ReadValue label={label} mono={mono || prefix !== undefined}>
+				{`${prefix ?? ""}${value ?? ""}`}
+			</ReadValue>
+		);
 	const control = {
 		id,
 		type,
@@ -244,6 +252,12 @@ export function TextAreaInput({
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	const changed = useFieldChange(label, revert);
+	if (disabled)
+		return (
+			<ReadValue label={label} mono={false}>
+				{value ?? ""}
+			</ReadValue>
+		);
 	return (
 		<Labeled label={label} htmlFor={id} required={required} changed={changed}>
 			<Textarea
@@ -342,7 +356,6 @@ export function SegmentedField({
 			{description && <Help>{description}</Help>}
 			<Segmented
 				aria-label={label}
-				inline
 				disabled={disabled}
 				value={value}
 				onValueChange={onChange}
@@ -388,6 +401,12 @@ export function Pick({
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
 	const changed = useFieldChange(label, revert);
+	if (disabled && customDisabled === undefined)
+		return (
+			<ReadValue label={label} mono={false}>
+				{items.find((item) => item.value === value)?.label ?? value}
+			</ReadValue>
+		);
 	return (
 		<Labeled label={label} description={description} hint={hint} htmlFor={id} control={control} changed={changed}>
 			<Select

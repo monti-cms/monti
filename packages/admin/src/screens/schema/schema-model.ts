@@ -143,27 +143,6 @@ export function settingChanges(base: Obj, draft: Obj): SettingChange[] {
 	return changes;
 }
 
-/**
- * How many things differ between the saved file and the draft: each collection that was added, removed or edited, each of the language settings
- * (`locales`, `defaultLocale`, `timeZone`) and each changed `site` or `admin` setting. The number shown as unsaved changes.
- */
-export function changeCount(base: Obj, draft: Obj): number {
-	const before = collectionsOf(base);
-	const after = collectionsOf(draft);
-	let count = 0;
-	const beforeKeys = Object.keys(before);
-	const afterKeys = Object.keys(after);
-	const sameNames = beforeKeys.length === afterKeys.length && beforeKeys.every((key) => key in after);
-	if (sameNames && !sameJson(beforeKeys, afterKeys)) count += 1;
-	for (const name of new Set([...beforeKeys, ...afterKeys])) {
-		if (!sameJson(before[name], after[name])) count += 1;
-	}
-	for (const key of ["locales", "defaultLocale", "timeZone"]) {
-		if (!sameJson(base[key], draft[key])) count += 1;
-	}
-	return count + settingChanges(base, draft).length;
-}
-
 /** Which of a collection's editor tabs hold a change against the saved file. */
 export interface CollectionChange {
 	readonly basics: boolean;
@@ -190,7 +169,7 @@ export function collectionChange(saved: Obj | undefined, draft: Obj): Collection
 	return basics || fields || editor ? { basics, fields, editor } : null;
 }
 
-/** The areas of the Settings page that hold draft changes, derived the same way `changeCount` counts them. */
+/** The areas of the Settings page that hold draft changes, derived the same way as the list of changes. */
 export function changedAreas(base: Obj, draft: Obj): ChangedAreas {
 	const before = collectionsOf(base);
 	const after = collectionsOf(draft);

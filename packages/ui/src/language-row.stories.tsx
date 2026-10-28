@@ -68,6 +68,18 @@ export const List: Story = {
 	),
 };
 
+/** A language taken out and not saved yet: it stays in the list, struck through, until the draft is saved or the change is undone. */
+export const Gone: Story = {
+	render: () => (
+		<>
+			<LanguageRow name="한국어" code="ko" label="한국어" handled>
+				{source}
+			</LanguageRow>
+			<LanguageRow name="English" code="en" label="영어" dot="뺄 예정" gone handled />
+		</>
+	),
+};
+
 /** The source changed: both rows carry the dot. */
 export const SourceChanged: Story = {
 	render: () => (

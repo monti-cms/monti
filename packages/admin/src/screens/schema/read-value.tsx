@@ -7,7 +7,7 @@ export function ReadValue({ label, children, mono = true }: { label: string; chi
 	return (
 		<FormField aria-labelledby={id}>
 			<FormFieldLabel id={id}>{label}</FormFieldLabel>
-			<Box paddingTop={4}>
+			<Box paddingTop={6}>
 				<Text mono={mono}>{children}</Text>
 			</Box>
 		</FormField>

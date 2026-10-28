@@ -56,7 +56,8 @@ function OptionRow({
 			data-slot="option-row"
 			className={cn(
 				COLUMNS,
-				"border-monti-muted border-b py-monti-8 text-monti-note",
+				// The cells are inputs (32px high, they read as text): 2px above and below make the board's 37px row.
+				"border-monti-muted border-b py-monti-2 text-monti-note",
 				drag?.active && "relative z-10 bg-monti-tool opacity-80",
 				className,
 			)}
