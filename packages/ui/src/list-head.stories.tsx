@@ -1,3 +1,4 @@
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
@@ -8,6 +9,7 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 } from "./dropdown-menu";
+import { IconButton } from "./icon-button";
 import { ListHead, type ListHeadColumn } from "./list-head";
 import { MenuShortcut } from "./menu-parts";
 import { RowActions, RowTitle, Table, TableBody, TableCell, TableRow } from "./table";
@@ -56,7 +58,11 @@ function Rows({ ids }: { ids: readonly string[] }) {
 					</TableCell>
 				))}
 				<TableCell align="end">
-					<RowActions>⋯</RowActions>
+					<RowActions>
+						<IconButton label="더보기">
+							<OverflowMenuHorizontal aria-hidden />
+						</IconButton>
+					</RowActions>
 				</TableCell>
 			</TableRow>
 		</TableBody>
