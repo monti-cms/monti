@@ -7,7 +7,7 @@ export interface Finding {
 }
 
 /**
- * The automated checks, run on the page of every shot (the same story, the same theme):
+ * The automated checks, run on the page of every story, in both themes (`audit.spec.ts`):
  * - overflow: the page scrolls sideways;
  * - clipped: an element hides part of its own text (`overflow: hidden` or `clip`, more content than room) without a `text-overflow: ellipsis` or a
  *   line clamp that says the cut is meant;

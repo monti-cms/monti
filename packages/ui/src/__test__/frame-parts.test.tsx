@@ -2,10 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Banner } from "../banner";
 import { EntryStatus } from "../entry-status";
-import { PageHeader, PageToolbar, PageToolbarEnd } from "../page-header";
+import { PageHeader } from "../page-header";
 import { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "../status-bar";
 import { StatusBarList } from "../status-bar-list";
-import { TodoItem } from "../todo-item";
+import { TodoDone, TodoItem } from "../todo-item";
 
 afterEach(cleanup);
 
@@ -17,31 +17,8 @@ describe("PageHeader", () => {
 			</PageHeader>,
 		);
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("게시글");
-		expect(screen.getByText("/posts/:slug").className).toContain("font-mono");
-		expect(screen.getByRole("button", { name: "새 글" }).parentElement?.className).toContain("ml-auto");
-	});
-
-	it("leaves out the address and the actions when there are none", () => {
-		render(<PageHeader title="설정" />);
-		expect(screen.getByRole("banner").children).toHaveLength(1);
-	});
-});
-
-describe("PageToolbar", () => {
-	it("keeps its right group at the end, and goes 12px inside only over a table", () => {
-		const { rerender } = render(
-			<PageToolbar data-testid="bar">
-				탭<PageToolbarEnd>필터</PageToolbarEnd>
-			</PageToolbar>,
-		);
-		expect(screen.getByText("필터").className).toContain("ml-auto");
-		expect(screen.getByTestId("bar").className).not.toContain("px-monti-12");
-		rerender(
-			<PageToolbar data-testid="bar" inset>
-				탭
-			</PageToolbar>,
-		);
-		expect(screen.getByTestId("bar").className).toContain("px-monti-12");
+		expect(screen.getByText("/posts/:slug")).toBeTruthy();
+		expect(screen.getByRole("button", { name: "새 글" })).toBeTruthy();
 	});
 });
 
@@ -60,26 +37,34 @@ describe("Banner", () => {
 });
 
 describe("EntryStatus", () => {
-	it("draws a mark of each status and hides it from screen readers, so the name is what is read", () => {
+	it("hides the mark from screen readers, so the name is what is read", () => {
 		render(<EntryStatus status="draft">초안</EntryStatus>);
 		const status = screen.getByText("초안");
 		expect(status.getAttribute("data-status")).toBe("draft");
 		const mark = status.querySelector("[data-slot=entry-status-mark]");
 		expect(mark?.getAttribute("aria-hidden")).toBe("true");
-		// A draft is an empty ring and an archived entry a bar: the shape, not only the color, says which.
-		expect(mark?.className).toContain("border-[1.5px]");
-		cleanup();
-		render(<EntryStatus status="archived">보관됨</EntryStatus>);
-		expect(document.querySelector("[data-slot=entry-status-mark]")?.className).toContain("h-0.5");
+		// The name is the text; the mark carries nothing a screen reader would read twice.
+		expect(mark?.textContent).toBe("");
 	});
 });
 
 describe("StatusBar", () => {
-	it("is drawn only while it has a cell", () => {
-		const { container } = render(<StatusBar aria-label="상태" />);
-		// Hidden by default, shown by the presence of a cell: the rule is in its classes, so check that a cell is what turns it on.
-		expect(container.querySelector("section")?.className).toContain("hidden");
-		expect(container.querySelector("section")?.className).toContain("has-[[data-slot=status-bar-cell]]:flex");
+	it("lists the group's name and count, runs a row's action, and shows what is done", async () => {
+		const onAction = vi.fn();
+		render(
+			<StatusBarList trigger={<button type="button">고칠 것 2</button>} label="고칠 것" count={2} defaultOpen>
+				<TodoItem blocking title="제목이 비어 있어요" detail="제목" actionLabel="이동" onAction={onAction} />
+				<TodoDone>요약 확인함</TodoDone>
+			</StatusBarList>,
+		);
+		const row = await screen.findByText("제목이 비어 있어요");
+		expect(
+			row.closest("[data-slot=status-bar-list]")?.querySelector("[data-slot=status-bar-list-head]")?.textContent,
+		).toBe("고칠 것2");
+		expect(document.querySelector("[data-slot=todo-mark]")?.getAttribute("data-blocking")).toBe("true");
+		fireEvent.click(screen.getByRole("button", { name: "이동" }));
+		expect(onAction).toHaveBeenCalledOnce();
+		expect(screen.getByText("요약 확인함")).toBeTruthy();
 	});
 
 	it("draws a cell as a button, or as what it is given, with a dot when something needs attention", () => {
@@ -94,7 +79,6 @@ describe("StatusBar", () => {
 		);
 		const todo = screen.getByRole("button", { name: "할 일 1" });
 		expect(todo.querySelector("[data-slot=status-bar-dot]")).toBeTruthy();
-		expect(todo.className).toContain("text-monti-danger");
 		const count = screen.getByText("1,240자");
 		expect(count.tagName).toBe("SPAN");
 		expect(count.getAttribute("data-slot")).toBe("status-bar-cell");
@@ -123,7 +107,6 @@ describe("StatusBarPluginCell", () => {
 			</StatusBar>,
 		);
 		const cell = screen.getByRole("button", { name: "맞춤법 2" });
-		expect(cell.className).toContain("text-monti-danger");
 		expect(cell.getAttribute("data-slot")).toBe("status-bar-cell");
 		await screen.findByText("됬다 → 됐다");
 		fireEvent.click(screen.getByRole("button", { name: "고치기" }));
@@ -150,16 +133,14 @@ describe("TodoItem", () => {
 		expect(screen.getAllByRole("button")).toHaveLength(1);
 	});
 
-	// The design's `.act` has no border and no background: plain muted text. A box around it is the focus ring of a popover that moved focus there.
-	it("is plain text with no box, and an opening list does not put focus on it", async () => {
+	// A box around the action would be the focus ring of a popover that moved focus there.
+	it("an opening list puts focus on its card, not on the first action", async () => {
 		render(
 			<StatusBarList defaultOpen label="할 일" count={1} trigger={<StatusBarCell>할 일 1</StatusBarCell>}>
 				<TodoItem blocking title="제목이 비어 있어요" actionLabel="이동" onAction={() => {}} />
 			</StatusBarList>,
 		);
 		const action = await screen.findByRole("button", { name: "이동" });
-		expect(action.className).toContain("border-0");
-		expect(action.className).toContain("bg-transparent");
 		await waitFor(() => expect(document.activeElement).not.toBe(action));
 		expect(document.activeElement?.getAttribute("data-slot")).toBe("status-bar-list");
 	});

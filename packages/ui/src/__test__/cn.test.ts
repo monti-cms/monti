@@ -15,12 +15,10 @@ describe("cn", () => {
 		expect(classes).toContain("md:text-monti-display");
 		expect(classes).not.toContain("text-monti-title");
 		expect(classes).not.toContain("md:text-monti-body");
-	});
-
-	it("keeps a text color next to a type scale role", () => {
-		const classes = cn("text-monti-caption", "text-monti-muted").split(" ");
-		expect(classes).toContain("text-monti-caption");
-		expect(classes).toContain("text-monti-muted");
+		// A text color is not a type scale role: it stays beside one.
+		const beside = cn("text-monti-caption", "text-monti-muted").split(" ");
+		expect(beside).toContain("text-monti-caption");
+		expect(beside).toContain("text-monti-muted");
 	});
 
 	it("lets a caller's color role replace a component's, and keeps the floating shadow beside a shadow color reset", () => {
@@ -30,12 +28,8 @@ describe("cn", () => {
 		expect(cn("shadow-none", "shadow-monti-floating")).toBe("shadow-monti-floating");
 	});
 
-	it("treats the spacing scale as spacing, beside Tailwind's numbers", () => {
-		expect(cn("gap-monti-4 px-monti-16", "gap-monti-48 px-monti-8")).toBe("gap-monti-48 px-monti-8");
+	it("merges every name of the generated theme with the others of its kind, and the spacing scale beside Tailwind's numbers", () => {
 		expect(cn("px-2.5", "px-monti-8")).toBe("px-monti-8");
-	});
-
-	it("merges every name of the generated theme with the others of its kind", () => {
 		const families: [string, string[]][] = [
 			["p", themed("spacing")],
 			["gap", themed("spacing")],

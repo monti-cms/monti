@@ -50,10 +50,11 @@ describe("visual regression setup", () => {
 			tags,
 		});
 
-		it("takes every story of the ui package's catalog, not the screens of other packages", () => {
+		it("takes every story of the ui package's catalog, not the screens of other packages or docs pages", () => {
 			expect(isShot(story("./src/button.stories.tsx"))).toBe(true);
 			expect(isShot(story("./src/foundations/type.stories.tsx"))).toBe(true);
 			expect(isShot(story("../admin/src/screens/entries/entries.stories.tsx"))).toBe(false);
+			expect(isShot({ ...story("./src/button.mdx"), type: "docs" })).toBe(false);
 		});
 
 		it("lets a screen story in with the `visual` tag, and a catalog story out with `no-visual`", () => {
@@ -68,10 +69,6 @@ describe("visual regression setup", () => {
 				"overflow",
 			]);
 			expect(allowedChecks(story("./src/box.stories.tsx"))).toEqual([]);
-		});
-
-		it("leaves out docs pages", () => {
-			expect(isShot({ ...story("./src/button.mdx"), type: "docs" })).toBe(false);
 		});
 	});
 });

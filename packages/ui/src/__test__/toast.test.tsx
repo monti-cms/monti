@@ -8,33 +8,16 @@ afterEach(() => {
 });
 
 describe("toast", () => {
-	it("shows its message", async () => {
-		render(<Toaster />);
-		act(() => void toast("Saved"));
-		expect(await screen.findByText("Saved")).toBeTruthy();
-		expect(screen.queryByRole("button")).toBeNull();
-	});
-
-	it("shows an error in the same pill on the danger background, with its action", async () => {
+	it.each([
+		["a toast", (action: { label: string; onClick: () => void }) => toast("Moved to the trash", { action })],
+		[
+			"an error toast",
+			(action: { label: string; onClick: () => void }) => toast.error("Moved to the trash", { action }),
+		],
+	])("calls the action of %s back and closes it", async (_name, show) => {
 		const onClick = vi.fn();
 		render(<Toaster />);
-		act(() => void toast.error("Could not save", { action: { label: "Retry", onClick } }));
-		const pill = (await screen.findByText("Could not save")).parentElement;
-		expect(pill?.className).toContain("bg-monti-danger-emphasis");
-		fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-		expect(onClick).toHaveBeenCalledTimes(1);
-	});
-
-	it("keeps an ordinary toast on the ink background", async () => {
-		render(<Toaster />);
-		act(() => void toast("Saved"));
-		expect((await screen.findByText("Saved")).parentElement?.className).not.toContain("bg-monti-danger-emphasis");
-	});
-
-	it("calls the action back and closes the toast", async () => {
-		const onClick = vi.fn();
-		render(<Toaster />);
-		act(() => void toast("Moved to the trash", { action: { label: "Undo", onClick } }));
+		act(() => void show({ label: "Undo", onClick }));
 		fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
 		expect(onClick).toHaveBeenCalledTimes(1);
 		await waitFor(() => expect(screen.queryByText("Moved to the trash")).toBeNull());

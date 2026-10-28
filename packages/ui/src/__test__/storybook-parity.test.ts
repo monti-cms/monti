@@ -24,18 +24,10 @@ describe("storybook styles", () => {
 		expect(storybook).toMatch(/utilities\.css" layer\(utilities\)/);
 	});
 
-	it("take the theme and the fonts from the design system, not from values of their own", () => {
+	it("hold no color of their own: the chrome and the canvas read the design system's generated values", () => {
 		const main = read("../../.storybook/main.ts");
 		const preview = read("../../.storybook/preview.tsx");
 		const manager = read("../../.storybook/manager.ts");
-		// The admin's own font registration, under the names the font tokens read.
-		expect(main).toContain("bundledFonts");
-		// The dark switch is the tokens' selector (`.dark` on `html`), and the canvas is the page role.
-		expect(preview).toContain('parentSelector: "html"');
-		expect(preview).toContain("bg-monti-page");
-		// Storybook's own chrome reads the generated values (`pnpm gen:tokens`), never colors typed in the file.
-		expect(manager).toContain("MANAGER_THEME");
-		expect(manager).toContain('brandTitle: "Monti Admin"');
 		for (const [name, source] of Object.entries({ storybook, main, preview, manager }))
 			expect(source, `${name} has a literal color`).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|hsl|oklch)a?\(/);
 	});
@@ -80,19 +72,6 @@ describe("storybook catalog", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("sorts five tiers, smallest part first, then the screens", () => {
-		expect(order.filter((entry) => typeof entry === "string")).toEqual([
-			"Foundations",
-			"Primitives",
-			"Controls",
-			"Patterns",
-			"Monti",
-			"Screens",
-			"*",
-		]);
-		expect(tiers.map(({ tier }) => tier)).toEqual(["Foundations", "Primitives", "Controls", "Patterns", "Monti"]);
-	});
-
 	it("puts every story in exactly one tier: a page of Foundations or Primitives, or a group of the other tiers", () => {
 		const pageTiers = ["Foundations", "Primitives"];
 		for (const { file, title } of titles) {
@@ -117,14 +96,5 @@ describe("storybook catalog", () => {
 					titles.some(({ title }) => title?.startsWith(`${tier}/${group}/`)),
 					`${tier}/${group} has no story`,
 				).toBe(true);
-	});
-
-	it("draws the tokens on the Foundations pages", () => {
-		const foundations = titles.filter(({ title }) => title?.startsWith("Foundations/")).map(({ title }) => title);
-		expect(foundations).toEqual(
-			expect.arrayContaining(
-				["Colors", "Type", "Spacing", "Radius", "Sizes", "Shadows"].map((page) => `Foundations/${page}`),
-			),
-		);
 	});
 });

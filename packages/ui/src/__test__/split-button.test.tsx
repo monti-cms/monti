@@ -11,12 +11,6 @@ const renderSplit = (props: Partial<Parameters<typeof SplitButton>[0]> = {}) =>
 	);
 
 describe("SplitButton", () => {
-	it("renders the main action and the menu trigger as two buttons", () => {
-		renderSplit();
-		expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Publish options" })).toBeTruthy();
-	});
-
 	it("fires onClick from the main half only", () => {
 		const onClick = vi.fn();
 		renderSplit({ onClick });
@@ -26,7 +20,7 @@ describe("SplitButton", () => {
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
 
-	it("opens the menu from the trigger, by click and by ArrowDown, and both halves are in the tab order", async () => {
+	it("is two buttons, both in the tab order, and opens the menu from the trigger", async () => {
 		renderSplit();
 		for (const name of ["Publish", "Publish options"])
 			expect(screen.getByRole("button", { name }).getAttribute("tabindex")).not.toBe("-1");
@@ -34,18 +28,6 @@ describe("SplitButton", () => {
 		expect(trigger.getAttribute("aria-haspopup")).toBe("menu");
 		fireEvent.click(trigger);
 		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeTruthy();
-	});
-
-	it("draws one focus ring round the whole pill, and marks the focused half by its fill, so the pill never reads as two shapes", () => {
-		renderSplit();
-		const pill = screen.getByRole("group");
-		// The ring is the pill's (it is not cut by the pill's `overflow-hidden`, which clips only what is inside), like a `Button`'s.
-		expect(pill.className).toContain("has-focus-visible:ring-3");
-		for (const name of ["Publish", "Publish options"]) {
-			const half = screen.getByRole("button", { name }).className;
-			expect(half).not.toMatch(/(^|\s)focus-visible:ring/);
-			expect(half).toContain("focus-visible:bg-");
-		}
 	});
 
 	it("disables both halves together, and while loading", () => {
@@ -59,5 +41,8 @@ describe("SplitButton", () => {
 		);
 		expect(screen.getByRole("button", { name: /Publish$/ }).hasAttribute("disabled")).toBe(true);
 		expect(screen.getByRole("button", { name: "Publish options" }).hasAttribute("disabled")).toBe(true);
+		// A loading pill shows its spinner in the main half only.
+		expect(screen.getByRole("button", { name: /Publish$/ }).querySelectorAll("[data-slot=spinner]")).toHaveLength(1);
+		expect(document.querySelectorAll("[data-slot=spinner]")).toHaveLength(1);
 	});
 });

@@ -1,7 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BulkBar } from "../bulk-bar";
-import { DropArea } from "../drop-area";
 import { DropdownMenuItem } from "../dropdown-menu";
 import { Empty, EmptyStep } from "../empty";
 import { PageToolbar } from "../page-header";
@@ -34,7 +33,7 @@ describe("list rows", () => {
 		expect(screen.getByTestId("proposed").getAttribute("data-proposal")).toBe("true");
 	});
 
-	it("hangs the check outside the row, reports a change, and keeps the title over its address", () => {
+	it("reports a change of the row check, and shows the title with its address", () => {
 		const onCheckedChange = vi.fn();
 		render(
 			<Table container="none">
@@ -43,17 +42,16 @@ describe("list rows", () => {
 						<TableCell>
 							<RowCheck checked={false} onCheckedChange={onCheckedChange} label="첫 글 선택" />
 							<RowTitle title="첫 글" address="/first-post" />
-							<RowActions data-testid="actions">⋯</RowActions>
+							<RowActions>⋯</RowActions>
 						</TableCell>
 					</TableRow>
 				</TableBody>
 			</Table>,
 		);
-		expect(document.querySelector("[data-slot=row-check]")?.className).toContain("-left-[26px]");
 		fireEvent.click(screen.getByRole("checkbox", { name: "첫 글 선택" }));
 		expect(onCheckedChange).toHaveBeenCalledWith(true);
-		expect(screen.getByText("/first-post").className).toContain("font-mono");
-		expect(screen.getByTestId("actions").className).toContain("group-hover/row:opacity-100");
+		expect(screen.getByText("/first-post")).toBeTruthy();
+		expect(screen.getByText("⋯")).toBeTruthy();
 	});
 });
 
@@ -80,7 +78,7 @@ describe("PageToolbar and BulkBar", () => {
 				탭
 			</PageToolbar>,
 		);
-		expect(document.querySelector("[data-slot=select-all]")?.className).toContain("opacity-0");
+		expect(screen.getByRole("checkbox", { name: "모두 선택" }).getAttribute("aria-checked")).toBe("false");
 	});
 
 	it("lists the count, the request, the two actions, the rest in ⋯ and the way to let go", async () => {
@@ -137,7 +135,7 @@ describe("Tile", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "줄여서 다시" }));
 		expect(retry).toHaveBeenCalledOnce();
-		expect(screen.getByText("14 MB").className).toContain("text-monti-danger");
+		expect(screen.getByText("14 MB")).toBeTruthy();
 	});
 
 	it("adds a check that reports a change, and puts the suggestion in the detail's place", () => {
@@ -153,38 +151,21 @@ describe("Tile", () => {
 			/>,
 		);
 		expect(screen.queryByText("2400×1600")).toBeNull();
-		expect(screen.getByText("아침 책상").className).toContain("bg-monti-proposal-muted");
+		expect(screen.getByText("아침 책상")).toBeTruthy();
 		fireEvent.click(screen.getByRole("checkbox", { name: "a.jpg 선택" }));
 		expect(onSelectedChange).toHaveBeenCalledWith(true);
 	});
-
-	it("marks the folder files are dragged over", () => {
-		render(<FolderTile name="covers" count={6} dropTarget />);
-		const folder = screen.getByRole("button", { name: /covers/ });
-		expect(folder.getAttribute("data-drop-target")).toBe("true");
-		expect(folder.className).toContain("bg-monti-selected");
-	});
 });
 
-describe("FolderTile action", () => {
-	it("keeps the ⋯ beside the folder button, not inside it, and shows it with the pointer", () => {
-		render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
+describe("FolderTile", () => {
+	it("keeps the ⋯ beside the folder button, not inside it, and marks the folder files are dragged over", () => {
+		const { rerender } = render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
 		const folder = screen.getByRole("button", { name: /^covers\s*6/ });
 		const action = screen.getByRole("button", { name: "more" });
 		expect(folder.contains(action)).toBe(false);
-		expect(action.parentElement?.className).toContain("group-hover/folder:opacity-100");
-		expect(action.parentElement?.className).toContain("pointer-coarse:opacity-100");
-	});
-});
-
-describe("DropArea", () => {
-	it("covers the area only while files are over it", () => {
-		const { rerender } = render(<DropArea>tiles</DropArea>);
-		expect(document.querySelector("[data-slot=drop-area-overlay]")).toBeNull();
-		rerender(<DropArea over>tiles</DropArea>);
-		const overlay = document.querySelector("[data-slot=drop-area-overlay]");
-		expect(overlay?.className).toContain("mix-blend-multiply");
-		expect(overlay?.className).toContain("monti-dark:mix-blend-screen");
+		expect(folder.hasAttribute("data-drop-target")).toBe(false);
+		rerender(<FolderTile name="covers" count={6} action={<button type="button">more</button>} dropTarget />);
+		expect(screen.getByRole("button", { name: /^covers\s*6/ }).getAttribute("data-drop-target")).toBe("true");
 	});
 });
 

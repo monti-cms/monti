@@ -6,8 +6,8 @@ describe("Affix", () => {
 	const field = (props: Partial<React.ComponentProps<typeof Affix>> = {}) =>
 		render(<Affix aria-label="Address" prefix="/" suffix="/:slug" defaultValue="posts" {...props} />);
 
-	it("focuses the input with the caret at its end when the fixed suffix or prefix is clicked", () => {
-		field();
+	it("focuses the input with the caret at its end when the fixed parts or the empty space are clicked", () => {
+		const { container } = field();
 		const input = screen.getByLabelText<HTMLInputElement>("Address");
 		fireEvent.click(screen.getByText("/:slug"));
 		expect(document.activeElement).toBe(input);
@@ -15,12 +15,9 @@ describe("Affix", () => {
 		input.blur();
 		fireEvent.click(screen.getByText("/"));
 		expect(document.activeElement).toBe(input);
-	});
-
-	it("focuses the input when the empty space of the field is clicked", () => {
-		const { container } = field();
+		input.blur();
 		fireEvent.click(container.querySelector('[data-slot="affix"]') as Element);
-		expect(document.activeElement).toBe(screen.getByLabelText("Address"));
+		expect(document.activeElement).toBe(input);
 	});
 
 	it("leaves a click on the action to the action", () => {

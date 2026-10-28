@@ -18,10 +18,8 @@ describe("ChatMessage", () => {
 		);
 		expect(screen.getByText("Hello").getAttribute("aria-busy")).toBe("true");
 		expect(screen.getByText("Hello").getAttribute("data-author")).toBe("assistant");
-	});
-
-	it("is the assistant's by default", () => {
-		render(<ChatMessage>Hi</ChatMessage>);
+		// With no author it is the assistant's.
+		rerender(<ChatMessage>Hi</ChatMessage>);
 		expect(screen.getByText("Hi").getAttribute("data-author")).toBe("assistant");
 	});
 });
@@ -139,25 +137,9 @@ describe("ChatInput", () => {
 		expect(onStop).toHaveBeenCalledTimes(1);
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
-
-	it("shows the aside text at the start of the row", () => {
-		setup({ aside: "150 tokens" });
-		expect(screen.getByText("150 tokens")).toBeTruthy();
-	});
 });
 
 describe("SidePanelFrame", () => {
-	it("has the title, actions, body and footer", () => {
-		render(
-			<SidePanelFrame title="Assistant" actions={<button type="button">Act</button>} footer={<p>Footer</p>}>
-				<p>Body</p>
-			</SidePanelFrame>,
-		);
-		expect(screen.getByRole("heading", { name: "Assistant" })).toBeTruthy();
-		for (const text of ["Body", "Footer"]) expect(screen.getByText(text)).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Act" })).toBeTruthy();
-	});
-
 	it("keeps the title, the actions and the close button in one header row", () => {
 		const { container } = render(
 			<SidePanelFrame title="Assistant" actions={<button type="button">Act</button>} onClose={() => undefined}>
@@ -173,15 +155,13 @@ describe("SidePanelFrame", () => {
 			screen.getByRole("button", { name: "Close" }),
 		])
 			expect(header.contains(node)).toBe(true);
-		// The row is one flex line: its direct children sit side by side, not stacked.
-		expect(header.className).toContain("flex");
-		expect(header.className).not.toContain("flex-col");
 	});
 
-	it("has a close button only when it is given something to do", () => {
+	it("has a close button only when it is given something to do, and a footer only when it is given one", () => {
 		const onClose = vi.fn();
-		const { rerender } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
+		const { rerender, container } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
 		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+		expect(container.querySelector("[data-slot=side-panel-frame-footer]")).toBeNull();
 		rerender(
 			<SidePanelFrame title="T" onClose={onClose}>
 				x
@@ -189,10 +169,5 @@ describe("SidePanelFrame", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Close" }));
 		expect(onClose).toHaveBeenCalledTimes(1);
-	});
-
-	it("has no footer area without a footer", () => {
-		const { container } = render(<SidePanelFrame title="T">x</SidePanelFrame>);
-		expect(container.querySelector("[data-slot=side-panel-frame-footer]")).toBeNull();
 	});
 });

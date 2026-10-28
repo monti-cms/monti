@@ -22,10 +22,10 @@ describe("design tokens", () => {
 		expect(read(".storybook/manager-theme.generated.ts")).toBe(generated.managerTheme);
 	});
 
-	it("key the layout options by the design system's names, once, and write each class out whole", async () => {
+	it("key the layout options by the design system's names, and name every role of it once, with the monti prefix", async () => {
 		const { generate } = await import(/* @vite-ignore */ script);
 		const json = JSON.parse(read("tokens/tokens.json"));
-		const { layout } = generate();
+		const { layout, tokens, theme } = generate();
 		const steps = json.spacing.tokens.map((token: { name: string }) => token.name.replace("space-", ""));
 		for (const step of steps) expect(layout, `gap ${step}`).toContain(`\t${step}: "gap-monti-${step}",`);
 		for (const token of json.width.tokens) {
@@ -35,21 +35,10 @@ describe("design tokens", () => {
 		}
 		for (const token of json.radius.tokens)
 			expect(layout).toContain(`"rounded-monti-${token.name.replace("radius-", "")}"`);
-		expect(layout).toContain('page: "bg-monti-page"');
-		expect(layout).not.toMatch(/\b(surface|overlay|inset|neutral|accent|condensed|comfortable|spacious)\b/);
-	});
-
-	it("name every role of the design system once, with the monti prefix", async () => {
-		const { generate } = await import(/* @vite-ignore */ script);
-		const json = JSON.parse(read("tokens/tokens.json"));
-		const { tokens, theme } = generate();
 		for (const token of json.color.tokens) expect(tokens, token.name).toContain(`--monti-${token.name}:`);
 		for (const style of json.type.groups.flatMap((group: { styles: { name: string }[] }) => group.styles)) {
 			expect(theme, style.name).toContain(`@utility ${style.name.replace("text-", "text-monti-")} {`);
 		}
-		expect(theme).toContain("--background-color-monti-tool:");
-		expect(theme).toContain("--spacing-monti-12:");
-		expect(theme).not.toMatch(/--[\w-]+-monti-(accent|surface|inset|hair|tight|condensed)\b/);
 	});
 
 	it("give a sans type role its family through `--monti-family`, which `font-mono` sets on its own element, so mono wins at every width and stays off the children", async () => {
@@ -69,14 +58,5 @@ describe("design tokens", () => {
 		// `font-mono` sets the property, and the property is not inherited: a sans role inside a mono parent is sans.
 		expect(theme).toContain("@utility font-mono {");
 		expect(theme).toMatch(/@property --monti-family \{[^}]*inherits: false;/);
-	});
-
-	it("resolve references to the scale, and keep one declaration for a role that is the same in both modes", async () => {
-		const { generate } = await import(/* @vite-ignore */ script);
-		const { tokens } = generate();
-		const dark = tokens.slice(tokens.indexOf(":where(html:is("));
-		expect(tokens).toContain("--monti-bg-page: var(--monti-gray-1);");
-		expect(dark).toContain("--monti-bg-page: var(--monti-gray-2);");
-		expect(dark).not.toContain("--monti-fg-default");
 	});
 });

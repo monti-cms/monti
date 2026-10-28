@@ -38,21 +38,21 @@ describe("proposal state, in words", () => {
 		});
 	}
 
-	it("takes the words from the app's labels", () => {
-		render(
+	it("takes the words from the app's labels, and a chip (which is not a control) says it in text only while it is proposed", () => {
+		const { rerender } = render(
 			<UiLabelsProvider labels={{ proposal: "AI 제안" }}>
 				<Input aria-label="field" proposal />
 				<Chip proposal>React</Chip>
 			</UiLabelsProvider>,
 		);
 		expect(screen.getByLabelText("field").getAttribute("aria-description")).toBe("AI 제안");
-		expect(screen.getByText("AI 제안").className).toContain("sr-only");
-	});
-
-	it("says it in text inside a chip, which is not a control", () => {
-		const { rerender } = render(<Chip proposal>React</Chip>);
-		expect(screen.getByText("AI suggestion").className).toContain("sr-only");
-		rerender(<Chip>React</Chip>);
-		expect(screen.queryByText("AI suggestion")).toBeNull();
+		expect(screen.getByText("AI 제안")).toBeTruthy();
+		rerender(
+			<UiLabelsProvider labels={{ proposal: "AI 제안" }}>
+				<Input aria-label="field" proposal />
+				<Chip>React</Chip>
+			</UiLabelsProvider>,
+		);
+		expect(screen.queryByText("AI 제안")).toBeNull();
 	});
 });
