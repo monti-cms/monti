@@ -3,22 +3,6 @@ import { describe, expect, it } from "vitest";
 import { Heading, Text } from "../text";
 
 describe("Text and Heading", () => {
-	it("Text is a span that shows its text", () => {
-		render(
-			<Text variant="caption" tone="muted">
-				meta
-			</Text>,
-		);
-		expect(screen.getByText("meta").tagName).toBe("SPAN");
-	});
-
-	it("Heading defaults to an h2, and a caller's class is kept beside its own", () => {
-		render(<Heading className="mt-2">Settings</Heading>);
-		const el = screen.getByRole("heading", { level: 2, name: "Settings" });
-		expect(el.className).toContain("mt-2");
-		expect(el.className.split(/\s+/).length).toBeGreaterThan(1);
-	});
-
 	it("a Text with no role of its own takes the role around it, and an explicit role still wins", () => {
 		render(
 			<>

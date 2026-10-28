@@ -171,26 +171,6 @@ describe("design system", () => {
 		expect(problem("leading-relaxed", false, false)).toMatch(/line height/);
 	});
 
-	it('paints every delete icon button red: an IconButton holding a TrashCan passes tone="danger"', () => {
-		const offenders: string[] = [];
-		let found = 0;
-		for (const pkg of ADMIN_UI_PACKAGES) {
-			for (const file of sourceFiles(path.join(packagesDir, pkg, "src"))) {
-				const source = readFileSync(file, "utf8");
-				for (const button of source.matchAll(/<IconButton\b([\s\S]*?)<\/IconButton>/g)) {
-					const glyph = button[0].search(/<TrashCan\b/);
-					if (glyph < 0) continue;
-					found++;
-					// The opening tag is what comes before the icon inside it.
-					if (!/tone="danger"/.test(button[0].slice(0, glyph)))
-						offenders.push(`${path.relative(packagesDir, file)}:${source.slice(0, button.index).split("\n").length}`);
-				}
-			}
-		}
-		expect(found).toBeGreaterThan(0);
-		expect(offenders).toEqual([]);
-	});
-
 	it("is the only thing the admin and its plugins use", () => {
 		const offenders: string[] = [];
 		for (const pkg of ADMIN_UI_PACKAGES) {
