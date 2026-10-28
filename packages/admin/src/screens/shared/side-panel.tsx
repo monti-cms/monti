@@ -10,7 +10,7 @@ import { usePanelDock } from "./panel-dock";
  * fixed width.
  */
 const SIDE_PANEL_DOCK =
-	"fixed inset-y-0 right-0 z-20 flex max-w-full shadow-monti-floating lg:static lg:shrink-0 lg:shadow-none";
+	"fixed inset-y-0 right-0 z-20 flex max-w-full shadow-monti-floating lg:static lg:z-auto lg:shrink-0 lg:shadow-none";
 
 /**
  * The slot a panel is put in. It is drawn in the dock of the admin frame, wherever the screen that opens it is in the page; outside a frame it stays

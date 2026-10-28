@@ -254,7 +254,7 @@ function SidebarInset({
 					{corner}
 				</div>
 			) : (
-				corner && <div className="absolute top-monti-12 right-monti-12 z-4">{corner}</div>
+				corner && <div className="absolute top-monti-12 right-monti-12 z-40">{corner}</div>
 			)}
 			{children}
 		</main>
