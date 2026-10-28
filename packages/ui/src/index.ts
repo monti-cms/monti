@@ -224,6 +224,9 @@ export const ResizeCorner = close(open.ResizeCorner);
 export const Section = close(open.Section);
 export const Untranslated = close(open.Untranslated);
 export const CodeBlock = close(open.CodeBlock);
+export const HeadingIcon = close(open.HeadingIcon);
+/** The heading glyphs by level (2, 3, 4), as icon components: they go where an `icon` goes (a slash menu item, a toolbar entry). */
+export const headingIcons = open.headingIcons;
 export const Icon = close(open.Icon);
 export const Image = close(open.Image);
 export const List = close(open.List);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, RecentlyViewed } from "@carbon/icons-react";
+import { Add, RecentlyViewed } from "@carbon/icons-react";
 import {
 	type AdminPanel,
 	type AdminPanelProps,
@@ -198,7 +198,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 							rememberRun("");
 						}}
 					>
-						<Edit aria-hidden />
+						<Add aria-hidden />
 					</IconButton>
 				</>
 			}

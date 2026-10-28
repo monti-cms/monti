@@ -1,6 +1,6 @@
 "use client";
 
-import { Add, ChevronSort, Draggable, Edit, TrashCan } from "@carbon/icons-react";
+import { Add, ChevronSort, Draggable, Edit, SubtractAlt } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
@@ -471,7 +471,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 			},
 			{
 				label: ts("row.remove", { name: locale.code }),
-				icon: TrashCan,
+				icon: SubtractAlt,
 				destructive: true,
 				disabled: disabled || isDefault,
 				title: isDefault ? t("locales.removeBlockedDefault") : undefined,

@@ -9,8 +9,8 @@ import {
 	Contrast,
 	Copy,
 	Download,
-	OpenPanelRight,
 	OverflowMenuHorizontal,
+	RightPanelOpen,
 	TrashCan,
 	View,
 } from "@carbon/icons-react";
@@ -201,7 +201,7 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 					<Separator orientation="vertical" aria-hidden />
 				</Inline>
 				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>
-					<OpenPanelRight aria-hidden />
+					<RightPanelOpen aria-hidden />
 				</IconButton>
 				<SidePanelToggle />
 				<DropdownMenu>

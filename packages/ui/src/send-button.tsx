@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { ArrowUp, SquareOutline } from "@carbon/icons-react";
+import { ArrowUp, StopFilledAlt } from "@carbon/icons-react";
 import { cn } from "./cn";
 
 /**
@@ -33,7 +33,7 @@ function SendButton({
 			{...props}
 		>
 			{busy ? (
-				<SquareOutline aria-hidden className="size-3 fill-current" />
+				<StopFilledAlt aria-hidden className="size-3" />
 			) : (
 				<ArrowUp aria-hidden className={size === "md" ? "size-4" : "size-3.5"} />
 			)}

@@ -62,6 +62,9 @@ const MODAL_TEXT = {
 /** The translation marker's text, 10px, the one size under the micro role (`.mt-marker`). */
 const MARKER_TEXT = { file: "ui/src/marker.tsx", utilities: new Set(["text-[10px]"]) };
 
+/** The heading icon's level number, 8px mono in the corner of the 16px glyph (`.mt-ico-level .lv`). */
+const LEVEL_TEXT = { file: "ui/src/heading-icon.tsx", utilities: new Set(["text-[8px]", "leading-[8px]"]) };
+
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const full = path.join(dir, entry.name);
@@ -188,6 +191,7 @@ describe("design system", () => {
 					if (why && rel === CHAT_LINES.file && CHAT_LINES.utilities.has(utility)) continue;
 					if (why && rel === MODAL_TEXT.file && MODAL_TEXT.utilities.has(utility)) continue;
 					if (why && rel === MARKER_TEXT.file && MARKER_TEXT.utilities.has(utility)) continue;
+					if (why && rel === LEVEL_TEXT.file && LEVEL_TEXT.utilities.has(utility)) continue;
 					if (why) offenders.push(`${rel}:${line} ${word} (${why})`);
 				}
 			}

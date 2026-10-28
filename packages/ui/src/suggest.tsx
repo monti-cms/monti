@@ -1,4 +1,4 @@
-import { Time } from "@carbon/icons-react";
+import { RecentlyViewed } from "@carbon/icons-react";
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
 import { Spark } from "./spark";
@@ -24,7 +24,11 @@ function Suggest({
 			)}
 			{...props}
 		>
-			{kind === "request" ? <Spark className="size-monti-icon-sm" /> : <Time aria-hidden className="size-3.5" />}
+			{kind === "request" ? (
+				<Spark className="size-monti-icon-sm" />
+			) : (
+				<RecentlyViewed aria-hidden className="size-3.5" />
+			)}
 			{children}
 		</button>
 	);

@@ -348,7 +348,7 @@ export default defineSchema({
 				},
 			},
 			path: "/memos/:slug",
-			icon: "notebook",
+			icon: "edit",
 			layout: [
 				{
 					fields: ["title", "slug"],
@@ -383,7 +383,7 @@ export default defineSchema({
 				},
 				slug: { kind: "slug", label: "Address", required: true, from: "title" },
 			},
-			icon: "shapes",
+			icon: "folder",
 		},
 		tag: {
 			label: "Tag",
@@ -458,7 +458,7 @@ export default defineSchema({
 					},
 				},
 			},
-			icon: "layers",
+			icon: "list",
 			path: "/series/:slug",
 		},
 	},

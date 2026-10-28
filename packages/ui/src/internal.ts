@@ -135,6 +135,7 @@ export {
 	type FormatMark,
 } from "./format-bar";
 export { Grid } from "./grid";
+export { HeadingIcon, headingIcons } from "./heading-icon";
 export { Icon } from "./icon";
 export { IconButton } from "./icon-button";
 export { Image } from "./image";

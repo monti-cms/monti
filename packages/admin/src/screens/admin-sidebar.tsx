@@ -8,7 +8,7 @@ import {
 	FolderAdd,
 	Folder as FolderIcon,
 	Globe,
-	ImageReference,
+	Image,
 	Launch,
 	Password,
 	SettingsAdjust,
@@ -499,7 +499,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		setSiteOpen(!siteOpen);
 	};
 
-	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <ImageReference />);
+	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <Image />);
 
 	return (
 		<Sidebar>

@@ -1,4 +1,4 @@
-import { Document, Folder, Hashtag, ImageReference, Launch, SettingsAdjust, TrashCan } from "@carbon/icons-react";
+import { Document, Folder, Image, Launch, SettingsAdjust, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
@@ -68,8 +68,8 @@ function AdminSidebar({ active = "media" }: { active?: "posts" | "media" | "tras
 							게시글
 						</Row>
 						<Row icon={<Folder aria-hidden />}>카테고리</Row>
-						<Row icon={<Hashtag aria-hidden />}>태그</Row>
-						<Row icon={<ImageReference aria-hidden />} isActive={active === "media"}>
+						<Row icon={<Tag aria-hidden />}>태그</Row>
+						<Row icon={<Image aria-hidden />} isActive={active === "media"}>
 							미디어
 						</Row>
 						{active === "media" && (
@@ -151,10 +151,10 @@ export const RowStates: Story = {
 							열린 줄
 						</Row>
 						<Row icon={<Folder aria-hidden />}>보통 줄</Row>
-						<Row icon={<Hashtag aria-hidden />} className="bg-monti-muted">
+						<Row icon={<Tag aria-hidden />} className="bg-monti-muted">
 							가리킨 줄
 						</Row>
-						<Row icon={<ImageReference aria-hidden />} changed>
+						<Row icon={<Image aria-hidden />} changed>
 							바뀐 곳이 있는 줄
 						</Row>
 						<Row icon={<SettingsAdjust aria-hidden />} removed count={2}>
@@ -200,7 +200,7 @@ export const Collapsible: Story = {
 						<Row icon={<Document aria-hidden />} count={148} isActive>
 							게시글
 						</Row>
-						<Row icon={<ImageReference aria-hidden />}>미디어</Row>
+						<Row icon={<Image aria-hidden />}>미디어</Row>
 					</SidebarMenu>
 				</SidebarContent>
 			</Sidebar>

@@ -1,6 +1,6 @@
 "use client";
 
-import { SquareOutline, Translate } from "@carbon/icons-react";
+import { StopFilledAlt, Translate } from "@carbon/icons-react";
 import { type EditorExtension, errorText, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import {
@@ -252,7 +252,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 					</Text>
 				)}
 				<TextButton type="button" variant="quiet" onClick={stop}>
-					<SquareOutline aria-hidden />
+					<StopFilledAlt aria-hidden />
 					{t("stop")}
 				</TextButton>
 			</Inline>

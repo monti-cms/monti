@@ -1,4 +1,4 @@
-import { Close, OpenPanelRight, OverflowMenuHorizontal, TrashCan } from "@carbon/icons-react";
+import { Close, OverflowMenuHorizontal, RightPanelOpen, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ICON_BUTTON, IconButton } from "./icon-button";
 import { Spark } from "./spark";
@@ -24,7 +24,7 @@ export const States: Story = {
 				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
 			<IconButton label="속성" pressed>
-				<OpenPanelRight aria-hidden />
+				<RightPanelOpen aria-hidden />
 			</IconButton>
 			<IconButton label="어시스턴트 열기">
 				<Spark className="size-monti-icon-md" />

@@ -1,4 +1,4 @@
-import { OpenPanelRight } from "@carbon/icons-react";
+import { RightPanelOpen } from "@carbon/icons-react";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { createSite, issueText } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -1753,7 +1753,7 @@ describe("side panel over the editor", () => {
 			</>
 		);
 	}
-	const PANEL: AdminPanel = { label: "Helper", icon: OpenPanelRight, Component: Probe };
+	const PANEL: AdminPanel = { label: "Helper", icon: RightPanelOpen, Component: Probe };
 	const renderWithPanel = () =>
 		render(
 			withSite(

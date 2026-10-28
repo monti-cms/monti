@@ -1,11 +1,10 @@
 import {
-	Attachment,
 	Code,
 	DataTable,
-	Heading,
+	DocumentBlank,
 	Image,
 	Link,
-	List,
+	ListBulleted,
 	ListChecked,
 	ListNumbered,
 	Paragraph,
@@ -14,7 +13,7 @@ import {
 	TextSuperscript,
 } from "@carbon/icons-react";
 import { perSite, type Site } from "@monti-cms/core/site";
-import type { MontiIcon } from "@monti-cms/ui";
+import { headingIcons, type MontiIcon } from "@monti-cms/ui";
 import type { Editor, Range } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
@@ -60,7 +59,7 @@ export const isOffered = (item: SlashCommandItem, allowance: EditorAllowance): b
 	(item.block === undefined || allowance.allowsBlock(item.block)) &&
 	(item.heading === undefined || allowance.allowsHeading(item.heading));
 
-const HEADING_ICONS = { 2: Heading, 3: Heading, 4: Heading } as const;
+const HEADING_ICONS = headingIcons;
 
 const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): SlashCommandItem => ({
 	title: t(`slash.h${level}.title`),
@@ -97,7 +96,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	{
 		title: t("slash.bullet.title"),
 		description: t("slash.bullet.description"),
-		icon: List,
+		icon: ListBulleted,
 		keywords: keywordList(t, "slash.bullet.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleBulletList().run();
@@ -177,7 +176,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.file.title"),
 		block: "file",
 		description: t("slash.file.description"),
-		icon: Attachment,
+		icon: DocumentBlank,
 		keywords: keywordList(t, "slash.file.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();

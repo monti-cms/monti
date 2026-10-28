@@ -7,8 +7,7 @@ import {
 	Asterisk,
 	Code,
 	DataTable,
-	Heading,
-	List,
+	ListBulleted,
 	ListChecked,
 	ListNumbered,
 	Paragraph,
@@ -20,6 +19,7 @@ import {
 	TextClearFormat,
 } from "@carbon/icons-react";
 import type { Site } from "@monti-cms/core/site";
+import { headingIcons } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
@@ -47,7 +47,7 @@ export const BLOCK_STYLES = (
 		.map((level) => ({
 			label: `H${level}`,
 			title: t("toolbar.heading", { level }),
-			icon: { 2: Heading, 3: Heading, 4: Heading }[level],
+			icon: headingIcons[level],
 			isActive: (e: Editor) => e.isActive("heading", { level }),
 			run: (e: Editor) => chain(e).setHeading({ level }).run(),
 		})),
@@ -107,7 +107,7 @@ export const LIST_STYLES = (
 	{
 		label: t("toolbar.bulletLabel"),
 		title: t("toolbar.bullet"),
-		icon: List,
+		icon: ListBulleted,
 		isActive: (e) => e.isActive("bulletList"),
 		run: (e) => chain(e).toggleBulletList().run(),
 	},

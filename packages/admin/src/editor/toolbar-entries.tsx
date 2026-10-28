@@ -3,7 +3,7 @@
  * their hide priority, how each renders in the bar and in the "More" menu, and the final placement order.
  */
 
-import { Attachment, Image, Link, List, TextAlignLeft, TextSuperscript, Upload } from "@carbon/icons-react";
+import { DocumentBlank, Image, Link, ListBulleted, TextAlignLeft, TextSuperscript, Upload } from "@carbon/icons-react";
 import type { Site } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
 import {
@@ -110,7 +110,7 @@ export const buildToolbarEntries = ({
 			)}
 			{allowance.allowsBlock("file") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openFilePicker()}>
-					<Attachment aria-hidden />
+					<DocumentBlank aria-hidden />
 					<Box as="span" grow>
 						{t("toolbar.file")}
 					</Box>
@@ -160,7 +160,7 @@ export const buildToolbarEntries = ({
 			2,
 			activeList?.title ?? t("toolbar.list"),
 			LIST_STYLES(t, allowance),
-			activeList?.icon ?? List,
+			activeList?.icon ?? ListBulleted,
 			t("toolbar.list"),
 		),
 		...INSERT_TOOLS(t, allowance).map(({ tool, priority }) => buttonSlot(tool, tool.label, priority)),

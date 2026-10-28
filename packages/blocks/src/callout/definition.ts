@@ -58,7 +58,7 @@ export const calloutBlock = defineBlock({
 		get keywords() {
 			return ["callout", ...keywordList(t("keywords"))];
 		},
-		icon: "warning--alt",
+		icon: "square--outline",
 		get insert() {
 			return { values: { variant: "info" }, text: t("insert.text") };
 		},
