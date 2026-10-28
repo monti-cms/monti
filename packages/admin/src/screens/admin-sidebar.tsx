@@ -5,6 +5,7 @@ import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
+	Count,
 	Sidebar,
 	SidebarContent,
 	SidebarFoot,
@@ -41,7 +42,8 @@ export interface FolderNavigation {
 	collection: Collection | "media";
 	/** `all` (top level) or a folder ID. */
 	currentFolder: string;
-	folders: Folder[];
+	/** The folders of the collection; with `entryCount` each shows its count at the right. */
+	folders: readonly (Folder & { entryCount?: number })[];
 	onSelectFolder: (folder: string) => void;
 	/** When a list row is dragged and dropped onto a folder. */
 	onDropEntries: (folderId: string | null, entries: DraggedEntry[]) => void;
@@ -97,6 +99,7 @@ function FolderList({ nav, label, closeMobile }: { nav: FolderNavigation; label:
 								{...dropProps(folder.id)}
 							>
 								<span>{folder.name}</span>
+								{folder.entryCount !== undefined && <Count>{folder.entryCount}</Count>}
 							</SidebarMenuSubButton>
 						</li>
 					);

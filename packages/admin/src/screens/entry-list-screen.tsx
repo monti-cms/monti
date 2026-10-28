@@ -18,17 +18,22 @@ import { usePublishScreenContext } from "./shared/screen-context";
 import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
-/** Top right above the list: search and add button (trash has no add). */
+/**
+ * Top right above the list: search, then the one add button (the trash has none). A collection of writing is "+ New post" in the one primary pill;
+ * a collection of items (categories, tags) is "+ Add category" in a secondary pill.
+ */
 function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
+	const site = useSite();
 	const isTrash = list.mode === "trash";
+	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
 			<ListSearch state={list.state} onChange={list.update} allowBody={!isTrash} />
 			{!isTrash && (
-				<Button type="button" onClick={list.createNew}>
+				<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 					<Add aria-hidden />
-					{t("list.add", { label: list.label })}
+					{isItems ? t("list.add", { label: list.label }) : t("list.writeNew", { label: list.label })}
 				</Button>
 			)}
 		</>

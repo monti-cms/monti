@@ -1,7 +1,7 @@
 import type { Folder } from "@monti-cms/core/site";
 
-export interface RailFolder {
-	readonly folder: Folder;
+export interface RailFolder<F extends Folder = Folder> {
+	readonly folder: F;
 	/** 0 for a top-level folder, 1 for one inside it, and so on. */
 	readonly depth: number;
 }
@@ -11,8 +11,8 @@ export interface RailFolder {
  * open one (and inside the open one itself), right under their parent. A folder beside the open path stays closed, so the rail never grows into the
  * whole tree. `currentFolder` is a folder ID, or `all` for none.
  */
-export function railFolders(folders: readonly Folder[], currentFolder: string): RailFolder[] {
-	const byParent = new Map<string | null, Folder[]>();
+export function railFolders<F extends Folder>(folders: readonly F[], currentFolder: string): RailFolder<F>[] {
+	const byParent = new Map<string | null, F[]>();
 	for (const folder of folders) {
 		const siblings = byParent.get(folder.parentId) ?? [];
 		siblings.push(folder);
@@ -25,7 +25,7 @@ export function railFolders(folders: readonly Folder[], currentFolder: string): 
 		const parentId = walk.parentId;
 		walk = parentId === null ? undefined : folders.find((folder) => folder.id === parentId);
 	}
-	const rows: RailFolder[] = [];
+	const rows: RailFolder<F>[] = [];
 	const add = (parentId: string | null, depth: number) => {
 		for (const folder of byParent.get(parentId) ?? []) {
 			rows.push({ folder, depth });

@@ -132,9 +132,9 @@ describe("any site: list screen", () => {
 		for (const column of columnsFor(testSite, content).defaults) {
 			expect(within(viewDialog).getByRole("checkbox", { name: columnLabel(testSite, content, column) })).toBeTruthy();
 		}
-		// The new item button uses the collection label.
+		// The new entry button uses the collection label: "write a new <label>" for writing.
 		expect(
-			screen.getByRole("button", { name: t("list.add", { label: testSite.schemaOf(content).label }) }),
+			screen.getByRole("button", { name: t("list.writeNew", { label: testSite.schemaOf(content).label }) }),
 		).toBeTruthy();
 	});
 

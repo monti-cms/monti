@@ -1,4 +1,4 @@
-import type { Folder, Site } from "@monti-cms/core/site";
+import type { Folder, FolderListItem, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** What deleting a folder moves up to its parent: the entries and child folders directly inside. */
@@ -14,9 +14,9 @@ export const foldersKeys = {
 	contents: (id: string) => [...foldersKeys.all, "contents", id] as const,
 };
 
-/** The folders of a collection (the list screen and the sidebar share this query). */
+/** The folders of a collection, each with the number of things directly in it (the list screen and the sidebar share this query). */
 export const listFolders = (site: Site, collection: string, signal?: AbortSignal) =>
-	adminFetch<Folder[]>(site, `/v1/folders?${new URLSearchParams({ collection })}`, { signal });
+	adminFetch<FolderListItem[]>(site, `/v1/folders?${new URLSearchParams({ collection })}`, { signal });
 
 /** What deleting `id` would move to the parent folder. */
 export const getFolderContents = (site: Site, id: string, signal?: AbortSignal) =>

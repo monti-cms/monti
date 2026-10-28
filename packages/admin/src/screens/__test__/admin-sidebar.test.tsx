@@ -225,6 +225,13 @@ describe("folders in the rail", () => {
 		expect(nav.onDropEntries).toHaveBeenCalledWith("a", entries);
 	});
 
+	it("shows how many things are in each folder at its right end, and nothing for a folder that has no count yet", () => {
+		const counted = { ...folder("a", "Dev"), entryCount: 12 };
+		renderRail({ folderNav: folderNav([counted, folder("b", "Essays")]) });
+		expect(within(within(tree()).getByRole("button", { name: /Dev/ })).getByText("12")).toBeTruthy();
+		expect(within(tree()).getByRole("button", { name: "Essays" }).textContent).toBe("Essays");
+	});
+
 	it("offers no way to add, rename or delete a folder", () => {
 		renderRail({ folderNav: folderNav([folder("a", "Dev")]) });
 		fireEvent.contextMenu(within(tree()).getByRole("button", { name: "Dev" }));

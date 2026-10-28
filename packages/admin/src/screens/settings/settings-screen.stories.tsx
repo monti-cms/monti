@@ -159,7 +159,9 @@ const review =
 	(save: boolean) =>
 	async ({ canvasElement }: { canvasElement: HTMLElement }) => {
 		await editLabel(canvasElement);
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.review") }));
+		await userEvent.click(
+			await within(canvasElement).findByRole("button", { name: new RegExp(`^${t("bar.review")}`) }),
+		);
 		if (!save) return;
 		const dialog = await within(document.body).findByRole("dialog");
 		const button = await within(dialog).findByRole("button", { name: tReview("review.save") });
@@ -184,12 +186,13 @@ export const AdminTab = story(server(), "admin");
 export const Loading = story(() => "pending", "collections");
 export const LoadFailed = story(() => answer(500), "collections");
 
-// Unsaved changes: the marks on the tab and in the collection list, and the bar.
+// Unsaved changes: the marks on the tab and in the collection list, and the save group in the title row.
 export const UnsavedChanges = story(
 	server(),
 	"collections",
 	{ collection: "post" },
 	{
+		tags: ["visual"],
 		play: async ({ canvasElement }) => editLabel(canvasElement),
 	},
 );

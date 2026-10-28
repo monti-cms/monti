@@ -7,7 +7,7 @@ import {
 	type FolderSite,
 } from "../../../core/domain/folders";
 import { CmsError } from "../../../core/store/errors";
-import type { Folder } from "../../../core/store/types";
+import type { Folder, FolderListItem } from "../../../core/store/types";
 import type { Db } from "../db/kysely";
 import { type StoreContext, withTrx } from "./context";
 import { isTransactionConflict, isUniqueViolation } from "./errors";
@@ -225,17 +225,41 @@ export function createFolderOps(ctx: StoreContext) {
 			};
 		},
 
-		listFolders: async (params: { collection: string }): Promise<Folder[]> => {
+		listFolders: async (params: { collection: string }): Promise<FolderListItem[]> => {
 			assertFoldersEnabled(site, params.collection);
 			const rows = await db
 				.selectFrom("folders")
 				.select(COLUMNS)
+				.select((eb) => [
+					// Entries directly in the folder, outside the trash, a translation group counted once (the list shows one row per group).
+					eb
+						.selectFrom("entries")
+						.select((c) => c.fn.countAll<string>().as("count"))
+						.whereRef("entries.folder_id", "=", "folders.id")
+						.where("entries.status", "<>", "trashed")
+						.where((w) =>
+							w.or([
+								w("entries.translation_group_id", "is", null),
+								w("entries.translation_group_id", "=", w.ref("entries.id")),
+							]),
+						)
+						.as("entry_count"),
+					eb
+						.selectFrom("media_assets")
+						.select((c) => c.fn.countAll<string>().as("count"))
+						.whereRef("media_assets.folder_id", "=", "folders.id")
+						.where("media_assets.status", "=", "ready")
+						.as("media_count"),
+				])
 				.where("collection", "=", params.collection)
 				.orderBy("parent_id", (order) => order.asc().nullsFirst())
 				.orderBy("position", "asc")
 				.orderBy("id", "asc")
 				.execute();
-			return rows.map(mapFolderRow);
+			return rows.map((row) => ({
+				...mapFolderRow(row),
+				entryCount: Number(row.entry_count ?? 0) + Number(row.media_count ?? 0),
+			}));
 		},
 	};
 }

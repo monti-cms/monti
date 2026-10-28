@@ -79,6 +79,7 @@ export type {
 	ExportSnapshotEntry,
 	ExportSnapshotReference,
 	Folder,
+	FolderListItem,
 	IncomingReferenceItem,
 	JsonArray,
 	JsonObject,

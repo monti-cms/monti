@@ -31,7 +31,7 @@ import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
 import { ReviewDialog } from "./review-dialog";
-import { SaveBar } from "./save-bar";
+import { SaveGroup } from "./save-group";
 import {
 	addCollection,
 	type ChangedAreas,
@@ -277,6 +277,7 @@ function SchemaEditor({
 		setIssues([]);
 	};
 
+	// What sits on the right of the title row: the read-only note, or the save group while the draft has changes.
 	const actions = !writable ? (
 		<Inline gap={4}>
 			<Icon icon={Locked} size="sm" tone="subtle" />
@@ -284,6 +285,14 @@ function SchemaEditor({
 				{t("status.readOnly")}
 			</Text>
 		</Inline>
+	) : dirty ? (
+		<SaveGroup
+			count={pending}
+			disabled={state.hash === null}
+			onReview={() => setReviewing(true)}
+			onSave={() => setReviewing(true)}
+			onDiscard={() => void discard()}
+		/>
 	) : null;
 
 	const reason = state.access.writable
@@ -421,15 +430,6 @@ function SchemaEditor({
 						)}
 					</PageBody>
 				</Stack>
-				{dirty && writable && (
-					<SaveBar
-						count={pending}
-						disabled={state.hash === null}
-						onReview={() => setReviewing(true)}
-						onSave={() => setReviewing(true)}
-						onDiscard={() => void discard()}
-					/>
-				)}
 			</Stack>
 			{dialog}
 			{guardDialog}

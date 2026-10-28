@@ -187,6 +187,11 @@ export interface Folder {
 	version: number;
 }
 
+/** A folder as the folder list gives it: with how many things sit directly in it (entries outside the trash, counted once per translation group; or the ready files of a media folder). */
+export interface FolderListItem extends Folder {
+	entryCount: number;
+}
+
 export interface ListEntriesItem {
 	id: string;
 	collection: string;

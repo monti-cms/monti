@@ -337,7 +337,7 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		fireEvent.click(screen.getByRole("button", { name: "게시글 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: "새 게시글 쓰기" }));
 
 		expect(nav.navigate).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
 	});
