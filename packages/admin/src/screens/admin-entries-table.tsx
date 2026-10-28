@@ -4,6 +4,8 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
+	ListHead,
+	type ListHeadColumn,
 	ListScroll,
 	type SelectAllState,
 	Stack,
@@ -16,8 +18,10 @@ import {
 import type { KeyboardEvent, ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
-import { cellSizesOf, EntryRowCells } from "./entries-table-row";
-import { monthMarks } from "./list-row-dates";
+import { EntryRowCells } from "./entries-table-row";
+import { ACTIONS_SIZE, columnSize } from "./entries-table-widths";
+import { sortByColumn } from "./list-column-order";
+import { type AdminListColumn, columnConfig, columnLabel } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { ListToolbar } from "./list-toolbar";
 import { screensMessages } from "./messages";
@@ -27,7 +31,10 @@ import { writeDraggedEntries } from "./shared/entry-drag";
 import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
 import type { FolderActions } from "./shared/use-folder-actions";
-import { useEntriesTable } from "./use-entries-table";
+import { useListColumns } from "./use-list-columns";
+
+/** Dates sit at the end of their cells, so the days line up. */
+const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt"];
 
 interface TableProps {
 	collection: string;
@@ -106,26 +113,25 @@ export function AdminEntriesTable({
 	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
 	const isRecord = site.isItemCollection(collection);
-	const { table, order, visibility, isShown, scrollRef, moveColumn, reorderColumn, toggleColumn } = useEntriesTable({
-		collection,
-		items,
-		folders,
-		explorer,
-		columnSettings,
-		onColumnSettingsChange,
-		selectedIds,
-		onSelectionChange,
-		mode,
-		rowMenu,
-		onOpenRecord,
-		onRestore,
-		onPermanentDelete,
-	});
-
+	const columns = useListColumns({ collection, columnSettings, onColumnSettingsChange });
+	const { order, visibility, scrollRef } = columns;
+	// Everything in the trash is trashed: its status says nothing there.
+	const shown = isTrash ? columns.shown.filter((column) => column !== "status") : columns.shown;
 	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
-	// The columns after the title: the ones turned on that the page has room for (the ones hidden first when it is narrow are left out, as a hidden column is).
-	const rowColumns = order.filter((column) => column !== "title" && visibility[column] !== false && isShown(column));
-	const marks = monthMarks(site, items, state.sortField);
+	const head: ListHeadColumn[] = shown.map((column) => {
+		const sortField = columnConfig(site, collection, column).sortField;
+		return {
+			id: column,
+			label: columnLabel(site, collection, column),
+			size: columnSize(site, collection, column),
+			align: DATE_COLUMNS.includes(column) ? "end" : "start",
+			sort: sortField === undefined ? undefined : state.sortField === sortField ? state.sortDirection : null,
+		};
+	});
+	const sortBy = (column: AdminListColumn) => {
+		const field = columnConfig(site, collection, column).sortField;
+		if (field) onStateChange(sortByColumn(field, state));
+	};
 
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
@@ -136,15 +142,17 @@ export function AdminEntriesTable({
 	};
 
 	const pageHref = (page: number) => `?page=${page}`;
-	const selectAllState: SelectAllState = table.getIsAllPageRowsSelected()
-		? "all"
-		: table.getIsSomePageRowsSelected()
-			? "some"
-			: "none";
+	const picked = items.filter((item) => selectedIds.has(item.id)).length;
 	const selectAll = {
-		state: selectAllState,
-		onChange: (all: boolean) => table.toggleAllPageRowsSelected(all),
+		state: (picked === 0 ? "none" : picked === items.length ? "all" : "some") as SelectAllState,
+		onChange: (all: boolean) => onSelectionChange(new Set(all ? items.map((item) => item.id) : [])),
 		label: t("list.selectAll"),
+	};
+	const select = (item: ListEntriesItem, on: boolean) => {
+		const next = new Set(selectedIds);
+		if (on) next.add(item.id);
+		else next.delete(item.id);
+		onSelectionChange(next);
 	};
 
 	return (
@@ -162,9 +170,7 @@ export function AdminEntriesTable({
 						order={order}
 						visibility={visibility}
 						onPageSizeChange={onPageSizeChange}
-						onToggleColumn={toggleColumn}
-						onReorderColumn={reorderColumn}
-						onMoveColumn={moveColumn}
+						onToggleColumn={columns.toggle}
 					/>
 				)}
 				{errorMessage && (
@@ -177,42 +183,48 @@ export function AdminEntriesTable({
 			<ListScroll>
 				<Box ref={scrollRef} width="full">
 					<Table container="none" layout="fixed">
+						<ListHead
+							columns={head}
+							end={isTrash ? undefined : ACTIONS_SIZE}
+							moveLabel={t("list.columnMove")}
+							onSort={sortBy}
+							onPlace={columns.place}
+							onStep={columns.step}
+							onPreview={columns.setPreview}
+						/>
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (
 								<EntriesTableFolderRows
 									explorer={explorer}
 									folders={folders}
 									folderActions={folderActions}
-									cellSizes={cellSizesOf(
-										new Set(site.taxonomyFieldsOf(collection).map((stored) => stored.name)),
-										rowColumns,
-									)}
+									span={shown.length}
 									onSelectFolder={onSelectFolder}
 								/>
 							)}
 							{isLoading ? (
 								<TableRow>
-									<TableCell colSpan={3}>
+									<TableCell colSpan={shown.length + 1}>
 										<Text as="span" variant="note" tone="subtle" role="status">
 											{tc("loading")}
 										</Text>
 									</TableCell>
 								</TableRow>
 							) : items.length === 0 ? null : (
-								table.getRowModel().rows.map((row, index) => (
+								items.map((item) => (
 									<ActionContextMenu
-										key={row.id}
-										actions={rowMenu(row.original)}
+										key={item.id}
+										actions={rowMenu(item)}
 										trigger={
 											<TableRow
-												selected={row.getIsSelected() || row.original.id === openRecordId}
-												aria-current={row.original.id === openRecordId ? "true" : undefined}
+												selected={selectedIds.has(item.id) || item.id === openRecordId}
+												aria-current={item.id === openRecordId ? "true" : undefined}
 												draggable={!isTrash}
 												onDragStart={(event) => {
 													// Dragging a selected row moves the whole selection; otherwise just this row.
-													const group = selectedIds.has(row.original.id)
+													const group = selectedIds.has(item.id)
 														? items.filter((item) => selectedIds.has(item.id))
-														: [row.original];
+														: [item];
 													writeDraggedEntries(
 														event,
 														group.map((item) => ({ id: item.id, expectedVersion: item.version })),
@@ -221,24 +233,22 @@ export function AdminEntriesTable({
 															: t("list.itemsCount", { count: group.length }),
 													);
 												}}
-												onKeyDown={rowKeyDown(row.original)}
+												onKeyDown={rowKeyDown(item)}
 											/>
 										}
 									>
 										<EntryRowCells
 											collection={collection}
-											item={row.original}
-											columns={rowColumns}
-											monthMark={marks[index] ?? null}
-											sortField={state.sortField}
+											item={item}
+											columns={shown}
 											folders={folders}
 											isTrash={isTrash}
 											isRecord={isRecord}
 											showFolderBesideTitle={showFolderBesideTitle}
 											showSlugBesideTitle={visibility.slug === false}
-											selected={row.getIsSelected()}
-											onSelect={(value) => row.toggleSelected(value)}
-											menu={rowMenu(row.original)}
+											selected={selectedIds.has(item.id)}
+											onSelect={(on) => select(item, on)}
+											menu={rowMenu(item)}
 											onOpenRecord={onOpenRecord}
 											onRestore={onRestore}
 											onPermanentDelete={onPermanentDelete}

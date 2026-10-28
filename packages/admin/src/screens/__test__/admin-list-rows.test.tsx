@@ -92,27 +92,6 @@ describe("a row of the list", () => {
 		expect(within(rowOf(/with-translations/)).getByText("KO +1")).toBeTruthy();
 	});
 
-	it("draws the categories and tags as one cell and the short date of the updated day", () => {
-		renderRows([
-			item("tagged", {
-				relations: {
-					categoryId: [{ id: "c", title: "개발" }],
-					tagIds: [{ id: "t", title: "리액트" }],
-				},
-			}),
-		]);
-		const row = rowOf(/tagged/);
-		expect(within(row).getByText("개발 · 리액트")).toBeTruthy();
-		expect(within(row).getByText("10. 26")).toBeTruthy();
-	});
-
-	it("shows a status only where the entry is not plainly published", () => {
-		renderRows([item("plain"), item("changed", { hasUnpublishedChanges: true }), item("draft", { status: "draft" })]);
-		expect(within(rowOf(/plain/)).queryByText(/발행됨|수정 중|초안/)).toBeNull();
-		expect(within(rowOf(/changed/)).getByText("수정 중")).toBeTruthy();
-		expect(within(rowOf(/draft/)).getByText("초안")).toBeTruthy();
-	});
-
 	it("has its check and its ⋯ in the row, named for the entry", () => {
 		renderRows([item("first", { title: "첫 번째 글" })]);
 		const row = rowOf(/첫 번째 글/);
@@ -131,56 +110,5 @@ describe("a row of the list", () => {
 		const row = rowOf(/first/);
 		expect(within(row).getByText("03. 04")).toBeTruthy();
 		expect(within(row).getByText("한 줄 요약")).toBeTruthy();
-	});
-});
-
-describe("the month mark of a row", () => {
-	const rows = () => [
-		item("oct-a", { updatedAt: new Date("2026-10-26T03:00:00Z") }),
-		item("oct-b", { updatedAt: new Date("2026-10-01T03:00:00Z") }),
-		item("sep-a", { updatedAt: new Date("2026-09-20T03:00:00Z") }),
-	];
-
-	it("is the month on the first row of each month when the list is ordered by a date", () => {
-		renderRows(rows());
-		expect(within(rowOf(/oct-a/)).getByText("10월")).toBeTruthy();
-		expect(within(rowOf(/oct-b/)).queryByText("10월")).toBeNull();
-		expect(within(rowOf(/sep-a/)).getByText("9월")).toBeTruthy();
-	});
-
-	it("is dropped when the list is ordered by title", () => {
-		renderRows(rows(), "collection=post&sortField=title&sortDirection=asc");
-		expect(screen.queryByText("10월")).toBeNull();
-		expect(screen.queryByText("9월")).toBeNull();
-	});
-});
-
-describe("the order of the cells of a row", () => {
-	it("is the board's: month, title, categories, language, status, date, then the ⋯", () => {
-		renderRows([
-			item("ordered", {
-				status: "draft",
-				relations: { categoryId: [{ id: "c", title: "개발" }], tagIds: [{ id: "t", title: "리액트" }] },
-			}),
-		]);
-		const cells = within(rowOf(/ordered/)).getAllByRole("cell");
-		const at = (text: string) => cells.findIndex((cell) => cell.textContent?.includes(text));
-		const order = [at("ordered"), at("개발 · 리액트"), at("KO"), at("초안"), at("10. 26")];
-		expect(order.every((index) => index >= 0)).toBe(true);
-		// Each comes after the one before it.
-		expect(order).toEqual([...order].sort((a, b) => a - b));
-		expect(new Set(order).size).toBe(order.length);
-		expect(within(cells.at(-1) as HTMLElement).getByRole("button")).toBeTruthy();
-	});
-
-	it("is the same in the View menu's list of columns, and a saved order still wins", () => {
-		renderRows([item("saved", { status: "draft" })], "collection=post", {
-			columnSettings: { order: ["title", "status", "locale"], visibility: {} },
-		});
-		const cells = within(rowOf(/saved/)).getAllByRole("cell");
-		const at = (text: string) => cells.findIndex((cell) => cell.textContent?.includes(text));
-		// The writer put status before language, so it is.
-		expect(at("초안")).toBeGreaterThan(-1);
-		expect(at("초안")).toBeLessThan(at("KO"));
 	});
 });

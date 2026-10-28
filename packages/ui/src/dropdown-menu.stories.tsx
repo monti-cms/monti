@@ -11,7 +11,6 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
-	DropdownMenuReorderGroup,
 	DropdownMenuScroll,
 	DropdownMenuSearch,
 	DropdownMenuSeparator,
@@ -313,48 +312,35 @@ export const FilterTwoLevel: Story = { render: () => <FilterDemo /> };
 const COLUMNS = ["분류", "언어", "상태", "날짜", "요약", "시리즈"];
 
 function ColumnsDemo() {
-	const [order, setOrder] = useState(COLUMNS);
 	const [shown, setShown] = useState(new Set(["분류", "언어", "상태", "날짜"]));
-	const move = (name: string, to: number) =>
-		setOrder((current) => {
-			const rest = current.filter((candidate) => candidate !== name);
-			rest.splice(Math.max(0, Math.min(rest.length, to)), 0, name);
-			return rest;
-		});
 	return (
 		<DropdownMenu defaultOpen>
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>보기</DropdownMenuTrigger>
 			<DropdownMenuContent className="min-w-55">
-				<DropdownMenuReorderGroup
-					onReorder={(from, to) => move(from, order.indexOf(to))}
-					onMove={(name, direction) => move(name, order.indexOf(name) + direction)}
-				>
-					{order.map((name) => (
-						<DropdownMenuCheckboxItem
-							key={name}
-							box
-							reorderId={name}
-							checked={shown.has(name)}
-							onCheckedChange={(checked) =>
-								setShown((current) => {
-									const next = new Set(current);
-									if (checked) next.add(name);
-									else next.delete(name);
-									return next;
-								})
-							}
-						>
-							{name}
-						</DropdownMenuCheckboxItem>
-					))}
-				</DropdownMenuReorderGroup>
+				{COLUMNS.map((name) => (
+					<DropdownMenuCheckboxItem
+						key={name}
+						box
+						checked={shown.has(name)}
+						onCheckedChange={(checked) =>
+							setShown((current) => {
+								const next = new Set(current);
+								if (checked) next.add(name);
+								else next.delete(name);
+								return next;
+							})
+						}
+					>
+						{name}
+					</DropdownMenuCheckboxItem>
+				))}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
 }
 
-/** The columns of a list: a grip to drag a row by (or Alt with ↑ ↓ on the row), a box to show or hide it. The title is not in the list: it is always there. */
-export const ReorderColumns: Story = { render: () => <ColumnsDemo /> };
+/** The columns of a list: a box to show or hide each. The title is not in the list: it is always there. Their order is set in the list's head. */
+export const Columns: Story = { render: () => <ColumnsDemo /> };
 
 /** Rows that open a second level next to ordinary rows and a red one. */
 export const MixedRows: Story = {

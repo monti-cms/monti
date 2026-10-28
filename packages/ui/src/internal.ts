@@ -105,7 +105,6 @@ export {
 	DropdownMenuPortal,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
-	DropdownMenuReorderGroup,
 	DropdownMenuScroll,
 	DropdownMenuSearch,
 	DropdownMenuSeparator,
@@ -147,6 +146,7 @@ export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
+export { ListHead, type ListHeadColumn } from "./list-head";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";

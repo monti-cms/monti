@@ -64,8 +64,7 @@ describe("admin entry list", () => {
 	it("uses the default columns per collection", () => {
 		for (const collection of ["post", "memo", "tag"] as const) {
 			const { defaults, available } = columnsFor(testSite, collection);
-			expect(defaults[0]).toBe("title");
-			expect(defaults).toContain("status");
+			expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 			expect(defaults).toContain("updatedAt");
 			for (const column of defaults) expect(available).toContain(column);
 		}
@@ -73,38 +72,6 @@ describe("admin entry list", () => {
 		expect(columnsFor(testSite, "tag").defaults).toContain("locale");
 		expect(columnsFor(testSite, "memo").available).not.toContain("categoryId");
 		expect(columnsFor(testSite, "tag").available).not.toContain("tagIds");
-	});
-
-	it("says a status only where the entry is not plainly published, in words as well as the mark", () => {
-		renderTable({
-			items: [
-				item("changed", { status: "published", hasUnpublishedChanges: true }),
-				item("plain", { status: "published" }),
-				item("draft"),
-				item("old", { status: "archived" }),
-			],
-		});
-		expect(within(screen.getByRole("row", { name: /changed/ })).getByText("수정 중")).toBeTruthy();
-		expect(within(screen.getByRole("row", { name: /draft/ })).getByText("초안")).toBeTruthy();
-		expect(within(screen.getByRole("row", { name: /old/ })).getByText("보관됨")).toBeTruthy();
-		expect(within(screen.getByRole("row", { name: /plain/ })).queryByText("발행됨")).toBeNull();
-	});
-
-	it("draws the taxonomy fields as one cell of the row and leaves an empty one blank", () => {
-		renderTable({
-			items: [
-				item("with-tags", {
-					title: "태그 있는 글",
-					relations: { categoryId: [{ id: "c1", title: "가이드" }], tagIds: [{ id: "t1", title: "React" }] },
-				}),
-				item("plain", { title: "태그 없는 글" }),
-			],
-		});
-		const rowWithTags = screen.getByRole("row", { name: /태그 있는 글/ });
-		// The category and the tags are one cell, joined, on the same line as the title.
-		expect(within(rowWithTags).getByText("가이드 · React")).toBeTruthy();
-		const plainRow = screen.getByRole("row", { name: /태그 없는 글/ });
-		expect(within(plainRow).queryByText("—")).toBeNull();
 	});
 
 	it("selects rows through the row checks and the select-all of the toolbar", () => {

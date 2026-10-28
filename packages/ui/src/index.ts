@@ -94,7 +94,6 @@ export const DropdownMenuGroup = close(open.DropdownMenuGroup);
 export const DropdownMenuItem = close(open.DropdownMenuItem);
 export const DropdownMenuLabel = close(open.DropdownMenuLabel);
 export const DropdownMenuPortal = close(open.DropdownMenuPortal);
-export const DropdownMenuReorderGroup = close(open.DropdownMenuReorderGroup);
 export const DropdownMenuScroll = close(open.DropdownMenuScroll);
 export const DropdownMenuSearch = close(open.DropdownMenuSearch);
 export const DropdownMenuRadioGroup = close(open.DropdownMenuRadioGroup);
@@ -134,6 +133,7 @@ export const Input = close(open.Input);
 export const Label = close(open.Label);
 export const UiLabelsProvider = close(open.UiLabelsProvider);
 export const ListFooter = close(open.ListFooter);
+export const ListHead = close(open.ListHead);
 export const Pagination = close(open.Pagination);
 export const PaginationContent = close(open.PaginationContent);
 export const PaginationEllipsis = close(open.PaginationEllipsis);
@@ -284,6 +284,7 @@ export type {
 	Background,
 	EntryStatusKind,
 	LayoutProps,
+	ListHeadColumn,
 	SearchTarget,
 	SegmentedOption,
 	SelectAll,

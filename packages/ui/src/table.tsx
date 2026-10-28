@@ -66,7 +66,7 @@ function TableBody({
 /**
  * A row of a list. Each row has its rule underneath. A picked row is filled with the muted background inside the table's rectangle (no rounded
  * corners, nothing outside it) and its rule goes darker, so a run of picked rows still reads as separate rows; `proposal` makes the fill the
- * proposal tint, for rows the assistant picked. The check and the ⋯ appear when the pointer is on the row ({@link RowCheck}, {@link RowActions}).
+ * proposal tint, for rows the assistant picked. The check appears when the pointer is on the row ({@link RowCheck}); the ⋯ is always there ({@link RowActions}).
  */
 function TableRow({
 	className,
@@ -96,8 +96,8 @@ function TableRow({
 }
 
 /**
- * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin and
- * the ⋯ at the end. On a touch screen it is always shown.
+ * What shows only while the pointer or the keyboard is on the row, or the row is picked, or its menu is open: the check in the left margin. On a
+ * touch screen it is always shown.
  */
 const ON_ROW =
 	"opacity-0 group-hover/row:opacity-100 group-data-selected/row:opacity-100 focus-within:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100";
@@ -147,9 +147,9 @@ function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-/** The ⋯ of a row, and anything else that belongs to the pointer being on it: it shows only then. */
+/** The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. */
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
-	return <span data-slot="row-actions" className={cn("relative z-1 inline-flex", ON_ROW, className)} {...props} />;
+	return <span data-slot="row-actions" className={cn("relative z-1 inline-flex", className)} {...props} />;
 }
 
 /**
@@ -234,7 +234,7 @@ function TableHead({
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-10 whitespace-nowrap px-monti-10 align-middle text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
+				"h-10 whitespace-nowrap px-monti-10 align-middle font-normal text-monti-caption text-monti-subtle first:pl-monti-12 last:pr-monti-12 [&:has([role=checkbox])]:pr-0",
 				ALIGN[align],
 				truncate && "max-w-0 truncate",
 				width && COLUMN_WIDTH[width],

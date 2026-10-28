@@ -100,6 +100,6 @@ describe("the title in the edit form", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(available.filter((column) => column === "title" || column === "headline")).toEqual(["title"]);
 		expect(available).toContain("note");
-		expect(defaults[0]).toBe("title");
+		expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
 	});
 });

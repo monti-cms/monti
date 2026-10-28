@@ -155,15 +155,13 @@ export const adminColumnSettingsSchema = z
 	.object({
 		order: z.array(fieldNameSchema).max(MAX_LIST_COLUMNS).optional(),
 		visibility: z.record(z.string(), z.boolean()).optional(),
-		/** Column width (px) the user dragged to. Columns without one use the default width. */
-		sizes: z.record(z.string(), z.number().int().min(48).max(960)).optional(),
 	})
 	.superRefine((settings, ctx) => {
 		if (settings.order && new Set(settings.order).size !== settings.order.length) {
 			ctx.addIssue({ code: "custom", message: "Column order cannot contain duplicates", path: ["order"] });
 		}
-		const keys = [...Object.keys(settings.visibility ?? {}), ...Object.keys(settings.sizes ?? {})];
-		if (keys.length > MAX_LIST_COLUMNS * 2) {
+		const keys = Object.keys(settings.visibility ?? {});
+		if (keys.length > MAX_LIST_COLUMNS) {
 			ctx.addIssue({ code: "custom", message: "Too many columns", path: ["visibility"] });
 		}
 		for (const key of keys) {

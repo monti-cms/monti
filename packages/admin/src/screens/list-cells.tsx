@@ -7,7 +7,6 @@ import { Text } from "@monti-cms/ui";
 import type { ComponentType } from "react";
 import type { AdminComponents, ListCellProps } from "../admin-components";
 import { fieldColumnOf } from "./list-columns";
-import { FittingTags } from "./shared/fitting-tags";
 
 const EMPTY = <Text tone="muted">—</Text>;
 
@@ -28,7 +27,8 @@ export function customListCell(
 }
 
 /**
- * Default cell of a field column. Relations show names (chips if several), select shows the option label, text and media show the stored text.
+ * Default cell of a field column. Relations show their items' names in one line ("React · Next"), select shows the option label, text and media show
+ * the stored text.
  * `—` when there is no value. Dates are drawn separately by the system columns (updated, created, published).
  */
 export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
@@ -37,9 +37,8 @@ export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
 	if (!stored) return EMPTY;
 	const { field } = stored;
 	if (field.kind === "relation") {
-		const values = (entry.relations[column] ?? []).flatMap(({ id, title }) => (title ? [{ id, title }] : []));
-		if (!values.length) return EMPTY;
-		return field.many ? <FittingTags tags={values} /> : values[0]?.title;
+		const names = (entry.relations[column] ?? []).flatMap(({ title }) => (title ? [title] : []));
+		return names.length > 0 ? names.join(" · ") : EMPTY;
 	}
 	const value = entry.values[column];
 	if (!value) return EMPTY;

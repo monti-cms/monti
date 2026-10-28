@@ -191,7 +191,7 @@ export function MediaTable({
 							explorer={explorer}
 							folders={folders}
 							folderActions={folderActions}
-							visibleCount={8}
+							span={7}
 							onSelectFolder={onSelectFolder}
 						/>
 					)}

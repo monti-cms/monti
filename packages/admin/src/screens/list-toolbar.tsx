@@ -44,8 +44,6 @@ export function ListToolbar({
 	visibility,
 	onPageSizeChange,
 	onToggleColumn,
-	onReorderColumn,
-	onMoveColumn,
 }: {
 	state: ListState;
 	mode: "list" | "trash";
@@ -57,8 +55,6 @@ export function ListToolbar({
 	visibility: Record<string, boolean>;
 	onPageSizeChange: (size: PageSize) => void;
 	onToggleColumn: (column: AdminListColumn, visible: boolean) => void;
-	onReorderColumn: (from: AdminListColumn, to: AdminListColumn) => void;
-	onMoveColumn: (column: AdminListColumn, direction: -1 | 1) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -102,8 +98,6 @@ export function ListToolbar({
 					onChange={onChange}
 					onPageSizeChange={onPageSizeChange}
 					onToggleColumn={onToggleColumn}
-					onReorderColumn={onReorderColumn}
-					onMoveColumn={onMoveColumn}
 				/>
 			</PageToolbarEnd>
 		</PageToolbar>

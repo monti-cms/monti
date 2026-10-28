@@ -340,7 +340,7 @@ describe("flow: sort from the view menu", () => {
 });
 
 describe("flow: columns and page size", () => {
-	it("turns a column on and puts it in order with the keys, and saves both", async () => {
+	it("turns a column on from the view menu, which has no way to move columns, and saves it", async () => {
 		await renderList();
 		openMenu(t("listMenu.view"));
 		await openSub(new RegExp(t("listMenu.columns")));
@@ -350,47 +350,7 @@ describe("flow: columns and page size", () => {
 		await waitFor(() => expect(saved().at(-1)?.collections.post.columns.visibility).toMatchObject({ createdAt: true }));
 		// The title is not in the list: it is always there.
 		expect(screen.queryByRole("menuitemcheckbox", { name: "제목" })).toBeNull();
-		const status = screen.getByRole("menuitemcheckbox", { name: "상태" });
-		fireEvent.keyDown(status, { key: "ArrowUp", altKey: true });
-		await waitFor(() => {
-			const order = saved().at(-1)?.collections.post.columns.order as string[];
-			expect(order.indexOf("status")).toBeLessThan(order.indexOf("locale"));
-		});
-	});
-
-	it("lifts a column by its grip, shows the new order while it moves, and saves it when let go", async () => {
-		// jsdom lays nothing out: each row is 32px tall, placed by the order the menu shows.
-		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-			this: HTMLElement,
-		) {
-			const place =
-				this.style.order === "" ? [...(this.parentElement?.children ?? [])].indexOf(this) : Number(this.style.order);
-			const top = place * 32;
-			return { top, bottom: top + 32, left: 0, right: 200, width: 200, height: 32, x: 0, y: top } as DOMRect;
-		});
-		try {
-			await renderList();
-			openMenu(t("listMenu.view"));
-			await openSub(new RegExp(t("listMenu.columns")));
-			const row = (name: string) => screen.getByRole("menuitemcheckbox", { name });
-			const centre = (name: string) => row(name).getBoundingClientRect().top + 16;
-			const grip = (await screen.findByRole("menuitemcheckbox", { name: "생성일" })).querySelector(
-				"[data-slot=menu-grip]",
-			) as HTMLElement;
-			fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientY: centre("생성일") });
-			fireEvent.pointerMove(grip, { pointerId: 1, clientY: centre("상태") });
-			// While held, it already sits before "status" and is not saved yet.
-			expect(centre("생성일")).toBeLessThan(centre("상태"));
-			const savesBefore = saved().length;
-			fireEvent.pointerUp(grip, { pointerId: 1, clientY: centre("상태") });
-			await waitFor(() => expect(saved().length).toBeGreaterThan(savesBefore));
-			const order = saved().at(-1)?.collections.post.columns.order as string[];
-			expect(order.indexOf("createdAt")).toBeLessThan(order.indexOf("status"));
-			// Holding the grip did not turn the column on.
-			expect(row("생성일").getAttribute("aria-checked")).toBe("false");
-		} finally {
-			box.mockRestore();
-		}
+		expect(document.querySelector("[data-slot=menu-grip]")).toBeNull();
 	});
 
 	it("picks 50 per page, which applies it, closes the menu and is saved", async () => {
@@ -450,6 +410,83 @@ describe("flow: pick rows and act", () => {
 		expect(rows.at(-1)?.textContent).toBe(tc("lifecycle.trash"));
 		fireEvent.click(rows.at(-1) as HTMLElement);
 		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
+	});
+});
+
+describe("flow: the list's head", () => {
+	const head = () => within(screen.getAllByRole("rowgroup")[0] as HTMLElement);
+	const names = () =>
+		head()
+			.getAllByRole("button")
+			.map((button) => button.textContent);
+
+	it("names the columns, the status first and the title after it, and no month column", async () => {
+		await renderList();
+		await screen.findAllByRole("columnheader");
+		expect(names().slice(0, 2)).toEqual([t("column.status"), t("column.title")]);
+		expect(screen.queryByText("10월")).toBeNull();
+	});
+
+	it("sorts by a column when its name is pressed, and the other way when pressed again", async () => {
+		await renderList();
+		fireEvent.click(await head().findByRole("button", { name: t("column.title") }));
+		await waitFor(() => expect(lastList().searchParams.get("sortField")).toBe("title"));
+		expect(lastList().searchParams.get("sortDirection")).toBe("asc");
+		expect(
+			head()
+				.getByRole("columnheader", { name: t("column.title") })
+				.getAttribute("aria-sort"),
+		).toBe("ascending");
+		fireEvent.click(head().getByRole("button", { name: t("column.title") }));
+		await waitFor(() => expect(lastList().searchParams.get("sortDirection")).toBe("desc"));
+		// A column that cannot sort the list does nothing when pressed.
+		const requests = listRequests().length;
+		fireEvent.click(head().getByRole("button", { name: t("column.status") }));
+		expect(listRequests().length).toBe(requests);
+	});
+
+	it("moves a column with Alt and the arrow keys on its name, and saves the order", async () => {
+		await renderList();
+		fireEvent.keyDown(await head().findByRole("button", { name: t("column.title") }), {
+			key: "ArrowLeft",
+			altKey: true,
+		});
+		await waitFor(() => {
+			const order = saved().at(-1)?.collections.post.columns.order as string[];
+			expect(order.indexOf("title")).toBeLessThan(order.indexOf("status"));
+		});
+	});
+
+	it("lifts a column's name, shows the new order in the head and the rows while it moves, and saves it when let go", async () => {
+		// jsdom lays nothing out: each head cell is 100px wide, placed by its order in the row.
+		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+			this: HTMLElement,
+		) {
+			const left = [...(this.parentElement?.children ?? [])].indexOf(this) * 100;
+			return { left, right: left + 100, top: 0, bottom: 40, width: 100, height: 40, x: left, y: 0 } as DOMRect;
+		});
+		try {
+			await renderList();
+			await screen.findAllByRole("columnheader");
+			const cell = (name: string) => head().getByRole("columnheader", { name });
+			const centre = (name: string) => cell(name).getBoundingClientRect().left + 50;
+			const from = centre(t("column.updatedAt"));
+			const to = centre(t("column.title"));
+			fireEvent.pointerDown(cell(t("column.updatedAt")), { button: 0, pointerId: 1, clientX: from });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: from - 10 });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: to });
+			// While held, the head already shows it before the title, and nothing is saved yet.
+			expect(names().indexOf(t("column.updatedAt"))).toBeLessThan(names().indexOf(t("column.title")));
+			const savesBefore = saved().length;
+			fireEvent.pointerUp(cell(t("column.updatedAt")), { pointerId: 1, clientX: to });
+			await waitFor(() => expect(saved().length).toBeGreaterThan(savesBefore));
+			const order = saved().at(-1)?.collections.post.columns.order as string[];
+			expect(order.indexOf("updatedAt")).toBeLessThan(order.indexOf("title"));
+			// The press that ended a drag did not sort the list (pressed, the updated date would turn the order around).
+			expect(lastList().searchParams.get("sortDirection")).not.toBe("asc");
+		} finally {
+			box.mockRestore();
+		}
 	});
 });
 

@@ -338,7 +338,7 @@ type ScreenMode = (typeof SCREEN_MODES)[number];
 const SCREEN_MODE_ICONS = { system: Screen, light: Light, dark: Asleep } as const;
 
 /**
- * The screen mode in the last row: three icon cells (system, light, dark) with the current one pressed, so one press changes it. Folded, the rail has no
+ * The screen mode in the last row: three icon cells (system, light, dark) across the rail's width, the current one pressed, so one press changes it. Folded, the rail has no
  * room for three, so one icon button shows the current mode and opens the three in a menu upward, a ✓ on the current one. `labels` names the control
  * and each mode.
  */
@@ -357,16 +357,17 @@ function SidebarScreenMode({
 	const { rail } = useSidebar();
 	if (!rail) {
 		return (
-			<Segmented
-				inline
-				aria-label={labels.label}
-				value={value}
-				onValueChange={onValueChange}
-				options={SCREEN_MODES.map((mode) => {
-					const Icon = SCREEN_MODE_ICONS[mode];
-					return { value: mode, label: <Icon aria-hidden />, "aria-label": labels[mode] };
-				})}
-			/>
+			<div className="min-w-0 flex-1">
+				<Segmented
+					aria-label={labels.label}
+					value={value}
+					onValueChange={onValueChange}
+					options={SCREEN_MODES.map((mode) => {
+						const Icon = SCREEN_MODE_ICONS[mode];
+						return { value: mode, label: <Icon aria-hidden />, "aria-label": labels[mode] };
+					})}
+				/>
+			</div>
 		);
 	}
 	const Icon = SCREEN_MODE_ICONS[value];

@@ -8,7 +8,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
-	DropdownMenuReorderGroup,
 	DropdownMenuSearch,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
@@ -121,74 +120,6 @@ describe("the search row of a menu", () => {
 		fireEvent.keyDown(field, { key: "ArrowRight" });
 		fireEvent.keyDown(field, { key: "a" });
 		expect(outside).not.toHaveBeenCalled();
-	});
-});
-
-describe("rows that can be put in order", () => {
-	const setup = () => {
-		const onReorder = vi.fn();
-		const onMove = vi.fn();
-		render(
-			<DropdownMenu defaultOpen>
-				<DropdownMenuTrigger>open</DropdownMenuTrigger>
-				<DropdownMenuContent>
-					<DropdownMenuReorderGroup onReorder={onReorder} onMove={onMove}>
-						{["분류", "언어", "상태"].map((name) => (
-							<DropdownMenuCheckboxItem key={name} box reorderId={name} checked>
-								{name}
-							</DropdownMenuCheckboxItem>
-						))}
-					</DropdownMenuReorderGroup>
-				</DropdownMenuContent>
-			</DropdownMenu>,
-		);
-		return { onReorder, onMove };
-	};
-
-	it("move with Alt and the arrow keys, and a plain arrow only walks through the rows", async () => {
-		const { onMove } = setup();
-		const row = await screen.findByRole("menuitemcheckbox", { name: "언어" });
-		fireEvent.keyDown(row, { key: "ArrowDown", altKey: true });
-		expect(onMove).toHaveBeenLastCalledWith("언어", 1);
-		fireEvent.keyDown(row, { key: "ArrowUp", altKey: true });
-		expect(onMove).toHaveBeenLastCalledWith("언어", -1);
-		onMove.mockClear();
-		fireEvent.keyDown(row, { key: "ArrowDown" });
-		expect(onMove).not.toHaveBeenCalled();
-	});
-
-	it("are held by the grip and put down in the place of the row let go over", async () => {
-		const onReorder = vi.fn();
-		render(
-			<DropdownMenu defaultOpen>
-				<DropdownMenuTrigger>open</DropdownMenuTrigger>
-				<DropdownMenuContent>
-					<DropdownMenuReorderGroup onReorder={onReorder} onMove={vi.fn()}>
-						{["분류", "언어"].map((name) => (
-							<DropdownMenuCheckboxItem key={name} box reorderId={name} checked>
-								{name}
-							</DropdownMenuCheckboxItem>
-						))}
-					</DropdownMenuReorderGroup>
-				</DropdownMenuContent>
-			</DropdownMenu>,
-		);
-		// jsdom lays nothing out: each row is 32px tall, placed by the order the menu shows.
-		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-			this: HTMLElement,
-		) {
-			const place =
-				this.style.order === "" ? [...(this.parentElement?.children ?? [])].indexOf(this) : Number(this.style.order);
-			return { top: place * 32, bottom: place * 32 + 32 } as DOMRect;
-		});
-		const first = await screen.findByRole("menuitemcheckbox", { name: "분류" });
-		const grip = first.querySelector("[data-slot=menu-grip]") as HTMLElement;
-		fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientY: 16 });
-		fireEvent.pointerMove(grip, { pointerId: 1, clientY: 48 });
-		expect(onReorder).not.toHaveBeenCalled();
-		fireEvent.pointerUp(grip, { pointerId: 1, clientY: 48 });
-		expect(onReorder).toHaveBeenCalledWith("분류", "언어");
-		box.mockRestore();
 	});
 });
 
