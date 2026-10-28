@@ -68,7 +68,7 @@ const removal = (blockers: number) => ({
 		translations: 0,
 		folders: 2,
 		addresses: 31,
-		blockers: {
+		unlinked: {
 			count: blockers,
 			sample: blockers
 				? [{ id: "e-1", title: "First post", collection: "post", locale: "en", status: "published" }]

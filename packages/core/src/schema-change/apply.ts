@@ -1,3 +1,4 @@
+import type { CollectionsConfig } from "../config/define";
 import { brandErrorClass } from "../core/error-brand";
 import { prepareSnapshot } from "../core/snapshot";
 import { CmsError } from "../core/store/errors";
@@ -5,16 +6,12 @@ import type { SchemaChangeStore } from "../core/store/ports";
 import type { AppliedSchemaChange, SchemaState } from "../core/store/schema-change";
 import type { JsonObject } from "../core/store/types";
 import { ServiceError } from "../core/types";
+import { createUnlinkRewrite } from "../core/unlink-rewrite";
+import { createSchemas, type SiteSchemas } from "../schema/derive";
 import type { SchemaMigration } from "../schema-file/types";
 import type { Site } from "../site";
 import { diffSchema } from "./diff";
-import {
-	applyTransforms,
-	checkTransforms,
-	droppedCollections,
-	type TransformProblem,
-	transformCollections,
-} from "./transforms";
+import { applyTransforms, checkTransforms, type TransformProblem, transformCollections } from "./transforms";
 import type { SchemaDiff, SchemaLike } from "./types";
 
 /**
@@ -87,6 +84,30 @@ export async function planSchemaChange(options: PlanOptions): Promise<SchemaPlan
 	};
 }
 
+/**
+ * Takes the entries of a dropped collection out of the relation fields of the others, with the rewrite the trash uses. The relation fields are the ones of the
+ * schema last applied (the site's own when none was applied yet): the new schema cannot have a relation to the collection that goes. A failing rewrite stops the apply with a {@link SchemaChangeError}.
+ */
+function unlinkRewriteFor(site: Site, applied: SchemaState | null) {
+	let fields: Pick<SiteSchemas, "storedFields"> = site;
+	if (applied) {
+		const before = applied.schema.collections as unknown as CollectionsConfig;
+		const schemas = createSchemas(before);
+		fields = { storedFields: (collection) => (collection in before ? schemas.storedFields(collection) : []) };
+	}
+	const rewrite = createUnlinkRewrite(site, fields);
+	return async (body: Parameters<typeof rewrite>[0], targets: Parameters<typeof rewrite>[1]) => {
+		try {
+			return await rewrite(body, targets);
+		} catch (error) {
+			const code = error instanceof ServiceError ? error.code : error instanceof Error ? error.message : String(error);
+			throw new SchemaChangeError(
+				`entry ${body.entryId} (${body.collection}, ${body.state}) cannot be unlinked from the collection to delete: ${code}`,
+			);
+		}
+	};
+}
+
 /** The transforms cannot run: a transform does not fit the schema, or an entry cannot be rewritten. Nothing was changed. */
 export class SchemaChangeError extends CmsError {
 	readonly problems: readonly TransformProblem[];
@@ -99,8 +120,7 @@ export class SchemaChangeError extends CmsError {
 brandErrorClass(SchemaChangeError, "SchemaChangeError");
 
 export interface ApplyOptions extends Omit<PlanOptions, "store"> {
-	readonly store: Pick<SchemaChangeStore, "readSchemaState" | "appliedSchemaTransforms" | "applySchemaChange"> &
-		Partial<Pick<SchemaChangeStore, "collectionFootprint">>;
+	readonly store: Pick<SchemaChangeStore, "readSchemaState" | "appliedSchemaTransforms" | "applySchemaChange">;
 	/** Do everything and report, but change nothing. */
 	readonly dryRun?: boolean;
 }
@@ -125,7 +145,8 @@ export interface SchemaApplyResult {
  * Every transform goes through the write rules (`prepareSnapshot`, with no write hooks): the changed metadata is checked, and the content hash, the search text and
  * the metadata references are recomputed from it, so they cannot drift from the data. Working and published bodies are rewritten the same way and `version` and
  * `updated_at` of the entry and its bodies are kept, as in the data migrations before, so an entry that had unpublished changes still has them and one that did
- * not still does not. Nothing is dropped without a `dropField` transform.
+ * not still does not. Nothing is dropped without a `dropField` transform. A `dropCollection` first cuts the relation fields of other collections that point into it
+ * (the store does it in the same transaction, with the same rewrite the trash uses).
  *
  * Throws a {@link SchemaChangeError} (changing nothing) when a transform does not fit the schema or an entry cannot be rewritten.
  */
@@ -143,31 +164,10 @@ export async function applySchemaChange(options: ApplyOptions): Promise<SchemaAp
 	const drops = plan.pending.flatMap((item) =>
 		item.op === "dropCollection" ? [{ id: item.id, collection: item.collection }] : [],
 	);
-	// Entries of other collections that still point into a collection to drop stop the apply before anything is written (the store checks again inside its transaction).
-	if (drops.length > 0 && store.collectionFootprint) {
-		const footprints = await store.collectionFootprint({ collections: droppedCollections(plan.pending), detail: true });
-		const blocked = drops.flatMap((item) => {
-			const count = footprints[item.collection]?.incoming?.relations ?? 0;
-			return count > 0
-				? [
-						{
-							id: item.id,
-							message: `${count} ${count === 1 ? "entry" : "entries"} of other collections still point at "${item.collection}"; unlink them first`,
-						},
-					]
-				: [];
-		});
-		if (blocked.length > 0) {
-			throw new SchemaChangeError(
-				`cannot apply: ${blocked.map((problem) => `${problem.id}: ${problem.message}`).join("; ")}`,
-				blocked,
-			);
-		}
-	}
-
 	const result: AppliedSchemaChange = await store.applySchemaChange({
 		transformIds: (options.migrations ?? []).map((item) => item.id),
 		dropCollections: drops,
+		unlinkRewrite: unlinkRewriteFor(site, plan.applied),
 		collections: transformCollections(plan.pending),
 		schema: snapshotSchema(site),
 		dryRun: options.dryRun,

@@ -225,7 +225,7 @@ export interface Removal {
 /** What the writer did to the entries pointing at a collection from the review, so the line can say it is done once the check no longer finds them. */
 interface Unlinked {
 	readonly count: number;
-	readonly sample: CollectionDropImpact["blockers"]["sample"];
+	readonly sample: CollectionDropImpact["unlinked"]["sample"];
 }
 
 /**
@@ -255,7 +255,7 @@ function DropChange({
 	const site = useSite();
 	const { drop } = impact;
 	const pointing =
-		drop.blockers.count > 0 ? drop.blockers : unlinked ? { count: unlinked.count, sample: unlinked.sample } : null;
+		drop.unlinked.count > 0 ? drop.unlinked : unlinked ? { count: unlinked.count, sample: unlinked.sample } : null;
 	const first = pointing?.sample[0];
 	const id = `drop-confirm-${removal.name}`;
 	return (
@@ -299,7 +299,7 @@ function DropChange({
 							</>
 						}
 						then={
-							drop.blockers.count > 0 ? (
+							drop.unlinked.count > 0 ? (
 								<TextButton type="button" variant="inherit" disabled={unlinking} onClick={onUnlink}>
 									{t("drop.unlink")}
 								</TextButton>
@@ -307,7 +307,7 @@ function DropChange({
 								t("drop.unlinked")
 							)
 						}
-						tone={drop.blockers.count > 0 ? "warning" : "default"}
+						tone={drop.unlinked.count > 0 ? "warning" : "default"}
 					/>
 				)}
 				{drop.bodyLinks > 0 && (
@@ -476,7 +476,7 @@ export function ReviewDialog({
 				(impact) => impact.drop && impact.change.kind === "collection_removed" && impact.change.collection === name,
 			)?.drop;
 			if (was)
-				setUnlinked((current) => ({ ...current, [name]: { count: was.blockers.count, sample: was.blockers.sample } }));
+				setUnlinked((current) => ({ ...current, [name]: { count: was.unlinked.count, sample: was.unlinked.sample } }));
 			setRecheck((count) => count + 1);
 		},
 	});
@@ -494,7 +494,7 @@ export function ReviewDialog({
 	// A deleted collection is applied only with its identifier typed exactly, and with nothing left that points at it.
 	const dropsOk = (preview?.impacts ?? []).every((impact) => {
 		const removal = removalOf(impact);
-		return !removal || (typed[removal.name] === removal.name && (impact.drop?.blockers.count ?? 0) === 0);
+		return !removal || (typed[removal.name] === removal.name && (impact.drop?.unlinked.count ?? 0) === 0);
 	});
 	const drops = (preview?.impacts ?? []).filter((impact) => removalOf(impact));
 	const others = (preview?.impacts ?? []).filter((impact) => !removalOf(impact));

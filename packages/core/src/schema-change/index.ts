@@ -13,7 +13,6 @@ export {
 	type CheckOptions,
 	type CollectionDropImpact,
 	checkSchemaChange,
-	dropBlockers,
 	type ImpactConsequence,
 	type ImpactSample,
 	type SchemaImpact,

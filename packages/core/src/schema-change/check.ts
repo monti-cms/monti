@@ -55,9 +55,9 @@ export interface CollectionDropImpact {
 	readonly folders: number;
 	/** Addresses deleted, the old ones included. */
 	readonly addresses: number;
-	/** Entries of other collections whose relation fields point into the collection: the apply is refused until they are unlinked. `sample` lists the first. */
-	readonly blockers: { readonly count: number; readonly sample: readonly ImpactSample[] };
-	/** Places in bodies of other collections that link into the collection: they do not block, they become broken links. */
+	/** Entries of other collections whose relation fields point into the collection: the apply cuts those links. `sample` lists the first. */
+	readonly unlinked: { readonly count: number; readonly sample: readonly ImpactSample[] };
+	/** Places in bodies of other collections that link into the collection: they become broken links. */
 	readonly bodyLinks: number;
 }
 
@@ -72,7 +72,7 @@ export interface ChangeImpact {
 	readonly consequence: ImpactConsequence;
 	/** `false` when the change was not looked at in the data (an allowed-blocks change needs the `site` option); `entries` is then 0. */
 	readonly checked: boolean;
-	/** A removed collection that a `dropCollection` transform handles: what it deletes and what blocks it. */
+	/** A removed collection that a `dropCollection` transform handles: what it deletes and what it leaves pointing nowhere. */
 	readonly drop?: CollectionDropImpact;
 }
 
@@ -100,10 +100,6 @@ export interface CheckOptions {
 }
 
 /** Walks every page of `store.scanBodies`, yielding one page at a time. */
-/** Whether the impacts hold a collection drop that entries of other collections still block (their relation fields point into it). */
-export const dropBlockers = (impacts: readonly ChangeImpact[]): readonly ChangeImpact[] =>
-	impacts.filter((impact) => (impact.drop?.blockers.count ?? 0) > 0);
-
 export async function* scanAllBodies(
 	store: Pick<SchemaChangeStore, "scanBodies">,
 	params: { collections?: readonly string[]; limit?: number } = {},
@@ -365,7 +361,7 @@ export async function checkSchemaChange(
 						translations: footprint.translations,
 						folders: footprint.folders,
 						addresses: footprint.addresses,
-						blockers: { count: footprint.incoming?.relations ?? 0, sample: footprint.incoming?.sample ?? [] },
+						unlinked: { count: footprint.incoming?.relations ?? 0, sample: footprint.incoming?.sample ?? [] },
 						bodyLinks: footprint.incoming?.bodyLinks ?? 0,
 					},
 				}),

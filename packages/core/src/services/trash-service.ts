@@ -1,7 +1,5 @@
 import { isTrashExpired } from "../core/domain/trash";
-import { prepareSnapshot } from "../core/snapshot";
 import { CmsError, type ContentStore } from "../core/store";
-import type { UnlinkBody, UnlinkedBody } from "../core/store/trash";
 import type {
 	FolderContents,
 	FolderTrashResult,
@@ -15,6 +13,7 @@ import type {
 } from "../core/trash";
 import type { PreparedSnapshot } from "../core/types";
 import { ServiceError } from "../core/types";
+import { createUnlinkRewrite } from "../core/unlink-rewrite";
 import type { MediaStore } from "../media/store";
 import type { Site } from "../site";
 import type { createContentService } from "./content-service";
@@ -160,45 +159,7 @@ export function createTrashService(deps: TrashServiceDeps): TrashService {
 		}
 	};
 
-	const withoutTargets = (body: UnlinkBody, targets: ReadonlySet<string>) => {
-		const metadata: Record<string, unknown> = { ...body.metadata };
-		let changed = false;
-		for (const { name, field } of site.storedFields(body.collection)) {
-			if (field.kind !== "relation") continue;
-			const value = metadata[name];
-			if (typeof value === "string" && targets.has(value)) {
-				delete metadata[name];
-				changed = true;
-			} else if (Array.isArray(value)) {
-				const rest = value.filter((id) => !(typeof id === "string" && targets.has(id)));
-				if (rest.length === value.length) continue;
-				changed = true;
-				if (rest.length > 0) metadata[name] = rest;
-				else delete metadata[name];
-			}
-		}
-		return changed ? metadata : null;
-	};
-
-	/** The body as the write rules prepare it once the targets are out of its relation fields. */
-	const rewrite = async (body: UnlinkBody, targets: ReadonlySet<string>): Promise<UnlinkedBody | null> => {
-		const metadata = withoutTargets(body, targets);
-		if (!metadata) return null;
-		const snapshot = await prepareSnapshot(
-			site,
-			{ collection: body.collection, slug: null, metadata, doc: body.doc } as never,
-			{ previousMetadata: body.metadata, previousDoc: body.doc },
-		);
-		return {
-			metadata: snapshot.metadata as never,
-			doc: snapshot.doc,
-			contentHash: snapshot.contentHash,
-			references: snapshot.references.flatMap((ref) => {
-				const occurrences = ref.occurrences.filter((occurrence) => occurrence.type === "metadata");
-				return occurrences.length === 0 ? [] : [{ kind: ref.kind, targetId: ref.targetId, occurrences }];
-			}),
-		};
-	};
+	const rewrite = createUnlinkRewrite(site);
 
 	return {
 		folderContents: (id) => deps.store().getFolderContents({ id }),

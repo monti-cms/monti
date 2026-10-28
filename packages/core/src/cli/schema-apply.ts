@@ -4,7 +4,6 @@ import {
 	type ChangeImpact,
 	checkSchemaChange,
 	describeSchemaChange,
-	dropBlockers,
 	type ImpactConsequence,
 	planSchemaChange,
 	type SchemaApplyResult,
@@ -47,9 +46,9 @@ function dropLines(item: ChangeImpact): string[] {
 		...(drop.bodyLinks > 0
 			? [`      ${plural(drop.bodyLinks, "link", "links")} in the bodies of other collections will be broken`]
 			: []),
-		...(drop.blockers.count > 0
+		...(drop.unlinked.count > 0
 			? [
-					`      BLOCKED: ${plural(drop.blockers.count, "entry", "entries")} of other collections still point at it (${drop.blockers.sample.map((entry) => quote(entry.title, entry.id)).join(", ")}${drop.blockers.count > drop.blockers.sample.length ? ", ..." : ""}); clear those fields first`,
+					`      ${plural(drop.unlinked.count, "entry", "entries")} of other collections point at it (${drop.unlinked.sample.map((entry) => quote(entry.title, entry.id)).join(", ")}${drop.unlinked.count > drop.unlinked.sample.length ? ", ..." : ""}); those links are cut`,
 				]
 			: []),
 	];
@@ -160,8 +159,7 @@ export async function schemaDiff(
 		const store = cms.store();
 		const plan = await planSchemaChange({ site: cms.site, store, migrations });
 		const impact = await checkSchemaChange(store, plan.diff, { site: cms.site, transforms: plan.pending });
-		const exitCode =
-			plan.problems.length > 0 || dropBlockers(impact.impacts).length > 0 || (options.check && plan.changed) ? 1 : 0;
+		const exitCode = plan.problems.length > 0 || (options.check && plan.changed) ? 1 : 0;
 		return { text: formatSchemaPlan(plan, impact), plan, impact, exitCode };
 	} finally {
 		await cms.close();
@@ -191,7 +189,7 @@ export async function schemaApply(
 		const plan = await planSchemaChange({ site: cms.site, store, migrations });
 		const impact = await checkSchemaChange(store, plan.diff, { site: cms.site, transforms: plan.pending });
 		const preview = formatSchemaPlan(plan, impact);
-		if (plan.problems.length > 0 || dropBlockers(impact.impacts).length > 0) {
+		if (plan.problems.length > 0) {
 			return { text: `${head}${preview}\nNothing was applied.`, ok: false };
 		}
 

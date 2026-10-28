@@ -1,5 +1,6 @@
 import type { StoredDocument } from "../../doc/stored-document";
 import type { ReferenceKind, ReferenceOccurrence } from "../types";
+import type { UnlinkParams } from "./trash";
 import type { EntryMetadata, EntryStatus, JsonObject } from "./types";
 
 /** The types of the schema-change port (`SchemaChangeStore` in `ports.ts`). */
@@ -73,11 +74,11 @@ export interface CollectionFootprint {
 	readonly addresses: number;
 	/** Only with `detail`: what points into the collection from outside. */
 	readonly incoming?: {
-		/** Entries of other collections, the trashed ones included, whose relation fields point at an entry of the collection. They block a drop until unlinked. */
+		/** Entries of other collections, the trashed ones included, whose relation fields point at an entry of the collection. A drop cuts those links. */
 		readonly relations: number;
 		/** The first of them (by creation), at most `sampleSize`. */
 		readonly sample: readonly FootprintReferrer[];
-		/** Places in the bodies of entries of other collections that link to an entry of the collection. They do not block: they become broken links. */
+		/** Places in the bodies of entries of other collections that link to an entry of the collection. They become broken links. */
 		readonly bodyLinks: number;
 	};
 }
@@ -99,11 +100,13 @@ export interface ApplySchemaChangeParams {
 	readonly collections: readonly string[];
 	/**
 	 * The `dropCollection` transforms, by id (a subset of `transformIds`). The ones that are not recorded yet delete their collection's data in the same
-	 * transaction: every entry with its translations, bodies and references, its folders and its addresses. Refused (`in_use`, nothing changed) while an entry of
-	 * another collection still has a relation field pointing at one of its entries. Body links from other collections do not block: their reference rows go and
-	 * the links stay in the text, broken.
+	 * transaction: every entry with its translations, bodies and references, its folders and its addresses. First the relation fields of entries of other
+	 * collections that point at one of its entries are cut (`unlinkRewrite`; each entry changed gets its version up once and a `saved` event). Body links from
+	 * other collections: their reference rows go and the links stay in the text, broken.
 	 */
 	readonly dropCollections?: readonly { readonly id: string; readonly collection: string }[];
+	/** The rewrite that takes the entries of a dropped collection out of the relation fields of the others (see `UnlinkParams.rewrite`). */
+	readonly unlinkRewrite: UnlinkParams["rewrite"];
 	/** The schema (as JSON) to record. */
 	readonly schema: JsonObject;
 	/**

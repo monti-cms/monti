@@ -282,7 +282,7 @@ const memoRemoval = (blockers: number) => ({
 		translations: 0,
 		folders: 2,
 		addresses: 31,
-		blockers: {
+		unlinked: {
 			count: blockers,
 			sample: blockers
 				? [{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" }]

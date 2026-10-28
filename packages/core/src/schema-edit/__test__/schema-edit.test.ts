@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
+import { applySchemaChange } from "../../schema-change";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { loadSchemaFile } from "../../schema-file/locate";
 import { printSchemaFile } from "../../schema-file/print";
@@ -564,6 +565,8 @@ describe("schema settings API", () => {
 			});
 			const cms = newCms();
 			await cms.migrate({ log: () => {} });
+			// The schema as it is now is the one applied: the unlink of a drop reads its relation fields from there.
+			await applySchemaChange({ site: cms.site, store: cms.store(), migrations: [] });
 			const service = cms.contentService();
 			const create = async (collection: string, slug: string, metadata: Record<string, unknown>) =>
 				(await service.createDraft({ collection, slug, metadata, doc: docOfText(slug) } as never)).entry;
@@ -617,14 +620,14 @@ describe("schema settings API", () => {
 			expect(removal).toMatchObject({
 				consequence: "deleted",
 				entries: 2,
-				drop: { entries: 2, trashed: 1, blockers: { count: 1, sample: [{ title: "reader" }] } },
+				drop: { entries: 2, trashed: 1, unlinked: { count: 1, sample: [{ title: "reader" }] } },
 			});
 		});
 
-		it("refuses to save while another collection points at it, then deletes everything once it is unlinked", async () => {
-			const { cms, reader } = await withMemos();
+		it("saves a deletion that other collections point at: it cuts those links and deletes everything", async () => {
+			const { cms, first, reader } = await withMemos();
 			const { hash, schema } = await read(cms);
-			// The post still has the relation in the stored data: the edit drops the field, but its value is what points at the memo.
+			// The post still has the relation in the stored data: the edit changes the field, but its value is what points at the memo.
 			const edited = structuredClone(schema) as unknown as Edit;
 			delete edited.collections.memo;
 			const postCollection = edited.collections.post as { fields: Record<string, unknown> };
@@ -633,25 +636,8 @@ describe("schema settings API", () => {
 			const keys = (
 				(await (await call(cms, "POST", "schema/preview", body)).json()) as { impacts: { key: string }[] }
 			).impacts.map((impact) => impact.key);
-
-			const before = text();
-			const refused = await call(cms, "PUT", "schema", { ...body, acknowledged: keys });
-			expect(refused.status).toBe(409);
-			expect(await refused.json()).toMatchObject({
-				error: { code: "in_use", details: { impacts: [{ drop: { blockers: { count: 1 } } }] } },
-			});
-			expect(text()).toBe(before);
-			expect(await memoRows()).toBe(2);
-
-			// Unlink: the post no longer holds the memo (what `POST /references/unlink` does).
-			const current = await cms.store().getEntry(reader.id);
-			await cms.contentService().saveDraft(reader.id, {
-				collection: "post",
-				slug: "reader",
-				metadata: { title: "reader" },
-				doc: docOfText("reader"),
-				expectedVersion: current.version,
-			} as never);
+			const was = await cms.store().getEntry(reader.id);
+			expect((await metadataOf("reader"))?.memoId).toBe(first.id);
 
 			const saved = await call(cms, "PUT", "schema", { ...body, acknowledged: keys });
 			expect(saved.status).toBe(200);
@@ -662,6 +648,11 @@ describe("schema settings API", () => {
 			expect(await memoRows()).toBe(0);
 			expect(Object.keys(onDiskData().collections)).toEqual(["post"]);
 			expect(onDiskData().migrations).toMatchObject([{ id: "drop-memo", op: "dropCollection", collection: "memo" }]);
+
+			// The post no longer holds the memo, and was saved once for it.
+			const now = await cms.store().getEntry(reader.id);
+			expect((await metadataOf("reader"))?.memoId).toBeUndefined();
+			expect(now.version).toBe(was.version + 1);
 		});
 
 		it("does not save a deletion nobody reviewed", async () => {

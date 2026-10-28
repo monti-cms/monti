@@ -13,7 +13,6 @@ import {
 	checkSchemaChange,
 	checkTransforms,
 	diffSchema,
-	dropBlockers,
 	type ImpactSample,
 	type RenameHint,
 	type SchemaChange,
@@ -514,8 +513,6 @@ export type SchemaSaveResult =
 	/** Changes that touch stored entries were not acknowledged (`SchemaSaveInput.acknowledged`). Review them and send their keys. */
 	| { readonly saved: false; readonly reason: "unacknowledged"; readonly impacts: readonly ChangeImpact[] }
 	| { readonly saved: false; readonly reason: "unchanged" }
-	/** Entries of other collections still have relation fields pointing into a collection to delete: unlink them first (`impacts` lists the removals). */
-	| { readonly saved: false; readonly reason: "in_use"; readonly impacts: readonly ChangeImpact[] }
 	| {
 			readonly saved: true;
 			readonly file: string;
@@ -585,8 +582,6 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 		(impact) => needsAcknowledgement(impact) && !acknowledged.has(impact.key),
 	);
 	if (unacknowledged.length > 0) return { saved: false, reason: "unacknowledged", impacts: unacknowledged };
-	const blocked = dropBlockers(preview.impacts);
-	if (blocked.length > 0) return { saved: false, reason: "in_use", impacts: blocked };
 
 	// What goes into the file: the edit as the writer arranged it (its key order), with the new transforms.
 	const raw = JSON.parse(JSON.stringify(input.schema)) as Record<string, unknown>;

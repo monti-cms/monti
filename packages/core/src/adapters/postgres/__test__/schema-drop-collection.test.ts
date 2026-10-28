@@ -5,7 +5,7 @@ import type { CmsConfig } from "../../../config/define";
 import { defineSite } from "../../../config/define";
 import { type CmsNode, STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../document";
 import { defineCollection } from "../../../schema/collection";
-import { applySchemaChange, checkSchemaChange, planSchemaChange, SchemaChangeError } from "../../../schema-change";
+import { applySchemaChange, checkSchemaChange, planSchemaChange } from "../../../schema-change";
 import type { SchemaMigration } from "../../../schema-file/types";
 import { createContentService } from "../../../services/content-service";
 import { createSite, type Site } from "../../../site";
@@ -13,7 +13,7 @@ import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * Removing a collection with a `dropCollection` transform, against a real database: the review's numbers, the relation referrers that block the apply, and
+ * Removing a collection with a `dropCollection` transform, against a real database: the review's numbers, the relation referrers the apply unlinks, and
  * what the apply deletes (entries with their trash and translations, folders, addresses, references) in one transaction with the schema record.
  */
 
@@ -71,7 +71,7 @@ describe("removing a collection with its entries", () => {
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
-	const ids = {} as Record<"m1" | "m1ko" | "m2" | "m3" | "p1" | "p2" | "p3" | "folder", string>;
+	const ids = {} as Record<"m1" | "m1ko" | "m2" | "m3" | "p1" | "p2" | "p3" | "p4" | "folder", string>;
 
 	const count = async (table: string, where = "TRUE", params: unknown[] = []) =>
 		Number(
@@ -216,22 +216,11 @@ describe("removing a collection with its entries", () => {
 		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
 		const impact = await checkSchemaChange(store, plan.diff, { site: siteAfter, transforms: plan.pending });
 		const removal = impact.impacts.find((item) => item.change.kind === "collection_removed");
-		expect(removal?.drop?.blockers.count).toBe(1);
-		expect(removal?.drop?.blockers.sample).toMatchObject([{ id: ids.p1, title: "Reads the memo", collection: "post" }]);
+		expect(removal?.drop?.unlinked.count).toBe(1);
+		expect(removal?.drop?.unlinked.sample).toMatchObject([{ id: ids.p1, title: "Reads the memo", collection: "post" }]);
 	});
 
-	it("refuses to apply while an entry of another collection points at it, and changes nothing", async () => {
-		const store = storeFor(siteAfter);
-		const entriesBefore = await memoEntries();
-		await expect(applySchemaChange({ site: siteAfter, store, migrations: [drop] })).rejects.toBeInstanceOf(
-			SchemaChangeError,
-		);
-		expect(await memoEntries()).toBe(entriesBefore);
-		expect(await count("cms_migrations", "name = 'schema:drop-memo'")).toBe(0);
-		expect(await count("cms_events", "kind = 'deleted'")).toBe(0);
-	});
-
-	it("the store refuses it too, inside the transaction, when the pre-check is skipped", async () => {
+	it("rolls back the unlink with the rest when the apply fails inside the transaction", async () => {
 		const store = storeFor(siteAfter);
 		await expect(
 			store.applySchemaChange({
@@ -240,36 +229,77 @@ describe("removing a collection with its entries", () => {
 				collections: [],
 				schema: {},
 				rewrite: async () => null,
+				unlinkRewrite: async () => {
+					throw new Error("boom");
+				},
 			}),
-		).rejects.toMatchObject({ code: "in_use" });
+		).rejects.toThrow("boom");
 		expect(await memoEntries()).toBe(4);
+		expect(await count("cms_migrations", "name = 'schema:drop-memo'")).toBe(0);
 	});
 
-	it("body links never block: only the relation field of p1 does", async () => {
+	it("applies with entries pointing in: unlinks them, then deletes the entries (the trashed one and the translation too), the folders, the addresses and the references in one step", async () => {
+		// p1 reads m1 from a relation field in its working and in its published body, and p4 reads the draft m2 in its working body only.
 		const service = serviceFor(siteBefore);
-		// Unlink: p1 no longer has the relation (what `POST /references/unlink` does for a screen).
-		const current = await pool.query<{ version: number }>(`SELECT version FROM "${schemaName}".entries WHERE id = $1`, [
+		const p1 = await pool.query<{ version: number }>(`SELECT version FROM "${schemaName}".entries WHERE id = $1`, [
 			ids.p1,
 		]);
 		await service.saveDraft(ids.p1, {
 			collection: "post",
 			slug: "p1",
-			metadata: { title: "Reads the memo" },
-			doc: docOf(""),
-			expectedVersion: current.rows[0]?.version as number,
+			metadata: { title: "Reads the memo", memoId: ids.m1 },
+			doc: docOf("Reads"),
+			expectedVersion: p1.rows[0]?.version as number,
 		} as never);
+		const p1Saved = await pool.query<{ version: number }>(`SELECT version FROM "${schemaName}".entries WHERE id = $1`, [
+			ids.p1,
+		]);
+		await service.publish({ id: ids.p1, expectedVersion: p1Saved.rows[0]?.version as number });
+		ids.p4 = (
+			await service.createDraft({
+				collection: "post",
+				slug: "p4",
+				metadata: { title: "Reads the draft memo", memoId: ids.m2 },
+				doc: docOf(""),
+			} as never)
+		).entry.id;
+		const versions = async () =>
+			Object.fromEntries(
+				(
+					await pool.query<{ id: string; version: number }>(
+						`SELECT id, version FROM "${schemaName}".entries WHERE id = ANY($1::uuid[])`,
+						[[ids.p1, ids.p2, ids.p3, ids.p4]],
+					)
+				).rows.map((row) => [row.id, row.version]),
+			);
+		const relationOf = async (id: string, state: "working" | "published") =>
+			(
+				await pool.query<{ metadata: Record<string, unknown> }>(
+					`SELECT metadata FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
+					[id, state],
+				)
+			).rows[0]?.metadata.memoId;
+		expect(await relationOf(ids.p1, "working")).toBe(ids.m1);
+		expect(await relationOf(ids.p1, "published")).toBe(ids.m1);
+		const was = await versions();
+		const saved = () => count("cms_events", "kind = 'saved' AND entry_id = ANY($1::uuid[])", [[ids.p1, ids.p4]]);
+		const savedBefore = await saved();
 
-		const store = storeFor(siteAfter);
-		const plan = await planSchemaChange({ site: siteAfter, store, migrations: [drop] });
-		const impact = await checkSchemaChange(store, plan.diff, { site: siteAfter, transforms: plan.pending });
-		const removal = impact.impacts.find((item) => item.change.kind === "collection_removed");
-		expect(removal?.drop).toMatchObject({ blockers: { count: 0, sample: [] }, bodyLinks: 1 });
-	});
-
-	it("deletes the entries (the trashed one and the translation too), the folders, the addresses and the references in one step", async () => {
 		const store = storeFor(siteAfter);
 		const postsBefore = await count("entries", "collection = 'post'");
 		const done = await applySchemaChange({ site: siteAfter, store, migrations: [drop] });
+
+		// The dropped ids are out of both bodies of p1 and out of p4, and nothing references them any more.
+		expect(await relationOf(ids.p1, "working")).toBeUndefined();
+		expect(await relationOf(ids.p1, "published")).toBeUndefined();
+		expect(await relationOf(ids.p4, "working")).toBeUndefined();
+		// Each entry that was unlinked has its version up once and a `saved` event; the others are untouched.
+		const now = await versions();
+		expect(now[ids.p1]).toBe((was[ids.p1] as number) + 1);
+		expect(now[ids.p4]).toBe((was[ids.p4] as number) + 1);
+		expect(now[ids.p2]).toBe(was[ids.p2]);
+		expect(now[ids.p3]).toBe(was[ids.p3]);
+		expect(await saved()).toBe(savedBefore + 2);
 
 		expect(done.result.dropped).toEqual([
 			expect.objectContaining({ collection: "memo", entries: 3, trashed: 1, translations: 1, folders: 1 }),
