@@ -4,7 +4,6 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { editorAllowance } from "../allowed";
@@ -17,7 +16,6 @@ import { CmsEditor } from "../tiptap-editor";
  * A body that limits its blocks and marks: what the editor offers and accepts, and that a body written before the list changed opens and saves as it is.
  */
 const t = testSite.createTranslator(editorMessages);
-const tc = testSite.createTranslator(commonMessages);
 
 beforeAll(() => {
 	// jsdom has no clipboard events; ProseMirror makes one to paste HTML.
@@ -133,7 +131,7 @@ describe("what the menus offer", () => {
 		for (const key of ["slash.table.title", "slash.quote.title", "slash.code.title", "slash.footnote.title"] as const) {
 			expect(has(rows, t(key)), key).toBe(true);
 		}
-		expect(has(rows, tc("upload")) || has(rows, t("slash.image.title"))).toBe(true);
+		expect(has(rows, t("slash.image.title"))).toBe(true);
 	});
 
 	it("leaves out the blocks and marks the list does not allow, and keeps the ones it does", async () => {

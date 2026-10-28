@@ -63,18 +63,10 @@ const DRAWING = new Map<string, string>([
 		"admin/src/editor/internal-link-popup.tsx",
 		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
 	],
-	[
-		"admin/src/editor/slash-menu-popup.tsx",
-		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
-	],
 	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
 	[
 		"admin/src/editor/tiptap-editor.tsx",
-		"the editor canvas: the writing column is sized by `--editor-width`, with a measured padding on the toolbar row",
-	],
-	[
-		"admin/src/editor/toolbar-row.tsx",
-		"the toolbar measures its own tools (refs, an invisible row, exact widths) to decide which move into 'More'",
+		"the editor canvas: the writing column is sized by `--editor-width`, and the empty-line hint and the block under an open menu are styled inside it",
 	],
 	["admin/src/host/layout.tsx", "the admin root: `monti-admin` scopes the tokens and the page fills the window"],
 	[

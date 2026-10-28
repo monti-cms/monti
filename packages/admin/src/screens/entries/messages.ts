@@ -77,13 +77,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"sourcePane.heading": "{locale} source",
 		"sourcePane.body": "Source body",
 
-		"template.applyTitle": "Apply template",
-		"template.applyAsk": "Replace the current body with the '{name}' template? What you wrote will be lost.",
-		"template.menu": "Templates",
-		"template.loadFailed": "Couldn't load templates.",
-		"template.none": "No templates.",
-		"template.manage": "Manage templates",
-
 		"relation.addFailed": "Couldn't add.",
 		"relation.empty": "No matches.",
 		"relation.create": "Add '{label}'",
@@ -207,13 +200,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"sourcePane.aria": "원문 창",
 		"sourcePane.heading": "{locale} 원문",
 		"sourcePane.body": "원문 본문",
-
-		"template.applyTitle": "템플릿 적용",
-		"template.applyAsk": "지금 본문을 '{name}' 템플릿으로 바꿀까요? 쓴 본문은 사라져요.",
-		"template.menu": "템플릿",
-		"template.loadFailed": "템플릿을 불러오지 못했어요.",
-		"template.none": "템플릿이 없어요.",
-		"template.manage": "템플릿 관리",
 
 		"relation.addFailed": "추가하지 못했어요.",
 		"relation.empty": "일치하는 항목이 없어요.",

@@ -1,5 +1,6 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Editor } from "@tiptap/core";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { type FakeApi, PageFrame } from "../stories/screen-frame";
@@ -43,6 +44,9 @@ const templates = [
 }));
 const api: FakeApi = (path) => (path.startsWith("/api/monti/v1/templates") ? { items: templates } : undefined);
 
+/** The editor of the story on screen, to do what a writer does with the keyboard and the mouse (typing into the page by script does not reach it). */
+let current: Editor | null = null;
+
 function Body({ text }: { text: string }) {
 	const [doc, setDoc] = useState(() => docOf(text));
 	return (
@@ -52,6 +56,9 @@ function Body({ text }: { text: string }) {
 					doc={doc}
 					onChange={setDoc}
 					templates
+					onEditor={(editor) => {
+						current = editor;
+					}}
 					titleField={<h1 className="text-monti-display">{text ? "첫 번째 글" : "제목"}</h1>}
 				/>
 			</div>
@@ -66,6 +73,27 @@ const editorOf = async (canvasElement: HTMLElement) => {
 	return canvasElement.querySelector(".ProseMirror") as HTMLElement;
 };
 const body = () => within(document.body);
+/** Waits for the editor of the story, with the cursor in it. */
+const ready = async (canvasElement: HTMLElement) => {
+	await editorOf(canvasElement);
+	await waitFor(() => expect(current).not.toBeNull(), LONG);
+	return current as Editor;
+};
+/** Types text at the cursor, as the keyboard would. */
+const typeInto = (editor: Editor, text: string) => editor.chain().focus("end").insertContent(text).run();
+/** Selects the first occurrence of some words of the body. */
+const selectWords = (editor: Editor, words: string) => {
+	let from = -1;
+	editor.state.doc.descendants((node, pos) => {
+		const at = node.isText ? (node.text ?? "").indexOf(words) : -1;
+		if (from < 0 && at >= 0) from = pos + at;
+	});
+	editor
+		.chain()
+		.focus()
+		.setTextSelection({ from, to: from + words.length })
+		.run();
+};
 
 /** A new post: one empty line that says how to start. */
 export const NewPost: Story = {
@@ -82,9 +110,7 @@ export const SlashMenu: Story = {
 	tags: ["visual"],
 	render: () => <Body text="" />,
 	play: async ({ canvasElement }) => {
-		const editor = await editorOf(canvasElement);
-		await userEvent.click(editor);
-		await userEvent.keyboard("/");
+		typeInto(await ready(canvasElement), "/");
 		await body().findByRole("listbox", { name: "넣기" }, LONG);
 		await body().findByText("템플릿 · 이 자리에 넣어요", undefined, LONG);
 	},
@@ -95,9 +121,7 @@ export const TemplatePicker: Story = {
 	tags: ["visual"],
 	render: () => <Body text="" />,
 	play: async ({ canvasElement }) => {
-		const editor = await editorOf(canvasElement);
-		await userEvent.click(editor);
-		await userEvent.keyboard("/템플릿");
+		typeInto(await ready(canvasElement), "/템플릿");
 		await body().findByRole("option", { name: /기본 글/ }, LONG);
 	},
 };
@@ -107,14 +131,14 @@ export const FormatCard: Story = {
 	tags: ["visual"],
 	render: () => <Body text={BODY} />,
 	play: async ({ canvasElement }) => {
-		const editor = await editorOf(canvasElement);
-		await userEvent.dblClick(within(editor).getByText(/필요할 때/));
+		selectWords(await ready(canvasElement), "필요할 때 꺼내 본다");
 		await body().findByRole("toolbar", { name: "인라인 서식" }, LONG);
 	},
 };
 
 const openBlockMenu = async (canvasElement: HTMLElement) => {
 	const editor = await editorOf(canvasElement);
+	await ready(canvasElement);
 	await userEvent.hover(within(editor).getByText(/블로그를 다시/));
 	await userEvent.click(await body().findByRole("button", { name: "블록 메뉴" }, LONG));
 	return body().findByRole("menu", { name: "블록 메뉴" }, LONG);
