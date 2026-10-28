@@ -86,19 +86,34 @@ function DropdownMenuItem({
 	className,
 	variant = "default",
 	swatch = false,
+	caption,
+	children,
 	...props
 }: MenuPrimitive.Item.Props & {
 	variant?: "default" | "danger";
 	/** A small square row in a grid of rows (a color sample), its content centered. */
 	swatch?: boolean;
+	/** A second line under the name that says what the row leaves alone ("The Korean original stays"), small and faint. */
+	caption?: React.ReactNode;
 }) {
 	return (
 		<MenuPrimitive.Item
 			data-slot="dropdown-menu-item"
 			data-variant={variant}
-			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", className)}
+			className={cn(MENU_ITEM, swatch && "justify-center p-monti-2", caption && "items-start", className)}
 			{...props}
-		/>
+		>
+			{caption ? (
+				<span className="flex min-w-0 flex-col items-start gap-monti-2">
+					<span>{children}</span>
+					<span data-slot="menu-caption" className="text-monti-caption text-monti-subtle">
+						{caption}
+					</span>
+				</span>
+			) : (
+				children
+			)}
+		</MenuPrimitive.Item>
 	);
 }
 
