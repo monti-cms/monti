@@ -138,6 +138,11 @@ const addColumn = async (label: string) => {
 };
 const menuOpen = () => screen.queryAllByRole("menu").length > 0;
 const menuClosed = () => waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
+/** Escape closes the menu; the chips row, held still while it was open, then shows the filters that are on. */
+const closeMenu = async () => {
+	fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+	await menuClosed();
+};
 /** The pager's names come from the UI labels, English until a provider says otherwise. */
 const PAGER = /Pagination|페이지 이동/;
 const NEXT = /Next page|다음 페이지/;
@@ -326,12 +331,51 @@ describe("flow: filter by value", () => {
 		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["editing", "draft"]));
 		expect(nav.search.getAll("status")).toEqual(["editing", "draft"]);
 		expect(menuOpen()).toBe(true);
-		const chip = chipNamed(`${t("column.status")}: ${t("filter.editing")}, ${statusName("draft")}`);
 		expect(dotsIn(t("column.status"))).toBe(1);
+		await closeMenu();
+		const chip = chipNamed(`${t("column.status")}: ${t("filter.editing")}, ${statusName("draft")}`);
 		expect(dotsIn(t("column.title"))).toBe(0);
 		fireEvent.click(chip.querySelector("button") ?? chip);
 		await waitFor(() => expect(lastList().searchParams.has("status")).toBe(false));
 		expect(dotsIn(t("column.status"))).toBe(0);
+	});
+
+	it("holds the chips row still while a column menu is open, so ticking one value after another never moves the menu, and shows the chips once it closes", async () => {
+		await renderList();
+		const chipRow = () => document.querySelector("[data-slot=chip-row]");
+		openColumn(t("column.status"));
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
+		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["draft"]));
+		// The filter is on, the dot and the ✓ say so, but no row has appeared above the head.
+		expect(chipRow()).toBeNull();
+		expect(dotsIn(t("column.status"))).toBe(1);
+		const editing = screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
+		fireEvent.click(editing);
+		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["draft", "editing"]));
+		expect(chipRow()).toBeNull();
+		expect(
+			screen
+				.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) })
+				.getAttribute("aria-checked"),
+		).toBe("true");
+		expect(
+			screen
+				.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) })
+				.getAttribute("aria-checked"),
+		).toBe("true");
+		await closeMenu();
+		expect(chipNamed(`${t("column.status")}: ${t("filter.editing")}, ${statusName("draft")}`)).toBeTruthy();
+	});
+
+	it("keeps the chips it had while a menu is open when the last filter is cleared from it, and drops them when it closes", async () => {
+		nav.setSearch("collection=post&status=draft");
+		await renderList();
+		openColumn(t("column.status"));
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
+		await waitFor(() => expect(lastList().searchParams.has("status")).toBe(false));
+		expect(document.querySelector("[data-slot=chip-row]")).not.toBeNull();
+		await closeMenu();
+		await waitFor(() => expect(document.querySelector("[data-slot=chip-row]")).toBeNull());
 	});
 
 	it("ticks none and a tag on the tag menu, narrows the list to them, shows one chip and takes it off with its ×", async () => {
@@ -345,6 +389,7 @@ describe("flow: filter by value", () => {
 		expect(menuOpen()).toBe(true);
 		expect(nav.search.getAll("field")).toEqual(["tagIds:empty", "tagIds:is:t-react"]);
 		expect(dotsIn("태그")).toBe(1);
+		await closeMenu();
 		fireEvent.click(
 			await screen.findByRole("button", { name: t("listMenu.chipRemove", { label: "태그: 없음, 리액트" }) }),
 		);
@@ -366,12 +411,12 @@ describe("flow: filter by value", () => {
 		await renderList();
 		openColumn(t("column.status"));
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-		await menuClosed();
+		await closeMenu();
 		openColumn("태그");
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^리액트/ }));
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["tagIds:is:t-react"]));
 		expect(lastList().searchParams.getAll("status")).toEqual(["draft"]);
+		await closeMenu();
 		expect(screen.getAllByRole("button", { name: /지우기|Remove/ })).toHaveLength(2);
 	});
 
@@ -384,12 +429,13 @@ describe("flow: filter by value", () => {
 		expect(await within(changed).findByText("1")).toBeTruthy();
 		fireEvent.click(changed);
 		await waitFor(() => expect(lastList().searchParams.getAll("translation")).toEqual(["changed"]));
-		expect(chipNamed(`${t("listMenu.translation")}: ${t("listMenu.translationChanged")}`)).toBeTruthy();
 		expect(dotsIn(t("column.locale"))).toBe(1);
 		fireEvent.click(
 			await screen.findByRole("menuitemcheckbox", { name: testSite.localeLabel(testSite.LOCALES[0] as string) }),
 		);
 		await waitFor(() => expect(lastList().searchParams.getAll("locale")).toEqual([testSite.LOCALES[0]]));
+		await closeMenu();
+		expect(chipNamed(`${t("listMenu.translation")}: ${t("listMenu.translationChanged")}`)).toBeTruthy();
 	});
 
 	it("filters a text column by 'empty' alone, after it is turned on with +", async () => {
@@ -400,8 +446,9 @@ describe("flow: filter by value", () => {
 		expect(rows.map((row) => row.textContent?.replace(/\d+$/, ""))).toEqual([t("listMenu.empty")]);
 		fireEvent.click(rows[0] as HTMLElement);
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["summary:empty"]));
-		expect(chipNamed(t("listMenu.chipEmpty", { label: "요약" }))).toBeTruthy();
 		expect(dotsIn("요약")).toBe(1);
+		await closeMenu();
+		expect(chipNamed(t("listMenu.chipEmpty", { label: "요약" }))).toBeTruthy();
 	});
 
 	it("filters a select by its options, with 'none' first", async () => {
@@ -412,6 +459,7 @@ describe("flow: filter by value", () => {
 		expect(rows[0]?.textContent).toContain(t("listMenu.none"));
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^지원 중단/ }));
 		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["policy:is:deprecated"]));
+		await closeMenu();
 		expect(chipNamed("정책: 지원 중단")).toBeTruthy();
 	});
 
@@ -437,13 +485,14 @@ describe("flow: filter by date", () => {
 			86_400_000;
 		expect(Math.round(days)).toBe(30);
 		expect(nav.search.get("updated")).toBe("last30");
-		expect(chipNamed(`${t("listMenu.updated")}: ${t("listMenu.last30")}`)).toBeTruthy();
 		expect(dotsIn(t("column.updatedAt"))).toBe(1);
 		// The menu stays, with the pick ticked, for the next filter.
 		expect(menuOpen()).toBe(true);
 		const radio = await screen.findByRole("menuitemradio", { name: t("listMenu.last30") });
 		await waitFor(() => expect(radio.getAttribute("aria-checked")).toBe("true"));
 		expect(screen.getByRole("menuitemradio", { name: t("listMenu.today") }).getAttribute("aria-checked")).toBe("false");
+		await closeMenu();
+		expect(chipNamed(`${t("listMenu.updated")}: ${t("listMenu.last30")}`)).toBeTruthy();
 	});
 
 	it("filters the created date once its column is on, as it does the updated date", async () => {
@@ -454,6 +503,7 @@ describe("flow: filter by date", () => {
 		await waitFor(() => expect(lastList().searchParams.get("createdFrom")).not.toBeNull());
 		expect(lastList().searchParams.has("updatedFrom")).toBe(false);
 		expect(nav.search.get("created")).toBe("last7");
+		await closeMenu();
 		expect(chipNamed(`${t("listMenu.created")}: ${t("listMenu.last7")}`)).toBeTruthy();
 	});
 

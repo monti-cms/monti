@@ -17,7 +17,7 @@ import {
 	TableRow,
 	Text,
 } from "@monti-cms/ui";
-import type { KeyboardEvent, ReactNode } from "react";
+import { type KeyboardEvent, type ReactNode, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { EntryRowCells } from "./entries-table-row";
@@ -151,7 +151,11 @@ export function AdminEntriesTable({
 		onAdd: (column: AdminListColumn) => columns.toggle(column, true),
 	};
 	const titles = useFilterTitles(state);
-	const chips = filterChipsOf(site, state, titles);
+	const liveChips = filterChipsOf(site, state, titles);
+	// While a column's menu is open the chips row holds the chips it had when the menu opened (or stays absent): a row that appears or goes pushes the head
+	// and the menu under the pointer. The rows, the counts, the dots and the ticks keep following the filters.
+	const [frozenChips, setFrozenChips] = useState<typeof liveChips | null>(null);
+	const chips = frozenChips ?? liveChips;
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
 		const target = event.target as HTMLElement;
@@ -213,6 +217,7 @@ export function AdminEntriesTable({
 							onPlace={columns.place}
 							onStep={columns.step}
 							onPreview={columns.setPreview}
+							onMenuOpenChange={(open) => setFrozenChips(open ? liveChips : null)}
 						/>
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (

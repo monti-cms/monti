@@ -230,6 +230,29 @@ export const StatusMenuOpen: Story = {
 	play: ({ canvasElement }) => openColumn(canvasElement, "상태"),
 };
 
+/** The chips row holds still while a column menu is open: ticking a value does not push the head and the menu down, so the next tick lands on its row. */
+export const StatusMenuHoldsStill: Story = {
+	render: listScreen(server({ total: 148 })),
+	play: async ({ canvasElement }) => {
+		await openColumn(canvasElement, "상태");
+		const top = () => body().getByRole("menu").getBoundingClientRect().top;
+		// The card's open animation moves it a little; measure once it has settled.
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		const before = top();
+		await userEvent.click(await body().findByRole("menuitemcheckbox", { name: /^초안/ }));
+		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked());
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		await expect(top()).toBe(before);
+		await expect(canvasElement.querySelector("[data-slot=chip-row]")).toBeNull();
+		await userEvent.click(body().getByRole("menuitemcheckbox", { name: /^수정 중/ }));
+		await expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked();
+		await expect(body().getByRole("menuitemcheckbox", { name: /^수정 중/ })).toBeChecked();
+		await expect(body().getByRole("menuitemcheckbox", { name: /^발행됨/ })).not.toBeChecked();
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => expect(canvasElement.querySelector("[data-slot=chip-row]")).not.toBeNull());
+	},
+};
+
 /** A relation's menu: a search row, "none", a rule, then the items with how many rows each has. */
 export const TagMenuOpen: Story = {
 	...visual,
