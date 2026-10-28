@@ -18,10 +18,16 @@ export * from "./media-types";
  * Request contract of `/api/monti/v1`. The routes and the admin UI see the same definitions.
  */
 
-export const ENTRY_STATUSES = ["draft", "published", "archived", "trashed"] as const;
-export const entryStatusSchema = z.enum(ENTRY_STATUSES);
+/**
+ * What the list's `status` filter can name: the four states of the status column, and the trash. `published` has no unpublished changes; `editing` is
+ * published with changes not yet published. Several are OR.
+ */
+export const LIST_STATUSES = ["draft", "published", "editing", "archived", "trashed"] as const;
+export type ListStatus = (typeof LIST_STATUSES)[number];
+export const listStatusSchema = z.enum(LIST_STATUSES);
 
-export const LIST_SORT_FIELDS = ["updatedAt", "createdAt", "publishedAt", "title", "slug"] as const;
+/** What a list can be sorted by. `trashedAt` is the day an entry was moved to the trash: the trash is sorted by it. */
+export const LIST_SORT_FIELDS = ["updatedAt", "createdAt", "publishedAt", "trashedAt", "title", "slug"] as const;
 export type ListSortField = (typeof LIST_SORT_FIELDS)[number];
 export const listSortFieldSchema = z.enum(LIST_SORT_FIELDS);
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
@@ -286,7 +292,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		collection: collectionSchema,
 		search: z.string().optional(),
 		includeBody: booleanQuery,
-		status: z.array(entryStatusSchema).optional(),
+		status: z.array(listStatusSchema).optional(),
 		/** Content locales. Can be repeated; if absent, all locales. */
 		locale: z.array(oneOf(LOCALES)).optional(),
 		/** With `translation`, each translation group appears as one row of its source. */
@@ -300,7 +306,6 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		field: fieldConditionsSchema,
 		/** Where the translation group stands. Can be repeated (OR). */
 		translation: z.array(z.enum(TRANSLATION_FILTERS)).optional(),
-		hasChanges: booleanQuery,
 		createdFrom: dateQuery,
 		createdTo: dateQuery,
 		updatedFrom: dateQuery,
@@ -314,14 +319,14 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 	});
 
 	/**
-	 * How many rows of the list each value of one field (`field=<name>`) or of the translation filter (`facet=translation`) has, for the filter menu.
-	 * It counts the rows of the folder (`folderId`, `includeDescendants`) and the statuses (`status`) given, before any other filter.
+	 * How many rows of the list each value of one field (`field=<name>`), of the translation filter (`facet=translation`) or of the status (`facet=status`)
+	 * has, for a column's menu. It counts the rows of the folder (`folderId`, `includeDescendants`), before any filter.
 	 */
 	const listCountsQuerySchema = z
 		.object({
 			collection: collectionSchema,
 			field: fieldNameSchema.optional(),
-			facet: z.literal("translation").optional(),
+			facet: z.enum(["translation", "status"]).optional(),
 			group: z.enum(["translation"]).optional(),
 			folderId: z
 				.union([z.string(), z.null()])
@@ -329,10 +334,9 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 				.transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
 				.pipe(z.union([z.uuid(), z.null(), z.undefined()])),
 			includeDescendants: booleanQuery,
-			status: z.array(entryStatusSchema).optional(),
 		})
-		.refine((query) => (query.field !== undefined) !== (query.facet === "translation"), {
-			message: "Ask for one field, or for facet=translation",
+		.refine((query) => (query.field !== undefined) !== (query.facet !== undefined), {
+			message: "Ask for one field, or for a facet (translation, status)",
 			path: ["field"],
 		});
 

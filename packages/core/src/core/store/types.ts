@@ -1,5 +1,5 @@
 import type { StoredDocument } from "../../doc/stored-document";
-import type { ListSortField } from "../api";
+import type { ListSortField, ListStatus } from "../api";
 import type { TranslationState } from "../translation/state";
 import type { ReferenceKind, ReferenceOccurrence } from "../types";
 
@@ -265,7 +265,11 @@ export interface ListEntriesParams {
 	collection: string;
 	search?: string;
 	includeBody?: boolean;
-	statuses?: readonly EntryStatus[];
+	/**
+	 * Only entries in one of these states (OR). `published` has no unpublished changes and `editing` is published with changes, so asking for both is every
+	 * published entry. All but the trash if unset.
+	 */
+	statuses?: readonly ListStatus[];
 	/**
 	 * Only these languages. All languages if unset.
 	 * In group view, filters to "groups that have content in this language (outside the trash)".
@@ -288,7 +292,6 @@ export interface ListEntriesParams {
 	 * `current`: it has translations and none is behind. Only for a collection with translations.
 	 */
 	translations?: readonly TranslationFilter[];
-	hasUnpublishedChanges?: boolean;
 	createdAt?: DateRange;
 	updatedAt?: DateRange;
 	publishedAt?: DateRange;
@@ -298,16 +301,15 @@ export interface ListEntriesParams {
 }
 
 /**
- * How many rows of a list each value of one thing has, for the filter menu: a stored field, or the translation filter. The rows counted are those of the
- * folder and the statuses given (the same rows the list has before any other filter).
+ * How many rows of a list each value of one thing has, for a column's menu: a stored field, the translation filter or the status. The rows counted are those
+ * of the folder given (the same rows the list has before any filter).
  */
 export interface ListCountsParams {
 	collection: string;
-	facet: { readonly field: string } | "translation";
+	facet: { readonly field: string } | "translation" | "status";
 	groupTranslations?: boolean;
 	folderId?: string | null;
 	includeDescendants?: boolean;
-	statuses?: readonly EntryStatus[];
 }
 
 export interface ListCounts {
@@ -317,7 +319,7 @@ export interface ListCounts {
 	empty?: number;
 	/** Of a text or media field: rows with a value. */
 	filled?: number;
-	/** Of a select or relation: rows per option or item id. Of the translation filter: rows per `none`, `changed` and `current`. */
+	/** Of a select or relation: rows per option or item id. Of the translation filter: rows per `none`, `changed` and `current`. Of the status: rows per `published`, `editing`, `draft` and `archived`. */
 	values: Readonly<Record<string, number>>;
 }
 

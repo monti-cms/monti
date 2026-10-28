@@ -19,7 +19,7 @@ async function loadRecords(cms: Cms, collection: string): Promise<AiOption[]> {
 	for (let page = 1; page <= 20; page++) {
 		const result = await store.listEntries({
 			collection,
-			statuses: ["published"],
+			statuses: ["published", "editing"],
 			sort: { field: "title", direction: "asc" },
 			page,
 			pageSize: 100,

@@ -1,5 +1,5 @@
 import { type Expression, type SqlBool, sql } from "kysely";
-import { ENTRY_STATUSES, LIST_SORT_FIELDS, PAGE_SIZES, TRANSLATION_FILTERS } from "../../../core/api";
+import { LIST_SORT_FIELDS, LIST_STATUSES, type ListStatus, PAGE_SIZES, TRANSLATION_FILTERS } from "../../../core/api";
 import type { Collection } from "../../../core/collections";
 import { isUuid } from "../../../core/ids";
 import { CmsError } from "../../../core/store/errors";
@@ -7,7 +7,6 @@ import {
 	type DateRange,
 	DEFAULT_ENTRY_SEARCH_LIMIT,
 	type EntrySearchHit,
-	type EntryStatus,
 	type FieldCondition,
 	type ListCounts,
 	type ListCountsParams,
@@ -99,12 +98,12 @@ function assertParams(site: Site, params: ListEntriesParams) {
 		if (params[key] !== undefined && typeof params[key] !== "string")
 			throw new CmsError(`Invalid ${key}`, "invalid_input");
 	}
-	for (const key of ["includeBody", "includeDescendants", "hasUnpublishedChanges", "groupTranslations"] as const) {
+	for (const key of ["includeBody", "includeDescendants", "groupTranslations"] as const) {
 		if (params[key] !== undefined && typeof params[key] !== "boolean")
 			throw new CmsError(`Invalid ${key}`, "invalid_input");
 	}
 	if (params.statuses !== undefined) {
-		if (!Array.isArray(params.statuses) || params.statuses.some((s) => !ENTRY_STATUSES.includes(s))) {
+		if (!Array.isArray(params.statuses) || params.statuses.some((s) => !LIST_STATUSES.includes(s))) {
 			throw new CmsError("Invalid status", "invalid_input");
 		}
 	}
@@ -202,6 +201,14 @@ function assertSearchParams(site: Site, params: SearchEntriesParams) {
 const hasChanges = (entry: "e" | "m") =>
 	sql<boolean>`(p.entry_id is not null and (p.content_hash <> w.content_hash or ${sql.ref(`${entry}.working_slug`)} is distinct from cur.slug))`;
 
+/** Whether the row is in one of the states a list can filter by. `published` has no unpublished changes, `editing` has. */
+const inState = (status: ListStatus) =>
+	status === "published"
+		? sql<boolean>`(e.status = 'published' and not ${hasChanges("e")})`
+		: status === "editing"
+			? sql<boolean>`(e.status = 'published' and ${hasChanges("e")})`
+			: sql<boolean>`e.status = ${status}`;
+
 /** The group an entry belongs to: its source, or itself for a source. */
 const groupOf = (entry: "e" | "m") =>
 	sql<string>`coalesce(${sql.ref(`${entry}.translation_group_id`)}, ${sql.ref(`${entry}.id`)})`;
@@ -261,7 +268,7 @@ export function createListOps(ctx: StoreContext) {
 					);
 				}
 				if (params.statuses && params.statuses.length > 0) {
-					conditions.push(eb("e.status", "=", sql<EntryStatus>`any(${params.statuses}::text[])`));
+					conditions.push(eb.or(params.statuses.map(inState)));
 				} else {
 					// The default list hides the trash.
 					conditions.push(eb("e.status", "<>", "trashed"));
@@ -316,9 +323,6 @@ export function createListOps(ctx: StoreContext) {
 						current: sql<boolean>`(${hasTranslations} and not ${behindGroup})`,
 					};
 					conditions.push(eb.or(params.translations.map((filter) => states[filter])));
-				}
-				if (params.hasUnpublishedChanges !== undefined) {
-					conditions.push(params.hasUnpublishedChanges ? hasChanges("e") : sql<boolean>`not ${hasChanges("e")}`);
 				}
 				const addRange = (column: "e.created_at" | "e.updated_at" | "e.published_at", range: DateRange | undefined) => {
 					if (range?.from) conditions.push(eb(column, ">=", range.from));
@@ -398,9 +402,8 @@ export function createListOps(ctx: StoreContext) {
 				groupTranslations: params.groupTranslations,
 				folderId: params.folderId,
 				includeDescendants: params.includeDescendants,
-				statuses: params.statuses,
 			};
-			// The same checks as a list that carries these conditions: the folder and the statuses must be valid.
+			// The same checks as a list that carries these conditions: the folder must be valid.
 			assertParams(site, scope);
 			const { from } = buildFrom(scope);
 			const count = async (extra?: Expression<SqlBool>) => {
@@ -409,6 +412,12 @@ export function createListOps(ctx: StoreContext) {
 				return Number(row?.count ?? 0);
 			};
 			const total = await count();
+			if (params.facet === "status") {
+				const values: Record<string, number> = {};
+				for (const status of ["published", "editing", "draft", "archived"] as const)
+					values[status] = await count(inState(status));
+				return { total, values };
+			}
 			if (params.facet === "translation") {
 				if (site.isItemCollection(params.collection)) {
 					throw new CmsError("A collection without translations has no translation filter", "invalid_input");
@@ -449,6 +458,7 @@ export function createListOps(ctx: StoreContext) {
 				updatedAt: sql.ref("e.updated_at"),
 				createdAt: sql.ref("e.created_at"),
 				publishedAt: sql.ref("e.published_at"),
+				trashedAt: sql.ref("e.trashed_at"),
 				title: titleOf("w"),
 				slug: sql.ref("e.working_slug"),
 			};

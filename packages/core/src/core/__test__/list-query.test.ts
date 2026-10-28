@@ -84,6 +84,22 @@ describe("translation filter of the list query", () => {
 	});
 });
 
+describe("status filter of the list query", () => {
+	it("takes the four states and the trash, repeated for OR", () => {
+		expect(list.parse({ collection: "post", status: ["published", "editing"] }).status).toEqual([
+			"published",
+			"editing",
+		]);
+		expect(LIST_ARRAY_QUERY_KEYS).toContain("status");
+		expect(list.safeParse({ collection: "post", status: ["draft", "archived", "trashed"] }).success).toBe(true);
+	});
+
+	it("refuses another word, and has no separate unpublished-changes flag", () => {
+		expect(list.safeParse({ collection: "post", status: ["live"] }).success).toBe(false);
+		expect("hasChanges" in list.parse({ collection: "post", hasChanges: "true" })).toBe(false);
+	});
+});
+
 describe("column filters are gone from the list query", () => {
 	it("does not carry titleContains or slugContains", () => {
 		const parsed = list.parse({ collection: "post", titleContains: "a", slugContains: "b" });
@@ -93,21 +109,24 @@ describe("column filters are gone from the list query", () => {
 });
 
 describe("counts query", () => {
-	it("asks for one field or for the translation filter, not both and not neither", () => {
+	it("asks for one field or for one facet, not both and not neither", () => {
 		expect(counts.safeParse({ collection: "post", field: "tags" }).success).toBe(true);
 		expect(counts.safeParse({ collection: "post", facet: "translation" }).success).toBe(true);
+		expect(counts.safeParse({ collection: "post", facet: "status" }).success).toBe(true);
+		expect(counts.safeParse({ collection: "post", facet: "nothing" }).success).toBe(false);
 		expect(counts.safeParse({ collection: "post" }).success).toBe(false);
 		expect(counts.safeParse({ collection: "post", field: "tags", facet: "translation" }).success).toBe(false);
 	});
 
-	it("takes the folder and the statuses that scope the rows", () => {
+	it("takes the folder that scopes the rows, and no status", () => {
 		const parsed = counts.parse({
 			collection: "post",
-			field: "tags",
+			facet: "status",
 			folderId: "null",
 			includeDescendants: "true",
-			status: ["draft", "published"],
+			status: ["draft"],
 		});
-		expect(parsed).toMatchObject({ folderId: null, includeDescendants: true, status: ["draft", "published"] });
+		expect(parsed).toMatchObject({ folderId: null, includeDescendants: true });
+		expect("status" in parsed).toBe(false);
 	});
 });

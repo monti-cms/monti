@@ -15,7 +15,7 @@ import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/st
 import { isRequiredField } from "../../../../schema/fields";
 import type { Collection } from "../../../collections";
 import { CmsError, type ContentStore, type Entry } from "../..";
-import { moveToFolder, publishDraft, seedEntry } from "../seed";
+import { moveToFolder, publishDraft, seedEntry, seedSave } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
 
 // ---------------------------------------------------------------------------
@@ -230,6 +230,15 @@ export const listContract: ContractSuite = (factory) => {
 				})
 			).id;
 
+		/** Saves a changed draft of an entry, which for a published entry is a change not yet published. */
+		const changeDraft = async (entry: Entry, title: string) =>
+			seedSave(store, entry.id, {
+				metadata: await metadataFor(content, title),
+				text: `${title} body`,
+				contentHash: uniqueHash(),
+				expectedVersion: entry.version,
+			});
+
 		/** A post of the content collection with these values on top of the required ones. */
 		const seedWith = async (slug: string, extra: Record<string, unknown>) =>
 			seedEntry(store, {
@@ -382,19 +391,27 @@ export const listContract: ContractSuite = (factory) => {
 				expect(counts.values).toEqual({ [tagA]: 2, [tagB]: 1 });
 			});
 
-			it("counts the rows of the folder and the statuses asked for, and no others", async () => {
+			it("counts the rows of the folder, and no others", async () => {
 				const folder = await store.createFolder({ collection: content, parentId: null, name: "Counted" });
 				await seed(content, "cv-in", "In folder", { folderId: folder.id });
 				await seed(content, "cv-in-published", "Published in folder", { folderId: folder.id, status: "published" });
 				await seed(content, "cv-out", "Out of folder");
 				const facet = { field: "title" } as const;
 				expect((await store.countListValues({ collection: content, facet, folderId: folder.id })).total).toBe(2);
-				expect(
-					(await store.countListValues({ collection: content, facet, folderId: folder.id, statuses: ["published"] }))
-						.total,
-				).toBe(1);
 				expect((await store.countListValues({ collection: content, facet, folderId: null })).total).toBe(1);
 				expect((await store.countListValues({ collection: content, facet })).total).toBe(3);
+			});
+
+			it("counts the rows in each state of the status column, which add up to the rows in scope", async () => {
+				await seed(content, "cs-draft", "Draft");
+				await seed(content, "cs-live", "Live", { status: "published" });
+				const editing = await seed(content, "cs-editing", "Editing", { status: "published" });
+				await changeDraft(editing, "Editing again");
+				const archived = await seed(content, "cs-archived", "Archived", { status: "published" });
+				await store.archiveEntry({ id: archived.id, expectedVersion: archived.version });
+				const counts = await store.countListValues({ collection: content, facet: "status" });
+				expect(counts.values).toEqual({ published: 1, editing: 1, draft: 1, archived: 1 });
+				expect(counts.total).toBe(4);
 			});
 
 			it.skipIf(!textField)("counts a text field as empty and filled", async () => {
@@ -587,6 +604,47 @@ export const listContract: ContractSuite = (factory) => {
 			const desc = await store.listEntries({ collection: content, folderId: f3a.id, includeDescendants: true });
 			expect(desc.items.map((i) => i.slug).sort()).toEqual(["le3-pub-f3a", "le3-pub-f3b"]);
 		}, 60_000);
+
+		it("the status filter tells the four states apart, and several are OR", async () => {
+			await seed(content, "st-draft", "Draft");
+			await seed(content, "st-live", "Live", { status: "published" });
+			const editing = await seed(content, "st-editing", "Editing", { status: "published" });
+			await changeDraft(editing, "Editing again");
+			const archived = await seed(content, "st-archived", "Archived", { status: "published" });
+			await store.archiveEntry({ id: archived.id, expectedVersion: archived.version });
+
+			const slugsOfStatuses = async (statuses: NonNullable<Parameters<ContentStore["listEntries"]>[0]["statuses"]>) =>
+				(await store.listEntries({ collection: content, statuses })).items.map((item) => item.slug).sort();
+			// `published` has no unpublished changes, `editing` has: each state is only its own rows.
+			expect(await slugsOfStatuses(["published"])).toEqual(["st-live"]);
+			expect(await slugsOfStatuses(["editing"])).toEqual(["st-editing"]);
+			expect(await slugsOfStatuses(["draft"])).toEqual(["st-draft"]);
+			expect(await slugsOfStatuses(["archived"])).toEqual(["st-archived"]);
+			// Several are OR.
+			expect(await slugsOfStatuses(["published", "editing"])).toEqual(["st-editing", "st-live"]);
+			expect(await slugsOfStatuses(["editing", "draft", "archived"])).toEqual([
+				"st-archived",
+				"st-draft",
+				"st-editing",
+			]);
+			// None asked for is everything but the trash.
+			expect((await store.listEntries({ collection: content })).total).toBe(4);
+		}, 60_000);
+
+		it("sorts the trash by the day its entries were trashed, the last one first", async () => {
+			const first = await seed(content, "tr-first", "Trashed first");
+			const second = await seed(content, "tr-second", "Trashed second");
+			await seed(content, "tr-kept", "Kept");
+			await store.trashEntry({ id: first.id, expectedVersion: first.version });
+			// `trashed_at` is the transaction's `now()`: a later transaction is later.
+			await store.trashEntry({ id: second.id, expectedVersion: second.version });
+			const trash = (direction: "asc" | "desc") =>
+				store
+					.listEntries({ collection: content, statuses: ["trashed"], sort: { field: "trashedAt", direction } })
+					.then((result) => result.items.map((item) => item.slug));
+			expect(await trash("desc")).toEqual(["tr-second", "tr-first"]);
+			expect(await trash("asc")).toEqual(["tr-first", "tr-second"]);
+		});
 
 		// -----------------------------------------------------------------------
 		// 4  AND vs OR across status+folder; collection is mandatory; supplied search is ANDed

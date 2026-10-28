@@ -262,11 +262,9 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const count = (query: string) =>
 			countEntries(new Request(`http://localhost/api/monti/v1/entries/counts?${query}`), { cms });
 
-		it("asks the store to count one field in the folder and statuses given, and answers the counts", async () => {
+		it("asks the store to count one field in the folder given, and answers the counts", async () => {
 			mockStore.countListValues.mockClear();
-			const res = await count(
-				`collection=${contentCollection}&field=tags&group=translation&folderId=null&status=draft&status=published`,
-			);
+			const res = await count(`collection=${contentCollection}&field=tags&group=translation&folderId=null`);
 			expect(res.status).toBe(200);
 			expect(await res.json()).toEqual({ total: 3, empty: 1, values: { a: 2 } });
 			expect(mockStore.countListValues).toHaveBeenCalledWith({
@@ -274,8 +272,15 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 				facet: { field: "tags" },
 				groupTranslations: true,
 				folderId: null,
-				statuses: ["draft", "published"],
 			});
+		});
+
+		it("asks for the counts of the entry states with facet=status", async () => {
+			mockStore.countListValues.mockClear();
+			await count(`collection=${contentCollection}&facet=status`);
+			expect(mockStore.countListValues).toHaveBeenCalledWith(
+				expect.objectContaining({ collection: contentCollection, facet: "status" }),
+			);
 		});
 
 		it("asks for the translation filter's counts with facet=translation", async () => {

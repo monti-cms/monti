@@ -16,7 +16,7 @@ Route base: `/v1/entries`.
 
 | Operation | Kind | Route today | Undo | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `entries.list` | read | `GET /entries` | | 1 | Per collection. Filters already cover what the agent needs: text in title, slug or body (`search`, `includeBody`), status, locale, folder (with descendants), field values and empty fields (`field`), translation state (`translation`), unpublished changes (`hasChanges`), created, updated and published date ranges, sort, paging |
+| `entries.list` | read | `GET /entries` | | 1 | Per collection. Filters already cover what the agent needs: text in title, slug or body (`search`, `includeBody`), status (draft, published, editing, archived; published has no unpublished changes, editing has), locale, folder (with descendants), field values and empty fields (`field`), translation state (`translation`), created, updated and published date ranges, sort, paging |
 | `entries.find` | read | `GET /entries/search` | | 1 | Title or slug lookup for a picker, at most 50 hits. The agent mostly uses `entries.list` |
 | `entries.get` | read | `GET /entries/[id]` | | 1 | With `?format=<name>` the body comes as text (MDX), which is what the model should read and write |
 | `entries.usages` | read | `GET /entries/[id]/relations` | | 1 | Where an entry is used, draft and published |

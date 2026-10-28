@@ -1428,7 +1428,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(final.publishedSlug).toBe(original);
 		});
 
-		it.skipIf(!filterRelation)("filters the admin list by trash, tag and unpublished changes", async () => {
+		it.skipIf(!filterRelation)("filters the admin list by trash, tag and the editing state", async () => {
 			if (!filterRelation) return;
 			const tag = await createTarget(filterRelation.to, unique("filter"));
 			const tagged = await publishedPost({ [filterRelation.name]: relationValue(filterRelation, tag.id) });
@@ -1448,8 +1448,10 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(byTag.items[0]?.hasUnpublishedChanges).toBe(true);
 			expect(byTag.items[0]?.relations[filterRelation.name]).toEqual([{ id: tag.id, title: expect.any(String) }]);
 
-			const withChanges = await store.listEntries({ collection: contentCollection, hasUnpublishedChanges: true });
+			const withChanges = await store.listEntries({ collection: contentCollection, statuses: ["editing"] });
 			expect(withChanges.items.map((item) => item.id)).toContain(tagged.id);
+			const withoutChanges = await store.listEntries({ collection: contentCollection, statuses: ["published"] });
+			expect(withoutChanges.items.map((item) => item.id)).not.toContain(tagged.id);
 
 			const trashed = await store.trashEntry({ id: tagged.id, expectedVersion: changed.version });
 			expect((await store.listEntries({ collection: contentCollection, fields })).items).toHaveLength(0);
