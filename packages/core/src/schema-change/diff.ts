@@ -148,7 +148,10 @@ export function diffSchema(oldSchema: SchemaLike, newSchema: SchemaLike, options
 			renameHints.push({ scope: "collection", from, to });
 		}
 	}
-	for (const collection of removedCollections) changes.push({ kind: "collection_removed", collection });
+	for (const collection of removedCollections) {
+		const drop = byField(transforms, "dropCollection", collection)[0];
+		changes.push({ kind: "collection_removed", collection, ...(drop && { handledBy: drop.id }) });
+	}
 	for (const collection of addedCollections) changes.push({ kind: "collection_added", collection });
 
 	for (const [collection, before] of oldCollections) {

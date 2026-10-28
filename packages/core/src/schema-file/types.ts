@@ -52,6 +52,15 @@ export type SchemaMigration = { readonly id: string; readonly note?: string } & 
 			readonly field: string;
 	  }
 	| {
+			/**
+			 * The collection is gone from the schema, and everything it held is deleted with it: every entry (the trashed ones too) with its translations, bodies and
+			 * references, its folders and its addresses (the old ones included). Names in the file are the schema's **after** the change, so `collection` is a name the
+			 * schema no longer has. The only transform that deletes a collection's data; without it a removed collection leaves its entries behind as orphans.
+			 */
+			readonly op: "dropCollection";
+			readonly collection: string;
+	  }
+	| {
 			/** An entry with no value for a text or select field (one that became required, say) gets `value`. */
 			readonly op: "setDefault";
 			readonly collection: string;

@@ -30,6 +30,12 @@ export const PUT = adminRoute(async ({ request, cms }) => {
 				"schema_unacknowledged",
 				{ details: { impacts: result.impacts } },
 			);
+		case "in_use":
+			throw new CmsError(
+				"Entries of other collections still point at a collection to delete. Unlink them first (`POST /v1/references/unlink`).",
+				"in_use",
+				{ details: { impacts: result.impacts } },
+			);
 		case "invalid":
 			throw new CmsError("The schema does not check", "invalid_schema", { issues: result.issues });
 		case "problems":

@@ -11,7 +11,9 @@ export {
 export {
 	type ChangeImpact,
 	type CheckOptions,
+	type CollectionDropImpact,
 	checkSchemaChange,
+	dropBlockers,
 	type ImpactConsequence,
 	type ImpactSample,
 	type SchemaImpact,
@@ -21,6 +23,7 @@ export { describeSchemaChange, diffSchema } from "./diff";
 export {
 	applyTransforms,
 	checkTransforms,
+	droppedCollections,
 	type SuggestedTransform,
 	suggestTransforms,
 	type TransformProblem,
