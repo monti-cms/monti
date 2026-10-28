@@ -12,9 +12,9 @@ import { useDebouncedInput } from "../shared/use-debounced";
 import { trashMessages } from "./messages";
 import { DeleteDialog, EmptyDialog } from "./trash-dialogs";
 import { TrashList } from "./trash-list";
-import { daysLeftOf, kindLabel } from "./trash-model";
+import { daysLeftOf } from "./trash-model";
 import { TrashPanel } from "./trash-panel";
-import { kindValues, useTrash } from "./use-trash";
+import { useTrash } from "./use-trash";
 import { useTrashActions } from "./use-trash-actions";
 
 // The admin list fetches data in the browser. Render after hydration so Base UI's auto IDs do not mismatch the server HTML.
@@ -43,34 +43,6 @@ export function TrashScreen({ now }: { now?: Date }) {
 		<AdminNavProvider>
 			<TrashPage now={now} />
 		</AdminNavProvider>
-	);
-}
-
-/**
- * The filters that are on, under the title, as the list shows them: the kinds the 종류 column picked, then the search. Each chip's × lets its filter go.
- * There is no row when nothing is on, and none inside a folder (it has neither).
- */
-function TrashChips({ view }: { view: ReturnType<typeof useTrash> }) {
-	const site = useSite();
-	const t = useTranslator(trashMessages);
-	const { state } = view;
-	const kinds = kindValues(view.kinds, site.COLLECTIONS)
-		.filter((value) => state.kinds.includes(value.kind))
-		.map((value) => kindLabel(site, value.kind));
-	if (state.folder || (kinds.length === 0 && !state.search)) return null;
-	return (
-		<ChipRow>
-			{kinds.length > 0 && (
-				<Chip onRemove={() => view.update({ kinds: [] })} removeLabel={t("kind.clear")}>
-					{t("kind.chip", { kinds: kinds.join(", ") })}
-				</Chip>
-			)}
-			{state.search && (
-				<Chip onRemove={() => view.update({ search: "" })} removeLabel={t("search.clear")}>
-					{t("search.chip", { text: state.search })}
-				</Chip>
-			)}
-		</ChipRow>
 	);
 }
 
@@ -135,7 +107,6 @@ function TrashPage({ now = new Date() }: { now?: Date }) {
 								</>
 							)}
 				</PageHeader>
-				<TrashChips view={view} />
 				<TrashList view={view} actions={actions} now={now} />
 				{panelItem && (
 					<DockedPanel>

@@ -166,7 +166,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(screen.getAllByRole("button", { name: tc("lifecycle.deletePermanently") }).length).toBeGreaterThan(0);
 		// The rows inside carry no day of their own, and there is no kind filter.
 		expect(screen.getByText(new RegExp(t("row.left", { count: 30 })))).toBeTruthy(); // the folder's own line in the head
-		expect(within(row(/시리즈 1화/)).queryByText(/버림|discarded/)).toBeNull();
+		expect(within(row(/시리즈 1화/)).queryByText(/남음|left/)).toBeNull();
 		fireEvent.click(
 			within(screen.getByRole("columnheader", { name: t("head.kind") })).getByRole("button", { name: t("head.kind") }),
 		);
@@ -198,15 +198,16 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("ep2"));
 	});
 
-	it("finds things inside folders too: the search is sent, the chip says it, and a result says which folder it was in", async () => {
+	it("finds things inside folders too: the search is sent, it is not also a chip, and a result says which folder it was in", async () => {
 		await renderTrash();
-		fireEvent.change(screen.getByLabelText(t("search")), { target: { value: "2화" } });
+		const box = screen.getByLabelText(t("search"));
+		fireEvent.change(box, { target: { value: "2화" } });
 		await waitFor(() => expect(lastList().searchParams.get("q")).toBe("2화"), { timeout: 3000 });
 		const found = await screen.findByRole("row", { name: /시리즈 2화/ });
-		expect(found.textContent).toContain(t("meta.inFolder", { path: "시리즈 원고", meta: "" }));
-		expect(screen.getByRole("button", { name: t("search.clear") })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: t("search.clear") }));
-		await waitFor(() => expect(lastList().searchParams.has("q")).toBe(false));
+		expect(found.textContent).toContain(t("meta.inFolder", { path: "시리즈 원고" }));
+		expect(document.querySelector("[data-slot=chip]")).toBeNull();
+		fireEvent.change(box, { target: { value: "" } });
+		await waitFor(() => expect(lastList().searchParams.has("q")).toBe(false), { timeout: 3000 });
 	});
 
 	it("opens the menu on a right click with restore and permanent delete (Del), and restore sends the request", async () => {

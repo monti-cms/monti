@@ -45,8 +45,8 @@ export const OriginalInTrash: Story = {
 export const Dates: Story = {
 	render: () => (
 		<div className="flex flex-col items-end gap-monti-16">
-			<TrashRowDate date="10. 27 버림" left="30일 남음" />
-			<TrashRowDate date="09. 30 버림" left="3일 남음" urgent />
+			<TrashRowDate date="10. 27" left="30일 남음" />
+			<TrashRowDate date="09. 30" left="3일 남음" urgent />
 		</div>
 	),
 };
@@ -57,11 +57,11 @@ const ROWS = [
 		address: "/first-post",
 		meta: "KO · EN",
 		kind: "게시글",
-		date: "10. 27 버림",
+		date: "10. 27",
 		left: "30일 남음",
 	},
-	{ title: "시리즈 원고", meta: "글 2", kind: "게시글", date: "10. 27 버림", left: "30일 남음", folder: true },
-	{ title: "임시", kind: "태그", date: "09. 30 버림", left: "3일 남음", urgent: true },
+	{ title: "시리즈 원고", meta: "글 2", kind: "게시글", date: "10. 27", left: "30일 남음", folder: true },
+	{ title: "임시", kind: "태그", date: "09. 30", left: "3일 남음", urgent: true },
 ];
 
 /** In a list: one head row (title, kind, day), the whole row opens the title's link, the text button and the ⋯ sit above it; an item keeps its empty line. */

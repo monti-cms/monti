@@ -46,8 +46,8 @@ function TrashRowTitle({
 }
 
 /**
- * The date cell of a trash row, at the end of its cell: the day it was discarded with the word for it ("10. 27 discarded") over how long it stays
- * ("30 days left"). The days turn to the warning tone when `urgent` (three or fewer): the purge is near.
+ * The date cell of a trash row, at the end of its cell: the day it was discarded ("10. 27"; the column's name says what the day is) over how long it
+ * stays ("30 days left"). The days turn to the warning tone when `urgent` (three or fewer): the purge is near.
  */
 function TrashRowDate({
 	date,
@@ -56,7 +56,7 @@ function TrashRowDate({
 	className,
 	...props
 }: Omit<React.ComponentProps<"span">, "children"> & {
-	/** The day and the word for it ("10. 27 discarded"). */
+	/** The day ("10. 27"). */
 	date: React.ReactNode;
 	/** Time left before the purge ("30 days left"). */
 	left: React.ReactNode;
