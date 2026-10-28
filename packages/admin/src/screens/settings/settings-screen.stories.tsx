@@ -173,15 +173,16 @@ const review =
 	};
 
 // Each tab, loaded. The site tab (the readable width) and the fields tab (the full width) are shot: no unit test can check a layout.
-export const SiteTab = story(server(), "site", undefined, { tags: ["visual"] });
+export const SiteTab: Story = {
+	...story(server(), "site", undefined),
+	tags: ["visual"],
+};
 export const LocalesTab = story(server(), "locales");
 export const CollectionsBasics = story(server(), "collections", { collection: "post" });
-export const CollectionsFields = story(
-	server(),
-	"collections",
-	{ collection: "post", section: "fields" },
-	{ tags: ["visual"] },
-);
+export const CollectionsFields: Story = {
+	...story(server(), "collections", { collection: "post", section: "fields" }),
+	tags: ["visual"],
+};
 export const CollectionsEditor = story(server(), "collections", { collection: "post", section: "editor" });
 export const AdminTab = story(server(), "admin");
 
@@ -190,15 +191,17 @@ export const Loading = story(() => "pending", "collections");
 export const LoadFailed = story(() => answer(500), "collections");
 
 // Unsaved changes: the marks on the tab and in the collection list, and the save group in the title row.
-export const UnsavedChanges = story(
-	server(),
-	"collections",
-	{ collection: "post" },
-	{
-		tags: ["visual"],
-		play: async ({ canvasElement }) => editLabel(canvasElement),
-	},
-);
+export const UnsavedChanges: Story = {
+	...story(
+		server(),
+		"collections",
+		{ collection: "post" },
+		{
+			play: async ({ canvasElement }) => editLabel(canvasElement),
+		},
+	),
+	tags: ["visual"],
+};
 export const ReviewDialog = story(
 	server({ preview: previewWithImpact() }),
 	"collections",
@@ -305,57 +308,66 @@ const pressDelete = async (canvasElement: HTMLElement) => {
 	await userEvent.click(within(block).getByRole("button", { name: tCollection("collection.delete") }));
 };
 /** Board stage 지우기 전 (step 15): the block at the bottom of the basics tab. */
-export const CollectionDeleteBefore = story(deleteServer, "collections", { collection: "memo" }, { tags: ["visual"] });
+export const CollectionDeleteBefore: Story = {
+	...story(deleteServer, "collections", { collection: "memo" }),
+	tags: ["visual"],
+};
 /** Board stage 지울 예정 (step 16): gone from the list at once, the editor on the first one left, the changes menu open with the row, and the toast. */
-export const CollectionDeleteRemoved = story(
-	deleteServer,
-	"collections",
-	{ collection: "memo" },
-	{
-		tags: ["visual"],
-		play: async ({ canvasElement }) => {
-			await pressDelete(canvasElement);
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.list") }));
-			await within(document.body).findByRole("menuitem", { name: new RegExp(t("bar.removed")) });
+export const CollectionDeleteRemoved: Story = {
+	...story(
+		deleteServer,
+		"collections",
+		{ collection: "memo" },
+		{
+			play: async ({ canvasElement }) => {
+				await pressDelete(canvasElement);
+				await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.list") }));
+				await within(document.body).findByRole("menuitem", { name: new RegExp(t("bar.removed")) });
+			},
 		},
-	},
-);
+	),
+	tags: ["visual"],
+};
 /** Board stage 지우기 검토 (step 17): the review names what goes, what is cut and what breaks; 지우고 적용 is on from the start. */
-export const CollectionDeleteReview = story(
-	deleteServer,
-	"collections",
-	{ collection: "memo" },
-	{
-		tags: ["visual"],
-		play: async ({ canvasElement }) => {
-			await pressDelete(canvasElement);
-			// The board's review has no toast: it belongs to the moment of the press.
-			toast.dismiss();
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
-			const sheet = await within(document.body).findByRole("dialog");
-			await within(sheet).findByTestId("impact-collection_removed:memo");
+export const CollectionDeleteReview: Story = {
+	...story(
+		deleteServer,
+		"collections",
+		{ collection: "memo" },
+		{
+			play: async ({ canvasElement }) => {
+				await pressDelete(canvasElement);
+				// The board's review has no toast: it belongs to the moment of the press.
+				toast.dismiss();
+				await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
+				const sheet = await within(document.body).findByRole("dialog");
+				await within(sheet).findByTestId("impact-collection_removed:memo");
+			},
 		},
-	},
-);
+	),
+	tags: ["visual"],
+};
 /** Board stage 지운 뒤 (step 19): the collection is gone from the list, and the toast says what went. */
-export const CollectionDeleted = story(
-	(path, method) => {
-		if (path === SCHEMA && method === "GET") {
-			const base = memoState();
-			const { memo: _memo, ...collections } = (base.schema as ReturnType<typeof memoSchema>).collections;
-			return { ...base, schema: { ...base.schema, collections }, collections: ["post", "tag"] };
-		}
-		return undefined;
-	},
-	"collections",
-	{ collection: "post" },
-	{
-		tags: ["visual"],
-		beforeEach: () => {
-			window.sessionStorage.setItem(SAVED_MESSAGE_KEY, t("save.done"));
+export const CollectionDeleted: Story = {
+	...story(
+		(path, method) => {
+			if (path === SCHEMA && method === "GET") {
+				const base = memoState();
+				const { memo: _memo, ...collections } = (base.schema as ReturnType<typeof memoSchema>).collections;
+				return { ...base, schema: { ...base.schema, collections }, collections: ["post", "tag"] };
+			}
+			return undefined;
 		},
-	},
-);
+		"collections",
+		{ collection: "post" },
+		{
+			beforeEach: () => {
+				window.sessionStorage.setItem(SAVED_MESSAGE_KEY, t("save.done"));
+			},
+		},
+	),
+	tags: ["visual"],
+};
 
 // Dialogs and sheets.
 export const AddFieldDialog = story(

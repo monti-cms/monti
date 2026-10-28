@@ -13,7 +13,6 @@ const meta = { title: "Screens/Trash", parameters: { layout: "fullscreen", bleed
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const visual = { tags: ["visual"] };
 const body = () => within(document.body);
 
 const first = entry("first", "첫 번째 글", { slug: "first-post", deletedAt: at(10, 27), locales: ["ko", "en"] });
@@ -115,11 +114,11 @@ const screen =
 const rowNamed = (canvasElement: HTMLElement, name: RegExp) => within(canvasElement).findByRole("row", { name });
 
 // 보통: one list for every kind, newest first; a folder is one line, a translation says what it is.
-export const Default: Story = { ...visual, render: screen(backendOf()) };
+export const Default: Story = { tags: ["visual"], render: screen(backendOf()) };
 
 // 종류 메뉴: the kind column's menu, every kind with its count; it stays open while kinds are picked.
 export const KindMenu: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await rowNamed(canvasElement, /첫 번째 글/);
@@ -130,14 +129,14 @@ export const KindMenu: Story = {
 };
 
 // 미디어: filtered to the media kind, files and media folders; the kind's name has its dot.
-export const Media: Story = { ...visual, render: screen(backendOf(), "kind=media") };
+export const Media: Story = { tags: ["visual"], render: screen(backendOf(), "kind=media") };
 
 // 휴지통 폴더 안: the trail, the folder's name, its day, folder restore and permanent delete, the way up, and rows with no day.
-export const InsideFolder: Story = { ...visual, render: screen(backendOf(), "folder=series") };
+export const InsideFolder: Story = { tags: ["visual"], render: screen(backendOf(), "folder=series") };
 
 // 휴지통 찾기: the search finds what is inside folders and says which folder.
 export const Searching: Story = {
-	...visual,
+	tags: ["visual"],
 	render: () => {
 		const backend = backendOf([...rows(), notes]);
 		return screen(backend, "search=저장소")();
@@ -145,11 +144,11 @@ export const Searching: Story = {
 };
 
 // 번역 막힘: a translation whose original is in the trash says so, and its button restores the original.
-export const OriginalInTrash: Story = { ...visual, render: screen(backendOf(rows(true))) };
+export const OriginalInTrash: Story = { tags: ["visual"], render: screen(backendOf(rows(true))) };
 
 // 항목 열기: an item opens in the read-only panel beside the list, with what points at it.
 export const ItemOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(within(await rowNamed(canvasElement, /임시/)).getByRole("button", { name: "임시" }));
@@ -159,7 +158,7 @@ export const ItemOpen: Story = {
 
 // 미디어 열기: a file opens in the same panel, with a preview and where it is used.
 export const MediaOpen: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(
@@ -181,7 +180,7 @@ export const DeleteConfirm: Story = {
 
 // 삭제 막힘: entries point at the item, so the dialog lists them with the way out of each and the delete stays off.
 export const DeleteBlocked: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(within(await rowNamed(canvasElement, /임시/)).getByRole("button", { name: "더보기" }));
@@ -192,7 +191,7 @@ export const DeleteBlocked: Story = {
 
 // 선택: the head becomes the bar with the count, restore and permanent delete.
 export const Picked: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		for (const name of [/옛 소개 글/, /연습장/])
@@ -244,7 +243,7 @@ export const EmptyConfirm: Story = {
 
 // 비운 뒤: the toast tells what went and what stayed; the kept row says why and offers the permanent delete.
 export const Emptied: Story = {
-	...visual,
+	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "비우기" }));
@@ -257,4 +256,4 @@ export const Emptied: Story = {
 };
 
 // 빔: nothing in the trash.
-export const Empty: Story = { ...visual, render: screen(backendOf([])) };
+export const Empty: Story = { tags: ["visual"], render: screen(backendOf([])) };
