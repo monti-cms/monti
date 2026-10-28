@@ -203,7 +203,7 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
-export { SidePanelFrame } from "./side-panel-frame";
+export { SidePanel } from "./side-panel";
 export {
 	Sidebar,
 	SidebarContent,

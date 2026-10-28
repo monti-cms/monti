@@ -15,7 +15,7 @@ import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
 import { usePublishScreenContext } from "./shared/screen-context";
-import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
+import { DockedPanel } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
 /** Top right above the list: search and add button (trash has no add). */
@@ -138,7 +138,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 					/>
 				</Stack>
 				{record && (
-					<DockedPanel resize={RECORD_PANEL_RESIZE}>
+					<DockedPanel>
 						<RecordPanel
 							key={`${record.collection}:${record.id ?? "new"}`}
 							target={record}

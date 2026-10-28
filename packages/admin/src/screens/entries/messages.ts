@@ -88,7 +88,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"template.none": "No templates.",
 		"template.manage": "Manage templates",
 
-		"record.add": "Add",
 		"relation.addFailed": "Couldn't add.",
 		"relation.empty": "No matches.",
 		"relation.create": "Add '{label}'",
@@ -224,7 +223,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"template.none": "템플릿이 없어요.",
 		"template.manage": "템플릿 관리",
 
-		"record.add": "분류 추가",
 		"relation.addFailed": "추가하지 못했어요.",
 		"relation.empty": "일치하는 항목이 없어요.",
 		"relation.create": "'{label}' 추가",

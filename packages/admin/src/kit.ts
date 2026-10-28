@@ -69,7 +69,7 @@ export {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	SidePanelFrame,
+	SidePanel,
 	Spark,
 	SplitButton,
 	Stack,

@@ -5,11 +5,9 @@ export const sidePanelSlotMessages = defineMessages("cms-admin.sidePanelSlot", {
 	en: {
 		open: ({ label }) => `Open ${label}`,
 		close: ({ label }) => `Close ${label}`,
-		resize: ({ label }) => `Resize ${label}`,
 	},
 	ko: {
 		open: ({ label }) => `${label} 열기`,
 		close: ({ label }) => `${label} 닫기`,
-		resize: ({ label }) => `${label} 너비 조절`,
 	},
 });

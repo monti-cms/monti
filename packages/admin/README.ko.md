@@ -412,7 +412,7 @@ function DraftsStatus() {
 
 ### 사이드 패널
 
-플러그인은 `defineAdminPlugin`의 `panel`로 모든 화면의 오른쪽에, 글 편집기에도, 패널 하나를 더한다. `label`, `icon`, `Component`를 준다. 관리자는 화면마다 머리글에 이 패널의 버튼을 그리고, 너비를 바꿀 수 있는 창으로 연다(1280px보다 좁으면 시트이고, Ctrl 또는 Cmd와 `.`로도 열고 닫는다). 열렸는지와 너비는 이 브라우저에 기억한다. 지금은 패널을 하나만 보여 주며, 여럿이면 나중에 등록한 플러그인의 것을 쓴다. 이름이 사이트 설정에 달려 있으면 사이트의 함수(`panel: (site) => ({ ... })`)를 준다. 이 함수와 컴포넌트는 `"use client"` 모듈에서 가져온다. 컴포넌트는 자기 틀을 직접 그리고(`/kit`의 `SidePanelFrame`이 머리글, 스크롤되는 본문, 아래에 고정된 바닥을 준다) 패널을 닫을 `onClose`를 받는다.
+플러그인은 `defineAdminPlugin`의 `panel`로 모든 화면의 오른쪽에, 글 편집기에도, 패널 하나를 더한다. `label`, `icon`, `Component`를 준다. 관리자는 화면마다 머리글에 이 패널의 버튼을 그리고, 창으로 연다(1280px보다 좁으면 화면 위에 뜨고, Ctrl 또는 Cmd와 `.`로도 열고 닫는다). 열렸는지는 이 브라우저에 기억한다. 지금은 패널을 하나만 보여 주며, 여럿이면 나중에 등록한 플러그인의 것을 쓴다. 이름이 사이트 설정에 달려 있으면 사이트의 함수(`panel: (site) => ({ ... })`)를 준다. 이 함수와 컴포넌트는 `"use client"` 모듈에서 가져온다. 컴포넌트는 자기 틀을 직접 그리고(`/kit`의 `SidePanel`이 고정된 너비, 머리글, 스크롤되는 본문, 아래에 고정된 바닥을 준다. `width`는 `side`, `panel`, `assistant`) 패널을 닫을 `onClose`를 받는다.
 
 ```tsx
 export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, Component: NotesPanel } });

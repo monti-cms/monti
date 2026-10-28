@@ -1,6 +1,7 @@
 import { RightPanelOpen } from "@carbon/icons-react";
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { createSite, issueText } from "@monti-cms/core/site";
+import { SidePanel } from "@monti-cms/ui";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -943,9 +944,9 @@ describe("entry editor shell", () => {
 		renderEdit();
 		// Searching for a name that does not exist shows `Add 'name'` at the end of the list; pressing it opens the add sheet with the name filled in.
 		const saveIn = async (label: string) => {
-			const panel = await screen.findByRole("complementary", { name: label }, { timeout: 10_000 });
+			const panel = await screen.findByRole("dialog", { name: label }, { timeout: 10_000 });
 			fireEvent.click(within(panel).getByRole("button", { name: "저장" }));
-			await waitFor(() => expect(screen.queryByRole("complementary", { name: label })).toBeNull(), {
+			await waitFor(() => expect(screen.queryByRole("dialog", { name: label })).toBeNull(), {
 				timeout: 10_000,
 			});
 		};
@@ -1744,12 +1745,12 @@ describe("side panel over the editor", () => {
 		const where = useScreenContext();
 		const editor = useOpenEditor();
 		return (
-			<>
+			<SidePanel title="Helper">
 				<output aria-label="where">{JSON.stringify(where)}</output>
 				<output aria-label="entry">{editor ? JSON.stringify(editor.readEntry().fields) : "no editor"}</output>
 				<output aria-label="unsaved">{String(editor?.readEntry().hasUnsavedChanges)}</output>
 				<output aria-label="selection">{editor ? JSON.stringify(editor.readSelection()) : "no editor"}</output>
-			</>
+			</SidePanel>
 		);
 	}
 	const PANEL: AdminPanel = { label: "Helper", icon: RightPanelOpen, Component: Probe };

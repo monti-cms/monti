@@ -35,7 +35,7 @@ export const FolderTabsList = close(open.FolderTabsList);
 export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
-export const SidePanelFrame = close(open.SidePanelFrame);
+export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
 export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 

@@ -45,7 +45,7 @@ import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
-import { EventDetailSheet } from "./event-detail-sheet";
+import { EventDetailPanel } from "./event-detail-panel";
 import { eventCollectionLabel, eventEntryLabel, STATE_STATUS } from "./event-display";
 import { eventsMessages } from "./messages";
 
@@ -140,171 +140,175 @@ export function EventsScreen() {
 	};
 
 	return (
-		<Stack gap={0} grow minHeight={0} overflow="hidden">
-			{waiting > 0 && (
-				<PageActions>
-					<Button
-						type="button"
-						size="sm"
-						variant="secondary"
-						disabled={retryAll.isPending}
-						onClick={() => retryAll.mutate()}
-					>
-						<Restart aria-hidden />
-						{t("action.retryAll")}
-					</Button>
-				</PageActions>
-			)}
-			<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
-			{error && (
-				<Box paddingX={32} paddingTop={12}>
-					<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} />
-				</Box>
-			)}
-			<Stack gap={0} grow minHeight={0} overflow="auto">
-				{listQuery.isPending ? (
-					<Box paddingX={32} paddingY={16}>
-						<Text as="p" variant="note" tone="subtle" role="status">
-							{tc("loading")}
-						</Text>
-					</Box>
-				) : items.length === 0 ? (
-					!error && (
-						<Box paddingX={32}>
-							{filter === "all" ? (
-								<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
-							) : (
-								<EmptyState
-									title={t("list.emptyNoMatch")}
-									description={t("list.emptyNoMatchHint")}
-									action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
-								/>
-							)}
-						</Box>
-					)
-				) : (
-					<Table aria-label={t("list.label")}>
-						<TableHeader>
-							<TableRow>
-								<TableHead>{t("column.state")}</TableHead>
-								<TableHead>{t("column.when")}</TableHead>
-								{!recordedOnly && <TableHead>{t("column.subscriber")}</TableHead>}
-								<TableHead>{t("column.kind")}</TableHead>
-								<TableHead>{t("column.entry")}</TableHead>
-								<TableHead>{t("column.actor")}</TableHead>
-								{!recordedOnly && <TableHead>{t("column.attempts")}</TableHead>}
-								{!recordedOnly && <TableHead>{t("column.lastError")}</TableHead>}
-								{!recordedOnly && <TableHead>{t("column.nextAttempt")}</TableHead>}
-								<TableHead>
-									<Text srOnly>{t("column.actions")}</Text>
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{items.map((item) => {
-								const { change } = item;
-								const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
-								return (
-									<TableRow key={rowKey(item)} onClick={() => setOpenedKey(rowKey(item))}>
-										<TableCell>
-											<EntryStatus status={STATE_STATUS[item.state]}>{t(`state.${item.state}`)}</EntryStatus>
-										</TableCell>
-										<TableCell>{formatDateTime(site, change.occurredAt)}</TableCell>
-										{!recordedOnly && (
-											<TableCell>
-												<Text variant="caption" mono>
-													{item.subscriber ?? ""}
-												</Text>
-											</TableCell>
-										)}
-										<TableCell>
-											<TextButton
-												render={<button type="button" />}
-												mono
-												aria-label={t("detail.open", {
-													kind: t(`kind.${change.kind}`),
-													entry: eventEntryLabel(change),
-												})}
-												onClick={(event) => {
-													event.stopPropagation();
-													setOpenedKey(rowKey(item));
-												}}
-											>
-												{t(`kind.${change.kind}`)}
-											</TextButton>
-										</TableCell>
-										<TableCell>
-											<Text tone="muted">{eventCollectionLabel(site, change.collection)} · </Text>
-											{change.kind === "deleted" ? (
-												<Text>{eventEntryLabel(change)}</Text>
-											) : (
-												<TextButton
-													variant="underline"
-													render={<Link href={entryHref(site, change.collection, change.entryId)} />}
-													onClick={(event) => event.stopPropagation()}
-												>
-													{eventEntryLabel(change)}
-												</TextButton>
-											)}
-										</TableCell>
-										<TableCell>{change.actor ?? ""}</TableCell>
-										{!recordedOnly && (
-											<>
-												<TableCell align="end">{item.attempts}</TableCell>
-												<TableCell truncate title={item.lastError ?? undefined}>
-													{item.lastError ? truncate(item.lastError) : ""}
-												</TableCell>
-												<TableCell>
-													{item.state === "failed" && item.nextAttemptAt
-														? formatDateTime(site, item.nextAttemptAt)
-														: ""}
-												</TableCell>
-											</>
-										)}
-										<TableCell align="end" onClick={(event) => event.stopPropagation()}>
-											{(item.state === "failed" || item.state === "dead") && (
-												<Inline gap={4} justify="end">
-													<Button
-														type="button"
-														variant="secondary"
-														size="sm"
-														aria-label={t("action.retryLabel", { subscriber: item.subscriber ?? "" })}
-														disabled={retry.isPending}
-														onClick={() => retry.mutate(key)}
-													>
-														{tc("retry")}
-													</Button>
-													<TextButton
-														type="button"
-														aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
-														onClick={() => void requestDismiss(key)}
-													>
-														{t("action.dismiss")}
-													</TextButton>
-												</Inline>
-											)}
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
+		<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+			<Stack gap={0} grow minWidth={0} minHeight={0} overflow="hidden">
+				{waiting > 0 && (
+					<PageActions>
+						<Button
+							type="button"
+							size="sm"
+							variant="secondary"
+							disabled={retryAll.isPending}
+							onClick={() => retryAll.mutate()}
+						>
+							<Restart aria-hidden />
+							{t("action.retryAll")}
+						</Button>
+					</PageActions>
 				)}
+				<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
+				{error && (
+					<Box paddingX={32} paddingTop={12}>
+						<LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} />
+					</Box>
+				)}
+				<Stack gap={0} grow minHeight={0} overflow="auto">
+					{listQuery.isPending ? (
+						<Box paddingX={32} paddingY={16}>
+							<Text as="p" variant="note" tone="subtle" role="status">
+								{tc("loading")}
+							</Text>
+						</Box>
+					) : items.length === 0 ? (
+						!error && (
+							<Box paddingX={32}>
+								{filter === "all" ? (
+									<EmptyState title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
+								) : (
+									<EmptyState
+										title={t("list.emptyNoMatch")}
+										description={t("list.emptyNoMatchHint")}
+										action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
+									/>
+								)}
+							</Box>
+						)
+					) : (
+						<Table aria-label={t("list.label")}>
+							<TableHeader>
+								<TableRow>
+									<TableHead>{t("column.state")}</TableHead>
+									<TableHead>{t("column.when")}</TableHead>
+									{!recordedOnly && <TableHead>{t("column.subscriber")}</TableHead>}
+									<TableHead>{t("column.kind")}</TableHead>
+									<TableHead>{t("column.entry")}</TableHead>
+									<TableHead>{t("column.actor")}</TableHead>
+									{!recordedOnly && <TableHead>{t("column.attempts")}</TableHead>}
+									{!recordedOnly && <TableHead>{t("column.lastError")}</TableHead>}
+									{!recordedOnly && <TableHead>{t("column.nextAttempt")}</TableHead>}
+									<TableHead>
+										<Text srOnly>{t("column.actions")}</Text>
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{items.map((item) => {
+									const { change } = item;
+									const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
+									return (
+										<TableRow key={rowKey(item)} onClick={() => setOpenedKey(rowKey(item))}>
+											<TableCell>
+												<EntryStatus status={STATE_STATUS[item.state]}>{t(`state.${item.state}`)}</EntryStatus>
+											</TableCell>
+											<TableCell>{formatDateTime(site, change.occurredAt)}</TableCell>
+											{!recordedOnly && (
+												<TableCell>
+													<Text variant="caption" mono>
+														{item.subscriber ?? ""}
+													</Text>
+												</TableCell>
+											)}
+											<TableCell>
+												<TextButton
+													render={<button type="button" />}
+													mono
+													aria-label={t("detail.open", {
+														kind: t(`kind.${change.kind}`),
+														entry: eventEntryLabel(change),
+													})}
+													onClick={(event) => {
+														event.stopPropagation();
+														setOpenedKey(rowKey(item));
+													}}
+												>
+													{t(`kind.${change.kind}`)}
+												</TextButton>
+											</TableCell>
+											<TableCell>
+												<Text tone="muted">{eventCollectionLabel(site, change.collection)} · </Text>
+												{change.kind === "deleted" ? (
+													<Text>{eventEntryLabel(change)}</Text>
+												) : (
+													<TextButton
+														variant="underline"
+														render={<Link href={entryHref(site, change.collection, change.entryId)} />}
+														onClick={(event) => event.stopPropagation()}
+													>
+														{eventEntryLabel(change)}
+													</TextButton>
+												)}
+											</TableCell>
+											<TableCell>{change.actor ?? ""}</TableCell>
+											{!recordedOnly && (
+												<>
+													<TableCell align="end">{item.attempts}</TableCell>
+													<TableCell truncate title={item.lastError ?? undefined}>
+														{item.lastError ? truncate(item.lastError) : ""}
+													</TableCell>
+													<TableCell>
+														{item.state === "failed" && item.nextAttemptAt
+															? formatDateTime(site, item.nextAttemptAt)
+															: ""}
+													</TableCell>
+												</>
+											)}
+											<TableCell align="end" onClick={(event) => event.stopPropagation()}>
+												{(item.state === "failed" || item.state === "dead") && (
+													<Inline gap={4} justify="end">
+														<Button
+															type="button"
+															variant="secondary"
+															size="sm"
+															aria-label={t("action.retryLabel", { subscriber: item.subscriber ?? "" })}
+															disabled={retry.isPending}
+															onClick={() => retry.mutate(key)}
+														>
+															{tc("retry")}
+														</Button>
+														<TextButton
+															type="button"
+															aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
+															onClick={() => void requestDismiss(key)}
+														>
+															{t("action.dismiss")}
+														</TextButton>
+													</Inline>
+												)}
+											</TableCell>
+										</TableRow>
+									);
+								})}
+							</TableBody>
+						</Table>
+					)}
+				</Stack>
+				<ListPagination
+					total={listQuery.data?.total ?? 0}
+					shown={items.length}
+					page={page}
+					pageSize={pageSize}
+					onPageChange={(next) => update({ page: next })}
+					onPageSizeChange={(size) => update({ pageSize: size })}
+				/>
+				{dialog}
 			</Stack>
-			<ListPagination
-				total={listQuery.data?.total ?? 0}
-				shown={items.length}
-				page={page}
-				pageSize={pageSize}
-				onPageChange={(next) => update({ page: next })}
-				onPageSizeChange={(size) => update({ pageSize: size })}
-			/>
-			<EventDetailSheet
-				item={opened}
-				deliveries={opened ? items.filter((item) => item.change.eventId === opened.change.eventId) : []}
-				onClose={() => setOpenedKey(null)}
-			/>
-			{dialog}
-		</Stack>
+			{opened && (
+				<EventDetailPanel
+					item={opened}
+					deliveries={items.filter((item) => item.change.eventId === opened.change.eventId)}
+					onClose={() => setOpenedKey(null)}
+				/>
+			)}
+		</Inline>
 	);
 }

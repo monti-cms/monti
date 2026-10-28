@@ -107,9 +107,3 @@ export function PanelResizeHandle({ resize, className }: { resize: PanelResize; 
 		/>
 	);
 }
-
-/** The `resizable` parts of a right-side `SheetContent`: its remembered width and its drag handle. */
-export function useResizableSheet(config: PanelResizeConfig) {
-	const resize = usePanelResize(config);
-	return { style: resize.style, handle: <PanelResizeHandle resize={resize} /> };
-}
