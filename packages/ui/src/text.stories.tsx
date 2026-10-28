@@ -136,6 +136,3 @@ export const HeadingLevelsAndTruncate: Story = {
 		</Stack>
 	),
 };
-
-/** Taken out but not saved yet: struck through and faint, the look of a removed row in a list. */
-export const Removed: Story = { args: { children: "메모", removed: true } };

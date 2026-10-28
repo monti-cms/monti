@@ -30,13 +30,11 @@ function DangerBlock({
 }
 
 /**
- * One thing the block can delete: its name, a quiet line of what it holds after it, and the button at the end. Once the writer has pressed the button
- * the thing is `removed` (name struck through and faint, as in the list) and the button turns into the one that takes it back; the caller passes both.
+ * One thing the block can delete: its name, a quiet line of what it holds after it, and the button at the end.
  */
 function DangerRow({
 	name,
 	meta,
-	removed = false,
 	action,
 	className,
 	...props
@@ -44,13 +42,12 @@ function DangerRow({
 	name: ReactNode;
 	/** What it holds ("23 posts · 2 in the trash"); left out when it is not known. */
 	meta?: ReactNode;
-	removed?: boolean;
 	action: ReactNode;
 }) {
 	return (
 		<div data-slot="danger-row" className={cn("flex items-center gap-monti-16", className)} {...props}>
 			<span className="grow">
-				<Text removed={removed}>{name}</Text>
+				<Text>{name}</Text>
 				{meta ? (
 					<>
 						{" "}

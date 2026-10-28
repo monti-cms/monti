@@ -44,8 +44,6 @@ export const textVariants = cva("", {
 		/** At most this many lines, then "…". */
 		lines: { 2: "line-clamp-2", 3: "line-clamp-3" },
 		italic: { true: "italic" },
-		/** Taken out but not saved yet (the design system's `.mt-removed`): struck through and faint. */
-		removed: { true: "text-monti-faint line-through" },
 		/** Keeps the text's own line breaks (an error message, a model's answer). */
 		preserveLines: { true: "whitespace-pre-wrap" },
 		align: { start: "text-left", center: "text-center", end: "text-right" },
@@ -75,7 +73,6 @@ function Text({
 	srOnly,
 	lines,
 	italic,
-	removed,
 	preserveLines,
 	align,
 	className,
@@ -96,7 +93,6 @@ function Text({
 						srOnly,
 						lines,
 						italic,
-						removed,
 						preserveLines,
 						align,
 					}),
