@@ -380,7 +380,7 @@ export function AdminEntriesTable({
 								title={t("list.welcomeTitle")}
 								description={t("list.welcomeHint")}
 								action={{
-									label: t("list.writeNew", { label: collectionLabel ?? collection }),
+									label: t("list.writeNew"),
 									onClick: addAction.run,
 								}}
 								secondaryAction={{

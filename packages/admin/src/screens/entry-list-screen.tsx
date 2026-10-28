@@ -33,7 +33,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 			{!isTrash && (
 				<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 					<Add aria-hidden />
-					{isItems ? t("list.add", { label: list.label }) : t("list.writeNew", { label: list.label })}
+					{isItems ? t("list.add", { label: list.label }) : t("list.writeNew")}
 				</Button>
 			)}
 		</>

@@ -292,7 +292,7 @@ describe("admin entry list", () => {
 			const run = vi.fn();
 			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run }, collectionLabel: "글" });
 			expect(emptyTitle()).toBe(t("list.welcomeTitle"));
-			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew", { label: "글" }) }));
+			fireEvent.click(screen.getByRole("button", { name: t("list.writeNew") }));
 			expect(run).toHaveBeenCalled();
 			const link = screen.getByRole("link", { name: t("list.importMarkdown") });
 			expect(link.getAttribute("href")).toMatch(/\/data#import-entries$/);

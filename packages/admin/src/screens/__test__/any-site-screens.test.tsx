@@ -132,10 +132,8 @@ describe("any site: list screen", () => {
 		for (const column of columnsFor(testSite, content).defaults) {
 			expect(within(viewDialog).getByRole("checkbox", { name: columnLabel(testSite, content, column) })).toBeTruthy();
 		}
-		// The new entry button uses the collection label: "write a new <label>" for writing.
-		expect(
-			screen.getByRole("button", { name: t("list.writeNew", { label: testSite.schemaOf(content).label }) }),
-		).toBeTruthy();
+		// A collection of writing has the one "write a new post" button, whatever its label.
+		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeTruthy();
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {
