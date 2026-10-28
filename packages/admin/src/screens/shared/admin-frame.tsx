@@ -4,8 +4,9 @@ import { type Site, useSite } from "@monti-cms/core/site";
 import { Inline, SidebarInset, SidebarProvider, Stack } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
-import { entriesKeys, listEntries } from "../../api/entries";
+import { entriesKeys } from "../../api/entries";
 import { countFailedEvents, eventsKeys } from "../../api/events";
+import { countTrash } from "../../api/trash";
 import { booleanCodec, usePreference } from "../../lib/hooks/use-preference";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useNavQueriesReady } from "./nav-queries";
@@ -14,7 +15,7 @@ import { type ScreenContextValue, usePublishScreenContext } from "./screen-conte
 import { SidePanelPane, SidePanelToggle } from "./side-panel-slot";
 
 interface AdminNavContextValue {
-	/** Number of trash items across all collections. null before loading. */
+	/** Number of units in the trash (entries, items, folders and files). null before loading. */
 	trashCount: number | null;
 	/** Number of failed and dead event deliveries. null before loading or when unavailable. */
 	eventsCount: number | null;
@@ -25,17 +26,6 @@ const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 /** The counts the rail and the tools page's tabs show: the trash and the failed deliveries. `null` before they are known. */
 export function useAdminNav(): AdminNavContextValue {
 	return useContext(AdminNavContext) ?? { trashCount: null, eventsCount: null };
-}
-
-async function countTrash(site: Site): Promise<number> {
-	const totals = await Promise.all(
-		site.COLLECTIONS.map(async (collection) => {
-			const query = new URLSearchParams({ collection, status: "trashed", pageSize: "25" });
-			const data = await listEntries<{ total: number }>(site, query);
-			return data.total;
-		}),
-	);
-	return totals.reduce((sum, total) => sum + total, 0);
 }
 
 /** Where the admin is on a frame page, for the side panel: a collection (or the trash) is the entry list, and the other nav items name their own screen. */
@@ -50,7 +40,11 @@ function frameScreenContext(site: Site, activeNav: AdminSidebarProps["activeNav"
 export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
 	const ready = useNavQueriesReady();
-	const { data } = useQuery({ queryKey: entriesKeys.trashCount(), queryFn: () => countTrash(site), enabled: ready });
+	const { data } = useQuery({
+		queryKey: entriesKeys.trashCount(),
+		queryFn: ({ signal }) => countTrash(site, signal),
+		enabled: ready,
+	});
 	// A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
 	const { data: eventsCount } = useQuery({
 		queryKey: eventsKeys.count(),

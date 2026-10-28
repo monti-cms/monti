@@ -4,7 +4,7 @@
 
 import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, Box, FormFieldError, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Banner, Box, FormFieldError, TextButton } from "@monti-cms/ui";
 import { issueLine } from "../../api/error-message";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
@@ -35,13 +35,7 @@ export function EntryEditorBanners({
 	const isTrashed = entry?.status === "trashed";
 	return (
 		<>
-			{isTrashed && (
-				<Box as="section" aria-label={t("trash")} background="muted" border="bottom" paddingX={16} paddingY={8}>
-					<Inline wrap gap={8}>
-						<Text>{t("trashNotice", nounVars(site, collection))}</Text>
-					</Inline>
-				</Box>
-			)}
+			{isTrashed && <Banner title={t("trashNotice", nounVars(site, collection))} />}
 			{visualUnavailable && (
 				<Banner
 					title={t("visualUnavailable")}

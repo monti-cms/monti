@@ -7,7 +7,6 @@ import {
 	FolderMoveTo,
 	FolderParent,
 	Launch,
-	Reset,
 	RightPanelOpen,
 	Tag,
 	TrashCan,
@@ -35,12 +34,11 @@ export function actionTargets(
 }
 
 export interface RowMenuContext {
-	mode: "list" | "trash";
 	/** Collections opened as a small form, like tags, categories and series. */
 	isRecord: boolean;
 	/** Collections that can be archived (documents). */
 	isContent: boolean;
-	/** The folders rows can move to; `null` where the list shows no folders (a collection without folders, the trash), which leaves out "Move to folder". */
+	/** The folders rows can move to; `null` where the list shows no folders (a collection without folders), which leaves out "Move to folder". */
 	folders: readonly Folder[] | null;
 	collection: string;
 }
@@ -51,7 +49,6 @@ export interface RowMenuHandlers {
 	openInNewTab: (item: ListEntriesItem) => void;
 	openRecord: (item: ListEntriesItem) => void;
 	duplicate: (item: ListEntriesItem) => void;
-	restore: (targets: BulkSelection[]) => void;
 	/** Publishing several entries asks first. */
 	confirmPublish: (targets: BulkSelection[]) => void;
 	/** Opens the export of these entries. */
@@ -59,14 +56,13 @@ export interface RowMenuHandlers {
 	confirmTrash: (targets: BulkSelection[]) => void;
 	/** Archiving takes down a public post, so it asks first (for one or many). */
 	confirmArchive: (targets: BulkSelection[]) => void;
-	confirmPermanentDelete: (targets: BulkSelection[]) => void;
 	bulk: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => void;
 }
 
 /**
  * Row menu. One row: open, new tab and duplicate; then the folder and each relation field (a second level of boxes or a single choice, the bar's Change menu
  * lists); then archive and the trash. Several rows get the item count at the top, then what can be done to all of them: publish (when something is left to
- * publish), archive, the folder, the relation fields, export and, last, the trash. Trash has only restore and permanent delete.
+ * publish), archive, the folder, the relation fields, export and, last, the trash.
  */
 export function rowMenuActions(
 	site: Site,
@@ -79,22 +75,6 @@ export function rowMenuActions(
 	const targets = group.map(toSelection);
 	const single = group.length === 1 ? group[0] : undefined;
 	const header: MenuAction[] = single ? [] : [{ kind: "label", label: t("menu.items", { count: group.length }) }];
-
-	if (context.mode === "trash") {
-		return [
-			...header,
-			{ kind: "item", label: tc("lifecycle.restore"), icon: Reset, onSelect: () => handlers.restore(targets) },
-			{ kind: "separator" },
-			{
-				kind: "item",
-				label: tc("lifecycle.deletePermanently"),
-				icon: TrashCan,
-				shortcut: "Del",
-				destructive: true,
-				onSelect: () => handlers.confirmPermanentDelete(targets),
-			},
-		];
-	}
 
 	const folderActions: MenuAction[] =
 		context.folders === null

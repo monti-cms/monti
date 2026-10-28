@@ -6,7 +6,7 @@ import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
 import { toast } from "../../test/ui-toast";
-import { EntryListScreen, TrashScreen } from "../entry-list-screen";
+import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
@@ -14,7 +14,7 @@ import { ScreenContextProvider, useScreenContext } from "../shared/screen-contex
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
 const { render } = nav;
-const t = testSite.createTranslator(screensMessages);
+const _t = testSite.createTranslator(screensMessages);
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
@@ -63,7 +63,7 @@ const entryRequests = () =>
 				!url.searchParams.getAll("status").includes("trashed"),
 		);
 /** The requests for the trash: the same list, asked for the trashed status. */
-const trashRequests = () =>
+const _trashRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
 		.filter(
@@ -113,12 +113,6 @@ const renderList = () =>
 	render(
 		<AdminQueryProvider>
 			<EntryListScreen />
-		</AdminQueryProvider>,
-	);
-const renderTrash = () =>
-	render(
-		<AdminQueryProvider>
-			<TrashScreen />
 		</AdminQueryProvider>,
 	);
 const row = (title: string) => screen.getByRole("row", { name: new RegExp(title) });
@@ -411,67 +405,6 @@ describe("list screen — a collection without folders", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		await waitFor(() => expect(folderRequests().length).toBeGreaterThan(0));
-	});
-});
-
-describe("trash screen", () => {
-	it("requests only trash items and the menu has only restore and permanent delete", async () => {
-		server.trashed = [item("버린 글", { status: "trashed" })];
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		expect(entryRequests().every((url) => url.searchParams.getAll("status").includes("trashed"))).toBe(true);
-		expect(menuLabels(await openRowMenu("버린 글"))).toEqual(["복원", "영구 삭제Del"]);
-	});
-
-	it("lists the title and the day it was trashed, sorted by that day with the last one first, and the collection tabs stay", async () => {
-		server.trashed = [item("버린 글", { status: "trashed", trashedAt: new Date("2026-10-15T00:00:00Z") })];
-		server.preferences = { collections: { post: { sort: { field: "title", direction: "asc" } } } };
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		const head = within(screen.getAllByRole("rowgroup")[0] as HTMLElement);
-		expect(head.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-			t("column.title"),
-			t("column.trashedAt"),
-		]);
-		expect(head.getByRole("columnheader", { name: t("column.trashedAt") }).getAttribute("aria-sort")).toBe(
-			"descending",
-		);
-		// What the list was sorted by is not the trash's order, and there are no columns to add.
-		const last = trashRequests().at(-1);
-		expect(last?.searchParams.get("sortField")).toBe("trashedAt");
-		expect(last?.searchParams.get("sortDirection")).toBe("desc");
-		expect(head.queryByRole("button", { name: t("column.add") })).toBeNull();
-		expect(within(row("버린 글")).getByText("10. 15")).toBeTruthy();
-		expect(screen.getAllByRole("tab").length).toBeGreaterThan(1);
-		// No page of the trash shows the list's filter or view controls.
-		expect(screen.queryByRole("button", { name: /^(필터|보기)$/ })).toBeNull();
-	});
-
-	it("keeps the trash's sort out of the list's saved settings", async () => {
-		server.trashed = [item("버린 글", { status: "trashed" })];
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-		fireEvent.click(
-			within(screen.getAllByRole("rowgroup")[0] as HTMLElement).getByRole("button", { name: t("column.title") }),
-		);
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
-		await waitFor(() => expect(trashRequests().at(-1)?.searchParams.get("sortField")).toBe("title"));
-		expect(calls("PUT", "/api/monti/v1/preferences")).toHaveLength(0);
-	});
-
-	it("restore requests per item and reports the result", async () => {
-		server.trashed = [item("trashed-1", { title: "버린 글", status: "trashed" })];
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/entries/trashed-1/restore" && init?.method === "POST" ? json({}) : undefined;
-		renderTrash();
-		await screen.findByRole("row", { name: /버린 글/ });
-
-		fireEvent.click(within(row("버린 글")).getByRole("button", { name: "복원" }));
-
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("1개 항목을 복원했어요."));
-		expect(bodyOf(calls("POST", "/api/monti/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
 	});
 });
 

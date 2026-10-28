@@ -164,7 +164,7 @@ describe("admin list state", () => {
 		expect(q("collection=memo&folder=f1&search=a").get("includeDescendants")).toBe("true");
 	});
 
-	it("asks for trashed items only on the trash screen", () => {
+	it("asks for the statuses the list is filtered by, in the folder it is in", () => {
 		const state = parseListState(
 			testSite,
 			new URLSearchParams("collection=post&folder=f1&status=draft&status=archived"),
@@ -172,10 +172,6 @@ describe("admin list state", () => {
 		const list = listStateToApiQuery(testSite, state);
 		expect(list.getAll("status")).toEqual(["draft", "archived"]);
 		expect(list.get("folderId")).toBe("f1");
-
-		const trash = listStateToApiQuery(testSite, state, { trash: true });
-		expect(trash.getAll("status")).toEqual(["trashed"]);
-		expect(trash.has("folderId")).toBe(false);
 	});
 
 	it("tells what narrows the list, the status among it, and clears only that", () => {

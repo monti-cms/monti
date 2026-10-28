@@ -82,21 +82,17 @@ type Run = (op: BulkOp, label: string, targets: ReturnType<typeof toSelection>[]
 function Bar({
 	initial = picked,
 	collection = "post",
-	mode = "list",
 	hasFolders = true,
 	run,
 	onExport = vi.fn(),
 	onClear = vi.fn(),
-	onRestore = vi.fn(),
 }: {
 	initial?: ListEntriesItem[];
 	collection?: string;
-	mode?: "list" | "trash";
 	hasFolders?: boolean;
 	run: Run;
 	onExport?: (ids: string[]) => void;
 	onClear?: () => void;
-	onRestore?: (targets: ReturnType<typeof toSelection>[]) => void;
 }) {
 	const [rows, setRows] = useState(initial);
 	const onRun: Run = async (op, label, targets, params) => {
@@ -133,12 +129,10 @@ function Bar({
 				collection={collection}
 				rows={rows}
 				folders={hasFolders ? folders : null}
-				mode={mode}
 				colSpan={3}
 				onClearSelection={onClear}
 				onRun={onRun}
 				onExport={onExport}
-				onRestore={onRestore}
 			/>
 		</table>
 	);
@@ -149,9 +143,8 @@ const bar = (props: Partial<Parameters<typeof Bar>[0]> = {}) => {
 	const run = vi.fn<Run>(async () => undefined);
 	const onExport = vi.fn();
 	const onClear = vi.fn();
-	const onRestore = vi.fn();
-	render(<Bar run={run} onExport={onExport} onClear={onClear} onRestore={onRestore} {...props} />);
-	return { run, onExport, onClear, onRestore };
+	render(<Bar run={run} onExport={onExport} onClear={onClear} {...props} />);
+	return { run, onExport, onClear };
 };
 
 /** Bulk actions that change many things at once ask first. Checks the confirm dialog's question and presses confirm. */
@@ -175,7 +168,7 @@ const names = () => screen.getAllByRole("button").map((button) => button.textCon
 
 describe("what the bar offers", () => {
 	const ask = (rows: ListEntriesItem[], over: Partial<Parameters<typeof bulkActionsFor>[0]> = {}) =>
-		bulkActionsFor({ site: testSite, collection: "post", mode: "list", rows, hasFolders: true, ...over });
+		bulkActionsFor({ site: testSite, collection: "post", rows, hasFolders: true, ...over });
 
 	it("puts publish, archive, the folder and 바꾸기 on the bar, and export and the trash in the ⋯", () => {
 		expect(ask(picked)).toEqual({
@@ -215,10 +208,6 @@ describe("what the bar offers", () => {
 				testSite.storedFields(name).some(({ field, when }) => field.kind === "relation" && !when),
 			);
 		}
-	});
-
-	it("gives the trash only the permanent delete, from a button", () => {
-		expect(ask(picked, { mode: "trash" })).toEqual({ primary: [], more: [] });
 	});
 });
 
@@ -319,33 +308,12 @@ describe("the bar over picked rows", () => {
 					onClearSelection={vi.fn()}
 					onRun={vi.fn()}
 					onExport={vi.fn()}
-					onRestore={vi.fn()}
 				/>
 			</table>,
 			{ site },
 		);
 		expect(screen.getByRole("button", { name: t("folder.move") })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
-	});
-
-	it("restores the picked rows from the trash, beside the permanent delete", async () => {
-		const { run, onRestore } = bar({ mode: "trash", hasFolders: false });
-		expect(names().slice(0, 2)).toEqual([tc("lifecycle.restore"), tc("lifecycle.deletePermanently")]);
-		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.restore") }));
-		expect(onRestore).toHaveBeenCalledWith(picked.map(toSelection));
-		expect(run).not.toHaveBeenCalled();
-	});
-
-	it("permanently deletes in the trash after asking, and has no menu", async () => {
-		const { run } = bar({ mode: "trash", hasFolders: false });
-		expect(screen.queryByRole("button", { name: t("more") })).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.deletePermanently") }));
-		await screen.findByRole("alertdialog", { name: tc("lifecycle.deletePermanently") });
-		fireEvent.click(
-			within(screen.getByRole("alertdialog")).getByRole("button", { name: tc("lifecycle.deletePermanently") }),
-		);
-		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
-		expect(run).toHaveBeenCalledWith("permanentDelete", tc("lifecycle.deletePermanently"), picked.map(toSelection), {});
 	});
 });
 

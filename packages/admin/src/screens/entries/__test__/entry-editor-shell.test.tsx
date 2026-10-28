@@ -1230,7 +1230,7 @@ describe("entry editor shell", () => {
 	it("shows trashed entries read-only with restore and permanent delete", async () => {
 		serve(() => undefined, { ...entry, status: "trashed" });
 		renderEdit();
-		const banner = await screen.findByRole("region", { name: "휴지통" });
+		const banner = (await screen.findByText(/휴지통에 있는/)).closest("[data-slot=banner]") as HTMLElement;
 		const toolbar = screen.getByRole("banner");
 		expect(within(toolbar).getByRole("button", { name: "복원" })).toBeTruthy();
 		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
