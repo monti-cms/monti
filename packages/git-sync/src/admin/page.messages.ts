@@ -4,12 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 	en: {
 		title: "Git sync",
-		"status.title": "Open Git sync",
-		"status.conflicts": ({ count }) => `Git: ${count} ${Number(count) === 1 ? "conflict" : "conflicts"}`,
-		"status.queued": ({ count }) => `Git: ${count} waiting for a commit`,
-		"status.synced": ({ ago }) => `Git synced · ${ago}`,
-		"status.popover.title": "Git sync",
-		"status.popover.lastSync": "Last sync",
 		"tab.sync": "Sync",
 		"tab.conflicts": "Conflicts",
 		"tab.settings": "Settings",
@@ -89,12 +83,6 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 	},
 	ko: {
 		title: "Git 동기화",
-		"status.title": "Git 동기화 열기",
-		"status.conflicts": ({ count }) => `Git 충돌 ${count}건`,
-		"status.queued": ({ count }) => `Git 커밋 대기 ${count}건`,
-		"status.synced": ({ ago }) => `Git 동기화됨 · ${ago}`,
-		"status.popover.title": "Git 동기화",
-		"status.popover.lastSync": "마지막 동기화",
 		"tab.sync": "동기화",
 		"tab.conflicts": "충돌",
 		"tab.settings": "설정",

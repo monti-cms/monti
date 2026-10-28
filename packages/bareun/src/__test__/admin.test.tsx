@@ -2,11 +2,16 @@ import { AdminComponentsProvider, useAdminComponents } from "@monti-cms/admin";
 import { SiteProvider } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type EditorStatus, StatusBar, StatusItemsProvider } from "../../../admin/src/screens/shared/status-bar";
+import type { TextIssueItem, TextIssues } from "../../../admin/src/editor/text-check/findings";
+import { StatusBar, StatusCellsProvider } from "../../../admin/src/screens/shared/status-bar";
+import { createTestRouter } from "../../../admin/src/test/router";
 import { SiteWrapper } from "../../../admin/src/test/site";
 import { testSite } from "../../test/site";
 import bareunAdmin from "../admin";
 import { bareun } from "../index";
+
+const testRouter = createTestRouter();
+const renderWithRouter = testRouter.render;
 
 afterEach(cleanup);
 
@@ -41,81 +46,102 @@ describe("Bareun checker admin side", () => {
 		expect(() => bareun({ limits: { maxChars: 0 } })).toThrow();
 	});
 
-	describe("status bar item", () => {
-		const editorStatus = (textIssues: EditorStatus["textIssues"]): EditorStatus => ({
-			saveStatus: "saved",
-			savedAt: null,
-			statusLabel: "Draft",
-			charCount: 0,
-			readingMinutes: 1,
-			bodyStats: { charsWithSpaces: 0, words: 0, paragraphs: 0, headings: 0 },
-			backupAvailable: true,
-			recovery: null,
-			translations: null,
-			save: () => {},
-			publishReadiness: null,
-			textIssues,
+	describe("status bar cell (flow 1 step 06)", () => {
+		const finding = (
+			key: string,
+			text: string,
+			suggestion: string | null,
+			over: Partial<TextIssueItem> = {},
+		): TextIssueItem => ({
+			key,
+			text,
+			suggestion,
+			paragraph: 1,
+			context: `${text} 동안`,
+			jump: () => {},
+			fix: suggestion === null ? null : () => {},
+			...over,
 		});
-		const showBar = (textIssues: EditorStatus["textIssues"]) => {
-			vi.stubGlobal(
-				"fetch",
-				vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) })),
-			);
-			const { statusItems } = bareunAdmin;
-			if (!statusItems || typeof statusItems === "function") throw new Error("statusItems is a plain record");
-			render(
+		const showBar = (textIssues: TextIssues | null, locale = "ko") => {
+			const { statusCells } = bareunAdmin;
+			if (!statusCells || typeof statusCells === "function") throw new Error("statusCells is a plain record");
+			renderWithRouter(
 				<SiteWrapper site={testSite}>
-					<StatusItemsProvider items={statusItems}>
-						<StatusBar context={{ screen: "entry", editor: editorStatus(textIssues) }} />
-					</StatusItemsProvider>
+					<StatusCellsProvider cells={statusCells}>
+						<StatusBar
+							save={{ status: "saved", savedAt: null, backupAvailable: true, onSave: () => {} }}
+							todo={null}
+							chars={0}
+							context={{ collection: "post", locale, textIssues }}
+						/>
+					</StatusCellsProvider>
 				</SiteWrapper>,
 			);
 		};
-
-		const issues = (over: Partial<NonNullable<EditorStatus["textIssues"]>> = {}) => ({
-			count: 2,
-			jumpToFirst: () => {},
-			items: [],
-			recheck: null,
-			checking: false,
-			...over,
+		const issues = (items: TextIssueItem[], fixAll: (() => void) | null = null): TextIssues => ({
+			count: items.length,
+			items,
+			fixAll,
 		});
+		const open = async () => {
+			fireEvent.click(screen.getByRole("button", { name: /^맞춤법 \d/ }));
+			return within(await screen.findByRole("dialog"));
+		};
 
-		it("counts the findings of the body, and lists them with the suggestion when opened", async () => {
+		it("counts the findings and lists each as what to change, where it is and one action", async () => {
 			showBar(
-				issues({
-					items: [
-						{ text: "됬다", suggestion: "됐다", jump: () => {} },
-						{ text: "안되", suggestion: null, jump: () => {} },
-					],
-				}),
+				issues([
+					finding("a", "몇일", "며칠"),
+					finding("b", "안되요", "안 돼요", { paragraph: 3, context: "그래서 안되요" }),
+				]),
 			);
-			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
-			const popup = within(await screen.findByRole("dialog"));
-			expect(popup.getByText("됬다")).toBeTruthy();
-			expect(popup.getByText("→ 됐다")).toBeTruthy();
-			expect(popup.getByText("안되")).toBeTruthy();
-			expect(popup.queryByRole("button", { name: "다시 검사" })).toBeNull();
+			const list = await open();
+			expect(list.getByText("몇일 → 며칠")).toBeTruthy();
+			expect(list.getByText("문단 3 · 그래서 안되요")).toBeTruthy();
+			expect(list.getAllByRole("button", { name: "고치기" })).toHaveLength(2);
 		});
 
-		it("goes to the finding that is clicked, and checks again from the header", async () => {
+		it("fixes one finding from its row", async () => {
+			const fix = vi.fn();
+			showBar(issues([finding("a", "몇일", "며칠", { fix }), finding("b", "안되요", "안 돼요")]));
+			const list = await open();
+			fireEvent.click(list.getAllByRole("button", { name: "고치기" })[0] as HTMLElement);
+			expect(fix).toHaveBeenCalledTimes(1);
+		});
+
+		it("goes to the word when its row is pressed", async () => {
 			const jump = vi.fn();
-			const recheck = vi.fn();
-			showBar(issues({ items: [{ text: "됬다", suggestion: "됐다", jump }], recheck }));
-			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
-			const popup = within(await screen.findByRole("dialog"));
-			fireEvent.click(popup.getByRole("button", { name: /됬다/ }));
+			showBar(issues([finding("a", "몇일", "며칠", { jump })]));
+			fireEvent.click((await open()).getByText("몇일 → 며칠"));
 			expect(jump).toHaveBeenCalledTimes(1);
-			fireEvent.click(screen.getByRole("button", { name: "맞춤법 2건" }));
-			fireEvent.click(await screen.findByRole("button", { name: "다시 검사" }));
-			expect(recheck).toHaveBeenCalledTimes(1);
 		});
 
-		it("is hidden when there is nothing to fix or no checker covers the text", () => {
-			showBar(issues({ count: 0 }));
+		it("fixes every finding from the footer", async () => {
+			const fixAll = vi.fn();
+			showBar(issues([finding("a", "몇일", "며칠")], fixAll));
+			fireEvent.click((await open()).getByRole("button", { name: "모두 고치기" }));
+			expect(fixAll).toHaveBeenCalledTimes(1);
+		});
+
+		it("offers no fix for a finding the checker has no suggestion for", async () => {
+			showBar(issues([finding("a", "몇일", "며칠"), finding("b", "이상한 말", null)]));
+			const list = await open();
+			expect(list.getByText("이상한 말")).toBeTruthy();
+			expect(list.getAllByRole("button", { name: "고치기" })).toHaveLength(1);
+			expect(list.queryByRole("button", { name: "모두 고치기" })).toBeNull();
+		});
+
+		it("opens the place where the Bareun key is set from the footer", async () => {
+			showBar(issues([finding("a", "몇일", "며칠")]));
+			fireEvent.click((await open()).getByRole("button", { name: "설정" }));
+			expect(testRouter.navigate).toHaveBeenCalledWith(testSite.adminHref("/api-keys"));
+		});
+
+		it("draws no cell when there is nothing to fix or no checker covers the language", () => {
+			showBar(issues([]));
 			expect(screen.queryByRole("button", { name: /맞춤법/ })).toBeNull();
 			cleanup();
-			showBar(null);
+			showBar(null, "en");
 			expect(screen.queryByRole("button", { name: /맞춤법/ })).toBeNull();
 		});
 	});
