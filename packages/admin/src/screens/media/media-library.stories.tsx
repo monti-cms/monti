@@ -122,8 +122,8 @@ export const FileSelected: Story = {
 	tags: ["visual"],
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await tile(canvasElement, /강아지\.png$/));
-		await within(canvasElement).findByRole("complementary");
+		await userEvent.click(await tile(canvasElement, /^강아지\.png/));
+		await within(canvasElement).findByRole("complementary", { name: "강아지.png" });
 	},
 };
 
@@ -132,8 +132,8 @@ export const UsedFileSelected: Story = {
 	tags: ["visual"],
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await tile(canvasElement, /고양이\.png$/));
-		await within(canvasElement).findByRole("complementary");
+		await userEvent.click(await tile(canvasElement, /^고양이\.png/));
+		await within(canvasElement).findByRole("complementary", { name: "고양이.png" });
 	},
 };
 
