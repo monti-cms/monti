@@ -23,8 +23,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.archive.ask": ({ translation, ...vars }) =>
 			`Archive this ${translation ? "translation" : enNoun(vars)}? It will no longer be public.`,
 		"lifecycle.archive.group": " Its translations are archived too.",
-		"lifecycle.trash.ask": ({ translation, ...vars }) =>
-			`Move this ${translation ? "translation" : enNoun(vars)} to the trash? It will no longer be public.`,
 
 		"save.new": "Not saved",
 		"save.saved": "Saved to server",
@@ -156,8 +154,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lifecycle.archive.ask": ({ translation, ...vars }) =>
 			`${translation ? "이 번역본을" : `이 ${koObject(vars)}`} 보관할까요? 공개가 종료돼요.`,
 		"lifecycle.archive.group": " 번역본도 함께 보관해요.",
-		"lifecycle.trash.ask": ({ translation, ...vars }) =>
-			`${translation ? "이 번역본을" : `이 ${koObject(vars)}`} 휴지통으로 이동할까요? 공개가 종료돼요.`,
 
 		"save.new": "저장 전",
 		"save.saved": "서버에 저장됨",
