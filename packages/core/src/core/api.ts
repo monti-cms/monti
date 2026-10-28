@@ -203,6 +203,11 @@ export const exportOptionsSchema = z.object({
 			z.array(z.string().uuid()).min(1).max(MAX_EXPORT_IDS),
 		)
 		.optional(),
+	/**
+	 * Limits the export to the entries of this collection, the trashed ones included, with their translations. It is how a whole collection is exported (the review of
+	 * deleting one offers it) without listing every id; with `ids` too, only those of them that belong to the collection are exported.
+	 */
+	collection: z.string().min(1).optional(),
 });
 
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
