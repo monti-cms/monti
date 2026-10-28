@@ -57,7 +57,7 @@ export const Toggle: Story = {
 		const [empty, setEmpty] = useState("");
 		const [held, setHeld] = useState("리액트");
 		return (
-			<Stack gap={16}>
+			<Stack gap={16} align="start">
 				<SearchToggle label="검색" aria-label="검색" placeholder="검색" value={empty} onValueChange={setEmpty} />
 				<SearchToggle label="검색" aria-label="검색" placeholder="검색" value={held} onValueChange={setHeld} />
 			</Stack>
