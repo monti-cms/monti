@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../../doc/stored-document";
 import { confirmedSourceState, MAX_TRANSLATION_BYTES, parseTranslationState, sourceHasChanged } from "../state";
+import { documentKeyHash } from "../state-hash";
 
 const doc = docOf("하나\n\n둘\n");
 
@@ -84,5 +85,29 @@ describe("whether the source changed since a translation was confirmed", () => {
 
 	it("is true when a block was added", () => {
 		expect(sourceHasChanged(docOf("하나\n\n둘\n\n셋\n"), doc)).toBe(true);
+	});
+});
+
+describe("the stored hash of a document for the translation filter", () => {
+	const withIds = (source: typeof doc) => ({
+		...source,
+		content: source.content.map((node, index) => ({ ...node, id: `blk0000${index}`, sourceId: "src00000" })),
+	});
+	const pairs: [string, typeof doc, typeof doc][] = [
+		["the same document", doc, doc],
+		["the same text with other block ids and links", doc, withIds(doc)],
+		["changed text", docOf("하나\n\n셋\n"), doc],
+		["an added block", docOf("하나\n\n둘\n\n셋\n"), doc],
+		["an emptied document", { ...doc, content: [] }, doc],
+		["another document", docOf("전혀 다른 글\n"), doc],
+	];
+
+	it.each(pairs)("agrees with sourceHasChanged for %s", (_name, source, confirmed) => {
+		expect(documentKeyHash(source) !== documentKeyHash(confirmed)).toBe(sourceHasChanged(source, confirmed));
+	});
+
+	it("is the same text of 64 hex characters for documents that read the same", () => {
+		expect(documentKeyHash(doc)).toMatch(/^[0-9a-f]{64}$/);
+		expect(documentKeyHash(withIds(doc))).toBe(documentKeyHash(doc));
 	});
 });

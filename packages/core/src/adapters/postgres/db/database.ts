@@ -70,6 +70,10 @@ export interface EntryBodiesTable {
 	translation: Jsonb<unknown> | null;
 	/** The stored document (`readBodyDoc`). */
 	doc: Jsonb<unknown> | null;
+	/** `documentKeyHash` of the document: what the translation filter compares a translation's base with. Written with every body. */
+	doc_key_hash: string | null;
+	/** `translationBaseHash` of the translation state: the hash of the source document it was confirmed against. `null` for a source. */
+	translation_base_hash: string | null;
 }
 
 export interface ContentAddressesTable {

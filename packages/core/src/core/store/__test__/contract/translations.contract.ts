@@ -423,6 +423,23 @@ export const translationsContract: ContractSuite = (factory) => {
 					]);
 				});
 
+				it("does not count a change to the block ids alone as a change of the source", async () => {
+					const source = await group("tf-ids-only");
+					const current = await store.getEntry(source.id);
+					await service.saveDraft(source.id, {
+						collection: contentCollection,
+						slug: current.workingSlug,
+						metadata: current.working.metadata,
+						doc: {
+							...current.working.doc,
+							content: (current.working.doc?.content ?? []).map((node, index) => ({ ...node, id: `ids0000${index}` })),
+						},
+						expectedVersion: current.version,
+					} as never);
+					expect(await idsFor(["current"])).toContain(source.id);
+					expect(await idsFor(["changed"])).not.toContain(source.id);
+				});
+
 				it("takes several as OR", async () => {
 					const alone = await createPost("tf-or-alone");
 					const behind = await group("tf-or-behind");

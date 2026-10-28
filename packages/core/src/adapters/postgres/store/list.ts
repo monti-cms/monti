@@ -18,13 +18,10 @@ import {
 	MAX_ENTRY_SEARCH_LIMIT,
 	type SearchEntriesParams,
 } from "../../../core/store/types";
-import { sourceHasChanged } from "../../../core/translation/state";
-import { emptyStoredDocument } from "../../../doc/stored-document";
 import { RECORD_TRANSLATIONS_KEY } from "../../../schema/fields";
 import type { StoredField } from "../../../schema/walk";
 import type { Site } from "../../../site";
 import type { StoreContext } from "./context";
-import { readBodyDoc, readTranslation } from "./rows";
 import { likeContainsPattern, likePrefixPattern, likeWordPattern } from "./sql";
 import { ROW_COLLECTION, titleExpr } from "./title-sql";
 
@@ -214,28 +211,17 @@ export function createListOps(ctx: StoreContext) {
 	const { qSchema, site } = ctx;
 	const db = ctx.db();
 
-	/** Groups with a translation that was confirmed against an earlier source than the source now is (`sourceHasChanged`, the translation editor's own rule). */
-	const behindGroups = async (collection: string): Promise<string[]> => {
-		const rows = await db
-			.selectFrom("entries as m")
-			.innerJoin("entry_bodies as mw", (join) => join.onRef("mw.entry_id", "=", "m.id").on("mw.state", "=", "working"))
-			.innerJoin("entry_bodies as sw", (join) =>
-				join.onRef("sw.entry_id", "=", "m.translation_group_id").on("sw.state", "=", "working"),
-			)
-			.select(["m.translation_group_id as group_id", "mw.translation", "sw.doc"])
-			.where("m.collection", "=", collection)
-			.where("m.status", "<>", "trashed")
-			.whereRef("m.translation_group_id", "<>", "m.id")
-			.where("mw.translation", "is not", null)
-			.execute();
-		const behind = new Set<string>();
-		for (const row of rows) {
-			if (!row.group_id) continue;
-			const confirmed = readTranslation(row.translation)?.baseDoc ?? emptyStoredDocument();
-			if (sourceHasChanged(readBodyDoc(row.doc), confirmed)) behind.add(row.group_id);
-		}
-		return [...behind];
-	};
+	/**
+	 * Whether the row's translation group has a translation confirmed against an earlier source than the source now is. The stored hashes of the two
+	 * documents (`documentKeyHash`, the hash of the key `sourceHasChanged` compares) are compared in SQL, so no document is read.
+	 */
+	const behindGroup = sql<boolean>`exists (
+		select 1 from ${sql.id(qSchema, "entries")} t
+		join ${sql.id(qSchema, "entry_bodies")} tw on tw.entry_id = t.id and tw.state = 'working'
+		join ${sql.id(qSchema, "entry_bodies")} sw2 on sw2.entry_id = ${groupOf("e")} and sw2.state = 'working'
+		where t.translation_group_id = ${groupOf("e")} and t.id <> ${groupOf("e")} and t.status <> 'trashed'
+			and tw.translation_base_hash is distinct from sw2.doc_key_hash
+	)`;
 
 	/** Whether the row's translation group has a translation outside the trash. */
 	const translatedGroup = sql<boolean>`exists (
@@ -243,8 +229,8 @@ export function createListOps(ctx: StoreContext) {
 			where t.translation_group_id = ${groupOf("e")} and t.id <> ${groupOf("e")} and t.status <> 'trashed'
 		)`;
 
-	/** The rows of a list before sorting and paging: the collection, the folder, the statuses and every filter. `behind` is `behindGroups`, when a translation filter needs it. */
-	const buildFrom = (params: ListEntriesParams, behind: readonly string[]) => {
+	/** The rows of a list before sorting and paging: the collection, the folder, the statuses and every filter. */
+	const buildFrom = (params: ListEntriesParams) => {
 		const grouped = params.groupTranslations === true;
 		const titleOf = (alias: string) => titleExpr(site, `${alias}.metadata`, { collection: params.collection });
 
@@ -324,8 +310,6 @@ export function createListOps(ctx: StoreContext) {
 				}
 				if (params.translations && params.translations.length > 0) {
 					const hasTranslations = translatedGroup;
-					const behindGroup =
-						behind.length > 0 ? sql<boolean>`${groupOf("e")} = any(${behind}::uuid[])` : sql<boolean>`false`;
 					const states: Record<(typeof TRANSLATION_FILTERS)[number], Expression<SqlBool>> = {
 						none: sql<boolean>`not ${hasTranslations}`,
 						changed: behindGroup,
@@ -418,7 +402,7 @@ export function createListOps(ctx: StoreContext) {
 			};
 			// The same checks as a list that carries these conditions: the folder and the statuses must be valid.
 			assertParams(site, scope);
-			const { from } = buildFrom(scope, []);
+			const { from } = buildFrom(scope);
 			const count = async (extra?: Expression<SqlBool>) => {
 				const rows = extra ? from.where(extra) : from;
 				const row = await rows.select((eb) => eb.fn.countAll<string>().as("count")).executeTakeFirst();
@@ -429,9 +413,8 @@ export function createListOps(ctx: StoreContext) {
 				if (site.isItemCollection(params.collection)) {
 					throw new CmsError("A collection without translations has no translation filter", "invalid_input");
 				}
-				const behind = await behindGroups(params.collection);
 				const withTranslations = await count(translatedGroup);
-				const changed = behind.length > 0 ? await count(sql<boolean>`${groupOf("e")} = any(${behind}::uuid[])`) : 0;
+				const changed = await count(behindGroup);
 				return { total, values: { none: total - withTranslations, changed, current: withTranslations - changed } };
 			}
 			const stored = filterFieldOf(site, params.collection, params.facet.field);
@@ -460,10 +443,7 @@ export function createListOps(ctx: StoreContext) {
 			assertParams(site, params);
 			const page = params.page ?? 1;
 			const pageSize = params.pageSize ?? 25;
-			const behind = params.translations?.some((filter) => filter !== "none")
-				? await behindGroups(params.collection)
-				: [];
-			const { from, grouped, titleOf } = buildFrom(params, behind);
+			const { from, grouped, titleOf } = buildFrom(params);
 
 			const sortColumns: Record<(typeof LIST_SORT_FIELDS)[number], Expression<unknown>> = {
 				updatedAt: sql.ref("e.updated_at"),
