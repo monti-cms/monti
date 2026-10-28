@@ -17,6 +17,5 @@
 @source "../../blocks/src";
 @source "../../mdx/src";
 @source "../../seo/src";
-@source "../../git-sync/src";
 @source not "../src/**/__test__";
 @source not "../../*/src/**/__test__";

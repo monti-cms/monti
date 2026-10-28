@@ -16,13 +16,7 @@
 		"packages/ai": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "src/routes/**/route.ts!"]
 		},
-		"packages/git-sync": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
-		},
 		"packages/seo": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
-		},
-		"packages/bareun": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
 		},
 		"packages/blocks": {
@@ -53,9 +47,6 @@
 		},
 		"packages/syntax-shiki": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
-		},
-		"docs/recipes": {
-			"entry": ["src/**/*.{ts,tsx}"]
 		}
 	},
 	"ignoreExportsUsedInFile": true,

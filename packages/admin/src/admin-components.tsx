@@ -20,10 +20,10 @@ import type { EditorMarkSpec } from "./editor/added-marks";
 import type { BlockView } from "./editor/blocks/use-block-editor";
 import type { ActiveInlineMark } from "./editor/inline-marks";
 import { useTextCheckEditor } from "./editor/text-check/extension";
+import type { TextIssues } from "./editor/text-check/findings";
 import type { BlockAction } from "./editor/tiptap-editor";
 import type { EntryData, EntryForm } from "./screens/entries/entry-form";
 import type { FieldInputProps } from "./screens/entries/field-inputs";
-import type { EditorStatus } from "./screens/shared/status-bar";
 
 /**
  * The current context received by edit screen extensions (plugins, etc.). It is a hook called on every render, so React hooks may be used inside.
@@ -323,7 +323,7 @@ const NO_CHECKERS: readonly TextChecker[] = [];
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
 export function useEditorExtensions(
 	context: EditorExtensionContext,
-): Required<EditorExtensionResult> & { readonly textIssues: EditorStatus["textIssues"] } {
+): Required<EditorExtensionResult> & { readonly textIssues: TextIssues | null } {
 	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
 	const extensionResults = editorExtensions.map((extension) => extension(context));

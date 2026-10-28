@@ -1,383 +1,189 @@
+import { StatusBarPluginCell } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse } from "../../../test/fetch";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import {
-	type EditorStatus,
 	StatusBar,
 	type StatusBarContextValue,
-	StatusBarItem,
-	type StatusItems,
-	StatusItemsProvider,
-	StatusPopoverHeader,
-	StatusPopoverRow,
+	type StatusBarProps,
+	StatusCellsProvider,
 	useStatusBarContext,
 } from "../status-bar";
 
 const { render: renderWithRouter } = createTestRouter();
+afterEach(cleanup);
 
-const failure = (id: string, subscriber: string, lastError: string) => ({
-	change: {
-		eventId: id,
-		kind: "published",
-		entryId: "e1",
-		collection: "post",
-		occurredAt: "2026-10-07T09:00:00.000Z",
-		title: "글",
-	},
-	subscriber,
-	state: "failed",
-	attempts: 2,
-	lastError,
-	nextAttemptAt: null,
-	lastAttemptAt: "2026-10-07T09:01:00.000Z",
+const missing = { code: "missing_field", path: "title", message: "제목", text: "서버 문구", where: "title" };
+const noAlt = { code: "missing_image_alt", path: "body", position: { blockId: "b1" }, text: "서버 문구" };
+
+const context = (over: Partial<StatusBarContextValue> = {}): StatusBarContextValue => ({
+	collection: "post",
+	entryId: "e1",
+	locale: "ko",
+	textIssues: null,
+	...over,
 });
 
-let failed = 0;
-let failures: ReturnType<typeof failure>[] = [];
-const retried = vi.fn();
-beforeEach(() => {
-	failed = 0;
-	failures = [];
-	retried.mockReset();
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: string, init?: RequestInit) => {
-			if (input === "/api/monti/v1/events/retry" && init?.method === "POST") {
-				retried();
-				return jsonResponse({ delivered: 1, failed: 0, dead: 0 });
-			}
-			if (input.startsWith("/api/monti/v1/events"))
-				return jsonResponse({ items: failures, total: failures.length, counts: { failed, dead: 0 } });
-			throw new Error(`Unexpected fetch: ${input}`);
-		}),
-	);
-});
-afterEach(() => {
-	cleanup();
-	vi.unstubAllGlobals();
+const props = (over: Partial<StatusBarProps> = {}): StatusBarProps => ({
+	save: { status: "saved", savedAt: null, backupAvailable: true, onSave: () => {} },
+	todo: null,
+	chars: 1240,
+	context: context(),
+	...over,
 });
 
-const show = (context: StatusBarContextValue, items: StatusItems = {}) =>
+const show = (barProps: StatusBarProps, cells: Record<string, () => React.ReactNode> = {}) =>
 	renderWithRouter(
 		withSite(
-			<StatusItemsProvider items={items}>
-				<StatusBar context={context} />
-			</StatusItemsProvider>,
+			<StatusCellsProvider cells={cells}>
+				<StatusBar {...barProps} />
+			</StatusCellsProvider>,
 		),
 	);
 const bar = () => within(screen.getByRole("region", { name: "상태" }));
-const texts = (element: HTMLElement) => [...element.querySelectorAll("span.truncate")].map((node) => node.textContent);
 
-describe("status bar", () => {
-	it("draws a plugin's item in its group, ordered by `order`", () => {
-		const Item = ({ label }: { label: string }) => <StatusBarItem title={label}>{label}</StatusBarItem>;
-		show(
-			{ screen: "tools" },
-			{
-				late: { align: "start", order: 200, Component: () => <Item label="늦은 항목" /> },
-				early: { align: "start", order: 5, Component: () => <Item label="이른 항목" /> },
-				right: { align: "end", order: 1, Component: () => <Item label="오른쪽 항목" /> },
-			},
-		);
-		// One row of cells: the start group, the spacer, then the end group.
-		const region = screen.getByRole("region", { name: "상태" });
-		const children = [...region.children] as HTMLElement[];
-		const spacer = children.findIndex((child) => child.dataset.slot === "status-bar-spacer");
-		expect(texts(region)).toEqual(["이른 항목", "늦은 항목", "오른쪽 항목"]);
-		expect(children.slice(0, spacer).map((child) => child.textContent)).toEqual(["이른 항목", "늦은 항목"]);
-		expect(children.slice(spacer + 1).map((child) => child.textContent)).toEqual(["오른쪽 항목"]);
+describe("save cell (flow 1 step 09)", () => {
+	it("saves from the cell while there are unsaved changes", () => {
+		const onSave = vi.fn();
+		show(props({ save: { status: "dirty", savedAt: null, backupAvailable: true, onSave } }));
+		fireEvent.click(bar().getByRole("button", { name: "저장 전 변경사항" }));
+		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it("leaves no gap or wrapper for an item that renders nothing", () => {
-		show(
-			{ screen: "tools" },
-			{
-				a: { align: "start", order: 1, Component: () => <StatusBarItem title="가">가</StatusBarItem> },
-				hidden: { align: "start", order: 2, Component: () => null },
-			},
-		);
-		const region = screen.getByRole("region", { name: "상태" });
-		expect(region.querySelectorAll("[data-slot=status-bar-cell]")).toHaveLength(1);
+	it("offers another try after a failed save", () => {
+		const onSave = vi.fn();
+		show(props({ save: { status: "failed", savedAt: null, backupAvailable: true, onSave } }));
+		fireEvent.click(bar().getByRole("button", { name: "저장 실패 · 다시 시도" }));
+		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it("gives an item the screen it is on", () => {
+	it("says saved with the time, and has nothing to press", () => {
+		show(
+			props({
+				save: {
+					status: "saved",
+					savedAt: Date.parse("2026-10-07T01:42:00.000Z"),
+					backupAvailable: true,
+					onSave: () => {},
+				},
+			}),
+		);
+		expect(bar().getByText(/^저장됨 /)).toBeTruthy();
+		expect(bar().queryByRole("button", { name: /저장됨/ })).toBeNull();
+	});
+
+	it("leads to signing in, in a new tab, when the session expired", () => {
+		show(props({ save: { status: "session-expired", savedAt: null, backupAvailable: true, onSave: () => {} } }));
+		const link = bar().getByRole("link", { name: "세션 만료 · 로그인" });
+		expect(link.getAttribute("href")).toContain("/login");
+		expect(link.getAttribute("target")).toBe("_blank");
+	});
+
+	it("says in the tooltip when the browser keeps no backup", () => {
+		show(props({ save: { status: "dirty", savedAt: null, backupAvailable: false, onSave: () => {} } }));
+		expect(bar().getByRole("button", { name: "저장 전 변경사항" }).getAttribute("title")).toContain("복구 불가");
+	});
+
+	it("shows the character count as plain text at the end", () => {
+		show(props({ chars: 1240 }));
+		expect(bar().getByText("1,240자")).toBeTruthy();
+		expect(bar().queryByRole("button", { name: /1,240/ })).toBeNull();
+	});
+});
+
+describe("to-do cell (flow 1 steps 10 to 13)", () => {
+	const todo = (over: Partial<NonNullable<StatusBarProps["todo"]>> = {}): NonNullable<StatusBarProps["todo"]> => ({
+		issues: [missing, noAlt],
+		done: ["주소", "대표 이미지"],
+		focus: () => {},
+		...over,
+	});
+
+	it("counts what is left and lists each problem as a row that goes to its place", async () => {
+		const focus = vi.fn();
+		show(props({ todo: todo({ focus }) }));
+		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
+		const list = within(await screen.findByRole("dialog"));
+		expect(list.getByText("발행 전에 고칠 것")).toBeTruthy();
+		expect(list.getByText("이미지에 설명(alt)이 필요해요")).toBeTruthy();
+		fireEvent.click(list.getByRole("button", { name: /제목을 입력해 주세요/ }));
+		expect(focus).toHaveBeenCalledWith(expect.objectContaining({ path: "title" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+	});
+
+	it("shows what is already right under the rows", async () => {
+		show(props({ todo: todo() }));
+		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
+		expect(within(await screen.findByRole("dialog")).getByText("주소 · 대표 이미지")).toBeTruthy();
+	});
+
+	it("says nothing is left to do, and the list then holds only what is right", async () => {
+		show(props({ todo: todo({ issues: [], done: ["제목"] }) }));
+		fireEvent.click(bar().getByRole("button", { name: "할 일 없음" }));
+		const list = within(await screen.findByRole("dialog"));
+		expect(list.getByText("제목")).toBeTruthy();
+		expect(list.queryByRole("button")).toBeNull();
+	});
+
+	it("is not there when the entry cannot be checked", () => {
+		show(props({ todo: null }));
+		expect(bar().queryByRole("button", { name: /할 일/ })).toBeNull();
+	});
+
+	it("can be opened from outside, as a refused publish does", async () => {
+		show(props({ todo: todo({ open: true, onOpenChange: () => {} }) }));
+		expect(await screen.findByRole("dialog")).toBeTruthy();
+	});
+});
+
+describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
+	const finding = (id: string, title: string) => ({
+		id,
+		title,
+		detail: "문단 1",
+		actionLabel: "고치기",
+		onAction: () => {},
+	});
+	const SpellCell = () => (
+		<StatusBarPluginCell
+			label="맞춤법"
+			findings={[finding("1", "몇일 → 며칠"), finding("2", "안되요 → 안 돼요")]}
+			settings={{ label: "설정", onClick: () => {} }}
+			fixAll={{ label: "모두 고치기", onClick: () => {} }}
+		/>
+	);
+
+	it("draws the plugin's cell after the to-do cell, and its rows, settings and fix all open from it", async () => {
+		show(props({ todo: { issues: [missing], done: [], focus: () => {} } }), { spelling: SpellCell });
+		const names = bar()
+			.getAllByRole("button")
+			.map((button) => button.textContent);
+		expect(names).toEqual(["할 일 1", "맞춤법 2"]);
+		fireEvent.click(bar().getByRole("button", { name: "맞춤법 2" }));
+		const list = within(await screen.findByRole("dialog"));
+		expect(list.getAllByRole("button", { name: "고치기" })).toHaveLength(2);
+		expect(list.getByRole("button", { name: "설정" })).toBeTruthy();
+		expect(list.getByRole("button", { name: "모두 고치기" })).toBeTruthy();
+	});
+
+	it("draws no cell for a plugin that has nothing to show", () => {
+		show(props(), { quiet: () => null });
+		expect(bar().queryByRole("button", { name: /맞춤법/ })).toBeNull();
+	});
+
+	it("tells the plugin where it is: the language of the entry and the text findings", () => {
 		const Where = () => {
-			const { screen: kind, collection } = useStatusBarContext();
-			return <StatusBarItem title="위치">{`${kind}:${collection}`}</StatusBarItem>;
+			const { locale, collection, textIssues } = useStatusBarContext();
+			return locale === "ko" ? (
+				<StatusBarPluginCell label="검사" findings={[finding("1", `${collection}:${textIssues?.count}`)]} />
+			) : null;
 		};
-		show({ screen: "list", collection: "post" }, { where: { align: "end", order: 1, Component: Where } });
-		expect(bar().getByText("list:post")).toBeTruthy();
-	});
-
-	it("renders a link, a button or plain text by what the item leads to", () => {
-		show(
-			{ screen: "tools" },
-			{
-				link: {
-					align: "start",
-					order: 1,
-					Component: () => (
-						<StatusBarItem title="링크" href="/admin/x">
-							링크
-						</StatusBarItem>
-					),
-				},
-				button: {
-					align: "start",
-					order: 2,
-					Component: () => (
-						<StatusBarItem title="버튼" onClick={() => {}}>
-							버튼
-						</StatusBarItem>
-					),
-				},
-				plain: { align: "start", order: 3, Component: () => <StatusBarItem title="글">글</StatusBarItem> },
-			},
-		);
-		expect(bar().getByRole("link", { name: "링크" })).toBeTruthy();
-		expect(bar().getByRole("button", { name: "버튼" })).toBeTruthy();
-		expect(bar().queryByRole("link", { name: "글" })).toBeNull();
-		expect(bar().queryByRole("button", { name: "글" })).toBeNull();
-	});
-
-	it("lists the latest failed deliveries, retries them all and links to the event log", async () => {
-		failed = 2;
-		failures = [failure("a", "slack", "HTTP 500"), failure("b", "search-index", "timeout")];
-		show({ screen: "tools" });
-		fireEvent.click(await bar().findByRole("button", { name: /웹훅 2건 실패/ }));
-		const popup = within(await screen.findByRole("dialog"));
-		expect(await popup.findByText("slack")).toBeTruthy();
-		expect(popup.getByText("HTTP 500")).toBeTruthy();
-		expect(popup.getByText("search-index")).toBeTruthy();
-		expect(popup.getByText("timeout")).toBeTruthy();
-		expect(popup.getByRole("link", { name: "이벤트 로그 열기" }).getAttribute("href")).toMatch(/\/events$/);
-		fireEvent.click(popup.getByRole("button", { name: /Retry all due|예정된 전달/ }));
-		await waitFor(() => expect(retried).toHaveBeenCalledTimes(1));
-	});
-
-	it("shows no failed-delivery item when none failed", async () => {
-		show({ screen: "tools" });
-		await waitFor(() => expect(fetch).toHaveBeenCalled());
-		expect(bar().queryByText(/실패/)).toBeNull();
-	});
-
-	it("shows no entry count on a list (the page header already has it)", () => {
-		show({ screen: "list", collection: "post" });
-		expect(bar().queryByText(/^\d+개$/)).toBeNull();
-		expect(bar().queryAllByRole("button")).toHaveLength(0);
-	});
-
-	describe("popover", () => {
-		const Popup = () => (
-			<StatusBarItem title="팝업" popover={<StatusPopoverHeader title="제목" />}>
-				열기
-			</StatusBarItem>
-		);
-		const showPopup = () => show({ screen: "tools" }, { p: { align: "start", order: 1, Component: Popup } });
-
-		it("opens on click, and Escape closes it with the focus back on the item", async () => {
-			showPopup();
-			const item = bar().getByRole("button", { name: "열기" });
-			expect(screen.queryByRole("dialog")).toBeNull();
-			fireEvent.click(item);
-			expect(await screen.findByText("제목")).toBeTruthy();
-			fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-			expect(document.activeElement).toBe(item);
-		});
-
-		it("opens from the keyboard with Enter", async () => {
-			showPopup();
-			const item = bar().getByRole("button", { name: "열기" });
-			item.focus();
-			// A browser turns an Enter that nobody prevented into a click on a button; jsdom does not, so the test does the same.
-			if (fireEvent.keyDown(item, { key: "Enter" })) fireEvent.click(item);
-			expect(await screen.findByText("제목")).toBeTruthy();
-		});
-
-		it("closes when a row is chosen", async () => {
-			const chosen = vi.fn();
-			show(
-				{ screen: "tools" },
-				{
-					p: {
-						align: "end",
-						order: 1,
-						Component: () => (
-							<StatusBarItem title="팝업" popover={<StatusPopoverRow label="행" value="값" onClick={chosen} />}>
-								열기
-							</StatusBarItem>
-						),
-					},
-				},
-			);
-			fireEvent.click(bar().getByRole("button", { name: "열기" }));
-			fireEvent.click(await screen.findByRole("button", { name: /행/ }));
-			expect(chosen).toHaveBeenCalledTimes(1);
-			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		});
-	});
-
-	describe("editor popups", () => {
-		const editor = (over: Partial<EditorStatus> = {}): EditorStatus => ({
-			saveStatus: "saved",
-			savedAt: Date.parse("2026-10-07T09:00:00.000Z"),
-			statusLabel: "초안",
-			charCount: 1200,
-			readingMinutes: 2,
-			bodyStats: { charsWithSpaces: 1500, words: 300, paragraphs: 12, headings: 3 },
-			backupAvailable: true,
-			recovery: null,
-			translations: null,
-			save: () => {},
-			publishReadiness: null,
-			textIssues: null,
-			...over,
-		});
-		const showEditor = (over: Partial<EditorStatus> = {}, locale = "ko") =>
-			show({ screen: "entry", collection: "post", entryId: "e1", locale, editor: editor(over) });
-		const open = async (name: RegExp | string) => {
-			fireEvent.click(bar().getByRole("button", { name }));
-			return within(await screen.findByRole("dialog"));
-		};
-
-		it("offers Save now while there are unsaved changes", async () => {
-			const save = vi.fn();
-			showEditor({ saveStatus: "dirty", save });
-			const popup = await open(/저장 전 변경사항/);
-			expect(popup.getByText("초안")).toBeTruthy();
-			expect(popup.getByText("마지막 저장")).toBeTruthy();
-			fireEvent.click(popup.getByRole("button", { name: "지금 저장" }));
-			expect(save).toHaveBeenCalledTimes(1);
-			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		});
-
-		it("offers Retry after a failed save, and nothing to do once saved", async () => {
-			const save = vi.fn();
-			showEditor({ saveStatus: "failed", save });
-			const popup = await open(/저장 실패/);
-			fireEvent.click(popup.getByRole("button", { name: "다시 시도" }));
-			expect(save).toHaveBeenCalledTimes(1);
-			cleanup();
-			showEditor({ saveStatus: "saved" });
-			const saved = await open(/저장됨/);
-			expect(saved.queryByRole("button")).toBeNull();
-		});
-
-		it("offers to sign in again in a new tab when the session expired", async () => {
-			showEditor({ saveStatus: "session-expired" });
-			const popup = await open(/세션 만료/);
-			const link = popup.getByRole("link", { name: "로그인" });
-			expect(link.getAttribute("href")).toMatch(/\/login$/);
-			expect(link.getAttribute("target")).toBe("_blank");
-		});
-
-		it("restores or discards the browser copy when one is offered", async () => {
-			const restore = vi.fn();
-			const discard = vi.fn();
-			showEditor({ recovery: { restore, discard } });
-			const popup = await open(/저장됨/);
-			fireEvent.click(popup.getByRole("button", { name: "브라우저 사본 복원" }));
-			expect(restore).toHaveBeenCalledTimes(1);
-			expect(discard).not.toHaveBeenCalled();
-		});
-
-		it("lists the translations of the entry with a link to each other language", async () => {
-			showEditor({
-				translations: [
-					{ id: "e1", locale: "ko", status: "draft", current: true },
-					{ id: "e2", locale: "en", status: "published", current: false },
-				],
-			});
-			const popup = await open(/^ko$/);
-			const links = popup.getAllByRole("link");
-			expect(links).toHaveLength(1);
-			expect(links[0]?.getAttribute("href")).toMatch(/e2/);
-		});
-
-		it("shows the locale as plain text when the entry has no translations", () => {
-			showEditor({ translations: null });
-			expect(bar().queryByRole("button", { name: /^ko$/ })).toBeNull();
-			expect(bar().getByText("ko")).toBeTruthy();
-		});
-
-		it("shows the extra counts of the body and the reading-time rule", async () => {
-			showEditor();
-			const popup = await open(/1,200/);
-			for (const [label, value] of [
-				["글자 수 (공백 제외)", "1,200"],
-				["글자 수 (공백 포함)", "1,500"],
-				["단어", "300"],
-				["문단", "12"],
-				["제목", "3"],
-			] as const) {
-				const row = popup.getByText(label).parentElement as HTMLElement;
-				expect(within(row).getByText(value)).toBeTruthy();
-			}
-			expect(popup.getByText(/분당 약 500자/)).toBeTruthy();
-		});
-
-		describe("publish readiness item", () => {
-			const readiness = (over: Partial<NonNullable<EditorStatus["publishReadiness"]>> = {}) => ({
-				result: { issues: [], warnings: [] },
-				checking: false,
-				stale: false,
-				recheck: () => {},
-				focus: () => {},
-				...over,
-			});
-
-			it("is absent when the editor has no readiness (trashed, unsaved) or no answer yet", () => {
-				showEditor({ publishReadiness: null });
-				expect(bar().queryByRole("button", { name: /발행/ })).toBeNull();
-				cleanup();
-				showEditor({ publishReadiness: readiness({ result: null }) });
-				expect(bar().queryByRole("button", { name: /발행/ })).toBeNull();
-			});
-
-			it("words a problem the dictionary knows as a to-do and one it does not know with the server's text", async () => {
-				const focus = vi.fn();
-				showEditor({
-					publishReadiness: readiness({
-						focus,
-						result: {
-							issues: [
-								{ code: "missing_image_alt", text: "서버 문구", path: "body", position: { blockId: "b1" } },
-								{ code: "plugin_rule", text: "플러그인이 막았어요", path: "summary", where: "summary" },
-							],
-							warnings: [],
-						},
-					}),
-				});
-				const popup = await open(/^발행 전 2/);
-				fireEvent.click(popup.getByRole("button", { name: /플러그인이 막았어요/ }));
-				expect(focus).toHaveBeenCalledWith(expect.objectContaining({ code: "plugin_rule" }));
-				await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-				const again = await open(/^발행 전 2/);
-				expect(again.getByRole("button", { name: "이미지에 설명(alt)이 필요해요" })).toBeTruthy();
-				expect(again.queryByText("서버 문구")).toBeNull();
-			});
-
-			it("names the thing a problem is about", async () => {
-				showEditor({
-					publishReadiness: readiness({
-						result: { issues: [{ code: "code_ref_broken", text: "x", message: "foo", path: "body" }], warnings: [] },
-					}),
-				});
-				const popup = await open(/^발행 전 1/);
-				expect(popup.getByRole("button", { name: /코드 링크 `foo`/ })).toBeTruthy();
-			});
-
-			it("shows the checking state with no to-do rows, and the stale hint beside an old answer", async () => {
-				showEditor({ publishReadiness: readiness({ checking: true, result: null }) });
-				expect(bar().getByRole("button", { name: "검사 중…" })).toBeTruthy();
-				cleanup();
-				showEditor({ publishReadiness: readiness({ stale: true }) });
-				const popup = await open(/^발행 준비됨/);
-				expect(popup.getByText("(저장 후 다시 검사)")).toBeTruthy();
-			});
-		});
+		const issues = { count: 3, items: [], fixAll: null };
+		show(props({ context: context({ locale: "ko", textIssues: issues }) }), { where: Where });
+		expect(bar().getByRole("button", { name: "검사 1" })).toBeTruthy();
+		cleanup();
+		show(props({ context: context({ locale: "en", textIssues: issues }) }), { where: Where });
+		expect(bar().queryByRole("button", { name: /검사/ })).toBeNull();
 	});
 });

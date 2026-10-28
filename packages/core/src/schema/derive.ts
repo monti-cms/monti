@@ -252,31 +252,49 @@ export function createSchemas(collections: CollectionsConfig) {
 		return { to: stored.field.to as RelationTarget, allowUnpublished: stored.field.allowUnpublished === true };
 	}
 
+	/**
+	 * The fields that must have a value to publish now: the address field first, then the stored ones in declaration order (`order` is the place of a
+	 * field, or of the group it is in, among the collection's fields, for a list that follows the form). They are the title, the fields marked `required`, and the address field when it is
+	 * required. A field inside a conditional group counts only while the condition holds in `metadata`. A translation has only per-language values, so
+	 * with `localizedOnly` the common required values (category etc.) are left to the source (translation group).
+	 */
+	function requiredFieldsOf(
+		collection: SchemaCollectionName,
+		metadata: { readonly [key: string]: unknown },
+		options: { localizedOnly?: boolean } = {},
+	): { name: string; label?: string; slug: boolean; order: number }[] {
+		// The title field is always required, whatever its `required` says: an entry without a title cannot be published.
+		const titleName = findTitleField(schemaOf(collection))?.name;
+		const required = (field: Field, name?: string) =>
+			(name === titleName || ("required" in field && isRequiredField(field))) &&
+			(!options.localizedOnly || Boolean(field.localized));
+		const found: { name: string; label?: string; slug: boolean; order: number }[] = [];
+		const names = Object.keys(schemaOf(collection).fields);
+		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
+			if (field.kind === "slug" && required(field, name)) {
+				found.push({ name, label: field.label, slug: true, order: names.indexOf(name) });
+			}
+		}
+		for (const { name, field, when } of storedFields(collection)) {
+			if (!required(field, name)) continue;
+			if (when && metadata[when.field] !== when.value) continue;
+			found.push({ name, label: field.label, slug: false, order: names.indexOf(when ? when.field : name) });
+		}
+		return found;
+	}
+
 	/** Problems of fields (`required`) that must not be empty when publishing (when saving for item collections). */
 	function missingRequiredIssues(
 		collection: SchemaCollectionName,
 		snapshot: { slug: string | null; metadata: { readonly [key: string]: unknown } },
 		options: { localizedOnly?: boolean } = {},
 	): { code: string; path: string; message?: string }[] {
-		const issues: { code: string; path: string; message?: string }[] = [];
-		// A translation has only per-language values, so common required values (category etc.) are checked on the source (translation group).
-		// The title field is always required, whatever its `required` says: an entry without a title cannot be published.
-		const titleName = findTitleField(schemaOf(collection))?.name;
-		const required = (field: Field, name?: string) =>
-			(name === titleName || ("required" in field && isRequiredField(field))) &&
-			(!options.localizedOnly || Boolean(field.localized));
-		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
-			if (field.kind !== "slug" || !required(field, name)) continue;
-			if (!snapshot.slug) issues.push({ code: NULL_SLUG, path: name });
-		}
-		for (const { name, field, when } of storedFields(collection)) {
-			if (!required(field, name)) continue;
-			if (when && snapshot.metadata[when.field] !== when.value) continue;
-			if (isEmptyValue(snapshot.metadata[name])) {
-				issues.push({ code: "missing_field", path: name, message: field.label });
-			}
-		}
-		return issues;
+		return requiredFieldsOf(collection, snapshot.metadata, options).flatMap(({ name, label, slug }) => {
+			if (slug) return snapshot.slug ? [] : [{ code: NULL_SLUG, path: name }];
+			return isEmptyValue(snapshot.metadata[name])
+				? [{ code: "missing_field", path: name, ...(label === undefined ? {} : { message: label }) }]
+				: [];
+		});
 	}
 
 	/** Names of per-language fields. Unmarked fields are shared by the translation group. */
@@ -387,6 +405,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		schemaMetadata,
 		metadataReferences,
 		relationRule,
+		requiredFieldsOf,
 		missingRequiredIssues,
 		localizedFieldNames,
 		localizedSet,

@@ -101,13 +101,13 @@ function TodoItem({
 	);
 }
 
-/** A thing that is already right: a green ✓ and one small line, under the rows to fix. */
+/** A thing that is already right: a green ✓ and one small line, under the rows to fix, set off from them by a rule. */
 function TodoDone({ className, children, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="todo-done"
 			className={cn(
-				"flex items-center gap-monti-8 px-[9px] pt-monti-6 pb-monti-4 text-monti-caption text-monti-subtle",
+				"relative flex items-center gap-monti-8 px-[9px] pt-monti-6 pb-monti-4 text-monti-caption text-monti-subtle [[data-slot=todo-item]+&]:mt-[11px] [[data-slot=todo-item]+&]:before:absolute [[data-slot=todo-item]+&]:before:inset-x-[2px] [[data-slot=todo-item]+&]:before:-top-[6px] [[data-slot=todo-item]+&]:before:h-px [[data-slot=todo-item]+&]:before:bg-monti-divider",
 				className,
 			)}
 			{...props}

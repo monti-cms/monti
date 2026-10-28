@@ -30,7 +30,7 @@ export const placementLine = (src: boolean): string =>
 /** What was chosen, one line each, and the file or screen that changes it later (the language and the admin path live in `monti.schema.ts`, which the Settings screen edits). */
 export function chosenLines(answers: InitAnswers): string[] {
 	const [defaultLocale, ...otherLocales] = answers.locales;
-	const features = [...(answers.ai ? ["AI writing"] : []), ...(answers.gitSync ? ["Git sync"] : [])];
+	const features = answers.ai ? ["AI writing"] : [];
 	return [
 		`Languages: ${[`${defaultLocale} (default)`, ...otherLocales].join(", ")}. Change: admin Settings (Languages) or monti.schema.ts`,
 		`Sign-in: ${answers.login === "github" ? "GitHub" : "email and password"}. Change: monti.config.ts (auth)`,

@@ -38,7 +38,7 @@ function CollectionTargets({ preview, form }: { preview: ImportPreview; form: Im
 		...preview.targets.map((target) => ({ value: target.name, label: target.label })),
 	];
 	return (
-		<Stack as="section" gap={8} aria-label={t("collections.title")} data-testid="import-collections">
+		<Stack as="section" gap={8} aria-label={t("collections.title")}>
 			<Heading as="h4" variant="label">
 				{t("collections.title")}
 			</Heading>
@@ -137,7 +137,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 				: entry.collection
 			: (preview.targets.find((target) => target.name === entry.target)?.label ?? entry.target);
 	return (
-		<Stack as="section" gap={8} aria-label={t("entries.title")} data-testid="import-entries">
+		<Stack as="section" gap={8} aria-label={t("entries.title")}>
 			<Heading as="h4" variant="label">
 				{t("entries.title")}
 			</Heading>
@@ -153,7 +153,7 @@ function EntryRows({ preview }: { preview: ImportPreview }) {
 					</TableHeader>
 					<TableBody>
 						{rows.map((entry) => (
-							<TableRow key={entry.key} data-testid="import-entry" data-status={entry.skipped ? "skipped" : "import"}>
+							<TableRow key={entry.key}>
 								<TableCell valign="top" wrap>
 									<Inline gap={8} wrap>
 										<Text weight="medium">{entry.title ?? t("entries.noTitle")}</Text>
@@ -196,7 +196,7 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 	const t = useTranslator(importMessages);
 	const { counts } = preview;
 	return (
-		<Stack as="section" gap={8} aria-label={t("fields.title")} data-testid="import-leftovers">
+		<Stack as="section" gap={8} aria-label={t("fields.title")}>
 			<Heading as="h4" variant="label">
 				{t("fields.title")}
 			</Heading>
@@ -210,7 +210,7 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 					</Text>
 				)}
 				{preview.fieldsNotImported.map((item) => (
-					<Text as="li" tone="muted" key={item.collection} data-testid="import-fields">
+					<Text as="li" tone="muted" key={item.collection}>
 						{t("fields.line", {
 							collection: item.collection === "" ? t("collections.top") : item.collection,
 							fields: item.fields.join(", "),
@@ -223,12 +223,12 @@ function Leftovers({ preview }: { preview: ImportPreview }) {
 					</Text>
 				))}
 				{counts.outsideImages > 0 && (
-					<Text as="li" tone="muted" data-testid="import-images">
+					<Text as="li" tone="muted">
 						{t("images.line", { count: counts.outsideImages })}
 					</Text>
 				)}
 				{counts.keptLinks > 0 && (
-					<Text as="li" tone="muted" data-testid="import-links">
+					<Text as="li" tone="muted">
 						{t("links.line", { count: counts.keptLinks })}
 					</Text>
 				)}
@@ -243,8 +243,8 @@ export function PreviewView({ preview, form }: { preview: ImportPreview; form: I
 	const publishId = useId();
 	const { counts } = preview;
 	return (
-		<Stack gap={24} data-testid="import-preview">
-			<Inline gap={12} wrap align="baseline" data-testid="import-summary">
+		<Stack gap={24}>
+			<Inline gap={12} wrap align="baseline">
 				<Text variant="title">{t("summary.found", { count: counts.entries })}</Text>
 				<Text tone="muted">
 					{[

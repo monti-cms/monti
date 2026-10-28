@@ -53,11 +53,12 @@ const cellVariants = cva(
 /**
  * One cell of the status bar. It is as tall as the bar, so the whole height can be pressed, and the cell whose list is open takes the selected
  * background. A `<button>` by default (it opens a list: `render` it from the list's trigger); give it `render={<span />}` for a cell that only states
- * something, and an `href` (or the app's router link in `render`) for one that goes somewhere. `tone` puts the dot and the color of something to fix.
+ * something, and an `href` (or the app's router link in `render`) for one that goes somewhere. `tone` colors the text of something to fix, and `dot` (on by default) puts the 6px dot before it: the dot marks what has to be dealt with before saving or publishing, so a cell that only counts findings turns it off.
  */
 function StatusBarCell({
 	end,
 	tone,
+	dot = true,
 	className,
 	children,
 	render,
@@ -67,11 +68,12 @@ function StatusBarCell({
 	Pick<React.ComponentProps<"a">, "href" | "target" | "rel"> & {
 		end?: boolean;
 		tone?: "warning" | "danger";
+		dot?: boolean;
 	}) {
 	const isButton = render === undefined && href === undefined;
 	const cell = (
 		<>
-			{tone && (
+			{tone && dot && (
 				<span
 					aria-hidden
 					data-slot="status-bar-dot"
@@ -102,6 +104,15 @@ function StatusBarCell({
 /** The space between the cells at the left and the ones at the right. */
 function StatusBarSpacer() {
 	return <span aria-hidden data-slot="status-bar-spacer" className="grow" />;
+}
+
+/** Says the bar's state aloud, politely, without showing it: for a cell whose text changes in ways that should not be read out each time (a clock time). */
+function StatusBarAnnouncer({ children }: { children: React.ReactNode }) {
+	return (
+		<output data-slot="status-bar-announcer" aria-live="polite" className="sr-only">
+			{children}
+		</output>
+	);
 }
 
 type Finding = {
@@ -152,7 +163,7 @@ function StatusBarPluginCell({
 	return (
 		<StatusBarList
 			trigger={
-				<StatusBarCell end={end} tone={blocking ? "danger" : "warning"}>
+				<StatusBarCell end={end} tone={blocking ? "danger" : "warning"} dot={blocking}>
 					{label} {findings.length}
 				</StatusBarCell>
 			}
@@ -185,4 +196,4 @@ function StatusBarPluginCell({
 	);
 }
 
-export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer };
+export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer };

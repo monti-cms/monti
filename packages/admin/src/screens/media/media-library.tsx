@@ -71,7 +71,7 @@ import type { DraggedEntry } from "../shared/entry-drag";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
-import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
+import { DockedPanel } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
 import { useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
@@ -628,7 +628,7 @@ export function MediaLibrary() {
 						</Stack>
 
 						{selected && (
-							<DockedPanel resize={MEDIA_PANEL_RESIZE}>
+							<DockedPanel>
 								<MediaDetailPanel
 									key={selected.id}
 									media={selected}

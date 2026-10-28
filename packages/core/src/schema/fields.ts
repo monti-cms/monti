@@ -18,7 +18,7 @@ export type Localized = boolean | "inherit";
  * (plugin `validate`).
  *
  * The roles the core knows are `summary` and `title`, both on text fields. The summary is passed as `summary` to actions next to a field (AI etc.) and is the default for
- * list and search result descriptions. The title names the field the list, search, relation picker, body links, SEO fallback and git-sync labels read as the entry's title.
+ * list and search result descriptions. The title names the field the list, search, relation picker, body links, SEO fallback and plugin labels read as the entry's title.
  */
 export type FieldRole = string;
 export const SUMMARY_ROLE = "summary";

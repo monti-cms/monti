@@ -23,7 +23,6 @@ import {
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
-import { useResizableSheet } from "../../ui/panel-resize";
 import { Labeled } from "../shared/labeled";
 import {
 	FlagSwitch,
@@ -61,7 +60,6 @@ import {
  * The editor of one field, in a sheet on the right. Edits go to a copy of the collection: Apply puts the copy into the file, Cancel (or closing the sheet)
  * drops it. Deleting a field is the one thing that acts at once, as a change of the file that the review still shows.
  */
-const FIELD_SHEET_RESIZE = { name: "field-sheet", defaultWidth: 520, minWidth: 420 };
 
 export function FieldSheet({
 	editing,
@@ -133,10 +131,9 @@ export function FieldSheet({
 		onClose();
 	};
 
-	const resizable = useResizableSheet(FIELD_SHEET_RESIZE);
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
-			<SheetContent resizable={resizable} data-testid="field-sheet">
+			<SheetContent data-testid="field-sheet">
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
 				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>

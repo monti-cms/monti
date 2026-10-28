@@ -69,7 +69,7 @@ export {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	SidePanelFrame,
+	SidePanel,
 	Spark,
 	SplitButton,
 	Stack,
@@ -107,19 +107,8 @@ export { EmptyState } from "./screens/shared/empty-state";
 export { formatAgo } from "./screens/shared/format-date";
 export { LoadErrorAlert } from "./screens/shared/load-error-alert";
 export { ListPane, ListRow, MasterDetail } from "./screens/shared/master-detail";
-export {
-	type EditorStatus,
-	type EditorTextIssue,
-	type EditorTranslation,
-	type StatusBarContextValue,
-	StatusBarItem,
-	type StatusBarItemProps,
-	type StatusBarScreen,
-	type StatusItemDefinition,
-	StatusPopoverHeader,
-	StatusPopoverRow,
-	useStatusBarContext,
-} from "./screens/shared/status-bar";
+export { StatusBarPluginCell } from "./screens/shared/plugin-cell";
+export { type StatusBarContextValue, useStatusBarContext } from "./screens/shared/status-bar";
 export { useDebounced } from "./screens/shared/use-debounced";
 export { useDraftEditor } from "./screens/shared/use-draft-editor";
 export { useUnsavedGuard } from "./screens/shared/use-unsaved-guard";

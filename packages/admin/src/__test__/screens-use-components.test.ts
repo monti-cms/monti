@@ -87,7 +87,7 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/entries/entry-editor-side-panels.tsx",
-		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow, a width the writer drags)",
+		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow)",
 	],
 	[
 		"admin/src/screens/entries/scroll-room.tsx",
@@ -117,11 +117,7 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/shared/side-panel.tsx",
-		"the docked side panel: positioned beside the list, its width comes from a drag handle (a CSS variable)",
-	],
-	[
-		"admin/src/screens/shared/status-bar.tsx",
-		"the status bar's popups are dense lists with their own row and header look that no other screen shares (the bar and its cells are design-system parts)",
+		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
 	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],

@@ -15,7 +15,7 @@ import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminFrame, AdminNavProvider } from "./shared/admin-frame";
 import { usePublishScreenContext } from "./shared/screen-context";
-import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
+import { DockedPanel } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
 /**
@@ -130,7 +130,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 					/>
 				</Stack>
 				{record && (
-					<DockedPanel resize={RECORD_PANEL_RESIZE}>
+					<DockedPanel>
 						<RecordPanel
 							key={`${record.collection}:${record.id ?? "new"}`}
 							target={record}

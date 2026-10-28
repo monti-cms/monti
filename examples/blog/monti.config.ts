@@ -6,7 +6,6 @@ import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tool
 import { chart } from "@monti-cms/blocks/chart";
 import { mermaid } from "@monti-cms/blocks/mermaid";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 import { seo } from "@monti-cms/seo";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
@@ -66,21 +65,6 @@ export const cms = defineConfig({
 		wordList(),
 		// Draws the site's own callout (components/callout.tsx) in the editor; the public page uses the same component (components/article-body.tsx).
 		siteCallout(),
-		// Two-way sync of published entries with files in a GitHub repo (`@monti-cms/git-sync`). It is switched off here, so the example runs with no token and no repo.
-		// To try it: set `enabled` to `true`, put your own repo in `targets`, run `pnpm db:migrate`, open /studio/tools/git-sync, save a GitHub token (and a webhook secret) there,
-		// and run `pnpm exec monti git-sync:push --all` once. The token is saved on that screen (encrypted with a key derived from MONTI_SECRET), never in this file. See the package README.
-		gitSync({
-			enabled: false,
-			targets: [
-				{
-					repo: "your-name/your-content-repo",
-					branch: "main",
-					folder: "content",
-					collections: ["post", "memo"],
-					mode: "commit",
-				},
-			],
-		}),
 	],
 
 	// The editor's width menu: the blog's real content width first (the editor starts there), then a phone width to check how a post wraps. "Full" is always added last.
@@ -101,5 +85,5 @@ export const cms = defineConfig({
 	// Media uploads: mock dummy storage for previewing the media library UI.
 	storage: dummyStorage(),
 
-	// The one secret, MONTI_SECRET, signs the login session and encrypts the stored values (AI service keys, git-sync tokens).
+	// The one secret, MONTI_SECRET, signs the login session and encrypts the stored values (AI service keys).
 });

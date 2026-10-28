@@ -119,19 +119,21 @@ export const UnusedFilter: Story = { render: screen(serve(), { search: "used=unu
 
 /** A file open in the detail panel on the right. */
 export const FileSelected: Story = {
+	tags: ["visual"],
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await tile(canvasElement, /강아지\.png$/));
-		await within(canvasElement).findByRole("complementary");
+		await userEvent.click(await tile(canvasElement, /^강아지\.png/));
+		await within(canvasElement).findByRole("complementary", { name: "강아지.png" });
 	},
 };
 
 /** A file in use: its usages are listed and it cannot be deleted. */
 export const UsedFileSelected: Story = {
+	tags: ["visual"],
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await tile(canvasElement, /고양이\.png$/));
-		await within(canvasElement).findByRole("complementary");
+		await userEvent.click(await tile(canvasElement, /^고양이\.png/));
+		await within(canvasElement).findByRole("complementary", { name: "고양이.png" });
 	},
 };
 

@@ -95,7 +95,7 @@ export interface AdminPluginShape {
 	readonly pages?: Readonly<Record<string, unknown>>;
 	readonly components?: unknown;
 	readonly slots?: readonly unknown[];
-	readonly statusItems?: unknown;
+	readonly statusCells?: unknown;
 	readonly Provider?: unknown;
 	readonly on?: unknown;
 }
@@ -105,8 +105,8 @@ export interface PluginKeySlot {
 	/** Lowercase letters, digits and `-`. Unique within the plugin. */
 	readonly id: string;
 	/**
-	 * The name of the service the key is for, the same in every language ("Bareun", "GitHub"). A key entered for this slot is saved under it (`Bareun`, then
-	 * `Bareun 2` when taken), so the stored name never depends on the admin language.
+	 * The name of the service the key is for, the same in every language ("Speller", "GitHub"). A key entered for this slot is saved under it (`Speller`, then
+	 * `Speller 2` when taken), so the stored name never depends on the admin language.
 	 */
 	readonly service: string;
 	/**
@@ -175,7 +175,7 @@ export interface ServerPlugin {
 	readonly routes?: readonly PluginRoute[];
 	/**
 	 * Operations this plugin adds (`defineOperation`): capabilities the admin agent can call as tools, next to the core's. Names are shared with the core and every other
-	 * plugin, so use a segment of your own (`gitSync.status`); a name used twice is a config error.
+	 * plugin, so use a segment of your own (`mailer.status`); a name used twice is a config error.
 	 */
 	readonly operations?: readonly AnyOperation[];
 	/**
@@ -260,8 +260,8 @@ export function definePlugin<
 declare const pluginOptionsType: unique symbol;
 
 /**
- * A plugin's name with the type of its options, for reading them from a site: `site.pluginOptions(GIT_SYNC_PLUGIN)` is `GitSyncOptions | undefined`. A plugin
- * package declares it once, next to its options type: `export const GIT_SYNC_PLUGIN: PluginId<"git-sync", GitSyncOptions> = { name: "git-sync" };`.
+ * A plugin's name with the type of its options, for reading them from a site: `site.pluginOptions(SLACK_ON_PUBLISH)` is `SlackOptions | undefined`. A plugin
+ * package declares it once, next to its options type: `export const SLACK_ON_PUBLISH: PluginId<"slack-on-publish", SlackOptions> = { name: "slack-on-publish" };`.
  */
 export interface PluginId<Name extends string = string, Options = unknown> {
 	readonly name: Name;

@@ -49,7 +49,7 @@ export interface ServerPlugins {
 	writeHooks(): Promise<readonly HookSource[]>;
 	/**
 	 * The subscribers of the committed changes, in the order they are delivered to: the server config's `on.entry` durable subscribers, then each plugin's.
-	 * The name is `<owner>:<name>` (`server:revalidate`, `plugin:git-sync:sync`) and keys the delivery state of the outbox.
+	 * The name is `<owner>:<name>` (`server:revalidate`, `plugin:mailer:sync`) and keys the delivery state of the outbox.
 	 */
 	eventSubscribers(): Promise<readonly EventSubscriber[]>;
 }

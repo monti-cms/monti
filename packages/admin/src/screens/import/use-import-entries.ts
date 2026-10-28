@@ -5,7 +5,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { entriesKeys } from "../../api/entries";
 import {
-	getImportLimit,
 	type ImportMapping,
 	type ImportPreview,
 	importKeys,
@@ -20,31 +19,21 @@ export const mappingOf = (preview: ImportPreview): ImportMapping =>
 	Object.fromEntries(preview.collections.map((collection) => [collection.name, collection.target]));
 
 /**
- * The state of one entry import: the file, the preview of what it holds (read again whenever a collection's target changes), the publish choice, and the run.
- * Choosing a file reads it at once; nothing is written until the run.
+ * The state of one entry import: the preview of what `file` holds (read again whenever a collection's target changes), the publish choice, and the run.
+ * It reads when `enabled` (the file is readable and is not a backup to restore); nothing is written until the run. `fileNumber` counts the files
+ * chosen, so reading the same file again is a new read. `reset` drops the choices and the result, for the next file.
  */
-export function useImportEntries() {
+export function useImportEntries(file: File | null, fileNumber: number, enabled: boolean) {
 	const site = useSite();
 	const t = useTranslator(importMessages);
-	const [file, setFile] = useState<File | null>(null);
-	// Counts the files chosen, so reading the same file again after "start over" is a new read.
-	const [fileNumber, setFileNumber] = useState(0);
 	// `undefined`: the server's own choice (each collection to the one of the same name).
 	const [choices, setChoices] = useState<ImportMapping | undefined>(undefined);
 	const [publish, setPublish] = useState(false);
 
-	const limitQuery = useQuery({
-		queryKey: importKeys.limit(),
-		queryFn: ({ signal }) => getImportLimit(site, signal),
-		staleTime: 5 * 60_000,
-	});
-	const limit = limitQuery.data;
-	const tooLarge = file !== null && limit !== undefined && file.size > limit;
-
 	const previewQuery = useQuery({
 		queryKey: [...importKeys.all, "preview", fileNumber, choices ?? null] as const,
 		queryFn: ({ signal }) => previewEntryImport(site, file as File, choices, signal),
-		enabled: file !== null && !tooLarge,
+		enabled: file !== null && enabled,
 		placeholderData: keepPreviousData,
 		// The preview is of one file's bytes at one moment; it is never "fresh" again and never kept after the file is gone.
 		staleTime: Number.POSITIVE_INFINITY,
@@ -62,26 +51,7 @@ export function useImportEntries() {
 		inline: true,
 	});
 
-	const reset = () => {
-		setFile(null);
-		setChoices(undefined);
-		setPublish(false);
-		run.reset();
-	};
-
 	return {
-		file,
-		/** Takes a file: the previous preview, choices and result are dropped. */
-		chooseFile: (next: File) => {
-			setFile(next);
-			setFileNumber((number) => number + 1);
-			setChoices(undefined);
-			setPublish(false);
-			run.reset();
-		},
-		reset,
-		limit,
-		tooLarge,
 		preview,
 		previewQuery,
 		/** Where an archive collection goes: a collection of this site, or `null` to skip it. */
@@ -94,6 +64,11 @@ export function useImportEntries() {
 		runError: run.error,
 		result: run.data,
 		start: () => run.mutate(undefined),
+		reset: () => {
+			setChoices(undefined);
+			setPublish(false);
+			run.reset();
+		},
 	};
 }
 

@@ -7,7 +7,6 @@ import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
-import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
@@ -179,10 +178,13 @@ function useWide(): boolean {
 	return wide;
 }
 
+/** The width of the layout preview, which the writer can drag: 384px until they do, 320px at the narrowest. */
+export const LAYOUT_PREVIEW_RESIZE = { defaultWidth: 384, minWidth: 320 } as const;
+
 /** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
 function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () => void }) {
 	const t = useTranslator(schemaFieldsMessages);
-	const resize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview", minWidth: 320 });
+	const resize = usePanelResize({ ...LAYOUT_PREVIEW_RESIZE, name: "layout-preview" });
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
@@ -234,7 +236,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [cardRef, cardWidth] = useElementWidth<HTMLDivElement>();
 	const showSettings = cardWidth === null || cardWidth >= SETTINGS_MIN_WIDTH;
 	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
-	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
+	const sideResize = usePanelResize({ ...LAYOUT_PREVIEW_RESIZE, name: "layout-preview-side" });
 	const { file, codeCollections } = useSchemaEdit();
 	const placements = placementsOf(site.plugins);
 	const ctx: TreeContext = {

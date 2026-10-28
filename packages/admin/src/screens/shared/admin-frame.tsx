@@ -11,7 +11,6 @@ import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useNavQueriesReady } from "./nav-queries";
 import { type ScreenContextValue, usePublishScreenContext } from "./screen-context";
 import { SidePanelPane, SidePanelToggle } from "./side-panel-slot";
-import { StatusBar, type StatusBarContextValue, type StatusBarScreen } from "./status-bar";
 
 interface AdminNavContextValue {
 	/** Number of trash items across all collections. null before loading. */
@@ -36,16 +35,6 @@ async function countTrash(site: Site): Promise<number> {
 		}),
 	);
 	return totals.reduce((sum, total) => sum + total, 0);
-}
-
-/** What the status bar's items read for a frame page: the screen kind from the current sidebar item, and the collection of a list. */
-function frameStatusContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): StatusBarContextValue {
-	const isCollection = site.COLLECTIONS.includes(activeNav);
-	const screen: StatusBarScreen = isCollection ? "list" : activeNav.startsWith("tools:") ? "tools" : activeNav;
-	return {
-		screen,
-		...(isCollection ? { collection: activeNav } : {}),
-	};
 }
 
 /** Where the admin is on a frame page, for the side panel: a collection (or the trash) is the entry list, and the other nav items name their own screen. */
@@ -74,7 +63,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 
 /**
  * Frame of every admin page but the editor: the sidebar on the left (a drawer on narrow screens), the page beside it with the assistant's button in its
- * corner, the side panel a plugin adds, and the status bar. The page draws its own header in a `PageColumn`.
+ * corner, and the side panel a plugin adds. The page draws its own header in a `PageColumn`.
  */
 export function AdminFrame({ sidebar, children }: { sidebar: AdminSidebarProps; children: ReactNode }) {
 	const site = useSite();
@@ -100,7 +89,6 @@ export function AdminFrame({ sidebar, children }: { sidebar: AdminSidebarProps; 
 					</Stack>
 					<SidePanelPane />
 				</Inline>
-				<StatusBar context={frameStatusContext(site, sidebar.activeNav)} />
 			</SidebarInset>
 		</SidebarProvider>
 	);
