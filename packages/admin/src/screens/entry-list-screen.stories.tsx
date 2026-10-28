@@ -223,7 +223,7 @@ export const StatusMenuOpen: Story = {
 	play: ({ canvasElement }) => openColumn(canvasElement, "상태"),
 };
 
-/** The chips row holds still while a column menu is open: ticking a value does not push the head and the menu down, so the next tick lands on its row. */
+/** Ticking values never moves the menu: nothing appears above the head (there is no chip row), so the next tick lands on its row. */
 export const StatusMenuHoldsStill: Story = {
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
@@ -236,13 +236,11 @@ export const StatusMenuHoldsStill: Story = {
 		await waitFor(() => expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked());
 		await new Promise((resolve) => setTimeout(resolve, 300));
 		await expect(top()).toBe(before);
-		await expect(canvasElement.querySelector("[data-slot=chip-row]")).toBeNull();
 		await userEvent.click(body().getByRole("menuitemcheckbox", { name: /^수정 중/ }));
 		await expect(body().getByRole("menuitemcheckbox", { name: /^초안/ })).toBeChecked();
 		await expect(body().getByRole("menuitemcheckbox", { name: /^수정 중/ })).toBeChecked();
 		await expect(body().getByRole("menuitemcheckbox", { name: /^발행됨/ })).not.toBeChecked();
 		await userEvent.keyboard("{Escape}");
-		await waitFor(() => expect(canvasElement.querySelector("[data-slot=chip-row]")).not.toBeNull());
 	},
 };
 
@@ -293,14 +291,14 @@ export const UpdatedRangeOpen: Story = {
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
-/** A period that is on: the calendar shows its two days filled and the days between banded, and the chip says it. */
+/** A period that is on: the calendar shows its two days filled and the days between banded, and the column has its dot. */
 export const UpdatedRangePicked: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
-/** The second day sets the period: the chip appears, and the calendar stays open showing it (a press outside or Escape closes it). */
+/** The second day sets the period: the column gets its dot, and the calendar stays open showing it (a press outside or Escape closes it). */
 export const UpdatedRangeSet: Story = {
 	render: listScreen(server({ total: 148 })),
 	play: async ({ canvasElement }) => {
@@ -308,16 +306,10 @@ export const UpdatedRangeSet: Story = {
 		const day = (n: string) => within(body().getByRole("grid")).getByRole("button", { name: new RegExp(`${n}일`) });
 		await userEvent.click(day("10"));
 		await userEvent.click(day("20"));
-		await within(canvasElement).findByRole("button", { name: /수정한 날: \d\d\. 10 – \d\d\. 20 지우기/ });
+		await waitFor(() => expect(canvasElement.querySelector("[data-slot=column-dot]")).not.toBeNull());
 		await expect(body().getByRole("grid")).toBeVisible();
 		await expect(body().getAllByRole("menu").length).toBeGreaterThanOrEqual(2);
 	},
-};
-
-/** The period as a chip alone, the menus closed. */
-export const UpdatedRangeChip: Story = {
-	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 };
 
 /** The + at the end of the head row lists only the columns that are off, as plain rows. */
@@ -331,7 +323,7 @@ export const ColumnAddOpen: Story = {
 	},
 };
 
-/** The filters that are on are chips under the title, each with its ×, and the columns they filter have a dot after the name. */
+/** Filters that are on: each column they filter has a dot after its name, and nothing is added above the head. */
 export const Filtered: Story = {
 	...visual,
 	render: listScreen(

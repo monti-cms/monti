@@ -4,8 +4,6 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
-	Chip,
-	ChipRow,
 	ListHead,
 	type ListHeadColumn,
 	ListScroll,
@@ -25,7 +23,6 @@ import { ACTIONS_SIZE, columnSize } from "./entries-table-widths";
 import { columnMenuOf, hiddenColumns, isColumnFiltered } from "./list-column-menu";
 import { ColumnMenuContent } from "./list-column-values";
 import { type AdminListColumn, columnConfig, columnLabel } from "./list-columns";
-import { filterChipsOf } from "./list-filter-model";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
@@ -35,7 +32,6 @@ import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
 import { collectionNoun } from "./shared/noun.messages";
 import type { FolderActions } from "./shared/use-folder-actions";
-import { useFilterTitles } from "./use-filter-titles";
 import { useListColumns } from "./use-list-columns";
 
 /** Dates sit at the end of their cells, so the days line up. */
@@ -147,12 +143,6 @@ export function AdminEntriesTable({
 		columns: off.map((column) => ({ id: column, label: columnLabel(site, collection, column) })),
 		onAdd: (column: AdminListColumn) => columns.toggle(column, true),
 	};
-	const titles = useFilterTitles(state);
-	const liveChips = filterChipsOf(site, state, titles);
-	// While a column's menu is open the chips row holds the chips it had when the menu opened (or stays absent): a row that appears or goes pushes the head
-	// and the menu under the pointer. The rows, the counts, the dots and the ticks keep following the filters.
-	const [frozenChips, setFrozenChips] = useState<typeof liveChips | null>(null);
-	const chips = frozenChips ?? liveChips;
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
 		const target = event.target as HTMLElement;
@@ -180,19 +170,6 @@ export function AdminEntriesTable({
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0}>
 			<Box width="full" shrink={false}>
-				{chips.length > 0 && (
-					<ChipRow>
-						{chips.map((chip) => (
-							<Chip
-								key={chip.key}
-								onRemove={() => onStateChange(chip.clear)}
-								removeLabel={t("listMenu.chipRemove", { label: chip.label })}
-							>
-								{chip.label}
-							</Chip>
-						))}
-					</ChipRow>
-				)}
 				{errorMessage && (
 					<Box paddingTop={12}>
 						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
@@ -219,7 +196,6 @@ export function AdminEntriesTable({
 								onPlace={columns.place}
 								onStep={columns.step}
 								onPreview={columns.setPreview}
-								onMenuOpenChange={(open) => setFrozenChips(open ? liveChips : null)}
 							/>
 						)}
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Chip, ChipRow, Inline, PageColumn, PageHeader, SearchBox, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Box, Inline, PageColumn, PageHeader, SearchBox, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";

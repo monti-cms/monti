@@ -35,7 +35,7 @@ export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
-export { Chip, ChipRow } from "./chip";
+export { Chip } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";

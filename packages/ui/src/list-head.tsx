@@ -102,7 +102,6 @@ function ListHead({
 	onPlace,
 	onStep,
 	onPreview,
-	onMenuOpenChange,
 }: {
 	/** The columns shown, in order. */
 	columns: readonly ListHeadColumn[];
@@ -118,8 +117,6 @@ function ListHead({
 	onPlace?: (from: string, to: string) => void;
 	onStep?: (id: string, direction: -1 | 1) => void;
 	onPreview?: (order: string[] | null) => void;
-	/** Called with `true` when a column's menu opens and `false` when it closes, so what sits above the head can hold still while it is open. */
-	onMenuOpenChange?: (open: boolean) => void;
 }) {
 	const row = React.useRef<HTMLTableRowElement>(null);
 	// The press in progress: where it started, where on the name it took hold, and the order when it started.
@@ -128,8 +125,6 @@ function ListHead({
 	// The column whose menu is open, and whether its card is lined up with the name's right side (a name near the end of the row).
 	const [open, setOpen] = React.useState<{ id: string; flip: boolean } | null>(null);
 	const dragged = React.useRef(false);
-	const menuOpen = open !== null;
-	React.useEffect(() => onMenuOpenChange?.(menuOpen), [menuOpen]);
 	const pointerX = React.useRef(0);
 	const ids = columns.map((column) => column.id);
 	const cellOf = (id: string) =>

@@ -26,9 +26,6 @@ const TAKES: Record<FilterFieldKind, readonly FieldCondition["kind"][]> = {
 	relation: ["empty", "is"],
 };
 
-/** Whether a field is found by being blank alone: a text or an image. */
-export const isBlankField = (field: FilterField): boolean => field.kind === "text" || field.kind === "media";
-
 /** Whether a field of this kind takes this kind of condition. */
 export const takesCondition = (kind: FilterFieldKind, condition: FieldCondition["kind"]): boolean =>
 	TAKES[kind].includes(condition);

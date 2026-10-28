@@ -24,16 +24,3 @@ export function shortDate(
 		? `${pad(month)}. ${pad(day)}`
 		: `${pad(year % 100)}. ${pad(month)}. ${pad(day)}`;
 }
-
-/** A day given as `YYYY-MM-DD` as the list says a date: "10. 05" within this year, "25. 10. 05" before it. */
-export function shortDay(
-	site: Pick<Site, "ADMIN_LOCALE" | "CMS_TIME_ZONE">,
-	day: string,
-	now: Date = new Date(),
-): string {
-	const [year = 0, month = 0, date = 0] = day.split("-").map(Number);
-	const pad = (n: number) => String(n).padStart(2, "0");
-	return year === partsOf(site, now).year
-		? `${pad(month)}. ${pad(date)}`
-		: `${pad(year % 100)}. ${pad(month)}. ${pad(date)}`;
-}
