@@ -200,8 +200,9 @@ const runBoxChecks = (): Finding[] => {
 };
 
 /**
- * The text of a fixed-height, single-line control must sit on the vertical center of its box (within 0.75px; within 1px for Hangul in the mono face, see below). A bottom-padding
- * "nudge" tuned on a canvas that drew another font once left every label about a pixel high.
+ * The text of a fixed-height, single-line control must sit on the vertical center of its box (within 0.5px; within 0.75px for text in the mono face and 1px for Hangul in it, see below). A bottom-padding
+ * "nudge" tuned on a canvas that drew another font once left every label about a pixel high. The admin's Pretendard is balanced in its `@font-face` (`ascent-override`,
+ * `descent-override`, see `bundledFonts`), so no part may need a nudge to pass.
  *
  * What is measured: the box is the control's padding box (a border is not room). The
  * text is each visible text node of the control. Its font is the computed font of its parent, set on a canvas; the baseline is the top of the node's
@@ -217,9 +218,11 @@ const runBoxChecks = (): Finding[] => {
  */
 export const findOffCenterText = (): Finding[] => {
 	// The controls: anything a pointer or a key picks, and the chips and status bar cells that are sized like one.
-	const tolerance = 0.75;
+	const tolerance = 0.5;
+	// Text in the mono face (IBM Plex Mono) has its own metrics, which the admin's font-face does not balance: it is measured to 0.75px.
+	const monoTolerance = 0.75;
 	// Hangul set in the mono face is drawn by the system's own Hangul face, whose metrics the page does not know (the design system keeps Korean in its
-	// mono roles as it is), so such a text is measured to a pixel, not to 0.75.
+	// mono roles as it is), so such a text is measured to a pixel.
 	const fallbackTolerance = 1;
 	const family = (value: string) => (value.split(",")[0] ?? "").replace(/["']/g, "").trim();
 	const monoFace = family(getComputedStyle(document.documentElement).getPropertyValue("--monti-font-mono"));
@@ -249,7 +252,7 @@ export const findOffCenterText = (): Finding[] => {
 		const top = outer.top + px(style.borderTopWidth);
 		const bottom = outer.bottom - px(style.borderBottomWidth);
 
-		const nodes: { text: string; font: string; lines: DOMRect[]; fallback: boolean }[] = [];
+		const nodes: { text: string; font: string; lines: DOMRect[]; fallback: boolean; mono: boolean }[] = [];
 		const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
 		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
 			const text = (node.textContent ?? "").trim();
@@ -271,6 +274,7 @@ export const findOffCenterText = (): Finding[] => {
 				font: `${own.fontStyle} ${own.fontWeight} ${own.fontSize} ${own.fontFamily}`,
 				lines,
 				fallback,
+				mono: monoFace !== "" && family(own.fontFamily) === monoFace,
 			});
 		}
 		const lines = nodes.flatMap((node) => node.lines);
@@ -298,7 +302,7 @@ export const findOffCenterText = (): Finding[] => {
 			const above = baseline - ink.actualBoundingBoxAscent - top;
 			const below = bottom - (baseline + ink.actualBoundingBoxDescent);
 			const off = (above - below) / 2;
-			if (Math.abs(off) <= (node.fallback ? fallbackTolerance : tolerance)) continue;
+			if (Math.abs(off) <= (node.fallback ? fallbackTolerance : node.mono ? monoTolerance : tolerance)) continue;
 			const cls = (control.getAttribute("class") ?? "").split(/\s+/).filter(Boolean).slice(0, 4).join(".");
 			findings.push({
 				check: "center",

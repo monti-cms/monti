@@ -130,9 +130,10 @@ describe("the center check", () => {
 		expect(check(control("0,36", "Save", 8))).toHaveLength(1);
 	});
 
-	it("finds text below the center, and tolerates less than 0.75px", () => {
+	it("finds text below the center, and tolerates less than 0.5px", () => {
 		expect(check(control("0,36", "Save", 12))[0]?.detail).toContain("below the center");
-		expect(check(control("0,36", "Save", 10.6))).toEqual([]);
+		expect(check(control("0,36", "Save", 10.4))).toEqual([]);
+		expect(check(control("0,36", "Save", 10.6))).toHaveLength(1);
 		expect(check(control("0,36", "Save", 11))).toHaveLength(1);
 	});
 
@@ -140,7 +141,7 @@ describe("the center check", () => {
 		const hangul = (family: string) =>
 			`<button style="display:inline-flex;font-family:${family}" data-box="0,36"><span style="font-family:${family}" data-box="0,36" data-lines="9.2,16">뉴스</span></button>`;
 		document.documentElement.style.setProperty("--monti-font-mono", "'Monti Plex Mono', monospace");
-		// 0.9px above the center: more than 0.75, within 1.
+		// 0.9px above the center: more than 0.75 (the mono face's own tolerance), within 1.
 		expect(check(hangul("'Monti Plex Mono', monospace"))).toEqual([]);
 		expect(check(hangul("'Monti Pretendard', sans-serif"))).toHaveLength(1);
 		document.documentElement.style.removeProperty("--monti-font-mono");

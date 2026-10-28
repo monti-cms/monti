@@ -210,15 +210,21 @@ export function localizeFonts(css, packageDir) {
 	return { css: kept, fonts };
 }
 
+/** Pretendard's metric overrides (see {@link bundledFonts}). */
+const ASCENT_OVERRIDE = "92.4%";
+const DESCENT_OVERRIDE = "19%";
+
 /**
  * The admin's own fonts, as `@font-face` rules plus the files to copy next to the built CSS (`dist/fonts/...`, linked relatively like the KaTeX fonts).
  * Pretendard is the variable font in its dynamic subsets (one file per `unicode-range`, so a page only downloads the slices it shows), IBM Plex Mono
  * is the latin subset in 400, 500 and 600. Both are renamed (`Monti Pretendard`, `Monti Plex Mono`) so they never collide with a site's own copy.
  * The fonts are devDependencies of the admin package: only the admin bundle has them, other bundles return `null`.
  *
- * No `ascent-override`, `descent-override` or `line-gap-override` is set: Pretendard's own metrics already center Hangul and Latin in the admin's
- * controls. A font that replaces it must be balanced here, with those descriptors, and never by nudging parts with padding. `pnpm test:visual:audit`
- * reports a control whose text is off center.
+ * Pretendard is balanced here, not by nudging parts: its own ascent (0.952em) and descent (0.241em) put the center of Hangul and Latin capitals 0.355em above the
+ * baseline, which in a fixed-height box leaves the text up to a pixel high at some sizes (11, 13 and 16px). `ASCENT_OVERRIDE` and `DESCENT_OVERRIDE` move the
+ * baseline so the ink sits within about half a pixel of the center at every size, and `line-gap-override: 0%` keeps the line box to the explicit line heights.
+ * A font that replaces it must be balanced the same way, with those descriptors, and never by nudging parts with padding. `pnpm test:visual:audit` reports a
+ * control whose text is off center.
  */
 export function bundledFonts(packageDir) {
 	const require = createRequire(path.join(packageDir, "package.json"));
@@ -241,6 +247,10 @@ export function bundledFonts(packageDir) {
 		.replace(/'Pretendard Variable'/g, '"Monti Pretendard"')
 		.replace(/url\(\.\/woff2-dynamic-subset\//g, "url(./fonts/pretendard/")
 		.replace(/format\('woff2-variations'\)/g, 'format("woff2")')
+		.replace(
+			/font-display: swap;/g,
+			`font-display: swap; ascent-override: ${ASCENT_OVERRIDE}; descent-override: ${DESCENT_OVERRIDE}; line-gap-override: 0%;`,
+		)
 		.replace(/\} /g, "}\n")
 		.trim();
 	const latin = JSON.parse(readFileSync(path.join(plexDir, "unicode.json"), "utf8")).latin;
@@ -251,8 +261,7 @@ export function bundledFonts(packageDir) {
 				`src:url(./fonts/ibm-plex-mono/ibm-plex-mono-latin-${weight}-normal.woff2) format("woff2");unicode-range:${latin}}`,
 		)
 		.join("\n");
-	const note =
-		"/* Pretendard's metrics already center Hangul and Latin in our controls, so no ascent-override or descent-override is set. A replacement font must be balanced here (ascent-override, descent-override, line-gap-override), not by nudging parts with padding. */";
+	const note = `/* Pretendard is balanced with ascent-override ${ASCENT_OVERRIDE} and descent-override ${DESCENT_OVERRIDE} so Hangul and Latin sit on the center of the admin's controls. A replacement font must be balanced here (ascent-override, descent-override, line-gap-override), not by nudging parts with padding. */`;
 	return {
 		css: `${note}\n${pretendardCss}\n${plexCss}\n`,
 		copies: [
