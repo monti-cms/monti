@@ -54,14 +54,14 @@ Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugin
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are IBM Carbon icon names (`document`, `warning--alt`, `text--highlight`; `spark` is the assistant's ✦).
 The admin package includes only the commonly used icons, so register other names with `icons` of the same `components`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
 ```tsx
-import { Eye } from "lucide-react";
+import { View } from "@carbon/icons-react";
 
-export default defineAdminPlugin({ components: { icons: { eye: Eye } } });
+export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
 Each block of `@monti-cms/blocks` and `@monti-cms/ai` declare theirs the same way.
@@ -257,7 +257,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 const myChecker = defineTextChecker({
 	id: "my-words",
 	label: "Banned words", // toolbar button name
-	icon: "ban", // lucide name or component. Defaults to the spelling icon
+	icon: "flag", // Carbon icon name or component. Defaults to the spelling icon
 	locales: ["ko"], // all languages if omitted
 	limits: { maxChars: 10_000, maxSegments: 50 }, // split before sending if exceeded
 	// auto: true, // when typing pauses, checks only changed paragraphs automatically (off by default)

@@ -54,14 +54,14 @@ export default defineAdminPlugin({
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
+블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 IBM Carbon 아이콘 이름이다(`document`, `warning--alt`, `text--highlight`. `spark`는 어시스턴트의 ✦).
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 `components`의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
 ```tsx
-import { Eye } from "lucide-react";
+import { View } from "@carbon/icons-react";
 
-export default defineAdminPlugin({ components: { icons: { eye: Eye } } });
+export default defineAdminPlugin({ components: { icons: { view: View } } });
 ```
 
 `@monti-cms/blocks`의 각 블록과 `@monti-cms/ai`도 같은 방식으로 선언한다.
@@ -255,7 +255,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 const myChecker = defineTextChecker({
 	id: "my-words",
 	label: "금지어 검사", // 도구 모음 버튼 이름
-	icon: "ban", // lucide 이름이나 컴포넌트. 없으면 맞춤법 아이콘
+	icon: "flag", // Carbon 아이콘 이름이나 컴포넌트. 없으면 맞춤법 아이콘
 	locales: ["ko"], // 없으면 모든 언어
 	limits: { maxChars: 10_000, maxSegments: 50 }, // 넘으면 나눠 보낸다
 	// auto: true, // 입력을 멈추면 바뀐 문단만 저절로 검사(기본은 끔)

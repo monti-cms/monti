@@ -83,12 +83,12 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 
 ```sh
 pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.16&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs" \
-  next-themes @tanstack/react-query @tiptap/core @tiptap/pm @tiptap/react lucide-react
+  next-themes @tanstack/react-query @tiptap/core @tiptap/pm @tiptap/react @carbon/icons-react
 ```
 
 Until the public release the Monti packages come from the GitHub release bundle, so each one is added by its GitHub address (the same ref, only `path:/<folder>` changes). `monti init` does this for you.
 
-The admin package and the AI plugin must share one copy of React Query, Tiptap and the lucide icons with the app, so the app installs them (peers).
+The admin package and the AI plugin must share one copy of React Query, Tiptap and the Carbon icons with the app, so the app installs them (peers).
 `monti init` installs `@monti-cms/auth` (Auth.js core, no Next.js in it) for the login you choose; see its README for providers.
 The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
@@ -204,7 +204,7 @@ export default defineSchema({
 			label: "Post",
 			kind: "document",
 			path: "/posts/:slug",
-			icon: "file-text",
+			icon: "document",
 			fields: {
 				title: { kind: "text", label: "Title", required: true, max: 200 },
 				slug: { kind: "slug", label: "Slug", from: "title", required: true },
@@ -711,7 +711,7 @@ blocks: [
 		editor: {
 			view: "node", // "opaque" shows it as a raw-text box in the editor
 			insertable: true,
-			icon: "message-square", // slash and component menu icon (lucide name)
+			icon: "chat", // slash and component menu icon (Carbon icon name)
 			insert: { values: { level: "warn" }, text: "Content" }, // initial values on insert
 		},
 	}),
@@ -780,7 +780,7 @@ codeBlock: {
 		{
 			name: "info", // annotation name (lowercase kebab-case). collapse, anchor and the text effect names cannot be used
 			label: "Info", // line effect menu name
-			icon: "star", // menu icon (lucide name, a name registered in the admin UI)
+			icon: "star", // menu icon (Carbon icon name, a name registered in the admin UI)
 			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
 			editor: { background: "bg-monti-selected" }, // editor display (admin color roles are `monti-*`, dark theme is `monti-dark:`): background, wavy (wavy underline color), marker({ text, className })
 		},
