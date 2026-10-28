@@ -12,6 +12,7 @@ import { useAdminComponents, useEditorExtensions } from "../../admin-components"
 import { adminEntryClient } from "../../api/entries";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
+import { openImageCard } from "../../editor/image-alt";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
@@ -301,6 +302,17 @@ export function EntryEditorShell({
 		if (issue.position || issue.path === "body" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
 			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the block in the source text.
+			// An image without alt text opens its card, with the cursor in the alt text field.
+			const visual = visualEditorRef.current;
+			if (
+				!isSourceMode &&
+				issue.code === "missing_image_alt" &&
+				issue.position?.blockId &&
+				visual &&
+				!visual.isDestroyed &&
+				openImageCard(visual, issue.position.blockId)
+			)
+				return;
 			if (!isSourceMode && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
 			if (!sourcePanel) return;
 			setFocusBlock(issue.position?.blockId);
