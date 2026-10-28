@@ -124,7 +124,7 @@ export const KindMenu: Story = {
 	},
 };
 
-// 미디어: filtered to the media kind, files and media folders; the chip says so and the kind's name has its dot.
+// 미디어: filtered to the media kind, files and media folders; the kind's name has its dot.
 export const Media: Story = { ...visual, render: screen(backendOf(), "kind=media") };
 
 // 휴지통 폴더 안: the trail, the folder's name, its day, folder restore and permanent delete, the way up, and rows with no day.

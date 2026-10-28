@@ -109,7 +109,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(badge).toBeTruthy();
 	});
 
-	it("filters by kind from the kind column: several at once, the menu stays open, a chip shows them and its × lets them go", async () => {
+	it("filters by kind from the kind column: several at once, the menu stays open, no chip row, and unticking lets them go", async () => {
 		await renderTrash();
 		const head = screen.getByRole("columnheader", { name: t("head.kind") });
 		fireEvent.click(within(head).getByRole("button", { name: t("head.kind") }));
@@ -123,11 +123,9 @@ describe("flow: looking around the trash (T3)", () => {
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(contentName) }));
 		await waitFor(() => expect(new Set(lastList().searchParams.getAll("kind"))).toEqual(new Set(["media", content])));
 		await screen.findByRole("row", { name: /첫 번째 글/ });
-		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-		const chip = await screen.findByText(new RegExp(`^${t("kind.chip", { kinds: "" })}`));
-		fireEvent.click(
-			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("kind.clear") }),
-		);
+		expect(document.querySelector("[data-slot=chip]")).toBeNull();
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(mediaName) }));
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(contentName) }));
 		await waitFor(() => expect(lastList().searchParams.getAll("kind")).toEqual([]));
 	});
 

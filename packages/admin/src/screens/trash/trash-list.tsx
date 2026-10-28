@@ -5,8 +5,6 @@ import { trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	BulkBar,
-	Chip,
-	ChipRow,
 	DropdownMenuCheckboxItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
@@ -28,7 +26,7 @@ import {
 	TrashRowDate,
 	TrashRowTitle,
 } from "@monti-cms/ui";
-import { type KeyboardEvent, useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { TrashEntryJson, TrashItemJson } from "../../api/trash";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
@@ -182,9 +180,9 @@ function TrashRow({
 
 /**
  * The one head row of the list: the title; the kind, whose menu filters to some kinds (several at once, any of them; it stays open, like the list's value
- * menus); and the day discarded, which sorts (newest first, or oldest first). Inside a folder the kind has no menu: everything there is one kind.
+ * menus; the dot after its name and the ticks in it are all that shows the filter, with no chip row to push the list); and the day discarded, which sorts (newest first, or oldest first). Inside a folder the kind has no menu: everything there is one kind.
  */
-function TrashHead({ view, onMenuOpenChange }: { view: TrashView; onMenuOpenChange: (open: boolean) => void }) {
+function TrashHead({ view }: { view: TrashView }) {
 	const site = useSite();
 	const t = useTranslator(trashMessages);
 	const ts = useTranslator(screensMessages);
@@ -235,7 +233,6 @@ function TrashHead({ view, onMenuOpenChange }: { view: TrashView; onMenuOpenChan
 				},
 			]}
 			end={ACTIONS_SIZE}
-			onMenuOpenChange={onMenuOpenChange}
 			selectAll={{
 				state: (picked === 0 ? "none" : picked === items.length ? "all" : "some") as SelectAllState,
 				onChange: (all) => setSelected(new Set(all ? items.map(itemKey) : [])),
@@ -277,7 +274,6 @@ function TrashBulkBar({ view, actions }: { view: TrashView; actions: TrashAction
  * menu and the Delete key act on the rows picked when the row is one of them.
  */
 export function TrashList({ view, actions, now }: { view: TrashView; actions: TrashActions; now: Date }) {
-	const site = useSite();
 	const t = useTranslator(trashMessages);
 	const tc = useTranslator(commonMessages);
 	const { state, items, selected } = view;
@@ -305,26 +301,8 @@ export function TrashList({ view, actions, now }: { view: TrashView; actions: Tr
 		void actions.requestDelete(targetsOf(item));
 	};
 	const picking = selected.size > 0;
-	// The kinds the 종류 column filters to, as one chip whose × lets them go. The search is not a chip: it is in its box. Inside a folder there is none.
-	const kinds = state.folder
-		? []
-		: kindValues(view.kinds, site.COLLECTIONS)
-				.filter((value) => state.kinds.includes(value.kind))
-				.map((value) => kindLabel(site, value.kind));
-	const liveChip = kinds.length > 0 ? t("kind.chip", { kinds: kinds.join(", ") }) : null;
-	// While the kind menu is open the chips row keeps what it had when the menu opened (or stays absent), as the entry list does: a row that appears or
-	// goes would push the head and the menu under the pointer. The rows, the counts, the dot and the ticks keep following the filter.
-	const [frozenChip, setFrozenChip] = useState<string | null | undefined>(undefined);
-	const chip = frozenChip === undefined ? liveChip : frozenChip;
 	return (
 		<Stack as="section" aria-label={t("title")} gap={0} grow minHeight={0}>
-			{chip && (
-				<ChipRow>
-					<Chip onRemove={() => view.update({ kinds: [] })} removeLabel={t("kind.clear")}>
-						{chip}
-					</Chip>
-				</ChipRow>
-			)}
 			{view.errorMessage && (
 				<Box paddingTop={12}>
 					<LoadErrorAlert message={view.errorMessage} onRetry={view.retry} />
@@ -334,11 +312,7 @@ export function TrashList({ view, actions, now }: { view: TrashView; actions: Tr
 				<Box width="full">
 					{items.length > 0 || state.folder ? (
 						<Table container="none" layout="fixed" columns={[undefined, KIND_SIZE, DATE_SIZE, ACTIONS_SIZE]}>
-							{picking ? (
-								<TrashBulkBar view={view} actions={actions} />
-							) : (
-								<TrashHead view={view} onMenuOpenChange={(open) => setFrozenChip(open ? liveChip : undefined)} />
-							)}
+							{picking ? <TrashBulkBar view={view} actions={actions} /> : <TrashHead view={view} />}
 							<TableBody aria-busy={view.isRefreshing || undefined} dimmed={view.isRefreshing}>
 								{state.folder && (
 									<TableRow>
