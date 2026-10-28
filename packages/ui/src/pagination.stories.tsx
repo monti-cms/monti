@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Count } from "./count";
 import {
+	ListFooter,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,
@@ -117,5 +118,44 @@ export const Disabled: Story = {
 				</PaginationItem>
 			</PaginationContent>
 		</Pagination>
+	),
+};
+
+/** The row under a table: the range at the left, the pager at the right, both 12px inside like the rows. */
+export const Footer: Story = {
+	decorators: [],
+	render: () => (
+		<div className="w-full max-w-4xl">
+			<ListFooter>
+				<Count className="whitespace-nowrap">1–25 / 148</Count>
+				<Pagination>
+					<PaginationContent>
+						<PaginationItem>
+							<PaginationPrevious disabled />
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationLink href="#" isActive>
+								1
+							</PaginationLink>
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationLink href="#">2</PaginationLink>
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationLink href="#">3</PaginationLink>
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationEllipsis />
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationLink href="#">6</PaginationLink>
+						</PaginationItem>
+						<PaginationItem>
+							<PaginationNext href="#" />
+						</PaginationItem>
+					</PaginationContent>
+				</Pagination>
+			</ListFooter>
+		</div>
 	),
 };

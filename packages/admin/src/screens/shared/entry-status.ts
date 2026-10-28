@@ -16,20 +16,6 @@ export const statusLabels = (site: Pick<Site, "createTranslator">): Record<Entry
 };
 
 /**
- * Status text of list and edit screens. Always written as text so status is not conveyed by color alone.
- * A draft that differs from the public version is "Published · Editing".
- */
-export function describeEntryStatus(
-	site: Pick<Site, "createTranslator">,
-	entry: { status: EntryStatus; hasUnpublishedChanges?: boolean },
-): string {
-	const t = site.createTranslator(sharedMessages);
-	let label = statusLabels(site)[entry.status] ?? entry.status;
-	if (entry.status === "published" && entry.hasUnpublishedChanges) label += ` · ${t("status.editing")}`;
-	return label;
-}
-
-/**
  * The mark an entry status wears, shared by the list and the editor header: published is a filled dot (orange while it has unpublished changes),
  * a draft is an empty ring, and archived and trashed entries are a short bar.
  */

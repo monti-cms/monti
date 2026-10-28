@@ -105,6 +105,9 @@ export {
 	DropdownMenuPortal,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuReorderGroup,
+	DropdownMenuScroll,
+	DropdownMenuSearch,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
@@ -161,6 +164,7 @@ export {
 	ToolbarDivider,
 } from "./page-header";
 export {
+	ListFooter,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,

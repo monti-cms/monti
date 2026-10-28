@@ -127,10 +127,14 @@ describe("any site: list screen", () => {
 		);
 		await screen.findByRole("row", { name: /Alpha/ });
 		expect(screen.getByRole("row", { name: /Beta/ })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: t("view.label") }));
-		const viewDialog = await screen.findByRole("dialog");
-		for (const column of columnsFor(testSite, content).defaults) {
-			expect(within(viewDialog).getByRole("checkbox", { name: columnLabel(testSite, content, column) })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: t("listMenu.view") }));
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: new RegExp(t("listMenu.columns")) }), {
+			key: "ArrowRight",
+		});
+		for (const column of columnsFor(testSite, content).defaults.filter((candidate) => candidate !== "title")) {
+			expect(
+				await screen.findByRole("menuitemcheckbox", { name: columnLabel(testSite, content, column) }),
+			).toBeTruthy();
 		}
 		// A collection of writing has the one "write a new post" button, whatever its label.
 		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeTruthy();

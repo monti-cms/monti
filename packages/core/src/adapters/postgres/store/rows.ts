@@ -11,6 +11,7 @@ import type {
 	PublishedEntryRecord,
 } from "../../../core/store/types";
 import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
+import { documentKeyHash, translationBaseHash } from "../../../core/translation/state-hash";
 import { type Reference, type ReferenceKind, readReferenceOccurrences } from "../../../core/types";
 import {
 	emptyStoredDocument,
@@ -259,6 +260,8 @@ export async function writeBody(
 			updated_at: body.updatedAt,
 			search_text: extractVisibleText(site, body.doc),
 			translation: body.translation === null ? null : JSON.stringify(body.translation),
+			doc_key_hash: documentKeyHash(body.doc),
+			translation_base_hash: translationBaseHash(body.translation),
 		})
 		.onConflict((conflict) =>
 			conflict.columns(["entry_id", "state"]).doUpdateSet({
@@ -268,6 +271,8 @@ export async function writeBody(
 				updated_at: proposed<Date>("updated_at"),
 				search_text: proposed<string>("search_text"),
 				translation: proposed<string | null>("translation"),
+				doc_key_hash: proposed<string>("doc_key_hash"),
+				translation_base_hash: proposed<string | null>("translation_base_hash"),
 			}),
 		)
 		.execute();

@@ -18,6 +18,8 @@ import type {
 	FolderListItem,
 	IncomingReferenceItem,
 	JsonObject,
+	ListCounts,
+	ListCountsParams,
 	ListEntriesParams,
 	ListEntriesResult,
 	ListMediaParams,
@@ -137,6 +139,8 @@ export interface LifecycleStore {
 /** The admin list: search, filters, sorting and paging done by the store. */
 export interface ListStore {
 	listEntries(params: ListEntriesParams): Promise<ListEntriesResult>;
+	/** How many rows of the list each value of a field (or of the translation filter) has, for the filter menu. */
+	countListValues(params: ListCountsParams): Promise<ListCounts>;
 	/**
 	 * Finds entries of one collection by title for a picker, so it loads only what it shows. The best matches come first: a title equal to the
 	 * query, then one that starts with it, one with a word that starts with it, one that contains it, and last a slug that contains it; equal

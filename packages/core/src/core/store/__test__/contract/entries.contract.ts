@@ -1442,8 +1442,8 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				})
 			).entry;
 
-			const relations = { [filterRelation.name]: [tag.id] };
-			const byTag = await store.listEntries({ collection: contentCollection, relations });
+			const fields = { [filterRelation.name]: [{ kind: "is" as const, value: tag.id }] };
+			const byTag = await store.listEntries({ collection: contentCollection, fields });
 			expect(byTag.items.map((item) => item.id)).toEqual([tagged.id]);
 			expect(byTag.items[0]?.hasUnpublishedChanges).toBe(true);
 			expect(byTag.items[0]?.relations[filterRelation.name]).toEqual([{ id: tag.id, title: expect.any(String) }]);
@@ -1452,7 +1452,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(withChanges.items.map((item) => item.id)).toContain(tagged.id);
 
 			const trashed = await store.trashEntry({ id: tagged.id, expectedVersion: changed.version });
-			expect((await store.listEntries({ collection: contentCollection, relations })).items).toHaveLength(0);
+			expect((await store.listEntries({ collection: contentCollection, fields })).items).toHaveLength(0);
 			const trash = await store.listEntries({ collection: contentCollection, statuses: ["trashed"] });
 			expect(trash.items.find((item) => item.id === tagged.id)?.trashedAt).toBeInstanceOf(Date);
 			expect(trashed.status).toBe("trashed");

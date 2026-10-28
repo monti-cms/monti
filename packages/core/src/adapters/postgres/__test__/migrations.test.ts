@@ -5,8 +5,10 @@ import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { SetupError } from "../../../core/problem";
 import { seedEntry } from "../../../core/store/__test__/seed";
+import { documentKeyHash } from "../../../core/translation/state-hash";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../migrations";
+import { fillDocumentHashes } from "../migrations/0003_translation_source_hashes";
 import { createPluginStorage } from "../plugin-storage";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
@@ -35,7 +37,42 @@ describe("migrations", () => {
 		);
 
 	it("has exactly the baseline as its step list (a guard against renaming a step)", () => {
-		expect([...CONTENT_STORE_MIGRATIONS]).toEqual(["0001_baseline", "0002_media_folders"]);
+		expect([...CONTENT_STORE_MIGRATIONS]).toEqual([
+			"0001_baseline",
+			"0002_media_folders",
+			"0003_translation_source_hashes",
+		]);
+	});
+
+	it("fills the hashes the translation filter compares for bodies written before they were kept, and every new body has them", async () => {
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		const store = createContentStore(pool, { site: testSite, schema: schemaName });
+		const entry = await seedEntry(store, {
+			collection: "post",
+			slug: "hash-fill",
+			metadata: { title: "해시" },
+			text: "본문",
+			contentHash: "hash-fill-1",
+		});
+		const read = async () =>
+			(
+				await pool.query<{ doc_key_hash: string | null; translation_base_hash: string | null; doc: unknown }>(
+					`SELECT doc_key_hash, translation_base_hash, doc FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
+					[entry.id],
+				)
+			).rows[0];
+		const written = await read();
+		expect(written?.doc_key_hash).toBe(documentKeyHash(entry.working.doc));
+		// A source has no base to compare.
+		expect(written?.translation_base_hash).toBeNull();
+		await pool.query(`UPDATE "${schemaName}".entry_bodies SET doc_key_hash = NULL WHERE entry_id = $1`, [entry.id]);
+		const client = await pool.connect();
+		try {
+			expect(await fillDocumentHashes(client, schemaName)).toBeGreaterThanOrEqual(1);
+		} finally {
+			client.release();
+		}
+		expect((await read())?.doc_key_hash).toBe(documentKeyHash(entry.working.doc));
 	});
 
 	it("runs one at a time even when started twice concurrently, and records the steps and the seed once", async () => {

@@ -283,7 +283,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 		await screen.findByText("slug-e0");
 
-		fireEvent.click(screen.getByRole("button", { name: /다음 페이지/ }));
+		fireEvent.click(screen.getByRole("link", { name: /Next page|다음 페이지/ }));
 		expect(await screen.findByText("slug-e25")).toBeTruthy();
 	});
 });

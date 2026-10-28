@@ -110,7 +110,22 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span"
 	);
 }
 
+/**
+ * The row under a table: the shown range ("1–25 / 148", a `Count`) at the left, the {@link Pagination} at the right. It sits 12px inside like the rows, so
+ * the range starts under the first letters of the table, and 12px under it.
+ */
+function ListFooter({ className, ...props }: React.ComponentProps<"footer">) {
+	return (
+		<footer
+			data-slot="list-footer"
+			className={cn("flex items-center gap-monti-16 px-monti-12 pt-monti-12", className)}
+			{...props}
+		/>
+	);
+}
+
 export {
+	ListFooter,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,

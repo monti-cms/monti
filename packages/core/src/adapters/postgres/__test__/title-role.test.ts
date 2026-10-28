@@ -118,7 +118,7 @@ describe("a collection whose title field is not named title", () => {
 
 		const searched = await store.listEntries({ collection: "article", search: "MANGO", pageSize: 25 });
 		expect(searched.items.map((item) => item.title)).toEqual(["Mango tree"]);
-		const filtered = await store.listEntries({ collection: "article", titleContains: "pie", pageSize: 25 });
+		const filtered = await store.listEntries({ collection: "article", search: "pie", pageSize: 25 });
 		expect(filtered.items.map((item) => item.title)).toEqual(["Apple pie"]);
 
 		const hits = await store.searchEntries({ collection: "article", query: "tree" });

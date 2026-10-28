@@ -17,6 +17,7 @@ import * as rEntry from "./v1/entries/[id]/route";
 import * as rEntryTranslations from "./v1/entries/[id]/translations/route";
 import * as rEntryTrash from "./v1/entries/[id]/trash/route";
 import * as rEntryUnarchive from "./v1/entries/[id]/unarchive/route";
+import * as rEntryCounts from "./v1/entries/counts/route";
 import * as rEntries from "./v1/entries/route";
 import * as rEntrySearch from "./v1/entries/search/route";
 import { CmsError, handleApiError } from "./v1/error-handler";
@@ -78,8 +79,9 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/api-keys/[id]", module: rApiKeyItem },
 	{ pattern: "v1/bulk", module: rBulk },
 	{ pattern: "v1/entries", module: rEntries },
-	// Named before `[id]`, so `search` is not read as an entry id.
+	// Named before `[id]`, so `search` and `counts` are not read as an entry id.
 	{ pattern: "v1/entries/search", module: rEntrySearch },
+	{ pattern: "v1/entries/counts", module: rEntryCounts },
 	{ pattern: "v1/entries/[id]", module: rEntry },
 	{ pattern: "v1/entries/[id]/archive", module: rEntryArchive },
 	{ pattern: "v1/entries/[id]/check", module: rEntryCheck },
