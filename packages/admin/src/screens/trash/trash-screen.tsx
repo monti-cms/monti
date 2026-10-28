@@ -1,7 +1,7 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Inline, PageColumn, PageHeader, SearchBox, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Box, Inline, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
@@ -46,13 +46,18 @@ export function TrashScreen({ now }: { now?: Date }) {
 	);
 }
 
+/** The header's "Search" button, which opens the search box in its place, as the list's does. */
 function TrashSearch({ view }: { view: ReturnType<typeof useTrash> }) {
 	const t = useTranslator(trashMessages);
 	const [text, setText] = useDebouncedInput(view.state.search, (search) => view.update({ search }));
 	return (
-		<Box width="panel">
-			<SearchBox aria-label={t("search")} placeholder={t("search")} value={text} onValueChange={setText} />
-		</Box>
+		<SearchToggle
+			label={t("search")}
+			aria-label={t("search")}
+			placeholder={t("search")}
+			value={text}
+			onValueChange={setText}
+		/>
 	);
 }
 

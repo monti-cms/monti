@@ -198,7 +198,8 @@ describe("flow: looking around the trash (T3)", () => {
 
 	it("finds things inside folders too: the search is sent, it is not also a chip, and a result says which folder it was in", async () => {
 		await renderTrash();
-		const box = screen.getByLabelText(t("search"));
+		fireEvent.click(screen.getByRole("button", { name: t("search") }));
+		const box = screen.getByRole("searchbox", { name: t("search") });
 		fireEvent.change(box, { target: { value: "2화" } });
 		await waitFor(() => expect(lastList().searchParams.get("q")).toBe("2화"), { timeout: 3000 });
 		const found = await screen.findByRole("row", { name: /시리즈 2화/ });

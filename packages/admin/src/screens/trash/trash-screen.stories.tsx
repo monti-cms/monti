@@ -168,9 +168,7 @@ export const MediaOpen: Story = {
 export const DeleteConfirm: Story = {
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(
-			within(await rowNamed(canvasElement, /옛 소개 글/)).getByRole("button", { name: "더보기: 영구 삭제" }),
-		);
+		await userEvent.click(within(await rowNamed(canvasElement, /옛 소개 글/)).getByRole("button", { name: "더보기" }));
 		await userEvent.click(await body().findByRole("menuitem", { name: /^영구 삭제/ }));
 		await body().findByRole("alertdialog", { name: "영구 삭제할까요?" });
 	},
@@ -181,9 +179,7 @@ export const DeleteBlocked: Story = {
 	...visual,
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(
-			within(await rowNamed(canvasElement, /임시/)).getByRole("button", { name: "더보기: 영구 삭제" }),
-		);
+		await userEvent.click(within(await rowNamed(canvasElement, /임시/)).getByRole("button", { name: "더보기" }));
 		await userEvent.click(await body().findByRole("menuitem", { name: /^영구 삭제/ }));
 		await body().findByRole("button", { name: "연결 끊기" });
 	},
