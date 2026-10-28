@@ -2,14 +2,14 @@
 
 import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { IconButton, Label, Popover, PopoverContent, PopoverTrigger, Stack, Text, Textarea } from "@monti-cms/ui";
+import { Label, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
 
 /**
- * Input form and popover to add, edit and remove a text decoration that carries one text property (body tooltip `content`, in-code tooltip, etc.).
+ * Input form to add, edit and remove a text decoration that carries one text property (body tooltip `content`, in-code tooltip, etc.).
  * Takes the decoration name and wording and renders them. Shared by the core code block's text tooltip and the blocks extension's body tooltip.
  */
 
@@ -100,76 +100,5 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 				onCancel={onDone}
 			/>
 		</Stack>
-	);
-}
-
-export interface MarkTextPopoverProps {
-	editor: Editor;
-	mark: string;
-	attribute: string;
-	labels: MarkTextLabels;
-	icon: ReactNode;
-	/** Opens when a window event with this name (`window.dispatchEvent(new CustomEvent(name))`) is received (slash menu, etc.). */
-	openEvent?: string;
-}
-
-/**
- * Decoration text popover of the formatting tool. Disabled when the selection is empty and not inside a decoration. When the cursor is inside a decoration it is pressed, and the text can be edited or removed.
- * Enter is ignored during Korean IME composition.
- */
-export function MarkTextPopover({ editor, mark, attribute, labels, icon, openEvent }: MarkTextPopoverProps) {
-	const [open, setOpen] = useState(false);
-	const [value, setValue] = useState("");
-
-	const isActive = editor.isActive(mark);
-	const disabled = !editor.isEditable || (editor.state.selection.empty && !isActive);
-	const existing = useCallback(() => String(editor.getAttributes(mark)[attribute] ?? ""), [editor, mark, attribute]);
-
-	const handleOpenChange = useCallback(
-		(nextOpen: boolean) => {
-			if (disabled && nextOpen) return;
-			if (nextOpen) setValue(existing());
-			setOpen(nextOpen);
-		},
-		[disabled, existing],
-	);
-
-	useEffect(() => {
-		if (!openEvent) return;
-		const onOpen = () => {
-			if (!editor.isEditable) return;
-			if (editor.state.selection.empty && !editor.isActive(mark)) return;
-			setValue(existing());
-			setOpen(true);
-		};
-		window.addEventListener(openEvent, onOpen);
-		return () => window.removeEventListener(openEvent, onOpen);
-	}, [editor, mark, existing, openEvent]);
-
-	return (
-		<Popover open={open} onOpenChange={handleOpenChange}>
-			<IconButton
-				label={labels.name}
-				side="bottom"
-				pressed={isActive}
-				disabled={disabled}
-				onMouseDown={(event) => event.preventDefault()}
-				trigger={(button) => <PopoverTrigger render={button} />}
-			>
-				{icon}
-			</IconButton>
-			<PopoverContent align="center" width="md">
-				<MarkTextForm
-					key={String(open)}
-					editor={editor}
-					mark={mark}
-					attribute={attribute}
-					labels={labels}
-					active={isActive}
-					initial={value}
-					onDone={() => setOpen(false)}
-				/>
-			</PopoverContent>
-		</Popover>
 	);
 }
