@@ -36,7 +36,6 @@ import * as rImportRestore from "./v1/import/restore/route";
 import * as rMediaComplete from "./v1/media/[id]/complete/route";
 import * as rMediaReplace from "./v1/media/[id]/replace/route";
 import * as rMediaItem from "./v1/media/[id]/route";
-import * as rMediaCleanup from "./v1/media/cleanup/route";
 import * as rMedia from "./v1/media/route";
 import * as rMediaTrash from "./v1/media/trash/route";
 import * as rMediaUploads from "./v1/media/uploads/route";
@@ -114,7 +113,6 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/folders/[id]", module: rFolder },
 	{ pattern: "v1/folders/[id]/contents", module: rFolderContents },
 	{ pattern: "v1/media", module: rMedia },
-	{ pattern: "v1/media/cleanup", module: rMediaCleanup },
 	// Named before `[id]`, so `trash` is not read as a media id.
 	{ pattern: "v1/media/trash", module: rMediaTrash },
 	{ pattern: "v1/media/uploads", module: rMediaUploads },

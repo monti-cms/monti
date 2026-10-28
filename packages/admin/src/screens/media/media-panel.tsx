@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, FolderMoveTo, Launch, TrashCan } from "@carbon/icons-react";
+import { Copy, FolderMoveTo, TrashCan } from "@carbon/icons-react";
 import type { FolderListItem } from "@monti-cms/core/site";
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
@@ -124,6 +124,7 @@ export function MediaPanel({
 
 	const usages = mediaUsages(media);
 	const ext = extensionOf(media.filename);
+	// The ⋯ holds what changes the file: replace, the ID (a picture's), and the trash. The address is in the body, under the picture.
 	const menu: MenuAction[] = [
 		{ kind: "item", label: t("panel.replace"), icon: FolderMoveTo, onSelect: onReplace },
 		...(isImage
@@ -134,34 +135,19 @@ export function MediaPanel({
 						icon: Copy,
 						onSelect: () => void copyText(media.id, t("panel.copiedId"), tc("copyFailed")),
 					},
-					...(media.publicUrl
-						? ([
-								{
-									kind: "item",
-									label: t("panel.copyUrl"),
-									icon: Copy,
-									onSelect: () => void copyText(media.publicUrl as string, t("panel.copiedUrl"), tc("copyFailed")),
-								},
-								{
-									kind: "item",
-									label: t("panel.openTab"),
-									icon: Launch,
-									onSelect: () => void window.open(media.publicUrl as string, "_blank", "noopener,noreferrer"),
-								},
-							] satisfies MenuAction[])
-						: []),
 				] satisfies MenuAction[])
 			: []),
 		{ kind: "separator" },
 		{ kind: "item", label: tc("lifecycle.trash"), icon: TrashCan, destructive: true, onSelect: onTrash },
 	];
+	const menuNames = menu.flatMap((item) => (item.kind === "item" ? [item.label] : [])).join(", ");
 
 	return (
 		<SidePanel
 			title={media.filename}
 			onClose={onClose}
 			bleed={false}
-			actions={<MoreActionsButton actions={menu} label={t("panel.more")} />}
+			actions={<MoreActionsButton actions={menu} label={t("panel.more", { items: menuNames })} />}
 			onSubmit={(event) => {
 				event.preventDefault();
 				void submit();

@@ -22,7 +22,7 @@ import {
 	Text,
 	Tile,
 } from "@monti-cms/ui";
-import type { KeyboardEvent } from "react";
+import type { DragEvent, KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { EntriesTableFolderRows } from "../entries-table-folder-rows";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
@@ -65,6 +65,19 @@ function useDetail(library: MediaLibraryView) {
 	};
 }
 
+/** Dragging a picked file takes every picked file with it, as in the entry list; any other file goes alone. */
+function useStartDrag(library: MediaLibraryView) {
+	const t = useTranslator(mediaMessages);
+	return (event: DragEvent, media: MediaItem) => {
+		const group = library.picked.has(media.id) ? [...library.picked] : [media.id];
+		writeDraggedEntries(
+			event,
+			group.map((id) => ({ id, expectedVersion: 0 })),
+			group.length === 1 ? media.filename : t("bulk.count", { count: group.length }),
+		);
+	};
+}
+
 const onDelete = (media: MediaItem, trash: (media: MediaItem) => void) => (event: KeyboardEvent) => {
 	if (event.key === "Delete") {
 		event.preventDefault();
@@ -77,6 +90,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	const detail = useDetail(library);
+	const startDrag = useStartDrag(library);
 	const { explorer, picked, open } = library;
 	const naming = folderActions.naming;
 	const showFolders =
@@ -147,9 +161,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 								<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<li />}>
 									<Tile
 										draggable
-										onDragStart={(event) =>
-											writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
-										}
+										onDragStart={(event) => startDrag(event, media)}
 										aria-current={open?.id === media.id ? "true" : undefined}
 										current={open?.id === media.id}
 										selected={picked.has(media.id)}
@@ -184,6 +196,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 /** List view: a row per file with its use, type, size, dimensions and day. The uploads wait above it as tiles. */
 export function MediaTable({ library, uploads, drop, folderActions, menuFor, onTrash }: MediaViewProps) {
 	const site = useSite();
+	const startDrag = useStartDrag(library);
 	const t = useTranslator(mediaMessages);
 	const { explorer, picked, open } = library;
 	return (
@@ -241,9 +254,7 @@ export function MediaTable({ library, uploads, drop, folderActions, menuFor, onT
 											aria-current={open?.id === media.id ? "true" : undefined}
 											selected={isPicked}
 											draggable
-											onDragStart={(event) =>
-												writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
-											}
+											onDragStart={(event) => startDrag(event, media)}
 											onClick={() => void library.openFile(media.id)}
 										/>
 									}

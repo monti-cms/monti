@@ -265,6 +265,8 @@ export const mediaListQuerySchema = z.object({
 	includeDescendants: booleanQuery,
 	uploadedFrom: dateQuery,
 	uploadedTo: dateQuery,
+	/** The order: newest upload first (`uploaded`, the default), oldest first (`uploadedAsc`), by file name (`name`) or biggest file first (`size`). Ties go by id. */
+	sort: z.enum(["uploaded", "uploadedAsc", "name", "size"]).default("uploaded"),
 	page: z.coerce.number().int().min(1).default(1),
 	pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });

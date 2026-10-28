@@ -40,6 +40,8 @@ const mockReadFile = vi.fn();
 const mockPromoteFile = vi.fn();
 const mockDeleteFile = vi.fn();
 const mockGetPublicUrl = vi.fn();
+const mockDiscardUnusedMedia = vi.fn();
+const mockListStaleUploads = vi.fn().mockResolvedValue([]);
 
 const cms = fakeCms({
 	config: testConfig,
@@ -53,6 +55,8 @@ const cms = fakeCms({
 		finalizeMediaDelete: mockFinalizeMediaDelete,
 		updateMediaMetadata: mockUpdateMediaMetadata,
 		replaceMediaFile: mockReplaceMediaFile,
+		discardUnusedMedia: mockDiscardUnusedMedia,
+		listStaleUploads: mockListStaleUploads,
 	},
 	mediaStore: {
 		prepareUpload: mockPrepareUpload,
@@ -755,6 +759,7 @@ describe("POST /media/:id/replace", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockVerifyAdmin.mockResolvedValue({ id: "admin-1", email: "admin@example.com" });
+		mockDiscardUnusedMedia.mockResolvedValue(true);
 		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
 			assetId === id ? asset(id, "image/png") : assetId === fromId ? asset(fromId, "image/webp") : null,
 		);
@@ -825,6 +830,38 @@ describe("POST /media/:id/replace", () => {
 		expect((await replace()).status).toBe(404);
 		expect(mockReplaceMediaFile).not.toHaveBeenCalled();
 		expect(mockDeleteFile).not.toHaveBeenCalled();
+	});
+
+	it("takes the replacement out of the library when the replace fails, so it does not stay as a file of its own", async () => {
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png") : asset(fromId, "application/pdf"),
+		);
+		expect((await replace()).status).toBe(415);
+		expect(mockDiscardUnusedMedia).toHaveBeenCalledWith(fromId);
+
+		mockDiscardUnusedMedia.mockClear();
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? null : asset(fromId, "image/webp"),
+		);
+		expect((await replace()).status).toBe(404);
+		expect(mockDiscardUnusedMedia).toHaveBeenCalledWith(fromId);
+
+		// A failure of the store itself: the original error is the answer, even when taking the file out fails too.
+		mockDiscardUnusedMedia.mockClear();
+		mockDiscardUnusedMedia.mockRejectedValue(new Error("down"));
+		mockGetMediaAsset.mockImplementation(async (assetId: string) =>
+			assetId === id ? asset(id, "image/png") : asset(fromId, "image/webp"),
+		);
+		mockReplaceMediaFile.mockRejectedValueOnce(new Error("conflict"));
+		expect((await replace()).status).toBe(500);
+		expect(mockDiscardUnusedMedia).toHaveBeenCalledWith(fromId);
+	});
+
+	it("keeps the replacement when the replace worked, and never discards the file itself", async () => {
+		expect((await replace()).status).toBe(200);
+		expect(mockDiscardUnusedMedia).not.toHaveBeenCalled();
+		expect((await replace({ fromId: id })).status).toBe(400);
+		expect(mockDiscardUnusedMedia).not.toHaveBeenCalled();
 	});
 
 	it("answers 400 for the same file, or a body without a valid fromId", async () => {

@@ -96,7 +96,17 @@ export class MediaBackend {
 		const isImage = (item: MediaItem) => item.mimeType?.startsWith("image/") ?? false;
 		const kind = query.get("kind");
 		const alt = query.get("alt");
-		const items = base.filter(
+		const sort = query.get("sort") ?? "uploaded";
+		const ordered = [...base].sort((a, b) =>
+			sort === "name"
+				? a.filename.toLowerCase().localeCompare(b.filename.toLowerCase())
+				: sort === "size"
+					? (b.byteSize ?? 0) - (a.byteSize ?? 0)
+					: sort === "uploadedAsc"
+						? a.id.localeCompare(b.id)
+						: b.id.localeCompare(a.id),
+		);
+		const items = ordered.filter(
 			(item) =>
 				(kind !== "image" || isImage(item)) &&
 				(kind !== "file" || !isImage(item)) &&

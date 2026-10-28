@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createMediaService, STALE_UPLOAD_AFTER_MS } from "../media-service";
+import { CLEANUP_EVERY_MS, createMediaService, STALE_UPLOAD_AFTER_MS } from "../media-service";
 
 const media = (id: string, extra: Record<string, unknown> = {}) => ({
 	id,
@@ -24,9 +24,15 @@ function setup(options: { failFor?: readonly string[]; stale?: readonly ReturnTy
 			deleted.push(key);
 		}),
 	};
-	const now = new Date("2026-01-10T00:00:00Z");
+	const clock = { at: new Date("2026-01-10T00:00:00Z") };
+	const now = clock.at;
 	return {
-		service: createMediaService({ store: () => store as never, mediaStore: () => mediaStore as never, now: () => now }),
+		clock,
+		service: createMediaService({
+			store: () => store as never,
+			mediaStore: () => mediaStore as never,
+			now: () => clock.at,
+		}),
 		store,
 		deleted,
 		finalized,
@@ -58,6 +64,32 @@ describe("media service", () => {
 		// Only what was staged is removed: an upload that never completed has no final file.
 		expect(deleted).toEqual(["staging/ok.png"]);
 		expect(finalized).toEqual(["ok"]);
+	});
+
+	describe("cleanupIfDue", () => {
+		it("cleans up the first time and then not again until a day has passed", async () => {
+			const { service, store, clock } = setup();
+			await service.cleanupIfDue();
+			await service.cleanupIfDue();
+			expect(store.listStaleUploads).toHaveBeenCalledTimes(1);
+			clock.at = new Date(clock.at.getTime() + CLEANUP_EVERY_MS - 1);
+			await service.cleanupIfDue();
+			expect(store.listStaleUploads).toHaveBeenCalledTimes(1);
+			clock.at = new Date(clock.at.getTime() + 1);
+			await service.cleanupIfDue();
+			expect(store.listStaleUploads).toHaveBeenCalledTimes(2);
+		});
+
+		it("does not throw when the cleanup fails, and tries again at the next call", async () => {
+			const { service, store } = setup();
+			const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+			store.listStaleUploads.mockRejectedValueOnce(new Error("database down"));
+			await expect(service.cleanupIfDue()).resolves.toBeUndefined();
+			expect(log).toHaveBeenCalled();
+			await service.cleanupIfDue();
+			expect(store.listStaleUploads).toHaveBeenCalledTimes(2);
+			log.mockRestore();
+		});
 	});
 
 	describe("release", () => {

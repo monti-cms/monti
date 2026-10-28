@@ -34,7 +34,7 @@ export function useMediaActions(library: MediaLibraryView) {
 	};
 
 	/** Moves files to a folder (`null` for the top). One request each; the pick is let go. */
-	const move = useCmsMutation<{ files: readonly MediaItem[]; folderId: string | null }>({
+	const move = useCmsMutation<{ files: readonly Pick<MediaItem, "id" | "filename">[]; folderId: string | null }>({
 		fn: ({ files, folderId }, { site }) =>
 			Promise.all(files.map((file) => updateMedia(site, file.id, { folderId }))).then(() => undefined),
 		success: (_result, { files, folderId }) =>

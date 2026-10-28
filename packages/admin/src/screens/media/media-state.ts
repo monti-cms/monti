@@ -9,6 +9,8 @@ export const MEDIA_PARAMS = {
 	used: enumParam(["all", "used", "unused"] as const, "all"),
 	kind: enumParam(["all", "image", "file"] as const, "all"),
 	alt: enumParam(["all", "none", "has"] as const, "all"),
+	/** The order of the files: newest upload first, oldest first, by name, or biggest first. */
+	sort: enumParam(["uploaded", "uploadedAsc", "name", "size"] as const, "uploaded"),
 	/** Where a search or a filter looks while a folder is open: the folder and what is inside it, or everywhere. */
 	scope: enumParam(["here", "all"] as const, "here"),
 	/** The open folder's id; empty for the top of the library. */
@@ -22,6 +24,7 @@ export interface MediaState {
 	used: "all" | "used" | "unused";
 	kind: "all" | "image" | "file";
 	alt: "all" | "none" | "has";
+	sort: "uploaded" | "uploadedAsc" | "name" | "size";
 	scope: "here" | "all";
 	folder: string;
 }
@@ -43,6 +46,7 @@ export function mediaListParams(state: MediaState): URLSearchParams {
 	if (state.search.trim()) params.set("search", state.search.trim());
 	if (state.kind !== "all") params.set("kind", state.kind);
 	if (state.alt !== "all") params.set("alt", state.alt);
+	if (state.sort !== "uploaded") params.set("sort", state.sort);
 	if (!isFiltered(state)) {
 		params.set("folderId", state.folder || "null");
 	} else if (state.folder && state.scope === "here") {

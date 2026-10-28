@@ -145,9 +145,10 @@ export function MediaLibrary() {
 					folders,
 					onSelectFolder: (id) => library.goToFolder(id ?? ""),
 					onDropEntries: async (targetFolderId, entries) => {
-						const files = entries
-							.map((entry) => items.find((item) => item.id === entry.id))
-							.filter((item): item is MediaItem => Boolean(item));
+						// The files dragged: the ones on this page by name, and picked ones from other pages by their id.
+						const files = entries.map(
+							(entry) => items.find((item) => item.id === entry.id) ?? { id: entry.id, filename: entry.id },
+						);
 						if (files.length > 0) actions.move.mutate({ files, folderId: targetFolderId });
 					},
 				},

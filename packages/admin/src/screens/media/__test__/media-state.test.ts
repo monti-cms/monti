@@ -21,6 +21,7 @@ const state = (patch: Partial<MediaState> = {}): MediaState => ({
 	used: "all",
 	kind: "all",
 	alt: "all",
+	sort: "uploaded",
 	scope: "here",
 	folder: "",
 	...patch,
@@ -69,6 +70,12 @@ describe("what the list asks for", () => {
 			pageSize: "50",
 		});
 		expect(mediaListParams(state()).has("alt")).toBe(false);
+	});
+
+	it("sends the order unless it is the newest upload first", () => {
+		expect(mediaListParams(state()).has("sort")).toBe(false);
+		expect(mediaListParams(state({ sort: "size" })).get("sort")).toBe("size");
+		expect(mediaCountsParams(state({ sort: "size" })).has("sort")).toBe(false);
 	});
 
 	it("offers the place to look only inside a folder with something on", () => {

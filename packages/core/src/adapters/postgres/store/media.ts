@@ -231,8 +231,18 @@ export function createMediaOps(ctx: StoreContext) {
 						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleExpr(site, "eb.metadata", ROW_COLLECTION)}
 					)) filter (where r.entry_id is not null), '[]')`.as("references_json"),
 				])
-				.orderBy("m.created_at", "desc")
-				.orderBy("m.id", "desc")
+				.$call((query) => {
+					switch (params.sort) {
+						case "uploadedAsc":
+							return query.orderBy("m.created_at", "asc").orderBy("m.id", "asc");
+						case "name":
+							return query.orderBy(sql`lower(m.filename)`, "asc").orderBy("m.id", "asc");
+						case "size":
+							return query.orderBy(sql`m.byte_size desc nulls last`).orderBy("m.id", "desc");
+						default:
+							return query.orderBy("m.created_at", "desc").orderBy("m.id", "desc");
+					}
+				})
 				.limit(pageSize)
 				.offset((page - 1) * pageSize)
 				.execute();
@@ -307,6 +317,18 @@ export function createMediaOps(ctx: StoreContext) {
 					released: { storageKey: target.storage_key, originalStorageKey: target.original_storage_key },
 				};
 			});
+		},
+
+		discardUnusedMedia: async (id: string): Promise<boolean> => {
+			if ((await mediaInUse(db, qSchema, [id])).size > 0) return false;
+			const rows = await db
+				.updateTable("media_assets")
+				.set({ status: "failed", updated_at: sql<Date>`now()` })
+				.where("id", "=", id)
+				.where("status", "=", "ready")
+				.returning("id")
+				.execute();
+			return rows.length > 0;
 		},
 
 		/**

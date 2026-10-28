@@ -11,6 +11,8 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	FilterButton,
@@ -22,9 +24,11 @@ import {
 	ToolbarDivider,
 } from "@monti-cms/ui";
 import type { ReactNode } from "react";
-import { folderChoices, selectAllState, toggleKind, withKind } from "./media-state";
+import { folderChoices, type MediaState, selectAllState, toggleKind, withKind } from "./media-state";
 import { mediaMessages } from "./messages";
 import type { MediaLibraryView } from "./use-media-library";
+
+const SORTS = ["uploaded", "uploadedAsc", "name", "size"] as const;
 
 /** A condition that is not on: its name and a caret, opening the values to pick (each with how many files it would give). */
 function Condition({ name, children }: { name: string; children: ReactNode }) {
@@ -112,6 +116,22 @@ function FilterBar({ library }: { library: MediaLibraryView }) {
 				</>
 			)}
 			<PageToolbarEnd>
+				<DropdownMenu>
+					<DropdownMenuTrigger render={<FilterButton />}>{t(`sort.${state.sort}`)}</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuRadioGroup
+							aria-label={t("sort.label")}
+							value={state.sort}
+							onValueChange={(sort) => update({ sort: sort as MediaState["sort"] })}
+						>
+							{SORTS.map((sort) => (
+								<DropdownMenuRadioItem key={sort} value={sort}>
+									{t(`sort.${sort}`)}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuContent>
+				</DropdownMenu>
 				<Segmented
 					aria-label={t("view.label")}
 					size="sm"

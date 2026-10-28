@@ -127,6 +127,8 @@ const dropArea = () => document.querySelector("[data-slot=drop-area]") as HTMLEl
 const dragOf = (...files: File[]) => ({
 	dataTransfer: { types: ["Files"], files, items: files.map(() => ({ kind: "file" })) },
 });
+/** The panel's ⋯, named "More: <what it holds>". */
+const moreButton = (panel: HTMLElement) => within(panel).getByRole("button", { name: /^(More|더보기):/ });
 const pick = (name: string) => fireEvent.click(screen.getByRole("checkbox", { name: t("tile.select", { name }) }));
 
 describe("flow: upload (올리기)", () => {
@@ -406,6 +408,21 @@ describe("flow: browsing (둘러보기)", () => {
 		});
 	});
 
+	it("sorts with the filter-style menu: newest upload first, oldest first, by name and biggest first, one at a time, sent with the request", async () => {
+		await renderLibrary();
+		expect(lastList().has("sort")).toBe(false);
+		const button = screen.getByRole("button", { name: t("sort.uploaded") });
+		fireEvent.click(button);
+		const items = await screen.findAllByRole("menuitemradio");
+		expect(names(items)).toEqual([t("sort.uploaded"), t("sort.uploadedAsc"), t("sort.name"), t("sort.size")]);
+		expect(items[0]?.getAttribute("aria-checked")).toBe("true");
+		fireEvent.click(items[3] as HTMLElement);
+		await waitFor(() => expect(lastList().get("sort")).toBe("size"));
+		expect(await screen.findByRole("button", { name: t("sort.size") })).toBeTruthy();
+		// The counts of the menus do not follow the order.
+		expect(backend.lists.filter((q) => q.get("pageSize") === "1").every((q) => !q.has("sort"))).toBe(true);
+	});
+
 	it("lists the files in the list view with their use, type, size, dimensions and day, and a path while searching", async () => {
 		writePreference(testSite, "media-view", "list");
 		nav.render(
@@ -435,25 +452,24 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		return screen.findByRole("complementary", { name });
 	};
 
-	it("opens the panel's menu with replace, copy ID, copy address, open in a new tab and the trash", async () => {
+	it("opens the panel's menu with replace, copy ID and the trash, named in the button; the address and the new tab are in the body", async () => {
 		await renderLibrary();
 		const panel = await openPanel();
-		fireEvent.click(within(panel).getByRole("button", { name: t("panel.more") }));
+		expect(moreButton(panel).getAttribute("aria-label")).toBe(
+			t("panel.more", { items: [t("panel.replace"), t("panel.copyId"), tc("lifecycle.trash")].join(", ") }),
+		);
+		fireEvent.click(moreButton(panel));
 		const items = await screen.findAllByRole("menuitem");
-		expect(names(items)).toEqual([
-			t("panel.replace"),
-			t("panel.copyId"),
-			t("panel.copyUrl"),
-			t("panel.openTab"),
-			tc("lifecycle.trash"),
-		]);
+		expect(names(items)).toEqual([t("panel.replace"), t("panel.copyId"), tc("lifecycle.trash")]);
+		expect(within(panel).getByRole("button", { name: t("panel.copyUrl") })).toBeTruthy();
+		expect(within(panel).getByRole("link", { name: t("panel.openTab") })).toBeTruthy();
 	});
 
 	it("asks with the number of places that use the file, then uploads the new file, replaces it in the same id and tells so", async () => {
 		upload.uploadImageFile.mockResolvedValue({ mediaId: "new-file" });
 		await renderLibrary();
 		const panel = await openPanel();
-		fireEvent.click(within(panel).getByRole("button", { name: t("panel.more") }));
+		fireEvent.click(moreButton(panel));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
 		const input = document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement;
 		fireEvent.change(input, { target: { files: [file("desk-morning-v2.jpg", "image/jpeg")] } });
@@ -473,7 +489,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 	it("does not send anything when cancelled", async () => {
 		await renderLibrary();
 		const panel = await openPanel();
-		fireEvent.click(within(panel).getByRole("button", { name: t("panel.more") }));
+		fireEvent.click(moreButton(panel));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
 		fireEvent.change(document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement, {
 			target: { files: [file("v2.jpg", "image/jpeg")] },
@@ -488,7 +504,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 	it("says a picture can only be replaced by a picture and does not let the replace go on", async () => {
 		await renderLibrary();
 		const panel = await openPanel();
-		fireEvent.click(within(panel).getByRole("button", { name: t("panel.more") }));
+		fireEvent.click(moreButton(panel));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
 		fireEvent.change(document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement, {
 			target: { files: [file("guide.pdf", "application/pdf")] },
@@ -503,7 +519,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 	it("says there is nothing using a file nobody uses yet", async () => {
 		await renderLibrary();
 		const panel = await openPanel("cafe-window.jpg");
-		fireEvent.click(within(panel).getByRole("button", { name: t("panel.more") }));
+		fireEvent.click(moreButton(panel));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("panel.replace") }));
 		fireEvent.change(document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement, {
 			target: { files: [file("v2.jpg", "image/jpeg")] },
@@ -571,6 +587,49 @@ describe("flow: moving many (여러 개 옮기기)", () => {
 		fireEvent.click(within(bar).getByRole("button", { name: t("bulk.trash") }));
 		await waitFor(() => expect(written("POST", "/media/trash")).toHaveLength(1));
 		expect(written("POST", "/media/trash")[0]).toEqual({ ids: ["desk-morning", "cafe-window"] });
+	});
+});
+
+describe("flow: moving many by dragging", () => {
+	/** Starts a drag on a tile and drops what it carried on the sidebar's folder, as the browser would. */
+	const dragTo = async (tileName: RegExp, folderName: string) => {
+		const carried: Record<string, string> = {};
+		const dataTransfer = {
+			setData: (type: string, value: string) => {
+				carried[type] = value;
+			},
+			getData: (type: string) => carried[type] ?? "",
+			setDragImage: () => undefined,
+			get types() {
+				return Object.keys(carried);
+			},
+			effectAllowed: "",
+		};
+		fireEvent.dragStart(screen.getByRole("button", { name: tileName }), { dataTransfer });
+		// The folder of the same name in the sidebar, not the tile in the grid.
+		const target = screen
+			.getAllByRole("button", { name: new RegExp(folderName) })
+			.find((button) => !dropArea().contains(button)) as HTMLElement;
+		fireEvent.drop(target, { dataTransfer });
+	};
+
+	it("takes every picked file with the one dragged to a sidebar folder", async () => {
+		await renderLibrary();
+		pick("desk-morning.jpg");
+		pick("cafe-window.jpg");
+		await dragTo(/^desk-morning\.jpg/, "Wallpapers");
+		await waitFor(() => expect(written("PATCH", "/media/desk-morning")).toHaveLength(1));
+		expect(written("PATCH", "/media/desk-morning")[0]).toEqual({ folderId: "wall" });
+		expect(written("PATCH", "/media/cafe-window")[0]).toEqual({ folderId: "wall" });
+		expect(written("PATCH", "/media/seoul-night")).toHaveLength(0);
+	});
+
+	it("takes only the dragged file when it is not one of the picked", async () => {
+		await renderLibrary();
+		pick("desk-morning.jpg");
+		await dragTo(/^seoul-night\.jpg/, "Wallpapers");
+		await waitFor(() => expect(written("PATCH", "/media/seoul-night")).toHaveLength(1));
+		expect(written("PATCH", "/media/desk-morning")).toHaveLength(0);
 	});
 });
 

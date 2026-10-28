@@ -141,7 +141,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow6Step18.dc.html`
 - Renders: `Media` (mode "바꾸기 메뉴")
-- In the side panel the user opens ⋯: replace file, copy ID, copy address, open in new tab. They choose "파일 바꾸기" and pick a file.
+- In the side panel the user opens ⋯: replace file, copy ID, move to trash (copy address and open in new tab are in the panel body, under the picture). They choose "파일 바꾸기" and pick a file.
 - Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
 ### Step 19: "고치기 · 고른 파일 확인 → 쓰는 곳 2곳이 새 파일로"

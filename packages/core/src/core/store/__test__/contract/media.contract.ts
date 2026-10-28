@@ -555,5 +555,76 @@ export const mediaContract: ContractSuite = (factory) => {
 			expect(await store.getMediaAsset(target.id)).toEqual(target);
 			expect(await store.getMediaAsset(source.id)).toEqual(source);
 		});
+
+		it("takes a ready replacement nothing uses out of the library, and keeps one that is in use or not ready", async () => {
+			const unused = await addReady({ filename: "gone.png", mimeType: "image/png", width: 1, height: 1 });
+			expect(await store.discardUnusedMedia(unused.id)).toBe(true);
+			expect((await store.getMediaAsset(unused.id))?.status).toBe("failed");
+			const listed = await store.listMediaAssets({ search: "gone.png" });
+			expect(listed.items).toHaveLength(0);
+			// It is now a failed upload, which the cleanup removes.
+			expect((await store.listStaleUploads({ before: new Date(Date.now() + 1000) })).map((m) => m.id)).toContain(
+				unused.id,
+			);
+			expect(await store.discardUnusedMedia(unused.id)).toBe(false);
+
+			const used = await addReady({ filename: "kept.png", mimeType: "image/png", width: 1, height: 1 });
+			await referToMedia(store, used.id);
+			expect(await store.discardUnusedMedia(used.id)).toBe(false);
+			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
+
+			const waiting = await pending("waiting.png", "image/png");
+			expect(await store.discardUnusedMedia(waiting.id)).toBe(false);
+			expect(await store.discardUnusedMedia("00000000-0000-4000-8000-00000000dead")).toBe(false);
+		});
+	});
+
+	describe("MediaMetadataStore: sort", () => {
+		let session: StoreSession;
+		let store: ContentStore;
+
+		beforeAll(async () => {
+			session = await factory.create();
+			store = session.store;
+			const add = async (filename: string, byteSize: number) => {
+				const media = await store.createMediaAsset({
+					filename,
+					mimeType: "image/png",
+					byteSize,
+					stagingKey: `staging/${filename}`,
+				});
+				await store.completeMediaAsset({
+					id: media.id,
+					storageKey: `media/${filename}`,
+					mimeType: "image/png",
+					byteSize,
+					width: 1,
+					height: 1,
+				});
+				// Uploaded one after the other, so the order of the days is the order of the calls.
+				await new Promise((resolve) => setTimeout(resolve, 5));
+			};
+			await add("b-medium.png", 200);
+			await add("A-small.png", 100);
+			await add("c-large.png", 300);
+		});
+
+		afterAll(async () => {
+			await session.close();
+		});
+
+		const names = async (sort?: "uploaded" | "uploadedAsc" | "name" | "size") =>
+			(await store.listMediaAssets({ ...(sort ? { sort } : {}) })).items.map((item) => item.filename);
+
+		it("lists the newest upload first by default", async () => {
+			expect(await names()).toEqual(["c-large.png", "A-small.png", "b-medium.png"]);
+			expect(await names("uploaded")).toEqual(["c-large.png", "A-small.png", "b-medium.png"]);
+		});
+
+		it("lists the oldest first, by name without regard to case, and the biggest file first", async () => {
+			expect(await names("uploadedAsc")).toEqual(["b-medium.png", "A-small.png", "c-large.png"]);
+			expect(await names("name")).toEqual(["A-small.png", "b-medium.png", "c-large.png"]);
+			expect(await names("size")).toEqual(["c-large.png", "b-medium.png", "A-small.png"]);
+		});
 	});
 };

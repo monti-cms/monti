@@ -166,6 +166,8 @@ export interface ListMediaParams {
 	kind?: "all" | "image" | "file";
 	/** Images without (`none`: empty or only spaces) or with (`has`) a default alt. Alt text only exists for images, so both show images only. */
 	alt?: "all" | "none" | "has";
+	/** Newest upload first (the default), oldest first, by file name, or biggest file first. Ties go by id. */
+	sort?: "uploaded" | "uploadedAsc" | "name" | "size";
 	used?: "all" | "used" | "unused";
 	folderId?: string | null;
 	includeDescendants?: boolean;

@@ -246,6 +246,12 @@ export interface MediaMetadataStore {
 		id: string;
 		fromId: string;
 	}): Promise<{ media: MediaAssetRecord; released: ReleasedMediaFiles }>;
+	/**
+	 * Takes a ready media file out of the library without touching its stored files: it becomes a `failed` upload, which the upload cleanup removes. Only a
+	 * file nothing refers to is taken (`true`); one that is in use, missing or not ready stays as it is (`false`). The replacement of a replace that failed
+	 * goes this way, so it does not stay in the library as a file of its own.
+	 */
+	discardUnusedMedia(id: string): Promise<boolean>;
 	/** The ready media files stored under these keys (the keys of public URLs). A key no ready file holds is left out. Core turns image URLs of an imported body into media ids with it. */
 	findReadyMediaByStorageKeys(params: { keys: readonly string[] }): Promise<{ id: string; storageKey: string }[]>;
 	/** Removes the row of a file after its stored files were deleted: a trashed file deleted for good, an unfinished upload, or a delete left half done. */

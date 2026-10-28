@@ -233,16 +233,23 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 export async function replaceMediaFile(cms: Cms, id: string, fromId: string) {
 	if (id === fromId) throw new CmsError("A media file cannot replace itself", "invalid_input");
 	const store = cms.store();
-	const [target, source] = await Promise.all([store.getMediaAsset(id), store.getMediaAsset(fromId)]);
-	if (!target || target.status !== "ready") throw new CmsError("Media asset not found", "not_found");
-	if (!source || source.status !== "ready") throw new CmsError("Replacement media asset not found", "not_found");
-	const mismatch = replaceMismatch(target.mimeType, source.mimeType);
-	if (mismatch) {
-		throw new CmsError("The replacement is not the same kind of file", "unsupported_media_type", {
-			notice: { key: mismatch },
-		});
+	try {
+		const [target, source] = await Promise.all([store.getMediaAsset(id), store.getMediaAsset(fromId)]);
+		if (!target || target.status !== "ready") throw new CmsError("Media asset not found", "not_found");
+		if (!source || source.status !== "ready") throw new CmsError("Replacement media asset not found", "not_found");
+		const mismatch = replaceMismatch(target.mimeType, source.mimeType);
+		if (mismatch) {
+			throw new CmsError("The replacement is not the same kind of file", "unsupported_media_type", {
+				notice: { key: mismatch },
+			});
+		}
+		const { media, released } = await store.replaceMediaFile({ id, fromId });
+		await cms.mediaService().release(released);
+		return describeReadyMedia(cms, media);
+	} catch (error) {
+		// The replacement was uploaded as a media file of its own for this call. If the call fails it must not stay in the library: it is taken out (a file that
+		// is in use stays), and the upload cleanup deletes its stored files later.
+		await store.discardUnusedMedia(fromId).catch(() => undefined);
+		throw error;
 	}
-	const { media, released } = await store.replaceMediaFile({ id, fromId });
-	await cms.mediaService().release(released);
-	return describeReadyMedia(cms, media);
 }
