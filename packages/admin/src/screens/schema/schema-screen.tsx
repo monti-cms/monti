@@ -132,7 +132,6 @@ function CollectionNavItem({
 	active,
 	isNew,
 	changed,
-	removed,
 	writable,
 	onSelect,
 }: {
@@ -142,8 +141,6 @@ function CollectionNavItem({
 	isNew: boolean;
 	/** The collection holds draft changes. */
 	changed: boolean;
-	/** The collection is struck out: it is deleted with its entries when the draft is saved. */
-	removed: boolean;
 	writable: boolean;
 	onSelect: () => void;
 }) {
@@ -177,28 +174,24 @@ function CollectionNavItem({
 			<button
 				type="button"
 				aria-current={active ? "true" : undefined}
-				data-removed={removed ? "" : undefined}
 				className={cn(
 					"flex h-8 w-full shrink-0 items-center gap-monti-8 rounded-monti-md border border-transparent px-monti-12 text-left text-monti-body outline-none transition-colors hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
 					writable && "group-focus-within/row:pl-monti-32 group-hover/row:pl-monti-32",
 					active && "border-monti-muted bg-monti-page font-medium hover:bg-monti-page",
-					removed && "text-monti-faint line-through",
 				)}
 				onClick={onSelect}
 			>
 				<Box grow minWidth={0}>
-					<Text truncate removed={removed}>
-						{label}
-					</Text>
+					<Text truncate>{label}</Text>
 				</Box>
 				{isNew ? (
 					<Text variant="meta" tone="subtle">
 						{t("collection.new")}
 					</Text>
 				) : (
-					changed && !removed && <ChangedMark />
+					changed && <ChangedMark />
 				)}
-				<Text variant="caption" tone="muted" removed={removed}>
+				<Text variant="caption" tone="muted">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</Text>
 			</button>
@@ -231,7 +224,7 @@ function SchemaEditor({
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [creating, setCreating] = useState(false);
-	// Collections struck out of the list and not saved yet: they stay in the draft (so taking one back loses nothing) and go out of what is checked and saved.
+	// Collections taken out of the list and not saved yet: they stay in the draft (so taking one back loses nothing) and go out of what is checked and saved.
 	const [removed, setRemoved] = useState<string[]>([]);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
@@ -246,7 +239,7 @@ function SchemaEditor({
 		setSection(undefined);
 	};
 	const scroller = useRef<HTMLElement>(null);
-	const selected = selectedName && selectedName in collections ? selectedName : names[0];
+	const selected = selectedName && liveNames.includes(selectedName) ? selectedName : liveNames[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 	const dirty = !sameJson(pendingDraft, base);
@@ -296,6 +289,19 @@ function SchemaEditor({
 				]
 			: [];
 	});
+	const restore = (name: string) => setRemoved((current) => current.filter((item) => item !== name));
+	/** A saved collection goes out of the list at once and stays in the file until the draft is saved; the toast and the changes menu bring it back. */
+	const remove = (name: string) => {
+		if (!savedNames.includes(name)) {
+			// A collection that was never saved holds nothing: it simply goes.
+			updateFile((file) => removeCollection(file, name));
+			return;
+		}
+		setRemoved((current) => [...current, name]);
+		toast(tCollection("collection.deleted", { name: String(collections[name]?.label ?? name) }), {
+			action: { label: tCollection("collection.deleteUndo"), onClick: () => restore(name) },
+		});
+	};
 	/** What the toast after a save says: what was deleted, else what the data transforms did. */
 	const savedMessage = (saved: SavedSchema): string => {
 		const dropped = saved.dropped ?? [];
@@ -337,6 +343,7 @@ function SchemaEditor({
 	) : dirty ? (
 		<SaveGroup
 			count={pending}
+			removed={removals.map((item) => ({ name: item.name, label: item.label, onRestore: () => restore(item.name) }))}
 			disabled={state.hash === null}
 			onReview={() => setReviewing(true)}
 			onSave={() => setReviewing(true)}
@@ -400,7 +407,7 @@ function SchemaEditor({
 										<Stack gap={2} width="fit" shrink={false}>
 											<Inline justify="between" paddingBottom={8} paddingX={12}>
 												<Text variant="caption" weight="medium" tone="muted">
-													{t("collection.railTitle")} {names.length}
+													{t("collection.railTitle")} {liveNames.length}
 												</Text>
 												{writable && (
 													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
@@ -410,16 +417,16 @@ function SchemaEditor({
 											</Inline>
 											<Stack as="nav" aria-label={t("tabs.collections")} gap={2}>
 												<SortableList
-													items={names}
+													items={liveNames}
 													onDragEnd={(from, to) => {
-														const fromIndex = names.indexOf(from);
-														const toIndex = names.indexOf(to);
+														const fromIndex = liveNames.indexOf(from);
+														const toIndex = liveNames.indexOf(to);
 														if (fromIndex !== -1 && toIndex !== -1) {
-															updateFile((file) => reorderCollections(file, moveWithin(names, fromIndex, toIndex)));
+															updateFile((file) => reorderCollections(file, moveWithin(liveNames, fromIndex, toIndex)));
 														}
 													}}
 												>
-													{names.map((name) => (
+													{liveNames.map((name) => (
 														<CollectionNavItem
 															key={name}
 															name={name}
@@ -427,7 +434,6 @@ function SchemaEditor({
 															active={name === selected}
 															isNew={!savedNames.includes(name)}
 															changed={name in areas.collections}
-															removed={removed.includes(name)}
 															writable={writable}
 															onSelect={() => setSelected(name)}
 														/>
@@ -447,14 +453,8 @@ function SchemaEditor({
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
 													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
 													onFileChange={updateFile}
-													removed={removed.includes(selected)}
 													footprint={state.footprints?.[selected]}
-													onRemove={() => {
-														// A collection that was never saved holds nothing: it simply goes. A saved one is struck out until the draft is saved.
-														if (savedNames.includes(selected)) setRemoved((current) => [...current, selected]);
-														else updateFile((file) => removeCollection(file, selected));
-													}}
-													onRestore={() => setRemoved((current) => current.filter((name) => name !== selected))}
+													onRemove={() => remove(selected)}
 												/>
 											) : (
 												<Text as="p" tone="muted">

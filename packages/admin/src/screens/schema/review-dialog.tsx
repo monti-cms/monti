@@ -9,14 +9,12 @@ import {
 	Banner,
 	Box,
 	Button,
-	ChangeActions,
 	ChangeGroup,
+	ChangeLabel,
 	ChangeLine,
 	ChangeLines,
 	ChangeNote,
 	Count,
-	FormField,
-	FormFieldLabel,
 	Heading,
 	Inline,
 	Input,
@@ -41,7 +39,6 @@ import {
 	type SchemaEditPreview,
 	type SuggestedTransform,
 	saveSchema,
-	unlinkCollection,
 } from "../../api/schema";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
@@ -222,42 +219,24 @@ export interface Removal {
 	readonly kind: "document" | "item";
 }
 
-/** What the writer did to the entries pointing at a collection from the review, so the line can say it is done once the check no longer finds them. */
-interface Unlinked {
-	readonly count: number;
-	readonly sample: CollectionDropImpact["unlinked"]["sample"];
-}
-
 /**
- * The change block of a collection that is deleted with its entries: what goes with it, what still points at it (and the button that clears that), a way to
- * keep a copy, and the identifier to type before the delete can be applied.
+ * The change block of a collection that is deleted with its entries: what goes with it and what is cut or breaks, a way to keep a copy first, and the note
+ * that it cannot be undone. Nothing has to be resolved before the apply: the links that point at the collection are cut when it is applied.
  */
 function DropChange({
 	impact,
 	removal,
-	unlinked,
-	typed,
-	onType,
-	onUnlink,
-	unlinking,
 	onExport,
 }: {
 	impact: ChangeImpact & { drop: CollectionDropImpact };
 	removal: Removal;
-	unlinked: Unlinked | undefined;
-	typed: string;
-	onType: (value: string) => void;
-	onUnlink: () => void;
-	unlinking: boolean;
 	onExport: () => void;
 }) {
 	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	const { drop } = impact;
-	const pointing =
-		drop.unlinked.count > 0 ? drop.unlinked : unlinked ? { count: unlinked.count, sample: unlinked.sample } : null;
-	const first = pointing?.sample[0];
-	const id = `drop-confirm-${removal.name}`;
+	const entries = t("drop.entries", { entries: drop.entries, trashed: drop.trashed, kind: removal.kind });
+	const first = drop.unlinked.sample[0];
 	return (
 		<ChangeGroup
 			kind="drop"
@@ -266,12 +245,9 @@ function DropChange({
 			identifier={removal.name}
 			data-testid={`impact-${impact.key}`}
 		>
+			<ChangeLabel>{t("drop.removes")}</ChangeLabel>
 			<ChangeLines>
-				<ChangeLine
-					what={t("drop.entries", { entries: drop.entries, trashed: drop.trashed, kind: removal.kind })}
-					then={t("drop.entries.then")}
-					tone="danger"
-				/>
+				<ChangeLine what={entries} then={t("drop.entries.then")} tone="danger" />
 				{(drop.folders > 0 || drop.addresses > 0) && (
 					<ChangeLine
 						what={t("drop.rest", { folders: drop.folders, addresses: drop.addresses })}
@@ -279,11 +255,11 @@ function DropChange({
 						tone="danger"
 					/>
 				)}
-				{pointing && (
+				{drop.unlinked.count > 0 && (
 					<ChangeLine
 						what={
 							<>
-								{t("drop.blockers", { count: pointing.count })}
+								{t("drop.pointing", { count: drop.unlinked.count })}
 								{first && (
 									<>
 										{" · "}
@@ -293,44 +269,30 @@ function DropChange({
 										>
 											{first.title ?? first.id.slice(0, 8)}
 										</TextButton>
-										{pointing.count > 1 && ` ${t("drop.blockers.more", { count: pointing.count - 1 })}`}
+										{drop.unlinked.count > 1 && ` ${t("drop.pointing.more", { count: drop.unlinked.count - 1 })}`}
 									</>
 								)}
 							</>
 						}
-						then={
-							drop.unlinked.count > 0 ? (
-								<TextButton type="button" variant="inherit" disabled={unlinking} onClick={onUnlink}>
-									{t("drop.unlink")}
-								</TextButton>
-							) : (
-								t("drop.unlinked")
-							)
-						}
-						tone={drop.unlinked.count > 0 ? "warning" : "default"}
+						then={t("drop.pointing.then")}
 					/>
 				)}
 				{drop.bodyLinks > 0 && (
 					<ChangeLine what={t("drop.bodyLinks", { count: drop.bodyLinks })} then={t("drop.bodyLinks.then")} />
 				)}
 			</ChangeLines>
-			<ChangeActions>
-				<TextButton type="button" onClick={onExport}>
-					<Download aria-hidden />
-					{t("drop.export")}
-				</TextButton>
-			</ChangeActions>
-			<FormField>
-				<FormFieldLabel htmlFor={id}>{t("drop.confirm")}</FormFieldLabel>
-				<Input
-					id={id}
-					mono
-					placeholder={removal.name}
-					value={typed}
-					autoComplete="off"
-					onChange={(event) => onType(event.target.value)}
+			<ChangeLabel>{t("drop.keep")}</ChangeLabel>
+			<ChangeLines>
+				<ChangeLine
+					what={drop.folders > 0 ? `${entries} · ${t("drop.folders", { count: drop.folders })}` : entries}
+					then={
+						<TextButton type="button" variant="underline" onClick={onExport}>
+							<Download aria-hidden />
+							{t("drop.export")}
+						</TextButton>
+					}
 				/>
-			</FormField>
+			</ChangeLines>
 			<ChangeNote danger>{t("drop.note")}</ChangeNote>
 		</ChangeGroup>
 	);
@@ -347,7 +309,7 @@ export interface ReviewDialogProps {
 	renames: readonly Rename[];
 	/** The site and admin settings that differ from the file, which the entries do not care about but the writer should still see. */
 	settings?: readonly SettingChange[];
-	/** The collections the draft removed (`draft` no longer has them). Their entries are deleted with them, after the identifier is typed. */
+	/** The collections the draft removed (`draft` no longer has them). Their entries are deleted with them when the review is applied. */
 	removals?: readonly Removal[];
 	baseHash: string;
 	/** The problems of the last check, for the screen to mark. */
@@ -385,9 +347,6 @@ export function ReviewDialog({
 	const [saveError, setSaveError] = useState<{ message: string; conflict?: boolean; applyFailed?: boolean } | null>(
 		null,
 	);
-	const [typed, setTyped] = useState<Record<string, string>>({});
-	const [unlinked, setUnlinked] = useState<Record<string, Unlinked>>({});
-	const [recheck, setRecheck] = useState(0);
 	const [exporting, setExporting] = useState<Removal | null>(null);
 	const skip = useRef(false);
 	const dropNames = removals.map((removal) => removal.name).join("\n");
@@ -401,8 +360,6 @@ export function ReviewDialog({
 			setPicks(undefined);
 			setError(null);
 			setSaveError(null);
-			setTyped({});
-			setUnlinked({});
 			setExporting(null);
 			return;
 		}
@@ -431,13 +388,13 @@ export function ReviewDialog({
 					})
 					.finally(() => setLoading(false));
 			},
-			picks || recheck > 0 ? 250 : 0,
+			picks ? 250 : 0,
 		);
 		return () => {
 			clearTimeout(timer);
 			controller.abort();
 		};
-	}, [open, draft, renames, picks, dropCollections, recheck, site, onIssues, t]);
+	}, [open, draft, renames, picks, dropCollections, site, onIssues, t]);
 
 	const saveMutation = useCmsMutation({
 		// The impacts this dialog showed are the ones the writer reviewed; the server refuses a lossy change it was not told was seen.
@@ -468,18 +425,6 @@ export function ReviewDialog({
 			} else setSaveError({ message: errorText(site, reason, t("save.failed")) });
 		},
 	});
-	const unlinkMutation = useCmsMutation({
-		fn: (name: string, { site }) => unlinkCollection(site, name),
-		failure: t("drop.unlinkFailed"),
-		onSuccess: (_result, name) => {
-			const was = preview?.impacts.find(
-				(impact) => impact.drop && impact.change.kind === "collection_removed" && impact.change.collection === name,
-			)?.drop;
-			if (was)
-				setUnlinked((current) => ({ ...current, [name]: { count: was.unlinked.count, sample: was.unlinked.sample } }));
-			setRecheck((count) => count + 1);
-		},
-	});
 	const saving = saveMutation.isPending;
 	const save = () => {
 		setSaveError(null);
@@ -491,18 +436,13 @@ export function ReviewDialog({
 		impact.drop && impact.change.kind === "collection_removed"
 			? removals.find((item) => item.name === (impact.change as { collection: string }).collection)
 			: undefined;
-	// A deleted collection is applied only with its identifier typed exactly, and with nothing left that points at it.
-	const dropsOk = (preview?.impacts ?? []).every((impact) => {
-		const removal = removalOf(impact);
-		return !removal || (typed[removal.name] === removal.name && (impact.drop?.unlinked.count ?? 0) === 0);
-	});
 	const drops = (preview?.impacts ?? []).filter((impact) => removalOf(impact));
 	const others = (preview?.impacts ?? []).filter((impact) => !removalOf(impact));
 	// The decisions about a deleted collection are the writer's own press of Delete: they are not asked again.
 	const decisions = (preview?.decisions ?? []).filter((decision) => decision.change.kind !== "collection_removed");
 	// A review that only deletes collections shows just their change blocks.
 	const onlyDrops = drops.length > 0 && others.length === 0 && decisions.length === 0 && settings.length === 0;
-	const ready = preview?.valid && problems.length === 0 && preview.changed && !loading && !saving && dropsOk;
+	const ready = preview?.valid && problems.length === 0 && preview.changed && !loading && !saving;
 	const dataChanges = (preview?.impacts ?? []).length;
 
 	return (
@@ -647,11 +587,6 @@ export function ReviewDialog({
 												key={impact.key}
 												impact={impact as ChangeImpact & { drop: CollectionDropImpact }}
 												removal={removal}
-												unlinked={unlinked[removal.name]}
-												typed={typed[removal.name] ?? ""}
-												onType={(value) => setTyped((current) => ({ ...current, [removal.name]: value }))}
-												onUnlink={() => unlinkMutation.mutate(removal.name)}
-												unlinking={unlinkMutation.isPending}
 												onExport={() => setExporting(removal)}
 											/>
 										);

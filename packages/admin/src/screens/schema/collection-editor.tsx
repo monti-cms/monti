@@ -234,10 +234,8 @@ export function CollectionEditor({
 	onSection,
 	collection,
 	onChange,
-	removed,
 	footprint,
 	onRemove,
-	onRestore,
 	onRename,
 	onFileChange,
 	changes,
@@ -251,14 +249,10 @@ export function CollectionEditor({
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
 	onChange: (change: (collection: Obj) => Obj) => void;
-	/** The collection is struck out and will be deleted with its entries when the draft is saved. */
-	removed: boolean;
 	/** What the collection holds in the store; none when that is not known. */
 	footprint?: { entries: number; trashed: number; folders: number };
-	/** Strikes the collection out (nothing is deleted before the draft is saved). */
+	/** Takes the collection out of the list (nothing is deleted before the draft is saved). */
 	onRemove: () => void;
-	/** Takes a struck collection back. */
-	onRestore: () => void;
 	onRename: (rename: Rename) => void;
 	/** Changes the whole file, for an edit that reaches another collection. */
 	onFileChange: (change: (file: Obj) => Obj) => void;
@@ -394,17 +388,10 @@ export function CollectionEditor({
 								<DangerRow
 									name={label}
 									meta={footprint ? t("collection.count", { ...footprint, kind: String(collection.kind) }) : undefined}
-									removed={removed}
 									action={
-										removed ? (
-											<Button type="button" variant="secondary" size="sm" onClick={onRestore}>
-												{t("collection.deleteUndo")}
-											</Button>
-										) : (
-											<Button type="button" variant="outline-danger" size="sm" onClick={onRemove}>
-												{t("collection.delete")}
-											</Button>
-										)
+										<Button type="button" variant="outline-danger" size="sm" onClick={onRemove}>
+											{t("collection.delete")}
+										</Button>
 									}
 								/>
 							</DangerBlock>

@@ -30,6 +30,7 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.dangerTitle": "Delete collection",
 		"collection.delete": "Delete",
 		"collection.deleteUndo": "Undo",
+		"collection.deleted": ({ name }) => `Deleted ${name}`,
 		"collection.count": ({ entries, trashed, folders }) =>
 			[
 				plural(entries, "entry", "entries"),
@@ -76,6 +77,7 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.dangerTitle": "컬렉션 지우기",
 		"collection.delete": "지우기",
 		"collection.deleteUndo": "되돌리기",
+		"collection.deleted": ({ name }) => `${josa(String(name), "을", "를")} 지웠어요`,
 		"collection.count": ({ entries, trashed, folders, kind }) => {
 			const [noun, unit] = kind === "item" ? ["항목", "개"] : ["글", "편"];
 			return [

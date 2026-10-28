@@ -1,3 +1,4 @@
+import { toast } from "@monti-cms/ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
@@ -238,7 +239,7 @@ export const SaveConflict = story(
 	{ play: review(true) },
 );
 
-// Deleting a collection with its entries: Flow 4 of the canvas, steps 15 to 19 (the Schema board's stages 지우기 전, 지울 예정, 지우기 검토, 지우기 확인, 지운 뒤).
+// Deleting a collection with its entries: Flow 4 of the canvas, steps 15 to 19 (the Schema board's stages 지우기 전, 지울 예정, 지우기 검토, 지운 뒤).
 const memoSchema = () => {
 	const base = schema();
 	return {
@@ -269,7 +270,7 @@ const memoState = (over: Record<string, unknown> = {}) =>
 		},
 		...over,
 	});
-const memoRemoval = (blockers: number) => ({
+const memoRemoval = {
 	change: { kind: "collection_removed", collection: "memo", handledBy: "drop-memo" },
 	key: "collection_removed:memo",
 	entries: 23,
@@ -283,80 +284,56 @@ const memoRemoval = (blockers: number) => ({
 		folders: 2,
 		addresses: 31,
 		unlinked: {
-			count: blockers,
-			sample: blockers
-				? [{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" }]
-				: [],
+			count: 4,
+			sample: [{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" }],
 		},
 		bodyLinks: 2,
 	},
-});
-/** The server of the delete: the review finds four entries pointing at the memos until they are unlinked. */
-const deleteServer = (): FakeApi => {
-	let blockers = 4;
-	return (path, method) => {
-		if (path === SCHEMA && method === "GET") return memoState();
-		if (path === `${SCHEMA}/preview`)
-			return previewOf({
-				impacts: [memoRemoval(blockers)],
-				transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
-			});
-		if (path === "/api/monti/v1/references/unlink") {
-			blockers = 0;
-			return { entries: 4 };
-		}
-		return undefined;
-	};
+};
+/** The server of the delete: the review names what goes and the four entries whose links are cut when it is applied. */
+const deleteServer: FakeApi = (path, method) => {
+	if (path === SCHEMA && method === "GET") return memoState();
+	if (path === `${SCHEMA}/preview`)
+		return previewOf({
+			impacts: [memoRemoval],
+			transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
+		});
+	return undefined;
 };
 const pressDelete = async (canvasElement: HTMLElement) => {
 	const block = await within(canvasElement).findByTestId("collection-delete");
 	await userEvent.click(within(block).getByRole("button", { name: tCollection("collection.delete") }));
 };
-const openDeleteReview = async (canvasElement: HTMLElement) => {
-	await pressDelete(canvasElement);
-	await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
-	const sheet = await within(document.body).findByRole("dialog");
-	await within(sheet).findByTestId("impact-collection_removed:memo");
-	return sheet;
-};
 /** Board stage 지우기 전 (step 15): the block at the bottom of the basics tab. */
-export const CollectionDeleteBefore = story(
-	deleteServer(),
-	"collections",
-	{ collection: "memo" },
-	{
-		tags: ["visual"],
-		render: screen((path, method) => (path === SCHEMA && method === "GET" ? memoState() : undefined)),
-	},
-);
-/** Board stage 지울 예정 (step 16): struck in the block and in the list, with 되돌리기. */
-export const CollectionDeleteStruck = story(
-	deleteServer(),
-	"collections",
-	{ collection: "memo" },
-	{ tags: ["visual"], play: ({ canvasElement }) => pressDelete(canvasElement) },
-);
-/** Board stage 지우기 검토 (step 17): the review names what goes and what still points at it; 지우고 적용 is off. */
-export const CollectionDeleteReview = story(
-	deleteServer(),
-	"collections",
-	{ collection: "memo" },
-	{ tags: ["visual"], play: async ({ canvasElement }) => void (await openDeleteReview(canvasElement)) },
-);
-/** Board stage 지우기 확인 (step 18): unlinked, the identifier typed, 지우고 적용 on. */
-export const CollectionDeleteConfirm = story(
-	deleteServer(),
+export const CollectionDeleteBefore = story(deleteServer, "collections", { collection: "memo" }, { tags: ["visual"] });
+/** Board stage 지울 예정 (step 16): gone from the list at once, the editor on the first one left, the changes menu open with the row, and the toast. */
+export const CollectionDeleteRemoved = story(
+	deleteServer,
 	"collections",
 	{ collection: "memo" },
 	{
 		tags: ["visual"],
 		play: async ({ canvasElement }) => {
-			const sheet = await openDeleteReview(canvasElement);
-			await userEvent.click(await within(sheet).findByRole("button", { name: tReview("drop.unlink") }));
-			await within(sheet).findByText(tReview("drop.unlinked"));
-			// A change event, not typed keys (see editLabel).
-			fireEvent.change(within(sheet).getByLabelText(tReview("drop.confirm")), { target: { value: "memo" } });
-			await waitFor(() => expect(within(sheet).getByRole("button", { name: tReview("drop.apply") })).toBeEnabled());
+			await pressDelete(canvasElement);
+			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.list") }));
+			await within(document.body).findByRole("menuitem", { name: new RegExp(t("bar.removed")) });
+		},
+	},
+);
+/** Board stage 지우기 검토 (step 17): the review names what goes, what is cut and what breaks; 지우고 적용 is on from the start. */
+export const CollectionDeleteReview = story(
+	deleteServer,
+	"collections",
+	{ collection: "memo" },
+	{
+		tags: ["visual"],
+		play: async ({ canvasElement }) => {
+			await pressDelete(canvasElement);
+			// The board's review has no toast: it belongs to the moment of the press.
+			toast.dismiss();
+			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
+			const sheet = await within(document.body).findByRole("dialog");
+			await within(sheet).findByTestId("impact-collection_removed:memo");
 		},
 	},
 );
