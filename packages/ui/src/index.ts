@@ -224,6 +224,7 @@ export const BlockBarSeparator = close(open.BlockBarSeparator);
 export const BlockHandle = close(open.BlockHandle);
 export const ChangeActions = close(open.ChangeActions);
 export const ChangeGroup = close(open.ChangeGroup);
+export const ChangeLabel = close(open.ChangeLabel);
 export const ChangeLine = close(open.ChangeLine);
 export const ChangeLines = close(open.ChangeLines);
 export const ChangeNote = close(open.ChangeNote);

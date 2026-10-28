@@ -29,7 +29,7 @@ export { BulkBar } from "./bulk-bar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
-export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
+export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
 export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";

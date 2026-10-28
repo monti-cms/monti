@@ -66,6 +66,17 @@ function ChangeNote({ danger = false, className, ...props }: ComponentProps<"p">
 	);
 }
 
+/** The name of a part of a change ("지워지는 것", "받아 두기"), over the `ChangeLines` it labels: mono, small, in the subtle ink. */
+function ChangeLabel({ className, ...props }: ComponentProps<"span">) {
+	return (
+		<span
+			data-slot="change-label"
+			className={cn("not-first:mt-monti-6 font-mono text-monti-micro text-monti-subtle first:mt-0", className)}
+			{...props}
+		/>
+	);
+}
+
 /** What the change touches: `ChangeLine`s, the thing on the left and what happens to it on the right. */
 function ChangeLines({ className, ...props }: ComponentProps<"div">) {
 	return (
@@ -118,4 +129,4 @@ function ChangeActions({ className, ...props }: ComponentProps<"div">) {
 	);
 }
 
-export { ChangeActions, ChangeGroup, ChangeLine, ChangeLines, ChangeNote };
+export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote };
