@@ -58,28 +58,37 @@ describe("done labels", () => {
 });
 
 describe("required fields", () => {
+	const field = (name: string, order: number, label?: string) => ({ name, label, slug: false, order });
+	/** The schema of a note with a `kind` that shows an address for a link, and a blurb for a text. */
 	const site = {
 		isCollection: () => true,
-		titleField: () => ({ name: "title" }),
-		schemaOf: () => ({
-			fields: {
-				title: { kind: "text", label: "제목", localized: true },
-				slug: { kind: "slug", label: "주소", required: true },
-				summary: { kind: "text", label: "요약", localized: true, required: true },
-				note: { kind: "text", label: "메모" },
-			},
-		}),
+		requiredFieldsOf: (
+			_collection: string,
+			metadata: Record<string, unknown>,
+			options?: { localizedOnly?: boolean },
+		) => [
+			{ ...field("slug", 1, "주소"), slug: true },
+			field("title", 0, "제목"),
+			...(metadata.kind === "link" ? [field("url", 2, "링크 주소")] : []),
+			...(options?.localizedOnly ? [] : [field("categoryId", 3, "카테고리")]),
+		],
 	} as unknown as Parameters<typeof requiredFields>[0];
 
-	it("lists the title, which is always required, and the fields marked required", () => {
-		expect(requiredFields(site, "post", false)).toEqual([
-			{ name: "title", label: "제목" },
-			{ name: "slug", label: "주소" },
-			{ name: "summary", label: "요약" },
-		]);
+	it("lists the required fields in the order of the form", () => {
+		expect(requiredFields(site, "note", false, {}).map((item) => item.label)).toEqual(["제목", "주소", "카테고리"]);
 	});
 
-	it("keeps only the per-language fields for a translation", () => {
-		expect(requiredFields(site, "post", true).map((field) => field.name)).toEqual(["title", "summary"]);
+	it("names a field of a conditional group when its condition is met and it has no problem", () => {
+		const required = requiredFields(site, "note", false, { kind: "link" });
+		expect(doneLabels(required, [])).toContain("링크 주소");
+	});
+
+	it("leaves out a field whose condition is not met", () => {
+		const required = requiredFields(site, "note", false, { kind: "text" });
+		expect(doneLabels(required, [])).not.toContain("링크 주소");
+	});
+
+	it("asks the check only for the fields written per language when the entry is a translation", () => {
+		expect(requiredFields(site, "note", true, {}).map((item) => item.name)).toEqual(["title", "slug"]);
 	});
 });

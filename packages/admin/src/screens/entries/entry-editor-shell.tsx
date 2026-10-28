@@ -366,7 +366,10 @@ export function EntryEditorShell({
 		entry && readiness.result
 			? {
 					issues: readiness.result.issues,
-					done: doneLabels(requiredFields(site, collection, translationSource !== null), readiness.result.issues),
+					done: doneLabels(
+						requiredFields(site, collection, translationSource !== null, entry.working.metadata ?? {}),
+						readiness.result.issues,
+					),
 					focus: focusIssue,
 					open: isReadinessOpen,
 					onOpenChange: setIsReadinessOpen,

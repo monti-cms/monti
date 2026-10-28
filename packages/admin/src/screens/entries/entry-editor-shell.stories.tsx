@@ -5,7 +5,7 @@ import { testSite } from "../../../../core/test/site";
 import { StatusBarPluginCell } from "../../kit";
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { docOf } from "../../test/mdx";
-import { StatusCellsProvider } from "../shared/status-bar";
+import { StatusCellsProvider, useStatusBarContext } from "../shared/status-bar";
 import { EntryEditorShell } from "./entry-editor-shell";
 import { type EntryData, type EntryForm, formFingerprint, formFromEntry } from "./entry-form";
 import { deleteLocalBackup, saveLocalBackup } from "./local-backup";
@@ -82,6 +82,20 @@ const translation = {
 	},
 };
 
+/** A Korean translation of an English original: a language the spell check covers, written in the translation editor. */
+const koTranslation = {
+	...translation,
+	id: "entry-ko",
+	locale: "ko",
+	translationGroupId: "entry-en",
+	translations: [
+		member("entry-en", "en", "published", true, "First post"),
+		member("entry-ko", "ko", "draft", false, "첫 번째 글"),
+	],
+	working: { metadata: { title: "첫 번째 글" }, doc: docOf("첫 문단입니다."), translation: null },
+	source: { ...translation.source, id: "entry-en", locale: "en", metadata: { title: "First post" } },
+};
+
 const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
 const missingTitle = told({ code: "missing_field", path: "title", message: "제목" });
 const missingSummary = told({ code: "missing_field", path: "summary", message: "요약" });
@@ -130,30 +144,31 @@ const screen =
 		</PageFrame>
 	);
 
-/** A plugin's spell-check cell with two findings, as a plugin fills the slot. */
-const SpellingCell = () => (
-	<StatusBarPluginCell
-		label="맞춤법"
-		findings={[
-			{
-				id: "1",
-				title: "몇일 → 며칠",
-				detail: "문단 1 · 몇일 동안 도구만 고쳤다",
-				actionLabel: "고치기",
-				onAction: () => {},
-			},
-			{
-				id: "2",
-				title: "안되요 → 안 돼요",
-				detail: "문단 3 · 그래서 안되요",
-				actionLabel: "고치기",
-				onAction: () => {},
-			},
-		]}
-		settings={{ label: "설정", href: "/admin/api-keys" }}
-		fixAll={{ label: "모두 고치기", onClick: () => {} }}
-	/>
-);
+/** A plugin's spell-check cell with two findings, as a plugin fills the slot. Like the Bareun plugin it checks Korean only, so it leaves the cell out of any other language. */
+const SpellingCell = () =>
+	useStatusBarContext().locale !== "ko" ? null : (
+		<StatusBarPluginCell
+			label="맞춤법"
+			findings={[
+				{
+					id: "1",
+					title: "몇일 → 며칠",
+					detail: "문단 1 · 몇일 동안 도구만 고쳤다",
+					actionLabel: "고치기",
+					onAction: () => {},
+				},
+				{
+					id: "2",
+					title: "안되요 → 안 돼요",
+					detail: "문단 3 · 그래서 안되요",
+					actionLabel: "고치기",
+					onAction: () => {},
+				},
+			]}
+			settings={{ label: "설정", href: "/admin/api-keys" }}
+			fixAll={{ label: "모두 고치기", onClick: () => {} }}
+		/>
+	);
 const screenWith =
 	(api: () => FakeApi, entryId = "entry-1") =>
 	() => (
@@ -202,6 +217,7 @@ export const NotFound: Story = {
 };
 
 export const UnsavedChanges: Story = {
+	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
@@ -304,8 +320,25 @@ export const PluginCellOpen: Story = {
 	},
 };
 
-/** The same cell in the translation editor, where the plugin leaves it out of what it does not check. */
+/** The same cell in the translation editor, for a language the spell check covers (a Korean translation of an English original). */
 export const PluginCellInTranslation: Story = {
+	tags: ["visual"],
+	render: screenWith(
+		() =>
+			server({
+				entry: koTranslation,
+				more: (path, method) => (method === "GET" && path.endsWith("/entry-ko") ? koTranslation : undefined),
+			}),
+		"entry-ko",
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await page(canvasElement).findByRole("button", { name: /^맞춤법 2/ }, LONG));
+		await within(document.body).findByRole("dialog", undefined, LONG);
+	},
+};
+
+/** An English translation: the spell check does not cover English, so the plugin leaves its cell out and the bar has only the core cells. */
+export const PluginCellLeftOut: Story = {
 	tags: ["visual"],
 	render: screenWith(
 		() =>
@@ -316,8 +349,8 @@ export const PluginCellInTranslation: Story = {
 		"entry-en",
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: /^맞춤법 2/ }, LONG));
-		await within(document.body).findByRole("dialog", undefined, LONG);
+		await settled(canvasElement);
+		await expect(page(canvasElement).queryByRole("button", { name: /맞춤법/ })).toBeNull();
 	},
 };
 

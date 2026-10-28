@@ -71,7 +71,7 @@ function SaveCell({ status, savedAt, backupAvailable, onSave }: SaveCellProps) {
 	const t = useTranslator(statusBarMessages);
 	const te = useTranslator(entriesMessages);
 	const ts = useTranslator(entryEditorShellMessages);
-	const { tone, action } = saveCell(status);
+	const { tone, dot, action } = saveCell(status);
 	const text =
 		status === "saved"
 			? savedAt === null
@@ -84,12 +84,13 @@ function SaveCell({ status, savedAt, backupAvailable, onSave }: SaveCellProps) {
 	const title = `${te(`save.${status}`)}${backupAvailable ? "" : ts("backupUnavailable")}`;
 	const cell =
 		action === "save" ? (
-			<StatusBarCell tone={tone} title={title} onClick={onSave}>
+			<StatusBarCell tone={tone} dot={dot} title={title} onClick={onSave}>
 				{text}
 			</StatusBarCell>
 		) : action === "sign-in" ? (
 			<StatusBarCell
 				tone={tone}
+				dot={dot}
 				title={title}
 				href={site.adminHref("/login")}
 				target="_blank"
@@ -98,7 +99,7 @@ function SaveCell({ status, savedAt, backupAvailable, onSave }: SaveCellProps) {
 				{text}
 			</StatusBarCell>
 		) : (
-			<StatusBarCell tone={tone} title={title} render={<span />}>
+			<StatusBarCell tone={tone} dot={dot} title={title} render={<span />}>
 				{text}
 			</StatusBarCell>
 		);

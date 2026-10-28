@@ -1,4 +1,4 @@
-import { isRequiredField, type Site } from "@monti-cms/core/site";
+import type { Site } from "@monti-cms/core/site";
 import type { CmsIssue } from "../../api/error-message";
 import type { TranslatorFor } from "../../translator";
 import { issueHasPlace, readinessText } from "./publish-readiness";
@@ -41,21 +41,19 @@ export function doneLabels(
 }
 
 /**
- * The fields a draft must have before it can be published: the title, and every field marked `required`. A translation has only its own language's
- * values, so for it only the fields written per language count (the others are checked on the source).
+ * The fields the publish check requires of the saved draft right now, in the order of the form: the title, the fields marked `required`, and the
+ * fields of a conditional group only while its condition holds in `metadata`. It is the list the server's check is made from, so a field left
+ * out here is one the check does not ask for.
  */
 export function requiredFields(
-	site: Pick<Site, "isCollection" | "titleField" | "schemaOf">,
+	site: Pick<Site, "isCollection" | "requiredFieldsOf">,
 	collection: string,
 	translation: boolean,
+	metadata: { readonly [key: string]: unknown },
 ): { name: string; label: string }[] {
 	if (!site.isCollection(collection)) return [];
-	const titleName = site.titleField(collection).name;
-	return Object.entries(site.schemaOf(collection).fields)
-		.filter(
-			([name, field]) =>
-				(name === titleName || ("required" in field && isRequiredField(field))) &&
-				(!translation || Boolean(field.localized)),
-		)
-		.map(([name, field]) => ({ name, label: field.label ?? name }));
+	return site
+		.requiredFieldsOf(collection, metadata, { localizedOnly: translation })
+		.sort((a, b) => a.order - b.order)
+		.map(({ name, label }) => ({ name, label: label ?? name }));
 }
