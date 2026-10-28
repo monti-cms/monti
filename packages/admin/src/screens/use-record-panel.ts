@@ -6,7 +6,6 @@ import { useAdminRouter, useAdminSearchParams } from "../router";
 import type { RecordTarget } from "./record-panel";
 import { OPEN_ITEM_PARAM } from "./shared/entry-href";
 import { useUnsavedGuard } from "./shared/use-unsaved-guard";
-import type { ListMode } from "./use-entry-list";
 
 /**
  * The taxonomy item (record) panel beside the list: which item is open, whether it has unsaved changes, and the guards around that. The panel
@@ -15,11 +14,9 @@ import type { ListMode } from "./use-entry-list";
  */
 export function useRecordPanel({
 	collection,
-	mode,
 	confirmDiscard,
 }: {
 	collection: string;
-	mode: ListMode;
 	confirmDiscard: (dirty: boolean) => Promise<boolean>;
 }) {
 	const site = useSite();
@@ -57,7 +54,7 @@ export function useRecordPanel({
 	const openParam = searchParams.get(OPEN_ITEM_PARAM);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: open only when the address value changes
 	useEffect(() => {
-		if (!openParam || !site.isItemCollection(collection) || mode === "trash") return;
+		if (!openParam || !site.isItemCollection(collection)) return;
 		showRecord({ collection, id: openParam });
 		const next = new URLSearchParams(searchParams.toString());
 		next.delete(OPEN_ITEM_PARAM);

@@ -78,9 +78,10 @@ function ListHead({
 	/** The select-all of the page. Leave it out while rows are picked: the bulk bar holds it then. */
 	selectAll?: SelectAll;
 	/** What each name's description says about moving it ("Alt+← → moves the column"). */
-	moveLabel: string;
-	onPlace: (from: string, to: string) => void;
-	onStep: (id: string, direction: -1 | 1) => void;
+	moveLabel?: string;
+	/** Moves a column onto the place of another. Without it (and `onStep`) the names do not move: a list whose columns are fixed. */
+	onPlace?: (from: string, to: string) => void;
+	onStep?: (id: string, direction: -1 | 1) => void;
 	onPreview?: (order: string[] | null) => void;
 	/** Called with `true` when a column's menu opens and `false` when it closes, so what sits above the head can hold still while it is open. */
 	onMenuOpenChange?: (open: boolean) => void;
@@ -125,7 +126,7 @@ function ListHead({
 		if (!drag) return;
 		if (held && commit) {
 			const to = held.ids[ids.indexOf(held.id)];
-			if (to !== undefined && to !== held.id) onPlace(held.id, to);
+			if (to !== undefined && to !== held.id) onPlace?.(held.id, to);
 		}
 		onPreview?.(null);
 		setDrag(null);
@@ -177,13 +178,14 @@ function ListHead({
 						</>
 					);
 					const buttonClass = cn(
-						"inline-flex max-w-full cursor-grab items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&_svg]:size-3 [&_svg]:shrink-0",
+						"inline-flex max-w-full items-center gap-monti-4 border-0 bg-transparent p-0 font-normal text-inherit outline-none focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 [&_svg]:size-3 [&_svg]:shrink-0",
 						column.menu && "hover:text-monti-default",
 						(column.sort || isOpen) && "text-monti-default",
+						onPlace && "cursor-grab",
 						held && "cursor-grabbing",
 					);
 					const onKeyDown = (event: React.KeyboardEvent) => {
-						if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+						if (!onStep || !event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
 						event.preventDefault();
 						onStep(column.id, event.key === "ArrowLeft" ? -1 : 1);
 					};
@@ -200,7 +202,7 @@ function ListHead({
 							className="relative touch-none select-none font-normal data-held:z-1 data-held:bg-monti-selected data-held:shadow-monti-floating"
 							style={held ? { transform: `translateX(${drag.offset}px)` } : undefined}
 							onPointerDown={(event) => {
-								if (event.button !== 0) return;
+								if (event.button !== 0 || !onPlace) return;
 								const box = event.currentTarget.getBoundingClientRect();
 								press.current = { id: column.id, x: event.clientX, grab: event.clientX - box.left, ids };
 								pointerX.current = event.clientX;
@@ -232,7 +234,7 @@ function ListHead({
 									}
 								>
 									<DropdownMenuTrigger
-										aria-description={moveLabel}
+										aria-description={onPlace ? moveLabel : undefined}
 										className={buttonClass}
 										// A press that may become a drag opens nothing; the click that follows a press that did not move opens the menu.
 										onMouseDown={(event) => event.preventBaseUIHandler()}
@@ -256,7 +258,12 @@ function ListHead({
 									</DropdownMenuContent>
 								</DropdownMenu>
 							) : (
-								<button type="button" aria-description={moveLabel} className={buttonClass} onKeyDown={onKeyDown}>
+								<button
+									type="button"
+									aria-description={onPlace ? moveLabel : undefined}
+									className={buttonClass}
+									onKeyDown={onKeyDown}
+								>
 									{name}
 								</button>
 							)}

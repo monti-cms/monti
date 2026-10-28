@@ -16,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Plain, underline (goes somewhere or opens something), quiet (less important) and danger (a risky second choice). */
+/** Plain, underline (goes somewhere or opens something), quiet (less important), danger (a risky second choice) and inherit (the color of the line it is in). */
 export const Variants: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center" wrap>

@@ -7,9 +7,13 @@ import { AdminQueryProvider } from "../screens/shared/query-provider";
 
 /**
  * A screen in Storybook: the test site, a router that keeps the address in memory, and server answers from `api` instead of a server.
- * `api` gets the request's path with its query and its method; it returns the JSON body, an `{ status, body }` error, or `"pending"` to stay loading.
+ * `api` gets the request's path with its query, its method and its JSON body; it returns the JSON body, an `{ status, body }` error, or `"pending"` to stay loading.
  */
-export type FakeApi = (path: string, method: string) => unknown | { status: number; body?: unknown } | "pending";
+export type FakeApi = (
+	path: string,
+	method: string,
+	body?: unknown,
+) => unknown | { status: number; body?: unknown } | "pending";
 
 export const answer = (status: number, body: unknown = { error: { message: "Server error" } }) => ({
 	__status: status,
@@ -19,7 +23,7 @@ export const answer = (status: number, body: unknown = { error: { message: "Serv
 function installFetch(api: FakeApi) {
 	window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 		const path = typeof input === "string" ? input : input instanceof URL ? input.pathname + input.search : input.url;
-		const result = api(path, init?.method ?? "GET");
+		const result = api(path, init?.method ?? "GET", typeof init?.body === "string" ? JSON.parse(init.body) : undefined);
 		if (result === "pending") return new Promise<Response>(() => {});
 		const failed = typeof result === "object" && result !== null && "__status" in result;
 		const status = failed ? (result as { __status: number }).__status : 200;

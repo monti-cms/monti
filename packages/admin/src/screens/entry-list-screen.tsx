@@ -3,13 +3,11 @@
 import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, PageColumn, PageHeader, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
+import { Button, Inline, PageColumn, PageHeader, Stack, Text, toast } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
-import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
-import { toSelection } from "./entries/bulk-model";
 import { ExportDialog } from "./export/export-dialog";
 import { ListSearch } from "./list-search";
 import { screensMessages } from "./messages";
@@ -21,23 +19,20 @@ import { DockedPanel } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
 /**
- * Top right above the list: search, then the one add button (the trash has none). A collection of writing is "+ New post" in the one primary pill;
+ * Top right above the list: search, then the one add button. A collection of writing is "+ New post" in the one primary pill;
  * a collection of items (categories, tags) is "+ Add category" in a secondary pill.
  */
 function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
 	const site = useSite();
-	const isTrash = list.mode === "trash";
 	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
-			<ListSearch state={list.state} onChange={list.update} allowBody={!isTrash} />
-			{!isTrash && (
-				<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
-					<Add aria-hidden />
-					{isItems ? t("list.add", { label: list.label }) : t("list.writeNew")}
-				</Button>
-			)}
+			<ListSearch state={list.state} onChange={list.update} />
+			<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
+				<Add aria-hidden />
+				{isItems ? t("list.add", { label: list.label }) : t("list.writeNew")}
+			</Button>
 		</>
 	);
 }
@@ -47,8 +42,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
-	const { state, data, mode, folders } = list;
-	const isTrash = mode === "trash";
+	const { state, data, folders } = list;
 	const { items } = data;
 	const record = list.recordTarget;
 	// The rows picked in the list, for the side panel; ids of rows that left the page (a filter, a search) are not offered.
@@ -65,7 +59,6 @@ function EntryListBody({ list }: { list: EntryList }) {
 						bulkBar={({ selectAll, colSpan }) => (
 							<BulkBar
 								collection={state.collection}
-								mode={mode}
 								rows={items.filter((item) => list.selectedIds.has(item.id))}
 								folders={folders?.list ?? null}
 								selectAll={selectAll}
@@ -73,7 +66,6 @@ function EntryListBody({ list }: { list: EntryList }) {
 								onClearSelection={() => list.setSelectedIds(new Set())}
 								onRun={list.mutations.bulk}
 								onExport={list.exportEntries}
-								onRestore={(targets) => void list.restore(targets)}
 							/>
 						)}
 						collection={state.collection}
@@ -83,7 +75,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						state={state}
 						onStateChange={(patch) => {
 							list.update(patch);
-							if (!isTrash && (patch.sortField || patch.sortDirection)) {
+							if (patch.sortField || patch.sortDirection) {
 								list.savePreferences({
 									sort: {
 										field: patch.sortField ?? state.sortField,
@@ -100,39 +92,32 @@ function EntryListBody({ list }: { list: EntryList }) {
 						isLoading={data.isLoading}
 						isRefreshing={data.isRefreshing}
 						errorMessage={data.errorMessage}
-						mode={mode}
 						folderActions={folders?.actions}
 						rowMenu={list.rowMenu}
-						blankMenu={
-							isTrash
-								? undefined
-								: [
-										...(folders
-											? [
-													{
-														kind: "item" as const,
-														label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
-														icon: FolderAdd,
-														onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
-													},
-												]
-											: []),
-										{ kind: "item", label: t("list.add", { label: list.label }), icon: Add, onSelect: list.createNew },
+						blankMenu={[
+							...(folders
+								? [
+										{
+											kind: "item" as const,
+											label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
+											icon: FolderAdd,
+											onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
+										},
 									]
-						}
+								: []),
+							{ kind: "item", label: t("list.add", { label: list.label }), icon: Add, onSelect: list.createNew },
+						]}
 						onDeleteKey={list.onDeleteKey}
 						onSelectFolder={(folder) => list.update({ folder })}
 						openRecordId={record?.collection === state.collection ? record.id : null}
 						onOpenRecord={(item) => void list.openRecord({ collection: state.collection, id: item.id })}
-						onRestore={(item) => void list.restore([toSelection(item)])}
-						onPermanentDelete={(item) => list.confirmPermanentDelete([toSelection(item)])}
 						onPageChange={(page) => list.update({ page }, { resetPage: false })}
 						onPageSizeChange={(pageSize) => {
 							list.update({ pageSize });
 							list.savePreferences({ pageSize });
 						}}
 						onRetry={data.retry}
-						addAction={isTrash ? undefined : { label: t("list.add", { label: list.label }), run: list.createNew }}
+						addAction={{ label: t("list.add", { label: list.label }), run: list.createNew }}
 					/>
 				</Stack>
 				{record && (
@@ -198,52 +183,9 @@ export function EntryListScreen() {
 	);
 }
 
-/** Trash-only screen. Split by collection tabs, offering only restore and permanent delete. */
-export function TrashScreen() {
-	const mounted = useMounted();
-	if (!mounted) return <ListLoading />;
-
-	return (
-		<AdminNavProvider>
-			<TrashPage />
-		</AdminNavProvider>
-	);
-}
-
-function TrashPage() {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	const list = useEntryList("trash");
-	const { state } = list;
-	return (
-		<AdminFrame sidebar={{ activeNav: "trash" }}>
-			<PageColumn width="list">
-				<PageHeader title={t("dashboard.trash")}>
-					<EntryListHeaderActions list={list} />
-				</PageHeader>
-				<Tabs value={state.collection}>
-					<TabsList variant="bar" inset="none" aria-label={t("dashboard.trashCollections")}>
-						{site.COLLECTIONS.map((item) => (
-							<TabsTrigger
-								key={item}
-								value={item}
-								nativeButton={false}
-								render={<Link href={site.adminHref(`/trash?collection=${item}`)} />}
-							>
-								{site.COLLECTION_DEFINITIONS[item].label}
-							</TabsTrigger>
-						))}
-					</TabsList>
-				</Tabs>
-				<EntryListBody list={list} />
-			</PageColumn>
-		</AdminFrame>
-	);
-}
-
 function ListPage() {
 	const site = useSite();
-	const list = useEntryList("list");
+	const list = useEntryList();
 	const { state, update, folders } = list;
 	const routePath = site.schemaOf(state.collection).path;
 	const folderLabel =

@@ -19,9 +19,6 @@ export const SYSTEM_COLUMNS = [
 type SystemColumn = (typeof SYSTEM_COLUMNS)[number];
 export type AdminListColumn = string;
 
-/** The columns of the trash: the title, and the day it was moved there. They are not in the list's column settings. */
-export const TRASH_COLUMNS: readonly AdminListColumn[] = ["title", "trashedAt"];
-
 export interface ColumnConfig {
 	label: string;
 	sortField?: ListSortField;
@@ -60,8 +57,6 @@ export function fieldColumnOf(site: Site, collection: string, column: AdminListC
  * Label and sort of one column. A field column is named after the field; a relation to many is drawn as chips and hidden first when width runs short.
  */
 export function columnConfig(site: Site, collection: string, column: AdminListColumn): ColumnConfig {
-	if (column === "trashedAt")
-		return { label: site.createTranslator(screensMessages)("column.trashedAt"), sortField: "trashedAt" };
 	if (isSystemColumn(column)) return systemConfig(site)[column];
 	const stored = fieldColumnOf(site, collection, column);
 	if (!stored) return { label: column };

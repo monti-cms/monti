@@ -82,21 +82,6 @@ describe("admin entry list", () => {
 		expect(props.onSelectionChange).toHaveBeenLastCalledWith(new Set(["published", "draft"]));
 	});
 
-	it("offers restore and permanent delete in the trash view and routes Delete to the handler", () => {
-		const trashed = item("trashed", { status: "trashed" });
-		const onRestore = vi.fn();
-		const onPermanentDelete = vi.fn();
-		const onDeleteKey = vi.fn();
-		renderTable({ items: [trashed], mode: "trash", onRestore, onPermanentDelete, onDeleteKey });
-		const row = screen.getByRole("row", { name: /trashed/ });
-		fireEvent.click(within(row).getByRole("button", { name: "복원" }));
-		fireEvent.click(within(row).getByRole("button", { name: "영구 삭제" }));
-		expect(onRestore).toHaveBeenCalledWith(trashed);
-		expect(onPermanentDelete).toHaveBeenCalledWith(trashed);
-		fireEvent.keyDown(within(row).getByRole("button", { name: "복원" }), { key: "Delete" });
-		expect(onDeleteKey).toHaveBeenCalledWith(trashed);
-	});
-
 	it("opens the same row actions from right click and from the always-visible ⋯ button", async () => {
 		const onSelect = vi.fn();
 		renderTable({ rowMenu: () => [{ kind: "item", label: "보관", onSelect }] });
@@ -272,12 +257,6 @@ describe("admin entry list", () => {
 			const patch = vi.mocked(props.onStateChange).mock.calls[0]?.[0] ?? {};
 			expect(patch).not.toHaveProperty("collection");
 			expect(patch).not.toHaveProperty("pageSize");
-		});
-
-		it("shows the trash as empty without an action", () => {
-			renderTable({ items: [], total: 0, mode: "trash" });
-			expect(emptyTitle()).toBe(t("list.emptyTrash"));
-			expect(screen.queryByRole("button", { name: t("list.clearFilters") })).toBeNull();
 		});
 	});
 });

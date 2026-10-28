@@ -2,12 +2,12 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Count, EntryStatus, Inline, RowActions, RowCheck, TableCell, Text, TextButton } from "@monti-cms/ui";
+import { Count, EntryStatus, Inline, RowActions, RowCheck, TableCell, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
 import { EntryCell } from "./entries-table-cells";
-import { actionsSize, columnSize } from "./entries-table-widths";
+import { ACTIONS_SIZE, columnSize } from "./entries-table-widths";
 import { customListCell, fieldCellText } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { shortDate } from "./list-row-dates";
@@ -15,7 +15,7 @@ import { screensMessages } from "./messages";
 import { type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { entryStatusKind, statusLabels } from "./shared/entry-status";
 
-const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt", "trashedAt"];
+const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt"];
 
 /** A language as the list says it: its code in mono, and "+1" for each other language the entry has. */
 function LanguageCell({ item }: { item: ListEntriesItem }) {
@@ -52,7 +52,6 @@ export function EntryRowCells({
 	item,
 	columns,
 	folders,
-	isTrash,
 	isRecord,
 	showFolderBesideTitle,
 	showSlugBesideTitle,
@@ -60,15 +59,12 @@ export function EntryRowCells({
 	onSelect,
 	menu,
 	onOpenRecord,
-	onRestore,
-	onPermanentDelete,
 }: {
 	collection: string;
 	item: ListEntriesItem;
 	/** The columns to draw, in order: the visible ones the page has room for. */
 	columns: readonly AdminListColumn[];
 	folders: Folder[];
-	isTrash: boolean;
 	isRecord: boolean;
 	showFolderBesideTitle: boolean;
 	showSlugBesideTitle: boolean;
@@ -76,8 +72,6 @@ export function EntryRowCells({
 	onSelect: (selected: boolean) => void;
 	menu: MenuAction[];
 	onOpenRecord: (item: ListEntriesItem) => void;
-	onRestore?: (item: ListEntriesItem) => void;
-	onPermanentDelete?: (item: ListEntriesItem) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -98,11 +92,11 @@ export function EntryRowCells({
 		// A cell an extension registered (for a field or a system column) takes the place of the default one.
 		const custom = customListCell(site, listCells, collection, column);
 		if (!custom && column === "locale") return <LanguageCell item={item} />;
-		if (!custom && column === "status") return isTrash ? null : <StatusCell item={item} />;
+		if (!custom && column === "status") return <StatusCell item={item} />;
 		if (!custom && DATE_COLUMNS.includes(column)) {
 			return (
 				<Text as="span" mono variant="meta" tone="muted">
-					{shortDate(site, item[column as "updatedAt" | "createdAt" | "publishedAt" | "trashedAt"])}
+					{shortDate(site, item[column as "updatedAt" | "createdAt" | "publishedAt"])}
 				</Text>
 			);
 		}
@@ -112,7 +106,6 @@ export function EntryRowCells({
 				column={column}
 				item={item}
 				folders={folders}
-				isTrash={isTrash}
 				isRecord={isRecord}
 				showFolderBesideTitle={column === "title" && showFolderBesideTitle}
 				showSlugBesideTitle={column === "title" && showSlugBesideTitle}
@@ -146,18 +139,8 @@ export function EntryRowCells({
 					{content(column)}
 				</TableCell>
 			))}
-			<TableCell size={actionsSize(isTrash)} align="end">
+			<TableCell size={ACTIONS_SIZE} align="end">
 				<Inline gap={4} justify="end">
-					{isTrash && (
-						<>
-							<TextButton type="button" onClick={() => onRestore?.(item)}>
-								{tc("lifecycle.restore")}
-							</TextButton>
-							<TextButton type="button" variant="danger" onClick={() => onPermanentDelete?.(item)}>
-								{tc("lifecycle.deletePermanently")}
-							</TextButton>
-						</>
-					)}
 					<RowActions>
 						<MoreActionsButton actions={menu} label={t("list.rowActions", { title: item.title ?? tc("untitled") })} />
 					</RowActions>

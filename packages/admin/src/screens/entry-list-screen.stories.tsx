@@ -2,7 +2,7 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { answer, type FakeApi, PageFrame } from "../stories/screen-frame";
-import { EntryListScreen, TrashScreen } from "./entry-list-screen";
+import { EntryListScreen } from "./entry-list-screen";
 
 const meta = { title: "Screens/Entry list", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
 export default meta;
@@ -67,17 +67,12 @@ const folders = [
 	folder("f-notes", "노트", 1, null, 2),
 	folder("f-weekly", "주간 정리", 0, "f-news", 5),
 ];
-const trashed = [
-	entry("버린 글", { status: "trashed", trashedAt: new Date("2026-10-15T00:00:00Z") }),
-	entry("오래된 초안", { status: "trashed", trashedAt: new Date("2026-10-10T00:00:00Z") }),
-];
 
 type ListOptions = {
 	items?: ListEntriesItem[];
 	/** The total the list API answers with, when the page shown is only part of it. */
 	total?: number;
 	folders?: Folder[];
-	trashed?: ListEntriesItem[];
 	/** Answers for the list request itself (loading, failure). */
 	list?: (url: URL) => unknown;
 	/** Anything else: runs first, `undefined` falls through to the defaults. */
@@ -86,7 +81,7 @@ type ListOptions = {
 
 /** The admin API of the list screens: entries (list and trash), folders and saved list settings. */
 const server =
-	({ items = posts, total, folders: folderList = [], trashed: trash = [], list, extra }: ListOptions = {}): FakeApi =>
+	({ items = posts, total, folders: folderList = [], list, extra }: ListOptions = {}): FakeApi =>
 	(path, method) => {
 		const extraAnswer = extra?.(path, method);
 		if (extraAnswer !== undefined) return extraAnswer;
@@ -102,13 +97,11 @@ const server =
 		}
 		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const collection = url.searchParams.get("collection");
-			const inTrash = url.searchParams.getAll("status").includes("trashed");
-			// The sidebar's trash badge asks for trashed rows of the same collection; only the list itself goes through `list`.
-			if (list && !inTrash && collection === "post") return list(url);
+			if (list && collection === "post") return list(url);
 			// The tags the bulk bar adds or takes away: every tag a row holds, and the ones the filter menu lists.
-			if (collection === "tag" && !inTrash) return { items: tagEntries, total: tagEntries.length };
-			const rows = collection !== "post" ? [] : inTrash ? trash : items;
-			return { items: rows, total: inTrash || collection !== "post" ? rows.length : (total ?? rows.length) };
+			if (collection === "tag") return { items: tagEntries, total: tagEntries.length };
+			const rows = collection !== "post" ? [] : items;
+			return { items: rows, total: collection !== "post" ? rows.length : (total ?? rows.length) };
 		}
 		return undefined;
 	};
@@ -175,11 +168,11 @@ const selectRows = async (canvasElement: HTMLElement, ...titles: string[]) => {
 /** The stories that show the list screen itself are shot by the visual checks. */
 const visual = { tags: ["visual"] };
 
-export const Loaded: Story = { ...visual, render: listScreen(server({ trashed, total: 148 })) };
+export const Loaded: Story = { ...visual, render: listScreen(server({ total: 148 })) };
 
 export const WithFolders: Story = {
 	...visual,
-	render: listScreen(server({ folders, trashed, total: 148 })),
+	render: listScreen(server({ folders, total: 148 })),
 };
 
 export const Empty: Story = {
@@ -667,75 +660,5 @@ export const RecordPanelDiscardDialog: Story = {
 		fireEvent.change(name, { target: { value: "리액트 2" } });
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "프론트엔드" }));
 		await body().findByRole("alertdialog", { name: "저장하지 않은 내용" });
-	},
-};
-
-// The trash screen.
-const trashScreen = (api: FakeApi) => () => (
-	<PageFrame api={api} pathname="/admin/trash" search="collection=post">
-		<TrashScreen />
-	</PageFrame>
-);
-export const TrashLoaded: Story = {
-	...visual,
-	render: trashScreen(server({ trashed })),
-};
-
-export const TrashEmpty: Story = {
-	...visual,
-	render: trashScreen(server()),
-};
-
-export const TrashLoadFailed: Story = {
-	render: trashScreen(server({ extra: (path) => (path.includes("status=trashed") ? serverError() : undefined) })),
-};
-
-export const TrashRowsSelected: Story = {
-	...visual,
-	render: trashScreen(server({ trashed })),
-	play: ({ canvasElement }) => selectRows(canvasElement, "버린 글", "오래된 초안"),
-};
-
-export const TrashRowMenuOpen: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await openRowMenu(canvasElement, "버린 글");
-	},
-};
-
-/** Restoring needs no confirmation; deleting forever asks, for one row or for the selected rows. */
-export const DeleteForeverSelectedDialog: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await selectRows(canvasElement, "버린 글", "오래된 초안");
-		// The bulk bar sits above the table, so its button comes before the rows' own.
-		const [bulkDelete] = await within(canvasElement).findAllByRole("button", { name: "영구 삭제" });
-		await userEvent.click(bulkDelete as HTMLElement);
-		await body().findByRole("alertdialog");
-	},
-};
-
-export const DeleteForeverDialog: Story = {
-	render: trashScreen(server({ trashed })),
-	play: async ({ canvasElement }) => {
-		await openRowMenu(canvasElement, "버린 글");
-		await userEvent.click(await body().findByRole("menuitem", { name: /영구 삭제/ }));
-		await body().findByRole("alertdialog");
-	},
-};
-
-export const RestoreFailed: Story = {
-	render: trashScreen(
-		server({
-			trashed,
-			extra: (path, method) =>
-				path.endsWith("/restore") && method === "POST"
-					? answer(409, { error: { code: "conflict", message: "다른 곳에서 먼저 바뀌었어요." } })
-					: undefined,
-		}),
-	),
-	play: async ({ canvasElement }) => {
-		const row = await within(canvasElement).findByRole("row", { name: /버린 글/ });
-		await userEvent.click(within(row).getByRole("button", { name: "복원" }));
 	},
 };
