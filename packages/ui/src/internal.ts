@@ -226,7 +226,7 @@ export { Spark } from "./spark";
 export { Spinner } from "./spinner";
 export { SplitButton } from "./split-button";
 export { Inline, Stack, type StackProps, stackVariants } from "./stack";
-export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 export { StatusBarList } from "./status-bar-list";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";

@@ -104,6 +104,15 @@ function StatusBarSpacer() {
 	return <span aria-hidden data-slot="status-bar-spacer" className="grow" />;
 }
 
+/** Says the bar's state aloud, politely, without showing it: for a cell whose text changes in ways that should not be read out each time (a clock time). */
+function StatusBarAnnouncer({ children }: { children: React.ReactNode }) {
+	return (
+		<output data-slot="status-bar-announcer" aria-live="polite" className="sr-only">
+			{children}
+		</output>
+	);
+}
+
 type Finding = {
 	id: string;
 	title: React.ReactNode;
@@ -185,4 +194,4 @@ function StatusBarPluginCell({
 	);
 }
 
-export { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer };
+export { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer };
