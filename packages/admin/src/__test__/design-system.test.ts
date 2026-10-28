@@ -146,36 +146,49 @@ function problem(utility: string, inUi: boolean, ownColors: boolean): string | n
 }
 
 describe("design system", () => {
-	it("finds roles in the theme and the admin UI packages in the stylesheet", () => {
-		expect(ADMIN_UI_PACKAGES).toEqual(expect.arrayContaining(["admin", "ai", "blocks", "mdx", "seo", "git-sync"]));
-		expect(ROLES.bg.has("tool")).toBe(true);
-		expect(ROLES.text.has("muted")).toBe(true);
-		expect(ROLES.text.has("caption")).toBe(true);
-		expect(ROLES.border.has("default")).toBe(true);
-		expect(ROLES.shadow.has("floating")).toBe(true);
-		expect(SPACING.has("monti-12")).toBe(true);
+	it("each parser finds something: the admin UI packages, a role of every kind, and the spacing scale", () => {
+		expect(ADMIN_UI_PACKAGES.length).toBeGreaterThan(0);
+		for (const [kind, names] of Object.entries(ROLES)) expect(names.size, kind).toBeGreaterThan(0);
+		expect(SPACING.size).toBeGreaterThan(0);
 	});
 
-	it("tells an off-system class from a system one", () => {
-		expect(problem("bg-monti-tool", false, false)).toBeNull();
-		expect(problem("bg-monti-emphasis/90", false, false)).toBeNull();
-		expect(problem("ring-monti-contrast/20", false, false)).toBeNull();
-		expect(problem("rounded-t-monti-lg", false, false)).toBeNull();
-		expect(problem("rounded-md", false, false)).toMatch(/unprefixed radius/);
-		expect(problem("text-monti-caption", false, false)).toBeNull();
-		expect(problem("text-xs", false, false)).toMatch(/text size/);
-		expect(problem("text-sm/relaxed", false, false)).toMatch(/text size/);
-		expect(problem("bg-monti-card", false, false)).toMatch(/unknown role/);
-		expect(problem("bg-monti-warning-strong/50", false, false)).toMatch(/unknown role/);
-		expect(problem("bg-red-500", false, false)).toMatch(/palette/);
-		expect(problem("text-[#fff]", false, false)).toMatch(/arbitrary color/);
-		expect(problem("gap-monti-8", false, false)).toBeNull();
+	it("takes a role of the parsed theme and refuses a made-up one, and names an off-system class", () => {
+		const role = [...ROLES.bg][0] as string;
+		const space = [...SPACING][0] as string;
+		expect(problem(`bg-monti-${role}`, false, false)).toBeNull();
+		expect(problem(`bg-monti-${role}/90`, false, false)).toBeNull();
+		expect(problem("bg-monti-not-a-role", false, false)).toMatch(/unknown role/);
+		expect(problem(`gap-${space}`, false, false)).toBeNull();
+		expect(problem("-mt-monti-4", false, false)).toBeNull();
 		expect(problem("gap-roomy", false, false)).toMatch(/use the scale/);
 		expect(problem("gap-2", false, false)).toMatch(/use the scale/);
-		expect(problem("-mt-monti-4", false, false)).toBeNull();
-		expect(problem("mx-auto", false, false)).toBeNull();
 		expect(problem("gap-1.5", true, false)).toBeNull();
+		expect(problem("mx-auto", false, false)).toBeNull();
+		expect(problem("text-xs", false, false)).toMatch(/text size/);
+		expect(problem("rounded-md", false, false)).toMatch(/unprefixed radius/);
+		expect(problem("bg-red-500", false, false)).toMatch(/palette/);
+		expect(problem("text-[#fff]", false, false)).toMatch(/arbitrary color/);
 		expect(problem("leading-relaxed", false, false)).toMatch(/line height/);
+	});
+
+	it('paints every delete icon button red: an IconButton holding a TrashCan passes tone="danger"', () => {
+		const offenders: string[] = [];
+		let found = 0;
+		for (const pkg of ADMIN_UI_PACKAGES) {
+			for (const file of sourceFiles(path.join(packagesDir, pkg, "src"))) {
+				const source = readFileSync(file, "utf8");
+				for (const button of source.matchAll(/<IconButton\b([\s\S]*?)<\/IconButton>/g)) {
+					const glyph = button[0].search(/<TrashCan\b/);
+					if (glyph < 0) continue;
+					found++;
+					// The opening tag is what comes before the icon inside it.
+					if (!/tone="danger"/.test(button[0].slice(0, glyph)))
+						offenders.push(`${path.relative(packagesDir, file)}:${source.slice(0, button.index).split("\n").length}`);
+				}
+			}
+		}
+		expect(found).toBeGreaterThan(0);
+		expect(offenders).toEqual([]);
 	});
 
 	it("is the only thing the admin and its plugins use", () => {

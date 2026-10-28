@@ -7,11 +7,9 @@ import { renderHookWithSite } from "../../test/site";
 import { parseListState } from "../list-state";
 import { useEntryMutations } from "../use-entry-mutations";
 
-const toast = vi.hoisted(() => vi.fn());
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 let fetchMock: ReturnType<typeof vi.fn>;
 const bulkBodies = () =>

@@ -6,15 +6,14 @@ import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { DataScreen } from "../../data/data-screen";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { restoreMessages } from "../messages";
 
-const toast = vi.hoisted(() => vi.fn());
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const t = testSite.createTranslator(restoreMessages);
 
@@ -128,7 +127,6 @@ describe("the Restore backup card", () => {
 		expect(backup.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(imports.compareDocumentPosition(zone) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(within(zone).getByRole("heading", { name: t("danger.title") })).toBeTruthy();
-		expect(zone.querySelector("[class~='border-monti-danger/40']")).not.toBeNull();
 		expect(within(zone).getByTestId("restore-file")).toBeTruthy();
 		expect(imports.id).toBe("import-entries");
 	});

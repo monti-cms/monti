@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
+import { toast } from "../../../test/ui-toast";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -10,11 +11,9 @@ import { eventsMessages } from "../messages";
 
 const t = testSite.createTranslator(eventsMessages);
 
-const toast = vi.hoisted(() => vi.fn());
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (

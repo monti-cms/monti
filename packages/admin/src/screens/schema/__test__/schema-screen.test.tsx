@@ -35,11 +35,9 @@ const tFields = testSite.createTranslator(schemaFieldsMessages);
 const tAdmin = testSite.createTranslator(schemaAdminMessages);
 const tReview = testSite.createTranslator(schemaReviewMessages);
 
-const toast = vi.hoisted(() => vi.fn());
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
 vi.mock("../reload", () => reload);
 
@@ -973,17 +971,6 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 	});
 
-	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		// The page body is the full-width column around the screen's content.
-		const bodyOf = (id: string) => screen.getByTestId(id).closest("[class*='w-full']") as HTMLElement;
-		expect(bodyOf("collection-post").className).not.toContain("max-w-monti-content");
-		fireEvent.click(screen.getByRole("tab", { name: "site" }));
-		await screen.findByTestId("site-settings");
-		expect(bodyOf("site-settings").className).toContain("max-w-monti-content");
-	});
-
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
@@ -1337,17 +1324,6 @@ describe("SchemaScreen", () => {
 			await waitFor(() => expect(settingsHeader()).not.toBeNull());
 			resizeTo(700);
 			await waitFor(() => expect(settingsHeader()).toBeNull());
-			vi.unstubAllGlobals();
-		});
-
-		it("caps the tree at a width that suits its columns, with the preview right beside it", async () => {
-			wideWindow();
-			await openFields();
-			const side = await screen.findByTestId("layout-preview-side");
-			const row = side.parentElement as HTMLElement;
-			// The first column stops growing at the cap; the preview follows it, not the page edge.
-			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
-			expect(screen.getByTestId("fields-card").parentElement?.className).toContain("max-w-monti-content");
 			vi.unstubAllGlobals();
 		});
 

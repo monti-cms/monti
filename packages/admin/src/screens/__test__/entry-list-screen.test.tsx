@@ -5,6 +5,7 @@ import { testSite } from "../../../../core/test/site";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
+import { toast } from "../../test/ui-toast";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { formatDateOnly } from "../shared/format-date";
@@ -14,11 +15,9 @@ import { ScreenContextProvider, useScreenContext } from "../shared/screen-contex
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
 const { render } = nav;
-const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,

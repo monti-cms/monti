@@ -4,17 +4,16 @@ import { testSite } from "../../../../../core/test/site";
 import { jsonResponse } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { renderWithSite as render, withSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { DataScreen } from "../../data/data-screen";
 import { settingsMessages } from "../../settings/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { ExportDialog } from "../export-dialog";
 import { exportMessages } from "../messages";
 
-const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const t = testSite.createTranslator(exportMessages);
 const ts = testSite.createTranslator(settingsMessages);

@@ -16,6 +16,7 @@ import type { AdminPanel } from "../../../plugins";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { statusLabels } from "../../shared/entry-status";
 import { formatDateTime } from "../../shared/format-date";
 import { useOpenEditor } from "../../shared/open-editor";
@@ -25,11 +26,10 @@ import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
 
-const { getLocalBackup, deleteLocalBackup, saveLocalBackup, toast } = vi.hoisted(() => ({
+const { getLocalBackup, deleteLocalBackup, saveLocalBackup } = vi.hoisted(() => ({
 	getLocalBackup: vi.fn(),
 	deleteLocalBackup: vi.fn(),
 	saveLocalBackup: vi.fn(),
-	toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }));
 // The functions take the site as their last argument (its recovery database); these tests look at the key and the record only.
 vi.mock("../local-backup", async (importOriginal) => ({
@@ -116,10 +116,9 @@ function MockEditor({
 		</>
 	);
 }
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),

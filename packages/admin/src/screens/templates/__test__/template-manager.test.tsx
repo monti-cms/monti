@@ -4,6 +4,7 @@ import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
@@ -11,11 +12,9 @@ import { TemplateManager } from "../template-manager";
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => vi.fn());
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 vi.mock("../../../editor/tiptap-editor", () => ({ CmsEditor: () => null }));
 
 const DOC = {

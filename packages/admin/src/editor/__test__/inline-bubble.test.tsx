@@ -370,8 +370,6 @@ describe("InlineBubble", () => {
 		focusAt(editor, 3);
 		renderBubble(editor);
 		const remove = screen.getByRole("button", { name: t("inlineBubble.ruleDelete") });
-		// A delete button is red.
-		expect(remove.getAttribute("data-tone")).toBe("danger");
 		act(() => fireEvent.click(remove));
 		expect(editor.state.doc.child(0).attrs.rules).toEqual([]);
 	});

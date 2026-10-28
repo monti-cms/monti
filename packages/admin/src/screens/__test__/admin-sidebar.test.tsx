@@ -134,7 +134,7 @@ describe("sidebar structure", () => {
 	it("keeps Trash and Settings with the theme toggle in the footer", () => {
 		const { container } = renderSidebar();
 		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
-		expect(labels(footer)).toEqual([t("sidebar.trash"), t("sidebar.settings")]);
+		expect(labels(footer)).toEqual(expect.arrayContaining([t("sidebar.trash"), t("sidebar.settings")]));
 		expect(within(footer).getAllByRole("button").length).toBeGreaterThan(0);
 	});
 

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import { jsonResponse as json } from "../../../../admin/src/test/fetch";
 import { SiteWrapper } from "../../../../admin/src/test/site";
+import { toast } from "../../../../admin/src/test/ui-toast";
 import config from "../../../test/cms.config";
 import { ConflictDiff, GitSyncPage } from "../git-sync-page";
 import { gitSyncMessages } from "../page.messages";
@@ -16,12 +17,12 @@ const common = site.createTranslator(commonMessages);
 /** The API key field belongs to the admin package; its texts are looked up by their English wording (the test site is English). */
 const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew" ? "Enter a new key" : "New API key");
 
-const toast = vi.hoisted(() => vi.fn());
-// The admin's own hooks toast too, so the toast is replaced where it is made.
-vi.mock("../../../../ui/src/toast", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../../../../ui/src/toast")>()),
-	toast,
-}));
+// The admin's own hooks toast too: the mock covers `@monti-cms/ui` wherever it is imported.
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../../admin/src/test/ui-toast")).withToast(
+		await importOriginal<typeof import("@monti-cms/ui")>(),
+	),
+);
 vi.mock("../../../../admin/src/screens/admin-sidebar", () => ({ AdminSidebar: () => null }));
 
 const target = {

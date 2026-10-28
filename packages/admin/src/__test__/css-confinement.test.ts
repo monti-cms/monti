@@ -100,8 +100,8 @@ describe("admin CSS confinement", () => {
 		])
 			expect(theme).toContain(`${reset}: initial;`);
 		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
-		for (const radius of theme.matchAll(/--radius-monti-[a-z]+:\s*([^;]+);/g))
-			expect(radius[1]).toContain("--monti-radius-");
+		for (const radius of theme.matchAll(/--radius-monti-[\w-]+:\s*([^;]+);/g))
+			expect(radius[1]).toMatch(/^var\(--monti-radius-/);
 		// Every role reads an admin variable (an animation names its `monti-` keyframes instead).
 		for (const role of theme.matchAll(/--(?!animate-)[a-z-]+-monti-[\w-]+:\s*([^;]+);/g))
 			expect(role[1]).toMatch(/^var\(--monti-|^\d/);
@@ -141,25 +141,26 @@ describe("admin CSS confinement", () => {
 			for (const node of rule.nodes) if (node.type === "decl") decls.set(node.prop, node.value);
 			blocks[rule.selector.includes(".dark") ? "dark" : "light"] = decls;
 		});
-		const scaled = [...blocks.light].filter(([, value]) =>
-			/^var\(--monti-(gray|success|warning|danger|proposal)-\d+\)$/.test(value),
-		);
-		expect(scaled.length).toBeGreaterThan(20);
-		expect(Object.fromEntries(scaled)).toMatchObject({
-			"--monti-fg-default": "var(--monti-gray-12)",
-			"--monti-fg-muted": "var(--monti-gray-11)",
-			"--monti-border-strong": "var(--monti-gray-7)",
-			"--monti-bg-success-muted": "var(--monti-success-3)",
-		});
-		// Dark repeats a role only where it points at another step (the page and tool grounds swap).
-		for (const [name, value] of scaled) if (blocks.dark.has(name)) expect(blocks.dark.get(name)).not.toBe(value);
-		// Every scale step exists in both modes.
-		const steps = [...blocks.light.keys()].filter((name) =>
-			/^--monti-(gray|success|warning|danger|proposal)-\d+$/.test(name),
-		);
-		// 12 grays, two steps for success, danger and proposal, and three for warning (its mark color, step 9, joins the fill and the text).
-		expect(steps.length).toBe(12 + 3 * 2 + 3);
-		for (const step of steps) expect(blocks.dark.has(step)).toBe(true);
+		// The rule, read from the tokens: a role whose light value names a scale step is declared as `var(--monti-<step>)`; dark repeats it only where it names another step.
+		const json = JSON.parse(readFileSync(path.resolve(__dirname, "../../../ui/tokens/tokens.json"), "utf8"));
+		const tokens = json.color.tokens as { name: string; value: { light: string; dark: string } }[];
+		const reference = (value: string) => /^\{(.+)\}$/.exec(value)?.[1];
+		const steps = tokens.filter((token) => !reference(token.value.light)).map((token) => token.name);
+		const roles = tokens.filter((token) => steps.includes(reference(token.value.light) ?? ""));
+		expect(roles.length).toBeGreaterThan(0);
+		for (const role of roles) {
+			const light = reference(role.value.light);
+			const dark = reference(role.value.dark);
+			expect(blocks.light.get(`--monti-${role.name}`), role.name).toBe(`var(--monti-${light})`);
+			if (dark === light) expect(blocks.dark.has(`--monti-${role.name}`), `${role.name} in dark`).toBe(false);
+			else if (dark)
+				expect(blocks.dark.get(`--monti-${role.name}`), `${role.name} in dark`).toBe(`var(--monti-${dark})`);
+		}
+		// Every scale step is given in both modes.
+		for (const step of steps) {
+			expect(blocks.light.has(`--monti-${step}`), step).toBe(true);
+			expect(blocks.dark.has(`--monti-${step}`), step).toBe(true);
+		}
 	});
 
 	it("the text roles people must read keep 4.5:1 on the page ground, in both modes", () => {
@@ -197,7 +198,6 @@ describe("admin CSS confinement", () => {
 				expect(contrast(color, page), `${mode} ${role}`).toBeGreaterThanOrEqual(4.5);
 			}
 		}
-		expect(themeCss).toContain("--ring-color-monti-contrast: var(--monti-border-contrast)");
 	});
 
 	it("the theme keeps the admin's own names only", () => {

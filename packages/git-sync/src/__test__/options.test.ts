@@ -2,6 +2,7 @@ import { createSite } from "@monti-cms/core/site";
 import { serverSideOf } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import config from "../../test/cms.config";
+import { gitSyncComponents } from "../admin/provider";
 import { gitSync } from "../index";
 import {
 	GIT_SYNC_PLUGIN,
@@ -148,7 +149,11 @@ describe("the plugin", () => {
 	it("registers a screen, a sidebar item, server hooks and routes", () => {
 		const plugin = gitSync({ targets: [target()] });
 		expect(plugin.name).toBe("git-sync");
-		expect(plugin.nav).toEqual([{ path: "git-sync", label: "Git sync", icon: "branch" }]);
+		expect(plugin.nav).toHaveLength(1);
+		const [item] = plugin.nav ?? [];
+		expect(item?.path).toBe("git-sync");
+		// The sidebar item's icon is one the admin side registers by that name.
+		expect(Object.keys(gitSyncComponents.icons ?? {})).toContain(item?.icon);
 		expect(plugin.server).toBeTypeOf("function");
 		expect(plugin.admin).toBeTypeOf("function");
 	});

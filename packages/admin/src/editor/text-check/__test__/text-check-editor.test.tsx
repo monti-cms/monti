@@ -11,6 +11,7 @@ import { AdminComponentsProvider, useEditorExtensions } from "../../../admin-com
 import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite } from "../../../test/site";
+import { toast } from "../../../test/ui-toast";
 import { editorMessages } from "../../messages";
 import { textCheckMessages } from "../messages";
 import { type TextCheckPluginState, textCheckIssues } from "../plugin";
@@ -19,11 +20,9 @@ import { AUTO_CHECK_DELAY } from "../use-text-check";
 const t = testSite.createTranslator(textCheckMessages);
 const tEditor = testSite.createTranslator(editorMessages);
 
-const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 // jsdom has no coordinates for text ranges.
 beforeAll(() => {

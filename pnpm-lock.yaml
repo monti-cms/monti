@@ -598,6 +598,9 @@ importers:
       '@monti-cms/mdx':
         specifier: workspace:*
         version: link:../mdx
+      '@monti-cms/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.1(react@19.2.3)

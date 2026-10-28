@@ -5,6 +5,7 @@ import { commonMessages } from "../../../lib/common.messages";
 import { preferenceKey } from "../../../lib/utils/site-storage";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
+import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { MediaNotConfigured } from "../media-not-configured";
@@ -13,11 +14,9 @@ import { mediaMessages } from "../messages";
 const t = testSite.createTranslator(mediaMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 const media = (id: string, fields: Record<string, unknown> = {}) => ({
 	id,

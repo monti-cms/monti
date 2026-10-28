@@ -4,14 +4,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import type { ImageInserted, ImageInsertedEvent } from "../../events";
+import { toast } from "../../test/ui-toast";
 import { BLOCK_ID_ATTRIBUTE, CmsBlockIds, findBlock } from "../block-ids";
 import { runImageInserted } from "../image-inserted";
 
-const toast = vi.hoisted(() => Object.assign(vi.fn(), { error: vi.fn() }));
-vi.mock("@monti-cms/ui", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/ui")>()),
-	toast,
-}));
+vi.mock("@monti-cms/ui", async (importOriginal) =>
+	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
+);
 
 /** The attributes of the core image node that `editor.imageInserted` reads and fills. */
 const Image = Node.create({

@@ -167,11 +167,16 @@ const review =
 		await userEvent.click(button);
 	};
 
-// Each tab, loaded.
-export const SiteTab = story(server(), "site");
+// Each tab, loaded. The site tab (the readable width) and the fields tab (the full width) are shot: no unit test can check a layout.
+export const SiteTab = story(server(), "site", undefined, { tags: ["visual"] });
 export const LocalesTab = story(server(), "locales");
 export const CollectionsBasics = story(server(), "collections", { collection: "post" });
-export const CollectionsFields = story(server(), "collections", { collection: "post", section: "fields" });
+export const CollectionsFields = story(
+	server(),
+	"collections",
+	{ collection: "post", section: "fields" },
+	{ tags: ["visual"] },
+);
 export const CollectionsEditor = story(server(), "collections", { collection: "post", section: "editor" });
 export const AdminTab = story(server(), "admin");
 
