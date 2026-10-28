@@ -18,7 +18,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 	ResizeCorner,
-	Spinner,
 	Switch,
 	Text,
 	TextButton,
@@ -35,7 +34,6 @@ import type { TranslatorFor } from "../translator";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { acknowledgeImageCard, nextImageWithoutAlt, openImageCard, useImageCardRequested } from "./image-alt";
 import { ImageCropSheet } from "./image-crop-sheet";
-import { useImageGenerating } from "./image-inserted";
 import { useImageUpload } from "./image-upload";
 import { editorMediaMessages } from "./media.messages";
 
@@ -113,8 +111,6 @@ export function ImageBlockView() {
 		};
 	}, []);
 	const isEditable = block.editable;
-	/** `editor.imageInserted` subscribers are still filling in this image's text. */
-	const generating = useImageGenerating(block.id);
 	/** Body image slot (alt, caption). The server reads media library images and images at this site's addresses (`/images/...`). */
 	const siteSrc = src.startsWith("/") && !src.startsWith("//") ? src : undefined;
 	const imageSlot = (target: "alt" | "caption"): SlotRequest => ({
@@ -122,6 +118,8 @@ export function ImageBlockView() {
 		target,
 		scope: slotScope,
 		disabled: !isEditable || (!mediaId && !siteSrc),
+		// With text in the field the action asks again ("Again") instead of filling.
+		filled: Boolean(target === "alt" ? alt : caption),
 		getContext: () => ({
 			mediaId: mediaId || undefined,
 			imageSrc: mediaId ? undefined : siteSrc,
@@ -214,12 +212,6 @@ export function ImageBlockView() {
 			center: "text-center",
 			right: "text-right",
 		}[align as "left" | "center" | "right"] || "text-center";
-	const captionJustifyClass =
-		{
-			left: "justify-start",
-			center: "justify-center",
-			right: "justify-end",
-		}[align as "left" | "center" | "right"] || "justify-center";
 
 	// Resize width by dragging a corner (bottom left/right) handle
 	const handleResizeStart = (e: React.PointerEvent, handle: "left" | "right") => {
@@ -469,7 +461,6 @@ export function ImageBlockView() {
 
 			{/* Caption Input / Display */}
 			<figcaption className={cn("mt-monti-8 flex items-center gap-monti-8", captionAlignClass)}>
-				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
 				<div className="relative w-full">
 					<Input
 						appearance="inline"
@@ -477,22 +468,11 @@ export function ImageBlockView() {
 						align={align === "left" ? "start" : align === "right" ? "end" : "center"}
 						type="text"
 						value={caption || ""}
-						placeholder={generating && !caption ? "" : t("imageNode.captionPlaceholder")}
+						placeholder={t("imageNode.captionPlaceholder")}
 						aria-label={t("imageNode.caption")}
 						readOnly={!isEditable}
 						onChange={(e) => block.setValues({ caption: e.target.value })}
 					/>
-					{generating && (
-						<output
-							className={cn(
-								"pointer-events-none absolute inset-0 flex items-center gap-monti-8 text-monti-caption text-monti-subtle",
-								caption ? "sr-only" : captionJustifyClass,
-							)}
-						>
-							<Spinner />
-							{t("imageNode.generating")}
-						</output>
-					)}
 				</div>
 				{showTools && captionSlot.trigger}
 			</figcaption>

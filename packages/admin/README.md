@@ -107,20 +107,24 @@ up, says so). Opening the link goes to the entry's page on the site when it is p
 
 ## Properties panel
 
-The properties panel on the right of the edit screen renders inputs from the collection definition. The input is chosen by field type: text, select, relation; a media field
+The properties panel on the right of the edit screen is a read list built from the collection definition: a label above its value, and pressing a value opens its input where it is
+(Enter, Escape or leaving the row closes it). The input is chosen from the collection definition. The input is chosen by field type: text, select, relation; a media field
 (`fields.media`) is a media picker (a file upload when `accept: "file"`). Inputs are never swapped by field name or role.
 If a registered input is chosen with `input`, that input wins. The core has no named inputs. Multiline text (`multiline: true`) is a multi-row box of
 `rows` (default 2) rows (the old `input: "auto-summary"` becomes `multiline: true, rows: 3`).
 
 `fieldInputs` accepts a component (replaces the whole input) or parts (`FieldInputParts`, keep the default input and change only some).
-Parts can read the value being entered (`form`).
+Parts can read the value being entered (`form`). `Aside` is shown on the label row while the field is open, and `Empty` is what the list reads in place of an empty value (the value it follows, such as "same as the title").
+An input registered as a whole component draws its own value, so the list keeps it open.
 
 ```tsx
 const components = {
 	fieldInputs: {
 		// Use the fallback value as the hint text, and put the character count on the right of the label row
 		"meta-title": { placeholder: ({ form }) => form.title, Aside: ({ value }) => <span>{String(value ?? "").length}</span> },
-		// Only a switch in the label row, with no input row (`Input: null`)
+		// Say what an empty value follows
+		"meta-title": { Empty: () => <>Same as the title</> },
+		// Only a piece on the label row, with no input row (`Input: null`)
 		"hide-switch": { Input: null, Aside: HideSwitch },
 	},
 };
@@ -192,22 +196,6 @@ function NoticeView() {
 	);
 }
 ```
-
-## Admin events
-
-A plugin's admin side reacts to what happens in the admin with `on`, written by target and event like `on` on the server:
-`defineAdminPlugin({ on: { editor: { imageInserted: [fillAltText] } } })` (the types are `AdminEvents`, `ImageInserted` and `ImageInsertedEvent`). Admin events are
-past tense: they come after the fact and never block it. Each takes a list of independent subscribers, in plugin order, and a subscriber that fails shows a short
-notice without touching the action or the others. A subscriber is a client function, so it goes in the plugin's `"use client"` admin module.
-
-| Event | When | What the subscriber gets |
-|---|---|---|
-| `editor.imageInserted` | An image went into the body. Drop, paste, the slash menu and the toolbar all insert through the image dialog, so it fires for each | `{ image: { mediaId?, src?, alt, caption, decorative }, around, site, signal, fill }` |
-
-The image is in at once and shows "Writing the image text…" while any subscriber runs. `fill({ alt?, caption? })` writes a field only while it is still empty
-and the person has not typed in it since the insert (and no alt text into a decorative image), and writes nothing once the image was removed, when `signal` is
-aborted too. It returns whether it wrote anything. While a plugin subscribes, the image dialog lets the alt text be left empty. `ai({ autoImageText: true })` of
-`@monti-cms/ai` is one subscriber.
 
 ## Text marks
 
@@ -427,15 +415,16 @@ Its hooks return state and results only: they never show a toast, open a confirm
 The default admin UI is built on the same hooks. Commands return an `EditorResult` (`{ ok: true, value }` or `{ ok: false, error }`) instead of throwing
 for expected failures, and `EditorError.code` (`conflict`, `session_expired`, `offline`, `validation`, `invalid_state`, ...) is what to branch on.
 
-`useSlotActions(request)` gives the actions attached to one screen slot with their run state (`idle`, `asking`, `running`, `done`, `error`),
-`run`, `cancel` and `apply`. Run state is shared by every hook instance with the same slot, target, collection and scope,
-and it survives the component unmounting. `useSlot` (`@monti-cms/admin/slots`) is the default button and panel on top of it.
+`useSlotActions(request)` gives the actions attached to one screen slot with their run state (`idle`, `running`, `error`), `run` and `cancel`. A run puts its result in
+at once through `request.apply` (the first candidate or the text of a `replace` action, every candidate of an `append` action): there is no result to accept, and ⌘Z undoes it.
+Run state is shared by every hook instance with the same slot, target, collection and scope, and it survives the component unmounting. `useSlot`
+(`@monti-cms/admin/slots`) is the default fill action on top of it: "Fill" on an empty target, "Again" once `request.filled`, and "Writing…" while it runs.
 
-`useField(name)` gives one form field's `value`, `setValue`, `error` / `errors`, `readOnly` (`readOnlyReason`: `disabled` or `locked`), the ids that link
+`useField(name)` gives one form field's `value`, `setValue`, `assisted` (the assistant filled the value and nobody has edited it or saved since: it shows blue), `error` / `errors`, `readOnly` (`readOnlyReason`: `disabled` or `locked`), the ids that link
 the label, the input and the error text (`ids`, `inputProps`), and the field's `slotRequest` to pass to `useSlotActions`. It must be used below an
 `EntryFormProvider`; the entry editor's properties panel and the record panel provide one, and a screen that keeps its own form state can provide its own
 (`collection`, `form`, `setForm`, `issues`, `disabled`, `entryId`, `locale`, `entry`, `locked`). A component re-renders only when its own field changes,
-so typing in one field does not re-render the others. The default field UI (`SchemaFields`) is built on the same hook.
+so typing in one field does not re-render the others. The default field UI (the properties list and `SchemaFields`) is built on the same hook.
 
 `useBlockEditor()` is the hook of a block view (a component registered in `blockViews`; it throws anywhere else). It returns the block's attribute `values` with
 `setValue` and `setValues` (one undo step), the `source` of a block written as code (math, code fences) with `setSource`, `editable`, `selected` and `focusedChild`

@@ -187,7 +187,6 @@ export const aiPresets = {
 				input: fieldInput(site),
 				send: ["title", "body"],
 				result: "text",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max }],
 				prompt:
 					options.prompt ??
@@ -274,7 +273,6 @@ export const aiPresets = {
 				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max: 200 }],
 				prompt:
 					options.prompt ??
@@ -302,7 +300,6 @@ export const aiPresets = {
 				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max: 120 }],
 				prompt:
 					options.prompt ??
@@ -458,7 +455,6 @@ export const aiPresets = {
 				input: { code: aiInput.code({ label: textOf(site)("input.code") }) },
 				result: "candidates",
 				apply: "append",
-				askInstruction: true,
 				checks: [regexRuns("code")],
 				prompt:
 					options.prompt ??

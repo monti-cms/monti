@@ -159,11 +159,6 @@ export interface AiConfig {
 	 * Giving a definition (or `aiPresets.name(options)`) under the same name replaces it, `false` removes it, and a new name adds it.
 	 */
 	readonly actions?: Readonly<Record<string, AiActionSource | false>>;
-	/**
-	 * Fill in the alt text and caption of an image as it goes into the body: the editor runs the `imageAlt` and `imageCaption` actions on it and writes the
-	 * first candidate of each into the field while it is still empty (the person may leave alt text empty in the image dialog). Off unless `true`.
-	 */
-	readonly autoImageText?: boolean;
 }
 
 /** The resolved list of actions (name -> definition). Read by the runner, the UI and the checks. */

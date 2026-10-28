@@ -640,7 +640,7 @@ describe("entry editor shell", () => {
 			{ ...entry, working: { ...entry.working, doc: body } },
 		);
 		renderEdit();
-		await screen.findByDisplayValue("요약");
+		await screen.findByRole("button", { name: /^요약/ });
 		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		// A refused publish opens the readiness popup with what it found.
 		const popup = await readinessPopup();
@@ -675,7 +675,7 @@ describe("entry editor shell", () => {
 			{ ...entry, working: { ...entry.working, doc } },
 		);
 		renderEdit();
-		await screen.findByDisplayValue("요약");
+		await screen.findByRole("button", { name: /^요약/ });
 		await screen.findByLabelText("시각 본문");
 		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		const popup = await readinessPopup();
@@ -833,7 +833,7 @@ describe("entry editor shell", () => {
 				{ ...entry, working: { ...entry.working, doc: body } },
 			);
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
-			await screen.findByDisplayValue("요약");
+			await screen.findByRole("button", { name: /^요약/ });
 			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
 			await screen.findByLabelText("블록 수");
 			fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
@@ -894,6 +894,10 @@ describe("entry editor shell", () => {
 		 * When several test files run together, input entered before the field is ready can vanish, so it is entered again until the item shows.
 		 */
 		const typeAndPickAdd = async (field: string, text: string) => {
+			// The value opens its list where it is.
+			if (!screen.queryByRole("combobox", { name: field })) {
+				fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${field}`) }));
+			}
 			const input = (await screen.findByRole("combobox", { name: field })) as HTMLInputElement;
 			const option = await waitFor(
 				() => {
@@ -995,7 +999,7 @@ describe("entry editor shell", () => {
 			},
 		);
 		renderEdit();
-		await screen.findByRole("textbox", { name: "요약" });
+		await screen.findByRole("button", { name: /^요약/ });
 		expect(screen.queryByText(/비워 두면 발행할 때 본문에서 만들어요/)).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
@@ -1008,7 +1012,7 @@ describe("entry editor shell", () => {
 			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
 		});
 		renderEdit();
-		await screen.findByRole("textbox", { name: "요약" });
+		await screen.findByRole("button", { name: /^요약/ });
 		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
@@ -1070,17 +1074,19 @@ describe("entry editor shell", () => {
 		});
 	});
 
-	it("opens and closes the inspector from the top bar toggle and its close button", async () => {
+	it("opens and closes the inspector from the top bar toggle; the pane has no close button of its own", async () => {
 		renderEdit();
-		const close = await screen.findByRole("button", { name: "닫기" });
+		const pane = async () => screen.findByRole("complementary", { name: "속성" });
+		await pane();
 		const toggle = within(screen.getByRole("banner")).getByRole("button", { name: "속성" });
 		expect(toggle.getAttribute("aria-pressed")).toBe("true");
-		expect(screen.getByRole("tab", { name: "속성" })).toBeTruthy();
-		fireEvent.click(close);
-		expect(screen.queryByRole("tab", { name: "속성" })).toBeNull();
+		expect(within(await pane()).getByRole("tab", { name: "기본" })).toBeTruthy();
+		expect(within(await pane()).queryByRole("button", { name: "닫기" })).toBeNull();
+		fireEvent.click(toggle);
+		expect(screen.queryByRole("complementary", { name: "속성" })).toBeNull();
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
 		fireEvent.click(toggle);
-		expect(screen.getByRole("tab", { name: "속성" })).toBeTruthy();
+		expect(await pane()).toBeTruthy();
 	});
 
 	it("shows the unarchive action in the toolbar for archived entries", async () => {

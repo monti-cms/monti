@@ -32,6 +32,7 @@ export function useRelationSearch({
 	limit,
 	selected = [],
 	enabled = true,
+	search: listed = true,
 }: {
 	/** Collection the relation points to (or the one that holds the inverse relation). */
 	collection: string;
@@ -40,6 +41,8 @@ export function useRelationSearch({
 	/** Ids the field holds now. Their titles are looked up even when no search result contains them. */
 	selected?: readonly string[];
 	enabled?: boolean;
+	/** Whether to list entries too. Off, only the entries of `selected` are looked up by id (a read-only list of names). */
+	search?: boolean;
 }) {
 	const site = useSite();
 	const tc = useTranslator(commonMessages);
@@ -80,7 +83,7 @@ export function useRelationSearch({
 	const searchQuery = useQuery({
 		queryKey: entriesKeys.search(params.toString()),
 		queryFn: ({ signal }) => searchEntries(site, params, signal),
-		enabled,
+		enabled: enabled && listed,
 		retry: false,
 		placeholderData: keepPreviousData,
 	});

@@ -7,7 +7,12 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 	en: {
 		retry: "Try again",
 		source: "Source",
-		"tab.default": "Properties",
+		"tab.default": "Basic",
+		"panel.label": "Properties",
+		"property.empty": "Empty",
+		"property.none": "None",
+		"property.slugFromTitle": "Made from the title",
+		"field.fromBody": "From body",
 		"copy.suffix": " (copy)",
 
 		"lifecycle.success.archive": "Archived.",
@@ -116,7 +121,12 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 	ko: {
 		retry: "다시 시도",
 		source: "원문",
-		"tab.default": "속성",
+		"tab.default": "기본",
+		"panel.label": "속성",
+		"property.empty": "비어 있음",
+		"property.none": "없음",
+		"property.slugFromTitle": "제목에서 만들어요",
+		"field.fromBody": "본문에서",
 		"copy.suffix": " (복사)",
 
 		"lifecycle.success.archive": "보관했어요.",

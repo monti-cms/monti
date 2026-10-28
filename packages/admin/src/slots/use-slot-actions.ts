@@ -20,10 +20,7 @@ export type SlotActionsOptions = SlotRequest;
  *
  * @experimental
  */
-export type SlotActionView = Pick<
-	SlotAction,
-	"id" | "label" | "icon" | "menuLabel" | "menuIcon" | "apply" | "askInstruction" | "instant"
->;
+export type SlotActionView = Pick<SlotAction, "id" | "label" | "apply">;
 
 /**
  * The run state of one slot.
@@ -32,10 +29,7 @@ export type SlotActionView = Pick<
  */
 export type SlotRunState =
 	| { status: "idle" }
-	/** Waiting for the extra instruction. */
-	| { status: "asking"; action: SlotActionView }
 	| { status: "running"; action: SlotActionView }
-	| { status: "done"; action: SlotActionView; result: SlotResult }
 	| { status: "error"; action: SlotActionView; error: EditorError };
 
 /**
@@ -49,53 +43,36 @@ export interface SlotActionsState {
 	/** `options.disabled`, and also true while running, so a button can reuse it. */
 	disabled: boolean;
 	state: SlotRunState;
-	/** Extra instruction typed for the next run. Kept between runs in the same hook instance. */
-	instruction: string;
-	setInstruction(text: string): void;
-
-	/** What a button click does: asks for the instruction first when the action has `askInstruction`, otherwise runs. */
-	start(actionId: string): void;
 	/**
-	 * Runs now. `instruction` defaults to the current `instruction` state. Resolves when the run ends: with the result, or with the
-	 * error (`aborted` when it was cancelled or replaced by a newer run of the same slot; that case never lands in `state`).
-	 * An `instant` action applies its first candidate and goes back to `idle`.
+	 * Runs now and puts the result in through `options.apply` as soon as it arrives. Resolves when the run ends, with the result or with the error
+	 * (`aborted` when it was cancelled or replaced by a newer run of the same slot; that case never lands in `state`).
 	 */
-	run(actionId: string, options?: { instruction?: string }): Promise<EditorResult<SlotResult>>;
-	/** Runs the action of the current `done` or `error` state again. */
-	rerun(): Promise<EditorResult<SlotResult>>;
-	/** Aborts a running or asking request and returns to `idle`. It also closes a `done` or `error` result. */
+	run(actionId: string): Promise<EditorResult<SlotResult>>;
+	/** Aborts a running request and returns to `idle`. It also clears a failure. */
 	cancel(): void;
-	/**
-	 * Applies one value (a candidate's `value`, or the text of a `text` result) through `options.apply` with the action's mode.
-	 * Fails with `invalid_state` when there is no `done` result or the action only displays.
-	 */
-	apply(value: string): EditorResult;
 }
 
-const toView = (action: SlotAction): SlotActionView => ({
-	id: action.id,
-	label: action.label,
-	icon: action.icon,
-	menuLabel: action.menuLabel,
-	menuIcon: action.menuIcon,
-	apply: action.apply,
-	askInstruction: action.askInstruction,
-	instant: action.instant,
-});
+const toView = (action: SlotAction): SlotActionView => ({ id: action.id, label: action.label, apply: action.apply });
 
 function toPublicState(state: RunState): SlotRunState {
 	return state.status === "idle" ? state : { ...state, action: toView(state.action) };
 }
 
-const OK: EditorResult = { ok: true, value: undefined };
+/** The values a result puts in: the text, the first candidate (`replace`) or every candidate (`append`). Empty when there is nothing for a field. */
+function valuesOf(action: SlotAction, result: SlotResult): string[] {
+	if (result.kind === "text") return result.text ? [result.text] : [];
+	if (result.kind !== "candidates") return [];
+	const values = result.items.map((item) => item.value).filter(Boolean);
+	return action.apply === "append" ? values : values.slice(0, 1);
+}
 
 /**
- * The actions attached to one screen slot, with their run state, result, `run`, `cancel` and `apply`. It returns state and results only,
- * so a site can draw the trigger and the panel itself. The default UI (`useSlot`) is built on it.
+ * The actions attached to one screen slot, with their run state, `run` and `cancel`. It returns state only, so a site can draw the trigger itself.
+ * The default UI (`useSlot`) is built on it.
  *
- * Run state lives in the slot registry, not in the component: it survives unmount, is shared by every hook instance with the same
- * `slot|target|collection|scope`, and a new run aborts the previous one of the same key. `getContext()` is read when the run starts.
- * Outside a `SlotRegistryProvider` the hook keeps its own run state and finds no actions.
+ * A run puts its result in at once through `options.apply`. Run state lives in the slot registry, not in the component: it survives unmount, is
+ * shared by every hook instance with the same `slot|target|collection|scope`, and a new run aborts the previous one of the same key.
+ * `getContext()` is read when the run starts. Outside a `SlotRegistryProvider` the hook keeps its own run state and finds no actions.
  *
  * @experimental
  */
@@ -115,34 +92,30 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 	const internal = useStoreSelector(runs.store, (store) => store.runs[key] ?? IDLE);
 	const state = useMemo(() => toPublicState(internal), [internal]);
 
-	const [instruction, setInstructionState] = useState("");
-	const instructionRef = useRef(instruction);
-	instructionRef.current = instruction;
-	const setInstruction = useCallback((text: string) => {
-		instructionRef.current = text;
-		setInstructionState(text);
-	}, []);
 	const optionsRef = useRef(options);
 	optionsRef.current = options;
 	const actionsRef = useRef(actions);
 	actionsRef.current = actions;
 
-	// It does not stop even if the component disappears from the screen. The result stays in `runs` and shows when reopened.
-	const execute = useCallback(
-		async (action: SlotAction, extra: string): Promise<EditorResult<SlotResult>> => {
+	// It does not stop even if the component disappears from the screen.
+	const run = useCallback(
+		async (actionId: string): Promise<EditorResult<SlotResult>> => {
+			const found = actionsRef.current.find((candidate) => candidate.id === actionId);
+			if (!found) return editorFailure("invalid_state", t("unknownAction"));
+			const action = found;
 			const controller = runs.begin(key);
 			runs.set(key, { status: "running", action });
 			try {
-				const context = optionsRef.current.getContext();
-				const request = action.askInstruction ? extra.trim() : "";
-				const result = await action.run(request ? { ...context, request } : context, controller.signal);
+				const result = await action.run(optionsRef.current.getContext(), controller.signal);
 				if (!runs.isCurrent(key, controller)) return editorFailure("aborted", t("cancelled"), true);
-				const value =
-					result.kind === "candidates" ? result.items[0]?.value : result.kind === "text" ? result.text : undefined;
-				if (action.instant && action.apply !== "none" && value) {
-					optionsRef.current.apply(value, action.apply);
-					runs.set(key, IDLE);
-				} else runs.set(key, { status: "done", action, result });
+				const values = valuesOf(action, result);
+				if (values.length === 0) {
+					const error: EditorError = { code: "invalid_state", message: t("nothingToApply"), retryable: false };
+					runs.set(key, { status: "error", action, error });
+					return { ok: false, error };
+				}
+				for (const value of values) optionsRef.current.apply(value, action.apply);
+				runs.set(key, IDLE);
 				return { ok: true, value: result };
 			} catch (thrown) {
 				if (!runs.isCurrent(key, controller)) return editorFailure("aborted", t("cancelled"), true);
@@ -155,72 +128,16 @@ export function useSlotActions(options: SlotActionsOptions): SlotActionsState {
 		[runs, key, t],
 	);
 
-	/** The action to run: one attached to the slot now, or the one the panel is showing (so a run survives a source change). */
-	const resolve = useCallback(
-		(actionId: string) => {
-			const found = actionsRef.current.find((action) => action.id === actionId);
-			if (found) return found;
-			const current = runs.get(key);
-			return current.status !== "idle" && current.action.id === actionId ? current.action : undefined;
-		},
-		[runs, key],
-	);
-
-	const run = useCallback(
-		(actionId: string, runOptions?: { instruction?: string }): Promise<EditorResult<SlotResult>> => {
-			const action = resolve(actionId);
-			if (!action) return Promise.resolve(editorFailure("invalid_state", t("unknownAction")));
-			return execute(action, runOptions?.instruction ?? instructionRef.current);
-		},
-		[resolve, execute, t],
-	);
-
-	const start = useCallback(
-		(actionId: string) => {
-			const action = resolve(actionId);
-			if (!action) return;
-			if (action.askInstruction) {
-				runs.abort(key);
-				runs.set(key, { status: "asking", action });
-			} else void execute(action, "");
-		},
-		[resolve, execute, runs, key],
-	);
-
-	const rerun = useCallback((): Promise<EditorResult<SlotResult>> => {
-		const current = runs.get(key);
-		if (current.status !== "done" && current.status !== "error")
-			return Promise.resolve(editorFailure("invalid_state", t("nothingToRerun")));
-		return execute(current.action, instructionRef.current);
-	}, [runs, key, execute, t]);
-
 	const cancel = useCallback(() => {
 		runs.abort(key);
 		runs.set(key, IDLE);
 	}, [runs, key]);
 
-	/** Inserts the result. The same candidate can be inserted any number of times (clear, then insert again, etc.). */
-	const apply = useCallback(
-		(value: string): EditorResult => {
-			const current = runs.get(key);
-			if (current.status !== "done" || current.action.apply === "none")
-				return editorFailure("invalid_state", t("nothingToApply"));
-			optionsRef.current.apply(value, current.action.apply);
-			return OK;
-		},
-		[runs, key, t],
-	);
-
 	return {
 		actions: views,
 		disabled: Boolean(options.disabled) || state.status === "running",
 		state,
-		instruction,
-		setInstruction,
-		start,
 		run,
-		rerun,
 		cancel,
-		apply,
 	};
 }

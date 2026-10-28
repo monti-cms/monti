@@ -48,7 +48,6 @@ const tagIds = fields.relation({
  */
 const seo = seoFields({
 	keys: {
-		preview: "searchPreview",
 		title: "seoTitle",
 		description: "seoDescription",
 		image: "ogImageId",
