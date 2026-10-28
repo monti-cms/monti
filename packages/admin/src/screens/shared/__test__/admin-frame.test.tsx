@@ -8,6 +8,7 @@ import { uiMessages } from "../../../ui/messages";
 import { screensMessages } from "../../messages";
 import { AdminFrame } from "../admin-frame";
 import { AdminQueryProvider } from "../query-provider";
+import { DockedPanel } from "../side-panel";
 
 const { render } = createTestRouter();
 const t = testSite.createTranslator(screensMessages);
@@ -179,5 +180,34 @@ describe("folding the sidebar to its icons", () => {
 		expect(within(rail()).getByRole("button", { name: "Dev" })).toBeTruthy();
 		fireEvent.click(fold());
 		expect(within(rail()).queryByRole("button", { name: "Dev" })).toBeNull();
+	});
+});
+
+describe("the side panel dock", () => {
+	beforeEach(() => stubWidth(false));
+
+	it("draws a panel that a screen opens outside that screen, beside the whole page, and takes it away when the screen closes it", () => {
+		const view = (open: boolean) => (
+			<AdminQueryProvider>
+				<AdminUiLabels>
+					<AdminFrame sidebar={{ activeNav: testSite.DEFAULT_COLLECTION }}>
+						<div data-testid="page">
+							{open && (
+								<DockedPanel>
+									<aside aria-label="Record" />
+								</DockedPanel>
+							)}
+						</div>
+					</AdminFrame>
+				</AdminUiLabels>
+			</AdminQueryProvider>
+		);
+		const shown = render(view(true));
+		const panel = screen.getByRole("complementary", { name: "Record" });
+		expect(screen.getByTestId("page").contains(panel)).toBe(false);
+		// Both the page and the panel are in the area beside the rail.
+		expect(panel.closest("main")?.contains(screen.getByTestId("page"))).toBe(true);
+		shown.rerender(view(false));
+		expect(screen.queryByRole("complementary", { name: "Record" })).toBeNull();
 	});
 });

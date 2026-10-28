@@ -44,6 +44,7 @@ import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
+import { DockedPanel } from "../shared/side-panel";
 import { ToolsFrame } from "../tools/tools-frame";
 import { EventDetailPanel } from "./event-detail-panel";
 import { eventCollectionLabel, eventEntryLabel, STATE_STATUS } from "./event-display";
@@ -157,7 +158,7 @@ export function EventsScreen() {
 				) : undefined
 			}
 		>
-			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
+			<Stack gap={0} grow minHeight={0} overflow="hidden">
 				<Stack gap={0} grow minWidth={0} minHeight={0} overflow="hidden">
 					<FilterTabs filter={filter} options={filterOptions} onChange={changeFilter} />
 					{error && (
@@ -306,13 +307,15 @@ export function EventsScreen() {
 					{dialog}
 				</Stack>
 				{opened && (
-					<EventDetailPanel
-						item={opened}
-						deliveries={items.filter((item) => item.change.eventId === opened.change.eventId)}
-						onClose={() => setOpenedKey(null)}
-					/>
+					<DockedPanel>
+						<EventDetailPanel
+							item={opened}
+							deliveries={items.filter((item) => item.change.eventId === opened.change.eventId)}
+							onClose={() => setOpenedKey(null)}
+						/>
+					</DockedPanel>
 				)}
-			</Inline>
+			</Stack>
 		</ToolsFrame>
 	);
 }
