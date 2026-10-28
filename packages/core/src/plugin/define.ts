@@ -34,7 +34,7 @@ export interface Plugin<
 	readonly options: Options;
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
-	/** Pages to add to the Writing or Site group of the admin sidebar (`group`, default Site). `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
+	/** Pages to add as tabs of the admin's Tools page, after the built-in ones. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/**
 	 * The API keys this plugin needs, one slot each. Tools > API keys lists every slot of the installed plugins: assigned (the key's "in use" line names it) or empty
@@ -117,15 +117,10 @@ export interface PluginKeySlot {
 }
 
 export interface PluginNavItem {
+	/** One address segment: the page opens at `<admin path>/tools/<path>`. */
 	readonly path: string;
-	/** The page name in the sidebar. A function of the site follows the admin language. */
+	/** The name of the page's tab on the tools page. A function of the site follows the admin language. */
 	readonly label: PluginLabel;
-	/** The line under the page title, one sentence on what the page is for. A function of the site follows the admin language. */
-	readonly description?: PluginLabel;
-	/** Carbon icon name (e.g. `spark`). */
-	readonly icon?: string;
-	/** The sidebar group the page belongs to: `writing` (next to Templates, for tools used while writing) or `site` (site administration, collapsed by default). Default `site`. */
-	readonly group?: "writing" | "site";
 }
 
 /** Site config as seen by plugin validation. */

@@ -2,7 +2,6 @@ import { createSite } from "@monti-cms/core/site";
 import { serverSideOf } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import config from "../../test/cms.config";
-import { gitSyncComponents } from "../admin/provider";
 import { gitSync } from "../index";
 import {
 	GIT_SYNC_PLUGIN,
@@ -152,8 +151,6 @@ describe("the plugin", () => {
 		expect(plugin.nav).toHaveLength(1);
 		const [item] = plugin.nav ?? [];
 		expect(item?.path).toBe("git-sync");
-		// The sidebar item's icon is one the admin side registers by that name.
-		expect(Object.keys(gitSyncComponents.icons ?? {})).toContain(item?.icon);
 		expect(plugin.server).toBeTypeOf("function");
 		expect(plugin.admin).toBeTypeOf("function");
 	});

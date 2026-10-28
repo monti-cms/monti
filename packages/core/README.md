@@ -899,7 +899,7 @@ export const myPlugin = () =>
 		name: "my-plugin",
 		options: {}, // JSON value. Read by both the server and the browser
 		blocks: [], // body blocks the plugin adds (`defineBlock`, "Body blocks")
-		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the admin sidebar: <admin path>/tools/my (`label` may be `(site) => text` to follow the admin language; `group: "writing"` puts it next to Templates, the default `"site"` puts it in the collapsed Site group)
+		nav: [{ path: "my", label: "My screen" }], // a tab of the admin's Tools page: <admin path>/tools/my (`label` may be `(site) => text` to follow the admin language)
 		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // an API key the plugin needs ("API key store")
 		checkConfig: ({ collections }) => {}, // called when the site config is built
 		// The server side, in one place: a module of its own, read only on the server. Its default export is `defineServerPlugin({ ... })`.
@@ -1222,7 +1222,7 @@ defineConfig({
 });
 ```
 
-Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Event log** (Tools > Event log: `/admin/events` at the config default path, `/studio/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the sidebar's Event log item shows how many there are.
+Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Event log** (Tools > Activity log: `/admin/tools/events` at the config default path, `/studio/tools/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the Tools row of the sidebar and the Activity log tab show how many there are.
 
 ## Testing your subscribers and plugins
 
