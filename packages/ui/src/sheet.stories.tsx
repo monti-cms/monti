@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
 import { Button } from "./button";
 import { FormField, FormFieldGroup, FormFieldLabel } from "./field";
 import { Input } from "./input";
-import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import {
 	Sheet,
 	SheetBody,
@@ -91,43 +89,41 @@ export const LongBody: Story = {
 	),
 };
 
-function ResizableDemo() {
-	const resize = useResizableWidth({ storageKey: "story-sheet", defaultWidth: 520, min: 400, max: 800 });
-	return (
+/** What the sheet is about, when the title alone does not say: the file name after it, in mono and quiet. */
+export const Of: Story = {
+	render: () => (
 		<Sheet defaultOpen>
-			<SheetContent
-				resizable={{
-					style: { "--panel-width": `${resize.width}px` } as React.CSSProperties,
-					handle: (
-						<ResizeHandle
-							edge="start"
-							label="시트 너비 조절"
-							value={resize.width}
-							min={resize.min}
-							max={resize.max}
-							onChange={resize.setWidth}
-							onReset={resize.reset}
-							resizing={resize.resizing}
-						/>
-					),
-				}}
-			>
-				<Body title="넓힐 수 있는 시트" />
+			<SheetContent>
+				<SheetHeader>
+					<SheetTitle of="blog-export.zip">가져오기</SheetTitle>
+				</SheetHeader>
+				<SheetBody>
+					<Fields count={3} />
+				</SheetBody>
+				<SheetFooter>
+					<SheetClose render={<TextButton />}>취소</SheetClose>
+					<Button>21편 가져오기</Button>
+				</SheetFooter>
 			</SheetContent>
 		</Sheet>
-	);
-}
+	),
+};
 
-/** The app owns the width and the drag handle: drag the left edge or use the arrow keys. This one starts with the left arrow pressed once. */
-export const Resizable: Story = {
-	render: () => <ResizableDemo />,
-	play: async () => {
-		const handle = await within(document.body).findByRole("separator", { name: "시트 너비 조절" });
-		// The width is remembered in the browser: start from the default each time.
-		await userEvent.dblClick(handle);
-		await expect(handle).toHaveAttribute("aria-valuenow", "520");
-		handle.focus();
-		await userEvent.keyboard("{ArrowLeft}");
-		await expect(handle).toHaveAttribute("aria-valuenow", "536");
-	},
+/** While the sheet is busy it cannot be left: no close button, and the pill says what is happening. */
+export const Busy: Story = {
+	render: () => (
+		<Sheet defaultOpen>
+			<SheetContent>
+				<SheetHeader closable={false}>
+					<SheetTitle of="blog-export.zip">가져오기</SheetTitle>
+				</SheetHeader>
+				<SheetBody>
+					<Fields count={3} />
+				</SheetBody>
+				<SheetFooter>
+					<Button loading>가져오는 중</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
+	),
 };

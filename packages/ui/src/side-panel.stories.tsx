@@ -5,29 +5,31 @@ import { ChatInput } from "./chat-input";
 import { ChatMessage } from "./chat-message";
 import { DescriptionItem, DescriptionList } from "./description-list";
 import { IconButton } from "./icon-button";
-import { SidePanelFrame } from "./side-panel-frame";
+import { SidePanel } from "./side-panel";
 import { Stack } from "./stack";
 import { Suggest } from "./suggest";
 import { Text } from "./text";
 import { ToolCallLine } from "./tool-call-line";
 
 /**
- * The panel beside a screen (the assistant, a media file, an activity): cream ground, a line down its left edge, a 60px head with the title (16px
- * bold) and icon buttons at the end, a body, and at the bottom one pill or the box to type in. It does not cover the screen next to it.
+ * The panel beside a screen (the assistant, a media file, an activity, an entry's properties): cream ground, a line down its left edge, a 60px
+ * head with the title (16px bold) and icon buttons at the end, a body, and at the bottom one pill or the box to type in. It does not cover the screen
+ * next to it. The width is fixed: 360 (`side`, the default), 300 (`panel`) or 380 (`assistant`). The head leaves its right side free for the ✦
+ * button in the corner, except on the assistant.
  */
 const meta = {
 	title: "Patterns/Sheet/SidePanel",
-	component: SidePanelFrame,
-	args: { title: "어시스턴트", children: null },
+	component: SidePanel,
+	args: { title: "어시스턴트", width: "assistant", corner: false, children: null },
 	parameters: { layout: "fullscreen", bleed: true },
 	decorators: [
 		(Story) => (
-			<div className="flex h-svh w-monti-assistant">
+			<div className="flex h-svh justify-end">
 				<Story />
 			</div>
 		),
 	],
-} satisfies Meta<typeof SidePanelFrame>;
+} satisfies Meta<typeof SidePanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -45,12 +47,12 @@ const input = (
 	/>
 );
 
-export const TitleOnly: Story = { render: (args) => <SidePanelFrame {...args}>{null}</SidePanelFrame> };
+export const TitleOnly: Story = { render: (args) => <SidePanel {...args}>{null}</SidePanel> };
 
 /** The panel's actions sit before the close button. */
 export const Header: Story = {
 	render: (args) => (
-		<SidePanelFrame
+		<SidePanel
 			{...args}
 			onClose={() => undefined}
 			actions={
@@ -60,15 +62,18 @@ export const Header: Story = {
 			}
 		>
 			{null}
-		</SidePanelFrame>
+		</SidePanel>
 	),
 };
 
 /** A media file: name and value rows in the body, a note and one small pill in the foot. */
 export const Details: Story = {
-	render: () => (
-		<div className="flex w-monti-side-panel">
-			<SidePanelFrame
+	render: (args) => (
+		<div className="flex h-svh justify-end">
+			<SidePanel
+				{...args}
+				width="side"
+				corner
 				title="desk-morning.jpg"
 				onClose={() => undefined}
 				actions={
@@ -90,7 +95,7 @@ export const Details: Story = {
 					</DescriptionItem>
 					<DescriptionItem label="쓰는 곳">첫 번째 글 외 1</DescriptionItem>
 				</DescriptionList>
-			</SidePanelFrame>
+			</SidePanel>
 		</div>
 	),
 };
@@ -101,7 +106,7 @@ export const Details: Story = {
  */
 export const Empty: Story = {
 	render: (args) => (
-		<SidePanelFrame {...args} onClose={() => undefined} footer={input}>
+		<SidePanel {...args} onClose={() => undefined} footer={input}>
 			<Stack gap={2} className="-mx-monti-24 mt-auto -mb-monti-20 px-monti-12 pt-monti-12 pb-monti-4">
 				<Text variant="micro" tone="subtle" className="px-monti-12 pb-monti-6">
 					이 글에서
@@ -114,14 +119,14 @@ export const Empty: Story = {
 				<Suggest kind="recent">첫 문단을 더 짧게 다듬어 줘</Suggest>
 				<Suggest kind="recent">작년 글은 2024 폴더로 옮겨 줘</Suggest>
 			</Stack>
-		</SidePanelFrame>
+		</SidePanel>
 	),
 };
 
 /** A body longer than the panel scrolls, under the head and above the foot. */
 export const Scrolling: Story = {
 	render: (args) => (
-		<SidePanelFrame {...args} onClose={() => undefined} footer={input}>
+		<SidePanel {...args} onClose={() => undefined} footer={input}>
 			{Array.from({ length: 8 }, (_, index) => (
 				<div key={index} style={{ display: "contents" }}>
 					<ChatMessage author="user">질문 {index + 1}</ChatMessage>
@@ -131,14 +136,28 @@ export const Scrolling: Story = {
 					<ChatMessage>질문 {index + 1}에 대한 답이에요. 패널 안에서 두 줄쯤 이어지도록 조금 길게 썼어요.</ChatMessage>
 				</div>
 			))}
-		</SidePanelFrame>
+		</SidePanel>
+	),
+};
+
+/** The entry's properties: the narrower `panel` width, with the head's right side kept free for ✦. */
+export const Properties: Story = {
+	render: (args) => (
+		<SidePanel {...args} width="panel" corner title="속성" onClose={() => undefined}>
+			<DescriptionList>
+				<DescriptionItem label="상태">초안</DescriptionItem>
+				<DescriptionItem label="주소">
+					<Text mono>/posts/first-post</Text>
+				</DescriptionItem>
+			</DescriptionList>
+		</SidePanel>
 	),
 };
 
 export const NoCloseButton: Story = {
 	render: (args) => (
-		<SidePanelFrame {...args} footer={<Button size="sm">저장</Button>}>
+		<SidePanel {...args} footer={<Button size="sm">저장</Button>}>
 			{null}
-		</SidePanelFrame>
+		</SidePanel>
 	),
 };
