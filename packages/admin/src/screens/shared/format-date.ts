@@ -4,10 +4,6 @@ import type { Site } from "@monti-cms/core/site";
 export const formatDateTime = (site: Site, value: string | number | Date, options: Intl.DateTimeFormatOptions = {}) =>
 	new Date(value).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE, ...options });
 
-/** Date only (`2025. 8. 7.`). */
-export const formatDateOnly = (site: Site, value: string | number | Date) =>
-	new Date(value).toLocaleDateString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE });
-
 /** How long ago, in the admin language and in short form ("2 min. ago"). Under a minute it reads "now". */
 export const formatAgo = (site: Site, value: string | number | Date, now: number = Date.now()) => {
 	const seconds = Math.round((new Date(value).getTime() - now) / 1000);

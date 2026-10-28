@@ -70,8 +70,7 @@ vi.mock("../../../editor/tiptap-editor", async () => {
 		CmsEditor: (props: {
 			editable?: boolean;
 			titleField?: React.ReactNode;
-			toolbarEnd?: React.ReactNode;
-			toolbarAside?: React.ReactNode;
+			tools?: React.ReactNode;
 			sourceView?: React.ReactNode;
 			doc?: StoredDocument;
 			onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
@@ -82,8 +81,7 @@ const { mockEditor } = vi.hoisted(() => ({ mockEditor: { current: null as import
 function MockEditor({
 	editable,
 	titleField,
-	toolbarEnd,
-	toolbarAside,
+	tools,
 	sourceView,
 	doc,
 	onEditor,
@@ -91,8 +89,7 @@ function MockEditor({
 }: {
 	editable?: boolean;
 	titleField?: React.ReactNode;
-	toolbarEnd?: React.ReactNode;
-	toolbarAside?: React.ReactNode;
+	tools?: React.ReactNode;
 	sourceView?: React.ReactNode;
 	doc?: StoredDocument;
 	onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
@@ -106,9 +103,8 @@ function MockEditor({
 	useHeadlessEditor(doc, stableOnEditor);
 	return (
 		<>
-			<div role="toolbar" aria-label="서식 도구">
-				{toolbarEnd}
-				{toolbarAside}
+			<div role="toolbar" aria-label="문서 도구">
+				{tools}
 			</div>
 			{titleField}
 			{sourceView ?? <textarea aria-label="시각 본문" readOnly={editable === false} />}
@@ -833,7 +829,7 @@ describe("entry editor shell", () => {
 		expect(screen.getByText(/원문 모드로만 편집해요/)).toBeTruthy();
 	});
 
-	it("switches only the body to the source panel and keeps the toolbar and title", async () => {
+	it("switches only the body to the source panel and keeps the title", async () => {
 		renderEdit();
 		await screen.findByLabelText("시각 본문");
 		const toggle = screen.getByRole("button", { name: SOURCE_LABEL });
@@ -842,7 +838,6 @@ describe("entry editor shell", () => {
 		expect(source.textContent).toBe("첫째 줄\n둘째 줄");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
-		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
 		fireEvent.click(toggle);
 		expect(await screen.findByLabelText("시각 본문")).toBeTruthy();
 		expect(screen.queryByLabelText("패널 본문")).toBeNull();
@@ -874,12 +869,11 @@ describe("entry editor shell", () => {
 			renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, panels);
 		};
 
-		it("shows no toggle when no panel is registered, and the other toolbar tools stay", async () => {
+		it("shows no toggle when no panel is registered", async () => {
 			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 			await screen.findByLabelText("시각 본문");
-			const toolbar = screen.getByRole("toolbar", { name: "서식 도구" });
+			const toolbar = screen.getByRole("toolbar", { name: "문서 도구" });
 			expect(within(toolbar).queryByRole("button", { name: SOURCE_LABEL })).toBeNull();
-			expect(within(toolbar).getByRole("button", { name: "템플릿" })).toBeTruthy();
 		});
 
 		it("shows the toggle of the registered panel under its label, and opens that panel on the body", async () => {
@@ -1244,7 +1238,7 @@ describe("entry editor shell", () => {
 		const toolbar = screen.getByRole("banner");
 		expect(within(toolbar).queryByRole("button", { name: "MDX 원문" })).toBeNull();
 		expect(
-			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: SOURCE_LABEL }),
+			within(screen.getByRole("toolbar", { name: "문서 도구" })).getByRole("button", { name: SOURCE_LABEL }),
 		).toBeTruthy();
 		expect(within(toolbar).getByRole("link", { name: "미리보기" })).toBeTruthy();
 		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
@@ -1356,97 +1350,6 @@ describe("entry editor shell", () => {
 		// An item collection opens that item in the small form on the list.
 		await waitFor(() => expect(testRouter.replace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
 		expect(EMPTY_FORM.slug).toBe("");
-	});
-});
-
-describe("templates", () => {
-	const templates = { items: [{ id: "t1", name: "회고", doc: docOf("## 회고") }] };
-	const sourceText = () => {
-		fireEvent.click(
-			within(screen.getByRole("toolbar", { name: "서식 도구" })).getByRole("button", { name: SOURCE_LABEL }),
-		);
-		return screen.getByLabelText("패널 본문").textContent;
-	};
-
-	it("inserts the chosen template right away into an empty body", async () => {
-		serve((input) => (input === "/api/monti/v1/templates" ? json(templates) : undefined), {
-			...entry,
-			working: { ...entry.working, doc: emptyStoredDocument() },
-		});
-		renderEdit();
-		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
-
-		expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull();
-		expect(sourceText()).toBe("회고");
-	});
-
-	it("asks before replacing existing body text, and replaces only when applied", async () => {
-		serve((input) => (input === "/api/monti/v1/templates" ? json(templates) : undefined));
-		renderEdit();
-		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
-
-		const dialog = await screen.findByRole("alertdialog", { name: "템플릿 적용" });
-		expect(dialog.textContent).toContain("회고");
-		fireEvent.click(within(dialog).getByRole("button", { name: "적용" }));
-
-		await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "템플릿 적용" })).toBeNull());
-		expect(sourceText()).toBe("회고");
-	});
-
-	it("applies a template as a copy with new block ids, and saves it as a document", async () => {
-		const template = {
-			id: "t1",
-			name: "회고",
-			doc: {
-				type: "doc",
-				version: 3,
-				content: [
-					{ type: "heading", id: "tpl00001", attrs: { level: 2 }, content: [{ type: "text", text: "회고" }] },
-					{ type: "paragraph", id: "tpl00002", content: [{ type: "text", text: "배운 점" }] },
-				],
-			},
-		};
-		const before = JSON.stringify(template.doc);
-		serve(
-			(input, init) => {
-				if (input === "/api/monti/v1/templates") return json({ items: [template] });
-				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
-			},
-			{ ...entry, working: { ...entry.working, doc: emptyStoredDocument() } },
-		);
-		renderEdit();
-		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "회고" }));
-		fireEvent.keyDown(window, { key: "s", ctrlKey: true });
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-
-		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)) as {
-			doc: { content: { type: string; id?: string }[] };
-		};
-		expect(sent).not.toHaveProperty("mdx");
-		expect(sent.doc.content.map((block) => block.type)).toEqual(["heading", "paragraph"]);
-		for (const block of sent.doc.content) {
-			expect(block.id).toMatch(/^[0-9a-z]{8}$/);
-			// Ids are unique within a body: the template's own are not copied into the entry.
-			expect(["tpl00001", "tpl00002"]).not.toContain(block.id);
-		}
-		expect(new Set(sent.doc.content.map((block) => block.id)).size).toBe(2);
-		// The template itself is untouched.
-		expect(JSON.stringify(template.doc)).toBe(before);
-	});
-
-	it("says so when there are no templates", async () => {
-		serve((input) => (input === "/api/monti/v1/templates" ? json({ items: [] }) : undefined));
-		renderEdit();
-		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
-
-		expect(await screen.findByRole("menuitem", { name: "템플릿이 없어요." })).toBeTruthy();
 	});
 });
 
@@ -1612,19 +1515,17 @@ describe("admin options that hide features", () => {
 		],
 	};
 
-	it("shows the template menu and the language tabs unless the site turns them off", async () => {
+	it("shows the language tabs unless the site turns them off", async () => {
 		serve(() => undefined, grouped);
 		renderEdit();
 		await screen.findByRole("navigation", { name: "언어" });
-		expect(screen.getByRole("button", { name: "템플릿" })).toBeTruthy();
 	});
 
-	it("hides the template menu and the language tabs of the editor", async () => {
+	it("hides the language tabs of the editor", async () => {
 		serve(() => undefined, grouped);
 		render(withSite(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, hiding));
 		await editorTitle();
 		expect(screen.queryByRole("navigation", { name: "언어" })).toBeNull();
-		expect(screen.queryByRole("button", { name: "템플릿" })).toBeNull();
 	});
 });
 
@@ -1678,7 +1579,7 @@ describe("translation source pane", () => {
 		// The title slot hint is the source title.
 		expect((await editorTitle()).getAttribute("placeholder")).toBe("원문 제목");
 		// A translation uses the same editor too (formatting tools, source switch).
-		expect(screen.getByRole("toolbar", { name: "서식 도구" })).toBeTruthy();
+		expect(screen.getByRole("toolbar", { name: "문서 도구" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: SOURCE_LABEL })).toBeTruthy();
 
 		cleanup();

@@ -1,5 +1,5 @@
 /**
- * The kinds a text block can be turned into from the block handle menu ("다른 블록으로 바꾸기"), the kind a block is now, and the alignment of a block.
+ * The kinds a text block can be turned into from the block handle menu ("Turn into another block"), the kind a block is now, and the alignment of a block.
  * Pure helpers over the document, so the menu only draws what they return.
  */
 
