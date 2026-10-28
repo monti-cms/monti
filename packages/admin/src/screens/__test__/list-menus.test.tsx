@@ -224,22 +224,48 @@ describe("flow: filter by a date", () => {
 		expect(radios[1]?.getAttribute("aria-checked")).toBe("false");
 	});
 
-	it("picks a period on a calendar from the 'pick a period' row: the first day starts it, the second ends it", async () => {
+	/** Opens the filter menu, its date level and the calendar card of the published date's "pick a period" row (the menus stay open behind it). */
+	const openCalendar = async () => {
 		await renderList();
 		openMenu(t("listMenu.filter"));
 		await openSub(t("listMenu.date"));
-		fireEvent.click((await screen.findAllByRole("menuitemradio", { name: t("listMenu.range") }))[1] as HTMLElement);
+		const rows = await screen.findAllByRole("menuitem", { name: t("listMenu.range") });
+		fireEvent.keyDown(rows[1] as HTMLElement, { key: "ArrowRight" });
 		await screen.findByRole("grid");
-		const day = (n: string) =>
-			within(screen.getByRole("grid"))
-				.getAllByRole("button")
-				.find((button) => button.textContent === n) as HTMLElement;
+		return rows;
+	};
+	const day = (n: string) =>
+		within(screen.getByRole("grid"))
+			.getAllByRole("button")
+			.find((button) => button.textContent === n) as HTMLElement;
+
+	it("opens a calendar card beside the date menu from the 'pick a period' row, which stays open behind it", async () => {
+		await openCalendar();
+		// The filter menu and the date level are still there, and the row that opened the card is the one under it.
+		expect(screen.getAllByRole("menu").length).toBeGreaterThanOrEqual(3);
+		expect(screen.getByRole("menuitem", { name: t("listMenu.date") })).toBeTruthy();
+	});
+
+	it("picks a period on the calendar: the first day starts it, the second applies it and closes everything, and a chip says it", async () => {
+		await openCalendar();
 		fireEvent.click(day("10"));
 		expect(nav.search.has("published")).toBe(false);
+		expect(screen.queryAllByRole("menu").length).toBeGreaterThan(0);
 		fireEvent.click(day("20"));
 		await waitFor(() => expect(nav.search.get("published")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
 		expect(lastList().searchParams.get("publishedFrom")).not.toBeNull();
-		await waitFor(() => expect(screen.queryByRole("grid")).toBeNull());
+		await waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
+		expect(screen.queryByRole("grid")).toBeNull();
+		expect(
+			screen.getByRole("button", { name: new RegExp(`${t("listMenu.published")}: \\d\\d\\. 10 – \\d\\d\\. 20`) }),
+		).toBeTruthy();
+	});
+
+	it("takes the same day twice as that one day", async () => {
+		await openCalendar();
+		fireEvent.click(day("10"));
+		fireEvent.click(day("10"));
+		await waitFor(() => expect(nav.search.get("published")).toMatch(/^(\d{4}-\d{2}-10)\.\.\1$/));
 	});
 
 	it("offers the published date only for a collection that is published", async () => {

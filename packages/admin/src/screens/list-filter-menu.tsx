@@ -20,10 +20,9 @@ import {
 	DropdownMenuTrigger,
 	FilterButton,
 	MenuShortcut,
-	Popover,
-	PopoverContent,
+	MenuTick,
 } from "@monti-cms/ui";
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useState } from "react";
 import type { TranslatorFor } from "../translator";
 import { adminCalendarLocale } from "../ui/calendar-locale";
 import { useRelationSearch } from "./entries/use-relation-search";
@@ -214,19 +213,48 @@ function LocaleValues({ state, onChange }: { state: ListState; onChange: Change 
 
 type DateKey = "updated" | "published";
 
-/** The current choice of a date filter as the radio group says it: a preset, `range`, or nothing. */
-const dateValue = (filter: DateFilter | null): string =>
-	filter === null ? "" : filter.kind === "preset" ? filter.preset : "range";
+/** The current choice of a date filter as the radio group says it: a preset, or nothing (a period is the "pick a period" row's own tick). */
+const dateValue = (filter: DateFilter | null): string => (filter?.kind === "preset" ? filter.preset : "");
+
+/**
+ * The calendar the "pick a period" row opens in a card at the side of the date menu, which stays open behind it. The first day clicked starts the period and
+ * the second ends it (the same day twice is one day); the second click applies the period and closes the whole menu.
+ */
+function RangeCalendar({
+	filter,
+	onApply,
+}: {
+	filter: DateFilter | null;
+	onApply: (from: string, to: string) => void;
+}) {
+	const site = useSite();
+	const [start, setStart] = useState<Date | null>(null);
+	const range = filter?.kind === "range" ? { from: dayToDate(filter.from), to: dayToDate(filter.to) } : undefined;
+	return (
+		<Calendar
+			mode="range"
+			numberOfMonths={1}
+			selected={start ? { from: start, to: start } : range}
+			defaultMonth={range?.from}
+			locale={adminCalendarLocale(site)}
+			onDayClick={(day) => {
+				if (!start) return setStart(day);
+				const [from, to] = start <= day ? [start, day] : [day, start];
+				onApply(dateToDay(from), dateToDay(to));
+			}}
+		/>
+	);
+}
 
 /** Updated date, and (for a document collection) published date: each a preset or a period. */
 function DateValues({
 	state,
 	onChange,
-	onPickRange,
+	onApplyRange,
 }: {
 	state: ListState;
 	onChange: Change;
-	onPickRange: (key: DateKey) => void;
+	onApplyRange: (key: DateKey, from: string, to: string) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -250,52 +278,20 @@ function DateValues({
 									{t(`listMenu.${preset}`)}
 								</DropdownMenuRadioItem>
 							))}
-							<DropdownMenuRadioItem value="range" onClick={() => onPickRange(key)}>
-								{t("listMenu.range")}
-							</DropdownMenuRadioItem>
 						</DropdownMenuRadioGroup>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger chevron={false}>
+								{t("listMenu.range")}
+								{state[key]?.kind === "range" && <MenuTick />}
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent side="left" bare>
+								<RangeCalendar filter={state[key]} onApply={(from, to) => onApplyRange(key, from, to)} />
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
 					</DropdownMenuGroup>
 				</Fragment>
 			))}
 		</>
-	);
-}
-
-/**
- * The calendar the "pick a period" row opens, at the filter button. The first day clicked starts the period and the second ends it (the same day twice is
- * one day); the period is applied and the calendar closes with the second.
- */
-function RangePopover({
-	filter,
-	anchor,
-	onApply,
-	onClose,
-}: {
-	filter: DateFilter | null;
-	anchor: React.RefObject<HTMLButtonElement | null>;
-	onApply: (from: string, to: string) => void;
-	onClose: () => void;
-}) {
-	const site = useSite();
-	const [start, setStart] = useState<Date | null>(null);
-	const range = filter?.kind === "range" ? { from: dayToDate(filter.from), to: dayToDate(filter.to) } : undefined;
-	return (
-		<Popover open onOpenChange={(open) => !open && onClose()}>
-			<PopoverContent anchor={anchor} align="end" width="auto" padding="none">
-				<Calendar
-					mode="range"
-					numberOfMonths={1}
-					selected={start ? { from: start, to: start } : range}
-					defaultMonth={range?.from}
-					locale={adminCalendarLocale(site)}
-					onDayClick={(day) => {
-						if (!start) return setStart(day);
-						const [from, to] = start <= day ? [start, day] : [day, start];
-						onApply(dateToDay(from), dateToDay(to));
-					}}
-				/>
-			</PopoverContent>
-		</Popover>
 	);
 }
 
@@ -304,12 +300,12 @@ function Row({
 	row,
 	state,
 	onChange,
-	onPickRange,
+	onApplyRange,
 }: {
 	row: FilterRow;
 	state: ListState;
 	onChange: Change;
-	onPickRange: (key: DateKey) => void;
+	onApplyRange: (key: DateKey, from: string, to: string) => void;
 }) {
 	return (
 		<DropdownMenuSub>
@@ -317,7 +313,7 @@ function Row({
 			<DropdownMenuSubContent side="left">
 				{row.kind === "locale" && <LocaleValues state={state} onChange={onChange} />}
 				{row.kind === "translation" && <TranslationValues state={state} onChange={onChange} />}
-				{row.kind === "date" && <DateValues state={state} onChange={onChange} onPickRange={onPickRange} />}
+				{row.kind === "date" && <DateValues state={state} onChange={onChange} onApplyRange={onApplyRange} />}
 				{row.kind === "field" && <FieldValues field={row.field} state={state} onChange={onChange} />}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
@@ -332,41 +328,41 @@ export function ListFilterMenu({ state, onChange }: { state: ListState; onChange
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const [text, setText] = useState("");
-	const [range, setRange] = useState<DateKey | null>(null);
-	const anchor = useRef<HTMLButtonElement | null>(null);
+	const [open, setOpen] = useState(false);
 	const { top, fields } = filterRowsOf(site, state.collection);
 	const shown = (rows: FilterRow[]) => rows.filter((row) => rowMatches(row, text));
 	const rowKey = (row: FilterRow) => (row.kind === "field" ? `field:${row.field.name}` : row.kind);
-	const pick = { state, onChange, onPickRange: setRange };
+	const pick = {
+		state,
+		onChange,
+		// The second day of a period applies it and closes everything.
+		onApplyRange: (key: DateKey, from: string, to: string) => {
+			onChange({ [key]: { kind: "range", from, to } });
+			setOpen(false);
+		},
+	};
 	return (
-		<>
-			<DropdownMenu onOpenChange={(open) => open && setText("")}>
-				<DropdownMenuTrigger render={<FilterButton ref={anchor} />}>{t("listMenu.filter")}</DropdownMenuTrigger>
-				<DropdownMenuContent align="end">
-					<DropdownMenuSearch label={t("listMenu.filterSearch")} value={text} onValueChange={setText} />
-					{shown(top).map((row) => (
-						<Row key={rowKey(row)} row={row} {...pick} />
-					))}
-					{shown(top).length > 0 && shown(fields).length > 0 && <DropdownMenuSeparator />}
-					{shown(fields).map((row) => (
-						<Row key={rowKey(row)} row={row} {...pick} />
-					))}
-					{shown(top).length + shown(fields).length === 0 && (
-						<DropdownMenuItem disabled>{t("listMenu.noMatch")}</DropdownMenuItem>
-					)}
-				</DropdownMenuContent>
-			</DropdownMenu>
-			{range && (
-				<RangePopover
-					filter={state[range]}
-					anchor={anchor}
-					onApply={(from, to) => {
-						onChange({ [range]: { kind: "range", from, to } });
-						setRange(null);
-					}}
-					onClose={() => setRange(null)}
-				/>
-			)}
-		</>
+		<DropdownMenu
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (next) setText("");
+			}}
+		>
+			<DropdownMenuTrigger render={<FilterButton />}>{t("listMenu.filter")}</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				<DropdownMenuSearch label={t("listMenu.filterSearch")} value={text} onValueChange={setText} />
+				{shown(top).map((row) => (
+					<Row key={rowKey(row)} row={row} {...pick} />
+				))}
+				{shown(top).length > 0 && shown(fields).length > 0 && <DropdownMenuSeparator />}
+				{shown(fields).map((row) => (
+					<Row key={rowKey(row)} row={row} {...pick} />
+				))}
+				{shown(top).length + shown(fields).length === 0 && (
+					<DropdownMenuItem disabled>{t("listMenu.noMatch")}</DropdownMenuItem>
+				)}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

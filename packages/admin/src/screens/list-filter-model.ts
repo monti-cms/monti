@@ -2,6 +2,7 @@ import type { Site } from "@monti-cms/core/site";
 import { collectionTranslated } from "./list-columns";
 import type { DateFilter } from "./list-dates";
 import { type FilterField, filterFieldsOf } from "./list-filter-fields";
+import { shortDay } from "./list-row-dates";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
 
@@ -58,9 +59,11 @@ export interface FilterChip {
 }
 
 /** The name of the date filter's value: a preset by its name, a range by its days. */
-export function dateFilterLabel(site: Site, filter: DateFilter): string {
+export function dateFilterLabel(site: Site, filter: DateFilter, now: Date = new Date()): string {
 	const t = site.createTranslator(screensMessages);
-	if (filter.kind === "range") return t("listMenu.chipRange", { from: filter.from, to: filter.to });
+	if (filter.kind === "range") {
+		return t("listMenu.chipRange", { from: shortDay(site, filter.from, now), to: shortDay(site, filter.to, now) });
+	}
 	return t(`listMenu.${filter.preset}`);
 }
 
@@ -68,7 +71,12 @@ export function dateFilterLabel(site: Site, filter: DateFilter): string {
  * The chips of the filters that are on, in the order the menu lists them. `titles` names the items of a relation by id (`id` → title), which only the server
  * knows; an id it does not know yet shows as "…" until it does.
  */
-export function filterChipsOf(site: Site, state: ListState, titles: ReadonlyMap<string, string>): FilterChip[] {
+export function filterChipsOf(
+	site: Site,
+	state: ListState,
+	titles: ReadonlyMap<string, string>,
+	now: Date = new Date(),
+): FilterChip[] {
 	const t = site.createTranslator(screensMessages);
 	const chips: FilterChip[] = [];
 	const add = (key: string, label: string, values: string, clear: Partial<ListState>) =>
@@ -89,10 +97,10 @@ export function filterChipsOf(site: Site, state: ListState, titles: ReadonlyMap<
 		});
 	}
 	if (state.updated) {
-		add("updated", t("listMenu.updated"), dateFilterLabel(site, state.updated), { updated: null });
+		add("updated", t("listMenu.updated"), dateFilterLabel(site, state.updated, now), { updated: null });
 	}
 	if (state.published) {
-		add("published", t("listMenu.published"), dateFilterLabel(site, state.published), { published: null });
+		add("published", t("listMenu.published"), dateFilterLabel(site, state.published, now), { published: null });
 	}
 	for (const { field } of filterRowsOf(site, state.collection).fields.flatMap((row) =>
 		row.kind === "field" ? [row] : [],

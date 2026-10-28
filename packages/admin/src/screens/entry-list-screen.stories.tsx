@@ -222,16 +222,32 @@ export const FilterDateOpen: Story = {
 	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "날짜"),
 };
 
-/** "Pick a period" opens a calendar at the filter button: the first day starts the period, the second ends it. */
+/** Opens the filter menu's date level and, from its "pick a period" row (of the updated date), the calendar card at the side; the menus stay open behind it. */
+const openCalendar = async (canvasElement: HTMLElement) => {
+	await openToolbarMenu(canvasElement, "필터", "날짜");
+	const rows = await body().findAllByRole("menuitem", { name: "기간 고르기" });
+	fireEvent.keyDown(rows[0] as HTMLElement, { key: "ArrowRight" });
+	await body().findByRole("grid");
+};
+
+/** "Pick a period": the first day clicked starts it, the second applies it and closes everything. */
 export const FilterDateRangeOpen: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 })),
-	play: async ({ canvasElement }) => {
-		await openToolbarMenu(canvasElement, "필터", "날짜");
-		const ranges = await body().findAllByRole("menuitemradio", { name: "기간 고르기" });
-		await userEvent.click(ranges[0] as HTMLElement);
-		await body().findByRole("grid");
-	},
+	render: listScreen(server({ total: 148 }), "collection=post&updated=last30"),
+	play: ({ canvasElement }) => openCalendar(canvasElement),
+};
+
+/** A period that is on: the calendar shows its two days filled and the days between banded, and the chip says it. */
+export const FilterDateRangePicked: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
+	play: ({ canvasElement }) => openCalendar(canvasElement),
+};
+
+/** After the second click: the chip alone, the menus closed. */
+export const FilterDateRangeChip: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 };
 
 export const FilterSearchOpen: Story = {

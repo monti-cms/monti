@@ -48,7 +48,10 @@ describe("finding a filter", () => {
 describe("the chips of the filters that are on", () => {
 	const titles = new Map([["t1", "리액트"]]);
 	const chips = (query: string) =>
-		filterChipsOf(testSite, stateOf(query), titles).map((chip) => [chip.key, chip.label]);
+		filterChipsOf(testSite, stateOf(query), titles, new Date("2026-10-28T03:00:00Z")).map((chip) => [
+			chip.key,
+			chip.label,
+		]);
 
 	it("name the field and its values", () => {
 		expect(chips("collection=post&field=tagIds:empty&field=tagIds:is:t1")).toEqual([
@@ -66,7 +69,7 @@ describe("the chips of the filters that are on", () => {
 		const names = chips("collection=post&translation=changed&updated=last30&published=2026-03-01..2026-03-05").map(
 			([, label]) => label,
 		);
-		expect(names).toEqual(["번역: 원문 바뀜", "수정한 날: 최근 30일", "발행한 날: 2026-03-01 ~ 2026-03-05"]);
+		expect(names).toEqual(["번역: 원문 바뀜", "수정한 날: 최근 30일", "발행한 날: 03. 01 – 03. 05"]);
 	});
 
 	it("each take only their own filter off", () => {

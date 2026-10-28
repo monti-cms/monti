@@ -111,11 +111,19 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
  * A row that picks a further value: its name, the current value in a `MenuValue` if there is one, and a ›. Pointing at it, or pressing →,
  * opens the second level at its side; ← closes it. The row keeps the selected background while the second level is open.
  */
-function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive.SubmenuTrigger.Props) {
+function DropdownMenuSubTrigger({
+	className,
+	children,
+	chevron = true,
+	...props
+}: MenuPrimitive.SubmenuTrigger.Props & {
+	/** The › at the end. Off for a row that opens a card with no rows in it (a calendar), where the row says its current value with a `MenuTick` instead. */
+	chevron?: boolean;
+}) {
 	return (
 		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
+			{chevron && <ChevronRight aria-hidden className={MENU_SUB_MARK} />}
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }
@@ -126,11 +134,17 @@ function DropdownMenuSubContent({
 	alignOffset = SUB_ALIGN_OFFSET,
 	side = "right",
 	sideOffset = SUB_SIDE_OFFSET,
+	bare = false,
+	className,
 	...props
-}: React.ComponentProps<typeof DropdownMenuContent>) {
+}: React.ComponentProps<typeof DropdownMenuContent> & {
+	/** No padding of its own: the card holds something that brings its own (a calendar), not menu rows. */
+	bare?: boolean;
+}) {
 	return (
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
+			className={cn(bare && "p-0", className)}
 			align={align}
 			alignOffset={alignOffset}
 			side={side}
