@@ -151,6 +151,8 @@ export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
 export { Option } from "./option";
 export {
+	PageBody,
+	PageColumn,
 	PageHeader,
 	PageToolbar,
 	PageToolbarEnd,

@@ -149,3 +149,21 @@ export const Links: Story = {
 		</nav>
 	),
 };
+
+/** The pages of one tool page, as links in the filter row under a title: the open one bold, a count after a name, and a count that needs attention in the warning tone. */
+export const ToolbarLinks: Story = {
+	render: () => (
+		<nav aria-label="도구 구역">
+			<TabLinks variant="toolbar">
+				<TabLink href="#templates" current count={3}>
+					템플릿
+				</TabLink>
+				<TabLink href="#data">데이터</TabLink>
+				<TabLink href="#events" count={1} countTone="warning" countLabel="전송 실패 1건">
+					활동 기록
+				</TabLink>
+				<TabLink href="#keys">API 키</TabLink>
+			</TabLinks>
+		</nav>
+	),
+};

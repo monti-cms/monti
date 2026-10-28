@@ -3,29 +3,62 @@ import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 
 /**
- * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. `meta` is what sits beside the title
- * in mono (the list's address rule, a count); `children` are the page's actions on the right, the secondary pill first and the one primary pill last.
+ * The head of a content page: the title (26px bold) with the ink rule under it, the only heavy line of a page. `meta` is a list's address rule in mono
+ * beside the title; `children` are the page's actions on the right, the secondary pill first and the one primary pill last. The title row is as tall
+ * as a pill (36px) with or without one, so the rule sits at the same height on every page. `trail` is the way back above the title (a folder path).
  */
 function PageHeader({
 	title,
 	meta,
+	trail,
 	className,
 	children,
 	...props
 }: Omit<React.ComponentProps<"header">, "title"> & {
 	title: React.ReactNode;
 	meta?: React.ReactNode;
+	trail?: React.ReactNode;
 }) {
 	return (
 		<header
 			data-slot="page-header"
-			className={cn("flex flex-wrap items-end gap-monti-12 border-monti-contrast border-b pb-[18px]", className)}
+			className={cn("shrink-0 border-monti-contrast border-b pb-[18px]", className)}
 			{...props}
 		>
-			<h1 className="text-monti-page">{title}</h1>
-			{meta && <span className="pb-[3px] font-mono text-monti-body text-monti-faint">{meta}</span>}
-			{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
+			{trail && <div className="pb-monti-10 text-monti-faint text-monti-note">{trail}</div>}
+			<div className="flex flex-wrap items-end gap-monti-12">
+				<h1 className="pt-monti-4 text-monti-page">{title}</h1>
+				{meta && <span className="pb-[3px] font-mono text-monti-body text-monti-faint">{meta}</span>}
+				{children && <span className="ml-auto flex items-center gap-monti-16">{children}</span>}
+			</div>
 		</header>
+	);
+}
+
+/**
+ * The column every page sits in: centred, 880px at most, 40px above the title and 48px at the sides (16px on a narrow screen). It takes the height
+ * the page has. The header and the toolbar keep their place; the body ({@link PageBody}) is what scrolls.
+ */
+function PageColumn({ className, children, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="page-column"
+			className={cn("flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			{...props}
+		>
+			<div className="mx-auto flex min-h-0 w-full max-w-content flex-1 flex-col">{children}</div>
+		</div>
+	);
+}
+
+/** What is under the header and the toolbar of a page: it takes the height left and scrolls by itself. */
+function PageBody({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="page-body"
+			className={cn("flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-48", className)}
+			{...props}
+		/>
 	);
 }
 
@@ -114,4 +147,13 @@ function ToolbarDivider({ className, ...props }: React.ComponentProps<"span">) {
 	);
 }
 
-export { PageHeader, PageToolbar, PageToolbarEnd, type SelectAll, type SelectAllState, ToolbarDivider };
+export {
+	PageBody,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
+	type SelectAll,
+	type SelectAllState,
+	ToolbarDivider,
+};

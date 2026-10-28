@@ -11,18 +11,12 @@ import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { useIsMobile } from "./use-mobile";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 /** Where the width starts (232px, the same as the `w-monti-sidebar` token, which a loading placeholder uses), and the limits the person can drag it between. */
 const SIDEBAR_WIDTH_DEFAULT = 232;
 const SIDEBAR_WIDTH_MIN = 200;
 const SIDEBAR_WIDTH_MAX = 400;
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
-	state: "expanded" | "collapsed";
-	open: boolean;
-	setOpen: (open: boolean) => void;
 	openMobile: boolean;
 	setOpenMobile: (open: boolean) => void;
 	isMobile: boolean;
@@ -43,9 +37,6 @@ function useSidebar() {
 }
 
 function SidebarProvider({
-	defaultOpen = true,
-	open: openProp,
-	onOpenChange: setOpenProp,
 	fixed = false,
 	resizeKey = "sidebar",
 	className,
@@ -55,9 +46,6 @@ function SidebarProvider({
 }: React.ComponentProps<"div"> & {
 	/** Names the remembered width of the sidebar (between 200px and 400px, 232px until it is dragged). */
 	resizeKey?: string;
-	defaultOpen?: boolean;
-	open?: boolean;
-	onOpenChange?: (open: boolean) => void;
 	/** The frame takes exactly the window and never scrolls, not even to bring a focused field into view; the panes inside scroll on their own (the admin's app frame). */
 	fixed?: boolean;
 }) {
@@ -69,68 +57,11 @@ function SidebarProvider({
 		min: SIDEBAR_WIDTH_MIN,
 		max: SIDEBAR_WIDTH_MAX,
 	});
-
-	// This is the internal state of the sidebar.
-	// We use openProp and setOpenProp for control from outside the component.
-	const [_open, _setOpen] = React.useState(defaultOpen);
-	const open = openProp ?? _open;
-	React.useEffect(() => {
-		if (openProp !== undefined) return;
-		const saved = document.cookie
-			.split("; ")
-			.find((cookie) => cookie.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
-			?.split("=")[1];
-		if (saved === "true" || saved === "false") _setOpen(saved === "true");
-	}, [openProp]);
-	const setOpen = React.useCallback(
-		(value: boolean | ((value: boolean) => boolean)) => {
-			const openState = typeof value === "function" ? value(open) : value;
-			if (setOpenProp) {
-				setOpenProp(openState);
-			} else {
-				_setOpen(openState);
-			}
-
-			// This sets the cookie to keep the sidebar state.
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-		},
-		[setOpenProp, open],
-	);
-
-	// Helper to toggle the sidebar.
-	const toggleSidebar = React.useCallback(() => {
-		return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-	}, [isMobile, setOpen, setOpenMobile]);
-
-	// Adds a keyboard shortcut to toggle the sidebar.
-	React.useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-				event.preventDefault();
-				toggleSidebar();
-			}
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [toggleSidebar]);
-
-	// We add a state so that we can do data-state="expanded" or "collapsed".
-	// This makes it easier to style the sidebar with Tailwind classes.
-	const state = open ? "expanded" : "collapsed";
+	const toggleSidebar = React.useCallback(() => setOpenMobile((open) => !open), []);
 
 	const contextValue = React.useMemo<SidebarContextProps>(
-		() => ({
-			state,
-			open,
-			setOpen,
-			isMobile,
-			openMobile,
-			setOpenMobile,
-			toggleSidebar,
-			resize,
-		}),
-		[state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, resize],
+		() => ({ isMobile, openMobile, setOpenMobile, toggleSidebar, resize }),
+		[isMobile, openMobile, toggleSidebar, resize],
 	);
 
 	return (
@@ -153,52 +84,26 @@ function SidebarProvider({
 const RAIL = "flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default";
 
 /**
- * The left navigation: the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a footer. The
- * writer drags its edge to change the width. `collapsible="offcanvas"` (the default) lets the writer slide it away; `none` keeps it in the page
- * flow, always shown. On a narrow screen it is a drawer that opens from the left over a dimmed page (square, on the same ground, with a line on its
- * open edge, like the sheet).
+ * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
+ * footer. It stays beside the page; the writer drags its edge to change the width. On a narrow screen it is a drawer that opens from the left over a
+ * dimmed page (square, on the same ground, with a line on its open edge, like the sheet). `label` names it for screen readers.
  */
 function Sidebar({
-	collapsible = "offcanvas",
+	label,
 	className,
 	children,
 	dir,
 	...props
 }: React.ComponentProps<"div"> & {
-	collapsible?: "offcanvas" | "none";
+	label: string;
 }) {
 	const labels = useUiLabels();
-	const { isMobile, state, openMobile, setOpenMobile, resize } = useSidebar();
-	// The handle sits on the edge facing the page.
-	const handle = (
-		<ResizeHandle
-			value={resize.width}
-			min={resize.min}
-			max={resize.max}
-			onChange={resize.setWidth}
-			onReset={resize.reset}
-			label={labels.sidebarResize}
-			edge="end"
-			resizing={resize.resizing}
-		/>
+	const { isMobile, openMobile, setOpenMobile, resize } = useSidebar();
+	const rows = (
+		<nav aria-label={label} data-slot="sidebar-nav" className="flex min-h-0 flex-1 flex-col gap-monti-2">
+			{children}
+		</nav>
 	);
-
-	if (collapsible === "none") {
-		return (
-			<div
-				data-slot="sidebar"
-				className={cn(
-					RAIL,
-					"relative w-(--sidebar-width) shrink-0 self-stretch border-monti-default border-r",
-					className,
-				)}
-				{...props}
-			>
-				{children}
-				{!isMobile && handle}
-			</div>
-		);
-	}
 
 	if (isMobile) {
 		return (
@@ -217,7 +122,7 @@ function Sidebar({
 					>
 						<DrawerPrimitive.Title className="sr-only">{labels.sidebarTitle}</DrawerPrimitive.Title>
 						<DrawerPrimitive.Description className="sr-only">{labels.sidebarDescription}</DrawerPrimitive.Description>
-						{children}
+						{rows}
 					</DrawerPrimitive.Popup>
 				</DrawerPrimitive.Portal>
 			</DrawerPrimitive.Root>
@@ -226,29 +131,25 @@ function Sidebar({
 
 	return (
 		<div
-			className="group peer hidden text-monti-default md:block"
-			data-state={state}
-			data-collapsible={state === "collapsed" ? collapsible : ""}
 			data-slot="sidebar"
+			className={cn(
+				RAIL,
+				"relative w-(--sidebar-width) shrink-0 self-stretch border-monti-default border-r",
+				className,
+			)}
+			{...props}
 		>
-			{/* This is what handles the sidebar gap on desktop */}
-			<div
-				data-slot="sidebar-gap"
-				className="relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=offcanvas]:w-0 group-data-resizing/sidebar-wrapper:transition-none"
+			{rows}
+			<ResizeHandle
+				value={resize.width}
+				min={resize.min}
+				max={resize.max}
+				onChange={resize.setWidth}
+				onReset={resize.reset}
+				label={labels.sidebarResize}
+				edge="end"
+				resizing={resize.resizing}
 			/>
-			<div
-				data-slot="sidebar-container"
-				className={cn(
-					"fixed inset-y-0 left-0 z-10 hidden h-svh w-(--sidebar-width) border-monti-default border-r transition-[left,width] duration-200 ease-linear group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] group-data-resizing/sidebar-wrapper:transition-none md:flex",
-					className,
-				)}
-				{...props}
-			>
-				<div data-sidebar="sidebar" data-slot="sidebar-inner" className={cn(RAIL, "size-full")}>
-					{children}
-				</div>
-				{state === "expanded" && handle}
-			</div>
 		</div>
 	);
 }
@@ -278,20 +179,38 @@ function SidebarTrigger({
 	);
 }
 
+/**
+ * The page beside the rail. `corner` is what sits in its top-right corner, 12px from both edges (the assistant's button); the page's own header keeps
+ * clear of it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
+ */
 function SidebarInset({
 	fixed = false,
+	corner,
 	className,
+	children,
 	...props
 }: React.ComponentProps<"main"> & {
 	/** Inside a `fixed` frame: the main area clips to the window, so its own panes scroll. */
 	fixed?: boolean;
+	corner?: React.ReactNode;
 }) {
+	const { isMobile } = useSidebar();
 	return (
 		<main
 			data-slot="sidebar-inset"
 			className={cn("relative flex w-full flex-1 flex-col bg-monti-page", fixed && "min-w-0 overflow-clip", className)}
 			{...props}
-		/>
+		>
+			{isMobile ? (
+				<div className="flex h-monti-header shrink-0 items-center justify-between px-monti-12">
+					<SidebarTrigger />
+					{corner}
+				</div>
+			) : (
+				corner && <div className="absolute top-monti-12 right-monti-12 z-4">{corner}</div>
+			)}
+			{children}
+		</main>
 	);
 }
 
@@ -413,13 +332,21 @@ function SidebarMenuButton({
 }
 
 /** The count at the end of a row: mono, small and quiet, in the flow of the row, so a long name is cut before it. */
-function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"span">) {
+function SidebarMenuBadge({
+	tone = "default",
+	className,
+	...props
+}: React.ComponentProps<"span"> & {
+	/** `warning` for a count that needs attention (failed deliveries). */
+	tone?: "default" | "warning";
+}) {
 	return (
 		<span
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
 			className={cn(
-				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta text-monti-subtle tabular-nums group-data-removed/menu-button:text-monti-faint",
+				"ml-auto shrink-0 select-none font-mono font-normal text-monti-meta tabular-nums group-data-removed/menu-button:text-monti-faint",
+				tone === "warning" ? "text-monti-warning" : "text-monti-subtle",
 				className,
 			)}
 			{...props}
@@ -442,26 +369,35 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 	);
 }
 
-/** A folder under a row: its name and, at the end, its count. The open one is ink and semibold. */
+const SUB_DEPTH = ["", "pl-[14px]", "pl-7", "pl-[42px]"] as const;
+
+/**
+ * A folder under a row: its name and, at the end, its count. The open one is ink and semibold. `depth` indents a folder inside another by 14px a
+ * level; `dropTarget` is the ring while entries are dragged over it. A link by default; `render={<button type="button" />}` makes it a button.
+ */
 function SidebarMenuSubButton({
 	render,
 	isActive = false,
+	depth = 0,
+	dropTarget = false,
 	className,
 	...props
-}: useRender.ComponentProps<"a"> & React.ComponentProps<"a"> & { isActive?: boolean }) {
+}: useRender.ComponentProps<"a"> &
+	React.ComponentProps<"a"> & { isActive?: boolean; depth?: 0 | 1 | 2 | 3; dropTarget?: boolean }) {
 	return useRender({
 		defaultTagName: "a",
 		props: mergeProps<"a">(
 			{
 				className: cn(
-					"flex items-center justify-between gap-monti-8 py-[5px] pr-monti-10 no-underline outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default",
+					"flex w-full cursor-pointer items-center justify-between gap-monti-8 border-0 bg-transparent py-[5px] pr-monti-10 text-left no-underline outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-3 focus-visible:ring-monti-contrast/20 data-active:font-semibold data-active:text-monti-default data-drop-target:rounded-monti-sm data-drop-target:ring-2 data-drop-target:ring-monti-contrast [&>span:not([data-slot])]:min-w-0 [&>span:not([data-slot])]:truncate",
+					SUB_DEPTH[depth],
 					className,
 				),
 			},
 			props,
 		),
 		render,
-		state: { slot: "sidebar-menu-sub-button", sidebar: "menu-sub-button", active: isActive },
+		state: { slot: "sidebar-menu-sub-button", sidebar: "menu-sub-button", active: isActive, dropTarget },
 	});
 }
 

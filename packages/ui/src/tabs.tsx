@@ -67,15 +67,23 @@ const TAB =
 
 type TabExtras = {
 	count?: React.ReactNode;
+	/** `warning` for a count that needs attention (failed deliveries). */
+	countTone?: "default" | "warning";
+	/** What the count means, for screen readers ("3 failed deliveries"). */
+	countLabel?: string;
 	dot?: "warning" | "proposal";
 	dotLabel?: string;
 };
 
 /** What follows a tab's name: its count and its change dot. */
-function TabTail({ count, dot, dotLabel }: TabExtras) {
+function TabTail({ count, countTone, countLabel, dot, dotLabel }: TabExtras) {
 	return (
 		<>
-			{count !== undefined && <Count>{count}</Count>}
+			{count !== undefined && (
+				<Count tone={countTone} aria-label={countLabel}>
+					{count}
+				</Count>
+			)}
 			{dot && (
 				<ChangeDot
 					tone={dot}
@@ -91,25 +99,43 @@ function TabTail({ count, dot, dotLabel }: TabExtras) {
  * A tab. `count` is a number after the name in mono; `dot` says this tab has something to handle: `warning` for an unsaved change, `proposal`
  * for something the assistant suggested. Say what the dot means in `dotLabel`.
  */
-function TabsTrigger({ className, children, count, dot, dotLabel, ...props }: TabsPrimitive.Tab.Props & TabExtras) {
+function TabsTrigger({
+	className,
+	children,
+	count,
+	countTone,
+	countLabel,
+	dot,
+	dotLabel,
+	...props
+}: TabsPrimitive.Tab.Props & TabExtras) {
 	return (
 		<TabsPrimitive.Tab data-slot="tabs-trigger" className={cn(TAB, className)} {...props}>
 			{children}
-			<TabTail count={count} dot={dot} dotLabel={dotLabel} />
+			<TabTail count={count} countTone={countTone} countLabel={countLabel} dot={dot} dotLabel={dotLabel} />
 		</TabsPrimitive.Tab>
 	);
 }
 
 /**
- * Tabs that go to another page (the languages of an entry), not views of one page: a `nav` of links in the look of the `line` tabs, with
- * `aria-current="page"` on the one you are on. A tab list would promise panels that are not there.
+ * Tabs that go to another page (the languages of an entry, the pages of the tools page), not views of one page: links in the look of the `line`
+ * tabs, or of the `toolbar` tabs under a page title, with `aria-current="page"` on the one you are on. A tab list would promise panels that are not
+ * there. Put them in a `nav`.
  */
-function TabLinks({ className, ...props }: React.ComponentProps<"div">) {
+function TabLinks({
+	variant = "line",
+	className,
+	...props
+}: React.ComponentProps<"div"> & { variant?: "line" | "toolbar" }) {
 	return (
 		<div
 			data-slot="tab-links"
-			data-variant="line"
-			className={cn("group/tabs-list flex w-fit items-end gap-monti-20 text-monti-note", className)}
+			data-variant={variant}
+			className={cn(
+				"group/tabs-list flex w-fit gap-monti-20",
+				variant === "line" ? "items-end text-monti-note" : "items-baseline text-monti-body",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -124,6 +150,8 @@ function TabLink({
 	children,
 	current = false,
 	count,
+	countTone,
+	countLabel,
 	dot,
 	dotLabel,
 	render,
@@ -138,7 +166,7 @@ function TabLink({
 				children: (
 					<>
 						{children}
-						<TabTail count={count} dot={dot} dotLabel={dotLabel} />
+						<TabTail count={count} countTone={countTone} countLabel={countLabel} dot={dot} dotLabel={dotLabel} />
 					</>
 				),
 			},

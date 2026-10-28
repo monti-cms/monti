@@ -59,7 +59,7 @@ export const DEFAULT_UI_LABELS: UiLabels = {
 	paginationMore: "More pages",
 	sidebarTitle: "Sidebar",
 	sidebarDescription: "Shows the mobile sidebar.",
-	sidebarToggle: "Toggle sidebar",
+	sidebarToggle: "Open sidebar",
 	sidebarResize: "Resize sidebar",
 	resize: "Resize",
 };
