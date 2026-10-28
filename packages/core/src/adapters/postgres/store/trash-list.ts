@@ -287,7 +287,8 @@ export function createTrashReads(ctx: StoreContext) {
 				: params.folderId
 					? sql`u.container_id = ${params.folderId}::uuid`
 					: sql`u.top_level`;
-			const kindFilter = params.kind ? sql`and u.kind = ${params.kind}` : sql``;
+			const kindFilter =
+				params.kinds && params.kinds.length > 0 ? sql`and u.kind = any(${[...params.kinds]}::text[])` : sql``;
 
 			const found = await withUnits(
 				sql`select u.type, u.id, u.kind, u.container_id, u.effective_at, u.top_level, u.title, u.version,

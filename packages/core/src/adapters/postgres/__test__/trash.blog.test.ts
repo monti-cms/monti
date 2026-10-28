@@ -431,12 +431,15 @@ describe("trash", () => {
 			// Kinds count the units at the top: the collection of the entry and of the folder, and the media.
 			expect(top.kinds[contentCollection]).toBeGreaterThanOrEqual(2);
 			expect(top.kinds.media).toBeGreaterThanOrEqual(1);
-			expect(await trash.list({ kind: "media", pageSize: 100 })).toMatchObject({
+			expect(await trash.list({ kinds: ["media"], pageSize: 100 })).toMatchObject({
 				items: expect.arrayContaining([expect.objectContaining({ id: file.id })]),
 			});
-			// The media tab holds files and media folders.
+			// Several kinds are any of them.
+			const both = await trash.list({ kinds: ["media", contentCollection], pageSize: 100 });
+			expect(both.items.map((item) => item.id)).toEqual(expect.arrayContaining([loose.id, shelf.id, file.id]));
+			// The media kind holds files and media folders.
 			expect(
-				(await trash.list({ kind: "media", pageSize: 100 })).items.every(
+				(await trash.list({ kinds: ["media"], pageSize: 100 })).items.every(
 					(item) => item.type === "media" || (item.type === "folder" && item.collection === "media"),
 				),
 			).toBe(true);

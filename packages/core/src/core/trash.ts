@@ -103,8 +103,8 @@ export interface TrashUsage {
 }
 
 export interface TrashListParams {
-	/** One tab: a collection or `media`. All kinds when unset. */
-	readonly kind?: TrashKind;
+	/** Only these kinds (a collection or `media`), any of them. All kinds when unset or empty. */
+	readonly kinds?: readonly TrashKind[];
 	/** Look inside this trashed folder: its direct children. */
 	readonly folderId?: string;
 	/** Text to find in titles, slugs, folder names and file names, inside trashed folders too. */
@@ -118,7 +118,7 @@ export interface TrashListParams {
 export interface TrashListResult {
 	readonly items: readonly TrashItem[];
 	readonly total: number;
-	/** Units at the top of the trash per kind, only the kinds that hold some, for the tabs. */
+	/** Units at the top of the trash per kind, only the kinds that hold some, for the kind filter's counts. Not narrowed by `kinds`. */
 	readonly kinds: Readonly<Record<TrashKind, number>>;
 	/** The folder looked inside (`folderId`), with its own date and path. */
 	readonly folder?: TrashFolderItem;

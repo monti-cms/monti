@@ -264,9 +264,12 @@ export const mediaListQuerySchema = z.object({
 	pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
-/** The trash list: one tab (`kind`), the inside of a trashed folder (`folder`), or a search (`q`); by the day each unit was discarded (`sort`). */
+/** Trash query keys that may appear several times (`kind`: the kinds to show, any of them). */
+export const TRASH_ARRAY_QUERY_KEYS = ["kind"] as const;
+
+/** The trash list: some kinds (`kind`, repeatable), the inside of a trashed folder (`folder`), or a search (`q`); by the day each unit was discarded (`sort`). */
 export const trashListQuerySchema = z.object({
-	kind: z.string().min(1).max(200).optional(),
+	kind: z.array(z.string().min(1).max(200)).max(50).optional(),
 	folder: z.uuid().optional(),
 	q: z.string().max(200).optional(),
 	sort: sortDirectionSchema.default("desc"),
