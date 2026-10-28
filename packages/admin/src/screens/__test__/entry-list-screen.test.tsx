@@ -241,7 +241,7 @@ describe("list screen — row menu and bulk actions", () => {
 
 		fireEvent.keyDown(screen.getByRole("checkbox", { name: "다 선택" }), { key: "Delete" });
 
-		expect(await screen.findByRole("alertdialog", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(await screen.findByRole("alertdialog", { name: "휴지통으로" })).toBeTruthy();
 	});
 
 	it("actions are applied to the list first, and failed rows stay selected", async () => {
@@ -257,8 +257,8 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
 		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
 		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로 이동" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
+		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		// Two rows drop out before the response.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /가/ })).toBeNull());
@@ -280,7 +280,7 @@ describe("list screen — row menu and bulk actions", () => {
 		await waitFor(() =>
 			expect(screen.getByRole("checkbox", { name: "나 선택" }).getAttribute("aria-checked")).toBe("true"),
 		);
-		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로 이동했고 1개는 하지 못했어요."));
+		expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."));
 	});
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
@@ -322,8 +322,8 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동Del" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로 이동" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
+		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "휴지통으로" }));
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
 		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();
@@ -384,12 +384,12 @@ describe("list screen — a collection without folders", () => {
 		server.folders = [folder];
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
-		expect(menuLabels(await openRowMenu("가"))).toContain("폴더로 이동");
+		expect(menuLabels(await openRowMenu("가"))).toContain("폴더로");
 		cleanup();
 
 		renderOff();
 		await screen.findByRole("row", { name: /가/ });
-		expect(menuLabels(await openRowMenu("가"))).not.toContain("폴더로 이동");
+		expect(menuLabels(await openRowMenu("가"))).not.toContain("폴더로");
 	});
 
 	it("never requests folders, and ignores a ?folder= left in the address", async () => {

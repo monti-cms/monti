@@ -87,6 +87,7 @@ function Bar({
 	run,
 	onExport = vi.fn(),
 	onClear = vi.fn(),
+	onRestore = vi.fn(),
 }: {
 	initial?: ListEntriesItem[];
 	collection?: string;
@@ -95,6 +96,7 @@ function Bar({
 	run: Run;
 	onExport?: (ids: string[]) => void;
 	onClear?: () => void;
+	onRestore?: (targets: ReturnType<typeof toSelection>[]) => void;
 }) {
 	const [rows, setRows] = useState(initial);
 	const onRun: Run = async (op, label, targets, params) => {
@@ -136,6 +138,7 @@ function Bar({
 				onClearSelection={onClear}
 				onRun={onRun}
 				onExport={onExport}
+				onRestore={onRestore}
 			/>
 		</table>
 	);
@@ -146,8 +149,9 @@ const bar = (props: Partial<Parameters<typeof Bar>[0]> = {}) => {
 	const run = vi.fn<Run>(async () => undefined);
 	const onExport = vi.fn();
 	const onClear = vi.fn();
-	render(<Bar run={run} onExport={onExport} onClear={onClear} {...props} />);
-	return { run, onExport, onClear };
+	const onRestore = vi.fn();
+	render(<Bar run={run} onExport={onExport} onClear={onClear} onRestore={onRestore} {...props} />);
+	return { run, onExport, onClear, onRestore };
 };
 
 /** Bulk actions that change many things at once ask first. Checks the confirm dialog's question and presses confirm. */
@@ -315,12 +319,21 @@ describe("the bar over picked rows", () => {
 					onClearSelection={vi.fn()}
 					onRun={vi.fn()}
 					onExport={vi.fn()}
+					onRestore={vi.fn()}
 				/>
 			</table>,
 			{ site },
 		);
 		expect(screen.getByRole("button", { name: t("folder.move") })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
+	});
+
+	it("restores the picked rows from the trash, beside the permanent delete", async () => {
+		const { run, onRestore } = bar({ mode: "trash", hasFolders: false });
+		expect(names().slice(0, 2)).toEqual([tc("lifecycle.restore"), tc("lifecycle.deletePermanently")]);
+		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.restore") }));
+		expect(onRestore).toHaveBeenCalledWith(picked.map(toSelection));
+		expect(run).not.toHaveBeenCalled();
 	});
 
 	it("permanently deletes in the trash after asking, and has no menu", async () => {

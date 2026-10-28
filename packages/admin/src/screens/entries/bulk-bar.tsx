@@ -107,6 +107,7 @@ export function BulkBar({
 	onClearSelection,
 	onRun,
 	onExport,
+	onRestore,
 }: {
 	collection: string;
 	/** The rows picked. */
@@ -123,6 +124,8 @@ export function BulkBar({
 	onRun: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void> | void;
 	/** Opens the export of the picked rows. */
 	onExport: (ids: string[]) => void;
+	/** Restores the picked rows from the trash. */
+	onRestore: (targets: BulkSelection[]) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
@@ -166,7 +169,14 @@ export function BulkBar({
 	);
 	const relations = changeableRelations(site, collection);
 	const actions = [
-		...(mode === "trash" ? [button("permanentDelete")] : []),
+		...(mode === "trash"
+			? [
+					<TextButton key="restore" onClick={() => onRestore(selected)}>
+						{tc("lifecycle.restore")}
+					</TextButton>,
+					button("permanentDelete"),
+				]
+			: []),
 		...primary.map((action) => {
 			if (action === "folder.move") {
 				return (

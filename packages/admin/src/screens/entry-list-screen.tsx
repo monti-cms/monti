@@ -73,6 +73,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 								onClearSelection={() => list.setSelectedIds(new Set())}
 								onRun={list.mutations.bulk}
 								onExport={list.exportEntries}
+								onRestore={(targets) => void list.restore(targets)}
 							/>
 						)}
 						collection={state.collection}

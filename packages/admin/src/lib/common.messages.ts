@@ -82,7 +82,7 @@ export const commonMessages = defineMessages("cms-admin.common", {
 		"lifecycle.duplicate": "복제",
 		"lifecycle.archive": "보관",
 		"lifecycle.unarchive": "보관 해제",
-		"lifecycle.trash": "휴지통으로 이동",
+		"lifecycle.trash": "휴지통으로",
 		"lifecycle.restore": "복원",
 		"lifecycle.deletePermanently": "영구 삭제",
 	},

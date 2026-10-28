@@ -5,6 +5,7 @@ import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
+import { toast } from "../../test/ui-toast";
 import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { statusLabels } from "../shared/entry-status";
@@ -684,9 +685,31 @@ describe("flow: change the relations of the picked rows", () => {
 				"true",
 			),
 		);
+		// The box and the cells say it: no toast for a tick.
+		expect(toast).not.toHaveBeenCalled();
+		expect(toast.error).not.toHaveBeenCalled();
 		// Still picked, still open: the next tick changes the same two rows.
 		expect(screen.getByRole("toolbar")).toBeTruthy();
 		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
+	});
+
+	it("tells it when a change of a relation fails", async () => {
+		await pickTwo();
+		const before = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
+		fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
+			String(input) === "/api/monti/v1/bulk" && init?.method === "POST"
+				? json({
+						results: [
+							{ id: "가", ok: false, error: "conflict" },
+							{ id: "나", ok: false, error: "conflict" },
+						],
+					})
+				: before(input, init),
+		);
+		fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ }));
+		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 	});
 
 	it("shows the fields directly in the right-click menu of several picked rows, with no 바꾸기 level", async () => {

@@ -67,14 +67,14 @@ describe("row menu items", () => {
 
 	it("a single post row offers open and duplicate, the folder and each relation field it can change, archive and the trash", () => {
 		const list = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
-		for (const label of ["열기", "복제", "폴더로 이동", "카테고리", "태그", "보관", "휴지통으로 이동"]) {
+		for (const label of ["열기", "복제", "폴더로", "카테고리", "태그", "보관", "휴지통으로"]) {
 			expect(list).toContain(label);
 		}
 		// The fields are rows of their own, not an "add a tag" row, and the destructive action comes last.
 		expect(list).not.toContain("태그 추가");
-		expect(list.indexOf("폴더로 이동")).toBeLessThan(list.indexOf("카테고리"));
+		expect(list.indexOf("폴더로")).toBeLessThan(list.indexOf("카테고리"));
 		expect(list.indexOf("태그")).toBeLessThan(list.indexOf("보관"));
-		expect(list.at(-1)).toBe("휴지통으로 이동");
+		expect(list.at(-1)).toBe("휴지통으로");
 	});
 
 	it("offers only the relation fields a bulk change can reach: not a backlink, not a field inside a conditional branch", () => {
@@ -97,11 +97,11 @@ describe("row menu items", () => {
 			"2개 항목",
 			"발행",
 			"보관",
-			"폴더로 이동",
+			"폴더로",
 			"카테고리",
 			"태그",
 			"내보내기",
-			"휴지통으로 이동",
+			"휴지통으로",
 		]);
 		expect(list).not.toContain("바꾸기");
 	});
@@ -166,8 +166,8 @@ describe("row menu items", () => {
 			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
 			expect.objectContaining({ id: "b", expectedVersion: 2, title: "b" }),
 		];
-		select(actions, "폴더로 이동", "최상위");
-		select(actions, "폴더로 이동", "뉴스");
+		select(actions, "폴더로", "최상위");
+		select(actions, "폴더로", "뉴스");
 		expect(on.bulk).toHaveBeenNthCalledWith(1, "folder.move", "옮김", targets, { folderId: null });
 		expect(on.bulk).toHaveBeenNthCalledWith(2, "folder.move", "옮김", targets, { folderId: "f1" });
 	});
@@ -178,7 +178,7 @@ describe("row menu items", () => {
 		const list = labels(actions);
 		expect(list).toContain("복원");
 		expect(list).toContain("영구 삭제");
-		for (const label of ["보관", "폴더로 이동", "태그"]) expect(list).not.toContain(label);
+		for (const label of ["보관", "폴더로", "태그"]) expect(list).not.toContain(label);
 		select(actions, "영구 삭제");
 		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([
 			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),

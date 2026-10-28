@@ -1250,7 +1250,7 @@ describe("entry editor shell", () => {
 		expect(within(toolbar).getByRole("link", { name: "미리보기" })).toBeTruthy();
 		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
 		expect(screen.getByRole("menuitem", { name: "복제" })).toBeTruthy();
-		expect(screen.getByRole("menuitem", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(screen.getByRole("menuitem", { name: "휴지통으로" })).toBeTruthy();
 		fireEvent.click(screen.getByRole("menuitem", { name: "보관" }));
 		expect(screen.getByRole("alertdialog", { name: "보관" })).toBeTruthy();
 	});
@@ -1522,10 +1522,10 @@ describe("language tabs", () => {
 		const nav = await screen.findByRole("navigation", { name: "언어" });
 		expect(within(nav).getByRole("link", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
 		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동" }));
-		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로 이동" });
+		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로" }));
+		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로" });
 		expect(within(dialog).queryByText(/함께/)).toBeNull();
-		fireEvent.click(within(dialog).getByRole("button", { name: "휴지통으로 이동" }));
+		fireEvent.click(within(dialog).getByRole("button", { name: "휴지통으로" }));
 		await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
 		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
 	});
@@ -1537,7 +1537,7 @@ describe("language tabs", () => {
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		await screen.findByRole("navigation", { name: "언어" });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
-		expect(screen.getByRole("menuitem", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(screen.getByRole("menuitem", { name: "휴지통으로" })).toBeTruthy();
 		expect(screen.queryByRole("menuitem", { name: "복제" })).toBeNull();
 	});
 
@@ -1546,7 +1546,7 @@ describe("language tabs", () => {
 		renderEdit();
 		await screen.findByRole("navigation", { name: "언어" });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로 이동" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로" }));
 		expect(within(screen.getByRole("alertdialog")).getByText(/EN 번역본도 함께 휴지통으로 이동해요\./)).toBeTruthy();
 	});
 

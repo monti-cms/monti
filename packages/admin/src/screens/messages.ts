@@ -221,7 +221,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
 		"sort.date.asc": "오래전부터",
 		"menu.items": "{count}개 항목",
 		"menu.openNewTab": "새 탭에서 열기",
-		"menu.moveToFolder": "폴더로 이동",
+		"menu.moveToFolder": "폴더로",
 		"menu.root": "최상위",
 		"bulk.move": "옮김",
 		"bulk.success": "{count}개 항목을 {label}했어요.",

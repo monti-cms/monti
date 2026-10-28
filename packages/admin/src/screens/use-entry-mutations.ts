@@ -30,13 +30,20 @@ import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
 /** Reports bulk results as notifications. Failures list the item name and reason. */
-function announce(site: Site, label: string, results: BulkItemResult[], items: BulkSelection[]) {
+function announce(
+	site: Site,
+	label: string,
+	results: BulkItemResult[],
+	items: BulkSelection[],
+	/** Say nothing when everything went through: the change shows in the list itself (a box ticked in a menu). Failures are always told. */
+	quiet = false,
+) {
 	const t = site.createTranslator(screensMessages);
 	const tc = site.createTranslator(commonMessages);
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
-		toast(t("bulk.success", { count: ok, label }));
+		if (!quiet) toast(t("bulk.success", { count: ok, label }));
 		return;
 	}
 	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
@@ -126,7 +133,7 @@ export function useEntryMutations({
 	/** Handles the action through the bulk API and reports the result. */
 	const bulk = async (op: BulkOp, label: string, targets: BulkSelection[], params: BulkParams = {}) => {
 		try {
-			announce(site, label, await run(op, targets, params), targets);
+			announce(site, label, await run(op, targets, params), targets, op.startsWith("relation."));
 		} catch (error) {
 			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}
