@@ -1,4 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
+import { josa } from "@monti-cms/core/site";
+
+const plural = (count: unknown, one: string, many: string) => `${count} ${Number(count) === 1 ? one : many}`;
 
 /** Text of the collection editor of the schema screen: basics, body, allowed blocks and the new-collection dialog. */
 export const schemaCollectionMessages = defineMessages("cms-admin.schema.collection", {
@@ -24,7 +27,20 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.featuresTitle": "Features",
 		"collection.folders": "Folders",
 		"collection.summary": "{kind} · {path}",
-		"collection.dangerTitle": "Remove collection",
+		"collection.dangerTitle": "Delete collection",
+		"collection.delete": "Delete",
+		"collection.deleteUndo": "Undo",
+		"collection.count": ({ entries, trashed, folders }) =>
+			[
+				plural(entries, "entry", "entries"),
+				Number(trashed) > 0 ? `${trashed} in the trash` : null,
+				Number(folders) > 0 ? plural(folders, "folder", "folders") : null,
+			]
+				.filter(Boolean)
+				.join(" · "),
+		"save.dropped": ({ name, count }) => `Deleted ${name} · ${plural(count, "entry", "entries")}`,
+		"save.droppedMany": ({ collections, count }) =>
+			`Deleted ${plural(collections, "collection", "collections")} · ${plural(count, "entry", "entries")}`,
 		"collection.tabs.basics": "Basics",
 		"collection.tabs.fields": "Fields",
 		"collection.tabs.editor": "Editor",
@@ -57,7 +73,22 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.featuresTitle": "기능",
 		"collection.folders": "폴더 사용",
 		"collection.summary": "{kind} · {path}",
-		"collection.dangerTitle": "컬렉션 삭제",
+		"collection.dangerTitle": "컬렉션 지우기",
+		"collection.delete": "지우기",
+		"collection.deleteUndo": "되돌리기",
+		"collection.count": ({ entries, trashed, folders, kind }) => {
+			const [noun, unit] = kind === "item" ? ["항목", "개"] : ["글", "편"];
+			return [
+				`${noun} ${entries}${unit}`,
+				Number(trashed) > 0 ? `휴지통 ${trashed}${unit} 포함` : null,
+				Number(folders) > 0 ? `폴더 ${folders}개` : null,
+			]
+				.filter(Boolean)
+				.join(" · ");
+		},
+		"save.dropped": ({ name, count, kind }) =>
+			`${String(name)}${josa(String(name), "을", "를")} 지웠어요 · ${kind === "item" ? `항목 ${count}개` : `글 ${count}편`}`,
+		"save.droppedMany": ({ collections, count }) => `컬렉션 ${collections}개를 지웠어요 · 항목 ${count}개`,
 		"collection.tabs.basics": "기본",
 		"collection.tabs.fields": "필드",
 		"collection.tabs.editor": "에디터",

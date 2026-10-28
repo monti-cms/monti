@@ -4,6 +4,7 @@ import {
 	type ChangeImpact,
 	checkSchemaChange,
 	describeSchemaChange,
+	dropBlockers,
 	type ImpactConsequence,
 	planSchemaChange,
 	type SchemaApplyResult,
@@ -25,7 +26,7 @@ export interface SchemaCommandOptions extends AppOptions {
 const CONSEQUENCE: Record<ImpactConsequence, string> = {
 	none: "",
 	transformed: "rewritten by its transform",
-	deleted: "stored values DELETED by the dropField transform",
+	deleted: "stored data DELETED by its drop transform",
 	orphaned: "values kept as orphans (hidden from the public read; publishing warns)",
 	unknown_value: "values kept as stored; publishing warns (unknown_select_value)",
 	publish_blocked: "cannot be published until the field is filled",
@@ -36,10 +37,29 @@ const CONSEQUENCE: Record<ImpactConsequence, string> = {
 
 const quote = (title: string | null, id: string) => (title ? `"${title}"` : id.slice(0, 8));
 
+/** What a collection drop deletes and what points into it, one line each below its change. */
+function dropLines(item: ChangeImpact): string[] {
+	const { drop } = item;
+	if (!drop) return [];
+	const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+	return [
+		`      deletes ${plural(drop.entries, "entry", "entries")} (${drop.trashed} in the trash), ${plural(drop.folders, "folder", "folders")}, ${plural(drop.addresses, "address", "addresses")}`,
+		...(drop.bodyLinks > 0
+			? [`      ${plural(drop.bodyLinks, "link", "links")} in the bodies of other collections will be broken`]
+			: []),
+		...(drop.blockers.count > 0
+			? [
+					`      BLOCKED: ${plural(drop.blockers.count, "entry", "entries")} of other collections still point at it (${drop.blockers.sample.map((entry) => quote(entry.title, entry.id)).join(", ")}${drop.blockers.count > drop.blockers.sample.length ? ", ..." : ""}); clear those fields first`,
+				]
+			: []),
+	];
+}
+
 function formatImpact(item: ChangeImpact): string {
 	const text = describeSchemaChange(item.change);
 	const via = item.change.handledBy ? ` [transform ${item.change.handledBy}]` : "";
 	if (!item.checked) return `  - ${text}${via} (not checked against stored entries)`;
+	if (item.drop) return [`  - ${text}${via}`, ...dropLines(item)].join("\n");
 	if (item.entries === 0) return `  - ${text}${via}`;
 	const sample = item.sample.map((entry) => quote(entry.title, entry.id)).join(", ");
 	const more = item.entries > item.sample.length ? ", ..." : "";
@@ -89,6 +109,11 @@ export function formatApplyResult(done: SchemaApplyResult): string {
 		}
 		lines.push(`Recorded the schema (${result.entries} entries rewritten).`);
 	}
+	for (const item of result.dropped) {
+		lines.push(
+			`Deleted collection ${item.collection}: ${item.entries} entries (${item.trashed} from the trash), ${item.folders} folders, ${item.addresses} addresses.`,
+		);
+	}
 	if (result.skipped.length > 0) lines.push(`Already applied before: ${result.skipped.join(", ")}.`);
 	for (const conflict of done.conflicts) {
 		lines.push(
@@ -135,7 +160,8 @@ export async function schemaDiff(
 		const store = cms.store();
 		const plan = await planSchemaChange({ site: cms.site, store, migrations });
 		const impact = await checkSchemaChange(store, plan.diff, { site: cms.site, transforms: plan.pending });
-		const exitCode = plan.problems.length > 0 || (options.check && plan.changed) ? 1 : 0;
+		const exitCode =
+			plan.problems.length > 0 || dropBlockers(impact.impacts).length > 0 || (options.check && plan.changed) ? 1 : 0;
 		return { text: formatSchemaPlan(plan, impact), plan, impact, exitCode };
 	} finally {
 		await cms.close();
@@ -165,7 +191,9 @@ export async function schemaApply(
 		const plan = await planSchemaChange({ site: cms.site, store, migrations });
 		const impact = await checkSchemaChange(store, plan.diff, { site: cms.site, transforms: plan.pending });
 		const preview = formatSchemaPlan(plan, impact);
-		if (plan.problems.length > 0) return { text: `${head}${preview}\nNothing was applied.`, ok: false };
+		if (plan.problems.length > 0 || dropBlockers(impact.impacts).length > 0) {
+			return { text: `${head}${preview}\nNothing was applied.`, ok: false };
+		}
 
 		let done: SchemaApplyResult;
 		try {

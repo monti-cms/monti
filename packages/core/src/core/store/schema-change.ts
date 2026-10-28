@@ -48,11 +48,62 @@ export interface RewrittenBody {
 	readonly changedBy: readonly string[];
 }
 
+/** An entry of another collection that points into a collection, for the check before a drop. */
+export interface FootprintReferrer {
+	readonly id: string;
+	readonly title: string | null;
+	readonly collection: string;
+	readonly locale: string;
+	readonly status: EntryStatus;
+}
+
+/**
+ * What a collection holds in the store, counted for the review of removing it. Entries are counted once per translation group (a translation comes with its
+ * source), the trashed ones included.
+ */
+export interface CollectionFootprint {
+	/** Entries (translation groups), the trashed ones included. */
+	readonly entries: number;
+	/** Of `entries`, the ones in the trash. */
+	readonly trashed: number;
+	/** Translations on top of `entries` (one row per extra language). */
+	readonly translations: number;
+	readonly folders: number;
+	/** Addresses of the collection, the old ones (renamed, reserved, deleted) included. */
+	readonly addresses: number;
+	/** Only with `detail`: what points into the collection from outside. */
+	readonly incoming?: {
+		/** Entries of other collections, the trashed ones included, whose relation fields point at an entry of the collection. They block a drop until unlinked. */
+		readonly relations: number;
+		/** The first of them (by creation), at most `sampleSize`. */
+		readonly sample: readonly FootprintReferrer[];
+		/** Places in the bodies of entries of other collections that link to an entry of the collection. They do not block: they become broken links. */
+		readonly bodyLinks: number;
+	};
+}
+
+/** What a drop deleted. */
+export interface DroppedCollection {
+	readonly collection: string;
+	readonly entries: number;
+	readonly trashed: number;
+	readonly translations: number;
+	readonly folders: number;
+	readonly addresses: number;
+}
+
 export interface ApplySchemaChangeParams {
 	/** Ids of every transform of the schema, in order. The store runs the ones that are not recorded yet, and records them. */
 	readonly transformIds: readonly string[];
 	/** The collections whose bodies the pending transforms may change. Only their bodies are read. */
 	readonly collections: readonly string[];
+	/**
+	 * The `dropCollection` transforms, by id (a subset of `transformIds`). The ones that are not recorded yet delete their collection's data in the same
+	 * transaction: every entry with its translations, bodies and references, its folders and its addresses. Refused (`in_use`, nothing changed) while an entry of
+	 * another collection still has a relation field pointing at one of its entries. Body links from other collections do not block: their reference rows go and
+	 * the links stay in the text, broken.
+	 */
+	readonly dropCollections?: readonly { readonly id: string; readonly collection: string }[];
 	/** The schema (as JSON) to record. */
 	readonly schema: JsonObject;
 	/**
@@ -71,6 +122,8 @@ export interface AppliedSchemaChange {
 	readonly skipped: readonly string[];
 	/** Per transform that ran: how many entries and stored bodies it changed. */
 	readonly changed: Readonly<Record<string, { readonly entries: number; readonly bodies: number }>>;
+	/** What the dropped collections held, as deleted. */
+	readonly dropped: readonly DroppedCollection[];
 	/** Stored bodies rewritten, and the entries they belong to. */
 	readonly bodies: number;
 	readonly entries: number;

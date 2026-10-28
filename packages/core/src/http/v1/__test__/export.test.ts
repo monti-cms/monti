@@ -329,6 +329,18 @@ describe("GET/POST /api/monti/v1/export/summary", () => {
 		expect(await byPost.json()).toMatchObject({ entries: 1, templates: 0 });
 	});
 
+	it("takes a collection as the selection of all its entries, and an empty one exports nothing instead of the whole site", async () => {
+		const snapshot = makeExportFixtureSnapshot();
+		const inCollection = snapshot.entries.filter((entry) => entry.collection === FIXTURE_CONTENT_COLLECTION).length;
+		expect(inCollection).toBeGreaterThan(0);
+		const whole = await (await SUMMARY(request(base), { cms })).json();
+		const one = await (await SUMMARY(request(`${base}?collection=${FIXTURE_CONTENT_COLLECTION}`), { cms })).json();
+		expect(one.entries).toBe(inCollection);
+		expect(one.entries).toBeLessThanOrEqual(whole.entries);
+		const none = await (await SUMMARY(request(`${base}?collection=nothing-here`), { cms })).json();
+		expect(none).toMatchObject({ entries: 0 });
+	});
+
 	it("rejects a format nobody provides and bad options", async () => {
 		const unknown = await SUMMARY(request(`${base}?format=hugo`), { cms });
 		expect(unknown.status).toBe(400);

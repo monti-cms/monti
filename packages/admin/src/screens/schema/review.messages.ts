@@ -1,14 +1,13 @@
 import { defineMessages } from "@monti-cms/core";
 import { entries } from "./messages";
 
+const plural = (count: unknown, one: string, many: string) => `${count} ${Number(count) === 1 ? one : many}`;
 const changes = (count: unknown) => `${count} ${Number(count) === 1 ? "change" : "changes"}`;
 
 /** Text of the review of a schema change: what changes, what happens to stored data, and the transforms to pick. */
 export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 	en: {
-		"review.title": "Review changes",
-		"review.description":
-			"Nothing is modified until saved. Saving updates monti.schema.ts and the development database.",
+		"review.title": "Review",
 		"review.loadFailed": "Couldn't check the changes.",
 		"review.invalid": "The schema does not check",
 		"review.problems": "A data transform does not fit the new schema",
@@ -29,9 +28,33 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 		"review.notChecked": "Not checked against stored entries.",
 		"review.transforms": "Recorded in migrations: {ids}",
 		"review.save": "Save and apply",
+		"drop.tag": "Deleted",
+		"drop.entries": ({ entries, trashed }) =>
+			`${plural(entries, "entry", "entries")}${Number(trashed) > 0 ? ` · ${trashed} in the trash included` : ""}`,
+		"drop.entries.then": "Deleted for good",
+		"drop.rest": ({ folders, addresses }) =>
+			[
+				Number(folders) > 0 ? plural(folders, "folder", "folders") : null,
+				Number(addresses) > 0 ? plural(addresses, "old address", "old addresses") : null,
+			]
+				.filter(Boolean)
+				.join(" · "),
+		"drop.rest.then": "Deleted",
+		"drop.blockers": ({ count }) => `${plural(count, "entry", "entries")} pointing at it`,
+		"drop.blockers.more": ({ count }) => `and ${count} more`,
+		"drop.unlink": "Unlink",
+		"drop.unlinked": "Unlinked",
+		"drop.unlinkFailed": "Couldn't unlink.",
+		"drop.bodyLinks": ({ count }) => plural(count, "link in a body", "links in bodies"),
+		"drop.bodyLinks.then": "Shown as broken links",
+		"drop.export": "Export",
+		"drop.confirm": "Type the identifier",
+		"drop.note": "This cannot be undone. A live site loses it when you deploy.",
+		"drop.apply": "Delete and apply",
 		"transform.renameField": "Move the values to {to}",
 		"transform.dropField": "Delete the stored values",
 		"transform.dropWarning": "Entries lose these values for good.",
+		"transform.dropCollection": "Delete the collection with its entries",
 		"transform.mapOption": "Change {from} to {to}",
 		"transform.setDefault": "Fill empty entries with {value}",
 		"transform.setDefaultText": "Fill empty entries with a value",
@@ -77,9 +100,7 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 		"save.reload": "Reload",
 	},
 	ko: {
-		"review.title": "변경 검토",
-		"review.description":
-			"저장하기 전까지는 파일이 변경되지 않아요. 저장 시 monti.schema.ts 및 개발 데이터베이스가 갱신돼요.",
+		"review.title": "검토",
 		"review.loadFailed": "변경을 확인하지 못했어요.",
 		"review.invalid": "스키마가 올바르지 않아요",
 		"review.problems": "데이터 변환이 새 스키마와 맞지 않아요",
@@ -99,9 +120,32 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 		"review.notChecked": "저장된 항목과 대조하지 않았어요.",
 		"review.transforms": "migrations에 기록: {ids}",
 		"review.save": "저장하고 적용",
+		"drop.tag": "지움",
+		"drop.entries": ({ entries, trashed, kind }) => {
+			const [noun, unit] = kind === "item" ? ["항목", "개"] : ["글", "편"];
+			return `${noun} ${entries}${unit}${Number(trashed) > 0 ? ` · 휴지통 ${trashed}${unit} 포함` : ""}`;
+		},
+		"drop.entries.then": "영구 삭제",
+		"drop.rest": ({ folders, addresses }) =>
+			[Number(folders) > 0 ? `폴더 ${folders}개` : null, Number(addresses) > 0 ? `옛 주소 ${addresses}개` : null]
+				.filter(Boolean)
+				.join(" · "),
+		"drop.rest.then": "삭제",
+		"drop.blockers": ({ count }) => `가리키는 글 ${count}편`,
+		"drop.blockers.more": ({ count }) => `외 ${count}편`,
+		"drop.unlink": "연결 끊기",
+		"drop.unlinked": "연결 끊음",
+		"drop.unlinkFailed": "연결을 끊지 못했어요.",
+		"drop.bodyLinks": ({ count }) => `본문 링크 ${count}곳`,
+		"drop.bodyLinks.then": "깨진 링크로 표시",
+		"drop.export": "내보내기",
+		"drop.confirm": "식별자 입력",
+		"drop.note": "되돌릴 수 없어요. 운영 사이트는 배포할 때 지워져요.",
+		"drop.apply": "지우고 적용",
 		"transform.renameField": "값을 {to}(으)로 옮기기",
 		"transform.dropField": "저장된 값 삭제",
 		"transform.dropWarning": "항목에서 이 값이 완전히 사라져요.",
+		"transform.dropCollection": "컬렉션을 항목과 함께 지우기",
 		"transform.mapOption": "{from}을(를) {to}(으)로 바꾸기",
 		"transform.setDefault": "비어 있는 항목을 {value}(으)로 채우기",
 		"transform.setDefaultText": "비어 있는 항목을 값으로 채우기",

@@ -80,6 +80,7 @@ export {
 	ContextMenuTrigger,
 } from "./context-menu";
 export { Count } from "./count";
+export { DangerBlock, DangerRow } from "./danger-block";
 export { DescriptionItem, DescriptionList } from "./description-list";
 export {
 	Dialog,

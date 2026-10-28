@@ -1,11 +1,12 @@
 "use client";
 
-import { TrashCan } from "@carbon/icons-react";
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
 	Checkbox,
+	DangerBlock,
+	DangerRow,
 	Grid,
 	Heading,
 	Inline,
@@ -233,7 +234,10 @@ export function CollectionEditor({
 	onSection,
 	collection,
 	onChange,
+	removed,
+	footprint,
 	onRemove,
+	onRestore,
 	onRename,
 	onFileChange,
 	changes,
@@ -247,7 +251,14 @@ export function CollectionEditor({
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
 	onChange: (change: (collection: Obj) => Obj) => void;
+	/** The collection is struck out and will be deleted with its entries when the draft is saved. */
+	removed: boolean;
+	/** What the collection holds in the store; none when that is not known. */
+	footprint?: { entries: number; trashed: number; folders: number };
+	/** Strikes the collection out (nothing is deleted before the draft is saved). */
 	onRemove: () => void;
+	/** Takes a struck collection back. */
+	onRestore: () => void;
 	onRename: (rename: Rename) => void;
 	/** Changes the whole file, for an edit that reaches another collection. */
 	onFileChange: (change: (file: Obj) => Obj) => void;
@@ -378,14 +389,26 @@ export function CollectionEditor({
 								}
 							/>
 						</Section>
-						<Section band title={t("collection.dangerTitle")} card={false}>
-							<Inline justify="end" paddingY={12}>
-								<Button type="button" variant="outline-danger" size="sm" disabled={disabled} onClick={onRemove}>
-									<TrashCan aria-hidden />
-									{ts("collection.remove")}
-								</Button>
-							</Inline>
-						</Section>
+						{!disabled && (
+							<DangerBlock title={t("collection.dangerTitle")} data-testid="collection-delete">
+								<DangerRow
+									name={label}
+									meta={footprint ? t("collection.count", { ...footprint, kind: String(collection.kind) }) : undefined}
+									removed={removed}
+									action={
+										removed ? (
+											<Button type="button" variant="secondary" size="sm" onClick={onRestore}>
+												{t("collection.deleteUndo")}
+											</Button>
+										) : (
+											<Button type="button" variant="outline-danger" size="sm" onClick={onRemove}>
+												{t("collection.delete")}
+											</Button>
+										)
+									}
+								/>
+							</DangerBlock>
+						)}
 					</Stack>
 				</TabsContent>
 				<TabsContent value="fields">

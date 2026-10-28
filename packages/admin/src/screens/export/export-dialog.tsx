@@ -18,30 +18,37 @@ import { useExportForm } from "./use-export-form";
 export interface ExportDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** The entries to export. Their translations come along, and the dialog says so. */
-	ids: readonly string[];
+	/** The entries to export. Their translations come along, and the dialog says so. Not with `collection`, which exports all the entries of one collection. */
+	ids?: readonly string[];
+	/** Exports every entry of this collection (the trashed ones too). */
+	collection?: string;
 	/** The label of the collection of these entries, for the counts ("3 post entries"). */
 	noun?: string;
-	/** Which question the dialog asks: about the selected entries, or about the one entry that is open. */
-	kind: "selected" | "entry";
+	/** Which question the dialog asks: about the selected entries, about the one entry that is open, or about a whole collection. */
+	kind: "selected" | "entry" | "collection";
 	/** The entry being edited has changes that are not saved: the archive holds what is saved, and the dialog says so. */
 	unsaved?: boolean;
 }
 
 function ExportDialogBody({
 	ids,
+	collection,
 	noun = "",
 	kind,
 	unsaved,
 	onClose,
 }: Omit<ExportDialogProps, "open" | "onOpenChange"> & { onClose: () => void }) {
 	const t = useTranslator(exportMessages);
-	const form = useExportForm({ ids });
+	const form = useExportForm({ ids, collection });
 	return (
 		<>
 			<DialogHeader>
 				<DialogTitle>
-					{kind === "entry" ? t("dialog.title.entry") : t("dialog.title.selected", { count: ids.length, noun })}
+					{kind === "entry"
+						? t("dialog.title.entry")
+						: kind === "collection"
+							? t("dialog.title.collection", { noun })
+							: t("dialog.title.selected", { count: ids?.length ?? 0, noun })}
 				</DialogTitle>
 				<DialogDescription>{t("dialog.description")}</DialogDescription>
 			</DialogHeader>

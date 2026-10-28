@@ -8,7 +8,9 @@ import type { SchemaChange } from "./types";
  *
  * - `renameField`: the value moves to the new name. Nothing is overwritten: an entry that already has a value under the new name keeps both and is reported.
  * - `mapOption`: a stored select value that is no longer an option becomes another option (also inside a list of values, without duplicates).
- * - `dropField`: the only transform that deletes data, and only the values of a field the schema no longer has.
+ * - `dropField`: deletes data, and only the values of a field the schema no longer has.
+ * - `dropCollection`: deletes data, and only of a collection the schema no longer has: every entry it held, with its folders and addresses. The store deletes the
+ *   rows itself (it is not a rewrite of bodies), so `applyTransforms` does nothing for it.
  * - `setDefault`: an entry with no value gets one (the field must be text or select). A translation only gets it for a per-language field.
  *
  * Moving a field into or out of a conditional branch needs no transform: a stored value is kept wherever its field is, so nothing moves in the data.
@@ -36,6 +38,15 @@ export function checkTransforms(site: TransformSite, transforms: readonly Schema
 	const problem = (id: string, message: string) => problems.push({ id, message });
 	for (const [index, item] of transforms.entries()) {
 		const at = `${item.collection}`;
+		if (item.op === "dropCollection") {
+			if (site.isCollection(item.collection)) {
+				problem(
+					item.id,
+					`collection "${item.collection}" is still in the schema; remove it there first (a drop deletes its entries)`,
+				);
+			}
+			continue;
+		}
 		if (!site.isCollection(item.collection)) {
 			problem(item.id, `collection "${item.collection}" is not in the schema`);
 			continue;
@@ -106,9 +117,14 @@ export interface TransformResult {
 	readonly conflicts: readonly { readonly id: string; readonly from: string; readonly to: string }[];
 }
 
-/** Which collections a list of transforms touches. */
+/** Which collections' bodies a list of transforms rewrites. A dropped collection is not one of them: its rows are deleted, not rewritten. */
 export const transformCollections = (transforms: readonly SchemaMigration[]): string[] => [
-	...new Set(transforms.map((item) => item.collection)),
+	...new Set(transforms.filter((item) => item.op !== "dropCollection").map((item) => item.collection)),
+];
+
+/** The collections whose data a list of transforms deletes (`dropCollection`). */
+export const droppedCollections = (transforms: readonly SchemaMigration[]): string[] => [
+	...new Set(transforms.flatMap((item) => (item.op === "dropCollection" ? [item.collection] : []))),
 ];
 
 /**
@@ -157,6 +173,8 @@ export function applyTransforms(
 				changed(item.id, rest);
 				break;
 			}
+			case "dropCollection":
+				break;
 			case "setDefault": {
 				if (!isEmpty(current[item.field])) break;
 				const stored = site.storedField(item.collection, item.field);
@@ -179,7 +197,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 
 /**
  * The transforms that fit a change, for a screen to offer. A removed field offers a drop (and a rename to each field that looks like it was renamed, see
- * `SchemaDiff.renameHints`, when `renameTo` lists candidates); a removed option offers a mapping to each option that is left; a field that became required
+ * `SchemaDiff.renameHints`, when `renameTo` lists candidates); a removed collection offers a drop of its entries; a removed option offers a mapping to each option that is left; a field that became required
  * offers a default. Nothing is offered for a change data does not follow from.
  */
 export function suggestTransforms(
@@ -187,6 +205,8 @@ export function suggestTransforms(
 	context: { readonly options?: readonly string[]; readonly renameTo?: readonly string[] } = {},
 ): SuggestedTransform[] {
 	switch (change.kind) {
+		case "collection_removed":
+			return [{ op: "dropCollection", collection: change.collection }];
 		case "field_removed":
 			return [
 				...(context.renameTo ?? []).map(

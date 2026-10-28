@@ -6,6 +6,7 @@ import { schemaCollectionMessages } from "../schema/collection.messages";
 import { schemaFieldsMessages } from "../schema/fields.messages";
 import { schemaLocalesMessages } from "../schema/locales.messages";
 import { schemaMessages } from "../schema/messages";
+import { SAVED_MESSAGE_KEY } from "../schema/reload";
 import { schemaReviewMessages } from "../schema/review.messages";
 import { SettingsScreen } from "./settings-screen";
 import type { SchemaTab } from "./tabs";
@@ -58,6 +59,7 @@ const screenState = (over: Record<string, unknown> = {}) => ({
 	codeCollections: [],
 	vocabulary: { blocks: ["table", "image", "callout"], marks: ["bold", "italic"] },
 	collections: ["post", "tag"],
+	footprints: {},
 	siteUrl: { url: null, from: "none" },
 	...over,
 });
@@ -236,6 +238,151 @@ export const SaveConflict = story(
 	{ play: review(true) },
 );
 
+// Deleting a collection with its entries: Flow 4 of the canvas, steps 15 to 19 (the Schema board's stages 지우기 전, 지울 예정, 지우기 검토, 지우기 확인, 지운 뒤).
+const memoSchema = () => {
+	const base = schema();
+	return {
+		...base,
+		collections: {
+			post: base.collections.post,
+			memo: {
+				label: "메모",
+				kind: "document",
+				path: "/memos/:slug",
+				fields: {
+					title: { kind: "text", label: "제목", required: true },
+					slug: { kind: "slug", label: "주소", from: "title" },
+				},
+			},
+			tag: base.collections.tag,
+		},
+	};
+};
+const memoState = (over: Record<string, unknown> = {}) =>
+	screenState({
+		schema: memoSchema(),
+		collections: ["post", "memo", "tag"],
+		footprints: {
+			post: { entries: 148, trashed: 0, folders: 3 },
+			memo: { entries: 23, trashed: 2, folders: 2 },
+			tag: { entries: 12, trashed: 0, folders: 0 },
+		},
+		...over,
+	});
+const memoRemoval = (blockers: number) => ({
+	change: { kind: "collection_removed", collection: "memo", handledBy: "drop-memo" },
+	key: "collection_removed:memo",
+	entries: 23,
+	sample: [],
+	consequence: "deleted",
+	checked: true,
+	drop: {
+		entries: 23,
+		trashed: 2,
+		translations: 0,
+		folders: 2,
+		addresses: 31,
+		blockers: {
+			count: blockers,
+			sample: blockers
+				? [{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" }]
+				: [],
+		},
+		bodyLinks: 2,
+	},
+});
+/** The server of the delete: the review finds four entries pointing at the memos until they are unlinked. */
+const deleteServer = (): FakeApi => {
+	let blockers = 4;
+	return (path, method) => {
+		if (path === SCHEMA && method === "GET") return memoState();
+		if (path === `${SCHEMA}/preview`)
+			return previewOf({
+				impacts: [memoRemoval(blockers)],
+				transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
+			});
+		if (path === "/api/monti/v1/references/unlink") {
+			blockers = 0;
+			return { entries: 4 };
+		}
+		return undefined;
+	};
+};
+const pressDelete = async (canvasElement: HTMLElement) => {
+	const block = await within(canvasElement).findByTestId("collection-delete");
+	await userEvent.click(within(block).getByRole("button", { name: tCollection("collection.delete") }));
+};
+const openDeleteReview = async (canvasElement: HTMLElement) => {
+	await pressDelete(canvasElement);
+	await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
+	const sheet = await within(document.body).findByRole("dialog");
+	await within(sheet).findByTestId("impact-collection_removed:memo");
+	return sheet;
+};
+/** Board stage 지우기 전 (step 15): the block at the bottom of the basics tab. */
+export const CollectionDeleteBefore = story(
+	deleteServer(),
+	"collections",
+	{ collection: "memo" },
+	{
+		tags: ["visual"],
+		render: screen((path, method) => (path === SCHEMA && method === "GET" ? memoState() : undefined)),
+	},
+);
+/** Board stage 지울 예정 (step 16): struck in the block and in the list, with 되돌리기. */
+export const CollectionDeleteStruck = story(
+	deleteServer(),
+	"collections",
+	{ collection: "memo" },
+	{ tags: ["visual"], play: ({ canvasElement }) => pressDelete(canvasElement) },
+);
+/** Board stage 지우기 검토 (step 17): the review names what goes and what still points at it; 지우고 적용 is off. */
+export const CollectionDeleteReview = story(
+	deleteServer(),
+	"collections",
+	{ collection: "memo" },
+	{ tags: ["visual"], play: async ({ canvasElement }) => void (await openDeleteReview(canvasElement)) },
+);
+/** Board stage 지우기 확인 (step 18): unlinked, the identifier typed, 지우고 적용 on. */
+export const CollectionDeleteConfirm = story(
+	deleteServer(),
+	"collections",
+	{ collection: "memo" },
+	{
+		tags: ["visual"],
+		play: async ({ canvasElement }) => {
+			const sheet = await openDeleteReview(canvasElement);
+			await userEvent.click(await within(sheet).findByRole("button", { name: tReview("drop.unlink") }));
+			await within(sheet).findByText(tReview("drop.unlinked"));
+			// A change event, not typed keys (see editLabel).
+			fireEvent.change(within(sheet).getByLabelText(tReview("drop.confirm")), { target: { value: "memo" } });
+			await waitFor(() => expect(within(sheet).getByRole("button", { name: tReview("drop.apply") })).toBeEnabled());
+		},
+	},
+);
+/** Board stage 지운 뒤 (step 19): the collection is gone from the list, and the toast says what went. */
+export const CollectionDeleted = story(
+	(path, method) => {
+		if (path === SCHEMA && method === "GET") {
+			const base = memoState();
+			const { memo: _memo, ...collections } = (base.schema as ReturnType<typeof memoSchema>).collections;
+			return { ...base, schema: { ...base.schema, collections }, collections: ["post", "tag"] };
+		}
+		return undefined;
+	},
+	"collections",
+	{ collection: "post" },
+	{
+		tags: ["visual"],
+		beforeEach: () => {
+			window.sessionStorage.setItem(
+				SAVED_MESSAGE_KEY,
+				tCollection("save.dropped", { name: "메모", count: 23, kind: "document" }),
+			);
+		},
+	},
+);
+
 // Dialogs and sheets.
 export const AddFieldDialog = story(
 	server(),
@@ -266,16 +413,6 @@ export const NewCollectionDialog = story(
 	{
 		play: async ({ canvasElement }) => {
 			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("collection.create") }));
-		},
-	},
-);
-export const DeleteCollectionConfirm = story(
-	server(),
-	"collections",
-	{ collection: "tag" },
-	{
-		play: async ({ canvasElement }) => {
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("collection.remove") }));
 		},
 	},
 );

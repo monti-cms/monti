@@ -275,6 +275,11 @@ const migration = z.discriminatedUnion(
 		}),
 		strict({
 			...migrationBase,
+			collection: text.describe("A collection the schema no longer has. Every entry it held is deleted."),
+			op: z.literal("dropCollection"),
+		}),
+		strict({
+			...migrationBase,
 			op: z.literal("setDefault"),
 			field: text,
 			value: text.describe(
@@ -282,7 +287,7 @@ const migration = z.discriminatedUnion(
 			),
 		}),
 	],
-	{ error: 'a migration needs an "op" of renameField, mapOption, dropField or setDefault' },
+	{ error: 'a migration needs an "op" of renameField, mapOption, dropField, dropCollection or setDefault' },
 );
 
 /** The keys of the plain data both the schema file and the code config hold (the file adds `migrations`). */

@@ -18,13 +18,14 @@ const issues = (edit: (schema: EditableSchema) => void) => {
 };
 
 describe("migrations in the schema file", () => {
-	it("accepts the four transforms", () => {
+	it("accepts the five transforms", () => {
 		const schema = cloneSchema();
 		schema.migrations = [
 			{ id: "a", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
 			{ id: "b", op: "mapOption", collection: "post", field: "policy", from: "x", to: "normal", note: "merged" },
 			{ id: "c", op: "dropField", collection: "post", field: "legacy" },
 			{ id: "d", op: "setDefault", collection: "post", field: "summary", value: "-" },
+			{ id: "e", op: "dropCollection", collection: "memo", note: "no longer used" },
 		];
 		const parsed = parseSchemaFile(schema);
 		expect(parsed.migrations).toEqual(schema.migrations);

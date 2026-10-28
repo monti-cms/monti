@@ -1382,12 +1382,13 @@ Removing a field or a select option is routine once the schema is edited. The da
 | --- | --- |
 | `renameField` | The value of `from` moves to `to`. Nothing is overwritten: an entry that already has a value under `to` keeps both, and the apply reports it. `to` must be a field of the schema (or the `from` of a later rename, for a chain), and `from` must not be |
 | `mapOption` | A stored select value that is no longer an option becomes another option of the field, also inside a list of values (without duplicates) |
-| `dropField` | **Deletes** the stored values of a field the schema no longer has. The only transform that deletes data; it is an error if the schema still has the field |
+| `dropField` | **Deletes** the stored values of a field the schema no longer has. It is an error if the schema still has the field |
+| `dropCollection` | **Deletes** a collection the schema no longer has, with all it held: every entry (the trashed ones too) with its translations, bodies and references, its folders, and its addresses (the old ones included), in the same transaction as the schema record. The only way a collection's data is deleted. The apply is refused while an entry of another collection still has a relation field pointing into the collection; links in the bodies of other collections do not block and become broken links. It is an error if the schema still has the collection |
 | `setDefault` | An entry with no value for a text or select field gets `value` (a field that became required, say). In a conditional branch it only fills entries the branch shows, and a translation only gets it for a per-language field |
 
 Moving a field into or out of a conditional branch needs no transform: every stored value is kept wherever its field is (conditional values are stored flat), so the data does not move. The diff reports it (`field_moved`) and the check counts the entries whose value the new branch does not show. A **collection** rename is not a transform: the collection name is a stored value (`entries.collection`, folders, addresses), so a renamed collection is a removed one plus an added one; the diff points out a pair that looks alike (`renameHints`) and nothing is applied.
 
-**Nothing is dropped silently.** A removal with no `dropField` keeps the orphans exactly as before. A transform that does not fit the schema (a drop of a field the schema still has, a mapping to something that is not an option, a default that is not valid for its field) is a problem and the apply refuses to start. If one entry cannot be rewritten, nothing at all is changed.
+**Nothing is dropped silently.** A removal with no `dropField` or `dropCollection` keeps the orphans exactly as before. A transform that does not fit the schema (a drop of a field the schema still has, a mapping to something that is not an option, a default that is not valid for its field) is a problem and the apply refuses to start. If one entry cannot be rewritten, nothing at all is changed.
 
 **How a transform writes.** Every transform runs through the write rules (`prepareSnapshot`, without the `before…` subscribers): the changed metadata is checked, and the content hash, the search text and the metadata references (a renamed or dropped relation or media field moves or removes its reference, so deletion checks stay right) are recomputed from it. Working and published bodies are rewritten the same way in one transaction, and `version` and `updated_at` of the entry and its bodies are kept, as in the data migrations before: an entry that had unpublished changes still has them, one that did not still does not. A transformed body is stamped with the new version. The run holds the lock the migrations use, so two applies at once run each transform once.
 
@@ -1395,7 +1396,7 @@ Moving a field into or out of a conditional branch needs no transform: every sto
 
 Both commands load the TypeScript schema file through tsx.
 
-- `monti schema:diff [--schema <file>] [--check]` (read-only) compares the schema of the app with the applied one and prints every change with the entries it touches and what happens to them: kept as orphans, rewritten by a transform, deleted by a `dropField`, cannot be published until filled, and so on. With `--check` it exits 1 when there is anything to apply.
+- `monti schema:diff [--schema <file>] [--check]` (read-only) compares the schema of the app with the applied one and prints every change with the entries it touches and what happens to them: kept as orphans, rewritten by a transform, deleted by a `dropField` or `dropCollection`, cannot be published until filled, and so on. With `--check` it exits 1 when there is anything to apply.
 - `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti db:migrate`), runs the transforms that did not run yet, and records the schema. It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing.
 
 ```text

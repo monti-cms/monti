@@ -71,11 +71,7 @@ export const DropCollection: Story = {
 		<ChangeGroup {...args}>
 			<ChangeLines>
 				<ChangeLine what="글 23편 · 휴지통 2편 포함" then="영구 삭제" tone="danger" />
-				<ChangeLine
-					what="가리키는 글 4편"
-					then={<TextButton className="text-[length:inherit] text-inherit">연결 끊기</TextButton>}
-					tone="warning"
-				/>
+				<ChangeLine what="가리키는 글 4편" then={<TextButton variant="inherit">연결 끊기</TextButton>} tone="warning" />
 				<ChangeLine what="본문 링크 2곳" then="깨진 링크로 표시" />
 			</ChangeLines>
 			<FormField>

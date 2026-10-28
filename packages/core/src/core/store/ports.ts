@@ -5,6 +5,7 @@ import type {
 	AppliedSchemaChange,
 	ApplySchemaChangeParams,
 	BodyCursor,
+	CollectionFootprint,
 	ScannedBody,
 	SchemaState,
 } from "./schema-change";
@@ -333,6 +334,15 @@ export interface SchemaChangeStore {
 		after?: BodyCursor;
 		limit?: number;
 	}): Promise<{ bodies: readonly ScannedBody[]; next: BodyCursor | null }>;
+	/**
+	 * What each of the collections holds: entries (the trashed ones counted too), translations, folders and addresses. With `detail`, also what points into it from
+	 * other collections (`incoming`: relation fields, which block a drop, and body links, which do not). Read-only; a collection the store holds nothing of counts zero.
+	 */
+	collectionFootprint(params: {
+		collections: readonly string[];
+		detail?: boolean;
+		sampleSize?: number;
+	}): Promise<Readonly<Record<string, CollectionFootprint>>>;
 	/**
 	 * Runs the transforms that are not recorded yet over the bodies of `collections`, records them, and records the schema and its version, in one transaction under the
 	 * lock the migrations use, so a second run (or a concurrent one) runs nothing again. `version` and `updated_at` of entries and bodies stay as they are, and

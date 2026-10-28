@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckmarkOutline, Information } from "@carbon/icons-react";
-import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
+import { CheckmarkOutline, Download, Information } from "@carbon/icons-react";
+import type { ChangeImpact, CollectionDropImpact } from "@monti-cms/core/internal/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
@@ -9,23 +9,30 @@ import {
 	Banner,
 	Box,
 	Button,
+	ChangeActions,
+	ChangeGroup,
+	ChangeLine,
+	ChangeLines,
+	ChangeNote,
 	Count,
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
+	FormField,
+	FormFieldLabel,
 	Heading,
 	Inline,
 	Input,
 	List,
 	ListItem,
+	Sheet,
+	SheetBody,
+	SheetContent,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
 	Stack,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {
 	type EditRequest,
@@ -34,10 +41,12 @@ import {
 	type SchemaEditPreview,
 	type SuggestedTransform,
 	saveSchema,
+	unlinkCollection,
 } from "../../api/schema";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink } from "../../router";
+import { ExportDialog } from "../export/export-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeChange, describeNoTransform, describeTransform } from "./change-text";
 import { IssueList } from "./controls";
@@ -48,10 +57,16 @@ import type { Rename, SettingChange } from "./schema-model";
 type Picks = Record<string, SuggestedTransform | null>;
 
 /** The request of the screen's edit with the picks made so far; `undefined` picks leave the choice to the server's defaults. */
-const requestOf = (draft: unknown, renames: readonly Rename[], picks: Picks | undefined): EditRequest => ({
+const requestOf = (
+	draft: unknown,
+	renames: readonly Rename[],
+	picks: Picks | undefined,
+	dropCollections: readonly string[],
+): EditRequest => ({
 	schema: draft,
 	transforms: picks ? Object.values(picks).filter((pick): pick is SuggestedTransform => pick !== null) : undefined,
 	renames,
+	...(dropCollections.length > 0 ? { dropCollections } : {}),
 });
 
 const sameTransform = (a: SuggestedTransform | null, b: SuggestedTransform) =>
@@ -200,6 +215,127 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	);
 }
 
+/** A collection the draft removed, as the review names it. */
+export interface Removal {
+	readonly name: string;
+	readonly label: string;
+	readonly kind: "document" | "item";
+}
+
+/** What the writer did to the entries pointing at a collection from the review, so the line can say it is done once the check no longer finds them. */
+interface Unlinked {
+	readonly count: number;
+	readonly sample: CollectionDropImpact["blockers"]["sample"];
+}
+
+/**
+ * The change block of a collection that is deleted with its entries: what goes with it, what still points at it (and the button that clears that), a way to
+ * keep a copy, and the identifier to type before the delete can be applied.
+ */
+function DropChange({
+	impact,
+	removal,
+	unlinked,
+	typed,
+	onType,
+	onUnlink,
+	unlinking,
+	onExport,
+}: {
+	impact: ChangeImpact & { drop: CollectionDropImpact };
+	removal: Removal;
+	unlinked: Unlinked | undefined;
+	typed: string;
+	onType: (value: string) => void;
+	onUnlink: () => void;
+	unlinking: boolean;
+	onExport: () => void;
+}) {
+	const t = useTranslator(schemaReviewMessages);
+	const site = useSite();
+	const { drop } = impact;
+	const pointing =
+		drop.blockers.count > 0 ? drop.blockers : unlinked ? { count: unlinked.count, sample: unlinked.sample } : null;
+	const first = pointing?.sample[0];
+	const id = `drop-confirm-${removal.name}`;
+	return (
+		<ChangeGroup
+			kind="drop"
+			tag={t("drop.tag")}
+			title={removal.label}
+			identifier={removal.name}
+			data-testid={`impact-${impact.key}`}
+		>
+			<ChangeLines>
+				<ChangeLine
+					what={t("drop.entries", { entries: drop.entries, trashed: drop.trashed, kind: removal.kind })}
+					then={t("drop.entries.then")}
+					tone="danger"
+				/>
+				{(drop.folders > 0 || drop.addresses > 0) && (
+					<ChangeLine
+						what={t("drop.rest", { folders: drop.folders, addresses: drop.addresses })}
+						then={t("drop.rest.then")}
+						tone="danger"
+					/>
+				)}
+				{pointing && (
+					<ChangeLine
+						what={
+							<>
+								{t("drop.blockers", { count: pointing.count })}
+								{first && (
+									<>
+										{" · "}
+										<TextButton
+											variant="underline"
+											render={<AdminLink href={entryHref(site, first.collection, first.id)} target="_blank" />}
+										>
+											{first.title ?? first.id.slice(0, 8)}
+										</TextButton>
+										{pointing.count > 1 && ` ${t("drop.blockers.more", { count: pointing.count - 1 })}`}
+									</>
+								)}
+							</>
+						}
+						then={
+							drop.blockers.count > 0 ? (
+								<TextButton type="button" variant="inherit" disabled={unlinking} onClick={onUnlink}>
+									{t("drop.unlink")}
+								</TextButton>
+							) : (
+								t("drop.unlinked")
+							)
+						}
+						tone={drop.blockers.count > 0 ? "warning" : "default"}
+					/>
+				)}
+				{drop.bodyLinks > 0 && (
+					<ChangeLine what={t("drop.bodyLinks", { count: drop.bodyLinks })} then={t("drop.bodyLinks.then")} />
+				)}
+			</ChangeLines>
+			<ChangeActions>
+				<TextButton type="button" onClick={onExport}>
+					<Download aria-hidden />
+					{t("drop.export")}
+				</TextButton>
+			</ChangeActions>
+			<FormField>
+				<FormFieldLabel htmlFor={id}>{t("drop.confirm")}</FormFieldLabel>
+				<Input
+					id={id}
+					mono
+					placeholder={removal.name}
+					value={typed}
+					autoComplete="off"
+					onChange={(event) => onType(event.target.value)}
+				/>
+			</FormField>
+			<ChangeNote danger>{t("drop.note")}</ChangeNote>
+		</ChangeGroup>
+	);
+}
+
 /** A setting's value as one short piece of text. */
 const settingText = (value: unknown, unset: string): string =>
 	value === undefined ? unset : typeof value === "string" ? `"${value}"` : JSON.stringify(value);
@@ -211,6 +347,8 @@ export interface ReviewDialogProps {
 	renames: readonly Rename[];
 	/** The site and admin settings that differ from the file, which the entries do not care about but the writer should still see. */
 	settings?: readonly SettingChange[];
+	/** The collections the draft removed (`draft` no longer has them). Their entries are deleted with them, after the identifier is typed. */
+	removals?: readonly Removal[];
 	baseHash: string;
 	/** The problems of the last check, for the screen to mark. */
 	onIssues: (issues: readonly ConfigIssue[]) => void;
@@ -231,6 +369,7 @@ export function ReviewDialog({
 	draft,
 	renames,
 	settings = [],
+	removals = [],
 	baseHash,
 	onIssues,
 	onSaved,
@@ -246,15 +385,15 @@ export function ReviewDialog({
 	const [saveError, setSaveError] = useState<{ message: string; conflict?: boolean; applyFailed?: boolean } | null>(
 		null,
 	);
+	const [typed, setTyped] = useState<Record<string, string>>({});
+	const [unlinked, setUnlinked] = useState<Record<string, Unlinked>>({});
+	const [recheck, setRecheck] = useState(0);
+	const [exporting, setExporting] = useState<Removal | null>(null);
 	const skip = useRef(false);
+	const dropNames = removals.map((removal) => removal.name).join("\n");
+	const dropCollections = useMemo(() => (dropNames === "" ? [] : dropNames.split("\n")), [dropNames]);
 
-	const request = (current: Picks | undefined): EditRequest => ({
-		schema: draft,
-		transforms: current
-			? Object.values(current).filter((pick): pick is SuggestedTransform => pick !== null)
-			: undefined,
-		renames,
-	});
+	const request = (current: Picks | undefined): EditRequest => requestOf(draft, renames, current, dropCollections);
 
 	useEffect(() => {
 		if (!open) {
@@ -262,6 +401,9 @@ export function ReviewDialog({
 			setPicks(undefined);
 			setError(null);
 			setSaveError(null);
+			setTyped({});
+			setUnlinked({});
+			setExporting(null);
 			return;
 		}
 		if (skip.current) {
@@ -273,7 +415,7 @@ export function ReviewDialog({
 		const timer = setTimeout(
 			() => {
 				setLoading(true);
-				previewSchema(site, requestOf(draft, renames, picks), controller.signal)
+				previewSchema(site, requestOf(draft, renames, picks, dropCollections), controller.signal)
 					.then((result) => {
 						setPreview(result);
 						setError(null);
@@ -289,13 +431,13 @@ export function ReviewDialog({
 					})
 					.finally(() => setLoading(false));
 			},
-			picks ? 250 : 0,
+			picks || recheck > 0 ? 250 : 0,
 		);
 		return () => {
 			clearTimeout(timer);
 			controller.abort();
 		};
-	}, [open, draft, renames, picks, site, onIssues, t]);
+	}, [open, draft, renames, picks, dropCollections, recheck, site, onIssues, t]);
 
 	const saveMutation = useCmsMutation({
 		// The impacts this dialog showed are the ones the writer reviewed; the server refuses a lossy change it was not told was seen.
@@ -326,6 +468,18 @@ export function ReviewDialog({
 			} else setSaveError({ message: errorText(site, reason, t("save.failed")) });
 		},
 	});
+	const unlinkMutation = useCmsMutation({
+		fn: (name: string, { site }) => unlinkCollection(site, name),
+		failure: t("drop.unlinkFailed"),
+		onSuccess: (_result, name) => {
+			const was = preview?.impacts.find(
+				(impact) => impact.drop && impact.change.kind === "collection_removed" && impact.change.collection === name,
+			)?.drop;
+			if (was)
+				setUnlinked((current) => ({ ...current, [name]: { count: was.blockers.count, sample: was.blockers.sample } }));
+			setRecheck((count) => count + 1);
+		},
+	});
 	const saving = saveMutation.isPending;
 	const save = () => {
 		setSaveError(null);
@@ -333,164 +487,215 @@ export function ReviewDialog({
 	};
 
 	const problems = preview?.problems ?? [];
-	const ready = preview?.valid && problems.length === 0 && preview.changed && !loading && !saving;
+	const removalOf = (impact: ChangeImpact): Removal | undefined =>
+		impact.drop && impact.change.kind === "collection_removed"
+			? removals.find((item) => item.name === (impact.change as { collection: string }).collection)
+			: undefined;
+	// A deleted collection is applied only with its identifier typed exactly, and with nothing left that points at it.
+	const dropsOk = (preview?.impacts ?? []).every((impact) => {
+		const removal = removalOf(impact);
+		return !removal || (typed[removal.name] === removal.name && (impact.drop?.blockers.count ?? 0) === 0);
+	});
+	const drops = (preview?.impacts ?? []).filter((impact) => removalOf(impact));
+	const others = (preview?.impacts ?? []).filter((impact) => !removalOf(impact));
+	// The decisions about a deleted collection are the writer's own press of Delete: they are not asked again.
+	const decisions = (preview?.decisions ?? []).filter((decision) => decision.change.kind !== "collection_removed");
+	// A review that only deletes collections shows just their change blocks.
+	const onlyDrops = drops.length > 0 && others.length === 0 && decisions.length === 0 && settings.length === 0;
+	const ready = preview?.valid && problems.length === 0 && preview.changed && !loading && !saving && dropsOk;
 	const dataChanges = (preview?.impacts ?? []).length;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent size="xl">
-				<DialogHeader>
-					<DialogTitle>{t("review.title")}</DialogTitle>
-					<DialogDescription>{t("review.description")}</DialogDescription>
-				</DialogHeader>
-				<Stack gap={16} maxHeight="half" overflow="y" data-testid="review-body">
-					{error && <Banner role="alert" tone="danger" title={error} />}
-					{loading && !preview && (
-						<Text as="p" tone="subtle" role="status">
-							{tc("loading")}
-						</Text>
-					)}
-					{preview && !preview.valid && (
-						<Stack gap={8}>
-							<Banner role="alert" tone="danger" title={t("review.invalid")} />
-							<IssueList issues={preview.issues} />
-						</Stack>
-					)}
-					{problems.length > 0 && (
-						<Stack gap={8}>
-							<Banner role="alert" tone="danger" title={t("review.problems")} />
-							<List>
-								{problems.map((problem) => (
-									<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
-								))}
-							</List>
-						</Stack>
-					)}
-					{preview?.valid && (
-						<>
-							<Inline
-								gap={8}
-								border="all"
-								radius="lg"
-								background="tool"
-								paddingX={12}
-								paddingY={8}
-								data-testid="review-summary"
-							>
-								{dataChanges === 0 ? (
-									<Text as="span">
-										<CheckmarkOutline size={16} aria-hidden />
-									</Text>
-								) : (
-									<Text as="span" tone="muted">
-										<Information size={16} aria-hidden />
-									</Text>
-								)}
-								<Text as="p">
-									{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}
-								</Text>
-							</Inline>
-							{preview.baseline === "file" && (
-								<Text as="p" variant="caption" tone="muted">
-									{t("review.baselineFile")}
+		<>
+			<Sheet open={open} onOpenChange={onOpenChange}>
+				<SheetContent>
+					<SheetHeader>
+						<SheetTitle of={removals.length > 0 ? removals.map((item) => item.label).join(", ") : undefined}>
+							{t("review.title")}
+						</SheetTitle>
+					</SheetHeader>
+					<SheetBody data-testid="review-body">
+						<Stack gap={16}>
+							{error && <Banner role="alert" tone="danger" title={error} />}
+							{loading && !preview && (
+								<Text as="p" tone="subtle" role="status">
+									{tc("loading")}
 								</Text>
 							)}
-							{preview.decisions.length > 0 && (
-								<Stack as="section" gap={8} aria-label={t("review.decisions")}>
-									<Heading as="h3" variant="label">
-										{t("review.decisions")}
-									</Heading>
-									<Text as="p" variant="caption" tone="muted">
-										{t("review.decisionsHint")}
-									</Text>
-									{preview.decisions.map((decision) => (
-										<Decision
-											key={decision.key}
-											decision={decision}
-											picked={picks?.[decision.key] ?? null}
-											onPick={(pick) => setPicks((current) => ({ ...current, [decision.key]: pick }))}
-										/>
-									))}
+							{preview && !preview.valid && (
+								<Stack gap={8}>
+									<Banner role="alert" tone="danger" title={t("review.invalid")} />
+									<IssueList issues={preview.issues} />
 								</Stack>
 							)}
-							{settings.length > 0 && (
-								<Stack as="section" gap={8} aria-label={t("review.settings")} data-testid="review-settings">
-									<Heading as="h3" variant="label">
-										{t("review.settings")}
-									</Heading>
-									<Stack as="ul" gap={8}>
-										{settings.map((setting) => (
-											<Inline
-												as="li"
-												key={setting.path}
-												wrap
-												justify="between"
-												gap={8}
-												border="all"
-												radius="md"
-												background="tool"
-												paddingX={12}
-												paddingY={8}
-											>
-												<Text as="code" variant="caption" mono weight="semibold">
-													{setting.path}:{" "}
+							{problems.length > 0 && (
+								<Stack gap={8}>
+									<Banner role="alert" tone="danger" title={t("review.problems")} />
+									<List>
+										{problems.map((problem) => (
+											<ListItem key={`${problem.id}:${problem.message}`}>{problem.message}</ListItem>
+										))}
+									</List>
+								</Stack>
+							)}
+							{preview?.valid && (
+								<>
+									{!onlyDrops && (
+										<Inline
+											gap={8}
+											border="all"
+											radius="lg"
+											background="tool"
+											paddingX={12}
+											paddingY={8}
+											data-testid="review-summary"
+										>
+											{dataChanges === 0 ? (
+												<Text as="span">
+													<CheckmarkOutline size={16} aria-hidden />
 												</Text>
-												<Inline gap={8}>
-													<Text variant="caption" mono tone="muted">
-														{settingText(setting.from, t("review.unset"))}
-													</Text>
-													<Text variant="caption" mono>
-														{" -> "}
-													</Text>
-													<Box as="span" background="selected" radius="sm" paddingX={8}>
-														<Text variant="caption" mono weight="medium">
-															{settingText(setting.to, t("review.unset"))}
+											) : (
+												<Text as="span" tone="muted">
+													<Information size={16} aria-hidden />
+												</Text>
+											)}
+											<Text as="p">
+												{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}
+											</Text>
+										</Inline>
+									)}
+									{preview.baseline === "file" && (
+										<Text as="p" variant="caption" tone="muted">
+											{t("review.baselineFile")}
+										</Text>
+									)}
+									{decisions.length > 0 && (
+										<Stack as="section" gap={8} aria-label={t("review.decisions")}>
+											<Heading as="h3" variant="label">
+												{t("review.decisions")}
+											</Heading>
+											<Text as="p" variant="caption" tone="muted">
+												{t("review.decisionsHint")}
+											</Text>
+											{decisions.map((decision) => (
+												<Decision
+													key={decision.key}
+													decision={decision}
+													picked={picks?.[decision.key] ?? null}
+													onPick={(pick) => setPicks((current) => ({ ...current, [decision.key]: pick }))}
+												/>
+											))}
+										</Stack>
+									)}
+									{settings.length > 0 && (
+										<Stack as="section" gap={8} aria-label={t("review.settings")} data-testid="review-settings">
+											<Heading as="h3" variant="label">
+												{t("review.settings")}
+											</Heading>
+											<Stack as="ul" gap={8}>
+												{settings.map((setting) => (
+													<Inline
+														as="li"
+														key={setting.path}
+														wrap
+														justify="between"
+														gap={8}
+														border="all"
+														radius="md"
+														background="tool"
+														paddingX={12}
+														paddingY={8}
+													>
+														<Text as="code" variant="caption" mono weight="semibold">
+															{setting.path}:{" "}
 														</Text>
-													</Box>
-												</Inline>
-											</Inline>
-										))}
-									</Stack>
-								</Stack>
+														<Inline gap={8}>
+															<Text variant="caption" mono tone="muted">
+																{settingText(setting.from, t("review.unset"))}
+															</Text>
+															<Text variant="caption" mono>
+																{" -> "}
+															</Text>
+															<Box as="span" background="selected" radius="sm" paddingX={8}>
+																<Text variant="caption" mono weight="medium">
+																	{settingText(setting.to, t("review.unset"))}
+																</Text>
+															</Box>
+														</Inline>
+													</Inline>
+												))}
+											</Stack>
+										</Stack>
+									)}
+									{others.length > 0 && (
+										<Stack as="section" gap={8} aria-label={t("review.changes")}>
+											<Heading as="h3" variant="label">
+												{t("review.changes")}
+											</Heading>
+											<Stack as="ul" gap={8}>
+												{others.map((impact) => (
+													<Impact key={impact.key} impact={impact} />
+												))}
+											</Stack>
+										</Stack>
+									)}
+									{drops.map((impact) => {
+										const removal = removalOf(impact);
+										if (!removal || !impact.drop) return null;
+										return (
+											<DropChange
+												key={impact.key}
+												impact={impact as ChangeImpact & { drop: CollectionDropImpact }}
+												removal={removal}
+												unlinked={unlinked[removal.name]}
+												typed={typed[removal.name] ?? ""}
+												onType={(value) => setTyped((current) => ({ ...current, [removal.name]: value }))}
+												onUnlink={() => unlinkMutation.mutate(removal.name)}
+												unlinking={unlinkMutation.isPending}
+												onExport={() => setExporting(removal)}
+											/>
+										);
+									})}
+									{!onlyDrops && preview.transforms.length > 0 && (
+										<Text as="p" variant="caption" tone="muted">
+											{t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") })}
+										</Text>
+									)}
+								</>
 							)}
-							{preview.impacts.length > 0 && (
-								<Stack as="section" gap={8} aria-label={t("review.changes")}>
-									<Heading as="h3" variant="label">
-										{t("review.changes")}
-									</Heading>
-									<Stack as="ul" gap={8}>
-										{preview.impacts.map((impact) => (
-											<Impact key={impact.key} impact={impact} />
-										))}
-									</Stack>
-								</Stack>
-							)}
-							{preview.transforms.length > 0 && (
-								<Text as="p" variant="caption" tone="muted">
-									{t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") })}
-								</Text>
-							)}
-						</>
-					)}
-					{saveError && <Banner role="alert" tone="danger" title={saveError.message} />}
-				</Stack>
-				<DialogFooter>
-					{saveError?.conflict || saveError?.applyFailed ? (
-						<Button type="button" onClick={reloadPage}>
-							{t("save.reload")}
-						</Button>
-					) : (
-						<>
-							<TextButton type="button" onClick={() => onOpenChange(false)}>
-								{tc("cancel")}
-							</TextButton>
-							<Button type="button" disabled={!ready} onClick={() => void save()}>
-								{saving ? tc("saving") : t("review.save")}
+							{saveError && <Banner role="alert" tone="danger" title={saveError.message} />}
+						</Stack>
+					</SheetBody>
+					<SheetFooter>
+						{saveError?.conflict || saveError?.applyFailed ? (
+							<Button type="button" onClick={reloadPage}>
+								{t("save.reload")}
 							</Button>
-						</>
-					)}
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+						) : (
+							<>
+								<TextButton type="button" onClick={() => onOpenChange(false)}>
+									{tc("cancel")}
+								</TextButton>
+								<Button
+									type="button"
+									variant={drops.length > 0 ? "danger" : "primary"}
+									disabled={!ready}
+									onClick={() => void save()}
+								>
+									{saving ? tc("saving") : drops.length > 0 ? t("drop.apply") : t("review.save")}
+								</Button>
+							</>
+						)}
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
+			<ExportDialog
+				open={exporting !== null}
+				onOpenChange={(next) => !next && setExporting(null)}
+				kind="collection"
+				collection={exporting?.name}
+				noun={exporting?.label}
+			/>
+		</>
 	);
 }

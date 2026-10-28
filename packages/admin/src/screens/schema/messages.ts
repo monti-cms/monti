@@ -78,11 +78,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.none": "This schema has no collections yet.",
 		"collection.kindDocument": "Document",
 		"collection.kindItem": "Item",
-		"collection.remove": "Remove collection",
 		"collection.railTitle": "Collections",
-		"collection.removeTitle": "Remove collection {name}",
-		"collection.removeDescription":
-			"Removes the collection from the schema. Data handling options are chosen in the review step.",
 		"sheet.optional": "optional",
 		"file.title": "Edited in monti.schema.ts",
 		"file.messages": "Admin text overrides (admin.messages)",
@@ -166,11 +162,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.none": "이 스키마에는 아직 컬렉션이 없어요.",
 		"collection.kindDocument": "문서",
 		"collection.kindItem": "항목",
-		"collection.remove": "컬렉션 삭제",
 		"collection.railTitle": "컬렉션",
-		"collection.removeTitle": "컬렉션 {name} 삭제",
-		"collection.removeDescription":
-			"컬렉션을 스키마에서 삭제해요. 저장된 데이터 처리 방식은 변경 검토 단계에서 선택해요.",
 		"sheet.optional": "선택",
 		"file.title": "monti.schema.ts에서 고치는 설정",
 		"file.messages": "관리자 문구 덮어쓰기 (admin.messages)",

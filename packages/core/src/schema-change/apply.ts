@@ -8,7 +8,13 @@ import { ServiceError } from "../core/types";
 import type { SchemaMigration } from "../schema-file/types";
 import type { Site } from "../site";
 import { diffSchema } from "./diff";
-import { applyTransforms, checkTransforms, type TransformProblem, transformCollections } from "./transforms";
+import {
+	applyTransforms,
+	checkTransforms,
+	droppedCollections,
+	type TransformProblem,
+	transformCollections,
+} from "./transforms";
 import type { SchemaDiff, SchemaLike } from "./types";
 
 /**
@@ -93,7 +99,8 @@ export class SchemaChangeError extends CmsError {
 brandErrorClass(SchemaChangeError, "SchemaChangeError");
 
 export interface ApplyOptions extends Omit<PlanOptions, "store"> {
-	readonly store: Pick<SchemaChangeStore, "readSchemaState" | "appliedSchemaTransforms" | "applySchemaChange">;
+	readonly store: Pick<SchemaChangeStore, "readSchemaState" | "appliedSchemaTransforms" | "applySchemaChange"> &
+		Partial<Pick<SchemaChangeStore, "collectionFootprint">>;
 	/** Do everything and report, but change nothing. */
 	readonly dryRun?: boolean;
 }
@@ -133,8 +140,34 @@ export async function applySchemaChange(options: ApplyOptions): Promise<SchemaAp
 	}
 	const conflicts: { id: string; entryId: string; from: string; to: string }[] = [];
 
+	const drops = plan.pending.flatMap((item) =>
+		item.op === "dropCollection" ? [{ id: item.id, collection: item.collection }] : [],
+	);
+	// Entries of other collections that still point into a collection to drop stop the apply before anything is written (the store checks again inside its transaction).
+	if (drops.length > 0 && store.collectionFootprint) {
+		const footprints = await store.collectionFootprint({ collections: droppedCollections(plan.pending), detail: true });
+		const blocked = drops.flatMap((item) => {
+			const count = footprints[item.collection]?.incoming?.relations ?? 0;
+			return count > 0
+				? [
+						{
+							id: item.id,
+							message: `${count} ${count === 1 ? "entry" : "entries"} of other collections still point at "${item.collection}"; unlink them first`,
+						},
+					]
+				: [];
+		});
+		if (blocked.length > 0) {
+			throw new SchemaChangeError(
+				`cannot apply: ${blocked.map((problem) => `${problem.id}: ${problem.message}`).join("; ")}`,
+				blocked,
+			);
+		}
+	}
+
 	const result: AppliedSchemaChange = await store.applySchemaChange({
 		transformIds: (options.migrations ?? []).map((item) => item.id),
+		dropCollections: drops,
 		collections: transformCollections(plan.pending),
 		schema: snapshotSchema(site),
 		dryRun: options.dryRun,

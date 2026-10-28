@@ -63,6 +63,7 @@ export const exportMessages = defineMessages("cms-admin.export", {
 		"dialog.title.entry": "Export this entry",
 		"dialog.title.selected": ({ count, ...vars }) =>
 			`Export ${count} selected ${String(vars.noun ?? "").trim() ? `${enNoun(vars)} ` : ""}${one(count) ? "entry" : "entries"}`,
+		"dialog.title.collection": ({ noun }) => `Export ${String(noun ?? "").trim() || "the collection"}`,
 		"dialog.description": "This is what goes into the archive.",
 	},
 	ko: {
@@ -110,6 +111,7 @@ export const exportMessages = defineMessages("cms-admin.export", {
 		"menu.exportEntry": "이 글 내보내기",
 		"dialog.title.entry": "이 글 내보내기",
 		"dialog.title.selected": (vars) => `선택한 ${koNoun(vars)} ${vars.count}개 내보내기`,
+		"dialog.title.collection": ({ noun }) => `${String(noun ?? "").trim() || "컬렉션"} 내보내기`,
 		"dialog.description": "보관 파일에 담기는 내용이에요.",
 	},
 });

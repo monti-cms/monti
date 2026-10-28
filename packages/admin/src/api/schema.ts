@@ -28,6 +28,8 @@ export interface EditRequest {
 	readonly schema: unknown;
 	readonly transforms?: readonly SuggestedTransform[];
 	readonly renames: readonly RenameInput[];
+	/** Collections the draft removed whose entries are deleted with them (a `dropCollection` each). */
+	readonly dropCollections?: readonly string[];
 }
 
 export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSignal) =>
@@ -45,3 +47,10 @@ export const saveSchema = (
 		method: "PUT",
 		json: request,
 	});
+
+/**
+ * Clears the relation fields of every entry that points into `collection`, so it can be deleted (`POST /v1/references/unlink`). The entries stay; only the
+ * collection's entries are taken out of their relation fields. Answers how many entries changed.
+ */
+export const unlinkCollection = (site: Site, collection: string) =>
+	adminFetch<{ entries: number }>(site, "/v1/references/unlink", { method: "POST", json: { collection } });
