@@ -239,6 +239,7 @@ export function MediaTable({ library, uploads, drop, folderActions, menuFor, onT
 								folders={library.folders}
 								folderActions={folderActions}
 								span={7}
+								countLabel={(count) => String(count)}
 								onSelectFolder={(id) => library.goToFolder(id === "all" ? "" : id)}
 							/>
 						)}

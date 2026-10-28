@@ -90,7 +90,15 @@ const screen =
 		);
 	};
 
-const tile = (canvasElement: HTMLElement, name: RegExp) => within(canvasElement).findByRole("button", { name });
+/** A tile of the grid (the sidebar lists the folders too, so the search is inside the grid). */
+const tile = async (canvasElement: HTMLElement, name: RegExp) => {
+	const grid = await waitFor(() => {
+		const found = canvasElement.querySelector("[data-slot=drop-area]");
+		if (!found) throw new Error("The grid is not there yet");
+		return found as HTMLElement;
+	});
+	return within(grid).findByRole("button", { name });
+};
 const area = () => document.querySelector("[data-slot=drop-area]") as HTMLElement;
 /** A right click on an element, where it is (the menu opens at the pointer). */
 const rightClick = (element: Element) => {
@@ -246,7 +254,7 @@ export const PanelMenu: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await tile(canvasElement, /^desk-morning/));
 		const panel = await body().findByRole("complementary", { name: "desk-morning.jpg" });
-		await userEvent.click(within(panel).getByRole("button", { name: "더보기" }));
+		await userEvent.click(within(panel).getByRole("button", { name: /^더보기:/ }));
 		await body().findByRole("menuitem", { name: "파일 바꾸기" });
 	},
 };
@@ -258,7 +266,7 @@ export const ReplaceDialog: Story = {
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await tile(canvasElement, /^desk-morning/));
 		const panel = await body().findByRole("complementary", { name: "desk-morning.jpg" });
-		await userEvent.click(within(panel).getByRole("button", { name: "더보기" }));
+		await userEvent.click(within(panel).getByRole("button", { name: /^더보기:/ }));
 		await userEvent.click(await body().findByRole("menuitem", { name: "파일 바꾸기" }));
 		const input = document.querySelector("input[data-slot=replace-input]") as HTMLInputElement;
 		const data = new DataTransfer();
@@ -289,7 +297,7 @@ export const MoveMenu: Story = {
 		await tile(canvasElement, /^desk-morning/);
 		await userEvent.click(within(canvasElement).getByRole("checkbox", { name: /desk-morning/ }));
 		await userEvent.click(within(canvasElement).getByRole("checkbox", { name: /cafe-window/ }));
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: /폴더로/ }));
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: /^폴더로$/ }));
 		await body().findByRole("menuitem", { name: "+ 새 폴더" });
 	},
 };
@@ -324,6 +332,17 @@ export const AltFilterAllPicked: Story = {
 export const Searching: Story = {
 	tags: ["visual"],
 	render: screen(backendOf(), { search: "folder=blog&search=cover&scope=all" }),
+};
+
+// 정렬: the order menu, newest upload first by default.
+export const SortMenu: Story = {
+	tags: ["visual"],
+	render: screen(backendOf()),
+	play: async ({ canvasElement }) => {
+		await tile(canvasElement, /^desk-morning/);
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "최근 올린순" }));
+		await body().findByRole("menuitemradio", { name: "큰 파일순" });
+	},
 };
 
 // 종류 열기: images and files with their counts.

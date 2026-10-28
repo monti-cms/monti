@@ -97,15 +97,15 @@ export class MediaBackend {
 		const kind = query.get("kind");
 		const alt = query.get("alt");
 		const sort = query.get("sort") ?? "uploaded";
-		const ordered = [...base].sort((a, b) =>
-			sort === "name"
-				? a.filename.toLowerCase().localeCompare(b.filename.toLowerCase())
-				: sort === "size"
-					? (b.byteSize ?? 0) - (a.byteSize ?? 0)
-					: sort === "uploadedAsc"
-						? a.id.localeCompare(b.id)
-						: b.id.localeCompare(a.id),
-		);
+		// The list is kept newest first as given; the other orders sort it.
+		const ordered =
+			sort === "uploadedAsc"
+				? [...base].reverse()
+				: sort === "name"
+					? [...base].sort((a, b) => a.filename.toLowerCase().localeCompare(b.filename.toLowerCase()))
+					: sort === "size"
+						? [...base].sort((a, b) => (b.byteSize ?? 0) - (a.byteSize ?? 0))
+						: base;
 		const items = ordered.filter(
 			(item) =>
 				(kind !== "image" || isImage(item)) &&
