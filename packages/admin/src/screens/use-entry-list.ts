@@ -11,8 +11,10 @@ import { getPreferences, preferencesKeys, savePreferences as putPreferences } fr
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminRouter, useAdminSearchParams } from "../router";
+import { bulkBarMessages } from "./entries/bulk-bar.messages";
+import { toSelection } from "./entries/bulk-model";
 import { copyTitle } from "./entries/entry-form";
-import { actionTargets, rowMenuActions, toSelection } from "./list-row-menu";
+import { actionTargets, rowMenuActions } from "./list-row-menu";
 import {
 	isExplorerMode,
 	type ListState,
@@ -187,6 +189,8 @@ export function useEntryList(mode: ListMode) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset whenever the visible query changes
 	useEffect(() => setSelectedIds(new Set()), [data.apiQuery]);
 	const { confirm, confirmDiscard, dialog: confirmDialog } = useConfirm();
+	// The entries whose export dialog is open (from the bar's ⋯ or the menu of several rows).
+	const [exportIds, setExportIds] = useState<string[] | null>(null);
 	const { recordTarget, openRecord, showRecord, closeRecord, setRecordDirty, guardDialog } = useRecordPanel({
 		collection,
 		mode,
@@ -197,7 +201,11 @@ export function useEntryList(mode: ListMode) {
 		listKey: data.listKey,
 		state,
 		options,
-		onResults: (results) => setSelectedIds(new Set(results.filter((result) => !result.ok).map((result) => result.id))),
+		// A change of a relation leaves the rows picked: its menu is still open to change them again.
+		onResults: (results, op) => {
+			if (!op.startsWith("relation."))
+				setSelectedIds(new Set(results.filter((result) => !result.ok).map((result) => result.id)));
+		},
 	});
 	const { bulk, restore, invalidateEntries } = mutations;
 
@@ -233,6 +241,16 @@ export function useEntryList(mode: ListMode) {
 			destructive: true,
 		});
 		if (ok) await bulk("trash", tc("lifecycle.trash"), targets);
+	};
+
+	const tb = useTranslator(bulkBarMessages);
+	const confirmPublish = async (targets: BulkSelection[]) => {
+		const ok = await confirm({
+			title: tc("lifecycle.publish"),
+			description: tb("ask.publish", { count: targets.length, ...nounVars(site, collection) }),
+			confirmLabel: tc("lifecycle.publish"),
+		});
+		if (ok) await bulk("publish", tc("lifecycle.publish"), targets);
 	};
 
 	const confirmArchive = async (targets: BulkSelection[]) => {
@@ -284,13 +302,15 @@ export function useEntryList(mode: ListMode) {
 		rowMenuActions(
 			site,
 			actionTargets(item, items, selectedIds),
-			{ mode, isRecord, isContent, folders: showsFolders ? folders : null, collection, options },
+			{ mode, isRecord, isContent, folders: showsFolders ? folders : null, collection },
 			{
 				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
 				openRecord: (target) => void openRecord({ collection, id: target.id }),
 				duplicate: (target) => duplicate(target),
 				restore: (targets) => void restore(targets),
+				confirmPublish: (targets) => void confirmPublish(targets),
+				exportEntries: (ids) => setExportIds(ids),
 				confirmTrash: (targets) => void confirmTrash(targets),
 				confirmArchive: (targets) => void confirmArchive(targets),
 				confirmPermanentDelete: (targets) => void confirmPermanentDelete(targets),
@@ -335,6 +355,11 @@ export function useEntryList(mode: ListMode) {
 		confirmDialog,
 		/** The discard dialog of a link clicked while the panel has changes. Render once per screen. */
 		guardDialog,
+		/** Opens the export of these entries. */
+		exportEntries: (ids: string[]) => setExportIds(ids),
+		/** The entries whose export dialog is open, or `null`. */
+		exportIds,
+		closeExport: () => setExportIds(null),
 		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: entriesKeys.taxonomy() }),
 		invalidateEntries,
 		createNew,

@@ -48,6 +48,8 @@ export type MenuAction =
 			shortcut?: string;
 	  }
 	| { kind: "sub"; label: string; icon?: MontiIcon; items: MenuAction[]; emptyLabel?: string; disabled?: boolean }
+	/** A second level that holds rows of its own (boxes to tick, a search row), given as the menu's rows. */
+	| { kind: "choice"; label: string; icon?: MontiIcon; content: React.ReactNode }
 	| { kind: "label"; label: string }
 	| { kind: "separator" };
 
@@ -89,6 +91,16 @@ function ContextItems({ actions }: { actions: MenuAction[] }) {
 								<ContextItems actions={action.items} />
 							)}
 						</ContextMenuSubContent>
+					</ContextMenuSub>
+				);
+			case "choice":
+				return (
+					<ContextMenuSub key={key}>
+						<ContextMenuSubTrigger>
+							{action.icon && <action.icon aria-hidden />}
+							{action.label}
+						</ContextMenuSubTrigger>
+						<ContextMenuSubContent>{action.content}</ContextMenuSubContent>
 					</ContextMenuSub>
 				);
 			case "item":
@@ -137,6 +149,16 @@ function DropdownItems({ actions }: { actions: MenuAction[] }) {
 								<DropdownItems actions={action.items} />
 							)}
 						</DropdownMenuSubContent>
+					</DropdownMenuSub>
+				);
+			case "choice":
+				return (
+					<DropdownMenuSub key={key}>
+						<DropdownMenuSubTrigger>
+							{action.icon && <action.icon aria-hidden />}
+							{action.label}
+						</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent>{action.content}</DropdownMenuSubContent>
 					</DropdownMenuSub>
 				);
 			case "item":

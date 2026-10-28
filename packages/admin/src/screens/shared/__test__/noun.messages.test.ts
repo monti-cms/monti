@@ -2,7 +2,7 @@ import type { CmsConfig } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
-import { taxonomyActions } from "../../entries/bulk-bar";
+import { bulkBarMessages } from "../../entries/bulk-bar.messages";
 import { entryEditorShellMessages } from "../../entries/entry-editor-shell.messages";
 import { lifecycleConfirm } from "../../entries/lifecycle-confirm";
 import { entriesMessages } from "../../entries/messages";
@@ -90,8 +90,10 @@ describe("collection label in admin messages", () => {
 			["ko", "메모", "메모"],
 		] as const) {
 			const { site, name } = siteLabeled(label, language);
-			const asks = taxonomyActions(site, name).map((action) => action.ask(2, "x"));
-			expect(asks.length).toBeGreaterThan(0);
+			const t = site.createTranslator(bulkBarMessages);
+			const asks = (["ask.publish", "ask.archive", "ask.unarchive"] as const).map((key) =>
+				t(key, { count: 2, ...nounVars(site, name) }),
+			);
 			for (const ask of asks) {
 				expect(ask).toContain(expected);
 				expect(ask).not.toMatch(/post|글/);

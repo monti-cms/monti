@@ -1,5 +1,4 @@
 import type * as React from "react";
-import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 
 /**
@@ -97,55 +96,27 @@ type SelectAll = {
 };
 
 /**
- * The select-all of a list: it hangs 26px outside the toolbar's left edge, on the line of the rows' checks, level with the toolbar's first line (24px down, half of 48) even when a narrow toolbar wraps onto a second. It is hidden while nothing is picked
- * and shows when the pointer is on the toolbar. It shows a bar while only some rows of the page are picked and a ✓ when all of them are.
- */
-function SelectAllCheck({ selectAll }: { selectAll: SelectAll }) {
-	return (
-		<span
-			data-slot="select-all"
-			className={cn(
-				"absolute top-6 -left-[26px] flex -translate-y-1/2 pointer-coarse:opacity-100 focus-within:opacity-100",
-				selectAll.state === "none" ? "opacity-0 group-hover/toolbar:opacity-100" : "opacity-100",
-			)}
-		>
-			<Checkbox
-				checked={selectAll.state === "all"}
-				indeterminate={selectAll.state === "some"}
-				onCheckedChange={(next) => selectAll.onChange(next === true)}
-				aria-label={selectAll.label}
-				className="bg-monti-page"
-			/>
-		</span>
-	);
-}
-
-/**
- * The row under the page title: tabs on the left, filters on the right ({@link PageToolbarEnd}), 48px high with a rule below. Once rows are picked
- * the same place becomes the bulk bar. Over a table, `inset` pulls it 12px inside like the rows, so the first letters line up with theirs while its
- * rule runs to the edge, and `selectAll` hangs the select-all check in the left margin (the table must not scroll itself, or the margin is cut off).
+ * The row under the page title: tabs on the left, filters on the right ({@link PageToolbarEnd}), 48px high with a rule below. Over a table, `inset` pulls
+ * it 12px inside like the rows, so the first letters line up with theirs while its rule runs to the edge.
  */
 function PageToolbar({
 	inset = false,
-	selectAll,
 	className,
 	children,
 	...props
 }: React.ComponentProps<"div"> & {
 	inset?: boolean;
-	selectAll?: SelectAll;
 }) {
 	return (
 		<div
 			data-slot="page-toolbar"
 			className={cn(
-				"group/toolbar relative flex min-h-monti-toolbar flex-wrap items-center gap-monti-20 border-monti-default border-b",
+				"flex min-h-monti-toolbar flex-wrap items-center gap-monti-20 border-monti-default border-b",
 				inset && "px-monti-12",
 				className,
 			)}
 			{...props}
 		>
-			{selectAll && <SelectAllCheck selectAll={selectAll} />}
 			{children}
 		</div>
 	);

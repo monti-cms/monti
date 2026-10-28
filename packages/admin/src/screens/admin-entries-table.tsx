@@ -78,8 +78,14 @@ interface TableProps {
 	onRetry: () => void;
 	/** Adds an item. Shown in the empty list as the way to start. */
 	addAction?: { label: string; run: () => void };
-	/** What replaces the chips row while rows are picked (the bulk bar). It is given the select-all, which moves onto it. */
-	bulkBar?: (selectAll: { state: SelectAllState; onChange: (all: boolean) => void; label: string }) => ReactNode;
+	/**
+	 * What replaces the head row while rows are picked (the bulk bar). It is given the select-all, which moves onto it, and how many columns the table has,
+	 * the bar being a row of it.
+	 */
+	bulkBar?: (parts: {
+		selectAll: { state: SelectAllState; onChange: (all: boolean) => void; label: string };
+		colSpan: number;
+	}) => ReactNode;
 }
 
 export function AdminEntriesTable({
@@ -171,7 +177,7 @@ export function AdminEntriesTable({
 		onChange: (all: boolean) => onSelectionChange(new Set(all ? items.map((item) => item.id) : [])),
 		label: t("list.selectAll"),
 	};
-	/** Rows are picked: the bulk bar is above the head row, and holds the select-all. */
+	/** Rows are picked: the bulk bar is the head row, and holds the select-all. */
 	const picking = selectedIds.size > 0 && bulkBar !== undefined;
 	const select = (item: ListEntriesItem, on: boolean) => {
 		const next = new Set(selectedIds);
@@ -183,21 +189,19 @@ export function AdminEntriesTable({
 	return (
 		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0}>
 			<Box width="full" shrink={false}>
-				{picking
-					? bulkBar(selectAll)
-					: chips.length > 0 && (
-							<ChipRow>
-								{chips.map((chip) => (
-									<Chip
-										key={chip.key}
-										onRemove={() => onStateChange(chip.clear)}
-										removeLabel={t("listMenu.chipRemove", { label: chip.label })}
-									>
-										{chip.label}
-									</Chip>
-								))}
-							</ChipRow>
-						)}
+				{chips.length > 0 && (
+					<ChipRow>
+						{chips.map((chip) => (
+							<Chip
+								key={chip.key}
+								onRemove={() => onStateChange(chip.clear)}
+								removeLabel={t("listMenu.chipRemove", { label: chip.label })}
+							>
+								{chip.label}
+							</Chip>
+						))}
+					</ChipRow>
+				)}
 				{errorMessage && (
 					<Box paddingTop={12}>
 						<LoadErrorAlert message={errorMessage} onRetry={onRetry} />
@@ -207,18 +211,26 @@ export function AdminEntriesTable({
 
 			<ListScroll>
 				<Box ref={scrollRef} width="full">
-					<Table container="none" layout="fixed">
-						<ListHead
-							columns={head}
-							end={actionsSize(isTrash)}
-							add={add}
-							selectAll={picking ? undefined : selectAll}
-							moveLabel={t("list.columnMove")}
-							onPlace={columns.place}
-							onStep={columns.step}
-							onPreview={columns.setPreview}
-							onMenuOpenChange={(open) => setFrozenChips(open ? liveChips : null)}
-						/>
+					<Table
+						container="none"
+						layout="fixed"
+						columns={[...shown.map((column) => columnSize(site, collection, column)), actionsSize(isTrash)]}
+					>
+						{picking ? (
+							bulkBar({ selectAll, colSpan: shown.length + 1 })
+						) : (
+							<ListHead
+								columns={head}
+								end={actionsSize(isTrash)}
+								add={add}
+								selectAll={selectAll}
+								moveLabel={t("list.columnMove")}
+								onPlace={columns.place}
+								onStep={columns.step}
+								onPreview={columns.setPreview}
+								onMenuOpenChange={(open) => setFrozenChips(open ? liveChips : null)}
+							/>
+						)}
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
 							{explorer && (
 								<EntriesTableFolderRows

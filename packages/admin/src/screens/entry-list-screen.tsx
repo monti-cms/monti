@@ -9,11 +9,13 @@ import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
-import { heldRelations, toSelection } from "./list-row-menu";
+import { toSelection } from "./entries/bulk-model";
+import { ExportDialog } from "./export/export-dialog";
 import { ListSearch } from "./list-search";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminFrame, AdminNavProvider } from "./shared/admin-frame";
+import { collectionNoun } from "./shared/noun.messages";
 import { usePublishScreenContext } from "./shared/screen-context";
 import { DockedPanel } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
@@ -42,6 +44,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }: { list: EntryList }) {
+	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
 	const { state, data, mode, folders } = list;
@@ -59,16 +62,17 @@ function EntryListBody({ list }: { list: EntryList }) {
 			<Inline position="relative" align="stretch" gap={0} grow minHeight={0}>
 				<Stack gap={0} grow minWidth={0}>
 					<AdminEntriesTable
-						bulkBar={(selectAll) => (
+						bulkBar={({ selectAll, colSpan }) => (
 							<BulkBar
 								collection={state.collection}
 								mode={mode}
-								selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
-								held={heldRelations(items.filter((item) => list.selectedIds.has(item.id)))}
+								rows={items.filter((item) => list.selectedIds.has(item.id))}
 								folders={folders?.list ?? null}
 								selectAll={selectAll}
+								colSpan={colSpan}
 								onClearSelection={() => list.setSelectedIds(new Set())}
 								onRun={list.mutations.bulk}
+								onExport={list.exportEntries}
 							/>
 						)}
 						collection={state.collection}
@@ -151,6 +155,13 @@ function EntryListBody({ list }: { list: EntryList }) {
 			{list.folderDialogs}
 			{list.confirmDialog}
 			{list.guardDialog}
+			<ExportDialog
+				open={list.exportIds !== null}
+				onOpenChange={(open) => !open && list.closeExport()}
+				kind="selected"
+				ids={list.exportIds ?? []}
+				noun={collectionNoun(site, state.collection)}
+			/>
 		</>
 	);
 }

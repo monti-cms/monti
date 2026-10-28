@@ -64,7 +64,8 @@ export function useEntryMutations({
 	listKey: ReturnType<typeof entriesKeys.list>;
 	state: ListState;
 	options: TaxonomyOptions;
-	onResults: (results: BulkItemResult[]) => void;
+	/** Per-item results of a change, with the operation that made them. */
+	onResults: (results: BulkItemResult[], op: OptimisticOp) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -108,7 +109,7 @@ export function useEntryMutations({
 				applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
 		},
 		invalidate: [entriesKeys.all, foldersKeys.all],
-		onSuccess: onResults,
+		onSuccess: (results, { op }) => onResults(results, op),
 	});
 
 	// A lifecycle change goes only to the rows that can take it (the store's own rule): archiving a selection that holds archived rows archives the

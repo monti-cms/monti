@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkBar } from "./bulk-bar";
 import { Button } from "./button";
 import { Caret } from "./caret";
 import { Count } from "./count";
@@ -83,18 +82,6 @@ export const Toolbar: Story = {
 			</Tabs>
 			<Filters />
 		</PageToolbar>
-	),
-};
-
-/** Rows picked: the same place becomes the bulk bar, with the same inset, so the first letter does not move. */
-export const Picked: Story = {
-	parameters: { bleed: true },
-	render: () => (
-		<BulkBar label="3개 선택" clearLabel="고르기 끝" onClear={() => {}}>
-			<TextButton>발행</TextButton>
-			<TextButton>폴더로 옮기기</TextButton>
-			<TextButton>태그 붙이기</TextButton>
-		</BulkBar>
 	),
 };
 

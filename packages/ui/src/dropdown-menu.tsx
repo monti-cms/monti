@@ -162,31 +162,38 @@ const BOX_MARK = (
 
 /**
  * A row that is on or off. By default the ✓ is at its end while on. With `box` the row starts with a 14px check box instead (a list of values where
- * several can be on: the tags to filter by, the columns to show), and a `MenuShortcut` at the end can carry a count.
+ * several can be on: the tags to filter by, the columns to show), and a `MenuShortcut` at the end can carry a count. `mixed` is the box of a value some of
+ * several things hold: filled with a bar, and read as "mixed" (pressing it turns it on, as for an unchecked row).
  */
 function DropdownMenuCheckboxItem({
 	className,
 	children,
 	checked,
 	box = false,
+	mixed = false,
 	...props
 }: MenuPrimitive.CheckboxItem.Props & {
 	/** Start the row with a check box (several can be on) instead of ending it with a ✓. */
 	box?: boolean;
+	/** Some, not all: with `box`, a bar in a filled box. Pass `checked={false}`. */
+	mixed?: boolean;
 }) {
 	return (
 		<MenuPrimitive.CheckboxItem
 			data-slot="dropdown-menu-checkbox-item"
+			data-mixed={mixed || undefined}
 			className={cn(MENU_ITEM, "group/item", className)}
 			checked={checked}
 			{...props}
+			{...(mixed ? { "aria-checked": "mixed" as const } : {})}
 		>
 			{box && (
 				<span
 					data-slot="menu-box"
-					className="relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint text-monti-on-emphasis transition-colors group-data-checked/item:border-monti-contrast group-data-checked/item:bg-monti-emphasis"
+					className="relative flex size-3.5 shrink-0 items-center justify-center rounded-monti-sm border-[1.5px] border-monti-faint text-monti-on-emphasis transition-colors group-data-checked/item:border-monti-contrast group-data-mixed/item:border-monti-contrast group-data-checked/item:bg-monti-emphasis group-data-mixed/item:bg-monti-emphasis"
 				>
 					<MenuPrimitive.CheckboxItemIndicator render={<span className="flex">{BOX_MARK}</span>} />
+					{mixed && <span aria-hidden className="h-[1.5px] w-1.5 bg-current" />}
 				</span>
 			)}
 			{children}

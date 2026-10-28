@@ -12,9 +12,16 @@ function Table({
 	layout = "auto",
 	stickyHeader = false,
 	width,
+	columns,
 	style,
+	children,
 	...props
 }: React.ComponentProps<"table"> & {
+	/**
+	 * The width in px of each column, in order (`undefined` for one that takes the room the others leave). A fixed-layout table then takes its widths from
+	 * here and not from its first row, so a row that is one cell across (the bulk bar) leaves the columns where they are.
+	 */
+	columns?: readonly (number | undefined)[];
 	/** A total width in px that the screen computes (the sum of resized columns); without it the table fills its box. */
 	width?: number;
 	/**
@@ -39,7 +46,17 @@ function Table({
 				)}
 				style={width === undefined ? style : { ...style, width }}
 				{...props}
-			/>
+			>
+				{columns && (
+					<colgroup>
+						{columns.map((size, index) => (
+							// The columns are a fixed run of the same table, never reordered.
+							<col key={index} style={size === undefined ? undefined : { width: size }} />
+						))}
+					</colgroup>
+				)}
+				{children}
+			</table>
 		</div>
 	);
 }

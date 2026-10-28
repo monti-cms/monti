@@ -84,6 +84,29 @@ beforeEach(() => {
 					ids.length > 0 ? TAGS.filter((tag) => ids.includes(tag.id)) : TAGS.filter((tag) => tag.title.includes(query)),
 			});
 		}
+		if (url.pathname === "/api/monti/v1/bulk" && method === "POST") {
+			const body = JSON.parse(String(init?.body)) as {
+				op: string;
+				field?: string;
+				ids?: string[];
+				items: { id: string; expectedVersion: number }[];
+			};
+			// The server keeps what was changed, so the list read again after it says so.
+			server.posts = server.posts.map((post) => {
+				if (!body.items.some((entry) => entry.id === post.id) || !body.field) return post;
+				const field = body.field;
+				const held = post.relations[field] ?? [];
+				const named = (id: string) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id });
+				const next =
+					body.op === "relation.add"
+						? [...held, ...(body.ids ?? []).filter((id) => !held.some((value) => value.id === id)).map(named)]
+						: held.filter((value) => !(body.ids ?? []).includes(value.id));
+				return { ...post, relations: { ...post.relations, [field]: next } };
+			});
+			return json({
+				results: body.items.map((entry) => ({ id: entry.id, ok: true, version: entry.expectedVersion + 1 })),
+			});
+		}
 		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const items = url.searchParams.get("collection") === "post" ? server.posts : [];
 			return json({ items, total: server.total ?? items.length });
@@ -547,25 +570,37 @@ describe("flow: filter by date", () => {
 });
 
 describe("flow: pick rows and act", () => {
-	it("hangs a check on each row and a select-all on the head row, and the bar replaces the chips row while rows are picked", async () => {
+	it("hangs a check on each row and a select-all on the head row, and the bar replaces the column names in the same place while rows are picked", async () => {
 		nav.setSearch("collection=post&status=draft");
 		await renderList();
 		expect(screen.queryByRole("toolbar")).toBeNull();
-		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
 		// The select-all is on the head row while nothing is picked.
 		expect(head().getByRole("checkbox", { name: t("list.selectAll") })).toBeTruthy();
+		const widths = () =>
+			[...document.querySelectorAll("table colgroup col")].map((col) => (col as HTMLElement).style.width);
+		const before = {
+			widths: widths(),
+			rows: screen.getAllByRole("row").length,
+			groups: screen.getAllByRole("rowgroup").length,
+		};
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "나" }) }));
 		const bar = await screen.findByRole("toolbar");
 		expect(bar.getAttribute("aria-label")).toBe(
 			testSite.createTranslator((await import("../entries/bulk-bar.messages")).bulkBarMessages)("count", { count: 2 }),
 		);
-		// The chips are gone while the bar is there, and the select-all moved onto the bar and shows that only some are picked.
-		expect(
-			screen.queryByRole("button", {
-				name: t("listMenu.chipRemove", { label: `${t("column.status")}: ${statusName("draft")}` }),
-			}),
-		).toBeNull();
+		// It is the head row's place, one row of the same table, and the columns keep their widths: nothing below moves.
+		expect(headRow().contains(bar)).toBe(true);
+		expect(headRow().querySelectorAll("tr")).toHaveLength(1);
+		expect(widths()).toEqual(before.widths);
+		expect({ rows: screen.getAllByRole("row").length, groups: screen.getAllByRole("rowgroup").length }).toEqual({
+			rows: before.rows,
+			groups: before.groups,
+		});
+		expect(within(headRow()).queryByRole("columnheader", { name: t("column.title"), hidden: true })).toBeNull();
+		expect(screen.queryByRole("button", { name: t("column.add") })).toBeNull();
+		// The chips row above stays, and the select-all moved onto the bar and shows that only some are picked.
+		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
 		expect(screen.getAllByRole("checkbox", { name: t("list.selectAll") })).toHaveLength(1);
 		expect(
 			within(bar)
@@ -574,7 +609,7 @@ describe("flow: pick rows and act", () => {
 		).toBe("mixed");
 	});
 
-	it("picks every row of the page with the select-all, and lets go with 'clear selection', which brings the chips back", async () => {
+	it("picks every row of the page with the select-all, and lets go with 'clear selection', which brings the column names back", async () => {
 		nav.setSearch("collection=post&status=draft");
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.selectAll") }));
@@ -586,6 +621,7 @@ describe("flow: pick rows and act", () => {
 			}),
 		);
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
+		expect(head().getByRole("button", { name: t("column.title") })).toBeTruthy();
 		expect(chipNamed(`${t("column.status")}: ${statusName("draft")}`)).toBeTruthy();
 		expect(
 			head()
@@ -610,6 +646,61 @@ describe("flow: pick rows and act", () => {
 		expect(rows.at(-1)?.textContent).toBe(tc("lifecycle.trash"));
 		fireEvent.click(rows.at(-1) as HTMLElement);
 		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
+	});
+});
+
+describe("flow: change the relations of the picked rows", () => {
+	const tagged = (...ids: string[]) => ({
+		tagIds: ids.map((id) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id })),
+	});
+	const bulkCalls = () =>
+		fetchMock.mock.calls
+			.filter(([input, init]) => String(input) === "/api/monti/v1/bulk" && init?.method === "POST")
+			.map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+	const pickTwo = async () => {
+		server.posts = [
+			item("가", { relations: tagged("t-react", "t-next") }),
+			item("나", { relations: tagged("t-react") }),
+			item("다"),
+		];
+		await renderList();
+		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
+		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "나" }) }));
+		await screen.findByRole("toolbar");
+	};
+
+	it("adds a tag some picked rows hold to all of them from 바꾸기, keeps the rows picked and the menu open, and the box turns on", async () => {
+		await pickTwo();
+		fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
+		const next = await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ });
+		expect(next.getAttribute("aria-checked")).toBe("mixed");
+		fireEvent.click(next);
+		await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+		expect(bulkCalls()[0]).toMatchObject({ op: "relation.add", field: "tagIds", ids: ["t-next"] });
+		expect(bulkCalls()[0].items).toHaveLength(2);
+		await waitFor(async () =>
+			expect((await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ })).getAttribute("aria-checked")).toBe(
+				"true",
+			),
+		);
+		// Still picked, still open: the next tick changes the same two rows.
+		expect(screen.getByRole("toolbar")).toBeTruthy();
+		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
+	});
+
+	it("shows the fields directly in the right-click menu of several picked rows, with no 바꾸기 level", async () => {
+		await pickTwo();
+		fireEvent.contextMenu(screen.getByRole("row", { name: /가/ }));
+		const rows = await screen.findAllByRole("menuitem");
+		const labels = rows.map((entry) => entry.textContent);
+		expect(labels).toContain("카테고리");
+		expect(labels).toContain("태그");
+		expect(labels).not.toContain("바꾸기");
+		fireEvent.keyDown(rows.find((entry) => entry.textContent === "태그") as HTMLElement, { key: "ArrowRight" });
+		expect((await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ })).getAttribute("aria-checked")).toBe(
+			"mixed",
+		);
 	});
 });
 

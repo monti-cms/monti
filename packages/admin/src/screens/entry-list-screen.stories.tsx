@@ -357,6 +357,30 @@ export const PageSizeOpen: Story = {
 	},
 };
 
+/** The bar is the head row in the same place: picking a row moves nothing below it, neither the rows nor their columns. */
+export const BulkBarHoldsRows: Story = {
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		const c = within(canvasElement);
+		await c.findByRole("checkbox", { name: "첫 번째 글 선택" });
+		await settle();
+		const place = () => {
+			const first = canvasElement.querySelector("[data-slot=table-body] tr") as HTMLElement;
+			return [
+				first.getBoundingClientRect().top,
+				...[...first.children].map((cell) => cell.getBoundingClientRect().left),
+			].map(Math.round);
+		};
+		const before = place();
+		await userEvent.click(await c.findByRole("checkbox", { name: "첫 번째 글 선택" }));
+		await c.findByText("1개 선택");
+		await expect(place()).toEqual(before);
+		await userEvent.click(await c.findByRole("button", { name: "선택 해제" }));
+		await c.findByRole("button", { name: "제목" });
+		await expect(place()).toEqual(before);
+	},
+};
+
 /** The bulk bar's ⋯ has the rest of the actions, the trash last in red. */
 export const BulkMoreOpen: Story = {
 	...visual,
@@ -368,15 +392,43 @@ export const BulkMoreOpen: Story = {
 	},
 };
 
-/** "Take a tag away" offers only the tags the picked rows hold. */
-export const BulkTagRemoveOpen: Story = {
+/** Two picked rows where both hold 리액트 and only the first holds 성능, so the tag list has a ticked value and a mixed one. */
+const tagRows = [
+	entry("첫 번째 글", {
+		slug: "first-post",
+		status: "published",
+		relations: {
+			tagIds: [
+				{ id: "tag-react", title: "리액트" },
+				{ id: "tag-perf", title: "성능" },
+			],
+		},
+	}),
+	entry("쓰는 중인 글", { slug: "draft-post", relations: { tagIds: [{ id: "tag-react", title: "리액트" }] } }),
+	entry("가을 사진 정리", { slug: "autumn-photos" }),
+];
+
+/** 바꾸기 › 태그: a tag every picked row holds is ticked, one only some hold is a bar with how many, the rest are empty; picking one changes all the rows. */
+export const BulkChangeOpen: Story = {
 	...visual,
-	render: listScreen(server({ folders })),
+	render: listScreen(server({ items: tagRows, folders, total: 148 })),
 	play: async ({ canvasElement }) => {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더보기" }));
-		await userEvent.click(await body().findByRole("menuitem", { name: "태그 빼기" }));
-		await body().findByRole("menuitem", { name: "회고" });
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "바꾸기" }));
+		fireEvent.keyDown(await body().findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
+		await body().findByRole("menuitemcheckbox", { name: /^성능/ });
+	},
+};
+
+/** The right-click menu of several picked rows: the same actions by the same names, the fields at the second level with no 바꾸기 above them. */
+export const RowMenuSeveralOpen: Story = {
+	...visual,
+	render: listScreen(server({ items: tagRows, folders, total: 148 })),
+	play: async ({ canvasElement }) => {
+		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
+		await openRowMenu(canvasElement, "첫 번째 글");
+		fireEvent.keyDown(await body().findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
+		await body().findByRole("menuitemcheckbox", { name: /^성능/ });
 	},
 };
 
@@ -465,6 +517,20 @@ const openTag = async (canvasElement: HTMLElement) => {
 };
 
 export const ItemCollection: Story = { render: tagScreen(tagServer()) };
+
+/** An item collection's bar: no publish or archive, only what an item can have done. It replaces the column names like any list's. */
+export const ItemRowsSelected: Story = {
+	tags: ["visual"],
+	render: tagScreen(tagServer()),
+	play: async ({ canvasElement }) => {
+		const c = within(canvasElement);
+		await c.findByRole("checkbox", { name: "리액트 선택" });
+		await settle();
+		await userEvent.click(await c.findByRole("checkbox", { name: "리액트 선택" }));
+		await userEvent.click(await c.findByRole("checkbox", { name: "회고 선택" }));
+		await c.findByText("2개 선택");
+	},
+};
 
 export const RecordPanelOpen: Story = {
 	tags: ["visual"],

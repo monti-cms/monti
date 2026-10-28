@@ -1,16 +1,8 @@
 import { defineMessages } from "@monti-cms/core";
-import { josa } from "@monti-cms/core/site";
 import { enSelected, koSelected } from "../shared/noun.messages";
 
 /** English: the generic noun in the right number ("1 selected item" / "3 selected items"). */
 const selected = (count: unknown, noun: string) => `${count} selected ${noun}${Number(count) === 1 ? "" : "s"}`;
-
-/** Korean: picks the "으로"/"로" particle by final consonant ("로" after no final or ㄹ). */
-const toward = (word: string) => {
-	const code = word.charCodeAt(word.length - 1) - 0xac00;
-	const final = code >= 0 && code <= 11171 ? code % 28 : 0;
-	return `${word}${final === 0 || final === 8 ? "로" : "으로"}`;
-};
 
 /** Messages for the bulk action bar. */
 export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
@@ -18,10 +10,9 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"relation.add": "Add {label}",
 		"relation.remove": "Remove {label}",
 		"relation.set": "Change {label}",
-		"ask.relation.add": ({ label, target, ...vars }) => `Add ${label} '${target}' to ${enSelected(vars)}?`,
-		"ask.relation.remove": ({ label, target, ...vars }) => `Remove ${label} '${target}' from ${enSelected(vars)}?`,
-		"ask.relation.clear": ({ label, ...vars }) => `Clear ${label} of ${enSelected(vars)}?`,
-		"ask.relation.set": ({ label, target, ...vars }) => `Change ${label} of ${enSelected(vars)} to '${target}'?`,
+		change: "Change",
+		search: "Find {label}",
+		holding: "{count} of the {total} picked",
 		"folder.move": "Move to folder",
 		"ask.folder.move": ({ count, target }) => `Move ${selected(count, "item")} to '${target}'?`,
 		"ask.folder.root": ({ count }) => `Move ${selected(count, "item")} to the top level?`,
@@ -59,13 +50,9 @@ export const bulkBarMessages = defineMessages("cms-admin.entries.bulk-bar", {
 		"relation.add": "{label} 추가",
 		"relation.remove": "{label} 빼기",
 		"relation.set": "{label} 바꾸기",
-		"ask.relation.add": ({ label, target, ...vars }) =>
-			`${koSelected(vars)}에 '${target}' ${josa(String(label), "을", "를")} 추가할까요?`,
-		"ask.relation.remove": ({ label, target, ...vars }) =>
-			`${koSelected(vars)}에서 '${target}' ${josa(String(label), "을", "를")} 뺄까요?`,
-		"ask.relation.clear": ({ label, ...vars }) => `${koSelected(vars)}의 ${josa(String(label), "을", "를")} 비울까요?`,
-		"ask.relation.set": ({ label, target, ...vars }) =>
-			`${koSelected(vars)}의 ${josa(String(label), "을", "를")} ${toward(`'${target}'`)} 바꿀까요?`,
+		change: "바꾸기",
+		search: "{label} 찾기",
+		holding: "고른 {total}개 중 {count}개",
 		"folder.move": "폴더로",
 		"ask.folder.move": "선택한 항목 {count}개를 '{target}' 폴더로 이동할까요?",
 		"ask.folder.root": "선택한 항목 {count}개를 최상위로 이동할까요?",
