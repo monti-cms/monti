@@ -31,7 +31,7 @@ Route base: `/v1/entries`.
 | `entries.unarchive` | write | `POST /entries/[id]/unarchive`, bulk `unarchive` | Archive | 2 | |
 | `entries.trash` | write | `POST /entries/[id]/trash`, bulk `trash` | Restore | 2 | Ends publication |
 | `entries.restore` | write | `POST /entries/[id]/restore` | Trash | 2 | |
-| `entries.deletePermanently` | write | `DELETE /entries/[id]`, bulk `permanentDelete` | **No** | 3 | Only for entries already in the trash. Refused while something refers to the entry |
+| `entries.deletePermanently` | write | `DELETE /entries/[id]`, bulk `permanentDelete`, `POST /trash/delete` | **No** | 3 | Only for entries already in the trash. Refused (`in_use`, naming the entries) while a relation field of another entry points at it; a link in a body does not hold it back. `POST /references/unlink` takes the target out of those fields first |
 | `entries.moveToFolder` | write | bulk `folder.move`, `PATCH /entries/[id]` | Move back | 2 | |
 | `entries.setRelation` | write | bulk `relation.add`, `relation.remove`, `relation.set` | The opposite change | 2 | Tags and categories are relation fields, so "tag these posts" is this |
 
@@ -61,10 +61,10 @@ stay server operations; the editor saves first, as its own buttons do.
 | Operation | Kind | Route today | Undo | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `folders.list` | read | `GET /folders` | | 1 | The tree of one collection |
-| `folders.get` | read | `GET /folders/[id]` | | 1 | With the number of entries and child folders, the preview of a delete |
+| `folders.get` | read | `GET /folders/[id]/contents` | | 1 | What the folder holds, subfolders included: entries (published ones counted), folders, files (those in use counted), the preview of a delete |
 | `folders.create` | write | `POST /folders` | Delete it | 2 | |
 | `folders.update` | write | `PATCH /folders/[id]` | Write the before values back | 2 | Rename, move under another parent, reorder |
-| `folders.delete` | write | `DELETE /folders/[id]` | Recreate it and move its entries and children back | 3 | Entries and child folders move to the parent; nothing is deleted with it |
+| `folders.delete` | write | `DELETE /folders/[id]` | `POST /trash/restore` | 3 | Moves the folder to the trash with its subfolders and entries as one unit (a media folder with files in use: only the unused files go). Nothing is deleted for good |
 
 ## Media
 
@@ -73,7 +73,7 @@ stay server operations; the editor saves first, as its own buttons do.
 | `media.list` | read | `GET /media` | | 1 | Filename search, type, folder, upload date, and `used: "unused"`, which is "find unused media" already |
 | `media.get` | read | `GET /media/[id]` | | 1 | With where it is used |
 | `media.update` | write | `PATCH /media/[id]` | Write the before values back | 2 | Filename, default alt text and caption, folder |
-| `media.delete` | write | `DELETE /media/[id]` | **No** | 2 | Refused with `in_use` while anything refers to the file, so the agent cannot delete a used file even by mistake |
+| `media.trash` | write | `POST /media/trash` | `POST /trash/restore` | 2 | Moves files to the trash; a file anything refers to stays (`kept`), so the agent cannot trash a used file even by mistake. A file is deleted for good only from the trash (`POST /trash/delete`) |
 | `media.cleanupUploads` | write | `POST /media/cleanup` | Not needed | 3 | Removes failed uploads older than a day |
 | — | — | `POST /media/uploads`, `POST /media/[id]/complete` | | | Uploading needs the file from the admin's computer. Later: an upload from a URL the admin gives |
 
