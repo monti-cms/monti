@@ -54,7 +54,12 @@ const diagrams = folder("diagrams", "diagrams", {
 	files: 3,
 	path: ["Blog Assets"],
 });
-const image = media("winter", "winter-01.jpg", { deletedAt: at(10, 25), path: ["Blog Assets"], folderId: "assets" });
+const image = media("winter", "winter-01.jpg", {
+	deletedAt: at(10, 25),
+	path: ["Blog Assets"],
+	folderId: "assets",
+	alt: "눈 덮인 골목길",
+});
 const episode1 = inside(
 	entry("ep1", "시리즈 1화 · 블로그를 다시 만든 이유", {
 		slug: "series-1",

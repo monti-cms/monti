@@ -76,6 +76,8 @@ export interface TrashMediaItem {
 	readonly byteSize: number | null;
 	readonly width: number | null;
 	readonly height: number | null;
+	/** The library's alt text, empty when it has none. */
+	readonly alt: string;
 	readonly folderId: string | null;
 	readonly deletedAt: Date;
 	readonly expiresAt: Date | null;

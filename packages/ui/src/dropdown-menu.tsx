@@ -39,10 +39,14 @@ function DropdownMenuContent({
 	side = "bottom",
 	sideOffset = 4,
 	anchor,
+	width = "menu",
 	className,
 	...props
 }: MenuPrimitive.Popup.Props &
-	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor">) {
+	Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
+		/** `menu` (240px, growing for a longer row) or `panel` (300px, for a menu of whole lines such as the list of unsaved changes). */
+		width?: "menu" | "panel";
+	}) {
 	return (
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
@@ -59,7 +63,10 @@ function DropdownMenuContent({
 						MENU_CARD,
 						"p-monti-6",
 						MENU_MOTION,
-						"z-50 max-h-(--available-height) w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))] overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						"z-50 max-h-(--available-height) overflow-y-auto overflow-x-hidden data-closed:overflow-hidden",
+						width === "panel"
+							? "w-monti-panel max-w-(--available-width)"
+							: "w-max min-w-monti-menu max-w-[min(20rem,var(--available-width))]",
 						className,
 					)}
 					{...props}

@@ -148,7 +148,7 @@ function TrashRow({
 							<TextButton onClick={() => void actions.restore([item])}>{tc("lifecycle.restore")}</TextButton>
 						)}
 						{action === "restoreOriginal" && (
-							<TextButton onClick={() => void actions.restoreOriginal(item as TrashEntryJson)}>
+							<TextButton variant="ink" onClick={() => void actions.restoreOriginal(item as TrashEntryJson)}>
 								{t("row.restoreOriginal")}
 							</TextButton>
 						)}

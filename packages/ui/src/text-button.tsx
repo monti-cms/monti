@@ -24,6 +24,8 @@ const textButtonVariants = cva(
 				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
+				/** The one thing a row asks for before anything else (restore the original first): in ink, among quieter buttons. */
+				ink: "text-monti-default",
 				/** Takes the ink and size of the line it stands in (the button at the end of a `ChangeLine`). */
 				inherit: "text-[length:inherit] text-inherit",
 			},

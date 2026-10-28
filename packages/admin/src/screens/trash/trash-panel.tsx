@@ -141,6 +141,7 @@ export function TrashPanel({
 							{formatFileSize(item.byteSize ?? 0)}
 						</DescriptionItem>
 						<DescriptionItem label={t("panel.folder")}>{item.path.join(" / ") || "—"}</DescriptionItem>
+						<DescriptionItem label={t("panel.alt")}>{item.alt || "—"}</DescriptionItem>
 						<DescriptionItem label={t("panel.deleted")}>{fullDate(site, item.deletedAt)}</DescriptionItem>
 					</DescriptionList>
 					<UsedIn />

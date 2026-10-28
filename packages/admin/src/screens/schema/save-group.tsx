@@ -65,7 +65,7 @@ export function SaveGroup({
 					<DropdownMenuTrigger render={<TextButton disabled={disabled} aria-label={t("bar.list")} />}>
 						{label}
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" anchor={group ?? undefined}>
+					<DropdownMenuContent align="end" anchor={group ?? undefined} width="panel">
 						{removed.map((item) => (
 							<DropdownMenuItem key={item.name} onClick={item.onRestore}>
 								<span>

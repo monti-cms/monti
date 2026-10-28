@@ -69,6 +69,7 @@ export const media = (id: string, filename: string, fields: Partial<TrashMediaJs
 		id,
 		filename,
 		mimeType: "image/jpeg",
+		alt: "",
 		byteSize: 2_516_582,
 		width: 2400,
 		height: 1600,

@@ -226,7 +226,17 @@ export function createTrashReads(ctx: StoreContext) {
 		if (rows.length === 0) return { items, keys };
 		const found = await db
 			.selectFrom("media_assets")
-			.select(["id", "filename", "mime_type", "byte_size", "width", "height", "folder_id", "storage_key"])
+			.select([
+				"id",
+				"filename",
+				"mime_type",
+				"byte_size",
+				"width",
+				"height",
+				"default_alt",
+				"folder_id",
+				"storage_key",
+			])
 			.where("id", "=", sql<string>`any(${rows.map((row) => row.id)}::uuid[])`)
 			.execute();
 		const paths = await pathsOf(
@@ -247,6 +257,7 @@ export function createTrashReads(ctx: StoreContext) {
 				byteSize: media.byte_size === null ? null : Number(media.byte_size),
 				width: media.width,
 				height: media.height,
+				alt: media.default_alt,
 				folderId: media.folder_id,
 				deletedAt: effective,
 				expiresAt: row.top_level ? trashExpiresAt(effective) : null,
