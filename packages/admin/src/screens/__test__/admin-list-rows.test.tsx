@@ -154,3 +154,33 @@ describe("the month mark of a row", () => {
 		expect(screen.queryByText("9월")).toBeNull();
 	});
 });
+
+describe("the order of the cells of a row", () => {
+	it("is the board's: month, title, categories, language, status, date, then the ⋯", () => {
+		renderRows([
+			item("ordered", {
+				status: "draft",
+				relations: { categoryId: [{ id: "c", title: "개발" }], tagIds: [{ id: "t", title: "리액트" }] },
+			}),
+		]);
+		const cells = within(rowOf(/ordered/)).getAllByRole("cell");
+		const at = (text: string) => cells.findIndex((cell) => cell.textContent?.includes(text));
+		const order = [at("ordered"), at("개발 · 리액트"), at("KO"), at("초안"), at("10. 26")];
+		expect(order.every((index) => index >= 0)).toBe(true);
+		// Each comes after the one before it.
+		expect(order).toEqual([...order].sort((a, b) => a - b));
+		expect(new Set(order).size).toBe(order.length);
+		expect(within(cells.at(-1) as HTMLElement).getByRole("button")).toBeTruthy();
+	});
+
+	it("is the same in the View menu's list of columns, and a saved order still wins", () => {
+		renderRows([item("saved", { status: "draft" })], "collection=post", {
+			columnSettings: { order: ["title", "status", "locale"], visibility: {} },
+		});
+		const cells = within(rowOf(/saved/)).getAllByRole("cell");
+		const at = (text: string) => cells.findIndex((cell) => cell.textContent?.includes(text));
+		// The writer put status before language, so it is.
+		expect(at("초안")).toBeGreaterThan(-1);
+		expect(at("초안")).toBeLessThan(at("KO"));
+	});
+});

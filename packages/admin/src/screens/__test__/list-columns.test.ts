@@ -72,7 +72,7 @@ describe("list columns", () => {
 		expect(available).toContain("title");
 	});
 
-	it("until the writer chooses columns the default ones are used: documents get title, status, locale, taxonomy fields and the updated date; items get title, locale, status, updated date and keep the slug beside the title", () => {
+	it("until the writer chooses columns the default ones are used: documents get title, taxonomy fields, locale, status and the updated date; items get title, locale, status, updated date and keep the slug beside the title", () => {
 		for (const collection of ["story", "topic"]) {
 			const defaults = defaultListColumns(site, collection);
 			expect(defaults[0]).toBe("title");
@@ -112,7 +112,7 @@ describe("locale column and the translation UI option", () => {
 		const { available, defaults } = columnsFor(make(one), "story");
 		expect(available).not.toContain("locale");
 		expect(defaults).not.toContain("locale");
-		expect(defaults.slice(0, 2)).toEqual(["title", "status"]);
+		expect(defaults.slice(0, 3)).toEqual(["title", "topicId", "status"]);
 		expect(available.indexOf("topicId")).toBe(available.indexOf("status") + 1);
 	});
 

@@ -79,7 +79,7 @@ export const columnLabel = (site: Site, collection: string, column: AdminListCol
 	columnConfig(site, collection, column).label;
 
 /**
- * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
+ * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, taxonomy fields, locale, status, updated date (the order of a row on the main board); item collections:
  * title, locale, status, updated date. The slug rides beside the title; its own column is off until the writer turns it on. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`, and for an item collection a `localized` field).
  */
 export function defaultListColumns(site: Site, collection: string): AdminListColumn[] {
@@ -90,7 +90,7 @@ export function defaultListColumns(site: Site, collection: string): AdminListCol
 		return ["title", ...locale, "status", "updatedAt"];
 	}
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
-	return ["title", "status", ...locale, ...taxonomy, "updatedAt"];
+	return ["title", ...taxonomy, ...locale, "status", "updatedAt"];
 }
 
 /**
