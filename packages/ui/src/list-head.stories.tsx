@@ -202,3 +202,19 @@ export const SelectAll: Story = {
 		await userEvent.hover(within(canvasElement).getByRole("button", { name: "제목" }));
 	},
 };
+
+/** A list whose columns are fixed (the trash) gives no `onPlace`: the names do not drag or step, and say nothing about moving. */
+export const FixedColumns: Story = {
+	args: Playground.args,
+	render: () => (
+		<Table container="none" layout="fixed" columns={[undefined, 72, 54]}>
+			<ListHead
+				columns={[
+					{ id: "title", label: "제목", menu: <ColumnMenu /> },
+					{ id: "deletedAt", label: "버린 날", size: 72, align: "end", sort: "desc", menu: <ColumnMenu /> },
+				]}
+				end={54}
+			/>
+		</Table>
+	),
+};

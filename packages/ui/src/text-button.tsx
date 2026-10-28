@@ -24,6 +24,8 @@ const textButtonVariants = cva(
 				quiet: "text-monti-subtle hover:text-monti-default",
 				/** The risky second choice of a confirmation. */
 				danger: "text-monti-danger",
+				/** The color of the line it is in: a choice inside a line that is already in a tone (the unlink of a warning line). */
+				inherit: "text-inherit",
 			},
 			/** Fixed-width letters, for an address or an identifier. */
 			mono: { true: "font-mono" },

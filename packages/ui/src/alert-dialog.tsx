@@ -37,8 +37,15 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 	);
 }
 
+/** `wide` (520px) is for a question that lists what it touches, with a choice per line (the review of a permanent delete). */
+const ALERT_WIDTH = { default: "", wide: "sm:max-w-[520px]" } as const;
+
 /** The same modal as `Dialog`: a question that must be answered before anything else, closed only by its own buttons or Escape. */
-function AlertDialogContent({ className, ...props }: AlertDialogPrimitive.Popup.Props) {
+function AlertDialogContent({
+	className,
+	size = "default",
+	...props
+}: AlertDialogPrimitive.Popup.Props & { size?: keyof typeof ALERT_WIDTH }) {
 	const { popup, initialFocus } = useModalFocus();
 	return (
 		<AlertDialogPortal>
@@ -47,7 +54,7 @@ function AlertDialogContent({ className, ...props }: AlertDialogPrimitive.Popup.
 				ref={popup}
 				initialFocus={initialFocus}
 				data-slot="alert-dialog-content"
-				className={cn(DIALOG_SURFACE, className)}
+				className={cn(DIALOG_SURFACE, ALERT_WIDTH[size], className)}
 				{...props}
 			/>
 		</AlertDialogPortal>

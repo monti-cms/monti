@@ -11,6 +11,8 @@ import {
 	AlertDialogTrigger,
 } from "./alert-dialog";
 import { Button } from "./button";
+import { ChangeGroup, ChangeLine, ChangeLines, ChangeNote } from "./change";
+import { TextButton } from "./text-button";
 
 /**
  * The same modal as `Dialog`, for a question that has to be answered: the Cancel text button and one pill, which is the danger pill when the
@@ -76,6 +78,40 @@ export const LongText: Story = {
 				<AlertDialogFooter>
 					<AlertDialogCancel>취소</AlertDialogCancel>
 					<AlertDialogAction variant="danger">휴지통으로</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	),
+};
+
+/** `wide` makes room for a review that lists what the question touches, a choice on each line; the pill stays off until nothing blocks it. */
+export const WithChanges: Story = {
+	render: () => (
+		<AlertDialog defaultOpen>
+			<AlertDialogContent size="wide">
+				<AlertDialogHeader>
+					<AlertDialogTitle>임시를 영구 삭제할까요?</AlertDialogTitle>
+					<ChangeGroup kind="drop" tag="지움" title="임시" identifier="태그">
+						<ChangeLines>
+							<ChangeLine
+								what="가리키는 글 4편 · 첫 번째 글 외 3편"
+								tone="warning"
+								then={<TextButton variant="inherit">연결 끊기</TextButton>}
+							/>
+							<ChangeLine
+								what="휴지통의 글 1편 · 연습장"
+								tone="warning"
+								then={<TextButton variant="inherit">같이 삭제</TextButton>}
+							/>
+						</ChangeLines>
+						<ChangeNote>연결 끊기는 글을 남기고 태그 칸에서 임시만 빼요.</ChangeNote>
+					</ChangeGroup>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>취소</AlertDialogCancel>
+					<AlertDialogAction variant="danger" disabled>
+						영구 삭제
+					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

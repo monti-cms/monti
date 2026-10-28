@@ -94,6 +94,7 @@ export {
 	DialogTrigger,
 } from "./dialog";
 export { DialogFormFooter } from "./dialog-form-footer";
+export { DotNote } from "./dot-note";
 export { DropArea } from "./drop-area";
 export {
 	DropdownMenu,
@@ -264,4 +265,5 @@ export { TodoDone, TodoItem } from "./todo-item";
 export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+export { TrashRowDate, TrashRowTitle } from "./trash-row";
 export { useIsMobile } from "./use-mobile";
