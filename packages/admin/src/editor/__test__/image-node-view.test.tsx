@@ -7,14 +7,11 @@ import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderWithSite } from "../../test/site";
-import { blocksMessages } from "../blocks/messages";
-import { altRequiredMessage } from "../image-insert-dialog";
 import { ImageBlockView } from "../image-node-view";
-import { editorMessages } from "../messages";
+import { editorMediaMessages } from "../media.messages";
 
-const t = testSite.createTranslator(editorMessages);
+const t = testSite.createTranslator(editorMediaMessages);
 const tc = testSite.createTranslator(commonMessages);
-const tBlocks = testSite.createTranslator(blocksMessages);
 
 vi.mock("@tiptap/react", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@tiptap/react")>();
@@ -63,9 +60,9 @@ describe("CmsImageNodeView", () => {
 	it("clearing alt text in the settings popover shows an error there, and decorative images are turned on with the switch", async () => {
 		const { props, updateAttributes } = createProps({ alt: "" });
 		renderWithSite(<CmsImageNodeView {...props} />);
-		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
-		expect((await screen.findByRole("alert")).textContent).toBe(altRequiredMessage(t));
-		fireEvent.click(screen.getByRole("switch", { name: t("imageDialog.decorative") }));
+		fireEvent.click(screen.getByRole("button", { name: t("imageNode.settings") }));
+		expect((await screen.findByRole("alert")).textContent).toBe(t("imageNode.altRequired"));
+		fireEvent.click(screen.getByRole("switch", { name: t("imageNode.decorative") }));
 		expect(updateAttributes).toHaveBeenCalledWith({ decorative: true, alt: "" });
 	});
 
@@ -124,14 +121,14 @@ describe("CmsImageNodeView", () => {
 		expect(wrapper).toBeTruthy();
 	});
 
-	it("can open the crop and rotate dialog and perform rotate and apply", () => {
+	it("can open the crop and rotate sheet and perform rotate and apply", () => {
 		const { props, updateAttributes } = createProps();
 		renderWithSite(<CmsImageNodeView {...props} />);
 
 		const cropBtn = screen.getByRole("button", { name: t("imageCrop.title") });
 		fireEvent.click(cropBtn);
 
-		// Confirm the dialog is open
+		// Confirm the sheet is open
 		expect(screen.getByRole("dialog", { name: t("imageCrop.title") })).toBeDefined();
 
 		// Click the 90-degree rotate button
@@ -205,7 +202,7 @@ describe("CmsImageNodeView", () => {
 		});
 	});
 
-	it("reset in the dialog reverts both crop and rotation", () => {
+	it("reset in the sheet reverts both crop and rotation", () => {
 		const { props, updateAttributes } = createProps({
 			crop: "10,10,80,80",
 			rotate: "180",

@@ -1,204 +1,159 @@
 "use client";
 
 import { Image as ImageIcon } from "@carbon/icons-react";
-import { useSite, useTranslator } from "@monti-cms/core/site";
+import { type FolderListItem, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
-	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
-	FormFieldError,
-	Grid,
+	FilePreview,
 	Image,
-	Input,
-	Label,
+	MediaPicker,
+	type MediaPickerFolder,
 	Stack,
-	Switch,
-	Tabs,
-	TabsList,
-	TabsTrigger,
 	Text,
-	Textarea,
 	Tile,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useId, useState } from "react";
-import { errorText } from "../api/client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { mediaNotConfiguredMessage } from "../api/error-message";
+import { foldersKeys, listFolders } from "../api/folders";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { LoadErrorAlert } from "../screens/shared/load-error-alert";
 import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
-import { submitOnEnter } from "./link-form";
-import { editorMessages } from "./messages";
-import { formatBytes, imageAccept, type PreparedUpload, prepareUpload, uploadImageFile } from "./upload-helper";
+import { editorMediaMessages } from "./media.messages";
+import { imageAccept } from "./upload-helper";
 
-/** Notice for when an image that needs a description has no alt text. Shared by the insert dialog and image settings. */
-export const altRequiredMessage = (t: TranslatorFor<typeof editorMessages>) => t("imageDialog.altRequired");
+/** What the picker lists: images, or files that are not images. */
+export type PickerKind = "image" | "file";
 
-export interface ImageInsertion {
-	mediaId: string;
-	alt: string;
-	decorative: boolean;
-	caption: string;
-	/** Public URL for the preview. `null` if not yet available. */
-	publicUrl: string | null;
-}
-
-type LibraryItem = Pick<
+/** The library item that was chosen. */
+export type PickedMedia = Pick<
 	MediaItem,
-	"id" | "filename" | "publicUrl" | "width" | "height" | "defaultAlt" | "defaultCaption"
+	"id" | "filename" | "mimeType" | "byteSize" | "publicUrl" | "defaultAlt" | "defaultCaption"
 >;
 
-interface ImageInsertDialogProps {
+/** The folders as the list the picker shows: each top folder, then what is inside it. */
+export function folderNav(folders: readonly FolderListItem[]): (FolderListItem & { depth: number })[] {
+	const byParent = new Map<string | null, FolderListItem[]>();
+	for (const folder of folders) {
+		const list = byParent.get(folder.parentId) ?? [];
+		list.push(folder);
+		byParent.set(folder.parentId, list);
+	}
+	const out: (FolderListItem & { depth: number })[] = [];
+	const walk = (parent: string | null, depth: number) => {
+		for (const folder of (byParent.get(parent) ?? []).sort((a, b) => a.position - b.position)) {
+			out.push({ ...folder, depth });
+			walk(folder.id, depth + 1);
+		}
+	};
+	walk(null, 0);
+	return out;
+}
+
+interface MediaPickerDialogProps {
 	open: boolean;
-	/** File that came in by paste or drag and drop. If present, opens the upload tab. */
-	initialFile: File | null;
-	onClose: () => void;
-	onInsert: (image: ImageInsertion) => void;
-	/** `pick` picks a single image without inserting it into the body (media field). Does not ask for alt text or caption. */
-	mode?: "insert" | "pick";
+	kind: PickerKind;
+	/** Defaults to the library's own name (images) or "Files". */
 	title?: string;
-	/** Something fills in the alt text after the insert (`editor.imageInserted`), so it may be left empty here. */
-	altLater?: boolean;
+	/** The pill: "Insert" in the body, "Pick" for a field. */
+	confirmLabel?: string;
+	onClose: () => void;
+	/** The picked item. The picker closes itself. */
+	onPick: (media: PickedMedia) => void;
+	/** Files chosen with "Upload", and the folder that was open. The picker closes itself; the caller uploads and puts the result in. */
+	onUpload: (files: File[], folderId: string | null) => void;
 }
 
 /**
- * Image insertion. Upload a new file (original kept by default, web optimization optional) or reuse from the library.
- * The library's default alt and caption are copied on insertion. An image that needs a description must have alt.
+ * The library as a picker: folders, search, and the files of the open folder as tiles. It serves "/ Image" (to insert), the cover image field
+ * (to pick) and "/ File" (the files only). Pressing a tile marks it and the pill puts it in at once; there is no alt text or caption step. "Upload"
+ * hands the chosen files to the caller, which puts them in the page as it does for a paste.
  */
-export function ImageInsertDialog({
+export function MediaPickerDialog({
 	open,
-	initialFile,
-	onClose,
-	onInsert,
-	mode = "insert",
+	kind,
 	title: titleProp,
-	altLater = false,
-}: ImageInsertDialogProps) {
+	confirmLabel: confirmProp,
+	onClose,
+	onPick,
+	onUpload,
+}: MediaPickerDialogProps) {
 	const site = useSite();
-	const t = useTranslator(editorMessages);
+	const t = useTranslator(editorMediaMessages);
 	const tc = useTranslator(commonMessages);
-	const title = titleProp ?? t("imageDialog.title");
-	const picking = mode === "pick";
 	const { media } = useAdminFeatures();
-	const altId = useId();
-	const altErrorId = useId();
-	const altLaterId = useId();
-	const captionId = useId();
-	const searchId = useId();
-	const optimizeId = useId();
-	const decorativeId = useId();
-	const [tab, setTab] = useState<"upload" | "library">("upload");
-	const [file, setFile] = useState<File | null>(null);
-	const [optimize, setOptimize] = useState(false);
-	const [prepared, setPrepared] = useState<PreparedUpload | null>(null);
-	const [picked, setPicked] = useState<LibraryItem | null>(null);
-	const [alt, setAlt] = useState("");
-	const [caption, setCaption] = useState("");
-	const [decorative, setDecorative] = useState(false);
-	/** Show an empty alt text as an error once the alt field was touched or insert was pressed. */
-	const [altTouched, setAltTouched] = useState(false);
-	const [progress, setProgress] = useState<number | null>(null);
-	const [error, setError] = useState<string | null>(null);
+	const files = kind === "file";
+	const [folder, setFolder] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
+	const [picked, setPicked] = useState<MediaItem | null>(null);
+	const input = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		if (!open) return;
-		setTab(initialFile ? "upload" : "upload");
-		setFile(initialFile);
-		setOptimize(false);
-		setPrepared(null);
+		setFolder(null);
+		setSearch("");
 		setPicked(null);
-		setAlt("");
-		setCaption("");
-		setDecorative(false);
-		setAltTouched(false);
-		setProgress(null);
-		setError(null);
-	}, [open, initialFile]);
+	}, [open]);
 
-	useEffect(() => {
-		let cancelled = false;
-		if (!file) {
-			setPrepared(null);
-			return;
-		}
-		prepareUpload(site, file, { optimize }).then((result) => {
-			if (!cancelled) setPrepared(result);
-		});
-		return () => {
-			cancelled = true;
-		};
-	}, [file, optimize, site]);
+	const foldersQuery = useQuery({
+		queryKey: foldersKeys.list("media"),
+		queryFn: ({ signal }) => listFolders(site, "media", signal),
+		enabled: open && media,
+		retry: false,
+	});
+	const nav: MediaPickerFolder[] = useMemo(
+		() =>
+			folderNav(foldersQuery.data ?? []).map((item) => ({
+				id: item.id,
+				name: item.name,
+				depth: item.depth,
+				// The number counts every kind of file in the folder, so it is shown only where it matches what is listed.
+				...(files ? {} : { count: item.entryCount }),
+			})),
+		[foldersQuery.data, files],
+	);
 
-	// The library list follows the typed name after a pause. The rows already shown stay while the next ones load.
+	// The list follows the typed name after a pause. The tiles already shown stay while the next ones load.
 	const debouncedSearch = useDebounced(search.trim(), 250);
-	const libraryQuery = useQuery({
-		queryKey: mediaKeys.list(`library:${debouncedSearch}`),
+	const listQuery = useQuery({
+		queryKey: mediaKeys.list(`picker:${kind}:${folder ?? "all"}:${debouncedSearch}`),
 		queryFn: ({ signal }) => {
-			const params = new URLSearchParams({ pageSize: "24", kind: "image" });
+			const params = new URLSearchParams({ pageSize: "100", kind });
+			if (folder) params.set("folderId", folder);
 			if (debouncedSearch) params.set("search", debouncedSearch);
 			return listMedia(site, params, signal);
 		},
-		enabled: open && tab === "library",
+		enabled: open && media,
 		placeholderData: keepPreviousData,
 		retry: false,
 	});
-	const library = (libraryQuery.data?.items ?? []).filter((item) => item.status !== "deleting");
-	const isLibraryLoading = open && tab === "library" && (libraryQuery.isFetching || search.trim() !== debouncedSearch);
-	const libraryFailed = libraryQuery.isError;
+	const items = (listQuery.data?.items ?? []).filter((item) => item.status === "ready");
+	const loading = listQuery.isFetching || search.trim() !== debouncedSearch;
 
-	const isUploading = progress !== null;
-	const needsAlt = !picking && !altLater && !decorative && !alt.trim();
-	const hasImage = tab === "upload" ? Boolean(prepared) : Boolean(picked);
-	const canInsert = !isUploading && !needsAlt && hasImage;
-	const showAltError = needsAlt && altTouched;
-
-	const pick = (item: LibraryItem) => {
-		setPicked(item);
-		setAlt(item.defaultAlt);
-		setCaption(item.defaultCaption);
-		setDecorative(false);
-	};
-
-	const confirm = async (event?: FormEvent<HTMLElement>) => {
-		event?.preventDefault();
-		if (needsAlt && hasImage) setAltTouched(true);
-		if (!canInsert) return;
-		setError(null);
-		if (tab === "library" && picked) {
-			onInsert({
-				mediaId: picked.id,
-				alt: decorative ? "" : alt.trim(),
-				decorative,
-				caption: caption.trim(),
-				publicUrl: picked.publicUrl,
-			});
-			return;
-		}
-		if (!prepared) return;
-		setProgress(0);
-		try {
-			const uploaded = await uploadImageFile(site, prepared, setProgress);
-			onInsert({
-				mediaId: uploaded.mediaId,
-				alt: decorative ? "" : alt.trim(),
-				decorative,
-				caption: caption.trim(),
-				publicUrl: uploaded.publicUrl,
-			});
-		} catch (err) {
-			setError(errorText(site, err, t("imageDialog.uploadFailed")));
-		} finally {
-			setProgress(null);
-		}
+	const notice = listQuery.isError
+		? !loading && <LoadErrorAlert message={t("picker.loadFailed")} onRetry={() => void listQuery.refetch()} />
+		: !loading &&
+			items.length === 0 && (
+				<Stack gap={0} paddingY={24} align="center">
+					<Text as="p" tone="muted">
+						{t("picker.empty")}
+					</Text>
+				</Stack>
+			);
+	const title = titleProp ?? (files ? t("picker.fileTitle") : t("picker.imageTitle"));
+	const confirm = (item: MediaItem | null) => {
+		if (!item) return;
+		onPick(item);
+		onClose();
 	};
 
 	if (!media) {
@@ -220,179 +175,71 @@ export function ImageInsertDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && !isUploading && onClose()}>
-			<DialogContent scroll>
-				<Stack
-					as="form"
-					gap={16}
-					onSubmit={(event) => void confirm(event)}
-					// Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
-					onKeyDown={submitOnEnter}
-				>
-					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
-						<DialogDescription>{t("imageDialog.description")}</DialogDescription>
-					</DialogHeader>
-
-					<Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
-						<TabsList variant="bar" inset="none" aria-label={t("imageDialog.sourceLabel")}>
-							<TabsTrigger value="upload" disabled={isUploading}>
-								{tc("upload")}
-							</TabsTrigger>
-							<TabsTrigger value="library" disabled={isUploading}>
-								{t("imageDialog.library")}
-							</TabsTrigger>
-						</TabsList>
-					</Tabs>
-
-					{tab === "upload" ? (
-						<Stack gap={8}>
-							<Input
-								type="file"
-								aria-label={t("imageDialog.fileLabel")}
-								accept={imageAccept(site)}
-								disabled={isUploading}
-								onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-							/>
-							{file && (
-								<>
-									<Label htmlFor={optimizeId} size="body">
-										<Switch
-											id={optimizeId}
-											checked={optimize}
-											disabled={isUploading}
-											onCheckedChange={(checked) => setOptimize(checked)}
-										/>
-										{t("imageDialog.optimize")}
-									</Label>
-									<Text as="p" variant="caption" tone="muted" aria-live="polite">
-										{prepared?.optimized
-											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
-											: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
-									</Text>
-								</>
-							)}
-						</Stack>
-					) : (
-						<Stack gap={8}>
-							<Label htmlFor={searchId} hidden>
-								{t("imageDialog.search")}
-							</Label>
-							<Input
-								id={searchId}
-								value={search}
-								placeholder={t("imageDialog.search")}
-								onChange={(event) => setSearch(event.target.value)}
-							/>
-							<Stack gap={8} aria-busy={isLibraryLoading}>
-								{isLibraryLoading && library.length === 0 && (
-									<Text as="p" variant="note" tone="subtle" role="status">
-										{tc("loading")}
-									</Text>
-								)}
-								{libraryFailed && !isLibraryLoading && (
-									<LoadErrorAlert
-										message={t("imageDialog.libraryFailed")}
-										onRetry={() => void libraryQuery.refetch()}
-									/>
-								)}
-								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<Stack gap={0} paddingY={24} align="center">
-										<Text as="p" tone="muted">
-											{t("imageDialog.libraryEmpty")}
-										</Text>
-									</Stack>
-								)}
-								<Grid columns={3} responsive={false} gap={8}>
-									{library.map((item) => (
-										<Tile
-											key={item.id}
-											selected={picked?.id === item.id}
-											onClick={() => pick(item)}
-											title={item.filename}
-											detail={item.publicUrl ? undefined : t("imageDialog.noPreview")}
-											preview={
-												<Image
-													src={item.publicUrl ?? undefined}
-													alt=""
-													ratio="photo"
-													radius="none"
-													fallback={ImageIcon}
-												/>
-											}
-										/>
-									))}
-								</Grid>
-							</Stack>
-						</Stack>
-					)}
-
-					<Stack gap={8} hidden={picking}>
-						<Label htmlFor={altId}>{t("imageDialog.alt")}</Label>
-						<Textarea
-							id={altId}
-							value={alt}
-							rows={2}
-							disabled={decorative || isUploading}
-							aria-required={!decorative && !altLater}
-							aria-invalid={showAltError || undefined}
-							aria-describedby={showAltError ? altErrorId : altLater && !decorative ? altLaterId : undefined}
-							onChange={(event) => {
-								setAlt(event.target.value);
-								setAltTouched(true);
-							}}
-							onBlur={() => setAltTouched(true)}
-						/>
-						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
-						{altLater && !decorative && !alt.trim() && (
-							<Text as="p" id={altLaterId} variant="caption" tone="muted">
-								{t("imageDialog.altLater")}
-							</Text>
-						)}
-						<Label htmlFor={decorativeId} size="body">
-							<Switch
-								id={decorativeId}
-								checked={decorative}
-								disabled={isUploading}
-								onCheckedChange={(checked) => setDecorative(checked)}
-							/>
-							{t("imageDialog.decorative")}
-						</Label>
-						<Label htmlFor={captionId}>{t("imageDialog.caption")}</Label>
-						<Textarea
-							id={captionId}
-							value={caption}
-							rows={2}
-							disabled={isUploading}
-							onChange={(event) => setCaption(event.target.value)}
-						/>
-					</Stack>
-
-					{isUploading && (
-						<Text as="p" role="status">
-							{t("imageDialog.uploading", { percent: progress ?? 0 })}
-						</Text>
-					)}
-					{error && <FormFieldError>{error}</FormFieldError>}
-
-					<DialogFormFooter
-						onCancel={() => !isUploading && onClose()}
-						disabled={isUploading || !hasImage}
-						submitLabel={
-							tab === "upload"
-								? error
-									? t("imageDialog.reupload")
-									: picking
-										? tc("upload")
-										: t("imageDialog.insert")
-								: picking
-									? t("imageDialog.pick")
-									: t("imageDialog.insert")
+		<>
+			<MediaPicker
+				open={open}
+				onOpenChange={(next) => !next && onClose()}
+				title={title}
+				allLabel={files ? t("picker.allFiles") : t("picker.allImages")}
+				folders={nav}
+				folder={folder}
+				onFolderChange={setFolder}
+				foldersLabel={t("picker.folders")}
+				search={search}
+				onSearchChange={setSearch}
+				searchLabel={t("picker.search")}
+				uploadLabel={t("picker.upload")}
+				onUpload={() => input.current?.click()}
+				confirmLabel={confirmProp ?? t("picker.insert")}
+				onConfirm={() => confirm(picked)}
+				confirmDisabled={!picked}
+				notice={notice}
+			>
+				{items.map((item) => (
+					<Tile
+						key={item.id}
+						selected={picked?.id === item.id}
+						onClick={() => setPicked(item)}
+						onDoubleClick={() => confirm(item)}
+						title={item.filename}
+						detail={detailOf(t, item, files)}
+						preview={
+							files ? (
+								<FilePreview ext={fileTypeLabel(item.filename, item.mimeType)} />
+							) : (
+								<Image src={item.publicUrl ?? undefined} alt="" ratio="photo" radius="none" fallback={ImageIcon} />
+							)
 						}
-						cancelLabel={tc("cancel")}
 					/>
-				</Stack>
-			</DialogContent>
-		</Dialog>
+				))}
+			</MediaPicker>
+			<input
+				ref={input}
+				type="file"
+				multiple={files}
+				accept={files ? site.api.FILE_ACCEPT : imageAccept(site)}
+				hidden
+				aria-label={t("picker.fileInput")}
+				onChange={(event) => {
+					const chosen = Array.from(event.target.files ?? []);
+					event.target.value = "";
+					if (chosen.length === 0) return;
+					onUpload(files ? chosen : chosen.slice(0, 1), folder);
+					onClose();
+				}}
+			/>
+		</>
 	);
+}
+
+/** The mono line under a tile's name: size or type and size, and how many entries use it. */
+function detailOf(t: TranslatorFor<typeof editorMediaMessages>, item: MediaItem, files: boolean) {
+	const parts: string[] = [];
+	if (files) {
+		parts.push(fileTypeLabel(item.filename, item.mimeType));
+		if (item.byteSize) parts.push(formatFileSize(item.byteSize));
+	} else if (item.width && item.height) parts.push(`${item.width}×${item.height}`);
+	else if (!item.publicUrl) parts.push(t("picker.noPreview"));
+	if (item.referencesCount > 0) parts.push(t("picker.uses", { count: item.referencesCount }));
+	return parts.join(" · ");
 }

@@ -41,12 +41,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow6Step05.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "올리는 중")
 - In the editor the user pastes or drops an image. It lands at the cursor right away with an uploading state and a caption field.
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
 
 ### Step 06: "편집기 · 이미지를 누르면 설정 · 대체 텍스트 · 캡션 · ✦ 채우기"
 
 - Board: `Flow6Step06.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "설정")
 - The user clicks an image in the editor. A settings card opens: caption, width (body width), alt text with the hint to type one or mark the image as decorative, and the "✦ 채우기" (fill) action.
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
 
 ## "둘러보기" · Browse
 
@@ -199,12 +201,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow6Step29.dc.html`
 - Renders: `ImageInsert` (stage "라이브러리")
 - In the editor the user types `/` and picks Image › Library. The library opens; choosing an image inserts it at once.
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
 
 ### Step 30: "고르기 · 대표 이미지 칸"
 
 - Board: `Flow6Step30.dc.html`
 - Renders: `ImageInsert` (stage "대표 이미지")
 - The user opens the cover image field. The same library opens and shows the "고르기" (pick) action.
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
 
 ## "종류로 거르기" · Filter by kind
 
@@ -245,12 +249,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow6Step37.dc.html`
 - Renders: `ImageInsert` (stage "파일")
 - In the editor the user types `/` › File. The library opens showing files only (PDF, CSV, ZIP, MD) with a type filter.
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
 
 ### Step 38: "파일 · 고르면 본문에 파일 블록 · 아이콘 · 이름 · PDF · 크기"
 
 - Board: `Flow6Step38.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "파일")
 - After picking, the body gets a file block with an icon, the name, the type and the size (price-list-2026.pdf, PDF, 1.2 MB).
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
 
 ## "예외" · Exceptions
 
