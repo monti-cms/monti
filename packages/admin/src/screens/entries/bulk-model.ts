@@ -7,6 +7,7 @@ export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 	expectedVersion: item.version,
 	title: item.title,
 	status: item.status,
+	folderId: item.folderId,
 });
 
 /** A relation field of a collection that the bar's Change menu can change on several rows at once. */

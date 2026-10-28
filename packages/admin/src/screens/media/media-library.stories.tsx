@@ -81,7 +81,8 @@ const serve =
 			return { items: list, total: list.length };
 		}
 		if (route === "/api/monti/v1/folders") return params.get("collection") === "media" ? folders : [];
-		if (route.startsWith("/api/monti/v1/folders/")) return { entryCount: 0, childFolders: [] };
+		if (route.startsWith("/api/monti/v1/folders/"))
+			return { entries: 0, published: 0, folders: 0, files: 0, filesInUse: 0 };
 		if (route === "/api/monti/v1/entries") return { items: [], total: 0 };
 		return undefined;
 	};
@@ -184,7 +185,7 @@ const openFolderMenu = async (canvasElement: HTMLElement, item: string) => {
 export const RenameFolderDialog: Story = {
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await openFolderMenu(canvasElement, "이름 변경");
+		await openFolderMenu(canvasElement, "이름 바꾸기");
 		await within(document.body).findByRole("dialog");
 	},
 };
@@ -197,34 +198,94 @@ export const RenameFolderFailed: Story = {
 		}),
 	),
 	play: async ({ canvasElement }) => {
-		await openFolderMenu(canvasElement, "이름 변경");
+		await openFolderMenu(canvasElement, "이름 바꾸기");
 		const dialog = await within(document.body).findByRole("dialog");
 		await userEvent.click(within(dialog).getByRole("button", { name: "저장" }));
 	},
 };
 
-/** Deleting a folder says what moves up to its parent. */
-export const DeleteFolderConfirm: Story = {
-	render: screen(
-		serve({
-			"/api/monti/v1/folders/f1": (method) =>
-				method === "GET" ? { entryCount: 12, childFolders: [folders[1]] } : undefined,
-		}),
-	),
+// The states of the trash on the media board: modes 폴더 우클릭, 폴더 지움, 폴더 일부 남김, 파일 메뉴, 휴지통으로 옮김, 일부 남김.
+
+/** Board mode 폴더 우클릭: 열기, 이름 바꾸기, 옮기기, and 폴더 지우기 last. */
+export const FolderMenu: Story = {
+	tags: ["visual"],
+	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await openFolderMenu(canvasElement, "삭제");
-		await within(document.body).findByRole("alertdialog");
+		const buttons = await within(canvasElement).findAllByRole("button", { name: "'여행 사진' 폴더 작업" });
+		await userEvent.click(buttons[buttons.length - 1] as HTMLElement);
+		await within(document.body).findByRole("menuitem", { name: "폴더 지우기" });
 	},
 };
 
-/** An unused file asks before it goes. */
-export const DeleteFileConfirm: Story = {
+/** Board mode 폴더 지움: the folder went with its files, with no question, and the toast can undo it. */
+export const FolderTrashed: Story = {
+	tags: ["visual"],
+	render: screen(
+		serve({
+			"/api/monti/v1/folders/f1": (method) =>
+				method === "DELETE" ? { folder: {}, entries: 0, folders: 0, files: 3, kept: 0 } : undefined,
+		}),
+	),
+	play: async ({ canvasElement }) => {
+		await openFolderMenu(canvasElement, "폴더 지우기");
+		await within(document.body).findByText("여행 사진 폴더와 파일 3개를 휴지통으로 옮겼어요");
+	},
+};
+
+/** Board mode 폴더 일부 남김: files in use stay, and the toast offers to show them. */
+export const FolderTrashedPartly: Story = {
+	tags: ["visual"],
+	render: screen(
+		serve({
+			"/api/monti/v1/folders/f1": (method) =>
+				method === "DELETE" ? { folder: null, entries: 0, folders: 0, files: 2, kept: 4 } : undefined,
+		}),
+	),
+	play: async ({ canvasElement }) => {
+		await openFolderMenu(canvasElement, "폴더 지우기");
+		await within(document.body).findByText("여행 사진에서 2개를 옮겼어요 · 4개는 쓰는 곳이 있어 남겼어요");
+	},
+};
+
+/** Board mode 파일 메뉴: open, where it is used, the folder, and 휴지통으로 last. A file in use is not dimmed. */
+export const FileMenu: Story = {
+	tags: ["visual"],
 	render: screen(serve()),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await tile(canvasElement, /강아지\.png$/));
+		fireEvent.contextMenu(await tile(canvasElement, /^고양이\.png/));
+		await within(document.body).findByRole("menuitem", { name: /휴지통으로/ });
+	},
+};
+
+/** Board mode 휴지통으로 옮김: a file went at once, and the toast can undo it. */
+export const FileTrashed: Story = {
+	tags: ["visual"],
+	render: screen(
+		serve({
+			[`${mediaPath}/trash`]: (method) => (method === "POST" ? { trashed: ["강아지"], kept: [] } : undefined),
+		}),
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await tile(canvasElement, /^강아지\.png/));
 		const detail = await within(canvasElement).findByRole("complementary");
-		await userEvent.click(within(detail).getByRole("button", { name: "삭제" }));
-		await within(document.body).findByRole("alertdialog");
+		await userEvent.click(within(detail).getByRole("button", { name: "휴지통으로" }));
+		await within(document.body).findByText("강아지.png를 휴지통으로 옮겼어요");
+	},
+};
+
+/** Board mode 일부 남김: a file in use stayed, and the toast offers to show it. */
+export const FileKept: Story = {
+	tags: ["visual"],
+	render: screen(
+		serve({
+			[`${mediaPath}/trash`]: (method) => (method === "POST" ? { trashed: [], kept: ["고양이"] } : undefined),
+		}),
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await tile(canvasElement, /^고양이\.png/));
+		const detail = await within(canvasElement).findByRole("complementary");
+		await userEvent.click(within(detail).getByRole("button", { name: "휴지통으로" }));
+		await within(document.body).findByText("쓰는 곳이 있어 남겼어요");
 	},
 };
 

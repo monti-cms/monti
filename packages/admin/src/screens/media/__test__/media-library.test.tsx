@@ -6,6 +6,7 @@ import { preferenceKey } from "../../../lib/utils/site-storage";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
+import { deleteMessages } from "../../shared/delete.messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { MediaNotConfigured } from "../media-not-configured";
@@ -13,6 +14,7 @@ import { mediaMessages } from "../messages";
 
 const t = testSite.createTranslator(mediaMessages);
 const tc = testSite.createTranslator(commonMessages);
+const td = testSite.createTranslator(deleteMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -52,6 +54,8 @@ const ITEMS = [
 ];
 
 let fetchMock: ReturnType<typeof vi.fn>;
+/** What the server answers to a move to the trash: by default every file goes. */
+let trashAnswer: (ids: string[]) => { trashed: string[]; kept: string[] };
 const mediaRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
@@ -65,12 +69,16 @@ const render: ReturnType<typeof createTestRouter>["render"] = (ui, options) => h
 beforeEach(() => {
 	host = createTestRouter();
 	vi.clearAllMocks();
+	trashAnswer = (ids) => ({ trashed: ids, kept: [] });
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = new URL(input, "http://localhost");
 		const method = init?.method ?? "GET";
 		if (url.pathname === "/api/monti/v1/media" && method === "GET") return json({ items: ITEMS, total: ITEMS.length });
 		if (url.pathname.startsWith("/api/monti/v1/media/") && method === "PATCH") return json({});
-		if (url.pathname.startsWith("/api/monti/v1/media/") && method === "DELETE") return json({});
+		if (url.pathname === "/api/monti/v1/media/trash" && method === "POST") {
+			return json(trashAnswer((JSON.parse(String(init?.body)) as { ids: string[] }).ids));
+		}
+		if (url.pathname === "/api/monti/v1/trash/restore" && method === "POST") return json({ results: [] });
 		if (url.pathname === "/api/monti/v1/entries") return json({ items: [], total: 0 });
 		if (url.pathname.startsWith("/api/monti/v1/ai/")) return json({ items: [] });
 		throw new Error(`Unexpected fetch ${method} ${input}`);
@@ -131,8 +139,10 @@ describe("media library", () => {
 				.getByRole("link", { name: /고양이 글/ })
 				.getAttribute("href"),
 		).toBe(testSite.adminEntryEditHref("e1"));
-		// A file in use cannot be deleted.
-		expect((within(detail).getByRole("button", { name: tc("delete") }) as HTMLButtonElement).disabled).toBe(true);
+		// A file in use can go to the trash too: the server keeps it and the toast says so.
+		expect((within(detail).getByRole("button", { name: tc("lifecycle.trash") }) as HTMLButtonElement).disabled).toBe(
+			false,
+		);
 	});
 
 	it("saves the image's default alt text and caption", async () => {
@@ -273,24 +283,63 @@ describe("media library", () => {
 		expect(within(detail).getByText(/1\.4 ?MB|1\.5 ?MB/)).toBeTruthy();
 	});
 
-	it("an unused file is deleted after confirmation", async () => {
-		await renderLibrary();
-		const detail = await openDetail("dog.png");
-		fireEvent.click(within(detail).getByRole("button", { name: tc("delete") }));
-		const dialog = await screen.findByRole("alertdialog", { name: t("library.delete.title") });
-		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
-
-		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/media/dog")).toHaveLength(1));
-		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
-	});
-
-	it("the right-click menu has open, usages and delete", async () => {
+	it("the right-click menu has open, usages and the trash, and the trash is open to a file in use", async () => {
 		await renderLibrary();
 		await act(async () => {
 			fireEvent.contextMenu(screen.getByRole("button", { name: /^cat\.png/ }));
 		});
-		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
-		expect(items).toEqual([tc("open"), t("library.menu.usage"), `${tc("delete")}Del`]);
+		const items = await screen.findAllByRole("menuitem");
+		expect(items.map((item) => item.textContent)).toEqual([
+			tc("open"),
+			t("library.menu.usage"),
+			`${tc("lifecycle.trash")}Del`,
+		]);
+		expect(items.at(-1)?.hasAttribute("data-disabled")).toBe(false);
+	});
+
+	describe("flow: files go to the trash (T8)", () => {
+		const trashBodies = () =>
+			calls("POST", "/api/monti/v1/media/trash").map(([, init]) => JSON.parse(String(init.body)));
+		const toastAction = () => {
+			const options = toast.mock.calls.at(-1)?.[1] as { action: { label: string; onClick: () => void } };
+			return options.action;
+		};
+
+		it("moves an unused file from its panel at once, and the toast's undo restores it", async () => {
+			await renderLibrary();
+			const detail = await openDetail("dog.png");
+			fireEvent.click(within(detail).getByRole("button", { name: tc("lifecycle.trash") }));
+
+			await waitFor(() => expect(trashBodies()).toEqual([{ ids: ["dog"] }]));
+			expect(screen.queryByRole("alertdialog")).toBeNull();
+			await waitFor(() =>
+				expect(toast).toHaveBeenCalledWith(td("media.done.one", { name: "dog.png" }), expect.anything()),
+			);
+			expect(toastAction().label).toBe(td("undo"));
+
+			await act(async () => toastAction().onClick());
+			await waitFor(() => expect(calls("POST", "/api/monti/v1/trash/restore")).toHaveLength(1));
+			expect(JSON.parse(String(calls("POST", "/api/monti/v1/trash/restore")[0]?.[1].body))).toEqual({
+				items: [{ type: "media", id: "dog" }],
+			});
+		});
+
+		it("moves a file in use too when the server lets it, from the menu or the Delete key", async () => {
+			await renderLibrary();
+			fireEvent.keyDown(screen.getByRole("button", { name: /^cat\.png/ }), { key: "Delete" });
+			await waitFor(() => expect(trashBodies()).toEqual([{ ids: ["cat"] }]));
+		});
+
+		it("says a file in use stayed, and the toast's view shows the used files", async () => {
+			trashAnswer = (ids) => ({ trashed: [], kept: ids });
+			await renderLibrary();
+			fireEvent.keyDown(screen.getByRole("button", { name: /^cat\.png/ }), { key: "Delete" });
+
+			await waitFor(() => expect(toast).toHaveBeenCalledWith(td("media.keptAll"), expect.anything()));
+			expect(toastAction().label).toBe(td("view"));
+			await act(async () => toastAction().onClick());
+			await waitFor(() => expect(host.search.get("used")).toBe("used"));
+		});
 	});
 
 	it("switching to list view shows name, type, size, dimensions, usage and upload date in a table, and clicking a row opens the detail", async () => {

@@ -168,14 +168,23 @@ export const createEntryTranslation = (site: Site, id: string, locale: string, f
 		fallback,
 	});
 
-export type BulkUsage = { entryId: string; title: string | null; collection: string; state: string };
+export type BulkUsage = { entryId: string; title: string | null; collection: string; trashed: boolean };
 
 export type BulkItemResult =
 	| { id: string; ok: true; version: number }
 	| { id: string; ok: false; error: string; issues?: CmsIssue[]; usages?: BulkUsage[] };
 
-/** A row a bulk action targets. `status`, when known, lets a lifecycle action leave out rows it cannot change (`canTransition`). */
-export type BulkSelection = { id: string; expectedVersion: number; title?: string | null; status?: EntryStatus };
+/**
+ * A row a bulk action targets. `status`, when known, lets a lifecycle action leave out rows it cannot change (`canTransition`).
+ * `folderId`, when known, is where the row is now: the undo of a folder move puts it back there.
+ */
+export type BulkSelection = {
+	id: string;
+	expectedVersion: number;
+	title?: string | null;
+	status?: EntryStatus;
+	folderId?: string | null;
+};
 
 export type BulkParams = { field?: string; ids?: string[]; id?: string | null; folderId?: string | null };
 

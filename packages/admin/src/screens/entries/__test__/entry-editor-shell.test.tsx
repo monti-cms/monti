@@ -1510,23 +1510,65 @@ describe("language tabs", () => {
 		expect(methodCalls("POST", "/translations")).toHaveLength(0);
 	});
 
-	it("trashes a translation from its tab menu and goes back to the source", async () => {
-		serve((input, init) => {
-			if (input === "/api/monti/v1/entries/entry-en" && !init?.method) return json(translation);
-			if (input === "/api/monti/v1/entries/entry-en/trash" && init?.method === "POST") {
-				return json({ ...translation, status: "trashed" });
-			}
-		}, translation);
-		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
-		const nav = await screen.findByRole("navigation", { name: "언어" });
-		expect(within(nav).getByRole("link", { name: "영어 · 초안" }).getAttribute("aria-current")).toBe("page");
-		fireEvent.click(within(nav).getByRole("button", { name: "번역본 메뉴" }));
-		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로" }));
-		const dialog = screen.getByRole("alertdialog", { name: "휴지통으로" });
-		expect(within(dialog).queryByText(/함께/)).toBeNull();
-		fireEvent.click(within(dialog).getByRole("button", { name: "휴지통으로" }));
-		await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
-		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
+	describe("flow: this translation goes to the trash (T10)", () => {
+		const serveTranslation = (current: typeof translation) =>
+			serve((input, init) => {
+				if (input === "/api/monti/v1/entries/entry-en" && !init?.method) return json(current);
+				if (input === "/api/monti/v1/entries/entry-en/trash" && init?.method === "POST") {
+					return json({ ...current, status: "trashed" });
+				}
+				if (input === "/api/monti/v1/trash/restore" && init?.method === "POST") return json({ results: [] });
+			}, current);
+		const openMore = async () => {
+			renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
+			const nav = await screen.findByRole("navigation", { name: "언어" });
+			// The tab bar has no menu of its own: the item is in the header's ⋯.
+			expect(within(nav).queryByRole("button", { name: /메뉴/ })).toBeNull();
+			fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+		};
+
+		it("names the item with the language that stays, and has no icon", async () => {
+			serveTranslation(translation);
+			await openMore();
+			const item = screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ });
+			expect(item.textContent).toBe("이 번역 휴지통으로한국어 원문은 그대로");
+			expect(item.querySelector("svg")).toBeNull();
+			expect(screen.queryByRole("menuitem", { name: "휴지통으로" })).toBeNull();
+		});
+
+		it("moves a draft translation at once, goes back to the source, and the toast's undo restores it", async () => {
+			serveTranslation(translation);
+			await openMore();
+			fireEvent.click(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ }));
+
+			await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
+			expect(screen.queryByRole("alertdialog")).toBeNull();
+			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
+			const [message, options] = toast.mock.calls.at(-1) as [
+				string,
+				{ action: { label: string; onClick: () => void } },
+			];
+			expect(message).toBe("휴지통으로 옮겼어요");
+			expect(options.action.label).toBe("되돌리기");
+
+			await act(async () => options.action.onClick());
+			await waitFor(() => expect(methodCalls("POST", "/trash/restore")).toHaveLength(1));
+			expect(JSON.parse(String(methodCalls("POST", "/trash/restore")[0]?.[1]?.body))).toEqual({
+				items: [{ type: "entry", id: "entry-en", expectedVersion: translation.version + 1 }],
+			});
+			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit"));
+		});
+
+		it("asks first when the translation is published, and sends nothing when cancelled", async () => {
+			serveTranslation({ ...translation, status: "published" });
+			await openMore();
+			fireEvent.click(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ }));
+			const dialog = await screen.findByRole("alertdialog", { name: "휴지통으로 옮길까요?" });
+			expect(within(dialog).getByText("테스트의 공개가 끝나요.")).toBeTruthy();
+			fireEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+			await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+			expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(0);
+		});
 	});
 
 	it("does not offer duplicate on a translation", async () => {
@@ -1536,17 +1578,19 @@ describe("language tabs", () => {
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		await screen.findByRole("navigation", { name: "언어" });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
-		expect(screen.getByRole("menuitem", { name: "휴지통으로" })).toBeTruthy();
+		expect(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ })).toBeTruthy();
 		expect(screen.queryByRole("menuitem", { name: "복제" })).toBeNull();
 	});
 
-	it("tells that translations go along when trashing or archiving the source", async () => {
-		serve(() => undefined, source);
+	it("tells that translations go along when trashing a published source, and moves a draft source at once", async () => {
+		serve(() => undefined, { ...source, status: "published" });
 		renderEdit();
 		await screen.findByRole("navigation", { name: "언어" });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로" }));
-		expect(within(screen.getByRole("alertdialog")).getByText(/EN 번역본도 함께 휴지통으로 이동해요\./)).toBeTruthy();
+		expect(
+			within(await screen.findByRole("alertdialog")).getByText("테스트의 공개가 끝나요. 영어 번역도 함께 옮겨요."),
+		).toBeTruthy();
 	});
 
 	it("hides the tabs for record collections and new entries", async () => {

@@ -14,6 +14,7 @@ import { useAdminRouter, useAdminSearchParams } from "../router";
 import { bulkBarMessages } from "./entries/bulk-bar.messages";
 import { toSelection } from "./entries/bulk-model";
 import { copyTitle } from "./entries/entry-form";
+import { trashConfirm, trashSubjectOfRow } from "./entries/lifecycle-confirm";
 import { actionTargets, rowMenuActions } from "./list-row-menu";
 import {
 	isExplorerMode,
@@ -27,7 +28,7 @@ import type { MenuAction } from "./shared/action-menu";
 import { useConfirm } from "./shared/confirm-dialog";
 import type { DraggedEntry } from "./shared/entry-drag";
 import { nounVars } from "./shared/noun.messages";
-import { useFolderActions } from "./shared/use-folder-actions";
+import { isInsideFolder, useFolderActions } from "./shared/use-folder-actions";
 import { useTaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntryMutations } from "./use-entry-mutations";
 import { useRecordPanel } from "./use-record-panel";
@@ -212,11 +213,14 @@ export function useEntryList(mode: ListMode) {
 	const folderActions = useFolderActions({
 		collection,
 		folders,
-		onChanged: async (deletedId) => {
+		onChanged: async (change) => {
 			await queryClient.invalidateQueries({ queryKey: foldersKeys.list(collection) });
-			// If the folder being viewed was deleted, go back to the all view.
-			if (deletedId && state.folder === deletedId) update({ folder: "all" });
-			else await invalidateEntries();
+			// If the folder being viewed (or one inside it) went to the trash, go up to the folder it was in, or to the all view.
+			const { deleted } = change ?? {};
+			if (deleted && state.folder !== "all" && isInsideFolder(folders, state.folder, deleted.id)) {
+				update({ folder: deleted.parentId ?? "all" });
+			}
+			await invalidateEntries();
 		},
 	});
 
@@ -224,23 +228,21 @@ export function useEntryList(mode: ListMode) {
 		void bulk(
 			"folder.move",
 			t("bulk.move"),
-			entries.map((entry) => ({ ...entry, title: items.find((item) => item.id === entry.id)?.title })),
+			entries.map((entry) => {
+				const row = items.find((item) => item.id === entry.id);
+				return { ...entry, title: row?.title, folderId: row?.folderId };
+			}),
 			{ folderId },
 		);
 
 	const titleOf = (targets: BulkSelection[]) => `'${targets[0]?.title || tc("untitled")}'`;
 
+	/** Moves to the trash at once; a published entry (or one with a published translation) asks first, because it leaves the site. */
 	const confirmTrash = async (targets: BulkSelection[]) => {
-		const ok = await confirm({
-			title: tc("lifecycle.trash"),
-			description:
-				targets.length === 1
-					? t("trash.askOne", { title: titleOf(targets) })
-					: t("trash.askMany", { count: targets.length }),
-			confirmLabel: tc("lifecycle.trash"),
-			destructive: true,
-		});
-		if (ok) await bulk("trash", tc("lifecycle.trash"), targets);
+		const rows = targets.flatMap((target) => items.filter((item) => item.id === target.id));
+		const ask = trashConfirm(site, collection, rows.map(trashSubjectOfRow));
+		if (ask && !(await confirm(ask))) return;
+		await bulk("trash", tc("lifecycle.trash"), targets);
 	};
 
 	const tb = useTranslator(bulkBarMessages);

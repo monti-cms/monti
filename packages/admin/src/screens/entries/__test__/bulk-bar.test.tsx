@@ -8,6 +8,7 @@ import { testConfig, testSite } from "../../../../../core/test/site";
 import type { BulkParams } from "../../../api/entries";
 import { commonMessages } from "../../../lib/common.messages";
 import { renderWithSite as render } from "../../../test/site";
+import { deleteMessages } from "../../shared/delete.messages";
 import { BulkBar, bulkActionsFor } from "../bulk-bar";
 import { bulkBarMessages } from "../bulk-bar.messages";
 import { toSelection } from "../bulk-model";
@@ -19,6 +20,7 @@ afterEach(() => {
 
 const t = testSite.createTranslator(bulkBarMessages);
 const tc = testSite.createTranslator(commonMessages);
+const td = testSite.createTranslator(deleteMessages);
 
 const row = (id: string, patch: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,
@@ -282,7 +284,7 @@ describe("the bar over picked rows", () => {
 		});
 	});
 
-	it("keeps export and then the trash in the ⋯, the trash in red behind a confirmation", async () => {
+	it("keeps export and then the trash in the ⋯, the trash in red, and moves drafts at once", async () => {
 		const { run, onExport } = bar();
 		const rows = await openMore();
 		expect(rows.map((entry) => entry.textContent)).toEqual([
@@ -296,11 +298,27 @@ describe("the bar over picked rows", () => {
 		expect(run).not.toHaveBeenCalled();
 		await openMore();
 		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
-		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
-		expect(run).not.toHaveBeenCalled();
-		fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: tc("lifecycle.trash") }));
 		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
-		expect(run).toHaveBeenCalledWith("trash", tc("lifecycle.trash"), picked.map(toSelection), {});
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+		expect(run.mock.calls[0]?.slice(0, 3)).toEqual(["trash", tc("lifecycle.trash"), picked.map(toSelection)]);
+	});
+
+	it("asks before moving a published entry to the trash, and sends nothing when cancelled", async () => {
+		const { run } = bar({ initial: [row("entry-1", { status: "published" })] });
+		await openMore();
+		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
+		const dialog = await screen.findByRole("alertdialog", { name: td("trash.ask.title") });
+		expect(within(dialog).getByText(td("trash.ask.one", { title: "entry-1" }))).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+		expect(run).not.toHaveBeenCalled();
+
+		await openMore();
+		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
+		fireEvent.click(
+			within(await screen.findByRole("alertdialog")).getByRole("button", { name: td("trash.ask.confirm") }),
+		);
+		await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 	});
 
 	it("offers an item collection that has folders the folder move, and no publishing", () => {

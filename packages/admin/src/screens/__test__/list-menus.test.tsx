@@ -638,15 +638,17 @@ describe("flow: pick rows and act", () => {
 		expect(screen.queryByRole("button", { name: /요청/ })).toBeNull();
 	});
 
-	it("moves the picked rows to the trash from the menu after asking, and the list is requested again", async () => {
+	it("moves the picked draft rows to the trash from the menu at once, and the list is requested again", async () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
 		await screen.findByRole("toolbar");
 		fireEvent.click(screen.getByRole("button", { name: "더보기" }));
 		const rows = await screen.findAllByRole("menuitem");
 		expect(rows.at(-1)?.textContent).toBe(tc("lifecycle.trash"));
+		const before = listRequests().length;
 		fireEvent.click(rows.at(-1) as HTMLElement);
-		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
+		await waitFor(() => expect(listRequests().length).toBeGreaterThan(before));
+		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 });
 
