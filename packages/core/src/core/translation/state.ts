@@ -1,3 +1,4 @@
+import { withoutBlockIds } from "../../doc/block-ids";
 import { readStoredDocument, type StoredDocument } from "../../doc/stored-document";
 
 /**
@@ -31,3 +32,16 @@ export function parseTranslationState(value: unknown): TranslationState | null |
 	const state: TranslationState = { version: 4, baseDoc };
 	return byteLength(state) > MAX_TRANSLATION_BYTES ? undefined : state;
 }
+
+/**
+ * What a document says to a reader of a translation's source, without its block ids: two documents with the same key read the same. This is the one definition
+ * of "the source changed" (`sourceHasChanged`), and the stored hashes the list's translation filter compares (`documentKeyHash`) are hashes of this key.
+ */
+export const sourceContentKey = (doc: StoredDocument): string => JSON.stringify(withoutBlockIds(doc.content));
+
+/**
+ * Whether the source's document differs from the one a translation was confirmed against (`TranslationState.baseDoc`). Block ids do not count: they say
+ * which block is which, not what the body says. The translation editor and the list's translation filter both ask this, so they never disagree.
+ */
+export const sourceHasChanged = (source: StoredDocument, confirmed: StoredDocument): boolean =>
+	sourceContentKey(source) !== sourceContentKey(confirmed);

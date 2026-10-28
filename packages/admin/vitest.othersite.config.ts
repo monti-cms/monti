@@ -14,7 +14,9 @@ const BLOG_FIXTURE_TESTS = [
 	// Renders screens with the reference blog's collections and fields (post, memo, category, tag, collection, summary) and its Korean and Japanese translations.
 	"src/screens/__test__/entry-list-screen.test.tsx",
 	"src/screens/__test__/admin-entries-table.test.tsx",
+	"src/screens/__test__/admin-list-rows.test.tsx",
 	"src/screens/__test__/blog-list-defaults.test.ts",
+	"src/screens/__test__/list-menus.test.tsx",
 	"src/screens/__test__/list-row-menu.test.ts",
 	"src/screens/__test__/list-state.test.ts",
 	"src/screens/__test__/record-panel.test.tsx",

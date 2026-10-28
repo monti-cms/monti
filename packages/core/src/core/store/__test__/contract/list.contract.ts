@@ -4,6 +4,7 @@ import {
 	contentCollection,
 	defaultLocale,
 	otherContentCollection,
+	recordCollection,
 	requiredFields,
 	requiredMetadata,
 	secondLocale,
@@ -11,6 +12,7 @@ import {
 import { testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
+import { isRequiredField } from "../../../../schema/fields";
 import type { Collection } from "../../../collections";
 import { CmsError, type ContentStore, type Entry } from "../..";
 import { moveToFolder, publishDraft, seedEntry } from "../seed";
@@ -216,34 +218,213 @@ export const listContract: ContractSuite = (factory) => {
 			expect(res2.items[0].collection).toBe(isolatedCollection);
 		});
 
-		it.skipIf(!filledRelation)("1b. relation filters accept only the collection's relation fields", async () => {
-			const relation = filledRelation as RelationInfo;
-			await seed(content, "le1b-slug", "Le1b Title");
-			const targetId = await relationTarget(relation.to);
-			const byTarget = await store.listEntries({ collection: content, relations: { [relation.name]: [targetId] } });
-			expect(byTarget.items.map((item) => item.slug)).toContain("le1b-slug");
-			const elsewhere = await store.listEntries({
+		/** One item of an item collection, under its own name (a tag). */
+		const makeItem = async (to: Collection, name: string): Promise<string> =>
+			(
+				await seedEntry(store, {
+					collection: to,
+					slug: `item-${name}`,
+					metadata: await requiredMetadata(to, name, relationTarget),
+					text: "",
+					contentHash: uniqueHash(),
+				})
+			).id;
+
+		/** A post of the content collection with these values on top of the required ones. */
+		const seedWith = async (slug: string, extra: Record<string, unknown>) =>
+			seedEntry(store, {
 				collection: content,
-				relations: { [relation.name]: ["00000000-0000-4000-8000-000000000000"] },
+				slug,
+				metadata: { ...(await metadataFor(content, slug)), ...extra },
+				text: "body",
+				contentHash: uniqueHash(),
 			});
-			expect(elsewhere.items.map((item) => item.slug)).not.toContain("le1b-slug");
-			const invalid: Record<string, string[]>[] = [
-				{ title: [targetId] },
-				{ [(manyRelation ?? relation).name]: ["not-a-uuid"] },
+
+		const slugsOf = async (fields: NonNullable<Parameters<ContentStore["listEntries"]>[0]["fields"]>) =>
+			(await store.listEntries({ collection: content, fields, pageSize: 100 })).items.map((item) => item.slug).sort();
+
+		describe.skipIf(!manyRelation)("field conditions on a relation that holds many", () => {
+			const field = () => (manyRelation as RelationInfo).name;
+			const seedTagged = async () => {
+				const tagA = await makeItem((manyRelation as RelationInfo).to, "a");
+				const tagB = await makeItem((manyRelation as RelationInfo).to, "b");
+				await seedWith("fc-a", { [field()]: [tagA] });
+				await seedWith("fc-ab", { [field()]: [tagA, tagB] });
+				await seedWith("fc-none", { [field()]: [] });
+				return { tagA, tagB };
+			};
+
+			it("is finds the rows that hold the item, and empty the rows that hold none", async () => {
+				const { tagA, tagB } = await seedTagged();
+				expect(await slugsOf({ [field()]: [{ kind: "is", value: tagA }] })).toEqual(["fc-a", "fc-ab"]);
+				expect(await slugsOf({ [field()]: [{ kind: "is", value: tagB }] })).toEqual(["fc-ab"]);
+				expect(await slugsOf({ [field()]: [{ kind: "empty" }] })).toEqual(["fc-none"]);
+			});
+
+			it("takes several conditions on one field as OR", async () => {
+				const { tagA, tagB } = await seedTagged();
+				expect(await slugsOf({ [field()]: [{ kind: "empty" }, { kind: "is", value: tagB }] })).toEqual([
+					"fc-ab",
+					"fc-none",
+				]);
+				expect(
+					await slugsOf({
+						[field()]: [
+							{ kind: "is", value: tagA },
+							{ kind: "is", value: tagB },
+						],
+					}),
+				).toEqual(["fc-a", "fc-ab"]);
+			});
+
+			it("takes conditions on different fields as AND", async () => {
+				const { tagB } = await seedTagged();
+				const other = filledRelation && filledRelation.name !== field() ? filledRelation : undefined;
+				if (!other) return;
+				const targetId = await relationTarget(other.to);
+				expect(
+					await slugsOf({ [field()]: [{ kind: "is", value: tagB }], [other.name]: [{ kind: "is", value: targetId }] }),
+				).toEqual(["fc-ab"]);
+				expect(await slugsOf({ [field()]: [{ kind: "empty" }], [other.name]: [{ kind: "empty" }] })).toEqual([]);
+			});
+		});
+
+		it.skipIf(!filledRelation)("a relation of one item: is finds the item, empty finds a row without it", async () => {
+			const relation = filledRelation as RelationInfo;
+			const targetId = await relationTarget(relation.to);
+			await seed(content, "fc-single", "Single");
+			expect(await slugsOf({ [relation.name]: [{ kind: "is", value: targetId }] })).toContain("fc-single");
+			expect(
+				await slugsOf({ [relation.name]: [{ kind: "is", value: "00000000-0000-4000-8000-000000000000" }] }),
+			).toEqual([]);
+			expect(await slugsOf({ [relation.name]: [{ kind: "empty" }] })).not.toContain("fc-single");
+		});
+
+		const textField = testSite.storedFields(content).find(({ field, when, name }) => {
+			return !when && field.kind === "text" && name !== "title" && !isRequiredField(field);
+		});
+		it.skipIf(!textField)("a text field: filled finds a row with text, empty one without", async () => {
+			const name = (textField as { name: string }).name;
+			await seedWith("fc-text", { [name]: "Something to say" });
+			await seedWith("fc-blank", { [name]: "" });
+			await seedWith("fc-unset", {});
+			expect(await slugsOf({ [name]: [{ kind: "filled" }] })).toEqual(["fc-text"]);
+			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).toEqual(["fc-blank", "fc-unset"]);
+		});
+
+		const selectField = testSite.storedFields(content).find(({ field, when }) => !when && field.kind === "select");
+		it.skipIf(!selectField)("a select: is finds the option, empty a row with none chosen", async () => {
+			const { name, field } = selectField as { name: string; field: { options: Record<string, string> } };
+			const [first, second] = Object.keys(field.options);
+			await seedWith("fc-first", { [name]: first });
+			await seedWith("fc-second", { [name]: second ?? first });
+			await seedWith("fc-chosen-none", {});
+			expect(await slugsOf({ [name]: [{ kind: "is", value: first as string }] })).toContain("fc-first");
+			expect(await slugsOf({ [name]: [{ kind: "is", value: first as string }] })).not.toContain("fc-chosen-none");
+			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).toContain("fc-chosen-none");
+			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).not.toContain("fc-first");
+		});
+
+		const mediaField = testSite.storedFields(content).find(({ field, when }) => !when && field.kind === "media");
+		it.skipIf(!mediaField)("a media field: filled finds a row that has a file, empty one that has none", async () => {
+			const name = (mediaField as { name: string }).name;
+			await seedWith("fc-media", { [name]: "5c1e7a8e-2d0b-4f4b-9d57-3f6a1b9a0c11" });
+			await seedWith("fc-no-media", {});
+			expect(await slugsOf({ [name]: [{ kind: "filled" }] })).toEqual(["fc-media"]);
+			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).toContain("fc-no-media");
+			expect(await slugsOf({ [name]: [{ kind: "empty" }] })).not.toContain("fc-media");
+		});
+
+		it("refuses a condition the field's kind does not take, and a field that is not there", async () => {
+			const targetId = filledRelation ? await relationTarget(filledRelation.to) : "";
+			const invalid: Record<string, { kind: "empty" } | { kind: "filled" } | { kind: "is"; value: string }>[] = [
+				// Nothing named so.
+				{ noSuchField: { kind: "empty" } },
+				// A title is text: it is not picked from a list.
+				{ title: { kind: "is", value: "x" } },
+				...(filledRelation
+					? [
+							// A relation has no "filled", and its item is an id.
+							{ [filledRelation.name]: { kind: "filled" as const } },
+							{ [filledRelation.name]: { kind: "is" as const, value: "not-a-uuid" } },
+						]
+					: []),
+				...(selectField ? [{ [selectField.name]: { kind: "filled" as const } }] : []),
 			];
-			for (const relations of invalid) {
-				try {
-					await store.listEntries({ collection: content, relations });
-					throw new Error("expected invalid_input");
-				} catch (err) {
-					expectCmsError(err, "invalid_input");
-				}
+			for (const [name, condition] of invalid.flatMap((entry) => Object.entries(entry))) {
+				await expect(store.listEntries({ collection: content, fields: { [name]: [condition] } })).rejects.toMatchObject(
+					{
+						code: "invalid_input",
+					},
+				);
 			}
+			if (!collectionWithoutFilledRelation || !filledRelation) return;
 			// That filter cannot be used on a collection without that relation field (the reference blog's memos have no category field).
-			if (!collectionWithoutFilledRelation) return;
 			await expect(
-				store.listEntries({ collection: collectionWithoutFilledRelation, relations: { [relation.name]: [targetId] } }),
+				store.listEntries({
+					collection: collectionWithoutFilledRelation,
+					fields: { [filledRelation.name]: [{ kind: "is", value: targetId }] },
+				}),
 			).rejects.toMatchObject({ code: "invalid_input" });
+		});
+
+		describe("countListValues: the numbers beside the filter menu's values", () => {
+			it.skipIf(!manyRelation)("counts the rows of each item of a relation, and the rows with none", async () => {
+				const many = manyRelation as RelationInfo;
+				const tagA = await makeItem(many.to, "a");
+				const tagB = await makeItem(many.to, "b");
+				await seedWith("cv-a", { [many.name]: [tagA] });
+				await seedWith("cv-ab", { [many.name]: [tagA, tagB] });
+				await seedWith("cv-none", { [many.name]: [] });
+				const counts = await store.countListValues({ collection: content, facet: { field: many.name } });
+				expect(counts.total).toBe(3);
+				expect(counts.empty).toBe(1);
+				expect(counts.values).toEqual({ [tagA]: 2, [tagB]: 1 });
+			});
+
+			it("counts the rows of the folder and the statuses asked for, and no others", async () => {
+				const folder = await store.createFolder({ collection: content, parentId: null, name: "Counted" });
+				await seed(content, "cv-in", "In folder", { folderId: folder.id });
+				await seed(content, "cv-in-published", "Published in folder", { folderId: folder.id, status: "published" });
+				await seed(content, "cv-out", "Out of folder");
+				const facet = { field: "title" } as const;
+				expect((await store.countListValues({ collection: content, facet, folderId: folder.id })).total).toBe(2);
+				expect(
+					(await store.countListValues({ collection: content, facet, folderId: folder.id, statuses: ["published"] }))
+						.total,
+				).toBe(1);
+				expect((await store.countListValues({ collection: content, facet, folderId: null })).total).toBe(1);
+				expect((await store.countListValues({ collection: content, facet })).total).toBe(3);
+			});
+
+			it.skipIf(!textField)("counts a text field as empty and filled", async () => {
+				const name = (textField as { name: string }).name;
+				await seedWith("cv-text", { [name]: "Words" });
+				await seedWith("cv-blank", { [name]: "" });
+				await seedWith("cv-unset", {});
+				const counts = await store.countListValues({ collection: content, facet: { field: name } });
+				expect(counts).toMatchObject({ total: 3, empty: 2, filled: 1 });
+			});
+
+			it.skipIf(!selectField)("counts a select per option", async () => {
+				const { name, field } = selectField as { name: string; field: { options: Record<string, string> } };
+				const [first] = Object.keys(field.options) as [string];
+				await seedWith("cv-first", { [name]: first });
+				await seedWith("cv-first-too", { [name]: first });
+				await seedWith("cv-unchosen", {});
+				const counts = await store.countListValues({ collection: content, facet: { field: name } });
+				expect(counts.values[first]).toBe(2);
+				expect(counts.empty).toBe(1);
+			});
+
+			it("refuses a field that is not there, and the translation filter of a collection without translations", async () => {
+				await expect(
+					store.countListValues({ collection: content, facet: { field: "noSuchField" } }),
+				).rejects.toMatchObject({ code: "invalid_input" });
+				await expect(
+					store.countListValues({ collection: recordCollection, facet: "translation" }),
+				).rejects.toMatchObject({ code: "invalid_input" });
+			});
 		});
 
 		// -----------------------------------------------------------------------
@@ -366,31 +547,6 @@ export const listContract: ContractSuite = (factory) => {
 			await expectMatch("HiddenAttr789", false, true);
 			await expectMatch("LinkUrl987", false, true);
 		}, 15_000);
-
-		// -----------------------------------------------------------------------
-		// 2b  column header filters: title only / slug only, ANDed with search
-		// -----------------------------------------------------------------------
-
-		it("2b. titleContains matches only the title and slugContains only the slug; both AND with search", async () => {
-			await seed(content, "alpha-slug", "베타 제목");
-			await seed(content, "beta-slug", "알파 제목");
-
-			const byTitle = await store.listEntries({ collection: content, titleContains: "베타" });
-			expect(byTitle.items.map((item) => item.slug)).toEqual(["alpha-slug"]);
-
-			const bySlug = await store.listEntries({ collection: content, slugContains: "beta" });
-			expect(bySlug.items.map((item) => item.slug)).toEqual(["beta-slug"]);
-
-			// The title filter does not look at the slug, and the slug filter does not look at the title.
-			expect((await store.listEntries({ collection: content, titleContains: "slug" })).items).toHaveLength(0);
-			expect((await store.listEntries({ collection: content, slugContains: "제목" })).items).toHaveLength(0);
-
-			const anded = await store.listEntries({ collection: content, search: "알파", slugContains: "alpha" });
-			expect(anded.items).toHaveLength(0);
-
-			const literal = await store.listEntries({ collection: content, titleContains: "%" });
-			expect(literal.items).toHaveLength(0);
-		});
 
 		// -----------------------------------------------------------------------
 		// 3  status filter; folder undefined/null/direct/descendants

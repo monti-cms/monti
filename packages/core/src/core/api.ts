@@ -10,7 +10,7 @@ import {
 	SUPPORTED_FILE_MIME_TYPES,
 	SUPPORTED_IMAGE_MIME_TYPES,
 } from "./media-types";
-import { MAX_ENTRY_SEARCH_LIMIT } from "./store/types";
+import { type FieldCondition, MAX_ENTRY_SEARCH_LIMIT } from "./store/types";
 
 export * from "./media-types";
 
@@ -25,6 +25,9 @@ export const LIST_SORT_FIELDS = ["updatedAt", "createdAt", "publishedAt", "title
 export type ListSortField = (typeof LIST_SORT_FIELDS)[number];
 export const listSortFieldSchema = z.enum(LIST_SORT_FIELDS);
 export const sortDirectionSchema = z.enum(["asc", "desc"]);
+
+/** Where a translation group stands, for the translation filter of the list (`translation=none|changed|current`). */
+export const TRANSLATION_FILTERS = ["none", "changed", "current"] as const;
 
 export const PAGE_SIZES = [25, 50, 100] as const;
 export type PageSize = (typeof PAGE_SIZES)[number];
@@ -46,7 +49,7 @@ const dateQuery = z.iso
 	.transform((val) => (val ? new Date(val) : undefined));
 
 /** List query keys that may appear multiple times. The route reads only these keys with `getAll`. */
-export const LIST_ARRAY_QUERY_KEYS = ["status", "relation", "locale"] as const;
+export const LIST_ARRAY_QUERY_KEYS = ["status", "field", "locale", "translation"] as const;
 
 /** Search query keys that may appear multiple times (`id`: entries to look up by id). */
 export const SEARCH_ARRAY_QUERY_KEYS = ["id"] as const;
@@ -56,24 +59,32 @@ const FIELD_NAME = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 export const fieldNameSchema = z.string().regex(FIELD_NAME);
 
 /**
- * Relation filter (`relation=field:ID`, repeatable). Collected into per-field ID lists.
- * Multiple values of the same field are OR, different fields are AND.
+ * Field conditions (`field=<name>:empty`, `<name>:filled`, `<name>:is:<value>`, repeatable). Collected into conditions per field name. Several
+ * conditions on one field are OR, different fields are AND. The value of `is` is everything after the second colon, so it may hold colons itself and
+ * may be a word like `empty`. Whether the field exists and takes the condition is checked against the schema, where the list is read.
  */
-const relationFiltersSchema = z
-	.array(z.string().max(120))
+const fieldConditionsSchema = z
+	.array(z.string().max(300))
 	.optional()
 	.transform((values, ctx) => {
 		if (!values) return undefined;
-		const filters: Record<string, string[]> = {};
+		const conditions: Record<string, FieldCondition[]> = {};
 		for (const value of values) {
-			const [field = "", id = "", ...rest] = value.split(":");
-			if (rest.length > 0 || !FIELD_NAME.test(field) || !z.uuid().safeParse(id).success) {
-				ctx.addIssue({ code: "custom", message: `Invalid relation filter: ${value}` });
+			const [name = "", kind = "", ...rest] = value.split(":");
+			const argument = rest.join(":");
+			const condition: FieldCondition | null =
+				(kind === "empty" || kind === "filled") && rest.length === 0
+					? { kind }
+					: kind === "is" && argument !== ""
+						? { kind, value: argument }
+						: null;
+			if (!FIELD_NAME.test(name) || !condition) {
+				ctx.addIssue({ code: "custom", message: `Invalid field condition: ${value}` });
 				return z.NEVER;
 			}
-			filters[field] = [...(filters[field] ?? []), id];
+			conditions[name] = [...(conditions[name] ?? []), condition];
 		}
-		return filters;
+		return conditions;
 	});
 
 const expectedVersionSchema = z.number().int().positive();
@@ -277,8 +288,6 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		collection: collectionSchema,
 		search: z.string().optional(),
 		includeBody: booleanQuery,
-		titleContains: z.string().optional(),
-		slugContains: z.string().optional(),
 		status: z.array(entryStatusSchema).optional(),
 		/** Content locales. Can be repeated; if absent, all locales. */
 		locale: z.array(oneOf(LOCALES)).optional(),
@@ -290,7 +299,9 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 			.transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
 			.pipe(z.union([z.uuid(), z.null(), z.undefined()])),
 		includeDescendants: booleanQuery,
-		relation: relationFiltersSchema,
+		field: fieldConditionsSchema,
+		/** Where the translation group stands. Can be repeated (OR). */
+		translation: z.array(z.enum(TRANSLATION_FILTERS)).optional(),
 		hasChanges: booleanQuery,
 		createdFrom: dateQuery,
 		createdTo: dateQuery,
@@ -303,6 +314,29 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		page: z.coerce.number().int().min(1).default(1),
 		pageSize: pageSizeSchema.default(25),
 	});
+
+	/**
+	 * How many rows of the list each value of one field (`field=<name>`) or of the translation filter (`facet=translation`) has, for the filter menu.
+	 * It counts the rows of the folder (`folderId`, `includeDescendants`) and the statuses (`status`) given, before any other filter.
+	 */
+	const listCountsQuerySchema = z
+		.object({
+			collection: collectionSchema,
+			field: fieldNameSchema.optional(),
+			facet: z.literal("translation").optional(),
+			group: z.enum(["translation"]).optional(),
+			folderId: z
+				.union([z.string(), z.null()])
+				.optional()
+				.transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
+				.pipe(z.union([z.uuid(), z.null(), z.undefined()])),
+			includeDescendants: booleanQuery,
+			status: z.array(entryStatusSchema).optional(),
+		})
+		.refine((query) => (query.field !== undefined) !== (query.facet === "translation"), {
+			message: "Ask for one field, or for facet=translation",
+			path: ["field"],
+		});
 
 	/** The entry search of a picker (`/v1/entries/search`): `query`, and at most `limit` hits (1 to 50, default 20). */
 	const searchEntriesQuerySchema = z.object({
@@ -387,6 +421,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 		collectionSchema,
 		folderCollectionSchema,
 		listEntriesQuerySchema,
+		listCountsQuerySchema,
 		searchEntriesQuerySchema,
 		createEntryBodySchema,
 		createFolderBodySchema,

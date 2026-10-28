@@ -368,6 +368,119 @@ export const translationsContract: ContractSuite = (factory) => {
 				}
 			});
 
+			describe("the translation filter and its counts", () => {
+				/** A source edited after its translation was confirmed: the translation is behind. */
+				const editSource = async (source: Entry, body: string) => {
+					const current = await store.getEntry(source.id);
+					await service.saveDraft(source.id, {
+						collection: contentCollection,
+						slug: current.workingSlug,
+						metadata: current.working.metadata,
+						format: "paragraphs",
+						body,
+						expectedVersion: current.version,
+					} as never);
+				};
+
+				const group = async (slug: string) => {
+					const source = await createPost(slug);
+					await service.createTranslation({ sourceId: source.id, locale: second });
+					return source;
+				};
+
+				const idsFor = async (translations: ("none" | "changed" | "current")[]) =>
+					(
+						await store.listEntries({
+							collection: contentCollection,
+							groupTranslations: true,
+							translations,
+							pageSize: 100,
+						})
+					).items.map((item) => item.id);
+
+				it("tells a group with no translation, one that is behind its source and one that is up to date apart", async () => {
+					const alone = await createPost("tf-alone");
+					const behind = await group("tf-behind");
+					await editSource(behind, "A new paragraph of the source");
+					const current = await group("tf-current");
+					const none = await idsFor(["none"]);
+					const changed = await idsFor(["changed"]);
+					const upToDate = await idsFor(["current"]);
+					expect([none.includes(alone.id), none.includes(behind.id), none.includes(current.id)]).toEqual([
+						true,
+						false,
+						false,
+					]);
+					expect([changed.includes(alone.id), changed.includes(behind.id), changed.includes(current.id)]).toEqual([
+						false,
+						true,
+						false,
+					]);
+					expect([upToDate.includes(alone.id), upToDate.includes(behind.id), upToDate.includes(current.id)]).toEqual([
+						false,
+						false,
+						true,
+					]);
+				});
+
+				it("does not count a change to the block ids alone as a change of the source", async () => {
+					const source = await group("tf-ids-only");
+					const current = await store.getEntry(source.id);
+					await service.saveDraft(source.id, {
+						collection: contentCollection,
+						slug: current.workingSlug,
+						metadata: current.working.metadata,
+						doc: {
+							...current.working.doc,
+							content: (current.working.doc?.content ?? []).map((node, index) => ({ ...node, id: `ids0000${index}` })),
+						},
+						expectedVersion: current.version,
+					} as never);
+					expect(await idsFor(["current"])).toContain(source.id);
+					expect(await idsFor(["changed"])).not.toContain(source.id);
+				});
+
+				it("takes several as OR", async () => {
+					const alone = await createPost("tf-or-alone");
+					const behind = await group("tf-or-behind");
+					await editSource(behind, "Edited");
+					const current = await group("tf-or-current");
+					const ids = await idsFor(["none", "changed"]);
+					expect(ids).toContain(alone.id);
+					expect(ids).toContain(behind.id);
+					expect(ids).not.toContain(current.id);
+				});
+
+				it("does not count a trashed translation", async () => {
+					const source = await createPost("tf-trashed");
+					const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+					await store.trashEntry({ id: translation.id, expectedVersion: translation.version });
+					expect(await idsFor(["none"])).toContain(source.id);
+				});
+
+				it("counts the groups of each state", async () => {
+					const ask = () =>
+						store.countListValues({ collection: contentCollection, facet: "translation", groupTranslations: true });
+					const before = await ask();
+					await createPost("tc-alone");
+					await createPost("tc-alone-too");
+					const behind = await group("tc-behind");
+					await editSource(behind, "Edited");
+					await group("tc-current");
+					const after = await ask();
+					expect(after.total - before.total).toBe(4);
+					const grew = (key: string) => (after.values[key] ?? 0) - (before.values[key] ?? 0);
+					expect([grew("none"), grew("changed"), grew("current")]).toEqual([2, 1, 1]);
+				});
+
+				it("is refused for a collection without translations", async () => {
+					if (!localizedRecord) return;
+					await expect(
+						store.listEntries({ collection: localizedRecord, translations: ["none"] }),
+					).rejects.toMatchObject({ code: "invalid_input" });
+				});
+			});
+
 			it.skipIf(!relation)(
 				"filters lists by language and shows the source's values for a translation's tags and categories",
 				async () => {
@@ -382,7 +495,7 @@ export const translationsContract: ContractSuite = (factory) => {
 					expect(row?.relations[relation.name]?.map((value) => value.id)).toEqual(relatedIds);
 					const byRelation = await store.listEntries({
 						collection: contentCollection,
-						relations: { [relation.name]: relatedIds },
+						fields: { [relation.name]: relatedIds.map((value) => ({ kind: "is" as const, value })) },
 						pageSize: 100,
 					});
 					expect(byRelation.items.map((item) => item.id).sort()).toEqual([source.id, translation.id].sort());

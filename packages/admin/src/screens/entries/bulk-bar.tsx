@@ -1,35 +1,23 @@
 "use client";
 
-import { ChevronDown } from "@carbon/icons-react";
 import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Box,
-	Button,
-	Checkbox,
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	FormFieldError,
-	Inline,
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	Stack,
-	Text,
+	BulkBar as BulkBarFrame,
+	Caret,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+	type SelectAllState,
 	TextButton,
 } from "@monti-cms/ui";
-import { useEffect, useMemo, useState } from "react";
-import { errorText } from "../../api/client";
-import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
+import { useState } from "react";
+import type { BulkItemResult, BulkParams, BulkSelection } from "../../api/entries";
 import { issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
@@ -39,8 +27,6 @@ import { useConfirm } from "../shared/confirm-dialog";
 import { collectionNoun, nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
-
-type RunBulkArgs = [op: BulkOp, items: BulkSelection[], params?: BulkParams];
 
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 
@@ -187,304 +173,224 @@ export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult,
 }
 
 /**
- * Multi-category (tags, etc.) picker in the bulk action row. A single small button like the folder and category pickers; pressing it opens search and a checklist.
- * The button shows picked items shortened like `React +2`, so the row does not overflow.
+ * What the bar offers for the rows picked, by what can be done to them: the two used most as buttons (publish, move to a folder), the rest in the ⋯
+ * with the trash last. Anything that cannot be done to these rows is left out instead of dimmed: a collection of items is not published or
+ * archived, a list without folders has no folder to move to, and a pick of only archived rows is not published or archived again.
  */
-function ManyPicker({
-	label,
-	options,
-	value,
-	onValueChange,
+export function bulkActionsFor({
+	site,
+	collection,
+	mode,
+	selected,
+	hasFolders,
 }: {
-	label: string;
-	options: readonly { id: string; title: string }[];
-	value: string[];
-	onValueChange: (value: string[]) => void;
-}) {
-	const t = useTranslator(bulkBarMessages);
-	const names = value.map((id) => options.find((option) => option.id === id)?.title ?? id);
-	const summary =
-		names.length === 0
-			? t("picker.select", { label })
-			: names.length === 1
-				? names[0]
-				: t("picker.more", { first: names[0] ?? "", more: names.length - 1 });
-	const toggle = (id: string) =>
-		onValueChange(value.includes(id) ? value.filter((item) => item !== id) : [...value, id]);
-	return (
-		<Popover>
-			<PopoverTrigger
-				render={
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
-					/>
-				}
-			>
-				<Text truncate tone={names.length === 0 ? "muted" : undefined}>
-					{summary}
-				</Text>
-				<ChevronDown aria-hidden />
-			</PopoverTrigger>
-			<PopoverContent align="start" width="md" padding="menu">
-				<Command>
-					<CommandInput placeholder={t("picker.search", { label })} aria-label={t("picker.search", { label })} />
-					<CommandList>
-						<CommandEmpty>{t("picker.empty", { label })}</CommandEmpty>
-						<CommandGroup>
-							{options.map((option) => (
-								<CommandItem key={option.id} value={`${option.title} ${option.id}`} onSelect={() => toggle(option.id)}>
-									<Checkbox checked={value.includes(option.id)} tabIndex={-1} aria-hidden />
-									{option.title}
-								</CommandItem>
-							))}
-						</CommandGroup>
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
-	);
+	site: Site;
+	collection: string;
+	mode: "list" | "trash";
+	selected: readonly BulkSelection[];
+	hasFolders: boolean;
+}): { primary: ListAction[]; more: ListAction[] } {
+	if (mode === "trash") return { primary: ["permanentDelete"], more: [] };
+	const documents = !site.isItemCollection(collection);
+	const states = new Set(selected.map((item) => item.status));
+	const onlyArchived = states.size > 0 && [...states].every((state) => state === "archived");
+	const noneArchived = !states.has("archived");
+	return {
+		primary: [
+			...(documents && !onlyArchived ? (["publish"] as const) : []),
+			...(hasFolders ? (["folder.move"] as const) : []),
+		],
+		more: [
+			...taxonomyActions(site, collection).map((action) => action.value),
+			...(documents && !onlyArchived ? (["archive"] as const) : []),
+			...(documents && !noneArchived ? (["unarchive"] as const) : []),
+			"export",
+			"trash",
+		],
+	};
 }
 
 /**
- * Bulk actions. Apply only to items picked on the current page and show a result per item.
- * Only failed items can be rerun. The trash screen (`mode="trash"`) offers only bulk permanent delete.
+ * The bar that replaces the list's toolbar once rows are picked: how many, the two actions used most, a ⋯ with the rest, and the way to let go.
+ * Every action on several rows asks first. A choice of a folder, tag or category is a row in a menu, so it is picked and applied in one step.
+ * Applies only to the rows picked on this page.
  */
 export function BulkBar({
 	collection,
 	selected,
 	folders,
 	mode = "list",
+	selectAll,
 	onClearSelection,
 	onRun,
-	onDone,
 }: {
 	collection: string;
 	selected: BulkSelection[];
 	/** The folders items can move to; `null` where the list shows no folders, which leaves out the folder move. */
 	folders: readonly Folder[] | null;
 	mode?: "list" | "trash";
+	/** The select-all check that stays where it was in the toolbar. */
+	selectAll?: { state: SelectAllState; onChange: (all: boolean) => void; label: string };
 	onClearSelection: () => void;
-	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
-	onRun?: (...args: RunBulkArgs) => Promise<BulkItemResult[]>;
-	onDone?: (failedIds: string[]) => void;
+	/** Applies an action to the picked rows and tells the writer how it went. */
+	onRun: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void> | void;
 }) {
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
 	const tc = useTranslator(commonMessages);
 	const tx = useTranslator(exportMessages);
 	const [isExporting, setIsExporting] = useState(false);
-	const isRecord = site.isItemCollection(collection);
-	const actions = useMemo(
-		() =>
-			mode === "trash"
-				? trashActions(t, tc)
-				: [
-						...taxonomyActions(site, collection),
-						...listActions(t, tc, tx, nounVars(site, collection)).filter(
-							(action) => (!action.content || !isRecord) && (action.value !== "folder.move" || folders !== null),
-						),
-					],
-		[isRecord, folders, collection, mode, site, t, tc, tx],
-	);
-	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
-	const [checked, setChecked] = useState<string[]>([]);
-	const [single, setSingle] = useState("");
-	const [isRunning, setIsRunning] = useState(false);
-	const [results, setResults] = useState<BulkItemResult[] | null>(null);
-	const [ranItems, setRanItems] = useState<BulkSelection[]>([]);
-	const [error, setError] = useState<string | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const options = useTaxonomyOptions(collection, mode === "list");
 
-	useEffect(() => {
-		if (!actions.some((candidate) => candidate.value === action)) setAction(actions[0]?.value ?? "trash");
-	}, [actions, action]);
+	const all = [
+		...taxonomyActions(site, collection),
+		...listActions(t, tc, tx, nounVars(site, collection)),
+		...trashActions(t, tc),
+	];
+	const definition = (action: ListAction) => all.find((candidate) => candidate.value === action);
+	const { primary, more } = bulkActionsFor({
+		site,
+		collection,
+		mode,
+		selected,
+		hasFolders: folders !== null,
+	});
 
-	// Changing the action clears that action's input value.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: reset keyed by action
-	useEffect(() => {
-		setChecked([]);
-		setSingle("");
-		setError(null);
-	}, [action]);
+	if (selected.length === 0) return null;
 
-	const activeAction = actions.find((candidate) => candidate.value === action);
-	const relation = activeAction?.relation;
-	const needsMany = relation !== undefined && relation.op !== "relation.set";
-	const needsSingle = relation?.op === "relation.set" || action === "folder.move";
-	const relationOptions = relation ? (options[relation.field] ?? []) : [];
-	const canRun =
-		!isRunning && selected.length > 0 && (needsMany ? checked.length > 0 : needsSingle ? single !== "" : true);
-
-	const run = async (items: BulkSelection[]) => {
-		setIsRunning(true);
-		setError(null);
-		try {
-			const params = needsMany
-				? { field: relation.field, ids: checked }
-				: relation
-					? { field: relation.field, id: single === "__none__" ? null : single }
-					: action === "folder.move"
-						? { folderId: single === "__unfiled__" ? null : single }
-						: {};
-			const out = await (onRun ?? ((...args: RunBulkArgs) => bulkEntries(site, ...args)))(
-				relation?.op ?? (action as BulkOp),
-				items,
-				params,
-			);
-			setResults(out);
-			setRanItems(items);
-			onDone?.(out.filter((result) => !result.ok).map((result) => result.id));
-		} catch (err) {
-			setError(errorText(site, err, t("failed")));
-		} finally {
-			setIsRunning(false);
-		}
-	};
-
-	/** Name of the picked target. For categories, the picked names; for a folder, the folder name. `null` for a clearing selection. */
-	const targetName = (): string | null => {
-		const titleOf = (id: string) => relationOptions.find((option) => option.id === id)?.title ?? id;
-		if (needsMany) return checked.map(titleOf).join(", ");
-		if (relation) return single === "__none__" ? null : titleOf(single);
-		if (action === "folder.move")
-			return single === "__unfiled__" ? null : (folders?.find((folder) => folder.id === single)?.name ?? single);
-		return null;
-	};
-
-	// Actions that change many items at once always ask.
-	const start = async () => {
-		if (!activeAction) return;
-		if (activeAction.value === "export") {
+	/** Asks, then applies. `target` names the folder, tag or category picked; `params` is what the server needs to apply it. */
+	const apply = async (action: ListAction, target: string | null, params: BulkParams = {}) => {
+		const def = definition(action);
+		if (!def) return;
+		if (def.value === "export") {
 			setIsExporting(true);
 			return;
 		}
 		const ok = await confirm({
-			title: activeAction.label,
-			description: activeAction.ask(selected.length, targetName()),
-			confirmLabel: activeAction.label,
-			destructive: activeAction.destructive,
+			title: def.label,
+			description: def.ask(selected.length, target),
+			confirmLabel: def.label,
+			destructive: def.destructive,
 		});
-		if (ok) await run(selected);
+		if (ok) await onRun(def.relation?.op ?? (def.value as BulkOp), def.label, selected, params);
 	};
 
-	const failures = (results ?? []).filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
-	const successes = (results ?? []).length - failures.length;
-	const titleOf = (id: string) => ranItems.find((item) => item.id === id)?.title || id.slice(0, 8);
+	const relationItems = (action: ListAction) => {
+		const relation = definition(action)?.relation;
+		if (!relation) return null;
+		const items = options[relation.field] ?? [];
+		return (
+			<DropdownMenuSub key={action}>
+				<DropdownMenuSubTrigger>{definition(action)?.label}</DropdownMenuSubTrigger>
+				<DropdownMenuSubContent>
+					{relation.op === "relation.set" && (
+						<>
+							<DropdownMenuItem onClick={() => void apply(action, null, { field: relation.field, id: null })}>
+								{t("option.none")}
+							</DropdownMenuItem>
+							{items.length > 0 && <DropdownMenuSeparator />}
+						</>
+					)}
+					{items.map((item) => (
+						<DropdownMenuItem
+							key={item.id}
+							onClick={() =>
+								void apply(
+									action,
+									item.title,
+									relation.op === "relation.set"
+										? { field: relation.field, id: item.id }
+										: { field: relation.field, ids: [item.id] },
+								)
+							}
+						>
+							{item.title}
+						</DropdownMenuItem>
+					))}
+				</DropdownMenuSubContent>
+			</DropdownMenuSub>
+		);
+	};
 
-	if (selected.length === 0 && !results) return null;
-
-	const singleItems = relation
-		? [
-				{ value: "__none__", label: t("option.none") },
-				...relationOptions.map((option) => ({ value: option.id, label: option.title })),
-			]
-		: [
-				{ value: "__unfiled__", label: t("option.root") },
-				...(folders ?? []).map((folder) => ({ value: folder.id, label: folder.name })),
-			];
+	const menuRow = (action: ListAction) => {
+		const def = definition(action);
+		if (!def) return null;
+		if (def.relation) return relationItems(action);
+		return (
+			<DropdownMenuItem
+				key={action}
+				variant={def.destructive ? "danger" : "default"}
+				onClick={() => void apply(action, null)}
+			>
+				{def.label}
+			</DropdownMenuItem>
+		);
+	};
+	/** The ⋯ rows: the dangerous one last, after a rule. */
+	const quiet = more.filter((action) => !definition(action)?.destructive);
+	const dangerous = more.filter((action) => definition(action)?.destructive);
 
 	return (
-		<Box as="section" aria-label={t("bar")} background="selected" border="bottom" paddingX={32} paddingY={8}>
-			<Inline wrap gap={8}>
-				<Text weight="medium">{t("count", { count: selected.length })}</Text>
-				<TextButton type="button" onClick={onClearSelection}>
-					{t("clear")}
-				</TextButton>
-
-				{actions.length > 1 ? (
-					<Select
-						value={action}
-						items={actions.map((candidate) => ({ value: candidate.value, label: candidate.label }))}
-						onValueChange={(value) => value && setAction(value as ListAction)}
-					>
-						<SelectTrigger size="sm" aria-label={t("kind")}>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{actions.map((candidate) => (
-								<SelectItem key={candidate.value} value={candidate.value}>
-									{candidate.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				) : null}
-
-				{needsMany && (
-					<ManyPicker label={relation.label} options={relationOptions} value={checked} onValueChange={setChecked} />
-				)}
-
-				{needsSingle && (
-					<Select
-						value={single || null}
-						items={singleItems}
-						onValueChange={(value) => setSingle(typeof value === "string" ? value : "")}
-					>
-						<SelectTrigger
-							size="sm"
-							aria-label={relation ? t("target.aria", { label: relation.label }) : t("folder.aria")}
+		<>
+			<BulkBarFrame
+				label={t("count", { count: selected.length })}
+				clearLabel={t("clear")}
+				onClear={onClearSelection}
+				selectAll={selectAll}
+				more={
+					more.length > 0
+						? {
+								label: t("more"),
+								children: (
+									<>
+										{quiet.map(menuRow)}
+										{dangerous.length > 0 && quiet.length > 0 && <DropdownMenuSeparator />}
+										{dangerous.map(menuRow)}
+									</>
+								),
+							}
+						: undefined
+				}
+			>
+				{primary.map((action) => {
+					const def = definition(action);
+					if (!def) return null;
+					if (action === "folder.move") {
+						return (
+							<DropdownMenu key={action}>
+								<DropdownMenuTrigger render={<TextButton type="button" />}>
+									{def.label}
+									<Caret />
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="start">
+									<DropdownMenuItem onClick={() => void apply(action, null, { folderId: null })}>
+										{t("option.root")}
+									</DropdownMenuItem>
+									{(folders ?? []).map((folder) => (
+										<DropdownMenuItem
+											key={folder.id}
+											onClick={() => void apply(action, folder.name, { folderId: folder.id })}
+										>
+											{folder.name}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						);
+					}
+					return (
+						<TextButton
+							key={action}
+							type="button"
+							variant={def.destructive ? "danger" : "plain"}
+							onClick={() => void apply(action, null)}
 						>
-							<SelectValue
-								placeholder={relation ? t("picker.select", { label: relation.label }) : t("folder.select")}
-							/>
-						</SelectTrigger>
-						<SelectContent>
-							{singleItems.map((item) => (
-								<SelectItem key={item.value} value={item.value}>
-									{item.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				)}
-
-				<Button
-					type="button"
-					size="sm"
-					variant={activeAction?.destructive ? "danger" : "primary"}
-					disabled={!canRun}
-					onClick={start}
-				>
-					{isRunning ? t("running") : (activeAction?.label ?? t("run"))}
-				</Button>
-
-				{results && (
-					<output>
-						<Text variant="caption" tone="muted">
-							{t("result", { success: successes, failed: failures.length })}
-						</Text>
-					</output>
-				)}
-				{failures.length > 0 && (
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						onClick={() => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id)))}
-					>
-						{t("retry")}
-					</Button>
-				)}
-			</Inline>
-
-			{error && (
-				<Box paddingTop={8}>
-					<FormFieldError>{error}</FormFieldError>
-				</Box>
-			)}
-			{failures.length > 0 && (
-				<Stack as="ul" gap={4} paddingTop={8}>
-					{failures.map((failure) => (
-						<Text as="li" key={failure.id} variant="caption" tone="danger">
-							<Text weight="medium">{titleOf(failure.id)}</Text> — {describeBulkFailure(site, failure)}
-						</Text>
-					))}
-				</Stack>
-			)}
+							{def.label}
+						</TextButton>
+					);
+				})}
+			</BulkBarFrame>
 			{dialog}
 			<ExportDialog
 				open={isExporting}
@@ -493,6 +399,6 @@ export function BulkBar({
 				ids={selected.map((item) => item.id)}
 				noun={collectionNoun(site, collection)}
 			/>
-		</Box>
+		</>
 	);
 }

@@ -8,7 +8,6 @@ import { siteWithFolders } from "../../test/site";
 import { toast } from "../../test/ui-toast";
 import { EntryListScreen, TrashScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
-import { formatDateOnly } from "../shared/format-date";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
 
@@ -194,20 +193,6 @@ describe("list screen — list settings", () => {
 		await screen.findByRole("row", { name: /가/ });
 
 		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("pageSize")).toBe("100"));
-	});
-
-	it("changing the sort changes the address and saves to the collection settings", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		fireEvent.click(screen.getByRole("button", { name: "보기" }));
-		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
-
-		await waitFor(() => expect(calls("PUT", "/api/monti/v1/preferences")).toHaveLength(1));
-		expect(bodyOf(calls("PUT", "/api/monti/v1/preferences")[0])).toEqual({
-			collections: { post: { sort: { field: "updatedAt", direction: "asc" } } },
-		});
-		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("sortDirection")).toBe("asc"));
 	});
 });
 
@@ -598,45 +583,5 @@ describe("list screen — screen context", () => {
 		await waitFor(() => expect(whereIs().selectedIds).toEqual(["다"]));
 		fireEvent.click(screen.getByRole("checkbox", { name: "다 선택" }));
 		await waitFor(() => expect(whereIs().selectedIds).toEqual([]));
-	});
-});
-
-describe("list screen — room for the dates", () => {
-	const published = new Date("2020-03-04T12:00:00Z");
-	const updated = new Date("2021-05-06T12:00:00Z");
-	const dateText = (date: Date) => formatDateOnly(testSite, date);
-
-	/** The page is `width` px wide for the table, whatever the window is (a panel beside the list narrows the page, not the window). */
-	const stubTableWidth = (width: number) =>
-		vi.stubGlobal(
-			"ResizeObserver",
-			class {
-				constructor(private readonly callback: (entries: Array<{ contentRect: { width: number } }>) => void) {}
-				observe() {
-					this.callback([{ contentRect: { width } }]);
-				}
-				unobserve() {}
-				disconnect() {}
-			},
-		);
-	const rowText = async () => {
-		server.posts = [item("가", { publishedAt: published, updatedAt: updated, status: "published" })];
-		renderList();
-		return (await screen.findByRole("row", { name: /가/ })).textContent ?? "";
-	};
-
-	it("shows the post date and the updated date when the page is wide", async () => {
-		stubTableWidth(1600);
-		const text = await rowText();
-		expect(text).toContain(dateText(published));
-		expect(text).toContain(dateText(updated));
-	});
-
-	it("leaves the post date out, and keeps the updated date, when the page has no room for both", async () => {
-		stubTableWidth(500);
-		const text = await rowText();
-		await waitFor(() => expect(screen.getByRole("row", { name: /가/ }).textContent).not.toContain(dateText(published)));
-		expect(text).toBeTruthy();
-		expect(screen.getByRole("row", { name: /가/ }).textContent).toContain(dateText(updated));
 	});
 });

@@ -31,10 +31,11 @@ const site = createSite(
 );
 
 describe("the post date in the list of a document collection", () => {
-	it("is one of the default columns, next to the updated date", () => {
-		const { defaults } = columnsFor(site, "post");
+	it("is a column to turn on in the View menu, while the list shows one date, the updated one, by default", () => {
+		const { defaults, available } = columnsFor(site, "post");
 		expect(defaults).toContain("updatedAt");
-		expect(defaults).toContain("publishedAt");
+		expect(defaults).not.toContain("publishedAt");
+		expect(available).toContain("publishedAt");
 	});
 
 	it("is the last column to give way when the screen is narrow, not the first", () => {

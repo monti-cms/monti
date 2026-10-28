@@ -17,6 +17,7 @@ export const listEntries = defineOperation({
 	describe:
 		"List the entries of one collection with filters, sorting and paging; the way to answer questions like 'which posts have no tag' or 'what changed this week'. " +
 		"`search` matches word by word: every word must appear in the title or slug (or the body with includeBody), in any order, so use one or two distinctive words. " +
+		"`field` filters one stored field and can be repeated: `name:empty` (no value), `name:filled` (text or media with a value) or `name:is:<value>` (an option of a select, or the id of the item of a relation); several conditions on one field are OR, so 'tags:empty' with 'tags:is:<id>' finds posts with no tag or that tag. `translation` (none, changed, current) filters by where a translation group stands. " +
 		"Filters combine with AND. Returns the page of entries (id, title, slug, status, locale, metadata) and the total.",
 	input: (site) => site.api.listEntriesQuerySchema,
 	run: async (query, { cms }) => {
@@ -25,14 +26,13 @@ export const listEntries = defineOperation({
 			collection: query.collection,
 			search: query.search,
 			includeBody: query.includeBody,
-			titleContains: query.titleContains?.trim() || undefined,
-			slugContains: query.slugContains?.trim() || undefined,
 			statuses: query.status,
 			locales: query.locale,
 			groupTranslations: query.group === "translation",
 			folderId: query.folderId,
 			includeDescendants: query.includeDescendants,
-			relations: query.relation,
+			fields: query.field,
+			translations: query.translation,
 			hasUnpublishedChanges: query.hasChanges,
 			createdAt: range(query.createdFrom, query.createdTo),
 			updatedAt: range(query.updatedFrom, query.updatedTo),

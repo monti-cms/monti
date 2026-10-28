@@ -1,46 +1,79 @@
 import type { CmsConfig } from "@monti-cms/core";
 import type { Folder } from "@monti-cms/core/site";
-import { createSite, issueText } from "@monti-cms/core/site";
+import { createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
-import { chooseSelectOption } from "../../../test/base-ui";
+import { commonMessages } from "../../../lib/common.messages";
 import { renderWithSite as render } from "../../../test/site";
-import { BulkBar } from "../bulk-bar";
-
-const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
+import { BulkBar, bulkActionsFor } from "../bulk-bar";
+import { bulkBarMessages } from "../bulk-bar.messages";
 
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
 });
 
-const selected = [{ id: "entry-1", expectedVersion: 3, title: "첫 글" }];
+const t = testSite.createTranslator(bulkBarMessages);
+const tc = testSite.createTranslator(commonMessages);
+
+const selected = [{ id: "entry-1", expectedVersion: 3, title: "첫 글", status: "draft" as const }];
 const folders: Folder[] = [
 	{ id: "folder-1", collection: "post", parentId: null, name: "Folder One", position: 0, version: 1 },
 ];
 
-function stubBulkApi(results: unknown[] = [{ id: "entry-1", ok: true, version: 4 }]) {
-	const payloads: Record<string, unknown>[] = [];
+/** The taxonomy options the bar's menus list come from the entries API. */
+function stubApi() {
 	vi.stubGlobal(
 		"fetch",
-		vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+		vi.fn(async (input: RequestInfo | URL) => {
 			const url = String(input);
 			if (url.startsWith("/api/monti/v1/entries?")) {
-				const items = url.includes("collection=tag") ? [{ id: "tag-1", title: "Tag One", slug: "tag-one" }] : [];
+				const items = url.includes("collection=tag")
+					? [{ id: "tag-1", title: "Tag One", slug: "tag-one" }]
+					: url.includes("collection=category")
+						? [{ id: "cat-1", title: "Cat One", slug: "cat-one" }]
+						: [];
 				return { ok: true, status: 200, json: async () => ({ items, total: items.length }) };
 			}
-			if (url === "/api/monti/v1/bulk") {
-				payloads.push(JSON.parse(String(init?.body)));
-				return { ok: true, status: 200, json: async () => ({ results }) };
+			if (url === "/api/monti/v1/meta") return { ok: true, status: 200, json: async () => ({ formats: [] }) };
+			if (url === "/api/monti/v1/export/summary") {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						scope: "admin",
+						entries: 1,
+						addedByTranslations: 0,
+						notPublished: 0,
+						notFound: 0,
+						templates: 0,
+						folders: 0,
+						addresses: 0,
+						media: 0,
+					}),
+				};
 			}
 			throw new Error(`Unexpected fetch: ${url}`);
 		}),
 	);
-	return payloads;
 }
 
-const choose = chooseSelectOption;
+const bar = (props: Partial<Parameters<typeof BulkBar>[0]> = {}) => {
+	const onRun = vi.fn(async () => undefined);
+	const onClearSelection = vi.fn();
+	render(
+		<BulkBar
+			collection="post"
+			selected={selected}
+			folders={folders}
+			onClearSelection={onClearSelection}
+			onRun={onRun}
+			{...props}
+		/>,
+	);
+	return { onRun, onClearSelection };
+};
 
 /** Bulk actions always ask. Checks the confirm dialog's question and presses confirm. */
 async function confirmIn(label: string, question: string) {
@@ -50,219 +83,180 @@ async function confirmIn(label: string, question: string) {
 	await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 }
 
-describe("bulk actions", () => {
-	it("sends tag, category clear and root folder payloads", async () => {
-		const payloads = stubBulkApi();
-		render(
-			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
+const openMore = async () => {
+	fireEvent.click(screen.getByRole("button", { name: t("more") }));
+	return screen.findAllByRole("menuitem");
+};
+
+describe("what the bar offers", () => {
+	const site = testSite;
+	const ask = (over: Partial<Parameters<typeof bulkActionsFor>[0]> = {}) =>
+		bulkActionsFor({ site, collection: "post", mode: "list", selected, hasFolders: true, ...over });
+
+	it("puts publish and the folder first and the rest in the menu, with the trash last", () => {
+		const { primary, more } = ask();
+		expect(primary).toEqual(["publish", "folder.move"]);
+		expect(more.at(-1)).toBe("trash");
+		expect(more).toContain("export");
+	});
+
+	it("leaves out what cannot be done to the rows picked", () => {
+		const archived = [{ ...selected[0], status: "archived" as const }];
+		expect(ask({ selected: archived }).primary).toEqual(["folder.move"]);
+		expect(ask({ selected: archived }).more).toContain("unarchive");
+		expect(ask({ selected: archived }).more).not.toContain("archive");
+		expect(ask().more).toContain("archive");
+		expect(ask().more).not.toContain("unarchive");
+		expect(ask({ hasFolders: false }).primary).toEqual(["publish"]);
+	});
+
+	it("gives an item collection only what an item can have done: export and trash, and a folder where it has them", () => {
+		expect(ask({ collection: "tag", hasFolders: false })).toEqual({ primary: [], more: ["export", "trash"] });
+		expect(ask({ collection: "tag", hasFolders: true }).primary).toEqual(["folder.move"]);
+	});
+
+	it("gives the trash only the permanent delete", () => {
+		expect(ask({ mode: "trash" })).toEqual({ primary: ["permanentDelete"], more: [] });
+	});
+});
+
+describe("the bar over picked rows", () => {
+	it("says how many are picked, and lets go with one press", () => {
+		stubApi();
+		const { onClearSelection } = bar();
+		expect(screen.getByRole("toolbar", { name: t("count", { count: 1 }) })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: t("clear") }));
+		expect(onClearSelection).toHaveBeenCalled();
+	});
+
+	it("draws nothing while no row is picked, and has no request to the assistant yet", () => {
+		stubApi();
+		bar({ selected: [] });
+		expect(screen.queryByRole("toolbar")).toBeNull();
+		cleanup();
+		bar();
+		expect(screen.queryByRole("button", { name: /요청|request/i })).toBeNull();
+	});
+
+	it("publishes after asking", async () => {
+		stubApi();
+		const { onRun } = bar();
+		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.publish") }));
+		await confirmIn(tc("lifecycle.publish"), t("ask.publish", { count: 1, noun: "게시글" }));
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(1));
+		expect(onRun).toHaveBeenCalledWith("publish", tc("lifecycle.publish"), selected, {});
+	});
+
+	it("moves to the top level or to a folder from the folder menu, after asking", async () => {
+		stubApi();
+		const { onRun } = bar();
+		fireEvent.click(screen.getByRole("button", { name: t("folder.move") }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: t("option.root") }));
+		await confirmIn(t("folder.move"), t("ask.folder.root", { count: 1 }));
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(1));
+		expect(onRun).toHaveBeenLastCalledWith("folder.move", t("folder.move"), selected, { folderId: null });
+
+		fireEvent.click(screen.getByRole("button", { name: t("folder.move") }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: "Folder One" }));
+		await confirmIn(t("folder.move"), t("ask.folder.move", { count: 1, target: "Folder One" }));
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+		expect(onRun).toHaveBeenLastCalledWith("folder.move", t("folder.move"), selected, { folderId: "folder-1" });
+	});
+
+	it("adds a tag and clears a category from the menu, picking and applying in one step", async () => {
+		stubApi();
+		const { onRun } = bar();
+		await openMore();
+		const addTag = await screen.findByRole("menuitem", { name: t("relation.add", { label: "태그" }) });
+		fireEvent.keyDown(addTag, { key: "ArrowRight" });
+		fireEvent.click(await screen.findByRole("menuitem", { name: "Tag One" }));
+		await confirmIn(
+			t("relation.add", { label: "태그" }),
+			t("ask.relation.add", { label: "태그", target: "Tag One", count: 1, noun: "게시글" }),
 		);
-		// After loading the tag list, opens the small tag button and picks from the checklist.
-		await waitFor(() =>
-			expect(
-				(fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some(([url]) =>
-					String(url).includes("collection=tag"),
-				),
-			).toBe(true),
-		);
-		fireEvent.click(screen.getByRole("button", { name: "적용할 태그: 없음" }));
-		fireEvent.click(await screen.findByRole("option", { name: "Tag One" }));
-		await waitFor(() =>
-			expect(screen.getByRole("button", { name: "적용할 태그: Tag One" }).textContent).toBe("Tag One"),
-		);
-		fireEvent.keyDown(screen.getByPlaceholderText("태그 검색"), { key: "Escape" });
-		await waitFor(() => expect(screen.queryByPlaceholderText("태그 검색")).toBeNull());
-		fireEvent.click(screen.getByRole("button", { name: "태그 추가" }));
-		await confirmIn("태그 추가", "선택한 게시글 1개에 'Tag One' 태그를 추가할까요?");
-		await waitFor(() => expect(payloads).toHaveLength(1));
-		expect(payloads[0]).toEqual({
-			op: "relation.add",
-			items: [{ id: "entry-1", expectedVersion: 3 }],
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(1));
+		expect(onRun).toHaveBeenLastCalledWith("relation.add", t("relation.add", { label: "태그" }), selected, {
 			field: "tagIds",
 			ids: ["tag-1"],
 		});
 
-		await choose("일괄 작업 종류", "카테고리 바꾸기");
-		await choose("대상 카테고리", "없음");
-		fireEvent.click(screen.getByRole("button", { name: "카테고리 바꾸기" }));
-		await confirmIn("카테고리 바꾸기", "선택한 게시글 1개의 카테고리를 비울까요?");
-		await waitFor(() => expect(payloads).toHaveLength(2));
-		expect(payloads[1]).toMatchObject({ op: "relation.set", field: "categoryId", id: null });
-
-		await choose("일괄 작업 종류", "폴더로 이동");
-		await choose("이동할 폴더", "최상위");
-		fireEvent.click(screen.getByRole("button", { name: "폴더로 이동" }));
-		await confirmIn("폴더로 이동", "선택한 항목 1개를 최상위로 이동할까요?");
-		await waitFor(() => expect(payloads).toHaveLength(3));
-		expect(payloads[2]).toMatchObject({ op: "folder.move", folderId: null });
-	});
-
-	it("asks before unarchiving in bulk", async () => {
-		const payloads = stubBulkApi();
-		render(
-			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
-		);
-		await choose("일괄 작업 종류", "보관 해제");
-		fireEvent.click(screen.getByRole("button", { name: "보관 해제" }));
-		await screen.findByRole("alertdialog", { name: "보관 해제" });
-		expect(payloads).toHaveLength(0);
+		await openMore();
+		const setCategory = await screen.findByRole("menuitem", { name: t("relation.set", { label: "카테고리" }) });
+		fireEvent.keyDown(setCategory, { key: "ArrowRight" });
+		fireEvent.click(await screen.findByRole("menuitem", { name: t("option.none") }));
 		await confirmIn(
-			"보관 해제",
-			"선택한 게시글 1개의 보관을 해제할까요? 초안으로 돌아가고 자동으로 다시 공개하지 않아요.",
+			t("relation.set", { label: "카테고리" }),
+			t("ask.relation.clear", { label: "카테고리", count: 1, noun: "게시글" }),
 		);
-		await waitFor(() => expect(payloads).toHaveLength(1));
-		expect(payloads[0]).toEqual({ op: "unarchive", items: [{ id: "entry-1", expectedVersion: 3 }] });
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(2));
+		expect(onRun).toHaveBeenLastCalledWith("relation.set", t("relation.set", { label: "카테고리" }), selected, {
+			field: "categoryId",
+			id: null,
+		});
 	});
 
-	it("keeps destructive actions behind a confirmation dialog", async () => {
-		const payloads = stubBulkApi();
-		render(
-			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
-		);
-		await choose("일괄 작업 종류", "휴지통으로 이동");
-		fireEvent.click(screen.getByRole("button", { name: "휴지통으로 이동" }));
-		await screen.findByRole("alertdialog", { name: /휴지통으로 이동/ });
-		expect(payloads).toHaveLength(0);
-		fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "휴지통으로 이동" }));
-		await waitFor(() => expect(payloads).toHaveLength(1));
-		expect(payloads[0]).toEqual({ op: "trash", items: [{ id: "entry-1", expectedVersion: 3 }] });
+	it("keeps the trash last in the menu, in red, behind a confirmation", async () => {
+		stubApi();
+		const { onRun } = bar();
+		const rows = await openMore();
+		const trash = rows.at(-1) as HTMLElement;
+		expect(trash.textContent).toBe(tc("lifecycle.trash"));
+		expect(trash.getAttribute("data-variant")).toBe("danger");
+		fireEvent.click(trash);
+		await screen.findByRole("alertdialog", { name: tc("lifecycle.trash") });
+		expect(onRun).not.toHaveBeenCalled();
+		fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: tc("lifecycle.trash") }));
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(1));
+		expect(onRun).toHaveBeenCalledWith("trash", tc("lifecycle.trash"), selected, {});
 	});
 
-	it("names failed items with their reason and validation issues", async () => {
-		stubBulkApi([
-			{
-				id: "entry-1",
-				ok: false,
-				error: "publish_validation_failed",
-				issues: [told({ code: "missing_field", path: "categoryId", message: "카테고리" })],
-			},
-		]);
-		const onDone = vi.fn();
-		render(
-			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={onDone} />,
+	it("exports the picked rows: it opens the export dialog instead of changing them", async () => {
+		stubApi();
+		const { onRun } = bar();
+		const rows = await openMore();
+		fireEvent.click(
+			rows.find(
+				(row) => row.textContent !== tc("lifecycle.trash") && /내보내기|Export/.test(row.textContent ?? ""),
+			) as HTMLElement,
 		);
-		await choose("일괄 작업 종류", "발행");
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "발행" }));
-		expect(await screen.findByText(/첫 글/)).toBeTruthy();
-		expect(screen.getByText(/카테고리를 입력하세요/)).toBeTruthy();
-		expect(screen.getByRole("button", { name: "실패만 다시 실행" })).toBeTruthy();
-		expect(onDone).toHaveBeenCalledWith(["entry-1"]);
-	});
-
-	it("exports the picked entries: the action opens the export dialog instead of changing them", async () => {
-		const requests: string[] = [];
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-				const url = String(input);
-				requests.push(`${init?.method ?? "GET"} ${url}`);
-				if (url.startsWith("/api/monti/v1/entries?"))
-					return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
-				if (url === "/api/monti/v1/meta") return { ok: true, status: 200, json: async () => ({ formats: [] }) };
-				if (url === "/api/monti/v1/export/summary") {
-					return {
-						ok: true,
-						status: 200,
-						json: async () => ({
-							scope: "admin",
-							entries: 1,
-							addedByTranslations: 0,
-							notPublished: 0,
-							notFound: 0,
-							templates: 0,
-							folders: 0,
-							addresses: 0,
-							media: 0,
-						}),
-					};
-				}
-				throw new Error(`Unexpected fetch: ${url}`);
-			}),
-		);
-		render(
-			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
-		);
-		await choose("일괄 작업 종류", "내보내기");
-		fireEvent.click(screen.getByRole("button", { name: "내보내기" }));
 		const dialog = await screen.findByRole("dialog");
 		expect(await within(dialog).findByTestId("export-headline")).toBeTruthy();
-		expect(requests).not.toContain("POST /api/monti/v1/bulk");
+		expect(onRun).not.toHaveBeenCalled();
 	});
 
-	it("offers only record-safe actions for record collections", async () => {
-		stubBulkApi();
-		render(<BulkBar collection="tag" selected={selected} folders={null} onClearSelection={vi.fn()} onDone={vi.fn()} />);
-		// Publishing and archiving are for documents; a record can be exported or trashed.
-		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
-		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
-		expect(labels).toEqual(["내보내기", "휴지통으로 이동"]);
+	it("has the folder button for a list with folders and not for one without", () => {
+		stubApi();
+		bar({ folders: null });
+		expect(screen.queryByRole("button", { name: t("folder.move") })).toBeNull();
+		cleanup();
+		bar();
+		expect(screen.getByRole("button", { name: t("folder.move") })).toBeTruthy();
 	});
 
-	it("offers folder move for record collections that have folders enabled", async () => {
-		stubBulkApi();
+	it("offers an item collection that has folders the folder move, and no publishing", () => {
+		stubApi();
 		const site = createSite({
 			...testConfig,
-			collections: {
-				...testConfig.collections,
-				tag: { ...testConfig.collections.tag, folders: true },
-			},
+			collections: { ...testConfig.collections, tag: { ...testConfig.collections.tag, folders: true } },
 		} as CmsConfig);
 		render(
-			<BulkBar collection="tag" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
+			<BulkBar collection="tag" selected={selected} folders={folders} onClearSelection={vi.fn()} onRun={vi.fn()} />,
 			{ site },
 		);
-		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
-		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
-		expect(labels).toEqual(["폴더로 이동", "내보내기", "휴지통으로 이동"]);
+		expect(screen.getByRole("button", { name: t("folder.move") })).toBeTruthy();
+		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
 	});
 
-	it("offers the folder move only when the list shows folders", async () => {
-		stubBulkApi();
-		const optionLabels = async (folderList: Folder[] | null) => {
-			render(
-				<BulkBar
-					collection="post"
-					selected={selected}
-					folders={folderList}
-					onClearSelection={vi.fn()}
-					onDone={vi.fn()}
-				/>,
-			);
-			fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
-			const found = (await screen.findAllByRole("option")).map((option) => option.textContent);
-			cleanup();
-			return found;
-		};
-		expect(await optionLabels(folders)).toContain("폴더로 이동");
-		expect(await optionLabels(null)).not.toContain("폴더로 이동");
-	});
-
-	it("permanently deletes in bulk on the trash screen and names what still uses a blocked item", async () => {
-		const payloads = stubBulkApi([
-			{
-				id: "entry-1",
-				ok: false,
-				error: "in_use",
-				usages: [{ entryId: "p1", title: "참조하는 글", collection: "post", state: "working" }],
-			},
-		]);
-		render(
-			<BulkBar
-				collection="post"
-				mode="trash"
-				selected={selected}
-				folders={[]}
-				onClearSelection={vi.fn()}
-				onDone={vi.fn()}
-			/>,
+	it("permanently deletes in the trash after asking, and has no menu", async () => {
+		stubApi();
+		const { onRun } = bar({ mode: "trash", folders: [] });
+		expect(screen.queryByRole("button", { name: t("more") })).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: tc("lifecycle.deletePermanently") }));
+		await screen.findByRole("alertdialog", { name: tc("lifecycle.deletePermanently") });
+		fireEvent.click(
+			within(screen.getByRole("alertdialog")).getByRole("button", { name: tc("lifecycle.deletePermanently") }),
 		);
-		expect(screen.queryByRole("combobox", { name: "일괄 작업 종류" })).toBeNull();
-		expect(screen.queryByRole("button", { name: "일괄 실행" })).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "영구 삭제" }));
-		await screen.findByRole("alertdialog", { name: /영구 삭제/ });
-		fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "영구 삭제" }));
-		await waitFor(() => expect(payloads).toHaveLength(1));
-		expect(payloads[0]).toEqual({ op: "permanentDelete", items: [{ id: "entry-1", expectedVersion: 3 }] });
-		expect(await screen.findByText(/사용 중: 참조하는 글/)).toBeTruthy();
+		await waitFor(() => expect(onRun).toHaveBeenCalledTimes(1));
+		expect(onRun).toHaveBeenCalledWith("permanentDelete", tc("lifecycle.deletePermanently"), selected, {});
 	});
 });

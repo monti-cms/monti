@@ -3,37 +3,32 @@ import type { Site } from "@monti-cms/core/site";
 import { type AdminListColumn, columnConfig, fieldColumnOf } from "./list-columns";
 
 /**
- * Default column widths (px). Title fills the remaining width if unset. Dragging to change it saves that value.
- * A taxonomy field column is wide enough for chips if it is a many-relation (tags etc.), or for a single name if single (category etc.).
+ * Default column widths (px): the cells of a row (`entries-table-row.tsx`). Title fills the remaining width. The taxonomy fields are drawn as one cell of 198px, so
+ * each counts half of it; the month column and the row's end are part of the title's minimum.
  */
 const DEFAULT_COLUMN_SIZE: Partial<Record<string, number>> = {
-	status: 132,
-	locale: 124,
-	updatedAt: 132,
-	publishedAt: 132,
-	createdAt: 132,
-	slug: 200,
+	status: 72,
+	locale: 56,
+	updatedAt: 56,
+	publishedAt: 56,
+	createdAt: 56,
+	slug: 160,
 	folder: 140,
 };
 export const DEFAULT_TITLE_SIZE = 320;
-const MANY_RELATION_SIZE = 200;
-const SINGLE_RELATION_SIZE = 112;
-const SELECT_SIZE = 132;
-const TEXT_SIZE = 200;
+const TAXONOMY_SIZE = 99;
+const FIELD_SIZE = 160;
 
 export function defaultColumnSize(site: Site, collection: string, column: AdminListColumn): number {
 	const size = DEFAULT_COLUMN_SIZE[column];
 	if (size !== undefined) return size;
-	const config = columnConfig(site, collection, column);
-	const kind = fieldColumnOf(site, collection, column)?.field.kind;
-	if (kind === "relation") return config.many ? MANY_RELATION_SIZE : SINGLE_RELATION_SIZE;
-	if (kind === "select") return SELECT_SIZE;
-	if (kind === "text" || kind === "media") return TEXT_SIZE;
-	return DEFAULT_TITLE_SIZE;
+	if (site.taxonomyFieldsOf(collection).some((stored) => stored.name === column)) return TAXONOMY_SIZE;
+	return fieldColumnOf(site, collection, column) ? FIELD_SIZE : DEFAULT_TITLE_SIZE;
 }
 export const MIN_COLUMN_SIZE = 72;
 export const MAX_COLUMN_SIZE = 960;
-export const TITLE_MIN_WIDTH = 240;
+/** The title with its address, and the month column and the row end beside it. */
+export const TITLE_MIN_WIDTH = 292;
 
 /**
  * Columns hidden first when width runs short, and their order. Even user-enabled columns are hidden in this order if the title cannot get its minimum width.
