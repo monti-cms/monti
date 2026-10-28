@@ -1,5 +1,6 @@
 "use client";
 
+import { DocumentAdd, DocumentBlank, Folder, FolderAdd, FolderTree, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -22,7 +23,6 @@ import {
 	SelectValue,
 	Text,
 } from "@monti-cms/admin/kit";
-import { File, FilePlus, Folder, FolderPlus, FolderTree, Trash2 } from "lucide-react";
 import { useId } from "react";
 import { filesOf, uniquePath } from "./editor-files";
 import { codeExplorerMessages } from "./messages";
@@ -83,7 +83,7 @@ export function CodeExplorerNodeView() {
 				{files.length > 0 ? (
 					<ul aria-label={t("files")} className="m-0 flex list-none flex-wrap gap-monti-4 p-0">
 						{files.map((file) => {
-							const Icon = file.folder ? Folder : File;
+							const Icon = file.folder ? Folder : DocumentBlank;
 							const current = file.index === selectedIndex;
 							return (
 								<li key={file.index}>
@@ -116,10 +116,10 @@ export function CodeExplorerNodeView() {
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<ToolbarButton label={t("add.file")} onClick={() => addEntry(NEW_FILE)}>
-						<FilePlus aria-hidden />
+						<DocumentAdd aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={tc("addFolder")} onClick={() => addEntry(NEW_FOLDER)}>
-						<FolderPlus aria-hidden />
+						<FolderAdd aria-hidden />
 					</ToolbarButton>
 					<BlockSettings>
 						<BlockSettingsField label={t("open.label")} htmlFor={openId}>
@@ -155,7 +155,7 @@ export function CodeExplorerNodeView() {
 						</BlockSettingsField>
 					</BlockSettings>
 					<ToolbarButton label={t("delete")} tone="danger" onClick={removeBlock}>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}

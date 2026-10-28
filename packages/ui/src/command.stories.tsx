@@ -1,5 +1,5 @@
+import { Add, DocumentAdd, Settings, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FilePlus, Plus, Settings, Trash2 } from "lucide-react";
 import {
 	Command,
 	CommandEmpty,
@@ -38,14 +38,14 @@ export const Playground: Story = {
 				<CommandEmpty>맞는 것이 없어요</CommandEmpty>
 				<CommandGroup heading="글">
 					<CommandItem>
-						<FilePlus aria-hidden />새 글 쓰기<MenuShortcut>⌘N</MenuShortcut>
+						<DocumentAdd aria-hidden />새 글 쓰기<MenuShortcut>⌘N</MenuShortcut>
 					</CommandItem>
 					<CommandItem disabled>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 						휴지통으로<MenuShortcut>쓰는 중</MenuShortcut>
 					</CommandItem>
 					<CommandItem variant="danger">
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 						휴지통 비우기
 					</CommandItem>
 				</CommandGroup>
@@ -117,7 +117,7 @@ export const ScrollingWithFooter: Story = {
 			</CommandList>
 			<CommandFooter>
 				<CommandItem value="새 태그 만들기">
-					<Plus aria-hidden />새 태그 만들기
+					<Add aria-hidden />새 태그 만들기
 				</CommandItem>
 			</CommandFooter>
 		</Command>

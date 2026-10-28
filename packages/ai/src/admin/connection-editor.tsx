@@ -1,5 +1,6 @@
 "use client";
 
+import { PlugFilled, Save } from "@carbon/icons-react";
 import { errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	type ApiKeyChoice,
@@ -28,7 +29,6 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlugZap, Save } from "lucide-react";
 import { useId, useState } from "react";
 import {
 	AI_PROVIDER_KINDS,
@@ -403,7 +403,7 @@ function ProviderEditor({
 					disabled={checking || !draft.url || !draft.defaultModel}
 					onClick={() => void runCheck()}
 				>
-					<PlugZap aria-hidden />
+					<PlugFilled aria-hidden />
 					{checking ? t("action.checking") : t("action.check")}
 				</Button>
 			</EditorFooter>

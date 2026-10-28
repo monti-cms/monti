@@ -2,11 +2,11 @@
 
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
+import { ArrowDown, ArrowRight, ArrowUp, CollapseAll, Draggable, TrashCan } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, cn, Input, Text } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tabLabel } from "../entries/layout-groups";
 import { schemaFieldsMessages } from "./fields.messages";
@@ -105,7 +105,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 		},
 		{
 			label: t("layout.removeTab", { name: currentName }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: ops.disabled || !canRemove,
 			onClick: () => ops.change((tree) => removeTab(tree, index)),
@@ -154,7 +154,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 	const buttons: RowButton[] = [
 		{
 			label: t("layout.collapseToggle", { name: group.title }),
-			icon: ChevronsDownUp,
+			icon: CollapseAll,
 			pressed: group.collapsed === true,
 			disabled: ops.disabled,
 			onClick: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
@@ -163,7 +163,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			? [
 					{
 						label: t("layout.moveGroup", { name: group.title }),
-						icon: MoveRight,
+						icon: ArrowRight,
 						disabled: ops.disabled,
 						onClick: () => setMoving(true),
 					},
@@ -171,7 +171,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			: []),
 		{
 			label: t("layout.removeGroup", { name: group.title }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: ops.disabled,
 			onClick: () => ops.change((tree) => removeGroup(tree, ref)),
@@ -228,7 +228,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 				disabled={ops.disabled}
 				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 			>
-				<GripVertical aria-hidden className="size-4" />
+				<Draggable aria-hidden className="size-4" />
 			</button>
 		</div>
 	);

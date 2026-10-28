@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Pen, Star, TrashCan } from "@carbon/icons-react";
 import {
 	AttributeInput,
 	BlockFrame,
@@ -10,7 +11,6 @@ import {
 	useTranslator,
 } from "@monti-cms/admin";
 import { cn } from "@monti-cms/admin/kit";
-import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";
 
@@ -129,10 +129,10 @@ export function TabsNodeView() {
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addTab}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("rename")} onClick={() => setRenaming(current)}>
-						<PencilLine aria-hidden />
+						<Pen aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("default")} pressed={current === defaultIndex} onClick={() => toggleDefault(current)}>
 						<Star aria-hidden fill={current === defaultIndex ? "currentColor" : "none"} />
@@ -143,7 +143,7 @@ export function TabsNodeView() {
 						disabled={!block.canRemoveChild(current)}
 						onClick={() => removeTab(current)}
 					>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}

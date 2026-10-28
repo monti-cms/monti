@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Hard rule of `@monti-cms/admin`: hooks return state and results only. A file in the hooks graph may not import `next/*`, `next-themes`,
- * `lucide-react`, `ui/*`, a confirm dialog, the router (`router/*`) or the host layout (`host/*`), so a site can use the hooks without the default UI, and the hooks work in any framework
+ * `@carbon/icons-react`, `ui/*`, a confirm dialog, the router (`router/*`) or the host layout (`host/*`), so a site can use the hooks without the default UI, and the hooks work in any framework
  * (the whole admin is also checked for `next/*` by `src/__test__/no-framework-imports.test.ts`).
  * The graph is every file under `src/hooks/` plus every file they import (relatively, transitively), which covers the files `public.ts`
  * re-exports.
@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 
 const SRC = path.resolve(import.meta.dirname, "../..");
 
-const FORBIDDEN_PACKAGES = [/^next(\/|$)/, /^next-(auth|themes)(\/|$)/, /^lucide-react(\/|$)/];
+const FORBIDDEN_PACKAGES = [/^next(\/|$)/, /^next-(auth|themes)(\/|$)/, /^@carbon\/icons-react(\/|$)/];
 /** Forbidden source folders and files, relative to `src` and without the extension. */
 const FORBIDDEN_SOURCES = [/^ui(\/|$)/, /^screens\/shared\/confirm-dialog(\/|$)/, /^router(\/|$)/, /^host(\/|$)/];
 
@@ -93,7 +93,7 @@ function findViolations(roots: string[], srcRoot: string): { violations: string[
 }
 
 describe("hooks import graph", () => {
-	it("imports no next/*, next-themes, lucide-react, ui/* or confirm dialog, transitively", () => {
+	it("imports no next/*, next-themes, @carbon/icons-react, ui/* or confirm dialog, transitively", () => {
 		const roots = filesUnder(path.join(SRC, "hooks"));
 		expect(roots.map((file) => path.relative(SRC, file))).toContain("hooks/public.ts");
 		const { violations, visited } = findViolations(roots, SRC);
@@ -146,7 +146,7 @@ describe("hooks import graph", () => {
 				'export { a } from "../lib/a";',
 				'import { useTheme } from "next-themes";',
 				'import { useRouter } from "next/navigation";',
-				'import type { Icon } from "lucide-react";',
+				'import type { Icon } from "@carbon/icons-react";',
 				'// import { ignored } from "next/image";',
 				"",
 			].join("\n"),
@@ -160,7 +160,7 @@ describe("hooks import graph", () => {
 		expect(violations.sort()).toEqual(
 			[
 				"hooks/other.ts -> ../screens/shared/confirm-dialog",
-				"hooks/public.ts -> lucide-react",
+				"hooks/public.ts -> @carbon/icons-react",
 				"hooks/public.ts -> next/navigation",
 				"hooks/public.ts -> next-themes",
 				"lib/a.ts -> ../ui/button",

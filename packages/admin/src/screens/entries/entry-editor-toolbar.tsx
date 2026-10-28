@@ -2,8 +2,8 @@
 
 // Small pieces of the entry editor's toolbar: toggles.
 
+import type { MontiIcon } from "@monti-cms/ui";
 import { IconButton } from "@monti-cms/ui";
-import type { LucideIcon } from "lucide-react";
 
 /** Toggle at the end of the editor toolbar (source pane, MDX source): an icon button that keeps its background while on. The name is the tooltip. */
 export function ToolbarToggle({
@@ -14,7 +14,7 @@ export function ToolbarToggle({
 	onPressedChange,
 }: {
 	label: string;
-	icon: LucideIcon;
+	icon: MontiIcon;
 	pressed: boolean;
 	disabled?: boolean;
 	onPressedChange: (pressed: boolean) => void;

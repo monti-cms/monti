@@ -116,6 +116,6 @@ describe("the packages init installs", () => {
 		const report = await initProject({ cwd: fixtureApp(), host: fakeHost(), install: false });
 		const step = report.next.find((item) => item.startsWith("Install the packages:")) ?? "";
 		expect(step).toContain("peer dependencies");
-		expect(step).toContain("lucide-react");
+		expect(step).toContain("@carbon/icons-react");
 	});
 });

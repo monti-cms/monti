@@ -1,9 +1,9 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
-import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "./cn";
+import type { MontiIcon } from "./monti-icon";
 
 /**
  * A picture in a frame of a fixed shape: `cover` fills the frame and crops, `contain` shows all of it. When the source is missing or fails,
@@ -49,7 +49,7 @@ function Image({
 	src?: string | null;
 	alt: string;
 	fit?: "cover" | "contain";
-	fallback?: LucideIcon;
+	fallback?: MontiIcon;
 	loading?: "lazy" | "eager";
 	className?: string;
 }) {

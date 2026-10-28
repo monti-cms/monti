@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, ChevronSort, Draggable, Edit, TrashCan } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { LOCALE_CODE, useTranslator } from "@monti-cms/core/site";
@@ -33,7 +34,6 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
@@ -279,7 +279,7 @@ function LocaleDialog({
 											) : (
 												<Text tone="muted">{t("locales.codePlaceholder")}</Text>
 											)}
-											<ChevronsUpDown aria-hidden />
+											<ChevronSort aria-hidden />
 										</Inline>
 									</PopoverTrigger>
 									<PopoverContent align="start" width="anchor" padding="menu">
@@ -327,7 +327,7 @@ function LocaleDialog({
 																setOpen(false);
 															}}
 														>
-															<Plus size={16} aria-hidden />
+															<Add size={16} aria-hidden />
 															<Text>{t("locales.codeCustom", { code: trimmedSearch })}</Text>
 														</CommandItem>
 													</CommandGroup>
@@ -410,7 +410,7 @@ function LocaleRow({
 				disabled={dragDisabled}
 				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 			>
-				<GripVertical aria-hidden className="size-4" />
+				<Draggable aria-hidden className="size-4" />
 			</button>
 			<Box as="span" radius="sm" background="muted" paddingX={8}>
 				<Text variant="caption" mono>
@@ -465,13 +465,13 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 		return [
 			{
 				label: t("locales.editNamed", { name: locale.label ?? locale.name }),
-				icon: Pencil,
+				icon: Edit,
 				disabled,
 				onClick: () => setDialog({ code: locale.code }),
 			},
 			{
 				label: ts("row.remove", { name: locale.code }),
-				icon: Trash2,
+				icon: TrashCan,
 				destructive: true,
 				disabled: disabled || isDefault,
 				title: isDefault ? t("locales.removeBlockedDefault") : undefined,
@@ -498,7 +498,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 							disabled={disabled}
 							onClick={() => setDialog({ code: null })}
 						>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("locales.add")}
 						</Button>
 					</Inline>

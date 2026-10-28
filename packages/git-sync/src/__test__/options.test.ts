@@ -148,7 +148,7 @@ describe("the plugin", () => {
 	it("registers a screen, a sidebar item, server hooks and routes", () => {
 		const plugin = gitSync({ targets: [target()] });
 		expect(plugin.name).toBe("git-sync");
-		expect(plugin.nav).toEqual([{ path: "git-sync", label: "Git sync", icon: "git-branch" }]);
+		expect(plugin.nav).toEqual([{ path: "git-sync", label: "Git sync", icon: "branch" }]);
 		expect(plugin.server).toBeTypeOf("function");
 		expect(plugin.admin).toBeTypeOf("function");
 	});

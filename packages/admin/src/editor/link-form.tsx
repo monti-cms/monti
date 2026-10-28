@@ -1,10 +1,10 @@
 "use client";
 
+import { Unlink } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Button, FormFieldError, Inline, Input, Label, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
-import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";

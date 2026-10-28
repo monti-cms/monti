@@ -1,8 +1,9 @@
 /** The dropdown button used by the toolbar for grouped tools (block shape, alignment, lists, ...). */
 
+import { ChevronDown } from "@carbon/icons-react";
+import type { MontiIcon } from "@monti-cms/ui";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, IconButton, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { ChevronDown, type LucideIcon } from "lucide-react";
 import type { ToolbarItem } from "./toolbar-button";
 import { ToolbarMenuItem } from "./toolbar-row";
 
@@ -16,7 +17,7 @@ export function ToolbarDropdown({
 	editor: Editor;
 	label: string;
 	items: ToolbarItem[];
-	icon?: LucideIcon;
+	icon?: MontiIcon;
 	/** Shows only the icon, no text. The name is conveyed via aria-label and tooltip. */
 	iconOnly?: boolean;
 }) {

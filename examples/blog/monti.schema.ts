@@ -176,7 +176,7 @@ export default defineSchema({
 				},
 			},
 			path: "/posts/:slug",
-			icon: "file-text",
+			icon: "document",
 			layout: [
 				{
 					fields: ["title", "slug", "summary"],
@@ -348,7 +348,7 @@ export default defineSchema({
 				},
 			},
 			path: "/memos/:slug",
-			icon: "notebook-pen",
+			icon: "notebook",
 			layout: [
 				{
 					fields: ["title", "slug"],

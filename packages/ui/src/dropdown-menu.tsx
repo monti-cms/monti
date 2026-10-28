@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import {
@@ -113,7 +113,7 @@ function DropdownMenuSubTrigger({ className, children, ...props }: MenuPrimitive
 	return (
 		<MenuPrimitive.SubmenuTrigger data-slot="dropdown-menu-sub-trigger" className={cn(MENU_ITEM, className)} {...props}>
 			{children}
-			<ChevronRightIcon aria-hidden className={MENU_SUB_MARK} />
+			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</MenuPrimitive.SubmenuTrigger>
 	);
 }

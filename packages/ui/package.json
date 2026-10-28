@@ -34,7 +34,7 @@
 		"tailwind-merge": "^3.4.0"
 	},
 	"peerDependencies": {
-		"lucide-react": ">=0.562.0",
+		"@carbon/icons-react": ">=11.90.0",
 		"react": ">=19",
 		"react-dom": ">=19"
 	},
@@ -50,7 +50,7 @@
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"jsdom": "^27.4.0",
-		"lucide-react": "^0.562.0",
+		"@carbon/icons-react": "11.90.0",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
 		"storybook": "10.6.1",

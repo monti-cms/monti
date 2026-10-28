@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, Document, Tag } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -15,7 +16,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { COLLECTION_ICON_NAMES, ICONS } from "../shared/collection-icon";
 import { Labeled } from "../shared/labeled";
@@ -46,8 +46,8 @@ export function IconPicker({
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
 
-	const defaultIconName = kind === "item" ? "tag" : "file-text";
-	const DefaultIcon = kind === "item" ? Tag : FileText;
+	const defaultIconName = kind === "item" ? "tag" : "document";
+	const DefaultIcon = kind === "item" ? Tag : Document;
 	const CurrentIcon = value && ICONS[value] ? ICONS[value] : DefaultIcon;
 
 	const filtered = useMemo(() => {

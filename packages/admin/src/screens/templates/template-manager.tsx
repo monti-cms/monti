@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Edit, TrashCan } from "@carbon/icons-react";
 import {
 	assignBlockIds,
 	type CmsNode,
@@ -11,7 +12,6 @@ import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, FormFieldError, Inline, Input, Stack } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTemplate } from "../../api/templates";
@@ -236,12 +236,12 @@ export function TemplateManager() {
 
 	/** Right-click and `⋯` menu of a template list row. */
 	const templateMenu = (template: BodyTemplate): MenuAction[] => [
-		{ kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => void openTemplate(template) },
+		{ kind: "item", label: tc("open"), icon: Edit, onSelect: () => void openTemplate(template) },
 		{ kind: "separator" },
 		{
 			kind: "item",
 			label: tc("delete"),
-			icon: Trash2,
+			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
 			onSelect: () => void requestDelete(template),
@@ -252,7 +252,7 @@ export function TemplateManager() {
 		<Stack gap={0} grow minHeight={0} overflow="hidden" border="top">
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("add")}
 				</Button>
 			</PageActions>

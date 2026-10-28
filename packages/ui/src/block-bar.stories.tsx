@@ -1,5 +1,5 @@
+import { Crop, SettingsAdjust, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AlignCenter, AlignLeft, AlignRight, Crop, SlidersHorizontal } from "lucide-react";
 import { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./block-bar";
 import { Image } from "./image";
 import { Stack } from "./stack";
@@ -20,17 +20,17 @@ export const Playground: Story = {
 	render: () => (
 		<BlockBar aria-label="이미지 도구">
 			<BlockBarButton label="왼쪽">
-				<AlignLeft aria-hidden />
+				<TextAlignLeft aria-hidden />
 			</BlockBarButton>
 			<BlockBarButton label="가운데" pressed>
-				<AlignCenter aria-hidden />
+				<TextAlignCenter aria-hidden />
 			</BlockBarButton>
 			<BlockBarButton label="오른쪽">
-				<AlignRight aria-hidden />
+				<TextAlignRight aria-hidden />
 			</BlockBarButton>
 			<BlockBarSeparator />
 			<BlockBarButton label="설정">
-				<SlidersHorizontal aria-hidden />
+				<SettingsAdjust aria-hidden />
 			</BlockBarButton>
 			<BlockBarButton label="자르기와 회전">
 				<Crop aria-hidden />
@@ -45,17 +45,17 @@ export const OnImage: Story = {
 		<Stack gap={8} className="max-w-md">
 			<BlockBar aria-label="이미지 도구" className="self-start">
 				<BlockBarButton label="왼쪽">
-					<AlignLeft aria-hidden />
+					<TextAlignLeft aria-hidden />
 				</BlockBarButton>
 				<BlockBarButton label="가운데" pressed>
-					<AlignCenter aria-hidden />
+					<TextAlignCenter aria-hidden />
 				</BlockBarButton>
 				<BlockBarButton label="오른쪽">
-					<AlignRight aria-hidden />
+					<TextAlignRight aria-hidden />
 				</BlockBarButton>
 				<BlockBarSeparator />
 				<BlockBarButton label="설정">
-					<SlidersHorizontal aria-hidden />
+					<SettingsAdjust aria-hidden />
 				</BlockBarButton>
 				<BlockBarButton label="자르기와 회전">
 					<Crop aria-hidden />

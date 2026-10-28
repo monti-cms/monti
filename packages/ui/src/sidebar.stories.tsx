@@ -1,5 +1,5 @@
+import { Document, Folder, Hashtag, ImageReference, Launch, SettingsAdjust, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ExternalLink, FileImage, FileText, Folder, Hash, Settings2, Trash2 } from "lucide-react";
 import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { Count } from "./count";
@@ -58,18 +58,18 @@ function AdminSidebar({ active = "media" }: { active?: "posts" | "media" | "tras
 					example.dev
 				</Text>
 				<a href="#top" aria-label="사이트 열기" className="flex text-monti-subtle">
-					<ExternalLink aria-hidden className="size-4" />
+					<Launch aria-hidden className="size-4" />
 				</a>
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<FileText aria-hidden />} count={148} isActive={active === "posts"}>
+						<Row icon={<Document aria-hidden />} count={148} isActive={active === "posts"}>
 							게시글
 						</Row>
 						<Row icon={<Folder aria-hidden />}>카테고리</Row>
-						<Row icon={<Hash aria-hidden />}>태그</Row>
-						<Row icon={<FileImage aria-hidden />} isActive={active === "media"}>
+						<Row icon={<Hashtag aria-hidden />}>태그</Row>
+						<Row icon={<ImageReference aria-hidden />} isActive={active === "media"}>
 							미디어
 						</Row>
 						{active === "media" && (
@@ -95,12 +95,12 @@ function AdminSidebar({ active = "media" }: { active?: "posts" | "media" | "tras
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu aria-label="휴지통">
-					<Row icon={<Trash2 aria-hidden />} count={3} isActive={active === "trash"}>
+					<Row icon={<TrashCan aria-hidden />} count={3} isActive={active === "trash"}>
 						휴지통
 					</Row>
 				</SidebarMenu>
 				<SidebarMenu aria-label="설정">
-					<Row icon={<Settings2 aria-hidden />}>설정</Row>
+					<Row icon={<SettingsAdjust aria-hidden />}>설정</Row>
 				</SidebarMenu>
 			</SidebarFooter>
 		</Sidebar>
@@ -147,20 +147,20 @@ export const RowStates: Story = {
 			<Sidebar collapsible="none">
 				<SidebarContent>
 					<SidebarMenu aria-label="상태">
-						<Row icon={<FileText aria-hidden />} count={148} isActive>
+						<Row icon={<Document aria-hidden />} count={148} isActive>
 							열린 줄
 						</Row>
 						<Row icon={<Folder aria-hidden />}>보통 줄</Row>
-						<Row icon={<Hash aria-hidden />} className="bg-monti-muted">
+						<Row icon={<Hashtag aria-hidden />} className="bg-monti-muted">
 							가리킨 줄
 						</Row>
-						<Row icon={<FileImage aria-hidden />} changed>
+						<Row icon={<ImageReference aria-hidden />} changed>
 							바뀐 곳이 있는 줄
 						</Row>
-						<Row icon={<Settings2 aria-hidden />} removed count={2}>
+						<Row icon={<SettingsAdjust aria-hidden />} removed count={2}>
 							지운 줄
 						</Row>
-						<Row icon={<Trash2 aria-hidden />} disabled>
+						<Row icon={<TrashCan aria-hidden />} disabled>
 							쓸 수 없는 줄
 						</Row>
 					</SidebarMenu>
@@ -177,7 +177,7 @@ export const LongLabel: Story = {
 			<Sidebar collapsible="none">
 				<SidebarContent>
 					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<FileText aria-hidden />} count={128} isActive>
+						<Row icon={<Document aria-hidden />} count={128} isActive>
 							아주 긴 이름의 콘텐츠 종류가 사이드바 폭을 넘으면 잘려요
 						</Row>
 					</SidebarMenu>
@@ -197,10 +197,10 @@ export const Collapsible: Story = {
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarMenu aria-label="콘텐츠">
-						<Row icon={<FileText aria-hidden />} count={148} isActive>
+						<Row icon={<Document aria-hidden />} count={148} isActive>
 							게시글
 						</Row>
-						<Row icon={<FileImage aria-hidden />}>미디어</Row>
+						<Row icon={<ImageReference aria-hidden />}>미디어</Row>
 					</SidebarMenu>
 				</SidebarContent>
 			</Sidebar>

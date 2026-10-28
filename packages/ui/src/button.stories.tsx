@@ -1,5 +1,5 @@
+import { Add, Search } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus, Search } from "lucide-react";
 import { Button } from "./button";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
@@ -45,7 +45,7 @@ export const WithIcon: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center" wrap>
 			<Button>
-				<Plus aria-hidden />새 글 쓰기
+				<Add aria-hidden />새 글 쓰기
 			</Button>
 			<Button variant="secondary">
 				<Search aria-hidden />

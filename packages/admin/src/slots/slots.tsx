@@ -1,5 +1,6 @@
 "use client";
 
+import { Close, Flash, Renew } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -15,7 +16,6 @@ import {
 	Textarea,
 	TextButton,
 } from "@monti-cms/ui";
-import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
@@ -44,7 +44,7 @@ export {
  */
 
 /** Icon used when an action does not provide one. */
-const defaultIcon = <Zap aria-hidden />;
+const defaultIcon = <Flash aria-hidden />;
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -109,11 +109,11 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 					<Inline as="span" grow justify="end">
 						{state.status !== "running" && state.status !== "asking" && (
 							<IconButton label={t("rerun")} onClick={() => void rerun()}>
-								<RefreshCw aria-hidden />
+								<Renew aria-hidden />
 							</IconButton>
 						)}
 						<IconButton label={tc("close")} onClick={cancel}>
-							<X aria-hidden />
+							<Close aria-hidden />
 						</IconButton>
 					</Inline>
 				</Inline>

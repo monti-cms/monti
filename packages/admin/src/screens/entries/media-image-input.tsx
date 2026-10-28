@@ -1,9 +1,9 @@
 "use client";
 
+import { DocumentBlank, Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, FormFieldError, Image, Inline, Text, TextButton } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { errorText } from "../../api/client";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
@@ -168,7 +168,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 			<Inline gap={8}>
 				{mediaId && (
 					<Inline gap={4} grow minWidth={0}>
-						<FileIcon aria-hidden size={14} />
+						<DocumentBlank aria-hidden size={14} />
 						<Text variant="caption" truncate>
 							{filename ?? mediaId}
 						</Text>

@@ -1,7 +1,7 @@
 "use client";
 
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import {
@@ -108,7 +108,7 @@ function ContextMenuSubTrigger({ className, children, ...props }: ContextMenuPri
 			{...props}
 		>
 			{children}
-			<ChevronRightIcon aria-hidden className={MENU_SUB_MARK} />
+			<ChevronRight aria-hidden className={MENU_SUB_MARK} />
 		</ContextMenuPrimitive.SubmenuTrigger>
 	);
 }

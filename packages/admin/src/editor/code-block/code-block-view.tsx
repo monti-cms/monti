@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, ChevronRight, Copy, Information, ListNumbered, Row } from "@carbon/icons-react";
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -18,7 +19,6 @@ import {
 	TooltipTrigger,
 } from "@monti-cms/ui";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
-import { Check, ChevronRight, Copy, Info, ListOrdered, Rows3 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { codeAnchorRef } from "../added-marks";
 import { useEditorEditable } from "../blocks/shared";
@@ -281,7 +281,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 					{!editable ? null : rawMode ? (
 						<Tooltip>
 							<TooltipTrigger render={<Inline as="span" gap={4} paddingX={4} />}>
-								<Info aria-hidden />
+								<Information aria-hidden />
 								<Text variant="caption" tone="muted">
 									{t("view.rawMode")}
 								</Text>
@@ -300,7 +300,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										if (lines) setMenu({ start: lines.start, end: lines.end });
 									}}
 								>
-									<Rows3 aria-hidden />
+									<Row aria-hidden />
 								</IconButton>
 							)}
 							{rulesOffered && (
@@ -328,11 +328,11 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 							pressed={parsedMeta.showLineNumbers}
 							onClick={() => setMeta({ showLineNumbers: !parsedMeta.showLineNumbers })}
 						>
-							<ListOrdered aria-hidden />
+							<ListNumbered aria-hidden />
 						</IconButton>
 					)}
 					<IconButton label={copied ? t("view.copied") : t("view.copy")} onClick={handleCopy}>
-						{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+						{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 					</IconButton>
 				</Inline>
 			</Inline>

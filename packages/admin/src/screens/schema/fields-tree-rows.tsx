@@ -3,11 +3,11 @@
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
+import { ArrowRight, type ArrowUp, Draggable, TrashCan, Undo } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton, Stack } from "@monti-cms/ui";
-import { type ArrowUp, GripVertical, MoveRight, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { ChangedMark, useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
@@ -200,18 +200,18 @@ export function Row({
 			? [
 					{
 						label: t("field.revert", { name }),
-						icon: Undo2,
+						icon: Undo,
 						disabled,
 						onClick: () => editing.update((collection) => setField(collection, place, name, () => savedField)),
 					},
 				]
 			: []),
 		...(top && !locked
-			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
+			? [{ label: t("layout.move", { name }), icon: ArrowRight, disabled, onClick: () => setMoving(true) }]
 			: []),
 		{
 			label: ts("row.remove", { name }),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			disabled: disabled || blocked !== null,
 			onClick: () => editing.update((collection) => removeField(collection, place, name)),
@@ -317,7 +317,7 @@ export function Row({
 					disabled={noDrag}
 					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
 				>
-					<GripVertical aria-hidden className="size-4" />
+					<Draggable aria-hidden className="size-4" />
 				</button>
 				<RowButtons buttons={buttons} />
 				{moving && top && (

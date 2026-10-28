@@ -1,5 +1,6 @@
 "use client";
 
+import { Edit, RecentlyViewed } from "@carbon/icons-react";
 import {
 	type AdminPanel,
 	type AdminPanelProps,
@@ -30,7 +31,6 @@ import {
 } from "@monti-cms/admin/kit";
 import { AdminLink } from "@monti-cms/admin/router";
 import { useQuery } from "@tanstack/react-query";
-import { History, SquarePen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AiAgentModelView } from "../connection";
 import { MessageView } from "./agent-conversation";
@@ -100,7 +100,7 @@ function HistoryMenu({ onPick }: { onPick: (id: string) => void }) {
 				side="bottom"
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<History aria-hidden />
+				<RecentlyViewed aria-hidden />
 			</IconButton>
 			<DropdownMenuContent align="end">
 				<DropdownMenuGroup>
@@ -198,7 +198,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 							rememberRun("");
 						}}
 					>
-						<SquarePen aria-hidden />
+						<Edit aria-hidden />
 					</IconButton>
 				</>
 			}

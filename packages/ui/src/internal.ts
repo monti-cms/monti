@@ -147,6 +147,7 @@ export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
+export type { MontiIcon } from "./monti-icon";
 export { Option } from "./option";
 export {
 	PageHeader,

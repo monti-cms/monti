@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 

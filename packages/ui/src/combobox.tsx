@@ -1,7 +1,7 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
-import { XIcon } from "lucide-react";
+import { Close } from "@carbon/icons-react";
 import * as React from "react";
 import { Caret } from "./caret";
 import { CHIP, CHIP_REMOVE } from "./chip";
@@ -29,7 +29,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 	const labels = useUiLabels();
 	return (
 		<ComboboxPrimitive.Clear data-slot="combobox-clear" className={cn(ICON_BUTTON, className)} {...props}>
-			<XIcon className="pointer-events-none" aria-hidden />
+			<Close className="pointer-events-none" aria-hidden />
 			<span className="sr-only">{labels.clear}</span>
 		</ComboboxPrimitive.Clear>
 	);
@@ -199,7 +199,7 @@ function ComboboxChip({
 			{children}
 			{showRemove && (
 				<ComboboxPrimitive.ChipRemove className={CHIP_REMOVE} data-slot="combobox-chip-remove">
-					<XIcon className="pointer-events-none size-3" aria-hidden />
+					<Close className="pointer-events-none size-3" aria-hidden />
 					<span className="sr-only">{labels.deselect}</span>
 				</ComboboxPrimitive.ChipRemove>
 			)}

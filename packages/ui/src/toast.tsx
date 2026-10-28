@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderInput } from "lucide-react";
+import { FolderMoveTo } from "@carbon/icons-react";
 import type { CSSProperties, ReactNode } from "react";
 import { Toaster as Engine, toast as engine } from "sonner";
 import { cn } from "./cn";
@@ -73,7 +73,7 @@ function error(message: ReactNode, options: ToastOptions = {}): string | number 
 function dropHint(
 	message: ReactNode,
 	{
-		icon = <FolderInput aria-hidden className="size-monti-icon-md shrink-0" />,
+		icon = <FolderMoveTo aria-hidden className="size-monti-icon-md shrink-0" />,
 		id,
 		duration = Number.POSITIVE_INFINITY,
 	}: {

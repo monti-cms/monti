@@ -1,5 +1,6 @@
 "use client";
 
+import { Edit, FolderAdd, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -27,7 +28,6 @@ import {
 	Text,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
@@ -63,17 +63,17 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 	const tc = site.createTranslator(commonMessages);
 	const targets = moveTargetsFor(folder, folders);
 	return [
-		{ kind: "item", label: tc("addSubfolder"), icon: FolderPlus, onSelect: () => actions.requestCreate(folder.id) },
+		{ kind: "item", label: tc("addSubfolder"), icon: FolderAdd, onSelect: () => actions.requestCreate(folder.id) },
 		{
 			kind: "item",
 			label: tc("rename"),
-			icon: Pencil,
+			icon: Edit,
 			onSelect: () => actions.requestRename(folder),
 		},
 		{
 			kind: "sub",
 			label: tc("move"),
-			icon: FolderInput,
+			icon: FolderMoveTo,
 			emptyLabel: t("folder.moveEmpty"),
 			items: [
 				...(folder.parentId
@@ -81,7 +81,7 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 							{
 								kind: "item" as const,
 								label: t("folder.root"),
-								icon: FolderUp,
+								icon: FolderParent,
 								onSelect: () => void actions.moveFolder(folder, null),
 							},
 						]
@@ -98,7 +98,7 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 		{
 			kind: "item",
 			label: tc("delete"),
-			icon: Trash2,
+			icon: TrashCan,
 			destructive: true,
 			onSelect: () => void actions.requestDelete(folder),
 		},

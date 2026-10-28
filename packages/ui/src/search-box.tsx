@@ -1,7 +1,7 @@
 "use client";
 
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { Search, X } from "lucide-react";
+import { Close, Search } from "@carbon/icons-react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
 import {
@@ -93,7 +93,7 @@ function SearchBox<T extends string = string>({
 					onClick={() => onValueChange("")}
 					className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0 text-monti-subtle outline-none hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
 				>
-					<X aria-hidden className="size-4" />
+					<Close aria-hidden className="size-4" />
 				</button>
 			)}
 		</div>

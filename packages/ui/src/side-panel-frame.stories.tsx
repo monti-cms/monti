@@ -1,5 +1,5 @@
+import { Edit, OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Ellipsis, SquarePen } from "lucide-react";
 import { Button } from "./button";
 import { ChatInput } from "./chat-input";
 import { ChatMessage } from "./chat-message";
@@ -55,7 +55,7 @@ export const Header: Story = {
 			onClose={() => undefined}
 			actions={
 				<IconButton label="새 대화" side="bottom">
-					<SquarePen aria-hidden />
+					<Edit aria-hidden />
 				</IconButton>
 			}
 		>
@@ -73,7 +73,7 @@ export const Details: Story = {
 				onClose={() => undefined}
 				actions={
 					<IconButton label="더 보기" side="bottom">
-						<Ellipsis aria-hidden />
+						<OverflowMenuHorizontal aria-hidden />
 					</IconButton>
 				}
 				footer={

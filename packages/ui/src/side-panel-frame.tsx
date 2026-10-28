@@ -1,6 +1,6 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { Close } from "@carbon/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
@@ -53,7 +53,7 @@ export function SidePanelFrame({
 				{actions}
 				{onClose && (
 					<IconButton label={labels.close} side="bottom" onClick={onClose}>
-						<XIcon aria-hidden />
+						<Close aria-hidden />
 					</IconButton>
 				)}
 			</header>

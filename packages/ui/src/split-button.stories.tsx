@@ -1,5 +1,5 @@
+import { CalendarSettings } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CalendarSync } from "lucide-react";
 import { expect, userEvent, within } from "storybook/test";
 import { DropdownMenuItem } from "./dropdown-menu";
 import { SplitButton } from "./split-button";
@@ -12,7 +12,7 @@ const meta = {
 		menuLabel: "발행 방식",
 		menu: (
 			<DropdownMenuItem>
-				<CalendarSync aria-hidden />
+				<CalendarSettings aria-hidden />
 				오늘 날짜로 다시 발행
 			</DropdownMenuItem>
 		),

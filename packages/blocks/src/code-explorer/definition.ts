@@ -53,7 +53,7 @@ export const codeExplorerBlock = defineBlock({
 		get keywords() {
 			return ["code-explorer", "file-tree", ...keywordList(t("keywords"))];
 		},
-		icon: "folder-tree",
+		icon: "folder--tree",
 		// Starts with one file, not an empty paragraph. `src/index.ts` is a path, so it is not translated.
 		insert: { codeBlocks: [{ language: "ts", title: "src/index.ts" }] },
 	},

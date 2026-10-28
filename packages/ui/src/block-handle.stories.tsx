@@ -1,5 +1,5 @@
+import { ArrowDown, ArrowUp, Copy, Repeat, TextAlignLeft, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AlignLeft, ArrowDown, ArrowUp, Copy, Repeat2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Block, BlockHandle } from "./block-handle";
 import {
@@ -71,7 +71,7 @@ function BlockMenuDemo({ defaultOpen = true }: { defaultOpen?: boolean }) {
 						<DropdownMenuLabel>문단</DropdownMenuLabel>
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger>
-								<Repeat2 aria-hidden />
+								<Repeat aria-hidden />
 								다른 블록으로 바꾸기
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
@@ -92,7 +92,7 @@ function BlockMenuDemo({ defaultOpen = true }: { defaultOpen?: boolean }) {
 						</DropdownMenuSub>
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger>
-								<AlignLeft aria-hidden />
+								<TextAlignLeft aria-hidden />
 								정렬
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
@@ -116,7 +116,7 @@ function BlockMenuDemo({ defaultOpen = true }: { defaultOpen?: boolean }) {
 						복제<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem variant="danger">
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 						삭제<MenuShortcut>⇧⌘⌫</MenuShortcut>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

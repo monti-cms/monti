@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Draggable, Locked } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
@@ -7,7 +8,6 @@ import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Banner, Box, CodeBlock, cn, Heading, Icon, IconButton, Inline, Stack, Text, toast } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorText } from "../../api/client";
@@ -166,7 +166,7 @@ function CollectionNavItem({
 					aria-label={t("collection.drag", { name: label })}
 					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 group-hover/row:opacity-100"
 				>
-					<GripVertical aria-hidden className="size-3.5" />
+					<Draggable aria-hidden className="size-3.5" />
 				</button>
 			)}
 			<button
@@ -279,7 +279,7 @@ function SchemaEditor({
 
 	const actions = !writable ? (
 		<Inline gap={4}>
-			<Icon icon={Lock} size="sm" tone="subtle" />
+			<Icon icon={Locked} size="sm" tone="subtle" />
 			<Text variant="meta" tone="subtle">
 				{t("status.readOnly")}
 			</Text>
@@ -346,7 +346,7 @@ function SchemaEditor({
 												</Text>
 												{writable && (
 													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
-														<Plus aria-hidden />
+														<Add aria-hidden />
 													</IconButton>
 												)}
 											</Inline>

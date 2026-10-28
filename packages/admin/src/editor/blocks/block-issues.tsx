@@ -18,7 +18,7 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 		>
 			{texts.map((text) => (
 				<li key={text} className="flex items-start gap-monti-8">
-					{/* An inline icon, not lucide-react: block views are in the hooks graph, which stays free of icon and UI packages. */}
+					{/* An inline icon, not an icon-set import: block views are in the hooks graph, which stays free of icon and UI packages. */}
 					{/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative, hidden from assistive tech */}
 					<svg
 						aria-hidden

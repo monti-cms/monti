@@ -162,6 +162,9 @@ importers:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.3.0)(immer@11.1.21)(react@19.2.3)(use-sync-external-store@1.7.0(react@19.2.3))
     devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@fontsource/ibm-plex-mono':
         specifier: ^5.3.0
         version: 5.3.0
@@ -207,9 +210,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -250,6 +250,9 @@ importers:
         specifier: ^4.2.1
         version: 4.6.5
     devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@monti-cms/admin':
         specifier: workspace:*
         version: link:../admin
@@ -298,9 +301,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -383,9 +383,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next:
         specifier: 16.4.0
         version: 16.4.0(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -410,6 +407,9 @@ importers:
 
   packages/blocks:
     devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@monti-cms/admin':
         specifier: workspace:*
         version: link:../admin
@@ -458,9 +458,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       mermaid:
         specifier: ^11.12.2
         version: 11.17.2
@@ -589,6 +586,9 @@ importers:
         specifier: ^4.2.1
         version: 4.6.5
     devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@monti-cms/admin':
         specifier: workspace:*
         version: link:../admin
@@ -634,9 +634,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -734,9 +731,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next:
         specifier: 16.4.0
         version: 16.4.0(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -806,9 +800,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       next:
         specifier: 16.4.0
         version: 16.4.0(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1059,6 +1050,9 @@ importers:
         specifier: ^3.4.0
         version: 3.7.0
     devDependencies:
+      '@carbon/icons-react':
+        specifier: 11.90.0
+        version: 11.90.0(react@19.2.3)
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -1092,9 +1086,6 @@ importers:
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      lucide-react:
-        specifier: ^0.562.0
-        version: 0.562.0(react@19.2.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -1431,6 +1422,14 @@ packages:
 
   '@braintree/sanitize-url@7.1.2':
     resolution: {integrity: sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA==}
+
+  '@carbon/icon-helpers@10.84.0':
+    resolution: {integrity: sha512-G+LVR42568CbluBzu7uV+ZMmI5tT2ojnWCmRgDB8Z3xKls1D5DU6fQHyiAg10JjLo+zBGUih6eEVSCqq9oXkEw==}
+
+  '@carbon/icons-react@11.90.0':
+    resolution: {integrity: sha512-WcYBnIJNEuLXpNxibe1ltVe1HAsTDuGanRVdzRYK/gN+adayDmHplMnXXDNjNlwB4PjSKesqhvt7UAZlLs7uYg==}
+    peerDependencies:
+      react: '>=16'
 
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
@@ -1798,6 +1797,10 @@ packages:
 
   '@fontsource/ibm-plex-mono@5.3.0':
     resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
+
+  '@ibm/telemetry-js@1.12.0':
+    resolution: {integrity: sha512-tNgmk2k8loNDTnPInlu7yMP9YOCr9UMwSnXN7SCEsGIV8xHfTawhXlDnp1PV0Lbv+2GoLQKSgkShlJeGPi4jTg==}
+    hasBin: true
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -4575,6 +4578,10 @@ packages:
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
+  loose-envify@1.4.0:
+    resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
+    hasBin: true
+
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
 
@@ -4584,11 +4591,6 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
-
-  lucide-react@0.562.0:
-    resolution: {integrity: sha512-82hOAu7y0dbVuFfmO4bYF1XEwYk/mEbM5E+b1jgci/udUBEE/R7LF5Ip0CCEmXe8AybRM8L+04eP+LGZeDvkiw==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -4849,6 +4851,10 @@ packages:
   oauth4webapi@3.8.8:
     resolution: {integrity: sha512-8N28E+a/oxfXWBgOMt+ZP/JUf/XR+IFbvkAEPP3gznXOMv9BpAAwiIj0TFNz3tGTPc0ZQ8zmWBNgN1nAys0gng==}
 
+  object-assign@4.1.1:
+    resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
+    engines: {node: '>=0.10.0'}
+
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
@@ -5026,6 +5032,9 @@ packages:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
 
+  prop-types@15.8.1:
+    resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
+
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
 
@@ -5095,6 +5104,9 @@ packages:
     resolution: {integrity: sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==}
     peerDependencies:
       react: ^19.2.3
+
+  react-is@16.13.1:
+    resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -6249,6 +6261,17 @@ snapshots:
 
   '@braintree/sanitize-url@7.1.2': {}
 
+  '@carbon/icon-helpers@10.84.0':
+    dependencies:
+      '@ibm/telemetry-js': 1.12.0
+
+  '@carbon/icons-react@11.90.0(react@19.2.3)':
+    dependencies:
+      '@carbon/icon-helpers': 10.84.0
+      '@ibm/telemetry-js': 1.12.0
+      prop-types: 15.8.1
+      react: 19.2.3
+
   '@chevrotain/types@11.1.2': {}
 
   '@clack/core@1.5.1':
@@ -6579,6 +6602,8 @@ snapshots:
   '@floating-ui/utils@0.2.12': {}
 
   '@fontsource/ibm-plex-mono@5.3.0': {}
+
+  '@ibm/telemetry-js@1.12.0': {}
 
   '@iconify/types@2.0.0': {}
 
@@ -9085,6 +9110,10 @@ snapshots:
 
   longest-streak@3.1.0: {}
 
+  loose-envify@1.4.0:
+    dependencies:
+      js-tokens: 4.0.0
+
   loupe@3.2.1: {}
 
   lru-cache@11.5.3: {}
@@ -9092,10 +9121,6 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
-
-  lucide-react@0.562.0(react@19.2.3):
-    dependencies:
-      react: 19.2.3
 
   lz-string@1.5.0: {}
 
@@ -9685,6 +9710,8 @@ snapshots:
 
   oauth4webapi@3.8.8: {}
 
+  object-assign@4.1.1: {}
+
   obug@2.2.1: {}
 
   oniguruma-parser@0.12.2: {}
@@ -9936,6 +9963,12 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 17.0.2
 
+  prop-types@15.8.1:
+    dependencies:
+      loose-envify: 1.4.0
+      object-assign: 4.1.1
+      react-is: 16.13.1
+
   property-information@7.2.0: {}
 
   prosemirror-changeset@2.4.4:
@@ -10045,6 +10078,8 @@ snapshots:
     dependencies:
       react: 19.2.3
       scheduler: 0.27.0
+
+  react-is@16.13.1: {}
 
   react-is@17.0.2: {}
 

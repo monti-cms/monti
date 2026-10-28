@@ -51,7 +51,7 @@
 		"@monti-cms/ai": "workspace:^",
 		"mermaid": ">=11",
 		"recharts": ">=3",
-		"lucide-react": ">=0.562.0"
+		"@carbon/icons-react": ">=11.90.0"
 	},
 	"peerDependenciesMeta": {
 		"@monti-cms/ai": {
@@ -81,7 +81,7 @@
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"jsdom": "^27.4.0",
-		"lucide-react": "^0.562.0",
+		"@carbon/icons-react": "11.90.0",
 		"mermaid": "^11.12.2",
 		"next": "16.4.0",
 		"next-mdx-remote": "^6.0.0",

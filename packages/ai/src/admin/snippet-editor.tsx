@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, Copy, Reset, Save } from "@carbon/icons-react";
 import { errorText, type Translator, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Box,
@@ -26,7 +27,6 @@ import {
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";
 import type { AiSnippetItem, AiSnippetView } from "../snippets";
 import { aiKeys, createAiSnippet, deleteAiSnippet, getAiSnippets, updateAiSnippet } from "./api";
@@ -166,7 +166,7 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 				</Text>
 			</Box>
 			<IconButton label={copied ? t("copy.done") : t("copy.label")} onClick={() => void copy()}>
-				{copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+				{copied ? <Checkmark aria-hidden /> : <Copy aria-hidden />}
 			</IconButton>
 		</Inline>
 	);
@@ -351,7 +351,7 @@ function SnippetEditor({
 						disabled={draft.text === item.defaultText}
 						onClick={() => set({ text: item.defaultText })}
 					>
-						<RotateCcw aria-hidden />
+						<Reset aria-hidden />
 						{t("action.resetDefault")}
 					</Button>
 				)}

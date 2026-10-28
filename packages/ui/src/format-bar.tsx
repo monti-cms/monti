@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { Link2 } from "lucide-react";
+import { Link } from "@carbon/icons-react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { BAR, BAR_BUTTON, BAR_SEPARATOR } from "./block-bar";
 import { cn } from "./cn";
@@ -18,7 +18,7 @@ const FORMAT_GLYPHS = {
 	code: { glyph: "</>", className: "font-mono text-monti-meta" },
 	superscript: { glyph: "x²", className: "text-monti-label" },
 	subscript: { glyph: "x₂", className: "text-monti-label" },
-	link: { glyph: <Link2 aria-hidden className="size-4" />, className: "" },
+	link: { glyph: <Link aria-hidden className="size-4" />, className: "" },
 	// The glyph is a word of the app's language (`footnoteMark` in the ui labels), so it is read from them in `FormatButton`.
 	footnote: { glyph: null, className: "text-monti-label" },
 	more: { glyph: "⋯", className: "" },

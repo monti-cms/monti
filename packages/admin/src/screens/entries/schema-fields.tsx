@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight, Renew } from "@carbon/icons-react";
 import type {
 	BacklinkField,
 	ConditionalField,
@@ -42,7 +43,6 @@ import {
 	TextButton,
 	FormField as UiField,
 } from "@monti-cms/ui";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
 	type FieldInputEntry,
@@ -388,7 +388,7 @@ function ValueRowView({
 				field.setValue(excerpt);
 			}}
 		>
-			<RefreshCw aria-hidden />
+			<Renew aria-hidden />
 		</IconButton>
 	) : null;
 
@@ -461,7 +461,7 @@ const SlugRow = memo(function SlugRow({
 				action={
 					onRegenerateSlug && definition.from ? (
 						<IconButton label={regenerateLabel} side="bottom" disabled={field.readOnly} onClick={onRegenerateSlug}>
-							<RefreshCw aria-hidden />
+							<Renew aria-hidden />
 						</IconButton>
 					) : undefined
 				}

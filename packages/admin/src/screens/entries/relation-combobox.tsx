@@ -1,5 +1,6 @@
 "use client";
 
+import { Add } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Combobox,
@@ -16,7 +17,6 @@ import {
 	Text,
 	useComboboxAnchor,
 } from "@monti-cms/ui";
-import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { EmptyState } from "../shared/empty-state";
@@ -158,7 +158,7 @@ export function RelationCombobox({
 					<ComboboxItem key={item.value} value={item}>
 						{item.create ? (
 							<>
-								<Plus aria-hidden />
+								<Add aria-hidden />
 								<Text truncate>{t("relation.create", { label: item.label })}</Text>
 							</>
 						) : (

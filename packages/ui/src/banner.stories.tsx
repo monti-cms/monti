@@ -1,5 +1,5 @@
+import { ChevronLeft } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChevronLeft } from "lucide-react";
 import { Banner } from "./banner";
 import { Text } from "./text";
 import { TextButton } from "./text-button";

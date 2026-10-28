@@ -1,8 +1,8 @@
 "use client";
 
+import { AppConnectivity } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
-import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIconByName } from "../screens/shared/collection-icon";
@@ -20,7 +20,7 @@ interface SlashMenuPopupProps {
 /** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
 function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
 	const iconByName = useIconByName();
-	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? Puzzle;
+	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? AppConnectivity;
 	return <Icon icon={Glyph} tone="muted" />;
 }
 

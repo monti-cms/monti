@@ -1,8 +1,8 @@
 "use client";
 
+import { Calendar as CalendarIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Button, Calendar, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
-import { CalendarRange } from "lucide-react";
 import { adminCalendarLocale } from "../../ui/calendar-locale";
 import { dateRangeMessages } from "./date-range.messages";
 
@@ -59,7 +59,7 @@ export function DateRangePicker({
 			<PopoverTrigger
 				render={<Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${summary}`} />}
 			>
-				<CalendarRange aria-hidden />
+				<CalendarIcon aria-hidden />
 				{label}: {summary}
 			</PopoverTrigger>
 			<PopoverContent align="start" width="auto">

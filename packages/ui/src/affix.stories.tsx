@@ -1,5 +1,5 @@
+import { Renew } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RefreshCw } from "lucide-react";
 import { Affix } from "./affix";
 import { FormField, FormFieldError, FormFieldLabel } from "./field";
 import { IconButton } from "./icon-button";
@@ -82,7 +82,7 @@ export const States: Story = {
 					defaultValue="first-post"
 					action={
 						<IconButton label="제목으로 다시 만들기">
-							<RefreshCw aria-hidden />
+							<Renew aria-hidden />
 						</IconButton>
 					}
 				/>

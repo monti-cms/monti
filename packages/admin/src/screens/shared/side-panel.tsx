@@ -1,8 +1,8 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline } from "@monti-cms/ui";
-import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
@@ -56,7 +56,7 @@ export function SidePanelHeader({
 			)}
 			{children}
 			<IconButton label={t("close")} side="bottom" onClick={onClose}>
-				<X aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 		</Inline>
 	);

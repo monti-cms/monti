@@ -1,5 +1,5 @@
+import { SettingsAdjust, Upload } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SlidersHorizontal, Upload } from "lucide-react";
 import { Box } from "./box";
 import { Stack } from "./stack";
 import { Text } from "./text";
@@ -48,7 +48,7 @@ export const WithIcon: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center">
 			<TextButton variant="quiet">
-				<SlidersHorizontal aria-hidden />
+				<SettingsAdjust aria-hidden />
 				보기
 			</TextButton>
 			<TextButton>

@@ -1,5 +1,5 @@
+import { Image as ImageIcon } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ImageIcon } from "lucide-react";
 import type * as React from "react";
 import { Image } from "./image";
 import { Stack } from "./stack";

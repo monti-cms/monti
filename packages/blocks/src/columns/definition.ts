@@ -34,7 +34,7 @@ export const columnsBlock = defineBlock({
 		get keywords() {
 			return ["columns", ...keywordList(t("keywords"))];
 		},
-		icon: "columns-2",
+		icon: "split-screen",
 		get insert() {
 			return { children: [{ text: t("insert.text") }, { text: t("insert.text") }] };
 		},

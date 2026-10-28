@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, OverflowMenuHorizontal, TrashCan } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -16,7 +17,6 @@ import {
 	TextButton,
 	toast,
 } from "@monti-cms/ui";
-import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
@@ -120,7 +120,7 @@ export function LanguageTabs({
 				)}
 				{missing.map((target) => (
 					<TextButton key={target} variant="quiet" disabled={createDisabled} onClick={() => void create(target)}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 						{/* The visible text is the button's name; the locale code stays in mono. */}
 						{t("lang.addTab", { code: CODE_MARK })
 							.split(CODE_MARK)
@@ -137,11 +137,11 @@ export function LanguageTabs({
 				{isTranslation && entry.status !== "trashed" && (
 					<DropdownMenu>
 						<IconButton label={t("lang.menu")} trigger={(button) => <DropdownMenuTrigger render={button} />}>
-							<MoreHorizontal aria-hidden />
+							<OverflowMenuHorizontal aria-hidden />
 						</IconButton>
 						<DropdownMenuContent align="start">
 							<DropdownMenuItem variant="danger" onClick={onTrashTranslation}>
-								<Trash2 aria-hidden />
+								<TrashCan aria-hidden />
 								{tc("lifecycle.trash")}
 							</DropdownMenuItem>
 						</DropdownMenuContent>

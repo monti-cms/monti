@@ -1,13 +1,13 @@
 "use client";
 
+import type { MontiIcon } from "@monti-cms/ui";
 import { IconButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import type { LucideIcon } from "lucide-react";
 
 export interface ToolbarItem {
 	label: string;
 	title?: string;
-	icon: LucideIcon;
+	icon: MontiIcon;
 	/** `danger` for a tool that removes something. */
 	tone?: "danger";
 	isActive?: (editor: Editor) => boolean;

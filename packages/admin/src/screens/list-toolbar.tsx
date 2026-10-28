@@ -1,5 +1,6 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -13,7 +14,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
@@ -190,7 +190,7 @@ export function ListSubToolbar({
 								</Text>
 							</Box>
 							<IconButton label={t("filter.clear")} onClick={() => onChange(chip.clear)}>
-								<X aria-hidden />
+								<Close aria-hidden />
 							</IconButton>
 						</Inline>
 					</Box>

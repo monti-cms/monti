@@ -1,5 +1,6 @@
 "use client";
 
+import { Restart } from "@carbon/icons-react";
 import {
 	type CropBox,
 	formatCrop,
@@ -25,7 +26,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
@@ -392,7 +392,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 							</Text>
 						</Inline>
 						<Button type="button" variant="secondary" size="sm" onClick={handleRotate90}>
-							<RotateCw aria-hidden />
+							<Restart aria-hidden />
 							{t("imageCrop.rotate90")}
 						</Button>
 					</Inline>

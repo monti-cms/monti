@@ -2,7 +2,7 @@
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
-import { GripVertical, Lock, Plus } from "lucide-react";
+import { Add, Draggable, Locked } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { Count } from "./count";
@@ -55,10 +55,10 @@ function FolderTab({
 			)}
 			{...props}
 		>
-			{draggable && !locked && <GripVertical aria-hidden className="size-3.5 text-monti-faint" />}
+			{draggable && !locked && <Draggable aria-hidden className="size-3.5 text-monti-faint" />}
 			{children}
 			{count !== undefined && <Count>{count}</Count>}
-			{locked && <Lock aria-hidden className="size-3 text-monti-faint" />}
+			{locked && <Locked aria-hidden className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
 	);
 }
@@ -75,7 +75,7 @@ function FolderTabsAdd({ className, children, ...props }: ButtonPrimitive.Props)
 			)}
 			{...props}
 		>
-			{children ?? <Plus aria-hidden className="size-monti-icon-md" />}
+			{children ?? <Add aria-hidden className="size-monti-icon-md" />}
 		</ButtonPrimitive>
 	);
 }

@@ -1,19 +1,18 @@
-import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
 import {
 	Archive,
-	ArchiveRestore,
 	Copy,
-	ExternalLink,
+	Edit,
 	Folder as FolderIcon,
-	FolderInput,
-	FolderUp,
-	PanelRightOpen,
-	RotateCcw,
-	SquarePen,
+	FolderMoveTo,
+	FolderParent,
+	Launch,
+	Reset,
+	RightPanelOpen,
 	Tag,
-	Tags,
-	Trash2,
-} from "lucide-react";
+	TagGroup,
+	TrashCan,
+} from "@carbon/icons-react";
+import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
 import type { BulkParams, BulkSelection } from "../api/entries";
 import { commonMessages } from "../lib/common.messages";
 import { screensMessages } from "./messages";
@@ -81,12 +80,12 @@ export function rowMenuActions(
 	if (context.mode === "trash") {
 		return [
 			...header,
-			{ kind: "item", label: tc("lifecycle.restore"), icon: RotateCcw, onSelect: () => handlers.restore(targets) },
+			{ kind: "item", label: tc("lifecycle.restore"), icon: Reset, onSelect: () => handlers.restore(targets) },
 			{ kind: "separator" },
 			{
 				kind: "item",
 				label: tc("lifecycle.deletePermanently"),
-				icon: Trash2,
+				icon: TrashCan,
 				shortcut: "Del",
 				destructive: true,
 				onSelect: () => handlers.confirmPermanentDelete(targets),
@@ -97,13 +96,13 @@ export function rowMenuActions(
 	const open: MenuAction[] = !single
 		? []
 		: context.isRecord
-			? [{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => handlers.openRecord(single) }]
+			? [{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => handlers.openRecord(single) }]
 			: [
-					{ kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => handlers.openEditor(single) },
+					{ kind: "item", label: tc("open"), icon: Edit, onSelect: () => handlers.openEditor(single) },
 					{
 						kind: "item",
 						label: t("menu.openNewTab"),
-						icon: ExternalLink,
+						icon: Launch,
 						onSelect: () => handlers.openInNewTab(single),
 					},
 					{ kind: "item", label: tc("lifecycle.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
@@ -116,7 +115,7 @@ export function rowMenuActions(
 			{
 				kind: "sub",
 				label: t("menu.addRelation", { label }),
-				icon: Tags,
+				icon: TagGroup,
 				emptyLabel: t("menu.relationEmpty", { label }),
 				items: (context.options[stored.name] ?? []).map((option) => ({
 					kind: "item" as const,
@@ -139,7 +138,7 @@ export function rowMenuActions(
 					? {
 							kind: "item",
 							label: tc("lifecycle.unarchive"),
-							icon: ArchiveRestore,
+							icon: Archive,
 							onSelect: () => handlers.bulk("unarchive", tc("lifecycle.unarchive"), targets),
 						}
 					: {
@@ -158,12 +157,12 @@ export function rowMenuActions(
 					{
 						kind: "sub",
 						label: t("menu.moveToFolder"),
-						icon: FolderInput,
+						icon: FolderMoveTo,
 						items: [
 							{
 								kind: "item",
 								label: t("menu.root"),
-								icon: FolderUp,
+								icon: FolderParent,
 								onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: null }),
 							},
 							...context.folders.map((folder) => ({
@@ -184,7 +183,7 @@ export function rowMenuActions(
 		{
 			kind: "item",
 			label: tc("lifecycle.trash"),
-			icon: Trash2,
+			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
 			onSelect: () => handlers.confirmTrash(targets),

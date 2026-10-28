@@ -3,26 +3,24 @@
  * and the order in which the toolbar places its entries.
  */
 
+import {
+	Asterisk,
+	Code,
+	DataTable,
+	Heading,
+	List,
+	ListChecked,
+	ListNumbered,
+	Paragraph,
+	Quotes,
+	Subtract,
+	TextAlignCenter,
+	TextAlignLeft,
+	TextAlignRight,
+	TextClearFormat,
+} from "@carbon/icons-react";
 import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
-import {
-	AlignCenter,
-	AlignLeft,
-	AlignRight,
-	Asterisk,
-	Heading2,
-	Heading3,
-	Heading4,
-	List,
-	ListOrdered,
-	ListTodo,
-	Minus,
-	Pilcrow,
-	Quote,
-	RemoveFormatting,
-	SquareCode,
-	Table2,
-} from "lucide-react";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
 import { canInsertFootnote, insertFootnote } from "./footnote-nodes";
@@ -40,7 +38,7 @@ export const BLOCK_STYLES = (
 ): ToolbarItem[] => [
 	{
 		label: t("toolbar.paragraph"),
-		icon: Pilcrow,
+		icon: Paragraph,
 		isActive: (e) => e.isActive("paragraph"),
 		run: (e) => chain(e).setParagraph().run(),
 	},
@@ -49,7 +47,7 @@ export const BLOCK_STYLES = (
 		.map((level) => ({
 			label: `H${level}`,
 			title: t("toolbar.heading", { level }),
-			icon: { 2: Heading2, 3: Heading3, 4: Heading4 }[level],
+			icon: { 2: Heading, 3: Heading, 4: Heading }[level],
 			isActive: (e: Editor) => e.isActive("heading", { level }),
 			run: (e: Editor) => chain(e).setHeading({ level }).run(),
 		})),
@@ -75,28 +73,28 @@ export const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>): ToolbarIte
 	{
 		label: t("toolbar.alignLeft"),
 		title: t("toolbar.alignLeftTitle"),
-		icon: AlignLeft,
+		icon: TextAlignLeft,
 		isActive: (e) => e.isActive({ textAlign: "left" }),
 		run: (e) => chain(e).setTextAlign("left").run(),
 	},
 	{
 		label: t("toolbar.alignCenter"),
 		title: t("toolbar.alignCenterTitle"),
-		icon: AlignCenter,
+		icon: TextAlignCenter,
 		isActive: (e) => e.isActive({ textAlign: "center" }),
 		run: (e) => chain(e).setTextAlign("center").run(),
 	},
 	{
 		label: t("toolbar.alignRight"),
 		title: t("toolbar.alignRightTitle"),
-		icon: AlignRight,
+		icon: TextAlignRight,
 		isActive: (e) => e.isActive({ textAlign: "right" }),
 		run: (e) => chain(e).setTextAlign("right").run(),
 	},
 	{
 		label: t("toolbar.alignAuto"),
 		title: t("toolbar.alignAutoTitle"),
-		icon: RemoveFormatting,
+		icon: TextClearFormat,
 		run: (e) => chain(e).unsetTextAlign().run(),
 	},
 ];
@@ -116,7 +114,7 @@ export const LIST_STYLES = (
 	{
 		label: t("toolbar.orderedLabel"),
 		title: t("toolbar.ordered"),
-		icon: ListOrdered,
+		icon: ListNumbered,
 		isActive: (e) => e.isActive("orderedList"),
 		run: (e) => chain(e).toggleOrderedList().run(),
 	},
@@ -125,7 +123,7 @@ export const LIST_STYLES = (
 				{
 					label: t("toolbar.todoLabel"),
 					title: t("toolbar.todo"),
-					icon: ListTodo,
+					icon: ListChecked,
 					isActive: (e: Editor) => e.isActive("taskList"),
 					run: (e: Editor) => chain(e).toggleTaskList().run(),
 				},
@@ -145,7 +143,7 @@ export const INSERT_TOOLS = (
 			tool: {
 				label: t("toolbar.quoteLabel"),
 				title: t("toolbar.quote"),
-				icon: Quote,
+				icon: Quotes,
 				isActive: (e) => e.isActive("blockquote"),
 				run: (e) => chain(e).toggleBlockquote().run(),
 			},
@@ -155,7 +153,7 @@ export const INSERT_TOOLS = (
 			priority: 3,
 			tool: {
 				label: t("toolbar.codeBlock"),
-				icon: SquareCode,
+				icon: Code,
 				isActive: (e) => e.isActive("codeBlock"),
 				run: (e) => chain(e).toggleCodeBlock().run(),
 			},
@@ -165,7 +163,7 @@ export const INSERT_TOOLS = (
 			priority: 7,
 			tool: {
 				label: t("toolbar.table"),
-				icon: Table2,
+				icon: DataTable,
 				run: (e) => chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
 			},
 		},
@@ -185,7 +183,7 @@ export const FOOTNOTE_TOOL = (t: TranslatorFor<typeof editorMessages>): ToolbarI
 
 export const DIVIDER_TOOL = (t: TranslatorFor<typeof editorMessages>): ToolbarItem => ({
 	label: t("toolbar.divider"),
-	icon: Minus,
+	icon: Subtract,
 	run: (e) => chain(e).setHorizontalRule().run(),
 });
 

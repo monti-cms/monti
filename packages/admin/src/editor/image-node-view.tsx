@@ -1,10 +1,10 @@
 "use client";
 
+import { Crop, TextAlignCenter, TextAlignLeft, TextAlignRight } from "@carbon/icons-react";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { cn, FormFieldError, Inline, Input, Label, Separator, Spinner, Switch, Text, Textarea } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getMedia, mediaKeys } from "../api/media";
@@ -40,9 +40,9 @@ const text = (value: string | boolean | undefined, fallback = "") => (typeof val
 
 const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>) =>
 	[
-		{ value: "left", label: t("toolbar.alignLeftTitle"), icon: AlignLeft },
-		{ value: "center", label: t("toolbar.alignCenterTitle"), icon: AlignCenter },
-		{ value: "right", label: t("toolbar.alignRightTitle"), icon: AlignRight },
+		{ value: "left", label: t("toolbar.alignLeftTitle"), icon: TextAlignLeft },
+		{ value: "center", label: t("toolbar.alignCenterTitle"), icon: TextAlignCenter },
+		{ value: "right", label: t("toolbar.alignRightTitle"), icon: TextAlignRight },
 	] as const;
 
 /** Edit view of the core image block (`blockViews.image`). */

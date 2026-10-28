@@ -3,7 +3,7 @@
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { PanelLeftIcon } from "lucide-react";
+import { OpenPanelLeft } from "@carbon/icons-react";
 import * as React from "react";
 import { cn } from "./cn";
 import { IconButton } from "./icon-button";
@@ -273,7 +273,7 @@ function SidebarTrigger({
 			}}
 			{...props}
 		>
-			<PanelLeftIcon />
+			<OpenPanelLeft />
 		</IconButton>
 	);
 }

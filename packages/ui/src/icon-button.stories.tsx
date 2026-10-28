@@ -1,5 +1,5 @@
+import { Close, OpenPanelRight, OverflowMenuHorizontal, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MoreHorizontal, PanelRight, Trash2, X } from "lucide-react";
 import { ICON_BUTTON, IconButton } from "./icon-button";
 import { Spark } from "./spark";
 import { Stack } from "./stack";
@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 const meta = {
 	title: "Controls/Button/IconButton",
 	component: IconButton,
-	args: { label: "더보기", children: <MoreHorizontal aria-hidden /> },
+	args: { label: "더보기", children: <OverflowMenuHorizontal aria-hidden /> },
 } satisfies Meta<typeof IconButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -21,19 +21,19 @@ export const States: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center">
 			<IconButton label="더보기">
-				<MoreHorizontal aria-hidden />
+				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
 			<IconButton label="속성" pressed>
-				<PanelRight aria-hidden />
+				<OpenPanelRight aria-hidden />
 			</IconButton>
 			<IconButton label="어시스턴트 열기">
 				<Spark className="size-monti-icon-md" />
 			</IconButton>
 			<IconButton label="닫기">
-				<X aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 			<IconButton label="비활성" disabled>
-				<X aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 		</Stack>
 	),
@@ -44,10 +44,10 @@ export const Danger: Story = {
 	render: () => (
 		<Stack direction="row" gap={16} align="center">
 			<IconButton label="규칙 지우기" tone="danger">
-				<Trash2 aria-hidden />
+				<TrashCan aria-hidden />
 			</IconButton>
 			<IconButton label="비활성" tone="danger" disabled>
-				<Trash2 aria-hidden />
+				<TrashCan aria-hidden />
 			</IconButton>
 		</Stack>
 	),
@@ -61,7 +61,7 @@ export const TooltipSides: Story = {
 				<div key={side} className="flex w-48 justify-center">
 					<Tooltip open>
 						<TooltipTrigger render={<button type="button" aria-label={side} className={ICON_BUTTON} />}>
-							<MoreHorizontal aria-hidden />
+							<OverflowMenuHorizontal aria-hidden />
 						</TooltipTrigger>
 						<TooltipContent side={side}>{side}</TooltipContent>
 					</Tooltip>

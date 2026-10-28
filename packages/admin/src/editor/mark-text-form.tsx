@@ -1,9 +1,9 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { IconButton, Label, Popover, PopoverContent, PopoverTrigger, Stack, Text, Textarea } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { X } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { collapseToEnd, PopoverFormError, PopoverFormFooter, submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
@@ -95,7 +95,7 @@ export function MarkTextForm({ editor, mark, attribute, labels, active, initial,
 			{error && <PopoverFormError id={`${id}-error`}>{error}</PopoverFormError>}
 			<PopoverFormFooter
 				removeLabel={t("markText.remove", { name: labels.name })}
-				removeIcon={<X aria-hidden />}
+				removeIcon={<Close aria-hidden />}
 				onRemove={active ? handleRemove : undefined}
 				onCancel={onDone}
 			/>

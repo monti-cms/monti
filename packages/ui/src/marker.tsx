@@ -1,5 +1,5 @@
+import { Chat } from "@carbon/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { MessageSquare } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "./cn";
 
@@ -55,9 +55,7 @@ function Marker({
 }: Omit<ComponentProps<"button">, "type"> & VariantProps<typeof markerVariants>) {
 	const content = (
 		<>
-			{tone === "changed" || tone === "keep" ? null : (
-				<MessageSquare aria-hidden className="size-3" strokeWidth={1.4} />
-			)}
+			{tone === "changed" || tone === "keep" ? null : <Chat aria-hidden className="size-3" />}
 			{children}
 		</>
 	);

@@ -1,5 +1,5 @@
+import { Copy, FolderMoveTo, FolderOpen, Launch, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Copy, ExternalLink, FolderInput, FolderOpen, Tag, Trash2 } from "lucide-react";
 import { fireEvent } from "storybook/test";
 import {
 	ContextMenu,
@@ -49,7 +49,7 @@ const meta = {
 					열기
 				</ContextMenuItem>
 				<ContextMenuItem>
-					<ExternalLink aria-hidden />새 탭에서 열기
+					<Launch aria-hidden />새 탭에서 열기
 				</ContextMenuItem>
 				<ContextMenuItem>
 					<Copy aria-hidden />
@@ -58,7 +58,7 @@ const meta = {
 				<ContextMenuSeparator />
 				<ContextMenuSub>
 					<ContextMenuSubTrigger>
-						<FolderInput aria-hidden />
+						<FolderMoveTo aria-hidden />
 						폴더로
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent>
@@ -77,7 +77,7 @@ const meta = {
 				</ContextMenuSub>
 				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger">
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>
@@ -109,7 +109,7 @@ export const DisabledItems: Story = {
 				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger" disabled>
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 				</ContextMenuItem>
 			</ContextMenuContent>
@@ -129,7 +129,7 @@ export const SeveralRows: Story = {
 				</ContextMenuGroup>
 				<ContextMenuSub>
 					<ContextMenuSubTrigger>
-						<FolderInput aria-hidden />
+						<FolderMoveTo aria-hidden />
 						폴더로
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent>
@@ -138,7 +138,7 @@ export const SeveralRows: Story = {
 				</ContextMenuSub>
 				<ContextMenuSeparator />
 				<ContextMenuItem variant="danger">
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</ContextMenuItem>

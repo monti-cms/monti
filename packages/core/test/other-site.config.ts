@@ -16,7 +16,7 @@ import { defineBlock, defineCollection, defineSite, fields } from "../src";
 
 const article = defineCollection({
 	label: "Article",
-	icon: "newspaper",
+	icon: "document--view",
 	kind: "document",
 	path: "/blog/:slug/",
 	fields: {

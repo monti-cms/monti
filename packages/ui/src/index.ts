@@ -37,7 +37,7 @@ export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
 export const SidePanelFrame = close(open.SidePanelFrame);
 export const ToolCallLine = close(open.ToolCallLine);
-export type { FormatMark, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
+export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
 export const Checkbox = close(open.Checkbox);
@@ -178,7 +178,7 @@ export const SidebarMenuSub = close(open.SidebarMenuSub);
 export const SidebarMenuSubButton = close(open.SidebarMenuSubButton);
 export const SidebarProvider = close(open.SidebarProvider);
 export const SidebarTrigger = close(open.SidebarTrigger);
-/** An icon like the lucide ones, so it is not closed: it goes where an `icon` goes (`<Icon icon={Spark}>`, a panel's or a menu item's icon). */
+/** An icon like the Carbon ones, so it is not closed: it goes where an `icon` goes (`<Icon icon={Spark}>`, a panel's or a menu item's icon). */
 export const Spark = open.Spark;
 export const StatusBarList = close(open.StatusBarList);
 export const TodoDone = close(open.TodoDone);

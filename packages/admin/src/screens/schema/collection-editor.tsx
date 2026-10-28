@@ -1,5 +1,6 @@
 "use client";
 
+import { TrashCan } from "@carbon/icons-react";
 import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -16,7 +17,6 @@ import {
 	TabsTrigger,
 	Text,
 } from "@monti-cms/ui";
-import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
@@ -381,7 +381,7 @@ export function CollectionEditor({
 						<Section band title={t("collection.dangerTitle")} card={false}>
 							<Inline justify="end" paddingY={12}>
 								<Button type="button" variant="outline-danger" size="sm" disabled={disabled} onClick={onRemove}>
-									<Trash2 aria-hidden />
+									<TrashCan aria-hidden />
 									{ts("collection.remove")}
 								</Button>
 							</Inline>

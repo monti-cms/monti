@@ -45,7 +45,7 @@ describe("IconPicker", () => {
 		// Filter
 		fireEvent.change(screen.getByRole("textbox"), { target: { value: "book" } });
 		expect(screen.getByRole("button", { name: "bookmark" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "book-open" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "book" })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "calendar" })).toBeNull();
 
 		// Pick icon

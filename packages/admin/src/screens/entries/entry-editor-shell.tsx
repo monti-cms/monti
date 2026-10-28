@@ -1,12 +1,12 @@
 "use client";
 
+import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminComponents, useEditorExtensions } from "../../admin-components";
 import { adminEntryClient } from "../../api/entries";
@@ -443,7 +443,7 @@ export function EntryEditorShell({
 	const sourcePaneToggle = translationSource && (
 		<ToolbarToggle
 			label={te("source")}
-			icon={PanelLeft}
+			icon={OpenPanelLeft}
 			pressed={isSourcePaneOpen}
 			onPressedChange={toggleSourcePane}
 		/>
@@ -451,7 +451,7 @@ export function EntryEditorShell({
 	const sourceModeToggle = sourcePanel && (
 		<ToolbarToggle
 			label={sourcePanel.label}
-			icon={FileCode}
+			icon={CodeReference}
 			pressed={isSourceMode}
 			// A body that could not be read cannot return to visual mode.
 			disabled={isSourceMode && !canUseVisual}

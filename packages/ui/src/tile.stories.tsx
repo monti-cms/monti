@@ -1,5 +1,5 @@
+import { Document, FolderParent, OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FileText, FolderUp, MoreHorizontal } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { DropArea } from "./drop-area";
 import { IconButton } from "./icon-button";
@@ -99,7 +99,7 @@ export const UploadingAndFailed: Story = {
 			</Labelled>
 			<Labelled name="실패, 다시 할 수 없음">
 				<Tile
-					preview={<Image src={null} alt="" fallback={FileText} ratio="photo" radius="none" />}
+					preview={<Image src={null} alt="" fallback={Document} ratio="photo" radius="none" />}
 					title="IMG_2041.HEIC"
 					detail="올릴 수 없는 형식"
 					status="failed"
@@ -149,7 +149,7 @@ export const WithMenu: Story = {
 				onSelectedChange={() => {}}
 				action={
 					<IconButton label="더 보기" className="size-6">
-						<MoreHorizontal aria-hidden />
+						<OverflowMenuHorizontal aria-hidden />
 					</IconButton>
 				}
 			/>
@@ -172,7 +172,7 @@ export const Detail: Story = {
 			</Labelled>
 			<Labelled name="preview 대체">
 				<Tile
-					preview={<Image src={null} alt="" fallback={FileText} ratio="photo" radius="none" />}
+					preview={<Image src={null} alt="" fallback={Document} ratio="photo" radius="none" />}
 					title="문서.pdf"
 					detail="340KB"
 				/>
@@ -187,7 +187,7 @@ export const Folders: Story = {
 		<div className="grid w-[640px] max-w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-monti-20 gap-y-monti-12">
 			<FolderTile name="covers" count={6} />
 			<FolderTile name="diagrams" count={3} />
-			<FolderTile name="상위 폴더로" icon={<FolderUp aria-hidden />} />
+			<FolderTile name="상위 폴더로" icon={<FolderParent aria-hidden />} />
 			<FolderTile name="menu open" count={4} selected />
 			<FolderTile name="files over it" count={4} dropTarget />
 			<FolderTile name="아주아주아주 긴 폴더 이름도 한 줄에서 잘려요" count={12} />
@@ -207,7 +207,7 @@ export const FolderWithMenu: Story = {
 					selected={open}
 					action={
 						<IconButton label="더 보기" aria-expanded={open}>
-							<MoreHorizontal aria-hidden />
+							<OverflowMenuHorizontal aria-hidden />
 						</IconButton>
 					}
 				/>

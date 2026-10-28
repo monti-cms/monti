@@ -1,8 +1,8 @@
 "use client";
 
+import { Add, Draggable, SplitScreen, TrashCan } from "@carbon/icons-react";
 import { BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator } from "@monti-cms/admin";
 import { Box, cn, Text } from "@monti-cms/admin/kit";
-import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type CSSProperties, type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import {
 	columnsGridTemplate,
@@ -172,7 +172,7 @@ export function ColumnsNodeView() {
 									draft && "opacity-100",
 								)}
 							>
-								<GripVertical aria-hidden className="size-2.5 rotate-90 text-monti-muted" />
+								<Draggable aria-hidden className="size-2.5 rotate-90 text-monti-muted" />
 							</button>
 						</div>
 					))
@@ -185,10 +185,10 @@ export function ColumnsNodeView() {
 						</Text>
 					</Box>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
-						<Columns2 aria-hidden />
+						<SplitScreen aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton label={t("add")} disabled={!block.canAddChild} onClick={addColumn}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 					</ToolbarButton>
 					<ToolbarButton
 						label={selectedIndex === -1 ? t("deleteLast") : t("delete")}
@@ -196,7 +196,7 @@ export function ColumnsNodeView() {
 						disabled={!block.canRemoveChild(selectedIndex === -1 ? count - 1 : selectedIndex)}
 						onClick={removeColumn}
 					>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</ToolbarButton>
 				</ContainerToolbar>
 			) : null}

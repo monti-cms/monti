@@ -1,5 +1,19 @@
 "use client";
 
+import {
+	Document,
+	FolderAdd,
+	Folder as FolderIcon,
+	FolderMoveTo,
+	FolderParent,
+	Grid,
+	Link,
+	List,
+	Renew,
+	RightPanelOpen,
+	TrashCan,
+	Upload,
+} from "@carbon/icons-react";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -23,20 +37,6 @@ import {
 	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	FileText,
-	Folder as FolderIcon,
-	FolderInput,
-	FolderPlus,
-	FolderUp,
-	LayoutGrid,
-	Link2,
-	List,
-	PanelRightOpen,
-	RefreshCw,
-	Trash2,
-	Upload,
-} from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { foldersKeys, listFolders } from "../../api/folders";
@@ -335,16 +335,16 @@ export function MediaLibrary() {
 
 	/** Right-click and `⋯` menu of a media tile. */
 	const mediaMenu = (media: MediaItem): MenuAction[] => [
-		{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => void openDetail(media.id) },
+		{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => void openDetail(media.id) },
 		{
 			kind: "sub",
 			label: t("library.menu.usage"),
-			icon: Link2,
+			icon: Link,
 			emptyLabel: t("library.menu.usageEmpty"),
 			items: mediaUsages(media).map((usage) => ({
 				kind: "item" as const,
 				label: `${usage.title || tc("untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
-				icon: FileText,
+				icon: Document,
 				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			})),
 		},
@@ -353,14 +353,14 @@ export function MediaLibrary() {
 					{
 						kind: "sub" as const,
 						label: t("library.menu.moveToFolder"),
-						icon: FolderInput,
+						icon: FolderMoveTo,
 						items: [
 							...(media.folderId
 								? [
 										{
 											kind: "item" as const,
 											label: t("detail.folder.none"),
-											icon: FolderUp,
+											icon: FolderParent,
 											onSelect: () => void moveMediaToFolder(media, null),
 										},
 									]
@@ -381,7 +381,7 @@ export function MediaLibrary() {
 		{
 			kind: "item",
 			label: tc("delete"),
-			icon: Trash2,
+			icon: TrashCan,
 			shortcut: "Del",
 			destructive: true,
 			disabled: media.referencesCount > 0,
@@ -402,7 +402,7 @@ export function MediaLibrary() {
 		{
 			kind: "item",
 			label: folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder"),
-			icon: FolderPlus,
+			icon: FolderAdd,
 			onSelect: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder),
 		},
 		{
@@ -474,14 +474,14 @@ export function MediaLibrary() {
 						variant="secondary"
 						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
 					>
-						<FolderPlus aria-hidden />
+						<FolderAdd aria-hidden />
 						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
 					<Button type="button" size="sm" variant="secondary" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
 					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
-						<RefreshCw aria-hidden />
+						<Renew aria-hidden />
 					</IconButton>
 				</Inline>
 			</PageActions>
@@ -532,7 +532,7 @@ export function MediaLibrary() {
 					value={view}
 					onValueChange={setView}
 					options={[
-						{ value: "grid", label: <LayoutGrid aria-hidden />, "aria-label": t("library.viewGrid") },
+						{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("library.viewGrid") },
 						{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
 					]}
 				/>

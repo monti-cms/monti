@@ -1,5 +1,20 @@
 "use client";
 
+import {
+	Activity,
+	ChevronRight,
+	DataBase,
+	Edit,
+	FolderAdd,
+	Folder as FolderIcon,
+	Globe,
+	ImageReference,
+	Launch,
+	Password,
+	SettingsAdjust,
+	Template,
+	TrashCan,
+} from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import { Caret, IconButton, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/ui";
@@ -18,21 +33,6 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from "@monti-cms/ui/internal";
-import {
-	Activity,
-	ChevronRight,
-	Database,
-	ExternalLink,
-	FileImage,
-	Folder as FolderIcon,
-	FolderPlus,
-	Globe,
-	KeyRound,
-	LayoutTemplate,
-	Pencil,
-	Settings2,
-	Trash2,
-} from "lucide-react";
 import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { booleanCodec, usePreference } from "../lib/hooks/use-preference";
@@ -222,20 +222,20 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 			{
 				kind: "item",
 				label: tc("addSubfolder"),
-				icon: FolderPlus,
+				icon: FolderAdd,
 				onSelect: () => startCreating(folder.id),
 			},
 			{
 				kind: "item",
 				label: tc("rename"),
-				icon: Pencil,
+				icon: Edit,
 				onSelect: () => startRenaming(folder),
 			},
 			{ kind: "separator" },
 			{
 				kind: "item",
 				label: tc("delete"),
-				icon: Trash2,
+				icon: TrashCan,
 				destructive: true,
 				onSelect: () => void nav.folderActions.requestDelete(folder),
 			},
@@ -326,7 +326,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 						{isCreatingChild && (
 							<li style={{ paddingLeft: TREE_INDENT + (depth + 1) * TREE_STEP }} className={cn(subRow, "pr-monti-8")}>
 								<span aria-hidden className="size-4 shrink-0" />
-								<FolderPlus aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
+								<FolderAdd aria-hidden className="size-3.5 shrink-0 text-monti-muted" />
 								<input
 									ref={createInputRef}
 									type="text"
@@ -499,7 +499,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		setSiteOpen(!siteOpen);
 	};
 
-	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <FileImage />);
+	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <ImageReference />);
 
 	return (
 		<Sidebar>
@@ -518,7 +518,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					nativeButton={false}
 					render={<Link role="link" href={site.SITE_HOME} target="_blank" rel="noopener noreferrer" />}
 				>
-					<ExternalLink aria-hidden />
+					<Launch aria-hidden />
 				</IconButton>
 				<Tooltip>
 					<TooltipTrigger
@@ -540,7 +540,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.writing")}>
 							{site.ADMIN_TEMPLATES &&
-								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
+								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <Template />)}
 							{writingPages.map(pageLink)}
 						</SidebarMenu>
 					</SidebarGroupContent>
@@ -574,8 +574,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					</SidebarMenu>
 					<SidebarGroupContent id="monti-sidebar-site" hidden={!siteOpen}>
 						<SidebarMenu aria-label={t("sidebar.site")}>
-							{navLink(site.adminHref("/data"), "data", t("sidebar.data"), <Database />)}
-							{navLink(site.adminHref("/api-keys"), "api-keys", t("sidebar.apiKeys"), <KeyRound />)}
+							{navLink(site.adminHref("/data"), "data", t("sidebar.data"), <DataBase />)}
+							{navLink(site.adminHref("/api-keys"), "api-keys", t("sidebar.apiKeys"), <Password />)}
 							{navLink(
 								site.adminHref("/events"),
 								"events",
@@ -602,7 +602,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 						site.adminHref("/trash"),
 						"trash",
 						t("sidebar.trash"),
-						<Trash2 />,
+						<TrashCan />,
 						undefined,
 						trashCount ? (
 							<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
@@ -613,7 +613,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				</SidebarMenu>
 				<div className="flex items-center gap-monti-4">
 					<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
-						{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <Settings2 />)}
+						{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <SettingsAdjust />)}
 					</SidebarMenu>
 					<ThemeToggle />
 				</div>

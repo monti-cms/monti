@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, ChevronDown, ChevronRight } from "@carbon/icons-react";
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -14,7 +15,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
@@ -730,7 +730,7 @@ export function FieldList({
 			{!disabled && (
 				<Box width="fit">
 					<Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)}>
-						<Plus aria-hidden />
+						<Add aria-hidden />
 						{t("field.add")}
 					</Button>
 				</Box>

@@ -1,5 +1,5 @@
+import { Add } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus } from "lucide-react";
 import { Stack } from "./stack";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
@@ -28,7 +28,7 @@ function IconTrigger({ label }: { label: string }) {
 				/>
 			}
 		>
-			<Plus aria-hidden className="size-4" />
+			<Add aria-hidden className="size-4" />
 		</TooltipTrigger>
 	);
 }

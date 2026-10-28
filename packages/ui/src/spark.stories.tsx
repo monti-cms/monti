@@ -5,7 +5,7 @@ import { Stack } from "./stack";
 import { StoryCaption } from "./story-caption";
 
 /**
- * The one AI mark: a four-point star ✦, never a lucide sparkles icon. It is an icon like the others (it goes wherever an `icon` does), drawn in
+ * The one AI mark: a four-point star ✦, never a sparkles icon from an icon set. It is an icon like the others (it goes wherever an `icon` does), drawn in
  * `currentColor` and decorative.
  */
 const meta = { title: "Primitives/AI mark", component: Spark } satisfies Meta<typeof Spark>;

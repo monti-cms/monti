@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, Filter, SortAscending, SortDescending } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -23,7 +24,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { type AdminListColumn, type ColumnFilter, columnConfig, isColumnFiltered } from "./list-columns";
@@ -275,9 +275,9 @@ export function ColumnHeader({
 			>
 				<Inline as="span" gap={4}>
 					{config.label}
-					{sorted === "asc" && <ArrowUpNarrowWide aria-hidden size={14} />}
-					{sorted === "desc" && <ArrowDownWideNarrow aria-hidden size={14} />}
-					{filtered ? <ListFilter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
+					{sorted === "asc" && <SortAscending aria-hidden size={14} />}
+					{sorted === "desc" && <SortDescending aria-hidden size={14} />}
+					{filtered ? <Filter aria-hidden size={14} data-filtered="" /> : <ChevronDown aria-hidden size={14} />}
 				</Inline>
 			</PopoverTrigger>
 			<PopoverContent align="start" width="md">

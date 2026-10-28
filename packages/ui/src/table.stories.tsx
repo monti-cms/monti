@@ -1,5 +1,5 @@
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MoreHorizontal } from "lucide-react";
 import { Count } from "./count";
 import { EntryStatus } from "./entry-status";
 import { IconButton } from "./icon-button";
@@ -111,7 +111,7 @@ function ListRows({ picked, proposal = false }: { picked: ReadonlySet<number>; p
 function MoreButton() {
 	return (
 		<IconButton label="더 보기">
-			<MoreHorizontal aria-hidden />
+			<OverflowMenuHorizontal aria-hidden />
 		</IconButton>
 	);
 }

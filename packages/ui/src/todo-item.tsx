@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Checkmark } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
@@ -112,7 +112,7 @@ function TodoDone({ className, children, ...props }: React.ComponentProps<"div">
 			)}
 			{...props}
 		>
-			<Check aria-hidden className="size-3.5 shrink-0 text-monti-success" />
+			<Checkmark aria-hidden className="size-3.5 shrink-0 text-monti-success" />
 			{children}
 		</div>
 	);

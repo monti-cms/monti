@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -17,7 +18,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { uiMessages } from "../../ui/messages";
 import { screensMessages } from "../messages";
 
@@ -45,7 +45,7 @@ export function ListPager({
 					disabled={page <= 1}
 					onClick={() => onPageChange(page - 1)}
 				>
-					<ChevronLeftIcon data-icon="inline-start" />
+					<ChevronLeft data-icon="inline-start" />
 					<Box as="span" hideBelow="sm">
 						{t("pagination.previous")}
 					</Box>
@@ -62,7 +62,7 @@ export function ListPager({
 					<Box as="span" hideBelow="sm">
 						{t("pagination.next")}
 					</Box>
-					<ChevronRightIcon data-icon="inline-end" />
+					<ChevronRight data-icon="inline-end" />
 				</TextButton>
 			</Inline>
 		);

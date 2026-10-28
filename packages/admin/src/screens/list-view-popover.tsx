@@ -1,4 +1,6 @@
 // "View" popover of the entry list: which columns show and in what order, how many rows a page holds, and how the list is sorted.
+
+import { ArrowDown, ArrowUp, SettingsAdjust } from "@carbon/icons-react";
 import { type ListSortField, PAGE_SIZES, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -19,7 +21,6 @@ import {
 	Stack,
 	TextButton,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { type AdminListColumn, columnConfig, columnLabel, columnsFor } from "./list-columns";
 import type { ListState } from "./list-state";
@@ -127,7 +128,7 @@ export function ListViewPopover({
 	return (
 		<Popover>
 			<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
-				<SlidersHorizontal aria-hidden />
+				<SettingsAdjust aria-hidden />
 				{t("view.label")}
 			</PopoverTrigger>
 			{/* Kept inside the viewport: the column list scrolls, so a collection with many fields cannot push the popover off screen. */}

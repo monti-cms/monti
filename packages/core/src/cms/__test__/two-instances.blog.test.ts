@@ -287,7 +287,7 @@ describe("renderDocument renders the same stored document with each site's own b
 	});
 
 	it("applies the line effects of the site that renders", async () => {
-		const effect = (name: string) => ({ name, label: name, class: `fx-${name}`, icon: "highlighter" });
+		const effect = (name: string) => ({ name, label: name, class: `fx-${name}`, icon: "text--highlight" });
 		const withEffects = (name: string) =>
 			createSite(
 				defineSite({

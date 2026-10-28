@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Close, Undo } from "@carbon/icons-react";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import {
@@ -22,7 +23,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Undo2, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { type ControlWidth, Labeled } from "../shared/labeled";
 import { useInSectionRow } from "../shared/section";
@@ -105,7 +105,7 @@ export function RevertMark({ name, onRevert }: { name: string; onRevert: () => v
 		<Inline as="span" gap={2} data-testid="field-changed">
 			<ChangedMark />
 			<IconButton label={t("revert.named", { name })} disabled={disabled} onClick={onRevert}>
-				<Undo2 aria-hidden />
+				<Undo aria-hidden />
 			</IconButton>
 		</Inline>
 	);
@@ -438,14 +438,14 @@ export function RowActions({
 					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
 					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
 						<IconButton label={t("row.remove", { name })} tone="danger" disabled aria-description={removeBlocked}>
-							<X aria-hidden />
+							<Close aria-hidden />
 						</IconButton>
 					</TooltipTrigger>
 					<TooltipContent side="top">{removeBlocked}</TooltipContent>
 				</Tooltip>
 			) : (
 				<IconButton label={t("row.remove", { name })} tone="danger" disabled={disabled} onClick={onRemove}>
-					<X aria-hidden />
+					<Close aria-hidden />
 				</IconButton>
 			)}
 		</Inline>

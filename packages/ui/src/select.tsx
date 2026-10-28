@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import type * as React from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
@@ -145,7 +145,7 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
 			)}
 			{...props}
 		>
-			<ChevronUpIcon />
+			<ChevronUp />
 		</SelectPrimitive.ScrollUpArrow>
 	);
 }
@@ -160,7 +160,7 @@ function SelectScrollDownButton({ className, ...props }: React.ComponentProps<ty
 			)}
 			{...props}
 		>
-			<ChevronDownIcon />
+			<ChevronDown />
 		</SelectPrimitive.ScrollDownArrow>
 	);
 }

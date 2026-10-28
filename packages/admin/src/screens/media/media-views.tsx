@@ -1,5 +1,6 @@
 "use client";
 
+import { Document, DocumentBlank, FolderOpen, FolderParent, TextFont, Zip } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -17,7 +18,6 @@ import {
 	TextButton,
 	Tile,
 } from "@monti-cms/ui";
-import { File, FileArchive, FileText, FileType, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
@@ -31,11 +31,11 @@ import { type FolderActions, folderMenuActions } from "../shared/use-folder-acti
 import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 
-const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
+const FILE_ICONS: Record<FileKind, typeof Document> = { pdf: TextFont, archive: Zip, text: Document };
 
 /** The icon an image frame shows in place of a picture: the type of a file, or a plain file when an image has no address yet. */
 export const fallbackFor = (media: MediaItem, isImage: boolean) =>
-	isImage ? File : FILE_ICONS[fileKindOf(media.mimeType)];
+	isImage ? DocumentBlank : FILE_ICONS[fileKindOf(media.mimeType)];
 
 export interface MediaViewProps {
 	items: readonly MediaItem[];
@@ -96,7 +96,7 @@ export function MediaGrid({
 			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
 				<li>
 					<FolderTile
-						icon={<FolderUp aria-hidden />}
+						icon={<FolderParent aria-hidden />}
 						name={ts("list.folderUp")}
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
 					/>

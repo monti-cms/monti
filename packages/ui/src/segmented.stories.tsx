@@ -1,5 +1,5 @@
+import { Grid, List } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { Segmented } from "./segmented";
 import { Stack } from "./stack";
@@ -79,7 +79,7 @@ export const Variants: Story = {
 				onValueChange={() => {}}
 				inline
 				options={[
-					{ value: "grid", label: <LayoutGrid aria-hidden className="size-4" />, "aria-label": "격자" },
+					{ value: "grid", label: <Grid aria-hidden className="size-4" />, "aria-label": "격자" },
 					{ value: "list", label: <List aria-hidden className="size-4" />, "aria-label": "목록" },
 				]}
 			/>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, TextColor } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import {
@@ -19,7 +20,6 @@ import {
 	TooltipTrigger,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
-import { Baseline, Check } from "lucide-react";
 import {
 	type ColorPair,
 	cleanTextColor,
@@ -144,7 +144,7 @@ function SwatchRow({
 						>
 							<Swatch kind={kind} color={color} />
 							{selected && (
-								<Check
+								<Checkmark
 									aria-hidden
 									className="absolute -top-0.5 -right-0.5 size-3 rounded-monti-full bg-monti-emphasis p-px text-monti-on-emphasis"
 								/>
@@ -202,7 +202,7 @@ export function TextColorIcon({ editor }: { editor: Editor }) {
 	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
 	return (
 		<span {...underline} className={cn(underline.className, "rounded-monti-sm p-monti-2")}>
-			<Baseline aria-hidden className="size-4" />
+			<TextColor aria-hidden className="size-4" />
 		</span>
 	);
 }

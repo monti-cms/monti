@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, OverflowMenuHorizontal } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -14,7 +15,6 @@ import {
 	Separator,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { Check, MoreHorizontal } from "lucide-react";
 import {
 	createContext,
 	type ReactNode,
@@ -68,7 +68,7 @@ export function ToolbarMenuItem({ editor, item }: { editor: Editor; item: Toolba
 			<Box as="span" grow>
 				{item.title ?? item.label}
 			</Box>
-			{active && <Check aria-hidden />}
+			{active && <Checkmark aria-hidden />}
 		</DropdownMenuItem>
 	);
 }
@@ -109,7 +109,7 @@ function OverflowMenu({ editor, children }: { editor: Editor; children: ReactNod
 				onMouseDown={(event) => event.preventDefault()}
 				trigger={(button) => <DropdownMenuTrigger render={button} />}
 			>
-				<MoreHorizontal aria-hidden />
+				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
 			<DropdownMenuContent align="end">{children}</DropdownMenuContent>
 		</DropdownMenu>

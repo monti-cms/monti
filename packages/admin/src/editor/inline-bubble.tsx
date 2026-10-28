@@ -1,7 +1,20 @@
 "use client";
 
+import {
+	ChatOperational,
+	Close,
+	Edit,
+	Link,
+	OverflowMenuHorizontal,
+	TrashCan,
+	TypePattern,
+	Unlink,
+	View,
+	ViewOff,
+} from "@carbon/icons-react";
 import { charEffectByName } from "@monti-cms/core/code-block";
 import { useSite, useTranslator } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
 	Box,
 	cn,
@@ -20,19 +33,6 @@ import {
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
-import {
-	ChevronsLeftRightEllipsis,
-	Eye,
-	EyeOff,
-	Link2,
-	type LucideIcon,
-	MessageSquareMore,
-	Pencil,
-	Regex,
-	Trash2,
-	Unlink,
-	X,
-} from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -122,7 +122,7 @@ export function BubbleButton({
 }
 
 /** A decorative icon at the start of a bubble row (what the row is about). */
-function BubbleIcon({ icon }: { icon: LucideIcon }) {
+function BubbleIcon({ icon }: { icon: MontiIcon }) {
 	return (
 		<Box as="span" paddingX={4} shrink={false}>
 			<Icon icon={icon} tone="muted" />
@@ -330,7 +330,7 @@ export function InlineBubble({
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
 				<Inline key={mark.name} gap={2}>
-					<BubbleIcon icon={Link2} />
+					<BubbleIcon icon={Link} />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
@@ -354,7 +354,7 @@ export function InlineBubble({
 						label={t("link.edit")}
 						onClick={() => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId })}
 					>
-						<Pencil aria-hidden />
+						<Edit aria-hidden />
 					</BubbleButton>
 					<BubbleButton label={t("link.remove")} onClick={act(() => removeInlineMark(editor, mark))}>
 						<Unlink aria-hidden />
@@ -366,17 +366,17 @@ export function InlineBubble({
 			const content = String(mark.attrs.content ?? "");
 			return (
 				<Inline key={mark.name} gap={2}>
-					<BubbleIcon icon={MessageSquareMore} />
+					<BubbleIcon icon={ChatOperational} />
 					<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 						<Text as="div" variant="caption" tone="muted" truncate title={content}>
 							{content}
 						</Text>
 					</Box>
 					<BubbleButton label={t("inlineBubble.tooltipEdit")} onClick={() => openCodeTooltip(mark)}>
-						<Pencil aria-hidden />
+						<Edit aria-hidden />
 					</BubbleButton>
 					<BubbleButton label={t("inlineBubble.tooltipRemove")} onClick={act(() => removeInlineMark(editor, mark))}>
-						<X aria-hidden />
+						<Close aria-hidden />
 					</BubbleButton>
 				</Inline>
 			);
@@ -403,7 +403,7 @@ export function InlineBubble({
 			const type = editor.schema.marks.codeFold;
 			return (
 				<Inline key={mark.name} gap={2}>
-					<BubbleIcon icon={ChevronsLeftRightEllipsis} />
+					<BubbleIcon icon={OverflowMenuHorizontal} />
 					<Box as="span" paddingX={4}>
 						<Text variant="caption" tone="muted">
 							{t("inlineBubble.fold")}
@@ -413,7 +413,7 @@ export function InlineBubble({
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
 					>
-						{open ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+						{open ? <ViewOff aria-hidden /> : <View aria-hidden />}
 					</BubbleButton>
 					<BubbleButton
 						label={t("inlineBubble.openByDefault")}
@@ -433,7 +433,7 @@ export function InlineBubble({
 						{t("inlineBubble.openByDefault")}
 					</BubbleButton>
 					<BubbleButton label={t("inlineBubble.foldRemove")} onClick={act(() => removeInlineMark(editor, mark))}>
-						<X aria-hidden />
+						<Close aria-hidden />
 					</BubbleButton>
 				</Inline>
 			);
@@ -447,7 +447,7 @@ export function InlineBubble({
 				onClick={act(() => removeInlineMark(editor, mark))}
 			>
 				<tool.icon aria-hidden />
-				<X aria-hidden />
+				<Close aria-hidden />
 			</BubbleButton>
 		);
 	};
@@ -459,7 +459,7 @@ export function InlineBubble({
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
 			<Inline key={rule.id} gap={2}>
-				<BubbleIcon icon={Regex} />
+				<BubbleIcon icon={TypePattern} />
 				<Box as="span" paddingX={4} maxWidth="menu" minWidth={0}>
 					<Text as="div" variant="caption" tone="muted" truncate title={`/${rule.pattern}/${rule.flags}`}>
 						{t("inlineBubble.ruleSummary", { label, count })}
@@ -470,7 +470,7 @@ export function InlineBubble({
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
 					>
-						{open ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+						{open ? <ViewOff aria-hidden /> : <View aria-hidden />}
 					</BubbleButton>
 				)}
 				<BubbleButton
@@ -484,7 +484,7 @@ export function InlineBubble({
 					tone="danger"
 					onClick={act(() => removeRule(editor.view, blockPos, rule.id))}
 				>
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 				</BubbleButton>
 			</Inline>
 		);
@@ -524,7 +524,7 @@ export function InlineBubble({
 				</Text>
 			</Box>
 			<BubbleButton label={t("inlineBubble.footnoteEdit")} onClick={() => setPanel({ kind: "footnote", target })}>
-				<Pencil aria-hidden />
+				<Edit aria-hidden />
 			</BubbleButton>
 			<BubbleButton
 				label={t("inlineBubble.footnoteRemove")}
@@ -532,7 +532,7 @@ export function InlineBubble({
 					removeFootnote(editor, target);
 				})}
 			>
-				<X aria-hidden />
+				<Close aria-hidden />
 			</BubbleButton>
 		</Inline>
 	);
@@ -576,7 +576,7 @@ export function InlineBubble({
 								}
 								onClick={() => openCodeTooltip()}
 							>
-								<MessageSquareMore aria-hidden />
+								<ChatOperational aria-hidden />
 							</BubbleButton>,
 						]
 					: []),
@@ -616,7 +616,7 @@ export function InlineBubble({
 								pressed={editor.isActive("codeFold")}
 								onClick={() => editor.chain().focus().toggleMark("codeFold").run()}
 							>
-								<ChevronsLeftRightEllipsis aria-hidden />
+								<OverflowMenuHorizontal aria-hidden />
 							</BubbleButton>,
 						]
 					: []),

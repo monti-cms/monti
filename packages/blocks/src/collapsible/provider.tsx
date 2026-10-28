@@ -1,11 +1,11 @@
 "use client";
 
+import { ChevronSort } from "@carbon/icons-react";
 import type { AdminComponents } from "@monti-cms/admin";
-import { ChevronsUpDown } from "lucide-react";
 import { CollapsibleNodeView } from "./view";
 
 /** The collapsible block's editing view and menu icon. */
 export const collapsibleComponents: AdminComponents = {
 	blockViews: { collapsible: CollapsibleNodeView },
-	icons: { "chevrons-up-down": ChevronsUpDown },
+	icons: { "chevron--sort": ChevronSort },
 };

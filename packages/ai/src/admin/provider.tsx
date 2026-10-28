@@ -9,5 +9,5 @@ import { useAiWriteExtension } from "./ai-write";
 export const aiComponents: AdminComponents = {
 	editorExtensions: [useAiTranslateExtension, useAiWriteExtension],
 	// Icons picked by name by sidebar items (`nav`) and slash menu items.
-	icons: { sparkles: Spark },
+	icons: { spark: Spark },
 };

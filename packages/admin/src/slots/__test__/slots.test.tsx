@@ -230,12 +230,12 @@ describe("screen slots", () => {
 		// Result panel with the request input open: the header and the run button share the same icon.
 		await screen.findByRole("textbox", { name: t("instruction") });
 		expect(screen.getAllByTestId("own-icon").length).toBe(3);
-		expect(document.querySelector(".lucide-sparkles")).toBeNull();
+		expect(document.querySelector("[data-slot=spark]")).toBeNull();
 
 		cleanup();
 		renderSlot([() => [action()]]);
-		expect(screen.getByTestId("trigger").querySelector("svg.lucide-zap")).toBeTruthy();
-		expect(document.querySelector(".lucide-sparkles")).toBeNull();
+		expect(screen.getByTestId("trigger").querySelector("svg")).toBeTruthy();
+		expect(document.querySelector("[data-slot=spark]")).toBeNull();
 	});
 
 	it("multiple actions are grouped into a menu; the action decides the menu name and icon, and each item uses its own icon", async () => {

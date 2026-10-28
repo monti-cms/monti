@@ -1,8 +1,8 @@
 "use client";
 
+import { Moon, Sun } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { IconButton } from "@monti-cms/ui/internal";
-import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useHydrated } from "../lib/hooks/use-hydrated";
 import { uiMessages } from "./messages";

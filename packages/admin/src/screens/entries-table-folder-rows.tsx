@@ -1,9 +1,9 @@
 // Folder rows shown above the entries in folder browse mode: the move-to-parent row and subfolder rows.
 
+import { Folder as FolderIcon, FolderOpen, FolderParent } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { TableCell, TableRow, Text, TextButton } from "@monti-cms/ui";
-import { Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import { commonMessages } from "../lib/common.messages";
 import { folderKeyHandler } from "./admin-sidebar";
 import { screensMessages } from "./messages";
@@ -43,7 +43,7 @@ export function EntriesTableFolderRows({
 			{explorer.parent !== null && (
 				<TableRow>
 					<TableCell align="center" tone="muted">
-						<FolderUp aria-hidden size={16} />
+						<FolderParent aria-hidden size={16} />
 					</TableCell>
 					<TableCell colSpan={visibleCount - 1}>
 						<TextButton

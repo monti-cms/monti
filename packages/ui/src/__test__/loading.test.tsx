@@ -1,5 +1,5 @@
+import { Search } from "@carbon/icons-react";
 import { render, screen } from "@testing-library/react";
-import { Search } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import { AiAction } from "../ai-action";
 import { Button } from "../button";

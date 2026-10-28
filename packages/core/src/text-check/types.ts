@@ -75,7 +75,7 @@ export interface TextChecker {
 	/** Toolbar button name and the source in the result window. Example: "Spell checker". */
 	readonly label: string;
 	/**
-	 * Toolbar button icon. A lucide component or an icon name (including names registered in the admin extension `icons`). If absent, the spelling icon.
+	 * Toolbar button icon. A Carbon icon component or an icon name (including names registered in the admin extension `icons`). If absent, the spelling icon.
 	 * One button is created per checker.
 	 */
 	readonly icon?: string | import("react").ComponentType<{ className?: string }>;

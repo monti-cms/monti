@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
-import { XIcon } from "lucide-react";
+import { Close } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { useModalFocus } from "./dialog";
@@ -90,7 +90,7 @@ function SheetHeader({ className, children, ...props }: React.ComponentProps<"di
 				side="bottom"
 				trigger={(button) => <SheetPrimitive.Close data-slot="sheet-close" render={button} />}
 			>
-				<XIcon aria-hidden />
+				<Close aria-hidden />
 			</IconButton>
 		</div>
 	);

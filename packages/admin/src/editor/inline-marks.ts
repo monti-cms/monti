@@ -1,9 +1,17 @@
+import {
+	Code,
+	TextBold,
+	TextItalic,
+	TextStrikethrough,
+	TextSubscript,
+	TextSuperscript,
+	TextUnderline,
+} from "@carbon/icons-react";
 import { type CodeRule, ruleMatches } from "@monti-cms/core/code-block";
 import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { Mark, Node as PmNode, ResolvedPos } from "@tiptap/pm/model";
 import { type EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { Bold, CodeXml, Italic, Strikethrough, Subscript, Superscript, Underline } from "lucide-react";
 import type { TranslatorFor } from "../translator";
 import { allowanceOfState } from "./allowed-extension";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
@@ -31,41 +39,41 @@ const chain = (editor: Editor) => editor.chain().focus();
 
 /** Inline effects that only toggle on and off. Shared by the top formatting tools and the inline bubble. */
 const markTools = (t: TranslatorFor<typeof editorMessages>): Omit<InlineMarkTool, "isActive">[] => [
-	{ mark: "bold", label: "B", title: t("inlineMarks.bold"), icon: Bold, run: (e) => chain(e).toggleBold().run() },
+	{ mark: "bold", label: "B", title: t("inlineMarks.bold"), icon: TextBold, run: (e) => chain(e).toggleBold().run() },
 	{
 		mark: "italic",
 		label: "i",
 		title: t("inlineMarks.italic"),
-		icon: Italic,
+		icon: TextItalic,
 		run: (e) => chain(e).toggleItalic().run(),
 	},
 	{
 		mark: "underline",
 		label: "U",
 		title: t("inlineMarks.underline"),
-		icon: Underline,
+		icon: TextUnderline,
 		run: (e) => chain(e).toggleUnderline().run(),
 	},
 	{
 		mark: "strike",
 		label: "S",
 		title: t("inlineMarks.strike"),
-		icon: Strikethrough,
+		icon: TextStrikethrough,
 		run: (e) => chain(e).toggleStrike().run(),
 	},
-	{ mark: "code", label: "</>", title: t("inlineMarks.code"), icon: CodeXml, run: (e) => chain(e).toggleCode().run() },
+	{ mark: "code", label: "</>", title: t("inlineMarks.code"), icon: Code, run: (e) => chain(e).toggleCode().run() },
 	{
 		mark: "superscript",
 		label: "x²",
 		title: t("inlineMarks.superscript"),
-		icon: Superscript,
+		icon: TextSuperscript,
 		run: (e) => chain(e).toggleSuperscript().run(),
 	},
 	{
 		mark: "subscript",
 		label: "x₂",
 		title: t("inlineMarks.subscript"),
-		icon: Subscript,
+		icon: TextSubscript,
 		run: (e) => chain(e).toggleSubscript().run(),
 	},
 ];

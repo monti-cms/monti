@@ -1,22 +1,12 @@
 "use client";
 
+import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { Inline, Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
 import { useEditorState } from "@tiptap/react";
-import {
-	BetweenHorizontalEnd,
-	BetweenHorizontalStart,
-	BetweenVerticalEnd,
-	BetweenVerticalStart,
-	Columns3,
-	MoveHorizontal,
-	Rows3,
-	TableCellsMerge,
-	TableCellsSplit,
-} from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TranslatorFor } from "../translator";
@@ -71,38 +61,38 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.addRowBeforeLabel"),
 			title: t("tableToolbar.addRowBefore"),
-			icon: BetweenHorizontalStart,
+			icon: RowInsert,
 			run: (e) => chain(e).addRowBefore().run(),
 		},
 		{
 			label: t("tableToolbar.addRowAfterLabel"),
 			title: t("tableToolbar.addRowAfter"),
-			icon: BetweenHorizontalEnd,
+			icon: RowInsert,
 			run: (e) => chain(e).addRowAfter().run(),
 		},
 		{
 			label: t("tableToolbar.addColumnBeforeLabel"),
 			title: t("tableToolbar.addColumnBefore"),
-			icon: BetweenVerticalStart,
+			icon: ColumnInsert,
 			run: (e) => chain(e).addColumnBefore().run(),
 		},
 		{
 			label: t("tableToolbar.addColumnAfterLabel"),
 			title: t("tableToolbar.addColumnAfter"),
-			icon: BetweenVerticalEnd,
+			icon: ColumnInsert,
 			run: (e) => chain(e).addColumnAfter().run(),
 		},
 	],
 	[
 		{
 			label: t("tableToolbar.deleteRow"),
-			icon: Rows3,
+			icon: Row,
 			tone: "danger",
 			run: (e) => chain(e).deleteRow().run(),
 		},
 		{
 			label: t("tableToolbar.deleteColumn"),
-			icon: Columns3,
+			icon: Column,
 			tone: "danger",
 			run: (e) => chain(e).deleteColumn().run(),
 		},
@@ -111,14 +101,14 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.mergeCells"),
 			title: t("tableToolbar.mergeCells"),
-			icon: TableCellsMerge,
+			icon: Merge,
 			isDisabled: (e) => !isCellSelection(e) || !e.can().mergeCells(),
 			run: (e) => chain(e).mergeCells().run(),
 		},
 		{
 			label: t("tableToolbar.splitCell"),
 			title: t("tableToolbar.splitCell"),
-			icon: TableCellsSplit,
+			icon: TableSplit,
 			isDisabled: (e) => !isCellSelection(e) || !e.can().splitCell(),
 			run: (e) => chain(e).splitCell().run(),
 		},
@@ -127,7 +117,7 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.fillWidth"),
 			title: t("tableToolbar.fillWidth"),
-			icon: MoveHorizontal,
+			icon: ArrowsHorizontal,
 			isDisabled: (e) => {
 				const table = findTable(e);
 				return !table || !hasFixedWidth(table.node);

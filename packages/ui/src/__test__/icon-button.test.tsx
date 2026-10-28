@@ -1,5 +1,5 @@
+import { TrashCan } from "@carbon/icons-react";
 import { render, screen } from "@testing-library/react";
-import { Trash2 } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import { IconButton } from "../icon-button";
 import { TooltipProvider } from "../tooltip";
@@ -8,7 +8,7 @@ const renderButton = (tone?: "danger") =>
 	render(
 		<TooltipProvider>
 			<IconButton label="Delete row" tone={tone}>
-				<Trash2 aria-hidden />
+				<TrashCan aria-hidden />
 			</IconButton>
 		</TooltipProvider>,
 	);

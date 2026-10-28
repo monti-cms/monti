@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, TriangleAlert } from "lucide-react";
+import { Checkmark, WarningAlt } from "@carbon/icons-react";
 import { type ComponentProps, type ReactNode, useState } from "react";
 import { Caret } from "./caret";
 import { cn } from "./cn";
@@ -49,9 +49,9 @@ function ToolCallLine({
 					…
 				</span>
 			) : status === "done" ? (
-				<Check aria-hidden className="size-3.5" strokeWidth={1.6} />
+				<Checkmark aria-hidden className="size-3.5" />
 			) : (
-				<TriangleAlert aria-hidden className="size-3.5 text-monti-danger" strokeWidth={1.6} />
+				<WarningAlt aria-hidden className="size-3.5 text-monti-danger" />
 			)}
 			<span className={cn(status === "failed" && "text-monti-danger")}>{children}</span>
 			<span className="sr-only">{statusLabel}</span>

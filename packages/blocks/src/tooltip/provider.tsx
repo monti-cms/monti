@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatOperational, Close, Edit } from "@carbon/icons-react";
 import { type AdminComponents, type Site, type Translator, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
@@ -15,7 +16,6 @@ import {
 } from "@monti-cms/admin/editor";
 import { Box, Icon, Text } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
-import { MessageSquareMore, Pencil, X } from "lucide-react";
 import { keywordList } from "../shared/text";
 import { tooltipBlock } from "./definition";
 import { tooltipMessages } from "./messages";
@@ -42,7 +42,7 @@ function TooltipToolbarButton({ editor }: { editor: Editor }) {
 			mark={TOOLTIP_MARK}
 			attribute="content"
 			labels={labelsOf(t)}
-			icon={<MessageSquareMore aria-hidden />}
+			icon={<ChatOperational aria-hidden />}
 			openEvent={OPEN_TOOLTIP_EVENT}
 		/>
 	);
@@ -81,7 +81,7 @@ function TooltipBubbleButton(props: EditorBubbleProps) {
 			label={active ? t("edit") : t("add")}
 			onClick={() => openForm(t, props, { active, initial: String(editor.getAttributes(TOOLTIP_MARK).content ?? "") })}
 		>
-			<MessageSquareMore aria-hidden />
+			<ChatOperational aria-hidden />
 		</BubbleButton>
 	);
 }
@@ -93,7 +93,7 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	return (
 		<>
 			<Box as="span" paddingX={4} shrink={false}>
-				<Icon icon={MessageSquareMore} size="sm" tone="muted" />
+				<Icon icon={ChatOperational} size="sm" tone="muted" />
 			</Box>
 			<Box paddingX={4} maxWidth="menu">
 				<Text as="div" variant="caption" tone="muted" truncate title={content}>
@@ -104,10 +104,10 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 				label={t("edit")}
 				onClick={() => openForm(t, props, { active: true, initial: content, range: mark })}
 			>
-				<Pencil aria-hidden />
+				<Edit aria-hidden />
 			</BubbleButton>
 			<BubbleButton label={t("remove")} onClick={act(() => removeInlineMark(editor, mark))}>
-				<X aria-hidden />
+				<Close aria-hidden />
 			</BubbleButton>
 		</>
 	);
@@ -128,7 +128,7 @@ export const tooltipMarkExtension = (t: TooltipText): EditorMarkExtension => ({
 			id: "tooltip",
 			title: t("insert.title"),
 			description: t("insert.description"),
-			icon: MessageSquareMore,
+			icon: ChatOperational,
 			keywords: ["tooltip", ...keywordList(t("insert.keywords"))],
 			run: (editor, range) => {
 				// The slash command is typed in an empty paragraph, so there is no selection. Select the sample label to start editing and entering the description.

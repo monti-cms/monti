@@ -1,10 +1,10 @@
 "use client";
 
+import { Close } from "@carbon/icons-react";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Heading, IconButton, Inline, Stack } from "@monti-cms/ui";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
 import { useAdminComponents, useSourceFormat } from "../../admin-components";
 import { documentKey } from "../../editor/document-key";
@@ -90,7 +90,7 @@ export function SourcePane({
 					{t("sourcePane.heading", { locale: locale.toUpperCase() })}
 				</Heading>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
-					<X aria-hidden />
+					<Close aria-hidden />
 				</IconButton>
 			</Inline>
 			<Box paddingX={24} paddingTop={48} paddingBottom={16}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Restart } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -20,7 +21,6 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { RotateCw } from "lucide-react";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
@@ -150,7 +150,7 @@ export function EventsScreen() {
 						disabled={retryAll.isPending}
 						onClick={() => retryAll.mutate()}
 					>
-						<RotateCw aria-hidden />
+						<Restart aria-hidden />
 						{t("action.retryAll")}
 					</Button>
 				</PageActions>

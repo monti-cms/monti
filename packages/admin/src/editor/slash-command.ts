@@ -1,23 +1,21 @@
-import { perSite, type Site } from "@monti-cms/core/site";
-import type { Editor, Range } from "@tiptap/core";
 import {
-	Heading2,
-	Heading3,
-	Heading4,
+	Attachment,
+	Code,
+	DataTable,
+	Heading,
 	Image,
-	Link2,
+	Link,
 	List,
-	ListOrdered,
-	ListTodo,
-	type LucideIcon,
-	Minus,
-	Paperclip,
-	Pilcrow,
-	Quote,
-	SquareCode,
-	Superscript,
-	Table2,
-} from "lucide-react";
+	ListChecked,
+	ListNumbered,
+	Paragraph,
+	Quotes,
+	Subtract,
+	TextSuperscript,
+} from "@carbon/icons-react";
+import { perSite, type Site } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
+import type { Editor, Range } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
 import {
@@ -45,8 +43,8 @@ import type { BlockDefinition } from "@monti-cms/core";
 export interface SlashCommandItem {
 	/** Name of the block insertion item (nodeView for core blocks, block name for added blocks). Absent for basic formatting items. */
 	id?: string;
-	/** Icon. For block insertion items it is the block definition's `editor.icon` (lucide name). A puzzle icon if absent. */
-	icon?: LucideIcon | string;
+	/** Icon. For block insertion items it is the block definition's `editor.icon` (Carbon icon name). A puzzle icon if absent. */
+	icon?: MontiIcon | string;
 	title: string;
 	description: string;
 	keywords: string[];
@@ -62,7 +60,7 @@ export const isOffered = (item: SlashCommandItem, allowance: EditorAllowance): b
 	(item.block === undefined || allowance.allowsBlock(item.block)) &&
 	(item.heading === undefined || allowance.allowsHeading(item.heading));
 
-const HEADING_ICONS = { 2: Heading2, 3: Heading3, 4: Heading4 } as const;
+const HEADING_ICONS = { 2: Heading, 3: Heading, 4: Heading } as const;
 
 const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): SlashCommandItem => ({
 	title: t(`slash.h${level}.title`),
@@ -87,7 +85,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	{
 		title: t("slash.paragraph.title"),
 		description: t("slash.paragraph.description"),
-		icon: Pilcrow,
+		icon: Paragraph,
 		keywords: keywordList(t, "slash.paragraph.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).setParagraph().run();
@@ -108,7 +106,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	{
 		title: t("slash.ordered.title"),
 		description: t("slash.ordered.description"),
-		icon: ListOrdered,
+		icon: ListNumbered,
 		keywords: keywordList(t, "slash.ordered.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleOrderedList().run();
@@ -118,7 +116,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.todo.title"),
 		block: "taskList",
 		description: t("slash.todo.description"),
-		icon: ListTodo,
+		icon: ListChecked,
 		keywords: keywordList(t, "slash.todo.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleTaskList().run();
@@ -128,7 +126,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.quote.title"),
 		block: "blockquote",
 		description: t("slash.quote.description"),
-		icon: Quote,
+		icon: Quotes,
 		keywords: keywordList(t, "slash.quote.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleBlockquote().run();
@@ -138,7 +136,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.code.title"),
 		block: "codeBlock",
 		description: t("slash.code.description"),
-		icon: SquareCode,
+		icon: Code,
 		keywords: keywordList(t, "slash.code.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
@@ -148,7 +146,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.table.title"),
 		block: "table",
 		description: t("slash.table.description"),
-		icon: Table2,
+		icon: DataTable,
 		keywords: keywordList(t, "slash.table.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
@@ -158,7 +156,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.divider.title"),
 		block: "horizontalRule",
 		description: t("slash.divider.description"),
-		icon: Minus,
+		icon: Subtract,
 		keywords: keywordList(t, "slash.divider.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).setHorizontalRule().run();
@@ -179,7 +177,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.file.title"),
 		block: "file",
 		description: t("slash.file.description"),
-		icon: Paperclip,
+		icon: Attachment,
 		keywords: keywordList(t, "slash.file.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
@@ -189,7 +187,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	{
 		title: t("slash.internalLink.title"),
 		description: t("slash.internalLink.description"),
-		icon: Link2,
+		icon: Link,
 		keywords: keywordList(t, "slash.internalLink.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).insertContent("[[").run();
@@ -199,7 +197,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		title: t("slash.footnote.title"),
 		block: "footnotes",
 		description: t("slash.footnote.description"),
-		icon: Superscript,
+		icon: TextSuperscript,
 		keywords: keywordList(t, "slash.footnote.keywords"),
 		action: (editor, range) => {
 			insertFootnote(editor, range);

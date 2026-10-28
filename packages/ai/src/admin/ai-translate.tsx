@@ -1,5 +1,6 @@
 "use client";
 
+import { SquareOutline, Translate } from "@carbon/icons-react";
 import { type EditorExtension, errorText, type Site, useSite, useTranslator } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import {
@@ -16,7 +17,6 @@ import {
 	toast,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
-import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { runAiActionMany, useAiActions } from "./ai-slot-provider";
 import { aiTranslateMessages } from "./ai-translate.messages";
@@ -233,7 +233,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			features.map((item) => ({
 				id: `ai-translate:${item.key}`,
 				label: item.label,
-				icon: <Languages aria-hidden />,
+				icon: <Translate aria-hidden />,
 				isAvailable: (editor, pos) =>
 					!!format && unitAt(site, format, editor.state.doc, pos) !== null && progress === null,
 				isBusy: (pos) => busyBlocks.has(pos),
@@ -252,14 +252,14 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 					</Text>
 				)}
 				<TextButton type="button" variant="quiet" onClick={stop}>
-					<Square aria-hidden />
+					<SquareOutline aria-hidden />
 					{t("stop")}
 				</TextButton>
 			</Inline>
 		) : (
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
-					<Languages aria-hidden />
+					<Translate aria-hidden />
 					{t("all")}
 				</PopoverTrigger>
 				<PopoverContent align="end" width="md">
@@ -298,7 +298,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 						)}
 						<Inline justify="end">
 							<Button type="submit" size="sm">
-								<Languages aria-hidden />
+								<Translate aria-hidden />
 								{t("run")}
 							</Button>
 						</Inline>

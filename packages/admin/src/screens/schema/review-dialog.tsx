@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckmarkOutline, Information } from "@carbon/icons-react";
 import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
@@ -24,7 +25,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { CheckCircle2, Info } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {
@@ -379,11 +379,11 @@ export function ReviewDialog({
 							>
 								{dataChanges === 0 ? (
 									<Text as="span">
-										<CheckCircle2 size={16} aria-hidden />
+										<CheckmarkOutline size={16} aria-hidden />
 									</Text>
 								) : (
 									<Text as="span" tone="muted">
-										<Info size={16} aria-hidden />
+										<Information size={16} aria-hidden />
 									</Text>
 								)}
 								<Text as="p">

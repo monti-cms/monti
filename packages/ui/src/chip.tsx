@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Close } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
@@ -52,7 +52,7 @@ function Chip({
 					onClick={onRemove}
 					className={cn(CHIP_REMOVE, proposal && "text-monti-proposal hover:text-monti-proposal")}
 				>
-					<X aria-hidden className="size-3" />
+					<Close aria-hidden className="size-3" />
 				</button>
 			)}
 		</span>

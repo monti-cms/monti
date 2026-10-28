@@ -13,7 +13,7 @@ import type { Prompter } from "./prompt";
 
 /**
  * The libraries the admin shares with the app, which `@monti-cms/admin` (and the AI plugin and the blocks) declare as peer dependencies and so are not installed
- * with it. They must stay peers: React Query, next-themes, Tiptap and the lucide icons keep state in a module-level context or schema, so the admin, the plugins and
+ * with it. They must stay peers: React Query, next-themes, Tiptap and the Carbon icons keep state in a module-level context or schema, so the admin, the plugins and
  * the app's own admin pages have to load one copy. `monti init` installs them with the Monti packages.
  */
 export const ADMIN_PEER_PACKAGES = [
@@ -22,7 +22,7 @@ export const ADMIN_PEER_PACKAGES = [
 	"@tiptap/core",
 	"@tiptap/pm",
 	"@tiptap/react",
-	"lucide-react",
+	"@carbon/icons-react",
 ] as const;
 
 const unique = <T>(values: readonly T[]) => [...new Set(values)];

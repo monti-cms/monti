@@ -29,7 +29,7 @@ export function schemaTemplate(
 				kind: "document",
 				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
 				path: pathFor(options.folder),
-				icon: "file-text",
+				icon: "document",
 				fields: post?.fields,
 			},
 			...related,

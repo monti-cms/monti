@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Copy, Draggable, TrashCan } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	DropdownMenu,
@@ -9,7 +10,6 @@ import {
 	IconButton,
 	MenuShortcut,
 } from "@monti-cms/ui";
-import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -74,7 +74,7 @@ export function BlockHandleOverlay({
 					onDragEnd={onDragEnd}
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
-					<GripVertical aria-hidden />
+					<Draggable aria-hidden />
 				</IconButton>
 				<DropdownMenuContent align="start" side="right">
 					<DropdownMenuItem onClick={onMoveUp}>
@@ -93,7 +93,7 @@ export function BlockHandleOverlay({
 						<MenuShortcut>⇧⌘D</MenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem variant="danger" onClick={onDelete}>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 						{tc("delete")}
 						<MenuShortcut>⇧⌘⌫</MenuShortcut>
 					</DropdownMenuItem>

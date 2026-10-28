@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { OverflowMenuHorizontal } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./dropdown-menu";
@@ -63,7 +63,7 @@ function BulkBar({
 						aria-label={more.label}
 						className="flex size-6 cursor-pointer items-center justify-center rounded-monti-full border-0 bg-transparent p-0 text-monti-muted outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 aria-expanded:bg-monti-selected"
 					>
-						<MoreHorizontal aria-hidden className="size-4" />
+						<OverflowMenuHorizontal aria-hidden className="size-4" />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start">{more.children}</DropdownMenuContent>
 				</DropdownMenu>

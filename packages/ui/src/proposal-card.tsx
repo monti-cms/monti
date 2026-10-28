@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Checkmark } from "@carbon/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
@@ -64,7 +64,7 @@ function ProposalCard({
 				{appliedLabel ? (
 					<>
 						<span className="flex items-center gap-monti-6 text-monti-muted">
-							<Check aria-hidden className="size-3.5 text-monti-success" />
+							<Checkmark aria-hidden className="size-3.5 text-monti-success" />
 							{appliedLabel}
 						</span>
 						<span className="grow" />

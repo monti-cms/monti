@@ -10,7 +10,7 @@ export const blogSchema = {
 			label: "Post",
 			kind: "document",
 			path: "/posts/:slug",
-			icon: "file-text",
+			icon: "document",
 			fields: {
 				title: { kind: "text", label: "Title", required: true, max: 200, localized: true },
 				slug: { kind: "slug", label: "Address", from: "title", required: true },

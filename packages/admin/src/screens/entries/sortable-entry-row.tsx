@@ -1,11 +1,11 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Close, Draggable } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Text } from "@monti-cms/ui";
 import { IconButton } from "@monti-cms/ui/internal";
-import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
 import type { RelationEntry } from "./use-relation-search";
@@ -54,7 +54,7 @@ export function SortableEntryRow({
 				{...attributes}
 				{...listeners}
 			>
-				<GripVertical />
+				<Draggable />
 			</IconButton>
 			<Text variant="caption" truncate>
 				{index + 1}. {title}
@@ -74,7 +74,7 @@ export function SortableEntryRow({
 				<ArrowDown />
 			</IconButton>
 			<IconButton label={t("entry.remove", { title })} disabled={disabled} onClick={onRemove}>
-				<X />
+				<Close />
 			</IconButton>
 		</li>
 	);

@@ -1,5 +1,5 @@
+import { Document, Settings } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FileText, Settings } from "lucide-react";
 import { Stack } from "./stack";
 import { TabLink, TabLinks, Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Text } from "./text";
@@ -98,7 +98,7 @@ export const WithIconsAndDisabled: Story = {
 		<Tabs defaultValue="seo">
 			<TabsList aria-label="보기">
 				<TabsTrigger value="write">
-					<FileText aria-hidden />글
+					<Document aria-hidden />글
 				</TabsTrigger>
 				<TabsTrigger value="seo">
 					<Settings aria-hidden />

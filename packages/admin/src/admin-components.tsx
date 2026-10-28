@@ -3,8 +3,8 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { ListEntriesItem } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/react";
-import type { LucideIcon } from "lucide-react";
 import {
 	type ComponentType,
 	createContext,
@@ -54,8 +54,8 @@ export interface EditorInsertAction {
 	readonly title: string;
 	readonly description: string;
 	readonly keywords: readonly string[];
-	/** Menu icon (lucide name or component). Defaults to a puzzle icon. */
-	readonly icon?: string | LucideIcon;
+	/** Menu icon (Carbon icon name or component). Defaults to a puzzle icon. */
+	readonly icon?: string | MontiIcon;
 	readonly run: (editor: Editor, range: { from: number; to: number }) => void;
 }
 
@@ -212,10 +212,10 @@ export interface AdminComponents {
 	 */
 	readonly marks?: Readonly<Record<string, EditorMarkExtension>>;
 	/**
-	 * Icons chosen by name (lucide name -> component). Register here when a block definition's `editor.icon`, a plugin sidebar item's `icon`,
+	 * Icons chosen by name (Carbon icon name -> component). Register here when a block definition's `editor.icon`, a plugin sidebar item's `icon`,
 	 * a collection's `icon` or a code line effect's `icon` uses a name missing from the core list.
 	 */
-	readonly icons?: Readonly<Record<string, LucideIcon>>;
+	readonly icons?: Readonly<Record<string, MontiIcon>>;
 	/**
 	 * Screens rendered by view fields (`fields.view({ view })`) (name -> component). Registered by extensions.
 	 * Receives the value being entered (`form`) and the saved entry (`entry`).

@@ -1,9 +1,9 @@
 "use client";
 
+import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, Inline, Stack, Tabs, TabsList, TabsTrigger, Text, toast } from "@monti-cms/ui";
-import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
@@ -27,7 +27,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 			<ListSearch state={list.state} onChange={list.update} allowBody={!isTrash} />
 			{!isTrash && (
 				<Button type="button" size="sm" onClick={list.createNew}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("list.add", { label: list.label })}
 				</Button>
 			)}
@@ -114,12 +114,12 @@ function EntryListBody({ list }: { list: EntryList }) {
 													{
 														kind: "item" as const,
 														label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
-														icon: FolderPlus,
+														icon: FolderAdd,
 														onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
 													},
 												]
 											: []),
-										{ kind: "item", label: t("list.add", { label: list.label }), icon: Plus, onSelect: list.createNew },
+										{ kind: "item", label: t("list.add", { label: list.label }), icon: Add, onSelect: list.createNew },
 									]
 						}
 						onDeleteKey={list.onDeleteKey}

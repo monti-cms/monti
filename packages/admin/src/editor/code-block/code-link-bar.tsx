@@ -1,10 +1,10 @@
 "use client";
 
+import { Code } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Button, Icon, Inline, Text } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
-import { Code2 } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
 import { codeEffectsKey } from "./effects-plugin";
@@ -56,7 +56,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 			paddingX={16}
 			paddingY={8}
 		>
-			<Icon icon={Code2} />
+			<Icon icon={Code} />
 			<Text variant="caption">
 				{status.kind === "text" ? (
 					<>

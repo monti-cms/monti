@@ -1,8 +1,8 @@
 "use client";
 
+import { Add, Close, View } from "@carbon/icons-react";
 import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/site";
 import { Box, Button, cn, Heading, IconButton, Inline, Stack, Text } from "@monti-cms/ui";
-import { Eye, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
@@ -196,7 +196,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 					{t("layout.preview")}
 				</Heading>
 				<IconButton label={t("layout.previewClose")} onClick={onClose}>
-					<X aria-hidden />
+					<Close aria-hidden />
 				</IconButton>
 			</Inline>
 			<Stack gap={0} grow minHeight={0} padding={12}>
@@ -286,14 +286,14 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Box>
 					<Inline wrap gap={8}>
 						<IconButton label={t("layout.preview")} pressed={previewOpen} onClick={() => setPreviewOpen(!previewOpen)}>
-							<Eye aria-hidden />
+							<View aria-hidden />
 						</IconButton>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("layout.addTab")}
 						</Button>
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addGroupRow}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("layout.addGroup")}
 						</Button>
 						{offeredSets.map((set) => (
@@ -305,12 +305,12 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 								disabled={disabled}
 								onClick={() => addSet(set)}
 							>
-								<Plus aria-hidden />
+								<Add aria-hidden />
 								{t("fields.addSet", { name: set.label })}
 							</Button>
 						))}
 						<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{t("field.add")}
 						</Button>
 					</Inline>

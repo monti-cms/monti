@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkmark, Copy, Launch } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
@@ -25,7 +26,6 @@ import {
 	Textarea,
 	TextButton,
 } from "@monti-cms/ui";
-import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
@@ -221,7 +221,7 @@ export function MediaDetailPanel({
 									variant="secondary"
 									size="sm"
 								>
-									<ExternalLink aria-hidden />
+									<Launch aria-hidden />
 									{tc("open")}
 								</Button>
 							</>
@@ -287,7 +287,7 @@ export function MediaDetailPanel({
 													label={t("detail.filename.save")}
 													disabled={!nameDirty || problem !== null || renaming}
 												>
-													<Check aria-hidden />
+													<Checkmark aria-hidden />
 												</IconButton>
 											</Inline>
 											{(renameError || (problem && nameDirty)) && (

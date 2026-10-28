@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "@carbon/icons-react";
 import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -26,7 +27,6 @@ import {
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
-import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
@@ -226,7 +226,7 @@ function ManyPicker({
 				<Text truncate tone={names.length === 0 ? "muted" : undefined}>
 					{summary}
 				</Text>
-				<ChevronDownIcon aria-hidden />
+				<ChevronDown aria-hidden />
 			</PopoverTrigger>
 			<PopoverContent align="start" width="md" padding="menu">
 				<Command>

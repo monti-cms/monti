@@ -1,4 +1,4 @@
-import { AlertCircle, AlertOctagon, AlertTriangle, Info, Lightbulb } from "lucide-react";
+import { Idea, Information, Warning, WarningAlt, WarningHex } from "@carbon/icons-react";
 import type { ComponentType } from "react";
 
 /** Callout block variants (the options of the block definition's `callout.variant`). */
@@ -6,11 +6,11 @@ export type CalloutVariant = "note" | "tip" | "info" | "warning" | "danger";
 
 /** Callout icon in the editor. The public page look is decided by the site's renderer. */
 export const CALLOUT_ICON_BY_VARIANT: Record<CalloutVariant, ComponentType<{ className?: string }>> = {
-	note: AlertCircle,
-	tip: Lightbulb,
-	info: Info,
-	warning: AlertTriangle,
-	danger: AlertOctagon,
+	note: Warning,
+	tip: Idea,
+	info: Information,
+	warning: WarningAlt,
+	danger: WarningHex,
 };
 
 const TITLE_BY_VARIANT: Record<CalloutVariant, string> = {

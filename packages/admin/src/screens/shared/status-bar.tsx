@@ -3,6 +3,7 @@
 // The status bar at the bottom of every admin screen. Core and plugins contribute items; an item shows changing state that leads somewhere when clicked,
 // and renders nothing when there is nothing to say.
 
+import { Checkmark, Translate, WarningAlt } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -16,7 +17,6 @@ import {
 	StatusBarSpacer,
 } from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Languages, TriangleAlert } from "lucide-react";
 import { type ComponentType, createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import type { CmsIssue } from "../../api/error-message";
 import { countFailedEvents, eventsKeys, listEvents, retryAllEvents } from "../../api/events";
@@ -543,7 +543,7 @@ function PublishReadinessItem() {
 		<>
 			<StatusBarItem
 				tone={!checking && blocking > 0 ? "warning" : "default"}
-				icon={checking ? <Spinner /> : blocking > 0 ? <TriangleAlert /> : <Check />}
+				icon={checking ? <Spinner /> : blocking > 0 ? <WarningAlt /> : <Checkmark />}
 				title={t("itemTitle")}
 				{...(readiness.open !== undefined && readiness.onOpenChange
 					? { open: readiness.open, onOpenChange: readiness.onOpenChange }
@@ -569,7 +569,7 @@ function LocaleItem() {
 	const translations = editor.translations;
 	if (!translations) {
 		return (
-			<StatusBarItem icon={<Languages />} title={title}>
+			<StatusBarItem icon={<Translate />} title={title}>
 				{locale}
 			</StatusBarItem>
 		);
@@ -577,7 +577,7 @@ function LocaleItem() {
 	const labels = statusLabels(site);
 	return (
 		<StatusBarItem
-			icon={<Languages />}
+			icon={<Translate />}
 			title={title}
 			popover={
 				<>
@@ -700,7 +700,7 @@ function FailedDeliveriesItem() {
 	return (
 		<StatusBarItem
 			tone="danger"
-			icon={<TriangleAlert />}
+			icon={<WarningAlt />}
 			title={t("deliveries.title")}
 			popover={<FailedDeliveriesPopover />}
 		>

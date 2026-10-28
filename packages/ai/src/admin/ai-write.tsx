@@ -1,5 +1,6 @@
 "use client";
 
+import { Renew } from "@carbon/icons-react";
 import {
 	type BrowserFormat,
 	type EditorExtension,
@@ -39,7 +40,6 @@ import {
 	TextButton,
 } from "@monti-cms/admin/kit";
 import type { Editor, JSONContent } from "@tiptap/core";
-import { RefreshCw } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";
@@ -240,7 +240,7 @@ function WriteDialog({
 						/>
 						<Inline justify="end">
 							<Button type="submit" size="sm" disabled={running}>
-								{state.status === "idle" ? <Spark aria-hidden /> : <RefreshCw aria-hidden />}
+								{state.status === "idle" ? <Spark aria-hidden /> : <Renew aria-hidden />}
 								{running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")}
 							</Button>
 						</Inline>
@@ -270,7 +270,7 @@ function WriteDialog({
 					<Inline gap={8} justify={askRequest ? "end" : "between"} width="full">
 						{!askRequest && (
 							<TextButton type="button" disabled={running} onClick={() => void run()}>
-								<RefreshCw aria-hidden />
+								<Renew aria-hidden />
 								{running ? t("running") : t("runAgain")}
 							</TextButton>
 						)}
@@ -423,7 +423,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 				title: action.label,
 				description: t("insertDescription"),
 				keywords: ["ai", action.label],
-				icon: "sparkles",
+				icon: "spark",
 				run: (current, range) => setJob({ mode: "insert", action, editor: current, from: range.from, to: range.to }),
 			})),
 		[usable.insert, t],

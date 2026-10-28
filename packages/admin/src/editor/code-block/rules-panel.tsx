@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, TrashCan, TypePattern } from "@carbon/icons-react";
 import {
 	CODE_CHAR_EFFECTS,
 	type CodeCharEffectName,
@@ -29,7 +30,6 @@ import {
 	Text,
 	Textarea,
 } from "@monti-cms/ui";
-import { Plus, Regex, Trash2 } from "lucide-react";
 import { useSlot } from "../../slots/slots";
 import type { TranslatorFor } from "../../translator";
 import { codeBlockMessages } from "./messages";
@@ -151,7 +151,7 @@ function RuleRow({
 				)}
 				<Inline grow justify="end">
 					<IconButton label={t("rulesPanel.remove")} tone="danger" onClick={onRemove}>
-						<Trash2 aria-hidden />
+						<TrashCan aria-hidden />
 					</IconButton>
 				</Inline>
 			</Inline>
@@ -242,7 +242,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 	return (
 		<Popover>
 			<IconButton label={t("rulesPanel.title")} trigger={(button) => <PopoverTrigger render={button} />}>
-				<Regex aria-hidden />
+				<TypePattern aria-hidden />
 				{rules.length > 0 && <Text variant="caption">{rules.length}</Text>}
 			</IconButton>
 			<PopoverContent align="end" width="lg" scroll data-code-ui="">
@@ -270,7 +270,7 @@ export function RulesPanel({ rules, text, lineCount, selection, language, slotSc
 				{canAdd && (
 					<Inline justify="start">
 						<Button type="button" variant="secondary" size="sm" onClick={addRule}>
-							<Plus aria-hidden />
+							<Add aria-hidden />
 							{selection?.text ? t("rulesPanel.addFromSelection") : t("rulesPanel.add")}
 						</Button>
 					</Inline>

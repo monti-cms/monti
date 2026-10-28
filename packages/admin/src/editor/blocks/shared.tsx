@@ -1,8 +1,8 @@
 "use client";
 
+import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
-import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
 import { BLOCK_TOOLBAR } from "./block-model";
@@ -161,7 +161,7 @@ export function BlockSettings({
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
 			<ToolbarButton label={label} trigger={(button) => <PopoverTrigger render={button} />}>
-				<Settings2 aria-hidden />
+				<SettingsAdjust aria-hidden />
 			</ToolbarButton>
 			<PopoverContent align="end" width="md">
 				{children}

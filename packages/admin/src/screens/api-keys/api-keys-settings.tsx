@@ -1,5 +1,6 @@
 "use client";
 
+import { Add, Edit, Plug, Renew, TrashCan } from "@carbon/icons-react";
 import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Banner,
@@ -19,7 +20,6 @@ import {
 	Stack,
 	Text,
 } from "@monti-cms/ui";
-import { Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
 import { errorText } from "../../api/client";
@@ -83,25 +83,25 @@ export function ApiKeysSettings() {
 	};
 
 	const rowMenu = (key: ApiKeyView): MenuAction[] => [
-		{ kind: "item", label: t("menu.rename"), icon: Pencil, onSelect: () => setEditing({ mode: "rename", key }) },
-		{ kind: "item", label: t("menu.replace"), icon: RefreshCw, onSelect: () => setEditing({ mode: "replace", key }) },
+		{ kind: "item", label: t("menu.rename"), icon: Edit, onSelect: () => setEditing({ mode: "rename", key }) },
+		{ kind: "item", label: t("menu.replace"), icon: Renew, onSelect: () => setEditing({ mode: "replace", key }) },
 		...key.slots.map(
 			(use): MenuAction => ({
 				kind: "item",
 				label: t("menu.clearSlot", { label: use.label }),
-				icon: Unplug,
+				icon: Plug,
 				onSelect: () => clearSlot.mutate({ plugin: use.plugin, slot: use.ref, label: use.label }),
 			}),
 		),
 		{ kind: "separator" },
-		{ kind: "item", label: t("menu.delete"), icon: Trash2, destructive: true, onSelect: () => askDelete(key) },
+		{ kind: "item", label: t("menu.delete"), icon: TrashCan, destructive: true, onSelect: () => askDelete(key) },
 	];
 
 	return (
 		<Stack gap={0} grow minHeight={0} overflow="y" data-testid="api-keys-settings">
 			<PageActions>
 				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
-					<Plus aria-hidden />
+					<Add aria-hidden />
 					{t("add")}
 				</Button>
 			</PageActions>

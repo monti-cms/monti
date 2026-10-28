@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, SquareOutline } from "@carbon/icons-react";
 import { cn } from "./cn";
 
 /**
@@ -33,9 +33,9 @@ function SendButton({
 			{...props}
 		>
 			{busy ? (
-				<Square aria-hidden className="size-3 fill-current" />
+				<SquareOutline aria-hidden className="size-3 fill-current" />
 			) : (
-				<ArrowUp aria-hidden className={size === "md" ? "size-4" : "size-3.5"} strokeWidth={1.8} />
+				<ArrowUp aria-hidden className={size === "md" ? "size-4" : "size-3.5"} />
 			)}
 		</ButtonPrimitive>
 	);

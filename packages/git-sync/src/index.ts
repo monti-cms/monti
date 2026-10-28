@@ -57,7 +57,7 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 						{
 							path: "git-sync",
 							label: "Git sync",
-							icon: "git-branch",
+							icon: "branch",
 						},
 					],
 					// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).

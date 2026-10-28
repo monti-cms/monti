@@ -1,5 +1,6 @@
 "use client";
 
+import { Branch, Password, PullRequest, Renew, WarningAlt } from "@carbon/icons-react";
 import { adminApiUrl, errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	type ApiKeyChoice,
@@ -32,7 +33,6 @@ import {
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { lineDiff } from "../diff";
 import {
@@ -72,15 +72,15 @@ export function GitSyncPage() {
 			<Tabs fill value={tab} onValueChange={(value) => setTab(value as Tab)}>
 				<TabsList variant="bar">
 					<TabsTrigger value="sync">
-						<GitBranch aria-hidden />
+						<Branch aria-hidden />
 						{t("tab.sync")}
 					</TabsTrigger>
 					<TabsTrigger value="conflicts" count={conflictCount > 0 ? conflictCount : undefined}>
-						<TriangleAlert aria-hidden />
+						<WarningAlt aria-hidden />
 						{t("tab.conflicts")}
 					</TabsTrigger>
 					<TabsTrigger value="settings">
-						<KeyRound aria-hidden />
+						<Password aria-hidden />
 						{t("tab.settings")}
 					</TabsTrigger>
 				</TabsList>
@@ -204,7 +204,7 @@ function SyncTab({
 							</Heading>
 						</Box>
 						<Inline gap={4}>
-							<Icon icon={target.mode === "pr" ? GitPullRequest : GitBranch} size="sm" tone="subtle" />
+							<Icon icon={target.mode === "pr" ? PullRequest : Branch} size="sm" tone="subtle" />
 							<Text variant="meta" tone="subtle">
 								{t(`target.mode.${target.mode}`)}
 							</Text>
@@ -216,7 +216,7 @@ function SyncTab({
 							disabled={pull.isPending}
 							onClick={() => pull.mutate(target.id)}
 						>
-							<RefreshCw aria-hidden />
+							<Renew aria-hidden />
 							{t("pull.now")}
 						</Button>
 						{target.queued > 0 && (

@@ -1,4 +1,4 @@
-import { Folder } from "lucide-react";
+import { Folder } from "@carbon/icons-react";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";

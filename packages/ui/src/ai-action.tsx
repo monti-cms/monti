@@ -1,7 +1,7 @@
 "use client";
 
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import { RotateCw } from "lucide-react";
+import { Restart } from "@carbon/icons-react";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
 import { Spark } from "./spark";
@@ -43,7 +43,7 @@ function AiAction({
 			{loading ? (
 				<Spinner className="size-2.5" />
 			) : filled ? (
-				<RotateCw aria-hidden className="size-3 shrink-0" strokeWidth={1.8} />
+				<Restart aria-hidden className="size-3 shrink-0" />
 			) : (
 				<Spark className="size-monti-icon-xs" />
 			)}

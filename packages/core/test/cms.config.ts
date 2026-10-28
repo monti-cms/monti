@@ -59,7 +59,7 @@ const seo = seoFields({
 
 export const post = defineCollection({
 	label: "게시글",
-	icon: "file-text",
+	icon: "document",
 	kind: "document",
 	path: "/posts/:slug",
 	fields: {
@@ -114,7 +114,7 @@ export const post = defineCollection({
 
 export const memo = defineCollection({
 	label: "메모",
-	icon: "notebook-pen",
+	icon: "notebook",
 	kind: "document",
 	path: "/memos/:slug",
 	fields: {

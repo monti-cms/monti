@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
@@ -67,7 +67,7 @@ function PaginationPrevious({
 			className={cn("px-monti-12 pl-monti-8", className)}
 			{...props}
 		>
-			<ChevronLeftIcon data-icon="inline-start" />
+			<ChevronLeft data-icon="inline-start" />
 			<span>{text}</span>
 		</PaginationLink>
 	);
@@ -87,7 +87,7 @@ function PaginationNext({
 			{...props}
 		>
 			<span>{text}</span>
-			<ChevronRightIcon data-icon="inline-end" />
+			<ChevronRight data-icon="inline-end" />
 		</PaginationLink>
 	);
 }

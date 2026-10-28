@@ -70,7 +70,7 @@ describe("storybook catalog", () => {
 	);
 
 	/** Modules the package exports that draw nothing of their own: helpers, labels, the menu pieces the menu stories show. */
-	const NOT_PARTS = ["cn", "closed", "labels", "layout", "menu-parts", "use-mobile"];
+	const NOT_PARTS = ["cn", "closed", "labels", "layout", "menu-parts", "monti-icon", "use-mobile"];
 
 	it("has a story file for every part the package exports", () => {
 		const modules = [...read("../internal.ts").matchAll(/from "\.\/([\w-]+)"/g)].map((match) => match[1]);

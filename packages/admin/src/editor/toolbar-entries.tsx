@@ -3,7 +3,9 @@
  * their hide priority, how each renders in the bar and in the "More" menu, and the final placement order.
  */
 
+import { Attachment, Image, Link, List, TextAlignLeft, TextSuperscript, Upload } from "@carbon/icons-react";
 import type { Site } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
 	Box,
 	DropdownMenu,
@@ -16,7 +18,6 @@ import {
 	PopoverTrigger,
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { AlignLeft, ImageIcon, Link2, List, type LucideIcon, Paperclip, Superscript, Upload } from "lucide-react";
 import type { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import type { EditorAllowance } from "./allowed";
@@ -89,7 +90,7 @@ export const buildToolbarEntries = ({
 		priority: number,
 		label: string,
 		items: ToolbarItem[],
-		icon: LucideIcon,
+		icon: MontiIcon,
 		menuLabel = label,
 	): ToolbarEntry => ({
 		key,
@@ -101,7 +102,7 @@ export const buildToolbarEntries = ({
 		<>
 			{allowance.allowsBlock("image") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openImageDialog()}>
-					<ImageIcon aria-hidden />
+					<Image aria-hidden />
 					<Box as="span" grow>
 						{t("toolbar.image")}
 					</Box>
@@ -109,7 +110,7 @@ export const buildToolbarEntries = ({
 			)}
 			{allowance.allowsBlock("file") && (
 				<DropdownMenuItem disabled={!canEdit} onClick={() => openFilePicker()}>
-					<Paperclip aria-hidden />
+					<Attachment aria-hidden />
 					<Box as="span" grow>
 						{t("toolbar.file")}
 					</Box>
@@ -127,7 +128,7 @@ export const buildToolbarEntries = ({
 			render: () => <ToolbarDropdown editor={editor} label={blockStyle} items={BLOCK_STYLES(t, allowance)} />,
 		},
 		...(allowance.allowsBlock("text-align")
-			? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? AlignLeft)]
+			? [dropdownSlot("align", 9, t("toolbar.align"), ALIGN_TOOLS(t), activeAlign?.icon ?? TextAlignLeft)]
 			: []),
 		{ key: "divider-block", divider: true },
 		...inlineTools(site, allowance).map((tool) =>
@@ -149,7 +150,7 @@ export const buildToolbarEntries = ({
 			];
 		}),
 		...(scriptTools(site, allowance).length > 0
-			? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), Superscript)]
+			? [dropdownSlot("script", 8, t("toolbar.script"), scriptTools(site, allowance), TextSuperscript)]
 			: []),
 		{ key: "divider-inline", divider: true },
 		{ key: "divider-list", divider: true },
@@ -222,7 +223,7 @@ export const buildToolbarEntries = ({
 									onMouseDown={(event) => event.preventDefault()}
 									trigger={(button) => <PopoverTrigger render={button} />}
 								>
-									<Link2 aria-hidden />
+									<Link aria-hidden />
 								</IconButton>
 								<PopoverContent align="start" width="md">
 									{linkDraft && <LinkForm editor={editor} draft={linkDraft} onDone={() => setLinkDraft(null)} />}

@@ -1,5 +1,17 @@
 "use client";
 
+import {
+	Add,
+	ChevronDown,
+	ChevronRight,
+	Plug,
+	Quotes,
+	Reset,
+	Save,
+	TrashCan,
+	View,
+	ViewOff,
+} from "@carbon/icons-react";
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Banner,
@@ -52,7 +64,6 @@ import {
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -488,17 +499,17 @@ export function AiManager() {
 	const headerActions =
 		tab === "features" ? (
 			<Button type="button" size="sm" onClick={() => void startNew()}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.feature")}
 			</Button>
 		) : tab === "connections" ? (
 			<Button type="button" size="sm" onClick={() => void openConnection("new")}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.connection")}
 			</Button>
 		) : (
 			<Button type="button" size="sm" onClick={() => void openSnippet("new")}>
-				<Plus aria-hidden />
+				<Add aria-hidden />
 				{t("add.snippet")}
 			</Button>
 		);
@@ -516,7 +527,7 @@ export function AiManager() {
 						{t("tab.connections")}
 					</TabsTrigger>
 					<TabsTrigger value="snippets">
-						<Quote aria-hidden />
+						<Quotes aria-hidden />
 						{t("tab.snippets")}
 					</TabsTrigger>
 				</TabsList>
@@ -647,7 +658,7 @@ export function AiManager() {
 										</TextButton>
 										{showHidden && (
 											<Button type="button" size="sm" variant="secondary" onClick={() => void restoreAllHidden()}>
-												<RotateCcw aria-hidden />
+												<Reset aria-hidden />
 												{t("button.restoreHidden")}
 											</Button>
 										)}
@@ -804,7 +815,7 @@ function CheckRow({
 			</Inline>
 			{onRemove ? (
 				<IconButton label={t("check.remove", { label })} tone="danger" onClick={onRemove}>
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 				</IconButton>
 			) : (
 				// Keeps the rows aligned with the ones that have a remove button.
@@ -1180,7 +1191,7 @@ function FeatureEditor({
 											<Inline>
 												<DropdownMenu>
 													<DropdownMenuTrigger render={<TextButton type="button" variant="quiet" />}>
-														<Plus aria-hidden />
+														<Add aria-hidden />
 														{t("field.addCheck")}
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="start">
@@ -1189,7 +1200,7 @@ function FeatureEditor({
 																key={kind}
 																onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
 															>
-																<Plus aria-hidden />
+																<Add aria-hidden />
 																{checkLabel(kind)}
 															</DropdownMenuItem>
 														))}
@@ -1237,7 +1248,7 @@ function FeatureEditor({
 						disabled={saving}
 						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
 					>
-						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+						{spec.hidden ? <View aria-hidden /> : <ViewOff aria-hidden />}
 						{spec.hidden ? t("button.unhide") : t("button.hide")}
 					</Button>
 				)}
@@ -1249,7 +1260,7 @@ function FeatureEditor({
 						disabled={atDefaults}
 						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
 					>
-						<RotateCcw aria-hidden />
+						<Reset aria-hidden />
 						{t("button.reset")}
 					</Button>
 				)}

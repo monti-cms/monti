@@ -1,7 +1,7 @@
 "use client";
 
+import { Search } from "@carbon/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "./cn";
 import { COMMAND_ITEM, MENU_SCROLL, MENU_SEPARATOR, MenuTick } from "./menu-parts";
@@ -27,7 +27,7 @@ function CommandInput({ className, ...props }: React.ComponentProps<typeof Comma
 			data-slot="command-input-wrapper"
 			className="mb-monti-4 flex items-center gap-monti-8 border-monti-muted border-b px-[9px] pt-monti-6 pb-[9px]"
 		>
-			<SearchIcon className="size-3.5 shrink-0 text-monti-subtle" aria-hidden />
+			<Search className="size-3.5 shrink-0 text-monti-subtle" aria-hidden />
 			<CommandPrimitive.Input
 				data-slot="command-input"
 				className={cn(

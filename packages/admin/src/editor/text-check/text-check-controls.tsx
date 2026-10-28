@@ -1,7 +1,9 @@
 "use client";
 
+import { Information, SpellCheck, ViewOff, Warning, WarningAlt } from "@carbon/icons-react";
 import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
+import type { MontiIcon } from "@monti-cms/ui";
 import {
 	Button,
 	Count,
@@ -19,7 +21,6 @@ import {
 	TextButton,
 } from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
-import { CircleAlert, EyeOff, Info, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { useIconByName } from "../../screens/shared/collection-icon";
@@ -28,11 +29,11 @@ import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";
 import type { TextCheckController } from "./use-text-check";
 
-const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: LucideIcon; tone: "danger" | "warning" | "inherit" }>> =
+const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: MontiIcon; tone: "danger" | "warning" | "inherit" }>> =
 	{
-		error: { icon: CircleAlert, tone: "danger" },
-		warning: { icon: TriangleAlert, tone: "warning" },
-		info: { icon: Info, tone: "inherit" },
+		error: { icon: Warning, tone: "danger" },
+		warning: { icon: WarningAlt, tone: "warning" },
+		info: { icon: Information, tone: "inherit" },
 	};
 
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
@@ -192,7 +193,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 					</TextButton>
 				)}
 				<TextButton type="button" onClick={() => controller.ignore(issue)}>
-					<EyeOff aria-hidden />
+					<ViewOff aria-hidden />
 					{t("ignore")}
 				</TextButton>
 			</Inline>

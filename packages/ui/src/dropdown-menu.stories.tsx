@@ -1,5 +1,5 @@
+import { Archive, Copy, Edit, FolderMoveTo, OverflowMenuHorizontal, Tag, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Archive, Copy, FolderInput, MoreHorizontal, Pencil, Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./button";
 import {
@@ -30,11 +30,11 @@ const meta = {
 	render: (args) => (
 		<DropdownMenu {...args}>
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>
-				<MoreHorizontal aria-hidden />더 보기
+				<OverflowMenuHorizontal aria-hidden />더 보기
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem>
-					<Pencil aria-hidden />
+					<Edit aria-hidden />
 					이름 바꾸기
 				</DropdownMenuItem>
 				<DropdownMenuItem>
@@ -44,7 +44,7 @@ const meta = {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem variant="danger">
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 					<MenuShortcut>Del</MenuShortcut>
 				</DropdownMenuItem>
@@ -93,7 +93,7 @@ export const DisabledItems: Story = {
 			<DropdownMenuTrigger render={<Button variant="secondary" />}>글 작업</DropdownMenuTrigger>
 			<DropdownMenuContent>
 				<DropdownMenuItem>
-					<Pencil aria-hidden />
+					<Edit aria-hidden />
 					이름 바꾸기
 				</DropdownMenuItem>
 				<DropdownMenuItem disabled>
@@ -102,7 +102,7 @@ export const DisabledItems: Story = {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem variant="danger" disabled>
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 				</DropdownMenuItem>
 			</DropdownMenuContent>
@@ -216,7 +216,7 @@ export const MixedRows: Story = {
 			<DropdownMenuContent>
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
-						<FolderInput aria-hidden />
+						<FolderMoveTo aria-hidden />
 						폴더로
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent>
@@ -235,7 +235,7 @@ export const MixedRows: Story = {
 				</DropdownMenuSub>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem variant="danger">
-					<Trash2 aria-hidden />
+					<TrashCan aria-hidden />
 					휴지통으로
 				</DropdownMenuItem>
 			</DropdownMenuContent>

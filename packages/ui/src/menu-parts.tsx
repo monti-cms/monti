@@ -1,4 +1,4 @@
-import { CheckIcon } from "lucide-react";
+import { Checkmark } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
 
@@ -57,7 +57,7 @@ export const MENU_SCROLL = "flex max-h-80 flex-col overflow-y-auto overscroll-co
 function MenuTick({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span data-slot="menu-tick" className={cn(MENU_TICK, className)} {...props}>
-			<CheckIcon aria-hidden />
+			<Checkmark aria-hidden />
 		</span>
 	);
 }
