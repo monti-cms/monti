@@ -2,7 +2,17 @@
 
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, type SelectAllState, Stack, Table, TableBody, TableCell, TableRow, Text } from "@monti-cms/ui";
+import {
+	Box,
+	ListScroll,
+	type SelectAllState,
+	Stack,
+	Table,
+	TableBody,
+	TableCell,
+	TableRow,
+	Text,
+} from "@monti-cms/ui";
 import type { KeyboardEvent, ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
@@ -138,7 +148,7 @@ export function AdminEntriesTable({
 	};
 
 	return (
-		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0} overflow="hidden">
+		<Stack as="section" aria-label={t("list.label")} gap={0} grow minHeight={0}>
 			<Box width="full" shrink={false}>
 				{selectedIds.size > 0 && bulkBar ? (
 					bulkBar(selectAll)
@@ -164,7 +174,7 @@ export function AdminEntriesTable({
 				)}
 			</Box>
 
-			<Stack gap={0} grow minHeight={0} overflow="auto">
+			<ListScroll>
 				<Box ref={scrollRef} width="full">
 					<Table container="none" layout="fixed">
 						<TableBody aria-busy={isRefreshing || undefined} dimmed={isRefreshing}>
@@ -277,7 +287,7 @@ export function AdminEntriesTable({
 						trigger={<Box grow paddingY={16} aria-hidden data-testid="list-blank-area" />}
 					/>
 				)}
-			</Stack>
+			</ListScroll>
 
 			<Box width="full" shrink={false}>
 				<ListPagination

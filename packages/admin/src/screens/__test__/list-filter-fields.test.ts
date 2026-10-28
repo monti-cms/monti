@@ -48,13 +48,13 @@ describe("the fields the filter menu offers", () => {
 });
 
 describe("conditions on a field", () => {
-	it("are what the kind takes: text and media empty or filled, select and relation empty or an item", () => {
+	it("are what the kind takes: text and media only empty, select and relation empty or an item", () => {
 		expect([takesCondition("text", "empty"), takesCondition("text", "filled"), takesCondition("text", "is")]).toEqual([
 			true,
-			true,
+			false,
 			false,
 		]);
-		expect([takesCondition("media", "filled"), takesCondition("media", "is")]).toEqual([true, false]);
+		expect([takesCondition("media", "empty"), takesCondition("media", "filled")]).toEqual([true, false]);
 		expect([takesCondition("select", "is"), takesCondition("select", "filled")]).toEqual([true, false]);
 		expect([takesCondition("relation", "is"), takesCondition("relation", "filled")]).toEqual([true, false]);
 	});

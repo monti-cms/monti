@@ -9,7 +9,7 @@ import { commonMessages } from "../lib/common.messages";
 import { AdminLink as Link } from "../router";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
-import { toSelection } from "./list-row-menu";
+import { heldRelations, toSelection } from "./list-row-menu";
 import { ListSearch } from "./list-search";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
@@ -55,14 +55,16 @@ function EntryListBody({ list }: { list: EntryList }) {
 	});
 	return (
 		<>
-			<Inline position="relative" align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-				<Stack gap={0} grow minWidth={0} overflow="hidden">
+			{/* Nothing here clips: the row checks hang in the page's left margin. */}
+			<Inline position="relative" align="stretch" gap={0} grow minHeight={0}>
+				<Stack gap={0} grow minWidth={0}>
 					<AdminEntriesTable
 						bulkBar={(selectAll) => (
 							<BulkBar
 								collection={state.collection}
 								mode={mode}
 								selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
+								held={heldRelations(items.filter((item) => list.selectedIds.has(item.id)))}
 								folders={folders?.list ?? null}
 								selectAll={selectAll}
 								onClearSelection={() => list.setSelectedIds(new Set())}

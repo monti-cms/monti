@@ -1478,27 +1478,27 @@ describe("SchemaScreen", () => {
 			fireEvent.click(screen.getByRole("tab", { name: "site" }));
 			type(await screen.findByLabelText(t("site.name")), "Blog");
 			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 1 }))).toBeTruthy();
-			type(screen.getByLabelText(tSite("site.home")), "/start");
+			type(screen.getByLabelText(tSite("site.previewPath")), "/start");
 			expect(within(saveBar()).getByLabelText(t("bar.count", { count: 2 }))).toBeTruthy();
 			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
-			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.home")) }));
+			fireEvent.click(screen.getByRole("button", { name: revertName(tSite("site.previewPath")) }));
 			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("");
 			expect(queryBar()).toBeNull();
 		});
 
 		it("marks a field that differs from the saved file, and its revert puts back that field only", async () => {
-			state = screenState({ schema: { ...schema(), site: { name: "Blog", home: "/" } } });
+			state = screenState({ schema: { ...schema(), site: { name: "Blog", previewPath: "/" } } });
 			renderScreen();
 			await screen.findByTestId("collection-post");
 			fireEvent.click(screen.getByRole("tab", { name: "site" }));
 			const site = await screen.findByTestId("site-settings");
 			expect(within(site).queryByTestId("field-changed")).toBeNull();
 			type(screen.getByLabelText(t("site.name")), "Journal");
-			type(screen.getByLabelText(tSite("site.home")), "/start");
+			type(screen.getByLabelText(tSite("site.previewPath")), "/start");
 			expect(within(site).getAllByTestId("field-changed")).toHaveLength(2);
 			fireEvent.click(screen.getByRole("button", { name: revertName(t("site.name")) }));
 			expect((screen.getByLabelText(t("site.name")) as HTMLInputElement).value).toBe("Blog");
-			expect((screen.getByLabelText(tSite("site.home")) as HTMLInputElement).value).toBe("/start");
+			expect((screen.getByLabelText(tSite("site.previewPath")) as HTMLInputElement).value).toBe("/start");
 			expect(within(site).getAllByTestId("field-changed")).toHaveLength(1);
 		});
 
@@ -1733,7 +1733,6 @@ describe("SchemaScreen", () => {
 	it("edits the site settings: each control writes its own key under site", async () => {
 		await openSettingsTab("site");
 		type(await screen.findByLabelText(t("site.name")), "My blog");
-		type(screen.getByLabelText(tSite("site.home")), "https://example.com");
 		type(screen.getByLabelText(tSite("site.previewPath")), "/preview");
 		type(screen.getByLabelText(tSite("site.previewParam")), "lang");
 		type(screen.getByLabelText(tSite("site.alias.new")), "www.example.com");
@@ -1744,7 +1743,6 @@ describe("SchemaScreen", () => {
 		const file = await reviewedFile();
 		expect(file.site).toEqual({
 			name: "My blog",
-			home: "https://example.com",
 			previewPath: "/preview",
 			previewLocaleParam: "lang",
 			localePrefix: "always",

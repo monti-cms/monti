@@ -107,10 +107,9 @@ export default defineSite({
 		url: "https://example.org",
 		name: "Example site",
 		previewPath: "/preview",
-		// URL rules different from the blog's: a prefix for every locale, the preview locale via the path, and the site view on a different host.
+		// URL rules different from the blog's: a prefix for every locale, the and the preview locale via the path.
 		localePrefix: "always",
 		previewLocaleParam: false,
-		home: "https://example.org/",
 	},
 	// The admin path also differs from the blog's (`/admin`).
 	admin: { path: "/studio" },

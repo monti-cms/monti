@@ -1459,7 +1459,6 @@ Everything in this table except `codeBlock`, `media` and `editor` can be written
 | `site.url` | Public site URL. Links written as full URLs in the body are also recognized as internal links. May be read from an environment variable. |
 | `site.aliases` | Other host names to treat as the same site (e.g. `www.example.com`). |
 | `site.name` | Site name shown in the admin UI. If unset, the host name of `site.url`. |
-| `site.home` | URL the admin sidebar's `View site` icon button (next to the site name) opens. A path or full URL. Default `/`. |
 | `site.localePrefix` | How the language is added to public URLs. `except-default` (default: the default language as is, other languages as `/{code}`), `always` (`/{code}` for every language), `never` (no prefix). Search previews, draft previews and `localizePath` follow it. |
 | `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
@@ -1537,7 +1536,7 @@ layout: [
 
 `defineConfig` throws one `ConfigError` as soon as the app starts, listing every problem with its path (`error.issues`: `{ path, code, message }`), if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
 roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, an option is not part of the format (a misspelt key gets a "did you mean"), `from` or `fillFromBody` does not match the fields,
-a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
+a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix` or `site.previewLocaleParam`
 is wrong.
 
 Duplicating (`POST /api/monti/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original

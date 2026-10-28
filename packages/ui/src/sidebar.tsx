@@ -4,13 +4,21 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Dialog as DrawerPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { OpenPanelLeft, SidePanelClose, SidePanelOpen } from "@carbon/icons-react";
+import { Asleep, Light, OpenPanelLeft, Screen, SidePanelClose, SidePanelOpen } from "@carbon/icons-react";
 import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { ICON_BUTTON, IconButton } from "./icon-button";
 import { useUiLabels } from "./labels";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
+import { Segmented } from "./segmented";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useIsMobile } from "./use-mobile";
 
@@ -123,8 +131,9 @@ function SidebarProvider({
 	);
 }
 
-/** The rail as the design draws it: the tool ground, 20px above, 14px at the sides, 16px below, rows 2px apart. */
-const RAIL = "flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default";
+/** The rail as the design draws it: the tool ground, 20px above, 14px at the sides (6px folded, so the 36px rows fill the 48px rail), 16px below, rows 2px apart. */
+const RAIL =
+	"flex flex-col gap-monti-2 bg-monti-tool px-[14px] pt-monti-20 pb-monti-16 text-monti-default data-rail:px-[6px]";
 
 /**
  * The left navigation: a `nav` on the tool ground with a line down its right edge, a header with the site's name, the rows of the groups, and a
@@ -228,7 +237,7 @@ function SidebarTrigger({
 
 /**
  * The page beside the rail. `corner` is what sits in its top-right corner, 12px from both edges (the assistant's button); the page's own header keeps
- * clear of it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
+ * clear of it, and a panel docked at the right edge covers it. On a narrow screen, where the rail is a drawer, a bar above the page holds the button that opens it, with the corner at its end.
  */
 function SidebarInset({
 	fixed = false,
@@ -254,7 +263,7 @@ function SidebarInset({
 					{corner}
 				</div>
 			) : (
-				corner && <div className="absolute top-monti-12 right-monti-12 z-40">{corner}</div>
+				corner && <div className="absolute top-monti-12 right-monti-12 z-10">{corner}</div>
 			)}
 			{children}
 		</main>
@@ -262,8 +271,8 @@ function SidebarInset({
 }
 
 /**
- * The head row, 32px: the site's name (cut with an ellipsis when it is long), what sits beside it (the way to the site, {@link SidebarIconLink}) and the
- * fold button ({@link SidebarRailToggle}). Folded, the row holds the unfold button alone.
+ * The head row, 32px: the site's name (cut with an ellipsis when it is long) and the fold button ({@link SidebarRailToggle}). Folded, the row holds the
+ * unfold button alone.
  */
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
@@ -271,39 +280,12 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-header"
 			data-sidebar="header"
 			className={cn(
-				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-[2px]",
+				"mb-monti-16 flex h-monti-icon-button shrink-0 items-center gap-monti-4 pr-0 pl-monti-6 group-data-[rail]/rail:px-0",
 				className,
 			)}
 			{...props}
 		/>
 	);
-}
-
-/**
- * A quiet icon link in the head row, next to the site's name (the way to the site): a 32px round target around a 16px icon. `label` names it. A link
- * by default; the app's router link goes in `render`.
- */
-function SidebarIconLink({
-	label,
-	render,
-	className,
-	...props
-}: useRender.ComponentProps<"a"> & React.ComponentProps<"a"> & { label: string }) {
-	return useRender({
-		defaultTagName: "a",
-		props: mergeProps<"a">(
-			{
-				"aria-label": label,
-				className: cn(
-					"flex size-monti-icon-button shrink-0 items-center justify-center rounded-monti-full text-monti-subtle outline-none hover:bg-monti-selected hover:text-monti-default focus-visible:ring-3 focus-visible:ring-monti-contrast/20 [&_svg]:size-4",
-					className,
-				),
-			},
-			props,
-		),
-		render,
-		state: { slot: "sidebar-icon-link" },
-	});
 }
 
 /**
@@ -338,15 +320,71 @@ function SidebarRailToggle({ className, ...props }: Omit<ButtonPrimitive.Props, 
 	);
 }
 
-/** The last row of the sidebar, under the bottom group: a place for one icon button (the screen mode), at the same spot folded and unfolded. */
+/** The last row of the sidebar, under the bottom group: the screen mode ({@link SidebarScreenMode}). */
 function SidebarFoot({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sidebar-foot"
 			data-sidebar="foot"
-			className={cn("flex px-[2px] pt-monti-8", className)}
+			className={cn("flex px-[2px] pt-monti-8 group-data-[rail]/rail:px-0", className)}
 			{...props}
 		/>
+	);
+}
+
+/** The screen modes in the order they are offered. */
+const SCREEN_MODES = ["system", "light", "dark"] as const;
+type ScreenMode = (typeof SCREEN_MODES)[number];
+const SCREEN_MODE_ICONS = { system: Screen, light: Light, dark: Asleep } as const;
+
+/**
+ * The screen mode in the last row: three icon cells (system, light, dark) with the current one pressed, so one press changes it. Folded, the rail has no
+ * room for three, so one icon button shows the current mode and opens the three in a menu upward, a ✓ on the current one. `labels` names the control
+ * and each mode.
+ */
+function SidebarScreenMode({
+	value,
+	onValueChange,
+	labels,
+	defaultOpen,
+}: {
+	value: ScreenMode;
+	onValueChange: (mode: ScreenMode) => void;
+	labels: { label: string } & Record<ScreenMode, string>;
+	/** Opens the folded menu at first (for a story). */
+	defaultOpen?: boolean;
+}) {
+	const { rail } = useSidebar();
+	if (!rail) {
+		return (
+			<Segmented
+				inline
+				aria-label={labels.label}
+				value={value}
+				onValueChange={onValueChange}
+				options={SCREEN_MODES.map((mode) => {
+					const Icon = SCREEN_MODE_ICONS[mode];
+					return { value: mode, label: <Icon aria-hidden />, "aria-label": labels[mode] };
+				})}
+			/>
+		);
+	}
+	const Icon = SCREEN_MODE_ICONS[value];
+	return (
+		<DropdownMenu defaultOpen={defaultOpen}>
+			<IconButton label={labels.label} side="right" trigger={(button) => <DropdownMenuTrigger render={button} />}>
+				<Icon aria-hidden />
+			</IconButton>
+			<DropdownMenuContent side="top" align="start">
+				<DropdownMenuRadioGroup value={value} onValueChange={(next) => onValueChange(next as ScreenMode)}>
+					{SCREEN_MODES.map((mode) => (
+						<DropdownMenuRadioItem key={mode} value={mode}>
+							{labels[mode]}
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -554,7 +592,6 @@ export {
 	SidebarGroupContent,
 	SidebarHeader,
 	SidebarFoot,
-	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -564,6 +601,7 @@ export {
 	SidebarMenuSubButton,
 	SidebarProvider,
 	SidebarRailToggle,
+	SidebarScreenMode,
 	SidebarTrigger,
 	useSidebar,
 };

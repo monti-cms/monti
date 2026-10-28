@@ -1,6 +1,6 @@
 "use client";
 
-import { Image, Launch, SettingsAdjust, Tools, TrashCan } from "@carbon/icons-react";
+import { Image, SettingsAdjust, Tools, TrashCan } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -13,7 +13,6 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
-	SidebarIconLink,
 	SidebarMenu,
 	SidebarMenuBadge,
 	SidebarMenuButton,
@@ -26,7 +25,7 @@ import {
 } from "@monti-cms/ui";
 import { type DragEvent, Fragment, type ReactNode, useState } from "react";
 import { AdminLink as Link } from "../router";
-import { ThemeMenu } from "../ui/theme-menu";
+import { ScreenModeSwitch } from "../ui/screen-mode";
 import { screensMessages } from "./messages";
 import { railFolders } from "./rail-folders";
 import { useAdminFeatures } from "./shared/admin-features";
@@ -189,22 +188,13 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 		<Sidebar label={t("sidebar.label")}>
 			<SidebarHeader>
 				{!rail && (
-					<>
-						<Box grow minWidth={0}>
-							<Link href={site.adminHref()} onClick={closeMobile}>
-								<Text variant="title" truncate>
-									{site.SITE_NAME || "CMS"}
-								</Text>
-							</Link>
-						</Box>
-						{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. Opens in a new tab so the admin stays. */}
-						<SidebarIconLink
-							label={t("sidebar.viewSite")}
-							render={<Link role="link" href={site.SITE_HOME} target="_blank" rel="noopener noreferrer" />}
-						>
-							<Launch aria-hidden />
-						</SidebarIconLink>
-					</>
+					<Box grow minWidth={0}>
+						<Link href={site.adminHref()} onClick={closeMobile}>
+							<Text variant="title" truncate>
+								{site.SITE_NAME || "CMS"}
+							</Text>
+						</Link>
+					</Box>
 				)}
 				<SidebarRailToggle />
 			</SidebarHeader>
@@ -262,7 +252,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 					})}
 				</SidebarMenu>
 				<SidebarFoot>
-					<ThemeMenu />
+					<ScreenModeSwitch />
 				</SidebarFoot>
 			</SidebarFooter>
 		</Sidebar>

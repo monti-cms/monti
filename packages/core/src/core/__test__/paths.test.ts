@@ -20,12 +20,11 @@ describe("admin addresses (admin.path)", () => {
 		expect(() => adminHrefWith("/admin", "media")).toThrow(/must start with/);
 	});
 
-	it("follows the site config (/admin if absent, view site is /)", () => {
+	it("follows the site config (/admin if absent)", () => {
 		expect(testSite.ADMIN_PATH).toBe(testConfig.admin?.path ?? DEFAULT_ADMIN_PATH);
 		expect(testSite.adminHref()).toBe(testSite.ADMIN_PATH);
 		expect(testSite.adminHref("/login")).toBe(`${testSite.ADMIN_PATH}/login`);
 		expect(testSite.adminEntryEditHref("e1")).toBe(`${testSite.ADMIN_PATH}/entries/e1/edit`);
-		expect(testSite.SITE_HOME).toBe(testConfig.site?.home ?? "/");
 	});
 });
 

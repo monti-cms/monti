@@ -1,28 +1,8 @@
-import {
-	Document,
-	Edit,
-	Folder,
-	Image,
-	Launch,
-	ListBulleted,
-	Screen,
-	SettingsAdjust,
-	Tag,
-	Tools,
-	TrashCan,
-} from "@carbon/icons-react";
+import { Document, Edit, Folder, Image, ListBulleted, SettingsAdjust, Tag, Tools, TrashCan } from "@carbon/icons-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type * as React from "react";
+import * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { Count } from "./count";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuTrigger,
-} from "./dropdown-menu";
-import { IconButton } from "./icon-button";
 import {
 	Sidebar,
 	SidebarContent,
@@ -30,7 +10,6 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarHeader,
-	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -40,6 +19,7 @@ import {
 	SidebarMenuSubButton,
 	SidebarProvider,
 	SidebarRailToggle,
+	SidebarScreenMode,
 	useSidebar,
 } from "./sidebar";
 import { Heading, Text } from "./text";
@@ -79,19 +59,14 @@ function Row({
 
 /** The screen mode at the foot: one icon button that shows the current mode and opens the three modes upward, a ✓ on the current one. */
 function ScreenMode({ open }: { open?: boolean }) {
+	const [mode, setMode] = React.useState<"system" | "light" | "dark">("system");
 	return (
-		<DropdownMenu defaultOpen={open}>
-			<IconButton label="화면 모드" side="right" trigger={(button) => <DropdownMenuTrigger render={button} />}>
-				<Screen aria-hidden />
-			</IconButton>
-			<DropdownMenuContent side="top" align="start">
-				<DropdownMenuRadioGroup value="system">
-					<DropdownMenuRadioItem value="system">시스템</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="light">라이트</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="dark">다크</DropdownMenuRadioItem>
-				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<SidebarScreenMode
+			value={mode}
+			onValueChange={setMode}
+			defaultOpen={open}
+			labels={{ label: "화면 모드", system: "시스템", light: "라이트", dark: "다크" }}
+		/>
 	);
 }
 
@@ -104,14 +79,9 @@ function AdminSidebar({ active = "posts", themeOpen = false }: { active?: Open; 
 		<Sidebar label="관리 메뉴">
 			<SidebarHeader>
 				{!rail && (
-					<>
-						<Text variant="title" className="grow truncate">
-							example.dev
-						</Text>
-						<SidebarIconLink href="#top" label="사이트 열기">
-							<Launch aria-hidden />
-						</SidebarIconLink>
-					</>
+					<Text variant="title" className="grow truncate">
+						example.dev
+					</Text>
 				)}
 				<SidebarRailToggle />
 			</SidebarHeader>

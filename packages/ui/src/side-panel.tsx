@@ -27,9 +27,8 @@ const SIDE_PANEL_WIDTH = {
 /**
  * A panel beside a screen, for what is looked at together with it (a media file, an activity, an entry's properties, the assistant): it does not
  * cover the screen. A fixed width by `width`, a cream ground, a line down its left edge, and a 60px head with the title (16px bold), the panel's
- * icon buttons and the close button. Under the body an optional foot holds the one pill, or the box to type in. The head leaves its right side free
- * for the ✦ button that floats in the top right corner (`corner`); the assistant, which is where ✦ leads, turns that off. The panel is named by its
- * title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
+ * icon buttons and the close button. Under the body an optional foot holds the one pill, or the box to type in. Docked at the window's right edge,
+ * it covers the ✦ button of the page's corner. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and the foot are one form, so Enter
  * in a field and the foot's submit button save it.
  */
 export function SidePanel({
@@ -38,7 +37,6 @@ export function SidePanel({
 	onClose,
 	footer,
 	width = "side",
-	corner = true,
 	bleed = false,
 	onSubmit,
 	className,
@@ -52,8 +50,6 @@ export function SidePanel({
 	/** Pinned under the body. */
 	footer?: ReactNode;
 	width?: keyof typeof SIDE_PANEL_WIDTH;
-	/** Keeps the right of the head free for the ✦ button in the corner. */
-	corner?: boolean;
 	/** The body keeps no padding or gap of its own: for content that lays out its own sections edge to edge (tabs, bands). */
 	bleed?: boolean;
 	onSubmit?: FormEventHandler<HTMLFormElement>;
@@ -84,7 +80,7 @@ export function SidePanel({
 			)}
 			{...props}
 		>
-			<header data-slot="side-panel-header" className={cn(PANEL_HEAD, corner && "pr-monti-48")}>
+			<header data-slot="side-panel-header" className={PANEL_HEAD}>
 				<h2 id={titleId} className={PANEL_TITLE}>
 					{title}
 				</h2>

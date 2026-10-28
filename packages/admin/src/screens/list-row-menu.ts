@@ -26,6 +26,17 @@ export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 	status: item.status,
 });
 
+/** The ids each relation field holds across these rows (the tags any of them has), for the menus that take one away. */
+export function heldRelations(items: readonly ListEntriesItem[]): Record<string, Set<string>> {
+	const held: Record<string, Set<string>> = {};
+	for (const item of items)
+		for (const [field, values] of Object.entries(item.relations)) {
+			held[field] ??= new Set();
+			for (const value of values) held[field].add(value.id);
+		}
+	return held;
+}
+
 /**
  * Target of right-click / Delete key. If the pressed row is one of the selected rows and two or more are selected, all selected rows; otherwise just that row.
  */

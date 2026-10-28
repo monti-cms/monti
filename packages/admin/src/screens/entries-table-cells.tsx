@@ -3,7 +3,7 @@
 import { Folder as FolderIcon } from "@carbon/icons-react";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Box, Inline, RowLink, Text } from "@monti-cms/ui";
 import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
@@ -86,14 +86,12 @@ function DefaultEntryCell({
 				);
 			return isRecord ? (
 				<Inline align="baseline" gap={8} minWidth={0}>
-					{titleBox(
-						<TextButton render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</TextButton>,
-					)}
+					{titleBox(<RowLink render={<button type="button" onClick={() => onOpenRecord(item)} />}>{title}</RowLink>)}
 					{slug}
 				</Inline>
 			) : (
 				<Inline align="baseline" gap={8} minWidth={0}>
-					{titleBox(<TextButton render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</TextButton>)}
+					{titleBox(<RowLink render={<Link href={site.adminEntryEditHref(item.id)} />}>{title}</RowLink>)}
 					{slug}
 					{showFolderBesideTitle && item.folderId && (
 						<Inline gap={4} minWidth={0}>

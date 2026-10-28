@@ -15,13 +15,19 @@ export interface FilterField {
 	readonly options?: readonly { readonly value: string; readonly label: string }[];
 }
 
-/** What each kind takes, which is what the list API accepts too. */
+/**
+ * What each kind takes in the filter menu. A text or an image is only ever looked for when it is missing ("what still has no description"), so those take
+ * only "empty" and are listed together under one "Blank" row; a select or a relation takes "none" and its values.
+ */
 const TAKES: Record<FilterFieldKind, readonly FieldCondition["kind"][]> = {
-	text: ["empty", "filled"],
-	media: ["empty", "filled"],
+	text: ["empty"],
+	media: ["empty"],
 	select: ["empty", "is"],
 	relation: ["empty", "is"],
 };
+
+/** Whether a field is found by being blank alone: a text or an image. */
+export const isBlankField = (field: FilterField): boolean => field.kind === "text" || field.kind === "media";
 
 /** Whether a field of this kind takes this kind of condition. */
 export const takesCondition = (kind: FilterFieldKind, condition: FieldCondition["kind"]): boolean =>

@@ -83,10 +83,8 @@ describe("moving around by the rail", () => {
 		const buttons = within(rail())
 			.queryAllByRole("button")
 			.map((button) => button.getAttribute("aria-label"));
-		// The fold button in the head row and the screen mode at the foot are the only buttons.
-		expect(buttons).toHaveLength(2);
-		expect(buttons).toContain(tui("sidebar.fold"));
-		expect(buttons).toContain(tui("theme.label"));
+		// The fold button in the head row and the three screen modes at the foot are the only buttons.
+		expect(buttons).toEqual([tui("sidebar.fold"), tui("theme.system"), tui("theme.light"), tui("theme.dark")]);
 	});
 
 	it("keeps the pages of the tools page behind the one tools row", () => {
@@ -158,18 +156,10 @@ describe("moving around by the rail", () => {
 	});
 });
 
-describe("the site's name and the way to the site", () => {
+describe("the site's name", () => {
 	it("links the name to the admin home", () => {
 		renderRail();
 		expect(link(site.SITE_NAME || "CMS").getAttribute("href")).toBe(site.adminHref());
-	});
-
-	it("opens the site in a new tab from an icon link next to the name", () => {
-		renderRail();
-		const open = link(t("sidebar.viewSite"));
-		expect(open.getAttribute("href")).toBe(site.SITE_HOME);
-		expect(open.getAttribute("target")).toBe("_blank");
-		expect(open.textContent?.trim()).toBe("");
 	});
 });
 

@@ -55,12 +55,6 @@ export const DEFAULT_ADMIN_PATH = "/admin";
  */
 export const isAdminPath = (path: string): boolean => /^(\/[A-Za-z0-9_-]+)+$/.test(path) && !/^\/api(\/|$)/.test(path);
 
-/** `site.home`: a path (`/`) or an http(s) URL. */
-export const isHomeHref = (href: string): boolean => {
-	if (href.startsWith("/")) return !href.startsWith("//");
-	return isHttpUrl(href);
-};
-
 /** Whether the value is an http(s) URL. */
 export const isHttpUrl = (value: string): boolean => {
 	try {

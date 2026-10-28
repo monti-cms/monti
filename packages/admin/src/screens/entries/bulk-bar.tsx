@@ -218,6 +218,7 @@ export function bulkActionsFor({
 export function BulkBar({
 	collection,
 	selected,
+	held = {},
 	folders,
 	mode = "list",
 	selectAll,
@@ -226,6 +227,8 @@ export function BulkBar({
 }: {
 	collection: string;
 	selected: BulkSelection[];
+	/** The ids each relation field holds across the picked rows: a remove menu offers only those. */
+	held?: Readonly<Record<string, ReadonlySet<string>>>;
 	/** The folders items can move to; `null` where the list shows no folders, which leaves out the folder move. */
 	folders: readonly Folder[] | null;
 	mode?: "list" | "trash";
@@ -279,7 +282,11 @@ export function BulkBar({
 	const relationItems = (action: ListAction) => {
 		const relation = definition(action)?.relation;
 		if (!relation) return null;
-		const items = options[relation.field] ?? [];
+		const offered = options[relation.field] ?? [];
+		const items =
+			relation.op === "relation.remove" ? offered.filter((item) => held[relation.field]?.has(item.id)) : offered;
+		// Nothing to add or take away: the row is left out rather than opening an empty menu.
+		if (items.length === 0 && relation.op !== "relation.set") return null;
 		return (
 			<DropdownMenuSub key={action}>
 				<DropdownMenuSubTrigger>{definition(action)?.label}</DropdownMenuSubTrigger>

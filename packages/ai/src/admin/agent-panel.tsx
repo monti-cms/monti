@@ -186,7 +186,6 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 		<SidePanel
 			data-testid="agent-panel"
 			width="assistant"
-			corner={false}
 			title={t("label")}
 			onClose={onClose}
 			actions={

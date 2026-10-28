@@ -17,7 +17,7 @@ const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
 describe("admin list state", () => {
 	it("round-trips filters through the URL", () => {
 		const url = new URLSearchParams(
-			"collection=post&folder=f1&descendants=1&search=리액트&status=published&status=draft&changes=1&field=tagIds:empty&field=tagIds:is:t1&field=summary:filled&translation=changed&translation=none&updated=last30&published=2026-03-01..2026-03-05&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
+			"collection=post&folder=f1&descendants=1&search=리액트&status=published&status=draft&changes=1&field=tagIds:empty&field=tagIds:is:t1&field=summary:empty&translation=changed&translation=none&updated=last30&published=2026-03-01..2026-03-05&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
 		);
 		const state = parseListState(testSite, url);
 		expect(state).toMatchObject({
@@ -29,7 +29,7 @@ describe("admin list state", () => {
 			hasChanges: true,
 			fields: {
 				tagIds: [{ kind: "empty" }, { kind: "is", value: "t1" }],
-				summary: [{ kind: "filled" }],
+				summary: [{ kind: "empty" }],
 			},
 			translations: ["changed", "none"],
 			updated: { kind: "preset", preset: "last30" },

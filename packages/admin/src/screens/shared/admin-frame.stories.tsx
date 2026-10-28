@@ -32,7 +32,7 @@ export const PluginPanelOpen: Story = {
 						label: "어시스턴트",
 						icon: Spark,
 						Component: ({ onClose }) => (
-							<SidePanel title="어시스턴트" width="assistant" corner={false} onClose={onClose}>
+							<SidePanel title="어시스턴트" width="assistant" onClose={onClose}>
 								<Text tone="muted">무엇을 도와 드릴까요?</Text>
 							</SidePanel>
 						),

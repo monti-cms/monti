@@ -3,7 +3,7 @@
 import { Folder as FolderIcon, FolderOpen, FolderParent } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { RowActions, TableCell, TableRow, Text, TextButton } from "@monti-cms/ui";
+import { RowActions, RowLink, TableCell, TableRow, Text } from "@monti-cms/ui";
 import { commonMessages } from "../lib/common.messages";
 import { ROW_ENDS } from "./entries-table-row";
 import { screensMessages } from "./messages";
@@ -51,12 +51,9 @@ export function EntriesTableFolderRows({
 								<FolderParent aria-hidden size={16} />
 							</TableCell>
 							<TableCell colSpan={(visibleCount ?? 3) - 1}>
-								<TextButton
-									variant="quiet"
-									render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}
-								>
+								<RowLink render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}>
 									{t("list.folderUp")}
-								</TextButton>
+								</RowLink>
 							</TableCell>
 						</TableRow>
 					)}
@@ -67,7 +64,7 @@ export function EntriesTableFolderRows({
 							</TableCell>
 							<TableCell colSpan={(visibleCount ?? 3) - 2}>
 								<Text weight="medium">
-									<TextButton
+									<RowLink
 										render={
 											<button
 												type="button"
@@ -77,14 +74,16 @@ export function EntriesTableFolderRows({
 										}
 									>
 										{folder.name}
-									</TextButton>
+									</RowLink>
 								</Text>
 							</TableCell>
 							<TableCell align="end">
-								<MoreActionsButton
-									actions={folderRowMenu(folder)}
-									label={t("list.folderActions", { name: folder.name })}
-								/>
+								<RowActions>
+									<MoreActionsButton
+										actions={folderRowMenu(folder)}
+										label={t("list.folderActions", { name: folder.name })}
+									/>
+								</RowActions>
 							</TableCell>
 						</ActionContextMenu>
 					))}
@@ -97,12 +96,9 @@ export function EntriesTableFolderRows({
 								<FolderParent aria-hidden size={16} />
 							</TableCell>
 							<TableCell>
-								<TextButton
-									variant="quiet"
-									render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}
-								>
+								<RowLink render={<button type="button" onClick={() => onSelectFolder(explorer.parent ?? "all")} />}>
 									{t("list.folderUp")}
-								</TextButton>
+								</RowLink>
 							</TableCell>
 							{cellSizes.map((size, index) => (
 								<TableCell key={`${index}-${size}`} size={size} />
@@ -116,7 +112,7 @@ export function EntriesTableFolderRows({
 								<FolderIcon aria-hidden size={16} />
 							</TableCell>
 							<TableCell>
-								<TextButton
+								<RowLink
 									render={
 										<button
 											type="button"
@@ -126,7 +122,7 @@ export function EntriesTableFolderRows({
 									}
 								>
 									{folder.name}
-								</TextButton>
+								</RowLink>
 							</TableCell>
 							{cellSizes.map((size, index) => (
 								<TableCell key={`${index}-${size}`} size={size} />

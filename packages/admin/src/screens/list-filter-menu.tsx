@@ -23,7 +23,6 @@ import {
 	MenuTick,
 } from "@monti-cms/ui";
 import { Fragment, useState } from "react";
-import type { TranslatorFor } from "../translator";
 import { adminCalendarLocale } from "../ui/calendar-locale";
 import { useRelationSearch } from "./entries/use-relation-search";
 import { DATE_PRESETS, type DateFilter } from "./list-dates";
@@ -37,11 +36,6 @@ import { useListCounts } from "./use-list-counts";
 type Change = (patch: Partial<ListState>) => void;
 
 /** The text of a condition's row, by the kind of field it is on. */
-function conditionLabel(t: TranslatorFor<typeof screensMessages>, field: FilterField, kind: "empty" | "filled") {
-	if (field.kind === "text") return kind === "empty" ? t("listMenu.textEmpty") : t("listMenu.textFilled");
-	return kind === "empty" ? t("listMenu.none") : t("listMenu.has");
-}
-
 /** A condition on a field, turned on or off in the state. A field with no condition left is left out. */
 function withCondition(state: ListState, name: string, condition: FieldCondition): Partial<ListState> {
 	const next = toggleCondition(state.fields[name], condition);
@@ -92,7 +86,7 @@ function RelationValues({ field, state, onChange }: { field: FilterField; state:
 				onToggle={() => onChange(withCondition(state, field.name, { kind: "empty" }))}
 				count={counts?.empty}
 			>
-				{conditionLabel(t, field, "empty")}
+				{t("listMenu.none")}
 			</ValueRow>
 			<DropdownMenuSeparator />
 			<DropdownMenuScroll>
@@ -111,7 +105,7 @@ function RelationValues({ field, state, onChange }: { field: FilterField; state:
 	);
 }
 
-/** The values a field of this kind takes (`README.md` of the design system: "none" first, then what the kind has). */
+/** The values of a select or a relation (`README.md` of the design system: "none" first, then what the field has). */
 function FieldValues({ field, state, onChange }: { field: FilterField; state: ListState; onChange: Change }) {
 	const t = useTranslator(screensMessages);
 	const counts = useListCounts(state, { field: field.name }, field.kind !== "relation");
@@ -125,17 +119,8 @@ function FieldValues({ field, state, onChange }: { field: FilterField; state: Li
 				onToggle={() => toggle({ kind: "empty" })}
 				count={counts?.empty}
 			>
-				{conditionLabel(t, field, "empty")}
+				{t("listMenu.none")}
 			</ValueRow>
-			{(field.kind === "text" || field.kind === "media") && (
-				<ValueRow
-					checked={hasCondition(conditions, { kind: "filled" })}
-					onToggle={() => toggle({ kind: "filled" })}
-					count={counts?.filled}
-				>
-					{conditionLabel(t, field, "filled")}
-				</ValueRow>
-			)}
 			{field.kind === "select" && (
 				<>
 					<DropdownMenuSeparator />
@@ -151,6 +136,32 @@ function FieldValues({ field, state, onChange }: { field: FilterField; state: Li
 					))}
 				</>
 			)}
+		</>
+	);
+}
+
+/** The texts and images of "Blank", each ticked to keep the rows where it is empty. Several are OR, like the values of one field. */
+function BlankValues({
+	fields,
+	state,
+	onChange,
+}: {
+	fields: readonly FilterField[];
+	state: ListState;
+	onChange: Change;
+}) {
+	return (
+		<>
+			{fields.map((field) => (
+				<ValueRow
+					key={field.name}
+					checked={hasCondition(state.fields[field.name], { kind: "empty" })}
+					onToggle={() => onChange(withCondition(state, field.name, { kind: "empty" }))}
+					count={undefined}
+				>
+					{field.label}
+				</ValueRow>
+			))}
 		</>
 	);
 }
@@ -218,7 +229,7 @@ const dateValue = (filter: DateFilter | null): string => (filter?.kind === "pres
 
 /**
  * The calendar the "pick a period" row opens in a card at the side of the date menu, which stays open behind it. The first day clicked starts the period and
- * the second ends it (the same day twice is one day); the second click applies the period and closes the whole menu.
+ * the second ends it (the same day twice is one day); the second click applies the period, and the calendar stays open showing it.
  */
 function RangeCalendar({
 	filter,
@@ -240,6 +251,7 @@ function RangeCalendar({
 			onDayClick={(day) => {
 				if (!start) return setStart(day);
 				const [from, to] = start <= day ? [start, day] : [day, start];
+				setStart(null);
 				onApply(dateToDay(from), dateToDay(to));
 			}}
 		/>
@@ -274,7 +286,7 @@ function DateValues({
 							}}
 						>
 							{DATE_PRESETS.map((preset) => (
-								<DropdownMenuRadioItem key={preset} value={preset}>
+								<DropdownMenuRadioItem key={preset} value={preset} closeOnClick={false}>
 									{t(`listMenu.${preset}`)}
 								</DropdownMenuRadioItem>
 							))}
@@ -315,53 +327,50 @@ function Row({
 				{row.kind === "translation" && <TranslationValues state={state} onChange={onChange} />}
 				{row.kind === "date" && <DateValues state={state} onChange={onChange} onApplyRange={onApplyRange} />}
 				{row.kind === "field" && <FieldValues field={row.field} state={state} onChange={onChange} />}
+				{row.kind === "blank" && <BlankValues fields={row.fields} state={state} onChange={onChange} />}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
 	);
 }
 
 /**
- * The "Filter" menu of a list: a search row, then only the names of what can be filtered (language, translation and date, a rule, then the schema's fields),
- * each opening its values at the side. Several values of one field can be on at once (they are OR); different fields narrow each other (AND).
+ * The "Filter" menu of a list: a search row, then only the names of what can be filtered (language, translation and date; the fields with values to pick;
+ * "Blank" for the texts and images), each opening its values at the side. Several values of one field can be on at once (they are OR); different fields narrow each other (AND). Picking a
+ * value leaves the menu open, so several filters are set in one go; Escape or a click outside closes it.
  */
 export function ListFilterMenu({ state, onChange }: { state: ListState; onChange: Change }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const [text, setText] = useState("");
-	const [open, setOpen] = useState(false);
-	const { top, fields } = filterRowsOf(site, state.collection);
-	const shown = (rows: FilterRow[]) => rows.filter((row) => rowMatches(row, text));
+	const { top, fields, blank } = filterRowsOf(site, state.collection);
+	// The groups that have a row matching the search, with a rule between them.
+	const groups = [top, fields, blank]
+		.map((rows) => rows.filter((row) => rowMatches(row, text)))
+		.filter((rows) => rows.length > 0);
 	const rowKey = (row: FilterRow) => (row.kind === "field" ? `field:${row.field.name}` : row.kind);
 	const pick = {
 		state,
 		onChange,
-		// The second day of a period applies it and closes everything.
-		onApplyRange: (key: DateKey, from: string, to: string) => {
-			onChange({ [key]: { kind: "range", from, to } });
-			setOpen(false);
-		},
+		onApplyRange: (key: DateKey, from: string, to: string) => onChange({ [key]: { kind: "range", from, to } }),
 	};
 	return (
 		<DropdownMenu
-			open={open}
 			onOpenChange={(next) => {
-				setOpen(next);
 				if (next) setText("");
 			}}
 		>
 			<DropdownMenuTrigger render={<FilterButton />}>{t("listMenu.filter")}</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
 				<DropdownMenuSearch label={t("listMenu.filterSearch")} value={text} onValueChange={setText} />
-				{shown(top).map((row) => (
-					<Row key={rowKey(row)} row={row} {...pick} />
+				{groups.map((rows, index) => (
+					<Fragment key={rowKey(rows[0] as FilterRow)}>
+						{index > 0 && <DropdownMenuSeparator />}
+						{rows.map((row) => (
+							<Row key={rowKey(row)} row={row} {...pick} />
+						))}
+					</Fragment>
 				))}
-				{shown(top).length > 0 && shown(fields).length > 0 && <DropdownMenuSeparator />}
-				{shown(fields).map((row) => (
-					<Row key={rowKey(row)} row={row} {...pick} />
-				))}
-				{shown(top).length + shown(fields).length === 0 && (
-					<DropdownMenuItem disabled>{t("listMenu.noMatch")}</DropdownMenuItem>
-				)}
+				{groups.length === 0 && <DropdownMenuItem disabled>{t("listMenu.noMatch")}</DropdownMenuItem>}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

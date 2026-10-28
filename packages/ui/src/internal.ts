@@ -218,7 +218,6 @@ export {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarHeader,
-	SidebarIconLink,
 	SidebarInset,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -228,6 +227,7 @@ export {
 	SidebarMenuSubButton,
 	SidebarProvider,
 	SidebarRailToggle,
+	SidebarScreenMode,
 	SidebarTrigger,
 	useSidebar,
 } from "./sidebar";
@@ -240,8 +240,10 @@ export { StatusBarList } from "./status-bar-list";
 export { Suggest } from "./suggest";
 export { Switch } from "./switch";
 export {
+	ListScroll,
 	RowActions,
 	RowCheck,
+	RowLink,
 	RowTitle,
 	Table,
 	TableBody,

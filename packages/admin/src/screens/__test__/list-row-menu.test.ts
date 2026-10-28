@@ -1,7 +1,13 @@
 import type { ListEntriesItem } from "@monti-cms/core/site";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { actionTargets, type RowMenuContext, type RowMenuHandlers, rowMenuActions } from "../list-row-menu";
+import {
+	actionTargets,
+	heldRelations,
+	type RowMenuContext,
+	type RowMenuHandlers,
+	rowMenuActions,
+} from "../list-row-menu";
 import { screensMessages } from "../messages";
 import type { MenuAction } from "../shared/action-menu";
 
@@ -137,5 +143,19 @@ describe("row menu items", () => {
 		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([
 			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
 		]);
+	});
+});
+
+describe("the relations the picked rows hold", () => {
+	const tagged = (id: string, tags: string[]) =>
+		({ ...item(id), relations: { tagIds: tags.map((tag) => ({ id: tag, title: tag })) } }) as ListEntriesItem;
+
+	it("are every tag any of the rows has, once", () => {
+		const held = heldRelations([tagged("a", ["t1", "t2"]), tagged("b", ["t2", "t3"])]);
+		expect([...(held.tagIds ?? [])]).toEqual(["t1", "t2", "t3"]);
+	});
+
+	it("are none for rows without tags", () => {
+		expect(heldRelations([tagged("a", [])]).tagIds?.size).toBe(0);
 	});
 });

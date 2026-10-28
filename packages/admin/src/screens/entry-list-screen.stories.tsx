@@ -98,6 +98,8 @@ const server =
 			const inTrash = url.searchParams.getAll("status").includes("trashed");
 			// The sidebar's trash badge asks for trashed rows of the same collection; only the list itself goes through `list`.
 			if (list && !inTrash && collection === "post") return list(url);
+			// The tags the bulk bar adds or takes away: every tag a row holds, and the ones the filter menu lists.
+			if (collection === "tag" && !inTrash) return { items: tagEntries, total: tagEntries.length };
 			const rows = collection !== "post" ? [] : inTrash ? trash : items;
 			return { items: rows, total: inTrash || collection !== "post" ? rows.length : (total ?? rows.length) };
 		}
@@ -113,6 +115,15 @@ const filterTags = [
 	{ id: "tag-perf", title: "성능", count: 8 },
 	{ id: "tag-tools", title: "도구", count: 6 },
 	{ id: "tag-design", title: "디자인", count: 4 },
+];
+
+const tagEntries = [
+	...new Map(
+		[...posts.flatMap((post) => post.relations.tagIds ?? []), ...filterTags].map(({ id, title }) => [
+			id,
+			entry(title ?? id, { id, title, slug: id, status: "published" }),
+		]),
+	).values(),
 ];
 const countsOf = (facet: string) =>
 	facet === "tagIds"
@@ -209,6 +220,13 @@ export const FilterMenuOpen: Story = {
 	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "태그"),
 };
 
+/** The texts and images are one "Blank" row: each ticked keeps the rows where it is empty, and its chip says "… 빈 칸". */
+export const FilterBlankOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 }), "collection=post&field=seoDescription:empty"),
+	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "빈 칸"),
+};
+
 /** The first level names fields only; the fields' values open at the side, with how many rows have each. */
 export const FilterTranslationOpen: Story = {
 	...visual,
@@ -291,6 +309,18 @@ export const BulkMoreOpen: Story = {
 		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더보기" }));
 		await body().findAllByRole("menuitem");
+	},
+};
+
+/** "Take a tag away" offers only the tags the picked rows hold. */
+export const BulkTagRemoveOpen: Story = {
+	...visual,
+	render: listScreen(server({ folders })),
+	play: async ({ canvasElement }) => {
+		await selectRows(canvasElement, "첫 번째 글", "쓰는 중인 글");
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "더보기" }));
+		await userEvent.click(await body().findByRole("menuitem", { name: "태그 빼기" }));
+		await body().findByRole("menuitem", { name: "회고" });
 	},
 };
 

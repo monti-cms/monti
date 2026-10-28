@@ -7,10 +7,14 @@ const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(
 const labelsOf = (rows: { label: string }[]) => rows.map((row) => row.label);
 
 describe("the first level of the filter menu", () => {
-	it("lists language, translation and date, then the fields in schema order", () => {
-		const { top, fields } = filterRowsOf(testSite, "post");
+	it("lists language, translation and date, then the fields with values in schema order, then one row for the blank texts and images", () => {
+		const { top, fields, blank } = filterRowsOf(testSite, "post");
 		expect(top.map((row) => row.kind)).toEqual(["locale", "translation", "date"]);
-		expect(labelsOf(fields).slice(0, 5)).toEqual(["요약", "카테고리", "태그", "정책", "대체 글"]);
+		expect(labelsOf(fields).slice(0, 4)).toEqual(["카테고리", "태그", "정책", "대체 글"]);
+		expect(labelsOf(fields)).not.toContain("요약");
+		expect(blank.map((row) => (row.kind === "blank" ? row.fields.map((field) => field.label) : []))[0]).toContain(
+			"요약",
+		);
 	});
 
 	it("has no language or translation row for an item collection, only a date", () => {
@@ -23,15 +27,16 @@ describe("the first level of the filter menu", () => {
 	});
 
 	it("has no row for the folder: the sidebar filters by folder", () => {
-		const all = [...filterRowsOf(testSite, "post").top, ...filterRowsOf(testSite, "post").fields];
+		const { top, fields, blank } = filterRowsOf(testSite, "post");
+		const all = [...top, ...fields, ...blank];
 		expect(labelsOf(all)).not.toContain("폴더");
 	});
 });
 
 describe("finding a filter", () => {
-	const { top, fields } = filterRowsOf(testSite, "post");
+	const { top, fields, blank } = filterRowsOf(testSite, "post");
 	const row = (label: string) =>
-		[...top, ...fields].find((candidate) => candidate.label === label) as (typeof top)[number];
+		[...top, ...fields, ...blank].find((candidate) => candidate.label === label) as (typeof top)[number];
 
 	it("matches a field by its name, ignoring case and the spaces around", () => {
 		expect(rowMatches(row("태그"), " 태 ")).toBe(true);
@@ -41,7 +46,11 @@ describe("finding a filter", () => {
 
 	it("matches a select by the options it offers", () => {
 		expect(rowMatches(row("정책"), "지원 중단")).toBe(true);
-		expect(rowMatches(row("요약"), "지원 중단")).toBe(false);
+		expect(rowMatches(row("태그"), "지원 중단")).toBe(false);
+	});
+
+	it("matches the blank row by the fields it lists", () => {
+		expect(rowMatches(row("빈 칸"), "요약")).toBe(true);
 	});
 });
 
@@ -57,7 +66,7 @@ describe("the chips of the filters that are on", () => {
 		expect(chips("collection=post&field=tagIds:empty&field=tagIds:is:t1")).toEqual([
 			["field:tagIds", "태그: 없음, 리액트"],
 		]);
-		expect(chips("collection=post&field=summary:filled")).toEqual([["field:summary", "요약: 채워짐"]]);
+		expect(chips("collection=post&field=summary:empty")).toEqual([["field:summary", "요약 빈 칸"]]);
 		expect(chips("collection=post&field=policy:is:deprecated")).toEqual([["field:policy", "정책: 지원 중단"]]);
 	});
 
@@ -73,10 +82,10 @@ describe("the chips of the filters that are on", () => {
 	});
 
 	it("each take only their own filter off", () => {
-		const state = stateOf("collection=post&field=tagIds:empty&field=summary:filled&translation=none");
+		const state = stateOf("collection=post&field=tagIds:empty&field=summary:empty&translation=none");
 		const all = filterChipsOf(testSite, state, titles);
 		const tags = all.find((chip) => chip.key === "field:tagIds");
-		expect({ ...state, ...tags?.clear }.fields).toEqual({ summary: [{ kind: "filled" }] });
+		expect({ ...state, ...tags?.clear }.fields).toEqual({ summary: [{ kind: "empty" }] });
 		const translation = all.find((chip) => chip.key === "translation");
 		expect({ ...state, ...translation?.clear }.translations).toEqual([]);
 	});

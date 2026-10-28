@@ -6,11 +6,11 @@ import { usePanelDock } from "./panel-dock";
 
 /**
  * Where the panel opened beside a page (a record, a media file, an activity) sits: at the window's right edge, full height, beside the whole page; the
- * page then centres in the room that is left. On a narrower window it floats over the right edge instead. The panel inside (`SidePanel`) has its own
- * fixed width.
+ * page then centres in the room that is left. On a narrower window it floats over the right edge instead. Either way it covers the ✦ button in the
+ * page's corner. The panel inside (`SidePanel`) has its own fixed width.
  */
 const SIDE_PANEL_DOCK =
-	"fixed inset-y-0 right-0 z-20 flex max-w-full shadow-monti-floating lg:static lg:z-auto lg:shrink-0 lg:shadow-none";
+	"fixed inset-y-0 right-0 z-20 flex max-w-full shadow-monti-floating lg:relative lg:shrink-0 lg:shadow-none";
 
 /**
  * The slot a panel is put in. It is drawn in the dock of the admin frame, wherever the screen that opens it is in the page; outside a frame it stays
@@ -22,11 +22,15 @@ export function DockedPanel({ children }: { children: ReactNode }) {
 	if (dock === undefined) return slot;
 	return dock ? createPortal(slot, dock) : null;
 }
-/** The slot of the plugin's panel: a column beside the page on a wide window, floating over its right edge on a narrow one. */
+/** The slot of the plugin's panel: a column beside the page on a wide window, floating over its right edge on a narrow one. It covers the ✦ that opened it. */
 export function PluginPanelSlot({ overlay, children }: { overlay: boolean; children: ReactNode }) {
 	return (
 		<div
-			className={overlay ? "fixed inset-y-0 right-0 z-30 flex w-full shadow-monti-floating sm:w-auto" : "flex shrink-0"}
+			className={
+				overlay
+					? "fixed inset-y-0 right-0 z-30 flex w-full shadow-monti-floating sm:w-auto"
+					: "relative z-20 flex shrink-0"
+			}
 		>
 			{children}
 		</div>

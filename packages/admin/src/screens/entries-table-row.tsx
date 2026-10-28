@@ -16,7 +16,7 @@ import { entryStatusKind, statusLabels } from "./shared/entry-status";
 
 /**
  * Column widths of a row, in px. They are the design system's grid (`44 · 1fr · 190 · 48 · 64 · 48 · 16`) plus the 8px each cell adds to the 12px the board
- * leaves between columns, so the title gets what the board gives it.
+ * leaves between columns, so the title gets what the board gives it. The ⋯ cell holds its 32px button and the cell's padding.
  */
 const SIZE = {
 	month: 52,
@@ -27,7 +27,7 @@ const SIZE = {
 	field: 160,
 	slug: 160,
 	folder: 140,
-	actions: 40,
+	actions: 54,
 } as const;
 
 /** The widths of the cells after the title, in order, for the columns of a row: the taxonomy fields are one cell. Rows that are not entries (folders) draw empty cells of these widths, so every row keeps the same columns. */

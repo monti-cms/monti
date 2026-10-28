@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/site";
 import { collectionTranslated } from "./list-columns";
 import type { DateFilter } from "./list-dates";
-import { type FilterField, filterFieldsOf } from "./list-filter-fields";
+import { type FilterField, filterFieldsOf, isBlankField } from "./list-filter-fields";
 import { shortDay } from "./list-row-dates";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
@@ -11,12 +11,17 @@ export type FilterRow =
 	| { readonly kind: "locale"; readonly label: string }
 	| { readonly kind: "translation"; readonly label: string }
 	| { readonly kind: "date"; readonly label: string }
-	| { readonly kind: "field"; readonly label: string; readonly field: FilterField };
+	| { readonly kind: "field"; readonly label: string; readonly field: FilterField }
+	| { readonly kind: "blank"; readonly label: string; readonly fields: readonly FilterField[] };
 
-/** The first level of the filter menu: the rows every list has, then (after a rule) the collection's fields in schema order. Folders are not here: the sidebar filters them. */
+/**
+ * The first level of the filter menu, in three groups with a rule between: the rows every list has; the fields that have values to pick (selects and
+ * relations), in schema order; and one "Blank" row that lists the texts and images to find empty. Folders are not here: the sidebar filters them.
+ */
 export interface FilterRows {
 	readonly top: FilterRow[];
 	readonly fields: FilterRow[];
+	readonly blank: FilterRow[];
 }
 
 /**
@@ -26,6 +31,7 @@ export interface FilterRows {
 export function filterRowsOf(site: Site, collection: string): FilterRows {
 	const t = site.createTranslator(screensMessages);
 	const documents = site.isCollection(collection) && site.isDocumentCollection(collection);
+	const blankFields = filterFieldsOf(site, collection).filter(isBlankField);
 	return {
 		top: [
 			...(documents && collectionTranslated(site, collection)
@@ -36,13 +42,18 @@ export function filterRowsOf(site: Site, collection: string): FilterRows {
 				: []),
 			{ kind: "date", label: t("listMenu.date") },
 		],
-		fields: filterFieldsOf(site, collection).map((field) => ({ kind: "field", label: field.label, field })),
+		fields: filterFieldsOf(site, collection)
+			.filter((field) => !isBlankField(field))
+			.map((field) => ({ kind: "field", label: field.label, field })),
+		blank: blankFields.length > 0 ? [{ kind: "blank", label: t("listMenu.blank"), fields: blankFields }] : [],
 	};
 }
 
-/** What "Find a filter" matches a row by: its name, and the options a select offers (a value can be found without opening its field). */
+/** What "Find a filter" matches a row by: its name, the options a select offers and the fields "Blank" lists (each can be found without opening its row). */
 export function rowTerms(row: FilterRow): string[] {
-	return row.kind === "field" ? [row.label, ...(row.field.options?.map((option) => option.label) ?? [])] : [row.label];
+	if (row.kind === "field") return [row.label, ...(row.field.options?.map((option) => option.label) ?? [])];
+	if (row.kind === "blank") return [row.label, ...row.fields.map((field) => field.label)];
+	return [row.label];
 }
 
 /** Whether a row matches the text typed in "Find a filter" (ignoring case; an empty text matches every row). */
@@ -102,19 +113,25 @@ export function filterChipsOf(
 	if (state.published) {
 		add("published", t("listMenu.published"), dateFilterLabel(site, state.published, now), { published: null });
 	}
-	for (const { field } of filterRowsOf(site, state.collection).fields.flatMap((row) =>
-		row.kind === "field" ? [row] : [],
-	)) {
+	for (const field of filterFieldsOf(site, state.collection)) {
 		const conditions = state.fields[field.name];
 		if (!conditions || conditions.length === 0) continue;
+		const { [field.name]: _off, ...rest } = state.fields;
+		// A blank text or image: "Description blank".
+		if (isBlankField(field)) {
+			chips.push({
+				key: `field:${field.name}`,
+				label: t("listMenu.chipBlank", { label: field.label }),
+				clear: { fields: rest },
+			});
+			continue;
+		}
 		const values = conditions.map((condition) => {
-			if (condition.kind === "empty") return field.kind === "text" ? t("listMenu.textEmpty") : t("listMenu.none");
-			if (condition.kind === "filled") return field.kind === "text" ? t("listMenu.textFilled") : t("listMenu.has");
+			if (condition.kind !== "is") return t("listMenu.none");
 			return field.kind === "select"
 				? (field.options?.find((option) => option.value === condition.value)?.label ?? condition.value)
 				: (titles.get(condition.value) ?? "…");
 		});
-		const { [field.name]: _off, ...rest } = state.fields;
 		add(`field:${field.name}`, field.label, values.join(", "), { fields: rest });
 	}
 	return chips;

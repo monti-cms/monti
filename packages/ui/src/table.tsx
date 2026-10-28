@@ -1,5 +1,7 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import type * as React from "react";
 import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
@@ -85,7 +87,7 @@ function TableRow({
 			aria-selected={selected || undefined}
 			className={cn(
 				props.onClick && "cursor-pointer",
-				"group/row relative border-monti-muted border-b data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-muted",
+				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
 				className,
 			)}
 			{...props}
@@ -118,7 +120,7 @@ function RowCheck({
 	proposal?: boolean;
 }) {
 	return (
-		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] flex -translate-y-1/2", ON_ROW)}>
+		<span data-slot="row-check" className={cn("absolute top-1/2 -left-[26px] z-1 flex -translate-y-1/2", ON_ROW)}>
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(next) => onCheckedChange(next === true)}
@@ -130,9 +132,47 @@ function RowCheck({
 	);
 }
 
+/**
+ * The box a list's rows scroll in. It reaches 32px into the page's left margin, where the row checks ({@link RowCheck}) and the toolbar's select-all hang,
+ * so scrolling does not cut them off; the rows keep the column's width. Put the table in it (`container="none"`); what holds it and the toolbar above must
+ * not clip either.
+ */
+function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="list-scroll"
+			className={cn("-ml-monti-32 flex min-h-0 flex-1 flex-col overflow-y-auto pl-monti-32", className)}
+			{...props}
+		/>
+	);
+}
+
 /** The ⋯ of a row, and anything else that belongs to the pointer being on it: it shows only then. */
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
-	return <span data-slot="row-actions" className={cn("inline-flex", ON_ROW, className)} {...props} />;
+	return <span data-slot="row-actions" className={cn("relative z-1 inline-flex", ON_ROW, className)} {...props} />;
+}
+
+/**
+ * The title of a row as the way into it, in ink: a link (the app's router link goes in `render`), or a button in `render`. What it opens covers the whole
+ * row, so a click anywhere on the row opens it; the row's check and its ⋯ stay above and keep their own clicks. Dragging the row drags the row, not the
+ * link.
+ */
+function RowLink({ className, render, ...props }: useRender.ComponentProps<"a"> & React.ComponentProps<"a">) {
+	return useRender({
+		defaultTagName: "a",
+		props: mergeProps<"a">(
+			{
+				draggable: false,
+				className: cn(
+					"cursor-pointer border-0 bg-transparent p-0 text-left text-monti-default no-underline outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-monti-contrast/20 focus-visible:after:ring-inset",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: { slot: "row-link" },
+	});
 }
 
 /**
@@ -243,4 +283,16 @@ function TableCell({
 	);
 }
 
-export { RowActions, RowCheck, RowTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow };
+export {
+	ListScroll,
+	RowActions,
+	RowCheck,
+	RowLink,
+	RowTitle,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+};

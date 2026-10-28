@@ -163,18 +163,31 @@ describe("flow: filter by a field's value", () => {
 		);
 	});
 
-	it("filters a text field by empty or filled, and a select by its options, with the first level only naming them", async () => {
+	it("finds texts and images that are blank under one row, and a select by its options, with the first level only naming them", async () => {
 		await renderList();
 		openMenu(t("listMenu.filter"));
-		// The first level has only names: no value of any field is a row yet.
+		// The first level has only names: no value of any field is a row yet, and a text field has no row of its own.
 		expect(screen.queryByRole("menuitemcheckbox")).toBeNull();
-		await openSub("요약");
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("listMenu.textFilled")}`) }));
-		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["summary:filled"]));
+		expect(screen.queryByRole("menuitem", { name: "요약" })).toBeNull();
+		await openSub(t("listMenu.blank"));
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "요약" }));
+		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["summary:empty"]));
+		expect(chipNamed(t("listMenu.chipBlank", { label: "요약" }))).toBeTruthy();
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "정책" }), { key: "ArrowRight" });
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^지원 중단/ }));
 		await waitFor(() =>
-			expect(lastList().searchParams.getAll("field")).toEqual(["summary:filled", "policy:is:deprecated"]),
+			expect(lastList().searchParams.getAll("field")).toEqual(["summary:empty", "policy:is:deprecated"]),
+		);
+	});
+
+	it("finds a text field from the search row through the row that lists it", async () => {
+		await renderList();
+		openMenu(t("listMenu.filter"));
+		fireEvent.change(await screen.findByRole("textbox", { name: t("listMenu.filterSearch") }), {
+			target: { value: "요약" },
+		});
+		await waitFor(() =>
+			expect(screen.getAllByRole("menuitem").map((row) => row.textContent?.trim())).toEqual([t("listMenu.blank")]),
 		);
 	});
 });
@@ -201,7 +214,7 @@ describe("flow: filter by translation and language", () => {
 });
 
 describe("flow: filter by a date", () => {
-	it("picks 'last 30 days' of the updated date, which closes the menu, shows a chip and a ✓ when it is opened again", async () => {
+	it("picks 'last 30 days' of the updated date, which leaves the menu open with a ✓ on it and shows a chip", async () => {
 		await renderList();
 		openMenu(t("listMenu.filter"));
 		await openSub(t("listMenu.date"));
@@ -214,13 +227,10 @@ describe("flow: filter by a date", () => {
 			86_400_000;
 		expect(Math.round(days)).toBe(30);
 		expect(nav.search.get("updated")).toBe("last30");
-		await waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
 		expect(chipNamed(`${t("listMenu.updated")}: ${t("listMenu.last30")}`)).toBeTruthy();
-
-		openMenu(t("listMenu.filter"));
-		await openSub(t("listMenu.date"));
+		// Several filters are often set in one go: the menu stays, with the pick ticked.
 		const radios = await screen.findAllByRole("menuitemradio", { name: t("listMenu.last30") });
-		expect(radios[0]?.getAttribute("aria-checked")).toBe("true");
+		await waitFor(() => expect(radios[0]?.getAttribute("aria-checked")).toBe("true"));
 		expect(radios[1]?.getAttribute("aria-checked")).toBe("false");
 	});
 
@@ -246,7 +256,7 @@ describe("flow: filter by a date", () => {
 		expect(screen.getByRole("menuitem", { name: t("listMenu.date") })).toBeTruthy();
 	});
 
-	it("picks a period on the calendar: the first day starts it, the second applies it and closes everything, and a chip says it", async () => {
+	it("picks a period on the calendar: the first day starts it, the second applies it with the menu left open, and a chip says it", async () => {
 		await openCalendar();
 		fireEvent.click(day("10"));
 		expect(nav.search.has("published")).toBe(false);
@@ -254,8 +264,8 @@ describe("flow: filter by a date", () => {
 		fireEvent.click(day("20"));
 		await waitFor(() => expect(nav.search.get("published")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
 		expect(lastList().searchParams.get("publishedFrom")).not.toBeNull();
-		await waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
-		expect(screen.queryByRole("grid")).toBeNull();
+		// The filter menu stays open for the next filter.
+		expect(screen.queryAllByRole("menu").length).toBeGreaterThan(0);
 		expect(
 			screen.getByRole("button", { name: new RegExp(`${t("listMenu.published")}: \\d\\d\\. 10 – \\d\\d\\. 20`) }),
 		).toBeTruthy();
@@ -348,20 +358,39 @@ describe("flow: columns and page size", () => {
 		});
 	});
 
-	it("puts a column before another when its grip is dragged onto it", async () => {
-		await renderList();
-		openMenu(t("listMenu.view"));
-		await openSub(new RegExp(t("listMenu.columns")));
-		const from = await screen.findByRole("menuitemcheckbox", { name: "생성일" });
-		const to = screen.getByRole("menuitemcheckbox", { name: "상태" });
-		const transfer = { setData: vi.fn(), effectAllowed: "" };
-		fireEvent.dragStart(from.querySelector("[data-slot=menu-grip]") as HTMLElement, { dataTransfer: transfer });
-		fireEvent.dragOver(to, { dataTransfer: transfer });
-		fireEvent.drop(to, { dataTransfer: transfer });
-		await waitFor(() => {
+	it("lifts a column by its grip, shows the new order while it moves, and saves it when let go", async () => {
+		// jsdom lays nothing out: each row is 32px tall, placed by the order the menu shows.
+		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+			this: HTMLElement,
+		) {
+			const place =
+				this.style.order === "" ? [...(this.parentElement?.children ?? [])].indexOf(this) : Number(this.style.order);
+			const top = place * 32;
+			return { top, bottom: top + 32, left: 0, right: 200, width: 200, height: 32, x: 0, y: top } as DOMRect;
+		});
+		try {
+			await renderList();
+			openMenu(t("listMenu.view"));
+			await openSub(new RegExp(t("listMenu.columns")));
+			const row = (name: string) => screen.getByRole("menuitemcheckbox", { name });
+			const centre = (name: string) => row(name).getBoundingClientRect().top + 16;
+			const grip = (await screen.findByRole("menuitemcheckbox", { name: "생성일" })).querySelector(
+				"[data-slot=menu-grip]",
+			) as HTMLElement;
+			fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientY: centre("생성일") });
+			fireEvent.pointerMove(grip, { pointerId: 1, clientY: centre("상태") });
+			// While held, it already sits before "status" and is not saved yet.
+			expect(centre("생성일")).toBeLessThan(centre("상태"));
+			const savesBefore = saved().length;
+			fireEvent.pointerUp(grip, { pointerId: 1, clientY: centre("상태") });
+			await waitFor(() => expect(saved().length).toBeGreaterThan(savesBefore));
 			const order = saved().at(-1)?.collections.post.columns.order as string[];
 			expect(order.indexOf("createdAt")).toBeLessThan(order.indexOf("status"));
-		});
+			// Holding the grip did not turn the column on.
+			expect(row("생성일").getAttribute("aria-checked")).toBe("false");
+		} finally {
+			box.mockRestore();
+		}
 	});
 
 	it("picks 50 per page, which applies it, closes the menu and is saved", async () => {
@@ -438,7 +467,7 @@ describe("flow: page through the list", () => {
 				.getAllByRole("link")
 				.map((link) => link.textContent)
 				.filter((text) => /^\d+$/.test(text ?? "")),
-		).toEqual(["1", "2", "3", "6"]);
+		).toEqual(["1", "2", "3", "4", "5", "6"]);
 		expect(within(pager).getByRole("link", { name: PREVIOUS }).getAttribute("aria-disabled")).toBe("true");
 		expect(screen.getByText("1–25 / 148")).toBeTruthy();
 	});

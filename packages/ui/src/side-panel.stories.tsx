@@ -14,13 +14,13 @@ import { ToolCallLine } from "./tool-call-line";
 /**
  * The panel beside a screen (the assistant, a media file, an activity, an entry's properties): cream ground, a line down its left edge, a 60px
  * head with the title (16px bold) and icon buttons at the end, a body, and at the bottom one pill or the box to type in. It does not cover the screen
- * next to it. The width is fixed: 360 (`side`, the default), 300 (`panel`) or 380 (`assistant`). The head leaves its right side free for the ✦
- * button in the corner, except on the assistant.
+ * next to it. The width is fixed: 360 (`side`, the default), 300 (`panel`) or 380 (`assistant`). Every panel closes with the × at the end of its
+ * head; docked at the window's edge it covers the ✦ button that opens the assistant.
  */
 const meta = {
 	title: "Patterns/Sheet/SidePanel",
 	component: SidePanel,
-	args: { title: "어시스턴트", width: "assistant", corner: false, children: null },
+	args: { title: "어시스턴트", width: "assistant", onClose: () => undefined, children: null },
 	parameters: { layout: "fullscreen", bleed: true },
 	decorators: [
 		(Story) => (
@@ -73,7 +73,6 @@ export const Details: Story = {
 			<SidePanel
 				{...args}
 				width="side"
-				corner
 				title="desk-morning.jpg"
 				onClose={() => undefined}
 				actions={
@@ -143,7 +142,7 @@ export const Scrolling: Story = {
 /** The entry's properties: the narrower `panel` width, with the head's right side kept free for ✦. */
 export const Properties: Story = {
 	render: (args) => (
-		<SidePanel {...args} width="panel" corner title="속성" onClose={() => undefined}>
+		<SidePanel {...args} width="panel" title="속성" onClose={() => undefined}>
 			<DescriptionList>
 				<DescriptionItem label="상태">초안</DescriptionItem>
 				<DescriptionItem label="주소">
