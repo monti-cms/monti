@@ -1,14 +1,10 @@
 import type { Cms } from "@monti-cms/core/server";
-import ApiKeysPage from "../screens/api-keys/page";
-import DataPage from "../screens/data/page";
 import EditEntryPage from "../screens/entries/[id]/edit/page";
 import NewEntryPage from "../screens/entries/new/page";
-import EventsPage from "../screens/events/page";
 import LoginPage from "../screens/login/page";
 import MediaPage from "../screens/media/page";
 import EntryListPage from "../screens/page";
 import SettingsPage from "../screens/settings/page";
-import TemplatesPage from "../screens/templates/page";
 import ToolsPage from "../screens/tools/page";
 import TrashPage from "../screens/trash/page";
 import type { AdminServer } from "./server";
@@ -26,10 +22,10 @@ export interface AdminPageProps {
  * A single admin screen, framework-neutral. A host package renders it from the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/data` backup, import and restore · `/admin/events` event log ·
- *   `/admin/api-keys` API keys
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media
  * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file)
- * - `/admin/tools/<path>` Tools: one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
+ * - `/admin/tools/<tab>` Tools, one tab per address: `templates` (body templates), `data` (backup, import and restore), `events` (activity log), `api-keys`, and a plugin's
+ *   page for each `nav` item (e.g. the AI plugin's `/admin/tools/ai`). `/admin/tools` goes to the first tab.
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */
 export async function AdminPage({ cms, server, params, searchParams }: AdminPageProps) {
@@ -43,14 +39,6 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 				return <TrashPage cms={cms} server={server} />;
 			case "media":
 				return <MediaPage cms={cms} server={server} />;
-			case "templates":
-				return <TemplatesPage cms={cms} server={server} />;
-			case "events":
-				return <EventsPage cms={cms} server={server} />;
-			case "api-keys":
-				return <ApiKeysPage cms={cms} server={server} />;
-			case "data":
-				return <DataPage cms={cms} server={server} />;
 			case "settings":
 				return <SettingsPage cms={cms} server={server} tab={undefined} />;
 			case "login":
@@ -60,7 +48,7 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 	if (first === "settings" && second && path.length === 2) {
 		return <SettingsPage cms={cms} server={server} tab={second} />;
 	}
-	if (first === "tools" && second && path.length === 2) {
+	if (first === "tools" && path.length <= 2) {
 		return <ToolsPage cms={cms} server={server} path={second} />;
 	}
 	if (first === "entries" && second === "new" && third === undefined) {

@@ -14,7 +14,7 @@ import {
 	TrashCan,
 	Upload,
 } from "@carbon/icons-react";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { type Folder, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
@@ -22,6 +22,11 @@ import {
 	Inline,
 	Input,
 	Label,
+	PageBody,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	PageToolbarEnd,
 	Segmented,
 	Select,
 	SelectContent,
@@ -34,6 +39,7 @@ import {
 	TabsList,
 	TabsTrigger,
 	Text,
+	TextButton,
 	toast,
 } from "@monti-cms/ui";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +63,7 @@ import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
 import { ActionContextMenu, type MenuAction } from "../shared/action-menu";
-import { AdminShell, PageActions } from "../shared/admin-shell";
+import { AdminFrame } from "../shared/admin-frame";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
 import { EmptyState } from "../shared/empty-state";
@@ -430,26 +436,50 @@ export function MediaLibrary() {
 	const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
 
 	const currentFolder = folders.find((f) => f.id === folder);
-	const folderTitle = currentFolder ? ` · ${currentFolder.name}` : "";
+	// The folders from the top down to the open one: the way back, above the title.
+	const trail: Folder[] = [];
+	for (let at = currentFolder; at; at = folders.find((f) => f.id === at?.parentId)) trail.unshift(at);
+	const ancestors = trail.slice(0, -1);
 
 	return (
-		<AdminShell
-			title={`${t("title")}${folderTitle}`}
-			count={mediaQuery.data ? t("library.count", { count: total }) : undefined}
+		<AdminFrame
 			sidebar={{
 				activeNav: "media",
 				folderNav: {
 					collection: "media",
 					currentFolder: folder || "all",
 					folders,
-					folderActions,
 					onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
 					onDropEntries,
 				},
 			}}
 		>
-			<PageActions>
-				<Inline gap={8} wrap>
+			<PageColumn>
+				<PageHeader
+					title={currentFolder?.name ?? t("title")}
+					trail={
+						currentFolder && (
+							<Inline gap={6} align="baseline">
+								<TextButton variant="underline" type="button" onClick={() => update({ folder: "all", page: 1 })}>
+									{t("title")}
+								</TextButton>
+								<span aria-hidden="true">/</span>
+								{ancestors.map((ancestor) => (
+									<Inline key={ancestor.id} gap={6} align="baseline">
+										<TextButton
+											variant="underline"
+											type="button"
+											onClick={() => update({ folder: ancestor.id, page: 1 })}
+										>
+											{ancestor.name}
+										</TextButton>
+										<span aria-hidden="true">/</span>
+									</Inline>
+								))}
+							</Inline>
+						)
+					}
+				>
 					<Label size="caption" tone="muted">
 						<Switch checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
@@ -462,160 +492,162 @@ export function MediaLibrary() {
 						accept={uploadAccept(site)}
 						onChange={(event) => void handleFiles(event.target.files)}
 					/>
-					<Button type="button" size="sm" disabled={upload !== null} onClick={() => fileInputRef.current?.click()}>
-						<Upload aria-hidden />
-						{upload
-							? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
-							: t("library.upload")}
-					</Button>
 					<Button
 						type="button"
-						size="sm"
 						variant="secondary"
 						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
 					>
 						<FolderAdd aria-hidden />
 						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
-					<Button type="button" size="sm" variant="secondary" onClick={() => cleanupMutation.mutate()}>
+					<Button type="button" variant="secondary" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
 					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
 						<Renew aria-hidden />
 					</IconButton>
-				</Inline>
-			</PageActions>
-			<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
-				<TabsList variant="bar" aria-label={t("library.kindLabel")}>
-					{kindOptions(t).map((option) => (
-						<TabsTrigger key={option.value} value={option.value}>
-							{option.label}
-						</TabsTrigger>
-					))}
-				</TabsList>
-			</Tabs>
-			<Inline gap={8} wrap justify="end" paddingX={32} paddingY={8} shrink={false}>
-				<Input
-					type="search"
-					size="sm"
-					aria-label={t("library.search")}
-					value={searchText}
-					placeholder={t("library.search")}
-					onChange={(event) => setSearchText(event.target.value)}
-				/>
-				<Select
-					value={used}
-					items={usedOptions(t)}
-					onValueChange={(value) => value && update({ used: value as typeof used })}
-				>
-					<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{usedOptions(t).map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<DateRangePicker
-					label={t("library.uploadedDate")}
-					from={uploadedFrom}
-					to={uploadedTo}
-					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
-				/>
-				<Segmented
-					aria-label={t("library.view")}
-					size="sm"
-					inline
-					value={view}
-					onValueChange={setView}
-					options={[
-						{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("library.viewGrid") },
-						{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
-					]}
-				/>
-			</Inline>
-
-			<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">
-				<Stack gap={0} grow minWidth={0} overflow="hidden">
-					{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
-					<Stack
-						gap={0}
-						grow
-						minHeight={0}
-						overflow="y"
-						paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? 32 : 0}
-						paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : 0}
-					>
-						{loadError && (
-							<Box
-								padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : 16}
-								paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : undefined}
-							>
-								<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
-							</Box>
-						)}
-						{items.length === 0 && !hasFolders ? (
-							loadError ? null : mediaQuery.isPending ? (
-								<Text as="p" variant="note" tone="subtle" role="status">
-									{tc("loading")}
-								</Text>
-							) : filtered ? (
-								<EmptyState
-									title={t("library.emptyNoMatch")}
-									description={t("library.emptyNoMatchHint")}
-									action={{ label: t("library.clearFilters"), onClick: clearFilters }}
-								/>
-							) : (
-								<EmptyState
-									title={t("library.emptyYet")}
-									description={t("library.emptyYetHint")}
-									action={{
-										label: t("library.upload"),
-										onClick: () => fileInputRef.current?.click(),
-									}}
-								/>
-							)
-						) : view === "grid" ? (
-							<MediaGrid {...viewProps} />
-						) : (
-							<MediaTable {...viewProps} />
-						)}
-						<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY={24} aria-hidden />} />
-					</Stack>
-					<ListPagination
-						total={total}
-						shown={items.length}
-						page={page}
-						pageSize={pageSize}
-						onPageChange={(next) => update({ page: next })}
-						onPageSizeChange={(size) => update({ pageSize: size })}
-						hidePagerWhenSingle
-						showRange={total > pageSize}
-					/>
-				</Stack>
-
-				{selected && (
-					<DockedPanel resize={MEDIA_PANEL_RESIZE}>
-						<MediaDetailPanel
-							key={selected.id}
-							media={selected}
-							folders={folders}
-							onClose={() => void openDetail(null)}
-							onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
-							onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
-							onMoveFolder={(targetFolderId) => moveMediaToFolder(selected, targetFolderId)}
-							onRequestDelete={() => void requestDelete(selected)}
-							onDirtyChange={setDetailDirty}
+					<Button type="button" disabled={upload !== null} onClick={() => fileInputRef.current?.click()}>
+						<Upload aria-hidden />
+						{upload
+							? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
+							: t("library.upload")}
+					</Button>
+				</PageHeader>
+				<PageToolbar>
+					<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
+						<TabsList variant="toolbar" aria-label={t("library.kindLabel")}>
+							{kindOptions(t).map((option) => (
+								<TabsTrigger key={option.value} value={option.value}>
+									{option.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+					</Tabs>
+					<PageToolbarEnd>
+						<Input
+							type="search"
+							size="sm"
+							aria-label={t("library.search")}
+							value={searchText}
+							placeholder={t("library.search")}
+							onChange={(event) => setSearchText(event.target.value)}
 						/>
-					</DockedPanel>
-				)}
-			</Stack>
+						<Select
+							value={used}
+							items={usedOptions(t)}
+							onValueChange={(value) => value && update({ used: value as typeof used })}
+						>
+							<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{usedOptions(t).map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<DateRangePicker
+							label={t("library.uploadedDate")}
+							from={uploadedFrom}
+							to={uploadedTo}
+							onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
+						/>
+						<Segmented
+							aria-label={t("library.view")}
+							size="sm"
+							inline
+							value={view}
+							onValueChange={setView}
+							options={[
+								{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("library.viewGrid") },
+								{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
+							]}
+						/>
+					</PageToolbarEnd>
+				</PageToolbar>
+				<PageBody>
+					<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">
+						<Stack gap={0} grow minWidth={0} overflow="hidden">
+							{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
+							<Stack
+								gap={0}
+								grow
+								minHeight={0}
+								overflow="y"
+								paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? 32 : 0}
+								paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : 0}
+							>
+								{loadError && (
+									<Box
+										padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : 16}
+										paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : undefined}
+									>
+										<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
+									</Box>
+								)}
+								{items.length === 0 && !hasFolders ? (
+									loadError ? null : mediaQuery.isPending ? (
+										<Text as="p" variant="note" tone="subtle" role="status">
+											{tc("loading")}
+										</Text>
+									) : filtered ? (
+										<EmptyState
+											title={t("library.emptyNoMatch")}
+											description={t("library.emptyNoMatchHint")}
+											action={{ label: t("library.clearFilters"), onClick: clearFilters }}
+										/>
+									) : (
+										<EmptyState
+											title={t("library.emptyYet")}
+											description={t("library.emptyYetHint")}
+											action={{
+												label: t("library.upload"),
+												onClick: () => fileInputRef.current?.click(),
+											}}
+										/>
+									)
+								) : view === "grid" ? (
+									<MediaGrid {...viewProps} />
+								) : (
+									<MediaTable {...viewProps} />
+								)}
+								<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY={24} aria-hidden />} />
+							</Stack>
+							<ListPagination
+								total={total}
+								shown={items.length}
+								page={page}
+								pageSize={pageSize}
+								onPageChange={(next) => update({ page: next })}
+								onPageSizeChange={(size) => update({ pageSize: size })}
+								hidePagerWhenSingle
+								showRange={total > pageSize}
+							/>
+						</Stack>
+
+						{selected && (
+							<DockedPanel resize={MEDIA_PANEL_RESIZE}>
+								<MediaDetailPanel
+									key={selected.id}
+									media={selected}
+									folders={folders}
+									onClose={() => void openDetail(null)}
+									onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
+									onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
+									onMoveFolder={(targetFolderId) => moveMediaToFolder(selected, targetFolderId)}
+									onRequestDelete={() => void requestDelete(selected)}
+									onDirtyChange={setDetailDirty}
+								/>
+							</DockedPanel>
+						)}
+					</Stack>
+				</PageBody>
+			</PageColumn>
 			{dialog}
 			{guardDialog}
 			{folderActions.dialogs}
-		</AdminShell>
+		</AdminFrame>
 	);
 }

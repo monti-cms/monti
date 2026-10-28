@@ -4,7 +4,6 @@ import { defineMessages } from "@monti-cms/core";
 export const sharedMessages = defineMessages("cms-admin.shared", {
 	en: {
 		"menu.empty": "No items",
-		"shell.openSidebar": "Open sidebar",
 		"tags.more": "and {count} more",
 		"status.draft": "Draft",
 		"status.published": "Published",
@@ -41,7 +40,6 @@ export const sharedMessages = defineMessages("cms-admin.shared", {
 	},
 	ko: {
 		"menu.empty": "항목이 없어요",
-		"shell.openSidebar": "사이드바 열기",
 		"tags.more": "외 {count}개",
 		"status.draft": "초안",
 		"status.published": "발행됨",

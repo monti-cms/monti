@@ -6,9 +6,6 @@ import type { AdminServer } from "../server";
 
 const page = vi.hoisted(() => (name: string) => ({ default: (props: Record<string, unknown>) => ({ name, props }) }));
 vi.mock("../../screens/settings/page", () => page("settings"));
-vi.mock("../../screens/templates/page", () => page("templates"));
-vi.mock("../../screens/events/page", () => page("events"));
-vi.mock("../../screens/api-keys/page", () => page("api-keys"));
 vi.mock("../../screens/tools/page", () => page("tools"));
 vi.mock("../../screens/trash/page", () => page("trash"));
 vi.mock("../../screens/media/page", () => page("media"));
@@ -40,11 +37,14 @@ const open = async (...path: string[]) => {
 };
 
 describe("admin addresses", () => {
-	it("gives templates, the API keys, the event log and trash their own address", async () => {
-		expect((await open("templates")).name).toBe("templates");
-		expect((await open("api-keys")).name).toBe("api-keys");
-		expect((await open("events")).name).toBe("events");
+	it("gives trash and media their own address", async () => {
 		expect((await open("trash")).name).toBe("trash");
+		expect((await open("media")).name).toBe("media");
+	});
+
+	it("has no top-level address for what is a tab of the tools page now", async () => {
+		for (const path of ["templates", "data", "events", "api-keys"])
+			await expect(open(path)).rejects.toThrow("not-found");
 	});
 
 	it("opens a schema tab under settings, and nothing else there", async () => {
@@ -52,14 +52,16 @@ describe("admin addresses", () => {
 		expect((await open("settings")).props).toMatchObject({ tab: undefined });
 	});
 
-	it("opens a plugin page under tools with its path", async () => {
-		const result = await open("tools", "ai");
-		expect(result.name).toBe("tools");
-		expect(result.props).toMatchObject({ path: "ai" });
+	it("opens a tab of the tools page by its path, and the bare tools address with none", async () => {
+		for (const path of ["templates", "ai"]) {
+			const result = await open("tools", path);
+			expect(result.name).toBe("tools");
+			expect(result.props).toMatchObject({ path });
+		}
+		expect((await open("tools")).props).toMatchObject({ path: undefined });
 	});
 
-	it("is a 404 for a bare tools address and for deeper paths", async () => {
-		await expect(open("tools")).rejects.toThrow("not-found");
+	it("is a 404 for deeper tools paths", async () => {
 		await expect(open("tools", "ai", "x")).rejects.toThrow("not-found");
 	});
 });

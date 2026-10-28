@@ -675,11 +675,11 @@ function FailedDeliveriesPopover() {
 						</>
 					}
 					value={formatAgo(site, item.lastAttemptAt ?? item.change.occurredAt)}
-					href={site.adminHref("/events")}
+					href={site.adminHref("/tools/events")}
 					tone="danger"
 				/>
 			))}
-			<StatusPopoverRow label={t("popover.deliveries.open")} href={site.adminHref("/events")} />
+			<StatusPopoverRow label={t("popover.deliveries.open")} href={site.adminHref("/tools/events")} />
 		</>
 	);
 }

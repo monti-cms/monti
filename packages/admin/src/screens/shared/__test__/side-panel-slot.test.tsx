@@ -5,7 +5,7 @@ import { testSite } from "../../../../../core/test/site";
 import { preferenceKey } from "../../../lib/utils/site-storage";
 import type { AdminPanel } from "../../../plugins";
 import { createTestRouter } from "../../../test/router";
-import { AdminShell } from "../admin-shell";
+import { AdminFrame } from "../admin-frame";
 import { AdminQueryProvider } from "../query-provider";
 import { ScreenContextProvider, useScreenContext } from "../screen-context";
 import { AdminPanelProvider, SIDE_PANEL_SHORTCUT_KEY } from "../side-panel-slot";
@@ -23,14 +23,14 @@ const toggle = () => screen.getByRole("button", { name: /Helper/ });
 
 /** A shell page with the plugin's panel, the way the plugin scope puts it around the admin. */
 const renderShell = (
-	activeNav: Parameters<typeof AdminShell>[0]["sidebar"]["activeNav"],
+	activeNav: Parameters<typeof AdminFrame>[0]["sidebar"]["activeNav"],
 	panel: AdminPanel | null = PANEL,
 ) => {
 	const page = (
 		<AdminQueryProvider>
-			<AdminShell title="Page" sidebar={{ activeNav }}>
+			<AdminFrame sidebar={{ activeNav }}>
 				<p>page body</p>
-			</AdminShell>
+			</AdminFrame>
 		</AdminQueryProvider>
 	);
 	return render(
@@ -168,9 +168,9 @@ describe("screen context of the shell pages", () => {
 			<ScreenContextProvider>
 				<AdminPanelProvider panel={PANEL}>
 					<AdminQueryProvider>
-						<AdminShell title="Page" sidebar={{ activeNav: "media" }}>
+						<AdminFrame sidebar={{ activeNav: "media" }}>
 							<p>page body</p>
-						</AdminShell>
+						</AdminFrame>
 					</AdminQueryProvider>
 				</AdminPanelProvider>
 			</ScreenContextProvider>,

@@ -303,7 +303,7 @@ function SchemaEditor({
 							</Inline>
 						)}
 				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
-					<PageBody wide={tab === "collections"}>
+					<PageBody>
 						{reason && (
 							<Banner
 								title={t(READ_ONLY_KEY[reason])}

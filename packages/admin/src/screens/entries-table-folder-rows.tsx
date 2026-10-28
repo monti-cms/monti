@@ -5,10 +5,9 @@ import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { TableCell, TableRow, Text, TextButton } from "@monti-cms/ui";
 import { commonMessages } from "../lib/common.messages";
-import { folderKeyHandler } from "./admin-sidebar";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
-import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
+import { type FolderActions, folderKeyHandler, folderMenuActions } from "./shared/use-folder-actions";
 
 export function EntriesTableFolderRows({
 	explorer,

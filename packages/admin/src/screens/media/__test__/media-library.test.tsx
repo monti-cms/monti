@@ -105,10 +105,10 @@ describe("media library", () => {
 		expect(tile(/^guide\.pdf/)).toContain("PDF");
 	});
 
-	it("names what the header counts, and keeps the footer free of a range line when one page holds everything", async () => {
+	it("has one title, and keeps the footer free of a range line when one page holds everything", async () => {
 		await renderLibrary();
-		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toContain(t("library.count", { count: 3 }));
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t("title"));
 		expect(screen.queryByText(/–/)).toBeNull();
 	});
 

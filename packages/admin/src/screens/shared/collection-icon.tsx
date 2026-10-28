@@ -73,7 +73,7 @@ import { useCallback } from "react";
 import { useAdminComponents } from "../../admin-components";
 
 /**
- * Built-in icons selectable by a collection definition's `icon`, a plugin sidebar item's `icon`, a block definition's `editor.icon`, or a code-line effect's
+ * Built-in icons selectable by a collection definition's `icon`, a block definition's `editor.icon`, or a code-line effect's
  * `icon`, by their IBM Carbon icon name (`document`, `warning--alt`, `text--highlight`) and `spark` for the assistant's ✦.
  * Only frequently used ones are included so not every icon is bundled. For other names, plugins/the site
  * register them through `icons` of `AdminComponentsProvider`. For an unknown collection icon name, publishable collections use a document icon and taxonomy collections a tag icon.
@@ -163,11 +163,5 @@ export function CollectionIcon({ collection }: { collection: string }) {
 	const iconByName = useIconByName();
 	const name = site.isCollection(collection) ? site.schemaOf(collection).icon : undefined;
 	const Icon = iconByName(name) ?? (site.isItemCollection(collection) ? Tag : Document);
-	return <Icon />;
-}
-
-/** Icon picked by name. For an unknown name, the plug icon. */
-export function NamedIcon({ name }: { name?: string }) {
-	const Icon = useIconByName()(name) ?? Plug;
 	return <Icon />;
 }

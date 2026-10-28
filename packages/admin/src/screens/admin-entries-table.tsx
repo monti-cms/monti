@@ -385,7 +385,7 @@ export function AdminEntriesTable({
 								}}
 								secondaryAction={{
 									label: t("list.importMarkdown"),
-									href: `${site.adminHref("/data")}#import-entries`,
+									href: `${site.adminHref("/tools/data")}#import-entries`,
 								}}
 							/>
 						) : (

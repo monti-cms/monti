@@ -158,7 +158,7 @@ const previewThenRun = (preview: unknown, run: () => unknown) => {
 };
 
 const screen = (api: FakeApi) => () => (
-	<PageFrame api={api} pathname="/admin/data">
+	<PageFrame api={api} pathname="/admin/tools/data">
 		<DataScreen />
 	</PageFrame>
 );
@@ -169,7 +169,7 @@ const chooseFile = async (canvasElement: HTMLElement, testId: string, name: stri
 	await userEvent.upload(input, zip(name));
 };
 
-export const Loaded: Story = { render: screen(serve()) };
+export const Loaded: Story = { tags: ["visual"], render: screen(serve()) };
 
 /** The site backup is still counting what it would hold. */
 export const Counting: Story = {

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
+import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { TemplateManager } from "./template-manager";
 
 const meta = {
@@ -38,9 +38,9 @@ const api =
 	};
 
 const screen = (fake: FakeApi) => () => (
-	<ScreenFrame api={fake} title="템플릿" nav="templates" pathname="/admin/templates">
+	<PageFrame api={fake} pathname="/admin/tools/templates">
 		<TemplateManager />
-	</ScreenFrame>
+	</PageFrame>
 );
 
 /** Opens the first row of the list. */
@@ -51,7 +51,7 @@ const openFirst = async (canvasElement: HTMLElement) => {
 	await within(canvasElement).findByRole("textbox", { name: "템플릿 이름" });
 };
 
-export const Loaded: Story = { render: screen(api(templates)) };
+export const Loaded: Story = { tags: ["visual"], render: screen(api(templates)) };
 export const TemplateOpen: Story = {
 	render: screen(api(templates)),
 	play: ({ canvasElement }) => openFirst(canvasElement),
