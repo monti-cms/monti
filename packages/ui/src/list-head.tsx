@@ -40,6 +40,41 @@ function placePreview(order: readonly string[], id: string, over: string): strin
 	return next;
 }
 
+/**
+ * The column the held one has passed, or `undefined`: the farthest neighbour whose middle the held name's middle has reached, going the way it is dragged.
+ * The middles, not the pointer over a cell: after a narrow column trades places with a wide one, the pointer can lie over the wide one again, and a test of
+ * the pointer would trade them back on the next move, and back again (the flicker). A middle the held name has reached stays behind it after the trade.
+ */
+function crossedColumn(
+	order: readonly string[],
+	id: string,
+	heldLeft: number,
+	cellOf: (id: string) => HTMLElement | undefined,
+): string | undefined {
+	const width = cellOf(id)?.getBoundingClientRect().width ?? 0;
+	const middle = heldLeft + width / 2;
+	const middleOf = (other: string) => {
+		const box = cellOf(other)?.getBoundingClientRect();
+		return box === undefined ? undefined : box.left + box.width / 2;
+	};
+	const index = order.indexOf(id);
+	let crossed: string | undefined;
+	for (let at = index - 1; at >= 0; at--) {
+		const other = order[at] as string;
+		const otherMiddle = middleOf(other);
+		if (otherMiddle === undefined || middle > otherMiddle) break;
+		crossed = other;
+	}
+	if (crossed !== undefined) return crossed;
+	for (let at = index + 1; at < order.length; at++) {
+		const other = order[at] as string;
+		const otherMiddle = middleOf(other);
+		if (otherMiddle === undefined || middle < otherMiddle) break;
+		crossed = other;
+	}
+	return crossed;
+}
+
 /** How far the pointer moves before a press on a name becomes a drag rather than a click. */
 const DRAG_START = 4;
 
@@ -149,11 +184,7 @@ function ListHead({
 						setDrag({ id: held.id, offset: lift(held.id, 0) });
 						return;
 					}
-					const over = ids.find((id) => {
-						if (id === held.id) return false;
-						const box = cellOf(id)?.getBoundingClientRect();
-						return box !== undefined && event.clientX >= box.left && event.clientX < box.right;
-					});
+					const over = crossedColumn(ids, held.id, event.clientX - held.grab, cellOf);
 					if (over === undefined) setDrag({ ...drag, offset: lift(held.id, drag.offset) });
 					else onPreview?.(placePreview(ids, held.id, over));
 				}}
