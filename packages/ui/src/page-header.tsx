@@ -36,14 +36,17 @@ function PageHeader({
 }
 
 /**
- * The column every page sits in: centred, 880px at most, 40px above the title and 48px at the sides (16px on a narrow screen). It takes the height
+ * The column every page sits in: centred, 880px at most, 40px above the title and below the page, and 48px at the sides (16px on a narrow screen). It takes the height
  * the page has. The header and the toolbar keep their place; the body ({@link PageBody}) is what scrolls.
  */
 function PageColumn({ className, children, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="page-column"
-			className={cn("flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 md:px-monti-48", className)}
+			className={cn(
+				"flex min-h-0 min-w-0 flex-1 flex-col px-monti-16 pt-monti-40 pb-monti-40 md:px-monti-48",
+				className,
+			)}
 			{...props}
 		>
 			<div className="mx-auto flex min-h-0 w-full max-w-monti-content flex-1 flex-col">{children}</div>
@@ -56,7 +59,7 @@ function PageBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="page-body"
-			className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-48", className)}
+			className={cn("relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-monti-8", className)}
 			{...props}
 		/>
 	);
