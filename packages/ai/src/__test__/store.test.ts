@@ -121,14 +121,13 @@ describe("AI action edited-value store", () => {
 		};
 		const edits = {
 			prompt: "글의 주제를 다루는가.",
-			instant: true,
 			checks: [
 				{ kind: "exists", enabled: true },
 				{ kind: "oneOf", enabled: true, items: ["t1"] },
 			],
 		};
 		const draft = await actionWithDraft(testSite, store, "custom_new", edits, base);
-		expect(draft).toMatchObject({ engine: "decide", prompt: "글의 주제를 다루는가.", instant: true });
+		expect(draft).toMatchObject({ engine: "decide", prompt: "글의 주제를 다루는가." });
 		expect(draft.checks.map((check) => check.kind)).toEqual(["exists", "oneOf"]);
 
 		const created = await createCustomAction(testSite, store, base, edits);
@@ -136,7 +135,6 @@ describe("AI action edited-value store", () => {
 			label: "태그 고르기",
 			engine: "decide",
 			prompt: "글의 주제를 다루는가.",
-			instant: true,
 		});
 		expect((await getAction(testSite, store, created.key)).checks.map((check) => check.kind)).toEqual([
 			"exists",

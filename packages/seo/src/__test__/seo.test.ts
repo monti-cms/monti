@@ -19,7 +19,6 @@ describe("seoFields", () => {
 		expect(bundle.seoNoindex).toMatchObject({ kind: "select", role: "noindex", defaultValue: "index" });
 		// Hiding is always a shared value.
 		expect(bundle.seoNoindex.localized).toBeUndefined();
-		expect(bundle.seoPreview).toMatchObject({ kind: "view", view: "search" });
 	});
 
 	it("default labels are chosen in the admin language at read time, not when the field is built (labels set by the site stay as is)", () => {
@@ -49,7 +48,7 @@ describe("seoFields", () => {
 			labels: { title: "Meta title" },
 			localized: false,
 			limits: { title: 70 },
-			omit: ["canonical", "preview"],
+			omit: ["canonical"],
 		});
 		expect(Object.keys(bundle)).toEqual(["metaTitle", "seoDescription", "ogImageId", "seoNoindex"]);
 		expect(bundle.metaTitle).toMatchObject({ label: "Meta title", inputOptions: { limit: 70 } });
@@ -176,7 +175,7 @@ describe("current config: AI features", () => {
 
 	it("takes the tab name from the plugin options, and places nothing in a collection without SEO fields", () => {
 		const layout = (tab?: string) => seo(tab ? { tab } : {}).contributes?.layout;
-		expect(layout()).toEqual([expect.objectContaining({ tab: "SEO", views: ["search"] })]);
+		expect(layout()).toEqual([expect.objectContaining({ tab: "SEO" })]);
 		expect(layout("Search")).toEqual([expect.objectContaining({ tab: "Search" })]);
 		expect(seo({ ai: false }).contributes).not.toHaveProperty("ai");
 	});

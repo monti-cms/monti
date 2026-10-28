@@ -3,33 +3,20 @@
 import { Edit, Folder as FolderIcon, FolderMoveTo, FolderParent, TrashCan } from "@carbon/icons-react";
 import type { Folder, FolderTrashResult } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFormFooter,
-	DialogHeader,
-	DialogTitle,
-	FormField,
-	FormFieldError,
-	Input,
-	Label,
-	Stack,
-	toast,
-} from "@monti-cms/ui";
+import { toast } from "@monti-cms/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
 import { restoreTrash } from "../../api/trash";
 import { useCmsMutation } from "../../api/use-cms-mutation";
-import { commonMessages } from "../../lib/common.messages";
 import type { MenuAction } from "./action-menu";
 import { useConfirm } from "./confirm-dialog";
 import { deleteMessages } from "./delete.messages";
 import { sharedMessages } from "./messages";
 
-type NameDialog = { mode: "create"; parentId: string | null } | { mode: "rename"; folder: Folder };
+/** The name being typed in place: a new folder under `parentId` (`null` is the top level), or an existing folder's new name. */
+export type FolderNaming = { mode: "create"; parentId: string | null } | { mode: "rename"; folder: Folder };
 
 /** Parent candidates to move to, excluding `folder` and its descendants. The server also rejects cycles. */
 export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
@@ -142,7 +129,11 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 }
 
 /**
- * Virtual folder create, rename, move and delete. The list's folder rows and the media library's folders share the same state and dialogs.
+ * Virtual folder create, rename, move and delete. The list's folder rows and the media library's folders share the same state.
+ *
+ * Naming is done where the folder stands, with no dialog: `requestCreate` and `requestRename` set `naming`, and the row or tile of that folder shows a
+ * {@link FolderNameField} while it is set. `commitName` sends it (an empty or unchanged name only closes), `cancelName` drops it. Once the folder list
+ * is fresh, `focusFolderId` names the folder that takes focus (the one just made or renamed); the row that shows it calls `focusSettled`.
  * Delete moves the folder with everything inside to the trash as one unit and says so in a toast with an undo. It asks first only when the folder holds
  * a published entry, which leaves the site.
  */
@@ -162,22 +153,12 @@ export function useFolderActions({
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
 	const td = useTranslator(deleteMessages);
-	const tc = useTranslator(commonMessages);
 	const queryClient = useQueryClient();
 	const { confirm, dialog: confirmDialog } = useConfirm();
-	const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
-	const [name, setName] = useState("");
-	const [error, setError] = useState<string | null>(null);
-	// Closing the dialog returns focus to the button that opened it. If that button is gone (deleted folder), follow the browser default.
-	const returnFocusRef = useRef<HTMLElement | null>(null);
-	const rememberFocus = () => {
-		returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-	};
-	const restoreFocus = () => {
-		const target = returnFocusRef.current;
-		returnFocusRef.current = null;
-		return target?.isConnected ? target : true;
-	};
+	const [naming, setNaming] = useState<FolderNaming | null>(null);
+	const [focusFolderId, setFocusFolderId] = useState<string | null>(null);
+	// A new folder that was dropped (Escape) hands focus back to what opened it ("+ Folder"); one that was made or renamed takes focus itself.
+	const openerRef = useRef<HTMLElement | null>(null);
 
 	const itemLabel = site.isCollection(collection)
 		? site.COLLECTION_DEFINITIONS[collection].label
@@ -190,17 +171,18 @@ export function useFolderActions({
 	const toFolder = (id: string | null) => t(id ? "folder.to.named" : "folder.to.root", { name: folderName(id) });
 
 	const requestCreate = (parentId: string | null) => {
-		rememberFocus();
-		setError(null);
-		setName("");
-		setNameDialog({ mode: "create", parentId });
+		openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		setNaming({ mode: "create", parentId });
 	};
 
-	const requestRename = (folder: Folder) => {
-		rememberFocus();
-		setError(null);
-		setName(folder.name);
-		setNameDialog({ mode: "rename", folder });
+	const requestRename = (folder: Folder) => setNaming({ mode: "rename", folder });
+
+	const cancelName = () => {
+		const current = naming;
+		setNaming(null);
+		if (current?.mode === "rename") setFocusFolderId(current.folder.id);
+		else if (openerRef.current?.isConnected) openerRef.current.focus();
+		openerRef.current = null;
 	};
 
 	/** Moves a folder to another parent (or the top level). If the same name exists, the server rejects and explains. */
@@ -214,32 +196,34 @@ export function useFolderActions({
 	});
 	const moveFolder = (folder: Folder, parentId: string | null) => move.mutate({ folder, parentId });
 
-	const save = useCmsMutation({
-		fn: (dialog: NameDialog, { site }) => {
-			const trimmed = name.trim();
-			return dialog.mode === "create"
-				? createFolder(site, { collection, name: trimmed, parentId: dialog.parentId }, t("folder.addFailed"))
-				: updateFolder(
-						site,
-						dialog.folder.id,
-						{ name: trimmed, expectedVersion: dialog.folder.version },
-						t("folder.renameFailed"),
-					);
-		},
-		success: (_result, dialog) => (dialog.mode === "create" ? t("folder.added", { name: name.trim() }) : tc("saved")),
-		failure: t("folder.saveFailed"),
-		inline: true,
-		onSuccess: () => {
-			setNameDialog(null);
-			void onChanged();
-		},
-		onError: (err) => setError(errorText(site, err, t("folder.saveFailed"))),
+	/** Settles after the folder list is fresh, so the field never leaves before the folder it made is there to take its place. */
+	const settle = async (focus: string | null) => {
+		await onChanged();
+		setFocusFolderId(focus);
+		setNaming(null);
+	};
+
+	const create = useCmsMutation<{ name: string; parentId: string | null }, Folder>({
+		fn: (input, { site }) => createFolder(site, { collection, ...input }, t("folder.addFailed")),
+		failure: t("folder.addFailed"),
+		onSuccess: (created) => void settle(created.id),
+		onError: () => setNaming(null),
 	});
 
-	const submitName = () => {
-		if (!nameDialog || !name.trim()) return;
-		setError(null);
-		save.mutate(nameDialog);
+	const rename = useCmsMutation<{ folder: Folder; name: string }>({
+		fn: ({ folder, name }, { site }) =>
+			updateFolder(site, folder.id, { name, expectedVersion: folder.version }, t("folder.renameFailed")),
+		failure: t("folder.renameFailed"),
+		onSuccess: (_result, { folder }) => void settle(folder.id),
+		onError: () => setNaming(null),
+	});
+
+	const commitName = (text: string) => {
+		if (!naming) return;
+		const name = text.trim();
+		if (!name || (naming.mode === "rename" && name === naming.folder.name)) return cancelName();
+		if (naming.mode === "create") create.mutate({ name, parentId: naming.parentId });
+		else rename.mutate({ folder: naming.folder, name });
 	};
 
 	/** Puts a folder back from the trash (the toast's undo). */
@@ -301,109 +285,34 @@ export function useFolderActions({
 		remove.mutate(folder);
 	};
 
-	const createDirectMutation = useCmsMutation({
-		fn: ({ name, parentId }: { name: string; parentId: string | null }, { site }) =>
-			createFolder(site, { collection, name: name.trim(), parentId }, t("folder.addFailed")),
-		success: (_result, { name }) => t("folder.added", { name: name.trim() }),
-		failure: t("folder.saveFailed"),
-		onSuccess: () => void onChanged(),
-	});
-
-	const renameDirectMutation = useCmsMutation({
-		fn: ({ folder, name }: { folder: Folder; name: string }, { site }) =>
-			updateFolder(site, folder.id, { name: name.trim(), expectedVersion: folder.version }, t("folder.renameFailed")),
-		success: tc("saved"),
-		failure: t("folder.saveFailed"),
-		onSuccess: () => void onChanged(),
-	});
-
-	const createFolderDirect = async (name: string, parentId: string | null) => {
-		const trimmed = name.trim();
-		if (!trimmed) return;
-		await createDirectMutation.mutateAsync({ name: trimmed, parentId });
-	};
-
-	const renameFolderDirect = async (folder: Folder, newName: string) => {
-		const trimmed = newName.trim();
-		if (!trimmed || trimmed === folder.name) return;
-		await renameDirectMutation.mutateAsync({ folder, name: trimmed });
-	};
-
-	const dialogs = (
-		<>
-			<Dialog open={nameDialog !== null} onOpenChange={(open) => !open && setNameDialog(null)}>
-				<DialogContent finalFocus={restoreFocus}>
-					<DialogHeader>
-						<DialogTitle>
-							{nameDialog?.mode === "rename"
-								? t("folder.renameTitle")
-								: nameDialog?.parentId
-									? tc("addSubfolder")
-									: tc("addFolder")}
-						</DialogTitle>
-						<DialogDescription>
-							{nameDialog?.mode === "create"
-								? t("folder.location", { name: folderName(nameDialog.parentId) })
-								: t("folder.uniqueName")}
-						</DialogDescription>
-					</DialogHeader>
-					<Stack
-						as="form"
-						gap={16}
-						onSubmit={(event) => {
-							event.preventDefault();
-							void submitName();
-						}}
-					>
-						<FormField data-invalid={Boolean(error) || undefined}>
-							<Label htmlFor="folder-name" hidden>
-								{t("folder.nameLabel")}
-							</Label>
-							<Input
-								id="folder-name"
-								autoFocus
-								value={name}
-								maxLength={100}
-								aria-invalid={Boolean(error) || undefined}
-								onChange={(e) => setName(e.target.value)}
-								onKeyDown={(event) => {
-									// While composing Hangul, Enter is the key that finishes the character. Do not submit the form.
-									if (event.key === "Enter" && (event.nativeEvent.isComposing || event.keyCode === 229)) {
-										event.preventDefault();
-									}
-								}}
-							/>
-							{error && <FormFieldError>{error}</FormFieldError>}
-						</FormField>
-						<DialogFormFooter
-							onCancel={() => setNameDialog(null)}
-							cancelLabel={tc("cancel")}
-							submitLabel={tc("save")}
-							busyLabel={tc("saving")}
-							busy={save.isPending}
-							disabled={!name.trim()}
-						/>
-					</Stack>
-				</DialogContent>
-			</Dialog>
-			{confirmDialog}
-		</>
-	);
+	const dialogs = confirmDialog;
 
 	return {
 		requestCreate,
 		requestRename,
 		requestDelete,
 		moveFolder,
-		createFolderDirect,
-		renameFolderDirect,
+		naming,
+		commitName,
+		cancelName,
+		focusFolderId,
+		focusSettled: () => setFocusFolderId(null),
+		/** The confirm dialog of a delete. Render once per screen. */
 		dialogs,
 	};
 }
 
 export type FolderActions = Pick<
 	ReturnType<typeof useFolderActions>,
-	"requestCreate" | "requestRename" | "requestDelete" | "moveFolder" | "createFolderDirect" | "renameFolderDirect"
+	| "requestCreate"
+	| "requestRename"
+	| "requestDelete"
+	| "moveFolder"
+	| "naming"
+	| "commitName"
+	| "cancelName"
+	| "focusFolderId"
+	| "focusSettled"
 >;
 
 /** Like a file explorer: F2 opens rename, Delete moves the folder to the trash (asking only if it holds a published entry). For the keydown of a folder row. */

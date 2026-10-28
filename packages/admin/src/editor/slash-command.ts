@@ -17,12 +17,7 @@ import { headingIcons, type MontiIcon } from "@monti-cms/ui";
 import type { Editor, Range } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
-import {
-	type BlockInsertAction,
-	blockInsertActions,
-	OPEN_FILE_PICKER_EVENT,
-	OPEN_IMAGE_DIALOG_EVENT,
-} from "./block-inserts";
+import { type BlockInsertAction, blockInsertActions, openMediaPicker } from "./block-inserts";
 import { insertFootnote } from "./footnote-nodes";
 import { editorMessages } from "./messages";
 
@@ -35,9 +30,11 @@ const keywordList = (
 		.split(",")
 		.map((word) => word.trim());
 
-export { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./block-inserts";
-
 import type { BlockDefinition } from "@monti-cms/core";
+
+/** The groups of the "/" menu, in the order it shows them. */
+export const SLASH_GROUPS = ["text", "insert", "components", "templates"] as const;
+export type SlashGroup = (typeof SLASH_GROUPS)[number];
 
 export interface SlashCommandItem {
 	/** Name of the block insertion item (nodeView for core blocks, block name for added blocks). Absent for basic formatting items. */
@@ -47,6 +44,12 @@ export interface SlashCommandItem {
 	title: string;
 	description: string;
 	keywords: string[];
+	/** The group the menu puts the item under. */
+	group: SlashGroup;
+	/** The Markdown that makes the same block while typing (`##`, `-`), shown at the end of the row. */
+	shortcut?: string;
+	/** A second line under the title (a template's sections). */
+	caption?: string;
 	/** The block this item inserts, by its name in the body's allowed list (`table`, `callout`, ...). The item is left out where the list does not allow it. */
 	block?: string;
 	/** The heading level this item sets. The item is left out where the list does not allow that level. */
@@ -63,6 +66,8 @@ const HEADING_ICONS = headingIcons;
 
 const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): SlashCommandItem => ({
 	title: t(`slash.h${level}.title`),
+	group: "text",
+	shortcut: "#".repeat(level),
 	heading: level,
 	icon: HEADING_ICONS[level],
 	description: t(`slash.h${level}.description`),
@@ -83,6 +88,7 @@ const heading = (t: TranslatorFor<typeof editorMessages>, level: 2 | 3 | 4): Sla
 export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): SlashCommandItem[] => [
 	{
 		title: t("slash.paragraph.title"),
+		group: "text",
 		description: t("slash.paragraph.description"),
 		icon: Paragraph,
 		keywords: keywordList(t, "slash.paragraph.keywords"),
@@ -95,6 +101,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	heading(t, 4),
 	{
 		title: t("slash.bullet.title"),
+		group: "text",
+		shortcut: "-",
 		description: t("slash.bullet.description"),
 		icon: ListBulleted,
 		keywords: keywordList(t, "slash.bullet.keywords"),
@@ -104,6 +112,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.ordered.title"),
+		group: "text",
+		shortcut: "1.",
 		description: t("slash.ordered.description"),
 		icon: ListNumbered,
 		keywords: keywordList(t, "slash.ordered.keywords"),
@@ -113,6 +123,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.todo.title"),
+		group: "text",
+		shortcut: "[ ]",
 		block: "taskList",
 		description: t("slash.todo.description"),
 		icon: ListChecked,
@@ -123,6 +135,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.quote.title"),
+		group: "text",
+		shortcut: ">",
 		block: "blockquote",
 		description: t("slash.quote.description"),
 		icon: Quotes,
@@ -133,6 +147,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.code.title"),
+		group: "insert",
+		shortcut: "```",
 		block: "codeBlock",
 		description: t("slash.code.description"),
 		icon: Code,
@@ -143,6 +159,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.table.title"),
+		group: "insert",
 		block: "table",
 		description: t("slash.table.description"),
 		icon: DataTable,
@@ -153,6 +170,8 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.divider.title"),
+		group: "text",
+		shortcut: "---",
 		block: "horizontalRule",
 		description: t("slash.divider.description"),
 		icon: Subtract,
@@ -163,28 +182,32 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.image.title"),
+		group: "insert",
 		block: "image",
 		description: t("slash.image.description"),
 		icon: Image,
 		keywords: keywordList(t, "slash.image.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
-			window.dispatchEvent(new CustomEvent(OPEN_IMAGE_DIALOG_EVENT));
+			openMediaPicker("image");
 		},
 	},
 	{
 		title: t("slash.file.title"),
+		group: "insert",
 		block: "file",
 		description: t("slash.file.description"),
 		icon: DocumentBlank,
 		keywords: keywordList(t, "slash.file.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
-			window.dispatchEvent(new CustomEvent(OPEN_FILE_PICKER_EVENT));
+			openMediaPicker("file");
 		},
 	},
 	{
 		title: t("slash.internalLink.title"),
+		group: "insert",
+		shortcut: "[[",
 		description: t("slash.internalLink.description"),
 		icon: Link,
 		keywords: keywordList(t, "slash.internalLink.keywords"),
@@ -194,6 +217,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 	},
 	{
 		title: t("slash.footnote.title"),
+		group: "insert",
 		block: "footnotes",
 		description: t("slash.footnote.description"),
 		icon: TextSuperscript,
@@ -232,6 +256,7 @@ export function buildBlockSlashCommands(
 
 		items.push({
 			id: nodeView,
+			group: "components",
 			block: block.name,
 			title: block.label,
 			description: block.description ?? t("slash.blockDescription", { label: block.label }),
@@ -277,7 +302,9 @@ export function filterCommands(
 	const { base, blocks, all } = slashTablesOf(site);
 	const listed = extra.length > 0 || inline.length > 0 ? [...base, ...inline, ...blocks, ...extra] : all;
 	// Only what the body's allowed list lets a writer add.
-	const commands = allowance.limited ? listed.filter((item) => isOffered(item, allowance)) : listed;
+	const offered = allowance.limited ? listed.filter((item) => isOffered(item, allowance)) : listed;
+	// The menu draws a group title where a group starts, so the items sit in group order (the sort is stable: inside a group the order stays).
+	const commands = [...offered].sort((a, b) => SLASH_GROUPS.indexOf(a.group) - SLASH_GROUPS.indexOf(b.group));
 	if (!query) return commands;
 	const clean = query.trim().toLowerCase();
 	return commands.filter((cmd) => {

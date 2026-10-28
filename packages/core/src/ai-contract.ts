@@ -143,8 +143,6 @@ export interface AiActionDefinition<I extends AiInputs = AiInputs> {
 	readonly checks?: readonly (Exclude<AiCheckInput, { kind: "code" }> | AiValidator)[];
 	/** Accepts an extra request at run time. If missing, none is accepted. */
 	readonly askInstruction?: boolean;
-	/** On click, inserts the result directly without showing it (the candidate is the first one). */
-	readonly instant?: boolean;
 	/** Streams the result (shown incrementally). Only for text/MDX results in generate mode. */
 	readonly stream?: boolean;
 	/** Enabled initially? Defaults to enabled. */

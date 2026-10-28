@@ -3,10 +3,10 @@ import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { storedDoc, text } from "../../test/stored-doc";
-import { type BlockInsertAction, blockInsertActions } from "../block-inserts";
+import { type BlockInsertAction, blockInsertActions, OPEN_MEDIA_PICKER_EVENT } from "../block-inserts";
 import { buildEditorExtensions } from "../extensions";
 import { editorMessages } from "../messages";
-import { buildBlockSlashCommands, filterCommands, OPEN_FILE_PICKER_EVENT, slashCommands } from "../slash-command";
+import { buildBlockSlashCommands, filterCommands, slashCommands } from "../slash-command";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 const t = testSite.createTranslator(editorMessages);
@@ -98,7 +98,7 @@ describe("slash menu insertion driven by block definitions", () => {
 		expect(ids).toEqual(expect.arrayContaining(["mermaid", "chart", "math"]));
 	});
 
-	it("slash menu and formatting tools share block names, and the file entry opens the file picker", () => {
+	it("slash menu and formatting tools share block names, and the file entry opens the library with files only", () => {
 		const titles = SLASH_COMMANDS.map((c) => c.title);
 		expect(titles).toEqual(
 			expect.arrayContaining([
@@ -111,11 +111,12 @@ describe("slash menu insertion driven by block definitions", () => {
 			]),
 		);
 		const open = vi.fn();
-		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
+		window.addEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>/파일</p>" });
 		SLASH_COMMANDS.find((c) => c.title === t("slash.file.title"))?.action(editor, { from: 1, to: 4 });
-		window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
+		window.removeEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 		expect(open).toHaveBeenCalledOnce();
+		expect((open.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ kind: "file" });
 		expect(editor.getText()).toBe("");
 		editor.destroy();
 	});
@@ -129,10 +130,19 @@ describe("slash menu insertion driven by block definitions", () => {
 		expect(filterCommands(testSite, "katex").some((c) => c.title === "수식")).toBe(true);
 		// Tooltip is a text decoration from the blocks extension, so it is not in the core menu; extension-provided entries (`inline`) come after the text formatting entries and before the block entries.
 		expect(filterCommands(testSite, "tooltip").some((c) => c.title === "툴팁")).toBe(false);
-		const inline = [{ title: "툴팁", description: "글자에 설명 달기", keywords: ["tooltip"], action: () => {} }];
+		const inline = [
+			{
+				title: "툴팁",
+				group: "insert" as const,
+				description: "글자에 설명 달기",
+				keywords: ["tooltip"],
+				action: () => {},
+			},
+		];
 		expect(filterCommands(testSite, "tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
 		const titles = filterCommands(testSite, "", [], inline).map((c) => c.title);
 		expect(titles.indexOf("툴팁")).toBeGreaterThan(titles.indexOf("내부 글 링크"));
+		// An extension item sits with the other items that insert something; the components come after them.
 		expect(titles.indexOf("툴팁")).toBeLessThan(titles.indexOf("다이어그램"));
 	});
 });

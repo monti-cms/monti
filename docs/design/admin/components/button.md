@@ -25,7 +25,7 @@ An icon (✦, the magnifier) is pointed or round, so with equal padding it looks
 
 ### In code
 
-`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring.
+`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring; `shortcut` puts a key combination after the label ("저장 ⌘S"): micro type, a little faint, 8px from the label.
 
 `outline-danger` is not in the DS README. It is a quieter `danger` with a 1px line. The side padding of the filled pills is 18px, 16px for `secondary` and 12px for `sm`.
 
@@ -72,6 +72,8 @@ One pill that holds the main action and its variants. Today there is one: "발�
 
 - The ▾ holds only other ways of the same action, such as "오늘 날짜로 다시 발행" (republish with today's date).
 - A first publish (a draft) has no ▾; it is a plain primary button.
+- The ▾ menu has two rows, each with the publish date under it: "발행하기" ("발행일 2026. 10. 01 그대로" (date kept)) and "오늘 날짜로 다시 발행" ("발행일 2026. 10. 26" (today's date)).
+- With nothing changed since it was published, the pill reads "발행됨" (published) and is dimmed (disabled, opacity .45). Editing makes the status "수정 중" and the pill "발행하기" again.
 - While publishing, the left half gets a turning ring ("발행 중" (publishing)) and neither half can be pressed.
 
 ### In code

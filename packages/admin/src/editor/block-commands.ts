@@ -31,6 +31,15 @@ export function topLevelBlockAt(doc: PmNode, pos: number): TopLevelBlock | null 
 const selectionInside = (doc: PmNode, from: number) =>
 	TextSelection.near(doc.resolve(Math.min(from + 1, doc.content.size)));
 
+/** Whether the block at `pos` has a neighbor to swap with in that direction. The block menu hides "up" on the first block and "down" on the last. */
+export function canMoveBlock(doc: PmNode, pos: number, direction: -1 | 1): boolean {
+	const target = targetBlockAt(doc, pos) ?? topLevelBlockAt(doc, pos);
+	if (!target) return false;
+	const parent: PmNode = isTargetBlock(target) ? target.parent : doc;
+	const neighborIndex = target.index + direction;
+	return neighborIndex >= 0 && neighborIndex < parent.childCount;
+}
+
 export function moveBlock(editor: Editor, pos: number, direction: -1 | 1): boolean {
 	const { state } = editor;
 	const target = targetBlockAt(state.doc, pos) ?? topLevelBlockAt(state.doc, pos);
@@ -60,6 +69,26 @@ export function duplicateBlock(editor: Editor, pos: number): boolean {
 	const tr = state.tr.insert(target.end, target.node.copy(target.node.content));
 	tr.setSelection(selectionInside(tr.doc, target.end)).scrollIntoView();
 	editor.view.dispatch(tr);
+	return true;
+}
+
+/**
+ * Puts an empty line under the block at `pos` with a `/` typed in it, and the cursor after it: the same state as typing the slash on a new line, so the block list
+ * opens by the same rule. A block that cannot take a paragraph after it (a list item) gets the line after its top-level block.
+ */
+export function addBlockBelow(editor: Editor, pos: number): boolean {
+	const { state } = editor;
+	const paragraph = state.schema.nodes.paragraph;
+	const target = targetBlockAt(state.doc, pos) ?? topLevelBlockAt(state.doc, pos);
+	if (!paragraph || !target) return false;
+	const $target = state.doc.resolve(target.start);
+	const inPlace = $target.parent.canReplaceWith($target.index() + 1, $target.index() + 1, paragraph);
+	const at = inPlace ? target.end : (topLevelBlockAt(state.doc, pos)?.end ?? target.end);
+	const line = paragraph.create(null, state.schema.text("/"));
+	const tr = state.tr.insert(at, line);
+	tr.setSelection(TextSelection.create(tr.doc, at + 2)).scrollIntoView();
+	editor.view.dispatch(tr);
+	editor.view.focus();
 	return true;
 }
 

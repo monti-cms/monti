@@ -37,7 +37,7 @@ const noop = () => {};
  * The form of a collection with nothing in it: the real panel on a local form, so typing, picking and the conditional fields that follow work, and nothing is
  * kept or sent. Documents use the properties panel of the edit screen, items the fields of the record panel.
  */
-function PreviewPanel({ collection, onClose }: { collection: string; onClose: () => void }) {
+function PreviewPanel({ collection }: { collection: string }) {
 	const site = useSite();
 	const [form, setForm] = useState<EntryForm>(() => emptyFormOf(site, collection));
 	const value = useMemo(
@@ -61,7 +61,6 @@ function PreviewPanel({ collection, onClose }: { collection: string; onClose: ()
 					onRefreshIncomingReferences={noop}
 					onSlugChange={(slug) => value.setForm({ slug })}
 					onRegenerateSlug={noop}
-					onClose={onClose}
 				/>
 			)}
 		</EntryFormProvider>
@@ -77,7 +76,6 @@ export function LayoutPreview({
 	file,
 	collection,
 	codeCollections,
-	onClose,
 	onOpenField,
 }: {
 	/** The schema file as edited. */
@@ -85,7 +83,6 @@ export function LayoutPreview({
 	/** The collection shown. */
 	collection: string;
 	codeCollections: readonly string[];
-	onClose: () => void;
 	/** Opens the sheet of a field that has a problem. */
 	onOpenField?: (place: FieldPlace, name: string) => void;
 }) {
@@ -148,7 +145,7 @@ export function LayoutPreview({
 			) : draft?.isCollection(collection) ? (
 				<SiteProvider site={draft}>
 					<PreviewBoundary fallback={problem} resetKey={draft}>
-						<PreviewPanel key={collection} collection={collection} onClose={onClose} />
+						<PreviewPanel key={collection} collection={collection} />
 					</PreviewBoundary>
 				</SiteProvider>
 			) : (

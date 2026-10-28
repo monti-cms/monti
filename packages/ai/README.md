@@ -20,7 +20,6 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "A personal tech blog", // Goes at the very top of every action's instruction. Defaults to "website"
-		autoImageText: true, // Fill in the alt text and caption of an image as it goes into the body. Off by default
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // Replace (same name)
 			draft: false, // Turn off
@@ -30,10 +29,8 @@ plugins: [
 ],
 ```
 
-`autoImageText: true` subscribes the AI plugin to the editor's `editor.imageInserted` event ("Admin events" in the [admin README](../admin/README.md)): when an
-image goes into the body, it runs `imageAlt` and `imageCaption` on it and writes the first candidate of each into the field while that field is still empty. The
-image is in at once and shows that its text is being written; what you type first is kept, and an action that is off or has no ready connection is skipped. With it
-on, the image dialog lets the alt text be left empty.
+An image gets no alt text or caption on its own: the person writes it in the image dialog, or presses "Fill" next to the field, which runs `imageAlt` or `imageCaption` and
+puts the result in at once (the first candidate).
 
 ### Built-in actions
 
@@ -43,6 +40,7 @@ on, the image dialog lets the alt text be left empty.
 | `summary` | Text field with the summary role (`role: "summary"`). Length comes from the field's `max` (160 if unset) | It is in a collection with a body |
 | `tags` | Multi-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
 | `category` | Single-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
+| `series` | Backlink field (`fields.backlink`, e.g. the series a post is listed in). Picks one series from the collection the backlink points from, and adds the post to it | It is in a collection with a body |
 | `imageAlt`, `imageCaption` | Alt text and caption in the body image and media screens | Always |
 | `mediaFilename` | File name in the media screen | Always |
 | `translate` | Block translation in the translation editor. The block props to translate come from the block definition (`translatable`) | There are two or more locales |
@@ -227,6 +225,8 @@ ai({
 	},
 });
 ```
+
+`askInstruction` lets the person type an extra request before the run; only the translation, selection, insert and block slots have a place for it (a field, image or media action runs at one press and puts its result in at once), and the config check refuses it elsewhere.
 
 For a streamed MDX result, only a ` ```mdx ` fence wrapping the whole answer is stripped. Fences of other languages, which are the
 block's source, are left as is.

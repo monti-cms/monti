@@ -137,6 +137,8 @@ States (`mode`, default "편집 충돌"):
 | "편집 충돌" | Your unsaved input against the latest server version (v4, saved 10:41); load the server version or save your input. | 1.17 |
 | "임시 저장본" | The browser-only draft (10. 26 10:12) against the server copy (10. 26 09:58); load the draft or discard it. | 1.19 |
 
+In code it is the edit address with `?compare=conflict` or `?compare=draft`, drawn by the editor in place of its own screen, so the input that is not saved stays in the editor while it is compared. Only the properties that differ are listed on top of each side; the title and the body are compared word by word and block by block (`compareEntries`). The count in the header and in the status bar ("다른 곳 3") is the number of properties, the title and the body blocks that differ.
+
 <a id="translate"></a>
 ## Translate: (untitled)
 
@@ -352,15 +354,15 @@ States (`stage`, default "라이브러리"):
 ## Templates: "도구 · 템플릿"
 
 - Board: `Templates.dc.html` (canvas row: "도구")
-- Purpose: Tools › Templates: the list of post templates with the last edit date.
-- Used in flows: none.
+- Purpose: Tools › Templates: the list of post templates. A row holds the name (the way into the template's page), its headings in one line, the day it was edited ("10. 20 고침") and a ⋯ with duplicate and delete. "+ 템플릿 추가" is in the page header. The page is the content width (880), not a wide list.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
 
 <a id="templateeditor"></a>
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
 - Board: `TemplateEditor.dc.html` (canvas row: "도구")
-- Purpose: The template editor: the editor with a template name field, saved with ⌘S.
-- Used in flows: none.
+- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" and the primary "저장 ⌘S" (both only while something is changed), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field over the reading-width body, and a status bar with the character count only.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>
 ## Data: "도구 · 데이터"

@@ -102,12 +102,13 @@ describe("AI action runner", () => {
 
 	it("an action with requests enabled appends the extra request typed at run time after the fixed instructions", async () => {
 		const { provider, requests } = stubProvider({ candidates: [] });
+		const withRequests = { ...preset("codeFold"), askInstruction: true };
 		await runAiAction(
-			preset("codeFold"),
+			withRequests,
 			call({ code: '<div className="flex gap-2">' }, {}, "tailwind 클래스만"),
 			deps(provider),
 		);
-		expect(requests[0]?.system).toContain(preset("codeFold").prompt);
+		expect(requests[0]?.system).toContain(withRequests.prompt);
 		expect(requests[0]?.system).toContain(
 			"Request for this run (takes priority over the instructions above):\ntailwind 클래스만",
 		);

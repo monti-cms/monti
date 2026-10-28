@@ -47,7 +47,7 @@ function Labelled({ name, children }: { name: string; children: React.ReactNode 
 export const Ratio: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} wrap align="start">
-			{(["square", "photo", "wide", "share", "auto"] as const).map((ratio) => (
+			{(["square", "photo", "wide", "share", "banner", "auto"] as const).map((ratio) => (
 				<Labelled key={ratio} name={`ratio ${ratio}`}>
 					<div className="w-40">
 						<Image src={SAMPLE} alt="여름 바다 풍경" ratio={ratio} />

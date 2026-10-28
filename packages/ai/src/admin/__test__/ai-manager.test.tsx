@@ -33,7 +33,6 @@ const SAMPLE_ACTIONS: AiActionView[] = [
 			hidden: false,
 			label: "Suggest slug",
 			askInstruction: false,
-			instant: false,
 			providerId: null,
 			modelName: "",
 			prompt: "Generate slug",
@@ -48,7 +47,6 @@ const SAMPLE_ACTIONS: AiActionView[] = [
 		enabled: true,
 		hidden: false,
 		askInstruction: false,
-		instant: false,
 		providerId: null,
 		modelName: "",
 		prompt: "Generate slug",
@@ -74,7 +72,6 @@ const SAMPLE_ACTIONS: AiActionView[] = [
 			hidden: false,
 			label: "Write summary",
 			askInstruction: false,
-			instant: false,
 			providerId: null,
 			modelName: "",
 			prompt: "Generate summary",
@@ -89,7 +86,6 @@ const SAMPLE_ACTIONS: AiActionView[] = [
 		enabled: false,
 		hidden: true,
 		askInstruction: false,
-		instant: false,
 		providerId: null,
 		modelName: "",
 		prompt: "Generate summary",
@@ -280,9 +276,19 @@ describe("AI Manager UI", () => {
 
 		fireEvent.click(screen.getByTestId("ai-advanced-toggle"));
 		expect(await screen.findByLabelText(tManager("field.prompt"))).toBeInTheDocument();
-		expect(screen.getByText(tManager("toggle.ask"))).toBeInTheDocument();
+		// A field action runs at one press: there is no request to ask for.
+		expect(screen.queryByText(tManager("toggle.ask"))).not.toBeInTheDocument();
 		expect(screen.getByText(tManager("field.send"))).toBeInTheDocument();
 		expect(screen.getByText(tManager("field.checks"))).toBeInTheDocument();
+	});
+
+	it("offers to ask for a request only to an action that sits where a request can be typed", async () => {
+		const [first] = actions;
+		if (first) first.attach = [{ slot: "selection" }];
+		renderManager();
+		fireEvent.click(await screen.findByText("Suggest slug"));
+		fireEvent.click(await screen.findByTestId("ai-advanced-toggle"));
+		expect(await screen.findByText(tManager("toggle.ask"))).toBeInTheDocument();
 	});
 
 	it("marks an action with an edited instruction as modified and opens Advanced for it", async () => {

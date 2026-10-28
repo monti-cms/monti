@@ -1,7 +1,7 @@
 import { defineBlock } from "@monti-cms/core";
 import { charEffectByName } from "@monti-cms/core/code-block";
 import type { CmsNode } from "@monti-cms/core/document";
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Editor, type JSONContent } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ import { renderWithSite } from "../../test/site";
 import { para, storedDoc, text } from "../../test/stored-doc";
 import { addedMarkName, createAddedMark } from "../added-marks";
 import { buildEditorExtensions } from "../extensions";
-import { BubbleButton, InlineBubble } from "../inline-bubble";
+import { BubbleButton, InlineBubble, runFormatItem } from "../inline-bubble";
 import { inlineBubbleTarget } from "../inline-marks";
 import { editorMessages } from "../messages";
 import { storedToTiptap } from "../tiptap-content";
@@ -213,35 +213,31 @@ describe("InlineBubble", () => {
 		expect(editor.getText()).toContain("마바");
 	});
 
-	it("an extension text decoration renders its registered bubble button, content and input", () => {
+	it("an extension text decoration lists its format under the ⋯, and renders its registered content and input", () => {
 		const extension: EditorMarkExtension = {
-			bubble: {
-				group: "link",
-				order: -1,
-				Button: ({ editor: current, openPanel, closePanel }) => (
-					<BubbleButton
-						label="메모 넣기"
-						onClick={() =>
-							openPanel({
-								label: "메모 편집",
-								content: (
-									<button
-										type="button"
-										onClick={() => {
-											current.chain().setMark(NOTE_MARK, { text: "새 메모" }).run();
-											closePanel();
-										}}
-									>
-										메모 적용
-									</button>
-								),
-							})
-						}
-					>
-						메모
-					</BubbleButton>
-				),
-			},
+			formatItems: [
+				{
+					id: "note",
+					label: (current) => (current.isActive(NOTE_MARK) ? "메모 고치기" : "메모 넣기"),
+					isAvailable: ({ inCode }) => !inCode,
+					isActive: (current) => current.isActive(NOTE_MARK),
+					run: ({ editor: current, openPanel, closePanel }) =>
+						openPanel({
+							label: "메모 편집",
+							content: (
+								<button
+									type="button"
+									onClick={() => {
+										current.chain().setMark(NOTE_MARK, { text: "새 메모" }).run();
+										closePanel();
+									}}
+								>
+									메모 적용
+								</button>
+							),
+						}),
+				},
+			],
 			detail: ({ mark, act, editor: current }) => (
 				<>
 					<span>{String(mark.attrs.text)}</span>
@@ -262,14 +258,15 @@ describe("InlineBubble", () => {
 				</AdminComponentsProvider>,
 			);
 
-		// When text is selected, the registered button comes before the link button (`order: -1`).
+		// When text is selected, the format sits under the ⋯ at the end of the formats: not a button of the card itself.
 		focusAt(editor, { from: 1, to: 3 });
 		const { unmount } = renderWith();
-		const labels = [
-			...screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") }).querySelectorAll("button"),
-		].map((button) => button.getAttribute("aria-label"));
-		expect(labels.indexOf("메모 넣기")).toBe(labels.indexOf(t("link.add")) - 1);
-		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 넣기" })));
+		const card = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
+		const labels = [...card.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
+		expect(labels).not.toContain("메모 넣기");
+		expect(labels.indexOf(t("formatBar.more"))).toBe(labels.indexOf(t("inlineBubble.footnoteAdd")) + 1);
+		act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
+		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "메모 넣기" })));
 		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeTruthy();
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 적용" })));
 		expect(editor.getHTML()).toMatch(/<span data-monti-mark="note" data-mark-text="새 메모">가나<\/span>/);
@@ -281,6 +278,56 @@ describe("InlineBubble", () => {
 		expect(screen.getByText("설명")).toBeTruthy();
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 해제" })));
 		expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
+	});
+
+	describe("the ⋯ of the card (formats a site added)", () => {
+		const noteFormat = {
+			id: "note",
+			label: "메모 넣기",
+			isAvailable: ({ inCode }: { inCode: boolean }) => !inCode,
+			isActive: (current: Editor) => current.isActive(NOTE_MARK),
+			run: ({ editor: current }: { editor: Editor }) =>
+				current.chain().focus().toggleMark(NOTE_MARK, { text: "메모" }).run(),
+		};
+		const renderWith = (editor: Editor, formats: EditorMarkExtension["formatItems"]) =>
+			renderWithSite(
+				<AdminComponentsProvider components={{ marks: { [noteBlock.name]: { formatItems: formats } } }}>
+					<InlineBubble editor={editor} />
+				</AdminComponentsProvider>,
+			);
+
+		it("is not there when no site format is available for the selection (in code, or none registered)", () => {
+			const code = createEditor("<pre><code>call(a, b)</code></pre>");
+			focusAt(code, { from: 6, to: 10 });
+			const { unmount } = renderWith(code, [noteFormat]);
+			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
+			unmount();
+
+			const plain = createEditor(HTML);
+			focusAt(plain, { from: 1, to: 3 });
+			renderWith(plain, undefined);
+			expect(screen.queryByRole("button", { name: t("formatBar.more") })).toBeNull();
+		});
+
+		it("ticks a format the selection has, and runs the one that is picked", () => {
+			const editor = createEditor(HTML);
+			focusAt(editor, { from: 10, to: 12 });
+			renderWith(editor, [noteFormat]);
+			act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
+			const row = screen.getByRole("menuitem", { name: "메모 넣기" });
+			// The text already has the note, so the row ends in a ✓.
+			expect(row.querySelector("[data-slot=menu-tick]")).not.toBeNull();
+			act(() => fireEvent.click(row));
+			expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
+		});
+
+		it("runs a format by its id on the selection (what a slash item uses)", async () => {
+			const editor = createEditor(HTML);
+			focusAt(editor, { from: 1, to: 3 });
+			renderWith(editor, [noteFormat]);
+			act(() => runFormatItem("note"));
+			await waitFor(() => expect(editor.getHTML()).toContain('data-monti-mark="note"'));
+		});
 	});
 
 	it("adds a link to the selected text from the bubble", () => {

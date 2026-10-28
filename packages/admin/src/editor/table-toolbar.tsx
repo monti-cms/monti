@@ -12,7 +12,7 @@ import { createPortal } from "react-dom";
 import type { TranslatorFor } from "../translator";
 import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { editorMessages } from "./messages";
-import { ToolbarButton, type ToolbarItem } from "./toolbar-button";
+import { ToolbarButton, type ToolbarItem } from "./tool-button";
 
 const chain = (editor: Editor) => editor.chain().focus();
 const isCellSelection = (editor: Editor): boolean => editor.state.selection instanceof CellSelection;
@@ -173,11 +173,8 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 		const rect = element.getBoundingClientRect();
 		const height = toolbar?.offsetHeight ?? 32;
 		const width = toolbar?.offsetWidth ?? 0;
-		// So it is not hidden by the top formatting toolbar (sticky), when the table scrolls up it sticks right below the formatting toolbar.
-		const formatBar = editor.view.dom
-			.closest("[data-monti-editor-shell]")
-			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
-		const minTop = (formatBar?.getBoundingClientRect().bottom ?? 0) + TOOLBAR_GAP;
+		// When the table scrolls up the tools stay in view at the top of the screen.
+		const minTop = TOOLBAR_GAP;
 		const top = Math.min(Math.max(rect.top - height - TOOLBAR_GAP, minTop), rect.bottom - height);
 		const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
 		setPosition((previous) => (previous && previous.top === top && previous.left === left ? previous : { top, left }));

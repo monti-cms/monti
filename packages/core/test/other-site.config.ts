@@ -35,7 +35,6 @@ const article = defineCollection({
 		// Field group from the SEO extension. Different names, labels and tab (`Search`) from the blog, and the canonical URL is left out. The `seo()` plugin below places the group in the `Search` tab.
 		...seoFields({
 			keys: {
-				preview: "searchPreview",
 				title: "metaTitle",
 				description: "metaDescription",
 				image: "shareImage",

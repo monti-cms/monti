@@ -1,12 +1,11 @@
 "use client";
 
 import { Code, Unlink } from "@carbon/icons-react";
-import { type AdminComponents, useSite, useTranslator } from "@monti-cms/admin";
+import { type AdminComponents, type Site, type Translator, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
 	BubbleButton,
-	type EditorBubbleProps,
 	type EditorMarkDetailProps,
 	type EditorMarkExtension,
 	findAnchor,
@@ -30,22 +29,6 @@ const hasCodeBlock = (editor: Editor) => {
 	});
 	return found;
 };
-
-function CodeRefBubbleButton({ editor, inCode }: EditorBubbleProps) {
-	const t = useTranslator(codeRefMessages);
-	if (inCode || !allowsMark(editor.state, CODE_REF_MARK) || !hasCodeBlock(editor)) return null;
-	return (
-		<BubbleButton
-			label={t("link")}
-			onClick={() => {
-				const { from, to } = editor.state.selection;
-				startLinkFromText(editor.view, from, to);
-			}}
-		>
-			<Code aria-hidden />
-		</BubbleButton>
-	);
-}
 
 function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 	const t = useTranslator(codeRefMessages);
@@ -79,11 +62,27 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 }
 
 /** Editor registration of the code-ref mark. Shown with an underline in the theme accent color. */
-export const codeRefMarkExtension: EditorMarkExtension = {
+export const codeRefMarkExtension = (
+	t: Translator<keyof (typeof codeRefMessages)["messages"]["en"]>,
+): EditorMarkExtension => ({
 	render: () => ({ class: "underline decoration-monti-strong decoration-solid underline-offset-4" }),
-	bubble: { group: "link", order: 1, Button: CodeRefBubbleButton },
+	formatItems: [
+		{
+			id: "code-ref",
+			label: t("link"),
+			icon: Code,
+			// Not inside code, and only where a code block gives a line to link to.
+			isAvailable: ({ editor, inCode }) => !inCode && allowsMark(editor.state, CODE_REF_MARK) && hasCodeBlock(editor),
+			run: ({ editor }) => {
+				const { from, to } = editor.state.selection;
+				startLinkFromText(editor.view, from, to);
+			},
+		},
+	],
 	detail: CodeRefDetail,
-};
+});
 
-/** The code-ref mark's editor display and bubble. */
-export const codeRefComponents: AdminComponents = { marks: { [codeRefBlock.name]: codeRefMarkExtension } };
+/** The code-ref mark's editor display, format row and bubble content, in the admin language of the site. */
+export const codeRefComponents = (site: Site): AdminComponents => ({
+	marks: { [codeRefBlock.name]: codeRefMarkExtension(site.createTranslator(codeRefMessages)) },
+});

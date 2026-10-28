@@ -391,7 +391,6 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			file={file}
 			collection={editing.collectionName}
 			codeCollections={codeCollections}
-			onClose={() => setPreviewOpen(false)}
 			onOpenField={(place, name) => setSheet({ place, name })}
 		/>
 	);

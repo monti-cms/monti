@@ -4,8 +4,7 @@ import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/docume
 import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/site";
 import { Stack } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { CellSelection } from "@tiptap/pm/tables";
-import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import { EditorContent, useEditor } from "@tiptap/react";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
 	type EditorInsertAction,
@@ -13,29 +12,24 @@ import {
 	useAdminComponents,
 	useSourceFormat,
 } from "../admin-components";
-import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { editorAllowance } from "./allowed";
 import { ALLOWED_BYPASS_META } from "./allowed-extension";
-import { deleteBlock, duplicateBlock, moveBlock } from "./block-commands";
 import { BlockHandleOverlay } from "./block-handle-overlay";
 import { CodeLinkBar } from "./code-block/code-link-bar";
 import { documentKey } from "./document-key";
 import { startMarquee } from "./drag";
 import { EditorWidthMenu, useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
-import { ImageInsertDialog } from "./image-insert-dialog";
+import { MediaPickerDialog } from "./image-insert-dialog";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble";
 import { InternalLinkPopup } from "./internal-link-popup";
-import type { LinkDraft } from "./link-form";
 import { editorMessages } from "./messages";
 import { filterCommands } from "./slash-command";
 import { SlashMenuPopup } from "./slash-menu-popup";
+import { useSlashTemplates } from "./slash-templates";
 import { TableToolbar } from "./table-toolbar";
 import { boxPreviewOf, storedToTiptap, tiptapToStored } from "./tiptap-content";
-import { buildToolbarEntries } from "./toolbar-entries";
-import { ToolbarRow } from "./toolbar-row";
-import { ALIGN_TOOLS, BLOCK_STYLES, inlineTools, LIST_STYLES, scriptTools } from "./toolbar-tools";
 import { useBlockHandle } from "./use-block-handle";
 import { useInternalLinkMenu } from "./use-internal-link-menu";
 import { useMediaInsertion } from "./use-media-insertion";
@@ -46,28 +40,28 @@ interface CmsEditorProps {
 	doc: StoredDocument;
 	/** The body as the editor holds it after every change, as a stored document with the editor's block ids. */
 	onChange: (doc: StoredDocument) => void;
-	/** Title input for the document being edited. Placed below the formatting tools, above the body. */
+	/** Title input for the document being edited. Placed above the body. */
 	titleField?: ReactNode;
-	/** Document action menu placed at the end of the formatting tools. */
-	toolbarEnd?: ReactNode;
-	/** Right end of the toolbar, apart from the formatting tools (view switch, etc.). */
-	toolbarAside?: ReactNode;
-	/** When given, shown in place of the body (source editing, etc.) and visual editing is paused. The toolbar and title stay as they are. */
+	/** Document-wide tools (view switches, a button that writes a draft), a row of buttons at the top right of the body next to the width menu. There is no toolbar. */
+	tools?: ReactNode;
+	/** The "/" menu lists the body templates, and a chosen one goes in at the cursor. Off where a template is being written. */
+	templates?: boolean;
+	/** When given, shown in place of the body (source editing, etc.) and visual editing is paused. The title stays as it is. */
 	sourceView?: ReactNode;
 	onCompositionStart?: () => void;
 	onCompositionEnd?: () => void;
 	/** False when the state is not editable, such as the trash. */
 	editable?: boolean;
-	/** Extra actions beside the block handle (e.g. "Translate" on a translation). Shown only when usable on that block. */
+	/** Extra actions in the block menu (e.g. "Translate" on a translation). Shown only when usable on that block. */
 	blockActions?: readonly BlockAction[];
 	/** Called when the editor is created or destroyed (for document-wide actions from outside). */
 	onEditor?: (editor: Editor | null) => void;
-	/** Actions to add to the selection menu (plugins). */
+	/** Actions to add to the end of the format card (plugins). */
 	selectionActions?: readonly EditorSelectionAction[];
 	/** Insert actions to add to the slash menu (plugins). */
 	insertActions?: readonly EditorInsertAction[];
 	/**
-	 * The blocks, marks and heading levels the body allows (`body` of the collection in the schema). The editor offers and accepts only these (toolbar, menus,
+	 * The blocks, marks and heading levels the body allows (`body` of the collection in the schema). The editor offers and accepts only these (menus, the format card,
 	 * input rules, paste); a body that already holds something else still opens and saves unchanged. Without it, everything is allowed.
 	 */
 	allowed?: BodyAllowed;
@@ -88,8 +82,8 @@ export function CmsEditor({
 	doc,
 	onChange,
 	titleField,
-	toolbarEnd,
-	toolbarAside,
+	tools,
+	templates = false,
 	sourceView,
 	onCompositionStart,
 	onCompositionEnd,
@@ -102,14 +96,13 @@ export function CmsEditor({
 }: CmsEditorProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
-	const tc = useTranslator(commonMessages);
 	// What the body's allowed list lets a writer add. A body that already holds more still opens and saves as it is.
 	const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
 	const isSourceMode = sourceView != null && sourceView !== false;
-	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
+	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formats for the format card, and slash menu items.
 	const { marks: markSpecs = {} } = useAdminComponents();
 	const allMarkExtensions = useMarkExtensions().filter(({ name }) => allowance.allowsEditorMark(name));
-	// While source is being edited, the visual editor is paused. Toolbar tools are locked too.
+	// While source is being edited, the visual editor is paused.
 	const canEdit = editable && !isSourceMode;
 	const { media } = useAdminFeatures();
 	// A body opened in source mode may be unparsable. The visual editor starts as an empty document and is filled when returning.
@@ -119,28 +112,34 @@ export function CmsEditor({
 		storedToTiptap(site, isSourceMode ? emptyStoredDocument() : doc, { boxPreview }),
 	);
 	const isInternalUpdateRef = useRef(false);
-	// Width of the element at the right end of the toolbar. Leave this much space on both sides so the tool group stays centered.
-	const asideRef = useRef<HTMLDivElement>(null);
-	const [asideWidth, setAsideWidth] = useState(72);
-	useEffect(() => {
-		const element = asideRef.current;
-		if (!element) return;
-		const measure = () => setAsideWidth(Math.ceil(element.getBoundingClientRect().width));
-		measure();
-		const observer = new ResizeObserver(measure);
-		observer.observe(element);
-		return () => observer.disconnect();
-	});
 	const isComposingRef = useRef(false);
 	const editorRef = useRef<Editor | null>(null);
 	const { steps: widthSteps, step: widthStep, choose: chooseWidth } = useEditorWidth();
 
-	const slashMenu = useSlashMenu({ site, allowance, insertActions, markExtensions: allMarkExtensions, editorRef });
+	const slashTemplates = useSlashTemplates({
+		enabled: templates && site.ADMIN_TEMPLATES,
+		site,
+		allowance,
+		boxPreview,
+	});
+	const slashMenu = useSlashMenu({
+		site,
+		allowance,
+		insertActions,
+		templateItems: slashTemplates.items,
+		markExtensions: allMarkExtensions,
+		editorRef,
+	});
 	const linkMenu = useInternalLinkMenu({ site, t, editorRef });
 	const { slash, slashRangeRef, extraCommands, inlineCommands, closeSlash } = slashMenu;
 	const { link, linkItems, isLinkLoading, linkError, closeLink, chooseLink } = linkMenu;
 
-	const [linkDraft, setLinkDraft] = useState<LinkDraft | null>(null);
+	// The template list is asked for the first time the menu opens.
+	const slashOpen = slash !== null;
+	const { ask: askTemplates } = slashTemplates;
+	useEffect(() => {
+		if (slashOpen) askTemplates();
+	}, [slashOpen, askTemplates]);
 
 	const syncTriggerPopup = (current: Editor) => {
 		if (isComposingRef.current) return;
@@ -162,7 +161,7 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected" +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected " +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
@@ -170,6 +169,10 @@ export function CmsEditor({
 					// Block selection (marquee): lay a box with margin (-inset-1) after the line and hide the text selection highlight. List items cover the bullet too.
 					// To avoid confusion with text selection (primary purple), show "a block is selected" with a different color (sky) and border.
 					"[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-1 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-monti-md [&_.monti-block-selected]:before:bg-monti-selected [&_.monti-block-selected]:before:ring-1 [&_.monti-block-selected]:before:ring-monti-contrast/20 [&_li.monti-block-selected]:before:-left-7 [&.monti-block-range]:selection:bg-transparent " +
+					// The empty line the cursor is on says how to add a block (`empty-hint.ts`).
+					"[&[contenteditable=false]_.monti-empty-line]:before:hidden [&_.monti-empty-line]:before:pointer-events-none [&_.monti-empty-line]:before:float-left [&_.monti-empty-line]:before:h-0 [&_.monti-empty-line]:before:text-monti-faint [&_.monti-empty-line]:before:content-[attr(data-placeholder)] " +
+					// The block whose handle menu is open has the block ground (`block-menu-mark.ts`), laid out like the block selection above.
+					"[&_.monti-menu-open]:relative [&_.monti-menu-open]:isolate [&_.monti-menu-open]:before:pointer-events-none [&_.monti-menu-open]:before:absolute [&_.monti-menu-open]:before:-inset-x-2 [&_.monti-menu-open]:before:-inset-y-0.5 [&_.monti-menu-open]:before:-z-10 [&_.monti-menu-open]:before:rounded-monti-md [&_.monti-menu-open]:before:bg-monti-block [&_li.monti-menu-open]:before:-left-7 " +
 					// Dragging across cells to select several (CellSelection) paints the selected cells. The range to merge is visible.
 					"[&_.selectedCell]:bg-monti-selected [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-monti-contrast",
 			},
@@ -188,49 +191,15 @@ export function CmsEditor({
 		onSelectionUpdate: ({ editor: current }) => syncTriggerPopup(current),
 	});
 
-	// Only text-style extensions in this editor schema (blocks the site uses) render tools.
-	const markExtensions = allMarkExtensions.filter(({ name }) => !editor || editor.schema.marks[name]);
-	const markNames = markExtensions.map(({ name }) => name);
-
-	// When the selection or applied formatting changes, update dropdown names and active indicators (table tools are subscribed separately by TableToolbar).
-	useEditorState({
-		editor,
-		selector: ({ editor: current }) => {
-			if (!current) return "";
-			const selection = current.state.selection;
-			const active = [
-				...BLOCK_STYLES(t),
-				...inlineTools(site),
-				...scriptTools(site),
-				...ALIGN_TOOLS(t),
-				...LIST_STYLES(t),
-			]
-				.map((item) => (item.isActive?.(current) ? "1" : "0"))
-				.join("");
-			const marks = ["link", ...markNames].map((mark) => (current.isActive(mark) ? "1" : "0")).join("");
-			return `${active}${marks}:${current.isActive("table") ? "table" : ""}:${selection.from}:${selection.to}:${selection instanceof CellSelection}`;
-		},
-	});
-
-	// The names of the current block and list come from every kind, also the ones the list no longer offers: a body keeps what it holds.
-	const blockStyle = editor
-		? (BLOCK_STYLES(t).find((item) => item.isActive?.(editor))?.label ?? t("toolbar.paragraph"))
-		: t("toolbar.paragraph");
-	const activeList = editor ? LIST_STYLES(t).find((item) => item.isActive?.(editor)) : undefined;
-	const activeAlign = editor ? ALIGN_TOOLS(t).find((item) => item.isActive?.(editor)) : undefined;
-
 	const { handleSpot, setHandleSpot, handleMouseMove, handleDragStart, handleDragEnd } = useBlockHandle(editor);
-	const {
-		imageDialog,
-		fillsImageText,
-		openImageDialog,
-		closeImageDialog,
-		insertImage,
-		fileInputRef,
-		uploadAttachments,
-		handlePaste,
-		handleDrop,
-	} = useMediaInsertion({ editor, site, t, media, allowance, canEdit });
+	const { pickerProps, handlePaste, handleDrop } = useMediaInsertion({
+		editor,
+		site,
+		t,
+		media,
+		allowance,
+		canEdit,
+	});
 	useEffect(() => {
 		editorRef.current = editor;
 		if (!editor || isSourceMode) return;
@@ -274,30 +243,7 @@ export function CmsEditor({
 		return () => onEditorRef.current?.(null);
 	}, [editor]);
 
-	const withBlock = (pos: number, action: (current: Editor, pos: number) => boolean) => () => {
-		if (!editor) return;
-		editor.commands.focus();
-		action(editor, pos);
-	};
-
 	if (!editor) return null;
-
-	const toolbarEntries = buildToolbarEntries({
-		editor,
-		site,
-		t,
-		tc,
-		allowance,
-		canEdit,
-		markExtensions,
-		blockStyle,
-		activeList,
-		activeAlign,
-		linkDraft,
-		setLinkDraft,
-		openImageDialog,
-		openFilePicker: () => fileInputRef.current?.click(),
-	});
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: editor shell tracks IME and block hover state
@@ -328,55 +274,22 @@ export function CmsEditor({
 				startMarquee(editor.view, event.nativeEvent);
 			}}
 		>
-			<Stack
-				role="toolbar"
-				aria-label={t("toolbar.format")}
-				gap={0}
-				position="sticky"
-				width="full"
-				shrink={false}
-				overflow="x"
-				border="bottom"
-				background="page"
-			>
-				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
-				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
-				<div className="relative flex min-h-12 items-center py-monti-8" style={{ paddingInline: asideWidth + 24 }}>
-					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
-					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-monti-4">
-						{toolbarAside}
-						<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
-					</div>
-				</div>
-				{!isSourceMode && <CodeLinkBar editor={editor} />}
-			</Stack>
+			{!isSourceMode && (
+				<Stack position="sticky" width="full" shrink={false} gap={0}>
+					<CodeLinkBar editor={editor} />
+				</Stack>
+			)}
+
+			<div className="mx-auto flex w-full max-w-(--editor-width) justify-end gap-monti-4 px-monti-16 pt-monti-8">
+				{tools}
+				<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
+			</div>
 
 			{titleField && (
 				<div className="mx-auto w-full max-w-(--editor-width) px-monti-16 pt-monti-48 pb-monti-8">{titleField}</div>
 			)}
 
-			<input
-				ref={fileInputRef}
-				type="file"
-				multiple
-				accept={site.api.FILE_ACCEPT}
-				hidden
-				aria-hidden
-				tabIndex={-1}
-				onChange={(event) => {
-					const files = Array.from(event.target.files ?? []);
-					event.target.value = "";
-					void uploadAttachments(files);
-				}}
-			/>
-
-			<ImageInsertDialog
-				open={imageDialog !== null}
-				initialFile={imageDialog?.file ?? null}
-				onClose={() => closeImageDialog()}
-				onInsert={insertImage}
-				altLater={fillsImageText}
-			/>
+			<MediaPickerDialog {...pickerProps} />
 
 			{isSourceMode && (
 				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-monti-16 pt-monti-24 pb-[35vh]">
@@ -410,8 +323,10 @@ export function CmsEditor({
 			{slash && !isSourceMode && (
 				<SlashMenuPopup
 					items={filterCommands(site, slash.query, extraCommands, inlineCommands, allowance)}
-					coords={slash.coords}
+					query={slash.query}
+					caret={slash.caret}
 					selectedIndex={slash.index}
+					onHighlight={slashMenu.highlight}
 					onSelect={(command) => {
 						if (slashRangeRef.current) command.action(editor, slashRangeRef.current);
 						closeSlash();
@@ -447,14 +362,9 @@ export function CmsEditor({
 
 			{handleSpot && canEdit && (
 				<BlockHandleOverlay
-					coords={handleSpot}
-					onMoveUp={withBlock(handleSpot.pos, (current, pos) => moveBlock(current, pos, -1))}
-					onMoveDown={withBlock(handleSpot.pos, (current, pos) => moveBlock(current, pos, 1))}
-					onDuplicate={withBlock(handleSpot.pos, duplicateBlock)}
-					onDelete={() => {
-						withBlock(handleSpot.pos, deleteBlock)();
-						setHandleSpot(null);
-					}}
+					editor={editor}
+					spot={handleSpot}
+					onDeleted={() => setHandleSpot(null)}
 					onDragStart={(event) => handleDragStart(handleSpot.pos, event)}
 					onDragEnd={handleDragEnd}
 					actions={(blockActions ?? [])

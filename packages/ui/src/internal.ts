@@ -69,6 +69,17 @@ export {
 	CommandSeparator,
 } from "./command";
 export {
+	Compare,
+	CompareBody,
+	CompareCode,
+	CompareHeading,
+	CompareParagraph,
+	CompareProperty,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+} from "./compare";
+export {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,
@@ -129,6 +140,8 @@ export {
 	FormFieldTitle,
 } from "./field";
 export { FieldRow, FieldTree } from "./field-tree";
+export { FileBlock } from "./file-block";
+export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
 export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
@@ -154,6 +167,7 @@ export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
 export { LockMark } from "./lock-mark";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
+export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
@@ -185,6 +199,7 @@ export { Patch, type PatchLine } from "./patch";
 export { PickList, PickListItem } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
+export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
 export { ProposalBubble } from "./proposal-bubble";
 export { ProposalCard, ProposalItem } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
@@ -275,4 +290,5 @@ export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { TrashRowDate, TrashRowTitle } from "./trash-row";
+export { UploadingImage } from "./uploading-image";
 export { useIsMobile } from "./use-mobile";

@@ -1,16 +1,14 @@
 "use client";
 
 import type { AdminComponents } from "@monti-cms/admin";
-import { SEO_INPUTS, SEO_PREVIEW_VIEW } from "../fields";
-import { seoDescriptionInput, seoNoindexInput, seoTitleInput } from "./inputs";
-import { SeoPreviewView } from "./preview";
+import { SEO_INPUTS } from "../fields";
+import { seoDescriptionInput, seoImageInput, seoTitleInput } from "./inputs";
 
-/** What the SEO extension adds to the admin UI: the search preview (view field) and the search title, description and hide inputs. */
+/** What the SEO extension adds to the admin UI: the search title, description and share image pieces (what each reads while empty, the character counts). */
 export const SEO_ADMIN_COMPONENTS: AdminComponents = {
-	fieldViews: { [SEO_PREVIEW_VIEW]: SeoPreviewView },
 	fieldInputs: {
 		[SEO_INPUTS.title]: seoTitleInput,
 		[SEO_INPUTS.description]: seoDescriptionInput,
-		[SEO_INPUTS.noindex]: seoNoindexInput,
+		[SEO_INPUTS.image]: seoImageInput,
 	},
 };

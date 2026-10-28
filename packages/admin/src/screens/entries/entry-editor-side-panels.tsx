@@ -32,7 +32,6 @@ interface InspectorSidePanelProps {
 	incomingItems: IncomingReferenceItem[];
 	isLoadingIncoming: boolean;
 	onRefreshIncoming: (entryId: string) => void;
-	onClose: () => void;
 	focusPath: string | null;
 	onFocused: () => void;
 }
@@ -42,7 +41,6 @@ export function InspectorSidePanel({
 	incomingItems,
 	isLoadingIncoming,
 	onRefreshIncoming,
-	onClose,
 	focusPath,
 	onFocused,
 }: InspectorSidePanelProps) {
@@ -60,7 +58,6 @@ export function InspectorSidePanel({
 					}}
 					onSlugChange={editor.setSlug}
 					onRegenerateSlug={editor.regenerateSlug}
-					onClose={onClose}
 					focusPath={focusPath}
 					onFocused={onFocused}
 				/>

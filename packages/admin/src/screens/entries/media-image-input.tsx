@@ -2,13 +2,15 @@
 
 import { DocumentBlank, Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, FormFieldError, Image, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { errorText } from "../../api/client";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
 import { getMedia, mediaKeys } from "../../api/media";
-import { ImageInsertDialog } from "../../editor/image-insert-dialog";
+import { MediaPickerDialog } from "../../editor/image-insert-dialog";
+import { uploadEditorImage } from "../../editor/image-upload";
+import { editorMediaMessages } from "../../editor/media.messages";
 import { uploadAttachment } from "../../editor/upload-helper";
 import { useAdminFeatures } from "../shared/admin-features";
 import type { FieldInputProps } from "./field-inputs";
@@ -70,6 +72,42 @@ export function MediaThumbnail({ mediaId, size }: { mediaId: string; size?: "inl
 	return size === "share" ? <Box border="bottom">{image}</Box> : image;
 }
 
+/**
+ * A media field at rest in the properties list: the image in a banner frame with its file name under it, or the file's name with a file icon. Pressing it
+ * (the row does) opens the input.
+ */
+export function MediaValue({ mediaId, accept }: { mediaId: string; accept: "image" | "file" | undefined }) {
+	const site = useSite();
+	const url = useMediaUrl(accept === "file" ? "" : mediaId);
+	const lookup = useQuery({
+		queryKey: mediaKeys.detail(mediaId),
+		queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+		enabled: mediaId !== "",
+		retry: false,
+	});
+	const filename = lookup.data?.filename ?? null;
+	if (accept === "file") {
+		return (
+			<Inline gap={4} minWidth={0}>
+				<DocumentBlank aria-hidden size={14} />
+				<Text variant="caption" truncate>
+					{filename ?? mediaId}
+				</Text>
+			</Inline>
+		);
+	}
+	return (
+		<Stack gap={4}>
+			<Image src={url} alt="" fallback={ImageIcon} ratio="banner" radius="sm" />
+			{filename && (
+				<Text variant="caption" tone="subtle" truncate>
+					{filename}
+				</Text>
+			)}
+		</Stack>
+	);
+}
+
 /** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */
 export function MediaInput(props: FieldInputProps) {
 	return props.field.kind === "media" && props.field.accept === "file" ? (
@@ -79,13 +117,32 @@ export function MediaInput(props: FieldInputProps) {
 	);
 }
 
-/** Picks an image from the media library and shows the picked image small. */
+/** Picks an image from the media library (the same picker as the editor's "/ Image") and shows the picked image small. */
 export function MediaImageInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const t = useTranslator(entriesMessages);
+	const tm = useTranslator(editorMediaMessages);
 	const site = useSite();
 	const { media } = useAdminFeatures();
 	const [picking, setPicking] = useState(false);
+	const [progress, setProgress] = useState<number | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const mediaId = typeof value === "string" ? value : "";
+	/** "Upload" of the picker: the file goes up, and the uploaded image is the value. */
+	const upload = async (files: File[], folderId: string | null) => {
+		const file = files[0];
+		if (!file) return;
+		setError(null);
+		setProgress(0);
+		try {
+			const uploaded = await uploadEditorImage(site, file, setProgress, { folderId });
+			rememberMediaUrl(uploaded.mediaId, uploaded.publicUrl);
+			onChange(uploaded.mediaId);
+		} catch (cause) {
+			setError(errorText(site, cause, tm("picker.uploadFailed")));
+		} finally {
+			setProgress(null);
+		}
+	};
 	return (
 		<>
 			<Inline gap={8}>
@@ -97,13 +154,17 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 						size="sm"
 						variant="secondary"
 						width="full"
-						disabled={context.disabled || !media}
+						disabled={context.disabled || !media || progress !== null}
 						title={media ? undefined : mediaNotConfiguredMessage(site)}
 						aria-invalid={invalid || undefined}
 						aria-describedby={describedBy}
 						onClick={() => setPicking(true)}
 					>
-						{mediaId ? t("media.change") : t("media.chooseImage")}
+						{progress !== null
+							? t("media.uploading", { progress })
+							: mediaId
+								? t("media.change")
+								: t("media.chooseImage")}
 					</Button>
 				</Box>
 				{mediaId && (
@@ -112,17 +173,18 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 					</TextButton>
 				)}
 			</Inline>
-			<ImageInsertDialog
+			{error && <FormFieldError>{error}</FormFieldError>}
+			<MediaPickerDialog
 				open={picking}
-				initialFile={null}
-				mode="pick"
+				kind="image"
 				title={field.label}
+				confirmLabel={tm("picker.pick")}
 				onClose={() => setPicking(false)}
-				onInsert={(image) => {
-					rememberMediaUrl(image.mediaId, image.publicUrl);
-					onChange(image.mediaId);
-					setPicking(false);
+				onPick={(image) => {
+					rememberMediaUrl(image.id, image.publicUrl);
+					onChange(image.id);
 				}}
+				onUpload={(files, folderId) => void upload(files, folderId)}
 			/>
 		</>
 	);

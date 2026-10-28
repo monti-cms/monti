@@ -59,13 +59,15 @@ A notice that runs across the top of a page screen is not used. It overlaps the 
 
 ### In code
 
-`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short; `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses).
+`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short (`plainMeta` sets it as a plain subtle sentence instead, as on the edit conflict strip: "이 글은 저장할 수 없어요"); `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses).
 
-A failed notice (a failed delivery) is danger, not warning, and uses red (`.mt-banner--danger`).
+A failed notice (a failed delivery, an edit conflict) is danger, not warning, and uses red (`.mt-banner--danger`).
+
+The editor has two strips: the edit conflict ("다른 곳에서 10:41에 먼저 저장했어요" · "이 글은 저장할 수 없어요" · 비교하기, 서버 최신본 불러오기) and the draft kept only in the browser ("이 브라우저에 저장하지 않은 편집이 있어요" · 10. 26 10:12 · 비교하기, 불러오기, 버리기). Neither is a dialog and neither goes away until it is answered.
 
 ## Toast
 
-A one-line result right after an action ("발행되었어요" (published), "발행할 수 없어요" (cannot publish)). It appears at the bottom center on an ink ground. If there is a next step, one text button goes on the right ("이동" (go)). It disappears after a few seconds, so anything the person must see stays in a status line or a to-do.
+A one-line result right after an action ("발행되었어요" (published), "발행할 수 없어요" (cannot publish)). It appears at the bottom center on an ink ground. If there is a next step, one text button goes on the right ("이동" (go), "보기" (view) after a publish: it opens the public page). It disappears after a few seconds, so anything the person must see stays in a status line or a to-do.
 
 - A failure or an error ("저장 실패" (save failed), "발행할 수 없어요") is on a red ground (`.mt-toast--error`, `bg-danger-emphasis`). The text and the button are the same light color.
 - The hint shown while files are dragged over a folder is a toast too. See the List page, drop target.

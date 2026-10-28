@@ -6,11 +6,16 @@ import { adminFetch } from "./client";
 export const templatesKeys = {
 	all: ["cms", "templates"] as const,
 	list: () => [...templatesKeys.all, "list"] as const,
+	detail: (id: string) => [...templatesKeys.all, "detail", id] as const,
 };
 
 /** The body templates, newest first. */
 export const listTemplates = async (site: Site, signal?: AbortSignal, fallback?: string): Promise<BodyTemplate[]> =>
 	(await adminFetch<{ items?: BodyTemplate[] }>(site, "/v1/templates", { signal, fallback })).items ?? [];
+
+/** One template with its body. */
+export const getTemplate = (site: Site, id: string, signal?: AbortSignal, fallback?: string) =>
+	adminFetch<BodyTemplate>(site, `/v1/templates/${encodeURIComponent(id)}`, { signal, fallback });
 
 export const createTemplate = (site: Site, input: { name: string; doc: StoredDocument }, fallback?: string) =>
 	adminFetch<BodyTemplate>(site, "/v1/templates", { method: "POST", json: input, fallback });

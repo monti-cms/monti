@@ -27,6 +27,15 @@ export const ChangesGroup = close(open.ChangesGroup);
 export const DangerBlock = close(open.DangerBlock);
 export const DangerRow = close(open.DangerRow);
 export const Chip = close(open.Chip);
+export const Compare = close(open.Compare);
+export const CompareBody = close(open.CompareBody);
+export const CompareCode = close(open.CompareCode);
+export const CompareHeading = close(open.CompareHeading);
+export const CompareParagraph = close(open.CompareParagraph);
+export const CompareProperty = close(open.CompareProperty);
+export const CompareSide = close(open.CompareSide);
+export const CompareText = close(open.CompareText);
+export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
 export const FilterButton = close(open.FilterButton);
@@ -38,9 +47,20 @@ export const FolderTabsList = close(open.FolderTabsList);
 export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
+export const PropertyGroup = close(open.PropertyGroup);
+export const PropertyPanel = close(open.PropertyPanel);
+export const PropertyRow = close(open.PropertyRow);
 export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
-export type { ChangesItem, FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
+export type {
+	ChangesItem,
+	FormatMark,
+	MediaPickerFolder,
+	MontiIcon,
+	PatchLine,
+	ToolCallDetail,
+	ToolCallStatus,
+} from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
 export const Checkbox = close(open.Checkbox);
@@ -267,6 +287,10 @@ export const RadioGroup = close(open.RadioGroup);
 export const RadioItem = close(open.RadioItem);
 export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
+export const FilePreview = close(open.FilePreview);
+export const FileBlock = close(open.FileBlock);
+export const MediaPicker = close(open.MediaPicker);
+export const UploadingImage = close(open.UploadingImage);
 export const Grid = close(open.Grid);
 export const StatusBar = close(open.StatusBar);
 export const StatusBarAnnouncer = close(open.StatusBarAnnouncer);

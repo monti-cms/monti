@@ -508,7 +508,12 @@ export const storedToTiptap = (
 	site: Site,
 	doc: StoredDocument,
 	options: { boxPreview?: BoxPreview } = {},
-): JSONContent => conversionsOf(site).storedToTiptap(doc, options);
+): JSONContent => {
+	const json = conversionsOf(site).storedToTiptap(doc, options);
+	// A body with no block is one empty line in the editor, where the cursor goes and the hint on how to start is shown. Saved, it is the empty body again
+	// (`tiptapToStored` drops a trailing empty paragraph).
+	return json.content?.length ? json : { ...json, content: [{ type: "paragraph" }] };
+};
 
 /**
  * Tiptap `getJSON()` → the stored document, with the editor's block ids. It is in the canonical form every body is stored in (sorted keys, merged text runs,

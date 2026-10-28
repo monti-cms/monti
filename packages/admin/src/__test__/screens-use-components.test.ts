@@ -48,7 +48,7 @@ const DRAWING = new Map<string, string>([
 		"the file card is a block inside the document, with its name written in place",
 	],
 	[
-		"admin/src/editor/image-crop-dialog.tsx",
+		"admin/src/editor/image-crop-sheet.tsx",
 		"the crop area is the image with a rectangle, mask and handles positioned by percent and pointer drag",
 	],
 	[
@@ -63,18 +63,10 @@ const DRAWING = new Map<string, string>([
 		"admin/src/editor/internal-link-popup.tsx",
 		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
 	],
-	[
-		"admin/src/editor/slash-menu-popup.tsx",
-		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
-	],
 	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
 	[
 		"admin/src/editor/tiptap-editor.tsx",
-		"the editor canvas: the writing column is sized by `--editor-width`, with a measured padding on the toolbar row",
-	],
-	[
-		"admin/src/editor/toolbar-row.tsx",
-		"the toolbar measures its own tools (refs, an invisible row, exact widths) to decide which move into 'More'",
+		"the editor canvas: the writing column is sized by `--editor-width`, and the empty-line hint and the block under an open menu are styled inside it",
 	],
 	["admin/src/host/layout.tsx", "the admin root: `monti-admin` scopes the tokens and the page fills the window"],
 	[
@@ -125,7 +117,6 @@ const DRAWING = new Map<string, string>([
 	["blocks/src/tabs/view.tsx", "draws the tab bar and body as the public post does"],
 	["mdx/src/admin/mdx-source-editor.tsx", "a textarea laid over a syntax-highlighted layer"],
 	["mdx/src/admin/source-panel.tsx", "sizes the highlighted source editor, which draws its own surface"],
-	["seo/src/admin/preview.tsx", "imitates a search result (Google's link blue, two-line clamps, share card thumbnail)"],
 ]);
 
 const packagesDir = path.resolve(__dirname, "../../..");

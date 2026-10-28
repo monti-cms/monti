@@ -19,7 +19,6 @@ describe("blog SEO fields", () => {
 				seoRobots: "string",
 			});
 			const fields = site.schemaOf(collection).fields;
-			expect(fields.searchPreview).toMatchObject({ kind: "view", view: "search" });
 			expect(fields.ogImageId).toMatchObject({ kind: "media", localized: true });
 			expect(fields.seoRobots).toMatchObject({ defaultValue: "index" });
 			expect(fields.canonicalUrl).toMatchObject({ localized: true });

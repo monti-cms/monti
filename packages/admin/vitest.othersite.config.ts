@@ -61,11 +61,7 @@ export default packageTests({
 		// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
 		transitive: false,
 		// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
-		also: [
-			"src/screens/schema/__test__/schema-screen.test.tsx",
-			"src/editor/__test__/internal-link-display.test.tsx",
-			"src/editor/__test__/internal-link-search.test.tsx",
-		],
+		also: ["src/editor/__test__/internal-link-display.test.tsx", "src/editor/__test__/internal-link-search.test.tsx"],
 		skip: (file) =>
 			BLOG_FIXTURE_TESTS.includes(
 				path

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { checkEntryPublish } from "../../api/entries";
 import type { CmsIssue } from "../../api/error-message";
 import type { PublishCheckResult } from "../shared/publish-readiness";
+import { type ResolvedTodo, type TodoRow, trackResolved } from "../shared/todo-rows";
 
 export interface PublishReadiness {
 	/** What the latest check found. `null` before the first answer, and after a check that could not be made (the item then stays hidden). */
@@ -71,4 +72,30 @@ export function usePublishReadiness({
 	}, []);
 
 	return { result, checking, recheck: () => void run(), setBlocked };
+}
+
+/**
+ * The to-dos that were fixed while the entry was open, kept for the check rows of the list ("Summary", "Alt text on 2 images"). It follows each answer
+ * of the check: a row that was in the last answer and is not in this one is fixed; one that comes back is not. `rowsOf` words the issues of an answer.
+ */
+export function useResolvedTodos(
+	result: PublishCheckResult | null,
+	rowsOf: (issues: PublishCheckResult["issues"]) => TodoRow[],
+): readonly ResolvedTodo[] {
+	const [resolved, setResolved] = useState<readonly ResolvedTodo[]>([]);
+	const before = useRef<TodoRow[]>([]);
+	const wording = useRef(rowsOf);
+	wording.current = rowsOf;
+	useEffect(() => {
+		if (!result) {
+			before.current = [];
+			setResolved([]);
+			return;
+		}
+		const prior = before.current;
+		const now = wording.current(result.issues);
+		before.current = now;
+		setResolved((kept) => trackResolved(kept, prior, now));
+	}, [result]);
+	return resolved;
 }
