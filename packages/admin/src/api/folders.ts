@@ -1,4 +1,4 @@
-import type { FolderContents, FolderListItem, FolderTrashResult, Site } from "@monti-cms/core/site";
+import type { Folder, FolderContents, FolderListItem, FolderTrashResult, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** Query keys. Everything under `all` is refetched after a folder changes. */
@@ -20,7 +20,7 @@ export const createFolder = (
 	site: Site,
 	input: { collection: string; name: string; parentId: string | null },
 	fallback?: string,
-) => adminFetch(site, "/v1/folders", { method: "POST", json: input, fallback });
+) => adminFetch<Folder>(site, "/v1/folders", { method: "POST", json: input, fallback });
 
 /** Renames a folder (`name`) or moves it (`parentId`, `null` for the top level). */
 export const updateFolder = (

@@ -45,10 +45,12 @@ A small tool row that appears at the top left of a block with settings, such as 
 - The caption is edited on the spot, centered right under the image. A ✦ is beside it.
 - Width can also be changed by dragging the two corner handles at the bottom (`.mt-resize`).
 - An image that is pasted or dragged in goes into the cursor position at once with no window, and a progress bar shows inside the block.
+- Next image: while the alt text card is open and another image still has no alt text, the card ends with "다음 이미지 ↵" (next image). Pressing it, or Enter in the alt text, selects that image and opens its card with the cursor in the alt text. With no other image to go to, the button is not shown and Enter closes the card. The count ("23 / 80") shows in the label row while there is text.
+- Crop and rotate is making with several inputs, so it opens as a sheet.
 
 ### In code
 
-`BlockBar` is the small floating row of tools above a block that has settings; put `BlockBarButton`s in it and a `BlockBarSeparator` between groups. It is a floating card and the editor places it at the block's top left. `BlockBarButton` is a 28px icon button: `label` is its name and its tooltip, `shortcut` its key combination, `pressed` keeps the background while the tool is on, and `trigger` wraps it to make it the trigger of a card or menu. `ResizeCorner` is the square handle on a bottom corner of a selected block; dragging it changes the block's width (the parent is `relative`). `Image` draws a picture in a frame of a fixed shape (`cover` crops, `contain` shows all of it; a file-type icon as `fallback`).
+`BlockBar` is the small floating row of tools above a block that has settings; put `BlockBarButton`s in it and a `BlockBarSeparator` between groups. It is a floating card and the editor places it at the block's top left. `BlockBarButton` is a 28px icon button: `label` is its name and its tooltip, `shortcut` its key combination, `pressed` keeps the background while the tool is on, and `trigger` wraps it to make it the trigger of a card or menu. `ResizeCorner` is the square handle on a bottom corner of a selected block; dragging it changes the block's width (the parent is `relative`). `UploadingImage` is the image block while it goes up: the file's own picture, faded, 240px high, with the 3px bar along its bottom edge. `Image` draws a picture in a frame of a fixed shape (`cover` crops, `contain` shows all of it; a file-type icon as `fallback`).
 
 The format bar and the block bar share one floating-row look: 3px inside, 2px between buttons, an emphasis border and the floating shadow.
 
@@ -56,7 +58,9 @@ The format bar and the block bar share one floating-row look: 3px inside, 2px be
 
 How a file chosen with "/ 파일" (/ file) looks in the body. A one-line box with the file icon (16px), the name, and the kind and size (mono 12, "PDF · 1.2 MB"). The panel for choosing is the same library as image insert, and it shows only files.
 
-Not in `@monti-cms/ui` yet. The admin editor draws it itself in `packages/admin/src/editor/file-node-view.tsx`.
+### In code
+
+`FileBlock` draws it: the file icon, the name and, in mono at the end, the kind and size. With `onNameChange` the name is a field that reads as text, so the shown name can be changed in place (`name` is then its value and `placeholder` the file's own name); `tone="danger"` is for a file that cannot be found. `MediaPicker` is the panel for choosing (see List).
 
 ## Body blocks (`.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`)
 

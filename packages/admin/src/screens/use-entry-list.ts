@@ -17,6 +17,7 @@ import { copyTitle } from "./entries/entry-form";
 import { trashConfirm, trashSubjectOfRow } from "./entries/lifecycle-confirm";
 import { actionTargets, rowMenuActions } from "./list-row-menu";
 import {
+	clearFiltersPatch,
 	isExplorerMode,
 	type ListState,
 	listStateToApiQuery,
@@ -213,6 +214,17 @@ export function useEntryList() {
 		},
 	});
 
+	const explorer = explorerOf(state, folders, showsFolders);
+
+	/**
+	 * "+ Folder": a new folder row at the top, named in place, inside the folder being viewed. The row stands among the folder rows, which a search or a filter
+	 * hides, so those are cleared first.
+	 */
+	const addFolder = () => {
+		if (!explorer) update({ ...clearFiltersPatch(state), includeDescendants: false });
+		folderActions.requestCreate(state.folder === "all" ? null : state.folder);
+	};
+
 	const moveEntries = (folderId: string | null, entries: DraggedEntry[]) =>
 		void bulk(
 			"folder.move",
@@ -312,10 +324,10 @@ export function useEntryList() {
 		 * Every folder entry point (the sidebar tree, folder rows, the blank-area and row menus, the bulk move, dropping rows on a folder) reads this,
 		 * so none of them can offer folders the server would refuse.
 		 */
-		folders: showsFolders ? { list: folders, actions: folderActions, moveEntries } : null,
-		/** The folder dialogs (create, rename, delete). Render once per screen; they open only through `folders.actions`. */
+		folders: showsFolders ? { list: folders, actions: folderActions, moveEntries, addFolder } : null,
+		/** The confirm dialog of a folder delete. Render once per screen; it opens only through `folders.actions`. */
 		folderDialogs: folderActions.dialogs,
-		explorer: explorerOf(state, folders, showsFolders),
+		explorer,
 		selectedIds,
 		setSelectedIds,
 		mutations,

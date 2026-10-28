@@ -31,6 +31,11 @@ export interface ListState {
 	 */
 	folder: string;
 	includeDescendants: boolean;
+	/**
+	 * A search inside a folder looks in that folder and the folders below it. This widens it to every folder. It counts only while a search is typed in a
+	 * folder ({@link searchScopeChoice}); at the top level a search already looks everywhere.
+	 */
+	searchAll: boolean;
 	search: string;
 	includeBody: boolean;
 	/** Empty means everything except trash. Multiple values are OR. */
@@ -54,6 +59,7 @@ export interface ListState {
 export const DEFAULT_LIST_STATE: Omit<ListState, "collection"> = {
 	folder: "all",
 	includeDescendants: false,
+	searchAll: false,
 	search: "",
 	includeBody: false,
 	statuses: [],
@@ -102,6 +108,7 @@ export function parseListState(
 		// A collection without folders has no folder to be in, so a `?folder=` left in the URL is ignored.
 		folder: !site.foldersEnabled(listed) || !folder ? "all" : folder,
 		includeDescendants: params.get("descendants") === "1",
+		searchAll: params.get("scope") === "all",
 		search: params.get("search") ?? "",
 		includeBody: params.get("body") === "1",
 		statuses,
@@ -134,6 +141,7 @@ function appendFilterParams(params: URLSearchParams, state: ListState) {
 		if (value !== fallback) params.set(key, value);
 	};
 	set("search", state.search, "");
+	if (state.searchAll && searchScopeChoice(state)) params.set("scope", "all");
 	if (state.includeBody) params.set("body", "1");
 	for (const status of state.statuses) params.append("status", status);
 	for (const [name, conditions] of Object.entries(state.fields))
@@ -183,7 +191,7 @@ export function listStateToApiQuery(site: Site, state: ListState, options: { now
 		const flat = !isExplorerMode(state);
 		if (state.folder === "all") {
 			if (!flat) query.set("folderId", "null");
-		} else {
+		} else if (!searchWidened(state)) {
 			query.set("folderId", state.folder);
 			if (flat) query.set("includeDescendants", "true");
 		}
@@ -250,12 +258,23 @@ export function isExplorerMode(state: ListState): boolean {
 	return !state.search.trim() && activeFilterCount(state) === 0 && !state.includeDescendants;
 }
 
+/** Whether the "search in" choice (this folder or all folders) is offered: a search is typed inside a folder. At the top level a search already looks everywhere. */
+export const searchScopeChoice = (state: ListState): boolean => state.folder !== "all" && state.search.trim() !== "";
+
+/** Whether the search looks in every folder instead of the open one. */
+export const searchWidened = (state: ListState): boolean => state.searchAll && searchScopeChoice(state);
+
+/** The patch for new search words: emptying them also drops the widening, so the next search starts in the folder again. */
+export const searchPatch = (text: string): Partial<ListState> =>
+	text.trim() === "" ? { search: text, searchAll: false } : { search: text };
+
 /** The patch that clears search and filters only; the folder, its subfolder setting, the page size and the sort stay as they are. */
 export function clearFiltersPatch(state: ListState): Partial<ListState> {
 	const {
 		collection: _c,
 		folder: _f,
 		includeDescendants: _d,
+		searchAll: _a,
 		pageSize: _p,
 		sortField: _s,
 		sortDirection: _sd,
@@ -273,7 +292,7 @@ export function clearFiltersPatch(state: ListState): Partial<ListState> {
 		created: null,
 		page: 1,
 	};
-	return rest;
+	return { ...rest, searchAll: false };
 }
 
 /** Whether a search or any filter narrows the list. */

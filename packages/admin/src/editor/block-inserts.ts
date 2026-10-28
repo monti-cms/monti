@@ -2,9 +2,12 @@ import type { Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import { addedBlockInsertActions } from "./blocks/added";
 
-export const OPEN_IMAGE_DIALOG_EVENT = "cms:open-image-dialog";
-/** Opens the attachment picker (slash menu "File"). */
-export const OPEN_FILE_PICKER_EVENT = "cms:open-file-picker";
+/** Opens the library picker (slash menu "Image" and "File"); `detail.kind` is `"image"` or `"file"`. */
+export const OPEN_MEDIA_PICKER_EVENT = "cms:open-media-picker";
+
+/** Asks the editor to open the library picker for images or for files. */
+export const openMediaPicker = (kind: "image" | "file") =>
+	window.dispatchEvent(new CustomEvent(OPEN_MEDIA_PICKER_EVENT, { detail: { kind } }));
 
 export type BlockInsertAction = (editor: Editor, range: Range) => void;
 
@@ -17,7 +20,7 @@ export type BlockInsertAction = (editor: Editor, range: Range) => void;
 export const blockInsertActions = (site: Pick<Site, "ADDED_BLOCKS">): Record<string, BlockInsertAction> => ({
 	image: (editor, range) => {
 		editor.chain().focus().deleteRange(range).run();
-		window.dispatchEvent(new CustomEvent(OPEN_IMAGE_DIALOG_EVENT));
+		openMediaPicker("image");
 	},
 	math: (editor, range) => {
 		editor

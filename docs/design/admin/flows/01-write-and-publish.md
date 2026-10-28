@@ -85,6 +85,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step12.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; fix "대체 텍스트"; todo-open off)
 - To-do 2. The user writes alt text for an image (23 of 80 characters) and moves on with "next image".
+- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (next image: flow: upload in the editor (05–06))
 
 ### Step 13: "할 일 다 채움 → 발행하기 (저장도 같이)"
 
