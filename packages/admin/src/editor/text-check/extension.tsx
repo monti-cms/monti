@@ -5,7 +5,7 @@ import { useSite } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { useState } from "react";
 import type { EditorExtensionContext, EditorExtensionResult } from "../../admin-components";
-import type { EditorStatus } from "../../screens/shared/status-bar";
+import { type TextIssues, textIssuesOf } from "./findings";
 import { TextCheckToolbar, TextIssuePopover } from "./text-check-controls";
 import { useTextCheck } from "./use-text-check";
 
@@ -17,7 +17,7 @@ import { useTextCheck } from "./use-text-check";
 export function useTextCheckEditor(
 	checkers: readonly TextChecker[],
 	context: EditorExtensionContext,
-): EditorExtensionResult & { readonly textIssues: EditorStatus["textIssues"] } {
+): EditorExtensionResult & { readonly textIssues: TextIssues | null } {
 	const site = useSite();
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const locale = context.getEntry?.().locale ?? site.DEFAULT_LOCALE;
@@ -26,25 +26,7 @@ export function useTextCheckEditor(
 		onEditor: setEditor,
 		toolbar: controller ? <TextCheckToolbar controller={controller} /> : null,
 		overlay: controller ? <TextIssuePopover controller={controller} /> : null,
-		// What the status bar shows: how many findings there are, and a way to the first one.
-		textIssues: controller
-			? {
-					count: controller.issues.length,
-					jumpToFirst: () => {
-						const first = controller.issues[0];
-						if (first) controller.jump(first);
-					},
-					items: controller.issues.map((issue) => ({
-						text: issue.text,
-						suggestion: issue.suggestions[0] ?? null,
-						jump: () => controller.jump(issue),
-					})),
-					// Checks with every checker of the language, one after the other (a check cancels the one before it).
-					recheck: async () => {
-						for (const checker of controller.checkers) await controller.run(checker.id);
-					},
-					checking: controller.running !== null,
-				}
-			: null,
+		// What the status bar's plugin cell shows: each finding with its place and the way to fix it.
+		textIssues: controller ? textIssuesOf(controller, locale) : null,
 	};
 }
