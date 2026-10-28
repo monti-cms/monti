@@ -18,13 +18,11 @@ import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
-import { usePanelResize } from "../../ui/panel-resize";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
 import { type OpenEditor, OpenEditorContext } from "../shared/open-editor";
 import { usePublishScreenContext } from "../shared/screen-context";
-import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { SidePanelPane } from "../shared/side-panel-slot";
 import { type EditorStatus, StatusBar } from "../shared/status-bar";
 import { bodyStats } from "./body-stats";
@@ -112,7 +110,6 @@ export function EntryEditorShell({
 		load.status === "error" ? (load.error.code === "not_found" ? t("loadNotFound") : load.error.message) : null;
 	const [editorMode, setEditorMode] = useState<"visual" | "source">("visual");
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
-	const inspectorResize = usePanelResize(INSPECTOR_PANEL_RESIZE);
 	// Whether the source pane was left open is remembered in this browser (a per-device preference); a narrow window closes it for as long as it stays narrow.
 	const [sourcePanePreference, setSourcePanePreference] = usePreference(
 		"translation-source-pane",
@@ -560,7 +557,6 @@ export function EntryEditorShell({
 							{isInspectorOpen && (
 								<InspectorSidePanel
 									editor={editor}
-									resize={inspectorResize}
 									incomingItems={incoming.items}
 									isLoadingIncoming={incoming.loading}
 									onRefreshIncoming={(id) => void refreshIncoming(id)}

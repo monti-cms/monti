@@ -21,6 +21,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	SidePanel,
 	Stack,
 	Text,
 	Textarea,
@@ -35,7 +36,6 @@ import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
-import { SidePanelHeader } from "../shared/side-panel";
 import { useDraftEditor } from "../shared/use-draft-editor";
 import {
 	copyText,
@@ -52,7 +52,7 @@ import { mediaMessages } from "./messages";
 /** One group in the detail. A small title, with the content below it. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
-		<Stack as="section" gap={12} border="top" paddingX={16} paddingY={16}>
+		<Stack as="section" gap={12} border="top" paddingX={24} paddingY={16}>
 			<Heading as="h3" variant="label">
 				{title}
 			</Heading>
@@ -189,11 +189,32 @@ export function MediaDetailPanel({
 	);
 
 	return (
-		<Stack as="aside" aria-label={t("detail.label")} gap={0} height="full" border="left" background="page">
-			<SidePanelHeader title={media.filename} onClose={onClose} />
-
-			<Stack gap={0} grow minHeight={0} overflow="y">
-				<Stack gap={12} padding={16}>
+		<SidePanel
+			title={media.filename}
+			onClose={onClose}
+			bleed
+			footer={
+				<Stack gap={8} grow>
+					<Button
+						type="button"
+						variant="outline-danger"
+						size="sm"
+						width="full"
+						disabled={media.referencesCount > 0}
+						onClick={onRequestDelete}
+					>
+						{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
+					</Button>
+					{media.referencesCount > 0 && (
+						<Text as="p" variant="caption" tone="muted">
+							{t("detail.inUse")}
+						</Text>
+					)}
+				</Stack>
+			}
+		>
+			<Stack gap={0} grow minHeight={0}>
+				<Stack gap={12} padding={24}>
 					<Image
 						src={isImage ? media.publicUrl : undefined}
 						alt=""
@@ -450,24 +471,6 @@ export function MediaDetailPanel({
 					)}
 				</Section>
 			</Stack>
-
-			<Stack gap={8} shrink={false} border="top" paddingX={16} paddingY={12}>
-				<Button
-					type="button"
-					variant="outline-danger"
-					size="sm"
-					width="full"
-					disabled={media.referencesCount > 0}
-					onClick={onRequestDelete}
-				>
-					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
-				</Button>
-				{media.referencesCount > 0 && (
-					<Text as="p" variant="caption" tone="muted">
-						{t("detail.inUse")}
-					</Text>
-				)}
-			</Stack>
-		</Stack>
+		</SidePanel>
 	);
 }

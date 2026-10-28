@@ -140,7 +140,7 @@ describe("taxonomy edit panel", () => {
 		const { onClose } = renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 
-		fireEvent.click(within(panel()).getByRole("button", { name: "닫기" }));
+		fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
 		const dialog = await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" });
 		expect(onClose).not.toHaveBeenCalled();
 

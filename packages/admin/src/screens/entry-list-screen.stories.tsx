@@ -232,6 +232,7 @@ const openTag = async (canvasElement: HTMLElement) => {
 export const ItemCollection: Story = { render: tagScreen(tagServer()) };
 
 export const RecordPanelOpen: Story = {
+	tags: ["visual"],
 	render: tagScreen(tagServer()),
 	play: async ({ canvasElement }) => {
 		await openTag(canvasElement);
@@ -239,6 +240,7 @@ export const RecordPanelOpen: Story = {
 };
 
 export const RecordPanelNew: Story = {
+	tags: ["visual"],
 	render: tagScreen(tagServer()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("button", { name: "태그 추가" }));

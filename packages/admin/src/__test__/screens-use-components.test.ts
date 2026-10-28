@@ -91,7 +91,7 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/entries/entry-editor-side-panels.tsx",
-		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow, a width the writer drags)",
+		"the side panels overlay the body on narrow screens and dock beside it on wide ones (absolute position, shadow)",
 	],
 	[
 		"admin/src/screens/entries/scroll-room.tsx",
@@ -121,7 +121,7 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/shared/side-panel.tsx",
-		"the docked side panel: positioned beside the list, its width comes from a drag handle (a CSS variable)",
+		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
 	],
 	[
 		"admin/src/screens/shared/status-bar.tsx",

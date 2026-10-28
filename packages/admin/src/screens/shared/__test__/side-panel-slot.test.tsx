@@ -1,5 +1,6 @@
 import { RightPanelOpen } from "@carbon/icons-react";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { SidePanel } from "@monti-cms/ui";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { preferenceKey } from "../../../lib/utils/site-storage";
@@ -12,9 +13,13 @@ import { AdminPanelProvider, SIDE_PANEL_SHORTCUT_KEY } from "../side-panel-slot"
 
 const { render } = createTestRouter();
 
-/** The panel of a plugin: it prints where the admin is, as the plugin's own component would read it. */
-function Where() {
-	return <output aria-label="where">{JSON.stringify(useScreenContext())}</output>;
+/** The panel of a plugin: a `SidePanel` that prints where the admin is, as the plugin's own component would read it. */
+function Where({ onClose }: { onClose: () => void }) {
+	return (
+		<SidePanel title="Helper" onClose={onClose}>
+			<output aria-label="where">{JSON.stringify(useScreenContext())}</output>
+		</SidePanel>
+	);
 }
 const PANEL: AdminPanel = { label: "Helper", icon: RightPanelOpen, Component: Where };
 
@@ -100,7 +105,16 @@ describe("side panel in the admin shell", () => {
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
-	it("docks beside the page from 1280px wide, and is a sheet below that, so the page keeps room", async () => {
+	it("closes from its own close button", () => {
+		renderShell("media");
+		fireEvent.click(toggle());
+		fireEvent.click(
+			within(screen.getByRole("complementary", { name: "Helper" })).getByRole("button", { name: "Close" }),
+		);
+		expect(screen.queryByRole("complementary")).toBeNull();
+	});
+
+	it("docks beside the page from 1280px wide, and floats over it below that, so the page keeps room", () => {
 		const windowOf = (width: number) =>
 			vi.stubGlobal("matchMedia", (query: string) => ({
 				matches: width <= Number(/max-width: (\d+)px/.exec(query)?.[1] ?? -1),
@@ -117,18 +131,18 @@ describe("side panel in the admin shell", () => {
 		windowOf(1279);
 		renderShell("media");
 		fireEvent.click(toggle());
-		expect(await screen.findByRole("dialog", { name: "Helper" })).toBeTruthy();
-		expect(screen.queryByRole("complementary")).toBeNull();
+		// Still the same panel, with its own close button; it is not a modal that traps the page.
+		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
-	it("is a sheet on a narrow screen, closed on load even when the wide screen left it open", async () => {
+	it("floats on a narrow screen, closed on load even when the wide screen left it open", () => {
 		window.localStorage.setItem(preferenceKey(testSite, "side-panel"), "1");
 		stubWidth(true);
 		renderShell("media");
 		expect(screen.queryByRole("dialog")).toBeNull();
 		fireEvent.click(toggle());
-		expect(await screen.findByRole("dialog", { name: "Helper" })).toBeTruthy();
-		expect(screen.queryByRole("complementary")).toBeNull();
+		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
 		expect(screen.getByLabelText("where")).toBeTruthy();
 	});
 });

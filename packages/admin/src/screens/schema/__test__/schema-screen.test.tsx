@@ -12,10 +12,10 @@ import { entriesMessages } from "../../entries/messages";
 import { rememberScroll, takeScroll } from "../../settings/place";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
-import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
 import { schemaAdminMessages } from "../admin.messages";
 import { schemaCollectionMessages } from "../collection.messages";
 import { schemaFieldsMessages } from "../fields.messages";
+import { LAYOUT_PREVIEW_RESIZE } from "../fields-tree";
 import { schemaLocalesMessages } from "../locales.messages";
 import { schemaMessages } from "../messages";
 import { schemaReviewMessages } from "../review.messages";
@@ -1270,14 +1270,14 @@ describe("SchemaScreen", () => {
 			vi.unstubAllGlobals();
 		});
 
-		it("opens as wide as the entry editor's properties panel, and can be resized", async () => {
+		it("opens at its own width, and can be resized", async () => {
 			wideWindow();
 			await openFields();
 			const side = await screen.findByTestId("layout-preview-side");
 			const handle = within(side).getByRole("separator");
-			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth);
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(LAYOUT_PREVIEW_RESIZE.defaultWidth);
 			fireEvent.keyDown(handle, { key: "ArrowLeft", shiftKey: true });
-			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth + 64);
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(LAYOUT_PREVIEW_RESIZE.defaultWidth + 64);
 			vi.unstubAllGlobals();
 		});
 

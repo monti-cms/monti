@@ -2,23 +2,10 @@ import { defineMessages } from "@monti-cms/core";
 
 const one = (count: unknown) => Number(count) === 1;
 
-/** Text of the backup restore: the Restore backup card on the Data page, with its preview, its confirmation and its result. */
+/** Text of the backup restore: the restore sheet the Data page opens for a full backup, with its preview and its result. */
 export const restoreMessages = defineMessages("cms-admin.restore", {
 	en: {
-		title: "Restore backup",
-		description:
-			"Put a full backup back into an empty site exactly as it was: the same entries and ids, drafts and published versions, translations, folders, media records and old addresses.",
-		"notEmpty.title": "Works only on an empty site",
-		"notEmpty.description":
-			"This site already has entries, folders or media records, so a backup can't be restored into it. To add entries from a backup, use Import entries.",
-		"kinds.label": "What you can choose",
-		"kinds.backup":
-			"A full backup made on this page with Everything (drafts included) and no selection. A selection or a public export is not accepted.",
-		"file.choose": "Choose a backup (.zip)",
-		"file.change": "Choose another file",
-		"file.tooLarge": ({ limit }) => `That file is larger than ${limit}.`,
-		"preview.loading": "Checking the backup against this site…",
-		"preview.failed": "The backup could not be read.",
+		title: "Restore as it was",
 		"summary.entries": ({ count }) => `${count} ${one(count) ? "entry" : "entries"}`,
 		"summary.draft": ({ count }) => `${count} ${one(count) ? "draft" : "drafts"}`,
 		"summary.published": ({ count }) => `${count} published`,
@@ -43,37 +30,16 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"notRestored.hint":
 			"A restore brings back the content only. These are left as they are, and each one is listed here.",
 		"action.restore": "Restore",
-		"action.cancel": "Start over",
-		"confirm.title": "Restore this backup?",
-		"confirm.description": ({ count }) =>
-			`${count} ${one(count) ? "entry" : "entries"}, with their folders, media records and addresses, are written to this site in one step. Either all of it is written or none of it is. Afterwards the site is no longer empty, so a backup can't be restored into it again.`,
-		"confirm.confirm": "Restore the backup",
-		"danger.title": "Danger zone",
-		"danger.description": "Works only on a site with no entries, folders or media. It cannot be undone.",
-		"progress.running": ({ count }) => `Restoring ${count} ${one(count) ? "entry" : "entries"}…`,
-		"progress.hint": "Everything is written in one step. Keep this page open.",
+		"action.restoring": "Restoring…",
+		"action.view": "View list",
 		"result.title": "Backup restored",
 		"result.summary": ({ count }) =>
 			`${count} ${one(count) ? "entry was" : "entries were"} restored exactly as they were.`,
-		"result.open": "Open the entries list",
 		"toast.done": ({ count }) => `Restored ${count} ${one(count) ? "entry" : "entries"}.`,
 		"error.run": "The backup could not be restored. Nothing was written.",
 	},
 	ko: {
-		title: "백업 복원",
-		description:
-			"전체 백업을 빈 사이트에 있던 그대로 되돌려요. 글과 id, 초안과 발행본, 번역, 폴더, 미디어 정보, 이전 주소가 모두 그대로 돌아와요.",
-		"notEmpty.title": "빈 사이트에서만 복원할 수 있어요",
-		"notEmpty.description":
-			"이 사이트에는 이미 글, 폴더 또는 미디어 정보이 있어서 백업을 복원할 수 없어요. 백업에서 글을 더하려면 글 가져오기를 쓰세요.",
-		"kinds.label": "고를 수 있는 파일",
-		"kinds.backup":
-			"이 페이지에서 만든 전체 백업(초안 포함, 선택 없음)이에요. 일부만 고른 파일이나 공개 내보내기는 받지 않아요.",
-		"file.choose": "백업 고르기 (.zip)",
-		"file.change": "다른 파일 고르기",
-		"file.tooLarge": ({ limit }) => `파일이 ${limit}보다 커요.`,
-		"preview.loading": "백업이 이 사이트와 맞는지 확인하는 중…",
-		"preview.failed": "백업을 읽지 못했어요.",
+		title: "있던 그대로 복원",
 		"summary.entries": ({ count }) => `글 ${count}개`,
 		"summary.draft": ({ count }) => `초안 ${count}개`,
 		"summary.published": ({ count }) => `발행 ${count}개`,
@@ -94,18 +60,10 @@ export const restoreMessages = defineMessages("cms-admin.restore", {
 		"notRestored.title": "복원하지 않는 것",
 		"notRestored.hint": "복원은 내용만 되돌려요. 아래는 그대로 두며, 하나씩 알려 드려요.",
 		"action.restore": "복원",
-		"action.cancel": "처음부터",
-		"confirm.title": "이 백업을 복원할까요?",
-		"confirm.description": ({ count }) =>
-			`글 ${count}개와 폴더, 미디어 정보, 주소를 한 번에 이 사이트에 써요. 전부 쓰거나 전혀 쓰지 않아요. 복원하고 나면 사이트가 비어 있지 않으니 같은 백업을 다시 복원할 수 없어요.`,
-		"confirm.confirm": "백업 복원하기",
-		"danger.title": "위험 구역",
-		"danger.description": "글, 폴더, 미디어가 하나도 없는 사이트에서만 돼요. 되돌릴 수 없어요.",
-		"progress.running": ({ count }) => `글 ${count}개를 복원하는 중…`,
-		"progress.hint": "모두 한 번에 써요. 이 페이지를 닫지 마세요.",
+		"action.restoring": "복원하는 중…",
+		"action.view": "목록에서 보기",
 		"result.title": "백업을 복원했어요",
 		"result.summary": ({ count }) => `글 ${count}개를 있던 그대로 복원했어요.`,
-		"result.open": "글 목록 열기",
 		"toast.done": ({ count }) => `글 ${count}개를 복원했어요.`,
 		"error.run": "백업을 복원하지 못했어요. 아무것도 쓰지 않았어요.",
 	},

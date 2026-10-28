@@ -15,7 +15,7 @@ export interface AdminPanel {
 	readonly label: string;
 	/** The icon of its button. */
 	readonly icon: ComponentType<{ readonly "aria-hidden"?: boolean }>;
-	/** The panel's content. It draws its own frame (`SidePanelFrame` from `@monti-cms/admin/kit` has the header, the body and the footer) and closes itself with `onClose`. */
+	/** The panel's content. It draws its own frame (`SidePanel` from `@monti-cms/admin/kit` has the width, the header, the body and the footer) and closes itself with `onClose`. */
 	readonly Component: ComponentType<AdminPanelProps>;
 }
 
