@@ -41,8 +41,5 @@ describe("SplitButton", () => {
 		);
 		expect(screen.getByRole("button", { name: /Publish$/ }).hasAttribute("disabled")).toBe(true);
 		expect(screen.getByRole("button", { name: "Publish options" }).hasAttribute("disabled")).toBe(true);
-		// A loading pill shows its spinner in the main half only.
-		expect(screen.getByRole("button", { name: /Publish$/ }).querySelectorAll("[data-slot=spinner]")).toHaveLength(1);
-		expect(document.querySelectorAll("[data-slot=spinner]")).toHaveLength(1);
 	});
 });

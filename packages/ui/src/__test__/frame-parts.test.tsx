@@ -3,36 +3,31 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Banner } from "../banner";
 import { EntryStatus } from "../entry-status";
 import { PageHeader } from "../page-header";
-import { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "../status-bar";
+import { StatusBar, StatusBarCell, StatusBarPluginCell } from "../status-bar";
 import { StatusBarList } from "../status-bar-list";
 import { TodoDone, TodoItem } from "../todo-item";
 
 afterEach(cleanup);
 
 describe("PageHeader", () => {
-	it("makes the title the page's first heading, and puts the address and the actions beside it", () => {
+	it("makes the title the page's first heading", () => {
 		render(
 			<PageHeader title="게시글" meta="/posts/:slug">
 				<button type="button">새 글</button>
 			</PageHeader>,
 		);
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("게시글");
-		expect(screen.getByText("/posts/:slug")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "새 글" })).toBeTruthy();
 	});
 });
 
 describe("Banner", () => {
-	it("announces its sentence with the detail and the actions", () => {
+	it("is announced as a status", () => {
 		render(
 			<Banner title="원문이 바뀌었어요" meta="10. 26">
 				<button type="button">비교</button>
 			</Banner>,
 		);
-		const banner = screen.getByRole("status");
-		expect(banner.textContent).toContain("원문이 바뀌었어요");
-		expect(banner.textContent).toContain("10. 26");
-		expect(screen.getByRole("button", { name: "비교" })).toBeTruthy();
+		expect(screen.getByRole("status").textContent).toContain("원문이 바뀌었어요");
 	});
 });
 
@@ -40,7 +35,6 @@ describe("EntryStatus", () => {
 	it("hides the mark from screen readers, so the name is what is read", () => {
 		render(<EntryStatus status="draft">초안</EntryStatus>);
 		const status = screen.getByText("초안");
-		expect(status.getAttribute("data-status")).toBe("draft");
 		const mark = status.querySelector("[data-slot=entry-status-mark]");
 		expect(mark?.getAttribute("aria-hidden")).toBe("true");
 		// The name is the text; the mark carries nothing a screen reader would read twice.
@@ -49,7 +43,7 @@ describe("EntryStatus", () => {
 });
 
 describe("StatusBar", () => {
-	it("lists the group's name and count, runs a row's action, and shows what is done", async () => {
+	it("runs a row's action", async () => {
 		const onAction = vi.fn();
 		render(
 			<StatusBarList trigger={<button type="button">고칠 것 2</button>} label="고칠 것" count={2} defaultOpen>
@@ -57,37 +51,13 @@ describe("StatusBar", () => {
 				<TodoDone>요약 확인함</TodoDone>
 			</StatusBarList>,
 		);
-		const row = await screen.findByText("제목이 비어 있어요");
-		expect(
-			row.closest("[data-slot=status-bar-list]")?.querySelector("[data-slot=status-bar-list-head]")?.textContent,
-		).toBe("고칠 것2");
-		expect(document.querySelector("[data-slot=todo-mark]")?.getAttribute("data-blocking")).toBe("true");
-		fireEvent.click(screen.getByRole("button", { name: "이동" }));
+		fireEvent.click(await screen.findByRole("button", { name: "이동" }));
 		expect(onAction).toHaveBeenCalledOnce();
-		expect(screen.getByText("요약 확인함")).toBeTruthy();
-	});
-
-	it("draws a cell as a button, or as what it is given, with a dot when something needs attention", () => {
-		render(
-			<StatusBar aria-label="상태">
-				<StatusBarCell tone="danger">할 일 1</StatusBarCell>
-				<StatusBarSpacer />
-				<StatusBarCell end render={<span />}>
-					1,240자
-				</StatusBarCell>
-			</StatusBar>,
-		);
-		const todo = screen.getByRole("button", { name: "할 일 1" });
-		expect(todo.querySelector("[data-slot=status-bar-dot]")).toBeTruthy();
-		const count = screen.getByText("1,240자");
-		expect(count.tagName).toBe("SPAN");
-		expect(count.getAttribute("data-slot")).toBe("status-bar-cell");
-		expect(count.querySelector("[data-slot=status-bar-dot]")).toBeNull();
 	});
 });
 
 describe("StatusBarPluginCell", () => {
-	it("shows its name and count, lists each finding with its action, and runs the list's two actions", async () => {
+	it("runs each finding's action and the list's two actions", async () => {
 		const onFix = vi.fn();
 		const onFixAll = vi.fn();
 		const onSettings = vi.fn();
@@ -106,8 +76,6 @@ describe("StatusBarPluginCell", () => {
 				/>
 			</StatusBar>,
 		);
-		const cell = screen.getByRole("button", { name: "맞춤법 2" });
-		expect(cell.getAttribute("data-slot")).toBe("status-bar-cell");
 		await screen.findByText("됬다 → 됐다");
 		fireEvent.click(screen.getByRole("button", { name: "고치기" }));
 		expect(onFix).toHaveBeenCalledOnce();

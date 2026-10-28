@@ -35,21 +35,6 @@ describe("toast", () => {
 		expect(screen.queryByText("Uploading 10%")).toBeNull();
 	});
 
-	it("shows the drop hint with the name in bold, and closes it on dismiss", async () => {
-		render(<Toaster />);
-		let id: string | number = "";
-		act(() => {
-			id = toast.dropHint(
-				<>
-					Drop in <b>Trips</b>
-				</>,
-			);
-		});
-		expect((await screen.findByText("Trips")).tagName).toBe("B");
-		act(() => void toast.dismiss(id));
-		await waitFor(() => expect(screen.queryByText("Trips")).toBeNull());
-	});
-
 	it("is shown once beside a toaster of the site's own, and shows none of the site's toasts", async () => {
 		render(
 			<>

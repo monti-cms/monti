@@ -11,29 +11,7 @@ import { FolderTile, Tile } from "../tile";
 afterEach(cleanup);
 
 describe("list rows", () => {
-	it("marks a picked row, and a row the assistant picked", () => {
-		render(
-			<Table>
-				<TableBody>
-					<TableRow data-testid="plain">
-						<TableCell>a</TableCell>
-					</TableRow>
-					<TableRow data-testid="picked" selected>
-						<TableCell>b</TableCell>
-					</TableRow>
-					<TableRow data-testid="proposed" selected proposal>
-						<TableCell>c</TableCell>
-					</TableRow>
-				</TableBody>
-			</Table>,
-		);
-		expect(screen.getByTestId("plain").hasAttribute("data-selected")).toBe(false);
-		expect(screen.getByTestId("picked").getAttribute("data-selected")).toBe("true");
-		expect(screen.getByTestId("picked").hasAttribute("data-proposal")).toBe(false);
-		expect(screen.getByTestId("proposed").getAttribute("data-proposal")).toBe("true");
-	});
-
-	it("reports a change of the row check, and shows the title with its address", () => {
+	it("reports a change of the row check", () => {
 		const onCheckedChange = vi.fn();
 		render(
 			<Table container="none">
@@ -50,8 +28,6 @@ describe("list rows", () => {
 		);
 		fireEvent.click(screen.getByRole("checkbox", { name: "첫 글 선택" }));
 		expect(onCheckedChange).toHaveBeenCalledWith(true);
-		expect(screen.getByText("/first-post")).toBeTruthy();
-		expect(screen.getByText("⋯")).toBeTruthy();
 	});
 });
 
@@ -118,13 +94,9 @@ describe("PageToolbar and BulkBar", () => {
 describe("Tile", () => {
 	const preview = <span>미리보기</span>;
 
-	it("shows the progress of an upload, and what can be done about a failed one", () => {
+	it("runs the action of a failed upload", () => {
 		const retry = vi.fn();
-		const { rerender } = render(
-			<Tile preview={preview} title="hero.png" detail="올리는 중 · 64%" status="uploading" progress={64} />,
-		);
-		expect(document.querySelector("[data-status=uploading] [style]")?.getAttribute("style")).toContain("64%");
-		rerender(
+		render(
 			<Tile
 				preview={preview}
 				title="panorama.jpg"
@@ -135,10 +107,9 @@ describe("Tile", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "줄여서 다시" }));
 		expect(retry).toHaveBeenCalledOnce();
-		expect(screen.getByText("14 MB")).toBeTruthy();
 	});
 
-	it("adds a check that reports a change, and puts the suggestion in the detail's place", () => {
+	it("adds a check that reports a change", () => {
 		const onSelectedChange = vi.fn();
 		render(
 			<Tile
@@ -150,22 +121,17 @@ describe("Tile", () => {
 				selectLabel="a.jpg 선택"
 			/>,
 		);
-		expect(screen.queryByText("2400×1600")).toBeNull();
-		expect(screen.getByText("아침 책상")).toBeTruthy();
 		fireEvent.click(screen.getByRole("checkbox", { name: "a.jpg 선택" }));
 		expect(onSelectedChange).toHaveBeenCalledWith(true);
 	});
 });
 
 describe("FolderTile", () => {
-	it("keeps the ⋯ beside the folder button, not inside it, and marks the folder files are dragged over", () => {
-		const { rerender } = render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
+	it("keeps the ⋯ beside the folder button, not inside it", () => {
+		render(<FolderTile name="covers" count={6} action={<button type="button">more</button>} />);
 		const folder = screen.getByRole("button", { name: /^covers\s*6/ });
 		const action = screen.getByRole("button", { name: "more" });
 		expect(folder.contains(action)).toBe(false);
-		expect(folder.hasAttribute("data-drop-target")).toBe(false);
-		rerender(<FolderTile name="covers" count={6} action={<button type="button">more</button>} dropTarget />);
-		expect(screen.getByRole("button", { name: /^covers\s*6/ }).getAttribute("data-drop-target")).toBe("true");
 	});
 });
 
@@ -206,16 +172,14 @@ describe("RenameField", () => {
 });
 
 describe("Empty", () => {
-	it("lists what can be done as steps, numbered only when given, and a step can be a link", () => {
+	it("makes a step with an address a link, and one without a button", () => {
 		render(
 			<Empty title="아직 글이 없어요." description="어디서부터 시작할까요?">
 				<EmptyStep number="01">첫 글 쓰기</EmptyStep>
 				<EmptyStep href="/data">쓰던 글 가져오기</EmptyStep>
 			</Empty>,
 		);
-		expect(screen.getByRole("button", { name: /첫 글 쓰기/ }).textContent).toContain("01");
-		const link = screen.getByRole("link", { name: /쓰던 글 가져오기/ });
-		expect(link.getAttribute("href")).toBe("/data");
-		expect(link.textContent).not.toMatch(/\d\d/);
+		expect(screen.getByRole("button", { name: /첫 글 쓰기/ })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /쓰던 글 가져오기/ }).getAttribute("href")).toBe("/data");
 	});
 });

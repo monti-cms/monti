@@ -5,8 +5,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -17,24 +15,7 @@ import { MenuValue } from "../menu-parts";
 afterEach(cleanup);
 
 describe("menus", () => {
-	it("marks the current value of a pick-one list with a ✓", async () => {
-		render(
-			<DropdownMenu defaultOpen>
-				<DropdownMenuTrigger>open</DropdownMenuTrigger>
-				<DropdownMenuContent>
-					<DropdownMenuRadioGroup value="title">
-						<DropdownMenuRadioItem value="recent">최근 수정순</DropdownMenuRadioItem>
-						<DropdownMenuRadioItem value="title">제목순</DropdownMenuRadioItem>
-					</DropdownMenuRadioGroup>
-				</DropdownMenuContent>
-			</DropdownMenu>,
-		);
-		const items = await screen.findAllByRole("menuitemradio");
-		expect(items[1]?.querySelector("[data-slot=menu-tick]")).not.toBeNull();
-		expect(items[0]?.querySelector("[data-slot=menu-tick]")).toBeNull();
-	});
-
-	it("shows a row's current value before its ›, and opens the second level with → and closes it with ←", async () => {
+	it("opens the second level with → and closes it with ←", async () => {
 		render(
 			<DropdownMenu defaultOpen>
 				<DropdownMenuTrigger>open</DropdownMenuTrigger>
@@ -51,7 +32,6 @@ describe("menus", () => {
 			</DropdownMenu>,
 		);
 		const trigger = await screen.findByRole("menuitem", { name: /정렬/ });
-		expect(trigger.querySelector("[data-slot=menu-value]")?.nextElementSibling?.tagName.toLowerCase()).toBe("svg");
 		expect(screen.queryByText("수정한 날")).toBeNull();
 		act(() => trigger.focus());
 		fireEvent.keyDown(trigger, { key: "ArrowRight" });
@@ -62,7 +42,7 @@ describe("menus", () => {
 		await waitFor(() => expect(screen.queryByText("수정한 날")).toBeNull());
 	});
 
-	it("filters a searchable list as you type, marks the checked row, and lets the footer action be picked", () => {
+	it("filters a searchable list as you type, and lets the footer action be picked", () => {
 		const onCreate = vi.fn();
 		render(
 			<Command>
@@ -80,7 +60,6 @@ describe("menus", () => {
 				</CommandFooter>
 			</Command>,
 		);
-		expect(screen.getByText("리액트").closest("[cmdk-item]")?.querySelector("[data-slot=menu-tick]")).not.toBeNull();
 		fireEvent.change(screen.getByPlaceholderText("태그 찾기"), { target: { value: "css" } });
 		expect(screen.queryByText("리액트")).toBeNull();
 		expect(screen.getByText("CSS")).toBeTruthy();

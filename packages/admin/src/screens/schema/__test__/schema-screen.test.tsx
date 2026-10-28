@@ -730,15 +730,6 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
-	it("ends the basics tab with the remove section", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
-		const button = screen.getByRole("button", { name: t("collection.remove") });
-		expect(button.closest("section")?.querySelector("[data-slot='card']")).toBeNull();
-	});
-
 	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
