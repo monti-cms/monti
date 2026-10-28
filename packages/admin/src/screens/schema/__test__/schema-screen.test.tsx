@@ -1209,9 +1209,13 @@ describe("SchemaScreen", () => {
 			expect(within(preview).queryByLabelText(/^Title/)).toBeNull();
 			// Real inputs of each kind work: a value opens a text box that takes typing, and a select opens its options.
 			fireEvent.click(within(preview).getByRole("button", { name: /^Summary/ }));
-			const summary = within(preview).getByLabelText("Summary") as HTMLTextAreaElement | HTMLInputElement;
+			const summary = within(preview).getByRole("textbox", { name: "Summary" }) as
+				| HTMLTextAreaElement
+				| HTMLInputElement;
 			fireEvent.change(summary, { target: { value: "typed in the preview" } });
-			expect((within(preview).getByLabelText("Summary") as HTMLInputElement).value).toBe("typed in the preview");
+			expect((within(preview).getByRole("textbox", { name: "Summary" }) as HTMLInputElement).value).toBe(
+				"typed in the preview",
+			);
 			fireEvent.click(within(preview).getByRole("button", { name: /^Status/ }));
 			pressOption(await screen.findByRole("option", { name: "Live" }));
 			await waitFor(() => expect(within(preview).getByRole("button", { name: /^Status/ }).textContent).toBe("Live"));

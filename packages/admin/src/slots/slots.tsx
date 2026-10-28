@@ -26,8 +26,8 @@ export {
  */
 
 /**
- * The fill action (`trigger`) and the line a failed run leaves (`panel`) of one slot. The action is the text button of the label row: "채우기" while
- * the target is empty, "↻ 다시" once it has a value (`request.filled`), a spinner and "쓰는 중…" while it works. Pressing it runs the action and puts
+ * The fill action (`trigger`) and the line a failed run leaves (`panel`) of one slot. The action is the text button of the label row: "Fill" while
+ * the target is empty, "↻ Again" once it has a value (`request.filled`), a spinner and "Writing…" while it works. Pressing it runs the action and puts
  * the result in at once. With more than one action attached it opens a list of them. Both are `null` when no action is attached.
  */
 export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: ReactNode } {

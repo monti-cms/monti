@@ -118,7 +118,7 @@ export function ImageBlockView() {
 		target,
 		scope: slotScope,
 		disabled: !isEditable || (!mediaId && !siteSrc),
-		// With text in the field the action asks again ("↻ 다시") instead of filling.
+		// With text in the field the action asks again ("Again") instead of filling.
 		filled: Boolean(target === "alt" ? alt : caption),
 		getContext: () => ({
 			mediaId: mediaId || undefined,
