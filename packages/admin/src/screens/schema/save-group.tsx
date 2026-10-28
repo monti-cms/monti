@@ -68,12 +68,12 @@ export function SaveGroup({
 					<DropdownMenuContent align="end" anchor={group ?? undefined} width="panel">
 						{removed.map((item) => (
 							<DropdownMenuItem key={item.name} onClick={item.onRestore}>
-								<span>
+								<Inline as="span" gap={4}>
 									{item.label}{" "}
 									<Text variant="meta" tone="danger">
 										{t("bar.removed")}
 									</Text>
-								</span>
+								</Inline>
 								<MenuShortcut>{t("bar.undo")}</MenuShortcut>
 							</DropdownMenuItem>
 						))}
