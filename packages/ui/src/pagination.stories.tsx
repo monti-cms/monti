@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { Count } from "./count";
 import {
 	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,
@@ -121,13 +123,20 @@ export const Disabled: Story = {
 	),
 };
 
-/** The row under a table: the range at the left, the pager at the right, both 12px inside like the rows. */
+const SIZES = [
+	{ value: 25, label: "25개씩" },
+	{ value: 50, label: "50개씩" },
+	{ value: 100, label: "100개씩" },
+] as const;
+
+/** The row under a table: the range and the page size beside it at the left, the pager at the right, all 12px inside like the rows. */
 export const Footer: Story = {
 	decorators: [],
 	render: () => (
 		<div className="w-full max-w-4xl">
 			<ListFooter>
 				<Count className="whitespace-nowrap">1–25 / 148</Count>
+				<PageSizeMenu label="페이지당 행 수" value={25} options={SIZES} onValueChange={() => {}} />
 				<Pagination>
 					<PaginationContent>
 						<PaginationItem>
@@ -158,4 +167,20 @@ export const Footer: Story = {
 			</ListFooter>
 		</div>
 	),
+};
+
+/** The page size menu opens upward, because it sits at the bottom of the page; the current size has the ✓ and picking one closes it. */
+export const PageSizeOpen: Story = {
+	decorators: [],
+	render: () => (
+		<div className="w-full max-w-4xl pt-48">
+			<ListFooter>
+				<Count className="whitespace-nowrap">1–25 / 148</Count>
+				<PageSizeMenu label="페이지당 행 수" value={25} options={SIZES} onValueChange={() => {}} />
+			</ListFooter>
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(within(canvasElement).getByRole("button", { name: "페이지당 행 수" }));
+	},
 };

@@ -3,9 +3,7 @@
 import { type FieldCondition, type TranslationFilter, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Calendar,
-	DropdownMenu,
 	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
@@ -17,25 +15,23 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-	FilterButton,
 	MenuShortcut,
 	MenuTick,
 } from "@monti-cms/ui";
 import { Fragment, useState } from "react";
 import { adminCalendarLocale } from "../ui/calendar-locale";
 import { useRelationSearch } from "./entries/use-relation-search";
+import type { ColumnFilter, ColumnMenu, DateKey } from "./list-column-menu";
 import { DATE_PRESETS, type DateFilter } from "./list-dates";
 import { type FilterField, hasCondition, toggleCondition } from "./list-filter-fields";
-import { type FilterRow, filterRowsOf, rowMatches } from "./list-filter-model";
-import type { ListState } from "./list-state";
+import { LIST_STATUS_ORDER, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { dateToDay, dayToDate } from "./shared/date-range-picker";
+import { statusLabels } from "./shared/entry-status";
 import { useListCounts } from "./use-list-counts";
 
 type Change = (patch: Partial<ListState>) => void;
 
-/** The text of a condition's row, by the kind of field it is on. */
 /** A condition on a field, turned on or off in the state. A field with no condition left is left out. */
 function withCondition(state: ListState, name: string, condition: FieldCondition): Partial<ListState> {
 	const next = toggleCondition(state.fields[name], condition);
@@ -105,11 +101,10 @@ function RelationValues({ field, state, onChange }: { field: FilterField; state:
 	);
 }
 
-/** The values of a select or a relation (`README.md` of the design system: "none" first, then what the field has). */
-function FieldValues({ field, state, onChange }: { field: FilterField; state: ListState; onChange: Change }) {
+/** The options of a select: "none" first, a rule, then what the field offers, each with its number. */
+function SelectValues({ field, state, onChange }: { field: FilterField; state: ListState; onChange: Change }) {
 	const t = useTranslator(screensMessages);
-	const counts = useListCounts(state, { field: field.name }, field.kind !== "relation");
-	if (field.kind === "relation") return <RelationValues field={field} state={state} onChange={onChange} />;
+	const counts = useListCounts(state, { field: field.name });
 	const conditions = state.fields[field.name];
 	const toggle = (condition: FieldCondition) => onChange(withCondition(state, field.name, condition));
 	return (
@@ -121,45 +116,58 @@ function FieldValues({ field, state, onChange }: { field: FilterField; state: Li
 			>
 				{t("listMenu.none")}
 			</ValueRow>
-			{field.kind === "select" && (
-				<>
-					<DropdownMenuSeparator />
-					{field.options?.map((option) => (
-						<ValueRow
-							key={option.value}
-							checked={hasCondition(conditions, { kind: "is", value: option.value })}
-							onToggle={() => toggle({ kind: "is", value: option.value })}
-							count={counts ? (counts.values[option.value] ?? 0) : undefined}
-						>
-							{option.label}
-						</ValueRow>
-					))}
-				</>
-			)}
+			<DropdownMenuSeparator />
+			{field.options?.map((option) => (
+				<ValueRow
+					key={option.value}
+					checked={hasCondition(conditions, { kind: "is", value: option.value })}
+					onToggle={() => toggle({ kind: "is", value: option.value })}
+					count={counts ? (counts.values[option.value] ?? 0) : undefined}
+				>
+					{option.label}
+				</ValueRow>
+			))}
 		</>
 	);
 }
 
-/** The texts and images of "Blank", each ticked to keep the rows where it is empty. Several are OR, like the values of one field. */
-function BlankValues({
-	fields,
-	state,
-	onChange,
-}: {
-	fields: readonly FilterField[];
-	state: ListState;
-	onChange: Change;
-}) {
+/** A text or an image: one row, ticked to keep the rows where it is empty. */
+function EmptyValue({ field, state, onChange }: { field: FilterField; state: ListState; onChange: Change }) {
+	const t = useTranslator(screensMessages);
+	const counts = useListCounts(state, { field: field.name });
+	return (
+		<ValueRow
+			checked={hasCondition(state.fields[field.name], { kind: "empty" })}
+			onToggle={() => onChange(withCondition(state, field.name, { kind: "empty" }))}
+			count={counts?.empty}
+		>
+			{t("listMenu.empty")}
+		</ValueRow>
+	);
+}
+
+/** The four states of an entry, each with how many rows are in it. Several are OR. */
+function StatusValues({ state, onChange }: { state: ListState; onChange: Change }) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const counts = useListCounts(state, "status");
+	const names = { ...statusLabels(site), editing: t("filter.editing") };
 	return (
 		<>
-			{fields.map((field) => (
+			{LIST_STATUS_ORDER.map((status) => (
 				<ValueRow
-					key={field.name}
-					checked={hasCondition(state.fields[field.name], { kind: "empty" })}
-					onToggle={() => onChange(withCondition(state, field.name, { kind: "empty" }))}
-					count={undefined}
+					key={status}
+					checked={state.statuses.includes(status)}
+					onToggle={() =>
+						onChange({
+							statuses: state.statuses.includes(status)
+								? state.statuses.filter((candidate) => candidate !== status)
+								: [...state.statuses, status],
+						})
+					}
+					count={counts?.values[status]}
 				>
-					{field.label}
+					{names[status]}
 				</ValueRow>
 			))}
 		</>
@@ -222,8 +230,6 @@ function LocaleValues({ state, onChange }: { state: ListState; onChange: Change 
 	);
 }
 
-type DateKey = "updated" | "published";
-
 /** The current choice of a date filter as the radio group says it: a preset, or nothing (a period is the "pick a period" row's own tick). */
 const dateValue = (filter: DateFilter | null): string => (filter?.kind === "preset" ? filter.preset : "");
 
@@ -258,120 +264,138 @@ function RangeCalendar({
 	);
 }
 
-/** Updated date, and (for a document collection) published date: each a preset or a period. */
-function DateValues({
-	state,
-	onChange,
-	onApplyRange,
-}: {
-	state: ListState;
-	onChange: Change;
-	onApplyRange: (key: DateKey, from: string, to: string) => void;
-}) {
-	const site = useSite();
+/** One date of the list: a preset (today, the last 7 or 30 days) or a period picked on a calendar beside the menu. One at a time, the pick has the ✓. */
+function DateValues({ dateKey, state, onChange }: { dateKey: DateKey; state: ListState; onChange: Change }) {
 	const t = useTranslator(screensMessages);
-	const keys: DateKey[] = site.isDocumentCollection(state.collection) ? ["updated", "published"] : ["updated"];
+	const filter = state[dateKey];
 	return (
 		<>
-			{keys.map((key, index) => (
-				<Fragment key={key}>
-					{index > 0 && <DropdownMenuSeparator />}
-					<DropdownMenuGroup>
-						<DropdownMenuLabel>{t(`listMenu.${key}`)}</DropdownMenuLabel>
-						<DropdownMenuRadioGroup
-							value={dateValue(state[key])}
-							onValueChange={(value) => {
-								const preset = DATE_PRESETS.find((candidate) => candidate === value);
-								if (preset) onChange({ [key]: { kind: "preset", preset } });
-							}}
-						>
-							{DATE_PRESETS.map((preset) => (
-								<DropdownMenuRadioItem key={preset} value={preset} closeOnClick={false}>
-									{t(`listMenu.${preset}`)}
-								</DropdownMenuRadioItem>
-							))}
-						</DropdownMenuRadioGroup>
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger chevron={false}>
-								{t("listMenu.range")}
-								{state[key]?.kind === "range" && <MenuTick />}
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent side="left" bare>
-								<RangeCalendar filter={state[key]} onApply={(from, to) => onApplyRange(key, from, to)} />
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-					</DropdownMenuGroup>
-				</Fragment>
-			))}
+			<DropdownMenuRadioGroup
+				value={dateValue(filter)}
+				onValueChange={(value) => {
+					const preset = DATE_PRESETS.find((candidate) => candidate === value);
+					if (preset) onChange({ [dateKey]: { kind: "preset", preset } });
+				}}
+			>
+				{DATE_PRESETS.map((preset) => (
+					<DropdownMenuRadioItem key={preset} value={preset} closeOnClick={false}>
+						{t(`listMenu.${preset}`)}
+					</DropdownMenuRadioItem>
+				))}
+			</DropdownMenuRadioGroup>
+			<DropdownMenuSub>
+				<DropdownMenuSubTrigger chevron={false}>
+					{t("listMenu.range")}
+					{filter?.kind === "range" && <MenuTick />}
+				</DropdownMenuSubTrigger>
+				<DropdownMenuSubContent bare>
+					<RangeCalendar filter={filter} onApply={(from, to) => onChange({ [dateKey]: { kind: "range", from, to } })} />
+				</DropdownMenuSubContent>
+			</DropdownMenuSub>
 		</>
 	);
 }
 
-/** One row of the first level, with the values it opens at the side. */
-function Row({
-	row,
+/** The language, with the translation state of the group under its own name. */
+function LanguageValues({
+	translation,
 	state,
 	onChange,
-	onApplyRange,
 }: {
-	row: FilterRow;
+	translation: boolean;
 	state: ListState;
 	onChange: Change;
-	onApplyRange: (key: DateKey, from: string, to: string) => void;
 }) {
+	const t = useTranslator(screensMessages);
 	return (
-		<DropdownMenuSub>
-			<DropdownMenuSubTrigger>{row.label}</DropdownMenuSubTrigger>
-			<DropdownMenuSubContent side="left">
-				{row.kind === "locale" && <LocaleValues state={state} onChange={onChange} />}
-				{row.kind === "translation" && <TranslationValues state={state} onChange={onChange} />}
-				{row.kind === "date" && <DateValues state={state} onChange={onChange} onApplyRange={onApplyRange} />}
-				{row.kind === "field" && <FieldValues field={row.field} state={state} onChange={onChange} />}
-				{row.kind === "blank" && <BlankValues fields={row.fields} state={state} onChange={onChange} />}
-			</DropdownMenuSubContent>
-		</DropdownMenuSub>
+		<>
+			<LocaleValues state={state} onChange={onChange} />
+			{translation && (
+				<>
+					<DropdownMenuSeparator />
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{t("listMenu.translation")}</DropdownMenuLabel>
+						<TranslationValues state={state} onChange={onChange} />
+					</DropdownMenuGroup>
+				</>
+			)}
+		</>
+	);
+}
+
+/** The values a column can be filtered by: the status, the language, a date, or what one stored field takes. */
+function FilterValues({ filter, state, onChange }: { filter: ColumnFilter; state: ListState; onChange: Change }) {
+	switch (filter.kind) {
+		case "status":
+			return <StatusValues state={state} onChange={onChange} />;
+		case "language":
+			return <LanguageValues translation={filter.translation} state={state} onChange={onChange} />;
+		case "date":
+			return <DateValues dateKey={filter.key} state={state} onChange={onChange} />;
+		case "field":
+			if (filter.field.kind === "relation")
+				return <RelationValues field={filter.field} state={state} onChange={onChange} />;
+			if (filter.field.kind === "select")
+				return <SelectValues field={filter.field} state={state} onChange={onChange} />;
+			return <EmptyValue field={filter.field} state={state} onChange={onChange} />;
+	}
+}
+
+/** The sort of a column: its two orders as one pick, the current one with a ✓. Picking one applies it and closes the menu. */
+function SortValues({
+	sort,
+	state,
+	onChange,
+}: {
+	sort: NonNullable<ColumnMenu["sort"]>;
+	state: ListState;
+	onChange: Change;
+}) {
+	const t = useTranslator(screensMessages);
+	const directions = sort.reads === "text" ? (["asc", "desc"] as const) : (["desc", "asc"] as const);
+	return (
+		<DropdownMenuRadioGroup
+			value={state.sortField === sort.field ? state.sortDirection : ""}
+			onValueChange={(value) => {
+				const direction = directions.find((candidate) => candidate === value);
+				if (direction) onChange({ sortField: sort.field, sortDirection: direction });
+			}}
+		>
+			{directions.map((direction) => (
+				<DropdownMenuRadioItem key={direction} value={direction}>
+					{t(`sort.${sort.reads}.${direction}`)}
+				</DropdownMenuRadioItem>
+			))}
+		</DropdownMenuRadioGroup>
 	);
 }
 
 /**
- * The "Filter" menu of a list: a search row, then only the names of what can be filtered (language, translation and date; the fields with values to pick;
- * "Blank" for the texts and images), each opening its values at the side. Several values of one field can be on at once (they are OR); different fields narrow each other (AND). Picking a
- * value leaves the menu open, so several filters are set in one go; Escape or a click outside closes it.
+ * The rows of a column's menu, top to bottom: sort, the values to filter by, hide the column. A section the column does not have is left out, and a rule
+ * separates the ones that are there. Several values of one column are OR and different columns are AND; picking a value leaves the menu open, so several
+ * are set in one go (Escape or a click outside closes it).
  */
-export function ListFilterMenu({ state, onChange }: { state: ListState; onChange: Change }) {
-	const site = useSite();
+export function ColumnMenuContent({
+	menu,
+	state,
+	onChange,
+	onHide,
+}: {
+	menu: ColumnMenu;
+	state: ListState;
+	onChange: Change;
+	onHide: () => void;
+}) {
 	const t = useTranslator(screensMessages);
-	const [text, setText] = useState("");
-	const { top, fields, blank } = filterRowsOf(site, state.collection);
-	// The groups that have a row matching the search, with a rule between them.
-	const groups = [top, fields, blank]
-		.map((rows) => rows.filter((row) => rowMatches(row, text)))
-		.filter((rows) => rows.length > 0);
-	const rowKey = (row: FilterRow) => (row.kind === "field" ? `field:${row.field.name}` : row.kind);
-	const pick = {
-		state,
-		onChange,
-		onApplyRange: (key: DateKey, from: string, to: string) => onChange({ [key]: { kind: "range", from, to } }),
-	};
-	return (
-		<DropdownMenu
-			onOpenChange={(next) => {
-				if (next) setText("");
-			}}
-		>
-			<DropdownMenuTrigger render={<FilterButton />}>{t("listMenu.filter")}</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuSearch label={t("listMenu.filterSearch")} value={text} onValueChange={setText} />
-				{groups.map((rows, index) => (
-					<Fragment key={rowKey(rows[0] as FilterRow)}>
-						{index > 0 && <DropdownMenuSeparator />}
-						{rows.map((row) => (
-							<Row key={rowKey(row)} row={row} {...pick} />
-						))}
-					</Fragment>
-				))}
-				{groups.length === 0 && <DropdownMenuItem disabled>{t("listMenu.noMatch")}</DropdownMenuItem>}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
+	const sections = [
+		menu.sort && { key: "sort", node: <SortValues sort={menu.sort} state={state} onChange={onChange} /> },
+		menu.filter && { key: "filter", node: <FilterValues filter={menu.filter} state={state} onChange={onChange} /> },
+		menu.hide && { key: "hide", node: <DropdownMenuItem onClick={onHide}>{t("column.hide")}</DropdownMenuItem> },
+	].filter((section) => section !== null && section !== undefined && section !== false);
+	return sections.map((section, index) => (
+		<Fragment key={section.key}>
+			{index > 0 && <DropdownMenuSeparator />}
+			{section.node}
+		</Fragment>
+	));
 }

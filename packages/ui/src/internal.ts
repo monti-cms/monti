@@ -35,7 +35,7 @@ export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
 export { Checkbox } from "./checkbox";
-export { Chip } from "./chip";
+export { Chip, ChipRow } from "./chip";
 export { cn } from "./cn";
 export { CodeBlock } from "./code-block";
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
@@ -146,7 +146,7 @@ export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
-export { ListHead, type ListHeadColumn } from "./list-head";
+export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
@@ -165,6 +165,7 @@ export {
 } from "./page-header";
 export {
 	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,

@@ -12,11 +12,13 @@ import {
 import { pageParam, pageSizeParam } from "../lib/hooks/use-url-state";
 import { type DateFilter, dateRangeOf, parseDateFilter, writeDateFilter } from "./list-dates";
 import { filterFieldOf, readCondition, takesCondition, writeCondition } from "./list-filter-fields";
-import type { EntryStatus } from "./shared/entry-status";
 
-/** Statuses that can be filtered in the list. Trash is seen only in its dedicated screen. */
-export type ListStatus = Exclude<EntryStatus, "trashed">;
-export const LIST_STATUSES: readonly ListStatus[] = ["draft", "published", "archived"];
+/**
+ * The states of the status column a list can be filtered by (the order of the column's menu). `published` has no unpublished changes and `editing` is
+ * published with changes. The trash is seen only in its dedicated screen.
+ */
+export type ListStatus = "published" | "editing" | "draft" | "archived";
+export const LIST_STATUS_ORDER: readonly ListStatus[] = ["published", "editing", "draft", "archived"];
 
 /**
  * Admin list state. Reflects folder, search, filters, sort and page in the URL so Back restores it.
@@ -33,16 +35,16 @@ export interface ListState {
 	includeBody: boolean;
 	/** Empty means everything except trash. Multiple values are OR. */
 	statuses: ListStatus[];
-	hasChanges: boolean;
 	/** Conditions on stored fields, by field name. Several on one field are OR; different fields are AND. */
 	fields: Readonly<Record<string, readonly FieldCondition[]>>;
 	/** Content locale. Empty means all locales. */
 	locales: Locale[];
 	/** Where the translation group stands. Empty means all. Multiple values are OR. */
 	translations: TranslationFilter[];
-	/** The updated date and the published date: a preset (kept relative) or a range of days. `null` means any. */
+	/** The updated, published and created dates: a preset (kept relative) or a range of days. `null` means any. */
 	updated: DateFilter | null;
 	published: DateFilter | null;
+	created: DateFilter | null;
 	sortField: ListSortField;
 	sortDirection: "asc" | "desc";
 	page: number;
@@ -55,12 +57,12 @@ export const DEFAULT_LIST_STATE: Omit<ListState, "collection"> = {
 	search: "",
 	includeBody: false,
 	statuses: [],
-	hasChanges: false,
 	fields: {},
 	locales: [],
 	translations: [],
 	updated: null,
 	published: null,
+	created: null,
 	sortField: "updatedAt",
 	sortDirection: "desc",
 	page: 1,
@@ -90,7 +92,7 @@ export function parseListState(
 	const collection = params.get("collection");
 	const sortField = params.get("sortField") ?? "";
 	const statuses = [...new Set(params.getAll("status"))].filter((status): status is ListStatus =>
-		(LIST_STATUSES as readonly string[]).includes(status),
+		(LIST_STATUS_ORDER as readonly string[]).includes(status),
 	);
 	const listed = site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION;
 	const folder = params.get("folder");
@@ -103,7 +105,6 @@ export function parseListState(
 		search: params.get("search") ?? "",
 		includeBody: params.get("body") === "1",
 		statuses,
-		hasChanges: params.get("changes") === "1",
 		fields: readFields(site, params.getAll("field"), listed),
 		// The locale filter is hidden without translations, so a `?locale=` left in the URL must not filter the list.
 		locales: site.ADMIN_TRANSLATIONS ? [...new Set(params.getAll("locale"))].filter(site.isLocale) : [],
@@ -116,6 +117,7 @@ export function parseListState(
 		updated: parseDateFilter(params.get("updated")),
 		// An item collection is never published: its list has no published date to filter by.
 		published: site.isDocumentCollection(listed) ? parseDateFilter(params.get("published")) : null,
+		created: parseDateFilter(params.get("created")),
 		sortField: (LIST_SORT_FIELDS as readonly string[]).includes(sortField)
 			? (sortField as ListSortField)
 			: DEFAULT_LIST_STATE.sortField,
@@ -134,13 +136,13 @@ function appendFilterParams(params: URLSearchParams, state: ListState) {
 	set("search", state.search, "");
 	if (state.includeBody) params.set("body", "1");
 	for (const status of state.statuses) params.append("status", status);
-	if (state.hasChanges) params.set("changes", "1");
 	for (const [name, conditions] of Object.entries(state.fields))
 		for (const condition of conditions) params.append("field", writeCondition(name, condition));
 	for (const locale of state.locales) params.append("locale", locale);
 	for (const translation of state.translations) params.append("translation", translation);
 	if (state.updated) params.set("updated", writeDateFilter(state.updated));
 	if (state.published) params.set("published", writeDateFilter(state.published));
+	if (state.created) params.set("created", writeDateFilter(state.created));
 	params.set("sortField", state.sortField);
 	params.set("sortDirection", state.sortDirection);
 }
@@ -195,7 +197,6 @@ export function listStateToApiQuery(
 	if (state.includeBody) query.set("includeBody", "true");
 	if (options.trash) query.append("status", "trashed");
 	else for (const status of state.statuses) query.append("status", status);
-	if (state.hasChanges) query.set("hasChanges", "true");
 	for (const [name, conditions] of Object.entries(state.fields))
 		for (const condition of conditions) query.append("field", writeCondition(name, condition));
 	for (const locale of state.locales) query.append("locale", locale);
@@ -203,6 +204,7 @@ export function listStateToApiQuery(
 	for (const [key, filter] of [
 		["updated", state.updated],
 		["published", state.published],
+		["created", state.created],
 	] as const) {
 		if (!filter) continue;
 		const { from, to } = dateRangeOf(site, filter, options.now);
@@ -215,35 +217,35 @@ export function listStateToApiQuery(
 }
 
 /**
- * `GET /entries/counts` query for the numbers beside a filter menu's values: one field (`{ field }`) or the translation filter. It counts what the list
- * would show before any filter: the current folder with its subfolders and the status the tab picked (the editing tab has no status of its own).
+ * `GET /entries/counts` query for the numbers beside a column menu's values: one field (`{ field }`), the translation filter or the status. It counts what
+ * the list would show before any filter: the current folder with its subfolders.
  */
 export function listStateToCountsQuery(
 	site: Site,
 	state: ListState,
-	facet: { field: string } | "translation",
+	facet: { field: string } | "translation" | "status",
 ): URLSearchParams {
 	const query = new URLSearchParams({ collection: state.collection });
-	if (facet === "translation") query.set("facet", "translation");
+	if (typeof facet === "string") query.set("facet", facet);
 	else query.set("field", facet.field);
 	if (site.schemaOf(state.collection).kind === "document") query.set("group", "translation");
 	if (site.foldersEnabled(state.collection) && state.folder !== "all") {
 		query.set("folderId", state.folder);
 		query.set("includeDescendants", "true");
 	}
-	for (const status of state.statuses) query.append("status", status);
 	return query;
 }
 
-/** Number of filters that narrow the list: each field with a condition, the translation, language and date filters, and the editing tab. Search and the status tabs are not counted. */
+/** Number of filters that narrow the list: the status, each field with a condition, and the language, translation and date filters. Search is not counted. */
 export const activeFilterCount = (state: ListState) =>
 	[
-		state.hasChanges,
+		state.statuses.length > 0,
 		...Object.values(state.fields).map((conditions) => conditions.length > 0),
 		state.locales.length > 0,
 		state.translations.length > 0,
 		state.updated !== null,
 		state.published !== null,
+		state.created !== null,
 	].filter(Boolean).length;
 
 /**
@@ -269,12 +271,12 @@ export function clearFiltersPatch(state: ListState): Partial<ListState> {
 		search: "",
 		includeBody: false,
 		statuses: [],
-		hasChanges: false,
 		fields: {},
 		locales: [],
 		translations: [],
 		updated: null,
 		published: null,
+		created: null,
 		page: 1,
 	};
 	return rest;

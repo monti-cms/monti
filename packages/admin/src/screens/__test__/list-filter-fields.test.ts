@@ -70,11 +70,6 @@ describe("conditions on a field", () => {
 		expect(toggleCondition([{ kind: "empty" }], { kind: "empty" })).toEqual([]);
 	});
 
-	it("take empty and filled as opposites: ticking one drops the other", () => {
-		expect(toggleCondition([{ kind: "empty" }], { kind: "filled" })).toEqual([{ kind: "filled" }]);
-		expect(toggleCondition([{ kind: "filled" }], { kind: "empty" })).toEqual([{ kind: "empty" }]);
-	});
-
 	it("are written and read as the address and the API write them", () => {
 		for (const [name, condition, raw] of [
 			["tagIds", { kind: "empty" }, "tagIds:empty"],

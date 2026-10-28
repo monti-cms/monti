@@ -24,6 +24,7 @@ export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
 export const Chip = close(open.Chip);
+export const ChipRow = close(open.ChipRow);
 export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
 export const FilterButton = close(open.FilterButton);
@@ -133,6 +134,7 @@ export const Input = close(open.Input);
 export const Label = close(open.Label);
 export const UiLabelsProvider = close(open.UiLabelsProvider);
 export const ListFooter = close(open.ListFooter);
+export const PageSizeMenu = close(open.PageSizeMenu);
 export const ListHead = close(open.ListHead);
 export const Pagination = close(open.Pagination);
 export const PaginationContent = close(open.PaginationContent);
@@ -284,6 +286,7 @@ export type {
 	Background,
 	EntryStatusKind,
 	LayoutProps,
+	ListHeadAdd,
 	ListHeadColumn,
 	SearchTarget,
 	SegmentedOption,

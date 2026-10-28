@@ -356,7 +356,7 @@ describe("media library", () => {
 			expect(screen.getAllByRole("button", { name: t("library.upload") }).length).toBeGreaterThan(1);
 			// Everything fits on one page, so there is no pager and no range line; the footer keeps the page size control.
 			expect(screen.queryByRole("navigation", { name: /페이지 이동/ })).toBeNull();
-			const footer = screen.getByRole("combobox", { name: "페이지당 행 수" }).closest('[data-slot="list-footer"]');
+			const footer = screen.getByRole("button", { name: "페이지당 행 수" }).closest('[data-slot="list-footer"]');
 			expect(footer?.closest('[data-slot="empty"]')).toBeNull();
 			// The footer is the last child of the content column; the empty message sits in the area above it.
 			expect(footer?.nextElementSibling).toBeNull();

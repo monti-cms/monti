@@ -27,27 +27,41 @@ export function customListCell(
 }
 
 /**
- * Default cell of a field column. Relations show their items' names in one line ("React · Next"), select shows the option label, text and media show
- * the stored text.
- * `—` when there is no value. Dates are drawn separately by the system columns (updated, created, published).
+ * What a field column says of a row, as one line of text: a relation's items' names ("React · Next"), a select's option label, a text or media's stored
+ * text. `undefined` where there is no value. A cell that is cut to its column ends in "…", and this is the text its `title` gives whole.
  */
-export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
-	const site = useSite();
+export function fieldCellText(
+	site: Site,
+	collection: string,
+	column: string,
+	entry: ListCellProps["entry"],
+): string | undefined {
 	const stored = fieldColumnOf(site, collection, column);
-	if (!stored) return EMPTY;
+	if (!stored) return undefined;
 	const { field } = stored;
 	if (field.kind === "relation") {
 		const names = (entry.relations[column] ?? []).flatMap(({ title }) => (title ? [title] : []));
-		return names.length > 0 ? names.join(" · ") : EMPTY;
+		return names.length > 0 ? names.join(" · ") : undefined;
 	}
 	const value = entry.values[column];
-	if (!value) return EMPTY;
-	if (field.kind === "select") return Object.hasOwn(field.options, value) ? field.options[value] : value;
-	if (field.kind === "media")
+	if (!value) return undefined;
+	if (field.kind === "select") return Object.hasOwn(field.options, value) ? String(field.options[value]) : value;
+	return value;
+}
+
+/**
+ * Default cell of a field column: the text of {@link fieldCellText}, in the mono caption for a media value. `—` when there is no value. Dates are drawn
+ * separately by the system columns (updated, created, published).
+ */
+export function DefaultFieldCell({ collection, column, entry }: ListCellProps) {
+	const site = useSite();
+	const text = fieldCellText(site, collection, column, entry);
+	if (text === undefined) return EMPTY;
+	if (fieldColumnOf(site, collection, column)?.field.kind === "media")
 		return (
 			<Text variant="caption" tone="muted" mono>
-				{value}
+				{text}
 			</Text>
 		);
-	return value;
+	return text;
 }

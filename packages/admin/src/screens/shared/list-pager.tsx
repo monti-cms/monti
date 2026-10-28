@@ -6,6 +6,7 @@ import {
 	Count,
 	Inline,
 	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,
@@ -13,11 +14,6 @@ import {
 	PaginationLink,
 	PaginationNext,
 	PaginationPrevious,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
 } from "@monti-cms/ui";
 import { screensMessages } from "../messages";
 import { pageWindow } from "./page-window";
@@ -68,8 +64,8 @@ export function ListPager({
 }
 
 /**
- * The footer of every paged list (entries, trash, media, events): the shown range on the left; on the right optional extra controls,
- * the page size and the pager.
+ * The footer of every paged list (entries, trash, media, events): the shown range on the left with the page size beside it (when the screen lets the
+ * writer change it); on the right optional extra controls and the pager.
  */
 export function ListPagination({
 	total,
@@ -80,7 +76,6 @@ export function ListPagination({
 	onPageSizeChange,
 	hrefFor,
 	leading,
-	showPageSize = true,
 	hidePagerWhenSingle = false,
 	showRange = true,
 }: {
@@ -90,13 +85,11 @@ export function ListPagination({
 	page: number;
 	pageSize: PageSize;
 	onPageChange: (page: number) => void;
-	/** Needed only with the page size control. */
+	/** Shows the page size beside the range, and what picking a size does. */
 	onPageSizeChange?: (size: PageSize) => void;
 	hrefFor?: (page: number) => string;
-	/** Screen-specific controls placed before the page size. */
+	/** Screen-specific controls placed before the pager. */
 	leading?: React.ReactNode;
-	/** `false` when the screen offers the page size somewhere else. */
-	showPageSize?: boolean;
 	/** Draw no pager when everything fits on one page. */
 	hidePagerWhenSingle?: boolean;
 	/** `false` when the screen shows the total elsewhere (the status bar): the footer then holds only the controls, and is left out when there are none. */
@@ -105,7 +98,7 @@ export function ListPagination({
 	const t = useTranslator(screensMessages);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const showPager = !(hidePagerWhenSingle && totalPages === 1);
-	if (!showRange && !showPager && !leading && !showPageSize) return null;
+	if (!showRange && !showPager && !leading && !onPageSizeChange) return null;
 	return (
 		<Box shrink={false}>
 			<ListFooter>
@@ -117,26 +110,16 @@ export function ListPagination({
 						})}
 					</Count>
 				)}
+				{onPageSizeChange && (
+					<PageSizeMenu
+						label={t("list.pageSize")}
+						value={pageSize}
+						options={PAGE_SIZES.map((size) => ({ value: size, label: t("list.pageSizeOption", { size }) }))}
+						onValueChange={(size) => onPageSizeChange(size as PageSize)}
+					/>
+				)}
 				<Inline gap={8} grow justify="end">
 					{leading}
-					{showPageSize && (
-						<Select
-							value={String(pageSize)}
-							items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-							onValueChange={(value) => value && onPageSizeChange?.(Number(value) as PageSize)}
-						>
-							<SelectTrigger size="sm" aria-label={t("list.pageSize")}>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{PAGE_SIZES.map((size) => (
-									<SelectItem key={size} value={String(size)}>
-										{t("list.pageSizeOption", { size })}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					)}
 					{showPager && <ListPager page={page} totalPages={totalPages} onPageChange={onPageChange} hrefFor={hrefFor} />}
 				</Inline>
 			</ListFooter>

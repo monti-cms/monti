@@ -1,7 +1,4 @@
-import type { ListSortField } from "@monti-cms/core/site";
 import type { AdminListColumn } from "./list-columns";
-
-type SortDirection = "asc" | "desc";
 
 /** The order after `from` takes the place of `to`: the columns between shift by one toward where `from` was. */
 export function placeColumn(
@@ -32,19 +29,6 @@ export function stepColumn(
 	const [a, b] = [next.indexOf(column), next.indexOf(neighbour)];
 	[next[a], next[b]] = [neighbour, column];
 	return next;
-}
-
-/** Dates start from the newest, a title or an address from A. */
-const firstDirection = (field: ListSortField): SortDirection =>
-	field === "title" || field === "slug" ? "asc" : "desc";
-
-/** The sort after a column's name is pressed: by that column, or the other way when the list is already sorted by it. */
-export function sortByColumn(
-	field: ListSortField,
-	current: { sortField: ListSortField; sortDirection: SortDirection },
-): { sortField: ListSortField; sortDirection: SortDirection } {
-	if (current.sortField !== field) return { sortField: field, sortDirection: firstDirection(field) };
-	return { sortField: field, sortDirection: current.sortDirection === "asc" ? "desc" : "asc" };
 }
 
 /**

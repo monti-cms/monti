@@ -1,8 +1,15 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "@carbon/icons-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { useUiLabels } from "./labels";
 
 /** The pager of a list, at the right end of the row under the table (the range, "1–25 / 148", goes at the left). */
@@ -124,8 +131,49 @@ function ListFooter({ className, ...props }: React.ComponentProps<"footer">) {
 	);
 }
 
+/**
+ * How many rows a page holds ("25 per page ▾"), in mono beside the shown range under the table. Its menu opens upward, and picking a size applies it and
+ * closes the menu.
+ */
+function PageSizeMenu({
+	label,
+	value,
+	options,
+	onValueChange,
+}: {
+	/** The name of the button, for screen readers ("Rows per page"). */
+	label: string;
+	value: number;
+	/** Each size with how it reads ("25 per page"). */
+	options: readonly { value: number; label: string }[];
+	onValueChange: (value: number) => void;
+}) {
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				aria-label={label}
+				data-slot="page-size"
+				className="inline-flex cursor-pointer items-center gap-monti-2 whitespace-nowrap border-0 bg-transparent p-0 font-mono text-monti-meta text-monti-subtle outline-none hover:text-monti-default focus-visible:rounded-monti-sm focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-popup-open:text-monti-default [&_svg]:size-3"
+			>
+				{options.find((option) => option.value === value)?.label ?? value}
+				<ChevronDown aria-hidden />
+			</DropdownMenuTrigger>
+			<DropdownMenuContent side="top" align="start">
+				<DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onValueChange(Number(next))}>
+					{options.map((option) => (
+						<DropdownMenuRadioItem key={option.value} value={String(option.value)}>
+							{option.label}
+						</DropdownMenuRadioItem>
+					))}
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 export {
 	ListFooter,
+	PageSizeMenu,
 	Pagination,
 	PaginationContent,
 	PaginationEllipsis,

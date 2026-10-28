@@ -1,59 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { filterChipsOf, filterRowsOf, rowMatches } from "../list-filter-model";
+import { filterChipsOf } from "../list-filter-model";
 import { parseListState } from "../list-state";
 
 const stateOf = (query: string) => parseListState(testSite, new URLSearchParams(query));
-const labelsOf = (rows: { label: string }[]) => rows.map((row) => row.label);
-
-describe("the first level of the filter menu", () => {
-	it("lists language, translation and date, then the fields with values in schema order, then one row for the blank texts and images", () => {
-		const { top, fields, blank } = filterRowsOf(testSite, "post");
-		expect(top.map((row) => row.kind)).toEqual(["locale", "translation", "date"]);
-		expect(labelsOf(fields).slice(0, 4)).toEqual(["카테고리", "태그", "정책", "대체 글"]);
-		expect(labelsOf(fields)).not.toContain("요약");
-		expect(blank.map((row) => (row.kind === "blank" ? row.fields.map((field) => field.label) : []))[0]).toContain(
-			"요약",
-		);
-	});
-
-	it("has no language or translation row for an item collection, only a date", () => {
-		expect(filterRowsOf(testSite, "tag").top.map((row) => row.kind)).toEqual(["date"]);
-	});
-
-	it("has no language or translation row when the translation screens are off", () => {
-		const off = Object.create(testSite, { ADMIN_TRANSLATIONS: { value: false } });
-		expect(filterRowsOf(off, "post").top.map((row) => row.kind)).toEqual(["date"]);
-	});
-
-	it("has no row for the folder: the sidebar filters by folder", () => {
-		const { top, fields, blank } = filterRowsOf(testSite, "post");
-		const all = [...top, ...fields, ...blank];
-		expect(labelsOf(all)).not.toContain("폴더");
-	});
-});
-
-describe("finding a filter", () => {
-	const { top, fields, blank } = filterRowsOf(testSite, "post");
-	const row = (label: string) =>
-		[...top, ...fields, ...blank].find((candidate) => candidate.label === label) as (typeof top)[number];
-
-	it("matches a field by its name, ignoring case and the spaces around", () => {
-		expect(rowMatches(row("태그"), " 태 ")).toBe(true);
-		expect(rowMatches(row("태그"), "요약")).toBe(false);
-		expect(rowMatches(row("태그"), "")).toBe(true);
-	});
-
-	it("matches a select by the options it offers", () => {
-		expect(rowMatches(row("정책"), "지원 중단")).toBe(true);
-		expect(rowMatches(row("태그"), "지원 중단")).toBe(false);
-	});
-
-	it("matches the blank row by the fields it lists", () => {
-		expect(rowMatches(row("빈 칸"), "요약")).toBe(true);
-	});
-});
-
 describe("the chips of the filters that are on", () => {
 	const titles = new Map([["t1", "리액트"]]);
 	const chips = (query: string) =>
@@ -66,7 +16,7 @@ describe("the chips of the filters that are on", () => {
 		expect(chips("collection=post&field=tagIds:empty&field=tagIds:is:t1")).toEqual([
 			["field:tagIds", "태그: 없음, 리액트"],
 		]);
-		expect(chips("collection=post&field=summary:empty")).toEqual([["field:summary", "요약 빈 칸"]]);
+		expect(chips("collection=post&field=summary:empty")).toEqual([["field:summary", "요약 비어 있음"]]);
 		expect(chips("collection=post&field=policy:is:deprecated")).toEqual([["field:policy", "정책: 지원 중단"]]);
 	});
 
@@ -74,16 +24,23 @@ describe("the chips of the filters that are on", () => {
 		expect(chips("collection=post&field=tagIds:is:unknown")).toEqual([["field:tagIds", "태그: …"]]);
 	});
 
+	it("name the status with its values in the order of the status menu, whatever order they were ticked in", () => {
+		expect(chips("collection=post&status=draft&status=editing")).toEqual([["status", "상태: 수정 중, 초안"]]);
+		expect(chips("collection=post&status=archived&status=published")).toEqual([["status", "상태: 발행됨, 보관됨"]]);
+	});
+
 	it("name the translation, language and dates", () => {
-		const names = chips("collection=post&translation=changed&updated=last30&published=2026-03-01..2026-03-05").map(
-			([, label]) => label,
-		);
-		expect(names).toEqual(["번역: 원문 바뀜", "수정한 날: 최근 30일", "발행한 날: 03. 01 – 03. 05"]);
+		const names = chips(
+			"collection=post&translation=changed&updated=last30&published=2026-03-01..2026-03-05&created=today",
+		).map(([, label]) => label);
+		expect(names).toEqual(["번역: 원문 바뀜", "수정한 날: 최근 30일", "발행한 날: 03. 01 – 03. 05", "만든 날: 오늘"]);
 	});
 
 	it("each take only their own filter off", () => {
-		const state = stateOf("collection=post&field=tagIds:empty&field=summary:empty&translation=none");
+		const state = stateOf("collection=post&field=tagIds:empty&field=summary:empty&translation=none&status=draft");
 		const all = filterChipsOf(testSite, state, titles);
+		const status = all.find((chip) => chip.key === "status");
+		expect({ ...state, ...status?.clear }.statuses).toEqual([]);
 		const tags = all.find((chip) => chip.key === "field:tagIds");
 		expect({ ...state, ...tags?.clear }.fields).toEqual({ summary: [{ kind: "empty" }] });
 		const translation = all.find((chip) => chip.key === "translation");

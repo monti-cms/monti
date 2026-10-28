@@ -126,6 +126,17 @@ describe("admin entry list", () => {
 		expect(screen.queryByText("활성")).toBeNull();
 	});
 
+	it("cuts a long relation to its cell with its whole text in the title, as a block that ends in an ellipsis", () => {
+		const names = ["리액트", "타입스크립트", "넥스트", "회고"];
+		renderTable({
+			items: [item("tagged", { relations: { tagIds: names.map((title, id) => ({ id: `t${id}`, title })) } })],
+		});
+		const cell = screen.getByTitle(names.join(" · "));
+		expect(cell.textContent).toBe(names.join(" · "));
+		// A block, not a flex box, which would ignore the ellipsis.
+		expect(cell.tagName).toBe("DIV");
+	});
+
 	it("shows child folders in explorer mode and navigates up", () => {
 		const props = renderTable({
 			explorer: {
@@ -137,6 +148,32 @@ describe("admin entry list", () => {
 		expect(props.onSelectFolder).toHaveBeenCalledWith("f2");
 		fireEvent.click(screen.getByRole("button", { name: ".. 상위 폴더" }));
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
+	});
+
+	it("starts a folder row's name in the title's cell, after the folder icon, with how many things are in it, and no status", () => {
+		renderTable({
+			explorer: {
+				folders: [
+					{ id: "f2", collection: "post", parentId: null, name: "알고리즘", position: 0, version: 1, entryCount: 2 },
+				],
+				parent: "f1",
+			},
+		});
+		const folderRow = screen.getByRole("row", { name: /알고리즘/ });
+		const cells = within(folderRow).getAllByRole("cell");
+		// The status column (first by default) is an empty cell; the title's cell holds the icon, the name and the count.
+		expect(cells[0]?.textContent).toBe("");
+		const titleCell = cells[1] as HTMLElement;
+		expect(titleCell.querySelector("svg")).not.toBeNull();
+		expect(titleCell.textContent).toBe(
+			`알고리즘${t("list.folderCount", { noun: testSite.COLLECTION_DEFINITIONS.post.label, count: 2 })}`,
+		);
+		// It takes the columns after it, so the ⋯ cell is the last one.
+		expect(Number(titleCell.getAttribute("colspan"))).toBe(columnsFor(testSite, "post").defaults.length - 1);
+		// The row to go up has the same shape: empty status, then the icon and the name.
+		const up = within(screen.getByRole("row", { name: /상위 폴더/ })).getAllByRole("cell");
+		expect(up[0]?.textContent).toBe("");
+		expect(up[1]?.querySelector("svg")).not.toBeNull();
 	});
 
 	it("a taxonomy item shows its first language and how many others have a name", () => {

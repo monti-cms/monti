@@ -47,18 +47,25 @@ const posts = [
 	entry("쓰는 중인 글", { slug: "draft-post", relations: tags("메모", "일상", "회고") }),
 	entry("지난해 공지", { slug: "old-notice", status: "archived" }),
 ];
-const folder = (id: string, name: string, position: number, parentId: string | null = null): Folder => ({
+const folder = (
+	id: string,
+	name: string,
+	position: number,
+	parentId: string | null = null,
+	entryCount?: number,
+): Folder & { entryCount?: number } => ({
 	id,
 	collection: "post",
 	parentId,
 	name,
 	position,
 	version: 1,
+	entryCount,
 });
 const folders = [
-	folder("f-news", "뉴스", 0),
-	folder("f-notes", "노트", 1),
-	folder("f-weekly", "주간 정리", 0, "f-news"),
+	folder("f-news", "뉴스", 0, null, 12),
+	folder("f-notes", "노트", 1, null, 2),
+	folder("f-weekly", "주간 정리", 0, "f-news", 5),
 ];
 const trashed = [
 	entry("버린 글", { status: "trashed", trashedAt: new Date("2026-10-15T00:00:00Z") }),
@@ -87,7 +94,7 @@ const server =
 		if (url.pathname === "/api/monti/v1/preferences") return {};
 		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return folderList;
 		if (url.pathname === "/api/monti/v1/entries/counts")
-			return countsOf(url.searchParams.get("field") ?? "translation");
+			return countsOf(url.searchParams.get("field") ?? url.searchParams.get("facet") ?? "");
 		if (url.pathname === "/api/monti/v1/entries/search") {
 			const ids = url.searchParams.getAll("id");
 			const found = filterTags.filter((tag) => ids.length === 0 || ids.includes(tag.id));
@@ -130,7 +137,9 @@ const countsOf = (facet: string) =>
 		? { total: 148, empty: 12, values: Object.fromEntries(filterTags.map((tag) => [tag.id, tag.count])) }
 		: facet === "translation"
 			? { total: 148, values: { none: 41, changed: 3, current: 104 } }
-			: { total: 148, empty: 20, filled: 128, values: {} };
+			: facet === "status"
+				? { total: 148, values: { published: 101, editing: 3, draft: 41, archived: 3 } }
+				: { total: 148, empty: 20, filled: 128, values: {} };
 
 const listScreen =
 	(api: FakeApi, search = "collection=post") =>
@@ -207,98 +216,122 @@ export const RowMenuOpen: Story = {
 	},
 };
 
-/** Presses a button of the toolbar, and opens one of the rows of its menu at the side (→, as a keyboard does). */
-const openToolbarMenu = async (canvasElement: HTMLElement, button: string, row?: RegExp | string) => {
-	await userEvent.click(await within(canvasElement).findByRole("button", { name: button }));
-	if (!row) return;
-	fireEvent.keyDown(await body().findByRole("menuitem", { name: row }), { key: "ArrowRight" });
+/** Presses the name of a column in the head row, which opens its menu under it. */
+const openColumn = async (canvasElement: HTMLElement, name: string) => {
+	const head = within((await within(canvasElement).findAllByRole("rowgroup"))[0] as HTMLElement);
+	await userEvent.click(await head.findByRole("button", { name }));
+	await body().findByRole("menu");
 };
 
-export const FilterMenuOpen: Story = {
+/** Every state of the status column is one of four values, ticked in the status menu, which stays open for the next. */
+export const StatusMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 3 }), "collection=post&status=editing"),
+	play: ({ canvasElement }) => openColumn(canvasElement, "상태"),
+};
+
+/** A relation's menu: a search row, "none", a rule, then the items with how many rows each has. */
+export const TagMenuOpen: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 })),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "태그"),
+	play: ({ canvasElement }) => openColumn(canvasElement, "태그"),
 };
 
-/** The texts and images are one "Blank" row: each ticked keeps the rows where it is empty, and its chip says "… 빈 칸". */
-export const FilterBlankOpen: Story = {
+/** The languages, a rule, and the translation state under its own name. */
+export const LanguageMenuOpen: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&field=seoDescription:empty"),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "빈 칸"),
+	render: listScreen(server({ total: 3 }), "collection=post&translation=changed"),
+	play: ({ canvasElement }) => openColumn(canvasElement, "언어"),
 };
 
-/** The first level names fields only; the fields' values open at the side, with how many rows have each. */
-export const FilterTranslationOpen: Story = {
+export const TitleMenuOpen: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&translation=changed"),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "번역"),
+	render: listScreen(server({ total: 148 })),
+	play: ({ canvasElement }) => openColumn(canvasElement, "제목"),
 };
 
-export const FilterDateOpen: Story = {
+/** The sorted column's name is in ink with its arrow; the menu is closed. */
+export const TitleSorted: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&updated=last30"),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "필터", "날짜"),
+	render: listScreen(server({ total: 148 }), "collection=post&sortField=title&sortDirection=asc"),
 };
 
-/** Opens the filter menu's date level and, from its "pick a period" row (of the updated date), the calendar card at the side; the menus stay open behind it. */
+/** The date menu: sort, then today, the last 7 and 30 days and a period, one at a time with the ✓. */
+export const UpdatedMenuOpen: Story = {
+	...visual,
+	render: listScreen(server({ total: 148 })),
+	play: ({ canvasElement }) => openColumn(canvasElement, "수정일"),
+};
+
+/** Opens the updated date's menu and, from its "pick a period" row, the calendar beside it; the menu stays open behind it. */
 const openCalendar = async (canvasElement: HTMLElement) => {
-	await openToolbarMenu(canvasElement, "필터", "날짜");
-	const rows = await body().findAllByRole("menuitem", { name: "기간 고르기" });
-	fireEvent.keyDown(rows[0] as HTMLElement, { key: "ArrowRight" });
+	await openColumn(canvasElement, "수정일");
+	fireEvent.keyDown(await body().findByRole("menuitem", { name: "기간 고르기" }), { key: "ArrowRight" });
 	await body().findByRole("grid");
 };
 
-/** "Pick a period": the first day clicked starts it, the second applies it and closes everything. */
-export const FilterDateRangeOpen: Story = {
+/** "Pick a period": the first day clicked starts it, the second sets it and the calendar stays open showing it. */
+export const UpdatedRangeOpen: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&updated=last30"),
+	render: listScreen(server({ total: 148 })),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
 /** A period that is on: the calendar shows its two days filled and the days between banded, and the chip says it. */
-export const FilterDateRangePicked: Story = {
+export const UpdatedRangePicked: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 	play: ({ canvasElement }) => openCalendar(canvasElement),
 };
 
-/** After the second click: the chip alone, the menus closed. */
-export const FilterDateRangeChip: Story = {
+/** The second day sets the period: the chip appears, and the calendar stays open showing it (a press outside or Escape closes it). */
+export const UpdatedRangeSet: Story = {
+	render: listScreen(server({ total: 148 })),
+	play: async ({ canvasElement }) => {
+		await openCalendar(canvasElement);
+		const day = (n: string) => within(body().getByRole("grid")).getByRole("button", { name: new RegExp(`${n}일`) });
+		await userEvent.click(day("10"));
+		await userEvent.click(day("20"));
+		await within(canvasElement).findByRole("button", { name: /수정한 날: \d\d\. 10 – \d\d\. 20 지우기/ });
+		await expect(body().getByRole("grid")).toBeVisible();
+		await expect(body().getAllByRole("menu").length).toBeGreaterThanOrEqual(2);
+	},
+};
+
+/** The period as a chip alone, the menus closed. */
+export const UpdatedRangeChip: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 }), "collection=post&updated=2026-10-05..2026-10-16"),
 };
 
-export const FilterSearchOpen: Story = {
+/** The + at the end of the head row lists only the columns that are off, as plain rows. */
+export const ColumnAddOpen: Story = {
 	...visual,
-	render: listScreen(server({ total: 148 })),
+	render: listScreen(server({ folders, total: 148 })),
 	play: async ({ canvasElement }) => {
-		await openToolbarMenu(canvasElement, "필터");
-		await userEvent.type(await body().findByRole("textbox", { name: "필터 찾기" }), "카");
+		const head = within((await within(canvasElement).findAllByRole("rowgroup"))[0] as HTMLElement);
+		await userEvent.click(await head.findByRole("button", { name: "열 추가" }));
+		await body().findByRole("menu");
 	},
 };
 
-/** The filters that are on are chips before the Filter menu. */
+/** The filters that are on are chips under the title, each with its ×, and the columns they filter have a dot after the name. */
 export const Filtered: Story = {
 	...visual,
-	render: listScreen(server({ total: 12 }), "collection=post&field=tagIds:empty&updated=last30&translation=none"),
+	render: listScreen(
+		server({ total: 12 }),
+		"collection=post&status=published&status=editing&field=tagIds:empty&updated=last30&translation=none",
+	),
 };
 
-export const ViewMenuOpen: Story = {
+/** The footer holds the range, the page size beside it (its menu opens upward) and the pager. */
+export const PageSizeOpen: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 })),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /정렬/),
-};
-
-export const TitleSorted: Story = {
-	...visual,
-	render: listScreen(server({ total: 148 }), "collection=post&sortField=title&sortDirection=asc"),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /정렬/),
-};
-
-export const ViewColumnsOpen: Story = {
-	...visual,
-	render: listScreen(server({ total: 148 })),
-	play: ({ canvasElement }) => openToolbarMenu(canvasElement, "보기", /^열/),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "페이지당 행 수" }));
+		await body().findByRole("menu");
+	},
 };
 
 /** The bulk bar's ⋯ has the rest of the actions, the trash last in red. */
@@ -338,11 +371,6 @@ export const BulkFolderMenuOpen: Story = {
 export const PagerOnPageFour: Story = {
 	...visual,
 	render: listScreen(server({ total: 148 }), "collection=post&page=4"),
-};
-
-export const StatusFiltered: Story = {
-	...visual,
-	render: listScreen(server(), "collection=post&status=published"),
 };
 
 /** The row menu's "Move to trash" asks first. */

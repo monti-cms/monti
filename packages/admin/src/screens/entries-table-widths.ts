@@ -6,9 +6,10 @@ import { type AdminListColumn, columnConfig, fieldColumnOf } from "./list-column
 const SYSTEM_SIZE: Partial<Record<AdminListColumn, number>> = {
 	status: 92,
 	locale: 64,
-	updatedAt: 72,
-	publishedAt: 72,
-	createdAt: 72,
+	updatedAt: 88,
+	publishedAt: 88,
+	createdAt: 88,
+	trashedAt: 88,
 	slug: 160,
 	folder: 140,
 };
@@ -31,6 +32,10 @@ export function columnSize(site: Site, collection: string, column: AdminListColu
 export const TITLE_MIN_WIDTH = 240;
 /** The ⋯ at the end of a row: its 32px button and the cell's padding. */
 export const ACTIONS_SIZE = 54;
+/** The end of a trash row: restore, delete for good and the ⋯, so the date before it stays beside them. */
+const TRASH_ACTIONS_SIZE = 206;
+/** The width of the cell at the end of a row. */
+export const actionsSize = (isTrash: boolean) => (isTrash ? TRASH_ACTIONS_SIZE : ACTIONS_SIZE);
 
 /** Columns left out first when the width runs short, in this order. The title, the status, a single taxonomy field and the updated date always stay. */
 const HIDE_ORDER_WHEN_NARROW = ["folder", "slug", "createdAt", "locale"] as const;

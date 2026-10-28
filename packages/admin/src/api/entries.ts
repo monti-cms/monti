@@ -18,7 +18,7 @@ export type EntrySearchResponse = {
 	items: { id: string; title: string | null; slug: string | null; status: string }[];
 };
 
-/** What `GET /v1/entries/counts` answers: how many rows have no value, a value, or each option, item or translation state. */
+/** What `GET /v1/entries/counts` answers: how many rows have no value, a value, or each option, item, translation state or entry state. */
 export interface ListCountsResponse {
 	total: number;
 	empty?: number;

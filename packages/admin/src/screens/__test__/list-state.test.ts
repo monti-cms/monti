@@ -17,7 +17,7 @@ const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
 describe("admin list state", () => {
 	it("round-trips filters through the URL", () => {
 		const url = new URLSearchParams(
-			"collection=post&folder=f1&descendants=1&search=리액트&status=published&status=draft&changes=1&field=tagIds:empty&field=tagIds:is:t1&field=summary:empty&translation=changed&translation=none&updated=last30&published=2026-03-01..2026-03-05&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
+			"collection=post&folder=f1&descendants=1&search=리액트&status=published&status=editing&status=draft&field=tagIds:empty&field=tagIds:is:t1&field=summary:empty&translation=changed&translation=none&updated=last30&published=2026-03-01..2026-03-05&created=last7&sortField=publishedAt&sortDirection=asc&page=2&pageSize=50",
 		);
 		const state = parseListState(testSite, url);
 		expect(state).toMatchObject({
@@ -25,8 +25,7 @@ describe("admin list state", () => {
 			folder: "f1",
 			includeDescendants: true,
 			search: "리액트",
-			statuses: ["published", "draft"],
-			hasChanges: true,
+			statuses: ["published", "editing", "draft"],
 			fields: {
 				tagIds: [{ kind: "empty" }, { kind: "is", value: "t1" }],
 				summary: [{ kind: "empty" }],
@@ -34,6 +33,7 @@ describe("admin list state", () => {
 			translations: ["changed", "none"],
 			updated: { kind: "preset", preset: "last30" },
 			published: { kind: "range", from: "2026-03-01", to: "2026-03-05" },
+			created: { kind: "preset", preset: "last7" },
 			sortField: "publishedAt",
 			sortDirection: "asc",
 			page: 2,
@@ -83,6 +83,27 @@ describe("admin list state", () => {
 			),
 		);
 		expect(state.fields).toEqual({ tagIds: [{ kind: "is", value: "t1" }] });
+	});
+
+	it("keeps the four states of the status column as one list, and no longer reads a separate unpublished-changes flag", () => {
+		const state = parseListState(
+			testSite,
+			new URLSearchParams("collection=post&status=editing&status=draft&status=editing&changes=1"),
+		);
+		expect(state.statuses).toEqual(["editing", "draft"]);
+		expect("hasChanges" in state).toBe(false);
+		const query = listStateToApiQuery(testSite, state);
+		expect(query.getAll("status")).toEqual(["editing", "draft"]);
+		expect(query.has("hasChanges")).toBe(false);
+		expect(listStateToSearchParams(state).has("changes")).toBe(false);
+	});
+
+	it("sends the created date as a range like the updated and published dates, for an item collection too", () => {
+		const state = parseListState(testSite, new URLSearchParams("collection=tag&created=2026-03-01..2026-03-05"));
+		const query = listStateToApiQuery(testSite, state, { now: NOW });
+		expect(query.get("createdFrom")).toBe("2026-02-28T15:00:00.000Z");
+		expect(query.get("createdTo")).toBe("2026-03-05T14:59:59.999Z");
+		expect(listStateToSearchParams(state).get("created")).toBe("2026-03-01..2026-03-05");
 	});
 
 	it("has no published date on an item collection", () => {
@@ -157,13 +178,15 @@ describe("admin list state", () => {
 		expect(trash.has("folderId")).toBe(false);
 	});
 
-	it("tells what narrows the list and clears only that", () => {
+	it("tells what narrows the list, the status among it, and clears only that", () => {
 		const narrowed = parseListState(
 			testSite,
-			new URLSearchParams("collection=post&folder=f1&field=tagIds:empty&updated=today&pageSize=50"),
+			new URLSearchParams("collection=post&folder=f1&status=draft&field=tagIds:empty&updated=today&pageSize=50"),
 		);
 		expect(isFiltered(narrowed)).toBe(true);
-		expect(activeFilterCount(narrowed)).toBe(2);
+		expect(activeFilterCount(narrowed)).toBe(3);
+		// A status narrows the list, so the folders are not browsed.
+		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post&status=draft")))).toBe(false);
 		const cleared = { ...narrowed, ...clearFiltersPatch(narrowed) };
 		expect(isFiltered(cleared)).toBe(false);
 		expect(cleared).toMatchObject({ folder: "f1", pageSize: 50 });
@@ -196,21 +219,22 @@ describe("list state for a collection without folders", () => {
 	});
 });
 
-describe("the query for the numbers beside the filter menu", () => {
+describe("the query for the numbers beside a column menu's values", () => {
 	const q = (search: string, facet: Parameters<typeof listStateToCountsQuery>[2]) =>
 		listStateToCountsQuery(testSite, parseListState(testSite, new URLSearchParams(search)), facet);
 
-	it("asks for one field, or for the translation filter, grouped by translation like the list", () => {
+	it("asks for one field, for the translation filter or for the status, grouped by translation like the list", () => {
 		expect(q("collection=post", { field: "tagIds" }).toString()).toBe("collection=post&field=tagIds&group=translation");
 		expect(q("collection=post", "translation").get("facet")).toBe("translation");
+		expect(q("collection=post", "status").get("facet")).toBe("status");
 		expect(q("collection=tag", { field: "title" }).has("group")).toBe(false);
 	});
 
-	it("counts the current folder with its subfolders, and the status of the tab", () => {
+	it("counts the current folder with its subfolders, and not the status that is picked", () => {
 		const query = q("collection=post&folder=f1&status=published", { field: "tagIds" });
 		expect(query.get("folderId")).toBe("f1");
 		expect(query.get("includeDescendants")).toBe("true");
-		expect(query.getAll("status")).toEqual(["published"]);
+		expect(query.has("status")).toBe(false);
 	});
 
 	it("counts everything at the top level, and ignores the other filters", () => {

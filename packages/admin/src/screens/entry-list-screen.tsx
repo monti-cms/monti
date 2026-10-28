@@ -78,7 +78,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						state={state}
 						onStateChange={(patch) => {
 							list.update(patch);
-							if (patch.sortField || patch.sortDirection) {
+							if (!isTrash && (patch.sortField || patch.sortDirection)) {
 								list.savePreferences({
 									sort: {
 										field: patch.sortField ?? state.sortField,

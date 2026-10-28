@@ -4,7 +4,7 @@ import { valueFieldsOf } from "@monti-cms/core/site";
 /** The kinds of stored field the list can filter by. An address, a view and a reverse relation have no filter (the address is found by search). */
 export type FilterFieldKind = "text" | "media" | "select" | "relation";
 
-/** One stored field as the filter menu offers it. */
+/** One stored field as its column's menu offers it. */
 export interface FilterField {
 	readonly name: string;
 	readonly label: string;
@@ -16,8 +16,8 @@ export interface FilterField {
 }
 
 /**
- * What each kind takes in the filter menu. A text or an image is only ever looked for when it is missing ("what still has no description"), so those take
- * only "empty" and are listed together under one "Blank" row; a select or a relation takes "none" and its values.
+ * What each kind takes in a column's menu. A text or an image is only ever looked for when it is missing ("what still has no description"), so those take
+ * only "empty"; a select or a relation takes "none" and its values.
  */
 const TAKES: Record<FilterFieldKind, readonly FieldCondition["kind"][]> = {
 	text: ["empty"],
@@ -34,7 +34,7 @@ export const takesCondition = (kind: FilterFieldKind, condition: FieldCondition[
 	TAKES[kind].includes(condition);
 
 /**
- * The fields the filter menu lists for a collection, in schema order: every stored text, media, select and relation field but the title (the title is found by
+ * The fields a column menu can filter a collection by, in schema order: every stored text, media, select and relation field but the title (the title is found by
  * search). A conditional field is its choice, then the fields that depend on it, each by the rule of its own kind.
  */
 export function filterFieldsOf(site: Site, collection: string): FilterField[] {
@@ -74,23 +74,15 @@ const sameCondition = (a: FieldCondition, b: FieldCondition) =>
 export const hasCondition = (conditions: readonly FieldCondition[] | undefined, condition: FieldCondition): boolean =>
 	(conditions ?? []).some((candidate) => sameCondition(candidate, condition));
 
-/**
- * The conditions of a field after the writer ticked or unticked one: they are OR, so a menu can tick "none" and an item together. `empty` and `filled` say
- * opposite things about one value, so ticking one drops the other.
- */
+/** The conditions of a field after the writer ticked or unticked one: they are OR, so a menu can tick "none" and an item together. */
 export function toggleCondition(
 	conditions: readonly FieldCondition[] | undefined,
 	condition: FieldCondition,
 ): FieldCondition[] {
 	const current = conditions ?? [];
-	if (hasCondition(current, condition)) return current.filter((candidate) => !sameCondition(candidate, condition));
-	const rest =
-		condition.kind === "empty"
-			? current.filter((candidate) => candidate.kind !== "filled")
-			: condition.kind === "filled"
-				? current.filter((candidate) => candidate.kind !== "empty")
-				: current;
-	return [...rest, condition];
+	return hasCondition(current, condition)
+		? current.filter((candidate) => !sameCondition(candidate, condition))
+		: [...current, condition];
 }
 
 /** `name:empty`, `name:filled` or `name:is:value`: one condition as the address and the list API write it. */

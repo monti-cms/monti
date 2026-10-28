@@ -56,16 +56,21 @@ function useListState(mode: ListMode) {
 	const preferences = preferencesQuery.data ?? null;
 
 	const collectionPrefs: CollectionPreferences = preferences?.collections?.[parsed.collection] ?? {};
+	const isTrash = mode === "trash";
+	// The trash starts with what was trashed last, and keeps no sort of its own in the settings: the list's saved sort is not its.
+	const sortPrefs = isTrash ? undefined : collectionPrefs.sort;
 	const state: ListState = useMemo(
 		() => ({
 			...parsed,
 			pageSize: parsed.explicit.pageSize ? parsed.pageSize : (collectionPrefs.pageSize ?? parsed.pageSize),
-			sortField: parsed.explicit.sort ? parsed.sortField : (collectionPrefs.sort?.field ?? parsed.sortField),
-			sortDirection: parsed.explicit.sort
-				? parsed.sortDirection
-				: (collectionPrefs.sort?.direction ?? parsed.sortDirection),
+			sortField: parsed.explicit.sort
+				? parsed.sortField
+				: isTrash
+					? "trashedAt"
+					: (sortPrefs?.field ?? parsed.sortField),
+			sortDirection: parsed.explicit.sort ? parsed.sortDirection : (sortPrefs?.direction ?? parsed.sortDirection),
 		}),
-		[parsed, collectionPrefs],
+		[parsed, collectionPrefs, sortPrefs, isTrash],
 	);
 
 	const navigate = useCallback(

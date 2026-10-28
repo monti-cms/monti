@@ -7,15 +7,15 @@ import type { ReactNode } from "react";
 import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
 import { EntryCell } from "./entries-table-cells";
-import { ACTIONS_SIZE, columnSize } from "./entries-table-widths";
-import { customListCell } from "./list-cells";
+import { actionsSize, columnSize } from "./entries-table-widths";
+import { customListCell, fieldCellText } from "./list-cells";
 import { type AdminListColumn, fieldColumnOf } from "./list-columns";
 import { shortDate } from "./list-row-dates";
 import { screensMessages } from "./messages";
 import { type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { entryStatusKind, statusLabels } from "./shared/entry-status";
 
-const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt"];
+const DATE_COLUMNS: readonly AdminListColumn[] = ["updatedAt", "createdAt", "publishedAt", "trashedAt"];
 
 /** A language as the list says it: its code in mono, and "+1" for each other language the entry has. */
 function LanguageCell({ item }: { item: ListEntriesItem }) {
@@ -102,7 +102,7 @@ export function EntryRowCells({
 		if (!custom && DATE_COLUMNS.includes(column)) {
 			return (
 				<Text as="span" mono variant="meta" tone="muted">
-					{shortDate(site, item[column as "updatedAt" | "createdAt" | "publishedAt"])}
+					{shortDate(site, item[column as "updatedAt" | "createdAt" | "publishedAt" | "trashedAt"])}
 				</Text>
 			);
 		}
@@ -120,8 +120,9 @@ export function EntryRowCells({
 			/>
 		);
 		if (column === "title") return value;
+		// A block that is cut to the cell and ends in "…" (a flex box would ignore `text-overflow`); its `title` gives the whole text.
 		return custom || hasValue(column) ? (
-			<Text as="div" truncate>
+			<Text as="div" truncate title={custom ? undefined : fieldCellText(site, collection, column, item)}>
 				{value}
 			</Text>
 		) : null;
@@ -145,7 +146,7 @@ export function EntryRowCells({
 					{content(column)}
 				</TableCell>
 			))}
-			<TableCell size={isTrash ? undefined : ACTIONS_SIZE} align="end">
+			<TableCell size={actionsSize(isTrash)} align="end">
 				<Inline gap={4} justify="end">
 					{isTrash && (
 						<>
