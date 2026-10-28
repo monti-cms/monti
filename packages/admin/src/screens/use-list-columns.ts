@@ -26,6 +26,12 @@ export function useListColumns({
 	);
 	// While a column's name is dragged, the order shown; nothing is saved until it is let go.
 	const [preview, setPreview] = useState<AdminListColumn[] | null>(null);
+	// The order just let go, shown until the saved settings carry it: they arrive a moment after the drag ends, and showing the old order in between
+	// makes the columns jump back and forth once.
+	const [placed, setPlaced] = useState<AdminListColumn[] | null>(null);
+	const savedKey = order.join();
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only when the saved order changes
+	useEffect(() => setPlaced(null), [savedKey]);
 
 	// The room the table has: the content of the box around it, so a panel beside the list leaves out columns as a narrower window does.
 	const scrollRef = useRef<HTMLElement | null>(null);
@@ -41,7 +47,7 @@ export function useListColumns({
 	}, []);
 
 	const shown = shownColumns({
-		order: preview ?? order,
+		order: preview ?? placed ?? order,
 		visible: (column) => visibility[column] !== false,
 		width,
 		sizeOf: (column) => columnSize(site, collection, column) ?? 0,
@@ -59,7 +65,11 @@ export function useListColumns({
 		scrollRef,
 		setPreview,
 		/** Puts `from` where `to` is. */
-		place: (from: AdminListColumn, to: AdminListColumn) => save(placeColumn(order, from, to)),
+		place: (from: AdminListColumn, to: AdminListColumn) => {
+			const next = placeColumn(order, from, to);
+			setPlaced(next);
+			save(next);
+		},
 		/** Moves a column one place among the columns drawn. */
 		step: (column: AdminListColumn, direction: -1 | 1) => save(stepColumn(order, shown, column, direction)),
 		/** Turns a column on or off. The title is always on. */

@@ -150,6 +150,8 @@ function ListHead({
 
 	/** Opens the menu of `column` under its name, lined up with the name's right side when the card would reach past the end of the row. */
 	const openFor = (column: ListHeadColumn, name: Element | null | undefined) => {
+		// The press that opened the menu is over: the menu takes the pointer from here, and its release never reaches the head.
+		press.current = null;
 		const left = name?.getBoundingClientRect().left ?? 0;
 		const rowEnd = row.current?.getBoundingClientRect().right ?? 0;
 		setOpen({ id: column.id, flip: column.align === "end" || left - MENU_REACH + MENU_WIDTH > rowEnd });
@@ -175,6 +177,12 @@ function ListHead({
 				onPointerMove={(event) => {
 					const held = press.current;
 					if (!held) return;
+					// The button is not down any more: the press ended where the head did not hear it (in an open menu, outside the window). A name is
+					// only ever dragged while the button is held.
+					if ((event.buttons & 1) === 0) {
+						finish(false);
+						return;
+					}
 					pointerX.current = event.clientX;
 					if (!drag) {
 						if (Math.abs(event.clientX - held.x) < DRAG_START) return;
