@@ -308,6 +308,7 @@ export {
 	cn,
 	DEFAULT_UI_LABELS,
 	SearchBox,
+	SearchToggle,
 	Segmented,
 	Select,
 	stackVariants,

@@ -186,7 +186,7 @@ export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
-export { SearchBox, type SearchTarget } from "./search-box";
+export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
 export { Section } from "./section";
 export { Segmented, type SegmentedOption } from "./segmented";
 export {
