@@ -316,8 +316,8 @@ describe("flow: columns and page size", () => {
 			const from = centre(t("column.updatedAt"));
 			const to = centre(t("column.title"));
 			fireEvent.pointerDown(cell(t("column.updatedAt")), { button: 0, pointerId: 1, clientX: from });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: from - 10 });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, clientX: to });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: from - 10 });
+			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: to });
 			// While held, the head already shows it before the title, and nothing is saved yet.
 			expect(names().indexOf(t("column.updatedAt"))).toBeLessThan(names().indexOf(t("column.title")));
 			const savesBefore = saved().length;
@@ -328,6 +328,36 @@ describe("flow: columns and page size", () => {
 			// The press that ended a drag opened no menu and sorted nothing.
 			expect(menuOpen()).toBe(false);
 			expect(lastList().searchParams.get("sortDirection")).not.toBe("asc");
+		} finally {
+			box.mockRestore();
+		}
+	});
+
+	it("does not pick a column up when the press only opened its menu: moving over the head afterwards moves nothing", async () => {
+		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+			this: HTMLElement,
+		) {
+			const left =
+				[...(this.parentElement?.children ?? [])].filter((cell) => cell.tagName === this.tagName).indexOf(this) * 100;
+			return { left, right: left + 100, top: 0, bottom: 40, width: 100, height: 40, x: left, y: 0 } as DOMRect;
+		});
+		try {
+			await renderList();
+			await screen.findAllByRole("columnheader");
+			const before = names();
+			const cell = head().getByRole("columnheader", { name: t("column.updatedAt") });
+			const from = cell.getBoundingClientRect().left + 50;
+			// The press opens the menu; its release goes to the menu, not the head.
+			fireEvent.pointerDown(cell, { button: 0, buttons: 1, pointerId: 1, clientX: from });
+			fireEvent.click(within(cell).getByRole("button", { name: t("column.updatedAt") }));
+			expect(menuOpen()).toBe(true);
+			fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+			await waitFor(() => expect(menuOpen()).toBe(false));
+			const savesBefore = saved().length;
+			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 150 });
+			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 300 });
+			expect(names()).toEqual(before);
+			expect(saved().length).toBe(savesBefore);
 		} finally {
 			box.mockRestore();
 		}
