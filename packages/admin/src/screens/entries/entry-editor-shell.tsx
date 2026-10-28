@@ -20,14 +20,13 @@ import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { usePanelResize } from "../../ui/panel-resize";
 import { entryHref } from "../shared/entry-href";
-import { describeEntryStatus } from "../shared/entry-status";
-import { nounVars } from "../shared/noun.messages";
 import { type OpenEditor, OpenEditorContext } from "../shared/open-editor";
 import { usePublishScreenContext } from "../shared/screen-context";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { SidePanelPane } from "../shared/side-panel-slot";
-import { type EditorStatus, StatusBar } from "../shared/status-bar";
-import { bodyStats } from "./body-stats";
+import { StatusBar } from "../shared/status-bar";
+import { doneLabels, requiredFields } from "../shared/todo-rows";
+import { bodyChars } from "./body-stats";
 import { EditorScroller } from "./editor-scroller";
 import { EntryEditorBanners } from "./entry-editor-banners";
 import { EntryEditorHeader } from "./entry-editor-header";
@@ -357,52 +356,22 @@ export function EntryEditorShell({
 		}
 		wasSaving.current = saveStatus === "saving";
 	}, [saveStatus, entry?.version]);
-	const stats = useMemo(() => bodyStats(form.doc), [form.doc]);
+	const chars = useMemo(() => bodyChars(form.doc), [form.doc]);
 
 	if (isLoading) return <EntryEditorLoading />;
 	if (loadError) return <EntryEditorLoadError message={loadError} />;
 
-	const statusLabel = entry ? describeEntryStatus(site, entry) : t("newEntry", nounVars(site, collection));
-	const barStatus: EditorStatus = {
-		saveStatus,
-		savedAt,
-		statusLabel,
-		charCount: stats.chars,
-		readingMinutes: stats.minutes,
-		bodyStats: {
-			charsWithSpaces: stats.charsWithSpaces,
-			words: stats.words,
-			paragraphs: stats.paragraphs,
-			headings: stats.headings,
-		},
-		backupAvailable: editor.recoveryCopyAvailable,
-		recovery: editor.recovery
-			? { restore: editor.restoreRecovery, discard: () => void editor.discardRecovery() }
-			: null,
-		translations:
-			site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection)
-				? (entry.translations ?? []).map((member) => ({
-						id: member.id,
-						locale: member.locale,
-						status: member.status,
-						current: member.id === entry.id,
-					}))
-				: null,
-		save: () => void commands.handleSaveNow(),
-		publishReadiness:
-			entry && (readiness.result || readiness.checking)
-				? {
-						result: readiness.result,
-						checking: readiness.checking,
-						stale: saveStatus !== "saved",
-						recheck: readiness.recheck,
-						focus: focusIssue,
-						open: isReadinessOpen,
-						onOpenChange: setIsReadinessOpen,
-					}
-				: null,
-		textIssues: extensions.textIssues,
-	};
+	// The status bar's to-do cell: the problems the server's publish check found in the saved draft. The required fields that have none are the ones that are right.
+	const todo =
+		entry && readiness.result
+			? {
+					issues: readiness.result.issues,
+					done: doneLabels(requiredFields(site, collection, translationSource !== null), readiness.result.issues),
+					focus: focusIssue,
+					open: isReadinessOpen,
+					onOpenChange: setIsReadinessOpen,
+				}
+			: null;
 	const bodyIssue = publishIssues.find((issue) => issue.path === "body" || Boolean(issue.position));
 	const titleIssue = publishIssues.find((issue) => issue.path === titleKey);
 	const languageTabs =
@@ -574,12 +543,19 @@ export function EntryEditorShell({
 					</Inline>
 
 					<StatusBar
+						save={{
+							status: saveStatus,
+							savedAt,
+							backupAvailable: editor.recoveryCopyAvailable,
+							onSave: () => void commands.handleSaveNow(),
+						}}
+						todo={todo}
+						chars={chars}
 						context={{
-							screen: "entry",
 							collection,
 							...(entry?.id ? { entryId: entry.id } : {}),
 							locale: entry?.locale ?? site.DEFAULT_LOCALE,
-							editor: barStatus,
+							textIssues: extensions.textIssues,
 						}}
 					/>
 

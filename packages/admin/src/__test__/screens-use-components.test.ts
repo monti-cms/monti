@@ -123,10 +123,6 @@ const DRAWING = new Map<string, string>([
 		"admin/src/screens/shared/side-panel.tsx",
 		"the docked side panel: positioned beside the list, its width comes from a drag handle (a CSS variable)",
 	],
-	[
-		"admin/src/screens/shared/status-bar.tsx",
-		"the status bar's popups are dense lists with their own row and header look that no other screen shares (the bar and its cells are design-system parts)",
-	],
 	["blocks/src/callout/view.tsx", "draws the callout as the public post does"],
 	["blocks/src/chart/preview.tsx", "chart geometry inside the post's rhythm"],
 	["blocks/src/chart/ui.tsx", "chart geometry (recharts selectors, aspect ratio, tooltip and legend boxes, swatches)"],

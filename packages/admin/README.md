@@ -356,7 +356,7 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`, `panel`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusCells`, `panel`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
@@ -366,51 +366,32 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 ### Status bar
 
-Every admin screen ends with a plain status bar (24px, the sidebar's background, a hairline on top). Core and plugins contribute items; the rule is that an item shows only changing state that leads somewhere when clicked, and renders nothing when there is nothing to say. Core ships the save state of the editor ("Draft · Saved 2 min ago", click to save), the language, the character count and reading time of the body (characters without whitespace, about 500 a minute, at least 1), whether the saved draft is ready to publish ("Ready to publish", "2 to fix before publishing"; from `POST /api/monti/v1/entries/:id/check`, rerun when the entry opens and after each save, and a refused publish opens its popup), failed event deliveries (links to the event log) and the entry count of lists.
+The editor ends with a plain status bar (24px, the sidebar's background, a hairline on top). It holds only what is shown nowhere else, left to right: the save state of the entry ("Unsaved changes", "Saved 10:42"; pressing it saves, and after a failed save it tries again), what is left to fix before publishing ("2 to do", or "Nothing to do"; from `POST /api/monti/v1/entries/:id/check`, rerun when the entry opens and after each save, and a refused publish opens its list), the cells plugins fill, and at the right the character count of the body (without whitespace). The to-do cell opens a list of the problems, each a row with its place that goes to its field or block when pressed, and under a rule the required fields that are right. The status name is the chip in the header and the language is in the language tabs.
 
-A plugin adds items with `statusItems` of `defineAdminPlugin`, by name. Each item declares its group (`align: "start"` is the left group, `"end"` the right one) and its `order` (ascending; the core items use 10 to 80 on the left and 10 on the right), and a component that renders a `StatusBarItem` or `null`:
+A plugin fills a cell with `statusCells` of `defineAdminPlugin`, by name. The core provides one slot for them, after the to-do cell, in the source editor and in the translation editor alike. The cell and the list that opens from it are the core's (`StatusBarPluginCell` from `@monti-cms/admin/kit`); the plugin brings only what goes in them: the name of what it finds, its findings, and the actions. A cell component renders `StatusBarPluginCell` or `null`; it shows only where the plugin has something to say, so a plugin that checks one language draws nothing in another:
 
 ```tsx
 "use client";
-import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+import { StatusBarPluginCell, useStatusBarContext } from "@monti-cms/admin/kit";
 
-function DraftsStatus() {
-	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
-	const drafts = useDrafts(collection); // your own query
-	if (screen !== "list" || !drafts) return null; // null hides the item, with no gap
-	return <StatusBarItem tone="warning" href="/admin?status=draft" title="Open the drafts">{drafts} drafts</StatusBarItem>;
-}
-
-export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
-```
-
-`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), at most one of `href` (a link inside the admin), `onClick` (a button) or `popover` (a popup; with `open` and `onOpenChange` the caller controls it), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, the size of the body, the browser copy on offer, the translations, and the findings of the text checkers with a way to each). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
-
-With `popover`, clicking the item (or Enter and Space) opens a popup above it, lined up with the item's left edge in the `start` group and its right edge in the `end` group; Escape closes it and the focus returns to the item. The popup is 320px wide and scrolls when the screen is short. Build its content from `StatusPopoverHeader` (a title and an optional action on the right, `{ label, onClick, keepOpen? }` or `{ label, href, newTab }`; `keepOpen` leaves the popup open after the action) and `StatusPopoverRow` (a `label` on the left and a `value` in mono on the right; `href` makes it a link, `onClick` a button, and both close the popup). Core uses popups for the save state (status, last save, Save now, Retry, Sign in, restoring the browser copy), the language (the translations and where each stands), the body counts, what to fix before publishing (each problem as a plain to-do that goes to its field or block, and Check again), and the latest failed deliveries (Retry all, the event log):
-
-```tsx
-function DraftsStatus() {
-	const { collection } = useStatusBarContext();
-	const drafts = useDrafts(collection); // your own query: [{ id, title }]
-	if (!drafts.length) return null;
+function LinksCell() {
+	const { locale, entryId } = useStatusBarContext();
+	const links = useBrokenLinks(entryId); // your own query: [{ id, label, where, fix }]
+	if (locale !== "en" || links.length === 0) return null; // null draws no cell, with no gap
 	return (
-		<StatusBarItem
-			tone="warning"
-			title="Show the drafts"
-			popover={
-				<>
-					<StatusPopoverHeader title="Drafts" action={{ label: "Open all", href: "/admin?status=draft" }} />
-					{drafts.map((draft) => (
-						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
-					))}
-				</>
-			}
-		>
-			{drafts.length} drafts
-		</StatusBarItem>
+		<StatusBarPluginCell
+			label="Links"
+			findings={links.map((link) => ({ id: link.id, title: link.label, detail: link.where, actionLabel: "Fix", onAction: link.fix }))}
+			settings={{ label: "Settings", href: "/admin/tools/links" }}
+			fixAll={{ label: "Fix all", onClick: fixAllLinks }}
+		/>
 	);
 }
+
+export default defineAdminPlugin({ statusCells: { links: LinksCell } });
 ```
+
+The cell shows `label` and the number of findings, and is red while a finding has `blocking`. Its list has one row per finding: the title, one line for where it is, and one action; pressing the row itself goes to the place (`onOpen`). Under a rule, `settings` (an address in the admin) and `fixAll` sit at the two ends. Give a function of the site (`statusCells: (site) => ({ ... })`) when the cells depend on the site config; the components come from a `"use client"` module. `useStatusBarContext()` returns the `collection`, the `entryId`, the `locale` of the entry and `textIssues`, what the text checkers (`textCheckers`) found in the body: each with its text, suggestion, paragraph number and sentence, a way to jump to it and a way to fix it, and `fixAll`. `@monti-cms/bareun` fills its cell this way.
 
 ### Side panel
 

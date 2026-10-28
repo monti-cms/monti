@@ -11,6 +11,7 @@ import {
 	type SourcePanelRegistration,
 } from "../../../admin-components";
 import { findBlock } from "../../../editor/block-ids";
+import { StatusBarPluginCell } from "../../../kit";
 import { preferenceKey } from "../../../lib/utils/site-storage";
 import type { AdminPanel } from "../../../plugins";
 import { docOf } from "../../../test/mdx";
@@ -22,6 +23,7 @@ import { formatDateTime } from "../../shared/format-date";
 import { useOpenEditor } from "../../shared/open-editor";
 import { ScreenContextProvider, useScreenContext } from "../../shared/screen-context";
 import { AdminPanelProvider } from "../../shared/side-panel-slot";
+import { StatusCellsProvider, useStatusBarContext } from "../../shared/status-bar";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
@@ -190,9 +192,9 @@ const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryI
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
 /** The popup a refused publish opens by itself. */
 const readinessPopup = async () => within(await screen.findByRole("dialog"));
-/** The popup opened from the readiness item in the status bar, which names how many problems there are. */
+/** The list opened from the to-do cell in the status bar, which names how many problems there are. */
 const reopenReadinessPopup = async () => {
-	fireEvent.click(await screen.findByRole("button", { name: /^발행 전 \d/ }));
+	fireEvent.click(await screen.findByRole("button", { name: /^할 일 \d/ }));
 	return within(await screen.findByRole("dialog"));
 };
 /** Saves the way the header no longer offers a button for: the keyboard shortcut. */
@@ -251,7 +253,7 @@ describe("entry editor shell", () => {
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).metadata.title).toBe("로컬에서 수정");
 	});
 
-	it("publishes the save state to the status bar: saved, then unsaved, saving and saved again", async () => {
+	it("shows the save state in the status bar and saves from it: saved, then unsaved, saving and saved again", async () => {
 		let finish: (() => void) | undefined;
 		serve(async (_input, init) => {
 			if (init?.method !== "PATCH") return undefined;
@@ -266,17 +268,19 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		const bar = within(await screen.findByRole("region", { name: "상태" }));
-		await waitFor(() => expect(bar.getByText(/^초안 · 저장됨/)).toBeTruthy());
-		// The language and the size of the body (whitespace not counted) are there too.
-		expect(bar.getByText("ko")).toBeTruthy();
-		expect(bar.getByText("6자 · 1분")).toBeTruthy();
+		await waitFor(() => expect(bar.getByText(/^저장됨 /)).toBeTruthy());
+		// The size of the body (whitespace not counted) is at the end; the language and the reading time are not in the bar.
+		expect(bar.getByText("6자")).toBeTruthy();
+		expect(bar.queryByText("ko")).toBeNull();
 		fireEvent.change(await editorTitle(), { target: { value: "수정" } });
-		expect(bar.getByRole("button", { name: "초안 · 저장 전 변경사항" })).toBeTruthy();
-		pressSave();
+		// Pressing the cell saves, as Cmd/Ctrl+S does.
+		fireEvent.click(bar.getByRole("button", { name: "저장 전 변경사항" }));
 		await waitFor(() => expect(bar.getByText("저장 중…")).toBeTruthy());
+		expect(bar.queryByRole("button", { name: "저장 중…" })).toBeNull();
 		finish?.();
-		await waitFor(() => expect(bar.getByText(/^초안 · 저장됨/)).toBeTruthy());
+		await waitFor(() => expect(bar.getByText(/^저장됨 /)).toBeTruthy());
 		expect(bar.queryByText("저장 중…")).toBeNull();
+		expect(methodCalls("PATCH")).toHaveLength(1);
 	});
 
 	it("shows a header save button only while there are unsaved changes, and it saves", async () => {
@@ -442,26 +446,29 @@ describe("entry editor shell", () => {
 		expect(screen.queryByText(/새로고침/)).toBeNull();
 	});
 
-	describe("publish readiness in the status bar", () => {
+	describe("to-do cell in the status bar (flow 1 steps 10 to 13)", () => {
 		const checkCalls = () => methodCalls("POST", "/check");
 		const bar = async () => within(await screen.findByRole("region", { name: "상태" }));
 		const missingTitle = told({ code: "missing_field", path: "title", message: "제목" });
 		const missingAlt = told({ code: "missing_image_alt", path: "body", position: { blockId: "b1" } });
 
-		it("says the entry is ready when the check finds nothing, and checks once after loading", async () => {
+		it("says nothing is left to do when the check finds nothing, and checks once after loading", async () => {
 			renderEdit();
-			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+			expect(await (await bar()).findByRole("button", { name: "할 일 없음" })).toBeTruthy();
 			expect(checkCalls()).toHaveLength(1);
 			expect(String(checkCalls()[0]?.[0])).toContain("/entries/entry-1/check");
 		});
 
-		it("counts what to fix and, quietly, the warnings", async () => {
+		it("counts what to fix, and leaves the warnings out", async () => {
 			checkAnswer = { issues: [missingTitle, missingAlt], warnings: [told({ code: "footnote_definition_unused" })] };
 			renderEdit();
-			expect(await (await bar()).findByRole("button", { name: "발행 전 2 · 경고 1" })).toBeTruthy();
+			fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 2" }));
+			const list = within(await screen.findByRole("dialog"));
+			expect(list.getByText("발행 전에 고칠 것")).toBeTruthy();
+			expect(list.queryByText("어디에도 쓰이지 않는 각주 내용이 있어요")).toBeNull();
 		});
 
-		it("says it is checking while the check runs", async () => {
+		it("draws no cell until the check has answered", async () => {
 			let answer: (() => void) | undefined;
 			serve(async (input, init) => {
 				if (!(input.endsWith("/check") && init?.method === "POST")) return undefined;
@@ -471,12 +478,13 @@ describe("entry editor shell", () => {
 				return json(checkAnswer);
 			});
 			renderEdit();
-			expect(await (await bar()).findByRole("button", { name: "검사 중…" })).toBeTruthy();
+			await editorTitle();
+			expect((await bar()).queryByRole("button", { name: /할 일/ })).toBeNull();
 			answer?.();
-			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+			expect(await (await bar()).findByRole("button", { name: "할 일 없음" })).toBeTruthy();
 		});
 
-		it("rechecks after a save, not on a keystroke, and keeps the last answer with a hint meanwhile", async () => {
+		it("rechecks after a save, not on a keystroke, and keeps the last answer meanwhile", async () => {
 			checkAnswer = { issues: [missingTitle], warnings: [] };
 			serve(async (_input, init) => {
 				if (init?.method !== "PATCH") return undefined;
@@ -487,52 +495,40 @@ describe("entry editor shell", () => {
 				});
 			});
 			renderEdit();
-			await (await bar()).findByRole("button", { name: "발행 전 1" });
+			await (await bar()).findByRole("button", { name: "할 일 1" });
 			expect(checkCalls()).toHaveLength(1);
 
 			fireEvent.change(await editorTitle(), { target: { value: "수정 중" } });
 			fireEvent.change(await editorTitle(), { target: { value: "수정 중 2" } });
-			// The last answer stays, with the note that it is about the saved version.
-			const popup = await screen.findByRole("button", { name: "발행 전 1" }).then(async (button) => {
-				fireEvent.click(button);
-				return within(await screen.findByRole("dialog"));
-			});
-			expect(popup.getByText("(저장 후 다시 검사)")).toBeTruthy();
+			expect(await screen.findByRole("button", { name: "할 일 1" })).toBeTruthy();
 			expect(checkCalls()).toHaveLength(1);
 
 			checkAnswer = { issues: [], warnings: [] };
 			pressSave();
 			await waitFor(() => expect(checkCalls()).toHaveLength(2));
-			expect(await (await bar()).findByRole("button", { name: "발행 준비됨" })).toBeTruthy();
+			expect(await (await bar()).findByRole("button", { name: "할 일 없음" })).toBeTruthy();
 		});
 
-		it("lists each problem as a to-do with its place, and clicking one goes to its field", async () => {
-			checkAnswer = { issues: [missingTitle], warnings: [told({ code: "footnote_definition_unused" })] };
-			renderEdit();
-			fireEvent.click(await (await bar()).findByRole("button", { name: /^발행 전 1/ }));
-			const popup = within(await screen.findByRole("dialog"));
-			expect(popup.getByRole("heading", { name: "발행 전 확인" })).toBeTruthy();
-			expect(popup.getByRole("button", { name: "다시 검사" })).toBeTruthy();
-			// The to-do is in plain words, and the place is next to it.
-			const row = popup.getByRole("button", { name: /제목을 입력해 주세요/ });
-			expect(row.textContent).toContain("title");
-			// A warning is listed after the problems, and it has no place to go to.
-			expect(popup.getByText("어디에도 쓰이지 않는 각주 내용이 있어요")).toBeTruthy();
-			expect(popup.queryByRole("button", { name: /각주/ })).toBeNull();
-			fireEvent.click(row);
-			await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "제목" })));
-		});
-
-		it("checks again from the popup and keeps it open to show the answer", async () => {
+		it("lists each problem as a row with its place, and pressing one goes to its field", async () => {
 			checkAnswer = { issues: [missingTitle], warnings: [] };
 			renderEdit();
-			fireEvent.click(await (await bar()).findByRole("button", { name: /^발행 전 1/ }));
-			const popup = within(await screen.findByRole("dialog"));
-			checkAnswer = { issues: [], warnings: [] };
-			fireEvent.click(popup.getByRole("button", { name: "다시 검사" }));
-			await waitFor(() => expect(checkCalls()).toHaveLength(2));
-			expect(await popup.findByText("고칠 곳이 없어요. 바로 발행할 수 있어요.")).toBeTruthy();
-			expect(screen.queryByRole("dialog")).not.toBeNull();
+			fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 1" }));
+			const list = within(await screen.findByRole("dialog"));
+			// The to-do is in plain words, and the place is next to it.
+			const row = list.getByRole("button", { name: /제목을 입력해 주세요/ });
+			expect(row.textContent).toContain("title");
+			fireEvent.click(row);
+			await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "제목" })));
+			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		});
+
+		it("shows the required fields that are filled under the rows", async () => {
+			checkAnswer = { issues: [missingTitle], warnings: [] };
+			renderEdit();
+			fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 1" }));
+			const list = within(await screen.findByRole("dialog"));
+			// The title is the one with a problem, so it is not among the ones that are right.
+			expect(list.getByText(/카테고리/).textContent).not.toContain("제목");
 		});
 
 		it("is not there for an entry in the trash, and makes no check for it", async () => {
@@ -540,7 +536,7 @@ describe("entry editor shell", () => {
 			renderEdit();
 			await editorTitle();
 			await screen.findByRole("region", { name: "상태" });
-			expect(screen.queryByRole("button", { name: /발행 (준비됨|전)/ })).toBeNull();
+			expect(screen.queryByRole("button", { name: /할 일/ })).toBeNull();
 			expect(checkCalls()).toHaveLength(0);
 		});
 
@@ -548,25 +544,83 @@ describe("entry editor shell", () => {
 			renderShell(<EntryEditorShell mode="new" collection="memo" adminId={ADMIN} />);
 			await editorTitle();
 			await screen.findByRole("region", { name: "상태" });
-			expect(screen.queryByRole("button", { name: /발행 (준비됨|전)/ })).toBeNull();
+			expect(screen.queryByRole("button", { name: /할 일/ })).toBeNull();
 			expect(checkCalls()).toHaveLength(0);
 		});
 
-		it("opens the popup with the fresh problems when a publish is refused, and keeps the toast", async () => {
+		it("opens the list with the fresh problems when a publish is refused, and keeps the toast", async () => {
 			serve((input) =>
 				input.endsWith("/publish")
 					? json({ code: "publish_validation_failed", issues: [missingTitle] }, 422)
 					: undefined,
 			);
 			renderEdit();
-			await (await bar()).findByRole("button", { name: "발행 준비됨" });
+			await (await bar()).findByRole("button", { name: "할 일 없음" });
 			fireEvent.click(screen.getByRole("button", { name: "발행" }));
-			const popup = within(await screen.findByRole("dialog"));
-			expect(popup.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
+			const list = within(await screen.findByRole("dialog"));
+			expect(list.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
 			expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
-			expect(await (await bar()).findByRole("button", { name: "발행 전 1" })).toBeTruthy();
-			// The list under the header is gone: the popup is where the problems are.
+			expect(await (await bar()).findByRole("button", { name: "할 일 1" })).toBeTruthy();
+			// The list under the header is gone: the cell's list is where the problems are.
 			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
+		});
+	});
+
+	describe("plugin cell in the status bar (flow 1 step 06, flow 3)", () => {
+		const finding = (title: string) => ({
+			id: title,
+			title,
+			detail: "문단 1",
+			actionLabel: "고치기",
+			onAction: () => {},
+		});
+		/** A plugin's cell that shows where it is, and draws nothing for any other language. */
+		const KoreanCell = () => {
+			const { locale } = useStatusBarContext();
+			return locale === "ko" ? <StatusBarPluginCell label="맞춤법" findings={[finding(`언어 ${locale}`)]} /> : null;
+		};
+		const EverywhereCell = () => {
+			const { locale, collection } = useStatusBarContext();
+			return <StatusBarPluginCell label="점검" findings={[finding(`${collection} ${locale}`)]} />;
+		};
+		const renderWithCells = () =>
+			renderShell(
+				<StatusCellsProvider cells={{ korean: KoreanCell, everywhere: EverywhereCell }}>
+					<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />
+				</StatusCellsProvider>,
+			);
+		const bar = async () => within(await screen.findByRole("region", { name: "상태" }));
+
+		it("fills the slot in the source editor, after the to-do cell", async () => {
+			serve(() => undefined, { ...entry, locale: "ko", translationGroupId: "entry-1", translations: [] });
+			renderWithCells();
+			const cells = await bar();
+			await cells.findByRole("button", { name: "할 일 없음" });
+			expect(cells.getAllByRole("button").map((button) => button.textContent)).toEqual([
+				"할 일 없음",
+				"맞춤법 1",
+				"점검 1",
+			]);
+			fireEvent.click(cells.getByRole("button", { name: "점검 1" }));
+			expect(within(await screen.findByRole("dialog")).getByText("post ko")).toBeTruthy();
+		});
+
+		it("fills the slot in the translation editor too, and a plugin can leave it empty for that language", async () => {
+			serve(() => undefined, {
+				...entry,
+				id: "entry-en",
+				locale: "en",
+				translationGroupId: "entry-1",
+				translations: [],
+				source: { locale: "ko", metadata: { title: "원문 제목" }, doc: docOf("원문\n") },
+				working: { metadata: { title: "Title" }, doc: docOf("First\n"), translation: null },
+			});
+			renderWithCells();
+			const cells = await bar();
+			await cells.findByRole("button", { name: "점검 1" });
+			expect(cells.queryByRole("button", { name: /맞춤법/ })).toBeNull();
+			fireEvent.click(cells.getByRole("button", { name: "점검 1" }));
+			expect(within(await screen.findByRole("dialog")).getByText("post en")).toBeTruthy();
 		});
 	});
 
@@ -1099,9 +1153,10 @@ describe("entry editor shell", () => {
 			await waitFor(() => expect(methodCalls("PATCH").length).toBeGreaterThanOrEqual(index + 1), { timeout: 4000 });
 			await waitFor(() => expect(screen.getAllByText(expected[index] as string).length).toBeGreaterThan(0));
 		}
-		fireEvent.click(screen.getByRole("button", { name: "세션 만료 · 로그인" }));
-		const signIn = await within(await screen.findByRole("dialog")).findByRole("link", { name: "로그인" });
+		// The expired session's cell leads to signing in, in a new tab.
+		const signIn = screen.getByRole("link", { name: "세션 만료 · 로그인" });
 		expect(signIn.getAttribute("href")).toContain("/login");
+		expect(signIn.getAttribute("target")).toBe("_blank");
 		expect(saveLocalBackup).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				key: `${ADMIN}:entry-1`,

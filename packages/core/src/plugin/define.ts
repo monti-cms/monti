@@ -95,7 +95,7 @@ export interface AdminPluginShape {
 	readonly pages?: Readonly<Record<string, unknown>>;
 	readonly components?: unknown;
 	readonly slots?: readonly unknown[];
-	readonly statusItems?: unknown;
+	readonly statusCells?: unknown;
 	readonly Provider?: unknown;
 	readonly on?: unknown;
 }

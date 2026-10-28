@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import type { SaveStatus } from "../../entries/entry-editor-types";
+import { saveCell } from "../save-cell";
+
+describe("save cell", () => {
+	it.each<SaveStatus>([
+		"new",
+		"dirty",
+		"local-only",
+		"failed",
+		"conflict",
+	])("%s: pressing the cell saves again", (status) => {
+		expect(saveCell(status).action).toBe("save");
+	});
+
+	it("session-expired: the cell leads to signing in, not to saving", () => {
+		expect(saveCell("session-expired").action).toBe("sign-in");
+	});
+
+	it.each<SaveStatus>(["saved", "saving"])("%s: there is nothing to press", (status) => {
+		expect(saveCell(status).action).toBeNull();
+	});
+
+	it("marks what needs attention as a warning and what is broken as danger", () => {
+		expect(saveCell("saved").tone).toBeUndefined();
+		expect(saveCell("saving").tone).toBeUndefined();
+		expect(saveCell("dirty").tone).toBe("warning");
+		expect(saveCell("local-only").tone).toBe("warning");
+		for (const status of ["failed", "conflict", "session-expired"] as const)
+			expect(saveCell(status).tone).toBe("danger");
+	});
+});
