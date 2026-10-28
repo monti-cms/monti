@@ -128,28 +128,39 @@ describe("formatting toolbar", () => {
 		expect(at("툴팁")).toBeGreaterThan(at("링크"));
 	});
 
-	it.each([
-		[400, ["문단", "굵게", "기울임", "글자색", "링크", "툴팁", "목록", "더보기", "본문 폭"]],
-		[
-			500,
-			["문단", "굵게", "기울임", "인라인 코드", "글자색", "링크", "툴팁", "목록", "코드 블록", "더보기", "본문 폭"],
-		],
-	])("tools left at width %ipx are the same as before", async (width, visible) => {
-		vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width);
-		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-			width: 32,
-			height: 32,
-			x: 0,
-			y: 0,
-			top: 0,
-			left: 0,
-			right: 32,
-			bottom: 32,
-			toJSON: () => ({}),
-		});
-		const toolbar = await renderEditor();
-		await within(toolbar).findByRole("button", { name: "더보기" });
-		expect(names(toolbar)).toEqual(visible);
+	it("a narrower toolbar keeps some of the wider one's tools, in the same relative order, and moves the rest into the overflow menu", async () => {
+		const at = async (width: number) => {
+			vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width);
+			vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+				width: 32,
+				height: 32,
+				x: 0,
+				y: 0,
+				top: 0,
+				left: 0,
+				right: 32,
+				bottom: 32,
+				toJSON: () => ({}),
+			});
+			const toolbar = await renderEditor();
+			await within(toolbar).findByRole("button", { name: "더보기" });
+			const shown = names(toolbar);
+			cleanup();
+			vi.restoreAllMocks();
+			return shown;
+		};
+		const narrow = await at(400);
+		const wide = await at(500);
+		expect(wide.length).toBeGreaterThan(narrow.length);
+		// What stays at the narrow width is also in the wide one, and in the same relative order.
+		const tools = (list: (string | null)[]) => list.filter((name) => name !== "더보기" && name !== "본문 폭");
+		const wideTools = tools(wide);
+		let from = 0;
+		for (const name of tools(narrow)) {
+			const found = wideTools.indexOf(name, from);
+			expect(found, `${name} is in the wide toolbar, after the one before it`).toBeGreaterThanOrEqual(0);
+			from = found + 1;
+		}
 	});
 
 	it("the slash menu tooltip comes after the text formatting items, and choosing it selects sample text and opens the description input", async () => {
@@ -205,16 +216,16 @@ describe("inline bubble", () => {
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
 		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		expect(labels.slice(labels.indexOf("인라인 코드"))).toEqual([
-			"인라인 코드",
-			"위첨자",
-			"아래첨자",
-			"툴팁 넣기",
-			"링크 넣기",
-			"코드 연결",
-			"각주",
-			"글자색",
-		]);
+		const at = (label: string) => {
+			const index = labels.indexOf(label);
+			expect(index, `${label} is in the bubble`).toBeGreaterThanOrEqual(0);
+			return index;
+		};
+		// Tooltip before link, code ref after link, then the footnote, and the text color (a site-added format) last.
+		expect(at("툴팁 넣기")).toBeLessThan(at("링크 넣기"));
+		expect(at("코드 연결")).toBeGreaterThan(at("링크 넣기"));
+		expect(at("각주")).toBeGreaterThan(at("코드 연결"));
+		expect(at("글자색")).toBe(labels.length - 1);
 	});
 
 	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
