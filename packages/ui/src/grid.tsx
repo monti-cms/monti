@@ -7,7 +7,7 @@ import { GAP } from "./tokens.generated";
 
 /**
  * Children in equal columns, by count, stacked to one column on a narrow screen (`responsive`, the default). `sidebar` is a fixed side column
- * (the panel width) next to a fluid one. `tiles` is the design system's tile grid (`.mt-tiles`): four columns, 24px between rows and 20px between columns
+ * (the panel width) next to a fluid one. `tiles` is the design system's tile grid (`.mt-tiles`): columns of at least 180px (four in an 880px column, more in a wider one), 24px between rows and 20px between columns
  * (two columns on a narrow screen). Every other gap takes the spacing steps, as in `Stack`.
  */
 const gridVariants = cva("grid", {
@@ -25,8 +25,8 @@ const gridVariants = cva("grid", {
 			 */
 			rail: "grid-cols-[220px_minmax(0,1fr)]",
 			"rail-wide": "grid-cols-[260px_minmax(0,1fr)]",
-			/** Four equal columns: a grid of tiles (files, images, folders). */
-			tiles: "grid-cols-4",
+			/** Equal columns of at least 180px: a grid of tiles (files, images, folders), four across in an 880px column and more in a wider one. */
+			tiles: "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]",
 		},
 		responsive: { true: "max-md:grid-cols-1" },
 		gap: GAP,

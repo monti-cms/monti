@@ -143,6 +143,7 @@ export function EventsScreen() {
 	return (
 		<ToolsFrame
 			tab="events"
+			wide
 			actions={
 				waiting > 0 ? (
 					<Button

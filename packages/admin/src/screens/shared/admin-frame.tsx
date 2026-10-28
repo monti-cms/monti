@@ -88,7 +88,7 @@ export function AdminFrame({ sidebar, children }: { sidebar: AdminSidebarProps; 
 			<SidebarInset fixed corner={<SidePanelToggle />}>
 				<PanelDockContext.Provider value={dock}>
 					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden">
-						<Stack gap={0} grow minWidth={0} minHeight={0}>
+						<Stack gap={0} grow minWidth={0} minHeight={0} container>
 							{children}
 						</Stack>
 						<Inline ref={setDock} align="stretch" gap={0} shrink={false} />

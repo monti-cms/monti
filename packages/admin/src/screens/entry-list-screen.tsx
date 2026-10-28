@@ -203,7 +203,7 @@ function TrashPage() {
 	const { state } = list;
 	return (
 		<AdminFrame sidebar={{ activeNav: "trash" }}>
-			<PageColumn>
+			<PageColumn width="list">
 				<PageHeader title={t("dashboard.trash")}>
 					<EntryListHeaderActions list={list} />
 				</PageHeader>
@@ -251,7 +251,7 @@ function ListPage() {
 					: undefined,
 			}}
 		>
-			<PageColumn>
+			<PageColumn width="list">
 				<PageHeader title={`${list.label}${folderLabel}`} meta={routePath || undefined}>
 					<EntryListHeaderActions list={list} />
 				</PageHeader>

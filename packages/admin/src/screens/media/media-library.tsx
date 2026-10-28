@@ -454,7 +454,7 @@ export function MediaLibrary() {
 				},
 			}}
 		>
-			<PageColumn>
+			<PageColumn width="list">
 				<PageHeader
 					title={currentFolder?.name ?? t("title")}
 					trail={

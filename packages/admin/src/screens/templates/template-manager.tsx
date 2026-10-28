@@ -251,6 +251,7 @@ export function TemplateManager() {
 	return (
 		<ToolsFrame
 			tab="templates"
+			wide
 			count={templatesQuery.data ? templates.length : undefined}
 			actions={
 				<Button type="button" onClick={() => void openNew()}>
