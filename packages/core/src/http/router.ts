@@ -27,6 +27,7 @@ import * as rEventsRetry from "./v1/events/retry/route";
 import * as rEvents from "./v1/events/route";
 import * as rExport from "./v1/export/route";
 import * as rExportSummary from "./v1/export/summary/route";
+import * as rFolderContents from "./v1/folders/[id]/contents/route";
 import * as rFolder from "./v1/folders/[id]/route";
 import * as rFolders from "./v1/folders/route";
 import { type RouteAccess, runRoute } from "./v1/handler";
@@ -36,11 +37,13 @@ import * as rMediaComplete from "./v1/media/[id]/complete/route";
 import * as rMediaItem from "./v1/media/[id]/route";
 import * as rMediaCleanup from "./v1/media/cleanup/route";
 import * as rMedia from "./v1/media/route";
+import * as rMediaTrash from "./v1/media/trash/route";
 import * as rMediaUploads from "./v1/media/uploads/route";
 import * as rMeta from "./v1/meta/route";
 import * as rPreferences from "./v1/preferences/route";
 import * as rPublicItem from "./v1/public/entries/[collection]/[slug]/route";
 import * as rPublicList from "./v1/public/entries/route";
+import * as rUnlink from "./v1/references/unlink/route";
 import * as rSchemaPreview from "./v1/schema/preview/route";
 import * as rSchema from "./v1/schema/route";
 import * as rSessionFirstAdmin from "./v1/session/first-admin/route";
@@ -48,6 +51,11 @@ import * as rSessionSignIn from "./v1/session/sign-in/[provider]/route";
 import * as rSessionSignOut from "./v1/session/sign-out/route";
 import * as rTemplate from "./v1/templates/[id]/route";
 import * as rTemplates from "./v1/templates/route";
+import * as rTrashDelete from "./v1/trash/delete/route";
+import * as rTrashEmpty from "./v1/trash/empty/route";
+import * as rTrashPurge from "./v1/trash/purge/route";
+import * as rTrashRestore from "./v1/trash/restore/route";
+import * as rTrash from "./v1/trash/route";
 
 /**
  * Admin API (`/api/monti/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `createRouteHandler(cms)` of `@monti-cms/nextjs` from a single catch-all route,
@@ -103,12 +111,16 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/import/restore", access: "admin-upload", module: rImportRestore },
 	{ pattern: "v1/folders", module: rFolders },
 	{ pattern: "v1/folders/[id]", module: rFolder },
+	{ pattern: "v1/folders/[id]/contents", module: rFolderContents },
 	{ pattern: "v1/media", module: rMedia },
 	{ pattern: "v1/media/cleanup", module: rMediaCleanup },
+	// Named before `[id]`, so `trash` is not read as a media id.
+	{ pattern: "v1/media/trash", module: rMediaTrash },
 	{ pattern: "v1/media/uploads", module: rMediaUploads },
 	{ pattern: "v1/media/[id]", module: rMediaItem },
 	{ pattern: "v1/media/[id]/complete", module: rMediaComplete },
 	{ pattern: "v1/meta", module: rMeta },
+	{ pattern: "v1/references/unlink", module: rUnlink },
 	{ pattern: "v1/preferences", module: rPreferences },
 	// The schema settings screen: reading works everywhere, the write routes answer 403 outside development.
 	{ pattern: "v1/schema", module: rSchema },
@@ -121,6 +133,12 @@ const ROUTES: readonly Route[] = [
 	// Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
 	{ pattern: "v1/public/entries", access: "public-read", module: rPublicList },
 	{ pattern: "v1/public/entries/[collection]/[slug]", access: "public-read", module: rPublicItem },
+	// The trash: units discarded for 30 days. `v1/trash/purge` also takes the events retry secret (for a cron job).
+	{ pattern: "v1/trash", module: rTrash },
+	{ pattern: "v1/trash/restore", module: rTrashRestore },
+	{ pattern: "v1/trash/delete", module: rTrashDelete },
+	{ pattern: "v1/trash/empty", module: rTrashEmpty },
+	{ pattern: "v1/trash/purge", access: "admin-or-bearer", module: rTrashPurge },
 	{ pattern: "v1/templates", module: rTemplates, enabled: templatesEnabled },
 	{ pattern: "v1/templates/[id]", module: rTemplate, enabled: templatesEnabled },
 ];

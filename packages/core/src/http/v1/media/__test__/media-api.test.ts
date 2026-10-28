@@ -3,18 +3,19 @@ import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
 import { noticeMessages } from "../../../../core/error-notice";
-import { CmsError } from "../../../../core/store";
 import type { NoticeKey } from "../../../../core/store/errors";
 import type { MessageVars } from "../../../../i18n/define";
 import { routeCaller } from "../../../../testing";
 import { POST as handleCompleteHandler } from "../[id]/complete/route";
-import { DELETE as handleDeleteMediaHandler, PATCH as handlePatchMediaHandler } from "../[id]/route";
+import * as mediaItemRoute from "../[id]/route";
+import { PATCH as handlePatchMediaHandler } from "../[id]/route";
 import { renameProblem, typeNames } from "../media-files";
 import { GET as handleListMediaHandler } from "../route";
+import { POST as handleTrashMediaHandler } from "../trash/route";
 import { POST as handleUploadsHandler } from "../uploads/route";
 
 const handleComplete = routeCaller(handleCompleteHandler);
-const handleDeleteMedia = routeCaller(handleDeleteMediaHandler);
+const handleTrashMedia = routeCaller(handleTrashMediaHandler);
 const handlePatchMedia = routeCaller(handlePatchMediaHandler);
 const handleListMedia = routeCaller(handleListMediaHandler);
 const handleUploads = routeCaller(handleUploadsHandler);
@@ -26,7 +27,7 @@ const mockGetMediaAsset = vi.fn();
 const mockCompleteMediaAsset = vi.fn();
 const mockFailMediaAsset = vi.fn();
 const mockListMediaAssets = vi.fn();
-const mockBeginMediaDelete = vi.fn();
+const mockTrashMedia = vi.fn();
 const mockFinalizeMediaDelete = vi.fn();
 const mockUpdateMediaMetadata = vi.fn();
 
@@ -45,7 +46,7 @@ const cms = fakeCms({
 		completeMediaAsset: mockCompleteMediaAsset,
 		failMediaAsset: mockFailMediaAsset,
 		listMediaAssets: mockListMediaAssets,
-		beginMediaDelete: mockBeginMediaDelete,
+		trashMedia: mockTrashMedia,
 		finalizeMediaDelete: mockFinalizeMediaDelete,
 		updateMediaMetadata: mockUpdateMediaMetadata,
 	},
@@ -480,83 +481,39 @@ describe("Media Upload API Endpoints", () => {
 		expect(json.items[0].references[0].title).toBe("First Post");
 	});
 
-	it("DELETE /media/:id rejects deletion with 409 if media is in use", async () => {
-		mockGetMediaAsset.mockResolvedValue({
-			id: "00000000-0000-4000-8000-000000000009",
-			status: "ready",
-			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
-			filename: "pic.png",
+	it("POST /media/trash moves the files that nothing uses to the trash and reports the ones in use as kept", async () => {
+		mockTrashMedia.mockResolvedValue({
+			trashed: ["00000000-0000-4000-8000-000000000009"],
+			kept: ["00000000-0000-4000-8000-00000000000a"],
 		});
-		mockBeginMediaDelete.mockRejectedValue(new CmsError("Media asset is in use", "in_use"));
-
-		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
-			method: "DELETE",
-			headers: {
-				origin: "http://localhost",
-				host: "localhost",
-			},
+		const req = new Request("http://localhost/api/monti/v1/media/trash", {
+			method: "POST",
+			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+			body: JSON.stringify({ ids: ["00000000-0000-4000-8000-000000000009", "00000000-0000-4000-8000-00000000000a"] }),
 		});
-
-		const res = await handleDeleteMedia(req, {
-			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
-			cms,
+		const res = await handleTrashMedia(req, { cms });
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({
+			trashed: ["00000000-0000-4000-8000-000000000009"],
+			kept: ["00000000-0000-4000-8000-00000000000a"],
 		});
-		expect(res.status).toBe(409);
-		const json = await res.json();
-		expect(json.error.code).toBe("in_use");
+		expect(mockTrashMedia).toHaveBeenCalledWith({
+			ids: ["00000000-0000-4000-8000-000000000009", "00000000-0000-4000-8000-00000000000a"],
+		});
 		expect(mockDeleteFile).not.toHaveBeenCalled();
-		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
 	});
 
-	it("DELETE /media/:id safely deletes unused media from R2 storage and DB", async () => {
-		mockBeginMediaDelete.mockResolvedValue({
-			id: "00000000-0000-4000-8000-000000000009",
-			status: "deleting",
-			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
-			stagingKey: "staging/00000000-0000-4000-8000-000000000009/pic.png",
-			original: null,
-			filename: "pic.png",
+	it("POST /media/trash rejects a body without ids", async () => {
+		const req = new Request("http://localhost/api/monti/v1/media/trash", {
+			method: "POST",
+			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+			body: JSON.stringify({ ids: [] }),
 		});
-		mockFinalizeMediaDelete.mockResolvedValue(undefined);
-
-		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
-			method: "DELETE",
-			headers: {
-				origin: "http://localhost",
-				host: "localhost",
-			},
-		});
-
-		const res = await handleDeleteMedia(req, {
-			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
-			cms,
-		});
-		expect(res.status).toBe(204);
-		expect(mockDeleteFile).toHaveBeenCalledWith({ key: "media/00000000-0000-4000-8000-000000000009/pic.png" });
-		expect(mockFinalizeMediaDelete).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000009");
+		expect((await handleTrashMedia(req, { cms })).status).toBe(400);
 	});
 
-	it("DELETE /media/:id keeps the deleting record when storage deletion fails so it can be retried", async () => {
-		mockBeginMediaDelete.mockResolvedValue({
-			id: "00000000-0000-4000-8000-000000000009",
-			status: "deleting",
-			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
-			stagingKey: null,
-			original: null,
-			filename: "pic.png",
-		});
-		mockDeleteFile.mockRejectedValue(new Error("R2 unavailable"));
-
-		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
-			method: "DELETE",
-			headers: { origin: "http://localhost", host: "localhost" },
-		});
-		const res = await handleDeleteMedia(req, {
-			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
-			cms,
-		});
-		expect(res.status).toBe(500);
-		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
+	it("has no DELETE /media/:id: a file is deleted for good only from the trash", () => {
+		expect(Object.keys(mediaItemRoute)).not.toContain("DELETE");
 	});
 });
 

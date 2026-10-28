@@ -19,7 +19,6 @@ import {
 	membersToUnarchive,
 	restorePublishesAgain,
 	STATUS_AFTER,
-	trashRequiresNoReferences,
 } from "../lifecycle";
 
 const codeOf = (run: () => unknown) => {
@@ -78,10 +77,8 @@ describe("lifecycle transitions", () => {
 		});
 	});
 
-	it("requires a record to be unreferenced before trashing and publishes it again on restore; a content collection does neither", () => {
-		expect(trashRequiresNoReferences(testSite, recordCollection)).toBe(true);
+	it("publishes a record again on restore; a content collection returns to draft", () => {
 		expect(restorePublishesAgain(testSite, recordCollection)).toBe(true);
-		expect(trashRequiresNoReferences(testSite, contentCollection)).toBe(false);
 		expect(restorePublishesAgain(testSite, contentCollection)).toBe(false);
 	});
 
@@ -108,11 +105,11 @@ describe("lifecycle transitions", () => {
 describe("what a source's transition does to its translations", () => {
 	const at = (iso: string) => new Date(iso);
 	const group: GroupMember[] = [
-		{ id: "draft", status: "draft", trashedAt: null },
-		{ id: "published", status: "published", trashedAt: null },
-		{ id: "archived", status: "archived", trashedAt: null },
-		{ id: "trashed-with-source", status: "trashed", trashedAt: at("2026-01-01T00:00:00Z") },
-		{ id: "trashed-earlier", status: "trashed", trashedAt: at("2025-06-01T00:00:00Z") },
+		{ id: "draft", status: "draft", deletedAt: null },
+		{ id: "published", status: "published", deletedAt: null },
+		{ id: "archived", status: "archived", deletedAt: null },
+		{ id: "trashed-with-source", status: "trashed", deletedAt: at("2026-01-01T00:00:00Z") },
+		{ id: "trashed-earlier", status: "trashed", deletedAt: at("2025-06-01T00:00:00Z") },
 	];
 
 	it("archives the drafts and published translations only", () => {

@@ -11,7 +11,7 @@ import type {
 	MediaAssetRecord,
 	MediaReferenceItem,
 } from "../../../core/store/types";
-import { type StoreContext, withTrx } from "./context";
+import type { StoreContext } from "./context";
 import { assertFolderTarget } from "./folders";
 import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows";
 import { likeContainsPattern, likePrefixPattern } from "./sql";
@@ -139,7 +139,7 @@ export function createMediaOps(ctx: StoreContext) {
 			return mapMediaRow(row);
 		},
 
-		/** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job. */
+		/** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job; files in the trash are read through the trash. */
 		listMediaAssets: async (params: ListMediaParams = {}): Promise<ListMediaResult> => {
 			const page = Math.max(1, params.page || 1);
 			const pageSize = Math.max(1, Math.min(params.pageSize || 25, 100));
@@ -217,60 +217,14 @@ export function createMediaOps(ctx: StoreContext) {
 		},
 
 		/**
-		 * Delete step 1: checks the media is not in use and sets it to `deleting`. When the file deletion finishes,
-		 * {@link finalizeMediaDelete} removes the row. If storage deletion fails, the `deleting` row remains so it can be retried.
-		 *
-		 * Besides the reference index, it also checks raw bodies, metadata, and templates: if an unparsed draft or template uses this media,
-		 * usage cannot be confirmed, so deletion is held. Metadata saved before media fields (`fields.media`) existed is checked too,
-		 * so values not yet in the reference index (media IDs kept in text fields) are not deleted.
+		 * Removes the row of a media file after its stored files were deleted: a file that was permanently deleted from the trash (`trashed`), an upload
+		 * that never finished (`pending`, `failed`) or a delete that was left half done (`deleting`).
 		 */
-		beginMediaDelete: async (id: string): Promise<MediaAssetRecord> =>
-			withTrx(ctx, async (trx) => {
-				const row = await trx
-					.selectFrom("media_assets")
-					.select(MEDIA_COLUMN_NAMES)
-					.where("id", "=", id)
-					.forUpdate()
-					.executeTakeFirst();
-				if (!row) throw new CmsError("Media asset not found", "not_found");
-
-				const refs = await trx
-					.selectFrom("entry_references")
-					.select((eb) => eb.fn.countAll<string>().as("count"))
-					.where("kind", "=", "media")
-					.where("target_media_id", "=", id)
-					.executeTakeFirst();
-				const mentions = await sql<{ count: string; templates: string }>`
-					select
-					  (select count(*) from ${sql.id(qSchema, "entry_bodies")}
-					    where position(${id} in doc::text) > 0 or position(${id} in metadata::text) > 0)::text as count,
-					  (select count(*) from ${sql.id(qSchema, "body_templates")} where position(${id} in doc::text) > 0)::text as templates`.execute(
-					trx,
-				);
-				const referenceCount = Number(refs?.count ?? 0);
-				const bodyMentions = Number(mentions.rows[0]?.count ?? 0);
-				const templateMentions = Number(mentions.rows[0]?.templates ?? 0);
-				if (referenceCount > 0 || bodyMentions > 0 || templateMentions > 0) {
-					throw new CmsError("Media asset is in use", "in_use", {
-						details: { references: referenceCount, bodies: bodyMentions, templates: templateMentions },
-					});
-				}
-
-				const updated = await trx
-					.updateTable("media_assets")
-					.set({ status: "deleting", updated_at: sql<Date>`now()` })
-					.where("id", "=", id)
-					.returning(MEDIA_COLUMN_NAMES)
-					.executeTakeFirstOrThrow();
-				return mapMediaRow(updated);
-			}),
-
-		/** Delete step 2: removes the row after confirming the file was deleted. */
 		finalizeMediaDelete: async (id: string): Promise<void> => {
 			await db
 				.deleteFrom("media_assets")
 				.where("id", "=", id)
-				.where("status", "in", ["deleting", "pending", "failed"])
+				.where("status", "in", ["trashed", "deleting", "pending", "failed"])
 				.execute();
 		},
 

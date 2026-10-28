@@ -36,7 +36,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	});
 
 	describe("2. Transactional Target Recheck & Published References Rollback", () => {
-		it("serializes tag deletion against a concurrent draft reference save", async () => {
+		it("lets a trash wait for a concurrent draft reference save to the tag, then go through", async () => {
 			const tagDraft = await seedEntry(store, {
 				collection: record,
 				slug: `tag-race-${randomUUID()}`,
@@ -74,7 +74,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
 				});
 				await coordinator.query("COMMIT");
-				await expect(trash).rejects.toMatchObject({ code: "in_use" });
+				await expect(trash).resolves.toMatchObject({ status: "trashed" });
 				expect(save.version).toBeGreaterThan(post.version);
 			} catch (error) {
 				await coordinator.query("ROLLBACK").catch(() => undefined);

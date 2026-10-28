@@ -16,6 +16,8 @@ import { createRestoreOps } from "./store/restore";
 import { createSchemaChangeOps } from "./store/schema-change";
 import { createTemplateOps } from "./store/templates";
 import { createTransferOps } from "./store/transfer";
+import { createTrashOps } from "./store/trash";
+import { createUnlinkOps } from "./store/unlink";
 
 /**
  * PostgreSQL implementation of the core `ContentStore` port (`core/store/ports.ts`). Reads and atomic changes for content, folders, relations, media metadata,
@@ -46,6 +48,8 @@ export function createContentStore(
 		...createLifecycleOps(ctx, publishing),
 		...createListOps(ctx),
 		...createFolderOps(ctx),
+		...createTrashOps(ctx, publishing),
+		...createUnlinkOps(ctx),
 		...createPublicReadOps(ctx),
 		...createPreferenceOps(ctx),
 		...createTransferOps(ctx),

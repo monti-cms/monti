@@ -4,7 +4,7 @@ import type { EntryMetadata, EntryStatus, JsonObject } from "../../../core/store
 
 /**
  * The tables of the content store as Kysely sees them: one interface per table, one line per column, in the state the core migrations
- * (`store/schema.ts`, up to `0023_entry_changed_by`) leave a store in. It is written by hand and kept in this one file. `__test__/database-types.test.ts`
+ * (`store/schema.ts`, up to `0004_trash`) leave a store in. It is written by hand and kept in this one file. `__test__/database-types.test.ts`
  * reads it and compares every table and column with `information_schema` of a freshly migrated schema, so a migration that adds or changes a column
  * cannot go in without this file changing with it.
  *
@@ -52,7 +52,7 @@ export interface EntriesTable {
 	working_slug: string | null;
 	folder_id: string | null;
 	status: Generated<EntryStatus>;
-	trashed_at: Date | null;
+	deleted_at: Date | null;
 	locale: Generated<string>;
 	translation_group_id: string | null;
 	changed_by: string | null;
@@ -87,7 +87,7 @@ export interface ContentAddressesTable {
 export interface MediaAssetsTable {
 	id: string;
 	folder_id: string | null;
-	status: Generated<"pending" | "ready" | "failed" | "deleting">;
+	status: Generated<"pending" | "ready" | "failed" | "deleting" | "trashed">;
 	filename: Generated<string>;
 	mime_type: string | null;
 	byte_size: Int8 | null;
@@ -106,6 +106,8 @@ export interface MediaAssetsTable {
 	original_byte_size: Int8 | null;
 	original_width: number | null;
 	original_height: number | null;
+	/** When the file was moved to the trash (status `trashed`); the files discarded with one folder share the folder's time. */
+	deleted_at: Date | null;
 }
 
 export interface EntryReferencesTable {
@@ -127,6 +129,8 @@ export interface FoldersTable {
 	name: string;
 	position: number;
 	version: Generated<number>;
+	/** When the folder was moved to the trash; `null` for a live folder. What was discarded with it carries the same time. */
+	deleted_at: Date | null;
 }
 
 export interface UserPreferencesTable {

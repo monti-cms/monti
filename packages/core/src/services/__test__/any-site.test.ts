@@ -204,7 +204,7 @@ describe("any site: core content flow", () => {
 			expect(media?.field.kind).toBe("media");
 		});
 
-		it("tracks the field value as a media reference: usage, the unused filter and the delete check", async () => {
+		it("tracks the field value as a media reference: usage, the unused filter and the trash check", async () => {
 			if (!collection || !media) return;
 			const used = await readyMedia(`${unique("used")}.png`);
 			const spare = await readyMedia(`${unique("spare")}.png`);
@@ -218,10 +218,7 @@ describe("any site: core content flow", () => {
 			const unused = await store.listMediaAssets({ pageSize: 100, used: "unused" });
 			expect(unused.items.map((item) => item.id)).toContain(spare.id);
 			expect(unused.items.map((item) => item.id)).not.toContain(used.id);
-			await expect(store.beginMediaDelete(used.id)).rejects.toMatchObject({
-				code: "in_use",
-				details: { references: 1 },
-			});
+			expect(await store.trashMedia({ ids: [used.id] })).toEqual({ trashed: [], kept: [used.id] });
 			expect((await store.getMediaAsset(used.id))?.status).toBe("ready");
 			// The published copy also has the same references.
 			const published = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
@@ -237,7 +234,7 @@ describe("any site: core content flow", () => {
 			expect(empty.working.metadata[media.name]).toBe("");
 		});
 
-		it("blocks deleting media that only stored metadata mentions (saved before the field tracked it)", async () => {
+		it("keeps media out of the trash that only stored metadata mentions (saved before the field tracked it)", async () => {
 			if (!collection || !media) return;
 			const legacy = await readyMedia(`${unique("legacy")}.png`);
 			const draft = await draftWith("Legacy share image", "");
@@ -246,7 +243,7 @@ describe("any site: core content flow", () => {
 				`UPDATE "${schemaName}".entry_bodies SET metadata = jsonb_set(metadata, $2, to_jsonb($3::text)) WHERE entry_id = $1`,
 				[draft.id, [media.name], legacy.id],
 			);
-			await expect(store.beginMediaDelete(legacy.id)).rejects.toMatchObject({ code: "in_use", details: { bodies: 1 } });
+			expect(await store.trashMedia({ ids: [legacy.id] })).toEqual({ trashed: [], kept: [legacy.id] });
 		});
 	});
 });

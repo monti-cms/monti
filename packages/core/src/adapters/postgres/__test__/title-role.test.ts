@@ -140,7 +140,8 @@ describe("a collection whose title field is not named title", () => {
 		const group = await store.getTranslationGroup({ entryId: post.id });
 		expect(group.members.map((member) => member.title)).toEqual(["Related post"]);
 
-		await expect(store.trashEntry({ id: music.id, expectedVersion: music.version })).rejects.toMatchObject({
+		const trashed = await store.trashEntry({ id: music.id, expectedVersion: music.version });
+		await expect(store.permanentDeleteEntry({ id: music.id, expectedVersion: trashed.version })).rejects.toMatchObject({
 			code: "in_use",
 			details: { usages: [expect.objectContaining({ entryId: post.id, title: "Related post" })] },
 		});

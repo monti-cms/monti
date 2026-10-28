@@ -108,12 +108,12 @@ export const entryUsages = defineOperation({
 	name: "entries.usages",
 	kind: "read",
 	describe:
-		"Where an entry is used: the other entries whose fields or body refer to it, in their draft and in their published version. Use it before trashing or changing an entry.",
-	input: () => z.object({ id: entryId }),
-	run: async ({ id }, { cms }) => {
+		"Where an entry is used: the other entries whose fields or body refer to it, in their draft and in their published version. Use it before trashing or changing an entry. Entries in the trash are left out unless `includeTrashed` is true.",
+	input: () => z.object({ id: entryId, includeTrashed: z.boolean().optional() }),
+	run: async ({ id, includeTrashed }, { cms }) => {
 		const store = cms.store();
 		await store.getEntry(id);
-		const relations = await store.getIncomingReferences({ targetId: id });
+		const relations = await store.getIncomingReferences({ targetId: id, includeTrashed });
 		return { targetId: id, incomingReferences: relations, total: relations.length };
 	},
 });

@@ -43,7 +43,7 @@ const manifestEntrySchema = z.object({
 	createdAt: date,
 	updatedAt: date,
 	publishedAt: date.nullable(),
-	trashedAt: date.nullable(),
+	deletedAt: date.nullable(),
 	changedBy: z.string().nullable(),
 	changedAt: date.nullable(),
 	hasWorking: z.literal(true),
@@ -76,6 +76,7 @@ const foldersSchema = z.array(
 		name: z.string(),
 		position: z.number().int(),
 		version: z.number().int(),
+		deletedAt: date.nullable().optional(),
 	}),
 );
 
@@ -94,7 +95,7 @@ const mediaSchema = z.array(
 	z.object({
 		id: z.string(),
 		folderId: z.string().nullable(),
-		status: z.enum(["pending", "ready", "failed", "deleting"]),
+		status: z.enum(["pending", "ready", "failed", "deleting", "trashed"]),
 		filename: z.string(),
 		mimeType: z.string().nullable(),
 		byteSize: nullableNumber,
@@ -117,6 +118,7 @@ const mediaSchema = z.array(
 		createdAt: date,
 		updatedAt: date,
 		readyAt: date.nullable(),
+		deletedAt: date.nullable().optional(),
 	}),
 );
 
@@ -222,7 +224,7 @@ export function readBackupArchive(bytes: Uint8Array): BackupRead {
 			createdAt: entry.createdAt,
 			updatedAt: entry.updatedAt,
 			publishedAt: entry.publishedAt,
-			trashedAt: entry.trashedAt,
+			deletedAt: entry.deletedAt,
 			changedBy: entry.changedBy,
 			changedAt: entry.changedAt,
 			working,

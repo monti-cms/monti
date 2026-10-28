@@ -14,7 +14,7 @@ export const getFolder = defineOperation({
 	name: "folders.get",
 	kind: "read",
 	describe:
-		"One folder with the number of entries directly in it and of its child folders. Use it to see what a folder holds.",
+		"What a folder holds, its subfolders included: the entries (once per translation group, with how many are published), the folders below it, and the media files (with how many are in use). Use it before discarding a folder.",
 	input: () => z.object({ id: z.uuid().describe("The id of the folder") }),
 	run: ({ id }, { cms }) => cms.store().getFolderContents({ id }),
 });

@@ -1,6 +1,6 @@
 import { mediaPatchBodySchema } from "../../../../core/api";
 import { CmsError } from "../../error-handler";
-import { adminRoute, deleted, ok, parseWith, readJsonBody } from "../../handler";
+import { adminRoute, ok, parseWith, readJsonBody } from "../../handler";
 import { renameProblem } from "../media-files";
 
 type IdParams = { id: string };
@@ -20,13 +20,4 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		if (problem) throw new CmsError(`Invalid file name (${problem.key})`, "invalid_input", { notice: problem });
 	}
 	return ok(await cms.store().updateMediaMetadata({ id: params.id, ...body }));
-});
-
-/**
- * Deletes only unused files. Marks the row `deleting`, deletes the file, and removes the row on success.
- * If storage deletion fails, the `deleting` row stays and can be retried.
- */
-export const DELETE = adminRoute<IdParams>(async ({ params, cms }) => {
-	await cms.mediaService().delete(params.id);
-	return deleted();
 });

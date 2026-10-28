@@ -77,6 +77,7 @@ export const mapFolderRow = (row: FolderRow): Folder => ({
 	name: row.name,
 	position: row.position,
 	version: row.version ?? 1,
+	deletedAt: row.deleted_at ?? null,
 });
 
 export const mapReferenceRow = (row: ReferenceRow): Reference => ({
@@ -133,6 +134,7 @@ export const MEDIA_COLUMN_NAMES = [
 	"created_at",
 	"updated_at",
 	"ready_at",
+	"deleted_at",
 ] as const;
 
 /** A row of `media_assets` as `MEDIA_COLUMN_NAMES` selects it. */
@@ -167,6 +169,7 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	createdAt: row.created_at,
 	updatedAt: row.updated_at,
 	readyAt: row.ready_at,
+	deletedAt: row.deleted_at ?? null,
 });
 
 /** The columns of `body_templates` that make a `BodyTemplate`. */
@@ -295,7 +298,7 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 			"e.changed_by",
 			"e.changed_at",
 			"e.published_at",
-			"e.trashed_at",
+			"e.deleted_at",
 			"e.working_slug",
 			eb
 				.selectFrom("content_addresses")
@@ -345,7 +348,7 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 		changedAt: first.changed_at ?? first.entry_updated_at,
 		...(first.changed_by ? { changedBy: first.changed_by } : {}),
 		publishedAt: first.published_at ?? undefined,
-		trashedAt: first.trashed_at ?? undefined,
+		deletedAt: first.deleted_at ?? undefined,
 		workingSlug: first.working_slug,
 		publishedSlug: first.current_slug ?? null,
 		working,

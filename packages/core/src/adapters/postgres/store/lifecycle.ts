@@ -3,12 +3,9 @@ import type { PoolClient } from "pg";
 import { currentActor } from "../../../core/actor";
 import {
 	assertArchivable,
-	assertDeletable,
 	assertRestoreSnapshot,
 	assertSourceNotTrashed,
 	assertTransitionAllowed,
-	blockingTranslations,
-	type GroupMember,
 	type LifecycleAction,
 	membersToArchive,
 	membersToRestore,
@@ -16,16 +13,16 @@ import {
 	membersToUnarchive,
 	restorePublishesAgain,
 	STATUS_AFTER,
-	trashRequiresNoReferences,
 } from "../../../core/domain/lifecycle";
-import { CmsError } from "../../../core/store/errors";
 import type { ContentChangeKind } from "../../../core/store/events";
 import type { Entry, EntryStatus } from "../../../core/store/types";
 import type { PreparedSnapshot } from "../../../core/types";
 import type { Db } from "../db/kysely";
 import { type StoreContext, withTrx } from "./context";
+import { lockTranslationsOf, removeEntryGroup } from "./entry-removal";
 import { mapEntryWriteError } from "./errors";
 import { recordEvents } from "./events";
+import { placeInLiveFolders } from "./folder-tree";
 import type { Publishing } from "./publish";
 import { loadEntry, lockEntryForUpdate } from "./rows";
 
@@ -62,26 +59,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		);
 
 	/**
-	 * For a source, locks and returns the translations in the same group (excluding itself). For a translation, returns an empty list.
-	 * A source's status transition applies to the whole group.
-	 */
-	const lockTranslations = async (trx: Db, id: string): Promise<GroupMember[]> =>
-		(
-			await trx
-				.selectFrom("entries")
-				.select(["id", "status", "version", "trashed_at"])
-				.where("translation_group_id", "=", id)
-				.where("id", "<>", id)
-				.orderBy("id")
-				.forUpdate()
-				.execute()
-		).map((row) => ({ id: row.id, status: row.status, trashedAt: row.trashed_at }));
-
-	/**
 	 * Changes the translations' status and bumps their version. Editors left open notice it as a conflict.
-	 * `trashedAt` also sets (`"now"`) or clears (`null`) the trash time of the translations.
+	 * `deletedAt` also sets (`"now"`) or clears (`null`) the trash time of the translations.
 	 */
-	const setMembersStatus = async (trx: Db, ids: readonly string[], status: EntryStatus, trashedAt?: "now" | null) => {
+	const setMembersStatus = async (trx: Db, ids: readonly string[], status: EntryStatus, deletedAt?: "now" | null) => {
 		if (ids.length === 0) return;
 		await trx
 			.updateTable("entries")
@@ -90,21 +71,10 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 				version: sql<number>`version + 1`,
 				changed_by: currentActor(),
 				changed_at: sql<Date>`now()`,
-				...(trashedAt === undefined ? {} : { trashed_at: trashedAt === null ? null : sql<Date>`now()` }),
+				...(deletedAt === undefined ? {} : { deleted_at: deletedAt === null ? null : sql<Date>`now()` }),
 			})
 			.where("id", "=", sql<string>`any(${[...ids]}::uuid[])`)
 			.execute();
-	};
-
-	/** Slugs that were ever published keep only a reuse-prevention record; reserved slugs are released before the content is deleted. */
-	const deleteEntryRow = async (trx: Db, id: string) => {
-		await trx.deleteFrom("content_addresses").where("entry_id", "=", id).where("type", "=", "reservation").execute();
-		await trx
-			.updateTable("content_addresses")
-			.set({ type: "deleted", entry_id: null })
-			.where("entry_id", "=", id)
-			.execute();
-		await trx.deleteFrom("entries").where("id", "=", id).execute();
 	};
 
 	return {
@@ -122,7 +92,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					})
 					.where("id", "=", params.id)
 					.execute();
-				const members = await lockTranslations(trx, params.id);
+				const members = await lockTranslationsOf(trx, params.id);
 				await setMembersStatus(trx, membersToArchive(members), STATUS_AFTER.archive);
 			}),
 
@@ -139,24 +109,18 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					})
 					.where("id", "=", params.id)
 					.execute();
-				const members = await lockTranslations(trx, params.id);
+				const members = await lockTranslationsOf(trx, params.id);
 				await setMembersStatus(trx, membersToUnarchive(members), STATUS_AFTER.unarchive);
 			}),
 
-		/**
-		 * To trash. Ends publication.
-		 * A category item in use (record collections: tags, categories, etc.) must have its references released first.
-		 */
+		/** To trash. Ends publication. An entry in use goes too (an item such as a tag included); only the permanent delete is held back by what points at it. */
 		trashEntry: (params: LifecycleParams) =>
-			transition(params, "trash", "trashed", async (trx, client, locked) => {
-				if (trashRequiresNoReferences(site, locked.collection)) {
-					await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: true });
-				}
+			transition(params, "trash", "trashed", async (trx, _client, locked) => {
 				await trx
 					.updateTable("entries")
 					.set({
 						status: STATUS_AFTER.trash,
-						trashed_at: sql<Date>`now()`,
+						deleted_at: sql<Date>`now()`,
 						version: locked.version + 1,
 						changed_by: currentActor(),
 						changed_at: sql<Date>`now()`,
@@ -164,7 +128,7 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 					.where("id", "=", params.id)
 					.execute();
 				// now() is the same value within one transaction. On restore, this timestamp finds the "translations trashed together".
-				const members = await lockTranslations(trx, params.id);
+				const members = await lockTranslationsOf(trx, params.id);
 				await setMembersStatus(trx, membersToTrash(members), STATUS_AFTER.trash, "now");
 			}),
 
@@ -172,7 +136,13 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 		 * Trash to restore. Publish collections return to draft; record collections are validated for current values and relations
 		 * and then returned to active (published) records.
 		 */
-		restoreEntry: (params: LifecycleParams & { snapshot?: PreparedSnapshot }) =>
+		restoreEntry: (
+			params: LifecycleParams & {
+				snapshot?: PreparedSnapshot;
+				/** Called when the entry came back from a trashed folder: into the live folder of the same path, made again where it was missing (`recreated`). */
+				onPlaced?: (placed: { recreated: boolean }) => void;
+			},
+		) =>
 			transition(params, "restore", "restored", async (trx, client, locked) => {
 				const isSource = locked.translation_group_id === params.id;
 				if (!isSource) {
@@ -183,16 +153,16 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 						.executeTakeFirst();
 					assertSourceNotTrashed(source?.status, locked.version);
 				}
-				const trashedAt = isSource
-					? (await trx.selectFrom("entries").select("trashed_at").where("id", "=", params.id).executeTakeFirst())
-							?.trashed_at
+				const deletedAt = isSource
+					? (await trx.selectFrom("entries").select("deleted_at").where("id", "=", params.id).executeTakeFirst())
+							?.deleted_at
 					: null;
 				const version = locked.version + 1;
 				await trx
 					.updateTable("entries")
 					.set({
 						status: STATUS_AFTER.restore,
-						trashed_at: null,
+						deleted_at: null,
 						version,
 						changed_by: currentActor(),
 						changed_at: sql<Date>`now()`,
@@ -207,47 +177,25 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 						snapshot: params.snapshot as PreparedSnapshot,
 					});
 				}
-				if (isSource && trashedAt) {
-					const members = await lockTranslations(trx, params.id);
-					await setMembersStatus(trx, membersToRestore(members, trashedAt), STATUS_AFTER.restore, null);
+				const restored = [params.id];
+				if (isSource && deletedAt) {
+					const members = await lockTranslationsOf(trx, params.id);
+					const withSource = membersToRestore(members, deletedAt);
+					await setMembersStatus(trx, withSource, STATUS_AFTER.restore, null);
+					restored.push(...withSource);
 				}
+				// An entry that was in a trashed folder comes back to the live folder of the same path.
+				const placed = await placeInLiveFolders(trx, "entries", restored);
+				if (placed.placed) params.onPlaced?.({ recreated: placed.recreated });
 			}),
 
 		/**
-		 * Permanently deletes a trashed entry. Rejected if other content references it.
+		 * Permanently deletes a trashed entry, and its translations with it. Rejected when an entry outside them points at it from a relation field
+		 * (`in_use`, with those entries); a link in a body does not hold it back, its reference is removed with the entry.
 		 * Slugs that were ever published keep only a reuse-prevention record (`deleted`); reserved slugs that were never published are released.
 		 */
-		permanentDeleteEntry: async (params: LifecycleParams): Promise<void> =>
-			withTrx(ctx, async (trx, client) => {
-				const locked = await lockEntryForUpdate(trx, params.id, params.expectedVersion);
-				assertDeletable(locked.status, locked.version);
-				// The event keeps the entry as it was; it is written after the rows are gone, in the same transaction.
-				const last = await loadEntry(trx, params.id);
-				await publishing.assertNotReferenced(client, params.id, { ignoreTrashedSources: false });
-				// Deleting a source deletes its translations too. Rejected if a translation outside the trash remains, since it would lose its shared values.
-				const members = await lockTranslations(trx, params.id);
-				const alive = blockingTranslations(members);
-				if (alive.length > 0) {
-					const translations = await trx
-						.selectFrom("entries")
-						.select(["id", "locale"])
-						.where("id", "=", sql<string>`any(${alive}::uuid[])`)
-						.orderBy("locale")
-						.execute();
-					throw new CmsError("Delete the translations first", "has_translations", {
-						serverVersion: locked.version,
-						details: { translations },
-					});
-				}
-				// Every entry that goes leaves its own event (the translations as well as the source), each read before its row is deleted.
-				const removed: Entry[] = [];
-				for (const member of members) {
-					await publishing.assertNotReferenced(client, member.id, { ignoreTrashedSources: false });
-					removed.push(await loadEntry(trx, member.id));
-					await deleteEntryRow(trx, member.id);
-				}
-				await deleteEntryRow(trx, params.id);
-				for (const entry of [...removed, last]) await recordEvents(client, qSchema, site, entry, ["deleted"]);
-			}),
+		permanentDeleteEntry: async (params: LifecycleParams): Promise<void> => {
+			await withTrx(ctx, (trx, client) => removeEntryGroup(ctx, trx, client, params));
+		},
 	};
 }

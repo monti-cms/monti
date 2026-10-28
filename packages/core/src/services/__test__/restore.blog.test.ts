@@ -201,6 +201,27 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		await source.store.updateMediaMetadata({ id: created.id, defaultAlt: "A photo", defaultCaption: "Taken today" });
 		ids.media = created.id;
 
+		// A media folder in the trash with a file in it: both keep the time they were discarded.
+		const retired = await source.store.createFolder({ collection: "media", parentId: null, name: "Retired" });
+		const retiredFile = await source.store.createMediaAsset({
+			filename: "old.png",
+			mimeType: "image/png",
+			byteSize: 10,
+			stagingKey: "staging/old.png",
+			folderId: retired.id,
+		});
+		await source.store.completeMediaAsset({
+			id: retiredFile.id,
+			storageKey: "media/old.png",
+			mimeType: "image/png",
+			byteSize: 10,
+			width: 1,
+			height: 1,
+		});
+		await source.store.trashFolder({ id: retired.id });
+		ids.retired = retired.id;
+		ids.retiredFile = retiredFile.id;
+
 		await source.store.createTemplate({ name: "Custom template", doc: emptyStoredDocument() });
 		backup = await backupOf(source);
 	});
@@ -230,8 +251,8 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 			entries: 6,
 			byStatus: { draft: 2, published: 2, archived: 1, trashed: 1 },
 			translations: 1,
-			folders: 3,
-			media: 1,
+			folders: 4,
+			media: 2,
 		});
 		// The old address of the renamed entry, and its current one.
 		expect(body.counts.aliases).toBe(1);
@@ -253,7 +274,7 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		const response = await run(target, backup);
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body).toMatchObject({ mode: "run", counts: { entries: 6, translations: 1, folders: 3, media: 1 } });
+		expect(body).toMatchObject({ mode: "run", counts: { entries: 6, translations: 1, folders: 4, media: 2 } });
 
 		const was = await source.store.readExportSnapshot();
 		const now = await target.store.readExportSnapshot();
@@ -264,7 +285,7 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		expect(now.addresses).toEqual(was.addresses);
 		// Media records keep their ids, storage keys, alt and caption.
 		expect(now.media).toEqual(was.media);
-		expect(now.media[0]).toMatchObject({
+		expect(now.media.find((asset) => asset.id === ids.media)).toMatchObject({
 			id: ids.media,
 			storageKey: "media/photo.png",
 			defaultAlt: "A photo",
@@ -272,10 +293,17 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 			folderId: ids.mediaFolder,
 		});
 
+		// What was in the trash stays in the trash, with the day it went there.
+		const retiredFolder = now.folders.find((folder) => folder.id === ids.retired);
+		const retiredFile = now.media.find((asset) => asset.id === ids.retiredFile);
+		expect(retiredFolder?.deletedAt).toBeInstanceOf(Date);
+		expect(retiredFile).toMatchObject({ status: "trashed", folderId: ids.retired });
+		expect(retiredFile?.deletedAt).toEqual(retiredFolder?.deletedAt);
+
 		// The statuses of the four kinds, the draft that differs from the published body, and the translation.
 		const byId = new Map(now.entries.map((entry) => [entry.id, entry]));
 		expect(byId.get(ids.trashed)?.status).toBe("trashed");
-		expect(byId.get(ids.trashed)?.trashedAt).toBeInstanceOf(Date);
+		expect(byId.get(ids.trashed)?.deletedAt).toBeInstanceOf(Date);
 		expect(byId.get(ids.archived)?.status).toBe("archived");
 		expect(byId.get(ids.alpha)?.status).toBe("published");
 		expect(byId.get(ids.alpha)?.working.contentHash).not.toBe(byId.get(ids.alpha)?.published?.contentHash);

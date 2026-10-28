@@ -458,7 +458,7 @@ export function createListOps(ctx: StoreContext) {
 				updatedAt: sql.ref("e.updated_at"),
 				createdAt: sql.ref("e.created_at"),
 				publishedAt: sql.ref("e.published_at"),
-				trashedAt: sql.ref("e.trashed_at"),
+				deletedAt: sql.ref("e.deleted_at"),
 				title: titleOf("w"),
 				slug: sql.ref("e.working_slug"),
 			};
@@ -480,7 +480,7 @@ export function createListOps(ctx: StoreContext) {
 					"e.created_at",
 					"e.updated_at",
 					"e.published_at",
-					"e.trashed_at",
+					"e.deleted_at",
 					"e.working_slug",
 					"w.metadata",
 					"sw.metadata as source_metadata",
@@ -528,7 +528,7 @@ export function createListOps(ctx: StoreContext) {
 					publishedAt: row.published_at,
 					createdAt: row.created_at,
 					updatedAt: row.updated_at,
-					trashedAt: row.trashed_at,
+					deletedAt: row.deleted_at,
 					...(site.isItemCollection(row.collection)
 						? { recordLocales: namedLocales(site, row.collection as Collection, meta) }
 						: {}),

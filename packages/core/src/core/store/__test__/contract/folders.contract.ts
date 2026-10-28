@@ -440,142 +440,10 @@ export const foldersContract: ContractSuite = (factory) => {
 		}, 30_000);
 
 		// -----------------------------------------------------------------------
-		// 5  delete folder reparents entries and child folders; never deletes entries
-		// -----------------------------------------------------------------------
-
-		it("5. delete non-root folder reparents direct entries and child folders to deleted parent; delete root reparents to null; never deletes entries; snapshot full entries/addresses/folder exact unchanged", async () => {
-			// Build tree: root → mid → leaf  (entries in mid)
-			const root = await store.createFolder({ collection: contentCollection, parentId: null, name: "Root5" });
-			const mid = await store.createFolder({ collection: contentCollection, parentId: root.id, name: "Mid5" });
-			const leaf = await store.createFolder({ collection: contentCollection, parentId: mid.id, name: "Leaf5" });
-
-			const e5 = await seedEntry(store, {
-				collection: contentCollection,
-				slug: "fc5-e",
-				metadata: { title: "E5" },
-				text: "e5 body",
-				contentHash: uniqueHash(),
-			});
-			const e5pub = await publishDraft(testSite, store, { id: e5.id, expectedVersion: e5.version });
-			const _e5moved = await moveToFolder(store, {
-				entryId: e5.id,
-				folderId: mid.id,
-				expectedVersion: e5pub.version,
-			});
-
-			const preDeleteMidEntry = await store.getEntry(e5.id);
-			const preDeleteMidAddress = await publicAddress("fc5-e");
-			expect(preDeleteMidAddress).toEqual({ status: "current", id: e5.id, slug: "fc5-e" });
-
-			// Delete mid → leaf reparents to root, entry reparents to root
-			await store.deleteFolder({ id: mid.id });
-
-			const folders5 = await store.listFolders({ collection: contentCollection });
-			expect(folders5.find((f) => f.id === mid.id)).toBeUndefined();
-
-			const leafAfter = folders5.find((f) => f.id === leaf.id);
-			expect(leafAfter?.parentId).toBe(root.id);
-
-			// Entry still exists, reparented to root's parent (root's id since mid had root as parent)
-			const e5After = await store.getEntry(e5.id);
-			expect(e5After).toBeDefined();
-
-			expect(e5After.folderId).toBe(root.id);
-
-			// Version and content exactly unchanged
-			expect({ ...e5After, folderId: null }).toEqual({ ...preDeleteMidEntry, folderId: null });
-
-			expect(await publicAddress("fc5-e")).toEqual(preDeleteMidAddress);
-
-			// Now delete root → leaf reparents to null, entry reparents to null
-			await store.deleteFolder({ id: root.id });
-
-			const folders5b = await store.listFolders({ collection: contentCollection });
-			expect(folders5b.find((f) => f.id === root.id)).toBeUndefined();
-
-			const leafFinal = folders5b.find((f) => f.id === leaf.id);
-			expect(leafFinal?.parentId).toBeNull();
-
-			const e5Final = await store.getEntry(e5.id);
-			expect(e5Final.folderId).toBeNull();
-			expect({ ...e5Final, folderId: null }).toEqual({ ...preDeleteMidEntry, folderId: null });
-		}, 30_000);
-
-		// -----------------------------------------------------------------------
-		// 6  delete collision → conflict, atomically unchanged
-		// -----------------------------------------------------------------------
-
-		it("6. delete collision => exact conflict and atomically unchanged folders/entries", async () => {
-			const parent = await store.createFolder({ collection: contentCollection, parentId: null, name: "P6" });
-
-			// "Dup" exists at root level
-			await store.createFolder({ collection: contentCollection, parentId: null, name: "Dup" });
-
-			// "Dup" also under parent (same name, different parent = OK)
-			await store.createFolder({ collection: contentCollection, parentId: parent.id, name: "Dup" });
-
-			// Seed an entry in the to-be-deleted parent
-			const e6 = await seedEntry(store, {
-				collection: contentCollection,
-				slug: "fc6-e",
-				metadata: { title: "E6" },
-				text: "e6 body",
-				contentHash: uniqueHash(),
-			});
-			const e6pub = await publishDraft(testSite, store, { id: e6.id, expectedVersion: e6.version });
-			const e6moved = await moveToFolder(store, {
-				entryId: e6.id,
-				folderId: parent.id,
-				expectedVersion: e6pub.version,
-			});
-
-			// Capture folder rows + entry state before deletion attempt
-			const beforeFolders = await store.listFolders({ collection: contentCollection });
-			const beforeEntry = await store.getEntry(e6.id);
-			expect({ folderId: beforeEntry.folderId, version: beforeEntry.version }).toEqual({
-				folderId: e6moved.folderId,
-				version: e6moved.version,
-			});
-			expect(beforeEntry.version).toBe(e6moved.version);
-			const beforeWorking = await store.getWorking({ entryId: e6.id });
-			const beforeAddress = await publicAddress("fc6-e");
-
-			// Deleting parent would reparent child "Dup" to root, colliding with existing root "Dup"
-			let delErr: unknown;
-			try {
-				await store.deleteFolder({ id: parent.id });
-			} catch (e) {
-				delErr = e;
-			}
-			expectCmsError(delErr, "folder_name_conflict");
-
-			// All folders unchanged
-			const afterFolders = await store.listFolders({ collection: contentCollection });
-			expect(afterFolders).toEqual(beforeFolders);
-
-			// Entry version, folder, timestamps, body, address all exactly unchanged
-			const afterEntry = await store.getEntry(e6.id);
-			expect(afterEntry).toEqual(beforeEntry);
-			expect({ folderId: afterEntry.folderId, version: afterEntry.version }).toEqual({
-				folderId: beforeEntry.folderId,
-				version: beforeEntry.version,
-			});
-
-			const afterWorking = await store.getWorking({ entryId: e6.id });
-			expect(afterWorking).toEqual(beforeWorking);
-			expect({ doc: afterEntry.working.doc, contentHash: afterEntry.working.contentHash }).toEqual({
-				doc: beforeEntry.working.doc,
-				contentHash: beforeEntry.working.contentHash,
-			});
-
-			expect(await publicAddress("fc6-e")).toEqual(beforeAddress);
-		}, 30_000);
-
-		// -----------------------------------------------------------------------
 		// 7  not_found exact codes
 		// -----------------------------------------------------------------------
 
-		it("7. not_found exact codes for update and delete of nonexistent folder", async () => {
+		it("7. not_found exact codes for update and trash of nonexistent folder", async () => {
 			const bogusId = "00000000-0000-0000-0000-000000000000";
 
 			let updateErr: unknown;
@@ -588,7 +456,7 @@ export const foldersContract: ContractSuite = (factory) => {
 
 			let deleteErr: unknown;
 			try {
-				await store.deleteFolder({ id: bogusId });
+				await store.trashFolder({ id: bogusId });
 			} catch (e) {
 				deleteErr = e;
 			}

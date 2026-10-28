@@ -239,7 +239,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(pubRefs[0]?.occurrences).toEqual([{ type: "metadata", path: "tags" }]);
 			});
 
-			it("prevents trashing or deleting a tag still used by published entries", async () => {
+			it("trashes a tag still used by published entries, and holds back only its permanent delete", async () => {
 				const tag = await seedEntry(store, {
 					collection: record,
 					slug: `tag-in-use-${randomUUID()}`,
@@ -268,21 +268,29 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						references: [],
 						imageSources: [],
 					},
-					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
+					references: [
+						{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [{ type: "metadata", path: "tags" }] },
+					],
 				});
 				const publishedPost = await publishDraft(testSite, store, { id: post.id, expectedVersion: saved.version });
 
-				await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
-					code: "in_use",
-				});
 				// Permanent delete targets only trashed entries.
 				await expect(
 					store.permanentDeleteEntry({ id: tag.id, expectedVersion: publishedTag.version }),
 				).rejects.toMatchObject({
 					code: "invalid_status",
 				});
-				const stillPublished = await store.getEntry(publishedPost.id);
-				expect(stillPublished.status).toBe("published");
+				const trashedTag = await store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version });
+				expect(trashedTag.status).toBe("trashed");
+				expect((await store.getEntry(publishedPost.id)).status).toBe("published");
+
+				// The relation field of the post still points at it, so it cannot be deleted for good, and the post is named.
+				await expect(
+					store.permanentDeleteEntry({ id: tag.id, expectedVersion: trashedTag.version }),
+				).rejects.toMatchObject({
+					code: "in_use",
+					details: { usages: [expect.objectContaining({ entryId: post.id, collection: content, trashed: false })] },
+				});
 
 				const editedWithoutTag = await store.saveWorkingWithReferences({
 					entryId: publishedPost.id,
@@ -299,12 +307,9 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					},
 					references: [],
 				});
-				await expect(store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version })).rejects.toMatchObject({
-					code: "in_use",
-				});
 				await publishDraft(testSite, store, { id: publishedPost.id, expectedVersion: editedWithoutTag.version });
-				const trashedTag = await store.trashEntry({ id: tag.id, expectedVersion: publishedTag.version });
-				expect(trashedTag.status).toBe("trashed");
+				await store.permanentDeleteEntry({ id: tag.id, expectedVersion: trashedTag.version });
+				await expect(store.getEntry(tag.id)).rejects.toMatchObject({ code: "not_found" });
 			});
 
 			it("does not publish a trashed entry", async () => {
@@ -323,7 +328,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it("blocks trashing or deleting a tag referenced by a draft", async () => {
+			it("holds back the permanent delete of a tag a draft points at, not its trash", async () => {
 				const tagDraft = await seedEntry(store, {
 					collection: record,
 					slug: `tag-draft-use-${randomUUID()}`,
@@ -352,14 +357,17 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						references: [],
 						imageSources: [],
 					},
-					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
+					references: [
+						{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [{ type: "metadata", path: "tags" }] },
+					],
 				});
 
-				await expect(store.trashEntry({ id: tag.id, expectedVersion: tag.version })).rejects.toMatchObject({
+				const trashedTag = await store.trashEntry({ id: tag.id, expectedVersion: tag.version });
+				await expect(
+					store.permanentDeleteEntry({ id: tag.id, expectedVersion: trashedTag.version }),
+				).rejects.toMatchObject({
 					code: "in_use",
-				});
-				await expect(store.permanentDeleteEntry({ id: tag.id, expectedVersion: tag.version })).rejects.toMatchObject({
-					code: "invalid_status",
+					details: { usages: [expect.objectContaining({ entryId: post.id })] },
 				});
 			});
 

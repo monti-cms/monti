@@ -14,6 +14,7 @@ import type { Site } from "../site";
 import type { HookProvider } from "./reactions";
 import {
 	type Issue,
+	type PreparedSnapshot,
 	type RestorePort,
 	type SaveDraftInput,
 	ServiceError,
@@ -102,6 +103,31 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 			...(options.imageChecks ? await imageWarningsForSnapshot(snapshot, options.imageChecks) : []),
 		];
 		return { snapshot, warnings, transformed, noticed };
+	};
+
+	/**
+	 * The prepared draft a record needs to be published again on restore: its draft goes through the write pipeline as a `restore`. `validate` and
+	 * `beforePublish` subscribers run (a restriction on publishing cannot be bypassed by trash and restore), `beforeValidate` ones do not (the content
+	 * is unchanged). Other collections return to draft and are not published, so they need none (`snapshot` is absent).
+	 */
+	const prepareRestore = async (id: string): Promise<{ snapshot?: PreparedSnapshot; warnings: readonly Issue[] }> => {
+		const working = await storePort.getWorking({ entryId: id });
+		if (!site.isItemCollection(working.collection)) return { warnings: [] };
+		const previousReferences = await storePort.getWorkingReferences({ entryId: id });
+		const { snapshot, warnings } = await pipeline.run({
+			operation: "restore",
+			entryId: id,
+			locale: working.locale ?? site.DEFAULT_LOCALE,
+			input: {
+				collection: working.collection,
+				slug: working.slug,
+				metadata: working.metadata,
+				doc: working.doc,
+			} as ServiceInput,
+			prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
+			skipTransform: true,
+		});
+		return { snapshot, warnings };
 	};
 
 	return {
@@ -303,33 +329,25 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 			}
 		},
 
+		prepareRestore,
+
 		/**
-		 * Trash to restore. A record is published again, so its draft goes through the write pipeline first as a `restore`: `validate` and
-		 * `beforePublish` subscribers run (a restriction on publishing cannot be bypassed by trash and restore), `beforeValidate` ones do not (the content
-		 * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
+		 * Trash to restore. A record is published again with its prepared draft (see `prepareRestore`); other collections return to draft. An entry that was in a
+		 * trashed folder goes to the live folder of the same path, and `onPlaced` says whether a folder had to be made again.
 		 */
-		restore: async (params: { id: string; expectedVersion: number }): Promise<WriteResult> => {
+		restore: async (params: {
+			id: string;
+			expectedVersion: number;
+			onPlaced?: (placed: { recreated: boolean }) => void;
+		}): Promise<WriteResult> => {
 			if (!storePort.restoreEntry) throw new Error("content service: the store cannot restore entries");
-			const working = await storePort.getWorking({ entryId: params.id });
-			if (!site.isItemCollection(working.collection)) {
-				const entry = await storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion });
-				return { entry, warnings: [] };
-			}
-			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
-			const { snapshot, warnings } = await pipeline.run({
-				operation: "restore",
-				entryId: params.id,
-				locale: working.locale ?? site.DEFAULT_LOCALE,
-				input: {
-					collection: working.collection,
-					slug: working.slug,
-					metadata: working.metadata,
-					doc: working.doc,
-				} as ServiceInput,
-				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
-				skipTransform: true,
+			const { snapshot, warnings } = await prepareRestore(params.id);
+			const entry = await storePort.restoreEntry({
+				id: params.id,
+				expectedVersion: params.expectedVersion,
+				onPlaced: params.onPlaced,
+				...(snapshot ? { snapshot } : {}),
 			});
-			const entry = await storePort.restoreEntry({ id: params.id, expectedVersion: params.expectedVersion, snapshot });
 			return { entry, warnings };
 		},
 	};

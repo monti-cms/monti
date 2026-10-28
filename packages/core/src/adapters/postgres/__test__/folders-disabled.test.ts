@@ -40,7 +40,7 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 	it("rejects changing, deleting and reading the contents of a folder in a collection without folders", async () => {
 		const folder = await on.createFolder({ collection: collection as string, parentId: null, name: "Left over" });
 		await expect(off.updateFolder({ id: folder.id, name: "Renamed" })).rejects.toMatchObject({ code: "invalid_input" });
-		await expect(off.deleteFolder({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
+		await expect(off.trashFolder({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(off.getFolderContents({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
 		// The folder is untouched.
 		expect((await on.listFolders({ collection: collection as string })).map((f) => f.name)).toEqual(["Left over"]);

@@ -463,7 +463,10 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		},
 
 		/** The detail screen's "Usages". Returns field relations and body references split into draft and published. */
-		getIncomingReferences: async (params: { targetId: string }): Promise<IncomingReferenceItem[]> => {
+		getIncomingReferences: async (params: {
+			targetId: string;
+			includeTrashed?: boolean;
+		}): Promise<IncomingReferenceItem[]> => {
 			const rows = await db
 				.selectFrom("entry_references as r")
 				.innerJoin("entries as e", "e.id", "r.entry_id")
@@ -478,6 +481,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					"r.state",
 					"e.id as source_id",
 					"e.collection as source_collection",
+					"e.status as source_status",
 					titleExpr(site, "b.metadata", ROW_COLLECTION).as("source_title"),
 					eb
 						.case()
@@ -492,7 +496,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				])
 				.where("r.target_id", "=", params.targetId)
 				.where("r.state", "in", ["working", "published"])
-				.where("e.status", "<>", "trashed")
+				.$if(!params.includeTrashed, (qb) => qb.where("e.status", "<>", "trashed"))
 				.where((eb) => eb.or([eb("r.state", "<>", "published"), eb("e.status", "=", "published")]))
 				.orderBy((eb) => eb.case().when("r.state", "=", "working").then(0).else(1).end())
 				.orderBy("e.updated_at", "desc")
@@ -504,6 +508,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				sourceCollection: row.source_collection,
 				sourceTitle: row.source_title,
 				sourceSlug: row.source_slug,
+				sourceStatus: row.source_status,
 				kind: row.kind as ReferenceKind,
 				isStale: row.is_stale,
 				occurrences: readReferenceOccurrences(row.occurrences),

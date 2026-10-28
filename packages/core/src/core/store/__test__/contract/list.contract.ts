@@ -636,11 +636,11 @@ export const listContract: ContractSuite = (factory) => {
 			const second = await seed(content, "tr-second", "Trashed second");
 			await seed(content, "tr-kept", "Kept");
 			await store.trashEntry({ id: first.id, expectedVersion: first.version });
-			// `trashed_at` is the transaction's `now()`: a later transaction is later.
+			// `deleted_at` is the transaction's `now()`: a later transaction is later.
 			await store.trashEntry({ id: second.id, expectedVersion: second.version });
 			const trash = (direction: "asc" | "desc") =>
 				store
-					.listEntries({ collection: content, statuses: ["trashed"], sort: { field: "trashedAt", direction } })
+					.listEntries({ collection: content, statuses: ["trashed"], sort: { field: "deletedAt", direction } })
 					.then((result) => result.items.map((item) => item.slug));
 			expect(await trash("desc")).toEqual(["tr-second", "tr-first"]);
 			expect(await trash("asc")).toEqual(["tr-first", "tr-second"]);

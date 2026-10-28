@@ -12,6 +12,9 @@ const ENTRY_CHANGES = [
 	"restoreEntry",
 ] as const satisfies readonly (keyof EntryStore | keyof LifecycleStore)[];
 
+/** The store functions that change many entries at once (a folder, the trash, an unlink) and name them in the `entryIds` of their result. */
+const BATCH_CHANGES = ["trashFolder", "restoreFolder", "deleteTrashed", "unlinkReferences"] as const;
+
 interface ChangingStore {
 	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
 }
@@ -38,6 +41,15 @@ export function withEventDispatch<S extends ChangingStore>(store: S, dispatch: (
 			const entry = (await original.apply(store, args)) as Entry;
 			await notify(entry.id);
 			return entry;
+		});
+	}
+	for (const method of BATCH_CHANGES) {
+		const original = (store as unknown as Record<string, unknown>)[method];
+		if (typeof original !== "function") continue;
+		overrides.set(method, async (...args: unknown[]) => {
+			const result = (await original.apply(store, args)) as { entryIds: readonly string[] };
+			for (const entryId of result.entryIds) await notify(entryId);
+			return result;
 		});
 	}
 	const deleteEntry = store.permanentDeleteEntry;

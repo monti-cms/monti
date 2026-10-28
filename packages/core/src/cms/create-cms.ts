@@ -19,6 +19,7 @@ import { createEventDispatcher } from "../services/events";
 import { createMediaService, type MediaService } from "../services/media-service";
 import { mediaUrlResolver } from "../services/media-urls";
 import { createPreferencesService, type PreferencesService } from "../services/preferences-service";
+import { createTrashService, type TrashService } from "../services/trash-service";
 import { createSite } from "../site";
 
 export type * from "./types";
@@ -114,6 +115,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 		let service: LooseContentService | undefined;
 		let bulk: BulkService | undefined;
 		let media: MediaService | undefined;
+		let trash: TrashService | undefined;
 		let preferences: PreferencesService | undefined;
 		let auth: CmsAuth | undefined;
 
@@ -177,6 +179,11 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 				: {}),
 		});
 
+		const getMediaService = (): MediaService => {
+			media ??= createMediaService({ store: getStore, mediaStore: getMediaStore });
+			return media;
+		};
+
 		return {
 			site,
 			server: publicServer,
@@ -201,9 +208,16 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 				});
 				return bulk;
 			},
-			mediaService: () => {
-				media ??= createMediaService({ store: getStore, mediaStore: getMediaStore });
-				return media;
+			mediaService: getMediaService,
+			trashService: () => {
+				trash ??= createTrashService({
+					site,
+					store: getStore,
+					...(server.media ? { mediaStore: getMediaStore } : {}),
+					media: getMediaService,
+					content: () => self().contentService(),
+				});
+				return trash;
 			},
 			preferencesService: () => {
 				preferences ??= createPreferencesService(site, getStore);
