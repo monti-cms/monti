@@ -90,7 +90,7 @@ async function readBatch(
  * Replaces the metadata references of one stored body and leaves its body references as they are. A reference keeps its stale flag; it is dropped when no
  * occurrence is left. Occurrences are written metadata first and body after, the order a save writes them, so a later identical save sees nothing to change.
  */
-async function replaceMetadataReferences(
+export async function replaceMetadataReferences(
 	db: Db,
 	entryId: string,
 	state: "working" | "published",
