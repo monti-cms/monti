@@ -42,7 +42,7 @@ export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSi
 export const saveSchema = (
 	site: Site,
 	request: EditRequest & { readonly baseHash: string; readonly acknowledged: readonly string[] },
-) =>
+): Promise<SavedSchema | { saved: false; reason: "unchanged" }> =>
 	adminFetch<SavedSchema | { saved: false; reason: "unchanged" }>(site, "/v1/schema", {
 		method: "PUT",
 		json: request,

@@ -57,14 +57,13 @@ export const LAYOUT = {
 	/**
 	 * `clip`: a frame the size of the window that nothing can scroll, not even a field brought into view (the panes inside scroll). A scrolling box (`auto`, `y`,
 	 * `x`) is `relative`: the screen-reader-only inputs inside it (a radio, a combobox) are placed in the box and scroll with it, instead of in the page around it,
-	 * where they would stretch the page past its window. `y` scrolls up and down only: CSS would make the other way scroll too as soon as one does, so a
-	 * part that reaches a little past the side (a switch's larger hit area at the end of a row) would give the box a sideways scroll.
+	 * where they would stretch the page past its window.
 	 */
 	overflow: {
 		auto: "relative overflow-auto",
 		hidden: "overflow-hidden",
 		clip: "overflow-clip",
-		y: "relative overflow-x-hidden overflow-y-auto",
+		y: "relative overflow-y-auto",
 		x: "relative overflow-x-auto",
 	},
 	/** Hidden on narrow screens (below the breakpoint), or from the breakpoint up. */
