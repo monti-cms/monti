@@ -8,8 +8,8 @@ import { columnsFor } from "../list-columns";
  */
 describe("reference blog list default columns", () => {
 	it.each([
-		["post", ["title", "status", "locale", "categoryId", "tagIds", "updatedAt", "publishedAt"]],
-		["memo", ["title", "status", "locale", "tagIds", "updatedAt", "publishedAt"]],
+		["post", ["title", "status", "locale", "categoryId", "tagIds", "updatedAt"]],
+		["memo", ["title", "status", "locale", "tagIds", "updatedAt"]],
 		["category", ["title", "locale", "status", "updatedAt"]],
 		["tag", ["title", "locale", "status", "updatedAt"]],
 		["collection", ["title", "locale", "status", "updatedAt"]],

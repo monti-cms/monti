@@ -90,7 +90,7 @@ export function defaultListColumns(site: Site, collection: string): AdminListCol
 		return ["title", ...locale, "status", "updatedAt"];
 	}
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
-	return ["title", "status", ...locale, ...taxonomy, "updatedAt", "publishedAt"];
+	return ["title", "status", ...locale, ...taxonomy, "updatedAt"];
 }
 
 /**

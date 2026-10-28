@@ -75,12 +75,22 @@ describe("admin entry list", () => {
 		expect(columnsFor(testSite, "tag").available).not.toContain("tagIds");
 	});
 
-	it("states status in text, including unpublished changes", () => {
-		renderTable({ items: [item("changed", { status: "published", hasUnpublishedChanges: true })] });
-		expect(screen.getByText("발행됨 · 수정 중")).toBeTruthy();
+	it("says a status only where the entry is not plainly published, in words as well as the mark", () => {
+		renderTable({
+			items: [
+				item("changed", { status: "published", hasUnpublishedChanges: true }),
+				item("plain", { status: "published" }),
+				item("draft"),
+				item("old", { status: "archived" }),
+			],
+		});
+		expect(within(screen.getByRole("row", { name: /changed/ })).getByText("수정 중")).toBeTruthy();
+		expect(within(screen.getByRole("row", { name: /draft/ })).getByText("초안")).toBeTruthy();
+		expect(within(screen.getByRole("row", { name: /old/ })).getByText("보관됨")).toBeTruthy();
+		expect(within(screen.getByRole("row", { name: /plain/ })).queryByText("발행됨")).toBeNull();
 	});
 
-	it("shows non-empty metadata on the second line of each editorial row and omits empty fields", () => {
+	it("draws the taxonomy fields as one cell of the row and leaves an empty one blank", () => {
 		renderTable({
 			items: [
 				item("with-tags", {
@@ -91,8 +101,8 @@ describe("admin entry list", () => {
 			],
 		});
 		const rowWithTags = screen.getByRole("row", { name: /태그 있는 글/ });
-		expect(within(rowWithTags).getByText("가이드")).toBeTruthy();
-		expect(within(rowWithTags).getAllByText("React").length).toBeGreaterThan(0);
+		// The category and the tags are one cell, joined, on the same line as the title.
+		expect(within(rowWithTags).getByText("가이드 · React")).toBeTruthy();
 		const plainRow = screen.getByRole("row", { name: /태그 없는 글/ });
 		expect(within(plainRow).queryByText("—")).toBeNull();
 	});
@@ -145,7 +155,8 @@ describe("admin entry list", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "TypeScript" }));
 		expect(props.onOpenRecord).toHaveBeenCalledWith(tag);
-		expect(screen.getByText("활성")).toBeTruthy();
+		// A published item is the normal case: it says nothing.
+		expect(screen.queryByText("활성")).toBeNull();
 	});
 
 	it("shows child folders in explorer mode and navigates up", () => {
@@ -161,7 +172,7 @@ describe("admin entry list", () => {
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
-	it("a taxonomy item shows the locales that have a name in the locale column", () => {
+	it("a taxonomy item shows its first language and how many others have a name", () => {
 		const tag = item("tag-1", {
 			collection: "tag",
 			title: "리액트",
@@ -174,9 +185,9 @@ describe("admin entry list", () => {
 			state: parseListState(testSite, new URLSearchParams("collection=tag")),
 		});
 		const row = screen.getByRole("row", { name: /리액트/ });
-		expect(within(row).getByText("한국어 있음")).toBeTruthy();
-		expect(within(row).getByText("영어 있음")).toBeTruthy();
-		expect(within(row).getByText("일본어 없음")).toBeTruthy();
+		// The first language in mono and "+1" for the other one that has a name; the whole list is in its title.
+		const cell = within(row).getByText("KO +1");
+		expect(cell.getAttribute("title")).toBe("한국어, 영어");
 	});
 
 	describe("row drag", () => {
