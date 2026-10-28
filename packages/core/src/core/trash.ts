@@ -9,12 +9,12 @@ export const TRASH_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** When a unit discarded at `trashedAt` is purged. */
-export const trashExpiresAt = (trashedAt: Date): Date => new Date(trashedAt.getTime() + TRASH_DAYS * DAY_MS);
+/** When a unit discarded at `deletedAt` is purged. */
+export const trashExpiresAt = (deletedAt: Date): Date => new Date(deletedAt.getTime() + TRASH_DAYS * DAY_MS);
 
 /** Whole days left before the purge, never below 0. A unit discarded today has {@link TRASH_DAYS} left. */
-export const trashDaysLeft = (trashedAt: Date, now: Date): number =>
-	Math.max(0, TRASH_DAYS - Math.floor((now.getTime() - trashedAt.getTime()) / DAY_MS));
+export const trashDaysLeft = (deletedAt: Date, now: Date): number =>
+	Math.max(0, TRASH_DAYS - Math.floor((now.getTime() - deletedAt.getTime()) / DAY_MS));
 
 /** What a trash tab holds: a collection's name, or `media` for files and media folders. */
 export type TrashKind = string;
@@ -33,7 +33,7 @@ export interface TrashEntryItem {
 	readonly title: string | null;
 	readonly slug: string | null;
 	readonly version: number;
-	readonly trashedAt: Date;
+	readonly deletedAt: Date;
 	/** When the purge deletes it; `null` inside a trashed folder, which goes with the folder. */
 	readonly expiresAt: Date | null;
 	/** The languages that came to the trash in this row, the row's own first. */
@@ -58,7 +58,7 @@ export interface TrashFolderItem {
 	readonly collection: string;
 	readonly name: string;
 	readonly version: number;
-	readonly trashedAt: Date;
+	readonly deletedAt: Date;
 	readonly expiresAt: Date | null;
 	readonly path: readonly string[];
 	/** What is in it, its subfolders included. Entries are counted once per translation group. */
@@ -77,7 +77,7 @@ export interface TrashMediaItem {
 	readonly width: number | null;
 	readonly height: number | null;
 	readonly folderId: string | null;
-	readonly trashedAt: Date;
+	readonly deletedAt: Date;
 	readonly expiresAt: Date | null;
 	readonly path: readonly string[];
 	/** The file's address for a preview, or `null`. */
