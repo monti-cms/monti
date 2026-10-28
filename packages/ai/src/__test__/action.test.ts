@@ -80,6 +80,24 @@ describe("AI action definition", () => {
 		expect(action.definedChecks).toEqual(["pattern", "maxLength", "code:unique-slug"]);
 	});
 
+	it("only a slot with a place to type asks for an extra request: a field action that asks is a config error and never asks once resolved", () => {
+		const definition = (attach: AiActionDefinition["attach"]) =>
+			aiAction({
+				label: "x",
+				input: { title: aiInput.text({ label: "제목" }) },
+				result: "text",
+				prompt: "x",
+				askInstruction: true,
+				attach,
+			});
+		const issues = (attach: AiActionDefinition["attach"]) =>
+			checkAiConfig({ actions: { a: definition(attach) } }, collections).map((issue) => issue.code);
+		expect(issues([{ slot: "field", field: "title" }])).toContain("askInstruction");
+		expect(issues([{ slot: "selection" }])).not.toContain("askInstruction");
+		expect(resolveAction("a", definition([{ slot: "field", field: "title" }])).askInstruction).toBe(false);
+		expect(resolveAction("a", definition([{ slot: "insert" }])).askInstruction).toBe(true);
+	});
+
 	it("code check names are lowercase hyphenated and used once per action", () => {
 		const check = defineValidator({ name: "no-dup", label: "겹침 없음", run: () => true });
 		const action = (checks: AiActionDefinition["checks"]) =>

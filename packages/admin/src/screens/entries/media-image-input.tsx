@@ -2,7 +2,7 @@
 
 import { DocumentBlank, Image as ImageIcon } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Button, FormFieldError, Image, Inline, Text, TextButton } from "@monti-cms/ui";
+import { Box, Button, FormFieldError, Image, Inline, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { errorText } from "../../api/client";
@@ -70,6 +70,42 @@ export function MediaThumbnail({ mediaId, size }: { mediaId: string; size?: "inl
 	);
 	// A share card shows the image full width with a line under it, as the platforms draw it.
 	return size === "share" ? <Box border="bottom">{image}</Box> : image;
+}
+
+/**
+ * A media field at rest in the properties list: the image in a banner frame with its file name under it, or the file's name with a file icon. Pressing it
+ * (the row does) opens the input.
+ */
+export function MediaValue({ mediaId, accept }: { mediaId: string; accept: "image" | "file" | undefined }) {
+	const site = useSite();
+	const url = useMediaUrl(accept === "file" ? "" : mediaId);
+	const lookup = useQuery({
+		queryKey: mediaKeys.detail(mediaId),
+		queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+		enabled: mediaId !== "",
+		retry: false,
+	});
+	const filename = lookup.data?.filename ?? null;
+	if (accept === "file") {
+		return (
+			<Inline gap={4} minWidth={0}>
+				<DocumentBlank aria-hidden size={14} />
+				<Text variant="caption" truncate>
+					{filename ?? mediaId}
+				</Text>
+			</Inline>
+		);
+	}
+	return (
+		<Stack gap={4}>
+			<Image src={url} alt="" fallback={ImageIcon} ratio="banner" radius="sm" />
+			{filename && (
+				<Text variant="caption" tone="subtle" truncate>
+					{filename}
+				</Text>
+			)}
+		</Stack>
+	);
 }
 
 /** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */

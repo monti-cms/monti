@@ -14,9 +14,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Text,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
 } from "@monti-cms/ui";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { useCallback, useId, useRef, useState } from "react";
@@ -279,15 +276,12 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 				)}
 				<Inline gap={2}>
 					{!editable ? null : rawMode ? (
-						<Tooltip>
-							<TooltipTrigger render={<Inline as="span" gap={4} paddingX={4} />}>
-								<Information aria-hidden />
-								<Text variant="caption" tone="muted">
-									{t("view.rawMode")}
-								</Text>
-							</TooltipTrigger>
-							<TooltipContent>{t("view.rawModeHint")}</TooltipContent>
-						</Tooltip>
+						<Inline as="span" gap={4} paddingX={4}>
+							<Information aria-hidden />
+							<Text variant="caption" tone="muted">
+								{t("view.rawMode")}
+							</Text>
+						</Inline>
 					) : (
 						<>
 							{lineMenuOffered && (

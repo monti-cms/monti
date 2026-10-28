@@ -8,7 +8,7 @@ import { tooltipBlock } from "./definition";
  * plugins: [tooltip()]
  * ```
  *
- * The editor gets a `Tooltip` item in the format toolbar, text bubble, and slash menu. For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
+ * The editor gets a `Tooltip` item in the format card (under ⋯) and the slash menu. For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  * Tooltips on text inside a code block (code fence comments) are a core code block feature, separate from this extension.
  */
 export const tooltip = () =>

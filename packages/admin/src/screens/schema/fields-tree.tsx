@@ -389,14 +389,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			</Box>
 		</Box>
 	);
-	const preview = (
-		<LayoutPreview
-			file={file}
-			collection={editing.collectionName}
-			codeCollections={codeCollections}
-			onClose={() => setPreviewOpen(false)}
-		/>
-	);
+	const preview = <LayoutPreview file={file} collection={editing.collectionName} codeCollections={codeCollections} />;
 	return (
 		<>
 			{wide && previewOpen ? (

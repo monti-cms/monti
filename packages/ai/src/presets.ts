@@ -156,7 +156,6 @@ export const aiPresets = {
 				// Send the current slug too so each press produces a different slug.
 				send: ["title", "body", "current"],
 				result: "candidates",
-				instant: true,
 				checks: [{ kind: "pattern", pattern: KEBAB_PATTERN }, { kind: "maxLength", max: 80 }, uniqueSlug],
 				prompt:
 					options.prompt ??
@@ -187,7 +186,6 @@ export const aiPresets = {
 				input: fieldInput(site),
 				send: ["title", "body"],
 				result: "text",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max }],
 				prompt:
 					options.prompt ??
@@ -266,6 +264,46 @@ export const aiPresets = {
 		};
 	},
 
+	/**
+	 * Picks the series (a collection of entries) the post belongs to, with the decide model, for a backlink field (e.g. series). The choices are the collection
+	 * the backlink points from (`choices`, or the `from` of the first field found). The post is added to the series picked.
+	 */
+	series: (options: FieldOptions & { readonly choices?: string; readonly threshold?: number } = {}) => {
+		return (site: AiSiteView) => {
+			const backlinkOf = (schema: CollectionSchema) => {
+				const found = Object.entries(schema.fields).find(
+					([name, field]) =>
+						field.kind === "backlink" &&
+						(options.field ? name === options.field : true) &&
+						(options.choices ? field.from === options.choices : true),
+				);
+				return found && found[1].kind === "backlink" ? { name: found[0], field: found[1] } : undefined;
+			};
+			const targets = candidateCollections(site, options).flatMap(([collection, schema]) => {
+				const found = backlinkOf(schema);
+				return found
+					? [{ collection, name: found.name, label: found.field.label ?? found.name, from: found.field.from }]
+					: [];
+			});
+			const first = options.choices ?? targets[0]?.from;
+			if (!first || targets.length === 0) return undefined;
+			return aiAction({
+				label: textOf(site)("label.suggest", { name: targets[0]?.label ?? textOf(site)("field.series") }),
+				input: fieldInput(site),
+				send: ["title", "summary", "body"],
+				engine: "decide",
+				choices: { from: "collection", collection: first },
+				pick: "one",
+				threshold: options.threshold ?? 0.3,
+				result: "candidates",
+				apply: "append",
+				checks: [{ kind: "exists" }],
+				prompt: options.prompt ?? "Choose the series that this content is part of. A passing mention does not count.",
+				attach: fieldAttachOf(targets.filter((target) => target.from === first)),
+			});
+		};
+	},
+
 	/** Alt text of body images. The media screen's default alt text uses the same action. */
 	imageAlt: (options: { readonly prompt?: string; readonly styleGuide?: string } = {}) => {
 		return (site: AiSiteView) =>
@@ -274,7 +312,6 @@ export const aiPresets = {
 				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max: 200 }],
 				prompt:
 					options.prompt ??
@@ -302,7 +339,6 @@ export const aiPresets = {
 				input: imageInput(site),
 				send: ["image", "around"],
 				result: "candidates",
-				askInstruction: true,
 				checks: [{ kind: "maxLength", max: 120 }],
 				prompt:
 					options.prompt ??
@@ -458,7 +494,6 @@ export const aiPresets = {
 				input: { code: aiInput.code({ label: textOf(site)("input.code") }) },
 				result: "candidates",
 				apply: "append",
-				askInstruction: true,
 				checks: [regexRuns("code")],
 				prompt:
 					options.prompt ??
@@ -499,6 +534,7 @@ export const DEFAULT_AI_ACTIONS = {
 	summary: aiPresets.summary(),
 	tags: aiPresets.tags(),
 	category: aiPresets.category(),
+	series: aiPresets.series(),
 	imageAlt: aiPresets.imageAlt(),
 	imageCaption: aiPresets.imageCaption(),
 	mediaFilename: aiPresets.mediaFilename(),

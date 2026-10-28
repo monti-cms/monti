@@ -130,10 +130,19 @@ describe("slash menu insertion driven by block definitions", () => {
 		expect(filterCommands(testSite, "katex").some((c) => c.title === "수식")).toBe(true);
 		// Tooltip is a text decoration from the blocks extension, so it is not in the core menu; extension-provided entries (`inline`) come after the text formatting entries and before the block entries.
 		expect(filterCommands(testSite, "tooltip").some((c) => c.title === "툴팁")).toBe(false);
-		const inline = [{ title: "툴팁", description: "글자에 설명 달기", keywords: ["tooltip"], action: () => {} }];
+		const inline = [
+			{
+				title: "툴팁",
+				group: "insert" as const,
+				description: "글자에 설명 달기",
+				keywords: ["tooltip"],
+				action: () => {},
+			},
+		];
 		expect(filterCommands(testSite, "tooltip", [], inline).map((c) => c.title)).toEqual(["툴팁"]);
 		const titles = filterCommands(testSite, "", [], inline).map((c) => c.title);
 		expect(titles.indexOf("툴팁")).toBeGreaterThan(titles.indexOf("내부 글 링크"));
+		// An extension item sits with the other items that insert something; the components come after them.
 		expect(titles.indexOf("툴팁")).toBeLessThan(titles.indexOf("다이어그램"));
 	});
 });

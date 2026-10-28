@@ -18,6 +18,8 @@ const frameVariants = cva(
 				photo: "aspect-[4/3]",
 				wide: "aspect-video",
 				share: "aspect-[1.91/1]",
+				/** The cover in a narrow panel: three times as wide as tall. */
+				banner: "aspect-[3/1]",
 				auto: "",
 			},
 			size: {

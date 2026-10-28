@@ -10,7 +10,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteWrapper } from "../../../../admin/src/test/site";
 import { testSite } from "../../../test/site";
-import { aiCommonMessages } from "../ai-common.messages";
 import { AiSlotProvider } from "../ai-slot-provider";
 
 /** The host router of the admin, standing still at one address. */
@@ -23,7 +22,6 @@ const routerAt = (pathname: string): AdminRouter => ({
 });
 const hostRouter = routerAt(testSite.adminHref());
 
-const t = testSite.createTranslator(aiCommonMessages);
 const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 
 /** Checks only how a screen slot receives the AI action. The list response is fake. */
@@ -32,8 +30,6 @@ const view = (key: string, label: string) => ({
 	label,
 	enabled: true,
 	apply: "replace",
-	askInstruction: false,
-	instant: false,
 	attach: [{ slot: "field", field: "title" }],
 });
 
@@ -75,24 +71,37 @@ function renderPlace(router: AdminRouter = hostRouter) {
 }
 
 describe("AI slot source", () => {
-	it("gives each action a button with its own label", async () => {
+	it("gives an action the fill button, which carries the action's name", async () => {
 		renderPlace();
-		expect(await screen.findByRole("button", { name: "Suggest titles" })).toBeTruthy();
+		const fill = await screen.findByRole("button", { name: "Fill" });
+		expect(fill.getAttribute("title")).toBe("Suggest titles");
+	});
+
+	it("leaves out an action that only shows a note, which has nothing to put in a field", async () => {
+		items = [{ ...view("a", "Explain"), apply: "none" }];
+		renderPlace();
+		await waitFor(() => expect(fetch).toHaveBeenCalled());
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(screen.queryByRole("button")).toBeNull();
 	});
 
 	it("asks for no actions on the login screen, which the host router reports", async () => {
 		renderPlace(routerAt(testSite.adminHref("/login")));
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(fetch).not.toHaveBeenCalled();
-		expect(screen.queryByRole("button", { name: "Suggest titles" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Fill" })).toBeNull();
 	});
 
-	it("groups several actions in one menu named AI", async () => {
+	it("lists several actions in one menu opened by the fill button", async () => {
 		items = [view("a", "Suggest titles"), view("b", "Write summary")];
 		renderPlace();
-		const menu = await screen.findByRole("button", { name: t("slotMenu") });
-		fireEvent.click(menu);
-		await waitFor(() => expect(screen.getAllByRole("menuitem")).toHaveLength(2));
+		fireEvent.click(await screen.findByRole("button", { name: "Fill" }));
+		await waitFor(() =>
+			expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+				"Suggest titles",
+				"Write summary",
+			]),
+		);
 	});
 });
 
@@ -132,13 +141,13 @@ describe("the body an action reads", () => {
 		);
 	}
 
-	const instantAction = () => ({ ...view("a", "Suggest titles"), instant: true, input: { body: {} } });
+	const bodyAction = () => ({ ...view("a", "Suggest titles"), input: { body: {} } });
 
 	function stubFetch() {
 		const fetchMock = vi.fn(async (url: string) =>
 			String(url).endsWith("/v1/ai/run")
 				? { ok: true, status: 200, json: async () => ({ result: { kind: "text", text: "제목" } }) }
-				: { ok: true, status: 200, json: async () => ({ usable: ["a"], items: [instantAction()] }) },
+				: { ok: true, status: 200, json: async () => ({ usable: ["a"], items: [bodyAction()] }) },
 		);
 		vi.stubGlobal("fetch", fetchMock);
 		return fetchMock;
@@ -147,7 +156,7 @@ describe("the body an action reads", () => {
 	it("is sent as MDX, written from the document by the mdx format", async () => {
 		const fetchMock = stubFetch();
 		renderBody(true);
-		fireEvent.click(await screen.findByRole("button", { name: "Suggest titles" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Fill" }));
 		await waitFor(() => expect(runCalls(fetchMock)).toHaveLength(1));
 		const sent = JSON.parse(String(runCalls(fetchMock)[0]?.[1]?.body)) as { input: { body?: string } };
 		expect(sent.input.body).toBe(mdxBrowserFormat.export(body).trim());
@@ -157,7 +166,7 @@ describe("the body an action reads", () => {
 	it("is left out when no mdx format is registered, instead of sending the document", async () => {
 		const fetchMock = stubFetch();
 		renderBody(false);
-		fireEvent.click(await screen.findByRole("button", { name: "Suggest titles" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Fill" }));
 		await waitFor(() => expect(runCalls(fetchMock)).toHaveLength(1));
 		const sent = JSON.parse(String(runCalls(fetchMock)[0]?.[1]?.body)) as { input: Record<string, unknown> };
 		expect(sent.input).not.toHaveProperty("body");

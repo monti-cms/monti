@@ -6,20 +6,16 @@ import type { Node as PmNode } from "@tiptap/pm/model";
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
-import { useAdminEvents } from "../events";
 import type { TranslatorFor } from "../translator";
 import type { EditorAllowance } from "./allowed";
 import { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";
 import { OPEN_MEDIA_PICKER_EVENT } from "./block-inserts";
 import { FILE_NODE_NAME } from "./file-node";
 import type { PickedMedia, PickerKind } from "./image-insert-dialog";
-import { runImageInserted } from "./image-inserted";
 import { beginImageUpload, endImageUpload, setImageUploadPercent, uploadEditorImage } from "./image-upload";
 import { editorMediaMessages } from "./media.messages";
 import type { editorMessages } from "./messages";
 import { uploadAttachment } from "./upload-helper";
-
-const NO_SUBSCRIBERS: readonly never[] = [];
 
 /** The first image file in a clipboard or drop payload. */
 export const imageFileFrom = (source: DataTransferItemList | FileList | null): File | null => {
@@ -59,9 +55,6 @@ export function useMediaInsertion({
 }) {
 	const tm = useTranslator(editorMediaMessages);
 	const [picker, setPicker] = useState<{ open: boolean; kind: PickerKind }>({ open: false, kind: "image" });
-	/** The `editor.imageInserted` subscribers of the plugins. Every way an image goes in runs them, so one place does. */
-	const imageInserted = useAdminEvents().editor?.imageInserted ?? NO_SUBSCRIBERS;
-
 	useEffect(() => {
 		const open = (event: Event) => {
 			const kind = (event as CustomEvent<{ kind?: PickerKind }>).detail?.kind === "file" ? "file" : "image";
@@ -70,21 +63,6 @@ export function useMediaInsertion({
 		window.addEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 		return () => window.removeEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 	}, []);
-
-	const notifyInserted = useCallback(
-		(blockId: string) => {
-			if (!editor) return;
-			runImageInserted({
-				editor,
-				blockId,
-				subscribers: imageInserted,
-				site,
-				marker: tm("imageNode.marker"),
-				failed: tm("imageNode.generateFailed"),
-			});
-		},
-		[editor, imageInserted, site, tm],
-	);
 
 	/** A picked library image goes in at the cursor, with the library's default text. */
 	const insertImage = useCallback(
@@ -108,9 +86,8 @@ export function useMediaInsertion({
 					},
 				})
 				.run();
-			notifyInserted(blockId);
 		},
-		[editor, notifyInserted],
+		[editor],
 	);
 
 	const insertFile = useCallback(
@@ -153,7 +130,6 @@ export function useMediaInsertion({
 				const uploaded = await uploadEditorImage(site, file, (percent) => setImageUploadPercent(uploadId, percent), {
 					folderId: options.folderId ?? null,
 				});
-				let done = false;
 				settle((pos, node) => {
 					editor.view.dispatch(
 						editor.state.tr
@@ -166,9 +142,7 @@ export function useMediaInsertion({
 							})
 							.setMeta("addToHistory", false),
 					);
-					done = true;
 				});
-				if (done) notifyInserted(blockId);
 			} catch (error) {
 				settle((pos, node) => {
 					editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize).setMeta("addToHistory", false));
@@ -178,7 +152,7 @@ export function useMediaInsertion({
 				endImageUpload(uploadId);
 			}
 		},
-		[editor, media, site, tm, notifyInserted],
+		[editor, media, site, tm],
 	);
 
 	/** Uploads non-image files and inserts them as file blocks. If `at` is given, inserts there (where they were dropped). */

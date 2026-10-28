@@ -51,6 +51,34 @@ export const Neutral: Story = {
 	args: { tone: "neutral", title: "휴지통에 있는 글이에요", meta: "복원하면 초안으로 돌아와요 · 23일 남음" },
 };
 
+/** A failed notice whose detail is a sentence, not a date or a count: `plainMeta` sets it in the subtle ink, not in mono. */
+export const DangerSentence: Story = {
+	render: (args) => (
+		<Banner
+			{...args}
+			tone="danger"
+			role="alert"
+			title="다른 곳에서 10:41에 먼저 저장했어요"
+			meta="이 글은 저장할 수 없어요"
+			plainMeta
+		>
+			<TextButton variant="underline">비교하기</TextButton>
+			<TextButton>서버 최신본 불러오기</TextButton>
+		</Banner>
+	),
+};
+
+/** A warning with a date in mono and three ways out: compare (underlined), load, and the quiet one that discards. */
+export const DraftNotice: Story = {
+	render: (args) => (
+		<Banner {...args} title="이 브라우저에 저장하지 않은 편집이 있어요" meta="10. 26 10:12">
+			<TextButton variant="underline">비교하기</TextButton>
+			<TextButton>불러오기</TextButton>
+			<TextButton variant="quiet">버리기</TextButton>
+		</Banner>
+	),
+};
+
 /** Only the sentence, with nothing to do about it. */
 export const TitleOnly: Story = { args: { meta: undefined } };
 

@@ -47,7 +47,13 @@ describe("any site: AI field actions", () => {
 			const field = fieldOf(collection, attach.field);
 			const choices = definition.choices;
 			if (choices?.from === "collection") {
-				// A picking action attaches to relation fields pointing at that collection, and one/many matches the field.
+				// A picking action attaches to relation fields pointing at that collection (and one/many matches the field), or to a backlink
+				// field whose records are that collection's entries (the series a post is added to).
+				if (field?.kind === "backlink") {
+					expect(field.from).toBe(choices.collection);
+					expect(definition.pick).toBe("one");
+					continue;
+				}
 				expect(field?.kind).toBe("relation");
 				if (field?.kind !== "relation") continue;
 				expect(field.to).toBe(choices.collection);

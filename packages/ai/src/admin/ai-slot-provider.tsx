@@ -1,7 +1,6 @@
 "use client";
 
 import { apiErrorOf, CmsApiError, type Site, useSite, useTranslator } from "@monti-cms/admin";
-import { Spark } from "@monti-cms/admin/kit";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
 import { useQuery } from "@tanstack/react-query";
@@ -167,12 +166,11 @@ const isLoginScreen = (site: Pick<Site, "adminHref">, pathname: string | null) =
 	pathname !== null && pathname.replace(/\/$/, "") === site.adminHref("/login");
 
 /**
- * Attaches AI actions to screen slots. Among enabled actions, those whose attach target (`attach`) is this slot are attached as buttons.
+ * Attaches AI actions to screen slots. Among enabled actions, those whose attach target (`attach`) is this slot are attached as the field's fill action.
  * An action is not attached if the connection it uses is not ready.
  */
 export function AiSlotProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
-	const t = useTranslator(aiCommonMessages);
 	const pathname = useAdminPathname();
 	const { data } = useAiActions(!isLoginScreen(site, pathname));
 	// The model reads the body as MDX: the document of the entry is written with the `mdx` format when an action runs.
@@ -180,8 +178,11 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 
 	const sources = useMemo<SlotSource[]>(() => {
 		const usable = new Set(data?.usable ?? []);
+		// A note is shown, never put in: it has no place on a field.
 		const actions = data
-			? data.items.filter((action) => action.enabled && !action.hidden && usable.has(action.key))
+			? data.items.filter(
+					(action) => action.enabled && !action.hidden && usable.has(action.key) && action.apply !== "none",
+				)
 			: [];
 		const source: SlotSource = (place) =>
 			actions
@@ -189,22 +190,18 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 				.map((action) => ({
 					id: action.key,
 					label: action.label,
-					icon: <Spark aria-hidden />,
-					menuLabel: t("slotMenu"),
-					apply: action.apply,
-					askInstruction: action.askInstruction,
-					instant: action.instant,
+					apply: action.apply === "append" ? ("append" as const) : ("replace" as const),
 					run: (context, signal) => {
 						const { body, ...rest } = context;
 						const { input, env } = inputFromContext(action, {
 							...rest,
 							...(body && format ? { body: format.export(body).trim() } : {}),
 						});
-						return runAiAction(site, action.key, input, { env, request: context.request, signal });
+						return runAiAction(site, action.key, input, { env, signal });
 					},
 				}));
 		return [source];
-	}, [data, format, site, t]);
+	}, [data, format, site]);
 
 	return <SlotRegistryProvider sources={sources}>{children}</SlotRegistryProvider>;
 }

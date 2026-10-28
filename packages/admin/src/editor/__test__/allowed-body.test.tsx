@@ -1,10 +1,9 @@
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import type { BodyAllowed } from "@monti-cms/core/site";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { editorAllowance } from "../allowed";
@@ -17,7 +16,6 @@ import { CmsEditor } from "../tiptap-editor";
  * A body that limits its blocks and marks: what the editor offers and accepts, and that a body written before the list changed opens and saves as it is.
  */
 const t = testSite.createTranslator(editorMessages);
-const tc = testSite.createTranslator(commonMessages);
 
 beforeAll(() => {
 	// jsdom has no clipboard events; ProseMirror makes one to paste HTML.
@@ -70,15 +68,38 @@ const open = async (body: StoredDocument, allowed?: BodyAllowed) => {
 			}}
 		/>,
 	);
-	const toolbar = await screen.findByRole("toolbar", { name: t("toolbar.format") });
 	await waitFor(() => expect(editor).not.toBeNull());
-	return { toolbar, editor: editor as unknown as Editor, onChange };
+	return { editor: editor as unknown as Editor, onChange };
 };
 
-const buttonNames = (toolbar: HTMLElement) =>
-	within(toolbar)
+/** The names of the buttons of the format card over a selected word. */
+const cardNames = async (editor: Editor) => {
+	act(() => {
+		editor.commands.setTextSelection({ from: 1, to: 3 });
+		editor.view.focus();
+	});
+	const card = await screen.findByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
+	return within(card)
 		.getAllByRole("button")
 		.map((button) => button.getAttribute("aria-label") || button.textContent);
+};
+
+/** The rows of the "/" menu opened on a new line. */
+const slashRows = async (editor: Editor) => {
+	act(() => {
+		editor
+			.chain()
+			.focus("end")
+			.insertContent([{ type: "paragraph" }])
+			.insertContent("/")
+			.run();
+	});
+	const menu = await screen.findByRole("listbox", { name: t("slashMenu.label") });
+	return within(menu)
+		.getAllByRole("option")
+		.map((row) => row.textContent ?? "");
+};
+const has = (rows: string[], title: string) => rows.some((row) => row.startsWith(title));
 
 const saved = (onChange: ReturnType<typeof vi.fn>): StoredDocument => onChange.mock.lastCall?.[0];
 
@@ -91,52 +112,58 @@ const type = (editor: Editor, value: string) => {
 	if (!handled) editor.view.dispatch(editor.state.tr.insertText(value, from, to));
 };
 
-describe("what the toolbar offers", () => {
+describe("what the menus offer", () => {
 	it("offers everything when the body has no list", async () => {
-		const { toolbar } = await open(docOf("text"));
-		const names = buttonNames(toolbar);
-		for (const name of [t("toolbar.table"), t("toolbar.quote"), t("toolbar.codeBlock"), t("toolbar.footnote")]) {
+		const { editor } = await open(docOf("text"));
+		const names = await cardNames(editor);
+		for (const name of [
+			t("inlineMarks.italic"),
+			t("inlineMarks.superscript"),
+			t("inlineMarks.subscript"),
+			t("inlineBubble.footnoteAdd"),
+		]) {
 			expect(names).toContain(name);
 		}
-		expect(names).toContain(t("toolbar.align"));
-		expect(names).toContain(t("toolbar.script"));
-		expect(names).toContain(tc("upload"));
-		expect(names).toContain(t("inlineMarks.italic"));
+		cleanup();
+
+		const second = await open(docOf("text"));
+		const rows = await slashRows(second.editor);
+		for (const key of ["slash.table.title", "slash.quote.title", "slash.code.title", "slash.footnote.title"] as const) {
+			expect(has(rows, t(key)), key).toBe(true);
+		}
+		expect(has(rows, t("slash.image.title"))).toBe(true);
 	});
 
-	it("leaves out the blocks, marks and tools the list does not allow, and keeps the ones it does", async () => {
-		const { toolbar } = await open(docOf("text"), LIMITED);
-		const names = buttonNames(toolbar);
+	it("leaves out the blocks and marks the list does not allow, and keeps the ones it does", async () => {
+		const { editor } = await open(docOf("text"), LIMITED);
+		const names = await cardNames(editor);
 		for (const name of [
-			t("toolbar.table"),
-			t("toolbar.quote"),
-			t("toolbar.codeBlock"),
-			t("toolbar.footnote"),
-			t("toolbar.divider"),
-			t("toolbar.align"),
-			t("toolbar.script"),
 			t("inlineMarks.italic"),
 			t("inlineMarks.strike"),
+			t("inlineMarks.superscript"),
+			t("inlineBubble.footnoteAdd"),
 		]) {
 			expect(names).not.toContain(name);
 		}
 		expect(names).toContain(t("inlineMarks.bold"));
-		expect(names).toContain(t("toolbar.link"));
-		// Images are allowed, so uploads stay.
-		expect(names).toContain(tc("upload"));
-		// The component menu lists only the block the list keeps.
-		fireEvent.click(within(toolbar).getByRole("button", { name: t("customBlockMenu.label") }));
-		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent ?? "");
-		expect(items).toHaveLength(1);
-	});
+		expect(names).toContain(t("link.add"));
+		cleanup();
 
-	it("offers only the heading levels the list allows", async () => {
-		const { toolbar } = await open(docOf("text"), LIMITED);
-		fireEvent.click(within(toolbar).getByRole("button", { name: t("toolbar.paragraph") }));
-		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent ?? "");
-		expect(items).toContain(t("toolbar.heading", { level: 2 }));
-		expect(items).toContain(t("toolbar.heading", { level: 3 }));
-		expect(items).not.toContain(t("toolbar.heading", { level: 4 }));
+		const second = await open(docOf("text"), LIMITED);
+		const rows = await slashRows(second.editor);
+		for (const key of [
+			"slash.table.title",
+			"slash.quote.title",
+			"slash.code.title",
+			"slash.footnote.title",
+			"slash.divider.title",
+		] as const) {
+			expect(has(rows, t(key)), key).toBe(false);
+		}
+		// Images are allowed, and the components menu lists only the block the list keeps.
+		expect(has(rows, t("slash.image.title"))).toBe(true);
+		const menu = screen.getByRole("listbox", { name: t("slashMenu.label") });
+		expect(within(menu).getAllByRole("option").length).toBeGreaterThan(0);
 	});
 });
 

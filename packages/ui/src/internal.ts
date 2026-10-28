@@ -69,6 +69,17 @@ export {
 	CommandSeparator,
 } from "./command";
 export {
+	Compare,
+	CompareBody,
+	CompareCode,
+	CompareHeading,
+	CompareParagraph,
+	CompareProperty,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+} from "./compare";
+export {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,
@@ -184,6 +195,7 @@ export { Patch, type PatchLine } from "./patch";
 export { PickList, PickListItem } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
+export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
 export { ProposalBubble } from "./proposal-bubble";
 export { ProposalCard, ProposalItem } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";

@@ -1,11 +1,4 @@
-import {
-	createActiveTranslator,
-	fields,
-	type MediaField,
-	type SelectField,
-	type TextField,
-	type ViewField,
-} from "@monti-cms/core";
+import { createActiveTranslator, fields, type MediaField, type SelectField, type TextField } from "@monti-cms/core";
 import { seoMessages } from "./messages";
 
 /**
@@ -18,7 +11,7 @@ import { seoMessages } from "./messages";
  */
 
 /** Field slots of the set. */
-export type SeoPart = "preview" | "title" | "description" | "image" | "noindex" | "canonical";
+export type SeoPart = "title" | "description" | "image" | "noindex" | "canonical";
 
 /** Field role for each slot. The public page helper (`seoOf`), search preview and AI features find values by these roles. */
 export const SEO_ROLES = {
@@ -31,7 +24,6 @@ export const SEO_ROLES = {
 
 /** Default field names. */
 export const SEO_DEFAULT_KEYS = {
-	preview: "seoPreview",
 	title: "seoTitle",
 	description: "seoDescription",
 	image: "seoImage",
@@ -65,9 +57,7 @@ export const SEO_DEFAULT_LABELS = {
 export const SEO_DEFAULT_LIMITS = { title: 60, description: 155 } as const;
 
 /** Admin UI input names (registered by the SEO extension's admin side). If not registered, the default input is rendered. */
-export const SEO_INPUTS = { title: "seo-title", description: "seo-description", noindex: "seo-noindex" } as const;
-/** Name of the view field for the search result and share preview. */
-export const SEO_PREVIEW_VIEW = "search";
+export const SEO_INPUTS = { title: "seo-title", description: "seo-description", image: "seo-image" } as const;
 
 export interface SeoFieldsOptions<
 	K extends Partial<Record<SeoPart, string>> = Partial<Record<SeoPart, string>>,
@@ -78,7 +68,7 @@ export interface SeoFieldsOptions<
 	/** Slots to omit (e.g. `["canonical"]`). */
 	readonly omit?: readonly O[];
 	/** Change labels. */
-	readonly labels?: Partial<Record<Exclude<SeoPart, "preview">, string>> & { readonly preview?: string };
+	readonly labels?: Partial<Record<SeoPart, string>>;
 	/** Keep title, description, image and canonical URL separate per language. Default `true` (hiding is always a shared value). */
 	readonly localized?: boolean;
 	/** Recommended lengths (the count changes color when exceeded; saving is not blocked). Also used for AI suggestion length. */
@@ -91,7 +81,6 @@ type KeyOf<K, P extends SeoPart> = K extends { readonly [Q in P]: infer N extend
 
 /** Field definition shape for each slot (determines the stored value type). */
 interface SeoPartFields {
-	readonly preview: ViewField;
 	readonly title: TextField;
 	readonly description: TextField;
 	readonly image: MediaField;
@@ -110,9 +99,9 @@ export function seoFields<
 	const O extends SeoPart = never,
 >(options: SeoFieldsOptions<K, O> = {}): SeoFields<K, O> {
 	const key = (part: SeoPart) => options.keys?.[part] ?? SEO_DEFAULT_KEYS[part];
-	const custom = (part: Exclude<SeoPart, "preview">) => options.labels?.[part];
+	const custom = (part: SeoPart) => options.labels?.[part];
 	/** If the site did not set a label, it is chosen by display language at read time (the language is not known yet when the field is built). */
-	const lazyLabel = <F extends { label: string }>(field: F, part: Exclude<SeoPart, "preview">): F =>
+	const lazyLabel = <F extends { label: string }>(field: F, part: SeoPart): F =>
 		custom(part) === undefined
 			? Object.defineProperty(field, "label", {
 					get: () => SEO_DEFAULT_LABELS[part],
@@ -124,11 +113,6 @@ export function seoFields<
 	const limits = { ...SEO_DEFAULT_LIMITS, ...options.limits };
 	const shared = localized ? { localized: true as const } : {};
 	const result: Record<string, unknown> = {
-		/** Search result and share preview. Values are read from the role fields, falling back to the title and summary when empty. */
-		[key("preview")]: fields.view({
-			view: SEO_PREVIEW_VIEW,
-			...(options.labels?.preview ? { label: options.labels.preview } : {}),
-		}),
 		/** Search result title. Falls back to the title when empty. */
 		[key("title")]: lazyLabel(
 			fields.text({
@@ -154,7 +138,13 @@ export function seoFields<
 		),
 		/** Link preview and search result image. Falls back to the site's default image when empty. */
 		[key("image")]: lazyLabel(
-			fields.media({ label: custom("image") ?? "", role: SEO_ROLES.image, accept: "image", ...shared }),
+			fields.media({
+				label: custom("image") ?? "",
+				role: SEO_ROLES.image,
+				accept: "image",
+				input: SEO_INPUTS.image,
+				...shared,
+			}),
 			"image",
 		),
 		/** Hidden from search engines when `noindex`. */
@@ -171,7 +161,6 @@ export function seoFields<
 					},
 				},
 				defaultValue: "index",
-				input: SEO_INPUTS.noindex,
 			}),
 			"noindex",
 		),

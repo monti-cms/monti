@@ -17,10 +17,11 @@ import {
 	Text,
 	useComboboxAnchor,
 } from "@monti-cms/ui";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { EmptyState } from "../shared/empty-state";
 import { entriesMessages } from "./messages";
+import { usePropertyEdit } from "./property-edit";
 
 export interface RelationOption {
 	value: string;
@@ -84,8 +85,12 @@ export function RelationCombobox({
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	const anchor = useComboboxAnchor();
+	// Opened in place in the properties list: the list is open at once, and closing it ends the edit.
+	const edit = usePropertyEdit();
 	const [query, setQuery] = useState("");
 	const [isCreating, setIsCreating] = useState(false);
+	// A name being added opens a sheet: the list closing then does not end the edit, or the sheet would go with it.
+	const creating = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const byValue = useMemo(
@@ -124,10 +129,19 @@ export function RelationCombobox({
 				},
 				// A closed list starts the next search from the first entries again.
 				onOpenChange: (open: boolean) => {
-					if (!open) onSearch("");
+					if (!open) {
+						onSearch("");
+						if (!creating.current) edit?.done();
+					}
 				},
 			}
-		: { onInputValueChange: setQuery };
+		: {
+				onInputValueChange: setQuery,
+				onOpenChange: (open: boolean) => {
+					if (!open && !creating.current) edit?.done();
+				},
+			};
+	const openProps = edit ? { defaultOpen: true } : {};
 	const items: Item[] = canCreate
 		? [...options, { value: `__create__:${trimmed}`, label: trimmed, create: true }]
 		: [...options];
@@ -135,6 +149,7 @@ export function RelationCombobox({
 	const create = async (label: string, keep: string[]) => {
 		if (!onCreate) return;
 		setIsCreating(true);
+		creating.current = true;
 		setError(null);
 		try {
 			const createdId = await onCreate(label);
@@ -144,6 +159,7 @@ export function RelationCombobox({
 		} catch (caught) {
 			setError(caught instanceof Error && caught.message ? caught.message : t("relation.addFailed"));
 		} finally {
+			creating.current = false;
 			setIsCreating(false);
 		}
 	};
@@ -179,6 +195,7 @@ export function RelationCombobox({
 					items={items}
 					multiple
 					autoHighlight
+					{...openProps}
 					disabled={disabled || isCreating}
 					value={selected}
 					onValueChange={(next: Item[]) => {
@@ -219,6 +236,7 @@ export function RelationCombobox({
 			<Combobox
 				items={items}
 				autoHighlight
+				{...openProps}
 				disabled={disabled || isCreating}
 				value={selected[0] ?? null}
 				onValueChange={(next: Item | null) => {

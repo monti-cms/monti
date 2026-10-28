@@ -820,7 +820,7 @@ describe("recovery on open", () => {
 	it("offers a copy made at the server's version as `restore`, and restoring puts it into the form", async () => {
 		const copy = recoveryCopy(ENTRY, { title: "임시 저장한 제목" });
 		const { editor } = await opened({ records: [copy] });
-		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt });
+		expect(editor().recovery).toEqual({ kind: "restore", savedAt: copy.savedAt, form: copy.snapshot });
 		expect(editor().form.title).toBe("테스트");
 		editor().restoreRecovery();
 		expect(editor().form.title).toBe("임시 저장한 제목");
@@ -836,6 +836,7 @@ describe("recovery on open", () => {
 		expect(editor().recovery).toEqual({
 			kind: "conflict",
 			savedAt: copy.savedAt,
+			form: copy.snapshot,
 			server: expect.objectContaining({ version: 4 }),
 		});
 	});
@@ -884,7 +885,7 @@ describe("recovery on open", () => {
 		const ctx = setup({ target: { mode: "new", collection: "post" }, records: [record] });
 		ctx.core.start();
 		await vi.waitFor(() => expect(ctx.editor().recovery).not.toBeNull());
-		expect(ctx.editor().recovery).toEqual({ kind: "restore", savedAt: 5 });
+		expect(ctx.editor().recovery).toEqual({ kind: "restore", savedAt: 5, form: snapshot });
 		expect(ctx.editor().load).toEqual({ status: "ready" });
 		ctx.editor().restoreRecovery();
 		expect(ctx.editor().form.title).toBe("쓰던 글");

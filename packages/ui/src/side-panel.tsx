@@ -33,6 +33,7 @@ const SIDE_PANEL_WIDTH = {
  */
 export function SidePanel({
 	title,
+	bar,
 	actions,
 	onClose,
 	footer,
@@ -43,7 +44,10 @@ export function SidePanel({
 	children,
 	...props
 }: Omit<ComponentProps<"aside">, "title"> & {
-	title: ReactNode;
+	/** The panel's name and its 16px head. Without it the panel has no head (give it an `aria-label`, and a `bar` if it has tabs). */
+	title?: ReactNode;
+	/** A row pinned at the top in place of the head: the tab bar of the properties panel. */
+	bar?: ReactNode;
 	/** Icon buttons at the end of the head, before the close button. */
 	actions?: ReactNode;
 	onClose?: () => void;
@@ -72,7 +76,7 @@ export function SidePanel({
 	return (
 		<aside
 			data-slot="side-panel"
-			aria-labelledby={titleId}
+			aria-labelledby={title ? titleId : undefined}
 			className={cn(
 				"flex min-h-0 w-full min-w-0 shrink-0 flex-col bg-monti-tool shadow-[inset_1px_0_0_var(--monti-border-default)]",
 				SIDE_PANEL_WIDTH[width],
@@ -80,17 +84,21 @@ export function SidePanel({
 			)}
 			{...props}
 		>
-			<header data-slot="side-panel-header" className={PANEL_HEAD}>
-				<h2 id={titleId} className={PANEL_TITLE}>
-					{title}
-				</h2>
-				{actions}
-				{onClose && (
-					<IconButton label={labels.close} side="bottom" onClick={onClose}>
-						<Close aria-hidden />
-					</IconButton>
-				)}
-			</header>
+			{title ? (
+				<header data-slot="side-panel-header" className={PANEL_HEAD}>
+					<h2 id={titleId} className={PANEL_TITLE}>
+						{title}
+					</h2>
+					{actions}
+					{onClose && (
+						<IconButton label={labels.close} side="bottom" onClick={onClose}>
+							<Close aria-hidden />
+						</IconButton>
+					)}
+				</header>
+			) : (
+				bar
+			)}
 			{onSubmit ? (
 				<form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
 					{body}

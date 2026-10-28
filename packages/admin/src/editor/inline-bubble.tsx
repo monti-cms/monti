@@ -18,6 +18,10 @@ import type { MontiIcon } from "@monti-cms/ui";
 import {
 	Box,
 	cn,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	FormatBar,
 	FormatBarButton,
 	FormatBarRequest,
@@ -26,6 +30,7 @@ import {
 	type FormatMark,
 	Icon,
 	Inline,
+	MenuTick,
 	Separator,
 	Text,
 	TextButton,
@@ -38,6 +43,7 @@ import { createPortal } from "react-dom";
 import {
 	type EditorBubblePanel,
 	type EditorBubbleProps,
+	type EditorFormatItem,
 	type EditorMarkExtension,
 	type EditorSelectionAction,
 	useAdminComponents,
@@ -98,6 +104,17 @@ const TEXT_FORMATS: readonly string[] = ["bold", "italic", "underline", "strike"
 
 const GAP = 8;
 const EDGE = 8;
+
+/**
+ * Window event that runs a site-added format (an `EditorFormatItem`) by its `id` on the current selection, as if it was picked from the ⋯ menu. A slash menu
+ * item that selects some text and then needs the format's input (the tooltip's description) sends it with {@link runFormatItem}.
+ */
+export const RUN_FORMAT_ITEM_EVENT = "cms:run-format-item";
+export const runFormatItem = (id: string) =>
+	window.dispatchEvent(new CustomEvent(RUN_FORMAT_ITEM_EVENT, { detail: id }));
+
+/** A format of a site, with the mark extension it came from. */
+type SiteFormat = EditorFormatItem & { key: string };
 
 /** A bubble button, 28px like the buttons of the format bar. The name (aria-label) and tooltip are the same. With `pressed`, it is a toggle button. Extension bubble buttons use this too. */
 export function BubbleButton({
@@ -186,14 +203,35 @@ export function InlineBubble({
 	// Hide while dragging with the button held (selecting text) and while typing.
 	const [pointerDown, setPointerDown] = useState(false);
 	const [typing, setTyping] = useState(false);
+	// The ⋯ menu moves the focus into itself, so the card stays while it is open.
+	const [moreOpen, setMoreOpen] = useState(false);
+	// A format asked for by id (`runFormatItem`) that waits for the card of the new selection.
+	const [pendingFormat, setPendingFormat] = useState<string | null>(null);
+	// Runs a site-added format by id on the card of the current selection; set while the card is drawn.
+	const formatRunnerRef = useRef<((id: string) => boolean) | null>(null);
 	const bubbleRef = useRef<HTMLDivElement>(null);
 	const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 	const [, setScrollTick] = useState(0);
 
+	useEffect(() => {
+		const onRun = (event: Event) => {
+			if (event instanceof CustomEvent && typeof event.detail === "string") setPendingFormat(event.detail);
+		};
+		window.addEventListener(RUN_FORMAT_ITEM_EVENT, onRun);
+		return () => window.removeEventListener(RUN_FORMAT_ITEM_EVENT, onRun);
+	}, []);
+
 	const target = snapshot?.target ?? null;
 	const visible =
 		target !== null &&
-		(panel !== null || (!!snapshot?.focused && !pointerDown && !(typing && target.kind === "marks")));
+		(panel !== null || moreOpen || (!!snapshot?.focused && !pointerDown && !(typing && target.kind === "marks")));
+
+	// A format asked for by id runs when the card of the new selection is up; if that selection cannot take it, the request is dropped.
+	useEffect(() => {
+		if (pendingFormat === null || !visible) return;
+		formatRunnerRef.current?.(pendingFormat);
+		setPendingFormat(null);
+	}, [pendingFormat, visible]);
 
 	useEffect(() => {
 		const onTransaction = ({ transaction }: { transaction: Transaction }) => {
@@ -269,11 +307,8 @@ export function InlineBubble({
 		const bubble = bubbleRef.current;
 		const height = bubble?.offsetHeight ?? 36;
 		const width = bubble?.offsetWidth ?? 0;
-		// Keep it from being covered by the top (sticky) formatting tools. If there is no room above, float it below the text.
-		const formatBar = editor.view.dom
-			.closest("[data-monti-editor-shell]")
-			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
-		const minTop = (formatBar?.getBoundingClientRect().bottom ?? 0) + GAP;
+		// If there is no room above the text, float it below.
+		const minTop = GAP;
 		if (rect.bottom < minTop || rect.top > window.innerHeight) {
 			setPosition(null);
 			return;
@@ -285,7 +320,10 @@ export function InlineBubble({
 		setPosition((previous) => (previous && previous.top === top && previous.left === left ? previous : { top, left }));
 	});
 
-	if (!visible || !target || typeof window === "undefined") return null;
+	if (!visible || !target || typeof window === "undefined") {
+		formatRunnerRef.current = null;
+		return null;
+	}
 
 	// Removing an effect from the bubble changes the document but is not typing, so keep the bubble visible.
 	const act = (action: () => void) => () => {
@@ -537,17 +575,20 @@ export function InlineBubble({
 		</Inline>
 	);
 
-	// In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
-	// A text style the body's allowed list does not allow gets no button, but one already in the text still shows its details above.
-	const bubbleTools = (group: "format" | "link") =>
-		markExtensions
-			.filter(({ name }) => allowance.allowsEditorMark(name))
-			.flatMap(({ name, extension }) => (extension.bubble?.group === group ? [{ name, bubble: extension.bubble }] : []))
-			.sort((a, b) => (a.bubble.order ?? 1) - (b.bubble.order ?? 1));
-	const renderTool = ({ name, bubble }: ReturnType<typeof bubbleTools>[number]) => (
-		<bubble.Button key={name} {...bubbleProps} />
-	);
-	const linkTools = bubbleTools("link");
+	// The formats the site added sit under the ⋯ of the card. A format the body's allowed list does not allow is not listed, and a format that cannot work on this
+	// selection (`isAvailable`) is left out; with none left there is no ⋯. One already in the text still shows its details above.
+	const siteFormats: SiteFormat[] = markExtensions
+		.filter(({ name }) => allowance.allowsEditorMark(name))
+		.flatMap(({ name, extension }) =>
+			(extension.formatItems ?? []).map((item) => ({ ...item, key: `${name}:${item.id}` })),
+		)
+		.filter((item) => item.isAvailable?.(bubbleProps) ?? true);
+	formatRunnerRef.current = (id) => {
+		const item = siteFormats.find((candidate) => candidate.id === id);
+		if (item) item.run(bubbleProps);
+		return Boolean(item);
+	};
+	const formatLabel = (item: SiteFormat) => (typeof item.label === "function" ? item.label(editor) : item.label);
 	const renderSelectionTools = () => {
 		const marks = allowedMarkTools(site, editor.state);
 		const markButton = (item: (typeof marks)[number]) => (
@@ -580,7 +621,6 @@ export function InlineBubble({
 							</BubbleButton>,
 						]
 					: []),
-				...linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool),
 				...(allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link")
 					? [
 							<FormatButton
@@ -592,13 +632,12 @@ export function InlineBubble({
 							/>,
 						]
 					: []),
-				...linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool),
 				...(!inCode && allowance.allowsBlock("footnotes") && canInsertFootnote(editor)
 					? [
 							<FormatButton
 								key="footnote"
 								mark="footnote"
-								label={t("toolbar.footnote")}
+								label={t("inlineBubble.footnoteAdd")}
 								// A footnote goes after the selected words; it does not replace them.
 								onClick={() => {
 									editor.chain().focus().setTextSelection(editor.state.selection.to).run();
@@ -607,7 +646,35 @@ export function InlineBubble({
 							/>,
 						]
 					: []),
-				...bubbleTools("format").map(renderTool),
+				...(siteFormats.length > 0
+					? [
+							<DropdownMenu
+								key="more"
+								modal={false}
+								open={moreOpen}
+								onOpenChange={(next, details) => {
+									setMoreOpen(next);
+									// Closed with no pick: the focus goes back to the text, so the card stays with the selection.
+									if (!next && details.reason !== "item-press") editor.view.focus();
+								}}
+							>
+								<FormatButton
+									mark="more"
+									label={t("formatBar.more")}
+									trigger={(button) => <DropdownMenuTrigger render={button} />}
+								/>
+								<DropdownMenuContent side="bottom" align="end" finalFocus={false}>
+									{siteFormats.map((item) => (
+										<DropdownMenuItem key={item.key} onClick={() => item.run(bubbleProps)}>
+											{item.icon && <Icon icon={item.icon} tone="muted" />}
+											{formatLabel(item)}
+											{item.isActive?.(editor) && <MenuTick />}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>,
+						]
+					: []),
 				...(inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold")
 					? [
 							<BubbleButton

@@ -27,6 +27,7 @@ export const presetMessages = defineMessages("cms-ai.presets", {
 		"label.draft": "Write draft",
 		"label.codeFold": "Generate code block regex",
 		"field.tags": "Tags",
+		"field.series": "Series",
 		"field.category": "Category",
 	},
 	ko: {
@@ -54,6 +55,7 @@ export const presetMessages = defineMessages("cms-ai.presets", {
 		"label.draft": "초안 쓰기",
 		"label.codeFold": "코드 블록 정규식 생성",
 		"field.tags": "태그",
+		"field.series": "시리즈",
 		"field.category": "분류",
 	},
 });

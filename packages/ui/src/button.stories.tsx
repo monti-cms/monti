@@ -89,3 +89,15 @@ export const FullWidth: Story = {
 		</Stack>
 	),
 };
+
+/** The key combination that does the same, after the label (a save button: "Save ⌘S"). */
+export const WithShortcut: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center" wrap>
+			<Button shortcut="⌘S">저장</Button>
+			<Button size="sm" shortcut="⌘S">
+				저장
+			</Button>
+		</Stack>
+	),
+};

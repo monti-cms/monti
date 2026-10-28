@@ -11,6 +11,7 @@ vi.mock("../../screens/trash/page", () => page("trash"));
 vi.mock("../../screens/media/page", () => page("media"));
 vi.mock("../../screens/page", () => page("dashboard"));
 vi.mock("../../screens/login/page", () => page("login"));
+vi.mock("../../screens/templates/edit-page", () => page("template"));
 vi.mock("../../screens/entries/new/page", () => page("new"));
 vi.mock("../../screens/entries/[id]/edit/page", () => page("edit"));
 
@@ -59,6 +60,13 @@ describe("admin addresses", () => {
 			expect(result.props).toMatchObject({ path });
 		}
 		expect((await open("tools")).props).toMatchObject({ path: undefined });
+	});
+
+	it("opens a template on a page of its own: a new one, or one by its id", async () => {
+		expect((await open("templates", "new")).name).toBe("template");
+		expect((await open("templates", "new")).props).toMatchObject({ id: undefined });
+		expect((await open("templates", "t1", "edit")).props).toMatchObject({ id: "t1" });
+		await expect(open("templates", "t1")).rejects.toThrow("not-found");
 	});
 
 	it("is a 404 for deeper tools paths", async () => {

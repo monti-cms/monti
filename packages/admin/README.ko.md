@@ -73,7 +73,7 @@ export default defineAdminPlugin({ components: { icons: { view: View } } });
 - `CmsEditor`는 `doc`을 받고, 바뀔 때마다 `onChange(doc)`를 부른다. 문서가 블록에 준 id가 그대로 담긴다. 편집기 자신이 만든 것이 아닌 `doc`이 오면 편집기가 보이는 것을 바꾼다
   (같은 내용에 id나 키 순서만 다른 문서는 그대로 둔다). `@monti-cms/admin/editor`의 `storedToTiptap(doc)`·`tiptapToStored(json)`이 바로 바꿔 준다. 편집 화면이 없는 노드나
   문서로 읽지 못한 본문(`unparsed` 노드 하나)은 읽기 전용 상자(`cmsOpaqueBlock`)에 통째로 담아 아무것도 잃지 않는다.
-- `CmsEditor`는 `allowed`(컬렉션 `body`의 객체 형태: `blocks`, `marks`, `headings`. 편집 화면은 컬렉션의 것을 넘긴다)도 받는다. 그러면 그것만 보여 주고 받아들이며(툴바, 슬래시·컴포넌트 메뉴, 글 말풍선, 입력 규칙, 단축키, 붙여넣기), 이미 다른 것이 들어 있는 본문도 그대로 열리고 저장된다. `@monti-cms/core` README의 "본문별 허용 블록·마크"를 본다.
+- `CmsEditor`는 `allowed`(컬렉션 `body`의 객체 형태: `blocks`, `marks`, `headings`. 편집 화면은 컬렉션의 것을 넘긴다)도 받는다. 그러면 그것만 보여 주고 받아들이며(슬래시 메뉴, 블록 메뉴, 서식 카드, 입력 규칙, 단축키, 붙여넣기), 이미 다른 것이 들어 있는 본문도 그대로 열리고 저장된다. `@monti-cms/core` README의 "본문별 허용 블록·마크"를 본다.
 - 편집 화면의 폼은 본문을 `form.doc`으로 든다(초안, 브라우저 복구본, 충돌 비교가 모두 문서를 본다. 내용으로 비교하므로 블록 id와 키 순서는 따지지 않는다). 그 전에 본문을 MDX 글로 `form.mdx`에 담아
   저장한 복구본도 그대로 되살린다. 이런 복구본은 `unparsed` 문서로 보관되고, 원문 패널(`@monti-cms/mdx`의 `mdx()` 플러그인)이 열려 있으면 다시 읽는다.
 - `DocPreview`(`@monti-cms/admin/editor`)는 번역 화면이 원문을 보이고 AI가 결과를 보이는 문서 읽기 전용 보기다.
@@ -81,7 +81,7 @@ export default defineAdminPlugin({ components: { icons: { view: View } } });
 
 ### 원문 패널
 
-도구 줄 끝의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
+문서 도구(본문 오른쪽 위의 버튼 줄. 본문 위에 툴바는 없다)의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
 (`useAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
 
 ```tsx
@@ -105,20 +105,23 @@ const components = {
 
 ## 속성 칸
 
-편집 화면 오른쪽 속성 칸은 컬렉션 정의대로 입력을 그린다. 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
+편집 화면 오른쪽 속성 칸은 컬렉션 정의로 만든 읽기 목록이다. 이름표 아래에 값이 있고, 값을 누르면 그 자리에서 입력이 열린다(Enter·Esc·줄을 벗어나면 닫힌다). 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
 (`fields.media`)는 미디어 고르기(`accept: "file"`이면 파일 올리기)다. 필드 이름이나 역할로 입력을 바꾸지 않는다.
 `input`으로 등록한 입력을 고르면 그 입력이 먼저다. 본체에는 이름 붙은 입력이 없다. 여러 줄 텍스트(`multiline: true`)는
 `rows`(기본 2)만큼의 여러 줄 칸이다(예전 `input: "auto-summary"`는 `multiline: true, rows: 3`으로 바꾼다).
 
 `fieldInputs`에는 컴포넌트(입력 전체를 바꾼다) 또는 조각(`FieldInputParts`, 기본 입력을 두고 일부만 바꾼다)을 등록한다.
-조각은 지금 입력 중인 값(`form`)을 읽을 수 있다.
+조각은 지금 입력 중인 값(`form`)을 읽을 수 있다. `Aside`는 필드가 열려 있는 동안 이름표 줄에 보이고, `Empty`는 값이 비었을 때 목록이 대신 읽어 주는 말("제목과 같음"처럼 따르는 값)이다.
+컴포넌트 하나로 등록한 입력은 제 값을 직접 그리므로 목록에서도 늘 열려 있다.
 
 ```tsx
 const components = {
 	fieldInputs: {
 		// 비었을 때 쓸 값을 안내 문구로, 글자 수를 이름표 줄 오른쪽에
 		"meta-title": { placeholder: ({ form }) => form.title, Aside: ({ value }) => <span>{String(value ?? "").length}</span> },
-		// 입력 줄 없이 이름표 줄의 스위치만(`Input: null`)
+		// 비었을 때 따르는 값을 말하기
+		"meta-title": { Empty: () => <>제목과 같음</> },
+		// 입력 줄 없이 이름표 줄의 조각만(`Input: null`)
 		"hide-switch": { Input: null, Aside: HideSwitch },
 	},
 };
@@ -141,7 +144,8 @@ const components = {
 |---|---|---|
 | 사이트·언어·컬렉션·파일·관리자 | `<관리자 경로>/settings`(사이트 탭으로 열린다. `site`·`locales`·`collections`·`file`·`admin`) | 설정, 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
 | API 키(도구의 탭) | `<관리자 경로>/tools/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결과 플러그인의 키 슬롯은 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
-| 템플릿(도구의 탭) | `<관리자 경로>/tools/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
+| 템플릿(도구의 탭) | `<관리자 경로>/tools/templates` | 본문 템플릿. 한 줄에 이름, 제목들, 고친 날, 복제·지우기 메뉴가 있고 헤더에 "템플릿 추가"가 있다(`admin.templates`가 `false`면 404). |
+| 템플릿 하나 | `<관리자 경로>/templates/new`, `<관리자 경로>/templates/<id>/edit` | 도구 페이지 밖의 템플릿 한 장짜리 페이지. 이름 아래에 본문이 있고, 고친 곳이 생기면 헤더에 "저장 안 됨"과 저장 버튼(⌘S)이 나오며, 상태 줄에 글자 수가 있다. 돌아가기 링크는 템플릿 탭으로 간다. |
 | 데이터(도구의 탭) | `<관리자 경로>/tools/data` | 백업, zip 하나로 글 가져오기(빈 사이트에 전체 백업이면 복원 시트가 열린다). |
 | 활동 기록(도구의 탭) | `<관리자 경로>/tools/events` | 이벤트 전달. 탭에 실패한 전달 개수가 붙는다. |
 | 플러그인 페이지마다 하나(도구의 탭) | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`). 기본 탭들 뒤의 탭으로 나온다. |
@@ -191,21 +195,6 @@ function NoticeView() {
 }
 ```
 
-## 관리자 이벤트
-
-플러그인의 관리자 쪽은 관리자에서 일어나는 일에 `on`으로 반응한다. 서버의 `on`처럼 대상과 이벤트로 적는다:
-`defineAdminPlugin({ on: { editor: { imageInserted: [fillAltText] } } })`(타입은 `AdminEvents`·`ImageInserted`·`ImageInsertedEvent`). 관리자 이벤트는 과거형이다.
-일이 끝난 뒤에 오고 그 일을 막지 않는다. 이벤트마다 서로 상관없는 구독자 목록을 받아 플러그인 순서대로 돌리고, 실패한 구독자는 짧은 알림만 보이며 동작이나
-다른 구독자에는 손대지 않는다. 구독자는 클라이언트 함수이므로 플러그인의 `"use client"` 관리자 모듈에 둔다.
-
-| 이벤트 | 언제 | 구독자가 받는 것 |
-|---|---|---|
-| `editor.imageInserted` | 이미지가 본문에 들어감. 끌어 놓기·붙여넣기·슬래시 메뉴·도구 막대가 모두 이미지 대화상자로 넣으므로 어느 쪽이든 불린다 | `{ image: { mediaId?, src?, alt, caption, decorative }, around, site, signal, fill }` |
-
-이미지는 바로 들어가고, 구독자가 도는 동안 "이미지 글을 쓰는 중…"을 보인다. `fill({ alt?, caption? })`은 칸이 아직 비어 있고 넣은 뒤로 사람이 그 칸에
-입력하지 않았을 때만 쓴다(장식 이미지에는 대체 텍스트를 쓰지 않는다). 이미지가 지워졌으면 아무것도 쓰지 않고, 그때 `signal`도 중단된다. 무엇이든 썼는지를
-돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나다.
-
 ## 글자 꾸밈
 
 블록 확장의 글자 꾸밈(`syntax.kind: "text"`, `editor.view: "mark"`, 예: `@monti-cms/blocks`의 툴팁·코드 연결·글자색)은 관리자
@@ -218,17 +207,20 @@ import type { EditorMarkExtension } from "@monti-cms/admin/editor";
 const note: EditorMarkExtension = {
 	inclusive: false, // 꾸밈 끝에 이어 친 글자가 꾸밈을 이어받는가(기본 false)
 	render: (attrs) => ({ class: "underline decoration-wavy" }), // span에 더할 HTML 속성
-	toolbar: { group: "format", priority: 3, Button: NoteButton, MenuItems: NoteMenuItems }, // format: 글자 꾸밈 뒤, link: 링크 뒤
-	bubble: { group: "link", order: -1, Button: NoteBubbleButton }, // 글자를 골랐을 때 버블 버튼(링크 앞)
+	formatItems: [noteFormat], // 서식 카드 ⋯ 아래의 줄(아래 설명)
 	detail: NoteDetail, // 커서가 꾸밈 안에 있을 때 버블 내용(설명·수정·해제)
 	insertActions: [{ id: "note", title: "메모", description: "…", keywords: ["note"], run: (editor, range) => {} }], // 슬래시 메뉴
 };
 const components = { marks: { note } };
 ```
 
-- 버블 버튼·내용은 `{ editor, inCode, openPanel, closePanel, act }`를 받는다. `openPanel({ label, size, content })`은 버블 안에
-  입력 칸을 펼친다. 같은 모양을 내려면 `@monti-cms/admin/editor`의 `BubbleButton`·`MarkTextForm`·`MarkTextPopover`·
-  `removeInlineMark`·`allowsMark`를 쓴다.
+- 서식 카드에는 사이트가 더한 꾸밈의 버튼이 따로 없다. 꾸밈마다 카드 `⋯` 아래의 한 줄이다(`formatItems`, 타입 `EditorFormatItem`): `id`(사이트에서
+  유일), `label`(문자열, 또는 고른 글에 따라 바뀌면 편집기를 받는 함수. "툴팁 넣기"·"툴팁 고치기"처럼), `icon`, `isAvailable(props)`(코드 안처럼 꾸밈이
+  안 되는 자리에서는 false. 남는 줄이 없으면 `⋯`도 그리지 않는다), `isActive(editor)`(줄 끝에 ✓), `run(props)`. `props`는
+  `{ editor, inCode, openPanel, closePanel, act }`이다. `openPanel({ label, size, content })`은 카드 안에 입력 칸을 펼치고 `closePanel`은 닫는다.
+  `runFormatItem(id)`(`@monti-cms/admin/editor`)는 고른 글에 그 줄을 id로 실행한다. 샘플 글자를 먼저 고르는 슬래시 메뉴 항목처럼 다른 곳에서 부를 때 쓴다.
+  커서가 꾸밈 안에 있을 때의 내용(`detail`)은 같은 `props`에 `mark`를 더해 받는다. 거기서 카드와 같은 모양을 내려면 `@monti-cms/admin/editor`의
+  `BubbleButton`·`MarkTextForm`·`removeInlineMark`·`allowsMark`를 쓴다.
 - HTML로는 `span[data-monti-mark="이름"]`과 속성마다 `data-mark-<속성>`이다. 저장 문서(CmsNode)의 mark 이름은 블록 이름이고
   속성은 정의의 속성만 남긴다(`markAttrsOf`).
 - 속성에 `codeAnchor: true`가 있는 꾸밈은 코드 블록 줄 이름표를 가리킨다(`CODE_ANCHOR_REF`). 코드 블록의 줄 메뉴 "본문 연결"·
@@ -236,13 +228,13 @@ const components = { marks: { note } };
   잇기 명령(`findAnchor`·`startLinkFromText`·`unlinkRef`)도 같은 진입점에 있다.
 - 코드 블록 안 글자 툴팁(코드 펜스 주석 `// @char Tooltip`)은 본체 코드 블록 기능이라 본문 툴팁과 따로다(마크 `codeTooltip`).
 - 코드 블록 도구는 사이트 설정 `codeBlock`(`@monti-cms/core` README)을 따른다. `omitLineEffects`와 `features`(`rules`·`fold`·`tooltip`·`textStyles`)는 줄 효과·정규식 규칙·접기·툴팁·
-  코드 안 굵게·기울임·취소선·밑줄을 줄 메뉴·규칙 패널·버블·툴바·단축키에서 감추고, `themes`와 `languages`는 강조 테마와 언어 목록을 정한다.
+  코드 안 굵게·기울임·취소선·밑줄을 줄 메뉴·규칙 패널·서식 카드·단축키에서 감추고, `themes`와 `languages`는 강조 테마와 언어 목록을 정한다.
   꺼진 도구를 이미 쓰는 본문은 그대로 열리고 저장해도 바뀌지 않으며, 그 효과는 계속 보여 지울 수 있다.
 
 ## 글 검사(맞춤법 등)
 
 본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
-등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 도구 모음 버튼(이름 `label`, 아이콘 `icon`)이
+등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 문서 도구의 버튼(이름 `label`, 아이콘 `icon`)이
 생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고). 예제 블로그의 `word-list` 플러그인이 작은 예다.
 
@@ -253,7 +245,7 @@ import type { AdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
 	id: "my-words",
-	label: "금지어 검사", // 도구 모음 버튼 이름
+	label: "금지어 검사", // 버튼 이름
 	icon: "flag", // Carbon 아이콘 이름이나 컴포넌트. 없으면 맞춤법 아이콘
 	locales: ["ko"], // 없으면 모든 언어
 	limits: { maxChars: 10_000, maxSegments: 50 }, // 넘으면 나눠 보낸다
@@ -340,7 +332,7 @@ export function StatsPage() {
 
 부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다.
 
-편집 화면 확장(`editorExtensions`)은 툴바 끝 요소·블록 손잡이 옆 동작·선택 영역 메뉴·슬래시 메뉴 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
+편집 화면 확장(`editorExtensions`)은 문서 도구(본문 오른쪽 위의 버튼 줄)의 요소·블록 메뉴의 동작·서식 카드와 슬래시 메뉴의 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `defineAdminPlugin`의 `slots`로 동작을 붙인다(`SlotSource` 타입과 슬롯 부품은 `@monti-cms/admin/slots`에 있다).
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
@@ -424,11 +416,12 @@ export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, C
 기본 관리자 화면도 같은 훅 위에 만들어져 있다. 명령은 예상할 수 있는 실패에서 던지지 않고 `EditorResult`(`{ ok: true, value }` 또는 `{ ok: false, error }`)를 돌려주며,
 분기는 `EditorError.code`(`conflict`·`session_expired`·`offline`·`validation`·`invalid_state` …)로 한다.
 
-`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`asking`·`running`·`done`·`error`),
-`run`·`cancel`·`apply`를 준다. 실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다.
-`useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 단추와 패널이다.
+`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`running`·`error`), `run`·`cancel`을 준다. 실행은 끝나는 즉시 결과를
+`request.apply`로 바로 넣는다(`replace` 동작은 글 또는 첫 후보, `append` 동작은 모든 후보). 받을지 말지 고르는 결과는 없고 ⌘Z로 되돌린다.
+실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다. `useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 "채우기" 동작이다.
+대상이 비었으면 "채우기", 값이 있으면(`request.filled`) "다시", 도는 동안은 "쓰는 중…"으로 보인다.
 
-`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
+`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`assisted`(어시스턴트가 채운 값을 아직 아무도 고치지 않았고 저장도 안 했다. 파란색으로 보인다)·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
 라벨·입력·오류 문구를 잇는 id(`ids`·`inputProps`), `useSlotActions`에 넘길 `slotRequest`를 준다. `EntryFormProvider` 아래에서만 쓸 수 있다.
 편집 화면의 속성 패널과 레코드 패널이 하나씩 제공하고, 폼 상태를 따로 가진 화면은 직접 제공할 수 있다
 (`collection`·`form`·`setForm`·`issues`·`disabled`·`entryId`·`locale`·`entry`·`locked`). 컴포넌트는 자기 필드가 바뀔 때만 다시 그려지므로

@@ -46,10 +46,10 @@ vi.mock("../entries/local-backup", async (importOriginal) => ({
 }));
 // The body editor is tested separately. Here only the place for the title slot is drawn.
 vi.mock("../../editor/tiptap-editor", () => ({
-	CmsEditor: ({ titleField, toolbarEnd }: { titleField?: React.ReactNode; toolbarEnd?: React.ReactNode }) => (
+	CmsEditor: ({ titleField, tools }: { titleField?: React.ReactNode; tools?: React.ReactNode }) => (
 		<>
-			<div role="toolbar" aria-label="서식 도구">
-				{toolbarEnd}
+			<div role="toolbar" aria-label="문서 도구">
+				{tools}
 			</div>
 			{titleField}
 		</>

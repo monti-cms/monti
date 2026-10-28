@@ -117,14 +117,13 @@ describe("extract -> load round trip", () => {
 	it("writes the labels plugins provide in the language asked for, else in the admin language of the site", () => {
 		const labelOf = (locale?: string) =>
 			extractSchemaData(blog as CmsConfig, { locale }).schema.collections.post?.fields.seoTitle?.label;
-		expect(labelOf()).toBe("검색 제목"); // cms-allow-korean: the reference blog's admin language is Korean
-		expect(labelOf("en")).toBe("Search title");
+		expect(labelOf()).toBe("SEO 제목"); // cms-allow-korean: the reference blog's admin language is Korean
+		expect(labelOf("en")).toBe("SEO title");
 	});
 
 	it("keeps the plugin-provided fields (seoFields) as plain fields of the collection", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const post = schema.collections.post;
-		expect(post?.fields.searchPreview).toMatchObject({ kind: "view", view: "search" });
 		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle" });
 	});
 });

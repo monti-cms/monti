@@ -178,7 +178,7 @@ function StatusBarPluginCell({
 				(settings || fixAll) && (
 					<>
 						{settings ? (
-							<TextButton variant="underline" onClick={settings.onClick}>
+							<TextButton variant="quiet" onClick={settings.onClick}>
 								{settings.label}
 							</TextButton>
 						) : (

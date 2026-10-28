@@ -14,7 +14,9 @@ import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
 import { useConfirm } from "../shared/confirm-dialog";
 import { deleteMessages } from "../shared/delete.messages";
+import { publicHref } from "../shared/entry-address";
 import { nounVars } from "../shared/noun.messages";
+import { todoCount } from "../shared/todo-rows";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
 import {
@@ -99,7 +101,7 @@ export function useEntryLifecycleCommands({
 		if (isReadOnly) return;
 		const saved = await editor.save();
 		if (saved.ok) toast(tc("saved"));
-		// On failure, always show the reason (a conflict opens its own conflict dialog).
+		// On failure, always show the reason (a conflict shows its own notice strip).
 		else if (saved.error.code !== "conflict") toast.error(saved.error.message || tc("saveFailed"));
 	};
 
@@ -137,10 +139,10 @@ export function useEntryLifecycleCommands({
 			if (!id) return;
 			const published = await editor.publish({ resetPublishedAt });
 			if (!published.ok) {
-				// A conflict opens its own conflict dialog.
+				// A conflict shows its own notice strip above the editor.
 				if (published.error.code === "conflict") return;
 				if (published.error.issues?.length) {
-					toast.error(t("publishBlocked"));
+					toast.error(t("publishBlocked", { count: todoCount(published.error.issues) }));
 					onPublishBlocked(published.error.issues);
 				} else toast.error(published.error.message);
 				return;
@@ -156,7 +158,11 @@ export function useEntryLifecycleCommands({
 						: undefined,
 				});
 			} else {
-				toast(t("published"));
+				// "View" opens the public page of what was just published, where the collection has one.
+				const href = publicHref(site, published.value.entry);
+				toast(t("published"), {
+					action: href ? { label: t("view"), onClick: () => window.open(href, "_blank", "noopener") } : undefined,
+				});
 			}
 		} finally {
 			setIsPreparingPublish(false);

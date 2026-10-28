@@ -48,7 +48,6 @@ export {
 	ToolbarButton,
 } from "./editor/blocks/shared";
 export { formatMeta, parseMeta } from "./editor/code-block/meta";
-export type { AdminEvents, ImageInserted, ImageInsertedEvent, ImageText, InsertedImage } from "./events";
 export * from "./hooks/public";
 export { type AdminPanel, type AdminPanelProps, type AdminPlugin, defineAdminPlugin } from "./plugins";
 export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";

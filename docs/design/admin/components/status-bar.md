@@ -20,12 +20,16 @@ Pressing a cell opens a list panel above it (`.mt-card.mt-statusbar-list`). Ever
 
 - At the top, the group name and a count (`.mt-menu-label`).
 - A row (`.mt-todo-item`): a mark in front (an orange circle, or a mark for changed / new / removed) · the title at 14 · where it is, one line of gray at 12 · one thing to do at the right end ("✦ 채우기" (✦ fill), "✦ 번역" (✦ translate), "지우기" (delete)). Pressing the row goes to that place.
-- Things already done go below as ✓ rows (`.mt-todo-done`).
+- Problems of the same kind are one row ("대체 텍스트 없는 이미지 2개" (2 images without alt text), with where they are in the line under it: "본문 1 · 본문 2"). An empty field is its own row: "요약 쓰기" (write the summary) for a field that is written, "대표 이미지 고르기" for one that is chosen, with "요약 · 비어 있음" under it.
+- Things already done go below as ✓ rows (`.mt-todo-done`): first what was fixed while the entry was open ("요약", "이미지 대체 텍스트 2개"), then the required fields that were never empty in one line ("제목 · 주소 · 대표 이미지"). With nothing left to do the cell reads "할 일 없음" and the list shows only ✓ rows.
+- A refused publish opens this list and says so in a toast: "발행할 수 없어요. 아래 할 일 N개를 먼저 고쳐요." (N is the number of rows).
 - What blocks publishing is gathered in one cell, "할 일" (to do). A dimmed block of a translation is a to-do too. A notice that does not block (the source changed) has a cell of its own.
 
 ### In code
 
 `StatusBarList`: opens upward from a status bar cell. A card with the group's name (`label`) and the count (`count`) in the head (no count once nothing is left; `countTone` is `danger` while any row blocks publishing), then rows to do (`TodoItem`) and rows already done (`TodoDone`), and under a rule the actions that belong to the whole list (`footer`: a link to its settings, "모두 고치기" (fix all)). `trigger` is the cell that opens it.
+
+The rows are made from the publish check by `todoRows` (`screens/shared/todo-rows.ts`), which groups them, and `trackResolved` keeps the fixed ones for the ✓ rows.
 
 `TodoItem`: a ring, the title, one short line under it, and the one action at the right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `marker` replaces the ring with a `Marker` (a translated block whose source changed). `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place. `TodoDone` is a thing that is already right: a green ✓ and one small line, under the rows to fix, set off by a rule.
 

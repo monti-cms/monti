@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The properties panel is read from the admin package source, not the public entry point (tests only).
 import { InspectorPanel } from "../../../admin/src/screens/entries/inspector-panel";
 import { EntryFormProvider } from "../../../admin/src/screens/entries/use-field";
+import { pressOption } from "../../../admin/src/test/base-ui";
 import { SiteWrapper } from "../../../admin/src/test/site";
 import { testSite } from "../../test/site";
 import { SEO_ROLES } from "..";
@@ -56,7 +57,6 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 								onRefreshIncomingReferences={vi.fn()}
 								onSlugChange={vi.fn()}
 								onRegenerateSlug={vi.fn()}
-								onClose={vi.fn()}
 							/>
 						</EntryFormProvider>
 					</SlotRegistryProvider>
@@ -69,56 +69,70 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 }
 
 describe("SEO extension admin UI", () => {
-	it("SEO fields gather in their tab even without a layout", async () => {
+	/** The properties list opens on the SEO tab; a property is found by its label. */
+	const valueButton = async (label: string) => screen.findByRole("button", { name: new RegExp(`^${label}`) });
+
+	it("SEO fields gather in their tab as a read list, with no preview boxes", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", [title.name]: "Search value" });
-		expect(((await screen.findByLabelText(title.field.label)) as HTMLInputElement).value).toBe("Search value");
-		expect(screen.getByLabelText(field(SEO_ROLES.description).field.label).tagName).toBe("TEXTAREA");
-		// The share image is a media field, so it is entered through the media picker.
-		expect(screen.getByLabelText(field(SEO_ROLES.image).field.label).textContent).toBeTruthy();
+		expect((await valueButton(title.field.label)).textContent).toBe("Search value");
+		expect(
+			screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.description).field.label}`) }),
+		).toBeTruthy();
+		expect(screen.getByRole("button", { name: new RegExp(`^${field(SEO_ROLES.image).field.label}`) })).toBeTruthy();
+		expect(screen.queryByRole("region", { name: /미리보기|preview/i })).toBeNull();
+		expect(screen.queryAllByRole("textbox")).toEqual([]);
 	});
 
-	it("the search preview uses role field values and falls back to the title and summary when empty", async () => {
-		renderPanel({
-			...EMPTY_FORM,
-			title: "Entry title",
-			slug: "hello",
-			...(summaryField ? { [summaryField.name]: "Lead" } : {}),
-		});
-		const search = await screen.findByRole("region", { name: t("preview.search") });
-		expect(within(search).getByText("Entry title")).toBeTruthy();
-		if (summaryField) expect(within(search).getByText("Lead")).toBeTruthy();
-		expect(within(search).getByText(new RegExp(`${testSite.SITE_NAME}.*hello`))).toBeTruthy();
-		expect(screen.getByRole("region", { name: t("preview.share") })).toBeTruthy();
+	it("an empty value says what it follows: the title with its length, the summary, the default image", async () => {
+		renderPanel({ ...EMPTY_FORM, title: "Entry title", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) });
+		const title = field(SEO_ROLES.title);
+		const limit = title.field.kind === "text" ? (title.field.max ?? title.field.inputOptions?.limit) : undefined;
+		expect((await valueButton(title.field.label)).textContent).toBe(`${t("same.title")} · 11/${limit}`);
+		expect((await valueButton(field(SEO_ROLES.description).field.label)).textContent).toBe(t("same.description"));
+		expect((await valueButton(field(SEO_ROLES.image).field.label)).textContent).toBe(t("same.image"));
+		expect((await valueButton(field(SEO_ROLES.noindex).field.label)).textContent).toBe(t("option.index"));
 	});
 
-	it("an empty search title or description shows the fallback value as a hint and character count", async () => {
+	it("an opened empty title shows the fallback as the hint and the character count", async () => {
 		const title = field(SEO_ROLES.title);
 		renderPanel({ ...EMPTY_FORM, title: "Entry title", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) });
-		expect(((await screen.findByLabelText(title.field.label)) as HTMLInputElement).placeholder).toBe("Entry title");
+		fireEvent.click(await valueButton(title.field.label));
+		const input = (await screen.findByRole("textbox", { name: title.field.label })) as HTMLInputElement;
+		expect(input.placeholder).toBe("Entry title");
 		const limit = title.field.kind === "text" ? (title.field.max ?? title.field.inputOptions?.limit) : undefined;
 		expect(screen.getByText(`11/${limit}`)).toBeTruthy();
 		if (summaryField) {
-			const description = screen.getByLabelText(field(SEO_ROLES.description).field.label) as HTMLTextAreaElement;
+			fireEvent.keyDown(input, { key: "Escape" });
+			fireEvent.click(await valueButton(field(SEO_ROLES.description).field.label));
+			const description = (await screen.findByRole("textbox", {
+				name: field(SEO_ROLES.description).field.label,
+			})) as HTMLTextAreaElement;
 			expect(description.placeholder).toBe("Lead");
 		}
 	});
 
-	it("hide is a switch in the label row, and on means `noindex`", async () => {
+	it("hide from search is a select: picking the hiding option writes `noindex`", async () => {
 		const noindex = field(SEO_ROLES.noindex);
 		const onChange = renderPanel({ ...EMPTY_FORM, title: "Entry" });
-		fireEvent.click(await screen.findByRole("switch", { name: noindex.field.label }));
-		expect(onChange).toHaveBeenCalledWith({ [noindex.name]: "noindex" });
+		fireEvent.click(await valueButton(noindex.field.label));
+		pressOption(await screen.findByRole("option", { name: t("option.noindex") }));
+		await waitFor(() => expect(onChange).toHaveBeenCalledWith({ [noindex.name]: "noindex" }));
 	});
 
 	it("actions next to the search title (AI and others) stay attached and receive the summary role value as `summary`", async () => {
 		const run = vi.fn<SlotAction["run"]>(async () => ({ kind: "text", text: "New" }));
-		renderPanel({ ...EMPTY_FORM, title: "Entry", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) }, vi.fn(), [
-			{ id: "t", label: "Suggest", apply: "replace", run },
-		]);
-		fireEvent.click(await screen.findByRole("button", { name: "Suggest" }));
+		const onChange = renderPanel(
+			{ ...EMPTY_FORM, title: "Entry", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) },
+			vi.fn(),
+			[{ id: "t", label: "Suggest", apply: "replace", run }],
+		);
+		await valueButton(field(SEO_ROLES.title).field.label);
+		const row = within(screen.getByRole("group", { name: field(SEO_ROLES.title).field.label }));
+		fireEvent.click(row.getByRole("button", { name: /Fill/ }));
 		await waitFor(() => expect(run).toHaveBeenCalled());
 		expect(run.mock.calls[0]?.[0]).toMatchObject({ title: "Entry", ...(summaryField ? { summary: "Lead" } : {}) });
+		await waitFor(() => expect(onChange).toHaveBeenCalledWith({ [field(SEO_ROLES.title).name]: "New" }));
 	});
 
 	it("a collection without an SEO tab has a single default tab", () => {
@@ -135,7 +149,6 @@ describe("SEO extension admin UI", () => {
 								onRefreshIncomingReferences={vi.fn()}
 								onSlugChange={vi.fn()}
 								onRegenerateSlug={vi.fn()}
-								onClose={vi.fn()}
 							/>
 						</EntryFormProvider>
 					</AdminComponentsProvider>
