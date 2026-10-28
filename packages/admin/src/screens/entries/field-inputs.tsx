@@ -227,6 +227,22 @@ export type IncomingReference = {
 	occurrences: readonly { type: string; path?: string }[];
 };
 
+/** The records an inverse relation holds now, from the usages of this post: the ones whose working copy lists it in the `via` field. */
+export function backlinkMembers(
+	references: readonly IncomingReference[],
+	field: BacklinkField,
+	untitled: string,
+): { id: string; title: string }[] {
+	const found = new Map<string, string>();
+	for (const reference of references) {
+		const viaField = reference.occurrences.some((occurrence) => occurrence.path === field.via);
+		if (reference.state === "working" && reference.sourceCollection === field.from && viaField) {
+			found.set(reference.sourceId, reference.sourceTitle || untitled);
+		}
+	}
+	return [...found].map(([id, title]) => ({ id, title }));
+}
+
 /**
  * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
  * only records matching that condition can be picked. The currently chosen kind is read per record to filter.
@@ -270,11 +286,14 @@ function useRecordKind(field: BacklinkField, options: readonly { id: string }[])
  * If versions diverge (changed elsewhere first), it re-reads the latest value and tries once more.
  */
 export function BacklinkInput({
+	id,
 	field,
 	targetId,
 	disabled,
 	shared,
 }: {
+	/** The id of the input, so a label (or the properties list) can point to it. */
+	id?: string;
 	field: BacklinkField;
 	/** ID of this post. For a translation, the original's ID (relations point to the original). Absent for a new post. */
 	targetId: string | undefined;
@@ -300,17 +319,8 @@ export function BacklinkInput({
 	const [error, setError] = useState<string | null>(null);
 
 	const membersOf = useCallback(
-		(references: readonly IncomingReference[]) => {
-			const found = new Map<string, string>();
-			for (const reference of references) {
-				const viaField = reference.occurrences.some((occurrence) => occurrence.path === field.via);
-				if (reference.state === "working" && reference.sourceCollection === field.from && viaField) {
-					found.set(reference.sourceId, reference.sourceTitle || tc("untitled"));
-				}
-			}
-			return [...found].map(([id, title]) => ({ id, title }));
-		},
-		[field.from, field.via, tc],
+		(references: readonly IncomingReference[]) => backlinkMembers(references, field, tc("untitled")),
+		[field, tc],
 	);
 
 	const refreshShared = shared?.refresh;
@@ -445,6 +455,7 @@ export function BacklinkInput({
 	return (
 		<>
 			<RelationCombobox
+				id={id}
 				multiple
 				aria-label={field.label}
 				placeholder={members === null || records.options === null ? tc("loading") : t("relation.searchOrAdd")}

@@ -531,7 +531,6 @@ export function EntryEditorShell({
 									incomingItems={incoming.items}
 									isLoadingIncoming={incoming.loading}
 									onRefreshIncoming={(id) => void refreshIncoming(id)}
-									onClose={() => setIsInspectorOpen(false)}
 									focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
 									onFocused={() => setPendingFieldPath(null)}
 								/>

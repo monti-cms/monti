@@ -105,20 +105,23 @@ const components = {
 
 ## 속성 칸
 
-편집 화면 오른쪽 속성 칸은 컬렉션 정의대로 입력을 그린다. 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
+편집 화면 오른쪽 속성 칸은 컬렉션 정의로 만든 읽기 목록이다. 이름표 아래에 값이 있고, 값을 누르면 그 자리에서 입력이 열린다(Enter·Esc·줄을 벗어나면 닫힌다). 입력은 필드 종류로 정한다: 텍스트·선택·관계, 미디어 필드
 (`fields.media`)는 미디어 고르기(`accept: "file"`이면 파일 올리기)다. 필드 이름이나 역할로 입력을 바꾸지 않는다.
 `input`으로 등록한 입력을 고르면 그 입력이 먼저다. 본체에는 이름 붙은 입력이 없다. 여러 줄 텍스트(`multiline: true`)는
 `rows`(기본 2)만큼의 여러 줄 칸이다(예전 `input: "auto-summary"`는 `multiline: true, rows: 3`으로 바꾼다).
 
 `fieldInputs`에는 컴포넌트(입력 전체를 바꾼다) 또는 조각(`FieldInputParts`, 기본 입력을 두고 일부만 바꾼다)을 등록한다.
-조각은 지금 입력 중인 값(`form`)을 읽을 수 있다.
+조각은 지금 입력 중인 값(`form`)을 읽을 수 있다. `Aside`는 필드가 열려 있는 동안 이름표 줄에 보이고, `Empty`는 값이 비었을 때 목록이 대신 읽어 주는 말("제목과 같음"처럼 따르는 값)이다.
+컴포넌트 하나로 등록한 입력은 제 값을 직접 그리므로 목록에서도 늘 열려 있다.
 
 ```tsx
 const components = {
 	fieldInputs: {
 		// 비었을 때 쓸 값을 안내 문구로, 글자 수를 이름표 줄 오른쪽에
 		"meta-title": { placeholder: ({ form }) => form.title, Aside: ({ value }) => <span>{String(value ?? "").length}</span> },
-		// 입력 줄 없이 이름표 줄의 스위치만(`Input: null`)
+		// 비었을 때 따르는 값을 말하기
+		"meta-title": { Empty: () => <>제목과 같음</> },
+		// 입력 줄 없이 이름표 줄의 조각만(`Input: null`)
 		"hide-switch": { Input: null, Aside: HideSwitch },
 	},
 };
@@ -204,7 +207,7 @@ function NoticeView() {
 
 이미지는 바로 들어가고, 구독자가 도는 동안 "이미지 글을 쓰는 중…"을 보인다. `fill({ alt?, caption? })`은 칸이 아직 비어 있고 넣은 뒤로 사람이 그 칸에
 입력하지 않았을 때만 쓴다(장식 이미지에는 대체 텍스트를 쓰지 않는다). 이미지가 지워졌으면 아무것도 쓰지 않고, 그때 `signal`도 중단된다. 무엇이든 썼는지를
-돌려준다. 구독하는 플러그인이 있으면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다. `@monti-cms/ai`의 `ai({ autoImageText: true })`가 구독자 하나다.
+돌려준다.
 
 ## 글자 꾸밈
 
@@ -424,11 +427,12 @@ export default defineAdminPlugin({ panel: { label: "메모", icon: StickyNote, C
 기본 관리자 화면도 같은 훅 위에 만들어져 있다. 명령은 예상할 수 있는 실패에서 던지지 않고 `EditorResult`(`{ ok: true, value }` 또는 `{ ok: false, error }`)를 돌려주며,
 분기는 `EditorError.code`(`conflict`·`session_expired`·`offline`·`validation`·`invalid_state` …)로 한다.
 
-`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`asking`·`running`·`done`·`error`),
-`run`·`cancel`·`apply`를 준다. 실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다.
-`useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 단추와 패널이다.
+`useSlotActions(request)`는 화면 자리 하나에 붙은 동작과 실행 상태(`idle`·`running`·`error`), `run`·`cancel`을 준다. 실행은 끝나는 즉시 결과를
+`request.apply`로 바로 넣는다(`replace` 동작은 글 또는 첫 후보, `append` 동작은 모든 후보). 받을지 말지 고르는 결과는 없고 ⌘Z로 되돌린다.
+실행 상태는 자리·대상·컬렉션·범위가 같은 훅끼리 공유하고, 컴포넌트가 사라져도 남는다. `useSlot`(`@monti-cms/admin/slots`)이 그 위에 만든 기본 "채우기" 동작이다.
+대상이 비었으면 "채우기", 값이 있으면(`request.filled`) "다시", 도는 동안은 "쓰는 중…"으로 보인다.
 
-`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
+`useField(name)`은 폼 필드 하나의 `value`·`setValue`·`assisted`(어시스턴트가 채운 값을 아직 아무도 고치지 않았고 저장도 안 했다. 파란색으로 보인다)·`error`/`errors`·`readOnly`(`readOnlyReason`: `disabled` 또는 `locked`)와,
 라벨·입력·오류 문구를 잇는 id(`ids`·`inputProps`), `useSlotActions`에 넘길 `slotRequest`를 준다. `EntryFormProvider` 아래에서만 쓸 수 있다.
 편집 화면의 속성 패널과 레코드 패널이 하나씩 제공하고, 폼 상태를 따로 가진 화면은 직접 제공할 수 있다
 (`collection`·`form`·`setForm`·`issues`·`disabled`·`entryId`·`locale`·`entry`·`locked`). 컴포넌트는 자기 필드가 바뀔 때만 다시 그려지므로

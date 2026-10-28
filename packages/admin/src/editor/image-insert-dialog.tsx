@@ -65,8 +65,6 @@ interface ImageInsertDialogProps {
 	/** `pick` picks a single image without inserting it into the body (media field). Does not ask for alt text or caption. */
 	mode?: "insert" | "pick";
 	title?: string;
-	/** Something fills in the alt text after the insert (`editor.imageInserted`), so it may be left empty here. */
-	altLater?: boolean;
 }
 
 /**
@@ -80,7 +78,6 @@ export function ImageInsertDialog({
 	onInsert,
 	mode = "insert",
 	title: titleProp,
-	altLater = false,
 }: ImageInsertDialogProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
@@ -90,7 +87,6 @@ export function ImageInsertDialog({
 	const { media } = useAdminFeatures();
 	const altId = useId();
 	const altErrorId = useId();
-	const altLaterId = useId();
 	const captionId = useId();
 	const searchId = useId();
 	const optimizeId = useId();
@@ -156,7 +152,7 @@ export function ImageInsertDialog({
 	const libraryFailed = libraryQuery.isError;
 
 	const isUploading = progress !== null;
-	const needsAlt = !picking && !altLater && !decorative && !alt.trim();
+	const needsAlt = !picking && !decorative && !alt.trim();
 	const hasImage = tab === "upload" ? Boolean(prepared) : Boolean(picked);
 	const canInsert = !isUploading && !needsAlt && hasImage;
 	const showAltError = needsAlt && altTouched;
@@ -334,9 +330,9 @@ export function ImageInsertDialog({
 							value={alt}
 							rows={2}
 							disabled={decorative || isUploading}
-							aria-required={!decorative && !altLater}
+							aria-required={!decorative}
 							aria-invalid={showAltError || undefined}
-							aria-describedby={showAltError ? altErrorId : altLater && !decorative ? altLaterId : undefined}
+							aria-describedby={showAltError ? altErrorId : undefined}
 							onChange={(event) => {
 								setAlt(event.target.value);
 								setAltTouched(true);
@@ -344,11 +340,6 @@ export function ImageInsertDialog({
 							onBlur={() => setAltTouched(true)}
 						/>
 						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
-						{altLater && !decorative && !alt.trim() && (
-							<Text as="p" id={altLaterId} variant="caption" tone="muted">
-								{t("imageDialog.altLater")}
-							</Text>
-						)}
 						<Label htmlFor={decorativeId} size="body">
 							<Switch
 								id={decorativeId}

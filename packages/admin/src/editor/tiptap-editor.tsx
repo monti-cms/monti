@@ -222,7 +222,6 @@ export function CmsEditor({
 	const { handleSpot, setHandleSpot, handleMouseMove, handleDragStart, handleDragEnd } = useBlockHandle(editor);
 	const {
 		imageDialog,
-		fillsImageText,
 		openImageDialog,
 		closeImageDialog,
 		insertImage,
@@ -375,7 +374,6 @@ export function CmsEditor({
 				initialFile={imageDialog?.file ?? null}
 				onClose={() => closeImageDialog()}
 				onInsert={insertImage}
-				altLater={fillsImageText}
 			/>
 
 			{isSourceMode && (

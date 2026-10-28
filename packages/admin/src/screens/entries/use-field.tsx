@@ -44,8 +44,10 @@ export interface FieldState<V extends FormValue = FormValue> {
 	readonly required: boolean;
 
 	readonly value: V;
-	/** Changes this field only. Does nothing while `readOnly`. */
+	/** Changes this field only. Does nothing while `readOnly`. Editing a value the assistant wrote returns it to the normal color. */
 	setValue(next: V): void;
+	/** The assistant filled this value and nobody has edited it or saved the entry since: it shows in the assistant's blue. */
+	readonly assisted: boolean;
 
 	/** Not editable now: the entry is disabled (trash, saving) or the field is shared on a translation. */
 	readonly readOnly: boolean;
@@ -72,7 +74,8 @@ export interface FieldState<V extends FormValue = FormValue> {
 
 	/**
 	 * The request for the slot next to this field (AI and other actions). Pass it to `useSlotActions`. `null` on a locked field, where no
-	 * action is placed. Its context and `apply` read the form when the action runs, not when it renders.
+	 * action is placed. Its context and `apply` read the form when the action runs, not when it renders. What `apply` writes counts as the
+	 * assistant's (`assisted`).
 	 */
 	readonly slotRequest: SlotRequest | null;
 }
@@ -113,7 +116,13 @@ interface EntryFormState {
 	locale: string | undefined;
 	entry: EntryData | null;
 	locked: { readonly values: EntryForm; readonly note: ReactNode } | undefined;
+	/** Writes values the assistant produced: like `setForm`, then marks the keys as the assistant's until they are edited or the entry is saved. */
+	fillForm: (patch: EntryFormPatch) => void;
+	/** The keys the assistant filled and nobody has edited since. Owned by the provider, not by the form owner. */
+	assisted: ReadonlySet<string>;
 }
+
+const NO_KEYS: ReadonlySet<string> = new Set();
 
 const EntryFormContext = createContext<StateStore<EntryFormState> | null>(null);
 
@@ -136,11 +145,23 @@ function stableIssues(previous: readonly CmsIssue[], next: readonly CmsIssue[]):
 export function EntryFormProvider({ value, children }: { value: EntryFormValue; children: ReactNode }) {
 	const [holder] = useState(() => {
 		const setFormRef = { current: value.setForm };
-		const store = createStateStore<EntryFormState>({
+		const store: StateStore<EntryFormState> = createStateStore<EntryFormState>({
 			collection: value.collection,
 			form: value.form,
 			// Stable for the life of the provider, so a field's `setValue` keeps its identity.
-			setForm: (patch) => setFormRef.current(patch),
+			setForm: (patch) => {
+				// An edit takes the assistant's mark off the keys it touches.
+				const marked = store.getState().assisted;
+				if (Object.keys(patch).some((key) => marked.has(key))) {
+					store.setState({ assisted: new Set([...marked].filter((key) => !(key in patch))) });
+				}
+				setFormRef.current(patch);
+			},
+			fillForm: (patch) => {
+				setFormRef.current(patch);
+				store.setState({ assisted: new Set([...store.getState().assisted, ...Object.keys(patch)]) });
+			},
+			assisted: NO_KEYS,
 			issues: value.issues ?? NO_ISSUES,
 			disabled: Boolean(value.disabled),
 			entryId: value.entryId,
@@ -157,6 +178,8 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 		collection: value.collection,
 		form: value.form,
 		setForm: state.setForm,
+		fillForm: state.fillForm,
+		assisted: state.assisted,
 		issues: stableIssues(state.issues, value.issues ?? NO_ISSUES),
 		disabled: Boolean(value.disabled),
 		entryId: value.entryId,
@@ -165,6 +188,13 @@ export function EntryFormProvider({ value, children }: { value: EntryFormValue; 
 		locked: value.locked,
 	});
 	if (changed) holder.version += 1;
+
+	// Saving ends the assistant's blue: the values are the entry's now.
+	const savedVersion = value.entry?.version;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a new saved version is the trigger
+	useLayoutEffect(() => {
+		if (store.getState().assisted.size > 0) store.setState({ assisted: NO_KEYS });
+	}, [savedVersion, store]);
 
 	useLayoutEffect(() => {
 		holder.setFormRef.current = value.setForm;
@@ -231,11 +261,17 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 		(state) => (lockable && state.locked ? state.locked.values : state.form)[name],
 	);
 	const issues = useStoreSelector(store, (state) => state.issues);
+	const assisted = useStoreSelector(store, (state) => state.assisted.has(name));
 	const entryId = useStoreSelector(store, (state) => state.entryId);
 	const locale = useStoreSelector(store, (state) => state.locale);
 
 	const readOnly = disabled || locked;
 	const value = (stored ?? null) as V;
+	const filled = Array.isArray(value)
+		? value.length > 0
+		: typeof value === "string"
+			? value.trim() !== ""
+			: value != null;
 
 	const setValue = useCallback(
 		(next: V) => {
@@ -264,6 +300,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			collection,
 			scope: entryId ?? "new",
 			disabled,
+			filled,
 			getContext: () => {
 				const { form } = store.getState();
 				const current = form[name];
@@ -277,16 +314,17 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 					current: Array.isArray(current) ? current : typeof current === "string" ? current : undefined,
 				};
 			},
+			// What the assistant writes goes in at once and counts as its (blue) until the person edits it.
 			apply: (next, mode) => {
-				const { form, setForm } = store.getState();
+				const { form, fillForm } = store.getState();
 				if (mode === "append") {
 					const current = form[name];
 					const list = Array.isArray(current) ? current : [];
-					if (!list.includes(next)) setForm({ [name]: [...list, next] });
-				} else setForm({ [name]: next });
+					if (!list.includes(next)) fillForm({ [name]: [...list, next] });
+				} else fillForm({ [name]: next });
 			},
 		};
-	}, [store, locked, name, collection, entryId, locale, disabled, site]);
+	}, [store, locked, name, collection, entryId, locale, disabled, filled, site]);
 
 	const error = errors[0] ?? null;
 	const ids = useMemo(() => ({ input: fieldId(name), error: `${fieldId(name)}-error` }), [name]);
@@ -308,6 +346,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			required: Boolean(definition && "required" in definition && definition.required) && !locked,
 			value,
 			setValue,
+			assisted,
 			readOnly,
 			readOnlyReason: locked ? "locked" : disabled ? "disabled" : null,
 			lockedNote,
@@ -323,6 +362,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			definition,
 			value,
 			setValue,
+			assisted,
 			readOnly,
 			locked,
 			disabled,

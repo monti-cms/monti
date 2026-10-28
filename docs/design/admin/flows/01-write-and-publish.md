@@ -51,12 +51,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step07.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; series-pending on; todo-open off)
 - The user sets the post properties, basic tab. The series field is mid-choice and offers the series "리액트 다시 만들기".
+- Test: `packages/admin/src/screens/entries/__test__/properties-flow.test.tsx` ("flow: set properties")
 
 ### Step 08: "속성 정하기 · SEO"
 
 - Board: `Flow1Step08.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; panel-tab "SEO"; todo-open off)
 - The user switches the property panel to the SEO tab: SEO title ("same as title", 10/60), SEO description ("same as summary"), share image ("same as cover") and hide from search ("no").
+- Test: `packages/admin/src/screens/entries/__test__/properties-flow.test.tsx` ("flow: set properties")
 
 ### Step 09: "저장 ⌘S · 서버에 저장됨"
 
@@ -75,6 +77,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step11.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; fix "요약"; todo-open off)
 - To-do 1. The user writes the summary in the property panel; the counter shows 28 of 120 characters.
+- Test: `packages/admin/src/screens/entries/__test__/properties-flow.test.tsx` ("flow: set properties")
 
 ### Step 12: "할 일 2 · 이미지 대체 텍스트"
 

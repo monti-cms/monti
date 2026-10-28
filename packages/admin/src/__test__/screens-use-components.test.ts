@@ -127,7 +127,6 @@ const DRAWING = new Map<string, string>([
 	["blocks/src/tabs/view.tsx", "draws the tab bar and body as the public post does"],
 	["mdx/src/admin/mdx-source-editor.tsx", "a textarea laid over a syntax-highlighted layer"],
 	["mdx/src/admin/source-panel.tsx", "sizes the highlighted source editor, which draws its own surface"],
-	["seo/src/admin/preview.tsx", "imitates a search result (Google's link blue, two-line clamps, share card thumbnail)"],
 ]);
 
 const packagesDir = path.resolve(__dirname, "../../..");

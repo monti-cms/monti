@@ -19,7 +19,6 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "개인 기술 블로그", // 모든 기능의 맨 앞 지시에 들어간다. 없으면 "웹사이트"
-		autoImageText: true, // 이미지를 본문에 넣을 때 대체 텍스트와 캡션을 채운다. 기본은 끔
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // 바꾸기(같은 이름)
 			draft: false, // 끄기
@@ -29,9 +28,7 @@ plugins: [
 ],
 ```
 
-`autoImageText: true`는 AI 플러그인을 편집기의 `editor.imageInserted` 이벤트에 구독시킨다([관리자 README](../admin/README.ko.md)의 "관리자 이벤트"). 이미지가 본문에
-들어가면 그 이미지에 `imageAlt`와 `imageCaption`을 돌려, 칸이 아직 비어 있으면 각각 첫 후보를 넣는다. 이미지는 바로 들어가고 글을 쓰는 중임을 보인다. 먼저
-입력한 글은 그대로 두고, 꺼졌거나 연결이 준비되지 않은 기능은 건너뛴다. 켜 두면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다.
+이미지는 대체 텍스트와 캡션이 저절로 채워지지 않는다. 이미지 대화상자에서 직접 쓰거나, 칸 옆의 "채우기"를 누르면 `imageAlt`·`imageCaption`을 돌려 첫 후보를 바로 넣는다.
 
 ### 기본 기능
 

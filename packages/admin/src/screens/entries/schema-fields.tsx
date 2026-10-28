@@ -10,7 +10,7 @@ import type {
 	ValueField,
 	ViewField,
 } from "@monti-cms/core";
-import type { Collection, PanelGroup } from "@monti-cms/core/site";
+import type { Collection } from "@monti-cms/core/site";
 import {
 	bodyExcerpt,
 	fillFromBodyLength,
@@ -29,7 +29,6 @@ import {
 	FormFieldLabel,
 	FormFieldLegend,
 	FormFieldSet,
-	Heading,
 	IconButton,
 	Inline,
 	Input,
@@ -52,6 +51,7 @@ import {
 } from "../../admin-components";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
+import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import {
@@ -65,6 +65,7 @@ import {
 import { FieldView } from "./field-views";
 import { MediaInput } from "./media-image-input";
 import { entriesMessages } from "./messages";
+import { usePropertyEdit } from "./property-edit";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
@@ -84,10 +85,6 @@ interface SchemaFieldsProps {
 	slugPlaceholder?: string;
 	/** Whether to show the always-visible description under the field. */
 	showDescriptions?: boolean;
-	/** Render only this group (splitting per tab in the edit screen's properties panel). All if absent. */
-	include?: (group: PanelGroup) => boolean;
-	/** Group title style. `plain` is a small title that does not collapse (the edit screen's properties panel). */
-	sections?: "collapsible" | "plain";
 	references?: SchemaFieldsReferences;
 }
 
@@ -104,11 +101,9 @@ interface FieldRowProps {
 }
 
 /**
- * Label, required mark, error and help of one field. If `slot` exists, a slot button goes next to the label and the result below the input.
- * All inputs in the properties panel use this row.
+ * Label, required mark, error and help of one field in a form. If `slot` exists, the fill action goes on the label row, at the right end.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }: FieldRowProps) {
-	const _site = useSite();
 	if (slot) {
 		return (
 			<SlotFieldRow id={id} label={label} required={required} issue={issue} help={help} slot={slot} aside={aside}>
@@ -116,21 +111,11 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			</SlotFieldRow>
 		);
 	}
-	const labelNode = (
-		<FormFieldLabel htmlFor={id} required={required}>
-			{label}
-		</FormFieldLabel>
-	);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
-			{aside ? (
-				<Inline justify="between" gap={8}>
-					{labelNode}
-					{aside}
-				</Inline>
-			) : (
-				labelNode
-			)}
+			<FormFieldLabel htmlFor={id} required={required} action={aside}>
+				{label}
+			</FormFieldLabel>
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
@@ -148,21 +133,23 @@ function SlotFieldRow({
 	aside,
 	children,
 }: FieldRowProps & { slot: SlotRequest }) {
-	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
-			<Inline justify="between" gap={8}>
-				<FormFieldLabel htmlFor={id} required={required}>
-					{label}
-				</FormFieldLabel>
-				{aside || trigger ? (
-					<Inline gap={4}>
-						{aside}
-						{trigger}
-					</Inline>
-				) : null}
-			</Inline>
+			<FormFieldLabel
+				htmlFor={id}
+				required={required}
+				action={
+					aside || trigger ? (
+						<Inline gap={8}>
+							{aside}
+							{trigger}
+						</Inline>
+					) : undefined
+				}
+			>
+				{label}
+			</FormFieldLabel>
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{panel}
@@ -223,11 +210,13 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 }
 
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
-function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
+export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useAdminComponents();
+	// Opened in place in the properties list: the assistant's blue until edited, and Enter or Escape ends the edit.
+	const edit = usePropertyEdit();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
 	if (registered && !isFieldInputParts(registered)) {
 		const Custom = registered;
@@ -246,10 +235,14 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					{...multilineProps(field)}
 					autoComplete="off"
 					value={text}
+					proposal={edit?.proposal}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					onKeyDown={(event) => {
+						if (event.key === "Escape") edit?.done();
+					}}
 				/>
 			) : (
 				<Input
@@ -257,10 +250,14 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					size="sm"
 					autoComplete="off"
 					value={text}
+					proposal={edit?.proposal}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					onKeyDown={(event) => {
+						if ((event.key === "Enter" && !isComposingKey(event)) || event.key === "Escape") edit?.done();
+					}}
 				/>
 			);
 		case "select": {
@@ -274,9 +271,13 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					value={text || field.defaultValue}
 					items={items}
 					disabled={context.disabled}
+					defaultOpen={Boolean(edit)}
+					onOpenChange={(open) => {
+						if (!open) edit?.done();
+					}}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					<SelectTrigger id={id} size="sm" width="full" aria-describedby={describedBy}>
+					<SelectTrigger id={id} size="sm" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -303,7 +304,7 @@ interface RowProps {
 }
 
 /** The entry a site registered under the field's `input` name, if any. */
-function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
+export function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
 	const { fieldInputs } = useAdminComponents();
 	const input = field.definition && "input" in field.definition ? field.definition.input : undefined;
 	return input ? fieldInputs?.[input] : undefined;
@@ -549,8 +550,6 @@ export function SchemaFields({
 	onRegenerateSlug,
 	slugPlaceholder,
 	showDescriptions = true,
-	include,
-	sections = "collapsible",
 	references,
 }: SchemaFieldsProps) {
 	const site = useSite();
@@ -584,7 +583,7 @@ export function SchemaFields({
 		}
 	};
 
-	const groups = site.panelGroupsOf(collection).filter((group) => !include || include(group));
+	const groups = site.panelGroupsOf(collection);
 
 	return (
 		<>
@@ -595,24 +594,6 @@ export function SchemaFields({
 				if (!group.group) {
 					return (
 						<Stack key={key} gap={16}>
-							{visible.map(renderField)}
-						</Stack>
-					);
-				}
-				if (sections === "plain") {
-					// If there is only one group (one group in one tab), no title is added.
-					if (groups.length === 1) {
-						return (
-							<Stack key={key} gap={16}>
-								{visible.map(renderField)}
-							</Stack>
-						);
-					}
-					return (
-						<Stack as="section" key={key} aria-label={group.group} gap={16} border="top" paddingTop={16}>
-							<Heading as="h3" variant="label">
-								{group.group}
-							</Heading>
 							{visible.map(renderField)}
 						</Stack>
 					);

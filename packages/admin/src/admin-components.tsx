@@ -252,12 +252,14 @@ export interface ListCellProps {
  * Field input parts that keep the default input and change only some. All can read the value being entered (`FieldInputProps.form`).
  */
 export interface FieldInputParts {
-	/** Input. If absent, the field type's default input; `null` renders only the label row with no input row (when the toggle goes in `Aside`). */
+	/** Input. If absent, the field type's default input; `null` renders only the label row with no input row. */
 	readonly Input?: ComponentType<FieldInputProps> | null;
-	/** Right side of the label row (character count, switch, etc.). Comes before the field's action buttons. */
+	/** Right side of the label row (character count, etc.), shown while the field is open for editing. Comes before the field's action buttons. */
 	readonly Aside?: ComponentType<FieldInputProps>;
 	/** Hint text of the default input. Returning `undefined` uses the field's `placeholder`. */
 	readonly placeholder?: (props: FieldInputProps) => string | undefined;
+	/** What the properties list reads in place of an empty value (the value it follows: "same as the title"). Without it the list says the value is empty. */
+	readonly Empty?: ComponentType<FieldInputProps>;
 }
 
 /** One field input registration: a whole input (component) or parts. */

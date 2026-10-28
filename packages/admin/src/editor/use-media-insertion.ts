@@ -176,8 +176,6 @@ export function useMediaInsertion({
 
 	return {
 		imageDialog,
-		/** Whether something fills in the image text after the insert, so the dialog can leave alt text empty. */
-		fillsImageText: imageInserted.length > 0,
 		openImageDialog: () => setImageDialog({ file: null }),
 		closeImageDialog: () => setImageDialog(null),
 		insertImage,

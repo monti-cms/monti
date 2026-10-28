@@ -450,7 +450,6 @@ describe("SchemaScreen", () => {
 			.collections.post.fields;
 		expect(Object.keys(fields).slice(0, 4)).toEqual(["title", "slug", "summary", "status"]);
 		expect(fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle", input: "seo-title" });
-		expect(fields.seoPreview).toMatchObject({ kind: "view", view: "search" });
 		// Plain data: nothing but JSON values reaches the file.
 		expect(JSON.parse(JSON.stringify(fields))).toEqual(fields);
 	});
@@ -1208,13 +1207,14 @@ describe("SchemaScreen", () => {
 			expect(within(preview).getByText(tFields("layout.previewLabel"))).toBeTruthy();
 			// The title is above the body, so the panel does not draw it.
 			expect(within(preview).queryByLabelText(/^Title/)).toBeNull();
-			// Real inputs of each kind work: a text box takes typing, a select opens its options.
+			// Real inputs of each kind work: a value opens a text box that takes typing, and a select opens its options.
+			fireEvent.click(within(preview).getByRole("button", { name: /^Summary/ }));
 			const summary = within(preview).getByLabelText("Summary") as HTMLTextAreaElement | HTMLInputElement;
 			fireEvent.change(summary, { target: { value: "typed in the preview" } });
 			expect((within(preview).getByLabelText("Summary") as HTMLInputElement).value).toBe("typed in the preview");
-			fireEvent.click(within(preview).getByRole("combobox", { name: /Status/ }));
+			fireEvent.click(within(preview).getByRole("button", { name: /^Status/ }));
 			pressOption(await screen.findByRole("option", { name: "Live" }));
-			expect(within(preview).getByRole("combobox", { name: /Status/ }).textContent).toContain("Live");
+			await waitFor(() => expect(within(preview).getByRole("button", { name: /^Status/ }).textContent).toBe("Live"));
 			expect(within(preview).getAllByRole("tab").length).toBeGreaterThan(0);
 			vi.unstubAllGlobals();
 		});
@@ -1239,18 +1239,19 @@ describe("SchemaScreen", () => {
 			wideWindow();
 			await openFields();
 			const preview = await screen.findByTestId("layout-preview");
-			expect(within(preview).queryByLabelText("Replacement note")).toBeNull();
-			fireEvent.click(within(preview).getByRole("combobox", { name: /Policy/ }));
+			const note = { name: /^Replacement note/ };
+			expect(within(preview).queryByRole("button", note)).toBeNull();
+			fireEvent.click(within(preview).getByRole("button", { name: /^Policy/ }));
 			pressOption(await screen.findByRole("option", { name: "Deprecated" }));
-			expect(await within(preview).findByLabelText("Replacement note")).toBeTruthy();
-			fireEvent.click(within(preview).getByRole("combobox", { name: /Policy/ }));
+			expect(await within(preview).findByRole("button", note)).toBeTruthy();
+			fireEvent.click(within(preview).getByRole("button", { name: /^Policy/ }));
 			pressOption(await screen.findByRole("option", { name: "Normal" }));
-			await waitFor(() => expect(within(preview).queryByLabelText("Replacement note")).toBeNull());
+			await waitFor(() => expect(within(preview).queryByRole("button", note)).toBeNull());
 
 			// A plugin's own tab is a real tab of the panel.
-			expect(within(preview).queryByLabelText("SEO title")).toBeNull();
+			expect(within(preview).queryByRole("button", { name: /^SEO title/ })).toBeNull();
 			fireEvent.click(within(preview).getByRole("tab", { name: seoTab }));
-			expect(await within(preview).findByLabelText("SEO title")).toBeTruthy();
+			expect(await within(preview).findByRole("button", { name: /^SEO title/ })).toBeTruthy();
 
 			// Nothing typed or picked reached the server: only reads were made.
 			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
@@ -1266,7 +1267,7 @@ describe("SchemaScreen", () => {
 			const group = await within(screen.getByTestId("layout-preview")).findByRole("region", {
 				name: tFields("layout.newGroup"),
 			});
-			expect(within(group).getByLabelText("Summary")).toBeTruthy();
+			expect(within(group).getByRole("button", { name: /^Summary/ })).toBeTruthy();
 			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
 			vi.unstubAllGlobals();
 		});

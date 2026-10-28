@@ -369,19 +369,13 @@ describe("a custom field UI built only from the hooks", () => {
 						{field.error.message}
 					</p>
 				)}
+				{field.assisted && <span>by the assistant</span>}
 				{slot.actions.map((action) => (
-					<button key={action.id} type="button" disabled={slot.disabled} onClick={() => slot.start(action.id)}>
+					<button key={action.id} type="button" disabled={slot.disabled} onClick={() => void slot.run(action.id)}>
 						{action.label}
 					</button>
 				))}
 				{slot.state.status === "running" && <span>working</span>}
-				{slot.state.status === "done" &&
-					slot.state.result.kind === "candidates" &&
-					slot.state.result.items.map((item) => (
-						<button key={item.value} type="button" onClick={() => slot.apply(item.value)}>
-							use {item.label}
-						</button>
-					))}
 			</div>
 		);
 	}
@@ -424,12 +418,47 @@ describe("a custom field UI built only from the hooks", () => {
 		expect(input.value).toBe("Draft 2");
 		expect(patches).toEqual([{ title: "Draft 2" }]);
 
-		// The action's context is read when it runs: the new title.
+		// The action's context is read when it runs: the new title. The result goes in at once and counts as the assistant's.
+		expect(screen.queryByText("by the assistant")).toBeNull();
 		fireEvent.click(screen.getByText("Suggest"));
-		const candidate = await screen.findByText("use Draft 2 (better)");
-		fireEvent.click(candidate);
 		await waitFor(() => expect(input.value).toBe("Draft 2 (better)"));
 		expect(patches.at(-1)).toEqual({ title: "Draft 2 (better)" });
+		expect(screen.getByText("by the assistant")).toBeTruthy();
+
+		// Editing the value takes the mark off.
+		fireEvent.change(input, { target: { value: "Mine" } });
+		expect(screen.queryByText("by the assistant")).toBeNull();
+	});
+
+	it("the assistant's mark ends when the entry is saved, and a field the assistant did not fill never has it", async () => {
+		function Marked({ version }: { version: number }) {
+			const title = useField("title");
+			const slot = useSlotActions(title.slotRequest as NonNullable<FieldState["slotRequest"]>);
+			const summary = useField("summary");
+			return (
+				<div>
+					<button type="button" onClick={() => void slot.run("suggest")}>
+						Suggest
+					</button>
+					<span>title {String(title.assisted)}</span>
+					<span>summary {String(summary.assisted)}</span>
+					<span>version {version}</span>
+				</div>
+			);
+		}
+		const view = (version: number) => (
+			<SlotRegistryProvider sources={[source]}>
+				<Owner initial={{ ...EMPTY_FORM, title: "Draft" }} entry={{ version } as never}>
+					<Marked version={version} />
+				</Owner>
+			</SlotRegistryProvider>
+		);
+		const { rerender } = render(view(1));
+		fireEvent.click(screen.getByText("Suggest"));
+		await screen.findByText("title true");
+		expect(screen.getByText("summary false")).toBeTruthy();
+		rerender(view(2));
+		await screen.findByText("title false");
 	});
 
 	it("shows no suggestion button for a field no source attached an action to", () => {

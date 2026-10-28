@@ -1,6 +1,6 @@
 import { definePlugin, type PluginFieldSet, type PluginPlacement } from "@monti-cms/core";
 import { seoAiContribution } from "./ai";
-import { SEO_PREVIEW_VIEW, SEO_ROLES, seoFields } from "./fields";
+import { SEO_ROLES, seoFields } from "./fields";
 import { SEO_PLUGIN_NAME } from "./name";
 import { checkSeoFields } from "./validate";
 
@@ -18,7 +18,7 @@ export interface SeoPluginOptions {
  * `monti.schema.ts` as plain fields), or spread `seoFields()` into a collection defined in code; the plugin places them in their own tab (`tab`, default `SEO`) of the
  * properties panel.
  *
- * - Admin UI: search result and share preview (view field `search`), character counts for search title and description with a hint for the fallback value, and a hide switch
+ * - Admin UI: the SEO tab as a read list: an empty title, description or image says what it follows ("same as the title"), with a character count while the title or description is edited
  * - Config validation: SEO roles are attached to fields of the right kind
  * - With the AI plugin, search title and description suggestions (`seoTitle`, `seoDescription`)
  *
@@ -27,10 +27,8 @@ export interface SeoPluginOptions {
  * ```
  */
 export const seo = (options: SeoPluginOptions = {}) => {
-	// The fields `seoFields()` makes are found by role and by the preview's view name, so a site that renames them keeps the tab.
-	const layout: readonly PluginPlacement[] = [
-		{ tab: options.tab ?? "SEO", roles: Object.values(SEO_ROLES), views: [SEO_PREVIEW_VIEW] },
-	];
+	// The fields `seoFields()` makes are found by role, so a site that renames them keeps the tab.
+	const layout: readonly PluginPlacement[] = [{ tab: options.tab ?? "SEO", roles: Object.values(SEO_ROLES) }];
 	// The field set the schema screen adds to a collection ("Add SEO fields"): the same fields `seoFields()` makes, as plain data for the schema file.
 	const fieldSets: readonly PluginFieldSet[] = [
 		{ id: "seo", label: options.tab ?? "SEO", roles: Object.values(SEO_ROLES), fields: seoFields() },

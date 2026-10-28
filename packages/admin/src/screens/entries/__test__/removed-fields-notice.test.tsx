@@ -5,8 +5,8 @@ import { testSite } from "../../../../../core/test/site";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM } from "../entry-form";
 import { entriesMessages } from "../messages";
+import { PropertyFields } from "../property-fields";
 import { RemovedFieldsNotice } from "../removed-fields-notice";
-import { SchemaFields } from "../schema-fields";
 import { EntryFormProvider } from "../use-field";
 
 const t = testSite.createTranslator(entriesMessages);
@@ -59,10 +59,12 @@ describe("select value that is no longer an option", () => {
 						setForm: () => {},
 					}}
 				>
-					<SchemaFields include={(group) => group.fields.includes(found.name)} />
+					<PropertyFields include={(group) => group.fields.includes(found.name)} />
 				</EntryFormProvider>
 			</TooltipProvider>,
 		);
-		expect(screen.getByRole("combobox").textContent).toContain(t("select.removedOption", { value: "removed-option" }));
+		expect(screen.getByRole("button", { name: new RegExp(`^${found.field.label}`) }).textContent).toBe(
+			t("select.removedOption", { value: "removed-option" }),
+		);
 	});
 });

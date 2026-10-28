@@ -1,33 +1,17 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Messages for the result panel of input-slot actions (AI, etc.). */
+/** Messages of the actions attached to a field (AI, etc.): what a failed run says. */
 export const slotsMessages = defineMessages("cms-admin.slots", {
 	en: {
 		failed: "Couldn't run it.",
-		rerun: "Run again",
-		instruction: "Extra request",
-		run: "Run",
-		running: "Running…",
-		noResults: "No matching results.",
-		insert: "Insert",
-		replace: "Replace",
 		unknownAction: "This action isn't available here.",
 		nothingToApply: "There is no result to apply.",
-		nothingToRerun: "There is nothing to run again.",
 		cancelled: "Cancelled.",
 	},
 	ko: {
 		failed: "실행하지 못했어요.",
-		rerun: "다시 실행",
-		instruction: "추가 요청",
-		run: "실행",
-		running: "실행 중…",
-		noResults: "맞는 결과가 없어요.",
-		insert: "넣기",
-		replace: "바꾸기",
 		unknownAction: "여기서는 쓸 수 없는 동작이에요.",
 		nothingToApply: "적용할 결과가 없어요.",
-		nothingToRerun: "다시 실행할 것이 없어요.",
 		cancelled: "취소했어요.",
 	},
 });
