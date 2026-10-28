@@ -21,7 +21,7 @@ const codeOf = (run: () => unknown) => {
 
 describe("plugin storage rules", () => {
 	it("names plugins and collections as lowercase words that start with a letter", () => {
-		for (const name of ["ai", "git-sync", "action-overrides", "v2"]) {
+		for (const name of ["ai", "slack-on-publish", "action-overrides", "v2"]) {
 			expect(codeOf(() => assertStorageName("plugin", name))).toBeNull();
 		}
 		for (const name of ["", "AI", "two words", "1st", "under_score", "dot.ted", "-lead", "한글"]) {

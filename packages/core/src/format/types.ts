@@ -71,7 +71,7 @@ export interface FormatMedia {
 
 /**
  * What the text is for. `read`: a consumer reads it (a site, a feed, another tool), so it needs addresses that work outside the database and no database ids.
- * `sync`: it will be imported again (git-sync, a backup), so a two-way format keeps whatever it needs to round-trip, such as the id of an unresolved link.
+ * `sync`: it will be imported again (a backup, a sync plugin), so a two-way format keeps whatever it needs to round-trip, such as the id of an unresolved link.
  */
 export type FormatPurpose = "read" | "sync";
 

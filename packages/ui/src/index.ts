@@ -239,6 +239,7 @@ export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
 export const StatusBar = close(open.StatusBar);
+export const StatusBarAnnouncer = close(open.StatusBarAnnouncer);
 export const StatusBarCell = close(open.StatusBarCell);
 export const StatusBarPluginCell = close(open.StatusBarPluginCell);
 export const StatusBarSpacer = close(open.StatusBarSpacer);

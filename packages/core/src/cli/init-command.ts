@@ -46,7 +46,7 @@ Every question has a flag; with --yes, --json, or no terminal nothing is asked a
 			value: "<s3|none>",
 			help: "Image storage: an S3-compatible store (S3, R2, MinIO), or none for now (default none)",
 		},
-		extras: { type: "string", value: "<list>", help: "ai, git-sync, or none (default none)" },
+		extras: { type: "string", value: "<list>", help: "ai, or none (default none)" },
 		blocks: {
 			type: "string",
 			value: "<list>",

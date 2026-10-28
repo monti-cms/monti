@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Text of the API keys page (Tools) and of the key field AI connections, the spell checker and git sync share. */
+/** Text of the API keys page (Tools) and of the key field AI connections and plugin key slots share. */
 export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 	en: {
 		title: "API keys",

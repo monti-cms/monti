@@ -53,7 +53,7 @@ export const callRoute = <P extends Record<string, string> = Record<string, stri
 /**
  * `callRoute` for a test that calls one handler many times: `const getEntry = routeCaller(GET)`, then `getEntry(request, { cms, params })`. The context takes `params`
  * as a value or as a promise. Give the `access` kind of a route that is not `admin`: `routeCaller(POST, "same-origin-form")`, and the plugin of a plugin's route:
- * `routeCaller(GET, { plugin: "ai" })` (or both: `routeCaller(POST, { access: "signed", plugin: "git-sync" })`).
+ * `routeCaller(GET, { plugin: "ai" })` (or both: `routeCaller(POST, { access: "signed", plugin: "slack-on-publish" })`).
  */
 export const routeCaller =
 	<P extends Record<string, string> = Record<string, string>>(

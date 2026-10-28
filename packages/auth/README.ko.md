@@ -81,7 +81,7 @@ export const cms = defineConfig({
 
 ## 비밀 값
 
-하나뿐인 비밀 값 `MONTI_SECRET`(`defineConfig`)이 설정해야 할 비밀 값의 전부다. 세션 쿠키 키(예약된 범위 `auth`의 `deriveKey("session")`)와 각 플러그인의 암호화 키(AI 서비스 키, git-sync 토큰)가 모두 이 값에서 HKDF로 파생된다. `AUTH_SECRET`과 `CMS_SECRET`은 더 읽지 않고, `auth()`에도 `secret` 옵션이 없다. 값이 없으면 `MONTI_SECRET`을 짚는 오류와 함께 로그인이 실패한다. 값을 바꾸면 모두 로그아웃되며, 바꾸기 전 값을 `defineConfig`의 `previousSecrets`에 적어 두면 그 값으로 저장된 것을 계속 읽을 수 있다.
+하나뿐인 비밀 값 `MONTI_SECRET`(`defineConfig`)이 설정해야 할 비밀 값의 전부다. 세션 쿠키 키(예약된 범위 `auth`의 `deriveKey("session")`)와 각 플러그인의 암호화 키(AI 서비스 키, 플러그인 토큰)가 모두 이 값에서 HKDF로 파생된다. `AUTH_SECRET`과 `CMS_SECRET`은 더 읽지 않고, `auth()`에도 `secret` 옵션이 없다. 값이 없으면 `MONTI_SECRET`을 짚는 오류와 함께 로그인이 실패한다. 값을 바꾸면 모두 로그아웃되며, 바꾸기 전 값을 `defineConfig`의 `previousSecrets`에 적어 두면 그 값으로 저장된 것을 계속 읽을 수 있다.
 
 `monti doctor`가 로그인 설정(`auth/*`)을 점검한다: 이메일·비밀번호 로그인이면 관리자 계정이 이미 있는지, GitHub이면 GitHub 클라이언트 id와 시크릿, 관리자가 있는지(GitHub 로그인 이름처럼 숫자 id가 아닌 항목은 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, 그리고 OAuth 앱에 등록할 콜백 URL(`SITE_URL`에서 만든다)을 찍는다. 프로바이더는 콜백 URL이 필요하면 `usesCallbackUrl`을 켠다. GitHub로 처음 로그인할 때는 GitHub가 브라우저를 어디로 돌려보낼지를 서버 로그가 알려 주고, 로그인했지만 관리자가 아닌 사람은 더해야 할 id와 함께 로그에 남는다.
 

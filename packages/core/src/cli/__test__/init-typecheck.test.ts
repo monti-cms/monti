@@ -80,7 +80,7 @@ describe("the project monti init writes", () => {
 			host,
 			locales: "en,ko",
 			storage: "s3",
-			extras: "ai,git-sync",
+			extras: "ai",
 			blocks: "all",
 			login,
 			install: false,

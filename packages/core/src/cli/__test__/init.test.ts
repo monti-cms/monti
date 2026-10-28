@@ -79,7 +79,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain("\tauth: auth({ providers: [password()] }),");
 		expect(config).not.toMatch(/github/i);
 		expect(config).toContain("// storage: s3Storage(),");
-		expect(config).not.toMatch(/\bai\(|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
+		expect(config).not.toMatch(/\bai\(|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
 		const schema = schemaOf(dir);
 		expect(() => parseSchemaFile(schema)).not.toThrow();
@@ -752,11 +752,6 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://example.com");
 	});
 
-	it("adds the git-sync note when git-sync is chosen", async () => {
-		const report = await initProject({ cwd: fixtureApp(), ...quiet(), extras: "git-sync" });
-		expect(report.next.join("\n")).toContain("add a target to gitSync()");
-	});
-
 	it("opts the admin page out of the instant validation only when next.config turns on cacheComponents", async () => {
 		const plain = fixtureApp();
 		await initProject({ cwd: plain, ...quiet() });
@@ -825,17 +820,15 @@ describe("monti init choices", () => {
 			locales: "ko,en",
 			timeZone: "Asia/Seoul",
 			storage: "s3",
-			extras: "ai,git-sync",
+			extras: "ai",
 			blocks: "callout,tabs,color",
 			siteUrl: "https://blog.example.com",
 		});
 		const config = read(dir, "monti.config.ts");
 		expect(config).toContain('import { ai } from "@monti-cms/ai";');
-		expect(config).toContain('import { gitSync } from "@monti-cms/git-sync";');
 		expect(config).toContain('import { s3Storage } from "@monti-cms/storage-s3";');
 		expect(config).toContain('import { callout, color, tabs } from "@monti-cms/blocks";');
 		expect(config).toMatch(/\n\t\tai\(\),\n/);
-		expect(config).toMatch(/\n\t\tgitSync\(\),\n/);
 		expect(config).toContain("\tstorage: s3Storage(),");
 		expect(config.indexOf("callout(),")).toBeLessThan(config.indexOf("tabs(),"));
 		expect(config.indexOf("tabs(),")).toBeLessThan(config.indexOf("color(),"));
@@ -846,9 +839,7 @@ describe("monti init choices", () => {
 		expect(schema.timeZone).toBe("Asia/Seoul");
 
 		const args = host.install.mock.calls[0]?.[0].args ?? [];
-		expect(args).toEqual(
-			expect.arrayContaining(["@monti-cms/ai", "@monti-cms/git-sync", "@monti-cms/storage-s3", "@monti-cms/blocks"]),
-		);
+		expect(args).toEqual(expect.arrayContaining(["@monti-cms/ai", "@monti-cms/storage-s3", "@monti-cms/blocks"]));
 		expect(read(dir, ".env.example")).toContain("S3_BUCKET=");
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://blog.example.com");
 	});
@@ -978,7 +969,7 @@ describe("monti init when something goes wrong", () => {
 			[{ locales: "English" }, /--locales: "English" must be a language code/],
 			[{ timeZone: "Mars/Base" }, /--time-zone "Mars\/Base" must be an IANA time zone/],
 			[{ storage: "gcs" }, /--storage "gcs" must be "s3" or "none"/],
-			[{ extras: "bareun" }, /--extras: "bareun" is not an extra/],
+			[{ extras: "nope" }, /--extras: "nope" is not an extra/],
 			[{ blocks: "callout,nope" }, /--blocks: "nope" is not a block/],
 			[{ adminPath: "/" }, /--admin-path "\/" must be a path like "\/studio"/],
 			[{ adminPath: "/api/studio" }, /--admin-path/],

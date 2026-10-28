@@ -19,7 +19,7 @@ const adminCss = [
 	readFileSync(path.resolve(__dirname, "../../styles/admin.css"), "utf8"),
 ].join("\n");
 /** Packages with an admin stylesheet (`styles/index.css`). */
-/** (ai, mdx, seo and git-sync ship none: their utilities are compiled into the admin's file, which scans their sources.) */
+/** (ai, mdx and seo ship none: their utilities are compiled into the admin's file, which scans their sources.) */
 const STYLE_PACKAGES = ["admin", "blocks"];
 
 /** The app's (shadcn) color names: the admin neither uses them unprefixed nor defines them, under its prefix or not. */
@@ -339,7 +339,7 @@ describe("admin CSS confinement", () => {
 		const variable = new RegExp(`\\(\\s*--(?:color-)?(?:${TOKENS})(?![\\w-])`, "g");
 		const dark = /(?<=[\s"'`:!([])dark:(?=[^\s,])/g;
 		const orientation = /(?<![\w-])(?:group-|peer-|in-|has-)*data-(?:horizontal|vertical)(?![\w-[])/g;
-		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai", "bareun", "git-sync"]) {
+		for (const pkg of ["core", "admin", "blocks", "mdx", "seo", "ai"]) {
 			const root = path.join(packagesDir, pkg, "src");
 			for (const file of sourceFiles(root)) {
 				const text = readFileSync(file, "utf8");

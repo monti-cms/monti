@@ -72,17 +72,21 @@ function Harness({
 	locale,
 	onChange,
 	onReady,
+	findings,
 }: {
 	content: string;
 	locale: string;
 	onChange: (doc: StoredDocument) => void;
 	onReady: (editor: Editor | null) => void;
+	/** Receives what the status bar would be given, on every render. */
+	findings: { current: ReturnType<typeof useEditorExtensions>["textIssues"] };
 }) {
 	const extensions = useEditorExtensions({
 		translateLocales: null,
 		getEntry: () => ({ title: "", collection: "post", locale }),
 	});
 	const doc = useMemo(() => docOf(content), [content]);
+	findings.current = extensions.textIssues;
 	return (
 		<>
 			<div role="toolbar" aria-label="확장 도구">
@@ -104,6 +108,7 @@ function Harness({
 const renderEditor = async (content: string, checkers: readonly TextChecker[], locale = "ko") => {
 	let editor: Editor | null = null;
 	const onChange = vi.fn();
+	const findings: { current: ReturnType<typeof useEditorExtensions>["textIssues"] } = { current: null };
 	renderWithSite(
 		<AdminComponentsProvider components={{ textCheckers: checkers }}>
 			<Harness
@@ -113,12 +118,13 @@ const renderEditor = async (content: string, checkers: readonly TextChecker[], l
 				onReady={(ready) => {
 					editor = ready;
 				}}
+				findings={findings}
 			/>
 		</AdminComponentsProvider>,
 	);
 	await screen.findByRole("toolbar", { name: tEditor("toolbar.format") });
 	await waitFor(() => expect(editor).not.toBeNull());
-	return { editor: editor as unknown as Editor, onChange };
+	return { editor: editor as unknown as Editor, onChange, findings };
 };
 
 /** Key name of the underline plugin the check extension adds to the editor (one per extension). */
@@ -156,7 +162,13 @@ describe("spellcheck button", () => {
 		renderWithSite(
 			<AdminComponentsProvider components={{ textCheckers: [fakeChecker()] }}>
 				<AdminComponentsProvider components={{ textCheckers: [other] }}>
-					<Harness content={"틀린말\n"} locale="ko" onChange={vi.fn()} onReady={() => {}} />
+					<Harness
+						content={"틀린말\n"}
+						locale="ko"
+						onChange={vi.fn()}
+						onReady={() => {}}
+						findings={{ current: null }}
+					/>
 				</AdminComponentsProvider>
 			</AdminComponentsProvider>,
 		);
@@ -289,6 +301,56 @@ describe("spellcheck button", () => {
 		expect(busy.hasAttribute("disabled")).toBe(true);
 		await act(async () => finish?.());
 		await waitFor(() => expect(checkButton("느림")).not.toBeNull());
+	});
+});
+
+describe("findings for the status bar", () => {
+	it("lists each finding with the paragraph it is in, its sentence, the suggestion and a way to fix or jump to it", async () => {
+		const { editor, findings } = await renderEditor("앞 문단\n\n이것은 틀린말 입니다\n", [fakeChecker()]);
+		expect(findings.current?.count).toBe(0);
+		fireEvent.click(checkButton() as HTMLElement);
+		await waitFor(() => expect(findings.current?.items).toHaveLength(1));
+		const [item] = findings.current?.items ?? [];
+		expect(item).toMatchObject({
+			text: "틀린말",
+			suggestion: "맞는 말",
+			paragraph: 2,
+			context: "이것은 틀린말 입니다",
+		});
+
+		act(() => item?.jump());
+		const [issue] = issuesOf(editor);
+		await waitFor(() => expect(editor.state.selection.from).toBe(issue?.from));
+	});
+
+	it("fixes one finding and leaves the others", async () => {
+		const { editor, onChange, findings } = await renderEditor("첫 틀린말\n\n둘째 틀린말\n", [fakeChecker()]);
+		fireEvent.click(checkButton() as HTMLElement);
+		await waitFor(() => expect(findings.current?.items).toHaveLength(2));
+		act(() => findings.current?.items[1]?.fix?.());
+		await waitFor(() => expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("둘째 맞는 말"));
+		expect(issuesOf(editor)).toHaveLength(1);
+		expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("첫 틀린말");
+	});
+
+	it("fixes every finding at once", async () => {
+		const { editor, onChange, findings } = await renderEditor("첫 틀린말 입니다\n\n둘째 틀린말\n\n셋째 틀린말\n", [
+			fakeChecker(),
+		]);
+		fireEvent.click(checkButton() as HTMLElement);
+		await waitFor(() => expect(findings.current?.items).toHaveLength(3));
+		act(() => findings.current?.fixAll?.());
+		await waitFor(() => expect(issuesOf(editor)).toHaveLength(0));
+		const text = JSON.stringify(onChange.mock.lastCall?.[0]);
+		expect(text).toContain("첫 맞는 말 입니다");
+		expect(text).toContain("둘째 맞는 말");
+		expect(text).toContain("셋째 맞는 말");
+		expect(text).not.toContain("틀린말");
+	});
+
+	it("has no findings for a language no checker covers", async () => {
+		const { findings } = await renderEditor("hello\n", [fakeChecker({ locales: ["ko"] })], "en");
+		expect(findings.current).toBeNull();
 	});
 });
 

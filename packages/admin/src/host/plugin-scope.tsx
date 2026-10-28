@@ -8,26 +8,26 @@ import type { LoadedAdminPlugin } from "../internal-plugins";
 import type { AdminPlugin } from "../plugins";
 import { ScreenContextProvider } from "../screens/shared/screen-context";
 import { AdminPanelProvider } from "../screens/shared/side-panel-slot";
-import { StatusItemsProvider } from "../screens/shared/status-bar";
+import { StatusCellsProvider } from "../screens/shared/status-bar";
 import { SlotRegistryProvider } from "../slots/registry";
 
-/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `on`, its `statusItems`, its `panel` and its `slots`. */
+/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `on`, its `statusCells`, its `panel` and its `slots`. */
 function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; readonly children: ReactNode }) {
 	const site = useSite();
-	const { components, slots, Provider, on, statusItems, panel } = plugin;
+	const { components, slots, Provider, on, statusCells, panel } = plugin;
 	const resolved = useMemo(
 		() => (typeof components === "function" ? components(site) : components),
 		[components, site],
 	);
 	const events = useMemo(() => (typeof on === "function" ? on(site) : on), [on, site]);
-	const statuses = useMemo(
-		() => (typeof statusItems === "function" ? statusItems(site) : statusItems),
-		[statusItems, site],
+	const cells = useMemo(
+		() => (typeof statusCells === "function" ? statusCells(site) : statusCells),
+		[statusCells, site],
 	);
 	const resolvedPanel = useMemo(() => (typeof panel === "function" ? panel(site) : panel), [panel, site]);
 	let inner = children;
 	if (resolvedPanel) inner = <AdminPanelProvider panel={resolvedPanel}>{inner}</AdminPanelProvider>;
-	if (statuses) inner = <StatusItemsProvider items={statuses}>{inner}</StatusItemsProvider>;
+	if (cells) inner = <StatusCellsProvider cells={cells}>{inner}</StatusCellsProvider>;
 	if (slots && slots.length > 0) inner = <SlotRegistryProvider sources={slots}>{inner}</SlotRegistryProvider>;
 	if (events) inner = <AdminEventsProvider on={events}>{inner}</AdminEventsProvider>;
 	if (resolved) inner = <AdminComponentsProvider components={resolved}>{inner}</AdminComponentsProvider>;

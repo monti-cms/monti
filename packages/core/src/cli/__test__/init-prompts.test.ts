@@ -12,7 +12,7 @@ const everything = {
 	[QUESTIONS.defaultLocale]: "ko",
 	[QUESTIONS.otherLocales]: ["en"],
 	[QUESTIONS.storage]: "s3",
-	[QUESTIONS.extras]: ["ai", "git-sync"],
+	[QUESTIONS.extras]: ["ai"],
 	[QUESTIONS.blocks]: "pick",
 	[QUESTIONS.blockList]: ["callout", "mermaid"],
 	[QUESTIONS.adminPath]: "/cms",
@@ -111,7 +111,6 @@ describe("the questions of monti init", () => {
 			timeZoneSource: "computer",
 			storage: "s3",
 			ai: true,
-			gitSync: true,
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
 			login: "github",
@@ -169,7 +168,7 @@ describe("the questions of monti init", () => {
 		expect(seen.labels).toEqual(expect.arrayContaining(["한국어 (ko)", "English (en)", "日本語 (ja)", "Other..."]));
 	});
 
-	it("the offered extras are AI and git-sync; Bareun is not offered", async () => {
+	it("the offered extras are AI only", async () => {
 		const offered: string[] = [];
 		const prompter = scriptedPrompter(everything);
 		const multiselect = prompter.multiselect.bind(prompter);
@@ -178,9 +177,8 @@ describe("the questions of monti init", () => {
 			return multiselect(question);
 		};
 		await collectAnswers(app(), {}, prompter);
-		expect(offered.filter((value) => ["ai", "git-sync", "bareun"].includes(value))).toEqual(["ai", "git-sync"]);
+		expect(offered.filter((value) => ["ai"].includes(value))).toEqual(["ai"]);
 		expect(offered).toContain("callout");
-		expect(offered).not.toContain("bareun");
 	});
 
 	it("lists every block with a one-line description when picking", async () => {
@@ -338,7 +336,6 @@ describe("the questions of monti init", () => {
 			timeZoneSource: "computer",
 			storage: "none",
 			ai: false,
-			gitSync: false,
 			// the light set: no mermaid or chart, which are heavy
 			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",

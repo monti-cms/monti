@@ -50,10 +50,10 @@ describe("key slots", () => {
 
 	it("assigns a saved key, shows the slot among the key's uses, and the plugin reads the value through it", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").set(key.id);
 		const [slot] = await cms.apiKeys.slots();
-		expect(slot?.key).toMatchObject({ id: key.id, name: "Bareun", tail: "3f9a" });
+		expect(slot?.key).toMatchObject({ id: key.id, name: "Speller", tail: "3f9a" });
 		const view = await cms.apiKeys.get(key.id);
 		expect(view?.uses).toEqual([{ plugin: "speller", ref: "key", label: "Spell check" }]);
 		expect(view?.slots).toHaveLength(1);
@@ -97,7 +97,7 @@ describe("key slots", () => {
 
 	it("deleting the assigned key empties the slot", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").set(key.id);
 		await expect(cms.apiKeys.remove(key.id, { expectedVersion: key.version })).rejects.toMatchObject({
 			code: "key_in_use",
@@ -109,7 +109,7 @@ describe("key slots", () => {
 	it("shows the slot in the admin language it is read in", async () => {
 		const language = { current: "en" };
 		const cms = cmsWith([speller(language)]);
-		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
 		await cms.apiKeys.slot("speller", "key").set(key.id);
 		expect((await cms.apiKeys.slots())[0]?.label).toBe("Spell check");
 		language.current = "ko";
@@ -139,7 +139,7 @@ describe("key slots", () => {
 		const shared = fakeCms();
 		const storage = (plugin: string) => shared.plugin(plugin).storage;
 		const installed = cmsWith([speller({ current: "en" })], { storage });
-		const key = await installed.apiKeys.add({ name: "Bareun", value: VALUE });
+		const key = await installed.apiKeys.add({ name: "Speller", value: VALUE });
 		await installed.apiKeys.slot("speller", "key").set(key.id);
 
 		const without = cmsWith([], { storage });

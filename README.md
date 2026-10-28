@@ -32,7 +32,7 @@ allowBuilds:
   esbuild: true
 ```
 
-- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`). How people sign in to the admin: the built-in email and password login (default, no other service needed), or GitHub (needs an OAuth app). With email and password, right after you deploy you open the admin and create the first admin on its first-admin screen; a forgotten password is replaced with `monti admin:reset-password`.
+- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing), which body blocks, and the admin path (default `/studio`). How people sign in to the admin: the built-in email and password login (default, no other service needed), or GitHub (needs an OAuth app). With email and password, right after you deploy you open the admin and create the first admin on its first-admin screen; a forgotten password is replaced with `monti admin:reset-password`.
 - **No prompts:** every question has a flag, and `--yes` takes the defaults (and installs without asking); `--no-install` prints the install command instead, and `--no-setup` leaves `.env.local`, the database and the doctor to you. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
 - **Safe:** apart from the three small edits it lists under "Changed:" it edits no existing file, never overwrites one without asking (a file that is already there is skipped and reported), never writes outside the project, and says what it wrote if a run stops partway. If the install fails it says so and prints the exact install command; running `monti init` again continues, and existing files are kept.
 - **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
@@ -66,9 +66,7 @@ It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every
 | [`@monti-cms/blocks`](packages/blocks) | Block extension. Callout, toggle, tabs, columns, code explorer, Mermaid, chart |
 | [`@monti-cms/ai`](packages/ai) | AI extension. AI features such as writing and translation |
 | [`@monti-cms/seo`](packages/seo) | SEO extension. Search and sharing fields with a preview |
-| [`@monti-cms/bareun`](packages/bareun) | Bareun spell checking |
 | [`@monti-cms/storage-s3`](packages/storage-s3) | Media storage on the S3 API (AWS S3, Cloudflare R2, MinIO), one `s3Storage()` configured from `S3_*` environment variables |
-| [`@monti-cms/git-sync`](packages/git-sync) | Git sync extension. Two-way sync of published entries with files in a GitHub repo, with a conflict screen |
 | [`@monti-cms/syntax-directive`](packages/syntax-directive) | Directive syntax extension. Reads and writes `:::callout`, `::image{…}` and `:u[text]` |
 | [`@monti-cms/syntax-shiki`](packages/syntax-shiki) | Shiki code notation extension. Reads `// [!code ++]` and friends in code fences as Monti code annotations |
 
@@ -94,10 +92,6 @@ For the other packages, change only `path:/<folder name>` and use the same tag.
 
 `@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog); its one config file is `monti.config.ts`, which exports the ready `cms` instance.
 
-## Recipes
-
-Short pages on how to extend Monti, each with a small illustrative sketch (not tested code): a Slack message on publish, your own block (definition, editor view, public component, check), a custom admin field screen, a slug rule before save, a custom format, typed reads on the public site, an admin page of a plugin, and a strict 404/308 proxy. Start at [`docs/recipes`](docs/recipes/README.md).
-
 ## Development
 
 ```sh
@@ -105,13 +99,13 @@ pnpm install          # install
 pnpm lint             # lint (fix with pnpm lint:fix)
 pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
 pnpm typecheck        # type check all packages
-pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
+pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → seo)
 pnpm test:run         # all tests, including the other-site and configured re-runs (needs Postgres)
 pnpm test:quick       # default projects only, for local work (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
 ```
 
-On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
+On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
 
 All tests run only if `.env.local` has a test DB URL (`CMS_TEST_DATABASE_URL`). The tests create a temporary schema in this DB and drop it when finished.
 

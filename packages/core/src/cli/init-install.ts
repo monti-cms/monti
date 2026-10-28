@@ -41,7 +41,6 @@ export function packagesFor(answers: InitAnswers): string[] {
 		...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
 		...(answers.directiveSyntax ? ["@monti-cms/syntax-directive"] : []),
 		...(answers.ai ? ["@monti-cms/ai"] : []),
-		...(answers.gitSync ? ["@monti-cms/git-sync"] : []),
 		...(answers.storage === "s3" ? ["@monti-cms/storage-s3"] : []),
 	]);
 }

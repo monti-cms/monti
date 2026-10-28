@@ -96,3 +96,52 @@ describe("missing required fields", () => {
 		]);
 	});
 });
+
+describe("required fields now", () => {
+	const noteSite = createSite(
+		defineSite({
+			collections: {
+				note: defineCollection({
+					label: "Note",
+					kind: "document",
+					fields: {
+						title: fields.text({ label: "Title", required: true }),
+						slug: fields.slug({ label: "Slug", from: "title", required: true }),
+						kind: fields.conditional(
+							fields.select({ label: "Kind", options: { link: "Link", text: "Text" }, defaultValue: "text" }),
+							{
+								link: { url: fields.text({ label: "Address", required: true }) },
+								text: { blurb: fields.text({ label: "Blurb", required: true }) },
+							},
+						),
+						note: fields.text({ label: "Note" }),
+					},
+				}),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+	const names = (metadata: Record<string, unknown>) =>
+		noteSite
+			.requiredFieldsOf("note", metadata)
+			.sort((a, b) => a.order - b.order)
+			.map((field) => field.name);
+
+	it("lists a field of a conditional group while its condition holds, and `order` puts them in the order of the form", () => {
+		expect(names({ kind: "link" })).toEqual(["title", "slug", "url"]);
+	});
+
+	it("leaves out a field whose condition is not met", () => {
+		expect(names({ kind: "text" })).toEqual(["title", "slug", "blurb"]);
+		expect(names({})).toEqual(["title", "slug"]);
+	});
+
+	it("is the list the publish check asks for: a field it lists is flagged when empty and the others are not", () => {
+		const flagged = noteSite
+			.missingRequiredIssues("note", { slug: null, metadata: { kind: "link" } })
+			.map((issue) => issue.path)
+			.sort();
+		expect(flagged).toEqual(["slug", "title", "url"]);
+	});
+});

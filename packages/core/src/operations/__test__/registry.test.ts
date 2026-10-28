@@ -35,7 +35,7 @@ describe("defineOperation", () => {
 	});
 
 	it("accepts dotted names with camel-case segments", () => {
-		for (const name of ["entries.list", "entries.checkPublish", "gitSync.status.last"]) {
+		for (const name of ["entries.list", "entries.checkPublish", "mailer.status.last"]) {
 			expect(OPERATION_NAME.test(name)).toBe(true);
 		}
 	});

@@ -104,18 +104,18 @@ describe("api key store", () => {
 
 	it("renames and replaces the value under the same id, keeping the places that use it", async () => {
 		const cms = cmsWithSecret();
-		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
-		await cms.apiKeys.setUses("text-check-bareun", [{ ref: "key", keyId: key.id }]);
+		const key = await cms.apiKeys.add({ name: "Speller", value: VALUE });
+		await cms.apiKeys.setUses("text-check-speller", [{ ref: "key", keyId: key.id }]);
 
-		const renamed = await cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "Bareun main" });
+		const renamed = await cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "Speller main" });
 		const replaced = await cms.apiKeys.update(key.id, {
 			expectedVersion: renamed.version,
 			value: "brn-0000000000007777",
 		});
 		expect(replaced.id).toBe(key.id);
-		expect(replaced.name).toBe("Bareun main");
+		expect(replaced.name).toBe("Speller main");
 		expect(replaced.tail).toBe("7777");
-		expect(replaced.uses).toEqual([{ plugin: "text-check-bareun", ref: "key", label: "text-check-bareun" }]);
+		expect(replaced.uses).toEqual([{ plugin: "text-check-speller", ref: "key", label: "text-check-speller" }]);
 		expect(await cms.apiKeys.read(key.id)).toBe("brn-0000000000007777");
 		await expect(cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "stale" })).rejects.toMatchObject({
 			code: "conflict",
@@ -130,15 +130,15 @@ describe("api key store", () => {
 			{ ref: "connection:b", keyId: key.id },
 			{ ref: "connection:c", keyId: "no-such-key" },
 		]);
-		await cms.apiKeys.setUses("git-sync", [{ ref: "token", keyId: key.id }]);
+		await cms.apiKeys.setUses("mailer", [{ ref: "token", keyId: key.id }]);
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => `${use.plugin}:${use.ref}`).sort()).toEqual([
 			"ai:connection:a",
 			"ai:connection:b",
-			"git-sync:token",
+			"mailer:token",
 		]);
 
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
-		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.plugin).sort()).toEqual(["ai", "git-sync"]);
+		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.plugin).sort()).toEqual(["ai", "mailer"]);
 	});
 
 	it("deleting a key forgets where it was used, and the value is gone", async () => {
