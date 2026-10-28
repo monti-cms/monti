@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/site";
+import { MEDIA_TRASH_KIND, useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
@@ -8,33 +8,19 @@ import { listTrash, type TrashFolderJson, type TrashItemJson, trashKeys, trashQu
 import { useAdminRouter, useAdminSearchParams } from "../../router";
 import { screensMessages } from "../messages";
 import { itemKey } from "./trash-model";
-import {
-	ALL_KINDS,
-	parseTrashState,
-	type TrashState,
-	trashStateToParams,
-	trashStateToSearchParams,
-} from "./trash-state";
+import { parseTrashState, type TrashState, trashStateToParams, trashStateToSearchParams } from "./trash-state";
 
-/** The tabs: every kind that holds something, the collections in the site's order, then the media. */
-export function tabKinds(
+/** The values of the 종류 column's filter: every collection in the site's order, then the media, each counted (a kind with nothing is 0). */
+export function kindValues(
 	kinds: Readonly<Record<string, number>>,
 	collections: readonly string[],
-	mediaKind = "media",
-): string[] {
-	const rank = (kind: string) => {
-		if (kind === mediaKind) return collections.length + 1;
-		const index = collections.indexOf(kind);
-		return index === -1 ? collections.length : index;
-	};
-	return Object.entries(kinds)
-		.filter(([, count]) => count > 0)
-		.map(([kind]) => kind)
-		.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+	mediaKind = MEDIA_TRASH_KIND,
+): { kind: string; count: number }[] {
+	return [...collections, mediaKind].map((kind) => ({ kind, count: kinds[kind] ?? 0 }));
 }
 
 /**
- * The state of the trash screen: the address (tab, folder, search, order, page), the page the server answers for it, the rows picked and the row open in
+ * The state of the trash screen: the address (kinds, folder, search, order, page), the page the server answers for it, the rows picked and the row open in
  * the panel. Draws nothing; the actions that change the trash are in `useTrashActions`.
  */
 export function useTrash() {
@@ -78,13 +64,7 @@ export function useTrash() {
 	const [panelKey, setPanelKey] = useState<string | null>(null);
 	const panelItem = panelKey ? (items.find((item) => itemKey(item) === panelKey) ?? null) : null;
 
-	// A tab whose last unit left is gone: go back to all of them.
 	const kinds = page?.kinds ?? {};
-	const tabless = page !== undefined && state.kind !== ALL_KINDS && !state.folder && (kinds[state.kind] ?? 0) === 0;
-	// biome-ignore lint/correctness/useExhaustiveDependencies: only when the tab is gone
-	useEffect(() => {
-		if (tabless) update({ kind: ALL_KINDS });
-	}, [tabless]);
 	// A folder with nothing left in it (everything came back) is gone too: back up.
 	const hollow = state.folder !== null && page !== undefined && !list.isPlaceholderData && items.length === 0;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: only when the folder is empty

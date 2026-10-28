@@ -5,11 +5,13 @@ import { trashDaysLeft, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	BulkBar,
+	DropdownMenuCheckboxItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	Inline,
 	ListHead,
 	ListScroll,
+	MenuShortcut,
 	RowActions,
 	RowCheck,
 	RowLink,
@@ -34,15 +36,30 @@ import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { trashMessages } from "./messages";
-import { addressOf, daysLeftOf, isUrgent, itemKey, metaOf, openOf, rowActionOf, titleOf } from "./trash-model";
-import type { TrashView } from "./use-trash";
+import {
+	addressOf,
+	daysLeftOf,
+	isUrgent,
+	itemKey,
+	kindLabel,
+	kindOf,
+	metaOf,
+	openOf,
+	rowActionOf,
+	titleOf,
+} from "./trash-model";
+import { kindValues, type TrashView } from "./use-trash";
 import type { TrashActions } from "./use-trash-actions";
 
-/** The width of the date column and of the end of a row (the text button and the ⋯). */
+/** The widths of the kind and date columns and of the end of a row (the text button and the ⋯). */
+const KIND_SIZE = 112;
 const DATE_SIZE = 128;
 const ACTIONS_SIZE = 140;
 
-/** One row: its check in the left margin, the title with what it is, the day it was discarded over the days left, and the button that brings it back. */
+/**
+ * One row: its check in the left margin, the title with its languages or contents, its kind, the day it was discarded over the days left, and the button
+ * that brings it back.
+ */
 function TrashRow({
 	item,
 	view,
@@ -110,6 +127,11 @@ function TrashRow({
 					metaTone={meta.tone}
 				/>
 			</TableCell>
+			<TableCell>
+				<Text variant="note" tone="subtle" truncate>
+					{kindLabel(site, kindOf(item))}
+				</Text>
+			</TableCell>
 			<TableCell align="end">
 				{days !== null && (
 					<TrashRowDate
@@ -156,8 +178,12 @@ function TrashRow({
 	);
 }
 
-/** The head of the list: the title and the day discarded, which sorts (newest first, or oldest first). */
+/**
+ * The one head row of the list: the title; the kind, whose menu filters to some kinds (several at once, any of them; it stays open, like the list's value
+ * menus); and the day discarded, which sorts (newest first, or oldest first). Inside a folder the kind has no menu: everything there is one kind.
+ */
 function TrashHead({ view }: { view: TrashView }) {
+	const site = useSite();
 	const t = useTranslator(trashMessages);
 	const ts = useTranslator(screensMessages);
 	const { state, items, selected, setSelected } = view;
@@ -166,6 +192,29 @@ function TrashHead({ view }: { view: TrashView }) {
 		<ListHead
 			columns={[
 				{ id: "title", label: t("head.title") },
+				{
+					id: "kind",
+					label: t("head.kind"),
+					size: KIND_SIZE,
+					filtered: state.kinds.length > 0,
+					menu: state.folder
+						? undefined
+						: kindValues(view.kinds, site.COLLECTIONS).map(({ kind, count }) => (
+								<DropdownMenuCheckboxItem
+									key={kind}
+									box
+									checked={state.kinds.includes(kind)}
+									onCheckedChange={(on) =>
+										view.update({
+											kinds: on ? [...state.kinds, kind] : state.kinds.filter((picked) => picked !== kind),
+										})
+									}
+								>
+									{kindLabel(site, kind)}
+									<MenuShortcut>{count}</MenuShortcut>
+								</DropdownMenuCheckboxItem>
+							)),
+				},
 				{
 					id: "deletedAt",
 					label: t("head.deletedAt"),
@@ -205,7 +254,7 @@ function TrashBulkBar({ view, actions }: { view: TrashView; actions: TrashAction
 			aria-label={t("bulk.label")}
 			clearLabel={t("bulk.clear")}
 			onClear={() => setSelected(new Set())}
-			colSpan={3}
+			colSpan={4}
 			selectAll={{
 				state: rows.length === items.length ? "all" : "some",
 				onChange: (all) => setSelected(new Set(all ? items.map(itemKey) : [])),
@@ -262,7 +311,7 @@ export function TrashList({ view, actions, now }: { view: TrashView; actions: Tr
 			<ListScroll>
 				<Box width="full">
 					{items.length > 0 || state.folder ? (
-						<Table container="none" layout="fixed" columns={[undefined, DATE_SIZE, ACTIONS_SIZE]}>
+						<Table container="none" layout="fixed" columns={[undefined, KIND_SIZE, DATE_SIZE, ACTIONS_SIZE]}>
 							{picking ? <TrashBulkBar view={view} actions={actions} /> : <TrashHead view={view} />}
 							<TableBody aria-busy={view.isRefreshing || undefined} dimmed={view.isRefreshing}>
 								{state.folder && (
@@ -273,6 +322,7 @@ export function TrashList({ view, actions, now }: { view: TrashView; actions: Tr
 												<RowLink render={<button type="button" onClick={view.closeFolder} />}>{t("folder.up")}</RowLink>
 											</Inline>
 										</TableCell>
+										<TableCell />
 										<TableCell />
 										<TableCell />
 									</TableRow>

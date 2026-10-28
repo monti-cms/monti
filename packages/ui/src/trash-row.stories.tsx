@@ -1,17 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ListHead } from "./list-head";
 import { RowActions, RowLink, Table, TableBody, TableCell, TableRow } from "./table";
+import { Text } from "./text";
 import { TextButton } from "./text-button";
 import { TrashRowDate, TrashRowTitle } from "./trash-row";
 
 /**
- * The two cells that make a trash row: the title cell (title and address, then what it is) and the date cell (the day it was discarded over the days
+ * The two cells that make a trash row: the title cell (title and address, then what it holds) and the date cell (the day it was discarded over the days
  * left). A trashed folder leads with its folder icon.
  */
 const meta = {
 	title: "Patterns/List/Trash row",
 	component: TrashRowTitle,
-	args: { title: "첫 번째 글", address: "/first-post", meta: "게시글 · KO · EN" },
+	args: { title: "첫 번째 글", address: "/first-post", meta: "KO · EN" },
 	decorators: [
 		(Story) => (
 			<div className="w-[880px]">
@@ -27,7 +28,7 @@ export const Playground: Story = {};
 
 /** A folder leads with its icon and says what is inside it. */
 export const Folder: Story = {
-	args: { title: "시리즈 원고", address: undefined, meta: "게시글 폴더 · 글 2", folder: true },
+	args: { title: "시리즈 원고", address: undefined, meta: "글 2", folder: true },
 };
 
 /** A translation whose original is in the trash says so in the warning tone. */
@@ -51,18 +52,26 @@ export const Dates: Story = {
 };
 
 const ROWS = [
-	{ title: "첫 번째 글", address: "/first-post", meta: "게시글 · KO · EN", date: "10. 27 버림", left: "30일 남음" },
-	{ title: "시리즈 원고", meta: "게시글 폴더 · 글 2", date: "10. 27 버림", left: "30일 남음", folder: true },
-	{ title: "임시", meta: "태그", date: "09. 30 버림", left: "3일 남음", urgent: true },
+	{
+		title: "첫 번째 글",
+		address: "/first-post",
+		meta: "KO · EN",
+		kind: "게시글",
+		date: "10. 27 버림",
+		left: "30일 남음",
+	},
+	{ title: "시리즈 원고", meta: "글 2", kind: "게시글", date: "10. 27 버림", left: "30일 남음", folder: true },
+	{ title: "임시", kind: "태그", date: "09. 30 버림", left: "3일 남음", urgent: true },
 ];
 
-/** In a list: the whole row opens the title's link, the text button and the ⋯ sit above it. */
+/** In a list: one head row (title, kind, day), the whole row opens the title's link, the text button and the ⋯ sit above it; an item keeps its empty line. */
 export const InAList: Story = {
 	render: () => (
-		<Table container="none" layout="fixed" columns={[undefined, 128, 120]}>
+		<Table container="none" layout="fixed" columns={[undefined, 112, 128, 120]}>
 			<ListHead
 				columns={[
 					{ id: "title", label: "제목" },
+					{ id: "kind", label: "종류", size: 112 },
 					{ id: "deletedAt", label: "버린 날", size: 128, align: "end", sort: "desc" },
 				]}
 				end={120}
@@ -77,6 +86,11 @@ export const InAList: Story = {
 								folder={row.folder}
 								meta={row.meta}
 							/>
+						</TableCell>
+						<TableCell>
+							<Text variant="note" tone="subtle">
+								{row.kind}
+							</Text>
 						</TableCell>
 						<TableCell align="end">
 							<TrashRowDate date={row.date} left={row.left} urgent={row.urgent} />

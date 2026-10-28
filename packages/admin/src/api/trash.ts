@@ -42,7 +42,7 @@ export const trashKeys = {
 /** The query string of `GET /v1/trash`; what is unset is left out. */
 export function trashQuery(params: TrashListParams): URLSearchParams {
 	const query = new URLSearchParams();
-	if (params.kind) query.set("kind", params.kind);
+	for (const kind of params.kinds ?? []) query.append("kind", kind);
 	if (params.folderId) query.set("folder", params.folderId);
 	if (params.search) query.set("q", params.search);
 	if (params.direction) query.set("sort", params.direction);

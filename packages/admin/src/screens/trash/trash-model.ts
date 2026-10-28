@@ -1,6 +1,7 @@
 import {
 	fileTypeLabel,
 	formatFileSize,
+	MEDIA_TRASH_KIND,
 	type Site,
 	type TrashTarget,
 	type TrashUsage,
@@ -77,47 +78,57 @@ export interface RowMeta {
 	tone: "default" | "warning";
 }
 
+/** The name of a kind as the 종류 column and its filter write it: the collection's noun, or the media. */
+export function kindLabel(site: Site, kind: string): string {
+	return kind === MEDIA_TRASH_KIND ? site.createTranslator(trashMessages)("kind.media") : collectionNoun(site, kind);
+}
+
+/** What a row is, for the 종류 column: the collection of an entry or an entry folder, and the media for a file or a media folder. */
+export const kindOf = (item: TrashItemJson): string => (item.type === "media" ? MEDIA_TRASH_KIND : item.collection);
+
 /**
- * The second line of a row: what it is, in the kind and languages of the board ("Post · KO · EN", "Post · English translation", "Tag", "Post folder · 2
- * entries", "Media · Image · 2.4MB · Blog Assets"). In a search it starts with the folder the thing was in; a unit the last emptying kept ends with why.
+ * The second line of a row, without the kind (the 종류 column says it): an entry's languages, a translation's language, what a folder holds, a file's type
+ * and size and its folder. A search adds where an entry or a folder was; a row kept by the empty says what points at it. An item has no second line
+ * of its own.
  */
 export function metaOf(site: Site, item: TrashItemJson, options: { searching: boolean; kept?: number }): RowMeta {
 	const t = site.createTranslator(trashMessages);
 	const pathText = item.path.join(" / ");
-	let text: string;
+	let parts: string[] = [];
 	let tone: RowMeta["tone"] = "default";
 	if (item.type === "entry") {
-		const kind = collectionNoun(site, item.collection);
 		if (item.sourceTrashed) {
-			text = t("row.sourceTrashed", {
-				title: item.sourceTitle || site.createTranslator(commonMessages)("untitled"),
-			});
+			parts = [
+				t("row.sourceTrashed", {
+					title: item.sourceTitle || site.createTranslator(commonMessages)("untitled"),
+				}),
+			];
 			tone = "warning";
 		} else if (site.isItemCollection(item.collection)) {
-			text = kind;
+			parts = [];
 		} else if (!item.isSource) {
-			text = t("meta.translation", { kind, language: site.localeLabel(item.locale) });
-		} else {
+			parts = [t("meta.translation", { language: site.localeLabel(item.locale) })];
+		} else if (site.ADMIN_TRANSLATIONS) {
 			const locales = item.locales.length > 0 ? item.locales : [item.locale];
-			text = site.ADMIN_TRANSLATIONS ? [kind, ...locales.map((locale) => locale.toUpperCase())].join(" · ") : kind;
+			parts = locales.map((locale) => locale.toUpperCase());
 		}
 	} else if (item.type === "folder") {
-		text =
-			item.collection === "media"
-				? t("meta.folderFiles", { count: item.files, path: pathText })
-				: t("meta.folderEntries", { kind: collectionNoun(site, item.collection), count: item.entries });
+		parts =
+			item.collection === MEDIA_TRASH_KIND
+				? [t("meta.files", { count: item.files }), ...(pathText ? [pathText] : [])]
+				: [t("meta.entries", { count: item.entries })];
 	} else {
 		const type = item.mimeType?.startsWith("image/") ? t("meta.image") : fileTypeLabel(item.filename, item.mimeType);
-		text = t("meta.media", { type, size: formatFileSize(item.byteSize ?? 0), path: pathText });
+		parts = [type, formatFileSize(item.byteSize ?? 0), ...(pathText ? [pathText] : [])];
 	}
 	// A file already names its folder at the end; a search says where an entry or a folder was.
 	if (options.searching && item.type !== "media" && item.path.length > 0)
-		text = t("meta.inFolder", { path: pathText, meta: text });
+		parts = [t("meta.inFolder", { path: pathText }), ...parts];
 	if (options.kept !== undefined) {
-		text = t("meta.pointed", { meta: text, count: options.kept });
+		parts = [...parts, t("meta.pointed", { count: options.kept })];
 		tone = "warning";
 	}
-	return { text, tone };
+	return { text: parts.join(" · "), tone };
 }
 
 /** The reason a request failed, in words: the bulk bar's for the codes it knows, the trash's own for the rest. */

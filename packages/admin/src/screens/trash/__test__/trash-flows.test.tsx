@@ -10,7 +10,7 @@ import { AdminQueryProvider } from "../../shared/query-provider";
 import { trashMessages } from "../messages";
 import { TrashScreen } from "../trash-screen";
 import { TrashBackend } from "./trash-backend";
-import { ago, content, entry, folder, inside, media, other, record, secondLocale } from "./trash-fixtures";
+import { ago, content, entry, folder, inside, media, record, secondLocale } from "./trash-fixtures";
 
 // One test per flow of the Trash board (flow 5 of the canvas): looking around, restoring, deleting for good, picking several, and emptying. They check what a
 // screenshot cannot: the requests a press sends, where it goes, what is enabled, the names of the parts and the keys.
@@ -90,7 +90,6 @@ const posted = (path: string) =>
 		.filter(([input, init]) => String(input).split("?")[0] === `/api/monti/v1${path}` && init?.method === "POST")
 		.map(([, init]) => ((init as RequestInit).body ? JSON.parse(String((init as RequestInit).body)) : {}));
 const row = (name: RegExp | string) => screen.getByRole("row", { name: new RegExp(name) });
-const tabs = () => within(screen.getByRole("navigation", { name: t("tabs.label") }));
 const openMenu = async (target: HTMLElement) => {
 	await act(async () => {
 		fireEvent.contextMenu(target);
@@ -101,37 +100,35 @@ const openMenu = async (target: HTMLElement) => {
 const moreOf = (target: HTMLElement) => within(target).getByRole("button", { name: t("row.more") });
 
 describe("flow: looking around the trash (T3)", () => {
-	it("puts tabs only on the kinds that hold something, all of them first, with counts, and the rail counts the units", async () => {
+	it("has one head row, title, kind and day, and the rail counts the units", async () => {
 		await renderTrash();
-		const links = tabs().getAllByRole("link");
-		expect(links[0]?.textContent).toContain(t("tabs.all"));
-		expect(links[0]?.textContent).toContain(String(backend.top.length));
-		const hrefs = links.map((link) => link.getAttribute("href"));
-		expect(hrefs[0]).toBe(testSite.adminHref("/trash"));
-		expect(hrefs.some((href) => href?.includes(`kind=${content}`))).toBe(true);
-		expect(hrefs.some((href) => href?.includes(`kind=${record}`))).toBe(true);
-		expect(hrefs.some((href) => href?.includes("kind=media"))).toBe(true);
-		// A collection that holds nothing has no tab.
-		if (other) expect(hrefs.some((href) => href?.includes(`kind=${other}`))).toBe(false);
-		expect(links[0]?.getAttribute("aria-current")).toBe("page");
+		const heads = screen.getAllByRole("columnheader").map((head) => head.textContent);
+		expect(heads.slice(0, 3)).toEqual([t("head.title"), t("head.kind"), t("head.deletedAt")]);
+		expect(screen.queryByRole("navigation", { name: /컬렉션|Collections/ })).toBeNull();
 		const badge = await screen.findByLabelText(ts("sidebar.trashBadge", { count: backend.top.length }));
 		expect(badge).toBeTruthy();
 	});
 
-	it("asks for one kind when its tab is the address, and marks the tab", async () => {
-		nav.setSearch("kind=media");
-		render(
-			<AdminQueryProvider>
-				<TrashScreen />
-			</AdminQueryProvider>,
-		);
+	it("filters by kind from the kind column: several at once, the menu stays open, a chip shows them and its × lets them go", async () => {
+		await renderTrash();
+		const head = screen.getByRole("columnheader", { name: t("head.kind") });
+		fireEvent.click(within(head).getByRole("button", { name: t("head.kind") }));
+		const mediaName = t("kind.media");
+		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(mediaName) }));
+		await waitFor(() => expect(lastList().searchParams.getAll("kind")).toEqual(["media"]));
 		await screen.findByRole("row", { name: /winter-01/ });
-		expect(lastList().searchParams.get("kind")).toBe("media");
 		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
-		const current = tabs()
-			.getAllByRole("link")
-			.find((link) => link.getAttribute("aria-current") === "page");
-		expect(current?.getAttribute("href")).toContain("kind=media");
+		// The menu is still open: a second kind is any of the two.
+		const contentName = testSite.COLLECTION_DEFINITIONS[content].label;
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(contentName) }));
+		await waitFor(() => expect(new Set(lastList().searchParams.getAll("kind"))).toEqual(new Set(["media", content])));
+		await screen.findByRole("row", { name: /첫 번째 글/ });
+		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+		const chip = await screen.findByText(new RegExp(`^${t("kind.chip", { kinds: "" })}`));
+		fireEvent.click(
+			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("kind.clear") }),
+		);
+		await waitFor(() => expect(lastList().searchParams.getAll("kind")).toEqual([]));
 	});
 
 	it("sorts by the day it was discarded, newest first, and the head switches the order", async () => {
@@ -167,10 +164,13 @@ describe("flow: looking around the trash (T3)", () => {
 		).toBeTruthy();
 		expect(screen.getByRole("button", { name: t("folder.restore") })).toBeTruthy();
 		expect(screen.getAllByRole("button", { name: tc("lifecycle.deletePermanently") }).length).toBeGreaterThan(0);
-		// The rows inside carry no day of their own, and no tabs.
+		// The rows inside carry no day of their own, and there is no kind filter.
 		expect(screen.getByText(new RegExp(t("row.left", { count: 30 })))).toBeTruthy(); // the folder's own line in the head
 		expect(within(row(/시리즈 1화/)).queryByText(/버림|discarded/)).toBeNull();
-		expect(screen.queryByRole("navigation", { name: t("tabs.label") })).toBeNull();
+		fireEvent.click(
+			within(screen.getByRole("columnheader", { name: t("head.kind") })).getByRole("button", { name: t("head.kind") }),
+		);
+		expect(screen.queryByRole("menuitemcheckbox")).toBeNull();
 
 		fireEvent.click(screen.getByRole("button", { name: t("folder.up") }));
 		await screen.findByRole("row", { name: /첫 번째 글/ });

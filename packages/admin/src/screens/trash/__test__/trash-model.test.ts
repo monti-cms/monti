@@ -19,7 +19,7 @@ import {
 	summarizeRestore,
 	usagesFromReferrers,
 } from "../trash-model";
-import { tabKinds } from "../use-trash";
+import { kindValues } from "../use-trash";
 import { ago, content, entry, folder, inside, media, record, secondLocale } from "./trash-fixtures";
 
 const t = testSite.createTranslator(trashMessages);
@@ -62,10 +62,7 @@ describe("the second line of a row", () => {
 	it("names a translation by its language and a translation with its original in the trash by that", () => {
 		const translation = entry("b", "b", { isSource: false, locale: secondLocale });
 		expect(metaOf(testSite, translation, { searching: false }).text).toBe(
-			t("meta.translation", {
-				kind: testSite.COLLECTION_DEFINITIONS[content].label,
-				language: testSite.localeLabel(secondLocale),
-			}),
+			t("meta.translation", { language: testSite.localeLabel(secondLocale) }),
 		);
 		const orphan = entry("c", "c", { isSource: false, sourceTrashed: true, sourceTitle: "원문" });
 		expect(metaOf(testSite, orphan, { searching: false })).toEqual({
@@ -77,14 +74,13 @@ describe("the second line of a row", () => {
 	it("starts with the folder in a search, ends with why in a kept row, and a file keeps its folder at the end", () => {
 		const found = entry("a", "a", { path: ["시리즈 원고"] });
 		expect(
-			metaOf(testSite, found, { searching: true }).text.startsWith(
-				t("meta.inFolder", { path: "시리즈 원고", meta: "" }),
-			),
+			metaOf(testSite, found, { searching: true }).text.startsWith(t("meta.inFolder", { path: "시리즈 원고" })),
 		).toBe(true);
 		expect(metaOf(testSite, found, { searching: false }).text.startsWith("시리즈 원고")).toBe(false);
 		const kept = metaOf(testSite, entry("t", "t", { collection: record }), { searching: false, kept: 4 });
 		expect(kept.tone).toBe("warning");
-		expect(kept.text.endsWith(t("meta.pointed", { meta: "", count: 4 }).replace(/^ · /, ""))).toBe(true);
+		// An item has no line of its own: the kept row's line is only why it stayed.
+		expect(kept.text).toBe(t("meta.pointed", { count: 4 }));
 		expect(
 			metaOf(testSite, media("m", "m.jpg", { path: ["Blog Assets"] }), { searching: true }).text.endsWith(
 				"Blog Assets",
@@ -215,13 +211,13 @@ describe("what a restore tells", () => {
 	});
 });
 
-describe("the tabs", () => {
-	it("lists the kinds that hold something, the collections in the site's order and the media last", () => {
+describe("the kind filter", () => {
+	it("offers every collection in the site's order, then the media, each with its count and 0 for none", () => {
 		const collections = testSite.COLLECTIONS;
-		const kinds = { media: 2, [collections[1] ?? content]: 1, [collections[0] ?? content]: 3, empty: 0 };
-		const order = tabKinds(kinds, collections);
-		expect(order).not.toContain("empty");
-		expect(order.at(-1)).toBe("media");
-		expect(order.indexOf(collections[0] ?? content)).toBeLessThanOrEqual(order.indexOf(collections[1] ?? content));
+		const values = kindValues({ media: 2, [collections[0] ?? content]: 3 }, collections);
+		expect(values.map((value) => value.kind)).toEqual([...collections, "media"]);
+		expect(values.find((value) => value.kind === "media")?.count).toBe(2);
+		expect(values.find((value) => value.kind === collections[0])?.count).toBe(3);
+		if (collections[1]) expect(values.find((value) => value.kind === collections[1])?.count).toBe(0);
 	});
 });

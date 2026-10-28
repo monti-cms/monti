@@ -1,16 +1,13 @@
 import type { PageSize, TrashListParams } from "@monti-cms/core/site";
 import { pageParam, pageSizeParam } from "../../lib/hooks/use-url-state";
 
-/** The tab that shows every kind. */
-export const ALL_KINDS = "all";
-
 /**
- * What the trash screen keeps in its address, so Back restores it: the tab (a collection or `media`), the trashed folder looked into, the search, the
- * order of the day it was discarded, and the page.
+ * What the trash screen keeps in its address, so Back restores it: the kinds the 종류 column filters to (collections or `media`), the trashed folder
+ * looked into, the search, the order of the day it was discarded, and the page.
  */
 export interface TrashState {
-	/** `all`, a collection, or `media`. */
-	kind: string;
+	/** Only these kinds (any of them); none is every kind. */
+	kinds: string[];
 	/** The trashed folder that is open, or `null` at the top. */
 	folder: string | null;
 	/** The trashed folders it was reached through, the outermost first: where "up one folder" goes. */
@@ -22,19 +19,9 @@ export interface TrashState {
 	pageSize: PageSize;
 }
 
-export const DEFAULT_TRASH_STATE: TrashState = {
-	kind: ALL_KINDS,
-	folder: null,
-	trail: [],
-	search: "",
-	direction: "desc",
-	page: 1,
-	pageSize: 25,
-};
-
 export function parseTrashState(params: URLSearchParams): TrashState {
 	return {
-		kind: params.get("kind") || ALL_KINDS,
+		kinds: params.getAll("kind").filter(Boolean),
 		folder: params.get("folder") || null,
 		trail: (params.get("trail") ?? "").split(",").filter(Boolean),
 		search: params.get("search") ?? "",
@@ -47,7 +34,7 @@ export function parseTrashState(params: URLSearchParams): TrashState {
 /** The address query of a state; what equals the default is left out. */
 export function trashStateToSearchParams(state: TrashState): URLSearchParams {
 	const params = new URLSearchParams();
-	if (state.kind !== ALL_KINDS) params.set("kind", state.kind);
+	for (const kind of state.kinds) params.append("kind", kind);
 	if (state.folder) params.set("folder", state.folder);
 	if (state.folder && state.trail.length > 0) params.set("trail", state.trail.join(","));
 	if (state.search) params.set("search", state.search);
@@ -59,15 +46,15 @@ export function trashStateToSearchParams(state: TrashState): URLSearchParams {
 }
 
 /**
- * What `GET /trash` is asked. Inside a folder there are no tabs and no search (the head has neither), so only the folder is sent; at the top the tab and
- * the search are, and the search looks in the trashed folders too.
+ * What `GET /trash` is asked. Inside a folder there is no kind filter and no search (the head has neither), so only the folder is sent; at the top the
+ * kinds and the search are, and the search looks in the trashed folders too.
  */
 export function trashStateToParams(state: TrashState): TrashListParams {
 	return {
 		...(state.folder
 			? { folderId: state.folder }
 			: {
-					...(state.kind !== ALL_KINDS ? { kind: state.kind } : {}),
+					...(state.kinds.length > 0 ? { kinds: state.kinds } : {}),
 					...(state.search ? { search: state.search } : {}),
 				}),
 		direction: state.direction,

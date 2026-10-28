@@ -4,7 +4,8 @@ import { cn } from "./cn";
 
 /**
  * The title cell of a trash row. Line one: the title in the quiet ink of what is out of use (a trashed folder has its folder icon before it), and its
- * address in mono beside it; line two: what it is (`meta`: its kind, languages and where it was), in the warning tone when something stops it from coming back.
+ * address in mono beside it; line two: what it holds (`meta`: its languages, what a folder or file is, where it was), in the warning tone when something stops it
+ * from coming back. A row with nothing to say there (an item) keeps the empty line, so every row of the list is as tall.
  * The title may be a {@link RowLink}: it covers the row, so a click anywhere on the row opens it.
  */
 function TrashRowTitle({
@@ -34,17 +35,12 @@ function TrashRowTitle({
 				</span>
 				{address && <span className="truncate font-mono text-monti-faint text-monti-meta">{address}</span>}
 			</span>
-			{meta && (
-				<span
-					data-slot="trash-row-meta"
-					className={cn(
-						"truncate text-monti-note",
-						metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle",
-					)}
-				>
-					{meta}
-				</span>
-			)}
+			<span
+				data-slot="trash-row-meta"
+				className={cn("truncate text-monti-note", metaTone === "warning" ? "text-monti-warning" : "text-monti-subtle")}
+			>
+				{meta || "\u00a0"}
+			</span>
 		</span>
 	);
 }

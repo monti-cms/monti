@@ -112,7 +112,19 @@ const rowNamed = (canvasElement: HTMLElement, name: RegExp) => within(canvasElem
 // 보통: one list for every kind, newest first; a folder is one line, a translation says what it is.
 export const Default: Story = { ...visual, render: screen(backendOf()) };
 
-// 미디어: the media tab, files and media folders.
+// 종류 메뉴: the kind column's menu, every kind with its count; it stays open while kinds are picked.
+export const KindMenu: Story = {
+	...visual,
+	render: screen(backendOf()),
+	play: async ({ canvasElement }) => {
+		await rowNamed(canvasElement, /첫 번째 글/);
+		const head = within(canvasElement).getByRole("columnheader", { name: "종류" });
+		await userEvent.click(within(head).getByRole("button", { name: "종류" }));
+		await body().findByRole("menuitemcheckbox", { name: /미디어/ });
+	},
+};
+
+// 미디어: filtered to the media kind, files and media folders; the chip says so and the kind's name has its dot.
 export const Media: Story = { ...visual, render: screen(backendOf(), "kind=media") };
 
 // 휴지통 폴더 안: the trail, the folder's name, its day, folder restore and permanent delete, the way up, and rows with no day.

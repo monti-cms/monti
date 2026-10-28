@@ -1,36 +1,20 @@
 "use client";
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Box,
-	Chip,
-	Inline,
-	PageColumn,
-	PageHeader,
-	PageToolbar,
-	PageToolbarEnd,
-	SearchBox,
-	Stack,
-	TabLink,
-	TabLinks,
-	Text,
-	TextButton,
-} from "@monti-cms/ui";
+import { Box, Chip, ChipRow, Inline, PageColumn, PageHeader, SearchBox, Stack, Text, TextButton } from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
 import { shortDate } from "../list-row-dates";
 import { AdminFrame, AdminNavProvider } from "../shared/admin-frame";
-import { collectionNoun } from "../shared/noun.messages";
 import { DockedPanel } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
 import { trashMessages } from "./messages";
 import { DeleteDialog, EmptyDialog } from "./trash-dialogs";
 import { TrashList } from "./trash-list";
-import { daysLeftOf } from "./trash-model";
+import { daysLeftOf, kindLabel } from "./trash-model";
 import { TrashPanel } from "./trash-panel";
-import { ALL_KINDS, DEFAULT_TRASH_STATE, trashStateToSearchParams } from "./trash-state";
-import { tabKinds, useTrash } from "./use-trash";
+import { kindValues, useTrash } from "./use-trash";
 import { useTrashActions } from "./use-trash-actions";
 
 // The admin list fetches data in the browser. Render after hydration so Base UI's auto IDs do not mismatch the server HTML.
@@ -62,42 +46,31 @@ export function TrashScreen({ now }: { now?: Date }) {
 	);
 }
 
-/** The tabs under the title: all of them, then each kind that holds something, with how many; and the search as a chip at the end. */
-function TrashTabs({ view }: { view: ReturnType<typeof useTrash> }) {
+/**
+ * The filters that are on, under the title, as the list shows them: the kinds the 종류 column picked, then the search. Each chip's × lets its filter go.
+ * There is no row when nothing is on, and none inside a folder (it has neither).
+ */
+function TrashChips({ view }: { view: ReturnType<typeof useTrash> }) {
 	const site = useSite();
 	const t = useTranslator(trashMessages);
 	const { state } = view;
-	const href = (kind: string) => {
-		const query = trashStateToSearchParams({ ...DEFAULT_TRASH_STATE, kind, direction: state.direction }).toString();
-		return `${site.adminHref("/trash")}${query ? `?${query}` : ""}`;
-	};
+	const kinds = kindValues(view.kinds, site.COLLECTIONS)
+		.filter((value) => state.kinds.includes(value.kind))
+		.map((value) => kindLabel(site, value.kind));
+	if (state.folder || (kinds.length === 0 && !state.search)) return null;
 	return (
-		<PageToolbar inset>
-			<Box as="nav" aria-label={t("tabs.label")}>
-				<TabLinks variant="toolbar">
-					<TabLink render={<Link href={href(ALL_KINDS)} />} current={state.kind === ALL_KINDS} count={view.total}>
-						{t("tabs.all")}
-					</TabLink>
-					{tabKinds(view.kinds, site.COLLECTIONS).map((kind) => (
-						<TabLink
-							key={kind}
-							render={<Link href={href(kind)} />}
-							current={state.kind === kind}
-							count={view.kinds[kind]}
-						>
-							{kind === "media" ? t("tabs.media") : collectionNoun(site, kind)}
-						</TabLink>
-					))}
-				</TabLinks>
-			</Box>
-			{state.search && (
-				<PageToolbarEnd>
-					<Chip onRemove={() => view.update({ search: "" })} removeLabel={t("search.clear")}>
-						{t("search.chip", { text: state.search })}
-					</Chip>
-				</PageToolbarEnd>
+		<ChipRow>
+			{kinds.length > 0 && (
+				<Chip onRemove={() => view.update({ kinds: [] })} removeLabel={t("kind.clear")}>
+					{t("kind.chip", { kinds: kinds.join(", ") })}
+				</Chip>
 			)}
-		</PageToolbar>
+			{state.search && (
+				<Chip onRemove={() => view.update({ search: "" })} removeLabel={t("search.clear")}>
+					{t("search.chip", { text: state.search })}
+				</Chip>
+			)}
+		</ChipRow>
 	);
 }
 
@@ -162,7 +135,7 @@ function TrashPage({ now = new Date() }: { now?: Date }) {
 								</>
 							)}
 				</PageHeader>
-				{!state.folder && <TrashTabs view={view} />}
+				<TrashChips view={view} />
 				<TrashList view={view} actions={actions} now={now} />
 				{panelItem && (
 					<DockedPanel>

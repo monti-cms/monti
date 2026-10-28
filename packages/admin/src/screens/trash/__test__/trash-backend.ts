@@ -41,14 +41,14 @@ export class TrashBackend {
 
 	private list(query: URLSearchParams): Answer {
 		const folderId = query.get("folder");
-		const kind = query.get("kind");
+		const kinds = query.getAll("kind");
 		const text = query.get("q")?.toLowerCase();
 		const name = (unit: TrashItemJson) =>
 			(unit.type === "entry" ? unit.title : unit.type === "folder" ? unit.name : unit.filename) ?? "";
 		let items: TrashItemJson[];
 		if (folderId) items = this.children[folderId] ?? [];
 		else if (text) items = this.all().filter((unit) => name(unit).toLowerCase().includes(text));
-		else items = kind ? this.top.filter((unit) => kindOf(unit) === kind) : this.top;
+		else items = kinds.length > 0 ? this.top.filter((unit) => kinds.includes(kindOf(unit))) : this.top;
 		items = [...items].sort((a, b) =>
 			query.get("sort") === "asc" ? a.deletedAt.localeCompare(b.deletedAt) : b.deletedAt.localeCompare(a.deletedAt),
 		);
