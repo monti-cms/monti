@@ -139,6 +139,8 @@ export {
 	FormFieldTitle,
 } from "./field";
 export { FieldRow, FieldTree } from "./field-tree";
+export { FileBlock } from "./file-block";
+export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
 export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
@@ -162,6 +164,7 @@ export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
+export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
@@ -278,4 +281,5 @@ export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { TrashRowDate, TrashRowTitle } from "./trash-row";
+export { UploadingImage } from "./uploading-image";
 export { useIsMobile } from "./use-mobile";

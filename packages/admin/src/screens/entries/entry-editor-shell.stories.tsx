@@ -2,6 +2,7 @@ import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
+import { openMediaPicker } from "../../editor/block-inserts";
 import { StatusBarPluginCell } from "../../kit";
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { docOf } from "../../test/mdx";
@@ -476,18 +477,12 @@ export const PermanentDeleteConfirm: Story = {
 	},
 };
 
-export const ImageInsertDialog: Story = {
+/** "/ Image" opens the library picker. */
+export const ImagePicker: Story = {
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await settled(canvasElement);
-		// The upload menu sits in the toolbar when there is room, and in its "more" menu when the frame is narrow.
-		const toolbar = within(await page(canvasElement).findByRole("toolbar", undefined, LONG));
-		const upload = toolbar.queryByRole("button", { name: "업로드" });
-		if (upload) await userEvent.click(upload);
-		else {
-			await userEvent.click(toolbar.getByRole("button", { name: "더보기" }));
-		}
-		await userEvent.click(await within(document.body).findByText("이미지", undefined, { timeout: 15000 }));
+		openMediaPicker("image");
 		await within(document.body).findByRole("dialog", undefined, LONG);
 	},
 };

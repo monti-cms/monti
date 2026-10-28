@@ -128,7 +128,15 @@ One cell of the media grid. A 4:3 preview, with the file name (14) under it and 
 
 ### In code
 
-`Tile` is a file in a grid, flat (no card, no border). It has `status` (`uploading` with `progress` 0 to 100, or `failed` with `actions`), a mono detail line under the name (size, usage, a path), `picking` (the check shows faintly on every tile while any is picked), `action` (the ⋯ at the top right, shown with the pointer) and `proposal` (the assistant's suggestion in place of the detail line; a picked tile that has one is ringed and checked in blue). A failed tile has a 1px red ring drawn over the preview's edge. `FolderTile` is the low folder cell (it takes `dropTarget`). `Grid` with `columns="tiles"` is the tile grid (`.mt-tiles`): columns of at least 180px, 24px between rows and 20px between columns.
+`Tile` is a file in a grid, flat (no card, no border). It has `status` (`uploading` with `progress` 0 to 100, or `failed` with `actions`), a mono detail line under the name (size, usage, a path), `picking` (the check shows faintly on every tile while any is picked), `action` (the ⋯ at the top right, shown with the pointer) and `proposal` (the assistant's suggestion in place of the detail line; a picked tile that has one is ringed and checked in blue). A failed tile has a 1px red ring drawn over the preview's edge. `FilePreview` is what a tile shows for a file: the 20px file icon and the extension (use it as the tile's `preview`; it goes fainter when the tile failed). `FolderTile` is the low folder cell (it takes `dropTarget`). `Grid` with `columns="tiles"` is the tile grid (`.mt-tiles`): columns of at least 180px, 24px between rows and 20px between columns.
+
+## Media picker (`ImageInsert` board)
+
+The library as a panel for choosing: images to insert from "/ 이미지", the cover image field, and files from "/ 파일". A 760px modal: the folder list at the left (168px; "모든 이미지" or "모든 파일" first, sub folders indented, the chosen one on `bg-current`; the count in mono), then the search box and three columns of tiles. At the bottom left "올리기" (upload) is a text button with an upload icon; at the bottom right "취소" and one pill ("넣기" in the body, "고르기" for a field). Choosing a tile and pressing the pill puts it in at once: there is no alt text or caption step and no tabs. "올리기" chooses a file and hands it to the page as a paste does. The folder count shows only for images: it counts every kind of file.
+
+### In code
+
+`MediaPicker` is the whole panel: `folders` (each with `depth` and an optional `count`), `folder` (`null` for all), the search, `onUpload`, `confirmLabel` and the tiles as `children` (a `Tile` each, `FilePreview` for files). The tile area scrolls inside the panel.
 
 ## Drop target (`.mt-droparea`, `.mt-folder.is-drop`, `.mt-toast--drop`)
 
@@ -178,12 +186,14 @@ Pressing "+ 폴더" makes a new folder on the spot with no dialog, and the name 
 
 ### In code
 
+In the list, `useFolderActions` holds the naming (`naming`, `commitName`, `cancelName`) and `FolderNameField` is the field a row or tile shows while it is set. A new folder's row comes right after "상위 폴더로"; an empty or unchanged name only closes the field. Focus goes back to "+ 폴더" after Escape, and to the folder's own name after a make or a rename. A search or a filter hides the folder rows, so "+ 폴더" clears them first.
+
 `RenameField`: the name of a new folder, or of one being renamed, edited where it stands. It opens with the whole name selected, so typing replaces it. Enter and leaving the field keep the name (`onCommit`, called once); Escape drops the change (`onCancel`). In a folder tile it fills the tile (`fill`); in a row it sits 200px wide with its text on the line of the other names.
 
 ## Inside a folder (posts and media)
 
-- Above is the path ("게시글 /" (posts /), "미디어 /" (media /)), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
-- Search and filters look in the current folder and its subfolders. When applied, the search-place row shows the toggle for where to look, "folder name | 모든 폴더". At the top level it is already everything, so there is no toggle.
+- Above is the path ("게시글 /" (posts /), "미디어 /" (media /); in a folder inside a folder every folder on the way is a button: "게시글 / 뉴스 /"), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
+- Search and filters look in the current folder and its subfolders. When applied, the search-place row shows the toggle for where to look, "folder name | 모든 폴더" (`PageToolbar inset` holding `Segmented size="sm" inline`, named "찾는 곳"). At the top level it is already everything, so there is no toggle. In the address it is `scope=all`; it counts only while words are typed in a folder, and emptying the words drops it.
 - Deleting a folder moves the folder and what is in it to the trash as one lump. It asks for confirmation only if a published post is inside; otherwise it shows a toast with "되돌리기" (undo).
 
 ## Pagination (`.mt-pager`, `.mt-page`)
