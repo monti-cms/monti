@@ -131,7 +131,7 @@ describe("admin entry list", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "알고리즘" }));
 		expect(props.onSelectFolder).toHaveBeenCalledWith("f2");
-		fireEvent.click(screen.getByRole("button", { name: ".. 상위 폴더" }));
+		fireEvent.click(screen.getByRole("button", { name: "상위 폴더로" }));
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 

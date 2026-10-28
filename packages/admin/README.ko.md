@@ -194,21 +194,6 @@ function NoticeView() {
 }
 ```
 
-## 관리자 이벤트
-
-플러그인의 관리자 쪽은 관리자에서 일어나는 일에 `on`으로 반응한다. 서버의 `on`처럼 대상과 이벤트로 적는다:
-`defineAdminPlugin({ on: { editor: { imageInserted: [fillAltText] } } })`(타입은 `AdminEvents`·`ImageInserted`·`ImageInsertedEvent`). 관리자 이벤트는 과거형이다.
-일이 끝난 뒤에 오고 그 일을 막지 않는다. 이벤트마다 서로 상관없는 구독자 목록을 받아 플러그인 순서대로 돌리고, 실패한 구독자는 짧은 알림만 보이며 동작이나
-다른 구독자에는 손대지 않는다. 구독자는 클라이언트 함수이므로 플러그인의 `"use client"` 관리자 모듈에 둔다.
-
-| 이벤트 | 언제 | 구독자가 받는 것 |
-|---|---|---|
-| `editor.imageInserted` | 이미지가 본문에 들어감. 끌어 놓기·붙여넣기·슬래시 메뉴·도구 막대가 모두 이미지 대화상자로 넣으므로 어느 쪽이든 불린다 | `{ image: { mediaId?, src?, alt, caption, decorative }, around, site, signal, fill }` |
-
-이미지는 바로 들어가고, 구독자가 도는 동안 "이미지 글을 쓰는 중…"을 보인다. `fill({ alt?, caption? })`은 칸이 아직 비어 있고 넣은 뒤로 사람이 그 칸에
-입력하지 않았을 때만 쓴다(장식 이미지에는 대체 텍스트를 쓰지 않는다). 이미지가 지워졌으면 아무것도 쓰지 않고, 그때 `signal`도 중단된다. 무엇이든 썼는지를
-돌려준다.
-
 ## 글자 꾸밈
 
 블록 확장의 글자 꾸밈(`syntax.kind: "text"`, `editor.view: "mark"`, 예: `@monti-cms/blocks`의 툴팁·코드 연결·글자색)은 관리자

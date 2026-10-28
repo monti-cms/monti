@@ -1,14 +1,17 @@
-// Folder rows shown above the entries in folder browse mode: the move-to-parent row and subfolder rows. A row has no status: its folder icon starts the
-// title's cell, then the name and, faint, how many things are directly inside.
+// Folder rows shown above the entries in folder browse mode: the move-to-parent row, the row of a folder being made, and subfolder rows. A row has no
+// status: its folder icon starts the title's cell, then the name and, faint, how many things are directly inside. A folder being made or renamed has its
+// name as a field in the same place (no dialog).
 
 import { Folder as FolderIcon, FolderOpen, FolderParent } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Inline, RowActions, RowLink, TableCell, TableRow, Text } from "@monti-cms/ui";
+import { useEffect, useRef } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { ACTIONS_SIZE } from "./entries-table-widths";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
+import { FolderNameField } from "./shared/folder-name-field";
 import { type FolderActions, folderKeyHandler, folderMenuActions } from "./shared/use-folder-actions";
 
 export function EntriesTableFolderRows({
@@ -31,21 +34,10 @@ export function EntriesTableFolderRows({
 	countLabel?: (count: number) => string;
 	onSelectFolder: (folder: string) => void;
 }) {
-	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const tc = useTranslator(commonMessages);
-
-	// Add "Open" to the same folder menu as the sidebar tree.
-	const folderRowMenu = (folder: Folder): MenuAction[] =>
-		folderActions
-			? [
-					{ kind: "item", label: tc("open"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
-					{ kind: "separator" },
-					...folderMenuActions(site, folder, folders, folderActions),
-				]
-			: [];
-
 	const empty = before.map((column) => <TableCell key={column} />);
+	const naming = folderActions?.naming ?? null;
+	const making = folderActions && naming?.mode === "create" ? naming : null;
 	return (
 		<>
 			{explorer.parent !== null && (
@@ -62,15 +54,90 @@ export function EntriesTableFolderRows({
 					<TableCell size={ACTIONS_SIZE} />
 				</TableRow>
 			)}
-			{explorer.folders.map((folder) => (
-				<ActionContextMenu key={`folder-${folder.id}`} actions={folderRowMenu(folder)} trigger={<TableRow />}>
+			{folderActions && making && (
+				<TableRow selected>
 					{empty}
 					<TableCell colSpan={span - before.length}>
 						<Inline gap={8}>
 							<FolderIcon aria-hidden size={16} />
+							<FolderNameField naming={making} actions={folderActions} />
+						</Inline>
+					</TableCell>
+					<TableCell size={ACTIONS_SIZE} />
+				</TableRow>
+			)}
+			{explorer.folders.map((folder) => (
+				<EntriesTableFolderRow
+					key={`folder-${folder.id}`}
+					folder={folder}
+					folders={folders}
+					folderActions={folderActions}
+					span={span}
+					before={before}
+					countLabel={countLabel}
+					onSelectFolder={onSelectFolder}
+				/>
+			))}
+		</>
+	);
+}
+
+function EntriesTableFolderRow({
+	folder,
+	folders,
+	folderActions,
+	span,
+	before,
+	countLabel,
+	onSelectFolder,
+}: {
+	folder: Folder & { entryCount?: number };
+	folders: Folder[];
+	folderActions?: FolderActions;
+	span: number;
+	before: readonly string[];
+	countLabel?: (count: number) => string;
+	onSelectFolder: (folder: string) => void;
+}) {
+	const site = useSite();
+	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
+	const link = useRef<HTMLButtonElement>(null);
+	const naming = folderActions?.naming ?? null;
+	const renaming = naming?.mode === "rename" && naming.folder.id === folder.id ? naming : null;
+	// The folder that was just made or renamed takes focus once its name is a link again.
+	const wantsFocus = folderActions?.focusFolderId === folder.id && !renaming;
+	const focusSettled = folderActions?.focusSettled;
+	useEffect(() => {
+		if (!wantsFocus) return;
+		link.current?.focus();
+		focusSettled?.();
+	}, [wantsFocus, focusSettled]);
+
+	// Add "Open" to the same folder menu as the sidebar tree.
+	const menu: MenuAction[] = folderActions
+		? [
+				{ kind: "item", label: tc("open"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
+				{ kind: "separator" },
+				...folderMenuActions(site, folder, folders, folderActions),
+			]
+		: [];
+	return (
+		<ActionContextMenu actions={menu} trigger={<TableRow />}>
+			{before.map((column) => (
+				<TableCell key={column} />
+			))}
+			<TableCell colSpan={span - before.length}>
+				<Inline gap={8}>
+					<FolderIcon aria-hidden size={16} />
+					{folderActions && renaming ? (
+						<FolderNameField naming={renaming} actions={folderActions} />
+					) : (
+						<>
 							<RowLink
 								render={
 									<button
+										ref={link}
 										type="button"
 										onClick={() => onSelectFolder(folder.id)}
 										onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
@@ -84,18 +151,15 @@ export function EntriesTableFolderRows({
 									{countLabel(folder.entryCount)}
 								</Text>
 							)}
-						</Inline>
-					</TableCell>
-					<TableCell size={ACTIONS_SIZE} align="end">
-						<RowActions>
-							<MoreActionsButton
-								actions={folderRowMenu(folder)}
-								label={t("list.folderActions", { name: folder.name })}
-							/>
-						</RowActions>
-					</TableCell>
-				</ActionContextMenu>
-			))}
-		</>
+						</>
+					)}
+				</Inline>
+			</TableCell>
+			<TableCell size={ACTIONS_SIZE} align="end">
+				<RowActions>
+					<MoreActionsButton actions={menu} label={t("list.folderActions", { name: folder.name })} />
+				</RowActions>
+			</TableCell>
+		</ActionContextMenu>
 	);
 }

@@ -25,6 +25,7 @@ import { EntriesTableFolderRows } from "../entries-table-folder-rows";
 import { screensMessages } from "../messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { writeDraggedEntries } from "../shared/entry-drag";
+import { FolderNameField } from "../shared/folder-name-field";
 import { formatDateTime } from "../shared/format-date";
 import { type FolderActions, folderKeyHandler, folderMenuActions } from "../shared/use-folder-actions";
 import { usageLabel } from "./media-item";
@@ -101,8 +102,25 @@ export function MediaGrid({
 					/>
 				</li>
 			)}
+			{folderActions?.naming?.mode === "create" && (
+				<li>
+					<FolderTile>
+						<FolderNameField naming={folderActions.naming} actions={folderActions} fill />
+					</FolderTile>
+				</li>
+			)}
 			{explorer?.folders.map((folder) => {
 				const actions = folderRowMenu(folder);
+				const naming = folderActions?.naming;
+				if (folderActions && naming?.mode === "rename" && naming.folder.id === folder.id) {
+					return (
+						<li key={`folder-${folder.id}`}>
+							<FolderTile>
+								<FolderNameField naming={naming} actions={folderActions} fill />
+							</FolderTile>
+						</li>
+					);
+				}
 				return (
 					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li />}>
 						<FolderTile

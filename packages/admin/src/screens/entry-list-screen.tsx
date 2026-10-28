@@ -3,14 +3,27 @@
 import { Add, FolderAdd } from "@carbon/icons-react";
 import type { AdminColumnSettings } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Button, Inline, PageColumn, PageHeader, Stack, Text, toast } from "@monti-cms/ui";
+import {
+	Button,
+	Inline,
+	PageColumn,
+	PageHeader,
+	PageToolbar,
+	Segmented,
+	Stack,
+	Text,
+	TextButton,
+	toast,
+} from "@monti-cms/ui";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { AdminEntriesTable } from "./admin-entries-table";
 import { BulkBar } from "./entries/bulk-bar";
 import { ExportDialog } from "./export/export-dialog";
 import { ListSearch } from "./list-search";
+import { searchScopeChoice } from "./list-state";
 import { screensMessages } from "./messages";
+import { folderPath } from "./rail-folders";
 import { RecordPanel } from "./record-panel";
 import { AdminFrame, AdminNavProvider } from "./shared/admin-frame";
 import { collectionNoun } from "./shared/noun.messages";
@@ -28,12 +41,39 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 	const isItems = site.isItemCollection(list.state.collection);
 	return (
 		<>
+			{list.folders && <TextButton onClick={list.folders.addFolder}>{t("list.addFolder")}</TextButton>}
 			<ListSearch state={list.state} onChange={list.update} />
 			<Button type="button" variant={isItems ? "secondary" : "primary"} onClick={list.createNew}>
 				<Add aria-hidden />
 				{isItems ? t("list.add", { label: list.label }) : t("list.writeNew")}
 			</Button>
 		</>
+	);
+}
+
+/**
+ * The row a search inside a folder adds under the title: where to look, this folder (and the folders below it) or all folders. At the top level a search
+ * already looks everywhere, so there is no choice.
+ */
+function SearchScope({ list }: { list: EntryList }) {
+	const t = useTranslator(screensMessages);
+	const { state, folders } = list;
+	const current = folders?.list.find((folder) => folder.id === state.folder);
+	if (!current || !searchScopeChoice(state)) return null;
+	return (
+		<PageToolbar inset>
+			<Segmented
+				size="sm"
+				inline
+				aria-label={t("toolbar.scope")}
+				value={state.searchAll ? "all" : "folder"}
+				onValueChange={(scope) => list.update({ searchAll: scope === "all" })}
+				options={[
+					{ value: "folder", label: current.name },
+					{ value: "all", label: t("toolbar.scopeAll") },
+				]}
+			/>
+		</PageToolbar>
 	);
 }
 
@@ -55,6 +95,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 			{/* Nothing here clips: the row checks hang in the page's left margin. */}
 			<Inline position="relative" align="stretch" gap={0} grow minHeight={0}>
 				<Stack gap={0} grow minWidth={0}>
+					<SearchScope list={list} />
 					<AdminEntriesTable
 						bulkBar={({ selectAll, colSpan }) => (
 							<BulkBar
@@ -101,7 +142,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 											kind: "item" as const,
 											label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
 											icon: FolderAdd,
-											onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
+											onSelect: folders.addFolder,
 										},
 									]
 								: []),
@@ -185,13 +226,13 @@ export function EntryListScreen() {
 
 function ListPage() {
 	const site = useSite();
+	const t = useTranslator(screensMessages);
 	const list = useEntryList();
 	const { state, update, folders } = list;
 	const routePath = site.schemaOf(state.collection).path;
-	const folderLabel =
-		folders && state.folder !== "all"
-			? ` · ${folders.list.find((folder) => folder.id === state.folder)?.name ?? ""}`
-			: "";
+	// Inside a folder: the folder is the title, and the way back is the path above it ("Posts /").
+	const path = folders && state.folder !== "all" ? folderPath(folders.list, state.folder) : [];
+	const current = path.at(-1);
 	return (
 		<AdminFrame
 			sidebar={{
@@ -208,7 +249,24 @@ function ListPage() {
 			}}
 		>
 			<PageColumn width="list">
-				<PageHeader title={`${list.label}${folderLabel}`} meta={routePath || undefined}>
+				<PageHeader
+					title={state.folder === "all" ? list.label : (current?.name ?? "")}
+					meta={state.folder === "all" ? routePath || undefined : undefined}
+					trail={
+						path.length > 0 ? (
+							<Inline as="nav" gap={6} aria-label={t("list.trail")}>
+								{[{ id: "all", name: list.label }, ...path.slice(0, -1)].map((step) => (
+									<Inline key={step.id} gap={6}>
+										<TextButton variant="underline" onClick={() => update({ folder: step.id })}>
+											{step.name}
+										</TextButton>
+										<span aria-hidden="true">/</span>
+									</Inline>
+								))}
+							</Inline>
+						) : undefined
+					}
+				>
 					<EntryListHeaderActions list={list} />
 				</PageHeader>
 				<EntryListBody list={list} />

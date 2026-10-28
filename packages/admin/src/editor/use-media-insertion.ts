@@ -1,27 +1,21 @@
-import { toast } from "@monti-cms/ui";
-/**
- * Image and file insertion of the visual editor: the image dialog state (opened from the slash menu, the toolbar, paste and drop),
- * inserting the chosen image, the file picker, and uploading attachments as file cards.
- */
-
 import { newBlockId } from "@monti-cms/core/document";
-import type { Site } from "@monti-cms/core/site";
+import { type Site, useTranslator } from "@monti-cms/core/site";
+import { toast } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
-import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import type { Node as PmNode } from "@tiptap/pm/model";
+import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useState } from "react";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
-import { useAdminEvents } from "../events";
 import type { TranslatorFor } from "../translator";
 import type { EditorAllowance } from "./allowed";
-import { BLOCK_ID_ATTRIBUTE } from "./block-ids";
+import { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";
+import { OPEN_MEDIA_PICKER_EVENT } from "./block-inserts";
 import { FILE_NODE_NAME } from "./file-node";
-import type { ImageInsertion } from "./image-insert-dialog";
-import { runImageInserted } from "./image-inserted";
+import type { PickedMedia, PickerKind } from "./image-insert-dialog";
+import { beginImageUpload, endImageUpload, setImageUploadPercent, uploadEditorImage } from "./image-upload";
+import { editorMediaMessages } from "./media.messages";
 import type { editorMessages } from "./messages";
-import { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./slash-command";
 import { uploadAttachment } from "./upload-helper";
-
-const NO_SUBSCRIBERS: readonly never[] = [];
 
 /** The first image file in a clipboard or drop payload. */
 export const imageFileFrom = (source: DataTransferItemList | FileList | null): File | null => {
@@ -38,6 +32,11 @@ export const imageFileFrom = (source: DataTransferItemList | FileList | null): F
 export const attachmentsFrom = (list: FileList | null): File[] =>
 	Array.from(list ?? []).filter((file) => !file.type.startsWith("image/"));
 
+/**
+ * Images and files of the visual editor. A pasted or dropped image goes in at the cursor at once as an image that is going up, and becomes the real
+ * image when the upload ends (no window in between). "/ Image" and "/ File" open the library picker; what is picked goes in at the cursor. A dropped file
+ * that is not an image goes up with a notice and then becomes a file block.
+ */
 export function useMediaInsertion({
 	editor,
 	site,
@@ -54,18 +53,20 @@ export function useMediaInsertion({
 	allowance: EditorAllowance;
 	canEdit: boolean;
 }) {
-	const [imageDialog, setImageDialog] = useState<{ file: File | null } | null>(null);
-	/** The `editor.imageInserted` subscribers of the plugins. Drop, paste, the slash menu and the toolbar all insert through the image dialog, so one place runs them. */
-	const imageInserted = useAdminEvents().editor?.imageInserted ?? NO_SUBSCRIBERS;
-
+	const tm = useTranslator(editorMediaMessages);
+	const [picker, setPicker] = useState<{ open: boolean; kind: PickerKind }>({ open: false, kind: "image" });
 	useEffect(() => {
-		const open = () => setImageDialog({ file: null });
-		window.addEventListener(OPEN_IMAGE_DIALOG_EVENT, open);
-		return () => window.removeEventListener(OPEN_IMAGE_DIALOG_EVENT, open);
+		const open = (event: Event) => {
+			const kind = (event as CustomEvent<{ kind?: PickerKind }>).detail?.kind === "file" ? "file" : "image";
+			setPicker({ open: true, kind });
+		};
+		window.addEventListener(OPEN_MEDIA_PICKER_EVENT, open);
+		return () => window.removeEventListener(OPEN_MEDIA_PICKER_EVENT, open);
 	}, []);
 
+	/** A picked library image goes in at the cursor, with the library's default text. */
 	const insertImage = useCallback(
-		(image: ImageInsertion) => {
+		(image: PickedMedia) => {
 			if (!editor) return;
 			// The block id is given here so the subscribers find the image again after the insert, wherever it moves.
 			const blockId = newBlockId();
@@ -77,41 +78,84 @@ export function useMediaInsertion({
 					// A registered media item stores only `mediaId`. The renderer resolves the public URL.
 					attrs: {
 						[BLOCK_ID_ATTRIBUTE]: blockId,
-						mediaId: image.mediaId,
-						alt: image.alt,
-						decorative: image.decorative || null,
-						caption: image.caption,
+						mediaId: image.id,
+						alt: image.defaultAlt,
+						caption: image.defaultCaption,
 						width: "100%",
 						align: "center",
 					},
 				})
 				.run();
-			setImageDialog(null);
-			runImageInserted({
-				editor,
-				blockId,
-				subscribers: imageInserted,
-				site,
-				marker: t("imageNode.marker"),
-				failed: t("imageNode.generateFailed"),
-			});
 		},
-		[editor, imageInserted, site, t],
+		[editor],
 	);
 
-	const fileInputRef = useRef<HTMLInputElement>(null);
+	const insertFile = useCallback(
+		(mediaId: string, at?: number) => {
+			if (!editor) return;
+			const node = { type: FILE_NODE_NAME, attrs: { mediaId, label: null } };
+			if (at === undefined) editor.chain().focus().insertContent(node).run();
+			else editor.chain().focus().insertContentAt(at, node).run();
+		},
+		[editor],
+	);
 
-	// Slash menu "File": open the file picker. If there is no media storage, report that uploading is not possible.
-	useEffect(() => {
-		const open = () => {
-			if (!media) toast.error(mediaNotConfiguredMessage(site));
-			else fileInputRef.current?.click();
-		};
-		window.addEventListener(OPEN_FILE_PICKER_EVENT, open);
-		return () => window.removeEventListener(OPEN_FILE_PICKER_EVENT, open);
-	}, [media, site]);
+	/**
+	 * Puts the file in at the cursor (or at `at`) as an image that is going up, uploads it, and then makes it the real image. If the upload fails the
+	 * image goes away again and the reason is shown.
+	 */
+	const uploadImage = useCallback(
+		async (file: File, options: { at?: number; folderId?: string | null } = {}) => {
+			if (!editor) return;
+			if (!media) {
+				toast.error(mediaNotConfiguredMessage(site));
+				return;
+			}
+			const blockId = newBlockId();
+			const uploadId = newBlockId();
+			const attrs = { [BLOCK_ID_ATTRIBUTE]: blockId, uploadId, alt: "", caption: "", width: "100%", align: "center" };
+			beginImageUpload(uploadId, file);
+			const chain = editor.chain().focus();
+			if (options.at === undefined) chain.insertContent({ type: "image", attrs }).run();
+			else chain.insertContentAt(options.at, { type: "image", attrs }).run();
+			/** Changes the image in place, outside the undo history: undoing the insert takes the whole image away. */
+			const settle = (change: (pos: number, node: PmNode) => void) => {
+				if (editor.isDestroyed) return;
+				const pos = findBlock(editor.state.doc, blockId);
+				const node = pos === undefined ? null : editor.state.doc.nodeAt(pos);
+				if (pos === undefined || !node) return;
+				change(pos, node);
+			};
+			try {
+				const uploaded = await uploadEditorImage(site, file, (percent) => setImageUploadPercent(uploadId, percent), {
+					folderId: options.folderId ?? null,
+				});
+				settle((pos, node) => {
+					editor.view.dispatch(
+						editor.state.tr
+							.setNodeMarkup(pos, undefined, {
+								...node.attrs,
+								uploadId: null,
+								mediaId: uploaded.mediaId,
+								alt: uploaded.defaultAlt,
+								caption: uploaded.defaultCaption,
+							})
+							.setMeta("addToHistory", false),
+					);
+				});
+			} catch (error) {
+				settle((pos, node) => {
+					editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize).setMeta("addToHistory", false));
+				});
+				toast.error([tm("imageNode.uploadFailed"), errorText(site, error, "")].filter(Boolean).join("\n"));
+			} finally {
+				endImageUpload(uploadId);
+			}
+		},
+		[editor, media, site, tm],
+	);
 
-	/** Upload non-image files and insert them as file cards. If `at` is given, insert there (where it was dropped). */
+	/** Uploads non-image files and inserts them as file blocks. If `at` is given, inserts there (where they were dropped). */
 	const uploadAttachments = useCallback(
 		async (files: File[], at?: number) => {
 			if (!editor) return;
@@ -129,12 +173,8 @@ export function useMediaInsertion({
 							duration: Number.POSITIVE_INFINITY,
 						}),
 					);
-					const node = { type: FILE_NODE_NAME, attrs: { mediaId, label: null } };
-					if (position === undefined) editor.chain().focus().insertContent(node).run();
-					else {
-						editor.chain().focus().insertContentAt(position, node).run();
-						position = editor.state.selection.to;
-					}
+					insertFile(mediaId, position);
+					if (position !== undefined) position = editor.state.selection.to;
 					toast(t("toolbar.uploaded", { name: file.name }), { id: toastId });
 				} catch (error) {
 					// The reason, when there is one the person can read (the title already says it failed).
@@ -145,42 +185,62 @@ export function useMediaInsertion({
 				}
 			}
 		},
-		[editor, media, site, t],
+		[editor, insertFile, media, site, t],
 	);
 
-	/** A pasted image opens the image dialog. */
+	/** What the picker's "Upload" chose: images go in as a pasted image does, other files as file blocks. */
+	const uploadFromPicker = useCallback(
+		(files: File[], folderId: string | null) => {
+			const images = files.filter((file) => file.type.startsWith("image/"));
+			const others = files.filter((file) => !file.type.startsWith("image/"));
+			for (const image of images) void uploadImage(image, { folderId });
+			if (others.length > 0) void uploadAttachments(others);
+		},
+		[uploadImage, uploadAttachments],
+	);
+
+	const pickMedia = useCallback(
+		(item: PickedMedia) => (picker.kind === "file" ? insertFile(item.id) : insertImage(item)),
+		[picker.kind, insertFile, insertImage],
+	);
+
+	/** A pasted image goes in at the cursor. */
 	const handlePaste = (event: ClipboardEvent<HTMLElement>) => {
 		const file = imageFileFrom(event.clipboardData.items);
 		if (file && canEdit && allowance.allowsBlock("image")) {
 			event.preventDefault();
-			setImageDialog({ file });
+			void uploadImage(file);
 		}
 	};
 
-	/** A dropped image opens the image dialog; other files are inserted as file cards where they are dropped. */
+	/** A dropped image goes in where it is dropped; other files go up and are inserted as file blocks there. */
 	const handleDrop = (event: DragEvent<HTMLElement>) => {
 		if (!canEdit || !editor) return;
+		const at = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
 		const file = imageFileFrom(event.dataTransfer.files);
 		if (file && allowance.allowsBlock("image")) {
 			event.preventDefault();
-			setImageDialog({ file });
+			void uploadImage(file, { at });
 			return;
 		}
 		const attachments = attachmentsFrom(event.dataTransfer.files);
 		if (attachments.length > 0 && allowance.allowsBlock("file")) {
 			event.preventDefault();
-			const at = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
 			void uploadAttachments(attachments, at);
 		}
 	};
 
 	return {
-		imageDialog,
-		openImageDialog: () => setImageDialog({ file: null }),
-		closeImageDialog: () => setImageDialog(null),
-		insertImage,
-		fileInputRef,
-		uploadAttachments,
+		/** The props of the picker dialog. */
+		pickerProps: {
+			open: picker.open,
+			kind: picker.kind,
+			onClose: () => setPicker((current) => ({ ...current, open: false })),
+			onPick: pickMedia,
+			onUpload: uploadFromPicker,
+		},
+		openImagePicker: () => setPicker({ open: true, kind: "image" }),
+		openFilePicker: () => setPicker({ open: true, kind: "file" }),
 		handlePaste,
 		handleDrop,
 	};

@@ -17,12 +17,7 @@ import { headingIcons, type MontiIcon } from "@monti-cms/ui";
 import type { Editor, Range } from "@tiptap/core";
 import type { TranslatorFor } from "../translator";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";
-import {
-	type BlockInsertAction,
-	blockInsertActions,
-	OPEN_FILE_PICKER_EVENT,
-	OPEN_IMAGE_DIALOG_EVENT,
-} from "./block-inserts";
+import { type BlockInsertAction, blockInsertActions, openMediaPicker } from "./block-inserts";
 import { insertFootnote } from "./footnote-nodes";
 import { editorMessages } from "./messages";
 
@@ -34,8 +29,6 @@ const keywordList = (
 	t(key)
 		.split(",")
 		.map((word) => word.trim());
-
-export { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./block-inserts";
 
 import type { BlockDefinition } from "@monti-cms/core";
 
@@ -169,7 +162,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		keywords: keywordList(t, "slash.image.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
-			window.dispatchEvent(new CustomEvent(OPEN_IMAGE_DIALOG_EVENT));
+			openMediaPicker("image");
 		},
 	},
 	{
@@ -180,7 +173,7 @@ export const baseSlashCommands = (t: TranslatorFor<typeof editorMessages>): Slas
 		keywords: keywordList(t, "slash.file.keywords"),
 		action: (editor, range) => {
 			editor.chain().focus().deleteRange(range).run();
-			window.dispatchEvent(new CustomEvent(OPEN_FILE_PICKER_EVENT));
+			openMediaPicker("file");
 		},
 	},
 	{

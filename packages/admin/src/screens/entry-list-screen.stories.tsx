@@ -532,6 +532,45 @@ export const FolderTrashed: Story = {
 	},
 };
 
+/** Main board mode 새 폴더 (flow 5 step 01): "+ 폴더" puts a new row at the top with the name selected, ready to type over. */
+export const NewFolder: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 148 })),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await within(canvasElement).findByRole("button", { name: "+ 폴더" }));
+		await within(canvasElement).findByRole("textbox", { name: "폴더 이름" });
+	},
+};
+
+/** Rename in place (flow 5 step 04): the folder's name becomes the same field, over the same row. */
+export const RenamingFolder: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 148 })),
+	play: async ({ canvasElement }) => {
+		await openFolderRowMenu(canvasElement, "뉴스");
+		await userEvent.click(await body().findByRole("menuitem", { name: "이름 바꾸기" }));
+		await within(canvasElement).findByRole("textbox", { name: "폴더 이름" });
+	},
+};
+
+/** Main board mode 폴더 안 (flow 5 step 02): the path above the title, the folder's name as the title, and "상위 폴더로" as the first row. */
+export const InFolder: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 5 }), "collection=post&folder=f-news"),
+};
+
+/** Main board mode 폴더 안 검색 (flow 5 step 03): the words look in this folder; "모든 폴더" widens it. */
+export const InFolderSearch: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 2 }), "collection=post&folder=f-news&search=리액트"),
+};
+
+/** The search widened to every folder. */
+export const InFolderSearchAllFolders: Story = {
+	tags: ["visual"],
+	render: listScreen(server({ folders, total: 4 }), "collection=post&folder=f-news&search=리액트&scope=all"),
+};
+
 export const BulkActionFailed: Story = {
 	render: listScreen(
 		server({
