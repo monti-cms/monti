@@ -35,7 +35,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	publishedAt: null,
 	createdAt: new Date("2026-01-01T00:00:00Z"),
 	updatedAt: new Date("2026-01-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 	...fields,
 });
 const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 };

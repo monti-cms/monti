@@ -55,7 +55,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	publishedAt: null,
 	createdAt: new Date("2026-01-01T00:00:00Z"),
 	updatedAt: new Date("2026-01-01T00:00:00Z"),
-	trashedAt: null,
+	deletedAt: null,
 	...fields,
 });
 

@@ -8,7 +8,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
 import { errorText } from "../../api/client";
 import { type CmsIssue, issueLine } from "../../api/error-message";
-import { restoreTrashed } from "../../api/trash-restore";
+import { restoreTrash } from "../../api/trash";
 import { commonMessages } from "../../lib/common.messages";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
@@ -180,7 +180,7 @@ export function useEntryLifecycleCommands({
 			// The undo puts the entry back at the version the trash made. A translation left the screen (the original opened), so it opens again.
 			const undo = async () => {
 				try {
-					const answer = await restoreTrashed(site, [
+					const answer = await restoreTrash(site, [
 						{ type: "entry", id: trashedId, expectedVersion: changed.value.version },
 					]);
 					if (!answer.every((result) => result.ok)) {

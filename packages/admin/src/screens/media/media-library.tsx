@@ -47,7 +47,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { foldersKeys, listFolders } from "../../api/folders";
 import { cleanupMedia, listMedia, type MediaItem, mediaKeys, trashMedia, updateMedia } from "../../api/media";
-import { restoreTrashed } from "../../api/trash-restore";
+import { restoreTrash } from "../../api/trash";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
@@ -267,7 +267,7 @@ export function MediaLibrary() {
 	/** Puts files back from the trash (the toast's undo). */
 	const undoTrash = async (ids: readonly string[]) => {
 		try {
-			const answer = await restoreTrashed(
+			const answer = await restoreTrash(
 				site,
 				ids.map((id) => ({ type: "media", id })),
 			);

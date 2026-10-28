@@ -21,7 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
-import { restoreTrashed } from "../../api/trash-restore";
+import { restoreTrash } from "../../api/trash";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { commonMessages } from "../../lib/common.messages";
 import type { MenuAction } from "./action-menu";
@@ -245,7 +245,7 @@ export function useFolderActions({
 	/** Puts a folder back from the trash (the toast's undo). */
 	const undoTrash = async (folder: Folder) => {
 		try {
-			const answer = await restoreTrashed(site, [{ type: "folder", id: folder.id }]);
+			const answer = await restoreTrash(site, [{ type: "folder", id: folder.id }]);
 			if (!answer.every((result) => result.ok)) toast.error(td("undoFailed"));
 		} catch (err) {
 			toast.error(errorText(site, err, td("undoFailed")));

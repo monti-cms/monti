@@ -21,7 +21,7 @@ import {
 	entriesKeys,
 } from "../api/entries";
 import { foldersKeys } from "../api/folders";
-import { restoreTrashed } from "../api/trash-restore";
+import { restoreTrash } from "../api/trash";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { describeBulkFailure } from "./entries/bulk-bar";
@@ -165,7 +165,7 @@ export function useEntryMutations({
 	/** The undo of what the trash just moved: restores each entry at the version the trash made. */
 	const undoTrash = (done: OkResult[]) =>
 		undoWith(async () => {
-			const answer = await restoreTrashed(
+			const answer = await restoreTrash(
 				site,
 				done.map(({ id, version }) => ({ type: "entry", id, expectedVersion: version })),
 			);

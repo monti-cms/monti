@@ -31,7 +31,7 @@ export type TrashDeleteOutcome = Jsonified<TrashDeleteResult>;
 export type TrashEmptyOutcome = Jsonified<TrashEmptyResult>;
 
 /** A referrer of an entry as the relations endpoint lists it; `sourceStatus` is `trashed` for a referrer that is in the trash itself. */
-export type TrashReferrer = IncomingReferenceItem & { readonly sourceStatus?: string };
+export type TrashReferrer = IncomingReferenceItem;
 
 /** Query keys. Everything under `all` is refetched after the trash changes. */
 export const trashKeys = {
@@ -61,13 +61,18 @@ export async function countTrash(site: Site, signal?: AbortSignal): Promise<numb
 	return Object.values(page.kinds ?? {}).reduce((sum, count) => sum + count, 0);
 }
 
-/** `POST /v1/trash/restore`: each unit on its own, so one that cannot come back does not stop the others. */
-export const restoreTrash = (site: Site, items: readonly TrashTarget[], fallback?: string) =>
-	adminFetch<{ results: TrashRestoreOutcome[] }>(site, "/v1/trash/restore", {
-		method: "POST",
-		json: { items },
-		fallback,
-	});
+/**
+ * `POST /v1/trash/restore`: each unit on its own, so one that cannot come back does not stop the others; one answer per unit, in order. Entries and
+ * folders name the version the screen saw (the undo of a trash toast passes the one the trash returned); media files need none.
+ */
+export const restoreTrash = async (site: Site, items: readonly TrashTarget[], fallback?: string) =>
+	(
+		await adminFetch<{ results: TrashRestoreOutcome[] }>(site, "/v1/trash/restore", {
+			method: "POST",
+			json: { items },
+			fallback,
+		})
+	).results;
 
 /** `POST /v1/trash/delete`: deletes for good, in the given order. A unit something points at stays and comes back as `in_use` with its referrers. */
 export const deleteTrash = (site: Site, items: readonly TrashTarget[], fallback?: string) =>

@@ -94,7 +94,7 @@ export function useTrashActions(view: TrashView) {
 
 	const restore = async (asked: readonly TrashItemJson[]) => {
 		try {
-			const { results } = await restoreTrash(site, asked.map(targetOf), t("restore.failed"));
+			const results = await restoreTrash(site, asked.map(targetOf), t("restore.failed"));
 			const summary = report(asked, results);
 			// The folder that was open is back: nothing of it is left to look into.
 			if (folder && summary.restored > 0 && asked.some((item) => itemKey(item) === itemKey(folder))) closeFolder();
@@ -112,7 +112,7 @@ export function useTrashActions(view: TrashView) {
 		let sourceId = sourceRowOf(item, items)?.id ?? null;
 		if (!sourceId) {
 			try {
-				const { results } = await restoreTrash(site, [targetOf(item)], t("restore.failed"));
+				const results = await restoreTrash(site, [targetOf(item)], t("restore.failed"));
 				const [result] = results;
 				if (result?.ok !== false) {
 					report([item], results);
