@@ -1,5 +1,5 @@
 import { StatusBarPluginCell } from "@monti-cms/ui";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -13,9 +13,6 @@ import {
 
 const { render: renderWithRouter } = createTestRouter();
 afterEach(cleanup);
-
-const missing = { code: "missing_field", path: "title", message: "제목", text: "서버 문구", where: "title" };
-const noAlt = { code: "missing_image_alt", path: "body", position: { blockId: "b1" }, text: "서버 문구" };
 
 const context = (over: Partial<StatusBarContextValue> = {}): StatusBarContextValue => ({
 	collection: "post",
@@ -93,36 +90,41 @@ describe("save cell (flow 1 step 09)", () => {
 });
 
 describe("to-do cell (flow 1 steps 10 to 13)", () => {
+	const row = (key: string, title: string, detail?: string, onOpen?: () => void) => ({
+		key,
+		title,
+		detail,
+		doneLabel: undefined,
+		onOpen,
+	});
 	const todo = (over: Partial<NonNullable<StatusBarProps["todo"]>> = {}): NonNullable<StatusBarProps["todo"]> => ({
-		issues: [missing, noAlt],
-		done: ["주소", "대표 이미지"],
-		focus: () => {},
+		rows: [row("a", "요약 쓰기", "요약 · 비어 있음"), row("b", "대체 텍스트 없는 이미지 2개", "대표 이미지 · 본문 1")],
+		done: ["제목 · 주소 · 대표 이미지"],
 		...over,
 	});
 
-	it("counts what is left and lists each problem as a row that goes to its place", async () => {
-		const focus = vi.fn();
-		show(props({ todo: todo({ focus }) }));
+	it("counts the rows, and a row goes to its place when pressed", async () => {
+		const onOpen = vi.fn();
+		show(props({ todo: todo({ rows: [row("a", "요약 쓰기", "요약 · 비어 있음", onOpen), row("b", "이미지")] }) }));
 		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
 		const list = within(await screen.findByRole("dialog"));
 		expect(list.getByText("발행 전에 고칠 것")).toBeTruthy();
-		expect(list.getByText("이미지에 설명(alt)이 필요해요")).toBeTruthy();
-		fireEvent.click(list.getByRole("button", { name: /제목을 입력해 주세요/ }));
-		expect(focus).toHaveBeenCalledWith(expect.objectContaining({ path: "title" }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		fireEvent.click(list.getByRole("button", { name: /요약 쓰기/ }));
+		expect(onOpen).toHaveBeenCalledTimes(1);
 	});
 
-	it("shows what is already right under the rows", async () => {
+	it("shows what is already right as check rows under the rows", async () => {
 		show(props({ todo: todo() }));
 		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
-		expect(within(await screen.findByRole("dialog")).getByText("주소 · 대표 이미지")).toBeTruthy();
+		expect(within(await screen.findByRole("dialog")).getByText("제목 · 주소 · 대표 이미지")).toBeTruthy();
 	});
 
-	it("says nothing is left to do, and the list then holds only what is right", async () => {
-		show(props({ todo: todo({ issues: [], done: ["제목"] }) }));
+	it("says nothing is left to do, and the list then holds only the check rows", async () => {
+		show(props({ todo: todo({ rows: [], done: ["요약", "이미지 대체 텍스트 2개", "제목 · 주소"] }) }));
 		fireEvent.click(bar().getByRole("button", { name: "할 일 없음" }));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByText("제목")).toBeTruthy();
+		expect(list.getByText("요약")).toBeTruthy();
+		expect(list.getByText("이미지 대체 텍스트 2개")).toBeTruthy();
 		expect(list.queryByRole("button")).toBeNull();
 	});
 
@@ -155,7 +157,17 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 	);
 
 	it("draws the plugin's cell after the to-do cell, and its rows, settings and fix all open from it", async () => {
-		show(props({ todo: { issues: [missing], done: [], focus: () => {} } }), { spelling: SpellCell });
+		show(
+			props({
+				todo: {
+					rows: [{ key: "a", title: "요약 쓰기", detail: undefined, doneLabel: undefined, onOpen: undefined }],
+					done: [],
+				},
+			}),
+			{
+				spelling: SpellCell,
+			},
+		);
 		const names = bar()
 			.getAllByRole("button")
 			.map((button) => button.textContent);

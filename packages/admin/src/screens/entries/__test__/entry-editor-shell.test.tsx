@@ -20,14 +20,13 @@ import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
 import { statusLabels } from "../../shared/entry-status";
-import { formatDateTime } from "../../shared/format-date";
 import { useOpenEditor } from "../../shared/open-editor";
 import { ScreenContextProvider, useScreenContext } from "../../shared/screen-context";
 import { AdminPanelProvider } from "../../shared/side-panel-slot";
 import { StatusCellsProvider, useStatusBarContext } from "../../shared/status-bar";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";
+import { EMPTY_FORM } from "../entry-form";
 
 const { getLocalBackup, deleteLocalBackup, saveLocalBackup } = vi.hoisted(() => ({
 	getLocalBackup: vi.fn(),
@@ -284,24 +283,6 @@ describe("entry editor shell", () => {
 		expect(methodCalls("PATCH")).toHaveLength(1);
 	});
 
-	it("shows a header save button only while there are unsaved changes, and it saves", async () => {
-		serve(async (_input, init) => {
-			if (init?.method !== "PATCH") return undefined;
-			const body = JSON.parse(String(init.body));
-			return json({
-				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
-				warnings: [],
-			});
-		});
-		renderEdit();
-		await screen.findByRole("region", { name: "상태" });
-		expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
-		fireEvent.change(await editorTitle(), { target: { value: "헤더에서 저장" } });
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-		await waitFor(() => expect(screen.queryByRole("button", { name: "저장" })).toBeNull());
-	});
-
 	it("writes the waiting browser backup right away when the page is left", async () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "떠나기 전 수정" } });
@@ -410,16 +391,6 @@ describe("entry editor shell", () => {
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
-	it("keeps the preview button for an entry with no address yet, disabled, and says why", async () => {
-		serve(() => undefined);
-		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
-		await editorTitle();
-		const button = within(screen.getByRole("banner")).getByRole("button", { name: "미리보기" });
-		expect(button.getAttribute("aria-disabled")).toBe("true");
-		fireEvent.focus(button);
-		expect(await screen.findByText(/먼저 저장해/)).toBeTruthy();
-	});
-
 	it("shows the entry's status as a chip next to the slug in the header", async () => {
 		const labels = statusLabels(testSite);
 		serve(() => undefined, { ...entry, status: "draft" });
@@ -510,19 +481,6 @@ describe("entry editor shell", () => {
 			expect(await (await bar()).findByRole("button", { name: "할 일 없음" })).toBeTruthy();
 		});
 
-		it("lists each problem as a row with its place, and pressing one goes to its field", async () => {
-			checkAnswer = { issues: [missingTitle], warnings: [] };
-			renderEdit();
-			fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 1" }));
-			const list = within(await screen.findByRole("dialog"));
-			// The to-do is in plain words, and the place is next to it.
-			const row = list.getByRole("button", { name: /제목을 입력해 주세요/ });
-			expect(row.textContent).toContain("title");
-			fireEvent.click(row);
-			await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "제목" })));
-			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		});
-
 		it("shows the required fields that are filled under the rows", async () => {
 			checkAnswer = { issues: [missingTitle], warnings: [] };
 			renderEdit();
@@ -547,23 +505,6 @@ describe("entry editor shell", () => {
 			await screen.findByRole("region", { name: "상태" });
 			expect(screen.queryByRole("button", { name: /할 일/ })).toBeNull();
 			expect(checkCalls()).toHaveLength(0);
-		});
-
-		it("opens the list with the fresh problems when a publish is refused, and keeps the toast", async () => {
-			serve((input) =>
-				input.endsWith("/publish")
-					? json({ code: "publish_validation_failed", issues: [missingTitle] }, 422)
-					: undefined,
-			);
-			renderEdit();
-			await (await bar()).findByRole("button", { name: "할 일 없음" });
-			fireEvent.click(screen.getByRole("button", { name: "발행" }));
-			const list = within(await screen.findByRole("dialog"));
-			expect(list.getByRole("button", { name: /제목을 입력해 주세요/ })).toBeTruthy();
-			expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("상태 표시줄"));
-			expect(await (await bar()).findByRole("button", { name: "할 일 1" })).toBeTruthy();
-			// The list under the header is gone: the cell's list is where the problems are.
-			expect(screen.queryByRole("list", { name: "발행 검증 문제" })).toBeNull();
 		});
 	});
 
@@ -653,7 +594,7 @@ describe("entry editor shell", () => {
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() => expect(saveLocalBackup).toHaveBeenCalled());
 		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
 		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1);
 		expect(JSON.parse(String(methodCalls("POST", "/publish")[0]?.[1]?.body))).toEqual({ expectedVersion: 1 });
@@ -667,73 +608,17 @@ describe("entry editor shell", () => {
 		await editorTitle();
 		// The server sets the publish date on first publish. It is not edited in the properties panel.
 		expect(screen.queryByLabelText(/^발행일/)).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 
 		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("POST", "/publish")[0]?.[1]?.body))).toEqual({ expectedVersion: 4 });
 	});
 
-	it("republishes with today's date only from the publish menu of an already published entry", async () => {
-		const published = { ...entry, status: "published", publishedAt: "2024-01-01T00:00:00.000Z" };
-		serve((input) => {
-			if (input.endsWith("/publish")) return json({ ...published, version: 5, warnings: [] });
-		}, published);
-		renderEdit();
-		await editorTitle();
-		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "발행 방식" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "오늘 날짜로 다시 발행" }));
-
-		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
-		expect(JSON.parse(String(methodCalls("POST", "/publish")[0]?.[1]?.body))).toEqual({
-			expectedVersion: 4,
-			resetPublishedAt: true,
-		});
-	});
-
 	it("shows a plain publish button when no extension adds a publish option and the entry was never published", async () => {
 		renderEdit();
 		await editorTitle();
-		expect(screen.getByRole("button", { name: "발행" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "발행하기" })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "발행 방식" })).toBeNull();
-	});
-
-	it("offers a same-version browser backup and deletes it when the server copy is kept", async () => {
-		const server = formFromEntry(testSite, entry as never);
-		getLocalBackup.mockResolvedValue({
-			key: `${ADMIN}:entry-1`,
-			entryId: "entry-1",
-			baseVersion: 4,
-			baseFingerprint: formFingerprint(testSite, server),
-			localFingerprint: formFingerprint(testSite, { ...server, title: "수정" }),
-			snapshot: { ...server, title: "수정" },
-			changeSeq: 1,
-			savedAt: Date.now(),
-		});
-		renderEdit();
-		const dialog = await screen.findByRole("dialog", { name: "저장하지 않은 편집이 있어요" });
-		expect(within(dialog).getByRole("button", { name: "임시 저장본 불러오기" })).toBeTruthy();
-		fireEvent.click(within(dialog).getByRole("button", { name: "서버 저장본 열기" }));
-		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`));
-	});
-
-	it("warns that loading a backup made before the server changed overwrites it", async () => {
-		const server = formFromEntry(testSite, entry as never);
-		getLocalBackup.mockResolvedValue({
-			key: `${ADMIN}:entry-1`,
-			entryId: "entry-1",
-			baseVersion: 3,
-			baseFingerprint: "old",
-			localFingerprint: formFingerprint(testSite, { ...server, doc: docOf("브라우저 본문") }),
-			snapshot: { ...server, doc: docOf("브라우저 본문") },
-			changeSeq: 1,
-			savedAt: Date.now(),
-		});
-		renderEdit();
-		const dialog = await screen.findByRole("dialog", { name: "저장하지 않은 편집이 있어요" });
-		expect(within(dialog).getByText(/서버 내용을 덮어써요/)).toBeTruthy();
-		expect(within(dialog).queryByText("브라우저 본문")).toBeNull();
-		fireEvent.click(within(dialog).getByRole("button", { name: "임시 저장본 불러오기" }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
 
 	it("binds field issues and moves issues in the body to the source text, at the block they are in", async () => {
@@ -756,14 +641,14 @@ describe("entry editor shell", () => {
 		);
 		renderEdit();
 		await screen.findByDisplayValue("요약");
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		// A refused publish opens the readiness popup with what it found.
 		const popup = await readinessPopup();
 		const title = await editorTitle();
 		expect(title.getAttribute("aria-invalid")).toBe("true");
 		expect(title.getAttribute("aria-describedby")).toBe("cms-title-error");
 		expect(screen.getAllByRole("textbox", { name: "제목" })).toHaveLength(1);
-		fireEvent.click(popup.getByRole("button", { name: /제목을 입력해 주세요/ }));
+		fireEvent.click(popup.getByRole("button", { name: /제목 쓰기/ }));
 		await waitFor(() => expect(document.activeElement).toBe(title));
 		// In source mode, the panel is asked to focus the block the issue is in.
 		fireEvent.click(screen.getByRole("button", { name: SOURCE_LABEL }));
@@ -792,7 +677,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByDisplayValue("요약");
 		await screen.findByLabelText("시각 본문");
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		const popup = await readinessPopup();
 
 		await waitFor(() => expect(mockEditor.current).not.toBeNull());
@@ -801,7 +686,7 @@ describe("entry editor shell", () => {
 		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 
 		blockId = "zzzzzzzz";
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(methodCalls("POST", "/publish").length).toBeGreaterThanOrEqual(2));
 		fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		expect(await screen.findByLabelText("패널 본문")).toBeTruthy();
@@ -951,7 +836,7 @@ describe("entry editor shell", () => {
 			await screen.findByDisplayValue("요약");
 			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
 			await screen.findByLabelText("블록 수");
-			fireEvent.click(screen.getByRole("button", { name: "발행" }));
+			fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 			fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 			// The panel is asked for that block, once; the screen does not keep asking.
 			await waitFor(() => expect(focused).toEqual([body.content[1]?.id]));
@@ -967,10 +852,10 @@ describe("entry editor shell", () => {
 				: undefined,
 		);
 		renderEdit();
-		await screen.findByRole("button", { name: "발행" });
+		await screen.findByRole("button", { name: "발행하기" });
 		expect(await editorTitle()).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		fireEvent.click((await readinessPopup()).getByRole("button", { name: /카테고리를 입력해 주세요/ }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
+		fireEvent.click((await readinessPopup()).getByRole("button", { name: /카테고리 고르기/ }));
 		const category = await screen.findByRole("combobox", { name: /카테고리/ });
 		await waitFor(() => expect(document.activeElement).toBe(category));
 		expect(screen.getByLabelText("시각 본문").closest("[inert]")).toBeTruthy();
@@ -1034,104 +919,6 @@ describe("entry editor shell", () => {
 			{ collection: "tag", metadata: { title: "새 태그" }, doc: emptyStoredDocument() },
 		]);
 	}, 30_000);
-
-	it("stops publishing after an autosave conflict and offers copy, reload and overwrite", async () => {
-		serve((input, init) => {
-			if (init?.method === "PATCH") return json({ error: { code: "conflict", serverVersion: 9 } }, 409);
-			if (input.endsWith("/publish")) throw new Error("Publish must not run after conflict");
-		});
-		renderEdit();
-		fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
-		const dialog = await screen.findByRole("dialog", { name: /편집 충돌/ });
-		expect(within(dialog).getAllByRole("button", { name: "본문 복사" })).toHaveLength(2);
-		expect(within(dialog).getByRole("button", { name: "다시 불러오기" })).toBeTruthy();
-		expect(within(dialog).getByRole("button", { name: "내 내용으로 덮어쓰기" })).toBeTruthy();
-		expect(methodCalls("POST", "/publish")).toHaveLength(0);
-	});
-
-	describe("resolving an edit conflict in place", () => {
-		const newer = {
-			...entry,
-			version: 9,
-			working: { ...entry.working, metadata: { ...entry.working.metadata, title: "서버 최신 제목" } },
-		};
-		/** Someone else saved version 9 while this screen holds version 4; the first save meets the conflict. */
-		async function conflicted(latest: typeof newer = newer) {
-			let server: typeof entry = { ...entry };
-			serve((input, init) => {
-				if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(server);
-				if (init?.method === "PATCH") {
-					const body = JSON.parse(String(init.body));
-					if (body.expectedVersion !== server.version)
-						return json({ error: { code: "conflict", serverVersion: server.version } }, 409);
-					server = {
-						...server,
-						version: server.version + 1,
-						working: { ...server.working, metadata: body.metadata, doc: body.doc },
-					};
-					return json({ entry: server, warnings: [] });
-				}
-			});
-			renderEdit();
-			fireEvent.change(await editorTitle(), { target: { value: "로컬 수정" } });
-			server = latest;
-			pressSave();
-			return { dialog: await screen.findByRole("dialog", { name: /편집 충돌/ }), server: () => server };
-		}
-
-		it("tells who saved the newer version and when", async () => {
-			const changedAt = "2026-03-04T05:06:00.000Z";
-			const { dialog } = await conflicted({ ...newer, changedBy: "박미나", changedAt } as typeof newer);
-			expect(within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 박미나 님이 저장했어요.`)).toBeTruthy();
-		});
-
-		it("tells only when it was saved when the saving admin is not known", async () => {
-			const changedAt = "2026-03-04T05:06:00.000Z";
-			const { dialog } = await conflicted({ ...newer, changedAt } as typeof newer);
-			expect(within(dialog).getByText(`${formatDateTime(testSite, changedAt)}에 저장했어요.`)).toBeTruthy();
-			expect(within(dialog).queryByText(/님이 저장/)).toBeNull();
-		});
-
-		it("shows no saved line when the server did not say when", async () => {
-			const { dialog } = await conflicted();
-			expect(within(dialog).queryByText(/에 저장했어요\.|님이 저장했어요\./)).toBeNull();
-		});
-
-		it("loads the server version without reloading the page", async () => {
-			const { dialog } = await conflicted();
-			expect(screen.getByTitle("충돌")).toBeTruthy();
-			fireEvent.click(within(dialog).getByRole("button", { name: "다시 불러오기" }));
-			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
-			await waitFor(async () => expect(((await editorTitle()) as HTMLInputElement).value).toBe("서버 최신 제목"));
-			expect(screen.getByTitle("서버에 저장됨")).toBeTruthy();
-			// The local copy was dropped with the local changes, so a reopen does not offer it again.
-			expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`);
-			expect(methodCalls("PATCH")).toHaveLength(1);
-		});
-
-		it("overwrites the server version with mine after asking once more, at the server's version", async () => {
-			const { dialog, server } = await conflicted();
-			fireEvent.click(within(dialog).getByRole("button", { name: "내 내용으로 덮어쓰기" }));
-			fireEvent.click(await screen.findByRole("button", { name: "덮어쓰기" }));
-			await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(2));
-			expect(JSON.parse(String(methodCalls("PATCH")[1]?.[1]?.body))).toMatchObject({
-				expectedVersion: 9,
-				metadata: expect.objectContaining({ title: "로컬 수정" }),
-			});
-			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
-			await waitFor(() => expect(screen.getByTitle("서버에 저장됨")).toBeTruthy());
-			expect(server().version).toBe(10);
-		});
-
-		it("closing the dialog only hides it: the editor stays in conflict and keeps what was typed", async () => {
-			const { dialog } = await conflicted();
-			fireEvent.click(within(dialog).getAllByRole("button", { name: "닫기" })[0] as HTMLElement);
-			await waitFor(() => expect(screen.queryByRole("dialog", { name: /편집 충돌/ })).toBeNull());
-			expect(screen.getByTitle("충돌")).toBeTruthy();
-			expect(((await editorTitle()) as HTMLInputElement).value).toBe("로컬 수정");
-		});
-	});
 
 	it("reports offline, server and expired-session failures and keeps a browser backup", async () => {
 		const failures: unknown[] = [
@@ -1210,7 +997,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
 		expect(screen.queryByText(/비워 두면 발행할 때 본문에서 만들어요/)).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
 		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).metadata.summary).toBe("소개 본문 첫 문장.");
 	});
@@ -1222,7 +1009,7 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		await screen.findByRole("textbox", { name: "요약" });
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 		expect(methodCalls("POST", "/publish")).toHaveLength(0);
 	});
@@ -1301,7 +1088,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		const unarchive = await screen.findByRole("button", { name: "보관 해제" });
 		expect(within(screen.getByRole("banner")).getByRole("button", { name: "보관 해제" })).toBe(unarchive);
-		expect(screen.queryByRole("button", { name: "발행" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "발행하기" })).toBeNull();
 		expect(screen.queryByRole("region", { name: "보관됨" })).toBeNull();
 	});
 
@@ -1332,22 +1119,9 @@ describe("entry editor shell", () => {
 		});
 		renderEdit();
 		await editorTitle();
-		fireEvent.click(screen.getByRole("button", { name: "발행" }));
+		fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
-	});
-
-	it("keeps the header to back, slug, preview, publish, properties and more; saving is Cmd+S and the status bar", async () => {
-		renderEdit();
-		await editorTitle();
-		const header = within(screen.getByRole("banner"));
-		expect(header.queryByRole("button", { name: "저장" })).toBeNull();
-		expect(header.getByText("test")).toBeTruthy();
-		expect(header.getByRole("link", { name: "미리보기" })).toBeTruthy();
-		for (const name of ["발행", "속성", "더보기"]) expect(header.getByRole("button", { name })).toBeTruthy();
-		fireEvent.click(header.getByRole("button", { name: "더보기" }));
-		expect(screen.getByRole("menuitem", { name: "복제" })).toBeTruthy();
-		expect(screen.queryByRole("menuitem", { name: /저장/ })).toBeNull();
 	});
 
 	it("sends record collections to their explicit-save form", async () => {

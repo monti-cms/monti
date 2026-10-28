@@ -46,7 +46,21 @@ function memoryRouter(pathname: string, search: string): AdminRouter {
 		for (const listener of listeners) listener();
 	};
 	return {
-		Link: ({ prefetch: _prefetch, ...props }: AdminLinkProps) => <a {...props} />,
+		// A link to another query of the screen that is open (the editor's compare screen) is followed in memory; a link to another screen stays a plain anchor.
+		Link: ({ prefetch: _prefetch, onClick, ...props }: AdminLinkProps) => (
+			// biome-ignore lint/a11y/noStaticElementInteractions: it is a link; the address is in the spread props
+			<a
+				{...props}
+				// biome-ignore lint/a11y/useValidAnchor: it is a link with an address (`props.href`) that this router follows in memory
+				onClick={(event) => {
+					onClick?.(event);
+					if (!event.defaultPrevented && props.href.split("?")[0] === state.pathname) {
+						event.preventDefault();
+						apply(props.href);
+					}
+				}}
+			/>
+		),
 		navigate: apply,
 		replace: apply,
 		usePathname: () =>

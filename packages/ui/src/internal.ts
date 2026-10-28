@@ -68,6 +68,17 @@ export {
 	CommandSeparator,
 } from "./command";
 export {
+	Compare,
+	CompareBody,
+	CompareCode,
+	CompareHeading,
+	CompareParagraph,
+	CompareProperty,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+} from "./compare";
+export {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,

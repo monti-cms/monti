@@ -44,6 +44,14 @@ const published: EntryData = {
 	published: draft.working,
 };
 
+const editing: EntryData = {
+	...published,
+	working: {
+		...published.working,
+		metadata: { ...published.working.metadata, summary: "발행한 뒤에 고친 소개입니다." },
+	},
+};
+
 const member = (id: string, locale: string, status: string, isSource: boolean, title: string) => ({
 	id,
 	locale,
@@ -199,12 +207,22 @@ const typeTitle = async (canvasElement: HTMLElement, text = " (고침)") => {
 	await settled(canvasElement);
 	const input = (await title(canvasElement)) as HTMLInputElement;
 	fireEvent.change(input, { target: { value: input.value + text } });
-	await page(canvasElement).findByRole("button", { name: "저장" }, LONG);
+	await page(canvasElement).findByRole("button", { name: "저장 전 변경사항" }, LONG);
 };
+/** The header's save button, with its shortcut written beside it. */
+const headerSave = (canvasElement: HTMLElement) =>
+	page(canvasElement).findByRole("button", { name: /^저장\s*⌘S$/ }, LONG);
 
 export const DraftLoaded: Story = { render: screen(() => server()) };
 
-export const PublishedLoaded: Story = { render: screen(() => server({ entry: published })) };
+/** Published and nothing changed since: the publish button reads "발행됨" and is dimmed. */
+export const PublishedLoaded: Story = { tags: ["visual"], render: screen(() => server({ entry: published })) };
+
+/** Published, then changed: the status reads "수정 중" and the publish button is ready again. */
+export const PublishedEditing: Story = {
+	tags: ["visual"],
+	render: screen(() => server({ entry: editing })),
+};
 
 export const Loading: Story = { render: screen(() => server({ load: "pending" })) };
 
@@ -216,12 +234,13 @@ export const NotFound: Story = {
 	render: screen(() => server({ load: answer(404, { error: { code: "not_found", message: "Not found" } }) })),
 };
 
+/** The save button is in the header all the time, with ⌘S beside it; after a change the status bar says there is something to save. */
 export const UnsavedChanges: Story = {
 	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
-		await page(canvasElement).findByRole("button", { name: "저장" }, LONG);
+		await headerSave(canvasElement);
 	},
 };
 
@@ -229,40 +248,57 @@ export const SaveFailed: Story = {
 	render: screen(() => server({ save: answer(500, { error: { message: "서버에 저장하지 못했어요." } }) })),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "저장" }, LONG));
+		await userEvent.click(await headerSave(canvasElement));
 	},
 };
 
-/** Someone else saved version 9 first: the conflict dialog compares both sides. */
+/** Someone else saved version 9 first: a notice strip above the editor offers the comparison and the server version. */
+const conflictServer = () =>
+	server({
+		save: answer(409, { error: { code: "conflict", serverVersion: 9 } }),
+		// The first answer is the loaded entry, later ones the newer version.
+		more: (() => {
+			let loads = 0;
+			return (path, method) =>
+				method === "GET" && /\/entries\/[^/?]+$/.test(path) && ++loads > 1
+					? {
+							...draft,
+							version: 9,
+							changedAt: "2026-10-26T01:41:00.000Z",
+							working: {
+								...draft.working,
+								metadata: { ...draft.working.metadata, title: "서버 최신 제목", summary: "다른 곳에서 쓴 소개입니다." },
+							},
+						}
+					: undefined;
+		})(),
+	});
+const conflicted = async (canvasElement: HTMLElement) => {
+	await typeTitle(canvasElement);
+	await userEvent.click(await headerSave(canvasElement));
+	await within(document.body).findByRole("alert", undefined, LONG);
+};
+
 export const SaveConflict: Story = {
-	render: screen(() =>
-		server({
-			save: answer(409, { error: { code: "conflict", serverVersion: 9 } }),
-			// The first answer is the loaded entry, later ones the newer version.
-			more: (() => {
-				let loads = 0;
-				return (path, method) =>
-					method === "GET" && /\/entries\/[^/?]+$/.test(path) && ++loads > 1
-						? {
-								...draft,
-								version: 9,
-								changedAt: "2026-10-20T05:06:00.000Z",
-								changedBy: "박미나",
-								working: { ...draft.working, metadata: { ...draft.working.metadata, title: "서버 최신 제목" } },
-							}
-						: undefined;
-			})(),
-		}),
-	),
+	tags: ["visual"],
+	render: screen(conflictServer),
+	play: async ({ canvasElement }) => conflicted(canvasElement),
+};
+
+/** The compare screen after a conflict: your input beside the server's latest version, differences marked, and the two ways out. */
+export const CompareConflict: Story = {
+	tags: ["visual"],
+	render: screen(conflictServer),
 	play: async ({ canvasElement }) => {
-		await typeTitle(canvasElement);
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "저장" }, LONG));
-		await within(document.body).findByRole("dialog", undefined, LONG);
+		await conflicted(canvasElement);
+		await userEvent.click(await within(document.body).findByRole("link", { name: "비교하기" }, LONG));
+		await within(document.body).findByRole("heading", { level: 1, name: "서버 최신본과 비교" }, LONG);
 	},
 };
 
 export const PublishMenuOpen: Story = {
-	render: screen(() => server({ entry: published })),
+	tags: ["visual"],
+	render: screen(() => server({ entry: editing })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행 방식" }, LONG));
 		await within(document.body).findByText(/오늘 날짜로 다시 발행/, undefined, LONG);
@@ -305,7 +341,7 @@ export const PublishBlocked: Story = {
 		}),
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행" }, LONG));
+		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행하기" }, LONG));
 		await within(document.body).findByRole("dialog", undefined, LONG);
 	},
 };
@@ -456,29 +492,47 @@ export const ImageInsertDialog: Story = {
 	},
 };
 
-/** A copy of an unsaved edit is waiting in the browser: the editor offers to bring it back. */
-export const RecoveryOffer: Story = {
-	loaders: [
-		async () => {
-			const base = formFromEntry(testSite, draft);
-			const snapshot = { ...base, title: "저장하지 못한 제목" } as EntryForm;
-			await saveLocalBackup(
-				{
-					key: "u1:entry-1",
-					entryId: "entry-1",
-					baseVersion: draft.version,
-					baseFingerprint: formFingerprint(testSite, base),
-					localFingerprint: formFingerprint(testSite, snapshot),
-					snapshot,
-					changeSeq: 1,
-					savedAt: Date.parse("2026-10-21T14:20:00.000Z"),
-				},
-				testSite,
-			);
+/** A copy of an unsaved edit is waiting in the browser. */
+const draftLoader = async () => {
+	const base = formFromEntry(testSite, draft);
+	const snapshot = {
+		...base,
+		title: "저장하지 못한 제목",
+		summary: "브라우저에만 남은 소개입니다.",
+		doc: docOf(`${BODY}\n\n브라우저에서 덧붙인 문단입니다.`, draft.working.doc),
+	} as EntryForm;
+	await saveLocalBackup(
+		{
+			key: "u1:entry-1",
+			entryId: "entry-1",
+			baseVersion: draft.version,
+			baseFingerprint: formFingerprint(testSite, base),
+			localFingerprint: formFingerprint(testSite, snapshot),
+			snapshot,
+			changeSeq: 1,
+			savedAt: Date.parse("2026-10-26T01:12:00.000Z"),
 		},
-	],
-	render: screen(() => server()),
+		testSite,
+	);
+};
+
+/** The editor opens with a notice strip: the draft was kept only in this browser; compare it, load it or discard it. */
+export const RecoveryOffer: Story = {
+	tags: ["visual"],
+	loaders: [draftLoader],
+	render: screen(() => server({ entry: { ...draft, changedAt: "2026-10-26T00:58:00.000Z" } as EntryData })),
 	play: async () => {
-		await within(document.body).findByRole("dialog", undefined, LONG);
+		await within(document.body).findByText("이 브라우저에 저장하지 않은 편집이 있어요", undefined, LONG);
+	},
+};
+
+/** The compare screen for the browser draft: the draft beside the server's copy, and loading the draft or discarding it. */
+export const CompareDraft: Story = {
+	tags: ["visual"],
+	loaders: [draftLoader],
+	render: screen(() => server({ entry: { ...draft, changedAt: "2026-10-26T00:58:00.000Z" } as EntryData })),
+	play: async () => {
+		await userEvent.click(await within(document.body).findByRole("link", { name: "비교하기" }, LONG));
+		await within(document.body).findByRole("heading", { level: 1, name: "임시 저장본과 비교" }, LONG);
 	},
 };

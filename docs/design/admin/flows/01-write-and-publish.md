@@ -63,12 +63,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step09.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo-open off)
 - The user saves with ⌘S. The status bar changes from unsaved changes to saved on the server.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ### Step 10: "발행하기 → 막힘 · 할 일 2"
 
 - Board: `Flow1Step10.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; toast "발행 막힘"; todo-open on)
 - The user presses publish while required fields are still empty. Publishing is blocked, a toast says to fix the 2 to-dos first, and the to-do panel opens with two items: write the summary (empty) and add alt text to 2 images (cover image, body image 1).
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ### Step 11: "할 일 1 · 요약 쓰기"
 
@@ -87,18 +89,21 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step13.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "다 채움"; todo-open on)
 - All to-dos are filled and the panel reads "할 일 없음" (nothing to do), listing what was checked: image alt text, title, address, cover image. The user presses publish, which also saves the post.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ### Step 14: "발행됨"
 
 - Board: `Flow1Step14.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; toast "발행됨"; todo-open off)
 - The post is published. The status reads published and a toast says "발행되었어요" with a "보기" (view) action.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ### Step 15: "발행 후 고침 → 수정 중 · 다시 발행"
 
 - Board: `Flow1Step15.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "수정 중"; save "저장됨"; todo "다 채움"; pub-menu on; todo-open off)
 - The user edits after publishing. The status becomes "수정 중" (editing) and the publish menu offers two choices: republish keeping the original date ("발행일 2026. 10. 01 그대로") or republish with today's date ("오늘 날짜로 다시 발행", 2026. 10. 26).
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: write and publish (steps 09–15)`)
 
 ## "다른 곳에서 먼저 저장" · Saved elsewhere first
 
@@ -107,12 +112,14 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step16.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "수정 중"; save "편집 충돌"; todo "다 채움"; dialog "편집 충돌"; todo-open off)
 - Exception: the post was saved elsewhere first. A notice bar says it was saved at 10:41 from another place and this post cannot be saved, with "비교하기" (compare) and "서버 최신본 불러오기" (load the server version). The status reads edit conflict.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: saved elsewhere first`)
 
 ### Step 17: "비교하기 → 양쪽 글을 보고 한쪽 고르기"
 
 - Board: `Flow1Step17.dc.html`
 - Renders: `EditorCompare` (mode "편집 충돌")
 - The user opens compare. The two versions sit side by side: the user's input (not saved) and the latest server version (v4, saved 10:41). The user picks one: load the server version, or save their own input.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: saved elsewhere first`)
 
 ## "다시 열었을 때 임시 저장본" · Browser draft on reopening
 
@@ -121,9 +128,11 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow1Step18.dc.html`
 - Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "수정 중"; save "브라우저에만 임시 저장됨"; todo "다 채움"; dialog "임시 저장본 복구"; todo-open off)
 - Exception: the user reopens a post that has unsaved edits kept only in this browser. A notice bar says so (10. 26 10:12) with "비교하기", "불러오기" (load) and "버리기" (discard). The status reads saved only in the browser.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: browser draft on reopening`)
 
 ### Step 19: "비교하기 → 양쪽 글을 보고 한쪽 고르기"
 
 - Board: `Flow1Step19.dc.html`
 - Renders: `EditorCompare` (mode "임시 저장본")
 - The user opens compare for the browser draft. The browser draft (10. 26 10:12) sits beside the server copy (10. 26 09:58). The user picks one: load the draft, or discard it.
+- Test: `packages/admin/src/screens/entries/__test__/write-and-publish-flow.test.tsx` (`flow: browser draft on reopening`)

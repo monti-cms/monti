@@ -14,16 +14,14 @@ import {
 	TodoItem,
 } from "@monti-cms/ui";
 import { type ComponentType, createContext, type ReactNode, useContext, useMemo, useState } from "react";
-import type { CmsIssue } from "../../api/error-message";
 import type { TextIssues } from "../../editor/text-check/findings";
 import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
 import type { SaveStatus } from "../entries/entry-editor-types";
 import { entriesMessages } from "../entries/messages";
 import { formatDateTime } from "./format-date";
-import { publishReadinessMessages } from "./publish-readiness.messages";
 import { saveCell } from "./save-cell";
 import { statusBarMessages } from "./status-bar.messages";
-import { todoRows } from "./todo-rows";
+import type { TodoRow } from "./todo-rows";
 
 /** What a plugin's cell can read about where it is shown: the entry being edited, and what the text checkers found in its body. */
 export interface StatusBarContextValue {
@@ -114,27 +112,20 @@ function SaveCell({ status, savedAt, backupAvailable, onSave }: SaveCellProps) {
 
 /** What is left to fix before the entry can be published. */
 export interface TodoCellProps {
-	/** What the server's publish check found. */
-	readonly issues: readonly CmsIssue[];
-	/** The labels of the required fields that are right. */
+	/** The rows to fix (`todoRows`): problems of the same kind are one row. */
+	readonly rows: readonly TodoRow[];
+	/** What is already right, one ✓ row each: the to-dos fixed just now, then the required fields that were never empty in one line. */
 	readonly done: readonly string[];
-	/** Brings the writer to the field or block of a problem. */
-	readonly focus: (issue: CmsIssue) => void;
 	/** Whether the list is open, so a refused publish can open it. Without `open` and `onOpenChange` the cell keeps that state itself. */
 	readonly open?: boolean;
 	readonly onOpenChange?: (open: boolean) => void;
 }
 
-function TodoCell({ issues, done, focus, open: controlledOpen, onOpenChange }: TodoCellProps) {
+function TodoCell({ rows, done, open: controlledOpen, onOpenChange }: TodoCellProps) {
 	const t = useTranslator(statusBarMessages);
-	const tr = useTranslator(publishReadinessMessages);
 	const [ownOpen, setOwnOpen] = useState(false);
 	const open = controlledOpen ?? ownOpen;
 	const setOpen = onOpenChange ?? setOwnOpen;
-	const rows = todoRows(tr, issues, (issue) => {
-		setOpen(false);
-		focus(issue);
-	});
 	return (
 		<StatusBarList
 			open={open}
@@ -147,10 +138,12 @@ function TodoCell({ issues, done, focus, open: controlledOpen, onOpenChange }: T
 				</StatusBarCell>
 			}
 		>
-			{rows.map(({ id, ...row }) => (
-				<TodoItem key={id} {...row} />
+			{rows.map(({ key, title, detail, onOpen }) => (
+				<TodoItem key={key} title={title} detail={detail} onOpen={onOpen} />
 			))}
-			{done.length > 0 && <TodoDone>{done.join(" · ")}</TodoDone>}
+			{done.map((label) => (
+				<TodoDone key={label}>{label}</TodoDone>
+			))}
 		</StatusBarList>
 	);
 }

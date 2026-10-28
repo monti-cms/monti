@@ -112,29 +112,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"backlink.saveDraft": "Save the draft to add it to {label}.",
 		"backlink.addFailed": "Couldn't add to {label}.",
 		"backlink.removeFailed": "Couldn't remove from {label}.",
-
-		"recovery.title": "You have unsaved edits",
-		"recovery.description": "Edits saved in this browser on {date} aren't on the server.",
-		"recovery.conflict":
-			" The server version has changed elsewhere since. Loading the browser copy and saving will overwrite it.",
-		"recovery.keepServer": "Open server version",
-		"recovery.restore": "Load browser copy",
-		"conflict.overwrite": "Overwrite",
-		"conflict.overwriteAsk":
-			"Overwrite the latest server version with your input? Changes saved elsewhere will be lost.",
-		"conflict.title": "Edit conflict",
-		"conflict.description":
-			"Someone saved first from another tab or device. Your input is still in this browser. Compare both sides, then copy what you need or pick one.",
-		"conflict.savedBy": "Saved by {name} on {date}.",
-		"conflict.savedAt": "Saved on {date}.",
-		"conflict.reload": "Reload",
-		"conflict.overwriteMine": "Overwrite with mine",
-		"conflict.copied": "Body copied.",
-		"conflict.summary": "Title: {title} · Slug: {slug}",
-		"conflict.noSlug": "None",
-		"conflict.copyBody": "Copy body",
-		"conflict.mine": "Your input",
-		"conflict.server": "Latest on server · v{version}",
 	},
 	ko: {
 		retry: "다시 시도",
@@ -243,27 +220,5 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"backlink.saveDraft": "초안을 저장하면 {label}에 넣을 수 있어요.",
 		"backlink.addFailed": "{label}에 넣지 못했어요.",
 		"backlink.removeFailed": "{label}에서 빼지 못했어요.",
-
-		"recovery.title": "저장하지 않은 편집이 있어요",
-		"recovery.description": "{date}에 이 브라우저에 임시 저장한 편집이 서버에 없어요.",
-		"recovery.conflict":
-			" 그 뒤 다른 곳에서 서버 내용도 바뀌었어요. 임시 저장본을 불러와 저장하면 서버 내용을 덮어써요.",
-		"recovery.keepServer": "서버 저장본 열기",
-		"recovery.restore": "임시 저장본 불러오기",
-		"conflict.overwrite": "덮어쓰기",
-		"conflict.overwriteAsk": "서버 최신본을 내 입력으로 덮어쓸까요? 다른 곳에서 저장한 변경은 사라져요.",
-		"conflict.title": "편집 충돌",
-		"conflict.description":
-			"다른 탭이나 기기에서 먼저 저장했어요. 내 입력은 브라우저에 남아 있어요. 양쪽을 비교해 복사하거나 하나를 고르세요.",
-		"conflict.savedBy": "{date}에 {name} 님이 저장했어요.",
-		"conflict.savedAt": "{date}에 저장했어요.",
-		"conflict.reload": "다시 불러오기",
-		"conflict.overwriteMine": "내 내용으로 덮어쓰기",
-		"conflict.copied": "본문을 복사했어요.",
-		"conflict.summary": "제목: {title} · 주소: {slug}",
-		"conflict.noSlug": "없음",
-		"conflict.copyBody": "본문 복사",
-		"conflict.mine": "내 입력",
-		"conflict.server": "서버 최신본 · v{version}",
 	},
 });

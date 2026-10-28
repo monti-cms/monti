@@ -110,7 +110,12 @@ export function createRecovery(ctx: EditorContext) {
 	const offerRecovery = (record: RecoveryRecord, server?: EntryData) => {
 		m.recoveryRecord = record;
 		commit({
-			recovery: { kind: server ? "conflict" : "restore", savedAt: record.savedAt, ...(server ? { server } : {}) },
+			recovery: {
+				kind: server ? "conflict" : "restore",
+				savedAt: record.savedAt,
+				form: record.snapshot as EntryForm,
+				...(server ? { server } : {}),
+			},
 		});
 	};
 
