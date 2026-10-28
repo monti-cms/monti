@@ -19,7 +19,7 @@ export interface InitAnswerFlags {
 	readonly timeZone?: string;
 	/** `s3` or `none`. */
 	readonly storage?: string;
-	/** Comma-separated: `ai`, `git-sync`, or `none`. */
+	/** Comma-separated: `ai` or `none`. */
 	readonly extras?: string;
 	/** `all`, `none`, `default` (the light set) or comma-separated block names. */
 	readonly blocks?: string;
@@ -41,7 +41,7 @@ export const detectSystemTimeZone = (): string | undefined => {
 
 const splitList = (value: string): string[] => value.split(/[\s,]+/).filter(Boolean);
 const BLOCK_IDS = BLOCK_CHOICES.map((block) => block.id);
-const EXTRAS = ["ai", "git-sync"] as const;
+const EXTRAS = ["ai"] as const;
 
 /** Every validator returns the error text, or `undefined` when the value is fine. The same text is used for a flag and for a prompt. */
 const check = {
@@ -222,16 +222,13 @@ export async function collectAnswers(
 					})
 				: "none";
 
-	// Extras (Bareun is not offered)
+	// Extras
 	let extras: string[];
 	if (flags.extras !== undefined) extras = splitList(flags.extras);
 	else if (asking) {
 		extras = await asking.multiselect({
 			message: QUESTIONS.extras,
-			options: [
-				{ value: "ai", label: "AI writing", hint: "polish, draft and translate buttons" },
-				{ value: "git-sync", label: "Git sync", hint: "sync published entries with files in a GitHub repo" },
-			],
+			options: [{ value: "ai", label: "AI writing", hint: "polish, draft and translate buttons" }],
 			initial: [],
 		});
 	} else extras = [];
@@ -323,7 +320,6 @@ export async function collectAnswers(
 		...resolveTimeZone(flags.timeZone, systemTimeZone),
 		storage,
 		ai: extras.includes("ai"),
-		gitSync: extras.includes("git-sync"),
 		blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
 		adminPath,
 		login,

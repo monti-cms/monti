@@ -36,7 +36,7 @@ export interface MontiServerOptions {
 	readonly storage?: MediaAdapter;
 	/**
 	 * The one master secret. If unset, the `MONTI_SECRET` environment variable (any long random value, for example `openssl rand -base64 32`).
-	 * The login's session-signing key and the encryption key of every plugin (AI service keys, git-sync tokens) are derived from it with HKDF, so one value
+	 * The login's session-signing key and the encryption key of every plugin (AI service keys, plugin tokens) are derived from it with HKDF, so one value
 	 * covers them all and none of them sees the secret itself. Without it the login cannot sign sessions and stored values cannot be encrypted.
 	 */
 	readonly secret?: string | undefined;

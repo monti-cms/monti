@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { answer, type FakeApi, ScreenFrame } from "../../stories/screen-frame";
 import { EventsScreen } from "./events-screen";
 
@@ -42,6 +43,16 @@ export const WithDeliveries: Story = {
 			item("e3", "webhook", "delivered"),
 		]),
 	),
+};
+/** An event opened from its row: the whole record in a panel beside the list. */
+export const EventOpen: Story = {
+	tags: ["visual"],
+	render: WithDeliveries.render,
+	play: async ({ canvasElement }) => {
+		const row = (await within(canvasElement).findAllByText("webhook"))[0]?.closest("tr") as HTMLElement;
+		await userEvent.click(within(row).getByText("첫 번째 글"));
+		await within(canvasElement).findByRole("complementary");
+	},
 };
 export const RecordedOnly: Story = {
 	render: screen(list([item("e1", null, "recorded"), item("e2", null, "recorded", "updated")])),

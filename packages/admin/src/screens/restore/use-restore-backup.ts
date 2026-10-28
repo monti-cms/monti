@@ -2,42 +2,32 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { getImportLimit, importKeys } from "../../api/import";
 import { getRestoreState, previewRestore, restoreKeys, runRestore } from "../../api/restore";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { restoreMessages } from "./messages";
 
 /**
- * The state of one backup restore: whether the site is empty (read before a file is chosen), the file, the preview of what restoring it would do
- * (read at once; nothing is written), and the run. A restore changes everything the admin lists, so every cached read is refetched after it.
+ * The state of one backup restore: whether the site is empty (read before a file is chosen), the preview of what restoring `file` would do (read at
+ * once when `readable` and the site is empty; nothing is written), and the run. `fileNumber` counts the files chosen, so reading the same file again is
+ * a new read. A restore changes everything the admin lists, so every cached read is refetched after it.
  */
-export function useRestoreBackup() {
+export function useRestoreBackup(file: File | null, fileNumber: number, readable: boolean) {
 	const site = useSite();
 	const t = useTranslator(restoreMessages);
-	const [file, setFile] = useState<File | null>(null);
-	// Counts the files chosen, so reading the same file again after "start over" is a new read.
-	const [fileNumber, setFileNumber] = useState(0);
 
 	const stateQuery = useQuery({
 		queryKey: restoreKeys.state(),
 		queryFn: ({ signal }) => getRestoreState(site, signal),
 		retry: false,
 	});
-	const limitQuery = useQuery({
-		queryKey: importKeys.limit(),
-		queryFn: ({ signal }) => getImportLimit(site, signal),
-		staleTime: 5 * 60_000,
-	});
-	const limit = limitQuery.data;
-	const tooLarge = file !== null && limit !== undefined && file.size > limit;
 	const empty = stateQuery.data?.empty ?? true;
 
 	const previewQuery = useQuery({
 		// Not under the `["cms"]` prefix the run invalidates: the file is not read again after the restore.
 		queryKey: restoreKeys.preview(fileNumber),
 		queryFn: ({ signal }) => previewRestore(site, file as File, signal),
-		enabled: file !== null && !tooLarge && empty,
+		// Not before the site is known to be empty: a site with entries never reads a zip as a backup.
+		enabled: file !== null && readable && stateQuery.isSuccess && empty,
 		// The preview is of one file's bytes at one moment; it is never "fresh" again and never kept after the file is gone.
 		staleTime: Number.POSITIVE_INFINITY,
 		gcTime: 0,
@@ -57,25 +47,14 @@ export function useRestoreBackup() {
 		stateReady: !stateQuery.isPending,
 		/** Whether the site is empty, so a backup can be restored. Unknown counts as empty: the server checks again. */
 		empty,
-		file,
-		/** Takes a file: the previous preview and result are dropped. */
-		chooseFile: (next: File) => {
-			setFile(next);
-			setFileNumber((number) => number + 1);
-			run.reset();
-		},
-		reset: () => {
-			setFile(null);
-			run.reset();
-		},
-		limit,
-		tooLarge,
 		preview: previewQuery.data,
-		previewQuery,
+		/** The preview is in, or could not be read: either way the file is not waiting for it any more. */
+		previewSettled: previewQuery.isSuccess || previewQuery.isError,
 		isRunning: run.isPending,
 		runError: run.error,
 		result: run.data,
 		start: () => run.mutate(undefined),
+		reset: () => run.reset(),
 	};
 }
 

@@ -9,9 +9,21 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
-import { Box, EntryStatus, Stack, Tabs, TabsContent, TabsList, TabsTrigger, Text } from "@monti-cms/ui";
+import {
+	EntryStatus,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SidePanel,
+	Stack,
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+	Text,
+} from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
 import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry } from "../api/entries";
 import { issueLine } from "../api/error-message";
@@ -34,7 +46,6 @@ import { collectionTranslated } from "./list-columns";
 import { screensMessages } from "./messages";
 import { useConfirm } from "./shared/confirm-dialog";
 import { EditorFooter } from "./shared/editor-footer";
-import { SidePanelHeader } from "./shared/side-panel";
 import { useDraftEditor } from "./shared/use-draft-editor";
 
 export type RecordTarget = { collection: Collection; id: string | null };
@@ -59,6 +70,7 @@ export function RecordPanel({
 	onSaved,
 	onDirtyChange,
 	initial,
+	in: frame = "panel",
 }: {
 	target: RecordTarget;
 	onClose: () => void;
@@ -68,6 +80,8 @@ export function RecordPanel({
 	onDirtyChange?: (dirty: boolean) => void;
 	/** Initial values of a new item (e.g. a name when added by search term in the entry edit screen). */
 	initial?: EntryFormPatch;
+	/** `panel` (the default) opens beside the list; `sheet` is the same form inside the sheet it is put in, which has the head, the body and the foot. */
+	in?: "panel" | "sheet";
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -183,78 +197,88 @@ export function RecordPanel({
 		});
 	};
 
-	return (
-		<Stack as="aside" aria-label={heading} gap={0} height="full" border="left" background="page">
-			<SidePanelHeader title={heading} onClose={() => void close()} />
-			<Stack
-				as="form"
-				gap={0}
-				grow
-				minHeight={0}
-				onSubmit={(event) => {
-					event.preventDefault();
-					save();
-				}}
-			>
-				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
-					<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
-						{translated && (
-							<TabsList variant="bar" inset="panel">
-								{site.LOCALES.map((option) => {
-									const filled = hasLocaleValues(site, collection, form, option);
-									const name = site.localeLabel(option);
-									return (
-										<TabsTrigger
-											key={option}
-											value={option}
-											aria-label={
-												option === site.DEFAULT_LOCALE
-													? name
-													: t(filled ? "record.translationOn" : "record.translationOff", { name })
-											}
-										>
-											{name}
-											{option !== site.DEFAULT_LOCALE && <EntryStatus status={filled ? "published" : "draft"} />}
-										</TabsTrigger>
-									);
-								})}
-							</TabsList>
+	const submit = (event: FormEvent) => {
+		event.preventDefault();
+		save();
+	};
+	const footer = (
+		<EditorFooter
+			// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
+			dirty={dirty || isNew}
+			saving={isSaving}
+			canSave={Boolean(title.trim()) && !(id && !loaded)}
+			error={error ?? loadError}
+			align="end"
+			onCancel={() => void close()}
+		/>
+	);
+	const fields = (
+		<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
+			<Tabs fill value={locale} onValueChange={(value) => setLocale(value as Locale)}>
+				{translated && (
+					<TabsList variant="bar" inset="panel">
+						{site.LOCALES.map((option) => {
+							const filled = hasLocaleValues(site, collection, form, option);
+							const name = site.localeLabel(option);
+							return (
+								<TabsTrigger
+									key={option}
+									value={option}
+									aria-label={
+										option === site.DEFAULT_LOCALE
+											? name
+											: t(filled ? "record.translationOn" : "record.translationOff", { name })
+									}
+								>
+									{name}
+									{option !== site.DEFAULT_LOCALE && <EntryStatus status={filled ? "published" : "draft"} />}
+								</TabsTrigger>
+							);
+						})}
+					</TabsList>
+				)}
+				<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
+					<Stack gap={16} padding={24}>
+						<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
+						{id && (
+							<Text as="p" variant="caption" tone="muted">
+								{t("record.slugChange")}
+							</Text>
 						)}
-						<TabsContent value={site.DEFAULT_LOCALE} fill scroll>
-							<Stack gap={16} padding={16}>
-								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
-								{id && (
-									<Text as="p" variant="caption" tone="muted">
-										{t("record.slugChange")}
-									</Text>
-								)}
-							</Stack>
-						</TabsContent>
-						{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
-							<TabsContent key={option} value={option} fill scroll>
-								<Stack gap={16} padding={16}>
-									<Text as="p" variant="caption" tone="muted">
-										{t("record.localeEmpty", { name: site.localeLabel(option) })}
-									</Text>
-									<RecordLocaleFields collection={collection} locale={option} />
-								</Stack>
-							</TabsContent>
-						))}
-					</Tabs>
-				</EntryFormProvider>
-				<Box shrink={false} border="top" paddingX={16} paddingY={12}>
-					<EditorFooter
-						// A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
-						dirty={dirty || isNew}
-						saving={isSaving}
-						canSave={Boolean(title.trim()) && !(id && !loaded)}
-						error={error ?? loadError}
-						align="end"
-						onCancel={() => void close()}
-					/>
-				</Box>
+					</Stack>
+				</TabsContent>
+				{(translated ? site.PREFIXED_LOCALES : []).map((option) => (
+					<TabsContent key={option} value={option} fill scroll>
+						<Stack gap={16} padding={24}>
+							<Text as="p" variant="caption" tone="muted">
+								{t("record.localeEmpty", { name: site.localeLabel(option) })}
+							</Text>
+							<RecordLocaleFields collection={collection} locale={option} />
+						</Stack>
+					</TabsContent>
+				))}
+			</Tabs>
+		</EntryFormProvider>
+	);
+
+	if (frame === "sheet") {
+		return (
+			<Stack as="form" gap={0} grow minHeight={0} onSubmit={submit}>
+				<SheetHeader>
+					<SheetTitle>{heading}</SheetTitle>
+				</SheetHeader>
+				<Stack gap={0} grow minHeight={0} overflow="y">
+					{fields}
+				</Stack>
+				<SheetFooter>{footer}</SheetFooter>
+				{dialog}
 			</Stack>
+		);
+	}
+	return (
+		<SidePanel title={heading} onClose={() => void close()} bleed onSubmit={submit} footer={footer}>
+			{fields}
 			{dialog}
-		</Stack>
+		</SidePanel>
 	);
 }

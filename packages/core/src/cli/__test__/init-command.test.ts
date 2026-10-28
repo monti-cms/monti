@@ -125,7 +125,7 @@ describe("monti init on the command line", () => {
 			"--storage",
 			"s3",
 			"--extras",
-			"ai,git-sync",
+			"ai",
 			"--blocks",
 			"callout,tabs",
 			"--admin-path",
@@ -273,6 +273,5 @@ describe("monti init on the command line", () => {
 		]) {
 			expect(out.join("\n")).toContain(flag);
 		}
-		expect(out.join("\n")).not.toMatch(/bareun/i);
 	});
 });

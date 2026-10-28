@@ -55,11 +55,6 @@ export function nextSteps(input: NextStepsInput): string[] {
 	if (input.setup.ran) todo.push(...input.setup.leftover);
 	else todo.push(...manualSetupSteps(manager));
 	todo.push(`Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
-	if (answers.gitSync) {
-		todo.push(
-			`Name the repo to sync: add a target to gitSync() in ${input.configFile}, then open ${answers.adminPath}/tools/git-sync to save the GitHub token.`,
-		);
-	}
 	const siteBase = answers.siteUrl.replace(/\/+$/, "");
 	const deployedAdmin = `${isLocalUrl(siteBase) ? "<your site>" : siteBase}${answers.adminPath}`;
 	if (answers.login === "github") {

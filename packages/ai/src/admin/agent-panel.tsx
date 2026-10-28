@@ -22,7 +22,7 @@ import {
 	DropdownMenuTrigger,
 	EmptyState,
 	IconButton,
-	SidePanelFrame,
+	SidePanel,
 	Spark,
 	Stack,
 	Text,
@@ -183,8 +183,10 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 
 	const last = chat.messages.at(-1);
 	return (
-		<SidePanelFrame
+		<SidePanel
 			data-testid="agent-panel"
+			width="assistant"
+			corner={false}
 			title={t("label")}
 			onClose={onClose}
 			actions={
@@ -266,7 +268,7 @@ export function AgentPanel({ onClose }: AdminPanelProps) {
 			)}
 			{openError && <ChatError title={openError} />}
 			<div ref={endRef} />
-		</SidePanelFrame>
+		</SidePanel>
 	);
 }
 

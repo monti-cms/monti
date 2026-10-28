@@ -26,7 +26,7 @@ const withFonts = async (head: string) => {
 // `packages/admin` and the plugins (dev only; nothing here ships).
 const config: StorybookConfig = {
 	framework: "@storybook/react-vite",
-	stories: ["../src/**/*.stories.tsx", "../../{admin,ai,blocks,mdx,seo,git-sync}/src/**/*.stories.tsx"],
+	stories: ["../src/**/*.stories.tsx", "../../{admin,ai,blocks,mdx,seo}/src/**/*.stories.tsx"],
 	addons: ["@storybook/addon-themes"],
 	// The `./fonts/...` urls in the rules below resolve against the preview's `iframe.html`.
 	staticDirs: [

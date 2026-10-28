@@ -103,17 +103,12 @@ stay server operations; the editor saves first, as its own buttons do.
 | `events.list` | read | `GET /events` | | 3 | Failed and dead webhook deliveries |
 | `events.retry` | write | `POST /events/[id]/retry` | Not needed | 3 | |
 | `events.dismiss` | write | `POST /events/[id]/dismiss` | No | 3 | |
-| `gitSync.status` | read | `GET /git-sync/status` | | 3 | Plugin operation |
-| `gitSync.conflicts` | read | `GET /git-sync/conflicts` | | 3 | Plugin operation |
-| `gitSync.pull` | write | `POST /git-sync/pull` | No | 3 | Plugin operation; changes many entries at once |
-| `gitSync.push` | write | `POST /git-sync/flush` | No | 3 | Plugin operation; writes to the repository |
-| `gitSync.resolve` | write | `POST /git-sync/resolve` | No | 3 | Plugin operation; the review shows both sides |
 
 ## AI and checks
 
 | Operation | Kind | Route today | Undo | Phase | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `spellcheck.run` | read | Bareun plugin route | | 3 | Plugin operation, when the Bareun plugin is installed |
+| `spellcheck.run` | read | The text-check plugin route | | 3 | Plugin operation, when a spell-check plugin is installed |
 | — | — | `POST /ai/run`, `/ai/actions`, `/ai/snippets` | | | Removed in phase 3 with actions, custom actions and snippets (agent.md section 7). There is no `ai.<action>` operation: the agent writes the summary, alt text or translation itself |
 | — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | The model moves to a picker in the assistant input, per conversation; the API keys screen shows each key's monthly usage and cap. The agent does not change which model it uses or what it may spend |
 | — | — | none | | | The writing voice (Settings › Site). Every run gets it as context; it is not a tool call |
@@ -139,7 +134,7 @@ Not operations: each is a fixed sentence sent to the agent with the screen conte
 | `/preferences` | The admin's own list columns and screen state, not site content |
 | `/import/*` | Takes a file from the admin's computer |
 | `/export/*` | Produces a download for the admin. The agent reads entries directly |
-| `/events/retry` (cron), git-sync webhook, `/public/*` | Called by machines or the public site, not by the admin |
+| `/events/retry` (cron), plugin webhooks, `/public/*` | Called by machines or the public site, not by the admin |
 | CLI (`db:*`, `schema:*`, `admin:reset-password`, `events:retry`, `content:rewrite`) | Run on the machine that hosts the site |
 
 ## What phase 1 needs that does not exist

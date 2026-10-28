@@ -42,7 +42,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 	// What the editor checks said about the saved body, once each.
 	const warnings = [...new Set(entry.warnings.map((warning) => warning.text))];
 	return (
-		<Stack as="li" gap={8} paddingY={12} border="bottom" data-testid="import-result" data-outcome={entry.outcome}>
+		<Stack as="li" gap={8} paddingY={12} border="bottom">
 			<Inline gap={8} wrap>
 				<Text variant="label" tone={OUTCOME_TONE[entry.outcome]}>
 					{t(`result.outcome.${entry.outcome}`)}
@@ -90,9 +90,9 @@ export function ResultView({ result }: { result: ImportRun }) {
 	const t = useTranslator(importMessages);
 	const { counts } = result;
 	return (
-		<Stack gap={16} data-testid="import-run-result">
+		<Stack gap={16}>
 			<Heading as="h4">{t("result.title")}</Heading>
-			<Text as="p" tone="muted" data-testid="import-result-summary">
+			<Text as="p" tone="muted">
 				{[
 					t("result.imported", { count: counts.imported }),
 					counts.draft > 0 ? t("result.draft", { count: counts.draft }) : null,

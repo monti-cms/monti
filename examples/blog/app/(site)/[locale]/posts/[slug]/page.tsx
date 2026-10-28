@@ -7,8 +7,7 @@ import { cms } from "@/monti.config";
 
 // The page reads the database on each request. With cacheComponents that needs `instant = false`; leave the line out when the option is off.
 // Status codes: with cacheComponents off, `notFound()` and `permanentRedirect()` send a real 404 and 308. With it on, Next has already sent
-// the page's shell with a 200, so an unknown post is a `noindex` page and an old address a client-side redirect. For strict statuses
-// see docs/recipes/strict-status.md (a proxy.ts).
+// the page's shell with a 200, so an unknown post is a `noindex` page and an old address a client-side redirect.
 export const instant = false;
 
 type Props = { params: Promise<{ locale: string; slug: string }> };

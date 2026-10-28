@@ -7,7 +7,7 @@ import { APP_OPTIONS, appFlagsOf, type CliContext, optionLines } from "./command
 /** `<plugin>:<command>`, both parts a lowercase name. */
 const COMMAND_NAME = /^([a-z][a-z0-9-]*):([a-z][a-z0-9-]*)$/;
 
-/** Whether `name` has the shape of a plugin command (`git-sync:pull`). */
+/** Whether `name` has the shape of a plugin command (`my-plugin:pull`). */
 export const isPluginCommandName = (name: string): boolean => COMMAND_NAME.test(name);
 
 const PARSE_OPTIONS = {

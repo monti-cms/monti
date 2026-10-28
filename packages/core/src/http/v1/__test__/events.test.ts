@@ -31,7 +31,7 @@ const failed: EventDelivery = {
 		actor: null,
 		occurredAt: new Date("2030-01-01T00:00:00Z"),
 	} satisfies ContentChange,
-	subscriber: "plugin:git-sync",
+	subscriber: "plugin:mailer",
 	state: "failed",
 	attempts: 2,
 	lastError: "push rejected",
@@ -67,7 +67,7 @@ describe("GET /v1/events", () => {
 		expect(body.total).toBe(1);
 		expect(body.counts).toEqual(counts);
 		expect(body.items[0]).toMatchObject({
-			subscriber: "plugin:git-sync",
+			subscriber: "plugin:mailer",
 			state: "failed",
 			lastError: "push rejected",
 			change: { eventId: failed.change.eventId, kind: "saved", workingSlug: "hello" },
@@ -164,7 +164,7 @@ describe("POST /v1/events/retry", () => {
 
 describe("POST /v1/events/<id>/retry and /dismiss", () => {
 	const params = Promise.resolve({ id: failed.change.eventId });
-	const body = { subscriber: "plugin:git-sync" };
+	const body = { subscriber: "plugin:mailer" };
 
 	it("retries one delivery and answers with the counts", async () => {
 		const store = storeOf();
@@ -174,7 +174,7 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 		});
 		expect(response.status).toBe(200);
 		expect(store.retryDelivery).toHaveBeenCalledWith(
-			expect.objectContaining({ eventId: failed.change.eventId, subscriber: "plugin:git-sync" }),
+			expect.objectContaining({ eventId: failed.change.eventId, subscriber: "plugin:mailer" }),
 		);
 	});
 
@@ -187,7 +187,7 @@ describe("POST /v1/events/<id>/retry and /dismiss", () => {
 		expect(response.status).toBe(200);
 		expect(store.dismissDelivery).toHaveBeenCalledWith({
 			eventId: failed.change.eventId,
-			subscriber: "plugin:git-sync",
+			subscriber: "plugin:mailer",
 		});
 	});
 

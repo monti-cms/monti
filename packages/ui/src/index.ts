@@ -35,7 +35,7 @@ export const FolderTabsList = close(open.FolderTabsList);
 export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
-export const SidePanelFrame = close(open.SidePanelFrame);
+export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
 export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
 
@@ -243,6 +243,7 @@ export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
 export const Grid = close(open.Grid);
 export const StatusBar = close(open.StatusBar);
+export const StatusBarAnnouncer = close(open.StatusBarAnnouncer);
 export const StatusBarCell = close(open.StatusBarCell);
 export const StatusBarPluginCell = close(open.StatusBarPluginCell);
 export const StatusBarSpacer = close(open.StatusBarSpacer);

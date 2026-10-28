@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StatusBar, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
+import { StatusBar, StatusBarAnnouncer, StatusBarCell, StatusBarPluginCell, StatusBarSpacer } from "./status-bar";
 import { StatusBarList } from "./status-bar-list";
 import { TodoDone, TodoItem } from "./todo-item";
 
@@ -54,10 +54,11 @@ export const Playground: Story = {
 	),
 };
 
-/** At rest: the cells side by side. Cells that only state something are not buttons. */
+/** At rest: the cells side by side. Cells that only state something are not buttons. The announcer says the state aloud and shows nothing. */
 export const Cells: Story = {
 	render: (args) => (
 		<StatusBar {...args}>
+			<StatusBarAnnouncer>저장됨</StatusBarAnnouncer>
 			<StatusBarCell tone="warning">할 일 2</StatusBarCell>
 			<StatusBarCell>요청 2 · 1 고치는 중</StatusBarCell>
 			<StatusBarSpacer />

@@ -1,14 +1,11 @@
 "use client";
 
-import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import { Sheet, SheetContent, SheetTitle, Text } from "@monti-cms/ui";
+import { type Collection, type Site, useSite } from "@monti-cms/core/site";
+import { Sheet, SheetContent } from "@monti-cms/ui";
 import { useCallback, useRef, useState } from "react";
-import { useResizableSheet } from "../../ui/panel-resize";
 import { RecordPanel } from "../record-panel";
 import { useConfirm } from "../shared/confirm-dialog";
-import { RECORD_PANEL_RESIZE } from "../shared/side-panel";
 import { type EntryData, type EntryFormPatch, titlePatch } from "./entry-form";
-import { entriesMessages } from "./messages";
 
 type Request = { collection: Collection; initial: EntryFormPatch };
 
@@ -26,7 +23,6 @@ export const optionOf = (site: Site, untitled: string, collection: string, saved
  */
 export function useRecordCreator() {
 	const site = useSite();
-	const t = useTranslator(entriesMessages);
 	const [request, setRequest] = useState<Request | null>(null);
 	const resolveRef = useRef<((saved: EntryData | null) => void) | null>(null);
 	const dirtyRef = useRef(false);
@@ -50,7 +46,6 @@ export function useRecordCreator() {
 		[site],
 	);
 
-	const panel = useResizableSheet(RECORD_PANEL_RESIZE);
 	const sheet = (
 		<>
 			<Sheet
@@ -60,10 +55,10 @@ export function useRecordCreator() {
 					if (!open) void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
 				}}
 			>
-				<SheetContent resizable={panel}>
-					<SheetTitle render={<Text as="div" srOnly />}>{t("record.add")}</SheetTitle>
+				<SheetContent>
 					{request && (
 						<RecordPanel
+							in="sheet"
 							target={{ collection: request.collection, id: null }}
 							initial={request.initial}
 							onDirtyChange={(dirty) => {

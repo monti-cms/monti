@@ -2,7 +2,7 @@ import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 import type { AdminComponents } from "./admin-components";
 import type { AdminEvents } from "./events";
-import type { StatusItems } from "./screens/shared/status-bar";
+import type { StatusCells } from "./screens/shared/status-bar";
 import type { SlotSource } from "./slots/registry";
 
 /**
@@ -15,7 +15,7 @@ export interface AdminPanel {
 	readonly label: string;
 	/** The icon of its button. */
 	readonly icon: ComponentType<{ readonly "aria-hidden"?: boolean }>;
-	/** The panel's content. It draws its own frame (`SidePanelFrame` from `@monti-cms/admin/kit` has the header, the body and the footer) and closes itself with `onClose`. */
+	/** The panel's content. It draws its own frame (`SidePanel` from `@monti-cms/admin/kit` has the width, the header, the body and the footer) and closes itself with `onClose`. */
 	readonly Component: ComponentType<AdminPanelProps>;
 }
 
@@ -45,12 +45,13 @@ export interface AdminPlugin {
 	/** Actions attached to the screen slots (the button next to a field, a menu in the editor), as `SlotSource`s. */
 	readonly slots?: readonly SlotSource[];
 	/**
-	 * Items the plugin adds to the status bar at the bottom of every screen, by name: `{ align: "start" | "end", order, Component }`. The component renders a
-	 * `StatusBarItem` (from `@monti-cms/admin/kit`), or `null` to hide, and reads where it is shown with `useStatusBarContext`. An item shows only changing
-	 * state that leads somewhere when clicked, and hides when there is nothing to say. Give a function of the site when the items depend on the site config.
-	 * The components are client components, so give them from a `"use client"` module.
+	 * The cells the plugin fills in the status bar under the editor, by name: `statusCells: { spelling: SpellingCell }`. The core provides the slot (after
+	 * the to-do cell, in the source editor and the translation editor alike) and the cell and the list that opens from it; the plugin brings only what
+	 * goes in them. A cell component renders `StatusBarPluginCell` (from `@monti-cms/admin/kit`: its name, its findings, each with one action, and the
+	 * settings and "fix all" actions of the list), or `null` to draw nothing, and reads where it is shown with `useStatusBarContext`. Give a function of the
+	 * site when the cells depend on the site config. The components are client components, so give them from a `"use client"` module.
 	 */
-	readonly statusItems?: StatusItems | ((site: Site) => StatusItems);
+	readonly statusCells?: StatusCells | ((site: Site) => StatusCells);
 	/**
 	 * A side panel (see {@link AdminPanel}). The admin shows one panel for now: when several plugins declare one, the plugin registered last wins. Give a
 	 * function of the site when the label depends on the site config.

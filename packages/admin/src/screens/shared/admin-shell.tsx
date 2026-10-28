@@ -24,7 +24,6 @@ import { sharedMessages } from "./messages";
 import { useNavQueriesReady } from "./nav-queries";
 import { type ScreenContextValue, usePublishScreenContext } from "./screen-context";
 import { SidePanelPane, SidePanelToggle } from "./side-panel-slot";
-import { StatusBar, type StatusBarContextValue, type StatusBarScreen } from "./status-bar";
 
 interface AdminNavContextValue {
 	/** Number of trash items across all collections. null before loading. */
@@ -100,16 +99,6 @@ async function countTrash(site: Site): Promise<number> {
 		}),
 	);
 	return totals.reduce((sum, total) => sum + total, 0);
-}
-
-/** What the status bar's items read for a shell page: the screen kind from the current sidebar item, and and the collection of a list. */
-function shellStatusContext(site: Site, activeNav: AdminSidebarProps["activeNav"]): StatusBarContextValue {
-	const isCollection = site.COLLECTIONS.includes(activeNav);
-	const screen: StatusBarScreen = isCollection ? "list" : activeNav.startsWith("tools:") ? "tools" : activeNav;
-	return {
-		screen,
-		...(isCollection ? { collection: activeNav } : {}),
-	};
 }
 
 /** Where the admin is on a shell page, for the side panel: a collection (or the trash) is the entry list, and the other nav items name their own screen. */
@@ -311,7 +300,6 @@ export function AdminShell({
 					</Stack>
 					<SidePanelPane />
 				</Inline>
-				<StatusBar context={shellStatusContext(site, sidebar.activeNav)} />
 			</SidebarInset>
 		</SidebarProvider>
 	);

@@ -4,10 +4,7 @@
 
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";
-import { cn } from "@monti-cms/ui";
 import type { Ref } from "react";
-import { PanelResizeHandle, type usePanelResize } from "../../ui/panel-resize";
-import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import type { EntryEditor } from "./entry-editor-types";
 import { InspectorPanel } from "./inspector-panel";
 import { SourcePane } from "./source-pane";
@@ -32,7 +29,6 @@ export function TranslationSourcePanel({
 
 interface InspectorSidePanelProps {
 	editor: EntryEditor;
-	resize: ReturnType<typeof usePanelResize>;
 	incomingItems: IncomingReferenceItem[];
 	isLoadingIncoming: boolean;
 	onRefreshIncoming: (entryId: string) => void;
@@ -43,7 +39,6 @@ interface InspectorSidePanelProps {
 
 export function InspectorSidePanel({
 	editor,
-	resize,
 	incomingItems,
 	isLoadingIncoming,
 	onRefreshIncoming,
@@ -54,15 +49,8 @@ export function InspectorSidePanel({
 	const site = useSite();
 	const { entry, collection } = editor;
 	return (
-		// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
-		<div
-			className={cn(
-				"absolute @min-[784px]:relative inset-y-0 right-0 @min-[784px]:z-auto z-20 max-w-full @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating",
-				SIDE_PANEL_WIDTH,
-			)}
-			style={resize.style}
-		>
-			<PanelResizeHandle resize={resize} />
+		// On narrow screens it overlays the body; on wide screens it sits beside it, at the design's width for the properties panel.
+		<div className="absolute @min-[784px]:relative inset-y-0 right-0 @min-[784px]:z-auto z-20 w-full max-w-full @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating sm:w-monti-panel">
 			{site.isCollection(collection) && (
 				<InspectorPanel
 					incomingReferences={incomingItems}
