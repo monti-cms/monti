@@ -107,7 +107,7 @@ export function ListPagination({
 	const showPager = !(hidePagerWhenSingle && totalPages === 1);
 	if (!showRange && !showPager && !leading && !showPageSize) return null;
 	return (
-		<Box paddingX={32} shrink={false}>
+		<Box shrink={false}>
 			<ListFooter>
 				{showRange && (
 					<Count>
