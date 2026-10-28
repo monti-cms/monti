@@ -4,7 +4,7 @@ import { Count } from "./count";
 
 /**
  * A one-line notice across the top of a pane, under its header, for something the writer should know about the whole page ("The Korean source
- * changed"): cream background and one rule below. A 6px dot leads it. `tone="warning"` (the default) sets the sentence in the warning text color and the dot in the
+ * changed"): cream background and one rule below. A 6px dot leads the sentence, 8px before its words. `tone="warning"` (the default) sets the sentence in the warning text color and the dot in the
  * warning mark color; `tone="danger"` is for something that failed (a delivery, a save) and makes both red. `title` is the sentence, `meta` the small detail after it in mono, which is cut with "…" when the line is short (the sentence and the actions never wrap); `children`
  * are what can be done about it, at the right end (text buttons: the one that goes there underlined, then the one that dismisses).
  */
@@ -33,19 +33,19 @@ function Banner({
 			{...props}
 		>
 			<span
-				aria-hidden="true"
-				data-slot="banner-dot"
 				className={cn(
-					"size-1.5 shrink-0 rounded-monti-full",
-					tone === "danger" ? "bg-(--monti-fg-danger)" : "bg-monti-warning-emphasis",
-				)}
-			/>
-			<span
-				className={cn(
-					"shrink-0 whitespace-nowrap font-semibold",
+					"inline-flex shrink-0 items-center gap-monti-8 whitespace-nowrap font-semibold",
 					tone === "danger" ? "text-monti-danger" : "text-monti-warning",
 				)}
 			>
+				<span
+					aria-hidden="true"
+					data-slot="banner-dot"
+					className={cn(
+						"size-1.5 shrink-0 rounded-monti-full",
+						tone === "danger" ? "bg-(--monti-fg-danger)" : "bg-monti-warning-emphasis",
+					)}
+				/>
 				{title}
 			</span>
 			{meta && <Count className="min-w-0 truncate">{meta}</Count>}
