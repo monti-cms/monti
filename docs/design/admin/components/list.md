@@ -205,6 +205,10 @@ Pressing "+ 폴더" makes a new folder on the spot with no dialog, and the name 
 - Restoring one thing inside makes the folder again and puts it back in its original place. What remains stays in the trash folder.
 - Trash search also finds what is inside folders, and puts "시리즈 원고 폴더 안" (inside the series drafts folder) before the info line.
 
+### In code
+
+`TrashRowTitle` is the title cell of a trash row: line one is the title in the quiet ink of what is out of use (a trashed folder has its folder icon before it) and its address in mono beside it; line two is what it holds (`meta`), in the warning tone when something stops it from coming back. A row with nothing to say there keeps the empty line, so every row is as tall. The title may be a `RowLink`. `TrashRowDate` is the date cell at the end: the day it was discarded over how long it stays ("30 days left"); the days turn to the warning tone when `urgent` (three or fewer).
+
 ## Merging categories
 
 In the tag list, picking two puts "합치기" (merge) in the bulk bar, in the place of the column-name row (name · post count). A dialog picks the name to keep with a radio, and shows the number of posts that change and the addresses that disappear in one line. After merging, a toast reads "글 3편의 태그를 리액트로 바꿨어요 · 되돌리기" (changed the tag of 3 posts to React · undo), and the merged tag goes to the trash.
