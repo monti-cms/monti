@@ -21,7 +21,7 @@ export function TranslationSourcePanel({
 	onClose: () => void;
 }) {
 	return (
-		<div className="@min-[784px]:static absolute inset-y-0 left-0 z-10 @min-[784px]:w-[45%] w-[min(100%,28rem)] @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating">
+		<div className="@min-[784px]:static absolute inset-y-0 left-0 z-10 @min-[784px]:w-[45%] w-full @min-[784px]:max-w-none max-w-112 @min-[784px]:shrink-0 @min-[784px]:shadow-none shadow-monti-floating">
 			<SourcePane ref={paneRef} doc={source.doc} title={source.title} locale={source.locale} onClose={onClose} />
 		</div>
 	);

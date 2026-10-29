@@ -41,8 +41,10 @@ export const TONE: Record<KindTone, string> = {
 };
 export const REQUIRED = "text-monti-warning";
 export const OPTION = "text-monti-muted";
+// design-allow: name and kind column widths of the field tree rows, a one-off layout of this screen
 const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-monti-16";
 /** Two columns only, for when the preview takes the room beside the tree; the kind column is narrower so the names keep their room. */
+// design-allow: name and kind column widths of the compact field tree rows, a one-off layout of this screen
 const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_6.5rem] items-center gap-x-monti-16";
 export const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
 
@@ -221,6 +223,7 @@ export function Row({
 	return (
 		<div
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("relative", isDragging && "z-10 bg-monti-page opacity-80")}
 			data-testid={`field-${name}`}
@@ -235,7 +238,7 @@ export function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer py-monti-8 pr-monti-16 pl-monti-32 outline-none hover:bg-monti-selected focus-visible:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 focus-visible:ring-inset",
+						"min-h-7.5 cursor-pointer py-monti-8 pr-monti-16 pl-monti-32 outline-none hover:bg-monti-selected focus-visible:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 focus-visible:ring-inset",
 						nested && "bg-monti-tool",
 					)}
 				>
@@ -333,7 +336,7 @@ export function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-monti-8 pr-monti-16 pl-monti-32")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-7.5 py-monti-8 pr-monti-16 pl-monti-32")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
 									{childLead}

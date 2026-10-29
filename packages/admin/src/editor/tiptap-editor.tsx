@@ -305,6 +305,7 @@ export function CmsEditor({
 			className="relative flex min-h-full w-full flex-1 flex-col bg-monti-page"
 			data-monti-editor-shell
 			// Title, body, and source use the same width (`--editor-width`).
+			// design-allow: editor width comes from the chosen width step
 			style={{ "--editor-width": widthStep.width } as CSSProperties}
 			onCompositionStart={(event) => {
 				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
@@ -341,6 +342,7 @@ export function CmsEditor({
 			>
 				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
 				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
+				{/* design-allow: toolbar padding follows the measured width of the aside */}
 				<div className="relative flex min-h-12 items-center py-monti-8" style={{ paddingInline: asideWidth + 24 }}>
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
 					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-monti-4">

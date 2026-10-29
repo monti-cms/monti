@@ -393,6 +393,7 @@ function LocaleRow({
 	return (
 		<li
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"group/row relative flex min-h-14 items-center gap-monti-12 bg-monti-page py-monti-8 pr-monti-16 pl-monti-32",

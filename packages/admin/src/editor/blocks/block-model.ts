@@ -10,10 +10,6 @@ import { useEditorState } from "@tiptap/react";
 /** Selected block border. All blocks use the same look. */
 export const SELECTED_RING = "ring-2 ring-monti-contrast ring-offset-2 ring-offset-monti-page";
 
-/** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables): the design system's floating bar. */
-export const BLOCK_TOOLBAR =
-	"z-10 flex items-center gap-monti-2 rounded-monti-lg border border-monti-emphasis bg-monti-page p-[3px] text-monti-default shadow-monti-floating";
-
 export type ContainerValues = Record<string, string | boolean>;
 
 /** The directive attribute values of an added block (the `values` attribute of its node). */

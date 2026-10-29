@@ -184,7 +184,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 					</div>
 
 					{/* Preview (shown at the top at the same time) */}
-					<div className="min-h-[40px] rounded-monti-md border border-monti-muted bg-monti-page p-monti-8">
+					<div className="min-h-10 rounded-monti-md border border-monti-muted bg-monti-page p-monti-8">
 						{renderPreview()}
 					</div>
 
@@ -206,7 +206,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={handleKeyDown}
-							className="field-sizing-content min-h-[96px] w-full resize-y rounded-monti-md border border-monti-default bg-transparent px-monti-12 py-monti-8 font-mono text-monti-body outline-none transition-[color,box-shadow] placeholder:text-monti-subtle focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 md:text-monti-body"
+							className="field-sizing-content min-h-24 w-full resize-y rounded-monti-md border border-monti-default bg-transparent px-monti-12 py-monti-8 font-mono text-monti-body outline-none transition-[color,box-shadow] placeholder:text-monti-subtle focus-visible:border-monti-contrast focus-visible:ring-3 focus-visible:ring-monti-contrast/20 md:text-monti-body"
 						/>
 					</div>
 				</div>

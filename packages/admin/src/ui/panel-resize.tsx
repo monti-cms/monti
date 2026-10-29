@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/site";
+// design-allow: the open ResizeHandle: the admin's panel resize glue, and no closed handle exists
 import { ResizeHandle } from "@monti-cms/ui/internal";
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { positiveNumberCodec, usePreference } from "../lib/hooks/use-preference";

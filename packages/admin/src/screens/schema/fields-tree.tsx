@@ -188,6 +188,7 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
+			// design-allow: width the writer dragged (panel resize)
 			style={resize.style}
 			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-monti-page sm:w-[var(--panel-width)]"
 			data-testid="layout-preview-drawer"
@@ -401,10 +402,13 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		<>
 			{wide && previewOpen ? (
 				<div
+					// design-allow: preview column beside the tree: the tree tops out at 1000px, a one-off layout of this screen
 					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-monti-24"
+					// design-allow: width the writer dragged (panel resize)
 					style={sideResize.style}
 				>
 					{card}
+					{/* design-allow: preview height follows the window height */}
 					<div className="sticky top-4 flex h-[min(48rem,calc(100vh-6rem))] flex-col" data-testid="layout-preview-side">
 						<PanelResizeHandle resize={sideResize} className="-left-3.5" />
 						{preview}

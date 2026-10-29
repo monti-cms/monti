@@ -155,6 +155,7 @@ function CollectionNavItem({
 	return (
 		<div
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("group/row relative flex items-center", isDragging && "z-10 opacity-80")}
 			data-testid={`collection-nav-${name}`}

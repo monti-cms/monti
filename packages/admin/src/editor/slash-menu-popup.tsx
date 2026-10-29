@@ -51,6 +51,7 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
 			role="listbox"
 			aria-label={t("slashMenu.label")}
 			tabIndex={-1}
+			// design-allow: popup placed under the caret from measured coordinates
 			style={{ position: "fixed", top: `${coords.top + 24}px`, left: `${coords.left}px`, zIndex: 9999 }}
 			onKeyDown={(event) => {
 				if (event.key === "Escape") {

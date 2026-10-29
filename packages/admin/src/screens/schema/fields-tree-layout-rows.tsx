@@ -114,6 +114,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	return (
 		<div
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
 			className="group/row relative mt-monti-12 flex items-center gap-monti-4 border-y bg-monti-muted py-monti-8 pr-monti-16 pl-monti-32 first:mt-0"
@@ -180,6 +181,7 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 	return (
 		<div
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"group/row relative mt-monti-12 border-y bg-monti-tool first:mt-0",
@@ -240,6 +242,7 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 	return (
 		<div
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"pr-monti-16 pl-monti-32 text-monti-caption text-monti-muted",
