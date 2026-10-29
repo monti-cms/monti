@@ -43,8 +43,8 @@ function SelectTrigger({
 	...props
 }: SelectPrimitive.Trigger.Props & {
 	size?: "sm" | "default";
-	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter. */
-	width?: "fit" | "full";
+	/** `full` in a form, beside full-width inputs; `fit` in a toolbar or a filter; `choice` at the end of a choice row (at least 120px, so the line reads as a field). */
+	width?: "fit" | "full" | "choice";
 	/** The assistant picked this value and nobody has touched it yet. Turn it off when the value is changed. */
 	proposal?: boolean;
 }) {
@@ -56,7 +56,7 @@ function SelectTrigger({
 			aria-description={useProposalDescription(proposal)}
 			className={cn(
 				"flex items-center justify-between gap-monti-8 whitespace-nowrap rounded-none border-0 border-monti-default border-b bg-transparent text-left text-monti-body text-monti-default outline-none transition-colors focus-visible:border-monti-contrast disabled:cursor-not-allowed disabled:opacity-45 aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-[size=default]:py-monti-6 data-[size=sm]:py-monti-4 data-[size=sm]:text-monti-note data-placeholder:text-monti-faint data-proposal:text-monti-proposal *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-monti-6 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-				width === "full" ? "w-full" : "w-fit",
+				width === "full" ? "w-full" : width === "choice" ? "w-fit min-w-30" : "w-fit",
 				className,
 			)}
 			{...props}

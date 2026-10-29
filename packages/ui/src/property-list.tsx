@@ -17,10 +17,13 @@ function PropertyPanel({
 	value,
 	onValueChange,
 	tabs,
+	onClose,
 	children,
 }: {
 	/** A head above the tab bar, for a pane that is not the editor's own (the preview in the settings). */
 	title?: ReactNode;
+	/** The head's ×, for a pane with a head that can be closed. */
+	onClose?: () => void;
 	/** The pane's name. */
 	label: string;
 	/** The picked tab. */
@@ -41,6 +44,7 @@ function PropertyPanel({
 				bleed
 				title={title}
 				aria-label={label}
+				onClose={onClose}
 				className="min-h-0 flex-1"
 				bar={
 					<TabsList variant="bar" aria-label={label}>

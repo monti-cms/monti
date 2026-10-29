@@ -227,6 +227,12 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		expect(panel.textContent).toContain(tProblem("preview.label"));
 		expect(within(panel).queryByTestId("layout-preview-problems")).toBeNull();
 		expect(panel.textContent).not.toContain(tProblem("preview.fix"));
+		// Its head's × closes it, as the toolbar button does (the ui part names it; this test renders no admin labels for it).
+		fireEvent.click(within(panel).getByRole("button", { name: /^(Close|닫기)$/ }));
+		await waitFor(() => expect(screen.queryByTestId("layout-preview")).toBeNull());
+		expect(screen.getByRole("button", { name: tFields("layout.previewTitle") }).getAttribute("aria-pressed")).toBe(
+			"false",
+		);
 	});
 
 	it("09 a select without options replaces the preview with what to fix, marks the field's row and blocks the save", async () => {

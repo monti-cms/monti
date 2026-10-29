@@ -59,7 +59,7 @@ export const exportMessages = defineMessages("cms-admin.export", {
 			`${count} ${one(count) ? "body was" : "bodies were"} kept as JSON only because the format could not write ${one(count) ? "it" : "them"}.`,
 		"error.export": "The export could not be made.",
 		"data.title": "Site backup",
-		"menu.exportEntry": "Export this entry",
+		"menu.exportEntry": "Export",
 		"dialog.title.entry": "Export this entry",
 		"dialog.title.selected": ({ count, ...vars }) =>
 			`Export ${count} selected ${String(vars.noun ?? "").trim() ? `${enNoun(vars)} ` : ""}${one(count) ? "entry" : "entries"}`,
@@ -108,7 +108,7 @@ export const exportMessages = defineMessages("cms-admin.export", {
 		"toast.notWritten": ({ count }) => `본문 ${count}개는 형식이 쓰지 못해서 JSON으로만 담았어요.`,
 		"error.export": "내보내지 못했어요.",
 		"data.title": "사이트 백업",
-		"menu.exportEntry": "이 글 내보내기",
+		"menu.exportEntry": "내보내기",
 		"dialog.title.entry": "이 글 내보내기",
 		"dialog.title.selected": (vars) => `선택한 ${koNoun(vars)} ${vars.count}개 내보내기`,
 		"dialog.title.collection": ({ noun }) => `${String(noun ?? "").trim() || "컬렉션"} 내보내기`,

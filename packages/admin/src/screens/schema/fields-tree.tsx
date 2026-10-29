@@ -410,7 +410,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
 	const wide = useWide();
-	const [previewOpen] = usePreviewOpen(wide);
+	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
 	const { file, codeCollections } = useSchemaEdit();
 	const placements = placementsOf(site.plugins);
 	const tree = treeOf(editing.collection, placements);
@@ -476,7 +476,8 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			/>
 		);
 	return (
-		<Stack gap={0} data-testid="fields-card">
+		// Under the toolbar: 16 to the tab strip, or 12 to the list when there are no tabs (board "Schema").
+		<Stack gap={0} paddingTop={showTabs ? 16 : 12} data-testid="fields-card">
 			{showTabs ? (
 				<FolderTabs value={String(active)} onValueChange={(value) => setPicked(Number(value))}>
 					<TabStrip ops={ops} site={site} active={active} onActive={setPicked} onAdd={addTabRow} />
@@ -518,6 +519,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						collection={editing.collectionName}
 						codeCollections={codeCollections}
 						onOpenField={(place, name) => setSheet({ place, name })}
+						onClose={() => setPreviewOpen(false)}
 					/>
 				</DockedPanel>
 			)}

@@ -1076,7 +1076,7 @@ describe("entry editor shell", () => {
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
-		fireEvent.click(screen.getByRole("menuitem", { name: "이 글 내보내기" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "내보내기" }));
 		const dialog = await screen.findByRole("dialog", { name: "이 글 내보내기" });
 		expect(await within(dialog).findByTestId("export-headline")).toBeTruthy();
 		expect(JSON.parse(String(methodCalls("POST", "/export/summary")[0]?.[1]?.body))).toEqual({

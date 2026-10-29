@@ -1,7 +1,9 @@
+import { CodeReference } from "@carbon/icons-react";
 import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
+import { AdminComponentsProvider, type EditorExtension } from "../../admin-components";
 import { MediaPickerDialog } from "../../editor/image-insert-dialog";
 import { StatusBarPluginCell } from "../../kit";
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
@@ -317,10 +319,21 @@ export const PublishMenuOpen: Story = {
 	},
 };
 
-/** The header's ⋯ menu: copy, archive and export, then the document tools (the body width, the theme), and the trash at the bottom (board `moreMenu` "열림"). */
+/** What a source-panel plugin such as MDX adds to the document tools: its switch is a row of the ⋯ menu. */
+const sourcePlugin: EditorExtension = () => ({
+	menuItems: [{ key: "mdx", label: "MDX로 보기", icon: <CodeReference aria-hidden />, onSelect: () => {} }],
+});
+
+/** The header's ⋯ menu: copy, archive and export, then the document tools (a plugin's row, the body width, the theme), and the trash at the bottom (board `moreMenu` "열림"). */
 export const MoreMenuOpen: Story = {
 	tags: ["visual"],
-	render: screen(() => server()),
+	render: () => (
+		<PageFrame api={server()} pathname="/admin/entries/entry-1/edit">
+			<AdminComponentsProvider components={{ editorExtensions: [sourcePlugin] }}>
+				<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+			</AdminComponentsProvider>
+		</PageFrame>
+	),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
 		await within(document.body).findByText(/^휴지통으로$/, undefined, LONG);

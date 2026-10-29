@@ -38,7 +38,7 @@ A select has a chevron icon (14px, `fg-subtle`) at the right end of the underlin
 
 ### In code
 
-`Select` (its `items` prop is required: every value with its label, so the closed trigger shows the label) and `Combobox`. `SelectTrigger` takes `width`: `full` in a form, `fit` in a toolbar or filter. `proposal` marks a value the assistant picked.
+`Select` (its `items` prop is required: every value with its label, so the closed trigger shows the label) and `Combobox`. `SelectTrigger` takes `width`: `full` in a form, `fit` in a toolbar or filter, `choice` at the end of a choice row (at least 120px, as the review sheet draws it). `proposal` marks a value the assistant picked.
 
 ## Fields with fixed ends (`.mt-affix`)
 

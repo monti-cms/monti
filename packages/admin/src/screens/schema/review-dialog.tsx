@@ -99,7 +99,7 @@ function ChoiceSelect({
 			items={items as { value: string; label: string }[]}
 			onValueChange={(next) => typeof next === "string" && onChange(next)}
 		>
-			<SelectTrigger size="sm" aria-label={label}>
+			<SelectTrigger size="sm" width="choice" aria-label={label}>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>

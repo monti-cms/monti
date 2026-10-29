@@ -26,6 +26,10 @@ interface InspectorPanelProps {
 	onFocused?: () => void;
 	/** A head above the tab bar, for a pane that is not the editor's own (the preview in the settings). */
 	title?: ReactNode;
+	/** The pane's name, when it is not the editor's own. */
+	label?: string;
+	/** The head's ×, for a pane that can be closed (the preview in the settings). */
+	onClose?: () => void;
 }
 
 /**
@@ -43,6 +47,8 @@ export function InspectorPanel({
 	focusPath,
 	onFocused,
 	title,
+	label,
+	onClose,
 }: InspectorPanelProps) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
@@ -68,7 +74,8 @@ export function InspectorPanel({
 	return (
 		<PropertyPanel
 			title={title}
-			label={t("panel.label")}
+			label={label ?? t("panel.label")}
+			onClose={onClose}
 			value={tab}
 			onValueChange={setTab}
 			tabs={tabs.map((name) => ({

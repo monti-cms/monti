@@ -37,7 +37,17 @@ const noop = () => {};
  * The form of a collection with nothing in it: the real panel on a local form, so typing, picking and the conditional fields that follow work, and nothing is
  * kept or sent. Documents use the properties panel of the edit screen, items the fields of the record panel.
  */
-function PreviewPanel({ collection, title }: { collection: string; title: string }) {
+function PreviewPanel({
+	collection,
+	title,
+	label,
+	onClose,
+}: {
+	collection: string;
+	title: ReactNode;
+	label: string;
+	onClose?: () => void;
+}) {
 	const site = useSite();
 	const [form, setForm] = useState<EntryForm>(() => emptyFormOf(site, collection));
 	const value = useMemo(
@@ -51,12 +61,14 @@ function PreviewPanel({ collection, title }: { collection: string; title: string
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview-record">
+				<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview-record">
 					<SchemaFields />
 				</SidePanel>
 			) : (
 				<InspectorPanel
 					title={title}
+					label={label}
+					onClose={onClose}
 					incomingReferences={[]}
 					isLoadingIncomingReferences={false}
 					onRefreshIncomingReferences={noop}
@@ -78,6 +90,7 @@ export function LayoutPreview({
 	collection,
 	codeCollections,
 	onOpenField,
+	onClose,
 }: {
 	/** The schema file as edited. */
 	file: Obj;
@@ -86,6 +99,8 @@ export function LayoutPreview({
 	codeCollections: readonly string[];
 	/** Opens the sheet of a field that has a problem. */
 	onOpenField?: (place: FieldPlace, name: string) => void;
+	/** The × of the head: closes the preview, as its toolbar button does. */
+	onClose?: () => void;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const tp = useTranslator(schemaProblemMessages);
@@ -98,9 +113,18 @@ export function LayoutPreview({
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
-	const title = tp("preview.label");
+	// The head: "미리보기" and, quieter, that what it shows is not saved.
+	const label = tp("preview.label");
+	const title = (
+		<>
+			{tp("preview.title")}{" "}
+			<Text as="span" variant="meta" tone="subtle">
+				· {tp("preview.unsaved")}
+			</Text>
+		</>
+	);
 	const problem = (
-		<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview">
+		<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview">
 			<Text as="p" variant="caption" tone="muted">
 				{t("layout.previewUnavailable")}
 			</Text>
@@ -108,7 +132,7 @@ export function LayoutPreview({
 	);
 	if (toFix.length > 0) {
 		return (
-			<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview">
+			<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview">
 				<Stack gap={8} data-testid="layout-preview-problems">
 					<Text as="p" variant="note" tone="muted">
 						{tp("preview.fix")}
@@ -134,7 +158,7 @@ export function LayoutPreview({
 	return (
 		<SiteProvider site={draft}>
 			<PreviewBoundary fallback={problem} resetKey={draft}>
-				<PreviewPanel key={collection} collection={collection} title={title} />
+				<PreviewPanel key={collection} collection={collection} title={title} label={label} onClose={onClose} />
 			</PreviewBoundary>
 		</SiteProvider>
 	);

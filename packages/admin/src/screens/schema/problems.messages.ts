@@ -4,6 +4,8 @@ import { defineMessages } from "@monti-cms/core";
 export const schemaProblemMessages = defineMessages("cms-admin.schema.problems", {
 	en: {
 		"preview.label": "Preview · not saved",
+		"preview.title": "Preview",
+		"preview.unsaved": "not saved",
 		"preview.fix": "There is something to fix, so the preview can't be shown.",
 		"problem.options": "It has no options",
 		"problem.optionLabel": "An option has no label",
@@ -22,6 +24,8 @@ export const schemaProblemMessages = defineMessages("cms-admin.schema.problems",
 	},
 	ko: {
 		"preview.label": "미리보기 · 저장 안 됨",
+		"preview.title": "미리보기",
+		"preview.unsaved": "저장 안 됨",
 		"preview.fix": "고칠 곳이 있어 미리볼 수 없어요.",
 		"problem.options": "선택지가 없어요",
 		"problem.optionLabel": "이름표 없는 선택지가 있어요",
