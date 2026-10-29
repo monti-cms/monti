@@ -36,7 +36,13 @@ function decorate(doc: EditorState["doc"], issues: readonly DocTextIssue[]): Dec
 			Decoration.inline(
 				issue.from,
 				issue.to,
-				{ class: "monti-text-issue", "data-severity": issue.severity, "data-text-issue": issue.key },
+				{
+					// A wavy underline in the severity color (warning by default).
+					class:
+						"underline decoration-wavy decoration-1 underline-offset-3 [text-decoration-skip-ink:none] decoration-monti-warning cursor-pointer data-[severity=error]:decoration-monti-danger data-[severity=info]:decoration-monti-subtle",
+					"data-severity": issue.severity,
+					"data-text-issue": issue.key,
+				},
 				{ key: issue.key },
 			),
 		),

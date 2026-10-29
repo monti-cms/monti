@@ -74,7 +74,7 @@ The docs hold the rules. For how things look, use these.
 | The rules: when to use a part, how it behaves, which states it has | These docs |
 | Token values (names, light and dark) | `packages/ui/tokens/tokens.json`. `pnpm gen:tokens` generates `packages/ui/styles/tokens.css` from it; do not edit the CSS by hand |
 | What each screen and flow looks like | The canvas |
-| How a part is built | `packages/ui/src` and its stories |
+| How a part is built | `packages/ui/src` and its stories. Parts style themselves with token utilities; `packages/admin/styles/admin.css` holds only document-wide base rules (portaled popups, default border color, scrollbars) |
 
 When a rule changes, change it in these docs in the same pull request as the code, then update the artifacts (the canvas and the DS artifact) to match.
 

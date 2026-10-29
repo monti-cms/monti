@@ -1,4 +1,8 @@
-/* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.monti-admin`. */
+/*
+ * Document-wide base rules only, compiled into the prebuilt bundle (`index.css`): the base text of the body and the admin root (popups are portaled
+ * to the body), the default border and outline color, and the scrollbars. Parts style themselves with token utilities, never here. Every selector
+ * here is scoped to a document that contains `.monti-admin`.
+ */
 
 /*
  * The admin's base text, on its root and on the body, because popups (menus, dialogs, tooltips) are portaled to the body: the sans stack, smooth glyphs, and Korean broken between words, not inside them (`keep-all`), except a long
@@ -56,37 +60,4 @@ html:has(.monti-admin) body {
 }
 .monti-admin *:hover::-webkit-scrollbar-thumb {
 	background: var(--monti-gray-8);
-}
-
-/* Numbers and dates in tables use tabular figures. */
-.monti-admin .tabular {
-	font-variant-numeric: tabular-nums;
-}
-
-/* Underlines for text check results (spelling, etc.) (editor decoration). The color differs by severity. */
-.monti-admin .monti-text-issue {
-	text-decoration-line: underline;
-	text-decoration-style: wavy;
-	text-decoration-thickness: 1px;
-	text-decoration-skip-ink: none;
-	text-underline-offset: 3px;
-	text-decoration-color: var(--monti-fg-warning);
-	cursor: pointer;
-}
-.monti-admin .monti-text-issue[data-severity="error"] {
-	text-decoration-color: var(--monti-fg-danger);
-}
-.monti-admin .monti-text-issue[data-severity="info"] {
-	text-decoration-color: var(--monti-fg-subtle);
-}
-
-/* The text selection in the editor body takes the selected-row tint. While whole blocks are selected (`monti-block-range`), the blocks show
-   their own ground and the text selection under it is hidden. */
-.monti-admin .ProseMirror ::selection,
-.monti-admin .ProseMirror::selection {
-	background: var(--monti-bg-selected);
-}
-.monti-admin .ProseMirror.monti-block-range ::selection,
-.monti-admin .ProseMirror.monti-block-range::selection {
-	background: transparent;
 }
