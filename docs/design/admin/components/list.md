@@ -1,241 +1,241 @@
-# List
+# 목록
 
-This page covers how lists of items are shown: list rows, the column menu, the bulk bar, the media grid, drop targets, empty states, the field outline, folders, pagination and the language list.
+이 페이지는 항목 목록을 보여 주는 방법을 다룬다. 목록 행, 열 메뉴, 일괄 막대, 미디어 격자, 놓을 곳, 빈 상태, 필드 개요, 폴더, 페이지 나누기, 언어 목록이다.
 
-## List rows
+## 목록 행
 
-A list row sits on a fixed-column grid, so a long title is cut and columns do not drift. A CMS list is a table, not a reading screen, so there is a column-name row at the top.
+목록 행은 열 너비가 고정된 격자 위에 놓인다. 그래서 긴 제목은 잘리고 열이 어긋나지 않는다. CMS 목록은 읽는 화면이 아니라 표이므로, 맨 위에 열 이름 행이 있다.
 
-### Column-name row
+### 열 이름 행
 
-- The column-name row (`.mt-list-head`) uses the same grid as the rows. It is 40px high with the same pale line under it as the rows. A name is `.mt-col` (`text-caption`, `fg-subtle`, weight 400). The ⋯ column and the checkbox column have no name.
-- There are no status tabs, no "필터 ▾" (filter) and no "보기 ▾" (view) above the list. Filtering, sorting and hiding columns are all done from the name of that column. There is one place for each job, so filtering by status is also done from the status column's name. A name is a button (`.mt-col`, wrapped in `.mt-col-wrap`). Pressing it opens that column's menu (`.mt-col-menu`, 220px) under the name. The text of the menu rows starts on the same vertical line as the name. The last column (the date, `.is-end`) and columns near the right edge (`.is-flip`) align the menu's right edge instead.
-- A column with a filter on has a 5px ink dot (`.dot`) after its name. A column whose menu is open has its name in ink (`.is-open`).
-- Filters that are on are not repeated as chips. The dot after the column's name and the ticks in its menu show them, and unticking in the menu removes one. A chip row would only say the same again and push the list down as it comes and goes. The search words stay in the search box and are not a chip either. Only a search inside a folder adds one row under the title row (`.mt-chips`): the place to search, "시리즈 원고" (series drafts) · "모든 폴더" (all folders).
+- 열 이름 행(`.mt-list-head`)은 행과 같은 격자를 쓴다. 높이는 40px이고, 아래에 행과 같은 옅은 선이 있다. 이름은 `.mt-col`(`text-caption`, `fg-subtle`, 굵기 400)이다. ⋯ 열과 체크박스 열에는 이름이 없다.
+- 목록 위에 상태 탭, "필터 ▾", "보기 ▾"가 없다. 필터, 정렬, 열 숨기기는 모두 그 열의 이름에서 한다. 일마다 하는 곳이 하나뿐이므로, 상태로 거르는 것도 상태 열의 이름에서 한다. 이름은 버튼이다(`.mt-col`, `.mt-col-wrap`으로 감싼다). 누르면 그 열의 메뉴(`.mt-col-menu`, 220px)가 이름 아래에 열린다. 메뉴 행의 글자는 이름과 같은 세로선에서 시작한다. 마지막 열(날짜, `.is-end`)과 오른쪽 끝 가까운 열(`.is-flip`)은 대신 메뉴의 오른쪽 끝을 맞춘다.
+- 필터가 켜진 열은 이름 뒤에 5px 잉크 점(`.dot`)이 있다. 메뉴가 열린 열은 이름이 잉크색이다(`.is-open`).
+- 켜진 필터를 칩으로 다시 보여 주지 않는다. 열 이름 뒤의 점과 메뉴의 체크가 그것을 보여 주고, 메뉴에서 체크를 풀면 필터 하나가 빠진다. 칩 행은 같은 말을 되풀이할 뿐이고, 생겼다 없어졌다 하면서 목록을 밀어낸다. 검색어는 검색 상자에 남고 칩이 되지 않는다. 폴더 안에서 검색할 때만 제목 행 아래에 행 하나(`.mt-chips`)가 더해진다. 찾는 곳인 "시리즈 원고" · "모든 폴더"다.
 
-### Column menu
+### 열 메뉴
 
-From the top: sort | values to filter by | hide column. A part that does not apply is left out, and there are rules between the parts.
+위에서부터 정렬 | 거를 값 | 열 숨기기 순이다. 해당하지 않는 부분은 빼고, 부분 사이에는 구분선이 있다.
 
-- **Sort** is only in columns that can be sorted: title, address, edited date, published date, created date. Title and address have ascending / descending; dates have "최근부터" (newest first) / "오래전부터" (oldest first). The current value has a ✓. Picking applies at once and closes the menu. A sorted column has its name in ink (`.mt-col.is-sort`) and a 12px ↓ (descending) or ↑ (ascending) after it.
-- **Filter values** are check rows and a post count. Turning on several means any of them (OR); different columns combine as all of them (AND). The menu stays open after a pick, so several can be applied at once. By column kind:
-  - Status: "발행됨" (published) · "수정 중" (editing) · "초안" (draft) · "보관됨" (archived).
-  - Relation (category, tag): a search row at the top, "없음" (none), a rule, then the items.
-  - Select field: "없음", a rule, the options.
-  - Language: the languages, a rule, a "번역" (translation) label, then "번역 없음" (no translation) · "원문 바뀜" (source changed) · "최신" (up to date).
-  - Date: "오늘" (today) · "최근 7일" (last 7 days) · "최근 30일" (last 30 days) · "기간 고르기" (pick a period). Only one at a time (✓). "기간 고르기" opens a calendar beside it. The days from the first one pressed to the next one pressed are applied, and the calendar shows that period and stays open.
-  - Text field or image field (summary, search description, share image …): a single "비어 있음" (empty).
-  - Title and address have no filter values (find them by search).
-- **Hide column**. The title does not have it (it is always shown).
+- **정렬**은 정렬할 수 있는 열에만 있다. 제목, 주소, 수정한 날, 발행한 날, 만든 날이다. 제목과 주소는 오름차순 / 내림차순이고, 날짜는 "최근부터" / "오래전부터"다. 지금 값에 ✓가 있다. 고르면 바로 적용되고 메뉴가 닫힌다. 정렬된 열은 이름이 잉크색이고(`.mt-col.is-sort`) 뒤에 12px ↓(내림차순)나 ↑(오름차순)가 붙는다.
+- **거를 값**은 체크 행과 글 개수다. 여러 개를 켜면 그중 하나라도(OR)이고, 서로 다른 열은 모두(AND)로 묶인다. 고른 뒤에도 메뉴가 열려 있어 여러 개를 한 번에 적용할 수 있다. 열 종류별로:
+  - 상태: "발행됨" · "수정 중" · "초안" · "보관됨".
+  - 관계(카테고리, 태그): 맨 위에 검색 행, "없음", 구분선, 그다음 항목.
+  - 선택 필드: "없음", 구분선, 선택지.
+  - 언어: 언어들, 구분선, "번역" 라벨, 그다음 "번역 없음" · "원문 바뀜" · "최신".
+  - 날짜: "오늘" · "최근 7일" · "최근 30일" · "기간 고르기". 한 번에 하나만 고른다(✓). "기간 고르기"는 옆에 달력을 연다. 처음 누른 날부터 다음에 누른 날까지가 적용되고, 달력은 그 기간을 보여 주며 열린 채로 있다.
+  - 텍스트 필드나 이미지 필드(요약, 검색 설명, 공유 이미지 …): "비어 있음" 하나.
+  - 제목과 주소는 거를 값이 없다(검색으로 찾는다).
+- **열 숨기기**. 제목에는 없다(늘 보인다).
 
-The table below sums up the filter values by stored kind, which is what decides them.
+아래 표는 거를 값을 저장 종류별로 정리한다. 거를 값을 정하는 것은 저장 종류다.
 
-### Filter values by stored kind
+### 저장 종류별 거를 값
 
-The filter values in a column menu follow the kind of value that is stored, not the shape of the input. A custom field with its input replaced (`input`) follows the same rule.
+열 메뉴의 거를 값은 입력 모양이 아니라 저장되는 값의 종류를 따른다. 입력을 바꾼(`input`) 사용자 정의 필드도 같은 규칙을 따른다.
 
-| Stored kind | Filter values in the column menu |
+| 저장 종류 | 열 메뉴의 거를 값 |
 |---|---|
-| Status | "발행됨" · "수정 중" · "초안" · "보관됨" |
-| Language | One row per language, a rule, then the translation: "번역 없음" · "원문 바뀜" · "최신" |
-| Date (edited, published, created) | "오늘" · "최근 7일" · "최근 30일" · "기간 고르기" (one at a time) |
-| Select | "없음" · one row per option |
-| Relation | search row · "없음" · one row per item |
-| Text, media | a single "비어 있음" (there is no "채워짐" (filled)) |
-| Title, address | none (find by search); sort only |
-| Screen-only, back-reference | no filter values in the column menu |
-| Conditional | the fields inside each follow this rule |
+| 상태 | "발행됨" · "수정 중" · "초안" · "보관됨" |
+| 언어 | 언어마다 한 행, 구분선, 그다음 번역: "번역 없음" · "원문 바뀜" · "최신" |
+| 날짜(수정, 발행, 생성) | "오늘" · "최근 7일" · "최근 30일" · "기간 고르기"(한 번에 하나) |
+| 선택 | "없음" · 선택지마다 한 행 |
+| 관계 | 검색 행 · "없음" · 항목마다 한 행 |
+| 텍스트, 미디어 | "비어 있음" 하나("채워짐"은 없다) |
+| 제목, 주소 | 없음(검색으로 찾는다). 정렬만 |
+| 화면 전용, 역참조 | 열 메뉴에 거를 값이 없다 |
+| 조건부 | 안의 필드가 각각 이 규칙을 따른다 |
 
-- If the column to filter is hidden, turn it on first with the +. Once on, the filtered result shows in that column right away.
-- Picking a value does not close the menu (several are applied at once). The period calendar also applies the period when the second day is pressed, and stays open showing the picked period. Esc or a press outside closes it. An applied filter shows at once as the dot after the column's name.
-- Sort is chosen at the top of the column menu. The title mixes Korean and English, so it is not called "가나다순" (alphabetical in Korean); it is "오름차순 · 내림차순" (ascending · descending). The English admin says "A → Z · Z → A", and for dates "Newest first · Oldest first". The order of titles follows the sort rules of the admin screen language.
-- Folders are filtered by the sidebar, so they are not in the column menu.
+- 거를 열이 숨겨져 있으면 먼저 +로 켠다. 켜면 거른 결과가 그 열에 바로 보인다.
+- 값을 골라도 메뉴가 닫히지 않는다(여러 개를 한 번에 적용한다). 기간 달력도 두 번째 날을 누르면 기간을 적용하고, 고른 기간을 보여 주며 열린 채로 있다. Esc나 바깥을 누르면 닫힌다. 적용한 필터는 열 이름 뒤의 점으로 바로 보인다.
+- 정렬은 열 메뉴 맨 위에서 고른다. 제목에는 한국어와 영어가 섞이므로 "가나다순"이라 하지 않고 "오름차순 · 내림차순"이라 한다. 영어 관리자 화면은 "A → Z · Z → A", 날짜는 "Newest first · Oldest first"라고 한다. 제목 순서는 관리자 화면 언어의 정렬 규칙을 따른다.
+- 폴더는 사이드바로 거르므로 열 메뉴에 없다.
 
-### Adding and ordering columns
+### 열 추가와 순서
 
-- Above the ⋯, in the name row, is a 24px + (`.mt-col-add`, named "열 추가" (add column)). The + and the row's ⋯ share the same end column, so the center of the + is on the same vertical line as the center of the ⋯ (it is 6px inside the row's inner padding). There is no separate margin at the right. Pressing it lists only the columns that are hidden now, as rows without checks (no visible columns, and no list label). Picking one makes the column, and that row leaves the list. If no column is hidden, there is no +. To filter by a text field, turn that column on here first.
-- The number per page (25 · 50 · 100) is `25개씩 ▾` (25 per page; `.mt-per-page`, mono 12px) beside the range below. It opens upward, and picking closes it.
-- Column order is changed in the name row, for all columns including the title. Press a name and drag sideways: the name is lifted (`.mt-col.is-held`: `bg-selected` + `shadow-floating`) and follows the pointer, and the other columns make room, both in the name row and in the rows, so the new order is visible at once. Letting go saves it. With the keyboard, focus a name and press Alt + ←→. The title can be moved but cannot be dragged away (hidden).
-- The default order of a document collection: status · title · one column per classification field (category, tag …) · language · edited date · ⋯. There is no month group column ("10월" (October)).
+- 이름 행의 ⋯ 위에 24px +(`.mt-col-add`, 이름은 "열 추가")가 있다. +와 행의 ⋯는 같은 끝 열을 쓰므로, +의 가운데가 ⋯의 가운데와 같은 세로선에 있다(행 안쪽 여백에서 6px 안이다). 오른쪽에 따로 여백은 없다. 누르면 지금 숨겨진 열만 체크 없는 행으로 나열한다(보이는 열도, 목록 라벨도 없다). 하나를 고르면 그 열이 생기고 그 행은 목록에서 빠진다. 숨겨진 열이 없으면 +도 없다. 텍스트 필드로 거르려면 먼저 여기서 그 열을 켠다.
+- 페이지당 개수(25 · 50 · 100)는 아래 범위 옆의 `25개씩 ▾`(`.mt-per-page`, mono 12px)다. 위로 열리고, 고르면 닫힌다.
+- 열 순서는 제목을 포함한 모든 열을 이름 행에서 바꾼다. 이름을 누르고 옆으로 끌면 이름이 들려(`.mt-col.is-held`: `bg-selected` + `shadow-floating`) 포인터를 따라오고, 다른 열은 이름 행과 행 모두에서 자리를 비켜 주므로 새 순서가 바로 보인다. 놓으면 저장된다. 키보드로는 이름에 포커스를 두고 Alt + ←→를 누른다. 제목은 옮길 수 있지만 끌어서 없앨(숨길) 수는 없다.
+- 문서 컬렉션의 기본 순서: 상태 · 제목 · 분류 필드마다 한 열(카테고리, 태그 …) · 언어 · 수정한 날 · ⋯. 월 묶음 열("10월")은 없다.
 
-### Status column and folder rows
+### 상태 열과 폴더 행
 
-- The status column shows every status. "발행됨" is written too, in the quiet color (`.mt-status--quiet`), so the first column is not empty.
-- A folder row (`.mt-row-folder`) leaves the status column empty. A 16px folder icon is at the very front of the title column, 8px later the name, then the post count ("글 2" (2 posts), mono `fg-faint`). "상위 폴더로" (up one folder) and the new-folder row for typing a name look the same. So a folder name starts further in than a post title by one icon and the gap.
-- A column that gets cut (relation columns like tags, text fields) gives its block box `min-width: 0`, `white-space: nowrap`, `overflow: hidden` and `text-overflow: ellipsis`. A flex box ignores `text-overflow` and so cuts in the middle of a letter, so do not hide such a column in flex and let it go unseen. The end is always …, and to read it all use the cell's `title`.
+- 상태 열은 모든 상태를 보여 준다. "발행됨"도 조용한 색(`.mt-status--quiet`)으로 적어서 첫 열이 비지 않게 한다.
+- 폴더 행(`.mt-row-folder`)은 상태 열을 비운다. 제목 열 맨 앞에 16px 폴더 아이콘, 8px 뒤에 이름, 그다음 글 개수("글 2", mono `fg-faint`)가 온다. "상위 폴더로"와 이름을 입력하는 새 폴더 행도 모양이 같다. 그래서 폴더 이름은 글 제목보다 아이콘과 간격만큼 안쪽에서 시작한다.
+- 잘리는 열(태그 같은 관계 열, 텍스트 필드)은 블록 상자에 `min-width: 0`, `white-space: nowrap`, `overflow: hidden`, `text-overflow: ellipsis`를 준다. flex 상자는 `text-overflow`를 무시해서 글자 한가운데를 자르므로, 이런 열을 flex 안에 숨겨 두고 안 보이게 두지 않는다. 끝은 늘 …이고, 전부 읽으려면 셀의 `title`을 쓴다.
 
-### Row content
+### 행 내용
 
-- The title is `text-body` (14 / 400) in ink, with the address under it in mono `fg-faint`.
-- Pressing anywhere on a row opens that item. The title is a link that covers the whole row, so the title need not be pressed exactly. The checkbox and the ⋯ sit above it and are pressed separately.
-- The ⋯ is always shown. The checkbox is shown only when the pointer is over the row and on picked rows. The checkbox hangs in the left outer margin of the table (-26px). The scrolling box of the list reaches 32px further into the left margin, so the checkbox is not cut and no horizontal scroll appears.
-- The ⋯ column is 54px (the 32px button and the column padding). The button takes only one line of the row (20px) and stands out above and below it, so a row is 10px, its line and 10px (41px with the rule), not as tall as the button.
-- A row whose title has a second line under it in `text-note` (a template's sections) has 16px above and below instead of 10.
-- A grid list (media) follows the same rules. A tile grid is `.mt-tiles` (12px padding at the left and right), and the tool row above is `.mt-table-head`. So the first letters of the posts table and the media grid are on the same vertical line.
-- The list view of media has no column-name row: the conditions and the order are in the tool row above it. A file row is 10px, a 40×30 picture (4:3, `radius-sm`; `Image size="row"`) and 10px, so 51px with the rule. Its format, size, dimensions and day are mono `text-meta`; the day is short as in the posts list ("10. 12"); a file with no dimensions (a PDF) leaves that cell empty, with no "—". A folder row puts its 16px icon in the picture's column, the name in the name column with the count after it, and has no ⋯ (what a folder can do is in its right-click menu), so it is 41px.
-- A table list is wrapped in `.mt-table`. The rows get 12px padding at the left and right, so the picked row's background does not touch the first column's text. The rows above and below the table (the search-place row, the column-name row, the bulk bar, group names, pagination) follow the same 12px inside (`.mt-chips`, `.mt-list-head` and `.mt-bulk` do it by themselves; other rows use `.mt-table-head`). The rules go all the way to the end.
-- When rows are picked, the bulk bar (`.mt-bulk`) replaces the column-name row. See "Bulk bar".
-- A picked row (`.mt-row.is-on`) is painted only inside the rectangle of the table: no rounded corners and no margin going out of the table. The background is `bg-selected` and the rule under it is `border-default`, so the lines do not merge into one when picked rows are next to each other.
-- A row under the pointer (`.mt-row:hover`; `.is-hover` in the drawings) is `bg-muted`, one step paler than a picked row, so the two are not confused. When a menu is opened by right-clicking a row (a folder row too), that row stays `bg-muted` while the menu is open, so you can see which row the menu is for. A menu opened from ⋯ does the same. A tile of the media grid does the same: while its right-click menu is open it keeps its check box and its ⋯, and a folder tile keeps `bg-selected`.
+- 제목은 잉크색 `text-body`(14 / 400)이고, 그 아래에 주소가 mono `fg-faint`로 있다.
+- 행 어디를 눌러도 그 항목이 열린다. 제목은 행 전체를 덮는 링크라서 제목을 정확히 누르지 않아도 된다. 체크박스와 ⋯는 그 위에 있어 따로 누른다.
+- ⋯는 늘 보인다. 체크박스는 포인터가 행 위에 있을 때와 고른 행에만 보인다. 체크박스는 표의 왼쪽 바깥 여백(-26px)에 걸린다. 목록의 스크롤 상자는 왼쪽 여백으로 32px 더 들어가므로 체크박스가 잘리지 않고 가로 스크롤도 생기지 않는다.
+- ⋯ 열은 54px이다(32px 버튼과 열 여백). 버튼은 행의 한 줄(20px)만 차지하고 위아래로 튀어나오므로, 행은 버튼 높이가 아니라 10px, 그 줄, 10px이다(구분선을 더해 41px).
+- 제목 아래에 `text-note`로 둘째 줄이 있는 행(템플릿의 섹션)은 위아래가 10 대신 16px이다.
+- 격자 목록(미디어)도 같은 규칙을 따른다. 타일 격자는 `.mt-tiles`(좌우 여백 12px)이고, 그 위의 도구 행은 `.mt-table-head`다. 그래서 글 표와 미디어 격자의 첫 글자가 같은 세로선에 있다.
+- 미디어의 목록 보기에는 열 이름 행이 없다. 조건과 순서는 그 위의 도구 행에 있다. 파일 행은 10px, 40×30 그림(4:3, `radius-sm`; `Image size="row"`), 10px이라서 구분선을 더해 51px이다. 형식, 크기, 치수, 날짜는 mono `text-meta`다. 날짜는 글 목록처럼 짧게 쓴다("10. 12"). 치수가 없는 파일(PDF)은 그 칸을 비우고 "—"도 쓰지 않는다. 폴더 행은 16px 아이콘을 그림 열에, 이름을 이름 열에 두고 그 뒤에 개수를 붙이며, ⋯가 없으므로(폴더로 할 수 있는 일은 오른쪽 클릭 메뉴에 있다) 41px이다.
+- 표 목록은 `.mt-table`로 감싼다. 행은 좌우에 12px 여백을 받으므로 고른 행의 배경이 첫 열 글자에 닿지 않는다. 표 위아래의 행(찾는 곳 행, 열 이름 행, 일괄 막대, 묶음 이름, 페이지 나누기)도 같은 12px 안쪽을 따른다(`.mt-chips`, `.mt-list-head`, `.mt-bulk`는 스스로 하고, 다른 행은 `.mt-table-head`를 쓴다). 구분선은 끝까지 간다.
+- 행을 고르면 일괄 막대(`.mt-bulk`)가 열 이름 행을 대신한다. "일괄 막대"를 본다.
+- 고른 행(`.mt-row.is-on`)은 표의 사각형 안에만 칠한다. 둥근 모서리도, 표 밖으로 나가는 여백도 없다. 배경은 `bg-selected`이고 아래 구분선은 `border-default`라서, 고른 행이 붙어 있어도 선이 하나로 뭉치지 않는다.
+- 포인터가 올라간 행(`.mt-row:hover`, 그림에서는 `.is-hover`)은 `bg-muted`로, 고른 행보다 한 단계 옅어서 둘이 헷갈리지 않는다. 행을 오른쪽 클릭해 메뉴를 열면(폴더 행도) 메뉴가 열려 있는 동안 그 행이 `bg-muted`로 남아, 메뉴가 어느 행의 것인지 보인다. ⋯로 연 메뉴도 같다. 미디어 격자의 타일도 같다. 오른쪽 클릭 메뉴가 열려 있는 동안 체크 상자와 ⋯를 유지하고, 폴더 타일은 `bg-selected`를 유지한다.
 
-### In code
+### 코드
 
-`Table` (with `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) draws a fixed-layout table. Options: `columns` widths in px, a total width, `scroll` (the table scrolls sideways in its own box) or `none` (the page or a parent scrolls it, needed for a sticky header and for the row check that hangs in the left margin), `layout="fixed"` for resizable columns, a sticky header, and a quieter "stale" state while new rows load. Row parts: `RowCheck`, `RowLink`, `RowTitle` (the title in ink over its address in mono, one line each; the other columns are gray), `RowActions`, `RowThumb` (the 40px thumb column of a media row: a file's picture, or a folder row's icon centered under the pictures), `ListScroll`; `TableRow twoLine` is the row with a second line. `ListHead` draws the column-name row: each column has a `ListHeadColumn` with `width` in px (without it the column takes the room the others leave), `sorted` (name in ink with ↓ or ↑), `filtered` (a dot follows the name) and `menu` (the rows of a menu: sort, values to filter by, hide). `ListHeadAdd` gives the columns that are off, offered by the + at the end, and the + button's name ("Add column"). The menu card is 220px, with row text starting on the name's line (the card reaches 15px past the name's side). A drag starts after a small pointer movement and only while the button is held, so a press stays a click and a press that opened a menu never becomes a drag. A dragged name takes a neighbour's place when its middle reaches the neighbour's middle, so two columns never trade back and forth.
+`Table`(`TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`과 함께)은 고정 레이아웃 표를 그린다. 옵션: px 단위 `columns` 너비, 전체 너비, `scroll`(표가 자기 상자 안에서 가로로 스크롤한다) 또는 `none`(페이지나 부모가 스크롤한다. 고정 헤더와 왼쪽 여백에 걸리는 행 체크에 필요하다), 크기를 바꿀 수 있는 열을 위한 `layout="fixed"`, 고정 헤더, 새 행을 불러오는 동안의 더 조용한 "stale" 상태. 행 부품: `RowCheck`, `RowLink`, `RowTitle`(잉크색 제목 아래 mono 주소, 각각 한 줄. 다른 열은 회색이다), `RowActions`, `RowThumb`(미디어 행의 40px 썸네일 열. 파일의 그림이거나, 그림들 아래 가운데에 놓인 폴더 행의 아이콘), `ListScroll`. `TableRow twoLine`은 둘째 줄이 있는 행이다. `ListHead`는 열 이름 행을 그린다. 열마다 `ListHeadColumn`이 있고, px 단위 `width`(없으면 다른 열이 남긴 자리를 차지한다), `sorted`(이름이 잉크색이고 ↓나 ↑가 붙는다), `filtered`(이름 뒤에 점이 붙는다), `menu`(메뉴의 행: 정렬, 거를 값, 숨기기)를 받는다. `ListHeadAdd`는 꺼진 열을 끝의 +로 내밀고, + 버튼의 이름("Add column")을 준다. 메뉴 카드는 220px이고 행 글자가 이름의 선에서 시작한다(카드는 이름 옆으로 15px 더 나간다). 끌기는 포인터가 조금 움직인 뒤에, 버튼을 누르고 있는 동안에만 시작한다. 그래서 누르기는 클릭으로 남고, 메뉴를 연 누르기는 끌기가 되지 않는다. 끄는 이름은 그 가운데가 이웃의 가운데에 닿을 때 이웃의 자리를 차지하므로, 두 열이 서로 자리를 왔다 갔다 바꾸지 않는다.
 
-`List` and `ListItem` in `@monti-cms/ui` are a different part: a list of short lines (`bullet` marks each with a dot; `none` is a plain column), for what a step will do or what a folder holds.
+`@monti-cms/ui`의 `List`와 `ListItem`은 다른 부품이다. 짧은 줄의 목록(`bullet`은 줄마다 점을 찍고, `none`은 그냥 세로로 늘어놓는다)으로, 한 단계가 할 일이나 폴더에 든 것을 보여 줄 때 쓴다.
 
-## Select all
+## 모두 선택
 
-A checkbox in the left outer margin at -26px, on the same vertical line as the row checkboxes, in the column-name row and in the bulk bar. When nothing is picked it is hidden, and it shows when the pointer is over the column-name row. While rows are being picked (the bulk bar) it is always shown. If only some are picked it is `.mt-check.is-mixed` (a bar through the middle). If all on this page are picked it is `.is-on`. Pressing it picks only the current side (page).
+열 이름 행과 일괄 막대에서, 왼쪽 바깥 여백 -26px에 행 체크박스와 같은 세로선으로 놓인 체크박스다. 아무것도 고르지 않았을 때는 숨겨져 있고, 포인터가 열 이름 행 위에 오면 보인다. 행을 고르는 동안(일괄 막대)은 늘 보인다. 일부만 골랐으면 `.mt-check.is-mixed`(가운데 가로줄)다. 이 페이지의 전부를 골랐으면 `.is-on`이다. 누르면 지금 쪽(페이지)만 고른다.
 
-### In code
+### 코드
 
-`ListHead` and `BulkBar` take a `selectAll` prop of type `SelectAll` (`state` is `none`, `some` or `all`), exported with `SelectAllState` from `@monti-cms/ui`.
+`ListHead`와 `BulkBar`는 `SelectAll` 타입의 `selectAll` prop을 받는다(`state`는 `none`, `some`, `all`). `SelectAllState`와 함께 `@monti-cms/ui`에서 내보낸다.
 
-## Bulk bar (`.mt-bulk`)
+## 일괄 막대 (`.mt-bulk`)
 
-While rows are picked, it takes the place of the column-name row: the same place, the same 40px and the same bottom line (`border-muted`), so the rows below do not move. The select-all check is in the same left outer position as the row checks. When everything picked is released, the column names come back.
+행을 고른 동안 열 이름 행의 자리를 차지한다. 같은 자리, 같은 40px, 같은 아래 선(`border-muted`)이므로 아래 행이 움직이지 않는다. 모두 선택 체크는 행 체크와 같은 왼쪽 바깥 위치에 있다. 고른 것을 모두 풀면 열 이름이 돌아온다.
 
-`☑ N개 선택 │ ✦ 요청 │ 발행 · 보관 · 폴더로 ▾ · 바꾸기 ▾ │ ⋯` … and at the end `선택 해제`. (N selected │ ✦ request │ publish · archive · to folder ▾ · change ▾ │ ⋯ … deselect.)
+`☑ N개 선택 │ ✦ 요청 │ 발행 · 보관 · 폴더로 ▾ · 바꾸기 ▾ │ ⋯` … 그리고 끝에 `선택 해제`.
 
-- The bar holds only things that every collection has, so it is the same bar in every collection. What comes from the schema (relation fields) is all inside one "바꾸기 ▾" menu. There is no button per field (that would make the bar differ per collection, and there is no rule for which field gets a button).
-- **발행** (publish): shown only if some picked row can be published (draft, editing). If all are already published it is hidden. A text button, no menu.
-- **보관** (archive): a text button. If all picked rows are archived it is "보관 풀기" (unarchive; unarchiving returns the entry to draft). There is no separate action to withdraw a publish: archiving ends being public.
-- **폴더로 ▾** (to folder): the top level and the folder tree. Picking moves and closes. In media, when every picked file is in one folder, that row has the ✓ (a menu that picks one value marks the current one); pressing it moves nothing.
-- **바꾸기 ▾** (change; `.mt-dropdown`, 200px): the first level is the relation fields that can be changed in this collection, in schema order ("카테고리" (category) › · "태그" (tag) ›). Hidden columns appear too. Back-references (`backlink`: what is stored on the other side, like a collection) and fields inside a conditional branch (the replacement entry that exists only when deprecated) are not there. Select fields are not there yet (there is no bulk change for them in core).
-  - A relation with several values (tag): a search row at the top, then for each value a three-state check row. ☑ all picked rows have it, – only some have it (`.mt-check.is-mixed`, a dimmed `n/N` at the right), ☐ none has it. Pressing adds it to all picked rows, or removes it from all if it was ☑. The menu stays open, so several can be changed at once.
-  - A relation with one value (category): a pick-one list. If all picked rows have the same value, that row has a ✓. If the field is not required, "없음" (none) is at the top. Picking changes at once and closes.
-- **⋯**: "내보내기" (export), a rule, "휴지통으로" (to trash, red).
-- A collection of items (an `item` collection like tags) has no archive or publish. The bar holds only what that collection does. The tag list is `N개 선택 │ 합치기 · 휴지통으로` (N selected │ merge · to trash).
-- Trash is `N개 선택 │ 복원 · 영구 삭제` (N selected │ restore · delete forever; the last is red).
-- Right-clicking one of the picked rows gives the same things with the same names (see Menu, row menu). A right-click menu uses at most a second level, so the relation fields stand in the menu directly, without the "바꾸기" level.
+- 막대에는 모든 컬렉션에 있는 것만 둔다. 그래서 어느 컬렉션에서나 같은 막대다. 스키마에서 오는 것(관계 필드)은 모두 "바꾸기 ▾" 메뉴 하나 안에 있다. 필드마다 버튼을 두지 않는다(그러면 컬렉션마다 막대가 달라지고, 어느 필드에 버튼을 줄지 정할 규칙도 없다).
+- **발행**: 고른 행 중 발행할 수 있는 것(초안, 수정 중)이 있을 때만 보인다. 모두 이미 발행됐으면 숨긴다. 메뉴 없는 텍스트 버튼이다.
+- **보관**: 텍스트 버튼이다. 고른 행이 모두 보관됐으면 "보관 풀기"다(보관을 풀면 글은 초안으로 돌아간다). 발행을 거두는 동작은 따로 없다. 보관하면 공개가 끝난다.
+- **폴더로 ▾**: 최상위와 폴더 트리. 고르면 옮기고 닫힌다. 미디어에서 고른 파일이 모두 한 폴더에 있으면 그 행에 ✓가 있다(값 하나를 고르는 메뉴는 지금 값을 표시한다). 그 행을 누르면 아무것도 옮기지 않는다.
+- **바꾸기 ▾**(`.mt-dropdown`, 200px): 첫 단계는 이 컬렉션에서 바꿀 수 있는 관계 필드로, 스키마 순서다("카테고리" › · "태그" ›). 숨긴 열도 나온다. 역참조(`backlink`: 컬렉션처럼 반대편에 저장되는 것)와 조건부 갈래 안의 필드(지원 중단됐을 때만 있는 대체 글)는 없다. 선택 필드는 아직 없다(core에 일괄 변경이 없다).
+  - 값이 여럿인 관계(태그): 맨 위에 검색 행, 그다음 값마다 세 가지 상태의 체크 행. ☑ 고른 행이 모두 가졌다, – 일부만 가졌다(`.mt-check.is-mixed`, 오른쪽에 흐린 `n/N`), ☐ 아무도 안 가졌다. 누르면 고른 행 모두에 더하고, ☑였으면 모두에서 뺀다. 메뉴가 열려 있으므로 여러 개를 한 번에 바꿀 수 있다.
+  - 값이 하나인 관계(카테고리): 하나를 고르는 목록. 고른 행이 모두 같은 값이면 그 행에 ✓가 있다. 필수 필드가 아니면 맨 위에 "없음"이 있다. 고르면 바로 바뀌고 닫힌다.
+- **⋯**: "내보내기", 구분선, "휴지통으로"(빨강).
+- 항목 컬렉션(태그 같은 `item` 컬렉션)에는 보관과 발행이 없다. 막대에는 그 컬렉션이 하는 일만 둔다. 태그 목록은 `N개 선택 │ 합치기 · 휴지통으로`다.
+- 휴지통은 `N개 선택 │ 복원 · 영구 삭제`다(마지막은 빨강).
+- 고른 행 중 하나를 오른쪽 클릭하면 같은 것이 같은 이름으로 나온다(메뉴의 행 메뉴를 본다). 오른쪽 클릭 메뉴는 둘째 단계까지만 쓰므로, 관계 필드는 "바꾸기" 단계 없이 메뉴에 바로 놓인다.
 
-### In code
+### 코드
 
-`BulkToolbar` is the bar of a grid, which has no head row: a `PageToolbar` row (48px, `inset`) with the count in bold, a rule, the actions as `children`, and `clearLabel` at the end; its `selectAll` hangs in the left margin like the table's. `BulkBar` replaces the list's head row in the same place, the same 40px with the same line under it. It takes `label` ("3 selected"), `request` (an assistant request: a spark and its label), the most used actions as `children` (text buttons and menu buttons), `more` (a ⋯ with the rest, the dangerous one last, in red), and at the end `clearLabel` and `onClear` (the button that clears the pick). `colSpan` is how many columns the table has, the ⋯ column included. It is a row of the list's table, so it spans the table's `colSpan` columns; the table keeps its widths from its columns, not from this row.
+`BulkToolbar`는 머리 행이 없는 격자의 막대다. `PageToolbar` 행(48px, `inset`)에 굵은 개수, 구분선, `children`인 동작, 끝의 `clearLabel`이 있다. `selectAll`은 표처럼 왼쪽 여백에 걸린다. `BulkBar`는 목록의 머리 행을 같은 자리에서 대신한다. 같은 40px에 아래 선도 같다. `label`("3 selected"), `request`(어시스턴트 요청: 반짝이와 그 라벨), `children`인 가장 많이 쓰는 동작(텍스트 버튼과 메뉴 버튼), `more`(나머지를 담은 ⋯. 위험한 것은 맨 끝에 빨강으로), 끝의 `clearLabel`과 `onClear`(고른 것을 푸는 버튼)를 받는다. `colSpan`은 ⋯ 열을 포함한 표의 열 수다. 목록 표의 한 행이므로 표의 `colSpan` 열에 걸친다. 표는 이 행이 아니라 자기 열에서 너비를 가져온다.
 
-## Grid cell
+## 격자 칸
 
-Cells of the media grid, and folder cells. A folder is a low cell, and a file is a 4:3 preview. A file being uploaded is a faded preview with a progress bar.
+미디어 격자의 칸과 폴더 칸. 폴더는 낮은 칸이고, 파일은 4:3 미리보기다. 올리는 중인 파일은 진행 막대가 있는 흐린 미리보기다.
 
-## File tile (`.mt-tile`)
+## 파일 타일 (`.mt-tile`)
 
-One cell of the media grid. A 4:3 preview, with the file name (14) under it and the info (mono 12).
+미디어 격자의 칸 하나. 4:3 미리보기 아래에 파일 이름(14)과 정보(mono 12)가 있다.
 
-- Uploading: the preview is faded and a `.mt-progress` runs along the bottom edge; the info line reads "올리는 중 · 64%" (uploading · 64%).
-- A format the site does not take (`.is-failed`): a 1px red line round the preview, the info line red and the name faded. Under it `.acts` holds the one thing to do, "빼기" (remove). A picture in a format that cannot be read (HEIC) has nothing to show, so its tile is blank with the red line, no file icon and no extension. It does not disappear; it stays in its place.
-- A file that is fine but did not go up (too large, the network): the picture stays, faded as while it goes up, with no red line. The info line is red ("14 MB · 10 MB까지" (14 MB, up to 10 MB): the sizes are whole MB), the name is faded, and `.acts` holds "줄여서 다시" (shrink and retry), "빼기".
-- Picked: a check box at the top left, and a 2px ink border.
-- ✦ suggestion (for several files at once): the suggested sentence goes into the info line as `.mt-ins` (pale blue ground, body font), the same as the editor's suggestion mark. The line above reads "✦ 제안 3 … 모두 버리기 · [모두 받기]" (✦ 3 suggestions … discard all · [accept all]). Pressing the suggestion mark opens a note card (`.mt-memo`) with a blue border; the head row's "버리기 · [받기]" (discard · [accept]) handles only that file, or "이어서 요청" (continue the request) edits again on the spot.
-- Files (PDF · ZIP · TXT · MD · CSV · JSON) show `.img.is-file` instead of a preview: a 20px file icon in the middle and the extension (mono 11, "PDF"). Uploading and failed are the same as for images (progress bar below, red border and info line). A format that is not accepted stays there, and its info line says the accepted kinds briefly ("이미지 · PDF · ZIP · 텍스트만" (images, PDF, ZIP and text only)); the one thing to do is "빼기".
+- 올리는 중: 미리보기가 흐려지고 아래 가장자리를 따라 `.mt-progress`가 흐른다. 정보 줄은 "올리는 중 · 64%"다.
+- 사이트가 받지 않는 형식(`.is-failed`): 미리보기 둘레에 1px 빨간 선, 정보 줄은 빨강, 이름은 흐리다. 그 아래 `.acts`에 할 일 하나 "빼기"가 있다. 읽을 수 없는 형식의 그림(HEIC)은 보여 줄 것이 없어서, 타일이 빨간 선만 두른 빈칸이 된다. 파일 아이콘도 확장자도 없다. 사라지지 않고 제자리에 남는다.
+- 문제없지만 올라가지 못한 파일(너무 큼, 네트워크): 그림은 남고, 올라가는 동안처럼 흐리며, 빨간 선은 없다. 정보 줄은 빨강("14 MB · 10 MB까지": 크기는 정수 MB), 이름은 흐리고, `.acts`에 "줄여서 다시", "빼기"가 있다.
+- 고름: 왼쪽 위에 체크 상자, 2px 잉크 테두리.
+- ✦ 제안(여러 파일 한꺼번에): 제안 문장이 정보 줄에 `.mt-ins`로 들어간다(옅은 파랑 바탕, 본문 글꼴). 편집기의 제안 표시와 같다. 위 줄은 "✦ 제안 3 … 모두 버리기 · [모두 받기]"다. 제안 표시를 누르면 파란 테두리의 메모 카드(`.mt-memo`)가 열린다. 머리 행의 "버리기 · [받기]"는 그 파일만 다루고, "이어서 요청"은 그 자리에서 다시 고친다.
+- 파일(PDF · ZIP · TXT · MD · CSV · JSON)은 미리보기 대신 `.img.is-file`을 보여 준다. 가운데에 20px 파일 아이콘과 확장자(mono 11, "PDF")다. 올리는 중과 실패는 이미지와 같다(아래 진행 막대, 빨간 테두리와 정보 줄). 받지 않는 형식은 그대로 남고, 정보 줄이 받는 종류를 짧게 말한다("이미지 · PDF · ZIP · 텍스트만"). 할 일 하나는 "빼기"다.
 
-### In code
+### 코드
 
-`Tile` is a file in a grid, flat (no card, no border). It has `status` (`uploading` with `progress` 0 to 100, `failed` for a type that is not taken, or `interrupted` for a file that did not go up; both take `actions`), a mono detail line under the name (size, usage, a path), `picking` (the check shows faintly on every tile while any is picked), `action` (the ⋯ at the top right, shown with the pointer) and `proposal` (the assistant's suggestion in place of the detail line; a picked tile that has one is ringed and checked in blue). A failed tile has a 1px red ring drawn over the preview's edge; an interrupted tile has none and fades its picture. `current` is the file open in the panel beside the grid: the picked ring (2px, ink; it stays ink under the keyboard's focus) without the check. `FilePreview` is what a tile shows for a file: the 20px file icon and the extension (use it as the tile's `preview`; it goes fainter when the tile failed; `framed` draws its own 4:3 box, for a panel). `FolderTile` is the low folder cell (it takes `dropTarget`). `Grid` with `columns="tiles"` is the tile grid (`.mt-tiles`): columns of at least 180px, 24px between rows and 20px between columns; `columns="folders"` is the same columns with 12px between rows, for the folder tiles above it (`.mt-tiles--folders`). Beside a docked panel both take `dense` (columns of at least 150px), so a 1440px screen still has four across, smaller. `columns="compare"` is two things side by side with a mark between them (the replace dialog's old and new file).
+`Tile`은 격자 안의 파일이고, 평평하다(카드도 테두리도 없다). `status`(`progress` 0부터 100까지인 `uploading`, 받지 않는 형식인 `failed`, 올라가지 못한 파일인 `interrupted`. 뒤의 둘은 `actions`를 받는다), 이름 아래 mono 세부 줄(크기, 사용처, 경로), `picking`(하나라도 고른 동안 모든 타일에 체크가 흐리게 보인다), `action`(오른쪽 위 ⋯, 포인터가 오면 보인다), `proposal`(세부 줄 자리에 어시스턴트 제안. 제안이 있는 고른 타일은 파랑으로 두르고 체크한다)을 가진다. 실패한 타일은 미리보기 가장자리 위에 1px 빨간 테를 그린다. 중단된 타일은 테가 없고 그림을 흐리게 한다. `current`는 격자 옆 패널에 열린 파일이다. 체크 없이 고름 테(2px, 잉크. 키보드 포커스 아래서도 잉크로 남는다)를 두른다. `FilePreview`는 타일이 파일에 보여 주는 것으로, 20px 파일 아이콘과 확장자다(타일의 `preview`로 쓴다. 타일이 실패하면 더 흐려진다. `framed`는 패널용으로 자기 4:3 상자를 그린다). `FolderTile`은 낮은 폴더 칸이다(`dropTarget`을 받는다). `columns="tiles"`인 `Grid`는 타일 격자(`.mt-tiles`)다. 열은 최소 180px, 행 사이 24px, 열 사이 20px이다. `columns="folders"`는 같은 열에 행 사이 12px로, 그 위의 폴더 타일용이다(`.mt-tiles--folders`). 붙박이 패널 옆에서는 둘 다 `dense`를 받아(열 최소 150px) 1440px 화면에서도 작게 네 개가 나란히 놓인다. `columns="compare"`는 두 가지를 나란히 놓고 그 사이에 표시를 둔다(바꾸기 대화상자의 옛 파일과 새 파일).
 
-## Media picker (`ImageInsert` board)
+## 미디어 고르기 (`ImageInsert` 보드)
 
-The library as a panel for choosing: images to insert from "/ 이미지", the cover image field, and files from "/ 파일". A 760px modal: the folder list at the left (168px; "모든 이미지" or "모든 파일" first, sub folders indented, the chosen one on `bg-current`; the count in mono), then the search box and three columns of tiles. At the bottom left "올리기" (upload) is a text button with an upload icon; at the bottom right "취소" and one pill ("넣기" in the body, "고르기" for a field). Choosing a tile and pressing the pill puts it in at once: there is no alt text or caption step and no tabs. "올리기" chooses a file and hands it to the page as a paste does. The folder count shows only for images: it counts every kind of file.
+고르기 위한 패널로서의 라이브러리. "/ 이미지"로 넣을 이미지, 표지 이미지 필드, "/ 파일"로 넣을 파일을 고른다. 760px 모달이다. 왼쪽에 폴더 목록(168px. "모든 이미지"나 "모든 파일"이 맨 앞, 하위 폴더는 들여 쓰고, 고른 것은 `bg-current` 위. 개수는 mono), 그다음 검색 상자와 세 열의 타일이다. 왼쪽 아래에 "올리기"가 올리기 아이콘을 단 텍스트 버튼으로 있고, 오른쪽 아래에 "취소"와 알약 하나(본문에서는 "넣기", 필드에서는 "고르기")가 있다. 타일을 고르고 알약을 누르면 바로 들어간다. 대체 텍스트나 캡션 단계도, 탭도 없다. "올리기"는 파일을 골라 붙여넣기처럼 페이지에 넘긴다. 폴더 개수는 이미지에서만 보인다. 모든 종류의 파일을 세기 때문이다.
 
-### In code
+### 코드
 
-`MediaPicker` is the whole panel: `folders` (each with `depth` and an optional `count`), `folder` (`null` for all), the search, `onUpload`, `confirmLabel` and the tiles as `children` (a `Tile` each, `FilePreview` for files). The tile area scrolls inside the panel.
+`MediaPicker`는 패널 전체다. `folders`(각각 `depth`와 선택적인 `count`), `folder`(전체는 `null`), 검색, `onUpload`, `confirmLabel`, `children`인 타일(각각 `Tile`, 파일은 `FilePreview`)을 받는다. 타일 영역은 패널 안에서 스크롤한다.
 
-## Drop target (`.mt-droparea`, `.mt-folder.is-drop`, `.mt-toast--drop`)
+## 놓을 곳 (`.mt-droparea`, `.mt-folder.is-drop`, `.mt-toast--drop`)
 
-When files are dragged in, nothing is hidden: only where to drop is shown (the same way as Google Drive and Dropbox).
+파일을 끌어 오면 아무것도 숨기지 않는다. 어디에 놓을지만 보여 준다(Google Drive, Dropbox와 같은 방식).
 
-- Dropping in the current folder: `.mt-droparea` wraps the folder tiles and the file grid and gets `.is-over`. A 1.5px solid ink line is drawn 12px outside the grid, and a 7% ink film covers the whole area by multiply (`mix-blend-mode: multiply`; `screen` in dark). Painting only the background would blend with the folder tile (`--bg-muted`), but multiply darkens the ground, the tile and the preview by the same ratio, so the usual differences remain. The tile colors do not change. A dotted line or a faded film that hides content is not used.
-- Over a subfolder: the area's border goes off and only that folder tile gets `.is-drop` (the selected ground + a 1.5px ink border).
-- A pill at the bottom center, `.mt-toast.mt-toast--drop`: an upload icon and "여기에 올려요" (upload here) / "**covers**에 올려요" (upload to covers). The current folder's name is already in the title, so it is not written; the folder name is shown in bold only when the place to drop changes.
-- Quiet work such as shrinking to WebP or removing location data is not written.
+- 지금 폴더에 놓을 때: `.mt-droparea`가 폴더 타일과 파일 격자를 감싸고 `.is-over`를 받는다. 격자 바깥 12px에 1.5px 실선 잉크 선을 긋고, 7% 잉크 막을 곱하기로(`mix-blend-mode: multiply`, 어두운 테마에서는 `screen`) 영역 전체에 덮는다. 배경만 칠하면 폴더 타일(`--bg-muted`)과 섞이지만, 곱하기는 바탕, 타일, 미리보기를 같은 비율로 어둡게 하므로 평소의 차이가 남는다. 타일 색은 바뀌지 않는다. 점선이나 내용을 가리는 흐린 막은 쓰지 않는다.
+- 하위 폴더 위: 영역 테두리가 꺼지고 그 폴더 타일만 `.is-drop`을 받는다(고른 바탕 + 1.5px 잉크 테두리).
+- 아래 가운데 알약 `.mt-toast.mt-toast--drop`: 올리기 아이콘과 "여기에 올려요" / "**covers**에 올려요". 지금 폴더 이름은 이미 제목에 있으므로 쓰지 않는다. 놓을 곳이 바뀔 때만 폴더 이름을 굵게 보여 준다.
+- WebP로 줄이기나 위치 정보 지우기 같은 조용한 일은 적지 않는다.
 
-### In code
+### 코드
 
-`DropArea` wraps what files can be dropped on. `over` means files are dragged over the area and not over a folder in it. A folder the files are over takes `FolderTile dropTarget`, and the area's frame goes out. The hint is `toast.dropHint`.
+`DropArea`는 파일을 놓을 수 있는 것을 감싼다. `over`는 파일이 영역 위에 있고 그 안의 폴더 위에는 없다는 뜻이다. 파일이 올라간 폴더는 `FolderTile dropTarget`을 받고, 영역의 테두리는 꺼진다. 안내는 `toast.dropHint`다.
 
-## Empty state
+## 빈 상태
 
-An empty state. Instead of an explanation, it lists what can be done, in order ("01 · 02 · 03" only when there really is an order).
+빈 상태. 설명 대신 할 수 있는 일을 순서대로 나열한다("01 · 02 · 03"은 정말 순서가 있을 때만).
 
-- The name of each thing to pick is `text-title` (16 / 600). Unlike a table row title (14 / 400), these are items to pick, so they look like subheadings.
+- 고를 일마다 이름은 `text-title`(16 / 600)이다. 표의 행 제목(14 / 400)과 달리 고를 항목이므로 소제목처럼 보인다.
 
-### In code
+### 코드
 
-`Empty` shows a line that says there is nothing and, instead of an explanation, the things that can be done as `EmptyStep`s in order. It has no box. An optional quiet line goes under the title, only when the steps cannot say what is missing. A popup or a short list that is empty needs no component: one quiet line of text. `EmptyStep` is the title at the size of a choice, an arrow at the end and a rule under it. Its `number` ("01") is for an order that really matters. It is a button, or a link with `href` or the router's link in `render`.
+`Empty`는 아무것도 없다는 줄과, 설명 대신 할 수 있는 일을 순서대로 `EmptyStep`으로 보여 준다. 상자는 없다. 단계로 무엇이 빠졌는지 말할 수 없을 때만 제목 아래에 선택적인 조용한 줄을 둔다. 비어 있는 팝업이나 짧은 목록은 컴포넌트가 필요 없다. 조용한 글 한 줄이면 된다. `EmptyStep`은 선택지 크기의 제목, 끝의 화살표, 아래 구분선이다. `number`("01")는 순서가 정말 중요할 때 쓴다. 버튼이거나, `href`가 있는 링크거나, `render`에 넣은 라우터 링크다.
 
-## Field outline (`.mt-tree`, `.mt-ftabs`)
+## 필드 개요 (`.mt-tree`, `.mt-ftabs`)
 
-The field list of a collection. The tabs of the properties panel work as real tabs (see Craft's field layout designer). Only the fields of one tab are shown at a time.
+컬렉션의 필드 목록. 속성 패널의 탭이 진짜 탭처럼 동작한다(Craft의 field layout designer를 본다). 한 번에 한 탭의 필드만 보인다.
 
-- The tab row `.mt-ftabs`: folder tabs sitting on a box. The picked tab has the same ground as the box and is open at the bottom, so it joins the box. The other tabs are closed in `bg-muted`. Each tab has a grip, a name and the field count; a tab placed by a plugin has a lock. At the end is a `+` (add a tab).
-- The box `.mt-ftabs-body`: the field rows of the picked tab. Only its top left corner is square, to join the picked tab.
-- To move a field to another tab, drag the row onto the tab's head.
-- A group `.is-group`: a `bg-muted` band inside the box, with the name at 13 bold. Fields in a group are indented 16px (`.d2`).
-- With only one tab there is no tab row and no box, only the rows, and `+ 탭 추가` (+ add a tab) below.
-- It does not look like the underlined tabs at the top of a screen. Layers are not made by font size or a single line.
+- 탭 행 `.mt-ftabs`: 상자 위에 얹힌 폴더 탭. 고른 탭은 상자와 바탕이 같고 아래가 열려 있어 상자와 이어진다. 다른 탭은 `bg-muted`로 닫혀 있다. 탭마다 손잡이, 이름, 필드 개수가 있고, 플러그인이 둔 탭에는 자물쇠가 있다. 끝에 `+`(탭 추가)가 있다.
+- 상자 `.mt-ftabs-body`: 고른 탭의 필드 행. 고른 탭과 이어지도록 왼쪽 위 모서리만 각지다.
+- 필드를 다른 탭으로 옮기려면 행을 그 탭 머리로 끈다.
+- 묶음 `.is-group`: 상자 안의 `bg-muted` 띠로, 이름은 13 굵게다. 묶음 안의 필드는 16px 들여 쓴다(`.d2`).
+- 탭이 하나뿐이면 탭 행도 상자도 없이 행만 있고, 아래에 `+ 탭 추가`가 있다.
+- 화면 맨 위의 밑줄 탭처럼 보이지 않는다. 층을 글자 크기나 선 하나로 나누지 않는다.
 
-### In code
+### 코드
 
-`FolderTabs` (with `FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`): `FolderTab` has a grip to drag it by (off for a tab that stays where it is), its name, how many fields it holds, and `locked` for a tab a plugin placed, which cannot be moved or removed. `FolderTabsAdd` is a 16px plus icon named by its `aria-label`. `FolderTabEdit` is the picked tab while its name is edited in place: the same shape, with the field where the name was. The body is a `FieldTree` without its outer rules; its top left corner is square. `FieldTree` is the outline of a collection's fields: one line per field (`FieldRow`), each with a grip, the name (mono), the label and, at the end, the kind (mono; it can carry a mark such as a required "!"). `nested` indents a field in a group or a branch. `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names line up. `changed` is an unsaved change.
+`FolderTabs`(`FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`와 함께): `FolderTab`은 끌 손잡이(제자리에 머무는 탭은 끈다), 이름, 담은 필드 수, 그리고 플러그인이 둔 탭이라 옮기거나 지울 수 없음을 뜻하는 `locked`를 가진다. `FolderTabsAdd`는 `aria-label`로 이름 붙인 16px 더하기 아이콘이다. `FolderTabEdit`은 이름을 제자리에서 고치는 동안의 고른 탭이다. 모양은 같고, 이름 자리에 입력란이 있다. 본문은 바깥 구분선이 없는 `FieldTree`이고, 왼쪽 위 모서리가 각지다. `FieldTree`는 컬렉션 필드의 개요다. 필드마다 한 줄(`FieldRow`)이고, 각 줄에 손잡이, 이름(mono), 라벨, 끝에 종류(mono. 필수를 뜻하는 "!" 같은 표시를 달 수 있다)가 있다. `nested`는 묶음이나 갈래 안의 필드를 들여 쓴다. `group`은 그 줄을 묶음의 줄로 만든다. 이름이 sans 굵게 들어간 회색 띠다. 옮길 수 없는 필드는 `grip`이 없고, 이름이 줄 맞도록 그 자리는 비워 둔다. `changed`는 저장하지 않은 변경이다.
 
-## Applied filters
+## 적용한 필터
 
-When a filter is applied, the dropdown in that place (`.mt-filter`) becomes a `.mt-chip` ("대체 텍스트 없음 ×" (no alt text)). The info beside the page title does not use the filter's name, only the count. Search words and the alt text condition look in the current folder and its subfolders (the count in the menu is the same range); the type and the use only narrow the files of the open folder, which stays browsable (its up row, its folders and "+ 폴더" stay, there is no place-to-look toggle, and the counts of the type menu are of the folder's own files). When one of the first two is applied, after the chip comes a rule and a toggle for where to look (`.mt-seg--sm`) "Blog Assets | 모든 폴더" (this folder | all folders), to widen it (the same as macOS Finder's search scope). A file in a folder inside the open one gets its path below the open folder before the info line ("covers · 1600×900 · 글 1"); a file elsewhere gets its whole path, and the files of the open folder keep their usual line. The path is never written for every file, and the size stays. Making a folder is in the head's "+ 폴더" (+ folder; a text button, the same as the posts list) and the right-click menu on empty space, not in a grid tile.
+필터를 적용하면 그 자리의 드롭다운(`.mt-filter`)이 `.mt-chip`("대체 텍스트 없음 ×")이 된다. 페이지 제목 옆 정보는 필터 이름 없이 개수만 쓴다. 검색어와 대체 텍스트 조건은 지금 폴더와 그 하위 폴더에서 찾는다(메뉴의 개수도 같은 범위다). 종류와 사용처는 연 폴더의 파일만 좁히고, 폴더는 계속 둘러볼 수 있다(위로 가는 행, 폴더들, "+ 폴더"가 남고, 찾는 곳 전환이 없으며, 종류 메뉴의 개수는 그 폴더 자체 파일의 것이다). 앞의 둘 중 하나를 적용하면 칩 뒤에 구분선과 찾는 곳 전환(`.mt-seg--sm`) "Blog Assets | 모든 폴더"가 와서 범위를 넓힌다(macOS Finder의 검색 범위와 같다). 연 폴더 안의 폴더에 있는 파일은 정보 줄 앞에 연 폴더 아래 경로가 붙는다("covers · 1600×900 · 글 1"). 다른 곳의 파일은 전체 경로가 붙고, 연 폴더의 파일은 평소 줄을 유지한다. 모든 파일에 경로를 쓰지는 않고, 크기는 남는다. 폴더 만들기는 머리의 "+ 폴더"(텍스트 버튼, 글 목록과 같다)와 빈 곳의 오른쪽 클릭 메뉴에 있고, 격자 타일에는 없다.
 
-## New folder and rename (`.mt-rename`)
+## 새 폴더와 이름 바꾸기 (`.mt-rename`)
 
-Pressing "+ 폴더" makes a new folder on the spot with no dialog, and the name field `.mt-rename` opens with "새 폴더" (new folder) selected. Typing changes the name and Enter finishes. In the posts list the new folder is at the top folder row; in media it is at the end of the folder tile row. Rename uses the same field. The field (28px) overlaps the title row (20px) by 4px above and below, so while renaming, the row height and the rows below do not move.
+"+ 폴더"를 누르면 대화상자 없이 그 자리에 새 폴더가 생기고, 이름 입력란 `.mt-rename`이 "새 폴더"를 선택한 채 열린다. 입력하면 이름이 바뀌고 Enter로 끝낸다. 글 목록에서는 새 폴더가 맨 위 폴더 행에, 미디어에서는 폴더 타일 행 끝에 생긴다. 이름 바꾸기도 같은 입력란을 쓴다. 입력란(28px)이 제목 행(20px)과 위아래로 4px씩 겹치므로, 이름을 바꾸는 동안 행 높이와 아래 행이 움직이지 않는다.
 
-### In code
+### 코드
 
-In the list, `useFolderActions` holds the naming (`naming`, `commitName`, `cancelName`) and `FolderNameField` is the field a row or tile shows while it is set. A new folder's row comes right after "상위 폴더로"; an empty or unchanged name only closes the field. Focus goes back to "+ 폴더" after Escape, and to the folder's own name after a make or a rename. A search or a filter hides the folder rows, so "+ 폴더" clears them first.
+목록에서 `useFolderActions`가 이름 짓기(`naming`, `commitName`, `cancelName`)를 쥐고, `FolderNameField`는 그것이 설정된 동안 행이나 타일이 보여 주는 입력란이다. 새 폴더의 행은 "상위 폴더로" 바로 다음에 온다. 비었거나 바뀌지 않은 이름은 입력란만 닫는다. Escape 뒤에는 포커스가 "+ 폴더"로, 만들기나 이름 바꾸기 뒤에는 그 폴더의 이름으로 돌아간다. 검색이나 필터는 폴더 행을 숨기므로, "+ 폴더"는 먼저 그것을 지운다.
 
-`RenameField`: the name of a new folder, or of one being renamed, edited where it stands. It opens with the whole name selected, so typing replaces it. Enter and leaving the field keep the name (`onCommit`, called once); Escape drops the change (`onCancel`). In a folder tile it fills the tile (`fill`); in a row it sits 200px wide with its text on the line of the other names.
+`RenameField`: 새 폴더나 이름을 바꾸는 폴더의 이름을 그 자리에서 고친다. 이름 전체를 선택한 채 열리므로 입력하면 바뀐다. Enter와 입력란을 벗어나기는 이름을 지키고(`onCommit`, 한 번 불린다), Escape는 변경을 버린다(`onCancel`). 폴더 타일에서는 타일을 채우고(`fill`), 행에서는 200px 너비로 다른 이름과 같은 선에 글자를 둔다.
 
-## Inside a folder (posts and media)
+## 폴더 안 (글과 미디어)
 
-- Above is the path ("게시글 /" (posts /), "미디어 /" (media /); in a folder inside a folder every folder on the way is a button: "게시글 / 뉴스 /"), the title is the folder name, and the first row is "상위 폴더로" (up one folder).
-- In media, only search words and the alt text condition look below the open folder; the type and the use narrow the folder's own files and keep it browsable (see Applied filters). In the posts list, search and filters look in the current folder and its subfolders. When they do, the search-place row shows the toggle for where to look, "folder name | 모든 폴더" (`PageToolbar inset` holding `Segmented size="sm" inline`, named "찾는 곳"). At the top level it is already everything, so there is no toggle. In the address it is `scope=all`; it counts only while words are typed in a folder, and emptying the words drops it.
-- Deleting a folder moves the folder and what is in it to the trash as one lump. It asks for confirmation only if a published post is inside; otherwise it shows a toast with "되돌리기" (undo).
+- 위에 경로("게시글 /", "미디어 /". 폴더 안의 폴더에서는 지나온 폴더마다 버튼이다: "게시글 / 뉴스 /"), 제목은 폴더 이름, 첫 행은 "상위 폴더로"다.
+- 미디어에서는 검색어와 대체 텍스트 조건만 연 폴더 아래를 찾는다. 종류와 사용처는 그 폴더 자체 파일을 좁히고 폴더를 계속 둘러볼 수 있게 둔다("적용한 필터"를 본다). 글 목록에서는 검색과 필터가 지금 폴더와 그 하위 폴더를 찾는다. 그럴 때 찾는 곳 행에 찾는 곳 전환 "folder name | 모든 폴더"(`Segmented size="sm" inline`을 담은 `PageToolbar inset`, 이름은 "찾는 곳")가 보인다. 최상위에서는 이미 전체이므로 전환이 없다. 주소에서는 `scope=all`이다. 폴더 안에서 검색어를 입력한 동안에만 의미가 있고, 검색어를 비우면 빠진다.
+- 폴더를 지우면 폴더와 그 안의 것이 한 덩어리로 휴지통에 간다. 안에 발행된 글이 있을 때만 확인을 묻고, 아니면 "되돌리기"가 있는 토스트를 보여 준다.
 
-## Pagination (`.mt-pager`, `.mt-page`)
+## 페이지 나누기 (`.mt-pager`, `.mt-page`)
 
-- A page number is a 32px-high button. It is never narrower than its height: one digit is a circle, two or more a pill.
-- Text is 14px `fg-muted`. The current page is `.is-on`: `bg-selected`, ink, semibold (600). The pointer over it gives the same ground.
-- Both ends are "‹ 이전" (previous) and "다음 ›" (next) (`.mt-page--wide` + `--prev` / `--next`). The previous of the first page and the next of the last page are `.is-off`: dimmed and cannot be pressed.
-- Up to 7 pages, every page is shown. With more, it is always 7 buttons: `1 … current-1 current current+1 … last`; near the start `1 2 3 4 5 … last`; near the end `1 … last-4 … last`. The width of the pagination does not change as pages turn.
-- It is at the right end of the row under the table (`.mt-table-head`). At the left is a range like "1–25 / 148" and, beside it, the per-page `25개씩 ▾` (`.mt-per-page`).
+- 페이지 번호는 높이 32px 버튼이다. 높이보다 좁아지지 않는다. 한 자리는 원, 두 자리 이상은 알약이다.
+- 글자는 14px `fg-muted`다. 지금 페이지는 `.is-on`: `bg-selected`, 잉크, semibold(600)이다. 포인터를 올리면 같은 바탕이 된다.
+- 양 끝은 "‹ 이전"과 "다음 ›"이다(`.mt-page--wide` + `--prev` / `--next`). 첫 페이지의 이전과 마지막 페이지의 다음은 `.is-off`로, 흐리고 누를 수 없다.
+- 7페이지까지는 모든 페이지를 보여 준다. 그보다 많으면 늘 버튼 7개다: `1 … current-1 current current+1 … last`. 처음 가까이에서는 `1 2 3 4 5 … last`, 끝 가까이에서는 `1 … last-4 … last`. 페이지를 넘겨도 페이지 나누기의 너비가 바뀌지 않는다.
+- 표 아래 행(`.mt-table-head`)의 오른쪽 끝에 있다. 왼쪽에는 "1–25 / 148" 같은 범위와 그 옆에 페이지당 개수 `25개씩 ▾`(`.mt-per-page`)가 있다.
 
-### In code
+### 코드
 
-`Pagination` (with `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`) is the pager at the right end of the row under the table. The first page's previous and the last page's next are dimmed to .45, not followed and not reached with the keyboard. `ListFooter` is the row under a table: the shown range ("1–25 / 148", a `Count`) at the left, the pagination at the right, 12px inside like the rows and 12px under them. `PageSizeMenu` is the "25 per page ▾" in mono beside the range; its menu opens upward, and picking a size applies it and closes the menu.
+`Pagination`(`PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`와 함께)은 표 아래 행 오른쪽 끝의 페이지 넘기기다. 첫 페이지의 이전과 마지막 페이지의 다음은 .45로 흐려지고, 따라갈 수 없으며 키보드로도 닿지 않는다. `ListFooter`는 표 아래 행이다. 왼쪽에 보이는 범위("1–25 / 148", `Count`), 오른쪽에 페이지 나누기가 있고, 행처럼 안쪽 12px, 행 아래 12px이다. `PageSizeMenu`는 범위 옆의 mono "25 per page ▾"다. 메뉴는 위로 열리고, 크기를 고르면 적용하고 메뉴를 닫는다.
 
-## Folders in the trash
+## 휴지통 안의 폴더
 
-- A deleted folder shows as one row (a folder icon, "게시글 폴더 · 글 2" (posts folder · 2 posts)). The date it was thrown away and the days left are for the folder as a whole.
-- Pressing it opens it inside the trash. The path is "휴지통 /" (trash /), the title is the folder name, the first row is "상위 폴더로", and the head has "폴더 복원 · 영구 삭제" (restore folder · delete forever). The date column of the rows inside is empty.
-- Restoring one thing inside makes the folder again and puts it back in its original place. What remains stays in the trash folder.
-- Trash search also finds what is inside folders, and puts "시리즈 원고 폴더 안" (inside the series drafts folder) before the info line.
+- 지운 폴더는 한 행으로 보인다(폴더 아이콘, "게시글 폴더 · 글 2"). 버린 날과 남은 날은 폴더 전체의 것이다.
+- 누르면 휴지통 안에서 열린다. 경로는 "휴지통 /", 제목은 폴더 이름, 첫 행은 "상위 폴더로"이고, 머리에 "폴더 복원 · 영구 삭제"가 있다. 안쪽 행의 날짜 열은 비어 있다.
+- 안의 것 하나를 복원하면 폴더를 다시 만들어 원래 자리에 되돌린다. 남은 것은 휴지통 폴더에 그대로 있다.
+- 휴지통 검색은 폴더 안의 것도 찾고, 정보 줄 앞에 "시리즈 원고 폴더 안"을 붙인다.
 
-### In code
+### 코드
 
-`TrashRowTitle` is the title cell of a trash row: line one is the title in the quiet ink of what is out of use (a trashed folder has its folder icon before it) and its address in mono beside it; line two is what it holds (`meta`), in the warning tone when something stops it from coming back. A row with nothing to say there keeps the empty line, so every row is as tall. The title may be a `RowLink`. `TrashRowDate` is the date cell at the end: the day it was discarded over how long it stays ("30 days left"); the days turn to the warning tone when `urgent` (three or fewer).
+`TrashRowTitle`은 휴지통 행의 제목 칸이다. 첫 줄은 쓰지 않는 것의 조용한 잉크색 제목(버린 폴더는 앞에 폴더 아이콘이 있다)과 그 옆의 mono 주소다. 둘째 줄은 그것이 담은 것(`meta`)이고, 되돌아오지 못하게 막는 것이 있으면 경고 톤이다. 그 자리에 할 말이 없는 행도 빈 줄을 유지해서 모든 행의 높이가 같다. 제목은 `RowLink`일 수 있다. `TrashRowDate`는 끝의 날짜 칸이다. 버린 날 아래에 얼마나 남는지("30 days left")가 있다. 남은 날이 `urgent`(사흘 이하)이면 경고 톤이 된다.
 
-## Merging categories
+## 카테고리 합치기
 
-In the tag list, picking two puts "합치기" (merge) in the bulk bar, in the place of the column-name row (name · post count). A dialog picks the name to keep with a radio, and shows the number of posts that change and the addresses that disappear in one line. After merging, a toast reads "글 3편의 태그를 리액트로 바꿨어요 · 되돌리기" (changed the tag of 3 posts to React · undo), and the merged tag goes to the trash.
+태그 목록에서 둘을 고르면 일괄 막대에 "합치기"가 생긴다. 열 이름 행(이름 · 글 개수)의 자리다. 대화상자에서 남길 이름을 라디오로 고르고, 바뀌는 글 수와 사라지는 주소를 한 줄로 보여 준다. 합친 뒤 토스트에 "글 3편의 태그를 리액트로 바꿨어요 · 되돌리기"가 나오고, 합쳐진 태그는 휴지통으로 간다.
 
-## Language list
+## 언어 목록
 
-The list of content languages in Settings › Languages. The language name is the lead (`.mt-row-title`), and the code and display name follow dimmed (`English en · 영어`; if the display name is the same as the name it is left out). The name comes from the language code and is not edited. A row has no input and no edit row.
+설정 › 언어의 콘텐츠 언어 목록. 언어 이름이 앞에 오고(`.mt-row-title`), 코드와 표시 이름이 흐리게 뒤따른다(`English en · 영어`. 표시 이름이 이름과 같으면 뺀다). 이름은 언어 코드에서 오고 고치지 않는다. 행에는 입력란도 편집 행도 없다.
 
-- **Source row**: fixed at the top. The place of the handle is left empty, and at the left it carries only the language info, like the other rows. At the right end (where the other rows have ×) are a bold "원문" (source; `text-note`, `fg-default`, 600), a vertical rule (`.mt-vr`), and an underlined text button "바꾸기" (change). The state and the button that changes it are in one place and are not mixed with the pale info at the left (code, display name). The right cell has only one quiet underlined text button, "바꾸기" (`.mt-text-btn--underline`). The word "원문" is not written separately.
-- **바꾸기**: opens a one-level menu (`.mt-card` + `.mt-menu-item`) with the languages in a line. The current source has a ✓ (`.tick`). Picking another language moves it to the top and makes it the new source (with "원문 | 바꾸기" at its right), the old source gets a handle and ×, change dots appear on the two rows, and the changed places count goes up by 1. It is a structure change, so it is saved after review like other structure changes.
-- **Other rows**: only a drag handle and ×. The × is the same quiet × as the × of the other host-name rows. × strikes the row and adds to the changed places. Removing a language that has translations lets you pick "남겨 두기" (keep) or "휴지통으로" (to trash) in the review.
-- **Adding a language**: "+ 언어 추가" (+ add a language) opens a code search menu (the last item is "직접 입력" (enter by hand)). Picking a code makes the row at once, with no form; the name is filled in and a change dot appears. Only "직접 입력" opens a small dialog (`.mt-dialog`, 420px) that asks once for the code (letters), the native name and the display name ("취소 · 추가" (cancel · add)).
-- On a deployed site without the GitHub plugin the whole section is structure, so the lock goes after the section title (`h2`), and the handle, ×, "바꾸기" and "+ 언어 추가" all go. The bold "원문" at the right of the source row stays as the state, and only the rule and "바꾸기" go. The time zone on the same screen is an admin setting, so it can still be edited.
+- **원문 행**: 맨 위에 고정된다. 손잡이 자리는 비워 두고, 다른 행처럼 왼쪽에는 언어 정보만 둔다. 오른쪽 끝(다른 행에서 ×가 있는 곳)에 굵은 "원문"(`text-note`, `fg-default`, 600), 세로 구분선(`.mt-vr`), 밑줄 친 텍스트 버튼 "바꾸기"가 있다. 상태와 그것을 바꾸는 버튼이 한곳에 있고, 왼쪽의 옅은 정보(코드, 표시 이름)와 섞이지 않는다. 오른쪽 칸에는 조용한 밑줄 텍스트 버튼 "바꾸기"(`.mt-text-btn--underline`) 하나만 있다. "원문"이라는 말을 따로 쓰지 않는다.
+- **바꾸기**: 언어가 한 줄로 놓인 한 단계 메뉴(`.mt-card` + `.mt-menu-item`)를 연다. 지금 원문에 ✓(`.tick`)가 있다. 다른 언어를 고르면 그 언어가 맨 위로 가서 새 원문이 되고(오른쪽에 "원문 | 바꾸기"), 옛 원문은 손잡이와 ×를 얻으며, 두 행에 변경 점이 생기고, 바뀐 곳 개수가 1 오른다. 구조 변경이므로 다른 구조 변경처럼 검토 뒤에 저장한다.
+- **다른 행**: 끌기 손잡이와 ×만 있다. ×는 다른 호스트 이름 행의 ×와 같은 조용한 ×다. ×는 행에 취소선을 긋고 바뀐 곳에 더한다. 번역이 있는 언어를 빼면 검토에서 "남겨 두기"나 "휴지통으로"를 고를 수 있다.
+- **언어 추가**: "+ 언어 추가"는 코드 검색 메뉴를 연다(마지막 항목은 "직접 입력"). 코드를 고르면 폼 없이 바로 행이 생기고, 이름이 채워지며 변경 점이 생긴다. "직접 입력"만 작은 대화상자(`.mt-dialog`, 420px)를 열어 코드(글자), 원어 이름, 표시 이름을 한 번에 묻는다("취소 · 추가").
+- GitHub 플러그인이 없는 배포된 사이트에서는 섹션 전체가 구조이므로, 섹션 제목(`h2`) 뒤에 자물쇠가 붙고 손잡이, ×, "바꾸기", "+ 언어 추가"가 모두 빠진다. 원문 행 오른쪽의 굵은 "원문"은 상태로 남고, 구분선과 "바꾸기"만 빠진다. 같은 화면의 시간대는 관리자 설정이므로 여전히 고칠 수 있다.
 
-### In code
+### 코드
 
-`LanguageRow` (name, `code`, `label`, `dot`, `handle` and `handled` for the handle column, `drag` for the sortable's transform) with `LanguageRowHandle` (the grip) and `LanguageSource` (the bold flag, a rule and the one quiet underlined button). The language picker is a `Popover` with a `Command` (`shouldFilter={false}`, the screen filters), the source menu a `DropdownMenu` with a radio group, and the "직접 입력" window a `Dialog` whose `DialogTitle` takes `of` ("새 언어 · tlh").
+`LanguageRow`(이름, `code`, `label`, `dot`, 손잡이 열을 위한 `handle`과 `handled`, 정렬 가능 항목의 변형을 위한 `drag`)와 `LanguageRowHandle`(손잡이), `LanguageSource`(굵은 표시, 구분선, 조용한 밑줄 버튼 하나). 언어 고르기는 `Command`(`shouldFilter={false}`, 거르기는 화면이 한다)를 담은 `Popover`이고, 원문 메뉴는 라디오 묶음을 담은 `DropdownMenu`, "직접 입력" 창은 `DialogTitle`이 `of`("새 언어 · tlh")를 받는 `Dialog`다.

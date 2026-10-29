@@ -1,80 +1,80 @@
-# Proposal
+# 제안
 
-This page covers how an AI proposal is shown and handled on the spot: the blue pencil, the bubble, request marks and cards, the fill-a-field button, and the blue "made by AI" state of controls.
+이 페이지는 AI 제안을 그 자리에서 보이고 다루는 방식을 다룬다. 파란 연필, 버블, 요청 표시와 카드, 필드 채우기 버튼, 그리고 컨트롤의 파란 "AI가 만든" 상태다.
 
-All of it is the blue pencil (`fg-proposal`), and this color is not used for anything else.
+모두 파란 연필(`fg-proposal`)이고, 이 색은 다른 데 쓰지 않는다.
 
-## Blue pencil
+## 파란 연필
 
-The blue pencil marks every proposal from the AI that has not been accepted yet. The color (`fg-proposal`) is used for nothing else.
+파란 연필은 아직 받아들이지 않은 AI의 제안을 모두 표시한다. 이 색(`fg-proposal`)은 다른 데 쓰지 않는다.
 
-- Text that is taken out: a blue strikethrough. Text that comes in: a pale blue ground (`bg-proposal-muted`).
-- A proposal that fills an empty place (moving dimmed source text) is blue text with no ground.
-- The proposal being looked at has a blue vertical line in the left margin. A proposal that is in another tab has a blue dot beside the tab name.
-- The look is the same everywhere: the editor, settings, the review screen and the assistant card.
+- 빠지는 글자: 파란 취소선. 들어오는 글자: 옅은 파란 바탕(`bg-proposal-muted`).
+- 빈 자리를 채우는 제안(흐린 원문 글자를 옮겨 오는 것)은 바탕 없는 파란 글자다.
+- 보고 있는 제안은 왼쪽 여백에 파란 세로선이 있다. 다른 탭에 있는 제안은 탭 이름 옆에 파란 점이 있다.
+- 모양은 어디서나 같다. 편집기, 설정, 검토 화면, 어시스턴트 카드.
 
-### In code
+### 코드
 
-`Ins` (text that comes in: pale blue ground, blue letters), `Del` (text taken out: blue with a line through it), `Fill` (an empty place filled with a suggestion: blue letters, no ground), `CurrentProposal` (the blue line in the left margin of the text the proposal is about) and `ChangeDot tone="proposal"` (the dot beside a tab name on other tabs). `Highlight` is a run of text on the highlight background: the words a note to the assistant is about, or the words that differ between two versions. It sets no color, so the text keeps its own.
+`Ins`(들어오는 글자: 옅은 파란 바탕, 파란 글자), `Del`(빠지는 글자: 줄이 그어진 파랑), `Fill`(제안으로 채운 빈 자리: 파란 글자, 바탕 없음), `CurrentProposal`(제안이 다루는 글의 왼쪽 여백에 있는 파란 선), `ChangeDot tone="proposal"`(다른 탭의 탭 이름 옆 점). `Highlight`는 강조 바탕 위의 글자 묶음이다. 어시스턴트에게 남긴 메모가 다루는 말이나, 두 버전에서 다른 말에 쓴다. 색을 정하지 않으므로 글자는 제 색을 지킨다.
 
-## Bubble
+## 버블
 
-A bubble to move between proposals that hang on places, and accept or discard them. It floats in the center, directly above the status bar.
+자리에 달린 제안 사이를 오가며 받아들이거나 버리는 버블이다. 가운데, 상태 표시줄 바로 위에 뜬다.
 
-- Left: ✦ and the name of the request (so the source is known even with the panel closed). Pressing it goes to that conversation.
-- Center: ↑ n / N ↓.
-- Right: "모두 버리기" (discard all) and a small pill, "모두 받기" (accept all).
-- Height 44. Discarding, accepting or asking about one by one is not in the bubble: it is done in the card that opens when the mark is pressed. The shortcuts (⌘⌫ discard, ⌘↵ accept) work on the proposal now pointed at, and the letters show only as tooltips.
+- 왼쪽: ✦와 요청 이름(패널이 닫혀 있어도 어디서 왔는지 알 수 있다). 누르면 그 대화로 간다.
+- 가운데: ↑ n / N ↓.
+- 오른쪽: "모두 버리기"와 작은 알약 "모두 받기".
+- 높이 44. 하나씩 버리기, 받기, 묻기는 버블에 없다. 표시를 누르면 열리는 카드에서 한다. 단축키(⌘⌫ 버리기, ⌘↵ 받기)는 지금 가리킨 제안에 작동하고, 글자는 툴팁으로만 보인다.
 
-### In code
+### 코드
 
-`ProposalBubble`: `name` (the request's words, cut with … when long), `onOpen`, `position` (the one being looked at, from 1) and `total`, previous / next labels and handlers, and discard-all / accept-all labels and handlers. It holds nothing for a single proposal: accepting, discarding or asking again about one is in the card that opens from its mark.
+`ProposalBubble`: `name`(요청의 말. 길면 …로 자른다), `onOpen`, `position`(보고 있는 것, 1부터)과 `total`, 이전 / 다음 레이블과 핸들러, 모두 버리기 / 모두 받기 레이블과 핸들러. 제안 하나를 위한 것은 담지 않는다. 하나를 받거나 버리거나 다시 묻는 일은 그 표시에서 열리는 카드에 있다.
 
-## Request mark and card
+## 요청 표시와 카드
 
-An AI request left at a place in the text. A small mark (with a count) sits in the block's left margin, and pressing it opens a card under that place. Several can be left without waiting for them.
+글의 한 자리에 남긴 AI 요청이다. 작은 표시(개수 포함)가 블록 왼쪽 여백에 놓이고, 누르면 그 자리 아래에 카드가 열린다. 기다리지 않고 여러 개를 남길 수 있다.
 
-- A request attached to plain body text gets the `bg-highlight` ground on those words.
-- While it is being fixed, the mark shows "…" instead of a count.
+- 평범한 본문 글에 단 요청은 그 말에 `bg-highlight` 바탕이 깔린다.
+- 고치는 동안에는 표시에 개수 대신 "…"가 보인다.
 
-The card (`.mt-memo`) has three parts.
+카드(`.mt-memo`)는 세 부분이다.
 
-- **Head** (`.mt-memo-head`, 48px): at the left where the request is attached (12px gray), at the right "버리기" (discard) and [받기] (accept). Accept is the one black pill in a floating surface. There is no close button. It closes with a press outside, Esc, or pressing the mark again.
-- **Conversation** (`.mt-memo-thread`): the name line is 12px, with the name only in bold (the assistant is ✦ and blue), and the time dimmed. The body is 14px. 16px between messages.
-- **Reply row** (`.mt-memo-reply`, 48px): one line under a rule. When empty, the send button is dimmed.
-- Buttons are not put in the middle of the conversation. However long it gets, accept and discard are always in the head.
+- **머리**(`.mt-memo-head`, 48px): 왼쪽에 요청이 달린 곳(12px 회색), 오른쪽에 "버리기"와 [받기]. 받기는 뜬 표면의 검은 알약 하나다. 닫기 버튼은 없다. 바깥을 누르거나, Esc를 누르거나, 표시를 다시 누르면 닫힌다.
+- **대화**(`.mt-memo-thread`): 이름 줄은 12px이고, 이름만 굵게(어시스턴트는 ✦에 파랑), 시각은 흐리게 쓴다. 본문은 14px. 메시지 사이는 16px.
+- **답장 행**(`.mt-memo-reply`, 48px): 선 아래 한 줄. 비어 있으면 보내기 버튼이 흐리다.
+- 대화 중간에 버튼을 넣지 않는다. 대화가 아무리 길어져도 받기와 버리기는 언제나 머리에 있다.
 
-### In code
+### 코드
 
-`Marker` with `tone="request"` (a note left for the assistant, with a count; `margin` hangs it in the left margin, 12px from the block; `active` when its card is open). `MemoCard`: three parts. The head (48px) says where the note is (`where`, "Request · paragraph 4") and holds the two ways to deal with it, always in this order: a quiet text to discard, then one black pill to accept (a spark before the accept label when accepting asks the assistant to do something, "✦ Translate again"). The key combinations show as tooltips on the head's buttons. The body is a `MemoThread` of `MemoMessage`s (16px apart; the assistant's name, `ai`, is blue with a spark; while it works there is an indicator) or a `MemoDiff`. `reply` adds the row at the bottom where the note goes on ("Continue").
+`Marker`와 `tone="request"`(어시스턴트에게 남긴 메모, 개수 포함. `margin`은 블록에서 12px 떨어진 왼쪽 여백에 단다. 카드가 열려 있으면 `active`). `MemoCard`: 세 부분이다. 머리(48px)는 메모가 어디 있는지 말하고(`where`, "Request · paragraph 4"), 그것을 처리하는 두 방법을 언제나 이 순서로 담는다. 버리는 조용한 글자, 그다음 받는 검은 알약 하나다(받기가 어시스턴트에게 무언가를 시키면 받기 레이블 앞에 반짝이가 붙는다. "✦ Translate again"). 키 조합은 머리 버튼의 툴팁으로 보인다. 본문은 `MemoMessage`를 담은 `MemoThread`(16px 간격. 어시스턴트의 이름 `ai`는 반짝이가 붙은 파랑이고, 일하는 동안 표시가 있다)나 `MemoDiff`다. `reply`는 메모를 이어 쓰는 행을 맨 아래에 더한다("Continue").
 
-## Fill a field
+## 필드 채우기
 
-A text button that fills one property field with AI (`mt-ai-action`). It has the same letters as the field label (mono 11) and differs only in blue; it has no border or ground. It floats at the right end of the label row, on the one field the hand is on.
+속성 필드 하나를 AI로 채우는 글자 버튼이다(`mt-ai-action`). 필드 레이블과 같은 글자(mono 11)이고 파랑인 것만 다르다. 테두리도 바탕도 없다. 손이 놓인 필드 하나에서만 레이블 행 오른쪽 끝에 뜬다.
 
-- An empty field: "✦ 채우기" (✦ fill). After filling, or a field that has a value: "↻ 다시" (↻ again).
-- While working: a turning ring (10px) in place of ✦ / ↻ and "쓰는 중…" (writing…). It stays blue and is not dimmed. It cannot be pressed again. When the answer comes the value goes in and the button becomes "↻ 다시".
-- It is a job the person pointed at one field, so the value goes in at once without the blue pencil proposal. If it is not liked, "↻ 다시" gets a new one, and to undo use ⌘Z.
-- The blue pencil (accept / discard) is used only when the agent changes several places or the body text.
-- Keyboard: ⌘J inside the field. Nothing is made before it is pressed.
+- 빈 필드: "✦ 채우기". 채운 뒤나 값이 있는 필드: "↻ 다시".
+- 일하는 동안: ✦ / ↻ 자리에 도는 고리(10px)와 "쓰는 중…". 파랑을 유지하고 흐려지지 않는다. 다시 누를 수 없다. 답이 오면 값이 들어가고 버튼은 "↻ 다시"가 된다.
+- 사람이 필드 하나를 가리켜 맡긴 일이므로, 값은 파란 연필 제안 없이 곧바로 들어간다. 마음에 들지 않으면 "↻ 다시"로 새 값을 받고, 되돌리려면 ⌘Z를 쓴다.
+- 파란 연필(받기 / 버리기)은 에이전트가 여러 곳이나 본문 글을 바꿀 때만 쓴다.
+- 키보드: 필드 안에서 ⌘J. 누르기 전에는 아무것도 만들지 않는다.
 
-### In code
+### 코드
 
-`Spark` is the one ✦ mark of the assistant. It is an icon like the Carbon ones, so it is not closed: it goes where an `icon` goes (`icon={Spark}`, a button's or a menu item's icon) and is sized by its parent. It is filled with `currentColor`, so it follows the text it stands next to (the proposal blue on a proposal, the button's ink on a button), and it is decorative: the words next to it say what it means. Every place that marks something as the assistant's uses it, never a sparkles icon from an icon set.
+`Spark`는 어시스턴트의 유일한 ✦ 표시다. Carbon 아이콘 같은 아이콘이라 닫혀 있지 않다. `icon`이 들어가는 자리에 들어가고(`icon={Spark}`, 버튼이나 메뉴 항목의 아이콘), 크기는 부모가 정한다. `currentColor`로 채워지므로 곁의 글자를 따른다(제안에서는 제안 파랑, 버튼에서는 버튼의 잉크). 장식이다. 무슨 뜻인지는 곁의 말이 알린다. 무언가를 어시스턴트의 것으로 표시하는 곳은 모두 이것을 쓰며, 아이콘 세트의 sparkles 아이콘은 쓰지 않는다.
 
-`AiAction`: `loading` shows the spinner and "writing" label, and the action cannot be pressed again and is not dimmed (only `disabled` dims); it is `aria-busy`. `filled` (the field has a value) makes it ask again instead of filling. It goes in `FormFieldLabel action`, and inside a `FormField` it shows only on the field the pointer or keyboard is in.
+`AiAction`: `loading`은 스피너와 "writing" 레이블을 보이고, 다시 누를 수 없으며 흐려지지 않는다(`disabled`만 흐리게 한다). `aria-busy`다. `filled`(필드에 값이 있음)이면 채우기 대신 다시 묻는다. `FormFieldLabel action`에 들어가고, `FormField` 안에서는 포인터나 키보드가 있는 필드에서만 보인다.
 
-## State made by AI
+## AI가 만든 상태
 
-A state that the AI made and the person has not touched yet is shown in blue (`fg-proposal`, with the ground `bg-proposal-muted`). When the person touches that element, accepts it or saves, it returns to the normal color. Blue is for AI only.
+AI가 만들었고 사람이 아직 건드리지 않은 상태는 파랑으로 보인다(`fg-proposal`, 바탕 `bg-proposal-muted`). 사람이 그 요소를 건드리거나, 받아들이거나, 저장하면 보통 색으로 돌아간다. 파랑은 AI에만 쓴다.
 
-- Filter chip: `.mt-chip.is-ai` + ✦ in front. It ends when the chip is changed or removed.
-- Picked rows: `.mt-row.is-on.is-ai` + `.mt-check.is-on.is-ai`, and the checkbox name is "AI가 고름" (picked by AI). If any one check is touched, all return to normal picking.
-- Field value: input and select fields are `.is-ai` (blue text + blue underline), and value text in a panel is `.mt-fill`. It ends when the field is edited or the entry saved. In the properties list a value is `PropertyRow proposal` (blue text, described as the assistant's), and the open field gets the same `proposal`. The entry editor keeps the keys the assistant filled (`useField().assisted`): editing a key, or saving the entry, takes the mark off.
-- Switch: `.mt-switch.is-on.is-ai`.
-- It is not told by color alone. The chip has ✦, and the checkbox and field get an accessible name.
-- Work with nothing to paint, such as going to another screen, is left as one line in the panel.
+- 필터 칩: `.mt-chip.is-ai` + 앞에 ✦. 칩을 바꾸거나 지우면 끝난다.
+- 고른 행: `.mt-row.is-on.is-ai` + `.mt-check.is-on.is-ai`이고, 체크박스 이름은 "AI가 고름"이다. 체크 하나라도 건드리면 모두 보통 고르기로 돌아간다.
+- 필드 값: 입력과 선택 필드는 `.is-ai`(파란 글자 + 파란 밑줄)이고, 패널 안의 값 글자는 `.mt-fill`이다. 필드를 고치거나 글을 저장하면 끝난다. 속성 목록의 값은 `PropertyRow proposal`(파란 글자, 어시스턴트의 것이라고 설명된다)이고, 열린 필드도 같은 `proposal`을 받는다. 글 편집기는 어시스턴트가 채운 키를 기억한다(`useField().assisted`). 키를 고치거나 글을 저장하면 표시가 사라진다.
+- 스위치: `.mt-switch.is-on.is-ai`.
+- 색만으로 알리지 않는다. 칩에는 ✦가 있고, 체크박스와 필드는 접근 가능한 이름을 받는다.
+- 칠할 것이 없는 일(다른 화면으로 가기 같은)은 패널에 한 줄로 남긴다.
 
-### In code
+### 코드
 
-The `proposal` prop on `Chip`, `Checkbox`, `Switch`, `Input`, `Textarea`, `Select`, `Affix`, `MapRow` (through its `Select`) and `Tile`. A control with `proposal` gets the accessible description of `UiLabels.proposal` ("AI suggestion"), through `useProposalDescription`; a chip, which is only text, uses `ProposalNote`.
+`Chip`, `Checkbox`, `Switch`, `Input`, `Textarea`, `Select`, `Affix`, `MapRow`(그 `Select`를 거쳐), `Tile`의 `proposal` prop. `proposal`이 있는 컨트롤은 `useProposalDescription`을 거쳐 `UiLabels.proposal`("AI suggestion")의 접근 가능한 설명을 받는다. 글자뿐인 칩은 `ProposalNote`를 쓴다.

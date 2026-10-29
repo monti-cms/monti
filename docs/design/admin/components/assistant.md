@@ -1,52 +1,52 @@
-# Assistant
+# 어시스턴트
 
-This page covers what is inside the assistant panel: the conversation, tool call lines, proposal cards, the input box, the model picker and error replies.
+이 페이지는 어시스턴트 패널 안에 든 것을 다룬다. 대화, 도구 호출 줄, 제안 카드, 입력 상자, 모델 선택기, 오류 답장이다.
 
-The panel itself is a side panel (see Overlay).
+패널 자체는 사이드 패널이다(오버레이 참고).
 
-## Conversation
+## 대화
 
-My words are a speech bubble at the right (paper). The assistant's answer has no ground and is plain text. A tool call is one mono line ("✓ 글 목록 읽음 · 게시글 6편" (✓ read the post list · 6 posts)); pressing it opens the input and the result.
+내 말은 오른쪽의 말풍선이다(종이). 어시스턴트의 답은 바탕 없이 그냥 글이다. 도구 호출은 mono 한 줄이다("✓ 글 목록 읽음 · 게시글 6편"). 누르면 입력과 결과가 열린다.
 
-### In code
+### 코드
 
-`ChatMessage`: `user` is a paper bubble at the right, and `assistant` is plain text with no ground; `streaming` shows a thin blinking caret after the last word while the answer is still arriving. Put them in a column. `ToolCallLine`: one call as a mono line with a mark for where it stands (running, ✓ done, ⚠ failed) and what was done, in words. With `details` the line opens to show the input and the result; without, it is a plain line. `statusLabel` is the status in words for screen readers; it is not drawn. `Suggest` is one row of the assistant's empty panel: a request to start from (`request` is a saved one with a spark, `recent` one asked before with a clock); pressing it sends the words or puts them in the box. `Suggest` has no rule in the DS README.
+`ChatMessage`: `user`는 오른쪽의 종이 말풍선이고, `assistant`는 바탕 없는 그냥 글이다. `streaming`은 답이 아직 오는 동안 마지막 단어 뒤에 깜박이는 얇은 커서를 보인다. 세로 열로 쌓는다. `ToolCallLine`: 호출 하나를 mono 한 줄로 보인다. 어디까지 왔는지 표시(진행 중, ✓ 완료, ⚠ 실패)하고, 한 일을 말로 적는다. `details`가 있으면 줄이 열려 입력과 결과를 보이고, 없으면 그냥 줄이다. `statusLabel`은 스크린 리더용 상태 설명이고 그려지지 않는다. `Suggest`는 어시스턴트 빈 패널의 한 행이다. 시작할 요청이다(`request`는 반짝이가 붙은 저장된 요청, `recent`는 시계가 붙은 전에 했던 요청). 누르면 그 말을 보내거나 상자에 넣는다. `Suggest`는 DS README에 규칙이 없다.
 
-## Proposal card
+## 제안 카드
 
-A proposal card in the chat. It tells what is changed in how many places; each item has a blue pencil; below are "검토" (review) · "버리기" (discard) · [적용] (apply). After applying: "✓ 2편에 적용 · 10:52 · 되돌리기" (✓ applied to 2 posts · 10:52 · undo).
+대화 안의 제안 카드다. 무엇이 몇 곳에서 바뀌는지 알린다. 항목마다 파란 연필이 있고, 아래에 "검토" · "버리기" · [적용]이 있다. 적용한 뒤에는 "✓ 2편에 적용 · 10:52 · 되돌리기"가 된다.
 
-### In code
+### 코드
 
-`ProposalCard`: the head says what will change and how much ("Proposal · Fill summary · 2 posts") and that it waits for review; under it one `ProposalItem` per place (its name in bold, and under it the text with `Ins` and `Del` marks); at the bottom review (goes to the places), discard and a black Apply. Once applied (`appliedLabel`, `undoLabel`) the bottom line says so with the time and a way back. The README writes this part as `Proposal card`.
+`ProposalCard`: 머리는 무엇이 얼마나 바뀌는지("Proposal · Fill summary · 2 posts")와 검토를 기다린다는 것을 말한다. 그 아래 위치마다 `ProposalItem`이 하나씩 온다(굵은 이름, 그 아래 `Ins`와 `Del` 표시가 있는 글). 맨 아래에 검토(그 위치들로 간다), 버리기, 검은 적용이 있다. 적용하고 나면(`appliedLabel`, `undoLabel`) 맨 아래 줄이 시각과 되돌릴 방법을 함께 적어 그 사실을 알린다. README는 이 부품을 `Proposal card`로 적는다.
 
-## Input box
+## 입력 상자
 
-The assistant input box. At the lower left is the model picker (remembered per conversation); at the right is a round send button. While the answer is being written the send button becomes stop.
+어시스턴트 입력 상자다. 왼쪽 아래에 모델 선택기가 있고(대화마다 기억한다), 오른쪽에 둥근 보내기 버튼이 있다. 답을 쓰는 동안 보내기 버튼은 멈춤이 된다.
 
-### In code
+### 코드
 
-`ChatInput`: a rounded box with a text area, and under it a row with `aside` at the start (the model picker) and a round send button at the end that becomes a stop button while the answer is being written (`busy`). Enter sends and Shift+Enter breaks the line (not while an input method is composing). Nothing is sent while the text is blank or the box is `disabled`. The words are the app's.
+`ChatInput`: 글 영역이 든 둥근 상자다. 그 아래 행의 앞쪽에 `aside`(모델 선택기)가, 끝에 둥근 보내기 버튼이 있다. 이 버튼은 답을 쓰는 동안 멈춤 버튼이 된다(`busy`). Enter는 보내고 Shift+Enter는 줄을 바꾼다(입력기가 글자를 조합하는 중에는 아니다). 글이 비어 있거나 상자가 `disabled`이면 아무것도 보내지 않는다. 문구는 앱이 정한다.
 
-## Model picker
+## 모델 선택기
 
-At the lower left of the input box, `모델 · 생각 정도 ▾` (model · thinking level). Pressing opens a menu upward (`.mt-card` + the menu parts).
+입력 상자 왼쪽 아래의 `모델 · 생각 정도 ▾`다. 누르면 위로 메뉴가 열린다(`.mt-card` + 메뉴 부품).
 
-- A search row at the top (`.mt-menu-search`). A key like OpenRouter has hundreds of models, so finding comes first.
-- The list is grouped by key, not by company. At the top is a "최근" (recent) group with the recently used models, and the count beside each group name. The list scrolls inside (`.mt-menu-scroll`).
-- A model name is mono 12 (`.mt-menu-item.is-mono`). The default model is marked "기본" (default). A model that cannot use tools is not in the list.
-- The last row is "생각 › 보통" (thinking › normal). In the second level pick one of "끔" (off) · "낮음" (low) · "보통" (normal) · "높음" (high). If the model does not support thinking, this row is left out.
-- The chosen model and thinking level are remembered per conversation.
+- 맨 위에 검색 행이 있다(`.mt-menu-search`). OpenRouter 같은 키는 모델이 수백 개라서 찾기가 먼저다.
+- 목록은 회사가 아니라 키로 묶는다. 맨 위에 최근에 쓴 모델을 모은 "최근" 그룹이 있고, 그룹 이름 옆에 개수가 있다. 목록은 안에서 스크롤된다(`.mt-menu-scroll`).
+- 모델 이름은 mono 12다(`.mt-menu-item.is-mono`). 기본 모델에는 "기본" 표시가 붙는다. 도구를 쓸 수 없는 모델은 목록에 없다.
+- 마지막 행은 "생각 › 보통"이다. 둘째 단계에서 "끔" · "낮음" · "보통" · "높음" 중 하나를 고른다. 모델이 생각을 지원하지 않으면 이 행은 빠진다.
+- 고른 모델과 생각 정도는 대화마다 기억한다.
 
-There is no dedicated model-picker component in `@monti-cms/ui`: it is built from the `aside` slot of `ChatInput` and the menu parts (see Menu).
+`@monti-cms/ui`에는 모델 선택기 전용 컴포넌트가 없다. `ChatInput`의 `aside` 슬롯과 메뉴 부품으로 만든다(메뉴 참고).
 
-## When blocked
+## 막혔을 때
 
-Sending is not blocked. If something cannot be done after sending, it is told by an error reply in the conversation (`.mt-msg-error`): one red line at the left, one bold red title line, one gray line of explanation, and under it what can be done.
+보내기는 막지 않는다. 보낸 뒤에 할 수 없는 일이 생기면 대화 안의 오류 답장으로 알린다(`.mt-msg-error`). 왼쪽에 빨간 선 하나, 굵은 빨간 제목 한 줄, 회색 설명 한 줄, 그 아래 할 수 있는 일이 온다.
 
-- The service refused (out of credit): "Anthropic 크레딧이 부족해요" (Anthropic credit is low) · the key name · one line telling to top up at the service's site · [다른 모델로 보내기] (send with another model). Picking another model sends that message again as it is. Monti does not count money (only the service knows the price), so it shows no amount or limit.
-- The connection dropped: "연결이 끊겼어요" (the connection was lost) · how far it got · [이어서 하기] (continue).
+- 서비스가 거절했다(크레딧 부족): "Anthropic 크레딧이 부족해요" · 키 이름 · 서비스 사이트에서 충전하라는 한 줄 · [다른 모델로 보내기]. 다른 모델을 고르면 그 메시지를 그대로 다시 보낸다. Monti는 돈을 세지 않으므로(가격은 서비스만 안다) 금액이나 한도를 보이지 않는다.
+- 연결이 끊겼다: "연결이 끊겼어요" · 어디까지 했는지 · [이어서 하기].
 
-### In code
+### 코드
 
-`ChatError`: a red line on the left, the problem in one bold red line, one grey line that says what happened (which key, when it opens again), and what can be done next (`actions`, one or two text buttons). Sending is never blocked beforehand; this is what comes back after.
+`ChatError`: 왼쪽에 빨간 선, 굵은 빨간 한 줄로 쓴 문제, 무슨 일이 있었는지 말하는 회색 한 줄(어느 키인지, 언제 다시 열리는지), 그리고 다음에 할 수 있는 일(`actions`, 글자 버튼 한두 개)이다. 보내기는 미리 막지 않는다. 이것은 보낸 뒤에 돌아오는 것이다.

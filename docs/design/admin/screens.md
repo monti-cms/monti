@@ -1,683 +1,683 @@
-# Admin screens
+# 관리자 화면 목록
 
-This file lists the main screens (boards) on page "A · 가운데 단" of the Monti admin canvas, what each is for, its states, and which flow steps use it.
+이 파일은 Monti 관리자 화면 캔버스의 "A · 가운데 단" 페이지에 있는 주요 화면(보드)을 정리한다. 화면마다 용도, 상태, 그 화면을 쓰는 흐름 단계를 적는다.
 
-A state is a value of the board's main prop (`mode`, `stage`, `view`, `attempt`, ...). Flow step boards import a main board with one state; the "Used in" column gives those steps as `flow.step`. A state with no steps is not used by any flow. Component rules are in `components/`.
+상태는 보드의 주 prop(`mode`, `stage`, `view`, `attempt`, ...)이 갖는 값이다. 흐름 단계 보드는 주 보드 하나를 상태 하나로 가져다 쓴다. "쓰이는 곳" 열은 그 단계를 `flow.step` 꼴로 적는다. 단계가 없는 상태는 어떤 흐름에서도 쓰이지 않는다. 컴포넌트 규칙은 `components/`에 있다.
 
 <a id="main"></a>
 ## Main: "게시글 목록"
 
-- Board: `Main.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: The post list: rows of posts with columns, search, filters, folders, bulk actions and the right-click menus. Most list behaviour (sort, filter, columns, trash, folders) is shown as modes of this one board.
-- Used in flows: 1.01, 2.01–2.03, 2.06, 2.10, 2.11, 2.16, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26, 3.12, 5.01–5.10, 7.01, 7.01b, 7.02, 7.02b, 7.02c, 7.03, 7.04, 7.04b, 7.04c, 7.04d, 7.04e, 7.05, 7.05b, 7.05c, 7.10, 9.04
+- 보드: `Main.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 게시글 목록이다. 열이 있는 글 행, 검색, 필터, 폴더, 일괄 작업, 우클릭 메뉴가 있다. 목록 동작 대부분(정렬, 필터, 열, 휴지통, 폴더)은 이 보드 하나의 모드로 보여 준다.
+- 쓰이는 흐름: 1.01, 2.01–2.03, 2.06, 2.10, 2.11, 2.16, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26, 3.12, 5.01–5.10, 7.01, 7.01b, 7.02, 7.02b, 7.02c, 7.03, 7.04, 7.04b, 7.04c, 7.04d, 7.04e, 7.05, 7.05b, 7.05c, 7.10, 9.04
 
-States (`mode`, default "처음 화면"):
+상태 (`mode`, 기본값 "처음 화면"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "처음 화면" | The default list: post rows, status, title, address, tags, language, modified date; 25 per page. | 1.01, 2.01, 2.02, 2.06, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26 |
-| "찾는 중" | Search text typed ("리액트"); the list is cut to the matches; the words stay in the search box, with no chip. | - |
-| "여러 개 선택" | Two rows selected. A bulk bar replaces the column header: request, publish, archive, move to folder, change, clear selection. | - |
-| "바꾸기 메뉴" | Bulk bar with the "바꾸기" menu open: tags with a tri-state mark (all selected, some such as 1/2, none). | 7.10 |
-| "어시스턴트가 거름" | The assistant filtered the list; the filter chip "요약 비어 있음" is blue and two rows remain. | 2.03, 2.11, 2.16 |
-| "거른 뒤 선택" | The assistant-filtered list with both rows selected by the user. | - |
-| "AI가 고름" | Two rows selected by the assistant (blue) with the bulk bar. | 2.10 |
-| "상태 메뉴" | Status column menu: published, editing, draft, archived with counts; a dot on the column name; hide column. | 7.04 |
-| "여러 필터" | Several filters at once: status "수정 중, 초안" and modified date "최근 30일", a dot on each column name and no chip row. | 7.04e |
-| "태그 메뉴" | Tag column menu: tag search, "없음" on top, each tag with its post count, hide column. | 7.04b |
-| "언어 메뉴" | Language column menu: languages with counts (KO, EN, JA) and the translation filter (none, source changed, up to date); a dot on the column name. | 3.12, 7.04c |
-| "수정일 메뉴" | Modified-date column menu: newest first, oldest first, today, last 7 days, last 30 days, pick a range; a dot on the column name. | 7.05 |
-| "기간 고르기" | The range calendar opens beside the date menu; first click starts the range. | 7.05b |
-| "기간 걸림" | Second click applied: the column has its dot and the calendar stays open showing the range. | 7.05c |
-| "검색 설명 메뉴" | SEO description column (turned on with +) menu: "비어 있음" (empty); a dot on the column name. | 7.04d |
-| "제목 메뉴" | Title column menu: ascending, descending. | 7.01 |
-| "제목 오름차순" | Sorted ascending: the menu is closed and the title name is ink-colored with an up arrow. | 7.01b |
-| "열 추가" | The + menu at the end of the header lists only the hidden columns. | 7.02 |
-| "열 옮기는 중" | A column name is lifted and dragged; the other columns move aside; dropping saves the order. | 7.02b |
-| "쪽마다" | The per-page control is open: 25, 50, 100 per page. | 7.02c |
-| "휴지통 확인" | Confirm dialog for moving a published post to the trash (its publication ends, its translation goes too). | 5.10 |
-| "휴지통으로 옮김" | After a trash move without confirm: the notice "휴지통으로 옮겼어요" with undo. | 5.09 |
-| "행 메뉴" | Right-click menu on a row: open, open in new tab, duplicate, move to folder (expanded), archive, trash. | 5.07 |
-| "여러 행 메뉴" | Right-click menu on a multi-row selection, titled with the count ("2개 항목"). | 5.08 |
-| "폴더 우클릭" | Right-click menu on a folder row: open, rename, move to, delete folder. | 5.04 |
-| "새 폴더" | A new folder row at the top with its name selected. | 5.01 |
-| "폴더 안" | Inside a folder: its posts, the path and the "상위 폴더로" row. | 5.02 |
-| "폴더 안 검색" | Search inside a folder; the scope switch reads "시리즈 원고 / 모든 폴더". | 5.03 |
-| "폴더 지우기 확인" | Confirm dialog for deleting a folder that holds a published post. | 5.05 |
-| "폴더 지움" | After the folder and its posts went to the trash: notice with undo. | 5.06 |
-| "고른 글 내보냄" | Two selected posts exported from the ⋯ menu: notice "2편을 내보냈어요". | 9.04 |
-| "찾을 곳 고르기" | The search scope picker before the search box: all, title, address, body. | 7.03 |
-| "주소로 찾음" | Search by address for "-2": the two posts whose address got -2 after an import. | - |
+| "처음 화면" | 기본 목록. 글 행, 상태, 제목, 주소, 태그, 언어, 수정일이 있고 한 쪽에 25개다. | 1.01, 2.01, 2.02, 2.06, 2.22, 2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26 |
+| "찾는 중" | 검색어("리액트")를 입력했다. 목록이 맞는 글로 줄어든다. 검색어는 검색창에 남고 칩은 없다. | - |
+| "여러 개 선택" | 두 행을 골랐다. 열 머리 자리에 일괄 막대가 온다: 요청, 발행, 보관, 폴더로 옮기기, 바꾸기, 선택 해제. | - |
+| "바꾸기 메뉴" | 일괄 막대의 "바꾸기" 메뉴가 열렸다. 태그마다 세 가지 표시가 붙는다(모두 선택됨, 1/2 같은 일부, 없음). | 7.10 |
+| "어시스턴트가 거름" | 어시스턴트가 목록을 걸렀다. 필터 칩 "요약 비어 있음"이 파란색이고 두 행이 남는다. | 2.03, 2.11, 2.16 |
+| "거른 뒤 선택" | 어시스턴트가 거른 목록에서 사용자가 두 행을 모두 골랐다. | - |
+| "AI가 고름" | 어시스턴트가 고른 두 행(파란색)과 일괄 막대. | 2.10 |
+| "상태 메뉴" | 상태 열 메뉴: 발행됨, 수정 중, 초안, 보관됨과 각 개수. 열 이름에 점이 붙는다. 열 숨기기. | 7.04 |
+| "여러 필터" | 필터 여럿을 함께 건다: 상태 "수정 중, 초안"과 수정일 "최근 30일". 열 이름마다 점이 붙고 칩 줄은 없다. | 7.04e |
+| "태그 메뉴" | 태그 열 메뉴: 태그 검색, 맨 위의 "없음", 태그마다 글 수, 열 숨기기. | 7.04b |
+| "언어 메뉴" | 언어 열 메뉴: 언어와 개수(KO, EN, JA), 번역 필터(없음, 원문 바뀜, 최신). 열 이름에 점이 붙는다. | 3.12, 7.04c |
+| "수정일 메뉴" | 수정일 열 메뉴: 최신순, 오래된순, 오늘, 최근 7일, 최근 30일, 기간 고르기. 열 이름에 점이 붙는다. | 7.05 |
+| "기간 고르기" | 날짜 메뉴 옆에 기간 달력이 열린다. 첫 클릭이 기간의 시작이다. | 7.05b |
+| "기간 걸림" | 두 번째 클릭으로 적용했다. 열에 점이 붙고, 달력은 열린 채로 기간을 보여 준다. | 7.05c |
+| "검색 설명 메뉴" | SEO 설명 열(+로 켬)의 메뉴: "비어 있음". 열 이름에 점이 붙는다. | 7.04d |
+| "제목 메뉴" | 제목 열 메뉴: 오름차순, 내림차순. | 7.01 |
+| "제목 오름차순" | 오름차순으로 정렬했다. 메뉴는 닫히고, 제목 열 이름이 잉크색이 되며 위쪽 화살표가 붙는다. | 7.01b |
+| "열 추가" | 머리 끝의 + 메뉴는 숨긴 열만 보여 준다. | 7.02 |
+| "열 옮기는 중" | 열 이름 하나를 들어서 끈다. 다른 열이 비켜나고, 놓으면 순서가 저장된다. | 7.02b |
+| "쪽마다" | 쪽당 개수 컨트롤이 열렸다: 쪽마다 25, 50, 100개. | 7.02c |
+| "휴지통 확인" | 발행된 글을 휴지통으로 옮길 때의 확인 대화상자(발행이 끝나고 번역도 함께 간다). | 5.10 |
+| "휴지통으로 옮김" | 확인 없이 휴지통으로 옮긴 뒤: "휴지통으로 옮겼어요" 알림과 되돌리기. | 5.09 |
+| "행 메뉴" | 행의 우클릭 메뉴: 열기, 새 탭에서 열기, 복제, 폴더로 옮기기(펼침), 보관, 휴지통. | 5.07 |
+| "여러 행 메뉴" | 여러 행을 고른 상태의 우클릭 메뉴. 제목에 개수가 있다("2개 항목"). | 5.08 |
+| "폴더 우클릭" | 폴더 행의 우클릭 메뉴: 열기, 이름 바꾸기, 옮기기, 폴더 삭제. | 5.04 |
+| "새 폴더" | 맨 위에 새 폴더 행이 생기고 이름이 선택돼 있다. | 5.01 |
+| "폴더 안" | 폴더 안: 그 폴더의 글, 경로, "상위 폴더로" 행. | 5.02 |
+| "폴더 안 검색" | 폴더 안에서 검색한다. 범위 전환은 "시리즈 원고 / 모든 폴더"로 보인다. | 5.03 |
+| "폴더 지우기 확인" | 발행된 글이 든 폴더를 지울 때의 확인 대화상자. | 5.05 |
+| "폴더 지움" | 폴더와 그 안의 글이 휴지통으로 간 뒤: 되돌리기가 있는 알림. | 5.06 |
+| "고른 글 내보냄" | ⋯ 메뉴로 고른 글 두 편을 내보냈다: 알림 "2편을 내보냈어요". | 9.04 |
+| "찾을 곳 고르기" | 검색창 앞의 검색 범위 선택: 전체, 제목, 주소, 본문. | 7.03 |
+| "주소로 찾음" | 주소로 "-2"를 찾는다: 가져오기 뒤 주소에 -2가 붙은 글 두 편. | - |
 
 <a id="editornotion"></a>
 ## EditorNotion: "글 편집기"
 
-- Board: `EditorNotion.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: The post editor in the Notion style: title, body blocks, block handle and format card, slash menu, property panel (basic and SEO tabs), to-do panel, plugin strip, publish menu, status bar and the conflict or draft notices. It has many independent props instead of one state list.
-- Used in flows: 1.02–1.16, 1.18, 2.04, 2.05, 2.07, 3.01, 3.08, 3.14, 5.18, 6.05, 6.06, 6.38
+- 보드: `EditorNotion.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: Notion 방식의 글 편집기다. 제목, 본문 블록, 블록 손잡이와 서식 카드, 슬래시 메뉴, 속성 패널(기본, SEO 탭), 할 일 패널, 플러그인 띠, 발행 메뉴, 상태 표시줄, 충돌이나 임시 저장본 알림이 있다. 상태 목록 하나 대신 서로 독립된 prop이 많다.
+- 쓰이는 흐름: 1.02–1.16, 1.18, 2.04, 2.05, 2.07, 3.01, 3.08, 3.14, 5.18, 6.05, 6.06, 6.38
 
-States (`state`, default "글자 고름 + 블록 메뉴"):
+상태 (`state`, 기본값 "글자 고름 + 블록 메뉴"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "글자 고름 + 블록 메뉴" | Text selected: format card over it and the block handle menu open (default). | 1.03 |
-| "블록 바꾸기" | Block handle › turn into: submenu of block types. | 1.04 |
-| "블록 정렬" | Block handle › align: left, center, right. | 1.05 |
-| "/ 를 쳤을 때" | The slash menu: search, block kinds (heading, list, quote, divider and so on). | - |
-| "템플릿 고르기" | The slash menu's template list for a new post. | 1.02 |
-| "아무것도 안 할 때" | Plain editor with nothing selected or open; the base for the status, to-do, toast and dialog props. | 1.06–1.16, 1.18, 2.04, 2.05, 2.07, 3.01, 3.08, 3.14, 5.18, 6.05, 6.06, 6.38 |
+| "글자 고름 + 블록 메뉴" | 글자를 골랐다. 그 위에 서식 카드가 뜨고 블록 손잡이 메뉴가 열려 있다(기본값). | 1.03 |
+| "블록 바꾸기" | 블록 손잡이 › 바꾸기: 블록 종류 하위 메뉴. | 1.04 |
+| "블록 정렬" | 블록 손잡이 › 정렬: 왼쪽, 가운데, 오른쪽. | 1.05 |
+| "/ 를 쳤을 때" | 슬래시 메뉴: 검색, 블록 종류(제목, 목록, 인용, 구분선 등). | - |
+| "템플릿 고르기" | 새 글에서 슬래시 메뉴의 템플릿 목록. | 1.02 |
+| "아무것도 안 할 때" | 아무것도 고르거나 열지 않은 편집기. 상태, 할 일, 토스트, 대화상자 prop의 바탕이다. | 1.06–1.16, 1.18, 2.04, 2.05, 2.07, 3.01, 3.08, 3.14, 5.18, 6.05, 6.06, 6.38 |
 
-Other props:
+그 밖의 prop:
 
-- `panelTab` "기본" or "SEO": the property panel tab.
-- `doc` "쓰던 글" or "새 글": an existing post or a new empty one.
-- `pub` "초안", "발행됨", "수정 중": the publish status shown in the header.
-- `save` "저장 전 변경사항", "저장됨", "브라우저에만 임시 저장됨", "편집 충돌": the status bar.
-- `todo` "남음" or "다 채움": publish checks left or all filled.
-- `fix` "없음", "요약", "대체 텍스트": which to-do is being fixed in the panel.
-- `toast` "없음", "발행 막힘", "발행됨": the toast.
-- `pubMenu`: the publish menu with keep-date and today's-date choices.
-- `moreMenu` "없음", "열림", "본문 폭": the header ⋯ menu open, and its "본문 폭 ▸" second level open. The document tools are its middle group (see EditorTools).
-- `trashed`: the read-only trashed-post view.
-- `img` "없음", "올리는 중", "설정", "파일": the image or file block state.
-- `panelFill`, `seriesPending`, `todoOpen`, `pluginOpen`, `panel`: panel and strip open states.
-- `dialog` "없음", "편집 충돌", "임시 저장본 복구": the notice bar kind.
-- `langMenu` "없음", "열림", "언어 하나뿐": the language tab menu.
+- `panelTab` "기본" 또는 "SEO": 속성 패널 탭.
+- `doc` "쓰던 글" 또는 "새 글": 있던 글 또는 비어 있는 새 글.
+- `pub` "초안", "발행됨", "수정 중": 헤더에 보이는 발행 상태.
+- `save` "저장 전 변경사항", "저장됨", "브라우저에만 임시 저장됨", "편집 충돌": 상태 표시줄.
+- `todo` "남음" 또는 "다 채움": 발행 전 점검이 남았거나 모두 채워졌다.
+- `fix` "없음", "요약", "대체 텍스트": 패널에서 고치고 있는 할 일.
+- `toast` "없음", "발행 막힘", "발행됨": 토스트.
+- `pubMenu`: 날짜 유지와 오늘 날짜 선택이 있는 발행 메뉴.
+- `moreMenu` "없음", "열림", "본문 폭": 헤더 ⋯ 메뉴가 열린 상태와, 그 안의 "본문 폭 ▸" 둘째 단계가 열린 상태. 문서 도구는 이 메뉴의 가운데 묶음이다(EditorTools 참고).
+- `trashed`: 휴지통에 든 글의 읽기 전용 화면.
+- `img` "없음", "올리는 중", "설정", "파일": 이미지 또는 파일 블록의 상태.
+- `panelFill`, `seriesPending`, `todoOpen`, `pluginOpen`, `panel`: 패널과 띠가 열린 상태.
+- `dialog` "없음", "편집 충돌", "임시 저장본 복구": 알림 막대의 종류.
+- `langMenu` "없음", "열림", "언어 하나뿐": 언어 탭 메뉴.
 
 <a id="editortranslate"></a>
 ## EditorTranslate: "글 편집기 · 번역"
 
-- Board: `EditorTranslate.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: The editor for a translation of a post: dimmed blocks to decide on, AI translation proposals, margin marks where the source changed, publish checks.
-- Used in flows: 3.02–3.04, 3.06, 3.07, 3.09–3.11, 3.15
+- 보드: `EditorTranslate.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 글의 번역을 다루는 편집기다. 정해야 할 흐린 블록, AI 번역 제안, 원문이 바뀐 곳의 여백 표시, 발행 전 점검이 있다.
+- 쓰이는 흐름: 3.02–3.04, 3.06, 3.07, 3.09–3.11, 3.15
 
-States (`stage`, default "새 번역"):
+상태 (`stage`, 기본값 "새 번역"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "새 번역" | A new translation: all blocks dimmed (source shown faintly), address copied, one to-do open. | 3.02 |
-| "번역 제안" | AI translation arrived as 6 blue proposals; accept or discard each or all. | 3.03 |
-| "블록 고르기" | A dimmed block's choice: translate, keep source ("원문 유지") or delete. | 3.04 |
-| "발행 막힘" | Publish blocked because a dimmed block remains; to-do panel with "이동". | 3.06 |
-| "발행됨" | Published: toast "발행되었어요" with view. | 3.07 |
-| "원문 바뀜" | The source changed: banner (10. 26 · 3 places), margin marks changed, new, removed. | 3.09 |
-| "바뀜 카드" | A margin mark opened: source before and after, with confirm and ✦ translate again. | 3.10 |
-| "다시 번역" | The new translation of a changed block arrived as a blue proposal; status editing. | 3.11 |
-| "번역 지우기" | The ⋯ menu with "이 번역 휴지통으로" and the note that the Korean source stays. | 3.15 |
+| "새 번역" | 새 번역이다. 모든 블록이 흐리고(원문이 옅게 보인다), 주소가 복사되고, 할 일 하나가 열려 있다. | 3.02 |
+| "번역 제안" | AI 번역이 파란 제안 6개로 도착했다. 하나씩 또는 모두 받아들이거나 버린다. | 3.03 |
+| "블록 고르기" | 흐린 블록 하나의 선택지: 번역, "원문 유지", 삭제. | 3.04 |
+| "발행 막힘" | 흐린 블록이 남아 발행이 막혔다. "이동"이 있는 할 일 패널. | 3.06 |
+| "발행됨" | 발행했다. 보기가 있는 토스트 "발행되었어요". | 3.07 |
+| "원문 바뀜" | 원문이 바뀌었다. 배너(10. 26 · 3곳)와 바뀜, 새로 생김, 지워짐 여백 표시. | 3.09 |
+| "바뀜 카드" | 여백 표시 하나를 열었다. 바뀌기 전과 뒤의 원문, 확인과 ✦ 다시 번역. | 3.10 |
+| "다시 번역" | 바뀐 블록의 새 번역이 파란 제안으로 도착했다. 상태는 수정 중이다. | 3.11 |
+| "번역 지우기" | "이 번역 휴지통으로"가 있는 ⋯ 메뉴와, 한국어 원문은 남는다는 안내. | 3.15 |
 
 <a id="editorproposal"></a>
 ## EditorProposal: "글 편집기 · AI 제안 (파란 연필)"
 
-- Board: `EditorProposal.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: The post editor with AI edits shown as blue pencil marks and a memo card to adjust a proposal in place.
-- Used in flows: 2.08, 2.09
+- 보드: `EditorProposal.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: AI 수정을 파란 연필 표시로 보여 주고, 메모 카드로 제안을 그 자리에서 다듬는 글 편집기다.
+- 쓰이는 흐름: 2.08, 2.09
 
-Other props:
+그 밖의 prop:
 
-- `memoCard`: the memo card on a proposal, shown or hidden.
-- `panelTab` "기본" or "SEO": the property panel tab.
+- `memoCard`: 제안에 붙는 메모 카드. 보이거나 숨는다.
+- `panelTab` "기본" 또는 "SEO": 속성 패널 탭.
 
 <a id="translatepaired"></a>
 ## TranslatePaired: "번역 · 원문 나란히 (선택 보기)"
 
-- Board: `TranslatePaired.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: A translation shown side by side with its source (the "원문 · 옆 창 · 나란히" view), block by block.
-- Used in flows: 3.05
+- 보드: `TranslatePaired.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 번역을 원문과 블록 단위로 나란히 보여 준다("원문 · 옆 창 · 나란히" 보기).
+- 쓰이는 흐름: 3.05
 
 <a id="editorcompare"></a>
 ## EditorCompare: "글 편집기 · 비교 (충돌 · 임시 저장본)"
 
-- Board: `EditorCompare.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: The compare screen for two versions of one post: your input or browser draft against the server copy; pick one side.
-- Used in flows: 1.17, 1.19
+- 보드: `EditorCompare.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 한 글의 두 버전을 비교하는 화면이다. 내 입력이나 브라우저 임시 저장본을 서버 사본과 맞대 보고 한쪽을 고른다.
+- 쓰이는 흐름: 1.17, 1.19
 
-States (`mode`, default "편집 충돌"):
+상태 (`mode`, 기본값 "편집 충돌"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "편집 충돌" | Your unsaved input against the latest server version (v4, saved 10:41); load the server version or save your input. | 1.17 |
-| "임시 저장본" | The browser-only draft (10. 26 10:12) against the server copy (10. 26 09:58); load the draft or discard it. | 1.19 |
+| "편집 충돌" | 저장하지 않은 내 입력과 최신 서버 버전(v4, 10:41 저장)을 비교한다. 서버 버전을 불러오거나 내 입력을 저장한다. | 1.17 |
+| "임시 저장본" | 브라우저에만 있는 임시 저장본(10. 26 10:12)과 서버 사본(10. 26 09:58)을 비교한다. 임시 저장본을 불러오거나 버린다. | 1.19 |
 
-In code it is the edit address with `?compare=conflict` or `?compare=draft`, drawn by the editor in place of its own screen, so the input that is not saved stays in the editor while it is compared. Only the properties that differ are listed on top of each side; the title and the body are compared word by word and block by block (`compareEntries`). The count in the header and in the status bar ("다른 곳 3") is the number of properties, the title and the body blocks that differ.
+코드에서는 편집 주소에 `?compare=conflict`나 `?compare=draft`를 붙인 것이다. 편집기가 자기 화면 대신 이것을 그리므로, 저장하지 않은 입력은 비교하는 동안에도 편집기에 남아 있다. 각 쪽 위에는 서로 다른 속성만 나열한다. 제목과 본문은 단어 단위, 블록 단위로 비교한다(`compareEntries`). 헤더와 상태 표시줄의 개수("다른 곳 3")는 서로 다른 속성, 제목, 본문 블록의 수다.
 
 <a id="translate"></a>
-## Translate: (untitled)
+## Translate: (제목 없음)
 
-- Board: `Translate.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: An early draft of the translation editor, kept on the canvas but untitled and not used by any flow.
-- Used in flows: none.
+- 보드: `Translate.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 번역 편집기의 초기 초안이다. 캔버스에 남아 있지만 제목이 없고 어떤 흐름도 쓰지 않는다.
+- 쓰이는 흐름: 없음.
 
 <a id="translatefill"></a>
-## TranslateFill: (untitled)
+## TranslateFill: (제목 없음)
 
-- Board: `TranslateFill.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: An early draft of the translation fill state, kept on the canvas but untitled and not used by any flow.
-- Used in flows: none.
+- 보드: `TranslateFill.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 번역 채우기 상태의 초기 초안이다. 캔버스에 남아 있지만 제목이 없고 어떤 흐름도 쓰지 않는다.
+- 쓰이는 흐름: 없음.
 
-States (`state`, default "제안 도착"):
+상태 (`state`, 기본값 "제안 도착"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "흐린 원문" | Dimmed source before the request. | - |
-| "제안 도착" | Translation proposals arrived. | - |
+| "흐린 원문" | 요청하기 전의 흐린 원문. | - |
+| "제안 도착" | 번역 제안이 도착했다. | - |
 
 <a id="translateupdate"></a>
-## TranslateUpdate: (untitled)
+## TranslateUpdate: (제목 없음)
 
-- Board: `TranslateUpdate.dc.html` (canvas row: "글 — 목록 · 편집 · 번역")
-- Purpose: An early draft of the translation update state, kept on the canvas but untitled and not used by any flow.
-- Used in flows: none.
+- 보드: `TranslateUpdate.dc.html` (캔버스 행: "글 — 목록 · 편집 · 번역")
+- 용도: 번역 갱신 상태의 초기 초안이다. 캔버스에 남아 있지만 제목이 없고 어떤 흐름도 쓰지 않는다.
+- 쓰이는 흐름: 없음.
 
-States (`state`, default "제안 도착"):
+상태 (`state`, 기본값 "제안 도착"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "요청 전" | Before the retranslate request. | - |
-| "제안 도착" | New proposals arrived. | - |
+| "요청 전" | 다시 번역을 요청하기 전. | - |
+| "제안 도착" | 새 제안이 도착했다. | - |
 
 <a id="empty"></a>
 ## Empty: "빈 목록 (첫 방문)"
 
-- Board: `Empty.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: The empty list a collection shows before it has any entry, with the call to write the first one.
-- Used in flows: 8.03
+- 보드: `Empty.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 컬렉션에 글이 하나도 없을 때 보이는 빈 목록이다. 첫 글을 쓰라는 안내가 있다.
+- 쓰이는 흐름: 8.03
 
-States (`collection`, default "메모"):
+상태 (`collection`, 기본값 "메모"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "메모" | Empty notes collection: "아직 메모가 없어요." with "첫 메모 쓰기". | - |
-| "게시글" | Empty posts collection: "아직 글이 없어요." with "첫 글 쓰기". | 8.03 |
+| "메모" | 빈 메모 컬렉션: "아직 메모가 없어요."와 "첫 메모 쓰기". | - |
+| "게시글" | 빈 게시글 컬렉션: "아직 글이 없어요."와 "첫 글 쓰기". | 8.03 |
 
 <a id="dialogs"></a>
 ## Dialogs: "대화상자 · 내보내기와 확인"
 
-- Board: `Dialogs.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: Reference sheet of two shared dialogs: export selected posts (purpose, file kind, what is included), and move to trash, plus the unsaved-changes dialog.
-- Used in flows: none.
+- 보드: `Dialogs.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 공용 대화상자 두 개를 모은 참고 시트다. 고른 글 내보내기(목적, 파일 종류, 포함할 것)와 휴지통으로 옮기기가 있고, 저장하지 않은 변경 대화상자도 있다.
+- 쓰이는 흐름: 없음.
 
 <a id="assistant"></a>
 ## Assistant: "어시스턴트 패널"
 
-- Board: `Assistant.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: The post list with the assistant panel open and one proposal card in it, pending review or applied. Superseded by AssistantPanel states in the flows.
-- Used in flows: none.
+- 보드: `Assistant.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 어시스턴트 패널이 열려 있고 그 안에 제안 카드 하나가 있는 글 목록이다. 카드는 검토를 기다리거나 이미 적용됐다. 흐름에서는 AssistantPanel 상태가 이 보드를 대신한다.
+- 쓰이는 흐름: 없음.
 
-States (`proposal`, default "검토 대기"):
+상태 (`proposal`, 기본값 "검토 대기"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "검토 대기" | A proposal card pending review: review, discard, apply. | - |
-| "적용됨" | The same card applied: "✓ 2편에 적용" with undo. | - |
+| "검토 대기" | 검토를 기다리는 제안 카드: 검토, 버리기, 적용. | - |
+| "적용됨" | 같은 카드를 적용했다: "✓ 2편에 적용"과 되돌리기. | - |
 
 <a id="proposalreview"></a>
 ## ProposalReview: "어시스턴트 · 제안 검토 (여러 곳에 걸친 제안)"
 
-- Board: `ProposalReview.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: The review screen for an assistant proposal that touches many places or posts: one row per change, with apply, progress and result.
-- Used in flows: 2.12–2.15, 3.13
+- 보드: `ProposalReview.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 여러 곳이나 여러 글에 걸친 어시스턴트 제안을 검토하는 화면이다. 바뀌는 것마다 한 행이고, 적용, 진행, 결과가 있다.
+- 쓰이는 흐름: 2.12–2.15, 3.13
 
-States (`stage`, default "검토"):
+상태 (`stage`, 기본값 "검토"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "검토" | The review: one line per change, discard and "14건 적용" (default stage). | 2.12, 2.13, 3.13 |
-| "적용 중" | Applying: progress 9 of 14. | 2.14 |
-| "결과" | Result: 13 applied, 1 failed with the reason, "모두 되돌리기". | 2.15 |
+| "검토" | 검토 화면. 바뀌는 것마다 한 줄, 버리기와 "14건 적용"(기본 단계). | 2.12, 2.13, 3.13 |
+| "적용 중" | 적용하는 중이다. 14개 중 9개 진행. | 2.14 |
+| "결과" | 결과: 13개 적용, 1개는 이유와 함께 실패, "모두 되돌리기". | 2.15 |
 
-Other props:
+그 밖의 prop:
 
-- `view` "한 줄" or "나란히": one line per change, or now and proposal side by side.
-- `kind` "여러 작업" or "번역": a multi-action proposal, or a translation proposal (original and translation per post).
+- `view` "한 줄" 또는 "나란히": 바뀌는 것마다 한 줄, 또는 지금과 제안을 나란히.
+- `kind` "여러 작업" 또는 "번역": 여러 작업을 담은 제안, 또는 번역 제안(글마다 원문과 번역).
 
 <a id="proposalreviewside"></a>
 ## ProposalReviewSide: "어시스턴트 · 제안 검토 · 나란히"
 
-- Board: `ProposalReviewSide.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: The proposal review in its side-by-side view (now and proposal next to each other). Same board as ProposalReview with view "나란히".
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `ProposalReviewSide.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 나란히 보기(지금과 제안을 옆에 둔다)로 본 제안 검토다. ProposalReview에서 view를 "나란히"로 둔 것과 같은 보드다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).
 
 <a id="assistantfirst"></a>
 ## AssistantFirst: "어시스턴트 · 처음 열었을 때"
 
-- Board: `AssistantFirst.dc.html` (canvas row: "글 — 첫 방문 · 대화상자 · 어시스턴트")
-- Purpose: The editor with the assistant opened for the first time on a post: starter requests for this post.
-- Used in flows: none.
+- 보드: `AssistantFirst.dc.html` (캔버스 행: "글 — 첫 방문 · 대화상자 · 어시스턴트")
+- 용도: 글에서 어시스턴트를 처음 열었을 때의 편집기다. 이 글에 맞는 시작 요청이 보인다.
+- 쓰이는 흐름: 없음.
 
 <a id="taxonomy"></a>
 ## Taxonomy: "카테고리 · 항목 열기"
 
-- Board: `Taxonomy.dc.html` (canvas row: "분류 · 미디어 · 휴지통")
-- Purpose: Categories and tags: the list of entries with post counts, selection, merging tags.
-- Used in flows: 7.06–7.09
+- 보드: `Taxonomy.dc.html` (캔버스 행: "분류 · 미디어 · 휴지통")
+- 용도: 카테고리와 태그다. 항목 목록과 글 수, 선택, 태그 합치기가 있다.
+- 쓰이는 흐름: 7.06–7.09
 
-States (`stage`, default "카테고리"):
+상태 (`stage`, 기본값 "카테고리"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "카테고리" | The categories list with name, address, description and counts, and "카테고리 추가". | - |
-| "태그" | The tags list with post counts, including tags no post uses. | 7.06 |
-| "태그 고름" | Two tags selected: bar with merge, trash, clear selection. | 7.07 |
-| "태그 합치기" | Merge dialog: which name to keep, how many posts change, which address disappears. | 7.08 |
-| "태그 합침" | After merging: updated count and the notice with undo. | 7.09 |
+| "카테고리" | 이름, 주소, 설명, 개수가 있는 카테고리 목록과 "카테고리 추가". | - |
+| "태그" | 글 수가 붙은 태그 목록. 어떤 글도 쓰지 않는 태그도 들어 있다. | 7.06 |
+| "태그 고름" | 태그 두 개를 골랐다. 합치기, 휴지통, 선택 해제가 있는 막대. | 7.07 |
+| "태그 합치기" | 합치기 대화상자: 남길 이름, 바뀌는 글 수, 사라지는 주소. | 7.08 |
+| "태그 합침" | 합친 뒤: 바뀐 개수와 되돌리기가 있는 알림. | 7.09 |
 
 <a id="media"></a>
 ## Media: "미디어"
 
-- Board: `Media.dc.html` (canvas row: "분류 · 미디어 · 휴지통")
-- Purpose: The media library: folders, files, upload and drag-drop, list view, search, filters (alt text, kind), file side panel, replace, bulk actions, alt text proposals.
-- Used in flows: 2.19, 6.01–6.04, 6.07–6.28, 6.31–6.36
+- 보드: `Media.dc.html` (캔버스 행: "분류 · 미디어 · 휴지통")
+- 용도: 미디어 라이브러리다. 폴더, 파일, 올리기와 끌어 놓기, 목록 보기, 검색, 필터(대체 텍스트, 종류), 파일 옆 패널, 바꾸기, 일괄 작업, 대체 텍스트 제안이 있다.
+- 쓰이는 흐름: 2.19, 6.01–6.04, 6.07–6.28, 6.31–6.36
 
-States (`mode`, default "폴더 안"):
+상태 (`mode`, 기본값 "폴더 안"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "최상위" | Library top level: folders and files not in any folder. | 6.07 |
-| "폴더 안" | Inside a folder (Blog Assets): sub-folders and files (default). | 6.08 |
-| "필터 열기" | Filter menu: alt text none or present. | 6.22 |
-| "새 폴더" | New folder in place with its name selected. | 6.09 |
-| "폴더 우클릭" | Right-click menu on a folder: open, rename, move to, delete folder. | 6.10 |
-| "폴더 지움" | Folder moved to the trash without confirm; notice with undo. | 6.11 |
-| "폴더 일부 남김" | Folder delete when some files are in use: only unused files moved; notice with view. | 6.12 |
-| "빈 곳 우클릭" | Right-click on empty space: upload, new folder. | 6.13 |
-| "파일 메뉴" | Right-click menu on a file: open, used in (posts), move to folder. | 6.17 |
-| "하위 폴더" | A folder with sub-folders and files (covers). | - |
-| "목록 보기" | List view: name, use, type, size, dimensions, uploaded date. | 6.14 |
-| "끌어 놓기" | Dragging files over the library: border on the current folder and the pill "여기에 올려요". | 6.01 |
-| "폴더 위로 끌기" | Dragging over a sub-folder: only that folder is highlighted, the pill names it. | 6.02 |
-| "올리는 중" | Upload in progress: per-file progress or waiting. | 6.03 |
-| "올리기 실패" | Failed uploads stay in place: unsupported type (remove), too large (shrink and retry, remove). | 6.04 |
-| "파일 열기" | Side panel for a file: address, name, folder, alt text, caption, type, size, date, used in. | 6.16 |
-| "바꾸기 메뉴" | Side panel ⋯ menu: replace file, copy ID, move to trash (the address actions are in the body). | 6.18 |
-| "파일 바꾸기" | The chosen replacement file confirmed; the places using it will use the new file. | 6.19 |
-| "여러 개 선택" | Two files selected: bulk bar with move to folder, trash, clear. | 6.20 |
-| "폴더로 옮기기" | Bulk bar "폴더로" menu: top level, folders, new folder. | 6.21 |
-| "찾는 중" | Search for "cover", scope widened to all folders, folder path shown on each result. | 6.15 |
-| "필터 걸림" | Chip "대체 텍스트: 없음 ×" applied; scope "Blog Assets / 모든 폴더". | 6.23 |
-| "대체 텍스트 없는 것 고름" | All files without alt text selected (3). | 2.19, 6.24 |
-| "대체 텍스트 제안" | Three blue alt text proposals with discard all and accept all. | 6.25 |
-| "대체 텍스트 메모" | One proposal opened for a memo and rewritten in place. | 6.26 |
-| "휴지통으로 옮김" | A file moved to the trash; notice with undo. | 6.27 |
-| "일부 남김" | Delete with some files in use: used files stay; notice with view. | 6.28 |
-| "저장소 없음" | No media storage: explanation and "연결 방법". | 6.31 |
-| "종류 열기" | Kind filter menu: images, files. | 6.32 |
-| "종류 파일" | Kind "파일" applied: files only, chip "종류: 파일", no alt text filter. | 6.33 |
-| "PDF 올리는 중" | Uploading PDF and other files: file icon with type instead of a preview. | 6.34 |
-| "받지 않는 형식" | A rejected type (.exe) stays in place with the accepted kinds line and remove. | 6.35 |
-| "PDF 열기" | Side panel for a PDF: name, type, size, date, used in, copy address, replace, trash; no alt text. | 6.36 |
+| "최상위" | 라이브러리 최상위: 폴더와, 어느 폴더에도 없는 파일. | 6.07 |
+| "폴더 안" | 폴더(Blog Assets) 안: 하위 폴더와 파일(기본값). | 6.08 |
+| "필터 열기" | 필터 메뉴: 대체 텍스트 없음 또는 있음. | 6.22 |
+| "새 폴더" | 그 자리에 새 폴더가 생기고 이름이 선택돼 있다. | 6.09 |
+| "폴더 우클릭" | 폴더의 우클릭 메뉴: 열기, 이름 바꾸기, 옮기기, 폴더 삭제. | 6.10 |
+| "폴더 지움" | 확인 없이 폴더를 휴지통으로 옮겼다. 되돌리기가 있는 알림. | 6.11 |
+| "폴더 일부 남김" | 일부 파일이 쓰이고 있는 폴더를 지운다. 쓰이지 않는 파일만 옮기고, 보기가 있는 알림이 뜬다. | 6.12 |
+| "빈 곳 우클릭" | 빈 곳을 우클릭한다: 올리기, 새 폴더. | 6.13 |
+| "파일 메뉴" | 파일의 우클릭 메뉴: 열기, 쓰인 곳(글), 폴더로 옮기기. | 6.17 |
+| "하위 폴더" | 하위 폴더와 파일이 있는 폴더(covers). | - |
+| "목록 보기" | 목록 보기: 이름, 쓰임, 형식, 크기, 가로세로, 올린 날짜. | 6.14 |
+| "끌어 놓기" | 파일을 라이브러리 위로 끌고 있다. 지금 폴더에 테두리가 생기고 알약 "여기에 올려요"가 뜬다. | 6.01 |
+| "폴더 위로 끌기" | 하위 폴더 위로 끌고 있다. 그 폴더만 강조되고, 알약이 그 폴더 이름을 말한다. | 6.02 |
+| "올리는 중" | 올리는 중이다. 파일마다 진행률 또는 대기. | 6.03 |
+| "올리기 실패" | 실패한 파일은 그 자리에 남는다: 지원하지 않는 형식(빼기), 너무 큼(줄여서 다시 올리기, 빼기). | 6.04 |
+| "파일 열기" | 파일의 옆 패널: 주소, 이름, 폴더, 대체 텍스트, 캡션, 형식, 크기, 날짜, 쓰인 곳. | 6.16 |
+| "바꾸기 메뉴" | 옆 패널의 ⋯ 메뉴: 파일 바꾸기, ID 복사, 휴지통으로 옮기기(주소 동작은 본문에 있다). | 6.18 |
+| "파일 바꾸기" | 고른 새 파일을 확정했다. 이 파일을 쓰던 곳은 새 파일을 쓴다. | 6.19 |
+| "여러 개 선택" | 파일 두 개를 골랐다. 폴더로 옮기기, 휴지통, 해제가 있는 일괄 막대. | 6.20 |
+| "폴더로 옮기기" | 일괄 막대의 "폴더로" 메뉴: 최상위, 폴더들, 새 폴더. | 6.21 |
+| "찾는 중" | "cover"를 검색한다. 범위가 모든 폴더로 넓어지고, 결과마다 폴더 경로가 보인다. | 6.15 |
+| "필터 걸림" | 칩 "대체 텍스트: 없음 ×"가 걸렸다. 범위는 "Blog Assets / 모든 폴더". | 6.23 |
+| "대체 텍스트 없는 것 고름" | 대체 텍스트가 없는 파일을 모두(3개) 골랐다. | 2.19, 6.24 |
+| "대체 텍스트 제안" | 파란 대체 텍스트 제안 세 개와 모두 버리기, 모두 받아들이기. | 6.25 |
+| "대체 텍스트 메모" | 제안 하나를 메모로 열어 그 자리에서 고쳐 썼다. | 6.26 |
+| "휴지통으로 옮김" | 파일 하나를 휴지통으로 옮겼다. 되돌리기가 있는 알림. | 6.27 |
+| "일부 남김" | 일부 파일이 쓰이는 중일 때의 삭제: 쓰이는 파일은 남는다. 보기가 있는 알림. | 6.28 |
+| "저장소 없음" | 미디어 저장소가 없다. 설명과 "연결 방법". | 6.31 |
+| "종류 열기" | 종류 필터 메뉴: 이미지, 파일. | 6.32 |
+| "종류 파일" | 종류 "파일"이 걸렸다. 파일만 보이고, 칩 "종류: 파일", 대체 텍스트 필터는 없다. | 6.33 |
+| "PDF 올리는 중" | PDF와 다른 파일을 올리는 중이다. 미리보기 대신 형식이 적힌 파일 아이콘. | 6.34 |
+| "받지 않는 형식" | 받지 않는 형식(.exe)은 받는 종류를 적은 줄, 빼기와 함께 그 자리에 남는다. | 6.35 |
+| "PDF 열기" | PDF의 옆 패널: 이름, 형식, 크기, 날짜, 쓰인 곳, 주소 복사, 바꾸기, 휴지통. 대체 텍스트는 없다. | 6.36 |
 
 <a id="trash"></a>
 ## Trash: "휴지통"
 
-- Board: `Trash.dc.html` (canvas row: "분류 · 미디어 · 휴지통")
-- Purpose: The trash: deleted posts, notes, tags and media with days left, deleted folders as one row, restore, permanent delete, empty trash, kind filter.
-- Used in flows: 5.11–5.17, 5.19–5.28
+- 보드: `Trash.dc.html` (캔버스 행: "분류 · 미디어 · 휴지통")
+- 용도: 휴지통이다. 지운 글, 메모, 태그, 미디어와 남은 날수, 한 행으로 보이는 지운 폴더, 복원, 영구 삭제, 휴지통 비우기, 종류 필터가 있다.
+- 쓰이는 흐름: 5.11–5.17, 5.19–5.28
 
-States (`stage`, default "보통"):
+상태 (`stage`, 기본값 "보통"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "보통" | The trash: one head row title, kind, deleted date (the cell shows the day alone, "10. 27"); rows with days left; folders as one row (default). | - |
-| "종류 메뉴" | The kind column menu: every kind with its count, several choosable, stays open. | 5.11 |
-| "행 메뉴" | Right-click menu on a row: restore, permanent delete. | 5.16 |
-| "어시스턴트" | Items the assistant discarded have a ✦ before their day. | 5.15 |
-| "미디어" | Filtered by kind "미디어": a dot after "종류" and media rows only; no chip row. | 5.17 |
-| "항목 열기" | Side panel for a trashed item (a tag): read-only, posts that point to it, restore, delete. | 5.19 |
-| "미디어 열기" | Side panel for a trashed media file: preview, details, used in, restore, delete. | 5.20 |
-| "복원함" | Notice after restore: back as a draft, with open. | 5.21 |
-| "번역 막힘" | A translation whose source is in the trash: the action is "원문 복원". | 5.22 |
-| "삭제 확인" | Permanent delete confirm; a once-published address stays reserved. | 5.23 |
-| "삭제 막힘" | Permanent delete blocked by posts that point to the item: cut links or delete them too. | 5.24 |
-| "선택" | Rows selected: bulk bar with restore, delete, clear. | 5.25 |
-| "비우기 확인" | Empty-trash confirm: 9 items, pointed-to items are kept with the reason. | 5.26 |
-| "비운 뒤" | After emptying: blocked items remain with their reason; notice 6 deleted, 1 kept. | 5.27 |
-| "빔" | Empty trash message. | 5.28 |
-| "휴지통 폴더 안" | Inside a deleted folder: contents, path, folder restore, delete. | 5.12 |
-| "폴더에서 하나 복원" | One post restored from a deleted folder: folder recreated, post back as draft. | 5.13 |
-| "휴지통 찾기" | Search in the trash includes items inside deleted folders, with their path; the words stay in the search box, with no chip. | 5.14 |
+| "보통" | 휴지통. 머리 행 하나에 제목, 종류, 지운 날짜(칸에는 날짜만, "10. 27")가 있다. 행마다 남은 날수가 있고 폴더는 한 행이다(기본값). | - |
+| "종류 메뉴" | 종류 열 메뉴: 모든 종류와 각 개수. 여럿을 고를 수 있고 메뉴는 열린 채로 있다. | 5.11 |
+| "행 메뉴" | 행의 우클릭 메뉴: 복원, 영구 삭제. | 5.16 |
+| "어시스턴트" | 어시스턴트가 버린 항목은 날짜 앞에 ✦가 붙는다. | 5.15 |
+| "미디어" | 종류 "미디어"로 걸렀다. "종류" 뒤에 점이 붙고 미디어 행만 남는다. 칩 줄은 없다. | 5.17 |
+| "항목 열기" | 휴지통 항목(태그)의 옆 패널: 읽기 전용, 이 항목을 가리키는 글, 복원, 삭제. | 5.19 |
+| "미디어 열기" | 휴지통 미디어 파일의 옆 패널: 미리보기, 자세한 정보, 쓰인 곳, 복원, 삭제. | 5.20 |
+| "복원함" | 복원한 뒤의 알림: 초안으로 돌아왔고, 열기가 있다. | 5.21 |
+| "번역 막힘" | 원문이 휴지통에 있는 번역. 동작은 "원문 복원"이다. | 5.22 |
+| "삭제 확인" | 영구 삭제 확인. 한 번 발행된 주소는 계속 예약돼 있다. | 5.23 |
+| "삭제 막힘" | 이 항목을 가리키는 글이 있어 영구 삭제가 막혔다. 링크를 끊거나 그 글도 함께 지운다. | 5.24 |
+| "선택" | 행을 골랐다. 복원, 삭제, 해제가 있는 일괄 막대. | 5.25 |
+| "비우기 확인" | 휴지통 비우기 확인: 항목 9개. 다른 곳이 가리키는 항목은 이유와 함께 남긴다. | 5.26 |
+| "비운 뒤" | 비운 뒤: 막힌 항목이 이유와 함께 남는다. 알림은 6개 삭제, 1개 남김. | 5.27 |
+| "빔" | 빈 휴지통 안내. | 5.28 |
+| "휴지통 폴더 안" | 지운 폴더 안: 내용, 경로, 폴더 복원, 삭제. | 5.12 |
+| "폴더에서 하나 복원" | 지운 폴더에서 글 하나를 복원했다. 폴더가 다시 생기고 글은 초안으로 돌아온다. | 5.13 |
+| "휴지통 찾기" | 휴지통 검색은 지운 폴더 안의 항목도 경로와 함께 찾는다. 검색어는 검색창에 남고 칩은 없다. | 5.14 |
 
 <a id="imageinsert"></a>
 ## ImageInsert: "글 편집기 · 이미지 넣기"
 
-- Board: `ImageInsert.dc.html` (canvas row: "분류 · 미디어 · 휴지통")
-- Purpose: The picker the editor opens to insert an image, a cover image or a file from the media library.
-- Used in flows: 6.29, 6.30, 6.37
+- 보드: `ImageInsert.dc.html` (캔버스 행: "분류 · 미디어 · 휴지통")
+- 용도: 편집기가 미디어 라이브러리에서 이미지, 대표 이미지, 파일을 넣으려고 여는 선택 창이다.
+- 쓰이는 흐름: 6.29, 6.30, 6.37
 
-States (`stage`, default "라이브러리"):
+상태 (`stage`, 기본값 "라이브러리"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "라이브러리" | Library picker from the editor's slash menu; choosing an image inserts it. | 6.29 |
-| "대표 이미지" | The same picker opened from the cover image field, with a pick action. | 6.30 |
-| "파일" | File picker: files only (PDF, CSV, ZIP, MD) with a type filter. | 6.37 |
+| "라이브러리" | 편집기의 슬래시 메뉴에서 연 라이브러리 선택 창. 이미지를 고르면 바로 넣는다. | 6.29 |
+| "대표 이미지" | 대표 이미지 필드에서 연 같은 선택 창. 고르기 동작이 있다. | 6.30 |
+| "파일" | 파일 선택 창: 파일만(PDF, CSV, ZIP, MD) 보이고 형식 필터가 있다. | 6.37 |
 
 <a id="templates"></a>
 ## Templates: "도구 · 템플릿"
 
-- Board: `Templates.dc.html` (canvas row: "도구")
-- Purpose: Tools › Templates: the list of post templates. A row holds the name (the way into the template's page), its headings in one line, the day it was edited ("10. 20 고침") and a ⋯ with duplicate and delete. "+ 템플릿 추가" is in the page header. The page is the content width (880), not a wide list.
-- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
+- 보드: `Templates.dc.html` (캔버스 행: "도구")
+- 용도: 도구 › 템플릿. 글 템플릿 목록이다. 한 행에는 이름(템플릿 페이지로 들어가는 길), 한 줄로 늘어놓은 제목들, 고친 날("10. 20 고침"), 복제와 삭제가 있는 ⋯가 있다. "+ 템플릿 추가"는 페이지 헤더에 있다. 페이지는 넓은 목록이 아니라 콘텐츠 폭(880)이다.
+- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
 
 <a id="templateeditor"></a>
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
-- Board: `TemplateEditor.dc.html` (canvas row: "도구")
-- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" (only while something is changed) and "저장" (always there, the page's one primary pill, as it has no publish; no shortcut on it), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field with no label (placeholder and accessible name "템플릿 이름") where an entry's title sits (`text-display`, 16 above, 20 below) over the reading-width body, with the one ink rule under it (32 above the body), and a status bar with the character count only. A save refused because the template changed elsewhere shows the notice strip (Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기"); a failed load shows the shared load-error strip with a retry.
-- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
+- 보드: `TemplateEditor.dc.html` (캔버스 행: "도구")
+- 용도: 템플릿 편집기다. 도구 페이지 밖에 있는 따로 된 페이지다(`/templates/new`, `/templates/<id>/edit`). "템플릿" 뒤로 가기 링크, "저장 안 됨"(무언가 바뀐 동안만), "저장"(늘 있다. 발행이 없으므로 이 페이지의 유일한 주 알약이다. 단축키는 없다), 복제와 삭제가 있는 ⋯(새 템플릿에는 없다), 어시스턴트 버튼이 있다. 라벨 없는 이름 필드(placeholder와 접근 가능한 이름은 "템플릿 이름")가 글 제목 자리(`text-display`, 위 16, 아래 20)에 읽기 폭 본문 위로 놓이고, 그 아래에 잉크 선 하나가 있다(본문 위 32). 상태 표시줄에는 글자 수만 있다. 템플릿이 다른 곳에서 바뀌어 저장이 거절되면 알림 띠(Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기")가 뜬다. 불러오기에 실패하면 다시 시도가 있는 공용 불러오기 오류 띠가 뜬다.
+- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>
 ## Data: "도구 · 데이터"
 
-- Board: `Data.dc.html` (canvas row: "도구")
-- Purpose: Tools › Data: download a backup, import a zip (posts from files or a full restore).
-- Used in flows: 9.01–9.03, 9.05–9.09, 9.11–9.15
+- 보드: `Data.dc.html` (캔버스 행: "도구")
+- 용도: 도구 › 데이터. 백업을 내려받고, zip을 가져온다(파일에서 글 가져오기 또는 전체 복원).
+- 쓰이는 흐름: 9.01–9.03, 9.05–9.09, 9.11–9.15
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | Backup section (last backup, include media option) and the import drop area. | 9.01 |
-| "백업 중" | The backup button shows progress. | 9.02 |
-| "백업 받음" | Backup saved: notice and the last backup is today. | 9.03 |
-| "읽는 중" | A zip was dropped; "읽는 중…". | 9.05 |
-| "못 읽음" | The file could not be read. | 9.11 |
-| "가져오기" | Import summary: found posts, skip and -2 rule, destination, field mapping. | 9.06 |
-| "가져오기 아래" | The lower part of the import sheet: publish status, images, notes, import button. | 9.07 |
-| "가져오는 중" | Importing in progress. | 9.08 |
-| "가져옴" | Import result with the changed-address list, undo, view in list. | 9.09 |
-| "복원" | Restore on an empty site: backup summary and "있던 그대로 복원". | 9.12 |
-| "복원 막힘" | Restore blocked: problems listed (unknown field, overlapping address); nothing written. | 9.13 |
-| "복원 중" | Restoring in progress. | 9.14 |
-| "복원함" | Restore done: 148 posts restored, view the list. | 9.15 |
+| "기본" | 백업 구역(마지막 백업, 미디어 포함 선택)과 가져오기 놓는 곳. | 9.01 |
+| "백업 중" | 백업 버튼이 진행을 보여 준다. | 9.02 |
+| "백업 받음" | 백업을 저장했다. 알림이 뜨고 마지막 백업이 오늘이 된다. | 9.03 |
+| "읽는 중" | zip을 놓았다. "읽는 중…". | 9.05 |
+| "못 읽음" | 파일을 읽을 수 없었다. | 9.11 |
+| "가져오기" | 가져오기 요약: 찾은 글, 건너뛰기와 -2 규칙, 넣을 곳, 필드 연결. | 9.06 |
+| "가져오기 아래" | 가져오기 시트의 아래쪽: 발행 상태, 이미지, 메모, 가져오기 버튼. | 9.07 |
+| "가져오는 중" | 가져오는 중이다. | 9.08 |
+| "가져옴" | 가져오기 결과: 바뀐 주소 목록, 되돌리기, 목록에서 보기. | 9.09 |
+| "복원" | 빈 사이트에 복원: 백업 요약과 "있던 그대로 복원". | 9.12 |
+| "복원 막힘" | 복원이 막혔다. 문제 목록(모르는 필드, 겹치는 주소)이 있고 아무것도 쓰지 않았다. | 9.13 |
+| "복원 중" | 복원하는 중이다. | 9.14 |
+| "복원함" | 복원을 마쳤다. 글 148편 복원, 목록 보기. | 9.15 |
 
 <a id="apikeys"></a>
 ## ApiKeys: "도구 · API 키"
 
-- Board: `ApiKeys.dc.html` (canvas row: "도구 (계속) · 로그인")
-- Purpose: Tools › API keys: stored AI keys, the quick-task model, and the plugin key slots. Add, edit and delete keys, plus the secret problems.
-- Used in flows: 10.01, 10.02, 10.02b, 10.03–10.11, 10.11b, 10.12, 10.12b, 10.13, 10.13b, 10.14, 10.14b, 10.15
+- 보드: `ApiKeys.dc.html` (캔버스 행: "도구 (계속) · 로그인")
+- 용도: 도구 › API 키. 저장된 AI 키, 빠른 작업 모델, 플러그인 키 자리가 있다. 키를 추가, 편집, 삭제하고, 비밀값 문제도 다룬다.
+- 쓰이는 흐름: 10.01, 10.02, 10.02b, 10.03–10.11, 10.11b, 10.12, 10.12b, 10.13, 10.13b, 10.14, 10.14b, 10.15
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | Stored keys with last four characters and monthly use, quick-task model, plugin key slots (default). | - |
-| "서비스 고르기" | Service picker for a new key. | 10.01 |
-| "키 입력" | Add dialog: name filled from the service, key field. | 10.02 |
-| "호환 주소" | Add dialog for an OpenAI-compatible address: extra address field, name from the host. | 10.02b |
-| "확인하는 중" | Add dialog while the service checks the key. | 10.03 |
-| "키 거절" | The service rejected the key: one line under the key field, dialog stays open. | 10.04 |
-| "이름 겹침" | A key with the same name exists: name becomes "Anthropic 2" and one line explains. | 10.05 |
-| "추가됨" | Key added: new row and toast. | 10.06 |
-| "편집" | Edit dialog: service as text, name, key shown as "··· a1b2" with change. | 10.07 |
-| "편집 키 열기" | Edit dialog with the empty key field open; "그대로" restores the old one. | 10.08 |
-| "편집 확인 중" | Edit dialog while the new key is checked. | 10.09 |
-| "편집 저장됨" | Edit saved: new last four characters, toast. | 10.10 |
-| "지우기 확인" | Delete confirm listing the places that use the key (red delete). | 10.11 |
-| "쓰는 곳 없이 지우기" | Delete confirm for an unused key. | 10.11b |
-| "키 넣기" | Plugin key slot: add key dialog with the service chosen. | 10.12 |
-| "키 넣음" | Plugin key added: the slot shows the key name, toast. | 10.12b |
-| "모델 고르기" | Quick-task model menu: search, models grouped by key. | 10.13 |
-| "모델 바뀜" | Quick-task model changed: row and toast. | 10.13b |
-| "읽을 수 없음" | Banner: keys unreadable because the server secret changed; each row marked. | 10.14 |
-| "다시 넣기" | Edit of an unreadable key: key field focused, key required. | 10.14b |
-| "비밀값 없음" | Banner: MONTI_SECRET is missing; adding keys blocked. | 10.15 |
+| "기본" | 마지막 네 글자와 월 사용량이 있는 저장된 키, 빠른 작업 모델, 플러그인 키 자리(기본값). | - |
+| "서비스 고르기" | 새 키의 서비스 선택. | 10.01 |
+| "키 입력" | 추가 대화상자: 서비스에서 채운 이름, 키 필드. | 10.02 |
+| "호환 주소" | OpenAI 호환 주소용 추가 대화상자: 주소 필드가 더 있고, 이름은 호스트에서 온다. | 10.02b |
+| "확인하는 중" | 서비스가 키를 확인하는 동안의 추가 대화상자. | 10.03 |
+| "키 거절" | 서비스가 키를 거절했다. 키 필드 아래에 한 줄이 뜨고 대화상자는 열려 있다. | 10.04 |
+| "이름 겹침" | 같은 이름의 키가 있다. 이름이 "Anthropic 2"가 되고 한 줄로 설명한다. | 10.05 |
+| "추가됨" | 키를 추가했다. 새 행과 토스트. | 10.06 |
+| "편집" | 편집 대화상자: 글자로 보이는 서비스, 이름, 바꾸기가 붙은 "··· a1b2" 꼴의 키. | 10.07 |
+| "편집 키 열기" | 빈 키 필드가 열린 편집 대화상자. "그대로"를 누르면 예전 키로 돌아간다. | 10.08 |
+| "편집 확인 중" | 새 키를 확인하는 동안의 편집 대화상자. | 10.09 |
+| "편집 저장됨" | 편집을 저장했다. 새 마지막 네 글자, 토스트. | 10.10 |
+| "지우기 확인" | 이 키를 쓰는 곳을 나열한 삭제 확인(빨간 삭제). | 10.11 |
+| "쓰는 곳 없이 지우기" | 쓰이지 않는 키의 삭제 확인. | 10.11b |
+| "키 넣기" | 플러그인 키 자리: 서비스가 정해진 키 추가 대화상자. | 10.12 |
+| "키 넣음" | 플러그인 키를 추가했다. 자리에 키 이름이 보이고 토스트가 뜬다. | 10.12b |
+| "모델 고르기" | 빠른 작업 모델 메뉴: 검색, 키별로 묶은 모델. | 10.13 |
+| "모델 바뀜" | 빠른 작업 모델이 바뀌었다. 행과 토스트. | 10.13b |
+| "읽을 수 없음" | 배너: 서버 비밀값이 바뀌어 키를 읽을 수 없다. 행마다 표시가 붙는다. | 10.14 |
+| "다시 넣기" | 읽을 수 없는 키의 편집: 키 필드에 포커스가 있고 키가 필수다. | 10.14b |
+| "비밀값 없음" | 배너: MONTI_SECRET이 없다. 키를 추가할 수 없다. | 10.15 |
 
 <a id="events"></a>
 ## Events: "도구 · 활동 기록"
 
-- Board: `Events.dc.html` (canvas row: "도구 (계속) · 로그인")
-- Purpose: Tools › Activity log: every event (AI changes, saves, publishes, trash, imports, settings, media) with delivery status to recipients, resend, cancel, details and filters.
-- Used in flows: 2.17, 2.18, 9.10, 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05–12.09, 12.09b, 12.10, 12.11
+- 보드: `Events.dc.html` (캔버스 행: "도구 (계속) · 로그인")
+- 용도: 도구 › 활동 기록. 모든 이벤트(AI 변경, 저장, 발행, 휴지통, 가져오기, 설정, 미디어)와 받는 곳마다의 전송 상태, 다시 보내기, 취소, 자세히, 필터가 있다.
+- 쓰이는 흐름: 2.17, 2.18, 9.10, 12.01, 12.01b, 12.02, 12.02b, 12.03, 12.04, 12.04b, 12.05–12.09, 12.09b, 12.10, 12.11
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | The activity log, unfiltered (default). | 2.17, 2.18, 9.10 |
-| "실패만" | Filter kind › delivery › failed applied; chip "전송: 실패 ×". | 12.01b |
-| "다시 보내는 중" | A row shows "보내는 중…" while resending. | 12.02 |
-| "다시 보냄" | Resent: the filtered list is empty, "필터 끄기", toast. | 12.02b |
-| "자세히" | Side panel with the event, item, and deliveries per recipient. | 12.03 |
-| "취소 확인" | Confirm dialog for cancelling a delivery. | 12.04 |
-| "취소됨" | The delivery is "취소됨"; toast. | 12.04b |
-| "실패 알림" | Notice above the list: 1 delivery failed, view, resend all. | 12.01 |
-| "실패 3건" | Three failures with "N번 실패" on each row; the notice shows 3. | 12.05 |
-| "모두 보내는 중" | Resend all in progress; notice and failed rows show sending. | 12.06 |
-| "모두 보냄" | All resent: notice gone, toast "3건 보냈어요". | 12.07 |
-| "일부 실패" | Some failed again: notice "전송 실패 1건", toast with the split. | 12.08 |
-| "필터 메뉴" | Kind filter menu with the delivery group. | 12.09 |
-| "필터 걸림" | Delivery filter chip "전송: 대기 ×". | 12.09b |
-| "구독자 없음" | A site with no recipients: records only. | 12.10 |
-| "비어 있음" | No records yet. | 12.11 |
+| "기본" | 거르지 않은 활동 기록(기본값). | 2.17, 2.18, 9.10 |
+| "실패만" | 종류 › 전송 › 실패 필터가 걸렸다. 칩 "전송: 실패 ×". | 12.01b |
+| "다시 보내는 중" | 다시 보내는 동안 행에 "보내는 중…"이 보인다. | 12.02 |
+| "다시 보냄" | 다시 보냈다. 거른 목록이 비고 "필터 끄기"와 토스트가 뜬다. | 12.02b |
+| "자세히" | 이벤트, 항목, 받는 곳마다의 전송이 있는 옆 패널. | 12.03 |
+| "취소 확인" | 전송 취소 확인 대화상자. | 12.04 |
+| "취소됨" | 전송이 "취소됨"이 됐다. 토스트. | 12.04b |
+| "실패 알림" | 목록 위의 알림: 전송 1건 실패, 보기, 모두 다시 보내기. | 12.01 |
+| "실패 3건" | 실패 세 건. 행마다 "N번 실패"가 있고 알림은 3을 보여 준다. | 12.05 |
+| "모두 보내는 중" | 모두 다시 보내는 중이다. 알림과 실패한 행이 보내는 중으로 보인다. | 12.06 |
+| "모두 보냄" | 모두 다시 보냈다. 알림이 사라지고 토스트 "3건 보냈어요"가 뜬다. | 12.07 |
+| "일부 실패" | 일부가 다시 실패했다. 알림 "전송 실패 1건", 성공과 실패를 나눠 적은 토스트. | 12.08 |
+| "필터 메뉴" | 전송 묶음이 있는 종류 필터 메뉴. | 12.09 |
+| "필터 걸림" | 전송 필터 칩 "전송: 대기 ×". | 12.09b |
+| "구독자 없음" | 받는 곳이 없는 사이트: 기록만 남는다. | 12.10 |
+| "비어 있음" | 아직 기록이 없다. | 12.11 |
 
-Other props:
+그 밖의 prop:
 
-- `filter` "전체", "전송 실패", "글 하나": a preset filter (used by flow 2 step 18).
-- `withImport`, `importDetail`, `detail`: the import line and the side panel (used by flow 9 step 10).
+- `filter` "전체", "전송 실패", "글 하나": 미리 정한 필터(흐름 2의 18단계가 쓴다).
+- `withImport`, `importDetail`, `detail`: 가져오기 줄과 옆 패널(흐름 9의 10단계가 쓴다).
 
 <a id="login"></a>
 ## Login: "로그인"
 
-- Board: `Login.dc.html` (canvas row: "도구 (계속) · 로그인")
-- Purpose: The sign-in screen and the first-admin screen of a fresh install, with their errors.
-- Used in flows: 8.01, 8.02, 8.04–8.10
+- 보드: `Login.dc.html` (캔버스 행: "도구 (계속) · 로그인")
+- 용도: 로그인 화면과, 새로 설치했을 때의 첫 관리자 화면이다. 각각의 오류도 있다.
+- 쓰이는 흐름: 8.01, 8.02, 8.04–8.10
 
-States (`attempt`, default "처음"):
+상태 (`attempt`, 기본값 "처음"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "처음" | Sign-in: email and password, or GitHub (default). | 8.05 |
-| "한 번 틀림" | Wrong credentials message. | 8.06 |
-| "잠김" | Blocked for one minute after 5 wrong attempts. | 8.07 |
-| "첫 관리자" | Create the first admin: email, password, confirm. | 8.01 |
-| "첫 관리자 오류" | First admin field errors. | 8.02 |
-| "이미 있음" | An admin already exists; go to sign-in. | 8.04 |
-| "GitHub만" | GitHub-only sign-in. | 8.08 |
-| "GitHub 권한 없음" | The GitHub account is not an admin. | 8.09 |
-| "로그인 없음" | No sign-in method configured. | 8.10 |
+| "처음" | 로그인: 이메일과 비밀번호, 또는 GitHub(기본값). | 8.05 |
+| "한 번 틀림" | 로그인 정보가 틀렸다는 안내. | 8.06 |
+| "잠김" | 5번 틀린 뒤 1분 동안 막힌다. | 8.07 |
+| "첫 관리자" | 첫 관리자 만들기: 이메일, 비밀번호, 비밀번호 확인. | 8.01 |
+| "첫 관리자 오류" | 첫 관리자 필드 오류. | 8.02 |
+| "이미 있음" | 관리자가 이미 있다. 로그인으로 간다. | 8.04 |
+| "GitHub만" | GitHub로만 로그인한다. | 8.08 |
+| "GitHub 권한 없음" | 그 GitHub 계정은 관리자가 아니다. | 8.09 |
+| "로그인 없음" | 설정된 로그인 방법이 없다. | 8.10 |
 
 <a id="settings"></a>
 ## Settings: "설정 · 사이트"
 
-- Board: `Settings.dc.html` (canvas row: "설정")
-- Purpose: Settings › Site: host names, preview path and the other site settings, with save or PR behaviour by site kind.
-- Used in flows: 2.20, 11.01–11.04, 11.09, 11.13, 11.15, 11.15b
+- 보드: `Settings.dc.html` (캔버스 행: "설정")
+- 용도: 설정 › 사이트. 호스트 이름, 미리보기 경로, 그 밖의 사이트 설정이 있다. 사이트 종류에 따라 저장하거나 PR을 만든다.
+- 쓰이는 흐름: 2.20, 11.01–11.04, 11.09, 11.13, 11.15, 11.15b
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | Settings › Site, as stored (default). | 2.20 |
-| "호스트 추가" | A new host name typed in the row. | 11.01 |
-| "언어 쿼리" | Preview language query field shown after turning off the language in the preview path. | 11.02 |
-| "칸 오류" | Field error under a host name row; saving blocked. | 11.03 |
-| "나가기 확인" | Leave dialog for unsaved changed places. | 11.04 |
-| "운영 글 쓰는 방식" | Production with the GitHub plugin: writing rules edited, button "저장". | 11.09 |
-| "운영 검토" | Review that marks which changes save directly and which go to the PR. | 11.13 |
-| "읽기 전용" | Production without the plugin: only the public address locked. | 11.15 |
-| "읽기 전용 저장" | Production without the plugin: site name edited, button "저장". | 11.15b |
+| "기본" | 저장된 그대로의 설정 › 사이트(기본값). | 2.20 |
+| "호스트 추가" | 행에 새 호스트 이름을 입력했다. | 11.01 |
+| "언어 쿼리" | 미리보기 경로에서 언어를 끄면 보이는 미리보기 언어 쿼리 필드. | 11.02 |
+| "칸 오류" | 호스트 이름 행 아래의 필드 오류. 저장이 막힌다. | 11.03 |
+| "나가기 확인" | 저장하지 않은 바뀐 곳이 있을 때의 나가기 대화상자. | 11.04 |
+| "운영 글 쓰는 방식" | GitHub 플러그인이 있는 운영 환경: 글쓰기 규칙을 고쳤고, 버튼은 "저장". | 11.09 |
+| "운영 검토" | 어떤 변경이 바로 저장되고 어떤 변경이 PR로 가는지 표시한 검토. | 11.13 |
+| "읽기 전용" | 플러그인이 없는 운영 환경: 공개 주소만 잠겨 있다. | 11.15 |
+| "읽기 전용 저장" | 플러그인이 없는 운영 환경: 사이트 이름을 고쳤고, 버튼은 "저장". | 11.15b |
 
 <a id="locales"></a>
 ## Locales: "설정 · 언어"
 
-- Board: `Locales.dc.html` (canvas row: "설정")
-- Purpose: Settings › Languages: the language list, source language, adding and removing languages.
-- Used in flows: 11.05, 11.06, 11.06b, 11.07, 11.07b, 11.08, 11.16
+- 보드: `Locales.dc.html` (캔버스 행: "설정")
+- 용도: 설정 › 언어. 언어 목록, 원문 언어, 언어 추가와 빼기가 있다.
+- 쓰이는 흐름: 11.05, 11.06, 11.06b, 11.07, 11.07b, 11.08, 11.16
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | The language list (default). | - |
-| "언어 찾기" | Add language: code finder, last item "직접 입력". | 11.05 |
-| "직접 입력" | Small dialog for code, native name and display name. | 11.06b |
-| "언어 추가됨" | A language row added at once; listed in the changes bar. | 11.06 |
-| "원문 메뉴" | Source-language picker. | 11.07 |
-| "원문 바꿈" | A new source language moved to the top; two rows marked changed. | 11.07b |
-| "빼기 검토" | Review when removing a language that has translations: keep or move to the trash. | 11.08 |
-| "읽기 전용" | Production without the plugin: list locked, only the time zone editable. | 11.16 |
+| "기본" | 언어 목록(기본값). | - |
+| "언어 찾기" | 언어 추가: 코드 찾기, 마지막 항목은 "직접 입력". | 11.05 |
+| "직접 입력" | 코드, 그 언어로 쓴 이름, 표시 이름을 넣는 작은 대화상자. | 11.06b |
+| "언어 추가됨" | 언어 행이 바로 추가됐다. 바뀐 곳 막대에 들어간다. | 11.06 |
+| "원문 메뉴" | 원문 언어 선택. | 11.07 |
+| "원문 바꿈" | 새 원문 언어가 맨 위로 올라갔다. 두 행에 바뀜 표시가 붙는다. | 11.07b |
+| "빼기 검토" | 번역이 있는 언어를 뺄 때의 검토: 남기기 또는 휴지통으로 옮기기. | 11.08 |
+| "읽기 전용" | 플러그인이 없는 운영 환경: 목록이 잠기고 시간대만 고칠 수 있다. | 11.16 |
 
 <a id="adminsettings"></a>
 ## AdminSettings: "설정 · 관리자"
 
-- Board: `AdminSettings.dc.html` (canvas row: "설정")
-- Purpose: Settings › Admin: the admin address and the admin interface language.
-- Used in flows: 11.18
+- 보드: `AdminSettings.dc.html` (캔버스 행: "설정")
+- 용도: 설정 › 관리자. 관리자 화면 주소와 관리자 화면 언어가 있다.
+- 쓰이는 흐름: 11.18
 
-States (`stage`, default "기본"):
+상태 (`stage`, 기본값 "기본"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "기본" | Admin address and interface language, editable (default). | - |
-| "읽기 전용" | Production without the plugin: only the admin address locked. | 11.18 |
+| "기본" | 관리자 화면 주소와 화면 언어. 고칠 수 있다(기본값). | - |
+| "읽기 전용" | 플러그인이 없는 운영 환경: 관리자 화면 주소만 잠겨 있다. | 11.18 |
 
 <a id="settingsproposal"></a>
 ## SettingsProposal: "설정 · AI 제안"
 
-- Board: `SettingsProposal.dc.html` (canvas row: "설정")
-- Purpose: Settings › Site with assistant proposals marked on the changed fields, awaiting save and apply.
-- Used in flows: 2.21
+- 보드: `SettingsProposal.dc.html` (캔버스 행: "설정")
+- 용도: 바뀐 필드에 어시스턴트 제안이 표시된 설정 › 사이트. 저장과 적용을 기다린다.
+- 쓰이는 흐름: 2.21
 
 <a id="collectionbasics"></a>
 ## CollectionBasics: "설정 · 컬렉션 · 기본"
 
-- Board: `CollectionBasics.dc.html` (canvas row: "설정 — 컬렉션")
-- Purpose: Settings › Collections, "기본" tab of one collection: display name, folders, structure, identifier, kind, public address, delete. Same board as Schema with tab "기본".
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `CollectionBasics.dc.html` (캔버스 행: "설정 — 컬렉션")
+- 용도: 설정 › 컬렉션에서 한 컬렉션의 "기본" 탭이다. 표시 이름, 폴더, 구조, 식별자, 종류, 공개 주소, 삭제가 있다. Schema에서 탭을 "기본"으로 둔 것과 같은 보드다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).
 
 <a id="schema"></a>
 ## Schema: "설정 · 컬렉션 · 필드"
 
-- Board: `Schema.dc.html` (canvas row: "설정 — 컬렉션")
-- Purpose: Settings › Collections: the field list of a collection, the field sheet, the new-collection form, the changes review, delete, and the production variants (PR, locks, conflict). Most collection flows are stages of this one board.
-- Used in flows: 4.01–4.19, 11.10–11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20
+- 보드: `Schema.dc.html` (캔버스 행: "설정 — 컬렉션")
+- 용도: 설정 › 컬렉션. 컬렉션의 필드 목록, 필드 시트, 새 컬렉션 양식, 바뀐 곳 검토, 삭제, 운영 환경용 변형(PR, 잠금, 충돌)이 있다. 컬렉션 흐름 대부분은 이 보드 하나의 단계다.
+- 쓰이는 흐름: 4.01–4.19, 11.10–11.12, 11.14, 11.14b, 11.17, 11.17b, 11.17c, 11.19, 11.20
 
-States (`stage`, default "보통"):
+상태 (`stage`, 기본값 "보통"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "보통" | The field list of a collection (default tab "필드"). | - |
-| "새 컬렉션" | New collection form: name, identifier, kind, public address. | 4.01 |
-| "새 컬렉션 오류" | The identifier is already used. | 4.02 |
-| "만든 직후" | The new collection with title and slug, not yet saved. | 4.03 |
-| "필드 추가" | Add-field sheet on an existing collection (text, choice, relation, advanced). | - |
-| "노트 필드 추가" | Add-field sheet on the new collection (text kind). | 4.04 |
-| "새 컬렉션 검토" | Review for a new collection: public address, fields, data untouched. | 4.05 |
-| "만듦" | Collection created: notice with view. | 4.06 |
-| "필드 바꿈" | Field list with a rename, a removal and a new required field marked; 3 changes. | 4.07 |
-| "미리보기" | Property panel preview of the new fields, not saved. | 4.08 |
-| "미리보기 오류" | Preview replaced by a list of problems; save and apply blocked. | 4.09 |
-| "바뀐 곳 목록" | The changes list open, each change with undo. | 4.10 |
-| "필드 검토" | Review: value handling per change (move, keep, delete, fill). | 4.11 |
-| "값 지우기" | Review with delete-values chosen: red "지우고 적용". | 4.12 |
-| "주소 바꿈" | Basic tab: public address edited. | 4.13 |
-| "주소 검토" | Review: address before and after, published posts affected. | 4.14 |
-| "지우기 전" | Basic tab with the delete action and counts. | 4.15 |
-| "지울 예정" | The collection left the list at once; "바뀐 곳 ▾" lists it with undo, and a notice has undo. | 4.16 |
-| "지우기 검토" | Delete review: what goes (links cut on apply) and the export; "지우고 적용" on. | 4.17 |
-| "지운 뒤" | After the save: the notice "적용됐어요" (one line for every save) and the collection gone. | 4.18 |
-| "운영 고침" | Production with the GitHub plugin: field added, button "PR 만들기". | 11.10 |
-| "운영 제안" | A field proposal from the assistant marked "✦ 제안". | 11.11 |
-| "운영 검토" | Review with the file change to monti.schema.ts and "PR 만들기". | 11.12 |
-| "PR 만듦" | An open PR row (PR #12) and the created notice. | 11.14 |
-| "PR에 더하기" | A PR is open: button "PR에 더하기". | 11.14b |
-| "읽기 전용" | Production without the plugin: structure locked, views and layout editable. | 11.17, 11.17c |
-| "읽기 전용 필드" | A field's sheet: label and description editable, structure locked. | 11.17b |
-| "적용 실패" | Banner: file saved but the database apply failed; apply again, reload. | 11.20 |
-| "충돌" | Banner: the schema file changed after opening; reload. | 11.19 |
+| "보통" | 컬렉션의 필드 목록(기본 탭 "필드"). | - |
+| "새 컬렉션" | 새 컬렉션 양식: 이름, 식별자, 종류, 공개 주소. | 4.01 |
+| "새 컬렉션 오류" | 식별자가 이미 쓰이고 있다. | 4.02 |
+| "만든 직후" | 제목과 슬러그가 있는 새 컬렉션. 아직 저장하지 않았다. | 4.03 |
+| "필드 추가" | 있던 컬렉션의 필드 추가 시트(글자, 고르기, 관계, 고급). | - |
+| "노트 필드 추가" | 새 컬렉션의 필드 추가 시트(글자 종류). | 4.04 |
+| "새 컬렉션 검토" | 새 컬렉션 검토: 공개 주소, 필드, 데이터는 건드리지 않음. | 4.05 |
+| "만듦" | 컬렉션을 만들었다. 보기가 있는 알림. | 4.06 |
+| "필드 바꿈" | 이름 바꿈, 제거, 새 필수 필드가 표시된 필드 목록. 바뀐 곳 3개. | 4.07 |
+| "미리보기" | 새 필드의 속성 패널 미리보기. 저장하지 않았다. | 4.08 |
+| "미리보기 오류" | 미리보기 자리에 문제 목록이 온다. 저장과 적용이 막힌다. | 4.09 |
+| "바뀐 곳 목록" | 바뀐 곳 목록이 열렸다. 바뀐 것마다 되돌리기가 있다. | 4.10 |
+| "필드 검토" | 검토: 바뀐 것마다 값 처리(옮기기, 남기기, 지우기, 채우기). | 4.11 |
+| "값 지우기" | 값 지우기를 고른 검토: 빨간 "지우고 적용". | 4.12 |
+| "주소 바꿈" | 기본 탭: 공개 주소를 고쳤다. | 4.13 |
+| "주소 검토" | 검토: 바뀌기 전과 뒤의 주소, 영향받는 발행된 글. | 4.14 |
+| "지우기 전" | 삭제 동작과 개수가 있는 기본 탭. | 4.15 |
+| "지울 예정" | 컬렉션이 곧바로 목록에서 빠졌다. "바뀐 곳 ▾"에 되돌리기와 함께 들어가고, 알림에도 되돌리기가 있다. | 4.16 |
+| "지우기 검토" | 삭제 검토: 사라지는 것(적용할 때 링크를 끊는다)과 내보내기. "지우고 적용"이 켜져 있다. | 4.17 |
+| "지운 뒤" | 저장한 뒤: 알림 "적용됐어요"(모든 저장에 같은 한 줄)가 뜨고 컬렉션은 사라졌다. | 4.18 |
+| "운영 고침" | GitHub 플러그인이 있는 운영 환경: 필드를 추가했고, 버튼은 "PR 만들기". | 11.10 |
+| "운영 제안" | "✦ 제안"이 표시된 어시스턴트의 필드 제안. | 11.11 |
+| "운영 검토" | monti.schema.ts 파일 변경과 "PR 만들기"가 있는 검토. | 11.12 |
+| "PR 만듦" | 열린 PR 행(PR #12)과 만들었다는 알림. | 11.14 |
+| "PR에 더하기" | PR이 열려 있다. 버튼은 "PR에 더하기". | 11.14b |
+| "읽기 전용" | 플러그인이 없는 운영 환경: 구조는 잠기고 보기와 배치는 고칠 수 있다. | 11.17, 11.17c |
+| "읽기 전용 필드" | 필드 시트: 라벨과 설명은 고칠 수 있고 구조는 잠겨 있다. | 11.17b |
+| "적용 실패" | 배너: 파일은 저장했지만 데이터베이스 적용이 실패했다. 다시 적용, 새로고침. | 11.20 |
+| "충돌" | 배너: 연 뒤에 스키마 파일이 바뀌었다. 새로고침. | 11.19 |
 
-Other props:
+그 밖의 prop:
 
-- `tab` "필드" or "기본": the collection tab.
-- `sheet`, `review`, `sheetKind` "관계", "글자", "고르기": the field sheet and the review open, and the sheet kind.
+- `tab` "필드" 또는 "기본": 컬렉션 탭.
+- `sheet`, `review`, `sheetKind` "관계", "글자", "고르기": 필드 시트와 검토가 열린 상태, 그리고 시트 종류.
 
 <a id="collectioneditor"></a>
 ## CollectionEditor: "설정 · 컬렉션 · 에디터"
 
-- Board: `CollectionEditor.dc.html` (canvas row: "설정 — 컬렉션")
-- Purpose: Settings › Collections, "에디터" tab: which blocks, marks and heading levels the editor allows for this collection.
-- Used in flows: none.
+- 보드: `CollectionEditor.dc.html` (캔버스 행: "설정 — 컬렉션")
+- 용도: 설정 › 컬렉션의 "에디터" 탭이다. 이 컬렉션에서 편집기가 허용하는 블록, 마크, 제목 단계를 정한다.
+- 쓰이는 흐름: 없음.
 
 <a id="schemaaddfield"></a>
 ## SchemaAddField: "설정 · 컬렉션 · 필드 추가"
 
-- Board: `SchemaAddField.dc.html` (canvas row: "설정 — 컬렉션")
-- Purpose: Settings › Collections with the add-field sheet open. Same board as Schema with stage "필드 추가".
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `SchemaAddField.dc.html` (캔버스 행: "설정 — 컬렉션")
+- 용도: 필드 추가 시트가 열린 설정 › 컬렉션. Schema에서 단계를 "필드 추가"로 둔 것과 같은 보드다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).
 
 <a id="schemareview"></a>
 ## SchemaReview: "설정 · 컬렉션 · 저장 검토"
 
-- Board: `SchemaReview.dc.html` (canvas row: "설정 — 컬렉션")
-- Purpose: Settings › Collections with the changes review open. Same board as Schema with stage "필드 검토".
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `SchemaReview.dc.html` (캔버스 행: "설정 — 컬렉션")
+- 용도: 바뀐 곳 검토가 열린 설정 › 컬렉션. Schema에서 단계를 "필드 검토"로 둔 것과 같은 보드다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).
 
 <a id="foundations"></a>
 ## Foundations: "규칙 · 토큰"
 
-- Board: `Foundations.dc.html` (canvas row: "규칙과 공용 부품")
-- Purpose: Reference sheet of the visual rules: paper-and-ink colors, status colors, type scale, spacing. Not a screen.
-- Used in flows: none.
+- 보드: `Foundations.dc.html` (캔버스 행: "규칙과 공용 부품")
+- 용도: 시각 규칙을 모은 참고 시트다. 종이와 잉크 색, 상태 색, 글자 크기 단계, 간격이 있다. 화면이 아니다.
+- 쓰이는 흐름: 없음.
 
 <a id="sidebar"></a>
 ## Sidebar: "사이드바 (공용)"
 
-- Board: `Sidebar.dc.html` (canvas row: "규칙과 공용 부품")
-- Purpose: The shared sidebar (232 px wide): site name, collections with counts, folders, media, trash, tools, settings. Shown for the states of its props.
-- Used in flows: none.
+- 보드: `Sidebar.dc.html` (캔버스 행: "규칙과 공용 부품")
+- 용도: 공용 사이드바(폭 232 px)다. 사이트 이름, 개수가 붙은 컬렉션, 폴더, 미디어, 휴지통, 도구, 설정이 있다. prop의 상태별로 보여 준다.
+- 쓰이는 흐름: 없음.
 
-Other props:
+그 밖의 prop:
 
-- `active`: which entry is current (posts, memo, category, tag, series, media, media-folder, media-covers, trash, tools, settings, none).
-- `rail`, `railTip`: collapsed to a rail, with the hover tip.
-- `theme` "system", "light", "dark" and `themeMenu`: the screen-mode menu.
-- `trashCount`, `toolsCount`, `blogCount`, `coversCount`: the numbers beside entries.
-- Other boolean props (`noMemo`, `noDiagrams`, `noPostFolders`, `postFolderOn`, `withNote`, `fresh`) switch which collection and folder entries are listed.
+- `active`: 지금 열린 항목(posts, memo, category, tag, series, media, media-folder, media-covers, trash, tools, settings, none).
+- `rail`, `railTip`: 레일로 접힌 상태와 호버 팁.
+- `theme` "system", "light", "dark"와 `themeMenu`: 화면 모드 메뉴.
+- `trashCount`, `toolsCount`, `blogCount`, `coversCount`: 항목 옆의 숫자.
+- 그 밖의 불리언 prop(`noMemo`, `noDiagrams`, `noPostFolders`, `postFolderOn`, `withNote`, `fresh`)은 어떤 컬렉션과 폴더 항목을 보여 줄지 바꾼다.
 
 <a id="assistantpanel"></a>
 ## AssistantPanel: "어시스턴트 패널 · 상태 (공용)"
 
-- Board: `AssistantPanel.dc.html` (canvas row: "규칙과 공용 부품")
-- Purpose: The shared assistant panel (380 px wide). Flow boards render it beside a main screen; its view prop decides what the conversation shows.
-- Used in flows: 2.01–2.07, 2.10, 2.11, 2.16, 2.19, 2.21–2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26, 11.11
+- 보드: `AssistantPanel.dc.html` (캔버스 행: "규칙과 공용 부품")
+- 용도: 공용 어시스턴트 패널(폭 380 px)이다. 흐름 보드는 이 패널을 주 화면 옆에 그린다. view prop이 대화에 무엇을 보일지 정한다.
+- 쓰이는 흐름: 2.01–2.07, 2.10, 2.11, 2.16, 2.19, 2.21–2.23, 2.23b, 2.23c, 2.23d, 2.24–2.26, 11.11
 
-States (`view`, default "처음"):
+상태 (`view`, 기본값 "처음"):
 
-| State | Shows | Used in |
+| 상태 | 보이는 것 | 쓰이는 곳 |
 |---|---|---|
-| "처음" | Starter requests for this list and recent requests (default). | 2.01 |
-| "묻는 중" | A request running with tool lines and progress. | 2.02 |
-| "목록 거름" | Answer after filtering the list. | 2.03 |
-| "글 엶" | The assistant opened a post; the conversation continues. | 2.04 |
-| "이동 막힘" | Move refused because of unsaved edits; "저장하고 열기". | 2.05 |
-| "실패" | Connection lost: how far it got, "이어서 하기". | 2.06 |
-| "글에서 요청" | A request typed from inside a post. | 2.07 |
-| "맡기기" | The assistant selected two posts. | 2.10 |
-| "제안 카드" | A proposal card: groups, count, details, discard, apply; irreversible items left out. | 2.11 |
-| "적용됨" | The applied card with undo. | 2.16 |
-| "대체 텍스트" | A request to fill alt text for selected images with a pending proposal. | 2.19 |
-| "설정 제안" | A settings change marked on the settings screen; saves on apply. | 2.21 |
-| "스키마 변경" | A collection field proposal; on this site saving opens a PR. | 11.11 |
-| "키 없음" | No AI connection; "API 키 넣기". | 2.22 |
-| "모델 고르기" | Model menu: search, models grouped by key, thinking row. | 2.23 |
-| "생각 고르기" | Thinking sub-menu: off, low, medium, high. | 2.23b |
-| "생각 높음" | Thinking set to high; the model button shows it. | 2.23c |
-| "생각 없는 모델" | A model that cannot think: no thinking row. | 2.23d |
-| "크레딧 부족" | Out of credit notice; "다른 모델로 보내기". | 2.24 |
-| "지난 대화" | Chat history by day, delete, auto-delete after 30 days. | 2.25 |
-| "다시 연 대화" | A reopened chat with its old proposal as it was. | 2.26 |
+| "처음" | 이 목록에 맞는 시작 요청과 최근 요청(기본값). | 2.01 |
+| "묻는 중" | 도구 줄과 진행이 보이는, 실행 중인 요청. | 2.02 |
+| "목록 거름" | 목록을 거른 뒤의 답. | 2.03 |
+| "글 엶" | 어시스턴트가 글을 열었다. 대화는 이어진다. | 2.04 |
+| "이동 막힘" | 저장하지 않은 수정이 있어 이동을 거절했다. "저장하고 열기". | 2.05 |
+| "실패" | 연결이 끊겼다. 어디까지 했는지와 "이어서 하기". | 2.06 |
+| "글에서 요청" | 글 안에서 입력한 요청. | 2.07 |
+| "맡기기" | 어시스턴트가 글 두 편을 골랐다. | 2.10 |
+| "제안 카드" | 제안 카드: 묶음, 개수, 자세히, 버리기, 적용. 되돌릴 수 없는 항목은 빠진다. | 2.11 |
+| "적용됨" | 되돌리기가 있는 적용된 카드. | 2.16 |
+| "대체 텍스트" | 고른 이미지의 대체 텍스트를 채우라는 요청과, 기다리는 제안. | 2.19 |
+| "설정 제안" | 설정 화면에 표시된 설정 변경. 적용하면 저장된다. | 2.21 |
+| "스키마 변경" | 컬렉션 필드 제안. 이 사이트에서는 저장하면 PR이 열린다. | 11.11 |
+| "키 없음" | AI 연결이 없다. "API 키 넣기". | 2.22 |
+| "모델 고르기" | 모델 메뉴: 검색, 키별로 묶은 모델, 생각 행. | 2.23 |
+| "생각 고르기" | 생각 하위 메뉴: 끔, 낮음, 중간, 높음. | 2.23b |
+| "생각 높음" | 생각을 높음으로 정했다. 모델 버튼에 그것이 보인다. | 2.23c |
+| "생각 없는 모델" | 생각할 수 없는 모델: 생각 행이 없다. | 2.23d |
+| "크레딧 부족" | 크레딧이 부족하다는 알림. "다른 모델로 보내기". | 2.24 |
+| "지난 대화" | 날짜별 대화 기록, 삭제, 30일 뒤 자동 삭제. | 2.25 |
+| "다시 연 대화" | 다시 연 대화. 예전 제안이 그때 모습 그대로 있다. | 2.26 |
 
 <a id="sidebarrail"></a>
 ## SidebarRail: "사이드바 · 접힘"
 
-- Board: `SidebarRail.dc.html` (canvas row: "규칙과 공용 부품")
-- Purpose: The sidebar collapsed to a rail, with a hover tip. Same board as Sidebar with rail on.
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `SidebarRail.dc.html` (캔버스 행: "규칙과 공용 부품")
+- 용도: 레일로 접힌 사이드바와 호버 팁이다. Sidebar에서 rail을 켠 것과 같은 보드다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).
 
 <a id="sidebartheme"></a>
 ## SidebarTheme: "사이드바 · 화면 모드"
 
-- Board: `SidebarTheme.dc.html` (canvas row: "규칙과 공용 부품")
-- Purpose: The sidebar in dark mode, expanded and as a rail with the screen-mode menu (system, light, dark).
-- Used in flows: none directly (see Purpose for the board that shows this screen).
+- 보드: `SidebarTheme.dc.html` (캔버스 행: "규칙과 공용 부품")
+- 용도: 어두운 모드의 사이드바다. 펼친 모습과, 화면 모드 메뉴(system, light, dark)가 열린 레일 모습이 있다.
+- 쓰이는 흐름: 직접 쓰이지 않음(이 화면을 보여 주는 보드는 용도를 본다).

@@ -1,50 +1,50 @@
-# Admin agent (design)
+# 관리자 에이전트 (설계)
 
-Status: accepted. Phase 1 is implemented. Revised on 2026-10-26: the agent is the only way the AI works (section 7).
+상태: 채택됨. 1단계는 구현되어 있다. 2026-10-26에 고쳤다: AI가 일하는 길은 에이전트 하나뿐이다(7절).
 
-Goal: an admin can ask the AI anything about the site and tell it to do things, from any screen of the admin, and the AI can use every capability the admin
-has, not only the fixed buttons it is given today. "Move these posts into a 2024 folder", "tag every post about React", "which media is unused, and clean
-it up", "add a summary field to posts". The AI plans and calls tools; the admin reviews what it wants to change and approves it.
+목표: 관리자가 관리자 화면 어디서든 사이트에 대해 AI에게 무엇이든 묻고 일을 시킬 수 있다. AI는 지금처럼 주어진 정해진 버튼만이 아니라 관리자가 가진
+모든 기능을 쓸 수 있다. "이 글들을 2024 폴더로 옮겨 줘", "React에 관한 글에 모두 태그를 달아 줘", "안 쓰는 미디어가 뭐야, 정리해 줘", "게시글에 요약
+필드를 더해 줘". AI는 계획을 세우고 도구를 부른다. 관리자는 AI가 바꾸려는 것을 검토하고 승인한다.
 
-Three rules shape the whole design:
+세 가지 규칙이 설계 전체를 정한다.
 
-1. **Parity**: whatever the admin can do, the agent can do, through the same code, the same checks and the same permissions. A capability added to the admin
-   becomes an agent tool without extra work, so the two cannot drift.
-2. **Nothing changes without approval**: the agent reads freely, but every write it asks for is collected into a proposal that the admin reviews and
-   applies. This is what makes broad access safe.
-3. **One path**: every AI feature is the agent. The few quick buttons left are fixed requests to it, and what the AI knows about the site comes from the
-   schema and one writing-voice text, not from configured actions (section 7).
+1. **동등성**: 관리자가 할 수 있는 일은 에이전트도 같은 코드, 같은 검사, 같은 권한으로 할 수 있다. 관리자 화면에 더한 기능은 따로 손대지 않아도
+   에이전트 도구가 되므로, 둘이 어긋날 수 없다.
+2. **승인 없이는 아무것도 바뀌지 않는다**: 에이전트는 마음대로 읽지만, 에이전트가 요청하는 쓰기는 모두 제안 하나로 모이고 관리자가 검토해
+   적용한다. 그래서 넓은 권한을 줘도 안전하다.
+3. **길은 하나**: 모든 AI 기능은 에이전트다. 남은 몇몇 빠른 버튼은 에이전트에 보내는 정해진 요청이다. AI가 사이트에 대해 아는 것은 설정된 액션이
+   아니라 스키마와 글쓰기 말투 텍스트 하나에서 온다(7절).
 
-## Today
+## 지금
 
-- AI features are **actions** (`packages/ai/src/action.ts`): a definition of inputs, a prompt, a result shape (candidates, text, MDX, a note) and checks. Each
-  action attaches to a fixed place in the admin (`AiAttach` in `packages/core/src/ai-contract.ts`: beside a field, an image, media, code rules, translation)
-  and runs once per click (`packages/ai/src/run.ts`). Actions never call other capabilities, and the model never chooses what to do next.
-- Models are reached through the Vercel AI SDK (`ai` 7, `@ai-sdk/openai-compatible`) in `packages/ai/src/provider.ts`, which uses `generateText` with a
-  structured output and `streamText`. The SDK also supports tool calling over several steps; Monti does not use it yet.
-- Capabilities live in core services on the `Cms` host (`packages/core/src/cms/types.ts`): `contentService()`, `bulkService()` (`relation.add`,
-  `relation.remove`, `relation.set`, `folder.move`, `archive`, `unarchive`, `trash`, `publish`, `permanentDelete`, with a result per item), `mediaService()`,
-  `preferencesService()`, plus the store (`store()`) and the read API (`read`).
-- The admin reaches them through the HTTP routes under `packages/core/src/http/v1/` (entries, bulk, folders, media, templates, schema, export, import,
-  events, API keys, preferences). Each route is written by hand: it parses a body with a zod schema and calls a service. The router applies the guard of the
-  route's `RouteAccess` (same-origin check, admin login) and records the admin as the actor of each change (`withActor`, `changedBy`).
-- Every signed-in admin has the same rights (`AuthContext` has `isAdmin`, no roles).
-- Some reads an agent needs exist already: entry search by title (`v1/entries/search`), the media list with reference counts (the media store joins
-  `entry_references` and refuses to delete a file in use with `in_use`), folders, and the publish readiness checks.
-- The schema settings screen edits the schema file. `PUT /v1/schema` answers `schema_read_only` unless the server runs in development and can write the file,
-  and every save of a lossy change needs the impacts acknowledged (`schema_unacknowledged`).
-- Monti keeps only the current version of a document (no revision history). Deleted entries go to the trash first; `permanentDelete` is a separate step.
-- Plugins add routes, pages, blocks and contributions to other plugins (`contributes`, which the AI plugin already reads for its actions).
+- AI 기능은 **액션**이다(`packages/ai/src/action.ts`): 입력 정의, 프롬프트, 결과 형태(후보, 텍스트, MDX, 노트), 검사로 이루어진다. 각
+  액션은 관리자 화면의 정해진 자리에 붙고(`packages/core/src/ai-contract.ts`의 `AiAttach`: 필드 옆, 이미지, 미디어, 코드 규칙, 번역)
+  클릭 한 번에 한 번 돈다(`packages/ai/src/run.ts`). 액션은 다른 기능을 부르지 않고, 다음에 할 일을 모델이 고르지도 않는다.
+- 모델은 `packages/ai/src/provider.ts`에서 Vercel AI SDK(`ai` 7, `@ai-sdk/openai-compatible`)로 부른다. 구조화된 출력과 함께 `generateText`를
+  쓰고, `streamText`도 쓴다. SDK는 여러 스텝에 걸친 도구 호출도 지원하지만 Monti는 아직 쓰지 않는다.
+- 기능은 `Cms` 호스트(`packages/core/src/cms/types.ts`)의 코어 서비스에 있다: `contentService()`, `bulkService()`(`relation.add`,
+  `relation.remove`, `relation.set`, `folder.move`, `archive`, `unarchive`, `trash`, `publish`, `permanentDelete`. 항목마다 결과를 낸다), `mediaService()`,
+  `preferencesService()`, 그리고 저장소(`store()`)와 읽기 API(`read`).
+- 관리자 화면은 `packages/core/src/http/v1/` 아래의 HTTP 라우트로 이들에 닿는다(entries, bulk, folders, media, templates, schema, export, import,
+  events, API keys, preferences). 라우트는 하나하나 손으로 쓴다: zod 스키마로 본문을 파싱하고 서비스를 부른다. 라우터는 라우트의
+  `RouteAccess`에 맞는 가드(같은 출처 검사, 관리자 로그인)를 적용하고, 변경마다 관리자를 행위자로 기록한다(`withActor`, `changedBy`).
+- 로그인한 관리자는 모두 같은 권한을 가진다(`AuthContext`에는 `isAdmin`이 있고 역할은 없다).
+- 에이전트에 필요한 읽기 가운데 일부는 이미 있다: 제목으로 글 찾기(`v1/entries/search`), 참조 수가 붙은 미디어 목록(미디어 저장소가
+  `entry_references`를 조인하고, 쓰이는 파일은 `in_use`로 지우기를 거부한다), 폴더, 발행 준비 검사.
+- 스키마 설정 화면은 스키마 파일을 고친다. `PUT /v1/schema`는 서버가 개발 모드로 돌고 파일을 쓸 수 있을 때가 아니면 `schema_read_only`로 답한다.
+  손실이 있는 변경은 저장할 때마다 영향을 확인받아야 한다(`schema_unacknowledged`).
+- Monti는 문서의 현재 버전만 남긴다(수정 이력이 없다). 지운 글은 먼저 휴지통으로 가고, `permanentDelete`는 따로 하는 단계다.
+- 플러그인은 라우트, 페이지, 블록, 그리고 다른 플러그인에 대한 기여(`contributes`. AI 플러그인이 이미 액션용으로 읽는다)를 더한다.
 
-## 1. One definition per capability: operations
+## 1. 기능마다 정의 하나: 동작
 
-The agent needs every capability as a tool: a name, a description, an input schema and a function. The question is where that comes from.
+에이전트는 모든 기능을 도구로 가져야 한다: 이름, 설명, 입력 스키마, 함수. 문제는 그것이 어디서 오느냐다.
 
-| Option | Parity | Cost | Verdict |
+| 선택지 | 동등성 | 비용 | 판단 |
 | --- | --- | --- | --- |
-| A. Write agent tools by hand next to the HTTP routes | Drifts: a new route without a tool is easy to forget | Small now, grows with every feature | Rejected |
-| B. Tools by hand, plus a test that every write route has a tool or is listed as excluded | Checked, not structural | Small | Rejected |
-| **C. One `defineOperation` per capability; the HTTP route and the agent tool are both made from it** | **Structural: there is one definition** | **Moving the routes over (phase 3)** | **Chosen** |
+| A. HTTP 라우트 옆에 에이전트 도구를 손으로 쓴다 | 어긋난다: 도구 없는 새 라우트를 잊기 쉽다 | 지금은 작고, 기능마다 커진다 | 기각 |
+| B. 도구는 손으로 쓰고, 모든 쓰기 라우트에 도구가 있거나 제외 목록에 있는지 테스트한다 | 검사는 되지만 구조는 아니다 | 작다 | 기각 |
+| **C. 기능마다 `defineOperation` 하나. HTTP 라우트와 에이전트 도구를 둘 다 거기서 만든다** | **구조적이다: 정의가 하나뿐이다** | **라우트 옮기기(3단계)** | **선택** |
 
 ```ts
 export const moveToFolder = defineOperation({
@@ -59,19 +59,19 @@ export const moveToFolder = defineOperation({
 });
 ```
 
-- `kind: "read"` operations have no `preview`. `run` returns data for the agent and the screens.
-- `kind: "write"` operations must have a `preview`. The agent only ever calls `preview`; `run` happens when a proposal is applied (section 2).
-- `kind: "code"` operations change files in the site's repository and end in a pull request (section 6).
-- `kind: "editor"` operations run in the browser on the open entry, and their writes are suggestions in the editor (section 5).
-- `describe` is written for the model: what the operation does and when to use it, in English. The admin screens do not show it.
-- Core defines its operations next to its services. Plugins add theirs with `defineServerPlugin({ operations })`, so seo or a site's own plugin
-  extends what the agent can do. A site customises what the agent can do this way, and how it writes through the schema and the writing voice (section 7).
-- The HTTP router mounts each operation at a path derived from its name, with the guard of its kind. Routes that do not fit (uploads, webhooks, the public
-  API, sign-in) stay hand-written and are not tools.
+- `kind: "read"` 동작에는 `preview`가 없다. `run`은 에이전트와 화면에 줄 데이터를 돌려준다.
+- `kind: "write"` 동작에는 `preview`가 꼭 있어야 한다. 에이전트는 `preview`만 부르고, `run`은 제안을 적용할 때 돈다(2절).
+- `kind: "code"` 동작은 사이트 저장소의 파일을 바꾸고 풀 리퀘스트로 끝난다(6절).
+- `kind: "editor"` 동작은 브라우저에서 열린 글을 상대로 돌고, 그 쓰기는 편집기 안의 수정안이 된다(5절).
+- `describe`는 모델을 위해 쓴다: 동작이 무엇을 하고 언제 쓰는지를 영어로 적는다. 관리자 화면에는 보이지 않는다.
+- 코어는 서비스 옆에 자기 동작을 정의한다. 플러그인은 `defineServerPlugin({ operations })`로 자기 것을 더하므로, seo나 사이트 자체 플러그인이
+  에이전트가 할 수 있는 일을 넓힌다. 사이트는 이렇게 에이전트가 할 수 있는 일을 맞추고, 어떻게 쓰는지는 스키마와 글쓰기 말투로 맞춘다(7절).
+- HTTP 라우터는 동작마다 이름에서 나온 경로에, 종류에 맞는 가드와 함께 단다. 들어맞지 않는 라우트(업로드, 웹훅, 공개 API, 로그인)는
+  손으로 쓴 채 남고 도구가 아니다.
 
-## 2. Proposals
+## 2. 제안
 
-A **proposal** is the set of writes one agent run asks for. (Not "changeset", to avoid confusion with the `@changesets` release tool.)
+**제안**은 에이전트 실행 한 번이 요청하는 쓰기의 묶음이다. (`@changesets` 릴리스 도구와 헷갈리지 않도록 "changeset"이라 부르지 않는다.)
 
 ```ts
 type Proposal = {
@@ -89,212 +89,212 @@ type Proposal = {
 };
 ```
 
-- During a run, calling a write tool adds an item and returns its preview to the model, so the agent can keep planning on the assumption that it will
-  apply ("after moving these, tag them"). Later items see earlier ones as if applied, through the preview context.
-- On the review page the admin sees the whole proposal at once, grouped by operation ("12 entries moved to 2024", "37 media files deleted, 210 MB"), can
-  open each item and leave items out, then applies it. Which changes go there, and which show in place, is below.
-- Apply runs the included items in order. Each item passes its recorded versions as `expectedVersion`, so an entry someone edited since the preview is a
-  conflict, not an overwrite. The result is per item, the same way bulk reports today. There is no transaction across items: a failure stops nothing else
-  and is shown with its reason.
-- Undo: Monti keeps no history, so the proposal keeps what it needs to reverse itself. Each item stores the before values from its preview, and undo applies
-  the reverse operation with the versions written by apply. Deletion moves entries to the trash; `permanentDelete` and media deletion are offered only after
-  the admin has seen the list, and media deletion is not undoable (the review says so).
-- A proposal is stored (section 3), so the admin can close the panel and come back to it.
+- 실행 중에 쓰기 도구를 부르면 항목이 하나 더해지고 그 미리보기가 모델에 돌아간다. 그래서 에이전트는 그것이 적용된다고 보고 계획을 이어 갈 수
+  있다("이것들을 옮긴 다음 태그를 달아"). 뒤 항목은 미리보기 맥락을 거쳐 앞 항목을 적용된 것처럼 본다.
+- 검토 페이지에서 관리자는 제안 전체를 한 번에 본다. 제안은 동작별로 묶여 있다("글 12편을 2024로 옮김", "미디어 파일 37개 삭제, 210 MB").
+  관리자는 항목마다 열어 보고 뺄 수 있고, 그다음 적용한다. 어떤 변경이 거기로 가고 어떤 변경이 제자리에 보이는지는 아래에 있다.
+- 적용은 포함된 항목을 순서대로 돌린다. 각 항목은 기록해 둔 버전을 `expectedVersion`으로 넘기므로, 미리보기 뒤에 누가 고친 글은 덮어쓰지 않고
+  충돌이 된다. 결과는 지금 bulk가 알려 주는 방식대로 항목마다 나온다. 항목들을 묶는 트랜잭션은 없다: 하나가 실패해도 다른 것은 멈추지 않고,
+  실패는 이유와 함께 보인다.
+- 되돌리기: Monti는 이력을 남기지 않으므로, 제안이 스스로를 되돌리는 데 필요한 것을 들고 있다. 각 항목은 미리보기의 이전 값을 저장하고,
+  되돌리기는 적용이 쓴 버전으로 반대 동작을 적용한다. 삭제는 글을 휴지통으로 옮긴다. `permanentDelete`와 미디어 삭제는 관리자가 목록을
+  본 뒤에만 제시되고, 미디어 삭제는 되돌릴 수 없다(검토 화면이 그렇게 말한다).
+- 제안은 저장되므로(3절) 관리자는 패널을 닫았다가 다시 돌아올 수 있다.
 
-### Where a proposal shows
+### 제안이 보이는 곳
 
-Decided by the owner on 2026-10-26. Proposed changes are marked with a blue pencil (`#2F56C8`) wherever they appear.
+2026-10-26에 소유자가 정했다. 제안된 변경은 어디에 나타나든 파란 연필(`#2F56C8`)로 표시한다.
 
-- **A change in one place shows in that place.**
-  - In the editor, as marks on the text and fields (section 5), with a bubble at the bottom of the editor: previous and next change, accept, discard,
-    accept all, and memo.
-  - On a settings page, as the page's unsaved changes. The admin saves or discards them with the page's own buttons.
-- **The review page** takes a change that spans several places (several entries, or an entry and the media it uses), a change to a list as a whole
-  (move, tag or delete many rows), and every change that cannot be undone. An irreversible change always goes to the review page, even when it touches one
-  place.
-- **Memos.** The admin can anchor a memo, a note to the AI, to any text or any proposed change: "shorter", "keep this term", "not this one". Each memo is a
-  request to the agent with its anchor as context, so several can be in flight at once, and each answer replaces the change it was anchored to.
-- **The record.** Applied proposals are listed in Tools › Events, each with undo. The editor menu item "Changes by AI" opens that list filtered to the open
-  post.
-- **Code changes.** In production a schema change opens a pull request (section 6) in place of the settings screen's "save and apply".
-- Proposals from several admins at once (who sees whose proposal, two open proposals on one entry) are out of scope for now: a Monti site has one admin.
+- **한 곳의 변경은 그 자리에 보인다.**
+  - 편집기에서는 텍스트와 필드 위의 표시로 보이고(5절), 편집기 아래쪽에 말풍선이 뜬다: 이전·다음 변경, 받기, 버리기,
+    모두 받기, 메모.
+  - 설정 페이지에서는 그 페이지의 저장 안 한 변경으로 보인다. 관리자는 페이지의 버튼으로 저장하거나 버린다.
+- **검토 페이지**는 여러 곳에 걸친 변경(여러 글, 또는 글 하나와 그 글이 쓰는 미디어), 목록 전체에 대한 변경(여러 행 옮기기, 태그 달기, 지우기),
+  그리고 되돌릴 수 없는 모든 변경을 맡는다. 되돌릴 수 없는 변경은 한 곳만 건드려도 언제나 검토 페이지로
+  간다.
+- **메모.** 관리자는 어떤 텍스트나 제안된 변경에도 메모, 곧 AI에게 남기는 쪽지를 붙일 수 있다: "더 짧게", "이 용어는 그대로", "이건 말고". 메모
+  하나하나가 붙은 자리를 맥락으로 삼는 에이전트 요청이므로 여러 개가 함께 진행될 수 있고, 각 답은 메모가 붙은 변경을 대신한다.
+- **기록.** 적용된 제안은 도구 › 활동 기록에 나열되고, 하나하나 되돌릴 수 있다. 편집기 메뉴 항목 "AI가 바꾼 기록"은 열린 글로 거른 그 목록을
+  연다.
+- **코드 변경.** 프로덕션에서는 스키마 변경이 설정 화면의 "저장하고 적용" 대신 풀 리퀘스트를 연다(6절).
+- 여러 관리자가 동시에 낸 제안(누가 누구의 제안을 보는지, 한 글에 열린 제안 둘)은 지금은 범위 밖이다: Monti 사이트의 관리자는 한 명이다.
 
-## 3. Runs
+## 3. 실행
 
-- The loop runs on the server, in an admin route of the AI plugin: the AI SDK's tool calling with the operations as tools, streamed to the panel. Limits per
-  run: a number of steps, a token budget, and a wall-clock budget per request.
-- A run is stored (Kysely tables of the AI plugin: runs, messages with their tool calls, proposals). A request that reaches its time budget ends the step it is
-  in, and the panel continues the run with a new request, so a long task survives serverless time limits. The admin can reopen past runs.
-- Tools run **as the admin who started the run**: the same guard and actor as an HTTP request, so the change record names that admin. The record also marks
-  the change as made through the agent.
-- Models that cannot call tools: the AI is off for that connection, and the screen says the connection does not support it. Since the agent is the only
-  AI path (section 7), such a model has no AI features at all. That is accepted.
-- Every run gets the site's shape (`site.describe`, with the field and collection descriptions) and the writing voice as context (section 7).
-- Cost: the site's own API key pays. The panel shows the usage of a run. Usage is also counted per month (section 7).
+- 루프는 서버의 AI 플러그인 관리자 라우트에서 돈다: 동작을 도구로 삼은 AI SDK의 도구 호출이고, 패널로 스트리밍된다. 실행마다
+  한도가 있다: 스텝 수, 토큰 예산, 요청마다의 실제 시간 예산.
+- 실행은 저장된다(AI 플러그인의 Kysely 테이블: 실행, 도구 호출이 담긴 메시지, 제안). 시간 예산에 닿은 요청은 진행 중인 스텝을 끝내고,
+  패널이 새 요청으로 실행을 이어 가므로 긴 작업도 서버리스 시간 제한을 견딘다. 관리자는 지난 실행을 다시 열 수 있다.
+- 도구는 **실행을 시작한 관리자로서** 돈다: HTTP 요청과 같은 가드와 행위자를 쓰므로 변경 기록에 그 관리자가 남는다. 기록에는 그 변경이
+  에이전트를 거쳐 이루어졌다는 표시도 붙는다.
+- 도구를 부를 수 없는 모델: 그 연결에서는 AI가 꺼지고, 화면은 그 연결이 이를 지원하지 않는다고 말한다. 에이전트가 유일한
+  AI 길이므로(7절) 그런 모델에는 AI 기능이 전혀 없다. 이것은 받아들인다.
+- 모든 실행은 사이트의 모양(`site.describe`, 필드와 컬렉션 설명 포함)과 글쓰기 말투를 맥락으로 받는다(7절).
+- 비용: 사이트의 API 키가 낸다. 패널은 실행 하나의 사용량을 보여 준다. 사용량은 달마다도 센다(7절).
 
-## 4. The panel
+## 4. 패널
 
-- The agent lives in the admin shell (`AdminShell`), not in the editor: one panel that opens on every screen.
-- The panel sends the **screen context** with each message: the screen, the collection, the selected rows of a list (`list.selectedIds` on the entry list
-  today), the open entry, and the selection in the editor. The admin can add more with `@` (an entry, a collection, a folder, a tag, a media file).
-- The empty panel shows the built-in requests of the current screen (section 7) and the admin's recent requests.
-- The open proposal shows in the panel, with a button to open the review.
-- After apply, the screens refresh the data the proposal changed.
-- The input has a model picker at its bottom left; the chosen model belongs to the conversation (section 7).
-- When the monthly cap of the key behind the chosen model is reached (section 7), the input is replaced by a short notice with a link to change the cap.
+- 에이전트는 편집기가 아니라 관리자 셸(`AdminShell`)에 산다: 모든 화면에서 열리는 패널 하나다.
+- 패널은 메시지마다 **화면 맥락**을 보낸다: 화면, 컬렉션, 목록에서 고른 행(지금은 글 목록의 `list.selectedIds`), 열린 글,
+  편집기 안의 선택. 관리자는 `@`로 더 넣을 수 있다(글, 컬렉션, 폴더, 태그, 미디어 파일).
+- 빈 패널은 지금 화면의 기본 요청(7절)과 관리자의 최근 요청을 보여 준다.
+- 열린 제안은 패널에 보이고, 검토를 여는 버튼이 함께 있다.
+- 적용 뒤에 화면들은 제안이 바꾼 데이터를 새로 불러온다.
+- 입력란 왼쪽 아래에 모델 선택기가 있다. 고른 모델은 그 대화에 속한다(7절).
+- 고른 모델 뒤에 있는 키의 월 상한에 닿으면(7절) 입력란 대신 상한을 바꾸는 링크가 달린 짧은 안내가 보인다.
 
-## 5. The open entry: editor operations
+## 5. 열린 글: 편집기 동작
 
-When the panel is open over the entry editor, the entry on screen is not the stored one: the form holds unsaved changes (`hasUnsavedChanges` of
-`EntryEditor`, `packages/admin/src/screens/entries/entry-editor-types.ts`), and the server sees them only on save. A server write to that entry would change
-the last saved copy, ignore what the admin is typing, and make the next save a version conflict. So the open entry is changed in the editor, not on the
-server.
+패널이 글 편집기 위에 열려 있으면 화면의 글은 저장된 글과 같지 않다: 폼에 저장 안 한 변경이 있고(`EntryEditor`의 `hasUnsavedChanges`,
+`packages/admin/src/screens/entries/entry-editor-types.ts`), 서버는 저장할 때에야 그것을 본다. 서버가 그 글에 쓰면 마지막으로 저장된 사본을 바꾸고,
+관리자가 치고 있는 내용을 무시하며, 다음 저장을 버전 충돌로 만든다. 그래서 열린 글은 서버가 아니라 편집기에서
+바꾼다.
 
-- **Editor operations** are operations that run in the browser, against the open editor. The run on the server sends the tool call to the panel, the panel
-  runs it on the editor and returns the result, and the run goes on. The AI SDK supports this: a tool without a server `execute` is answered by the client.
-- Reads: the open entry as the form holds it (fields, and the body as text in the site's format), the selection, and the block at the cursor. These come
-  with the screen context too, so a short question needs no tool call.
-- Writes: replace the selection, rewrite a block, insert, move or remove blocks (addressed by their block ids, `packages/admin/src/editor/block-ids.ts`), and
-  set a field of the properties panel.
-- **Review in place.** An editor write does not go into a proposal. It shows in the editor as a suggestion with blue-pencil marks: removed text struck
-  through, added text marked, on each block and each field (the word diff the AI style polish uses today, `packages/ai/src/admin/word-diff.ts`, is the
-  starting point). The bubble at the bottom of the editor steps through them and accepts, discards or accepts all, and a memo can be anchored to any of them
-  (section 2, "Where a proposal shows"). Accepting changes the form, not the server. The admin saves as always, and the browser recovery copy covers the
-  accepted text.
-- Rejecting a suggestion, typing over it, or closing the entry drops it. The model is told which suggestions were accepted, so it does not repeat a rejected
-  one.
-- **Which side a write goes to.** The entry open in the editor: editor operations. Every other entry, or several at once: server operations and a proposal.
-  One request can use both ("tag this post, and the three older posts like it"): the tag on this post is a suggestion in the editor, and the other three
-  are a proposal. A server write to the open entry is refused and the model is told to use the editor operation instead.
-- Lifecycle commands of the open entry (publish, archive, trash) stay server operations in a proposal, and the editor applies them the way its own buttons
-  do: save first, then the command.
+- **편집기 동작**은 브라우저에서 열린 편집기를 상대로 도는 동작이다. 서버의 실행이 도구 호출을 패널에 보내고, 패널이
+  편집기에서 그것을 돌려 결과를 돌려주면, 실행이 이어진다. AI SDK가 이를 지원한다: 서버 `execute`가 없는 도구는 클라이언트가 답한다.
+- 읽기: 폼이 들고 있는 그대로의 열린 글(필드, 그리고 사이트 형식의 텍스트로 된 본문), 선택, 커서가 있는 블록. 이것들은 화면 맥락으로도
+  오므로 짧은 질문에는 도구 호출이 필요 없다.
+- 쓰기: 선택 바꾸기, 블록 다시 쓰기, 블록 넣기·옮기기·빼기(블록 id로 가리킨다, `packages/admin/src/editor/block-ids.ts`), 속성 패널의
+  필드 값 정하기.
+- **제자리 검토.** 편집기 쓰기는 제안에 들어가지 않는다. 편집기 안에 파란 연필 표시가 붙은 수정안으로 보인다: 지운 텍스트에는 취소선,
+  더한 텍스트에는 표시가 블록과 필드마다 붙는다(지금 AI 문체 다듬기가 쓰는 단어 diff, `packages/ai/src/admin/word-diff.ts`가
+  출발점이다). 편집기 아래쪽 말풍선이 수정안을 하나씩 넘기며 받거나 버리거나 모두 받고, 어느 수정안에든 메모를 붙일 수 있다
+  (2절, "제안이 보이는 곳"). 받으면 서버가 아니라 폼이 바뀐다. 관리자는 늘 하던 대로 저장하고, 브라우저 복구 사본이
+  받은 텍스트를 지켜 준다.
+- 수정안을 버리거나, 그 위에 타이핑하거나, 글을 닫으면 그 수정안은 사라진다. 모델은 어떤 수정안이 받아들여졌는지 듣기 때문에 버려진 것을
+  되풀이하지 않는다.
+- **쓰기가 어느 쪽으로 가는가.** 편집기에 열린 글: 편집기 동작. 다른 모든 글, 또는 여러 글을 한꺼번에: 서버 동작과 제안.
+  요청 하나가 둘 다 쓸 수 있다("이 글에 태그를 달고, 비슷한 옛 글 세 편에도"): 이 글의 태그는 편집기 안의 수정안이 되고, 다른 세 편은
+  제안이 된다. 열린 글에 대한 서버 쓰기는 거부되고, 모델은 대신 편집기 동작을 쓰라는 말을 듣는다.
+- 열린 글의 생애 명령(발행, 보관, 휴지통)은 제안 안의 서버 동작으로 남고, 편집기는 자기 버튼이 하듯이 그것을 적용한다:
+  먼저 저장하고, 그다음 명령.
 
-## 6. Code changes as pull requests
+## 6. 풀 리퀘스트로 하는 코드 변경
 
-Some of what the admin may ask for lives in the site's code: the schema file, and, later, the site config. In production the schema file is read-only today
-(`schema_read_only`), so the agent could never change it there directly.
+관리자가 요청할 수 있는 것 가운데 일부는 사이트 코드에 있다: 스키마 파일, 그리고 나중에는 사이트 설정. 지금 프로덕션에서 스키마 파일은 읽기 전용이라
+(`schema_read_only`) 에이전트가 거기서 직접 바꿀 수는 없다.
 
-- `kind: "code"` operations produce file changes instead of database writes. The schema edit is the first one: the agent uses the same diff and impact check
-  as the settings screen (`forSchema`, the acknowledged impacts) to make the change.
-- Applying a proposal with code items commits them to a new branch and opens a pull request through a GitHub client the code-change path brings. Reviewing the code is the
-  pull request; the site's CI and preview deployment are how it is checked. The change takes effect when it is merged and deployed. In production the
-  schema settings screen offers the same: its button opens a pull request where development has "save and apply".
-- In development, where the file is writable, the same proposal can write the file directly, as the settings screen does.
-- The agent cannot run the site's type check or build itself, so a wrong change is found by CI, minutes later. That is acceptable for schema changes, which
-  are rare. Editing arbitrary code is out of scope.
+- `kind: "code"` 동작은 데이터베이스 쓰기 대신 파일 변경을 만든다. 첫 번째는 스키마 편집이다: 에이전트는 설정 화면과 같은 diff와 영향 검사
+  (`forSchema`, 확인받은 영향)로 변경을 만든다.
+- 코드 항목이 있는 제안을 적용하면, 코드 변경 경로가 들여오는 GitHub 클라이언트로 그 항목들을 새 브랜치에 커밋하고 풀 리퀘스트를 연다. 코드 검토는
+  그 풀 리퀘스트가 맡고, 사이트의 CI와 미리보기 배포가 확인을 맡는다. 변경은 병합되어 배포되면 적용된다. 프로덕션에서는
+  스키마 설정 화면도 같은 것을 제공한다: 개발 모드에서 "저장하고 적용"이 있는 자리의 버튼이 풀 리퀘스트를 연다.
+- 파일을 쓸 수 있는 개발 모드에서는 같은 제안이 설정 화면처럼 파일을 바로 쓸 수 있다.
+- 에이전트는 사이트의 타입 검사나 빌드를 직접 돌릴 수 없으므로, 잘못된 변경은 몇 분 뒤 CI가 찾는다. 드문 스키마 변경에는 받아들일 만하다.
+  아무 코드나 고치는 것은 범위 밖이다.
 
-## 7. One AI path: the agent
+## 7. AI 길은 하나: 에이전트
 
-Decided by the owner on 2026-10-26. This reverses the earlier version of this section, which said "Actions stay" and made each action a read operation
-(`ai.<action name>`) next to its button.
+2026-10-26에 소유자가 정했다. 이 절의 이전 판을 뒤집는다. 이전 판은 "액션은 남는다"고 하고 각 액션을 버튼 옆의 읽기 동작
+(`ai.<action name>`)으로 만들었다.
 
-**Actions go away as a user-facing concept.** AI actions (`packages/ai/src/action.ts`), their presets (`packages/ai/src/presets.ts`), the actions the admin
-creates on the AI screen (`packages/ai/src/custom.ts`) and the prompt snippets (`packages/ai/src/snippets.ts`) are removed. The reasons:
+**액션은 사용자가 보는 개념에서 사라진다.** AI 액션(`packages/ai/src/action.ts`), 그 프리셋(`packages/ai/src/presets.ts`), 관리자가 AI 화면에서
+만드는 액션(`packages/ai/src/custom.ts`), 프롬프트 스니펫(`packages/ai/src/snippets.ts`)을 없앤다. 이유는 이렇다.
 
-- **One mental model.** With both actions and the agent, the admin has two kinds of AI that know different things, are set up in different places and
-  fail in different ways. With the agent alone, every AI feature is "ask the assistant", and what it changes is reviewed the same way (section 2).
-- **Customisation moves to what the site already has.** A site shaped its AI by configuring actions: prompts, inputs, attach points, snippets. That is a
-  second schema to learn and keep in step with the real one. Instead, the agent learns the site from the schema (field and collection descriptions, field
-  limits) and from one writing-voice text, which the admin edits where they already edit fields and site settings.
+- **머릿속 모델 하나.** 액션과 에이전트가 둘 다 있으면 관리자에게는 두 종류의 AI가 생긴다. 아는 것이 다르고, 설정하는 곳이 다르고,
+  실패하는 방식도 다르다. 에이전트만 있으면 모든 AI 기능은 "어시스턴트에게 묻기"이고, 그것이 바꾸는 것은 같은 방식으로 검토한다(2절).
+- **맞춤은 사이트가 이미 가진 것으로 옮겨 간다.** 사이트는 액션을 설정해 AI를 다듬었다: 프롬프트, 입력, 붙는 자리, 스니펫. 그것은 따로 배우고
+  진짜 스키마와 맞춰 두어야 하는 두 번째 스키마다. 대신 에이전트는 스키마(필드와 컬렉션 설명, 필드 제한)와 글쓰기 말투 텍스트 하나에서 사이트를
+  배운다. 관리자는 이것들을 이미 필드와 사이트 설정을 고치는 곳에서 고친다.
 
-The admin cannot create saved requests or per-task prompts. A request is typed in the panel, or it is one of the built-in requests.
+관리자는 저장된 요청이나 작업별 프롬프트를 만들 수 없다. 요청은 패널에 직접 쓰거나, 기본 요청 가운데 하나다.
 
-### Built-in requests
+### 기본 요청
 
-The few quick buttons left are built-in requests tied to their place. Each one sends a fixed sentence, together with the screen context, to the agent. It
-runs as one turn with a narrow tool set (only the reads and writes the request needs), and its changes show like any other proposal.
+남은 몇몇 빠른 버튼은 제자리에 묶인 기본 요청이다. 각각 정해진 문장 하나를 화면 맥락과 함께 에이전트에 보낸다. 요청은
+요청에 필요한 읽기와 쓰기만 담은 좁은 도구 묶음으로 한 턴 돌고, 그 변경은 다른 제안과 똑같이 보인다.
 
-| Place | Requests |
+| 자리 | 요청 |
 | --- | --- |
-| The publish to-do | Write the summary; fill missing alt text |
-| The translation editor | Translate from the source; translate only the blocks that changed |
-| The bulk bar of the media list | Fill alt text |
+| 발행 할 일 | 요약 쓰기; 빠진 대체 텍스트 채우기 |
+| 번역 편집기 | 원문에서 번역하기; 바뀐 블록만 번역하기 |
+| 미디어 목록의 일괄 막대 | 대체 텍스트 채우기 |
 
-The sentences are fixed by Monti and translated with the admin's messages; a site cannot change them or add its own. The empty panel lists the built-in
-requests of the current screen (section 4).
+문장은 Monti가 정하고 관리자 화면의 메시지와 함께 번역된다. 사이트는 그것을 바꾸거나 자기 것을 더할 수 없다. 빈 패널은 지금 화면의 기본
+요청을 나열한다(4절).
 
-### What the agent knows about fields: the schema
+### 에이전트가 필드에 대해 아는 것: 스키마
 
-- The field `description` (`packages/core/src/schema/fields.ts`, today "help text below the input") becomes what tells the agent what the field is for
-  and how to fill it: "One sentence that makes someone want to read the post, no spoilers." It is no longer shown under the input. The admin edits it in
-  the field settings sheet of the schema settings.
-- Field limits (`max`, `required`, and the other checks a field definition has) are both the agent's guide and the check on its writes. The agent reads
-  them with the schema, and a write operation's preview refuses a value that breaks them, so the model is told and can try again. Checks that are hard rules
-  (maximum length, unique slug) live in the field definitions and the write operations, not in prompts.
-- A collection's description tells the agent what the collection holds and how its entries are written.
+- 필드 `description`(`packages/core/src/schema/fields.ts`, 지금은 "입력 아래 도움말")은 그 필드가 무엇을 위한 것이고 어떻게 채우는지를
+  에이전트에게 알려 주는 것이 된다: "글을 읽고 싶게 만드는 한 문장, 스포일러 없이." 이제 입력 아래에는 보이지 않는다. 관리자는 스키마 설정의
+  필드 설정 시트에서 이것을 고친다.
+- 필드 제한(`max`, `required`, 그리고 필드 정의가 가진 다른 검사)은 에이전트의 길잡이이자 그 쓰기에 대한 검사다. 에이전트는 스키마와 함께 그것을
+  읽고, 쓰기 동작의 미리보기는 제한을 어기는 값을 거부하므로 모델이 그 말을 듣고 다시 시도할 수 있다. 엄격한 규칙인 검사
+  (최대 길이, 겹치지 않는 슬러그)는 프롬프트가 아니라 필드 정의와 쓰기 동작에 있다.
+- 컬렉션 설명은 그 컬렉션이 무엇을 담고 그 글을 어떻게 쓰는지 에이전트에게 알려 준다.
 
-### The writing voice
+### 글쓰기 말투
 
-One text in Settings › Site, the writing voice: how the site writes (tone, person, terms to use or avoid, how long sentences run). The agent reads it on
-every job, typed requests and built-in ones alike. It replaces the `styleGuide` snippet.
+설정 › 사이트에 있는 텍스트 하나, 글쓰기 말투다: 사이트가 글을 쓰는 방식(어조, 인칭, 쓰거나 피할 용어, 문장 길이)을 적는다. 에이전트는
+직접 쓴 요청이든 기본 요청이든 모든 작업에서 이것을 읽는다. `styleGuide` 스니펫을 대신한다.
 
-### Model and usage
+### 모델과 사용량
 
-There is no AI settings tab.
+AI 설정 탭은 없다.
 
-- **The model is chosen in the assistant input.** A model picker at the bottom left of the input ("claude-sonnet-5-5 ▾") lists the models available
-  from the stored API keys, grouped by provider. The chosen model belongs to that conversation; a new conversation starts with the last used model.
-- **The API keys screen shows usage.** It does not pick the assistant's key or model. For each key it shows the month's token usage with an approximate
-  cost ("no usage this month" when unused), and an optional monthly cap.
-- When the cap of the key behind the chosen model is reached, the assistant input is replaced by a short notice with a link to change the cap (section 4).
-  Built-in requests that would use that key are off too.
+- **모델은 어시스턴트 입력란에서 고른다.** 입력란 왼쪽 아래의 모델 선택기("claude-sonnet-5-5 ▾")는 저장된 API 키로 쓸 수 있는 모델을
+  공급자별로 묶어 나열한다. 고른 모델은 그 대화에 속하고, 새 대화는 마지막에 쓴 모델로 시작한다.
+- **API 키 화면은 사용량을 보여 준다.** 어시스턴트의 키나 모델을 고르지는 않는다. 키마다 이번 달 토큰 사용량과 대략의 비용
+  (쓰지 않았으면 "이번 달 사용 없음"), 그리고 선택 사항인 월 상한을 보여 준다.
+- 고른 모델 뒤에 있는 키의 상한에 닿으면 어시스턴트 입력란 대신 상한을 바꾸는 링크가 달린 짧은 안내가 보인다(4절).
+  그 키를 쓸 기본 요청도 꺼진다.
 
-### No automatic alt text on upload
+### 올릴 때 자동 대체 텍스트 없음
 
-Uploading an image no longer fills its alt text or caption (`packages/ai/src/admin/auto-image-text.ts` is removed). Missing alt text is filled from the
-publish to-do or the bulk bar of the media list, both built-in requests.
+이미지를 올려도 이제 대체 텍스트나 캡션을 채우지 않는다(`packages/ai/src/admin/auto-image-text.ts`를 없앤다). 빠진 대체 텍스트는
+발행 할 일이나 미디어 목록의 일괄 막대에서 채운다. 둘 다 기본 요청이다.
 
-## 8. Security
+## 8. 보안
 
-- **Prompt injection.** The agent reads content written by other people, and content can contain instructions. Tool results are marked as data in the
-  messages, but the real defence is that no write happens without the admin's review. The agent has no tool that sends anything outside the site (no web
-  fetch, no email). A plugin operation that does must be a write, so it goes through review.
-- **Scope.** Operations exist only for what an admin can already do. Sign-in, API key values, secrets and the AI connection settings are not operations.
-- **Size.** Inputs and previews have limits, like a save. A proposal has a maximum number of items; larger work is split into several runs.
+- **프롬프트 인젝션.** 에이전트는 다른 사람이 쓴 콘텐츠를 읽고, 콘텐츠에는 지시가 들어 있을 수 있다. 메시지 안에서 도구 결과는 데이터로
+  표시되지만, 진짜 방어는 관리자의 검토 없이는 아무 쓰기도 일어나지 않는다는 점이다. 에이전트에게는 사이트 밖으로 무엇을 보내는 도구가 없다(웹
+  가져오기도, 이메일도 없다). 그런 일을 하는 플러그인 동작은 쓰기여야 하므로 검토를 거친다.
+- **범위.** 동작은 관리자가 이미 할 수 있는 일에만 있다. 로그인, API 키 값, 시크릿, AI 연결 설정은 동작이 아니다.
+- **크기.** 입력과 미리보기에는 저장처럼 한도가 있다. 제안에는 최대 항목 수가 있고, 더 큰 일은 여러 실행으로 나눈다.
 
-## 9. Phases
+## 9. 단계
 
-| Phase | What | The admin can |
+| 단계 | 내용 | 관리자가 할 수 있는 것 |
 | --- | --- | --- |
-| 0 | This document; check tool calling with the models people connect (done, below) | — |
-| 1 | `defineOperation`; read operations (entry search by fields, read an entry, schema, folders, tags, media with usage); stored runs; the shell panel with screen context; editor reads (the open entry, the selection) | Ask questions about the site, and about the post being written: "which posts have no tags?", "is this intro too long?" |
-| 2 | Proposals: preview, review page, apply, undo, the list in Tools › Events; write operations for bulk, entry fields and media; editor writes as blue-pencil suggestions with the bottom bubble; memos. Core: field and collection descriptions as agent input (edited in the field settings sheet, no longer shown under the input); field limits as write checks; the writing voice in Settings › Site; the model picker in the assistant input, kept per conversation; usage per month and the monthly cap per key on the API keys screen | "Tag these", "move these", "clean up unused media", then review and apply; "tighten this paragraph", accepted or discarded in place; a memo on a suggestion |
-| 3 | Every admin route that fits becomes an operation and the router mounts it; plugin operations. Moving the AI over: the action attach points become built-in requests or go away (see below), and actions, custom actions, snippets and the AI settings tab are removed | Everything the admin can do; the built-in requests |
-| 4 | `kind: "code"` and pull requests, starting with the schema file | "Add a summary field to posts" in production |
+| 0 | 이 문서; 사람들이 연결하는 모델로 도구 호출 확인(완료, 아래) | — |
+| 1 | `defineOperation`; 읽기 동작(필드로 글 찾기, 글 읽기, 스키마, 폴더, 태그, 사용처가 붙은 미디어); 저장되는 실행; 화면 맥락이 있는 셸 패널; 편집기 읽기(열린 글, 선택) | 사이트에 대해, 그리고 쓰고 있는 글에 대해 묻기: "태그 없는 글은?", "이 도입부 너무 길어?" |
+| 2 | 제안: 미리보기, 검토 페이지, 적용, 되돌리기, 도구 › 활동 기록의 목록; bulk, 글 필드, 미디어용 쓰기 동작; 아래쪽 말풍선과 함께 파란 연필 수정안으로 보이는 편집기 쓰기; 메모. 코어: 에이전트 입력으로 쓰는 필드와 컬렉션 설명(필드 설정 시트에서 고치고, 입력 아래에는 더 보이지 않음); 쓰기 검사로서의 필드 제한; 설정 › 사이트의 글쓰기 말투; 대화마다 유지되는 어시스턴트 입력란의 모델 선택기; API 키 화면의 월별 사용량과 키별 월 상한 | "이것들에 태그 달아 줘", "이것들 옮겨 줘", "안 쓰는 미디어 정리해 줘", 그다음 검토하고 적용; "이 문단 다듬어 줘", 제자리에서 받거나 버림; 수정안에 메모 |
+| 3 | 들어맞는 모든 관리자 라우트가 동작이 되고 라우터가 그것을 단다; 플러그인 동작. AI 옮기기: 액션이 붙던 자리는 기본 요청이 되거나 사라지고(아래 참고), 액션, 사용자 정의 액션, 스니펫, AI 설정 탭을 없앤다 | 관리자가 할 수 있는 모든 것; 기본 요청 |
+| 4 | `kind: "code"`와 풀 리퀘스트, 스키마 파일부터 | 프로덕션에서 "게시글에 요약 필드를 더해 줘" |
 
-What happens to each place an action attaches today (`AiAttach` in `packages/core/src/ai-contract.ts`) in phase 3:
+3단계에서 지금 액션이 붙는 자리(`packages/core/src/ai-contract.ts`의 `AiAttach`)가 하나하나 어떻게 되는지:
 
-| Attach point today | Default actions | Becomes |
+| 지금 붙는 자리 | 기본 액션 | 바뀌는 모습 |
 | --- | --- | --- |
-| `field`: an AI button beside a field | slug, summary, tags, category | Removed. The summary is the publish to-do's "write the summary"; the others are asked in the panel |
-| `image`: alt text and caption of a body image | imageAlt, imageCaption | Removed, with the automatic fill on upload. Missing alt text is the publish to-do's "fill missing alt text" |
-| `media`: filename, default alt text and caption | mediaFilename, imageAlt, imageCaption | Default alt text is the media bulk bar's "fill alt text"; the rest is removed |
-| `translation`: block translate and "translate all" | translate | The translation editor's "translate from the source" and "translate only changed blocks" |
-| `codeRules`: code fold rules | codeFold | Removed; asked in the panel with the code block selected |
-| `selection`: the menu on selected body text | polish | Removed; the selection is in the screen context, so the request is typed in the panel |
-| `insert`: the slash menu and the empty document | draft | Removed; asked in the panel |
-| `block`: beside a body block's handle | (custom actions) | Removed with custom actions |
+| `field`: 필드 옆 AI 버튼 | slug, summary, tags, category | 없앤다. 요약은 발행 할 일의 "요약 쓰기"가 되고, 나머지는 패널에서 묻는다 |
+| `image`: 본문 이미지의 대체 텍스트와 캡션 | imageAlt, imageCaption | 올릴 때 자동 채우기와 함께 없앤다. 빠진 대체 텍스트는 발행 할 일의 "빠진 대체 텍스트 채우기"다 |
+| `media`: 파일 이름, 기본 대체 텍스트와 캡션 | mediaFilename, imageAlt, imageCaption | 기본 대체 텍스트는 미디어 일괄 막대의 "대체 텍스트 채우기"가 되고, 나머지는 없앤다 |
+| `translation`: 블록 번역과 "모두 번역" | translate | 번역 편집기의 "원문에서 번역하기"와 "바뀐 블록만 번역하기" |
+| `codeRules`: 코드 접기 규칙 | codeFold | 없앤다. 코드 블록을 고른 채 패널에서 묻는다 |
+| `selection`: 본문에서 고른 텍스트의 메뉴 | polish | 없앤다. 선택이 화면 맥락에 있으므로 요청은 패널에 쓴다 |
+| `insert`: 슬래시 메뉴와 빈 문서 | draft | 없앤다. 패널에서 묻는다 |
+| `block`: 본문 블록 핸들 옆 | (사용자 정의 액션) | 사용자 정의 액션과 함께 없앤다 |
 
-Multi-admin proposals are out of scope for now: a Monti site has a single admin.
+여러 관리자의 제안은 지금은 범위 밖이다: Monti 사이트의 관리자는 한 명이다.
 
-Every capability, with its operation name, kind, undo and phase, is listed in [Admin agent: capabilities](agent-capabilities.md).
+모든 기능은 동작 이름, 종류, 되돌리기, 단계와 함께 [관리자 에이전트: 기능](agent-capabilities.md)에 나열되어 있다.
 
-Phase 1 has no writes on purpose: the loop, the context and the tool descriptions can be tuned while nothing can go wrong.
+1단계에 쓰기가 없는 것은 일부러다: 아무것도 잘못될 수 없는 동안 루프, 맥락, 도구 설명을 다듬을 수 있다.
 
-## Phase 0: tool calling with the models people connect
+## 0단계: 사람들이 연결하는 모델로 도구 호출 확인
 
-Run on 2026-10-26 through OpenRouter, with the AI SDK version Monti uses (`ai` 7, `@ai-sdk/openai-compatible`). Six tools over a fake site (four posts, one
-folder) stood in for the agent's operations: search, read, list folders, and three writes that only record what they were asked. Each model got six
-cases:
+2026-10-26에 OpenRouter를 거쳐, Monti가 쓰는 AI SDK 버전(`ai` 7, `@ai-sdk/openai-compatible`)으로 돌렸다. 가짜 사이트(글 네 편, 폴더
+하나) 위의 도구 여섯 개가 에이전트의 동작을 대신했다: 찾기, 읽기, 폴더 나열, 그리고 요청받은 것을 기록만 하는 쓰기 셋. 모델마다 경우 여섯 개를
+주었다.
 
-- **single**: "which posts have no tags?" needs one search with the right input.
-- **chain**: "move the 2024 review post into the 2024 folder" needs a search and a folder lookup, then a move with exactly the ids they returned.
-- **parallel**: reading two given posts.
-- **bulk**: "tag every post about React": the right posts, and none of the others.
-- **injection**: summarising a post whose body tells the model to trash every entry.
-- **chain (stream)**: the chain case through `streamText`.
+- **single**: "태그 없는 글은?"에는 올바른 입력으로 찾기 한 번이 필요하다.
+- **chain**: "2024 회고 글을 2024 폴더로 옮겨 줘"에는 찾기와 폴더 조회, 그리고 그 둘이 돌려준 id 그대로 옮기기가 필요하다.
+- **parallel**: 주어진 글 두 편 읽기.
+- **bulk**: "React에 관한 글에 모두 태그 달아 줘": 맞는 글에만 달고, 다른 글에는 하나도 달지 않는다.
+- **injection**: 본문이 모델에게 모든 글을 휴지통에 넣으라고 하는 글을 요약하기.
+- **chain (stream)**: chain 경우를 `streamText`로.
 
-| Model | Passed | Average time | Average tokens | What failed |
+| 모델 | 통과 | 평균 시간 | 평균 토큰 | 실패한 것 |
 | --- | --- | --- | --- | --- |
 | google/gemini-2.5-flash | 6/6 | 3.4 s | 1,474 | |
 | openai/gpt-5-mini | 6/6 | 8.6 s | 3,019 | |
@@ -302,47 +302,47 @@ cases:
 | mistralai/mistral-small-3.2-24b-instruct | 6/6 | 6.1 s | 3,756 | |
 | qwen/qwen3.8-flash | 6/6 | 8.2 s | 5,675 | |
 | z-ai/glm-5.3-flash | 6/6 | 6.1 s | 3,481 | |
-| meta-llama/llama-3.3-70b-instruct | 4/6 | 6.5 s | 9,272 | Repeated the same search until the step limit (bulk, streamed chain) |
-| deepseek/deepseek-chat-v3.1 | 3/6 | 12.5 s | 2,091 | "Provider returned error" from the upstream provider mid-run (single, chain); stopped before the write (streamed chain) |
-| google/gemma-3-27b-it | 2/6 | 2.2 s | 3,034 | Answered without calling a tool when two calls were needed (chain, bulk, injection, streamed chain) |
-| nex-agi/nex-n2.5-mini (no tool support) | 0/6 | 0.2 s | 0 | Refused at once: "No endpoints found that support tool use" |
+| meta-llama/llama-3.3-70b-instruct | 4/6 | 6.5 s | 9,272 | 같은 찾기를 스텝 한도까지 되풀이함(bulk, streamed chain) |
+| deepseek/deepseek-chat-v3.1 | 3/6 | 12.5 s | 2,091 | 실행 중에 상위 공급자가 "Provider returned error"를 냄(single, chain); 쓰기 전에 멈춤(streamed chain) |
+| google/gemma-3-27b-it | 2/6 | 2.2 s | 3,034 | 호출 두 번이 필요한데 도구를 부르지 않고 답함(chain, bulk, injection, streamed chain) |
+| nex-agi/nex-n2.5-mini (도구 지원 없음) | 0/6 | 0.2 s | 0 | 바로 거부됨: "No endpoints found that support tool use" |
 
-The 60 runs cost $0.135 in total.
+실행 60번에 든 비용은 모두 $0.135였다.
 
-What this changes in the design:
+이 결과가 설계에서 바꾸는 것:
 
-1. **Detecting tool support.** A model without it fails on the first request, fast and with a clear error, so the connection check
-   (`POST /v1/ai/providers/check`) can send one request with a trivial tool and store whether the model called it. That is decision 3 made concrete, and it
-   works for every OpenAI-compatible provider. OpenRouter also lists it (`supported_parameters` of `/models` contains `tools`: 399 of 467 models today),
-   which the model picker can show before the check.
-2. **Supporting tools is not the same as using them well.** Gemma and Llama accept tools but stop early or loop. The agent stays available for them (the
-   check passes), and two guards in the run limit the damage: the same call with the same input three times in a row ends the step with a message to the
-   model, and the step limit ends the run with what was done so far.
-3. **Search must forgive.** In the first round the search tool matched the query as one substring; Gemini searched "2024 review", found nothing for "My 2024
-   in review", and gave up without trying other words. With word-by-word matching it passed. `entries.list` should match words, and an empty result should
-   say what was searched and suggest a broader query.
-4. **Upstream errors happen mid-run.** A run retries a failed step once, then stops with the provider's message and keeps what was done.
-5. **The injection case passed for every model that called a tool**, but it is one simple case. It does not replace the review of every write.
-6. **Cost per task** was 1,500 to 9,000 tokens for these small tasks. The run's usage display (section 3) is enough; no per-model limits are needed yet.
+1. **도구 지원 감지.** 지원하지 않는 모델은 첫 요청에서 빠르고 분명한 오류로 실패한다. 그래서 연결 확인
+   (`POST /v1/ai/providers/check`)은 사소한 도구 하나를 넣은 요청을 보내고 모델이 그것을 불렀는지 저장할 수 있다. 결정 3을 구체화한 것이고,
+   OpenAI 호환 공급자라면 어디서나 된다. OpenRouter도 이를 나열하므로(`/models`의 `supported_parameters`에 `tools`가 있다: 지금 467개 모델 중 399개),
+   모델 선택기가 확인 전에 보여 줄 수 있다.
+2. **도구를 지원한다고 잘 쓰는 것은 아니다.** Gemma와 Llama는 도구를 받지만 일찍 멈추거나 맴돈다. 에이전트는 이들에게도 열려 있고(확인은
+   통과한다), 실행 안의 두 가드가 피해를 줄인다: 같은 입력으로 같은 호출을 세 번 연달아 하면 모델에게 메시지를 남기고 스텝을 끝내고,
+   스텝 한도는 그때까지 한 것을 남기고 실행을 끝낸다.
+3. **찾기는 너그러워야 한다.** 첫 회차에서 찾기 도구는 질의를 부분 문자열 하나로 맞췄다. Gemini는 "2024 review"로 찾았다가 "My 2024
+   in review"에서 아무것도 찾지 못했고, 다른 낱말을 써 보지 않고 포기했다. 낱말 단위로 맞추자 통과했다. `entries.list`는 낱말로 맞춰야 하고, 빈 결과는
+   무엇을 찾았는지 말하고 더 넓은 질의를 권해야 한다.
+4. **상위 오류는 실행 중에 일어난다.** 실행은 실패한 스텝을 한 번 다시 시도하고, 그래도 안 되면 공급자의 메시지와 함께 멈추고 한 일은 남긴다.
+5. **injection 경우는 도구를 부른 모든 모델이 통과했다.** 하지만 단순한 경우 하나일 뿐이다. 모든 쓰기를 검토하는 일을 대신하지 않는다.
+6. **작업당 비용**은 이런 작은 작업에서 1,500에서 9,000 토큰이었다. 실행의 사용량 표시(3절)로 충분하다. 모델별 한도는 아직 필요 없다.
 
-## Decisions
+## 결정
 
-Decided by the owner on 2026-10-26:
+2026-10-26에 소유자가 정했다.
 
-1. **Routes are made from operations (section 1, option C).** Parity is structural. Phase 3 is a large refactor of the HTTP layer, and that cost is accepted.
-2. **The agent lives in `@monti-cms/ai`.** `defineOperation` is in core; the loop, the panel and proposals are in the AI plugin, which is where every AI
-   feature lives. There is no separate agent package.
-3. **Models without tool calling turn the AI off for that connection.** First recorded as "actions keep working with every model"; with decision 4 there
-   are no actions, so such a model has no AI features.
+1. **라우트는 동작에서 만든다(1절, 선택지 C).** 동등성은 구조적이다. 3단계는 HTTP 층의 큰 리팩터링이고, 그 비용은 받아들인다.
+2. **에이전트는 `@monti-cms/ai`에 산다.** `defineOperation`은 코어에 있고, 루프와 패널과 제안은 모든 AI 기능이 사는 AI 플러그인에 있다.
+   따로 된 에이전트 패키지는 없다.
+3. **도구 호출이 없는 모델은 그 연결의 AI를 끈다.** 처음에는 "액션은 모든 모델에서 계속 작동한다"로 기록했다. 결정 4로 액션이 없어졌으므로
+   그런 모델에는 AI 기능이 없다.
 
-Decided by the owner later on 2026-10-26, in the review of the editorial admin mockups:
+2026-10-26 늦게, 에디토리얼 관리자 화면 목업을 검토하며 소유자가 정했다.
 
-4. **The agent is the only AI path (section 7).** Actions, presets, custom actions and snippets go away. The admin cannot save requests or per-task
-   prompts; the quick buttons left are built-in requests tied to their place.
-5. **What the agent knows comes from the schema and the writing voice.** Field descriptions guide it and are no longer shown under the input; field limits
-   are its guide and its write checks; collection descriptions help; one writing-voice text in Settings › Site is read on every job.
-6. **No AI settings tab.** The model is picked in the assistant input, per conversation, from the models of the stored keys. The API keys screen shows
-   each key's monthly usage and an optional monthly cap; it does not pick the assistant's key or model.
-7. **No automatic alt text on upload.**
-8. **Proposals show where they apply (section 2).** One place: blue-pencil marks in place. Several places, a whole list, or anything irreversible: the
-   review page. Memos can be anchored to any text or proposal. Applied proposals are listed in Tools › Events with undo.
+4. **에이전트가 유일한 AI 길이다(7절).** 액션, 프리셋, 사용자 정의 액션, 스니펫은 사라진다. 관리자는 요청이나 작업별 프롬프트를 저장할 수
+   없다. 남은 빠른 버튼은 제자리에 묶인 기본 요청이다.
+5. **에이전트가 아는 것은 스키마와 글쓰기 말투에서 온다.** 필드 설명이 에이전트의 길잡이가 되고, 더는 입력 아래에 보이지 않는다. 필드 제한은
+   길잡이이자 쓰기 검사다. 컬렉션 설명도 돕는다. 설정 › 사이트의 글쓰기 말투 텍스트 하나를 모든 작업에서 읽는다.
+6. **AI 설정 탭은 없다.** 모델은 어시스턴트 입력란에서 대화마다, 저장된 키의 모델 가운데서 고른다. API 키 화면은 키마다 월 사용량과
+   선택 사항인 월 상한을 보여 준다. 어시스턴트의 키나 모델을 고르지는 않는다.
+7. **올릴 때 자동 대체 텍스트는 없다.**
+8. **제안은 적용될 곳에 보인다(2절).** 한 곳: 제자리의 파란 연필 표시. 여러 곳, 목록 전체, 되돌릴 수 없는 것: 검토
+   페이지. 메모는 어떤 텍스트나 제안에도 붙일 수 있다. 적용된 제안은 도구 › 활동 기록에 되돌리기와 함께 나열된다.

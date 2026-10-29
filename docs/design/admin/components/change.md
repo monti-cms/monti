@@ -1,70 +1,70 @@
-# Change review
+# 변경 검토
 
-This page covers the review sheet that opens before a schema change is saved: the change blocks, the split review, deleting a collection, file changes shown as a patch, and the display of changed collections in the list.
+이 페이지는 스키마 변경을 저장하기 전에 열리는 검토 시트를 다룬다. 변경 블록, 나눈 검토, 컬렉션 삭제, 패치로 보이는 파일 변경, 그리고 목록에서 바뀐 컬렉션을 보이는 방식이다.
 
-When the schema is changed, a review sheet opens before saving. Each change gets one block (`.mt-change`), and what to do with the saved data is chosen there.
+스키마를 바꾸면 저장하기 전에 검토 시트가 열린다. 변경마다 블록이 하나씩 있고(`.mt-change`), 저장된 데이터를 어떻게 할지 거기서 고른다.
 
-## Change block (`.mt-change`)
+## 변경 블록 (`.mt-change`)
 
-- In a 48px column at the left is a tag (mono 11). Its color follows the kind: `--new` green, `--edit` yellow, `--drop` red.
-- The first line of the right column: the name (bold) and, at the far right, the identifier (mono 12). Everything under it starts on the same left line as the name.
-- Choices use `mt-option` + `mt-radio` (pick one) or `mt-check` (on / off). The text is 13px, one step under the bold 14px name. Switches are not used. A black switch at the right end reads with the same weight as the name line. A count is `.n` (mono 12).
-- The result in one line is `.note`. If it cannot be undone, `.note.is-danger`.
-- A change that adds text shows the line itself with no explanation (`.note.is-add`): a green `+` in front and the text in ink. A name like "더한 줄" (added line) is not added. When a file change (`.mt-patch`) shows the same content, before / after lines are not repeated.
-- The list of what is affected is `.lines`: `.what` at the left and `.then` at the right. What is deleted is `.then.is-danger`, and what blocks is `.then.is-warn` (put the button that can clear it in that place).
-- If any choice deletes values, the pill at the bottom of the sheet becomes a red "지우고 적용" (delete and apply).
-- The sheet's foot holds only "취소" and the one pill ("적용"). It carries no note about the file.
-- A choice that needs one more answer carries it at the end of its row: the select of "다른 필드로 옮기기" (which field) and of "빈 글 148편 채우기" (which value).
-- A change that no stored value follows from (a new collection, a field no entry holds) has no choices, only the line "저장된 데이터는 바뀌지 않아요.".
-- A public address change shows its before and after as `.lines` (전 / 후, mono) and, when published entries change address, the line "발행된 글 | 148편 주소 바뀜" with the note "옛 주소는 404가 돼요." There is no redirect to pick.
-- A removed language that has translations is a block tagged "뺌": "남겨 두기" (the default) or "휴지통으로", with the note "다시 추가하면 돌아와요.".
-- When the file changed since the screen opened, the top of the sheet shows the error reply (`.mt-msg-error`: "파일이 바뀌었어요", "다시 불러오기") and the pill is off.
+- 왼쪽 48px 열에 태그(mono 11)가 있다. 색은 종류를 따른다. `--new` 초록, `--edit` 노랑, `--drop` 빨강.
+- 오른쪽 열의 첫 줄: 이름(굵게)과, 맨 오른쪽의 식별자(mono 12). 그 아래는 모두 이름과 같은 왼쪽 선에서 시작한다.
+- 선택지는 `mt-option` + `mt-radio`(하나 고르기)나 `mt-check`(켜기 / 끄기)를 쓴다. 글자는 13px로, 굵은 14px 이름보다 한 단계 작다. 스위치는 쓰지 않는다. 오른쪽 끝의 검은 스위치는 이름 줄과 같은 무게로 읽힌다. 개수는 `.n`(mono 12)이다.
+- 한 줄짜리 결과는 `.note`다. 되돌릴 수 없으면 `.note.is-danger`다.
+- 텍스트를 더하는 변경은 설명 없이 그 줄 자체를 보인다(`.note.is-add`). 앞에 초록 `+`, 글자는 잉크다. "더한 줄" 같은 이름은 붙이지 않는다. 파일 변경(`.mt-patch`)이 같은 내용을 보이면 전 / 후 줄을 되풀이하지 않는다.
+- 영향받는 것의 목록은 `.lines`다. 왼쪽에 `.what`, 오른쪽에 `.then`. 지워지는 것은 `.then.is-danger`이고, 막는 것은 `.then.is-warn`이다(그것을 풀 수 있는 버튼을 그 자리에 둔다).
+- 어느 선택지든 값을 지우면, 시트 아래의 알약이 빨간 "지우고 적용"이 된다.
+- 시트의 발에는 "취소"와 알약 하나("적용")만 있다. 파일에 대한 설명은 싣지 않는다.
+- 답이 하나 더 필요한 선택지는 그 답을 행 끝에 싣는다. "다른 필드로 옮기기"의 선택(어느 필드)과 "빈 글 148편 채우기"의 선택(어떤 값)이다.
+- 저장된 값에 아무 영향이 없는 변경(새 컬렉션, 어떤 글도 값을 갖지 않은 필드)에는 선택지가 없고, "저장된 데이터는 바뀌지 않아요." 한 줄만 있다.
+- 공개 주소 변경은 전과 후를 `.lines`(전 / 후, mono)로 보이고, 발행된 글의 주소가 바뀌면 "발행된 글 | 148편 주소 바뀜" 줄과 "옛 주소는 404가 돼요." 설명을 보인다. 고를 리다이렉트는 없다.
+- 번역이 있는 언어를 빼면 "뺌" 태그가 붙은 블록이 된다. "남겨 두기"(기본값)나 "휴지통으로"를 고르고, "다시 추가하면 돌아와요." 설명이 붙는다.
+- 화면을 연 뒤 파일이 바뀌었으면, 시트 맨 위에 오류 답장(`.mt-msg-error`: "파일이 바뀌었어요", "다시 불러오기")이 보이고 알약은 꺼진다.
 
-### In code
+### 코드
 
-`ChangeGroup` is the `.mt-change` block: `kind` is `new`, `edit` or `drop` (the tag color), `tag` is the app's word ("New", "Edit", "Removed"), `title`, and `identifier` (the key as written in the schema, "summary → excerpt"); the children are what to do with the data already saved. Choices are `Option` rows with a radio or a check. `ChangeLabel` names a part of a change ("what goes", "keep a copy") over the `ChangeLines` it labels, in small mono in the subtle ink. `ChangeNote` is the one-line result (`danger` when it cannot be undone). `ChangeLines` holds `ChangeLine`s (`what`, `then`, `tone` of `default`, `danger` or `warning`). `ChangeActions` is the buttons a change ends with, in one row.
+`ChangeGroup`은 `.mt-change` 블록이다. `kind`는 `new`, `edit`, `drop` 중 하나이고(태그 색), `tag`는 앱의 말("New", "Edit", "Removed"), 그리고 `title`과 `identifier`(스키마에 적힌 그대로의 키, "summary → excerpt")가 있다. 자식은 이미 저장된 데이터를 어떻게 할지다. 선택지는 라디오나 체크가 있는 `Option` 행이다. `ChangeLabel`은 변경의 한 부분("what goes", "keep a copy")에 이름을 붙이며, 그 이름이 가리키는 `ChangeLines` 위에 흐린 잉크의 작은 mono로 놓인다. `ChangeNote`는 한 줄짜리 결과다(되돌릴 수 없으면 `danger`). `ChangeLines`는 `ChangeLine`을 담는다(`what`, `then`, 그리고 `default`, `danger`, `warning` 중 하나인 `tone`). `ChangeActions`는 변경 끝에 한 행으로 놓이는 버튼들이다.
 
-The name `ChangeGroup` in code is the single change block, not the DS's `.mt-change-group` below. The `.note.is-add` line has no counterpart in `ChangeNote`. The DS README names this family `SchemaReview · ChangeGroup · Patch`; no `SchemaReview` exists in `@monti-cms/ui`, and the admin draws the review in `packages/admin/src/screens/schema/review-dialog.tsx`.
+코드의 `ChangeGroup`이라는 이름은 변경 블록 하나를 뜻하며, 아래에 나오는 DS의 `.mt-change-group`이 아니다. `.note.is-add` 줄은 `ChangeNote`에 짝이 없다. DS README는 이 계열을 `SchemaReview · ChangeGroup · Patch`로 부르지만, `@monti-cms/ui`에 `SchemaReview`는 없고, 관리자 화면은 검토를 `packages/admin/src/screens/schema/review-dialog.tsx`에서 그린다.
 
-## Split review (`.mt-change-group`)
+## 나눈 검토 (`.mt-change-group`)
 
-On a deployed site, if a setting that is saved straight to the database (how entries are written) and a file setting are changed together, the blocks of the sheet are split by where they go: "바로 저장" (save now) and "PR". The head is one word (not a sentence), 13px bold, with a count at the right (mono 12) and an ink rule under it. A file change (`.mt-patch`) comes only under "PR". If only one side is changed, there is no split (if only how entries are written is changed, there is no sheet and the button is "저장" (save)).
+배포된 사이트에서 데이터베이스에 바로 저장되는 설정(글을 쓰는 방식)과 파일 설정을 함께 바꾸면, 시트의 블록이 가는 곳에 따라 "바로 저장"과 "PR"로 나뉜다. 머리는 문장이 아닌 한 단어이고, 13px 굵게, 오른쪽에 개수(mono 12), 아래에 잉크 선이 있다. 파일 변경(`.mt-patch`)은 "PR" 아래에만 온다. 한쪽만 바뀌었으면 나누지 않는다(글을 쓰는 방식만 바뀌었으면 시트가 없고 버튼은 "저장"이다).
 
-Not in `@monti-cms/ui` yet.
+아직 `@monti-cms/ui`에 없다.
 
-## Deleting a collection
+## 컬렉션 삭제
 
-Deleting a collection permanently deletes its entries too. It does not go through the trash.
+컬렉션을 지우면 그 글도 영구히 지워진다. 휴지통을 거치지 않는다.
 
-- The block has two labeled parts. "지워지는 것" (what goes): the entries (the trash included), the folders and old addresses, the entries of other collections that point to it ("연결 끊김", links cut), and the links in the body (shown as broken links). "받아 두기" (keep a copy): the export of the collection.
-- Nothing has to be resolved first. The apply cuts the links that point to it: the pointing entries stay, and only the target leaves their relation field (from the published copy too; it remains in the activity log).
-- "지우고 적용" is on from the start: the review itself is the last check, and there is no identifier to type.
-- A development database deletes at once; a production site deletes when deployed.
+- 블록에는 이름 붙은 두 부분이 있다. "지워지는 것": 글(휴지통 포함), 폴더와 옛 주소, 이 컬렉션을 가리키는 다른 컬렉션의 글("연결 끊김"), 본문의 링크(깨진 링크로 보인다). "받아 두기": 컬렉션 내보내기.
+- 먼저 풀어야 할 것은 없다. 적용하면 이 컬렉션을 가리키는 연결이 끊긴다. 가리키던 글은 남고, 그 관계 필드에서 대상만 빠진다(발행된 사본에서도 빠지며, 활동 기록에는 남는다).
+- "지우고 적용"은 처음부터 켜져 있다. 검토 자체가 마지막 확인이고, 입력할 식별자는 없다.
+- 개발 데이터베이스는 곧바로 지운다. 운영 사이트는 배포할 때 지운다.
 
-### In code
+### 코드
 
-`DangerBlock` is the step at the bottom of a settings tab that deletes something with its data: a rule in the danger ink above and the `title` in the danger ink, with 24px above and below and 16px between the title and its rows. Each row is a `DangerRow`: its `name`, a quiet `meta` line of what it holds after it ("23 posts · 2 in the trash"; left out when not known), and the `action` button at the end. The review of a deletion is not in `@monti-cms/ui` yet.
+`DangerBlock`은 설정 탭 맨 아래에서 무언가를 그 데이터와 함께 지우는 단계다. 위에 위험 잉크의 선, 위험 잉크의 `title`이 있고, 위아래로 24px, 제목과 그 행 사이에 16px을 둔다. 행 하나는 `DangerRow`다. `name`, 그 뒤에 담고 있는 것을 적은 조용한 `meta` 줄("23 posts · 2 in the trash". 알 수 없으면 뺀다), 끝에 `action` 버튼이 있다. 삭제 검토는 아직 `@monti-cms/ui`에 없다.
 
-## File change (`.mt-patch`)
+## 파일 변경 (`.mt-patch`)
 
-On a deployed site too, settings are edited directly on the screen (the assistant's proposals are shown on the screen too). But the file cannot be written, so the save button becomes "PR 만들기" (create a PR) and the review sheet puts it up as a PR.
+배포된 사이트에서도 설정은 화면에서 바로 고친다(어시스턴트의 제안도 화면에 보인다). 하지만 파일을 쓸 수 없으므로, 저장 버튼은 "PR 만들기"가 되고 검토 시트가 그것을 PR로 올린다.
 
-- Under the blocks of the review sheet, the changed lines of `monti.schema.ts` are shown. Head: the file name (mono 12) · the number of added lines (green).
-- The body is mono 12/20. An added line `.add` (green ground, +), a removed line `.del` (red ground, −), the rest dimmed.
-- Under the sheet: "PR로 올려요 · 합치고 배포하면 적용" (it goes up as a PR · applied when merged and deployed) + the pill "PR 만들기".
-- After the PR is created, a band at the top of the screen keeps "PR #12 · … · 합치고 배포하면 적용돼요 · 보기" (PR #12 · … · applied when merged and deployed · view).
-- There is one settings PR at a time. Everything changed in one save (review, then create PR) goes into it, and a proposal made by a ✦ request goes into the same save after it is accepted. While a PR is open, saving again does not make a new PR but adds to it (the button is "PR에 더하기" (add to the PR)). When it is merged or closed, the next save makes a new PR.
-- If GitHub is not connected, it is read-only, and the band links to "연결" (connect).
+- 검토 시트의 블록 아래에 `monti.schema.ts`의 바뀐 줄이 보인다. 머리: 파일 이름(mono 12) · 더한 줄 수(초록).
+- 본문은 mono 12/20이다. 더한 줄 `.add`(초록 바탕, +), 지운 줄 `.del`(빨강 바탕, −), 나머지는 흐리게.
+- 시트 아래: "PR로 올려요 · 합치고 배포하면 적용" + 알약 "PR 만들기".
+- PR을 만든 뒤에는 화면 맨 위의 띠가 "PR #12 · … · 합치고 배포하면 적용돼요 · 보기"를 계속 보인다.
+- 설정 PR은 한 번에 하나다. 한 번의 저장(검토, 그다음 PR 만들기)에서 바꾼 것은 모두 그 PR에 들어가고, ✦ 요청으로 만든 제안도 받아들인 뒤에는 같은 저장에 들어간다. PR이 열려 있는 동안 다시 저장하면 새 PR을 만들지 않고 그 PR에 더한다(버튼은 "PR에 더하기"). PR이 합쳐지거나 닫히면 다음 저장이 새 PR을 만든다.
+- GitHub이 연결되지 않았으면 읽기 전용이고, 띠는 "연결"로 이어진다.
 
-### In code
+### 코드
 
-`Patch`: what changes in one file, line by line. `file` is the name (mono), `lines` are `PatchLine`s of type `same`, `add` or `remove`; the head shows how many lines are added (green) and taken out (red). Added lines have a green ground and a +, removed lines a red one and a −; the lines around them are dimmed. `actionLabel` and `onAction` give one text button at the end of the head (copy).
+`Patch`: 파일 하나에서 바뀌는 것을 줄 단위로 보인다. `file`은 이름(mono)이고, `lines`는 `same`, `add`, `remove` 타입의 `PatchLine`이다. 머리는 더한 줄 수(초록)와 뺀 줄 수(빨강)를 보인다. 더한 줄은 초록 바탕에 +, 지운 줄은 빨강 바탕에 −이고, 그 둘레의 줄은 흐리다. `actionLabel`과 `onAction`은 머리 끝에 글자 버튼 하나(복사)를 둔다.
 
-## Collection list display
+## 컬렉션 목록 표시
 
-- A collection that has changed: `.mt-change-dot` beside its name.
-- A collection to be deleted leaves the list at once; nothing is struck through. Until it is saved it can be taken back from "바뀐 곳 ▾" (the row "메모 · 컬렉션 지움 · 되돌리기") or from the notice "메모를 지웠어요 · 되돌리기".
+- 바뀐 컬렉션: 이름 옆에 `.mt-change-dot`.
+- 지울 컬렉션은 곧바로 목록에서 빠진다. 취소선은 긋지 않는다. 저장하기 전까지는 "바뀐 곳 ▾"("메모 · 컬렉션 지움 · 되돌리기" 행)이나 "메모를 지웠어요 · 되돌리기" 알림에서 되돌릴 수 있다.
 
-### In code
+### 코드
 
-`NavLink` is one link of the list: 36px, the name, the identifier at the end (mono, quiet), the open one on the current ground and semibold. `dot` names the change dot after the name, and `handle` (a `NavLinkHandle`) is the drag handle that shows in the left margin while the pointer is on the link. `RailLayout` puts the links (a `nav`) beside the content; narrow, the content wraps under them. `ChangeDot` (see Status) and `FieldRow changed` for the field outline (see List). There is no struck-through row: a collection that is to be deleted leaves the list.
+`NavLink`는 목록의 링크 하나다. 36px, 이름, 끝에 식별자(mono, 조용히)가 있고, 열린 링크는 현재 바탕에 semibold다. `dot`은 이름 뒤의 변경 점에 이름을 붙이고, `handle`(`NavLinkHandle`)은 포인터가 링크 위에 있는 동안 왼쪽 여백에 보이는 끌기 핸들이다. `RailLayout`은 링크(`nav`)를 내용 옆에 둔다. 좁으면 내용이 그 아래로 내려간다. `ChangeDot`(상태 참고)과 필드 윤곽을 위한 `FieldRow changed`(목록 참고). 취소선 행은 없다. 지울 컬렉션은 목록에서 빠진다.

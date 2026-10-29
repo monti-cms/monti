@@ -1,127 +1,127 @@
-# Testing
+# 테스트
 
-Status: draft, for review. The suite is moved to these rules one package at a time, core first; until a package is moved, its tests may still break
-them. The numbers the overhaul starts from are in [`testing/baseline-2026-10.md`](testing/baseline-2026-10.md).
+상태: 승인됨 (2026-10-30). 패키지별로 차례로 적용한다. 코어가 먼저다. 아직 옮기지 않은 패키지의 테스트는 이 규칙을 어길 수 있다.
+개편을 시작하는 숫자는 [`testing/baseline-2026-10.md`](testing/baseline-2026-10.md)에 있다.
 
-Goal: tests that catch defects, and cost little to run and to keep. Fewer tests is not the goal. A test earns its place by failing when the code is
-wrong, and by staying green when the code changes without changing what it does.
+목표: 결함을 잡으면서, 돌리고 유지하는 비용이 적은 테스트. 테스트 수를 줄이는 것은 목표가 아니다. 테스트는 코드가 틀렸을 때 실패하고,
+코드가 하는 일은 그대로인 채 코드만 바뀌었을 때 초록으로 남아야 제 몫을 한다.
 
-## Two kinds of test
+## 테스트의 두 종류
 
-- **Behavior**: what the code does. Layers L1 to L4 below. This page is about these.
-- **Looks**: what the admin looks like. Storybook stories, the visual comparison and the audit (`packages/ui/visual`, see the `packages/ui` README).
-  A behavior test never checks looks: no class names, no order of elements on the page, no widths.
+- **동작**: 코드가 하는 일. 아래의 L1~L4 층이다. 이 페이지는 이것을 다룬다.
+- **모양**: 관리자 화면이 어떻게 보이는지. Storybook 스토리, 시각 비교, 감사다(`packages/ui/visual`, `packages/ui` README 참고).
+  동작 테스트는 모양을 검사하지 않는다. 클래스 이름, 페이지 위 요소의 순서, 폭을 보지 않는다.
 
-## Layers
+## 층
 
-A layer is named by what has to be running for the test to check its behavior, not by back end or front end. Front-end code lands in several layers.
+층은 백엔드냐 프런트엔드냐가 아니라, 테스트가 동작을 검사하려면 무엇이 돌아야 하는지로 이름 붙인다. 프런트엔드 코드는 여러 층에 걸친다.
 
-| Layer | What runs | File | Runner | For example |
+| 층 | 도는 것 | 파일 | 러너 | 예 |
 |---|---|---|---|---|
-| L1 logic | Nothing but the code | `foo.test.ts` | Vitest, node | `membersToRestore`, `canTransition`, slug rules, schema diff |
-| L2 integration | Postgres, the file system, a child process | `foo.db.test.ts` | Vitest, node, the test database | The store restoring a trashed group, a migration, `monti init` |
-| L3 component | A component, rendered with the providers the admin uses | `foo.test.tsx`; `foo.browser.test.tsx` when it needs layout, focus or the editor | Vitest with jsdom; Vitest browser mode | A row menu's keyboard and callbacks; a popover placed by the caret |
-| L4 flow | The example app, its database and a browser | `examples/blog/e2e/<flow>.spec.ts` | Playwright | Write a post, publish it, see it on the site |
+| L1 로직 | 코드뿐 | `foo.test.ts` | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
+| L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.db.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
+| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.test.tsx`; 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
+| L4 흐름 | 예제 앱, 그 데이터베이스, 브라우저 | `examples/blog/e2e/<flow>.spec.ts` | Playwright | 글을 쓰고, 발행하고, 사이트에서 보기 |
 
-**One behavior, one layer.** A behavior is tested once, in the lowest layer that can catch its defects. A rule that is a function is tested in L1, not
-again through the database, the HTTP route and the screen. A higher layer checks that the layers join (the route calls the service, the screen sends the
-request), not every case again. L4 has one test per flow of the admin's design (`docs/design/admin`), and nothing else.
+**동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
+데이터베이스, HTTP 라우트, 화면을 거쳐 다시 테스트하지 않는다. 높은 층은 층들이 이어지는지(라우트가 서비스를 부르고, 화면이 요청을 보낸다)를
+검사하고, 모든 경우를 다시 검사하지 않는다. L4는 관리자 화면 디자인(`docs/design/admin`)의 흐름마다 테스트 하나를 두고, 그 밖에는 없다.
 
-**jsdom or a real browser.** jsdom draws nothing: every box is 0 by 0, the caret has no position, and focus and timers do not behave as in a browser.
-It is fine for a component whose behavior does not depend on any of that (a menu's items, a form's validation). A test that needs a position, a size,
-focus moving, or the editor goes to `*.browser.test.tsx`. A test that makes up sizes or stubs a browser API to get past jsdom belongs there instead.
+**jsdom이냐 실제 브라우저냐.** jsdom은 아무것도 그리지 않는다. 모든 상자는 0 × 0이고, 캐럿에는 위치가 없으며, 포커스와 타이머는 브라우저처럼 움직이지 않는다.
+동작이 그중 어느 것에도 기대지 않는 컴포넌트(메뉴의 항목, 폼의 검증)에는 괜찮다. 위치, 크기, 포커스 이동, 편집기가 필요한 테스트는
+`*.browser.test.tsx`로 간다. jsdom을 넘기려고 크기를 지어내거나 브라우저 API를 스텁하는 테스트도 그쪽에 속한다.
 
-## Front end
+## 프런트엔드
 
-- **Extract judgments, not hooks.** When a component decides something with many cases (which bulk actions a selection allows, what the slash menu shows),
-  the decision becomes a plain function of its inputs and is tested in L1. Extract only when there are many cases, the decision is used in more than one
-  place, or it is an asynchronous state machine (as `entry-editor-store`, a plain object that runs without React). Everything else stays in the
-  component and is tested there, which also tests how the component uses it.
-- **No hook tests.** A hook is not tested on its own: it is tested through the component that uses it, or its decision moves out into a function.
-- **Storybook is for looks.** Stories are the catalog, the visual comparison and the accessibility check. Behavior tests do not run stories, and a
-  story's `play` only sets up a state to look at (a menu opened).
+- **훅이 아니라 판단을 뽑아낸다.** 컴포넌트가 경우가 많은 것을 정할 때(선택한 행에 어떤 일괄 동작을 허락하는지, 슬래시 메뉴가 무엇을 보이는지),
+  그 판단은 입력을 받는 평범한 함수가 되고 L1에서 테스트한다. 경우가 많거나, 판단을 여러 곳에서 쓰거나, 비동기 상태 기계일 때만
+  뽑아낸다(`entry-editor-store`처럼 React 없이 도는 평범한 객체). 나머지는 모두 컴포넌트에 남기고 거기서 테스트한다. 그러면 컴포넌트가 그것을
+  어떻게 쓰는지도 함께 테스트된다.
+- **훅 테스트는 없다.** 훅은 따로 테스트하지 않는다. 그 훅을 쓰는 컴포넌트를 거쳐 테스트하거나, 그 판단을 함수로 뽑아낸다.
+- **Storybook은 모양을 위한 것이다.** 스토리는 카탈로그, 시각 비교, 접근성 검사다. 동작 테스트는 스토리를 돌리지 않고,
+  스토리의 `play`는 볼 상태(열린 메뉴)를 만들기만 한다.
 
-## Writing a test
+## 테스트 쓰기
 
-Every test answers three questions. If one has no answer, the test is not written.
+모든 테스트는 세 질문에 답한다. 하나라도 답이 없으면 그 테스트는 쓰지 않는다.
 
-1. **What does it promise?** A behavior someone relies on: a public function, an HTTP route, a CLI command, what the admin can do on a screen.
-2. **Which layer?** The lowest one that can catch it.
-3. **How would the code have to be wrong for it to fail?** Name the defect. A test that passes for any value (`toBeDefined`, `toBeTruthy`) answers
-   nothing.
+1. **무엇을 약속하는가?** 누군가 기대는 동작이다. 공개 함수, HTTP 라우트, CLI 명령, 관리자가 화면에서 할 수 있는 일.
+2. **어느 층인가?** 그것을 잡을 수 있는 가장 낮은 층.
+3. **코드가 어떻게 틀려야 실패하는가?** 결함을 이름으로 댄다. 어떤 값에도 통과하는 테스트(`toBeDefined`, `toBeTruthy`)는
+   아무것에도 답하지 않는다.
 
-### The site config
+### 사이트 설정
 
-Tests run against the reference blog config and again against a second site config (`vitest.othersite.config.ts`). A test that runs on the shared site
-looks names up from the config (`packages/core/test/any-site.ts`: `contentCollection`, `titleFieldOf`, `secondLocale`, …) and never writes `"post"`,
-`"ko"` or `"summary"` itself. A test that is about the blog alone is named `*.blog.test.ts`. A test that needs a config of its own builds it in the
-test.
+테스트는 참조 블로그 설정으로 돌고, 두 번째 사이트 설정(`vitest.othersite.config.ts`)으로 한 번 더 돈다. 공유 사이트에서 도는 테스트는
+이름을 설정에서 찾고(`packages/core/test/any-site.ts`: `contentCollection`, `titleFieldOf`, `secondLocale`, …) `"post"`,
+`"ko"`, `"summary"`를 직접 쓰지 않는다. 블로그만 다루는 테스트는 이름을 `*.blog.test.ts`로 짓는다. 자기만의 설정이 필요한 테스트는
+테스트 안에서 그 설정을 만든다.
 
-The other-site run repeats only the tests whose result can depend on the config, and it finds them by itself (`packages/core/test/config-sensitive.ts`).
-No package keeps a hand-written list.
+다른 사이트 실행은 결과가 설정에 따라 달라질 수 있는 테스트만 되풀이하고, 그런 테스트를 스스로 찾는다(`packages/core/test/config-sensitive.ts`).
+손으로 적은 목록을 가진 패키지는 없다.
 
-### Language and copy
+### 언어와 문구
 
-Screen tests render in one language, Korean. A test finds text by its message key through the translator (`testSite.createTranslator(messages)`), and
-never types the copy: a test that writes the copy breaks when the copy changes, and one that accepts the Korean or the English copy passes in either
-language.
+화면 테스트는 한 언어, 한국어로 렌더한다. 테스트는 번역기(`testSite.createTranslator(messages)`)를 거쳐 메시지 키로 글자를 찾고,
+문구를 직접 적지 않는다. 문구를 적는 테스트는 문구가 바뀌면 깨지고, 한국어 문구와 영어 문구를 둘 다 받는 테스트는 어느
+언어에서나 통과한다.
 
-### Each test stands alone
+### 테스트는 저마다 홀로 선다
 
-A test sets up the state it needs and leaves nothing for the next one. It passes when run alone (`-t`) and in any order (`--sequence.shuffle`). A
-file that runs one scenario in steps (create, change, apply) is one test with steps, not several tests that read each other's state.
+테스트는 필요한 상태를 스스로 만들고, 다음 테스트에 아무것도 남기지 않는다. 혼자 돌려도(`-t`), 어떤 순서로 돌려도(`--sequence.shuffle`) 통과한다.
+한 시나리오를 단계로 돌리는 파일(만들기, 바꾸기, 적용)은 단계가 있는 테스트 하나다. 서로의 상태를 읽는 여러 테스트가 아니다.
 
-### Waiting
+### 기다리기
 
-Wait for a condition (`findBy…`, `waitFor`, `expect.poll`) or move a fake clock (`vi.useFakeTimers`). Never wait a fixed time.
+조건을 기다리거나(`findBy…`, `waitFor`, `expect.poll`) 가짜 시계를 움직인다(`vi.useFakeTimers`). 정해진 시간을 기다리지 않는다.
 
-## Forbidden
+## 금지
 
-| Pattern | Why | Instead |
+| 패턴 | 까닭 | 대신 |
 |---|---|---|
-| A regex that accepts Korean or English | Passes in either language, so a negative check passes always | The translator, in Korean |
-| `toBeDefined()` on a result or an error | Passes for any value, any error | Check the value, or the error's code |
-| `toBeTruthy()` on an element or a value | Passes for anything present | Check what it should be |
-| A fixed sleep (`setTimeout`, `sleep(n)`) | Slow, and still flaky on a slow machine | Wait for a condition, or a fake clock |
-| `return` inside a test to skip it | Reports a pass for a test that did not run | `it.skipIf(…)`, or set up what it needs |
-| Class names, data attributes, DOM order in a behavior test | That is how the component is built and looks | Role and name; looks go to the visual tests |
-| `querySelector`, test ids | Ties the test to the markup | Role and name (`getByRole`) |
-| A mock of the package's own module | Tests the mock, and breaks on any internal move | Use the module; mock only the edge (network, clock, model) |
-| Mock call arguments read by position (`mock.calls[0][1]`) | Breaks when an argument is added | `toHaveBeenCalledWith` with what matters |
-| A blog name in a shared-site test | Breaks or checks nothing on another site | `any-site` lookups, or `*.blog.test.ts` |
-| Reading source files as text to check them | Breaks on formatting, says nothing about behavior | Test what the code does; type checks belong to `tsc` |
+| 한국어나 영어를 받는 정규식 | 어느 언어에서나 통과하므로, 부정 검사는 언제나 통과한다 | 번역기, 한국어로 |
+| 결과나 오류에 `toBeDefined()` | 어떤 값, 어떤 오류에도 통과한다 | 값이나 오류 코드를 검사한다 |
+| 요소나 값에 `toBeTruthy()` | 있기만 하면 무엇이든 통과한다 | 무엇이어야 하는지 검사한다 |
+| 정해진 시간 재우기(`setTimeout`, `sleep(n)`) | 느리고, 느린 기계에서는 여전히 불안정하다 | 조건을 기다리거나, 가짜 시계 |
+| 건너뛰려고 테스트 안에서 `return` | 돌지 않은 테스트를 통과로 알린다 | `it.skipIf(…)`, 또는 필요한 것을 만든다 |
+| 동작 테스트의 클래스 이름, data 속성, DOM 순서 | 컴포넌트가 어떻게 만들어지고 보이는지다 | 역할과 이름. 모양은 시각 테스트로 |
+| `querySelector`, 테스트 id | 테스트를 마크업에 묶는다 | 역할과 이름(`getByRole`) |
+| 패키지 자기 모듈의 mock | mock을 테스트하고, 내부를 조금만 옮겨도 깨진다 | 모듈을 그대로 쓴다. 가장자리(네트워크, 시계, 모델)만 mock한다 |
+| 위치로 읽는 mock 호출 인자(`mock.calls[0][1]`) | 인자가 하나 더해지면 깨진다 | 중요한 것만 담은 `toHaveBeenCalledWith` |
+| 공유 사이트 테스트의 블로그 이름 | 다른 사이트에서 깨지거나 아무것도 검사하지 않는다 | `any-site` 찾기, 또는 `*.blog.test.ts` |
+| 소스 파일을 글자로 읽어 검사하기 | 서식이 바뀌면 깨지고, 동작에 대해 아무것도 말하지 않는다 | 코드가 하는 일을 테스트한다. 타입 검사는 `tsc`의 몫이다 |
 
-`scripts/test-metrics/weak-patterns.mjs` and `site-names.mjs` count these.
+`scripts/test-metrics/weak-patterns.mjs`와 `site-names.mjs`가 이것들을 센다.
 
-## Files
+## 파일
 
-- A test sits in a `__test__` folder beside what it tests, named after it (`lifecycle.ts` → `__test__/lifecycle.test.ts`), never after the task that
-  added it (`m13-accessibility.test.ts`, `review-fixes.test.ts`).
-- The suffix says the layer: `.test.ts` (L1), `.db.test.ts` (L2), `.test.tsx` and `.browser.test.tsx` (L3). Each layer is its own Vitest project, so
-  one layer can run alone.
-- Each package keeps its shared fixtures and render helpers in one `test` folder.
+- 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
+  더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
+- 접미사가 층을 말한다. `.test.ts`(L1), `.db.test.ts`(L2), `.test.tsx`와 `.browser.test.tsx`(L3). 층마다 자기 Vitest 프로젝트이므로,
+  한 층만 따로 돌릴 수 있다.
+- 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
 
-## Measuring and guarding
+## 재기와 지키기
 
-| What | How |
+| 무엇 | 어떻게 |
 |---|---|
-| Defects caught (mutation score) | StrykerJS: change the code a little at a time and count the changes a test fails on (`packages/core/stryker.score.config.mjs`) |
-| What each test adds | StrykerJS with every test run per change (`stryker.config.mjs`): the changes only that test catches. Zero means another test already catches everything it does |
-| Code no test runs | Vitest coverage, read as a map of gaps, not a score |
-| Time | Vitest JSON reporter |
-| Flaky and order-dependent tests | `scripts/test-metrics/repeat-runs.mjs`, plain and shuffled |
-| Tests tied to how code is built | `scripts/test-metrics/test-churn.mjs`: refactor commits that had to change tests |
-| Weak patterns | `scripts/test-metrics/weak-patterns.mjs`, `site-names.mjs` |
+| 잡는 결함(변이 점수) | StrykerJS: 코드를 조금씩 바꾸고, 테스트가 실패하는 바꿈을 센다(`packages/core/stryker.score.config.mjs`) |
+| 테스트 하나가 더하는 것 | 바꿈마다 모든 테스트를 돌리는 StrykerJS(`stryker.config.mjs`): 그 테스트만 잡는 바꿈. 0이면 그 테스트가 하는 일을 다른 테스트가 이미 다 잡는다 |
+| 어떤 테스트도 돌리지 않는 코드 | Vitest 커버리지. 점수가 아니라 빈틈의 지도로 읽는다 |
+| 시간 | Vitest JSON 리포터 |
+| 불안정한 테스트와 순서에 기대는 테스트 | `scripts/test-metrics/repeat-runs.mjs`, 그대로 한 번과 섞어서 한 번 |
+| 코드가 만들어진 방식에 묶인 테스트 | `scripts/test-metrics/test-churn.mjs`: 테스트를 바꿔야 했던 리팩터 커밋 |
+| 약한 패턴 | `scripts/test-metrics/weak-patterns.mjs`, `site-names.mjs` |
 
-CI measures first and blocks later. Once a number is steady it becomes a gate, in this order: the forbidden patterns, then quarantine of flaky tests,
-then a floor for the mutation score. "What each test adds" is used to find tests to delete, never as a gate.
+CI는 먼저 재고 나중에 막는다. 숫자가 안정되면 관문이 된다. 순서는 금지 패턴, 그다음 불안정한 테스트 격리,
+그다음 변이 점수 하한이다. "테스트 하나가 더하는 것"은 지울 테스트를 찾는 데 쓰고, 관문으로는 쓰지 않는다.
 
-## Not yet in place
+## 아직 없는 것
 
-- Vitest browser mode and `*.browser.test.tsx`.
-- The L4 flows (`examples/blog/e2e`).
-- One Vitest project per layer, and the `.db.test.ts` suffix.
-- Automatic other-site selection outside core (admin, ai and seo keep lists).
-- The CI gates.
+- Vitest 브라우저 모드와 `*.browser.test.tsx`.
+- L4 흐름(`examples/blog/e2e`).
+- 층마다 Vitest 프로젝트 하나, 그리고 `.db.test.ts` 접미사.
+- 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).
+- CI 관문.
 
-Each is added when the package that needs it is moved to these rules.
+각각은 그것이 필요한 패키지를 이 규칙으로 옮길 때 더한다.

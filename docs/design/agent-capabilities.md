@@ -1,182 +1,182 @@
-# Admin agent: capabilities
+# 관리자 에이전트: 기능
 
-Status: inventory for [the admin agent design](agent.md). It lists every capability the admin has today, as found in the routes of core and the plugins,
-and what each one becomes for the agent.
+상태: [관리자 에이전트 설계](agent.md)를 위한 목록. 관리자 화면에 지금 있는 모든 기능을 core와 플러그인의 라우트에서 찾아 적고,
+각 기능이 에이전트에게 무엇이 되는지 적는다.
 
-Columns:
+열:
 
-- **Operation**: the proposed `defineOperation` name.
-- **Kind**: `read` (the agent calls it freely), `write` (goes into a proposal), `code` (a pull request), `editor read` and `editor write` (run in the browser on the open entry; a write is a suggestion in the editor), or `—` (not an operation; the reason is in the notes).
-- **Undo**: how a proposal reverses the write. "No" means the review says it cannot be undone.
-- **Phase**: when it arrives (agent.md section 9).
+- **동작**: 제안하는 `defineOperation` 이름.
+- **종류**: `read`(에이전트가 마음대로 부른다), `write`(제안에 들어간다), `code`(풀 리퀘스트), `editor read`와 `editor write`(열린 글에 대해 브라우저에서 돈다. 쓰기는 편집기 안의 제안이다), 또는 `—`(동작이 아니다. 이유는 메모에 있다).
+- **되돌리기**: 제안이 쓰기를 어떻게 되돌리는가. "불가"는 검토 화면이 되돌릴 수 없다고 알린다는 뜻이다.
+- **단계**: 언제 들어오는가(agent.md 9절).
 
-## Entries
+## 글
 
-Route base: `/v1/entries`.
+라우트 기준: `/v1/entries`.
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `entries.list` | read | `GET /entries` | | 1 | Per collection. Filters already cover what the agent needs: text in title, slug or body (`search`, `includeBody`), status (draft, published, editing, archived; published has no unpublished changes, editing has), locale, folder (with descendants), field values and empty fields (`field`), translation state (`translation`), created, updated and published date ranges, sort, paging |
-| `entries.find` | read | `GET /entries/search` | | 1 | Title or slug lookup for a picker, at most 50 hits. The agent mostly uses `entries.list` |
-| `entries.get` | read | `GET /entries/[id]` | | 1 | With `?format=<name>` the body comes as text (MDX), which is what the model should read and write |
-| `entries.usages` | read | `GET /entries/[id]/relations` | | 1 | Where an entry is used, draft and published |
-| `entries.translations` | read | `GET /entries/[id]/translations` | | 1 | The translation group |
-| `entries.checkPublish` | read | `POST /entries/[id]/check` | | 1 | What publishing would find, without publishing. A read, though it is a `POST` |
-| `entries.create` | write | `POST /entries` | Trash it | 2 | Title, slug, metadata, body as text, folder |
-| `entries.update` | write | `PATCH /entries/[id]` | Write the before values back | 2 | Any of slug, metadata fields, body, folder. The preview is a field-by-field diff, the body a text diff |
-| `entries.duplicate` | write | `POST /entries/[id]/duplicate` | Trash the copy | 2 | |
-| `entries.translate` | write | `POST /entries/[id]/translations` | Trash the translation | 3 | Creates a translation; filling it is `entries.update`, or a built-in request of the translation editor |
-| `entries.publish` | write | `POST /entries/[id]/publish`, bulk `publish` | **No**, when the entry was already published | 2 | Monti keeps no history, so the published version it replaces is gone. A first publish is undone by archiving |
-| `entries.archive` | write | `POST /entries/[id]/archive`, bulk `archive` | Unarchive (back to draft, not republished) | 2 | Ends publication |
-| `entries.unarchive` | write | `POST /entries/[id]/unarchive`, bulk `unarchive` | Archive | 2 | |
-| `entries.trash` | write | `POST /entries/[id]/trash`, bulk `trash` | Restore | 2 | Ends publication |
-| `entries.restore` | write | `POST /entries/[id]/restore` | Trash | 2 | |
-| `entries.deletePermanently` | write | `DELETE /entries/[id]`, bulk `permanentDelete`, `POST /trash/delete` | **No** | 3 | Only for entries already in the trash. Refused (`in_use`, naming the entries) while a relation field of another entry points at it; a link in a body does not hold it back. `POST /references/unlink` takes the target out of those fields first |
-| `entries.moveToFolder` | write | bulk `folder.move`, `PATCH /entries/[id]` | Move back | 2 | |
-| `entries.setRelation` | write | bulk `relation.add`, `relation.remove`, `relation.set` | The opposite change | 2 | Tags and categories are relation fields, so "tag these posts" is this |
+| `entries.list` | read | `GET /entries` | | 1 | 컬렉션별. 에이전트에게 필요한 것은 필터가 이미 다룬다. 제목, 슬러그, 본문의 텍스트(`search`, `includeBody`), 상태(초안, 발행됨, 수정 중, 보관됨. 발행됨은 발행하지 않은 변경이 없고, 수정 중은 있다), 언어, 폴더(하위 포함), 필드 값과 빈 필드(`field`), 번역 상태(`translation`), 만든 날, 수정한 날, 발행한 날의 범위, 정렬, 페이지 |
+| `entries.find` | read | `GET /entries/search` | | 1 | 고르기 화면용 제목이나 슬러그 찾기, 최대 50건. 에이전트는 주로 `entries.list`를 쓴다 |
+| `entries.get` | read | `GET /entries/[id]` | | 1 | `?format=<name>`을 붙이면 본문이 텍스트(MDX)로 온다. 모델이 읽고 써야 하는 것이 이것이다 |
+| `entries.usages` | read | `GET /entries/[id]/relations` | | 1 | 글이 쓰이는 곳, 초안과 발행본 |
+| `entries.translations` | read | `GET /entries/[id]/translations` | | 1 | 번역 묶음 |
+| `entries.checkPublish` | read | `POST /entries/[id]/check` | | 1 | 발행하지 않고 발행하면 무엇이 걸리는지 본다. `POST`지만 읽기다 |
+| `entries.create` | write | `POST /entries` | 휴지통으로 | 2 | 제목, 슬러그, 메타데이터, 텍스트 본문, 폴더 |
+| `entries.update` | write | `PATCH /entries/[id]` | 이전 값을 다시 쓴다 | 2 | 슬러그, 메타데이터 필드, 본문, 폴더 중 무엇이든. 미리보기는 필드별 비교, 본문은 텍스트 비교다 |
+| `entries.duplicate` | write | `POST /entries/[id]/duplicate` | 사본을 휴지통으로 | 2 | |
+| `entries.translate` | write | `POST /entries/[id]/translations` | 번역을 휴지통으로 | 3 | 번역을 만든다. 채우는 것은 `entries.update`나 번역 편집기의 기본 요청이다 |
+| `entries.publish` | write | `POST /entries/[id]/publish`, 일괄 `publish` | 이미 발행된 글이었으면 **불가** | 2 | Monti는 기록을 남기지 않으므로 대체된 발행본은 사라진다. 첫 발행은 보관으로 되돌린다 |
+| `entries.archive` | write | `POST /entries/[id]/archive`, 일괄 `archive` | 보관 풀기(초안으로 돌아가고, 다시 발행하지 않는다) | 2 | 발행을 끝낸다 |
+| `entries.unarchive` | write | `POST /entries/[id]/unarchive`, 일괄 `unarchive` | 보관 | 2 | |
+| `entries.trash` | write | `POST /entries/[id]/trash`, 일괄 `trash` | 복원 | 2 | 발행을 끝낸다 |
+| `entries.restore` | write | `POST /entries/[id]/restore` | 휴지통으로 | 2 | |
+| `entries.deletePermanently` | write | `DELETE /entries/[id]`, 일괄 `permanentDelete`, `POST /trash/delete` | **불가** | 3 | 이미 휴지통에 있는 글에만 쓴다. 다른 글의 관계 필드가 가리키는 동안에는 거절한다(`in_use`, 그 글들을 알려 준다). 본문 안의 링크는 막지 않는다. `POST /references/unlink`가 먼저 그 필드에서 대상을 뺀다 |
+| `entries.moveToFolder` | write | 일괄 `folder.move`, `PATCH /entries/[id]` | 다시 옮긴다 | 2 | |
+| `entries.setRelation` | write | 일괄 `relation.add`, `relation.remove`, `relation.set` | 반대 변경 | 2 | 태그와 카테고리는 관계 필드이므로 "이 글들에 태그 달아 줘"가 이것이다 |
 
-The bulk route takes up to 100 items per call. A proposal with more items splits them into several bulk calls when it is applied.
+일괄 라우트는 한 번에 최대 100개를 받는다. 그보다 많은 항목이 든 제안은 적용할 때 여러 번의 일괄 호출로 나눈다.
 
-## The open entry (editor)
+## 열린 글 (편집기)
 
-These run in the browser on the entry open in the editor (agent.md section 5). There is no route: they act on the form, not on the server. A write is a
-suggestion the admin accepts or rejects in the editor, and nothing is saved until the admin saves.
+이것들은 편집기에 열린 글에 대해 브라우저에서 돈다(agent.md 5절). 라우트는 없다. 서버가 아니라 폼에 작용한다. 쓰기는
+관리자가 편집기에서 받거나 버리는 제안이고, 관리자가 저장할 때까지 아무것도 저장되지 않는다.
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `editor.read` | editor read | none | | 1 | The open entry as the form holds it, unsaved changes included: fields, and the body as text in the site's format |
-| `editor.selection` | editor read | none | | 1 | The selected text and the block at the cursor, with its block id. Also sent with the screen context |
-| `editor.replaceSelection` | editor write | none | Reject the suggestion | 2 | |
-| `editor.rewriteBlock` | editor write | none | Reject the suggestion | 2 | A paragraph, heading, list or block, by block id |
-| `editor.insertBlocks` | editor write | none | Reject the suggestion | 2 | Before or after a block; the blocks as text in the site's format, so code blocks, images and custom blocks work |
-| `editor.moveBlocks` | editor write | none | Reject the suggestion | 2 | |
-| `editor.removeBlocks` | editor write | none | Reject the suggestion | 2 | |
-| `editor.setField` | editor write | none | Reject the suggestion | 2 | A field of the properties panel: title, slug, summary, tags, and the other fields of the collection |
+| `editor.read` | editor read | 없음 | | 1 | 폼이 쥔 그대로의 열린 글, 저장하지 않은 변경 포함: 필드와, 사이트 형식의 텍스트 본문 |
+| `editor.selection` | editor read | 없음 | | 1 | 선택한 텍스트와 커서가 있는 블록, 그 블록 id와 함께. 화면 맥락과 함께 보내기도 한다 |
+| `editor.replaceSelection` | editor write | 없음 | 제안을 버린다 | 2 | |
+| `editor.rewriteBlock` | editor write | 없음 | 제안을 버린다 | 2 | 블록 id로 문단, 제목, 목록, 블록을 다시 쓴다 |
+| `editor.insertBlocks` | editor write | 없음 | 제안을 버린다 | 2 | 블록 앞이나 뒤. 블록은 사이트 형식의 텍스트이므로 코드 블록, 이미지, 사용자 정의 블록이 된다 |
+| `editor.moveBlocks` | editor write | 없음 | 제안을 버린다 | 2 | |
+| `editor.removeBlocks` | editor write | 없음 | 제안을 버린다 | 2 | |
+| `editor.setField` | editor write | 없음 | 제안을 버린다 | 2 | 속성 패널의 필드: 제목, 슬러그, 요약, 태그, 컬렉션의 다른 필드 |
 
-A server write to the entry open in the editor is refused, and the model is told to use these instead. Publishing, archiving and trashing the open entry
-stay server operations; the editor saves first, as its own buttons do.
+편집기에 열린 글에 대한 서버 쓰기는 거절되고, 모델에게 대신 이것들을 쓰라고 알린다. 열린 글의 발행, 보관, 휴지통으로 보내기는
+서버 동작으로 남는다. 편집기 자신의 버튼처럼 편집기가 먼저 저장한다.
 
-## Folders
+## 폴더
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `folders.list` | read | `GET /folders` | | 1 | The tree of one collection |
-| `folders.get` | read | `GET /folders/[id]/contents` | | 1 | What the folder holds, subfolders included: entries (published ones counted), folders, files (those in use counted), the preview of a delete |
-| `folders.create` | write | `POST /folders` | Delete it | 2 | |
-| `folders.update` | write | `PATCH /folders/[id]` | Write the before values back | 2 | Rename, move under another parent, reorder |
-| `folders.delete` | write | `DELETE /folders/[id]` | `POST /trash/restore` | 3 | Moves the folder to the trash with its subfolders and entries as one unit (a media folder with files in use: only the unused files go). Nothing is deleted for good |
+| `folders.list` | read | `GET /folders` | | 1 | 컬렉션 하나의 트리 |
+| `folders.get` | read | `GET /folders/[id]/contents` | | 1 | 폴더에 든 것, 하위 폴더 포함: 글(발행된 것은 따로 센다), 폴더, 파일(쓰이는 것은 따로 센다), 삭제 미리보기 |
+| `folders.create` | write | `POST /folders` | 지운다 | 2 | |
+| `folders.update` | write | `PATCH /folders/[id]` | 이전 값을 다시 쓴다 | 2 | 이름 바꾸기, 다른 부모 아래로 옮기기, 순서 바꾸기 |
+| `folders.delete` | write | `DELETE /folders/[id]` | `POST /trash/restore` | 3 | 폴더를 하위 폴더와 글과 함께 한 덩어리로 휴지통에 옮긴다(쓰이는 파일이 있는 미디어 폴더는 쓰이지 않는 파일만 간다). 아무것도 영구히 지우지 않는다 |
 
-## Media
+## 미디어
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `media.list` | read | `GET /media` | | 1 | Filename search, type, folder, upload date, and `used: "unused"`, which is "find unused media" already |
-| `media.get` | read | `GET /media/[id]` | | 1 | With where it is used |
-| `media.update` | write | `PATCH /media/[id]` | Write the before values back | 2 | Filename, default alt text and caption, folder |
-| `media.trash` | write | `POST /media/trash` | `POST /trash/restore` | 2 | Moves files to the trash; a file anything refers to stays (`kept`), so the agent cannot trash a used file even by mistake. A file is deleted for good only from the trash (`POST /trash/delete`) |
-| — | — | `POST /media/uploads`, `POST /media/[id]/complete` | | | Uploading needs the file from the admin's computer. Later: an upload from a URL the admin gives |
+| `media.list` | read | `GET /media` | | 1 | 파일 이름 검색, 종류, 폴더, 올린 날, 그리고 `used: "unused"`. 이것이 이미 "쓰이지 않는 미디어 찾기"다 |
+| `media.get` | read | `GET /media/[id]` | | 1 | 쓰이는 곳과 함께 |
+| `media.update` | write | `PATCH /media/[id]` | 이전 값을 다시 쓴다 | 2 | 파일 이름, 기본 대체 텍스트와 캡션, 폴더 |
+| `media.trash` | write | `POST /media/trash` | `POST /trash/restore` | 2 | 파일을 휴지통에 옮긴다. 무엇이든 가리키는 파일은 남으므로(`kept`) 에이전트가 실수로라도 쓰이는 파일을 버릴 수 없다. 파일은 휴지통에서만 영구히 지운다(`POST /trash/delete`) |
+| — | — | `POST /media/uploads`, `POST /media/[id]/complete` | | | 올리려면 관리자 컴퓨터의 파일이 필요하다. 나중에: 관리자가 준 URL에서 올리기 |
 
-## Templates
+## 템플릿
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
 | `templates.list` | read | `GET /templates` | | 1 | |
-| `templates.get` | read | `GET /templates/[id]` | | 1 | Body as text with `?format=` |
-| `templates.create` | write | `POST /templates` | Delete it | 3 | |
-| `templates.update` | write | `PATCH /templates/[id]` | Write the before values back | 3 | |
-| `templates.delete` | write | `DELETE /templates/[id]` | Recreate it | 3 | |
+| `templates.get` | read | `GET /templates/[id]` | | 1 | `?format=`을 붙이면 본문이 텍스트로 온다 |
+| `templates.create` | write | `POST /templates` | 지운다 | 3 | |
+| `templates.update` | write | `PATCH /templates/[id]` | 이전 값을 다시 쓴다 | 3 | |
+| `templates.delete` | write | `DELETE /templates/[id]` | 다시 만든다 | 3 | |
 
-## Site structure
+## 사이트 구조
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `site.describe` | read | `GET /meta` | | 1 | Collections, fields, body blocks, limits. The agent reads it at the start of every run, so it knows the site's shape. From phase 2 it carries the field and collection descriptions, which tell the agent what each field is for (agent.md section 7) |
-| `schema.read` | read | `GET /schema` | | 1 | The schema file |
-| `schema.edit` | code | `POST /schema/preview`, `PUT /schema` | Revert the pull request | 4 | Writes the file in development; elsewhere a pull request. The preview's impacts on stored entries go into the review, and the admin acknowledges them there |
-| — | — | none | | | Site config in code (`defineSite`: locales, plugins). Out of scope until the schema edit works as a pull request |
+| `site.describe` | read | `GET /meta` | | 1 | 컬렉션, 필드, 본문 블록, 제한. 에이전트는 실행할 때마다 처음에 이것을 읽어 사이트의 모양을 안다. 2단계부터는 필드와 컬렉션 설명을 담아, 각 필드가 무엇을 위한 것인지 에이전트에게 알려 준다(agent.md 7절) |
+| `schema.read` | read | `GET /schema` | | 1 | 스키마 파일 |
+| `schema.edit` | code | `POST /schema/preview`, `PUT /schema` | 풀 리퀘스트를 되돌린다 | 4 | 개발 환경에서는 파일을 쓰고, 그 밖에서는 풀 리퀘스트다. 미리보기가 찾은 저장된 글에 대한 영향은 검토에 들어가고, 관리자가 거기서 확인한다 |
+| — | — | 없음 | | | 코드 안의 사이트 설정(`defineSite`: 언어, 플러그인). 스키마 수정이 풀 리퀘스트로 동작할 때까지 범위 밖 |
 
-## Delivery and sync
+## 전달과 동기화
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `events.list` | read | `GET /events` | | 3 | Failed and dead webhook deliveries |
-| `events.retry` | write | `POST /events/[id]/retry` | Not needed | 3 | |
-| `events.dismiss` | write | `POST /events/[id]/dismiss` | No | 3 | |
+| `events.list` | read | `GET /events` | | 3 | 실패했거나 죽은 웹훅 전달 |
+| `events.retry` | write | `POST /events/[id]/retry` | 필요 없음 | 3 | |
+| `events.dismiss` | write | `POST /events/[id]/dismiss` | 불가 | 3 | |
 
-## AI and checks
+## AI와 검사
 
-| Operation | Kind | Route today | Undo | Phase | Notes |
+| 동작 | 종류 | 지금 라우트 | 되돌리기 | 단계 | 메모 |
 | --- | --- | --- | --- | --- | --- |
-| `spellcheck.run` | read | The text-check plugin route | | 3 | Plugin operation, when a spell-check plugin is installed |
-| — | — | `POST /ai/run`, `/ai/actions`, `/ai/snippets` | | | Removed in phase 3 with actions, custom actions and snippets (agent.md section 7). There is no `ai.<action>` operation: the agent writes the summary, alt text or translation itself |
-| — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | The model moves to a picker in the assistant input, per conversation; the API keys screen shows each key's monthly usage and cap. The agent does not change which model it uses or what it may spend |
-| — | — | none | | | The writing voice (Settings › Site). Every run gets it as context; it is not a tool call |
+| `spellcheck.run` | read | 텍스트 검사 플러그인 라우트 | | 3 | 맞춤법 검사 플러그인이 설치됐을 때의 플러그인 동작 |
+| — | — | `POST /ai/run`, `/ai/actions`, `/ai/snippets` | | | 3단계에서 액션, 사용자 정의 액션, 스니펫과 함께 없앤다(agent.md 7절). `ai.<action>` 동작은 없다. 요약, 대체 텍스트, 번역은 에이전트가 직접 쓴다 |
+| — | — | `/ai/providers`, `/ai/settings`, `/ai/models` | | | 모델은 대화마다 어시스턴트 입력란의 고르기로 옮긴다. API 키 화면은 키마다 한 달 사용량과 상한을 보여 준다. 에이전트는 자기가 쓰는 모델이나 쓸 수 있는 금액을 바꾸지 않는다 |
+| — | — | 없음 | | | 글쓰기 말투(설정 › 사이트). 모든 실행이 맥락으로 받는다. 도구 호출이 아니다 |
 
-### Built-in requests
+### 기본 요청
 
-Not operations: each is a fixed sentence sent to the agent with the screen context, run as one turn with only the tools it needs (agent.md section 7).
+동작이 아니다. 각각 화면 맥락과 함께 에이전트에게 보내는 정해진 문장이고, 필요한 도구만 가지고 한 턴으로 돈다(agent.md 7절).
 
-| Place | Request | Tools | Phase |
+| 곳 | 요청 | 도구 | 단계 |
 | --- | --- | --- | --- |
-| The publish to-do | Write the summary | `editor.read`, `editor.setField` | 3 |
-| The publish to-do | Fill missing alt text | `editor.read`, `media.get`, `editor.rewriteBlock` | 3 |
-| The translation editor | Translate from the source | `entries.get` (the source), `editor.read`, `editor.rewriteBlock`, `editor.setField` | 3 |
-| The translation editor | Translate only the blocks that changed | The same, limited to the blocks changed in the source since the translation | 3 |
-| The bulk bar of the media list | Fill alt text | `media.get`, `media.update` | 3 |
+| 발행 할 일 | 요약 쓰기 | `editor.read`, `editor.setField` | 3 |
+| 발행 할 일 | 빠진 대체 텍스트 채우기 | `editor.read`, `media.get`, `editor.rewriteBlock` | 3 |
+| 번역 편집기 | 원문에서 번역하기 | `entries.get`(원문), `editor.read`, `editor.rewriteBlock`, `editor.setField` | 3 |
+| 번역 편집기 | 바뀐 블록만 번역하기 | 같은 도구, 번역 뒤 원문에서 바뀐 블록으로 한정 | 3 |
+| 미디어 목록의 일괄 막대 | 대체 텍스트 채우기 | `media.get`, `media.update` | 3 |
 
-## Not operations
+## 동작이 아닌 것
 
-| Route today | Why not |
+| 지금 라우트 | 동작이 아닌 이유 |
 | --- | --- |
-| `/session/*` (sign-in, sign-out, first admin) | Signing in is the admin's |
-| `/api-keys/*` | Key values never reach the agent, and choosing keys and their monthly caps is the admin's |
-| `/preferences` | The admin's own list columns and screen state, not site content |
-| `/import/*` | Takes a file from the admin's computer |
-| `/export/*` | Produces a download for the admin. The agent reads entries directly |
-| `/events/retry` (cron), plugin webhooks, `/public/*` | Called by machines or the public site, not by the admin |
-| CLI (`db:*`, `schema:*`, `admin:reset-password`, `events:retry`, `content:rewrite`) | Run on the machine that hosts the site |
+| `/session/*`(로그인, 로그아웃, 첫 관리자) | 로그인은 관리자의 일이다 |
+| `/api-keys/*` | 키 값은 에이전트에게 가지 않고, 키와 그 월 상한을 고르는 것은 관리자의 일이다 |
+| `/preferences` | 관리자 자신의 목록 열과 화면 상태이지, 사이트 콘텐츠가 아니다 |
+| `/import/*` | 관리자 컴퓨터의 파일을 받는다 |
+| `/export/*` | 관리자를 위한 내려받기를 만든다. 에이전트는 글을 직접 읽는다 |
+| `/events/retry`(cron), 플러그인 웹훅, `/public/*` | 관리자가 아니라 기계나 공개 사이트가 부른다 |
+| CLI(`db:*`, `schema:*`, `admin:reset-password`, `events:retry`, `content:rewrite`) | 사이트를 호스팅하는 기계에서 돈다 |
 
-## What phase 1 needs that does not exist
+## 1단계에 필요한데 없는 것
 
-Almost every read the agent needs is a route already. The gaps:
+에이전트에게 필요한 읽기는 거의 모두 이미 라우트가 있다. 빈틈은 이렇다.
 
-1. **Lists across collections.** `entries.list` takes one collection. A question like "what did I change this week" needs one call per collection; that is
-   fine for the agent, which reads `site.describe` first.
-2. **Counts by relation value.** "Which tags are used least" means listing the tags collection and counting with `entries.usages`, one call per tag. A
-   `relations.counts` read would make it one call. Add it only if the probe of phase 1 shows the agent struggling.
-3. **Size of a proposal.** The bulk route stops at 100 items; the proposal splits larger applies itself (above).
+1. **컬렉션을 가로지르는 목록.** `entries.list`는 컬렉션 하나를 받는다. "이번 주에 뭘 바꿨지" 같은 질문은 컬렉션마다 한 번씩 불러야 한다.
+   `site.describe`를 먼저 읽는 에이전트에게는 괜찮다.
+2. **관계 값별 개수.** "어떤 태그가 가장 덜 쓰이나"는 태그 컬렉션을 나열하고 `entries.usages`로 세는 것이라, 태그마다 한 번씩 부른다.
+   `relations.counts` 읽기가 있으면 한 번이면 된다. 1단계 시험에서 에이전트가 애를 먹을 때만 더한다.
+3. **제안의 크기.** 일괄 라우트는 100개에서 멈춘다. 그보다 큰 적용은 제안이 스스로 나눈다(위 참고).
 
-## What the single AI path needs (agent.md section 7)
+## 하나의 AI 경로에 필요한 것 (agent.md 7절)
 
-Core, in phase 2, before the agent writes:
+core, 2단계, 에이전트가 쓰기 전에:
 
-1. **Field descriptions as agent input.** `description` of a field (`packages/core/src/schema/fields.ts`) is sent to the agent with `site.describe` and is
-   no longer rendered under the input. The field settings sheet of the schema settings edits it. Collection descriptions go the same way.
-2. **Checks in field definitions.** `max`, `required` and the other limits of a field are checked by the write operations' previews, and a unique slug is a
-   check of `entries.create` and `entries.update`, so a value that breaks them is refused before it reaches a proposal.
-3. **The writing voice.** One text in Settings › Site, stored with the site settings and added to the context of every run.
-4. **Model per conversation.** The assistant input has a model picker listing the models of the stored keys, grouped by provider. A run is stored with
-   its model; a new conversation starts with the last used one.
-5. **Usage and the monthly cap.** Each run records its tokens against the key it used; the API keys screen shows each key's month of usage with an
-   approximate cost and an optional cap. A run or built-in request on a key past its cap is refused, and the panel shows the notice in place of its input.
+1. **필드 설명을 에이전트 입력으로.** 필드의 `description`(`packages/core/src/schema/fields.ts`)은 `site.describe`와 함께 에이전트에게 가고,
+   더는 입력란 아래에 그리지 않는다. 스키마 설정의 필드 설정 시트에서 고친다. 컬렉션 설명도 같은 길을 간다.
+2. **필드 정의 안의 검사.** 필드의 `max`, `required`와 다른 제한은 쓰기 동작의 미리보기가 검사하고, 고유한 슬러그는
+   `entries.create`와 `entries.update`의 검사다. 그래서 이를 어기는 값은 제안에 닿기 전에 거절된다.
+3. **글쓰기 말투.** 설정 › 사이트의 글 하나로, 사이트 설정과 함께 저장되고 모든 실행의 맥락에 더해진다.
+4. **대화별 모델.** 어시스턴트 입력란에 저장된 키의 모델을 공급자별로 묶어 나열하는 모델 고르기가 있다. 실행은
+   그 모델과 함께 저장되고, 새 대화는 마지막에 쓴 모델로 시작한다.
+5. **사용량과 월 상한.** 실행마다 쓴 키에 토큰을 기록한다. API 키 화면은 키마다 한 달 사용량을
+   대략의 비용과 선택적인 상한과 함께 보여 준다. 상한을 넘은 키로 하는 실행이나 기본 요청은 거절되고, 패널은 입력란 자리에 알림을 보여 준다.
 
-Moving the AI over, in phase 3. Each place an action attaches today becomes a built-in request or goes away:
+3단계에서 AI를 옮긴다. 지금 액션이 붙은 곳마다 기본 요청이 되거나 없어진다.
 
-| Today | Becomes |
+| 지금 | 바뀐 뒤 |
 | --- | --- |
-| AI buttons beside fields (slug, summary, tags, category) | Removed. The summary is the publish to-do's "write the summary" |
-| Alt text and caption of a body image, and the automatic fill on upload (`auto-image-text.ts`) | Removed. Missing alt text is the publish to-do's "fill missing alt text" |
-| Media filename, default alt text and caption | Default alt text is the media bulk bar's "fill alt text"; the rest is removed |
-| Block translate and "translate all" in the translation editor | "Translate from the source" and "translate only changed blocks" |
-| Code fold rules | Removed |
-| The selection menu (polish), the insert menu (draft) and body block buttons | Removed; asked in the panel, with the selection in the screen context |
-| Custom actions, prompt snippets and the AI settings tab | Removed. The `styleGuide` snippet becomes the writing voice; the model is picked in the assistant input, and usage and caps are on the API keys screen |
+| 필드 옆 AI 버튼(슬러그, 요약, 태그, 카테고리) | 없앤다. 요약은 발행 할 일의 "요약 쓰기"다 |
+| 본문 이미지의 대체 텍스트와 캡션, 올릴 때 자동 채우기(`auto-image-text.ts`) | 없앤다. 빠진 대체 텍스트는 발행 할 일의 "빠진 대체 텍스트 채우기"다 |
+| 미디어 파일 이름, 기본 대체 텍스트와 캡션 | 기본 대체 텍스트는 미디어 일괄 막대의 "대체 텍스트 채우기"다. 나머지는 없앤다 |
+| 번역 편집기의 블록 번역과 "모두 번역" | "원문에서 번역하기"와 "바뀐 블록만 번역하기" |
+| 코드 접기 규칙 | 없앤다 |
+| 선택 메뉴(다듬기), 넣기 메뉴(초안), 본문 블록 버튼 | 없앤다. 패널에서 묻고, 선택은 화면 맥락에 담긴다 |
+| 사용자 정의 액션, 프롬프트 스니펫, AI 설정 탭 | 없앤다. `styleGuide` 스니펫은 글쓰기 말투가 된다. 모델은 어시스턴트 입력란에서 고르고, 사용량과 상한은 API 키 화면에 있다 |
 
-Out of scope for now: proposals from several admins at once. A Monti site has a single admin.
+지금은 범위 밖: 여러 관리자가 한꺼번에 내는 제안. Monti 사이트의 관리자는 한 명이다.
 
-## Counts
+## 개수
 
-| Kind | Operations |
+| 종류 | 동작 |
 | --- | --- |
 | read | 18 |
 | write | 26 |
@@ -184,4 +184,4 @@ Out of scope for now: proposals from several admins at once. A Monti site has a 
 | editor read | 2 |
 | editor write | 6 |
 
-Phase 1 is 14 reads and 2 editor reads. Phase 2 adds 14 writes and 6 editor writes.
+1단계는 읽기 14개와 편집기 읽기 2개다. 2단계는 쓰기 14개와 편집기 쓰기 6개를 더한다.

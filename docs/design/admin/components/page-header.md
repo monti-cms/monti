@@ -1,41 +1,41 @@
-# Page header
+# 페이지 머리
 
-This page covers the top of a content page: the title row with its ink rule, the toolbar under it, and how page width behaves on wide windows.
+이 페이지는 콘텐츠 페이지의 위쪽을 다룬다. 잉크 선이 있는 제목 행, 그 아래 툴바, 넓은 창에서 페이지 너비가 어떻게 되는지다.
 
-When rows are picked, the toolbar stays as it is. The bulk bar takes the place of the column-name row below it (see List).
+행을 골라도 툴바는 그대로다. 일괄 작업 바는 그 아래의 열 이름 행 자리를 차지한다(목록 참고).
 
-## Title row
+## 제목 행
 
-The head of a content page. The title (`text-page`) has an ink rule under it. This is the only place a page has this rule.
+콘텐츠 페이지의 머리다. 제목(`text-page`) 아래에 잉크 선이 있다. 페이지에서 이 선이 있는 곳은 여기뿐이다.
 
-- Beside the title: only the address rule of that list, in mono (`/posts/:slug`). Settings screens do not have it. The name of the file to save (`monti.schema.ts`) shows only where that file is the problem, such as the save review and the read-only notice.
-- The title row is as tall as a pill (36px), whether or not there is a pill. So the ink rule is at the same height on every page (it does not move down when the save group appears).
-- At the right: secondary pill first, then primary pill. On a settings screen the save group goes here ("바뀐 곳 N ▾" (N changed places) · "모두 되돌리기" (undo all) · "저장하고 적용" (save and apply)), and it follows when the page scrolls.
+- 제목 옆: 그 목록의 주소 규칙만 mono로 둔다(`/posts/:slug`). 설정 화면에는 없다. 저장할 파일의 이름(`monti.schema.ts`)은 저장 검토나 읽기 전용 알림처럼 그 파일이 문제인 곳에서만 보인다.
+- 제목 행은 필이 있든 없든 필 높이(36px)다. 그래서 잉크 선은 모든 페이지에서 같은 높이에 있다(저장 묶음이 나타나도 내려가지 않는다).
+- 오른쪽: 보조 필이 먼저, 주 필이 다음이다. 설정 화면에서는 여기에 저장 묶음이 온다("바뀐 곳 N ▾" · "모두 되돌리기" · "저장하고 적용"). 페이지를 스크롤해도 따라온다.
 
-### In code
+### 코드
 
-`PageHeader`: `title`, `meta` (the address rule, mono, beside the title), `children` (the actions at the right: the secondary pill first and the one primary pill last) and `trail` (the way back above the title, such as a folder path). The title is 26px bold. `PageColumn` is the column every page sits in: centered, 40px above the title and below the page, 48px at the sides (16px on a narrow screen). It takes the height the page has; the header and the toolbar keep their place, and `PageBody` is what scrolls. `Section` is one section of a settings screen: the title in a column on the left, the fields beside it, and a hairline under; the fields wrap under the title on a narrow screen (`stacked` always puts them under it, for a section in a column that is already narrow: a collection's basics). `id` is the anchor a link can land on. `ChangesGroup` is the save group of a settings screen: "바뀐 곳 N ▾" opens the list of changes, each with its own undo, then "모두 되돌리기" and the one primary pill; the pill is disabled, not hidden, while something blocks saving, and the list hangs from the whole group with its right edge on the group's.
+`PageHeader`: `title`, `meta`(제목 옆의 mono 주소 규칙), `children`(오른쪽의 동작: 보조 필이 먼저, 하나뿐인 주 필이 마지막), `trail`(제목 위의 돌아가는 길, 폴더 경로 같은 것). 제목은 26px 굵게다. `PageColumn`은 모든 페이지가 놓이는 열이다. 가운데 정렬이고, 제목 위와 페이지 아래에 40px, 양옆에 48px(좁은 화면에서는 16px)를 둔다. 페이지가 가진 높이를 차지한다. 머리와 툴바는 제자리에 있고, 스크롤되는 것은 `PageBody`다. `Section`은 설정 화면의 한 절이다. 왼쪽 열에 제목, 그 옆에 필드, 아래에 가는 선이 있다. 좁은 화면에서는 필드가 제목 아래로 내려간다(`stacked`는 이미 좁은 열에 든 절에서 필드를 언제나 제목 아래에 둔다. 컬렉션의 기본 정보가 그렇다). `id`는 링크가 닿을 수 있는 앵커다. `ChangesGroup`은 설정 화면의 저장 묶음이다. "바뀐 곳 N ▾"은 바뀐 곳 목록을 열고 각 항목에 되돌리기가 따로 있다. 그다음 "모두 되돌리기"와 하나뿐인 주 필이 온다. 저장을 막는 것이 있는 동안 필은 숨지 않고 비활성이 된다. 목록은 묶음 전체에 매달리고, 오른쪽 끝이 묶음의 오른쪽 끝에 맞는다.
 
-## Toolbar
+## 툴바
 
-The row under the title (height `height-toolbar`, 48px). What it holds differs by screen. Picking rows does not change it. The bulk bar appears in the column-name row.
+제목 아래의 행이다(높이 `height-toolbar`, 48px). 무엇이 들어가는지는 화면마다 다르다. 행을 골라도 바뀌지 않는다. 일괄 작업 바는 열 이름 행에 나타난다.
 
-- A collection list: nothing, so the column-name row sits directly under the title row; filters that are on show as the dot after a column's name, not as chips. Only a search inside a folder adds the search-place row (`.mt-chips`). There are no status tabs, no "필터 ▾" (filter) and no "보기 ▾" (view); filtering, sorting and columns are done from the column names (see List).
-- The trash mixes kinds, but it has no kind tabs either: its one column-name row is "제목 · 종류 · 버린 날" (title · kind · discarded), and the "종류" column's menu filters by kind ("게시글" (posts) · "메모" (memos) · "카테고리" · "태그" · "미디어", with counts, several at once). Sorting is done from the column names there too.
-- Between the left group and the right group is a short vertical rule.
+- 컬렉션 목록: 아무것도 없다. 그래서 열 이름 행이 제목 행 바로 아래에 붙는다. 켜진 필터는 칩이 아니라 열 이름 뒤의 점으로 보인다. 폴더 안에서 검색할 때만 검색 위치 행(`.mt-chips`)이 더해진다. 상태 탭도, "필터 ▾"도, "보기 ▾"도 없다. 필터, 정렬, 열은 열 이름에서 다룬다(목록 참고).
+- 휴지통은 종류가 섞이지만 종류 탭도 없다. 열 이름 행 하나가 "제목 · 종류 · 버린 날"이고, "종류" 열의 메뉴가 종류로 필터한다("게시글" · "메모" · "카테고리" · "태그" · "미디어", 개수와 함께, 여러 개를 한 번에). 정렬도 거기서 열 이름으로 한다.
+- 왼쪽 묶음과 오른쪽 묶음 사이에 짧은 세로선이 있다.
 
-### In code
+### 코드
 
-`PageToolbar` (and `PageToolbarEnd` for the right group, `ToolbarDivider` for the short rule). There is no chip row part: filters show as the dot after a column's name.
+`PageToolbar`(오른쪽 묶음은 `PageToolbarEnd`, 짧은 선은 `ToolbarDivider`). 칩 행 부품은 없다. 필터는 열 이름 뒤의 점으로 보인다.
 
-## Wide windows
+## 넓은 창
 
-The mockups are drawn at 1440x900. In a wider window the column width depends on the kind of screen.
+시안은 1440x900으로 그린다. 더 넓은 창에서는 화면 종류에 따라 열 너비가 정해진다.
 
-- List screens (entry list, media, trash, the tables of tools): they grow by the amount that leaves at least 240px on each side, up to `width-list` (1200px). At 1440 the column stays 880, at 1920 it is 1200. When the column gets wider, the title column grows and media fit more per row.
-- Settings and input screens (the four settings tabs, template editing, add a key: screens that fill in fields): always `width-content` (880px). So that labels do not drift from their values and lines do not get long.
-- When a side surface is open, the same rule is followed again with the room that is left.
+- 목록 화면(글 목록, 미디어, 휴지통, 도구의 표): 양옆에 적어도 240px가 남는 만큼 넓어지고, 최대 `width-list`(1200px)까지다. 1440에서 열은 880 그대로이고, 1920에서는 1200이다. 열이 넓어지면 제목 열이 커지고 미디어는 한 행에 더 많이 들어간다.
+- 설정과 입력 화면(설정 탭 네 개, 템플릿 편집, 키 추가처럼 필드를 채우는 화면): 언제나 `width-content`(880px)다. 라벨이 값에서 멀어지지 않고 줄이 길어지지 않게 하려는 것이다.
+- 옆 화면이 열려 있으면 남은 공간으로 같은 규칙을 다시 따른다.
 
-### In code
+### 코드
 
-`PageColumn` has `width="content"` (the default, 880px) or `width="list"` (880px until the page area leaves at least 240px on each side, then it grows with the area up to 1200px). The area is what is beside the sidebar and any docked panel, measured on the nearest `container` (the admin frame makes it), so a folded rail or an open panel runs the same rule on the room that is left.
+`PageColumn`에는 `width="content"`(기본, 880px)나 `width="list"`(페이지 영역이 양옆에 적어도 240px를 남길 때까지 880px, 그 뒤로는 영역을 따라 1200px까지 넓어진다)가 있다. 영역은 사이드바와 붙은 패널 옆의 공간이고, 가장 가까운 `container`(관리자 화면 틀이 만든다)에서 잰다. 그래서 접힌 레일이나 열린 패널이 있어도 남은 공간으로 같은 규칙이 돈다.

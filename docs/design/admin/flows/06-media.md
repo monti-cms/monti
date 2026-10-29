@@ -1,297 +1,297 @@
-# Flow 6: Media
+# 흐름 6: 미디어
 
-This file lists every row and step of canvas flow 6, "흐름 6 · 미디어". Uploading, inserting from the editor, browsing, replacing a file, alt text, deleting, files that are not images, picking, and exceptions.
+이 파일은 캔버스 흐름 6 "흐름 6 · 미디어"의 모든 행과 단계를 적는다. 올리기, 편집기에서 넣기, 둘러보기, 파일 바꾸기, 대체 텍스트, 지우기, 이미지가 아닌 파일, 고르기, 예외를 다룬다.
 
-Canvas note: "흐름 6 · 미디어 — 올리기 · 편집기에서 넣기 · 둘러보기 · 파일 바꾸기 · 대체 텍스트 · 지우기 · 이미지가 아닌 파일 · 고르기 · 예외"
+캔버스 메모: "흐름 6 · 미디어 — 올리기 · 편집기에서 넣기 · 둘러보기 · 파일 바꾸기 · 대체 텍스트 · 지우기 · 이미지가 아닌 파일 · 고르기 · 예외"
 
-Screens used: [`Media`](../screens.md#media), [`EditorNotion`](../screens.md#editornotion), [`ImageInsert`](../screens.md#imageinsert).
+쓰는 화면: [`Media`](../screens.md#media), [`EditorNotion`](../screens.md#editornotion), [`ImageInsert`](../screens.md#imageinsert).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "올리기" · Upload
+## "올리기"
 
-### Step 01: "올리기 · 끌어 오면 지금 폴더에 테두리 · 아래 알약 "여기에 올려요""
+### 단계 01: "올리기 · 끌어 오면 지금 폴더에 테두리 · 아래 알약 "여기에 올려요""
 
-- Board: `Flow6Step01.dc.html`
-- Renders: `Media` (mode "끌어 놓기")
-- The user drags files over the media library. The current folder gets a border and a pill at the bottom says "여기에 올려요" (uploading here).
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step01.dc.html`
+- 화면: `Media` (mode "끌어 놓기")
+- 사용자가 파일을 미디어 라이브러리 위로 끌어 온다. 지금 폴더에 테두리가 생기고, 아래쪽 알약에 "여기에 올려요"라고 나온다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 02: "올리기 · 하위 폴더 위로 가면 그 폴더만 강조 · "covers에 올려요""
+### 단계 02: "올리기 · 하위 폴더 위로 가면 그 폴더만 강조 · "covers에 올려요""
 
-- Board: `Flow6Step02.dc.html`
-- Renders: `Media` (mode "폴더 위로 끌기")
-- The user drags over a sub-folder. Only that folder is highlighted and the pill names it ("covers에 올려요").
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step02.dc.html`
+- 화면: `Media` (mode "폴더 위로 끌기")
+- 사용자가 하위 폴더 위로 끌어 간다. 그 폴더만 강조되고, 알약에 그 폴더 이름이 나온다("covers에 올려요").
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 03: "올리기 · 올리는 중"
+### 단계 03: "올리기 · 올리는 중"
 
-- Board: `Flow6Step03.dc.html`
-- Renders: `Media` (mode "올리는 중")
-- Uploading. Each file shows a thumbnail with progress ("올리는 중 · 64%") or "대기" (waiting).
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step03.dc.html`
+- 화면: `Media` (mode "올리는 중")
+- 올리는 중이다. 파일마다 썸네일과 함께 진행 상황("올리는 중 · 64%")이나 "대기"가 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 04: "올리기 · 실패한 파일은 그 자리에 남음 · 줄여서 다시 · 빼기"
+### 단계 04: "올리기 · 실패한 파일은 그 자리에 남음 · 줄여서 다시 · 빼기"
 
-- Board: `Flow6Step04.dc.html`
-- Renders: `Media` (mode "올리기 실패")
-- Failed files stay in place with the reason: "올릴 수 없는 형식" (HEIC) with a remove action, or too large (14 MB, 10 MB limit) with "줄여서 다시" (shrink and retry) and remove.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step04.dc.html`
+- 화면: `Media` (mode "올리기 실패")
+- 실패한 파일은 이유와 함께 그 자리에 남는다. "올릴 수 없는 형식"(HEIC)에는 빼기가 있고, 너무 큰 파일(14 MB, 한도 10 MB)에는 "줄여서 다시"와 빼기가 있다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "편집기에서 올리기" · Upload in the editor
+## "편집기에서 올리기"
 
-### Step 05: "편집기 · 붙여넣거나 끌어 놓으면 커서 자리에 바로 · 올리는 중"
+### 단계 05: "편집기 · 붙여넣거나 끌어 놓으면 커서 자리에 바로 · 올리는 중"
 
-- Board: `Flow6Step05.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "올리는 중")
-- In the editor the user pastes or drops an image. It lands at the cursor right away with an uploading state and a caption field.
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
+- 보드: `Flow6Step05.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "올리는 중")
+- 사용자가 편집기에서 이미지를 붙여넣거나 끌어 놓는다. 이미지는 바로 커서 자리에 들어가고, 올리는 중 상태와 캡션 칸이 보인다.
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
 
-### Step 06: "편집기 · 이미지를 누르면 설정 · 대체 텍스트 · 캡션 · ✦ 채우기"
+### 단계 06: "편집기 · 이미지를 누르면 설정 · 대체 텍스트 · 캡션 · ✦ 채우기"
 
-- Board: `Flow6Step06.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "설정")
-- The user clicks an image in the editor. A settings card opens: caption, width (body width), alt text with the hint to type one or mark the image as decorative, and the "✦ 채우기" (fill) action.
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
+- 보드: `Flow6Step06.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "설정")
+- 사용자가 편집기에서 이미지를 누른다. 설정 카드가 열린다: 캡션, 너비(본문 너비), 대체 텍스트(직접 쓰거나 꾸밈용 이미지로 표시하라는 안내가 붙는다), 그리고 "✦ 채우기" 동작.
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: upload in the editor (05–06))
 
-## "둘러보기" · Browse
+## "둘러보기"
 
-### Step 07: "둘러보기 · 미디어 맨 위 · 폴더와 폴더에 넣지 않은 파일"
+### 단계 07: "둘러보기 · 미디어 맨 위 · 폴더와 폴더에 넣지 않은 파일"
 
-- Board: `Flow6Step07.dc.html`
-- Renders: `Media` (mode "최상위")
-- The library top level shows folders and files not placed in any folder, with a count of folders and files.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step07.dc.html`
+- 화면: `Media` (mode "최상위")
+- 라이브러리 맨 위에는 폴더와, 어느 폴더에도 넣지 않은 파일이 폴더 수, 파일 수와 함께 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 08: "둘러보기 · 폴더 안 (Blog Assets) · 하위 폴더 · 파일"
+### 단계 08: "둘러보기 · 폴더 안 (Blog Assets) · 하위 폴더 · 파일"
 
-- Board: `Flow6Step08.dc.html`
-- Renders: `Media` (mode "폴더 안")
-- Inside a folder (Blog Assets) the library shows its sub-folders and files.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step08.dc.html`
+- 화면: `Media` (mode "폴더 안")
+- 폴더(Blog Assets) 안에서는 라이브러리가 그 폴더의 하위 폴더와 파일을 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 09: "둘러보기 · + 폴더 → 그 자리에 새 폴더 · 이름이 골라진 채로"
+### 단계 09: "둘러보기 · + 폴더 → 그 자리에 새 폴더 · 이름이 골라진 채로"
 
-- Board: `Flow6Step09.dc.html`
-- Renders: `Media` (mode "새 폴더")
-- The user presses "+ 폴더". A new folder appears in place with its name selected.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step09.dc.html`
+- 화면: `Media` (mode "새 폴더")
+- 사용자가 "+ 폴더"를 누른다. 그 자리에 새 폴더가 이름이 골라진 채로 나타난다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 10: "둘러보기 · 폴더를 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
+### 단계 10: "둘러보기 · 폴더를 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
 
-- Board: `Flow6Step10.dc.html`
-- Renders: `Media` (mode "폴더 우클릭")
-- The user right-clicks a folder. The menu offers open, rename, move to ▸ and delete folder.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step10.dc.html`
+- 화면: `Media` (mode "폴더 우클릭")
+- 사용자가 폴더를 우클릭한다. 메뉴에 열기, 이름 바꾸기, 옮기기 ▸, 폴더 지우기가 있다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 13: "둘러보기 · 빈 곳을 우클릭 → 올리기 · 새 폴더"
+### 단계 13: "둘러보기 · 빈 곳을 우클릭 → 올리기 · 새 폴더"
 
-- Board: `Flow6Step13.dc.html`
-- Renders: `Media` (mode "빈 곳 우클릭")
-- The user right-clicks empty space. The menu offers upload and new folder.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step13.dc.html`
+- 화면: `Media` (mode "빈 곳 우클릭")
+- 사용자가 빈 곳을 우클릭한다. 메뉴에 올리기와 새 폴더가 있다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 14: "둘러보기 · 목록 보기 · 사용 · 형식 · 크기 · 치수 · 올린 날"
+### 단계 14: "둘러보기 · 목록 보기 · 사용 · 형식 · 크기 · 치수 · 올린 날"
 
-- Board: `Flow6Step14.dc.html`
-- Renders: `Media` (mode "목록 보기")
-- List view. Columns: name, use (number of posts using it, or unused), type, size, dimensions, uploaded date.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step14.dc.html`
+- 화면: `Media` (mode "목록 보기")
+- 목록 보기다. 열: 이름, 사용(그 파일을 쓰는 글 수, 또는 안 씀), 형식, 크기, 치수, 올린 날.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 15: "둘러보기 · 검색 → 찾는 곳을 모든 폴더로 넓힘 · 경로가 보임"
+### 단계 15: "둘러보기 · 검색 → 찾는 곳을 모든 폴더로 넓힘 · 경로가 보임"
 
-- Board: `Flow6Step15.dc.html`
-- Renders: `Media` (mode "찾는 중")
-- The user searches. The search scope widens to all folders and each result shows its folder path, use count or unused.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step15.dc.html`
+- 화면: `Media` (mode "찾는 중")
+- 사용자가 검색한다. 찾는 범위가 모든 폴더로 넓어지고, 결과마다 폴더 경로와 쓰는 수 또는 안 씀이 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 16: "둘러보기 · 파일 열기 → 옆 패널 · 쓰는 곳"
+### 단계 16: "둘러보기 · 파일 열기 → 옆 패널 · 쓰는 곳"
 
-- Board: `Flow6Step16.dc.html`
-- Renders: `Media` (mode "파일 열기")
-- The user opens a file. A side panel shows copy address, open in new tab, file name, folder, default alt text (with a fill action), default caption, type, size (web 2400×1600, original 4032×2688), uploaded date, and where it is used: each post with, at the row's end, the places in it (a field's label such as "대표 이미지", or "본문" for the body).
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step16.dc.html`
+- 화면: `Media` (mode "파일 열기")
+- 사용자가 파일을 연다. 옆 패널에 주소 복사, 새 탭에서 열기, 파일 이름, 폴더, 기본 대체 텍스트(채우기 동작이 있다), 기본 캡션, 형식, 크기(웹 2400×1600, 원본 4032×2688), 올린 날, 그리고 쓰는 곳이 보인다. 쓰는 곳은 글마다 한 행이고, 행 끝에 그 글 안의 자리가 나온다(필드 라벨 "대표 이미지", 또는 본문이면 "본문").
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 17: "둘러보기 · 파일을 우클릭 → 열기 · 쓰는 곳 ▸ · 폴더로 ▸"
+### 단계 17: "둘러보기 · 파일을 우클릭 → 열기 · 쓰는 곳 ▸ · 폴더로 ▸"
 
-- Board: `Flow6Step17.dc.html`
-- Renders: `Media` (mode "파일 메뉴")
-- The user right-clicks a file. The menu offers open, "쓰는 곳 ▸" (used in: the posts and where, for example cover image or body), and move to folder ▸.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step17.dc.html`
+- 화면: `Media` (mode "파일 메뉴")
+- 사용자가 파일을 우클릭한다. 메뉴에 열기, "쓰는 곳 ▸"(쓰는 글과 그 안의 자리, 예를 들어 대표 이미지나 본문), 폴더로 옮기기 ▸가 있다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "폴더 지우기" · Delete a folder
+## "폴더 지우기"
 
-### Step 11: "지우기 · 폴더 지우기 → 확인 없이 폴더째 휴지통으로 · 되돌리기"
+### 단계 11: "지우기 · 폴더 지우기 → 확인 없이 폴더째 휴지통으로 · 되돌리기"
 
-- Board: `Flow6Step11.dc.html`
-- Renders: `Media` (mode "폴더 지움")
-- Deleting a folder: no confirm. The folder goes to the trash with its files; a notice says so with "되돌리기".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step11.dc.html`
+- 화면: `Media` (mode "폴더 지움")
+- 폴더를 지울 때 확인은 묻지 않는다. 폴더는 안의 파일과 함께 휴지통으로 가고, 알림이 그렇다고 알리며 "되돌리기"를 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 12: "지우기 · 쓰는 파일이 있는 폴더 → 그 파일만 폴더째 남김 · 보기"
+### 단계 12: "지우기 · 쓰는 파일이 있는 폴더 → 그 파일만 폴더째 남김 · 보기"
 
-- Board: `Flow6Step12.dc.html`
-- Renders: `Media` (mode "폴더 일부 남김")
-- Deleting a folder that holds files in use: only the files not in use move; the folder stays with the files that are used. A notice says 2 moved and 4 stayed because they are used, with "보기" (view).
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step12.dc.html`
+- 화면: `Media` (mode "폴더 일부 남김")
+- 쓰이는 파일이 든 폴더를 지운다: 쓰이지 않는 파일만 옮겨지고, 폴더는 쓰이는 파일과 함께 남는다. 알림이 2개를 옮겼고 4개는 쓰이고 있어 남았다고 알리며 "보기"를 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "파일 바꾸기" · Replace a file
+## "파일 바꾸기"
 
-### Step 18: "고치기 · 옆 패널 ⋯ → 파일 바꾸기 → 파일 고르기"
+### 단계 18: "고치기 · 옆 패널 ⋯ → 파일 바꾸기 → 파일 고르기"
 
-- Board: `Flow6Step18.dc.html`
-- Renders: `Media` (mode "바꾸기 메뉴")
-- In the side panel the user opens ⋯: replace file, copy ID, move to trash (copy address and open in new tab are in the panel body, under the picture). They choose "파일 바꾸기" and pick a file.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step18.dc.html`
+- 화면: `Media` (mode "바꾸기 메뉴")
+- 사용자가 옆 패널에서 ⋯를 연다: 파일 바꾸기, ID 복사, 휴지통으로 옮기기(주소 복사와 새 탭에서 열기는 패널 본문의 그림 아래에 있다). "파일 바꾸기"를 고르고 파일을 고른다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 19: "고치기 · 고른 파일 확인 → 쓰는 곳 2곳이 새 파일로"
+### 단계 19: "고치기 · 고른 파일 확인 → 쓰는 곳 2곳이 새 파일로"
 
-- Board: `Flow6Step19.dc.html`
-- Renders: `Media` (mode "파일 바꾸기")
-- The user confirms the chosen file. The side panel states that the 2 places using the old file will use the new file.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step19.dc.html`
+- 화면: `Media` (mode "파일 바꾸기")
+- 사용자가 고른 파일을 확인한다. 옆 패널은 옛 파일을 쓰던 2곳이 새 파일을 쓰게 된다고 알린다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "여러 개 옮기기" · Move many
+## "여러 개 옮기기"
 
-### Step 20: "고치기 · 여러 개 선택"
+### 단계 20: "고치기 · 여러 개 선택"
 
-- Board: `Flow6Step20.dc.html`
-- Renders: `Media` (mode "여러 개 선택")
-- The user selects several files. A bulk bar shows the count with move to folder, trash and clear selection.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step20.dc.html`
+- 화면: `Media` (mode "여러 개 선택")
+- 사용자가 파일 여러 개를 고른다. 일괄 막대에 개수와 함께 폴더로 옮기기, 휴지통, 선택 해제가 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 21: "고치기 · 폴더로 옮기기"
+### 단계 21: "고치기 · 폴더로 옮기기"
 
-- Board: `Flow6Step21.dc.html`
-- Renders: `Media` (mode "폴더로 옮기기")
-- The user opens "폴더로" (to folder) in the bulk bar. A menu lists top level, the folders and "+ 새 폴더".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step21.dc.html`
+- 화면: `Media` (mode "폴더로 옮기기")
+- 사용자가 일괄 막대에서 "폴더로"를 연다. 메뉴에 최상위, 폴더들, "+ 새 폴더"가 나온다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "대체 텍스트 채우기" · Fill alt text
+## "대체 텍스트 채우기"
 
-### Step 22: "대체 텍스트 · 필터 열기 → 없음 · 있음 (지금 폴더와 하위 폴더)"
+### 단계 22: "대체 텍스트 · 필터 열기 → 없음 · 있음 (지금 폴더와 하위 폴더)"
 
-- Board: `Flow6Step22.dc.html`
-- Renders: `Media` (mode "필터 열기")
-- The user opens the filter. Alt text: none | present, applied to the current folder and its sub-folders, with a count.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step22.dc.html`
+- 화면: `Media` (mode "필터 열기")
+- 사용자가 필터를 연다. 대체 텍스트: 없음 | 있음. 지금 폴더와 그 하위 폴더에 걸리고, 개수가 함께 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 23: "대체 텍스트 · 없음 → 칩 “대체 텍스트: 없음 ×” · 찾는 곳 Blog Assets | 모든 폴더"
+### 단계 23: "대체 텍스트 · 없음 → 칩 “대체 텍스트: 없음 ×” · 찾는 곳 Blog Assets | 모든 폴더"
 
-- Board: `Flow6Step23.dc.html`
-- Renders: `Media` (mode "필터 걸림")
-- The user picks "없음" (none). A chip "대체 텍스트: 없음 ×" appears, and the search scope reads "Blog Assets | 모든 폴더".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step23.dc.html`
+- 화면: `Media` (mode "필터 걸림")
+- 사용자가 "없음"을 고른다. 칩 "대체 텍스트: 없음 ×"가 나타나고, 찾는 범위에 "Blog Assets | 모든 폴더"가 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 24: "대체 텍스트 · 없는 것 모두 선택"
+### 단계 24: "대체 텍스트 · 없는 것 모두 선택"
 
-- Board: `Flow6Step24.dc.html`
-- Renders: `Media` (mode "대체 텍스트 없는 것 고름")
-- The user selects every file without alt text. The bulk bar shows "3개 선택".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step24.dc.html`
+- 화면: `Media` (mode "대체 텍스트 없는 것 고름")
+- 사용자가 대체 텍스트가 없는 파일을 모두 고른다. 일괄 막대에 "3개 선택"이 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 25: "대체 텍스트 · ✦ 대체 텍스트 → 파란 제안 3 · 모두 버리기 · 모두 받기"
+### 단계 25: "대체 텍스트 · ✦ 대체 텍스트 → 파란 제안 3 · 모두 버리기 · 모두 받기"
 
-- Board: `Flow6Step25.dc.html`
-- Renders: `Media` (mode "대체 텍스트 제안")
-- The user presses "✦ 대체 텍스트". Blue proposals appear on the 3 files ("제안 3") with "모두 버리기" (discard all) and "모두 받기" (accept all).
+- 보드: `Flow6Step25.dc.html`
+- 화면: `Media` (mode "대체 텍스트 제안")
+- 사용자가 "✦ 대체 텍스트"를 누른다. 파일 3개에 파란 제안이 나타나고("제안 3"), "모두 버리기"와 "모두 받기"가 보인다.
 
-### Step 26: "대체 텍스트 · 제안 하나를 눌러 메모 → 그 자리에서 다시 고침 · 버리기 · 받기"
+### 단계 26: "대체 텍스트 · 제안 하나를 눌러 메모 → 그 자리에서 다시 고침 · 버리기 · 받기"
 
-- Board: `Flow6Step26.dc.html`
-- Renders: `Media` (mode "대체 텍스트 메모")
-- The user clicks a proposal to add a memo. The assistant rewrites it in place; each proposal can be discarded or accepted.
+- 보드: `Flow6Step26.dc.html`
+- 화면: `Media` (mode "대체 텍스트 메모")
+- 사용자가 제안 하나를 눌러 메모를 단다. 어시스턴트가 그 자리에서 다시 고친다. 제안마다 버리거나 받을 수 있다.
 
-## "파일 지우기" · Delete a file
+## "파일 지우기"
 
-### Step 27: "지우기 · 휴지통으로 → 되돌리기"
+### 단계 27: "지우기 · 휴지통으로 → 되돌리기"
 
-- Board: `Flow6Step27.dc.html`
-- Renders: `Media` (mode "휴지통으로 옮김")
-- Deleting a file moves it to the trash. A notice says so with "되돌리기".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step27.dc.html`
+- 화면: `Media` (mode "휴지통으로 옮김")
+- 파일을 지우면 휴지통으로 옮겨진다. 알림이 그렇다고 알리며 "되돌리기"를 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 28: "지우기 · 쓰는 곳이 있는 파일은 남김"
+### 단계 28: "지우기 · 쓰는 곳이 있는 파일은 남김"
 
-- Board: `Flow6Step28.dc.html`
-- Renders: `Media` (mode "일부 남김")
-- A file in use is not moved. A notice says 1 was moved and 1 was kept because it is used, with "보기".
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step28.dc.html`
+- 화면: `Media` (mode "일부 남김")
+- 쓰이는 파일은 옮겨지지 않는다. 알림이 1개를 옮겼고 1개는 쓰이고 있어 남겼다고 알리며 "보기"를 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "편집기에서 고르기" · Pick in the editor
+## "편집기에서 고르기"
 
-### Step 29: "고르기 · 편집기 / → 이미지 → 라이브러리 · 고르면 바로 들어감"
+### 단계 29: "고르기 · 편집기 / → 이미지 → 라이브러리 · 고르면 바로 들어감"
 
-- Board: `Flow6Step29.dc.html`
-- Renders: `ImageInsert` (stage "라이브러리")
-- In the editor the user types `/` and picks Image › Library. The library opens; choosing an image inserts it at once.
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
+- 보드: `Flow6Step29.dc.html`
+- 화면: `ImageInsert` (stage "라이브러리")
+- 사용자가 편집기에서 `/`를 치고 이미지 › 라이브러리를 고른다. 라이브러리가 열리고, 이미지를 고르면 바로 들어간다.
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
 
-### Step 30: "고르기 · 대표 이미지 칸"
+### 단계 30: "고르기 · 대표 이미지 칸"
 
-- Board: `Flow6Step30.dc.html`
-- Renders: `ImageInsert` (stage "대표 이미지")
-- The user opens the cover image field. The same library opens and shows the "고르기" (pick) action.
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
+- 보드: `Flow6Step30.dc.html`
+- 화면: `ImageInsert` (stage "대표 이미지")
+- 사용자가 대표 이미지 필드를 연다. 같은 라이브러리가 열리고 "고르기" 동작이 보인다.
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: pick in the editor (29–30))
 
-## "종류로 거르기" · Filter by kind
+## "종류로 거르기"
 
-### Step 32: "거르기 · 종류 ▾ → 이미지 · 파일"
+### 단계 32: "거르기 · 종류 ▾ → 이미지 · 파일"
 
-- Board: `Flow6Step32.dc.html`
-- Renders: `Media` (mode "종류 열기")
-- The user opens the type filter. Choices: images (count) and files.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step32.dc.html`
+- 화면: `Media` (mode "종류 열기")
+- 사용자가 종류 필터를 연다. 선택지는 이미지(개수)와 파일이다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 33: "거르기 · 종류: 파일 → 파일만 · 대체 텍스트 거르기가 빠짐"
+### 단계 33: "거르기 · 종류: 파일 → 파일만 · 대체 텍스트 거르기가 빠짐"
 
-- Board: `Flow6Step33.dc.html`
-- Renders: `Media` (mode "종류 파일")
-- The user picks files. The list shows files only, the chip "종류: 파일" appears, and the alt text filter is gone because it does not apply.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step33.dc.html`
+- 화면: `Media` (mode "종류 파일")
+- 사용자가 파일을 고른다. 목록에는 파일만 보이고, 칩 "종류: 파일"이 나타나며, 대체 텍스트 필터는 해당하지 않으므로 빠진다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-## "PDF 같은 파일" · Files such as PDF
+## "PDF 같은 파일"
 
-### Step 34: "파일 · PDF 올리기 → 미리보기 대신 파일 아이콘 · PDF · 이름 · 이미지와 같은 올리는 중"
+### 단계 34: "파일 · PDF 올리기 → 미리보기 대신 파일 아이콘 · PDF · 이름 · 이미지와 같은 올리는 중"
 
-- Board: `Flow6Step34.dc.html`
-- Renders: `Media` (mode "PDF 올리는 중")
-- The user uploads a PDF or other file. Instead of a preview the tile shows a file icon with the type (PDF, CSV) and the name; the uploading state is the same as for images.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step34.dc.html`
+- 화면: `Media` (mode "PDF 올리는 중")
+- 사용자가 PDF나 다른 파일을 올린다. 타일에는 미리보기 대신 파일 아이콘과 형식(PDF, CSV), 이름이 보인다. 올리는 중 상태는 이미지와 같다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 35: "파일 · 받지 않는 형식(.exe) → 그 자리에 남고 받는 종류 한 줄 · 빼기"
+### 단계 35: "파일 · 받지 않는 형식(.exe) → 그 자리에 남고 받는 종류 한 줄 · 빼기"
 
-- Board: `Flow6Step35.dc.html`
-- Renders: `Media` (mode "받지 않는 형식")
-- Exception: a type that is not accepted (.exe). The file stays in place with one line listing the accepted kinds (images, PDF, ZIP, text only) and a remove action.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step35.dc.html`
+- 화면: `Media` (mode "받지 않는 형식")
+- 예외: 받지 않는 형식(.exe)이다. 파일은 그 자리에 남고, 받는 종류(이미지, PDF, ZIP, 텍스트만)를 적은 한 줄과 빼기 동작이 보인다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 36: "파일 · 파일 열기 → 옆 패널 · 이름 · 종류 · 크기 · 쓰는 곳 · 주소 복사 · 파일 바꾸기 · 휴지통으로 (대체 텍스트 없음)"
+### 단계 36: "파일 · 파일 열기 → 옆 패널 · 이름 · 종류 · 크기 · 쓰는 곳 · 주소 복사 · 파일 바꾸기 · 휴지통으로 (대체 텍스트 없음)"
 
-- Board: `Flow6Step36.dc.html`
-- Renders: `Media` (mode "PDF 열기")
-- The user opens a PDF. The side panel shows name, type, size, uploaded date, where used, copy address, replace file, move to trash; there is no alt text.
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step36.dc.html`
+- 화면: `Media` (mode "PDF 열기")
+- 사용자가 PDF를 연다. 옆 패널에 이름, 형식, 크기, 올린 날, 쓰는 곳, 주소 복사, 파일 바꾸기, 휴지통으로 옮기기가 보인다. 대체 텍스트는 없다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
-### Step 37: "파일 · 편집기 / 파일 → 파일만 보이는 라이브러리"
+### 단계 37: "파일 · 편집기 / 파일 → 파일만 보이는 라이브러리"
 
-- Board: `Flow6Step37.dc.html`
-- Renders: `ImageInsert` (stage "파일")
-- In the editor the user types `/` › File. The library opens showing files only (PDF, CSV, ZIP, MD) with a type filter.
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
+- 보드: `Flow6Step37.dc.html`
+- 화면: `ImageInsert` (stage "파일")
+- 사용자가 편집기에서 `/` › 파일을 고른다. 라이브러리가 파일만(PDF, CSV, ZIP, MD) 보여 주며 열리고, 종류 필터가 있다.
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
 
-### Step 38: "파일 · 고르면 본문에 파일 블록 · 아이콘 · 이름 · PDF · 크기"
+### 단계 38: "파일 · 고르면 본문에 파일 블록 · 아이콘 · 이름 · PDF · 크기"
 
-- Board: `Flow6Step38.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "파일")
-- After picking, the body gets a file block with an icon, the name, the type and the size (price-list-2026.pdf, PDF, 1.2 MB).
-- Test: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
+- 보드: `Flow6Step38.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "초안"; save "저장됨"; todo "남음"; todo-open off; img "파일")
+- 고르고 나면 본문에 파일 블록이 들어간다. 아이콘, 이름, 형식, 크기가 보인다(price-list-2026.pdf, PDF, 1.2 MB).
+- 테스트: `packages/admin/src/editor/__test__/editor-media-flow.test.tsx` (flow: files such as PDF (37–38))
 
-## "예외" · Exceptions
+## "예외"
 
-### Step 31: "예외 · 저장소가 없음"
+### 단계 31: "예외 · 저장소가 없음"
 
-- Board: `Flow6Step31.dc.html`
-- Renders: `Media` (mode "저장소 없음")
-- Exception: the site has no media storage. The screen says "미디어 저장소가 없어요" (no media storage), that uploading needs storage, and offers "연결 방법" (how to connect).
-- Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
+- 보드: `Flow6Step31.dc.html`
+- 화면: `Media` (mode "저장소 없음")
+- 예외: 사이트에 미디어 저장소가 없다. 화면은 "미디어 저장소가 없어요"라고 말하고, 올리려면 저장소가 필요하다고 알리며 "연결 방법"을 보여 준다.
+- 테스트: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`

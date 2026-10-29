@@ -1,31 +1,31 @@
-# Admin flows
+# 관리자 화면 흐름
 
-This folder describes the user flows drawn on the Monti admin canvas, one file per flow page, so a step can be found without opening the canvas.
+이 폴더는 Monti 관리자 화면 캔버스에 그린 사용자 흐름을 흐름 페이지마다 파일 하나로 적는다. 캔버스를 열지 않고도 단계를 찾을 수 있게 하려는 것이다.
 
-## Flows
+## 흐름
 
-- [Flow 1: Write and publish](01-write-and-publish.md) ("흐름 1 · 글 쓰고 발행하기"): Writing a post from the first slash to publishing and editing after publishing, with two exceptions: an edit conflict and recovering a browser draft. 3 rows, 19 steps.
-- [Flow 2: Assistant](02-assistant.md) ("흐름 2 · 어시스턴트"): Asking the assistant, editing the current post, editing many posts, undoing, default requests, writing rules, settings changes, first connection and finding old chats. 10 rows, 29 steps.
-- [Flow 3: Translation](03-translation.md) ("흐름 3 · 번역"): Creating and publishing a translation, handling a changed source, the language column in the list, translating many posts, and exceptions. 4 rows, 15 steps.
-- [Flow 4: Collections](04-collections.md) ("흐름 4 · 컬렉션"): Creating a collection, editing its fields, changing its public address and deleting it, on a dev server. 4 rows, 19 steps.
-- [Flow 5: Trash](05-trash.md) ("흐름 5 · 휴지통"): Folders in the post list, discarding, browsing the trash, restoring, permanent delete, handling many items and emptying the trash. 7 rows, 28 steps.
-- [Flow 6: Media](06-media.md) ("흐름 6 · 미디어"): Uploading, inserting from the editor, browsing, replacing a file, alt text, deleting, files that are not images, picking, and exceptions. 12 rows, 38 steps.
-- [Flow 7: List tidy-up](07-list-tidy-up.md) ("흐름 7 · 목록 정리"): Sorting by the column name menu, filtering, columns, per page, search scope, changing many posts and merging tags. 7 rows, 19 steps.
-- [Flow 8: First install](08-first-install.md) ("흐름 8 · 처음 설치"): The first admin and the sign-in exceptions. 3 rows, 10 steps.
-- [Flow 9: Data](09-data.md) ("흐름 9 · 데이터"): Downloading a backup and importing (read the file, then either new posts or a restore). 3 rows, 15 steps.
-- [Flow 10: API keys](10-api-keys.md) ("흐름 10 · API 키"): Adding, checking, editing and deleting keys, plugin keys, the quick-task model, and exceptions. 6 rows, 20 steps.
-- [Flow 11: Settings](11-settings.md) ("흐름 11 · 설정"): Dev server (no plugin, writes the file directly), production with the GitHub plugin (PR), production without a plugin (locks), and exceptions. 5 rows, 26 steps.
-- [Flow 12: Activity log](12-activity-log.md) ("흐름 12 · 활동 기록"): The failed-delivery notice, resend, cancel, resend all, details, filters and the empty screen. 6 rows, 15 steps.
+- [흐름 1: 글 쓰고 발행하기](01-write-and-publish.md) ("흐름 1 · 글 쓰고 발행하기"): 첫 슬래시부터 발행, 발행 뒤 수정까지 글을 쓰는 흐름이다. 예외는 두 가지로, 편집 충돌과 브라우저 초안 복구다. 3행, 19단계.
+- [흐름 2: 어시스턴트](02-assistant.md) ("흐름 2 · 어시스턴트"): 어시스턴트에게 묻기, 지금 글 고치기, 여러 글 고치기, 되돌리기, 기본 요청, 글쓰기 규칙, 설정 바꾸기, 첫 연결, 지난 대화 찾기. 10행, 29단계.
+- [흐름 3: 번역](03-translation.md) ("흐름 3 · 번역"): 번역 만들고 발행하기, 원문이 바뀌었을 때 처리, 목록의 언어 열, 여러 글 번역, 예외. 4행, 15단계.
+- [흐름 4: 컬렉션](04-collections.md) ("흐름 4 · 컬렉션"): 개발 서버에서 컬렉션 만들기, 필드 고치기, 공개 주소 바꾸기, 삭제. 4행, 19단계.
+- [흐름 5: 휴지통](05-trash.md) ("흐름 5 · 휴지통"): 글 목록의 폴더, 버리기, 휴지통 둘러보기, 복원, 영구 삭제, 여러 항목 처리, 휴지통 비우기. 7행, 28단계.
+- [흐름 6: 미디어](06-media.md) ("흐름 6 · 미디어"): 올리기, 편집기에서 넣기, 둘러보기, 파일 바꾸기, 대체 텍스트, 삭제, 이미지가 아닌 파일, 고르기, 예외. 12행, 38단계.
+- [흐름 7: 목록 정리](07-list-tidy-up.md) ("흐름 7 · 목록 정리"): 열 이름 메뉴로 정렬, 필터, 열, 페이지당 개수, 검색 범위, 여러 글 바꾸기, 태그 합치기. 7행, 19단계.
+- [흐름 8: 처음 설치](08-first-install.md) ("흐름 8 · 처음 설치"): 첫 관리자와 로그인 예외. 3행, 10단계.
+- [흐름 9: 데이터](09-data.md) ("흐름 9 · 데이터"): 백업 내려받기와 가져오기(파일을 읽은 뒤 새 글로 넣거나 복원한다). 3행, 15단계.
+- [흐름 10: API 키](10-api-keys.md) ("흐름 10 · API 키"): 키 추가, 확인, 수정, 삭제, 플러그인 키, 빠른 작업 모델, 예외. 6행, 20단계.
+- [흐름 11: 설정](11-settings.md) ("흐름 11 · 설정"): 개발 서버(플러그인 없이 파일을 직접 쓴다), GitHub 플러그인이 있는 운영 환경(PR), 플러그인이 없는 운영 환경(잠금), 예외. 5행, 26단계.
+- [흐름 12: 활동 기록](12-activity-log.md) ("흐름 12 · 활동 기록"): 전달 실패 알림, 다시 보내기, 취소, 모두 다시 보내기, 자세히, 필터, 빈 화면. 6행, 15단계.
 
-## How steps are numbered and named
+## 단계 번호와 이름
 
-- A flow page on the canvas is a stack of labeled rows. Each row holds the steps of one part of the flow, left to right. Rows are ordered top to bottom.
-- Each step is one board named `Flow<flow>Step<step>.dc.html`, for example `Flow5Step22.dc.html` is flow 5, step 22. Its canvas title is `<step> · <what happens>`; these docs quote the part after the number.
-- Steps are numbered in the order they were drawn, not always in reading order. Steps in an exception row (for example flow 2 steps 05, 06 and 24) are numbered into the main sequence but sit in their own row at the bottom. Follow the row order in each file, not the numbers.
-- A letter after the number (`05b`, `23c`) is a variant of the numbered step or its next moment: a menu closing, an error line, a second option, a result. `07b` follows `07`; `23b` to `23d` follow `23`.
-- A step board usually imports one main board from `../screens.md` in one state (the "Renders" line), sometimes with the assistant panel beside it. The state names are the Korean strings the board uses.
-- Where a flow note says "flow 11 · 12" or "01 · 04", it points at steps of the same or another flow.
+- 캔버스의 흐름 페이지는 이름 붙은 행을 쌓은 것이다. 행 하나에는 흐름 한 부분의 단계가 왼쪽에서 오른쪽으로 놓인다. 행은 위에서 아래로 이어진다.
+- 단계 하나는 보드 하나이고, 이름은 `Flow<flow>Step<step>.dc.html`이다. 예를 들어 `Flow5Step22.dc.html`은 흐름 5의 22단계다. 캔버스 제목은 `<step> · <what happens>`이고, 이 문서는 번호 뒤 부분을 인용한다.
+- 단계 번호는 읽는 순서가 아니라 그린 순서대로 붙었다. 예외 행의 단계(예: 흐름 2의 05, 06, 24단계)는 번호는 본 순서 안에 있지만 맨 아래 따로 된 행에 놓인다. 번호가 아니라 각 파일의 행 순서를 따른다.
+- 번호 뒤 글자(`05b`, `23c`)는 그 번호 단계의 변형이거나 바로 다음 순간이다. 메뉴가 닫히는 순간, 오류 줄, 두 번째 선택지, 결과 같은 것이다. `07b`는 `07` 다음이고, `23b`부터 `23d`는 `23` 다음이다.
+- 단계 보드는 보통 `../screens.md`의 주 보드 하나를 한 상태로 가져온다("화면:" 줄). 옆에 어시스턴트 패널을 함께 두기도 한다. 상태 이름은 보드가 쓰는 한국어 문자열이다.
+- 흐름 메모에 "흐름 11 · 12"나 "01 · 04"라고 적혀 있으면 같은 흐름이나 다른 흐름의 단계를 가리킨다.
 
-## Tests
+## 테스트
 
-Each canvas flow is meant to have one test that follows its steps. No step is linked to a test yet; when a test exists, add "Test: path" under its step.
+캔버스 흐름마다 그 단계를 따라가는 테스트를 하나씩 두려고 한다. 아직 테스트와 이어진 단계는 없다. 테스트가 생기면 그 단계 아래에 "테스트: 경로"를 적는다.

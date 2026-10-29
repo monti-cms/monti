@@ -1,75 +1,75 @@
-# Flow 8: First install
+# 흐름 8: 처음 설치
 
-This file lists every row and step of canvas flow 8, "흐름 8 · 처음 설치". The first admin and the sign-in exceptions. AI connection is flow 2 steps 22 and 23, a missing storage is flow 6, a missing GitHub plugin is flow 11 step 17.
+이 파일은 캔버스 흐름 8 "흐름 8 · 처음 설치"의 모든 행과 단계를 적는다. 첫 관리자와 로그인 예외를 다룬다. AI 연결은 흐름 2의 22, 23단계, 저장소가 없을 때는 흐름 6, GitHub 플러그인이 없을 때는 흐름 11의 17단계다.
 
-Canvas note: "흐름 8 · 처음 설치 — 첫 관리자 · 로그인 예외 (AI 연결은 흐름 2 · 22–23, 저장소 없음은 흐름 6, GitHub 플러그인이 없을 때는 흐름 11 · 17)"
+캔버스 메모: "흐름 8 · 처음 설치 — 첫 관리자 · 로그인 예외 (AI 연결은 흐름 2 · 22–23, 저장소 없음은 흐름 6, GitHub 플러그인이 없을 때는 흐름 11 · 17)"
 
-Screens used: [`Login`](../screens.md#login), [`Empty`](../screens.md#empty).
+쓰는 화면: [`Login`](../screens.md#login), [`Empty`](../screens.md#empty).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 글자가 붙은 단계 번호(예: 04b)는 바로 앞 단계의 변형이거나 다음 순간이다.
 
-## "첫 관리자" · First admin
+## "첫 관리자"
 
-### Step 01: "첫 관리자 · /admin 첫 방문 · 관리자가 없으면 만들기"
+### 단계 01: "첫 관리자 · /admin 첫 방문 · 관리자가 없으면 만들기"
 
-- Board: `Flow8Step01.dc.html`
-- Renders: `Login` (attempt "첫 관리자")
-- First visit to /admin when no admin exists. The screen is "첫 관리자 만들기" (create the first admin): email, password (10 or more characters), confirm password, and a create button.
+- 보드: `Flow8Step01.dc.html`
+- 화면: `Login` (attempt "첫 관리자")
+- 관리자가 없을 때 /admin에 처음 들어온다. 화면은 "첫 관리자 만들기"로, 이메일, 비밀번호(10자 이상), 비밀번호 확인, 만들기 버튼이 있다.
 
-### Step 02: "첫 관리자 · 칸 오류 · 10자 이상 · 두 비밀번호가 다름"
+### 단계 02: "첫 관리자 · 칸 오류 · 10자 이상 · 두 비밀번호가 다름"
 
-- Board: `Flow8Step02.dc.html`
-- Renders: `Login` (attempt "첫 관리자 오류")
-- Field errors: "10자 이상이어야 해요." (at least 10 characters) under the password and "두 비밀번호가 같지 않아요." (the two passwords differ) under the confirm field.
+- 보드: `Flow8Step02.dc.html`
+- 화면: `Login` (attempt "첫 관리자 오류")
+- 필드 오류: 비밀번호 아래에 "10자 이상이어야 해요.", 확인 필드 아래에 "두 비밀번호가 같지 않아요."가 나온다.
 
-### Step 03: "첫 관리자 · 만들고 바로 로그인 → 빈 게시글 목록"
+### 단계 03: "첫 관리자 · 만들고 바로 로그인 → 빈 게시글 목록"
 
-- Board: `Flow8Step03.dc.html`
-- Renders: `Empty` (collection "게시글")
-- The admin is created and signed in at once. The screen is the empty post list (no posts yet, first-post call to action "첫 글 쓰기").
+- 보드: `Flow8Step03.dc.html`
+- 화면: `Empty` (collection "게시글")
+- 관리자가 만들어지고 바로 로그인된다. 화면은 빈 글 목록이다(아직 글이 없고, 첫 글을 부르는 "첫 글 쓰기"가 있다).
 
-### Step 04: "첫 관리자 · 그 사이 다른 곳에서 먼저 만듦 → 로그인으로"
+### 단계 04: "첫 관리자 · 그 사이 다른 곳에서 먼저 만듦 → 로그인으로"
 
-- Board: `Flow8Step04.dc.html`
-- Renders: `Login` (attempt "이미 있음")
-- Exception: someone else created the first admin in the meantime. The screen says "이미 관리자가 있어요." (an admin already exists) and offers "로그인하기" (sign in).
+- 보드: `Flow8Step04.dc.html`
+- 화면: `Login` (attempt "이미 있음")
+- 예외: 그 사이 다른 사람이 첫 관리자를 먼저 만들었다. 화면에 "이미 관리자가 있어요."가 나오고 "로그인하기"를 내민다.
 
-## "로그인" · Sign in
+## "로그인"
 
-### Step 05: "로그인 · 이메일과 비밀번호 · GitHub"
+### 단계 05: "로그인 · 이메일과 비밀번호 · GitHub"
 
-- Board: `Flow8Step05.dc.html`
-- Renders: `Login` (attempt "처음")
-- Sign-in: email and password, or GitHub.
+- 보드: `Flow8Step05.dc.html`
+- 화면: `Login` (attempt "처음")
+- 로그인: 이메일과 비밀번호, 또는 GitHub.
 
-### Step 06: "로그인 · 틀림"
+### 단계 06: "로그인 · 틀림"
 
-- Board: `Flow8Step06.dc.html`
-- Renders: `Login` (attempt "한 번 틀림")
-- Wrong credentials. The form shows "이메일 또는 비밀번호가 맞지 않아요." (email or password is wrong).
+- 보드: `Flow8Step06.dc.html`
+- 화면: `Login` (attempt "한 번 틀림")
+- 로그인 정보가 틀렸다. 폼에 "이메일 또는 비밀번호가 맞지 않아요."가 나온다.
 
-### Step 07: "로그인 · 5번 틀리면 1분 막힘"
+### 단계 07: "로그인 · 5번 틀리면 1분 막힘"
 
-- Board: `Flow8Step07.dc.html`
-- Renders: `Login` (attempt "잠김")
-- After 5 wrong attempts sign-in is blocked for one minute: "1분 뒤에 다시 시도해 주세요."
+- 보드: `Flow8Step07.dc.html`
+- 화면: `Login` (attempt "잠김")
+- 5번 틀리면 1분 동안 로그인이 막힌다: "1분 뒤에 다시 시도해 주세요."
 
-### Step 08: "로그인 · GitHub만 쓰는 사이트"
+### 단계 08: "로그인 · GitHub만 쓰는 사이트"
 
-- Board: `Flow8Step08.dc.html`
-- Renders: `Login` (attempt "GitHub만")
-- A site that uses GitHub only: the sign-in screen has the GitHub button and no email form.
+- 보드: `Flow8Step08.dc.html`
+- 화면: `Login` (attempt "GitHub만")
+- GitHub만 쓰는 사이트: 로그인 화면에 GitHub 버튼만 있고 이메일 폼은 없다.
 
-### Step 09: "로그인 · 권한 없는 GitHub 계정"
+### 단계 09: "로그인 · 권한 없는 GitHub 계정"
 
-- Board: `Flow8Step09.dc.html`
-- Renders: `Login` (attempt "GitHub 권한 없음")
-- A GitHub account that is not an admin: "octo-kim은 관리자가 아니에요." with "다른 계정으로 로그인" (sign in with another account).
+- 보드: `Flow8Step09.dc.html`
+- 화면: `Login` (attempt "GitHub 권한 없음")
+- 관리자가 아닌 GitHub 계정: "octo-kim은 관리자가 아니에요."와 함께 "다른 계정으로 로그인"이 나온다.
 
-## "예외" · Exceptions
+## "예외"
 
-### Step 10: "예외 · 로그인 방법이 설정되지 않음"
+### 단계 10: "예외 · 로그인 방법이 설정되지 않음"
 
-- Board: `Flow8Step10.dc.html`
-- Renders: `Login` (attempt "로그인 없음")
-- Exception: no sign-in method is configured. The screen says "로그인이 설정되지 않았어요" (sign-in is not set up).
+- 보드: `Flow8Step10.dc.html`
+- 화면: `Login` (attempt "로그인 없음")
+- 예외: 로그인 방법이 하나도 설정되지 않았다. 화면에 "로그인이 설정되지 않았어요"가 나온다.

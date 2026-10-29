@@ -1,197 +1,197 @@
-# Flow 5: Trash
+# 흐름 5: 휴지통
 
-This file lists every row and step of canvas flow 5, "흐름 5 · 휴지통". Folders in the post list, discarding, browsing the trash, restoring, permanent delete, handling many items and emptying the trash.
+이 파일은 캔버스 흐름 5 "흐름 5 · 휴지통"의 모든 행과 단계를 적는다. 글 목록의 폴더, 버리기, 휴지통 둘러보기, 복원, 영구 삭제, 여러 항목 다루기, 휴지통 비우기를 다룬다.
 
-Canvas note: "흐름 5 · 휴지통 — 버리기 · 보기 · 복원 · 영구 삭제 · 여러 개 · 비우기". The 30-day auto-empty and the media trash are part of E2 (#276).
+캔버스 메모: "흐름 5 · 휴지통 — 버리기 · 보기 · 복원 · 영구 삭제 · 여러 개 · 비우기". 30일 뒤 자동 비우기와 미디어 휴지통은 E2(#276)에 속한다.
 
-Screens used: [`Main`](../screens.md#main), [`Trash`](../screens.md#trash), [`EditorNotion`](../screens.md#editornotion).
+쓰는 화면: [`Main`](../screens.md#main), [`Trash`](../screens.md#trash), [`EditorNotion`](../screens.md#editornotion).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "목록의 폴더" · Folders in the list
+## "목록의 폴더"
 
-### Step 01: "목록 · + 폴더 → 맨 위에 새 폴더 행 · 이름이 골라진 채로"
+### 단계 01: "목록 · + 폴더 → 맨 위에 새 폴더 행 · 이름이 골라진 채로"
 
-- Board: `Flow5Step01.dc.html`
-- Renders: `Main` (mode "새 폴더")
-- In the post list the user presses "+ 폴더". A new folder row appears at the top with its name selected, ready to type over.
-- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 보드: `Flow5Step01.dc.html`
+- 화면: `Main` (mode "새 폴더")
+- 사용자가 글 목록에서 "+ 폴더"를 누른다. 맨 위에 새 폴더 행이 나타나고, 이름이 선택되어 있어서 바로 덮어 쓸 수 있다.
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
-### Step 02: "목록 · 폴더 안 · 경로 · 상위 폴더로"
+### 단계 02: "목록 · 폴더 안 · 경로 · 상위 폴더로"
 
-- Board: `Flow5Step02.dc.html`
-- Renders: `Main` (mode "폴더 안")
-- The user opens a folder. The list shows only that folder's posts, a path above the list, and a "상위 폴더로" (up one folder) row.
-- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 보드: `Flow5Step02.dc.html`
+- 화면: `Main` (mode "폴더 안")
+- 사용자가 폴더를 연다. 목록에는 그 폴더의 글만 보이고, 목록 위에 경로가, 그리고 "상위 폴더로" 행이 있다.
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
-### Step 03: "목록 · 폴더 안에서 찾기 → 찾는 곳 시리즈 원고 | 모든 폴더"
+### 단계 03: "목록 · 폴더 안에서 찾기 → 찾는 곳 시리즈 원고 | 모든 폴더"
 
-- Board: `Flow5Step03.dc.html`
-- Renders: `Main` (mode "폴더 안 검색")
-- Searching inside a folder. The search covers the current folder by default; a scope switch reads "찾는 곳 시리즈 원고 | 모든 폴더" (search in: this folder | all folders) and the user can widen it.
-- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 보드: `Flow5Step03.dc.html`
+- 화면: `Main` (mode "폴더 안 검색")
+- 폴더 안에서 찾는다. 기본으로는 지금 폴더에서 찾는다. 범위 전환에 "찾는 곳 시리즈 원고 | 모든 폴더"라고 적혀 있고, 사용자가 범위를 넓힐 수 있다.
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
-### Step 04: "목록 · 폴더 행을 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
+### 단계 04: "목록 · 폴더 행을 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
 
-- Board: `Flow5Step04.dc.html`
-- Renders: `Main` (mode "폴더 우클릭")
-- The user right-clicks a folder row. The menu offers open, rename, move to ▸ and delete folder.
-- Test: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 보드: `Flow5Step04.dc.html`
+- 화면: `Main` (mode "폴더 우클릭")
+- 사용자가 폴더 행을 우클릭한다. 메뉴에 열기, 이름 바꾸기, 옮기기 ▸, 폴더 지우기가 있다.
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
-### Step 05: "목록 · 폴더 지우기 → 공개 중인 글이 있으면 확인"
+### 단계 05: "목록 · 폴더 지우기 → 공개 중인 글이 있으면 확인"
 
-- Board: `Flow5Step05.dc.html`
-- Renders: `Main` (mode "폴더 지우기 확인")
-- The user deletes a folder that holds published posts. A confirm dialog says the folder's 2 posts move to the trash too and the 1 published post comes off the site; buttons are cancel and "휴지통으로" (to trash).
-- Test: `packages/admin/src/screens/__test__/safe-delete.test.tsx` (the confirm) and `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 보드: `Flow5Step05.dc.html`
+- 화면: `Main` (mode "폴더 지우기 확인")
+- 사용자가 발행된 글이 든 폴더를 지운다. 확인 대화상자가 폴더의 글 2편도 휴지통으로 옮겨지고, 발행된 글 1편은 사이트에서 내려간다고 알린다. 버튼은 취소와 "휴지통으로"다.
+- 테스트: `packages/admin/src/screens/__test__/safe-delete.test.tsx`(확인)와 `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
 
-### Step 06: "목록 · 폴더와 글을 휴지통으로 · 되돌리기 (초안만 있으면 확인 없이 바로)"
+### 단계 06: "목록 · 폴더와 글을 휴지통으로 · 되돌리기 (초안만 있으면 확인 없이 바로)"
 
-- Board: `Flow5Step06.dc.html`
-- Renders: `Main` (mode "폴더 지움")
-- The folder and its posts are moved to the trash. A notice says so with "되돌리기" (undo). A folder that holds only drafts skips the confirm and goes straight to this step.
-- Test: `packages/admin/src/screens/__test__/safe-delete.test.tsx`
+- 보드: `Flow5Step06.dc.html`
+- 화면: `Main` (mode "폴더 지움")
+- 폴더와 그 안의 글이 휴지통으로 옮겨진다. 알림이 "되돌리기"와 함께 그렇다고 알린다. 초안만 든 폴더는 확인을 건너뛰고 바로 이 단계로 온다.
+- 테스트: `packages/admin/src/screens/__test__/safe-delete.test.tsx`
 
-## "버리기" · Discard
+## "버리기"
 
-### Step 07: "버리기 · 행을 우클릭 → 메뉴 (폴더로 ▸ 펼침)"
+### 단계 07: "버리기 · 행을 우클릭 → 메뉴 (폴더로 ▸ 펼침)"
 
-- Board: `Flow5Step07.dc.html`
-- Renders: `Main` (mode "행 메뉴")
-- The user right-clicks a post row. The menu offers open, open in new tab, duplicate, move to folder ▸ (expanded: top level and the folders), archive, and trash (Del).
+- 보드: `Flow5Step07.dc.html`
+- 화면: `Main` (mode "행 메뉴")
+- 사용자가 글 행을 우클릭한다. 메뉴에 열기, 새 탭에서 열기, 복제, 폴더로 옮기기 ▸(펼침: 맨 위 단계와 폴더들), 보관, 휴지통(Del)이 있다.
 
-### Step 08: "버리기 · 여러 행을 골라 우클릭 → 2개 항목 메뉴"
+### 단계 08: "버리기 · 여러 행을 골라 우클릭 → 2개 항목 메뉴"
 
-- Board: `Flow5Step08.dc.html`
-- Renders: `Main` (mode "여러 행 메뉴")
-- The user selects several rows and right-clicks. The menu is titled with the count ("2개 항목") and offers the bulk actions: change (tags), archive, move to folder, trash, export.
+- 보드: `Flow5Step08.dc.html`
+- 화면: `Main` (mode "여러 행 메뉴")
+- 사용자가 여러 행을 고르고 우클릭한다. 메뉴 제목은 개수("2개 항목")이고, 일괄 동작이 있다. 바꾸기(태그), 보관, 폴더로 옮기기, 휴지통, 내보내기다.
 
-### Step 09: "버리기 · 초안 · 메모는 확인 없이 바로 휴지통으로 → 되돌리기"
+### 단계 09: "버리기 · 초안 · 메모는 확인 없이 바로 휴지통으로 → 되돌리기"
 
-- Board: `Flow5Step09.dc.html`
-- Renders: `Main` (mode "휴지통으로 옮김")
-- Drafts and notes go to the trash without asking. A notice says "휴지통으로 옮겼어요" with "되돌리기".
+- 보드: `Flow5Step09.dc.html`
+- 화면: `Main` (mode "휴지통으로 옮김")
+- 초안과 메모는 묻지 않고 휴지통으로 간다. 알림이 "되돌리기"와 함께 "휴지통으로 옮겼어요"라고 알린다.
 
-### Step 10: "버리기 · 공개 중인 글만 확인 · 사이트에서 내려가고 번역도 함께 (복원하면 초안)"
+### 단계 10: "버리기 · 공개 중인 글만 확인 · 사이트에서 내려가고 번역도 함께 (복원하면 초안)"
 
-- Board: `Flow5Step10.dc.html`
-- Renders: `Main` (mode "휴지통 확인")
-- A published post asks first. The confirm says its publication ends and its English translation moves to the trash with it; restoring brings it back as a draft. Buttons: cancel, "휴지통으로".
+- 보드: `Flow5Step10.dc.html`
+- 화면: `Main` (mode "휴지통 확인")
+- 발행된 글은 먼저 묻는다. 확인 창은 발행이 끝나고 영어 번역도 함께 휴지통으로 간다고 알린다. 복원하면 초안으로 돌아온다. 버튼: 취소, "휴지통으로".
 
-## "휴지통 둘러보기" · Browse the trash
+## "휴지통 둘러보기"
 
-### Step 11: "휴지통 · 지운 폴더는 한 줄 · 버린 날 · n일 남음(30일) · 종류 열로 거르기"
+### 단계 11: "휴지통 · 지운 폴더는 한 줄 · 버린 날 · n일 남음(30일) · 종류 열로 거르기"
 
-- Board: `Flow5Step11.dc.html`
-- Renders: `Trash` (stage "종류 메뉴")
-- The trash screen. A head row reads title, kind ("종류"), deleted date ("버린 날", sorted newest first). Each row shows the title, a kind column (posts, notes, tags, media), the day it was deleted (the day alone, "10. 27"; the column's name says what it is) and days left out of 30; a deleted folder is one row. The user opens the "종류" column menu to filter by kind: it lists every kind with its count (posts 5, notes 1, categories 0, tags 1, media 2), several can be chosen at once, and the menu stays open. A filter that is on shows only as the dot after "종류"; there is no chip row. The header has search and "비우기" (empty trash). The row meta line does not start with the kind; the kind has its own column.
+- 보드: `Flow5Step11.dc.html`
+- 화면: `Trash` (stage "종류 메뉴")
+- 휴지통 화면. 머리 행에는 제목, "종류", "버린 날"(최신순 정렬)이 있다. 각 행에는 제목, 종류 열(글, 메모, 태그, 미디어), 지운 날(날짜만 "10. 27"로 쓴다. 무엇인지는 열 이름이 말해 준다), 30일 중 남은 날이 보인다. 지운 폴더는 한 행이다. 사용자가 "종류" 열 메뉴를 열어 종류로 거른다. 메뉴에는 모든 종류가 개수와 함께 나온다(글 5, 메모 1, 카테고리 0, 태그 1, 미디어 2). 여러 개를 함께 고를 수 있고, 메뉴는 열린 채로 있다. 켜진 필터는 "종류" 뒤의 점으로만 보인다. 칩 줄은 없다. 머리에는 검색과 "비우기"가 있다. 행의 메타 줄은 종류로 시작하지 않는다. 종류는 따로 열이 있다.
 
-### Step 12: "휴지통 · 폴더를 누르면 안으로 · 경로 · 상위 폴더로 · 폴더 복원 · 영구 삭제"
+### 단계 12: "휴지통 · 폴더를 누르면 안으로 · 경로 · 상위 폴더로 · 폴더 복원 · 영구 삭제"
 
-- Board: `Flow5Step12.dc.html`
-- Renders: `Trash` (stage "휴지통 폴더 안")
-- The user opens a deleted folder. The list shows its contents, the folder's path, "상위 폴더로", and header actions for the folder: "폴더 복원" (restore folder) and permanent delete.
+- 보드: `Flow5Step12.dc.html`
+- 화면: `Trash` (stage "휴지통 폴더 안")
+- 사용자가 지운 폴더를 연다. 목록에는 그 내용, 폴더의 경로, "상위 폴더로"가 보이고, 머리에는 폴더를 위한 동작 "폴더 복원"과 영구 삭제가 있다.
 
-### Step 13: "휴지통 · 폴더 안의 글 하나만 복원 → 폴더를 다시 만들고 원래 자리로"
+### 단계 13: "휴지통 · 폴더 안의 글 하나만 복원 → 폴더를 다시 만들고 원래 자리로"
 
-- Board: `Flow5Step13.dc.html`
-- Renders: `Trash` (stage "폴더에서 하나 복원")
-- The user restores one post from inside a deleted folder. The folder is recreated, the post returns to its original place as a draft, and a notice says so with "열기" (open).
+- 보드: `Flow5Step13.dc.html`
+- 화면: `Trash` (stage "폴더에서 하나 복원")
+- 사용자가 지운 폴더 안에서 글 하나를 복원한다. 폴더가 다시 만들어지고, 글은 초안으로 원래 자리에 돌아가며, 알림이 "열기"와 함께 그렇다고 알린다.
 
-### Step 14: "휴지통 · 찾기 → 폴더 안에 든 것까지 · 경로가 보임"
+### 단계 14: "휴지통 · 찾기 → 폴더 안에 든 것까지 · 경로가 보임"
 
-- Board: `Flow5Step14.dc.html`
-- Renders: `Trash` (stage "휴지통 찾기")
-- Searching the trash also finds items inside deleted folders. The result row shows its path ("시리즈 원고 폴더 안 · KO") and days left. The words stay in the search box; there is no search chip.
+- 보드: `Flow5Step14.dc.html`
+- 화면: `Trash` (stage "휴지통 찾기")
+- 휴지통에서 찾으면 지운 폴더 안의 항목도 찾는다. 결과 행에는 경로("시리즈 원고 폴더 안 · KO")와 남은 날이 보인다. 검색어는 검색 상자에 남는다. 검색 칩은 없다.
 
-### Step 15: "휴지통 · 어시스턴트가 버린 것은 ✦ 버림 · 누르면 그 대화 · 영구 삭제는 사람만"
+### 단계 15: "휴지통 · 어시스턴트가 버린 것은 ✦ 버림 · 누르면 그 대화 · 영구 삭제는 사람만"
 
-- Board: `Flow5Step15.dc.html`
-- Renders: `Trash` (stage "어시스턴트")
-- Items deleted by the assistant carry a ✦ before their day in the date column (in the proposal blue). Clicking it opens that conversation. Permanent deletion is for people only; the assistant cannot do it.
+- 보드: `Flow5Step15.dc.html`
+- 화면: `Trash` (stage "어시스턴트")
+- 어시스턴트가 지운 항목은 날짜 열의 날짜 앞에 ✦가 붙는다(제안 파랑). 누르면 그 대화가 열린다. 영구 삭제는 사람만 할 수 있고, 어시스턴트는 할 수 없다.
 
-### Step 16: "휴지통 · 행을 우클릭 → 복원 · 영구 삭제"
+### 단계 16: "휴지통 · 행을 우클릭 → 복원 · 영구 삭제"
 
-- Board: `Flow5Step16.dc.html`
-- Renders: `Trash` (stage "행 메뉴")
-- The user right-clicks a trash row. The menu offers restore and permanent delete (Del).
+- 보드: `Flow5Step16.dc.html`
+- 화면: `Trash` (stage "행 메뉴")
+- 사용자가 휴지통 행을 우클릭한다. 메뉴에 복원과 영구 삭제(Del)가 있다.
 
-### Step 17: "휴지통 · 종류: 미디어 · 복원하면 원래 폴더로 · 30일 뒤 파일도 지움"
+### 단계 17: "휴지통 · 종류: 미디어 · 복원하면 원래 폴더로 · 30일 뒤 파일도 지움"
 
-- Board: `Flow5Step17.dc.html`
-- Renders: `Trash` (stage "미디어")
-- The user filters the trash by kind "미디어" (media). The "종류" name gets its dot and only media rows show (a deleted folder with 3 files, an image). Restoring puts a file back in its original folder; after 30 days the file itself is deleted.
+- 보드: `Flow5Step17.dc.html`
+- 화면: `Trash` (stage "미디어")
+- 사용자가 휴지통을 종류 "미디어"로 거른다. "종류" 이름에 점이 붙고, 미디어 행만 보인다(파일 3개가 든 지운 폴더, 이미지 하나). 복원하면 파일이 원래 폴더로 돌아간다. 30일이 지나면 파일 자체가 지워진다.
 
-### Step 18: "휴지통 · 글을 열면 읽기 전용 · 복원 · 영구 삭제"
+### 단계 18: "휴지통 · 글을 열면 읽기 전용 · 복원 · 영구 삭제"
 
-- Board: `Flow5Step18.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; trashed on)
-- The user opens a trashed post. The editor is read-only, with a banner "휴지통에 있는 글이에요" saying that restoring brings it back as a draft (23 days left), and "복원" and "영구 삭제" in the header.
+- 보드: `Flow5Step18.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; trashed on)
+- 사용자가 휴지통에 있는 글을 연다. 편집기는 읽기 전용이다. "휴지통에 있는 글이에요" 배너가 복원하면 초안으로 돌아온다고 알리고(23일 남음), 머리에 "복원"과 "영구 삭제"가 있다.
 
-### Step 19: "휴지통 · 항목을 열면 옆 패널 · 가리키는 글 · 복원 · 영구 삭제"
+### 단계 19: "휴지통 · 항목을 열면 옆 패널 · 가리키는 글 · 복원 · 영구 삭제"
 
-- Board: `Flow5Step19.dc.html`
-- Renders: `Trash` (stage "항목 열기")
-- The user opens a trashed item, here a tag. A side panel shows it read-only: collection, name, address, deleted date, and the posts that point to it (4, with titles), plus restore and permanent delete.
+- 보드: `Flow5Step19.dc.html`
+- 화면: `Trash` (stage "항목 열기")
+- 사용자가 휴지통의 항목 하나를 연다. 여기서는 태그다. 사이드 패널이 그 항목을 읽기 전용으로 보여 준다. 컬렉션, 이름, 주소, 지운 날, 그 항목을 가리키는 글(4편, 제목과 함께)이 있고, 복원과 영구 삭제가 있다.
 
-### Step 20: "휴지통 · 미디어를 열면 옆 패널 · 미리보기 · 복원 · 영구 삭제"
+### 단계 20: "휴지통 · 미디어를 열면 옆 패널 · 미리보기 · 복원 · 영구 삭제"
 
-- Board: `Flow5Step20.dc.html`
-- Renders: `Trash` (stage "미디어 열기")
-- The user opens a trashed media file. A side panel shows the preview, kind, size, folder, alt text, deleted date and where it was used (none), plus restore and permanent delete.
+- 보드: `Flow5Step20.dc.html`
+- 화면: `Trash` (stage "미디어 열기")
+- 사용자가 휴지통의 미디어 파일을 연다. 사이드 패널에 미리보기, 종류, 크기, 폴더, 대체 텍스트, 지운 날, 쓰인 곳(없음)이 보이고, 복원과 영구 삭제가 있다.
 
-## "복원" · Restore
+## "복원"
 
-### Step 21: "복원 · 초안으로 돌아옴 · 열기"
+### 단계 21: "복원 · 초안으로 돌아옴 · 열기"
 
-- Board: `Flow5Step21.dc.html`
-- Renders: `Trash` (stage "복원함")
-- After a restore, a notice says the post is back as a draft, with "열기" (open).
+- 보드: `Flow5Step21.dc.html`
+- 화면: `Trash` (stage "복원함")
+- 복원하면 알림이 "열기"와 함께 글이 초안으로 돌아왔다고 알린다.
 
-### Step 22: "복원 · 번역만 복원하려는데 원문이 휴지통 → 원문 복원"
+### 단계 22: "복원 · 번역만 복원하려는데 원문이 휴지통 → 원문 복원"
 
-- Board: `Flow5Step22.dc.html`
-- Renders: `Trash` (stage "번역 막힘")
-- Exception: the user restores only a translation while its source post is in the trash. The row says the source is in the trash ("원문이 휴지통에 있어요", with its title) and the action reads "원문 복원" (restore the source) instead of "복원".
+- 보드: `Flow5Step22.dc.html`
+- 화면: `Trash` (stage "번역 막힘")
+- 예외: 원문 글이 휴지통에 있는데 사용자가 번역만 복원한다. 행에 원문이 휴지통에 있다고 적히고("원문이 휴지통에 있어요", 원문 제목과 함께), 동작은 "복원" 대신 "원문 복원"이 된다.
 
-## "영구 삭제" · Permanent delete
+## "영구 삭제"
 
-### Step 23: "영구 삭제 · 확인 · 공개됐던 주소는 남겨 둠"
+### 단계 23: "영구 삭제 · 확인 · 공개됐던 주소는 남겨 둠"
 
-- Board: `Flow5Step23.dc.html`
-- Renders: `Trash` (stage "삭제 확인")
-- Permanent delete confirm. It says deleting cannot be undone, and that an address that was ever published (/about-old) stays reserved so no other post can use it. Buttons: cancel, delete.
+- 보드: `Flow5Step23.dc.html`
+- 화면: `Trash` (stage "삭제 확인")
+- 영구 삭제 확인. 지우면 되돌릴 수 없고, 한 번이라도 발행된 주소(/about-old)는 다른 글이 쓰지 못하도록 남겨 둔다고 알린다. 버튼: 취소, 삭제.
 
-### Step 24: "영구 삭제 · 가리키는 글이 있으면 막힘 → 연결 끊기 · 같이 삭제"
+### 단계 24: "영구 삭제 · 가리키는 글이 있으면 막힘 → 연결 끊기 · 같이 삭제"
 
-- Board: `Flow5Step24.dc.html`
-- Renders: `Trash` (stage "삭제 막힘")
-- Exception: permanent delete of an item that other posts point to is blocked. The dialog lists the posts that point to it (4 posts, with "외 3편" for the rest) and offers "연결 끊기" (cut the links, keeping the posts and removing the tag from their tag field) or "같이 삭제" (delete them too; 1 post in the trash is named).
+- 보드: `Flow5Step24.dc.html`
+- 화면: `Trash` (stage "삭제 막힘")
+- 예외: 다른 글이 가리키는 항목은 영구 삭제가 막힌다. 대화상자가 그 항목을 가리키는 글을 나열하고(4편, 나머지는 "외 3편"), "연결 끊기"(글은 남기고 태그 필드에서 태그만 뺀다)나 "같이 삭제"(그 글들도 지운다. 휴지통에 있는 글 1편의 이름이 나온다)를 고르게 한다.
 
-## "여러 개" · Many items
+## "여러 개"
 
-### Step 25: "여러 개 · 골라서 복원 · 영구 삭제"
+### 단계 25: "여러 개 · 골라서 복원 · 영구 삭제"
 
-- Board: `Flow5Step25.dc.html`
-- Renders: `Trash` (stage "선택")
-- Selecting several trash rows. A bulk bar shows "2개 선택" with restore, permanent delete and clear selection.
+- 보드: `Flow5Step25.dc.html`
+- 화면: `Trash` (stage "선택")
+- 휴지통 행을 여러 개 고른다. 일괄 작업 줄에 "2개 선택"과 복원, 영구 삭제, 선택 해제가 보인다.
 
-## "비우기" · Empty the trash
+## "비우기"
 
-### Step 26: "비우기 · 확인"
+### 단계 26: "비우기 · 확인"
 
-- Board: `Flow5Step26.dc.html`
-- Renders: `Trash` (stage "비우기 확인")
-- The user presses "비우기" (empty trash). A confirm says 9 items will be permanently deleted, that anything other posts point to is kept, and that the reason will be shown. Buttons: cancel, empty.
+- 보드: `Flow5Step26.dc.html`
+- 화면: `Trash` (stage "비우기 확인")
+- 사용자가 "비우기"를 누른다. 확인 창이 항목 9개를 영구 삭제하고, 다른 글이 가리키는 것은 남기며, 그 이유를 보여 준다고 알린다. 버튼: 취소, 비우기.
 
-### Step 27: "비우기 · 막힌 것만 남고 이유가 보임"
+### 단계 27: "비우기 · 막힌 것만 남고 이유가 보임"
 
-- Board: `Flow5Step27.dc.html`
-- Renders: `Trash` (stage "비운 뒤")
-- After emptying, only the blocked items remain and each shows why (for example a tag pointed to by 4 posts). A notice says 6 were deleted and 1 was kept.
+- 보드: `Flow5Step27.dc.html`
+- 화면: `Trash` (stage "비운 뒤")
+- 비운 뒤에는 막힌 항목만 남고, 항목마다 이유가 보인다(예: 글 4편이 가리키는 태그). 알림이 6개를 지우고 1개를 남겼다고 알린다.
 
-### Step 28: "빈 휴지통"
+### 단계 28: "빈 휴지통"
 
-- Board: `Flow5Step28.dc.html`
-- Renders: `Trash` (stage "빔")
-- The trash is empty and the screen says "휴지통이 비었어요."
+- 보드: `Flow5Step28.dc.html`
+- 화면: `Trash` (stage "빔")
+- 휴지통이 비었고, 화면에 "휴지통이 비었어요."라고 적혀 있다.

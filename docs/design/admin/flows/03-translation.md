@@ -1,107 +1,107 @@
-# Flow 3: Translation
+# 흐름 3: 번역
 
-This file lists every row and step of canvas flow 3, "흐름 3 · 번역". Creating and publishing a translation, handling a changed source, the language column in the list, translating many posts, and exceptions.
+이 파일은 캔버스 흐름 3 "흐름 3 · 번역"의 모든 행과 단계를 적는다. 번역을 만들고 발행하기, 바뀐 원문 다루기, 목록의 언어 열, 여러 글 번역하기, 예외를 다룬다.
 
-Canvas note: "흐름 3 · 번역 — 새 번역 · 발행 · 원문 바뀜 · 목록 · 여러 글 · 예외"
+캔버스 메모: "흐름 3 · 번역 — 새 번역 · 발행 · 원문 바뀜 · 목록 · 여러 글 · 예외"
 
-Screens used: [`EditorNotion`](../screens.md#editornotion), [`EditorTranslate`](../screens.md#editortranslate), [`TranslatePaired`](../screens.md#translatepaired), [`Main`](../screens.md#main), [`ProposalReview`](../screens.md#proposalreview).
+쓰는 화면: [`EditorNotion`](../screens.md#editornotion), [`EditorTranslate`](../screens.md#editortranslate), [`TranslatePaired`](../screens.md#translatepaired), [`Main`](../screens.md#main), [`ProposalReview`](../screens.md#proposalreview).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "새 번역 · 발행" · New translation, publish
+## "새 번역 · 발행"
 
-### Step 01: "새 번역 · “+ 언어” → 번역할 언어 고르기"
+### 단계 01: "새 번역 · “+ 언어” → 번역할 언어 고르기"
 
-- Board: `Flow3Step01.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; lang-menu "열림")
-- On a published post the user clicks "+ 언어" in the language tabs. A menu "번역 추가" (add translation) lists the languages to translate to (English, 日本語) and a link to manage languages.
+- 보드: `Flow3Step01.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; lang-menu "열림")
+- 발행된 글에서 사용자가 언어 탭의 "+ 언어"를 누른다. 메뉴 "번역 추가"가 번역할 언어(English, 日本語)와 언어 관리로 가는 링크를 보여 준다.
 
-### Step 02: "새 번역 · 흐린 원문으로 시작 · 주소는 원문 것을 복사"
+### 단계 02: "새 번역 · 흐린 원문으로 시작 · 주소는 원문 것을 복사"
 
-- Board: `Flow3Step02.dc.html`
-- Renders: `EditorTranslate` (stage "새 번역")
-- A new translation opens. Every block starts dimmed (the source text shown faintly), the address is copied from the source post, and one to-do is open. The character count is 0.
+- 보드: `Flow3Step02.dc.html`
+- 화면: `EditorTranslate` (stage "새 번역")
+- 새 번역이 열린다. 모든 블록이 흐린 채로 시작하고(원문이 옅게 보임), 주소는 원문 글에서 복사되며, 할 일 하나가 열려 있다. 글자 수는 0이다.
 
-### Step 03: "새 번역 · ✦ 번역 → 파란 제안 → 받기"
+### 단계 03: "새 번역 · ✦ 번역 → 파란 제안 → 받기"
 
-- Board: `Flow3Step03.dc.html`
-- Renders: `EditorTranslate` (stage "번역 제안")
-- The user presses ✦ translate. The translation arrives as blue proposals (6 proposals); the user accepts them one at a time or with "모두 받기" (accept all) or "모두 버리기" (discard all).
+- 보드: `Flow3Step03.dc.html`
+- 화면: `EditorTranslate` (stage "번역 제안")
+- 사용자가 ✦ 번역을 누른다. 번역이 파란 제안으로 도착한다(제안 6개). 사용자는 하나씩 받거나 "모두 받기", "모두 버리기"를 쓴다.
 
-### Step 04: "새 번역 · 흐린 블록 → 번역 · 원문 유지 · 지우기"
+### 단계 04: "새 번역 · 흐린 블록 → 번역 · 원문 유지 · 지우기"
 
-- Board: `Flow3Step04.dc.html`
-- Renders: `EditorTranslate` (stage "블록 고르기")
-- For a block that is still dimmed, the user picks what to do with it: translate it, keep the source ("원문 유지") or delete it ("지우기").
+- 보드: `Flow3Step04.dc.html`
+- 화면: `EditorTranslate` (stage "블록 고르기")
+- 아직 흐린 블록에서 사용자가 할 일을 고른다. 번역하기, "원문 유지", "지우기" 중 하나다.
 
-### Step 05: "새 번역 · 원문 나란히 보기"
+### 단계 05: "새 번역 · 원문 나란히 보기"
 
-- Board: `Flow3Step05.dc.html`
-- Renders: `TranslatePaired`
-- The user views the source beside the translation. The screen splits into source ("한국어", last edited 10. 26) and translation (English, last edited 09. 20) with matching blocks side by side and a "원문 바뀜" marker where the source changed.
+- 보드: `Flow3Step05.dc.html`
+- 화면: `TranslatePaired`
+- 사용자가 원문을 번역 옆에 놓고 본다. 화면이 원문("한국어", 마지막 수정 10. 26)과 번역(English, 마지막 수정 09. 20)으로 나뉘고, 짝이 맞는 블록이 나란히 놓이며, 원문이 바뀐 곳에는 "원문 바뀜" 표시가 붙는다.
 
-### Step 06: "발행 · 흐린 블록이 남으면 막힘 → 이동 (블록마다 정함)"
+### 단계 06: "발행 · 흐린 블록이 남으면 막힘 → 이동 (블록마다 정함)"
 
-- Board: `Flow3Step06.dc.html`
-- Renders: `EditorTranslate` (stage "발행 막힘")
-- The user publishes while dimmed blocks remain. Publishing is blocked; the to-do panel lists "흐린 블록 1" (a dimmed block) and the title and address checks, and a "이동" (go) action jumps to the block. Each such block has to be decided on its own.
+- 보드: `Flow3Step06.dc.html`
+- 화면: `EditorTranslate` (stage "발행 막힘")
+- 흐린 블록이 남은 채로 사용자가 발행한다. 발행이 막힌다. 할 일 패널이 "흐린 블록 1"과 제목, 주소 확인을 나열하고, "이동" 동작이 그 블록으로 데려간다. 그런 블록은 하나하나 따로 정해야 한다.
 
-### Step 07: "발행됨 · /en/first-post"
+### 단계 07: "발행됨 · /en/first-post"
 
-- Board: `Flow3Step07.dc.html`
-- Renders: `EditorTranslate` (stage "발행됨")
-- The translation is published. A toast says it was published with a "보기" action; the address is /en/first-post.
+- 보드: `Flow3Step07.dc.html`
+- 화면: `EditorTranslate` (stage "발행됨")
+- 번역이 발행됐다. 토스트가 발행됐다고 알리며 "보기" 동작을 준다. 주소는 /en/first-post다.
 
-## "원문 바뀜" · Source changed
+## "원문 바뀜"
 
-### Step 08: "원문 바뀜 · 원문을 고쳐 다시 발행 → English 탭에 점"
+### 단계 08: "원문 바뀜 · 원문을 고쳐 다시 발행 → English 탭에 점"
 
-- Board: `Flow3Step08.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; toast "발행됨")
-- The source post is edited and republished. The English tab now shows a dot, meaning the source changed since the translation.
+- 보드: `Flow3Step08.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; toast "발행됨")
+- 원문 글을 고쳐 다시 발행한다. 이제 English 탭에 점이 보인다. 번역한 뒤로 원문이 바뀌었다는 뜻이다.
 
-### Step 09: "원문 바뀜 · 번역을 열면 바뀐 곳마다 여백 표시 (바뀜 · 새로 · 지워짐)"
+### 단계 09: "원문 바뀜 · 번역을 열면 바뀐 곳마다 여백 표시 (바뀜 · 새로 · 지워짐)"
 
-- Board: `Flow3Step09.dc.html`
-- Renders: `EditorTranslate` (stage "원문 바뀜")
-- The user opens the translation. Each changed place has a margin mark: changed ("바뀜"), new ("새로") or removed ("지워짐"). A banner says the source changed on 10. 26 in 3 places, with "모두 확인" (confirm all) and a count "원문 바뀜 3".
+- 보드: `Flow3Step09.dc.html`
+- 화면: `EditorTranslate` (stage "원문 바뀜")
+- 사용자가 번역을 연다. 바뀐 곳마다 여백 표시가 있다. "바뀜", "새로", "지워짐"이다. 배너가 원문이 10. 26에 3곳 바뀌었다고 알리며, "모두 확인"과 개수 "원문 바뀜 3"을 보여 준다.
 
-### Step 10: "원문 바뀜 · 표시를 누르면 원문 전후 → 확인 · ✦ 다시 번역"
+### 단계 10: "원문 바뀜 · 표시를 누르면 원문 전후 → 확인 · ✦ 다시 번역"
 
-- Board: `Flow3Step10.dc.html`
-- Renders: `EditorTranslate` (stage "바뀜 카드")
-- The user clicks a margin mark. A card shows the source before and after, with "확인" (confirm) and "✦ 다시 번역" (translate again).
+- 보드: `Flow3Step10.dc.html`
+- 화면: `EditorTranslate` (stage "바뀜 카드")
+- 사용자가 여백 표시를 누른다. 카드가 바뀌기 전과 뒤의 원문을 보여 주고, "확인"과 "✦ 다시 번역"이 있다.
 
-### Step 11: "원문 바뀜 · ✦ 다시 번역 → 파란 제안 → 받기 → 다시 발행"
+### 단계 11: "원문 바뀜 · ✦ 다시 번역 → 파란 제안 → 받기 → 다시 발행"
 
-- Board: `Flow3Step11.dc.html`
-- Renders: `EditorTranslate` (stage "다시 번역")
-- The user presses ✦ translate again. The new translation of that block arrives as a blue proposal; the user accepts it and publishes again (the status reads editing until then).
+- 보드: `Flow3Step11.dc.html`
+- 화면: `EditorTranslate` (stage "다시 번역")
+- 사용자가 ✦ 다시 번역을 누른다. 그 블록의 새 번역이 파란 제안으로 도착한다. 사용자는 그것을 받고 다시 발행한다(그때까지 상태는 수정 중이다).
 
-## "목록 · 여러 글" · List, many posts
+## "목록 · 여러 글"
 
-### Step 12: "목록 · 언어 이름 → 번역 · 원문 바뀜"
+### 단계 12: "목록 · 언어 이름 → 번역 · 원문 바뀜"
 
-- Board: `Flow3Step12.dc.html`
-- Renders: `Main` (mode "언어 메뉴")
-- In the post list the user opens the language column menu. It lists languages with post counts (KO 148, EN 40, JA 6) and a translation filter: no translation (41), source changed (3), up to date (104). Choosing "원문 바뀜" adds the chip "번역: 원문 바뀜".
+- 보드: `Flow3Step12.dc.html`
+- 화면: `Main` (mode "언어 메뉴")
+- 글 목록에서 사용자가 언어 열 메뉴를 연다. 언어마다 글 수(KO 148, EN 40, JA 6)와 번역 필터가 있다. 번역 없음(41), 원문 바뀜(3), 최신(104)이다. "원문 바뀜"을 고르면 칩 "번역: 원문 바뀜"이 생긴다.
 
-### Step 13: "여러 글 · 번역 상세 보기 → 글마다 원문 | 번역"
+### 단계 13: "여러 글 · 번역 상세 보기 → 글마다 원문 | 번역"
 
-- Board: `Flow3Step13.dc.html`
-- Renders: `ProposalReview` (default stage "검토"; kind "번역")
-- For several posts, the translation proposal review shows details per post: the original and the translation side by side. The header reads "3편 적용" for the request "이 세 편 영어로 번역해 줘.", with "새 글 3편 · 되돌릴 수 있음" (3 new posts, can be undone), "모두 펼치기" (expand all) and per-post block counts (for example blocks 8, source kept 1).
+- 보드: `Flow3Step13.dc.html`
+- 화면: `ProposalReview` (default stage "검토"; kind "번역")
+- 여러 글에 대해, 번역 제안 검토가 글마다 상세를 보여 준다. 원문과 번역이 나란히 놓인다. 머리에는 요청 "이 세 편 영어로 번역해 줘."에 대한 "3편 적용"이 있고, "새 글 3편 · 되돌릴 수 있음", "모두 펼치기", 글마다 블록 수(예: 블록 8, 원문 유지 1)가 있다.
 
-## "예외" · Exceptions
+## "예외"
 
-### Step 14: "예외 · 언어가 하나뿐 → 설정에서 언어 추가"
+### 단계 14: "예외 · 언어가 하나뿐 → 설정에서 언어 추가"
 
-- Board: `Flow3Step14.dc.html`
-- Renders: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; lang-menu "언어 하나뿐")
-- Exception: the site has only one language. The language menu shows "언어 추가" (add a language) with a link to settings.
+- 보드: `Flow3Step14.dc.html`
+- 화면: `EditorNotion` (state "아무것도 안 할 때"; pub "발행됨"; save "저장됨"; todo "다 채움"; todo-open off; lang-menu "언어 하나뿐")
+- 예외: 사이트에 언어가 하나뿐이다. 언어 메뉴는 "언어 추가"와 설정으로 가는 링크를 보여 준다.
 
-### Step 15: "예외 · 이 번역만 휴지통으로 (원문은 그대로)"
+### 단계 15: "예외 · 이 번역만 휴지통으로 (원문은 그대로)"
 
-- Board: `Flow3Step15.dc.html`
-- Renders: `EditorTranslate` (stage "번역 지우기")
-- Exception: the user moves only this translation to the trash from ⋯. The menu item "이 번역 휴지통으로" notes that the Korean source stays as it is.
+- 보드: `Flow3Step15.dc.html`
+- 화면: `EditorTranslate` (stage "번역 지우기")
+- 예외: 사용자가 ⋯에서 이 번역만 휴지통으로 옮긴다. 메뉴 항목 "이 번역 휴지통으로"에는 한국어 원문은 그대로 남는다는 말이 붙는다.

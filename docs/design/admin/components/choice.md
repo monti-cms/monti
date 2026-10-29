@@ -1,40 +1,40 @@
-# Choice
+# 선택
 
-This page covers the controls for choosing among fixed things: checkbox and radio, the switch, and the short one-of-a-few choice.
+이 페이지는 정해진 것들 중에서 고르는 컨트롤을 다룬다. 체크박스와 라디오, 스위치, 몇 개 중 하나를 고르는 짧은 선택이다.
 
-An on state is shown by shape as well as color: a ✓, a filled circle, a knob on the right.
+켜진 상태는 색뿐 아니라 모양으로도 보인다. ✓, 채운 동그라미, 오른쪽에 간 손잡이가 그렇다.
 
-## Checkbox and radio
+## 체크박스와 라디오
 
-- A checked checkbox holds a ✓. The state is never carried by color alone.
-- A list row's checkbox shows only when the pointer is over the row or when any row is picked.
-- A radio is for a pick-one handling, such as "move the values" or "start with a new field".
-- A checkbox is 14px (`.mt-check`). The partly-on state (`.is-mixed`) draws a bar instead of the ✓ and is used for select-all and for "some rows have it".
+- 체크된 체크박스에는 ✓가 든다. 상태를 색만으로 전하는 일은 없다.
+- 목록 행의 체크박스는 포인터가 행 위에 있거나 어떤 행이든 골랐을 때만 보인다.
+- 라디오는 "값 옮기기"나 "빈 칸으로 시작"처럼 처리 방법 하나를 고를 때 쓴다.
+- 체크박스는 14px다(`.mt-check`). 일부만 켜진 상태(`.is-mixed`)는 ✓ 대신 막대를 그리고, 전체 선택과 "일부 행에만 있음"에 쓴다.
 
-### In code
+### 코드
 
-`Checkbox` (14px; a ✓ when on; `indeterminate` for the bar; `proposal` marks a choice the assistant made and nobody has touched, with the same mark in blue; an invalid checkbox keeps a red ring). `RadioGroup` with `RadioItem` rows (a filled ring when picked, an optional mono note at the end of the row, such as "148 posts", a plain `description` right after the label that says what the choice is ("문서 · 게시글, 노트처럼 본문이 있어요" in the kind of a new collection), and an optional `control` at the far end: the select of "move to another field"). `Option` lays out a row of a control, its text and a note; pressing the text presses the control, and `spread` pushes the control to the far end.
+`Checkbox`(14px. 켜지면 ✓. 막대는 `indeterminate`. `proposal`은 어시스턴트가 골랐고 아무도 건드리지 않은 선택을 같은 표시의 파란색으로 나타낸다. 잘못된 체크박스는 빨간 고리를 유지한다). `RadioGroup`과 `RadioItem` 행(골랐으면 채운 고리. 행 끝에 선택적인 mono 메모, 예를 들어 "148 posts". 라벨 바로 뒤에 그 선택이 무엇인지 말하는 평범한 `description`, 새 컬렉션의 종류에서는 "문서 · 게시글, 노트처럼 본문이 있어요". 맨 끝에 선택적인 `control`, "다른 필드로 옮기기"의 선택 상자가 그렇다). `Option`은 컨트롤, 그 글, 메모를 한 행으로 배치한다. 글을 누르면 컨트롤이 눌리고, `spread`는 컨트롤을 맨 끝으로 민다.
 
-## Switch
+## 스위치
 
-An on/off setting that takes effect at once. Inside a form that has its own save button it keeps the same look.
+바로 적용되는 켜기/끄기 설정이다. 자체 저장 버튼이 있는 폼 안에서도 같은 모양을 유지한다.
 
-### In code
+### 코드
 
-`Switch` (34 by 20: the knob sits left when off and right when on). `proposal` makes the track blue for a setting the assistant turned on and nobody has touched.
+`Switch`(34 x 20. 꺼지면 손잡이가 왼쪽, 켜지면 오른쪽에 있다). `proposal`은 어시스턴트가 켰고 아무도 건드리지 않은 설정의 트랙을 파랗게 만든다.
 
-## One of a few
+## 몇 개 중 하나
 
-A short choice of one among a few. Example: the language setting "모두 같음" (all the same) / "언어마다" (per language) / "원문 따름" (follow the source).
+몇 개 중 하나를 고르는 짧은 선택이다. 예: 언어 설정의 "모두 같음" / "언어마다" / "원문 따름".
 
-### In code
+### 코드
 
-`Segmented`: joined cells in a thin rounded frame; the picked cell is on the selected background at 600. `size="sm"` is for panels and filter rows; `inline` makes it as wide as its cells. A `tool` ground variant is for tool surfaces (the sidebar), where the selected ground is the hover and the pressed cell takes the current ground. The DS README names this part `ToggleGroup`; that is only the Base UI primitive underneath.
+`Segmented`: 얇은 둥근 테두리 안에 붙은 칸들이다. 고른 칸은 선택 배경 위에 600이다. `size="sm"`은 패널과 필터 행용이고, `inline`은 칸들만큼의 너비로 만든다. `tool` 바탕 변형은 도구 화면(사이드바)용이다. 여기서는 선택 바탕이 호버이고 눌린 칸이 현재 바탕을 쓴다. DS README는 이 부품을 `ToggleGroup`이라고 부르는데, 그것은 아래에 깔린 Base UI 기본 요소일 뿐이다.
 
-## Choices of a select (`OptionTable`)
+## 선택 상자의 선택지 (`OptionTable`)
 
-The choices of a select field, in the sheet that adds or edits a field: a small table with a head (값 in mono, 라벨), one row per choice and "+ 선택지" under it. The value is what is stored (mono) and the label is what the writer sees; both read as text until pressed. A row has a grip to reorder it by and a × to take it out. The default is picked in a quiet menu at the end of the line ("기본값 · 메모 ▾").
+필드를 추가하거나 고치는 시트 안에 있는 선택 상자 필드의 선택지다. 머리(mono인 값, 라벨)가 있는 작은 표에 선택지마다 한 행이 있고, 그 아래에 "+ 선택지"가 있다. 값은 저장되는 것(mono)이고 라벨은 쓰는 사람이 보는 것이다. 둘 다 누르기 전까지는 글로 읽힌다. 행에는 순서를 바꾸는 손잡이와 빼는 ×가 있다. 기본값은 줄 끝의 조용한 메뉴에서 고른다("기본값 · 메모 ▾").
 
-### In code
+### 코드
 
-`OptionTable` (`valueLabel`, `labelLabel`) with `OptionRow` rows (`value`, `label`, `handle` with an `OptionRowHandle`, `action`, `drag` for the sortable's transform).
+`OptionTable`(`valueLabel`, `labelLabel`)과 `OptionRow` 행(`value`, `label`, `OptionRowHandle`이 든 `handle`, `action`, 정렬 가능한 목록의 변환에 쓰는 `drag`).

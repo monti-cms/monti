@@ -1,137 +1,137 @@
-# Flow 7: List tidy-up
+# 흐름 7: 목록 정리
 
-This file lists every row and step of canvas flow 7, "흐름 7 · 목록 정리". Sorting by the column name menu, filtering, columns, per page, search scope, changing many posts and merging tags. Search and translation filters are covered in flows 2, 3, 5 and 6.
+이 파일은 캔버스 흐름 7 "흐름 7 · 목록 정리"의 모든 행과 단계를 적는다. 열 이름 메뉴로 정렬하기, 거르기, 열, 쪽마다 개수, 찾을 곳, 여러 글 바꾸기, 태그 합치기를 다룬다. 찾기와 번역 거르기는 흐름 2, 3, 5, 6에서 다룬다.
 
-Canvas note: "흐름 7 · 목록 정리 — 열 이름 메뉴로 정렬 · 거르기 · 열 · 쪽마다 · 찾을 곳 · 여러 글 바꾸기 · 태그 합치기 (찾기 · 번역 거르기는 흐름 2 · 3 · 5 · 6에)"
+캔버스 메모: "흐름 7 · 목록 정리 — 열 이름 메뉴로 정렬 · 거르기 · 열 · 쪽마다 · 찾을 곳 · 여러 글 바꾸기 · 태그 합치기 (찾기 · 번역 거르기는 흐름 2 · 3 · 5 · 6에)"
 
-Screens used: [`Main`](../screens.md#main), [`Taxonomy`](../screens.md#taxonomy).
+쓰는 화면: [`Main`](../screens.md#main), [`Taxonomy`](../screens.md#taxonomy).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "정렬" · Sort
+## "정렬"
 
-### Step 01: "정렬 · 제목 이름을 누르면 그 열의 메뉴 · 오름차순 · 내림차순"
+### 단계 01: "정렬 · 제목 이름을 누르면 그 열의 메뉴 · 오름차순 · 내림차순"
 
-- Board: `Flow7Step01.dc.html`
-- Renders: `Main` (mode "제목 메뉴")
-- The user clicks a column name (title). The column's menu opens: ascending, descending.
+- 보드: `Flow7Step01.dc.html`
+- 화면: `Main` (mode "제목 메뉴")
+- 사용자가 열 이름(제목)을 누른다. 그 열의 메뉴가 열린다. 오름차순, 내림차순이 있다.
 
-### Step 01b: "정렬 · 오름차순을 고르면 메뉴가 닫히고 제목 이름이 잉크색으로 ↑"
+### 단계 01b: "정렬 · 오름차순을 고르면 메뉴가 닫히고 제목 이름이 잉크색으로 ↑"
 
-- Board: `Flow7Step01b.dc.html`
-- Renders: `Main` (mode "제목 오름차순")
-- The user picks ascending. The menu closes and the title name turns ink-colored with an up arrow.
+- 보드: `Flow7Step01b.dc.html`
+- 화면: `Main` (mode "제목 오름차순")
+- 사용자가 오름차순을 고른다. 메뉴가 닫히고 제목 이름이 잉크색이 되며 위쪽 화살표가 붙는다.
 
-## "열과 쪽" · Columns and page size
+## "열과 쪽"
 
-### Step 02: "열 · ⋯ 위의 + → 숨긴 열만 나와요 · 고르면 그 열이 생겨요"
+### 단계 02: "열 · ⋯ 위의 + → 숨긴 열만 나와요 · 고르면 그 열이 생겨요"
 
-- Board: `Flow7Step02.dc.html`
-- Renders: `Main` (mode "열 추가")
-- The user clicks the + above the ⋯ at the end of the header. The menu lists only the hidden columns (publish date, created date, address, summary, cover image, SEO title, share image). Choosing one adds that column.
+- 보드: `Flow7Step02.dc.html`
+- 화면: `Main` (mode "열 추가")
+- 사용자가 머리 행 끝 ⋯ 위의 +를 누른다. 메뉴에는 숨긴 열만 나온다(발행일, 만든 날, 주소, 요약, 대표 이미지, 검색 제목, 공유 이미지). 하나를 고르면 그 열이 더해진다.
 
-### Step 02b: "열 · 열 이름을 잡고 옆으로 끌면 들려 따라오고 다른 열이 비켜요 · 놓으면 저장"
+### 단계 02b: "열 · 열 이름을 잡고 옆으로 끌면 들려 따라오고 다른 열이 비켜요 · 놓으면 저장"
 
-- Board: `Flow7Step02b.dc.html`
-- Renders: `Main` (mode "열 옮기는 중")
-- The user grabs a column name and drags it sideways. The column lifts and follows the pointer and the other columns move aside; dropping saves the new order.
+- 보드: `Flow7Step02b.dc.html`
+- 화면: `Main` (mode "열 옮기는 중")
+- 사용자가 열 이름을 잡고 옆으로 끈다. 열이 들려 포인터를 따라오고 다른 열은 비켜난다. 놓으면 새 순서가 저장된다.
 
-### Step 02c: "쪽마다 · 아래 범위 옆 25개씩 ▾ → 25 · 50 · 100"
+### 단계 02c: "쪽마다 · 아래 범위 옆 25개씩 ▾ → 25 · 50 · 100"
 
-- Board: `Flow7Step02c.dc.html`
-- Renders: `Main` (mode "쪽마다")
-- The user opens the per-page control beside the range under the list ("25개씩 ▾"). Choices: 25, 50, 100.
+- 보드: `Flow7Step02c.dc.html`
+- 화면: `Main` (mode "쪽마다")
+- 사용자가 목록 아래 범위 옆의 쪽마다 개수 컨트롤("25개씩 ▾")을 연다. 고를 수 있는 값은 25, 50, 100이다.
 
-## "찾기" · Search
+## "찾기"
 
-### Step 03: "찾기 · 검색창 앞에서 찾을 곳 고르기 · 전체 · 제목 · 주소 · 본문"
+### 단계 03: "찾기 · 검색창 앞에서 찾을 곳 고르기 · 전체 · 제목 · 주소 · 본문"
 
-- Board: `Flow7Step03.dc.html`
-- Renders: `Main` (mode "찾을 곳 고르기")
-- Before the search box the user opens the scope picker: all, title, address, body.
+- 보드: `Flow7Step03.dc.html`
+- 화면: `Main` (mode "찾을 곳 고르기")
+- 사용자가 검색창 앞에서 찾을 곳 고르기를 연다. 전체, 제목, 주소, 본문이 있다.
 
-## "값으로 거르기" · Filter by value
+## "값으로 거르기"
 
-### Step 04: "거르기 · 상태 이름 → 발행됨 · 수정 중 · 초안 · 보관됨 · 고르면 칩과 이름 옆 점 · 메뉴는 열린 채"
+### 단계 04: "거르기 · 상태 이름 → 발행됨 · 수정 중 · 초안 · 보관됨 · 고르면 칩과 이름 옆 점 · 메뉴는 열린 채"
 
-- Board: `Flow7Step04.dc.html`
-- Renders: `Main` (mode "상태 메뉴")
-- The user clicks the status column name. The menu lists published, editing, draft, archived with counts. Picking one adds a chip and a dot beside the column name, and the menu stays open.
+- 보드: `Flow7Step04.dc.html`
+- 화면: `Main` (mode "상태 메뉴")
+- 사용자가 상태 열 이름을 누른다. 메뉴에 발행됨, 수정 중, 초안, 보관됨이 개수와 함께 나온다. 하나를 고르면 칩이 생기고 열 이름 옆에 점이 붙으며, 메뉴는 열린 채로 남는다.
 
-### Step 04b: "거르기 · 태그 이름 → 태그 찾기 · 맨 위 없음 · 태그마다 글 수 · 열 숨기기"
+### 단계 04b: "거르기 · 태그 이름 → 태그 찾기 · 맨 위 없음 · 태그마다 글 수 · 열 숨기기"
 
-- Board: `Flow7Step04b.dc.html`
-- Renders: `Main` (mode "태그 메뉴")
-- The user clicks the tag column name. The menu has a tag search box, "없음" (no tag) at the top, each tag with its post count, and hide column.
+- 보드: `Flow7Step04b.dc.html`
+- 화면: `Main` (mode "태그 메뉴")
+- 사용자가 태그 열 이름을 누른다. 메뉴에는 태그 검색창, 맨 위의 "없음"(태그 없음), 글 수가 붙은 태그마다 한 줄, 열 숨기기가 있다.
 
-### Step 04c: "거르기 · 언어 이름 → 언어 | 번역 · 원문 바뀜을 고르면 칩 "번역: 원문 바뀜""
+### 단계 04c: "거르기 · 언어 이름 → 언어 | 번역 · 원문 바뀜을 고르면 칩 "번역: 원문 바뀜""
 
-- Board: `Flow7Step04c.dc.html`
-- Renders: `Main` (mode "언어 메뉴")
-- The user clicks the language column name. The menu has two groups, language and translation. Picking "원문 바뀜" adds the chip "번역: 원문 바뀜".
+- 보드: `Flow7Step04c.dc.html`
+- 화면: `Main` (mode "언어 메뉴")
+- 사용자가 언어 열 이름을 누른다. 메뉴는 언어와 번역 두 묶음으로 나뉜다. "원문 바뀜"을 고르면 칩 "번역: 원문 바뀜"이 생긴다.
 
-### Step 04d: "거르기 · + 로 검색 설명 열을 켜고 그 이름 → 비어 있음 → 칩 "검색 설명 비어 있음""
+### 단계 04d: "거르기 · + 로 검색 설명 열을 켜고 그 이름 → 비어 있음 → 칩 "검색 설명 비어 있음""
 
-- Board: `Flow7Step04d.dc.html`
-- Renders: `Main` (mode "검색 설명 메뉴")
-- The user turns on the SEO description column with +, then opens its name and picks "비어 있음" (empty). The chip "검색 설명 비어 있음" appears.
+- 보드: `Flow7Step04d.dc.html`
+- 화면: `Main` (mode "검색 설명 메뉴")
+- 사용자가 +로 검색 설명 열을 켠 뒤 그 이름을 열고 "비어 있음"을 고른다. 칩 "검색 설명 비어 있음"이 나타난다.
 
-### Step 04e: "거르기 · 걸린 필터마다 칩 하나 · 열 이름에 점 · 칩의 ×로 하나씩 풀어요"
+### 단계 04e: "거르기 · 걸린 필터마다 칩 하나 · 열 이름에 점 · 칩의 ×로 하나씩 풀어요"
 
-- Board: `Flow7Step04e.dc.html`
-- Renders: `Main` (mode "여러 필터")
-- Several filters at once: one chip per active filter, a dot on each filtered column name, and each chip's × removes just that filter.
+- 보드: `Flow7Step04e.dc.html`
+- 화면: `Main` (mode "여러 필터")
+- 필터 여러 개가 한꺼번에 걸려 있다. 걸린 필터마다 칩이 하나씩 있고, 걸러진 열 이름마다 점이 붙으며, 칩의 ×는 그 필터 하나만 푼다.
 
-## "날짜로 거르기" · Filter by date
+## "날짜로 거르기"
 
-### Step 05: "날짜 · 수정일 이름 → 최근부터 · 오래전부터 | 오늘 · 최근 7일 · 최근 30일 · 기간 고르기 → 칩"
+### 단계 05: "날짜 · 수정일 이름 → 최근부터 · 오래전부터 | 오늘 · 최근 7일 · 최근 30일 · 기간 고르기 → 칩"
 
-- Board: `Flow7Step05.dc.html`
-- Renders: `Main` (mode "수정일 메뉴")
-- The user clicks the modified-date column name. The menu has sort (newest first, oldest first), then ranges (today, last 7 days, last 30 days) and "기간 고르기" (pick a range). A chosen range becomes a chip.
+- 보드: `Flow7Step05.dc.html`
+- 화면: `Main` (mode "수정일 메뉴")
+- 사용자가 수정일 열 이름을 누른다. 메뉴에는 먼저 정렬(최근부터, 오래전부터)이, 그다음 범위(오늘, 최근 7일, 최근 30일)와 "기간 고르기"가 있다. 고른 범위는 칩이 된다.
 
-### Step 05b: "날짜 · 기간 고르기 → 옆에 달력 · 처음 누른 날부터 다음 누른 날까지"
+### 단계 05b: "날짜 · 기간 고르기 → 옆에 달력 · 처음 누른 날부터 다음 누른 날까지"
 
-- Board: `Flow7Step05b.dc.html`
-- Renders: `Main` (mode "기간 고르기")
-- The user picks "기간 고르기". A calendar opens beside the menu; the range runs from the first day clicked to the next day clicked.
+- 보드: `Flow7Step05b.dc.html`
+- 화면: `Main` (mode "기간 고르기")
+- 사용자가 "기간 고르기"를 고른다. 메뉴 옆에 달력이 열린다. 기간은 처음 누른 날부터 다음에 누른 날까지다.
 
-### Step 05c: "날짜 · 두 번째 날을 누르면 기간이 걸리고 달력은 그 기간을 보여 주며 열린 채 → 칩 "수정한 날: 10. 05 – 10. 16""
+### 단계 05c: "날짜 · 두 번째 날을 누르면 기간이 걸리고 달력은 그 기간을 보여 주며 열린 채 → 칩 "수정한 날: 10. 05 – 10. 16""
 
-- Board: `Flow7Step05c.dc.html`
-- Renders: `Main` (mode "기간 걸림")
-- The user clicks the second day. The range is applied, the calendar shows the range and stays open, and the chip reads "수정한 날: 10. 05 – 10. 16".
+- 보드: `Flow7Step05c.dc.html`
+- 화면: `Main` (mode "기간 걸림")
+- 사용자가 두 번째 날을 누른다. 기간이 걸리고, 달력은 그 기간을 보여 주며 열린 채로 남고, 칩에는 "수정한 날: 10. 05 – 10. 16"이 적힌다.
 
-## "여러 글 바꾸기" · Change many posts
+## "여러 글 바꾸기"
 
-### Step 10: "여러 글 · 둘을 고르면 열 이름 줄 자리에 일괄 작업 줄 · 바꾸기 ▾ › 태그 › 모두 ☑ · 일부 – 1/2 · 없음 ☐"
+### 단계 10: "여러 글 · 둘을 고르면 열 이름 줄 자리에 일괄 작업 줄 · 바꾸기 ▾ › 태그 › 모두 ☑ · 일부 – 1/2 · 없음 ☐"
 
-- Board: `Flow7Step10.dc.html`
-- Renders: `Main` (mode "바꾸기 메뉴")
-- The user selects two posts. A bulk bar replaces the column header row. "바꾸기 ▾ › 태그" opens a tag list where each tag shows a state: checked for all selected, "–" with 1/2 for some, unchecked for none.
+- 보드: `Flow7Step10.dc.html`
+- 화면: `Main` (mode "바꾸기 메뉴")
+- 사용자가 글 두 편을 고른다. 열 이름 머리 행 자리에 일괄 작업 줄이 들어선다. "바꾸기 ▾ › 태그"를 열면 태그 목록이 나오고, 태그마다 상태가 보인다. 고른 글 모두에 있으면 체크, 일부에만 있으면 "–"와 1/2, 하나도 없으면 빈 체크다.
 
-## "태그 합치기" · Merge tags
+## "태그 합치기"
 
-### Step 06: "분류 · 태그 목록 · 글 수 · 쓰는 글 없음"
+### 단계 06: "분류 · 태그 목록 · 글 수 · 쓰는 글 없음"
 
-- Board: `Flow7Step06.dc.html`
-- Renders: `Taxonomy` (stage "태그")
-- Taxonomy, tags tab. The tag list shows each tag's post count, and tags used by no post.
+- 보드: `Flow7Step06.dc.html`
+- 화면: `Taxonomy` (stage "태그")
+- Taxonomy의 태그 탭이다. 태그 목록에 태그마다 글 수가 나오고, 어떤 글도 쓰지 않는 태그도 보인다.
 
-### Step 07: "분류 · 같은 뜻의 태그 둘을 고름 → 합치기"
+### 단계 07: "분류 · 같은 뜻의 태그 둘을 고름 → 합치기"
 
-- Board: `Flow7Step07.dc.html`
-- Renders: `Taxonomy` (stage "태그 고름")
-- The user selects two tags that mean the same thing. A bar shows "2개 선택" with "합치기" (merge), trash and clear selection.
+- 보드: `Flow7Step07.dc.html`
+- 화면: `Taxonomy` (stage "태그 고름")
+- 사용자가 같은 뜻의 태그 두 개를 고른다. 줄에 "2개 선택"과 함께 "합치기", 휴지통, 선택 해제가 나온다.
 
-### Step 08: "분류 · 남길 이름 고르기 · 바뀌는 글 수 · 사라지는 주소"
+### 단계 08: "분류 · 남길 이름 고르기 · 바뀌는 글 수 · 사라지는 주소"
 
-- Board: `Flow7Step08.dc.html`
-- Renders: `Taxonomy` (stage "태그 합치기")
-- The user presses merge. A dialog "어느 이름으로 합칠까요?" asks which name to keep and states the effect: the 3 posts with React become "리액트", React goes to the trash, and the address /tag/react-en disappears. Buttons: cancel and the names to keep.
+- 보드: `Flow7Step08.dc.html`
+- 화면: `Taxonomy` (stage "태그 합치기")
+- 사용자가 합치기를 누른다. 대화상자 "어느 이름으로 합칠까요?"가 남길 이름을 묻고 결과를 알려 준다. React가 붙은 글 3편이 "리액트"가 되고, React는 휴지통으로 가며, 주소 /tag/react-en은 사라진다. 버튼은 취소와 남길 이름들이다.
 
-### Step 09: "분류 · 합친 뒤 · 글 3편이 리액트로 · 되돌리기"
+### 단계 09: "분류 · 합친 뒤 · 글 3편이 리액트로 · 되돌리기"
 
-- Board: `Flow7Step09.dc.html`
-- Renders: `Taxonomy` (stage "태그 합침")
-- After merging, a notice says the tags of 3 posts were changed to "리액트", with "되돌리기"; the kept tag now shows its new post count.
+- 보드: `Flow7Step09.dc.html`
+- 화면: `Taxonomy` (stage "태그 합침")
+- 합친 뒤에는 글 3편의 태그를 "리액트"로 바꿨다는 알림이 "되돌리기"와 함께 나온다. 남긴 태그에는 새 글 수가 보인다.

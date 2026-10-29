@@ -633,7 +633,7 @@ function checkUndocumentedParts() {
 			indexFile,
 			line,
 			"undocumented-part",
-			`\`${name}\` is not named in docs/design/admin/components/*.md; add it to the docs page of its family (its rules and an "In code" line)`,
+			`\`${name}\` is not named in docs/design/admin/components/*.md; add it to the docs page of its family (its rules, and its name in the "코드" section)`,
 		);
 	}
 }

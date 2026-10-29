@@ -1,121 +1,121 @@
-# Field
+# 필드
 
-This page covers the controls where a value is typed or picked: inputs, selects, fixed-end fields, the search box, the calendar, secret values, and the rules for required and read-only values.
+이 페이지는 값을 입력하거나 고르는 컨트롤을 다룬다. 입력란, 선택, 앞뒤가 고정된 필드, 검색 상자, 달력, 비밀 값, 그리고 필수 값과 읽기 전용 값의 규칙이다.
 
-Every field has a single underline. The label is above in mono 11px, and the error is one line below.
+모든 필드에는 밑줄이 하나 있다. 라벨은 위에 mono 11px로 두고, 오류는 아래에 한 줄로 둔다.
 
-## Single line
+## 한 줄
 
-An input with one underline. Box borders are not used.
+밑줄 하나가 있는 입력란. 상자 테두리는 쓰지 않는다.
 
-- The label is above the field in mono 11px (`text-micro`, `fg-subtle`).
-- A text button at the end of the label row ("되돌리기" (undo), "버리기" (discard), "✦ 채우기" (✦ fill)) does not exceed the label row's height (14px). When a field changes and a button appears, the field below does not move.
-- Focus: the underline turns ink (`border-contrast`).
-- Error: the underline is `fg-danger`, and one line of error text is below (what is wrong and how to fix it).
-- Several errors are not spaced apart (`.mt-errors`). No gap is wider than the 2px between the field and its error. The same sentence appears once; if there is one, it is plain text, and if there are several each line gets a dot.
-- The placeholder is `fg-faint`. No explanation text is hung below a field.
-- Values that a machine reads, such as an address or an identifier, are mono (`.mt-input.mt-mono`). The mono rule wins, so `font: inherit` on the input does not turn the font back.
+- 라벨은 필드 위에 mono 11px(`text-micro`, `fg-subtle`)로 둔다.
+- 라벨 줄 끝의 텍스트 버튼("되돌리기", "버리기", "✦ 채우기")은 라벨 줄의 높이(14px)를 넘지 않는다. 필드가 바뀌어 버튼이 나타나도 아래 필드는 움직이지 않는다.
+- 포커스: 밑줄이 잉크색(`border-contrast`)이 된다.
+- 오류: 밑줄이 `fg-danger`가 되고, 아래에 오류 문장이 한 줄 있다(무엇이 잘못됐고 어떻게 고치는지).
+- 오류가 여럿이어도 사이를 띄우지 않는다(`.mt-errors`). 어떤 간격도 필드와 오류 사이의 2px보다 넓지 않다. 같은 문장은 한 번만 나온다. 하나면 그냥 글이고, 여럿이면 줄마다 점을 붙인다.
+- 플레이스홀더는 `fg-faint`이다. 필드 아래에 설명 글을 달지 않는다.
+- 주소나 식별자처럼 기계가 읽는 값은 mono(`.mt-input.mt-mono`)로 쓴다. mono 규칙이 이기므로, 입력란의 `font: inherit`가 글꼴을 되돌리지 않는다.
 
-### In code
+### 코드
 
-`Input` (an underline, never a box; ink on focus, danger when `aria-invalid`; `proposal` marks a value the assistant wrote and nobody has touched, in blue text with a 1.5px blue underline). `size="sm"` is 28px, for toolbars, filters and tables; `mono` is fixed-width letters; `inline` reads as text until focused, with no line at all (a name edited in place); at a heading's size (`title`, `display`: the post title, a template name) focus shows only the caret, never a box. `FormField` lays out a labeled field: the label above (mono 11), the control, then at most one line of error. The assistant's fill action sits on the label row (`FormFieldLabel action`) and shows only while the pointer or keyboard is in this field. `FormFieldLabel changed={{ label, undoLabel, undoName, onUndo }}` is the label row of a field that differs from the saved value: a change dot after the label and a small quiet underlined text button at the end (`TextButton variant="underline" quiet size="caption"`); the row is fixed at the label's 14px, so the field below does not move. Without `onUndo` it has the dot only (a switch). `TextButton` takes `quiet` (the quiet ink on top of its variant) and `size` (`note`, `caption`). The parts are `FormField`, `FormFieldLabel`, `FormFieldError`, `FormFieldDescription`, `FormFieldTitle`, `FormFieldGroup`, `FormFieldSet` (`density`: 24 between fields, `compact` 16, `flush` none for the property pane, whose groups and rows carry their own spacing) and `FormFieldLegend` (`variant="field"` draws a set's legend like the label of a field, for a group of options such as the kind of a collection).
+`Input`(밑줄이고 상자가 아니다. 포커스에서는 잉크색, `aria-invalid`일 때는 danger다. `proposal`은 어시스턴트가 쓰고 아무도 건드리지 않은 값을 파란 글자와 1.5px 파란 밑줄로 표시한다). `size="sm"`은 28px로 툴바, 필터, 표에 쓴다. `mono`는 고정폭 글자다. `inline`은 포커스 전까지 선 없이 글처럼 읽힌다(그 자리에서 고치는 이름). 제목 크기(`title`, `display`: 글 제목, 템플릿 이름)에서는 포커스가 캐럿만 보여 주고, 상자는 절대 보여 주지 않는다. `FormField`는 라벨 달린 필드를 배치한다. 라벨이 위(mono 11), 그다음 컨트롤, 그다음 많아야 한 줄의 오류다. 어시스턴트의 채우기 동작은 라벨 줄(`FormFieldLabel action`)에 있고, 포인터나 키보드가 이 필드 안에 있을 때만 보인다. `FormFieldLabel changed={{ label, undoLabel, undoName, onUndo }}`는 저장된 값과 다른 필드의 라벨 줄이다. 라벨 뒤에 바뀜 점이 있고, 끝에 작고 조용한 밑줄 텍스트 버튼(`TextButton variant="underline" quiet size="caption"`)이 있다. 줄 높이는 라벨의 14px로 고정되어 아래 필드가 움직이지 않는다. `onUndo`가 없으면 점만 있다(스위치). `TextButton`은 `quiet`(변형 위에 얹는 조용한 잉크)와 `size`(`note`, `caption`)를 받는다. 부품은 `FormField`, `FormFieldLabel`, `FormFieldError`, `FormFieldDescription`, `FormFieldTitle`, `FormFieldGroup`, `FormFieldSet`(`density`: 필드 사이 24, `compact` 16, `flush`는 간격 없음으로 속성 패널에 쓴다. 속성 패널은 묶음과 행이 스스로 간격을 가진다), `FormFieldLegend`(`variant="field"`는 묶음의 legend를 필드 라벨처럼 그린다. 컬렉션 종류 같은 선택지 묶음에 쓴다)다.
 
-## Properties list
+## 속성 목록
 
-The entry's properties are not a form: they are a read list (see Overlay › Side panel). Each row is the label above its value, with no box. Pressing the value opens the field in place (the underline field of this page, with the caret in it); Enter (one line), Esc, or leaving the row closes it. While the field is open the count ("28 / 120") sits at the right end of the label row, next to the fill action. An empty value reads `fg-faint` ("비어 있음"); a value that follows another (the SEO tab) says what it follows ("제목과 같음 · 10/60"). A property the person cannot change (a translation's shared field) is text only, with one quiet note under it.
+글의 속성은 폼이 아니라 읽는 목록이다(Overlay › 사이드 패널 참고). 각 행은 라벨이 위에, 값이 아래에 있고 상자는 없다. 값을 누르면 그 자리에서 필드가 열린다(이 페이지의 밑줄 필드이고, 캐럿이 그 안에 있다). Enter(한 줄), Esc를 누르거나 행을 벗어나면 닫힌다. 필드가 열려 있는 동안 글자 수("28 / 120")는 라벨 줄 오른쪽 끝, 채우기 동작 옆에 있다. 빈 값은 `fg-faint`로 "비어 있음"이라고 읽힌다. 다른 값을 따르는 값(SEO 탭)은 무엇을 따르는지 말한다("제목과 같음 · 10/60"). 사람이 바꿀 수 없는 속성(번역에서 원문과 함께 쓰는 필드)은 글로만 보이고, 아래에 조용한 메모가 한 줄 있다.
 
-## Multiple lines
+## 여러 줄
 
-A multi-line input. It has the same underline look as `Input`. Used for tone rules, field descriptions and alternative text.
+여러 줄 입력란. `Input`과 같은 밑줄 모양이다. 말투 규칙, 필드 설명, 대체 텍스트에 쓴다.
 
-### In code
+### 코드
 
-`Textarea`: `size="sm"` writes at the note size for compact panels; `mono` is for code and source text; `proposal` marks text the assistant wrote.
+`Textarea`: `size="sm"`은 좁은 패널을 위해 note 크기 글자로 쓴다. `mono`는 코드와 소스 텍스트에 쓴다. `proposal`은 어시스턴트가 쓴 글을 표시한다.
 
-`TagInput` is a list of short values in one underline field: each value is a `Chip`, and a text entry at the end adds the next one on Enter or a comma (and when the field loses focus). Backspace in the empty entry removes the last chip.
+`TagInput`은 밑줄 필드 하나에 담긴 짧은 값들의 목록이다. 값 하나하나가 `Chip`이고, 끝의 입력 칸에서 Enter나 쉼표를 치면(그리고 필드에서 포커스가 빠지면) 다음 값이 더해진다. 빈 입력 칸에서 Backspace를 누르면 마지막 칩이 지워진다.
 
-## Select
+## 선택
 
-A select has a chevron icon (14px, `fg-subtle`) at the right end of the underline. The text character ▾ is not used. When there are many items (language codes, time zones), it opens as a Combobox that can search.
+선택에는 밑줄 오른쪽 끝에 셰브런 아이콘(14px, `fg-subtle`)이 있다. 텍스트 문자 ▾는 쓰지 않는다. 항목이 많으면(언어 코드, 시간대) 검색할 수 있는 Combobox로 열린다.
 
-### In code
+### 코드
 
-`Select` (its `items` prop is required: every value with its label, so the closed trigger shows the label) with `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton` and `SelectScrollDownButton`, and `Combobox`: `ComboboxInput` is its field (an underline like `Input`, with the open button, or once there is a value the clear button, at the end), then `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator` and `ComboboxEmpty`; `ComboboxChips` (with `ComboboxChip` and `ComboboxChipsInput`) is the field of a combobox that holds several values. `SelectTrigger` takes `width`: `full` in a form, `fit` in a toolbar or filter, `choice` at the end of a choice row (at least 120px, as the review sheet draws it). `proposal` marks a value the assistant picked.
+`Select`(`items` prop은 필수다. 모든 값과 그 라벨을 주어야 닫힌 트리거가 라벨을 보여 준다)와 `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton`, 그리고 `Combobox`가 있다. `ComboboxInput`이 그 필드이고(`Input`처럼 밑줄이며, 끝에 여는 버튼이, 값이 생기면 지우는 버튼이 있다), 이어서 `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator`, `ComboboxEmpty`가 있다. `ComboboxChips`(`ComboboxChip`, `ComboboxChipsInput`과 함께)는 값을 여러 개 담는 콤보박스의 필드다. `SelectTrigger`는 `width`를 받는다. 폼에서는 `full`, 툴바나 필터에서는 `fit`, 선택 행 끝에서는 `choice`(검토 시트가 그리는 대로 최소 120px)다. `proposal`은 어시스턴트가 고른 값을 표시한다.
 
-## Fields with fixed ends (`.mt-affix`)
+## 앞뒤가 고정된 필드 (`.mt-affix`)
 
-Only the part that can be changed is an input. The ends are fixed in dimmed mono text, so it reads as one address.
+바꿀 수 있는 부분만 입력란이다. 양 끝은 흐린 mono 글자로 고정되어 있어서, 하나의 주소로 읽힌다.
 
-- The underline is under the changeable part only. The fixed parts (`/`, `/:slug`) are dimmed text with no line.
-- Pressing anywhere in the field (the fixed text or empty space) puts the caret at the end of the changeable part.
-- Focus, error and proposal colors apply to that underline only (ink, `fg-danger`, blue 1.5px). The fixed text does not change color.
-- The changeable part is only as wide as its text. Even when empty it keeps three characters of width (`3ch`), so a line is there to press.
-- The public address: `/` + `posts` + `/:slug`. `:slug` cannot be deleted, so an error like "`:slug` is missing" cannot happen.
-- A collection without pages turns it off with a switch above the field.
+- 밑줄은 바꿀 수 있는 부분 아래에만 있다. 고정된 부분(`/`, `/:slug`)은 선 없는 흐린 글자다.
+- 필드 어디를 누르든(고정 글자든 빈 공간이든) 캐럿이 바꿀 수 있는 부분의 끝에 놓인다.
+- 포커스, 오류, 제안 색은 그 밑줄에만 적용된다(잉크, `fg-danger`, 파란 1.5px). 고정 글자는 색이 바뀌지 않는다.
+- 바꿀 수 있는 부분은 글자만큼만 넓다. 비어 있어도 세 글자 너비(`3ch`)를 유지해서, 누를 선이 남아 있다.
+- 공개 주소: `/` + `posts` + `/:slug`. `:slug`는 지울 수 없으므로 "`:slug`가 없음" 같은 오류는 생길 수 없다.
+- 페이지가 없는 컬렉션은 필드 위의 스위치로 이것을 끈다.
 
-### In code
+### 코드
 
-`Affix`: `prefix` and `suffix` are the fixed texts; `action` is a control at the far end of the line (a regenerate button).
+`Affix`: `prefix`와 `suffix`는 고정 글자다. `action`은 줄 맨 끝의 컨트롤이다(다시 만들기 버튼).
 
-## Fold-out mark (`.mt-caret`)
+## 펼침 표시 (`.mt-caret`)
 
-A chevron icon after a text button that opens a list (filter, sort, changed places, move to folder, pick a model). 12px, `fg-subtle`, 6px from the text and centered on it (checked by measuring). A button that holds only the chevron (the publish split button, expand) uses `.mt-caret--solo`, which removes the margin. On a dark ground such as the publish split button, it follows the text color. The text character ▾ is too small and looks like decoration, so it is not used.
+목록을 여는 텍스트 버튼(필터, 정렬, 바뀐 곳, 폴더로 옮기기, 모델 고르기) 뒤에 붙는 셰브런 아이콘. 12px, `fg-subtle`이고, 글자에서 6px 떨어져 글자의 가운데에 맞춘다(재서 확인한다). 셰브런만 담은 버튼(발행 분할 버튼, 펼치기)은 `.mt-caret--solo`를 써서 여백을 없앤다. 발행 분할 버튼처럼 어두운 바탕 위에서는 글자 색을 따른다. 텍스트 문자 ▾는 너무 작고 장식처럼 보여서 쓰지 않는다.
 
-### In code
+### 코드
 
-`Caret` (`solo`, `ink`). `Collapsible` (`CollapsibleTrigger`, `CollapsibleContent`) opens and closes content; put the `Caret` after the trigger's text. A disabled trigger is dimmed to .45 like every disabled control.
+`Caret`(`solo`, `ink`). `Collapsible`(`CollapsibleTrigger`, `CollapsibleContent`)은 내용을 열고 닫는다. `Caret`은 트리거 글자 뒤에 둔다. 비활성 트리거는 다른 모든 비활성 컨트롤처럼 .45로 흐려진다.
 
-## Match row (`.mt-map`, `.mt-map-row`)
+## 짝 맞춤 행 (`.mt-map`, `.mt-map-row`)
 
-The row in an import that connects a key of the file to a field. The key is at the left (mono), → in the middle, and a `.mt-select` at the right, with one line under it: an example value (`.ex`, dimmed) or a note (`.warn`, orange). A key that is not imported is `.is-off` (the key is dimmed). A select that ✦ matched is `.mt-select.is-ai` (blue). A summary table (the restore preview) uses the same row as two columns.
+가져오기에서 파일의 키를 필드에 잇는 행. 왼쪽에 키(mono), 가운데에 →, 오른쪽에 `.mt-select`가 있고, 그 아래에 한 줄이 있다. 예시 값(`.ex`, 흐림)이나 메모(`.warn`, 주황)다. 가져오지 않는 키는 `.is-off`다(키가 흐려진다). ✦가 맞춘 선택은 `.mt-select.is-ai`(파랑)다. 요약 표(복원 미리보기)는 같은 행을 두 열로 쓴다.
 
-### In code
+### 코드
 
-`MapRow`: `name` (the key), `example`, `warning` (a note in the warning color that replaces the example), `off`, and the `Select` that picks the field as its child. Give the select `proposal` when the assistant matched it.
+`MapRow`: `name`(키), `example`, `warning`(예시 대신 들어가는 경고 색 메모), `off`, 그리고 필드를 고르는 `Select`를 자식으로 받는다. 어시스턴트가 맞췄다면 그 선택에 `proposal`을 준다.
 
-## Search box (`.mt-searchbox`)
+## 검색 상자 (`.mt-searchbox`)
 
-A pill that opens in place when the page's "검색" (search) is pressed. At the front, `.target` picks where to look ("전체" (everything, the default) · "제목" (title) · "주소" (address) · "본문" (body)), then the magnifier, the search words and ×. While it is open, the filter row does not repeat the same words as a chip. Example: an import result's "-2를 붙인 2편 보기" (see the 2 posts with -2 added) opens the list with the place "주소" and the words "-2".
+페이지의 "검색"을 누르면 그 자리에서 열리는 알약. 앞쪽의 `.target`이 찾을 곳을 고르고("전체"(기본값) · "제목" · "주소" · "본문"), 이어서 돋보기, 검색어, ×가 있다. 열려 있는 동안 필터 줄은 같은 검색어를 칩으로 되풀이하지 않는다. 예: 가져오기 결과의 "-2를 붙인 2편 보기"는 찾을 곳이 "주소", 검색어가 "-2"인 상태로 목록을 연다.
 
-### In code
+### 코드
 
-`SearchBox`: `targets` (the places to look) is optional; without it there is no picker. `SearchToggle` is the page's "Search" button (a secondary pill with the magnifier) that opens the `SearchBox` in its place with the words' field focused. The box stays while it holds words or has the focus; emptied and left, or emptied and Escape, it is the button again.
+`SearchBox`: `targets`(찾을 곳)는 선택이다. 없으면 고르는 부분이 없다. `SearchToggle`은 페이지의 "검색" 버튼(돋보기가 있는 secondary 알약)으로, 그 자리에서 `SearchBox`를 열고 검색어 필드에 포커스를 준다. 상자는 검색어가 있거나 포커스가 있는 동안 남아 있다. 비우고 벗어나거나, 비우고 Escape를 누르면 다시 버튼이 된다.
 
-## Calendar (`.mt-cal`)
+## 달력 (`.mt-cal`)
 
-Used only in a list filter's date › "기간 고르기" (pick a period). One month, 7 rows of 32px cells, weekdays in mono 11 `fg-subtle`. Days outside this month are `fg-faint`, today has a thin border, the picked day is a black cell, and the days between are a `bg-selected` band. The head shows "2026년 10월" (October 2026) and ‹ › to move.
+목록 필터의 날짜 › "기간 고르기"에서만 쓴다. 한 달, 32px 칸 7줄, 요일은 mono 11 `fg-subtle`이다. 이번 달 밖의 날은 `fg-faint`, 오늘은 얇은 테두리, 고른 날은 검은 칸, 그 사이 날들은 `bg-selected` 띠다. 머리에는 "2026년 10월"과 이동용 ‹ ›가 있다.
 
-- In the list filter's date › pick a period, the calendar opens in a card beside the date menu. The first day pressed is the start and the next is the end. The moment the end is pressed the filter is applied and the calendar closes. Pressing the same day twice means that one day. The applied period shows as a chip ("수정한 날: 10. 05 – 10. 16" (edited date: 10. 05 – 10. 16)).
+- 목록 필터의 날짜 › 기간 고르기에서 달력은 날짜 메뉴 옆의 카드로 열린다. 처음 누른 날이 시작, 다음에 누른 날이 끝이다. 끝을 누르는 순간 필터가 적용되고 달력이 닫힌다. 같은 날을 두 번 누르면 그 하루다. 적용된 기간은 칩으로 보인다("수정한 날: 10. 05 – 10. 16").
 
-### In code
+### 코드
 
-`Calendar` (a month grid for a day or a range) and `CalendarDayButton`.
+`Calendar`(하루나 기간을 고르는 달 격자)와 `CalendarDayButton`.
 
-## Line under the field (`.mt-note`)
+## 필드 아래 줄 (`.mt-note`)
 
-A line that is not an error (13px, `fg-subtle`). It says only why a field appeared, or what was filled in instead. Example: the name field of "add a key" is always filled with the service name. If a key with that name already exists, it is filled as "Anthropic 2" and below it reads "이름이 Anthropic인 키가 이미 있어요." (A key named Anthropic already exists.)
+오류가 아닌 줄(13px, `fg-subtle`). 필드가 왜 나타났는지, 또는 대신 무엇을 채웠는지만 말한다. 예: "키 추가"의 이름 필드는 언제나 서비스 이름으로 채워진다. 그 이름의 키가 이미 있으면 "Anthropic 2"로 채우고, 아래에 "이름이 Anthropic인 키가 이미 있어요."라고 적는다.
 
-## Secret value field (`.mt-secret`)
+## 비밀 값 필드 (`.mt-secret`)
 
-A field for a value that is entered hidden, such as an API key. Under one underline are the input and an eye button (24px, `fg-subtle`). Pressing the eye shows the value just entered, pressing again hides it (names: "키 보기" (show key) / "키 가리기" (hide key)). A saved key is never shown again (only "··· a1b2"). There is no clear × : to fix a pasted value, empty the field. With two buttons the end of the field would be crowded.
+API 키처럼 가려서 입력하는 값을 위한 필드. 밑줄 하나 위에 입력란과 눈 버튼(24px, `fg-subtle`)이 있다. 눈을 누르면 방금 입력한 값이 보이고, 다시 누르면 가려진다(이름: "키 보기" / "키 가리기"). 저장된 키는 다시 보여 주지 않는다("··· a1b2"만). 지우기 ×는 없다. 붙여 넣은 값을 고치려면 필드를 비운다. 버튼이 두 개면 필드 끝이 붐빈다.
 
-## Saved value row (`.mt-value`)
+## 저장된 값 행 (`.mt-value`)
 
-The place to change a value that is never shown again (a saved key). Instead of a field it shows a trace of the current value (`··· a1b2`, mono) and one text button at the end ("바꾸기" (change)).
+다시 보여 주지 않는 값(저장된 키)을 바꾸는 자리. 필드 대신 지금 값의 흔적(`··· a1b2`, mono)과 끝에 텍스트 버튼 하나("바꾸기")를 보여 준다.
 
-- Its height and text position are the same as an input (33px, 6px from the top), so when "바꾸기" opens the field (`.mt-secret`), nothing below moves.
-- The quiet "그대로" (keep) at the end of the open field (`.mt-secret > .mt-text-btn`) goes back to this row and leaves the value as it is. It is not called "취소" so it does not collide with the "취소" under the window. Leaving it empty keeps the value as it is.
-- When the value cannot be read, the field is open from the start, with one `.mt-note` line below and without "그대로".
+- 높이와 글자 위치가 입력란과 같아서(33px, 위에서 6px), "바꾸기"가 필드(`.mt-secret`)를 열어도 아래가 움직이지 않는다.
+- 열린 필드 끝의 조용한 "그대로"(`.mt-secret > .mt-text-btn`)는 이 행으로 돌아가고 값을 그대로 둔다. 창 아래의 "취소"와 겹치지 않도록 "취소"라고 부르지 않는다. 비워 두어도 값은 그대로다.
+- 값을 읽을 수 없으면 필드가 처음부터 열려 있다. 아래에 `.mt-note` 한 줄이 있고, "그대로"는 없다.
 
-## Required fields (`.mt-label > .req`)
+## 필수 필드 (`.mt-label > .req`)
 
-In a form where at least one field may be left empty, a red `*` goes at the end of the label of each required field (the field has `required`). It is not added to a field that always has a value (a select) or to a short form where every field is required (login, the first admin). A field that may be empty says so in its placeholder (for example the key of an OpenAI-compatible address: "없음" (none)).
+비워 둘 수 있는 필드가 하나라도 있는 폼에서는, 필수 필드(`required`가 있는 필드)마다 라벨 끝에 빨간 `*`를 붙인다. 언제나 값이 있는 필드(선택)나 모든 필드가 필수인 짧은 폼(로그인, 첫 관리자)에는 붙이지 않는다. 비워 둘 수 있는 필드는 플레이스홀더로 그렇다고 말한다(예: OpenAI 호환 주소의 키: "없음").
 
-## Read only
+## 읽기 전용
 
-On a deployed site without the GitHub plugin, the settings that live in the file (`monti.schema.ts`), that is, the structure, are locked. The structure is what the site's code (routes, components, types) or the shape of saved data depends on. The rest (the admin settings) is in the database and can be edited anywhere (no lock and no dimmed switch). A section that mixes structure and admin settings is split in two (for example the collection's default tab: "보기" (view) and "구조" (structure)).
+GitHub 플러그인 없이 배포한 사이트에서는 파일(`monti.schema.ts`)에 있는 설정, 곧 구조가 잠긴다. 구조란 사이트 코드(라우트, 컴포넌트, 타입)나 저장된 데이터의 모양이 기대는 것이다. 나머지(관리자 설정)는 데이터베이스에 있어서 어디서든 고칠 수 있다(자물쇠도, 흐린 스위치도 없다). 구조와 관리자 설정이 섞인 섹션은 둘로 나눈다(예: 컬렉션의 기본 탭은 "보기"와 "구조").
 
-- A locked value is shown as text without a field (the same look as an identifier field).
-- The lock (`LockMark`; its meaning is its `label`, "바꿀 수 없음") goes once after the title (`h2`) of a section that is entirely structure, not after a value or a field label (12px `fg-faint`, centered on the title text, 6px away). When one list with no section title is entirely structure, one lock goes after the name of the tab that points to it. A value that can never be changed (an identifier) gets a lock right after the value, separately from this rule.
-- A switch in a locked section stays and is dimmed (`.mt-switch[aria-disabled="true"]`).
-- The drag handle, + add and × of a locked list are hidden, and their space is removed too, so the lines move to the left (`.mt-tree.is-readonly` for a field list, `.mt-ftabs.is-readonly` for group tabs). No banner or explanation sentence is added.
+- 잠긴 값은 필드 없이 글로 보여 준다(식별자 필드와 같은 모양).
+- 자물쇠(`LockMark`. 뜻은 그 `label`인 "바꿀 수 없음")는 전체가 구조인 섹션의 제목(`h2`) 뒤에 한 번 붙는다. 값이나 필드 라벨 뒤에는 붙지 않는다(12px `fg-faint`, 제목 글자의 가운데에 맞추고 6px 떨어진다). 섹션 제목이 없는 목록 하나가 전부 구조라면, 그 목록을 가리키는 탭 이름 뒤에 자물쇠 하나를 붙인다. 절대 바꿀 수 없는 값(식별자)은 이 규칙과 따로, 값 바로 뒤에 자물쇠를 붙인다.
+- 잠긴 섹션의 스위치는 그대로 두고 흐리게 한다(`.mt-switch[aria-disabled="true"]`).
+- 잠긴 목록의 끌기 손잡이, + 추가, ×는 숨기고 그 자리도 없애서, 줄이 왼쪽으로 붙는다(필드 목록은 `.mt-tree.is-readonly`, 묶음 탭은 `.mt-ftabs.is-readonly`). 배너나 설명 문장은 더하지 않는다.

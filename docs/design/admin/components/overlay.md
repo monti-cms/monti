@@ -1,93 +1,93 @@
-# Overlay
+# 오버레이
 
-This page covers the three surfaces opened over a screen (modal, sheet, side panel), how to choose between them, and the tooltip.
+이 페이지는 화면 위에 열리는 세 표면(모달, 시트, 사이드 패널), 그중 무엇을 고를지, 그리고 툴팁을 다룬다.
 
-Choose by what the surface is for.
+표면이 무엇을 위한 것인지로 고른다.
 
-| | When | Examples |
+| | 언제 | 예 |
 |---|---|---|
-| Modal | Asking: a decision in a few seconds | "공개 중인 글을 휴지통으로" (move a published entry to the trash), "영구 삭제" (delete forever) |
-| Sheet | Making: several inputs | "필드 추가" (add a field), "저장 검토" (review a save) |
-| Side panel | Looking at together: next to the screen, not covering it | "미디어 파일" (media file), "활동 자세히" (activity details) |
+| 모달 | 묻기: 몇 초 안에 끝나는 결정 | "공개 중인 글을 휴지통으로", "영구 삭제" |
+| 시트 | 만들기: 입력이 여럿 | "필드 추가", "저장 검토" |
+| 사이드 패널 | 함께 보기: 화면을 가리지 않고 그 옆에 | "미디어 파일", "활동 자세히" |
 
-Properties and the assistant are side panels too.
+속성과 어시스턴트도 사이드 패널이다.
 
-## Modal
+## 모달
 
-A modal is for asking only: a decision that ends in a few seconds, where nothing else may be done before answering ("휴지통으로 옮길까요?" (move to the trash?), "저장하지 않은 변경" (unsaved changes)).
+모달은 묻는 데만 쓴다. 몇 초 안에 끝나고, 답하기 전에는 다른 일을 할 수 없는 결정이다("휴지통으로 옮길까요?", "저장하지 않은 변경").
 
-- A rule in ink under the title. The body is the result only, short.
-- When the title alone does not say what the window is about (changing the value of one key), the name follows the title, dimmed, in `.of`: "값 바꾸기 · Anthropic 개인" (change value · Anthropic personal). Same line, normal weight, `fg-subtle`.
-- Bottom right: a text button ("취소" (cancel)) and one pill. For a dangerous decision the pill is danger.
-- When there are several inputs or it gets long, use a sheet.
-- Surface: the page ground with an emphasis edge, `radius-xl`, `shadow-overlay`, 28px around (22px below), 420px wide. The title is 20px (`text-heading` role) and the actions are 18px apart. Behind it goes `bg-backdrop` alone, with no blur.
+- 제목 아래에 잉크 선을 둔다. 본문은 결과만 짧게 쓴다.
+- 제목만으로 창이 무엇에 관한 것인지 알 수 없으면(키 하나의 값 바꾸기), 제목 뒤에 이름을 `.of`로 흐리게 붙인다. "값 바꾸기 · Anthropic 개인". 같은 줄, 보통 굵기, `fg-subtle`이다.
+- 오른쪽 아래에 글자 버튼("취소")과 알약 하나를 둔다. 위험한 결정이면 알약은 danger다.
+- 입력이 여럿이거나 길어지면 시트를 쓴다.
+- 표면: 페이지 바탕에 강조 테두리, `radius-xl`, `shadow-overlay`, 둘레 28px(아래는 22px), 폭 420px. 제목은 20px(`text-heading` 역할)이고, 동작 버튼 사이는 18px이다. 뒤에는 흐림 없이 `bg-backdrop`만 깐다.
 
-### When a delete shows a modal
+### 삭제에 모달을 띄울 때
 
-Decide by whether it can be undone, not by what kind of thing it is. There is no "do not show again" check.
+무엇의 종류인지가 아니라 되돌릴 수 있는지로 정한다. "다시 보지 않기" 체크는 없다.
 
-- Moving to the trash (a draft, a memo, an item, media, a folder): no modal. Move at once and show a toast with "되돌리기" (undo). If something that is used elsewhere was left in place, the toast also has "보기" (view).
-- Confirm only when the site is affected at once: a published entry (it stops being public and its translations go with it; restoring brings it back as a draft).
-- What cannot be undone (delete forever, empty all, delete a collection): confirm every time.
+- 휴지통으로 옮기기(초안, 메모, 항목, 미디어, 폴더): 모달이 없다. 곧바로 옮기고 "되돌리기"가 있는 토스트를 보인다. 다른 곳에서 쓰는 것이 그 자리에 남았으면 토스트에 "보기"도 있다.
+- 사이트에 곧바로 영향이 갈 때만 확인한다. 발행된 글이 그렇다(공개가 멈추고 번역도 함께 간다. 복원하면 초안으로 돌아온다).
+- 되돌릴 수 없는 것(영구 삭제, 모두 비우기, 컬렉션 삭제)은 매번 확인한다.
 
-### In code
+### 코드
 
-`Dialog` (`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`; `DialogPortal` and `DialogOverlay` are the portal and the dimmed ground that `DialogContent` already draws, so a screen does not use them) and `AlertDialog` (a question that must be answered before anything else; closed only by its own buttons or Escape) with `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel` and `AlertDialogAction` (`AlertDialogPortal` and `AlertDialogOverlay` are the same pair as in `Dialog`). `AlertDialogContent` has a `wide` size (520px) for a question that lists what it touches, with a choice per line (the review of a permanent delete). `DialogFormFooter` is the footer of a dialog that holds a form: a cancel text button and one pill, which shows its `busyLabel` while the request runs. Focus lands on the first text field when a modal opens, else on the modal itself, so no button shows a focus ring at the moment it appears.
+`Dialog`(`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`. `DialogPortal`과 `DialogOverlay`는 `DialogContent`가 이미 그리는 포털과 흐린 바탕이라 화면에서 쓰지 않는다)와 `AlertDialog`(다른 무엇보다 먼저 답해야 하는 질문. 자기 버튼이나 Escape로만 닫힌다)가 있다. `AlertDialog`는 `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction`과 함께 쓴다(`AlertDialogPortal`과 `AlertDialogOverlay`는 `Dialog`의 것과 같은 짝이다). `AlertDialogContent`에는 `wide` 크기(520px)가 있다. 건드리는 것을 줄마다 선택지와 함께 나열하는 질문(영구 삭제 검토)에 쓴다. `DialogFormFooter`는 폼을 담은 대화상자의 푸터다. 취소 글자 버튼과 알약 하나가 있고, 알약은 요청이 도는 동안 `busyLabel`을 보인다. 모달이 열리면 포커스는 첫 텍스트 필드에, 없으면 모달 자체에 간다. 그래서 모달이 나타나는 순간 포커스 링을 보이는 버튼이 없다.
 
-## Sheet
+## 시트
 
-A sheet is for making: work with several inputs that may get long (add a field, review a save). It opens from the right and dims what is behind.
+시트는 만드는 데 쓴다. 입력이 여럿이고 길어질 수 있는 일이다(필드 추가, 저장 검토). 오른쪽에서 열리고 뒤를 흐리게 한다.
 
-- Width `width-sheet` (520px), cream ground (`bg-tool`), a head of 60px (title and ×), and at the bottom a cancel and one pill.
-- While it is open it also covers the ✦ button.
-- To work with the screen behind in sight, use a side panel.
+- 폭 `width-sheet`(520px), 크림색 바탕(`bg-tool`), 60px 머리(제목과 ×), 아래에 취소와 알약 하나.
+- 열려 있는 동안 ✦ 버튼도 가린다.
+- 뒤 화면을 보면서 일하려면 사이드 패널을 쓴다.
 
-### In code
+### 코드
 
-`Sheet` (`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). It opens over a dimmed page with a line down its left edge, square, with `shadow-sheet`. Its width is fixed. `SheetHeader` has no ✦ place; with `closable={false}` (the sheet is busy and cannot be left) there is no close button. The body scrolls when longer than the sheet. The title can end in what the sheet is about with `SheetTitle of` ("필드 추가 · 노트").
+`Sheet`(`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). 흐린 페이지 위에 왼쪽 가장자리에 선을 두고 열리며, 모서리가 각지고 `shadow-sheet`를 가진다. 폭은 정해져 있다. `SheetHeader`에는 ✦ 자리가 없다. `closable={false}`이면(시트가 일하는 중이라 떠날 수 없다) 닫기 버튼이 없다. 본문이 시트보다 길면 스크롤된다. 제목 끝에 `SheetTitle of`로 시트가 무엇에 관한 것인지 붙일 수 있다("필드 추가 · 노트").
 
-`SheetSection` is a titled part of the body ("보기", then "구조"): the title in 14px semibold, the fields under it, a later section 8px lower; the title can end in a `LockMark`. `SheetSplit` splits the body in two: a list on the left (150px, a rule on its right edge) and the work on the right under its own tabs. "필드 추가" uses it: the kinds are a `PickList` (a listbox) and the settings of the picked kind sit beside it under the tabs "기본" and "고급".
+`SheetSection`은 본문의 제목 있는 한 부분이다("보기", 그다음 "구조"). 제목은 14px semibold이고, 그 아래에 필드가 오며, 다음 섹션은 8px 더 아래에 온다. 제목 끝에 `LockMark`를 둘 수 있다. `SheetSplit`은 본문을 둘로 나눈다. 왼쪽에 목록(150px, 오른쪽 가장자리에 선), 오른쪽에 자기 탭 아래의 작업이 온다. "필드 추가"가 이것을 쓴다. 종류는 `PickList`(listbox)이고, 고른 종류의 설정이 그 옆에 "기본"과 "고급" 탭 아래에 놓인다.
 
-## Side panel
+## 사이드 패널
 
-A side panel is for looking at together: next to the screen without covering it (category item, media file, activity details, properties, assistant).
+사이드 패널은 함께 보는 데 쓴다. 화면을 가리지 않고 그 옆에 둔다(카테고리 항목, 미디어 파일, 활동 자세히, 속성, 어시스턴트).
 
-- Cream ground, a thin inset line on the left, a head of 60px. It closes with the × at the end of the head (12px from the right edge). The assistant is the same.
-- It is docked at the window's right edge and covers the ✦ button. ✦ opens the assistant, so while a panel is open it lies under it and is not seen. So the right of the head is not kept empty for ✦.
-- The properties pane is the exception: it has no head and no ×. It opens and closes with the properties button of the page header, and its tab bar is its top row.
-- Fields inside a panel: the label is `mt-label` (mono 11) and the value is `text-note` (13). A panel is a tool, so its text is one step smaller than body text (14).
-- When there is something to save, one pill goes at the bottom.
+- 크림색 바탕, 왼쪽에 얇은 안쪽 선, 60px 머리. 머리 끝의 ×로 닫는다(오른쪽 가장자리에서 12px). 어시스턴트도 같다.
+- 창 오른쪽 가장자리에 붙고 ✦ 버튼을 가린다. ✦는 어시스턴트를 여는 버튼이라, 패널이 열린 동안에는 그 아래에 깔려 보이지 않는다. 그래서 머리 오른쪽을 ✦를 위해 비워 두지 않는다.
+- 속성 창은 예외다. 머리도 ×도 없다. 페이지 헤더의 속성 버튼으로 열고 닫으며, 탭 바가 맨 윗줄이다.
+- 패널 안의 필드: 레이블은 `mt-label`(mono 11), 값은 `text-note`(13)다. 패널은 도구라서 글자가 본문 글자(14)보다 한 단계 작다.
+- 저장할 것이 있으면 아래에 알약 하나를 둔다.
 
-### In code
+### 코드
 
-`PropertyPanel` is the entry's properties pane: a `SidePanel` 300px wide with a tab bar (`TabsList variant="bar"`) in place of the head, no title and no close button, and a read list under it. `PropertyGroup` is a run of rows with an optional quiet subheading ("분류"); `PropertyRow` is one property: the label above (mono 11) with an `action` at the right end of the label row, the value below (13). At rest the value is text with no box, and pressing it opens the field in place (`onEdit`, `editing`); an empty value reads `fg-faint` (`empty`); a value the assistant wrote is `fg-proposal` and described as the assistant's (`proposal`). The fill `action` shows only while the pointer or the keyboard is in the row, and while it works.
+`PropertyPanel`은 글의 속성 창이다. 폭 300px의 `SidePanel`로, 머리 자리에 탭 바(`TabsList variant="bar"`)가 있고, 제목과 닫기 버튼이 없으며, 그 아래에 읽기 목록이 있다. `PropertyGroup`은 조용한 소제목("분류")을 붙일 수 있는 행 묶음이다. `PropertyRow`는 속성 하나다. 위에 레이블(mono 11)이 있고 레이블 행 오른쪽 끝에 `action`이 있으며, 아래에 값(13)이 있다. 평소에는 값이 상자 없는 글자이고, 누르면 그 자리에서 필드가 열린다(`onEdit`, `editing`). 빈 값은 `fg-faint`로 보이고(`empty`), 어시스턴트가 쓴 값은 `fg-proposal`이며 어시스턴트의 것이라고 설명된다(`proposal`). 채우기 `action`은 포인터나 키보드가 행 안에 있는 동안, 그리고 일하는 동안에만 보인다.
 
-`SidePanel`: `title` is optional (without it there is no head; give `aria-label`, and `bar` for a pinned tab row), `width` is `side` (360px; a file or an activity beside a list), `panel` (300px; an entry's properties) or `assistant` (380px). The title is 16px bold. It takes optional panel icon buttons and the close button in the head, and a foot that holds the one pill or the box to type in. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and foot are one form. The look shared with the sheet is the `PANEL_*` strings (a 60px head, a body with 20px above and 24 at the sides).
+`SidePanel`: `title`은 넣지 않아도 된다(없으면 머리가 없다. 이때 `aria-label`을 주고, 고정된 탭 행이면 `bar`를 준다). `width`는 `side`(360px. 목록 옆의 파일이나 활동), `panel`(300px. 글의 속성), `assistant`(380px) 중 하나다. 제목은 16px bold다. 머리에 패널 아이콘 버튼과 닫기 버튼을 받을 수 있고, 알약 하나나 입력 상자를 담는 발을 받는다. 패널의 이름은 그 제목이다. 화면 옆에 한 행으로 둔다. 좁은 화면에서는 폭 전체를 차지한다. `onSubmit`이 있으면 본문과 발이 한 폼이 된다. 시트와 함께 쓰는 모양은 `PANEL_*` 문자열이다(60px 머리, 위 20px·양옆 24의 본문).
 
-## Name and value
+## 이름과 값
 
-A name and value pair. The information in a panel (type, size, upload date), activity details, delivery information.
+이름과 값의 짝이다. 패널 안의 정보(종류, 크기, 올린 날짜), 활동 자세히, 전달 정보에 쓴다.
 
-### In code
+### 코드
 
-`DescriptionList` with `DescriptionItem`: the label column is 76px wide so the values line up; long values wrap. Labels are quiet and values a step darker, both at the regular weight.
+`DescriptionList`와 `DescriptionItem`: 값이 한 줄로 맞도록 레이블 열은 폭 76px이다. 긴 값은 줄을 바꾼다. 레이블은 조용하고 값은 한 단계 진하며, 둘 다 보통 굵기다.
 
-## Popover
+## 팝오버
 
-A floating card for a small form or a note, or the card around a menu. The DS README lists popovers under Overlay but gives them no rule of their own; this section comes from the code.
+작은 폼이나 메모를 담는 뜬 카드, 또는 메뉴를 감싸는 카드다. DS README는 팝오버를 오버레이 아래에 두지만 따로 규칙을 주지 않는다. 이 절은 코드에서 가져왔다.
 
-### In code
+### 코드
 
-`Popover` (`PopoverContent`, `PopoverHeader`, `PopoverTitle`, `PopoverDescription`, `PopoverTrigger`). `width` is `sm` (240px, a menu's width), `md` (300px, the default, a panel), `lg` (380px, the assistant), `auto` or `anchor`; `padding` is `menu` (6px, for a list of rows), `default` (a small form or a note) or `none` (the content brings its own rows, such as a calendar). It scrolls inside when taller than the space left.
+`Popover`(`PopoverContent`, `PopoverHeader`, `PopoverTitle`, `PopoverDescription`, `PopoverTrigger`). `width`는 `sm`(240px, 메뉴 폭), `md`(300px, 기본값, 패널), `lg`(380px, 어시스턴트), `auto`, `anchor` 중 하나다. `padding`은 `menu`(6px, 행 목록용), `default`(작은 폼이나 메모), `none`(달력처럼 내용이 자기 행을 가져온다) 중 하나다. 남은 공간보다 길면 안에서 스크롤된다.
 
-## Tooltip (`.mt-tooltip`)
+## 툴팁 (`.mt-tooltip`)
 
-A small black pill that names an icon button that has no text. 12px, and a shortcut in mono 11, dimmed, at the right when there is one. It shows on pointer hover or when the keyboard moves to the button. No sentence goes in it: one or two words, the name only. A text button gets no tooltip.
+글자 없는 아이콘 버튼에 이름을 붙이는 작은 검은 알약이다. 12px이고, 단축키가 있으면 오른쪽에 mono 11로 흐리게 붙는다. 포인터를 올리거나 키보드로 버튼에 가면 보인다. 문장은 넣지 않는다. 한두 단어, 이름만 쓴다. 글자 버튼에는 툴팁이 없다.
 
-### In code
+### 코드
 
-`Tooltip` (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`); `shortcut` takes the keys (`["mod", "S"]`), written "⌘S" on a Mac and "Ctrl+S" elsewhere (see Menu, "Shortcuts").
+`Tooltip`(`TooltipTrigger`, `TooltipContent`, `TooltipProvider`). `shortcut`은 키를 받고(`["mod", "S"]`), Mac에서는 "⌘S", 다른 곳에서는 "Ctrl+S"로 쓴다(메뉴의 "단축키" 참고).
 
-## Toast
+## 토스트
 
-The toast (a short result at the bottom center) is described in the Status page.
+토스트(아래 가운데의 짧은 결과)는 상태 페이지에서 다룬다.

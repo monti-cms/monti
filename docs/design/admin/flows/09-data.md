@@ -1,105 +1,105 @@
-# Flow 9: Data
+# 흐름 9: 데이터
 
-This file lists every row and step of canvas flow 9, "흐름 9 · 데이터". Downloading a backup and importing (read the file, then either new posts or a restore).
+이 파일은 캔버스 흐름 9 "흐름 9 · 데이터"의 모든 행과 단계를 적는다. 백업 받기와 가져오기(파일을 읽은 뒤 새 글로 가져오거나 복원)를 다룬다.
 
-Canvas note: "흐름 9 · 데이터 — 백업 받기 · 가져오기(파일을 보고 새 글 또는 복원)"
+캔버스 메모: "흐름 9 · 데이터 — 백업 받기 · 가져오기(파일을 보고 새 글 또는 복원)"
 
-Screens used: [`Data`](../screens.md#data), [`Main`](../screens.md#main), [`Events`](../screens.md#events).
+쓰는 화면: [`Data`](../screens.md#data), [`Main`](../screens.md#main), [`Events`](../screens.md#events).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "백업" · Backup
+## "백업"
 
-### Step 01: "백업 · 도구 › 데이터 · 백업 받기 · 마지막 백업 · 미디어 파일도 담기(기본 꺼짐)"
+### 단계 01: "백업 · 도구 › 데이터 · 백업 받기 · 마지막 백업 · 미디어 파일도 담기(기본 꺼짐)"
 
-- Board: `Flow9Step01.dc.html`
-- Renders: `Data` (stage "기본")
-- Tools › Data. The backup section shows "백업 받기" (download backup), the date of the last backup, and the option "미디어 파일도 담기" (include media files, 2.1 GB), off by default. Below it is the import section with a zip drop area.
+- 보드: `Flow9Step01.dc.html`
+- 화면: `Data` (stage "기본")
+- 도구 › 데이터. 백업 섹션에 "백업 받기", 마지막 백업 날짜, 기본으로 꺼진 선택지 "미디어 파일도 담기"(2.1 GB)가 있다. 그 아래에는 zip을 놓는 곳이 있는 가져오기 섹션이 있다.
 
-### Step 02: "백업 · 고를 것 없이 바로 · 버튼에 진행"
+### 단계 02: "백업 · 고를 것 없이 바로 · 버튼에 진행"
 
-- Board: `Flow9Step02.dc.html`
-- Renders: `Data` (stage "백업 중")
-- The user presses the backup button. There is nothing to choose first. The button shows progress ("만드는 중 64%").
+- 보드: `Flow9Step02.dc.html`
+- 화면: `Data` (stage "백업 중")
+- 사용자가 백업 버튼을 누른다. 먼저 고를 것은 없다. 버튼에 진행이 보인다("만드는 중 64%").
 
-### Step 03: "백업 · 저장했어요 · 마지막 백업이 오늘로"
+### 단계 03: "백업 · 저장했어요 · 마지막 백업이 오늘로"
 
-- Board: `Flow9Step03.dc.html`
-- Renders: `Data` (stage "백업 받음")
-- The backup is saved. A notice says so and the last-backup date changes to today.
+- 보드: `Flow9Step03.dc.html`
+- 화면: `Data` (stage "백업 받음")
+- 백업이 저장됐다. 알림이 그렇게 알리고, 마지막 백업 날짜가 오늘로 바뀐다.
 
-### Step 04: "백업 · 목록에서 고른 글만 → ⋯ → 내보내기"
+### 단계 04: "백업 · 목록에서 고른 글만 → ⋯ → 내보내기"
 
-- Board: `Flow9Step04.dc.html`
-- Renders: `Main` (mode "고른 글 내보냄")
-- A partial export. In the post list the user selects posts and uses ⋯ › export. A notice says "2편을 내보냈어요" (2 posts exported).
+- 보드: `Flow9Step04.dc.html`
+- 화면: `Main` (mode "고른 글 내보냄")
+- 일부만 내보내기. 글 목록에서 사용자가 글을 고르고 ⋯ › 내보내기를 쓴다. 알림이 "2편을 내보냈어요"라고 알린다.
 
-## "가져오기" · Import
+## "가져오기"
 
-### Step 05: "가져오기 · zip을 놓거나 고름 → 읽는 중 (빈 목록의 쓰던 글 가져오기도 여기로)"
+### 단계 05: "가져오기 · zip을 놓거나 고름 → 읽는 중 (빈 목록의 쓰던 글 가져오기도 여기로)"
 
-- Board: `Flow9Step05.dc.html`
-- Renders: `Data` (stage "읽는 중")
-- The user drops or picks a zip file. The import area shows "읽는 중…" (reading). The empty post list's "import posts you already wrote" action also leads here.
+- 보드: `Flow9Step05.dc.html`
+- 화면: `Data` (stage "읽는 중")
+- 사용자가 zip 파일을 놓거나 고른다. 가져오기 영역에 "읽는 중…"이 나온다. 빈 글 목록의 "쓰던 글 가져오기" 동작도 여기로 온다.
 
-### Step 06: "가져오기 · 본문이 같으면 건너뛰고 주소가 겹치면 -2 (한 줄 안내) · 들어갈 곳 · 필드 맞추기"
+### 단계 06: "가져오기 · 본문이 같으면 건너뛰고 주소가 겹치면 -2 (한 줄 안내) · 들어갈 곳 · 필드 맞추기"
 
-- Board: `Flow9Step06.dc.html`
-- Renders: `Data` (stage "가져오기")
-- The file was read. A summary says 24 posts were found, that posts with identical body are skipped and posts with an overlapping address get -2 added (one line). The user sets the destination (folder posts/ into the "게시글" collection, 24 posts) and maps the file's front matter to fields: title → "제목", date → "발행일", tags → "태그" (with the note "새 태그 4개가 생겨요", 4 new tags will be created), description → "요약", thumbnail → "대표 이미지", layout → not imported.
+- 보드: `Flow9Step06.dc.html`
+- 화면: `Data` (stage "가져오기")
+- 파일을 읽었다. 요약이 글 24편을 찾았고, 본문이 같은 글은 건너뛰며 주소가 겹치는 글에는 -2를 붙인다고 알린다(한 줄). 사용자는 들어갈 곳을 정하고(폴더 posts/를 "게시글" 컬렉션으로, 24편), 파일의 front matter를 필드에 맞춘다. title → "제목", date → "발행일", tags → "태그"("새 태그 4개가 생겨요"라는 말과 함께), description → "요약", thumbnail → "대표 이미지", layout → 가져오지 않음.
 
-### Step 07: "가져오기 · 발행은 모두 초안 · 이미지는 미디어로 · 모르는 컴포넌트 · 빈 필수 필드"
+### 단계 07: "가져오기 · 발행은 모두 초안 · 이미지는 미디어로 · 모르는 컴포넌트 · 빈 필수 필드"
 
-- Board: `Flow9Step07.dc.html`
-- Renders: `Data` (stage "가져오기 아래")
-- Below the field mapping: publish status ("모두 초안", all drafts, with a way to restore the original), images (38 images go to the media folder "가져온 이미지"; option to also move 6 outside images), and a notes block: 3 component kinds left as original text (Callout, Tweet, Chart in 12 posts), and 18 posts without a summary that must be filled before publishing. The button reads "21편 가져오기" (import 21).
+- 보드: `Flow9Step07.dc.html`
+- 화면: `Data` (stage "가져오기 아래")
+- 필드 맞추기 아래에는 이런 것이 있다. 발행 상태("모두 초안", 원래대로 되살리는 방법도 있음), 이미지(이미지 38개가 미디어 폴더 "가져온 이미지"로 간다. 바깥 이미지 6개도 옮기는 선택지가 있음), 그리고 참고 블록이다. 참고 블록은 원문 글자 그대로 남는 컴포넌트 3종(글 12편의 Callout, Tweet, Chart)과, 발행하기 전에 채워야 하는 요약 없는 글 18편을 알린다. 버튼은 "21편 가져오기"다.
 
-### Step 08: "가져오기 · 가져오는 중"
+### 단계 08: "가져오기 · 가져오는 중"
 
-- Board: `Flow9Step08.dc.html`
-- Renders: `Data` (stage "가져오는 중")
-- The user presses import. The same sheet shows the importing state.
+- 보드: `Flow9Step08.dc.html`
+- 화면: `Data` (stage "가져오는 중")
+- 사용자가 가져오기를 누른다. 같은 시트가 가져오는 중 상태를 보여 준다.
 
-### Step 09: "가져오기 · 결과 · 주소를 바꾼 글 목록(누르면 편집기) · 통째로 되돌리기 · 목록에서 보기"
+### 단계 09: "가져오기 · 결과 · 주소를 바꾼 글 목록(누르면 편집기) · 통째로 되돌리기 · 목록에서 보기"
 
-- Board: `Flow9Step09.dc.html`
-- Renders: `Data` (stage "가져옴")
-- Result: "21편을 가져왔어요." with the summary (all drafts, 4 new tags, 38 images) and the list of posts whose address changed (2, each shown as old → new; clicking one opens the editor). Actions: undo the whole import ("되돌리기") and "목록에서 보기" (view in the list).
+- 보드: `Flow9Step09.dc.html`
+- 화면: `Data` (stage "가져옴")
+- 결과: "21편을 가져왔어요."와 요약(모두 초안, 새 태그 4개, 이미지 38개), 그리고 주소가 바뀐 글 목록(2편, 각각 이전 → 새 주소로 보이고, 누르면 편집기가 열림)이 나온다. 동작은 가져오기 전체를 되돌리는 "되돌리기"와 "목록에서 보기"다.
 
-### Step 10: "가져오기 · 시트를 닫은 뒤에도 · 활동 기록의 가져오기 줄 → 옆 판에 그때 결과 · 되돌리기"
+### 단계 10: "가져오기 · 시트를 닫은 뒤에도 · 활동 기록의 가져오기 줄 → 옆 판에 그때 결과 · 되돌리기"
 
-- Board: `Flow9Step10.dc.html`
-- Renders: `Events` (default stage "기본"; with-import on; import-detail on)
-- After the sheet is closed. In the activity log the import line (11:05, blog-export.zip) opens a side panel with the result from that time (same summary and changed-address list) and an undo action.
+- 보드: `Flow9Step10.dc.html`
+- 화면: `Events` (default stage "기본"; with-import on; import-detail on)
+- 시트를 닫은 뒤다. 활동 기록의 가져오기 줄(11:05, blog-export.zip)을 누르면 옆 패널이 열려 그때의 결과(같은 요약과 주소가 바뀐 글 목록)와 되돌리기 동작을 보여 준다.
 
-### Step 11: "가져오기 · 읽지 못한 파일"
+### 단계 11: "가져오기 · 읽지 못한 파일"
 
-- Board: `Flow9Step11.dc.html`
-- Renders: `Data` (stage "못 읽음")
-- Exception: the file could not be read. The import area says "읽지 못했어요" (could not read it).
+- 보드: `Flow9Step11.dc.html`
+- 화면: `Data` (stage "못 읽음")
+- 예외: 파일을 읽지 못했다. 가져오기 영역에 "읽지 못했어요"가 나온다.
 
-## "복원" · Restore
+## "복원"
 
-### Step 12: "복원 · 빈 사이트에 전체 백업 → 있던 그대로 복원 (글이 있으면 새 글로 가져오기)"
+### 단계 12: "복원 · 빈 사이트에 전체 백업 → 있던 그대로 복원 (글이 있으면 새 글로 가져오기)"
 
-- Board: `Flow9Step12.dc.html`
-- Renders: `Data` (stage "복원")
-- Restore on an empty site with a full backup. The file summary (monti-backup-1020.zip: drafts 12, published 130, archived 6, translations 21; folders 3; media 24 with files; addresses 160 plus 12 old; templates 3) heads a "있던 그대로 복원" (restore as it was) action. If the site already has posts, the same file is imported as new posts instead.
+- 보드: `Flow9Step12.dc.html`
+- 화면: `Data` (stage "복원")
+- 빈 사이트에 전체 백업으로 복원한다. 파일 요약(monti-backup-1020.zip: 초안 12, 발행됨 130, 보관됨 6, 번역 21. 폴더 3. 미디어 24, 파일 포함. 주소 160과 옛 주소 12. 템플릿 3) 아래에 "있던 그대로 복원" 동작이 있다. 사이트에 이미 글이 있으면 같은 파일을 새 글로 가져온다.
 
-### Step 13: "복원 · 문제가 있으면 하나도 쓰지 않음"
+### 단계 13: "복원 · 문제가 있으면 하나도 쓰지 않음"
 
-- Board: `Flow9Step13.dc.html`
-- Renders: `Data` (stage "복원 막힘")
-- Exception: problems found. Nothing is written. The panel says "문제가 2개 있어서 복원하지 않아요." and lists them: a field the site does not have (series, 14 posts carry it) and an overlapping address (/about, two posts use the same one).
+- 보드: `Flow9Step13.dc.html`
+- 화면: `Data` (stage "복원 막힘")
+- 예외: 문제를 찾았다. 아무것도 쓰지 않는다. 패널이 "문제가 2개 있어서 복원하지 않아요."라고 알리고 문제를 나열한다. 사이트에 없는 필드(series, 글 14편에 있음)와 겹치는 주소(/about, 글 두 편이 같은 주소를 씀)다.
 
-### Step 14: "복원 · 복원하는 중"
+### 단계 14: "복원 · 복원하는 중"
 
-- Board: `Flow9Step14.dc.html`
-- Renders: `Data` (stage "복원 중")
-- Restoring. The button shows "복원하는 중…".
+- 보드: `Flow9Step14.dc.html`
+- 화면: `Data` (stage "복원 중")
+- 복원하는 중이다. 버튼에 "복원하는 중…"이 나온다.
 
-### Step 15: "복원 · 다 됨 · 목록 보기"
+### 단계 15: "복원 · 다 됨 · 목록 보기"
 
-- Board: `Flow9Step15.dc.html`
-- Renders: `Data` (stage "복원함")
-- Done: "글 148편을 복원했어요" with "목록 보기" (view the list).
+- 보드: `Flow9Step15.dc.html`
+- 화면: `Data` (stage "복원함")
+- 끝났다. "글 148편을 복원했어요"와 "목록 보기"가 나온다.
