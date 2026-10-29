@@ -104,7 +104,7 @@ export function fileMenu(
 			items: mediaUsages(media, placeName).map((usage) => ({
 				kind: "item" as const,
 				label: usage.title || tc("untitled"),
-				// Where in the post it is used, at the row's end as the board draws it ("대표 이미지").
+				// Where in the post it is used (a field's label, or the body), at the row's end as the board draws it.
 				shortcut: usage.places.join(" · ") || undefined,
 				icon: Document,
 				onSelect: () => handlers.openEntry(usage),

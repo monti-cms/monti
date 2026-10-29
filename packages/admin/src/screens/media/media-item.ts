@@ -9,7 +9,7 @@ export interface MediaUsage {
 	entryId: string;
 	title: string | null;
 	collection: string;
-	/** The places, named ("대표 이미지", "본문"), in the order the entry first gives them. Empty when the server says nothing about them. */
+	/** The places, named (a field's label, or the body), in the order the entry first gives them. Empty when the server says nothing about them. */
 	places: string[];
 }
 
@@ -41,7 +41,7 @@ export function mediaUsages(media: Pick<MediaItem, "references">, placeName?: Pl
 	return [...byEntry.values()];
 }
 
-/** Names the places of the site's entries: "본문" for the body, a field's label for a metadata path (its first segment, for a nested value). */
+/** Names the places of the site's entries: the body's own name, a field's label for a metadata path (its first segment, for a nested value). */
 export const placeNamer =
 	(site: Site, t: TranslatorFor<typeof mediaMessages>): PlaceName =>
 	(collection, occurrence) => {
