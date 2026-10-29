@@ -1,44 +1,44 @@
-# Status bar
+# 상태 표시줄
 
-This page covers the bar under the editor, the list that opens above a cell, and how plugins fill cells.
+이 페이지는 편집기 아래의 표시줄, 칸 위로 열리는 목록, 플러그인이 칸을 채우는 방법을 다룬다.
 
-## Bar
+## 표시줄
 
-The bar under the editor. It holds as cells only information that is not anywhere else: to-dos, requests, character count. When there is nothing, it is hidden.
+편집기 아래의 표시줄이다. 다른 곳에 없는 정보만 칸으로 담는다. 할 일, 요청, 글자 수가 그렇다. 담을 것이 없으면 숨는다.
 
-- A cell fills the full height (the pressing area). The separator between cells is only 14px in the middle.
-- An open cell is `bg-selected`, and a panel opens above it.
-- The bar is `height-statusbar` (30px) on the tool ground, with a rule above it, in mono 12px `fg-subtle`.
+- 칸은 높이를 꽉 채운다(누르는 영역). 칸 사이 구분선은 가운데 14px뿐이다.
+- 열린 칸은 `bg-selected`이고, 그 위로 패널이 열린다.
+- 표시줄은 도구 바탕 위의 `height-statusbar`(30px)이고, 위에 선이 있으며, mono 12px `fg-subtle`이다.
 
-### In code
+### 코드
 
-`StatusBar` is as tall as the design says, takes the tool color, and is not drawn at all while it has no cell. Name it with `aria-label`. `StatusBarCell` is as tall as the bar, so the whole height can be pressed; the cell whose list is open takes the selected background. It is a `<button>` by default (render it from the list's trigger); give it `render={<span />}` for a cell that only states something, or an `href` (or the app's router link in `render`) for one that goes somewhere. `tone` colors the text of something to fix, and `dot` (on by default) puts the 6px dot before it: the dot marks what has to be dealt with before saving or publishing. Cells with `end` sit after the spacer (`StatusBarSpacer`), with the rule on their left, and they hide first on a narrow screen. `StatusBarAnnouncer` says the bar's state aloud, politely, without showing it, for a cell whose text changes in ways that should not be read out each time.
+`StatusBar`는 디자인이 정한 높이를 갖고 도구 색을 쓰며, 칸이 하나도 없으면 아예 그리지 않는다. `aria-label`로 이름을 붙인다. `StatusBarCell`은 표시줄만큼 높아서 높이 전체를 누를 수 있다. 목록이 열린 칸은 선택 배경을 쓴다. 기본은 `<button>`이다(목록의 트리거에서 그린다). 무언가를 알리기만 하는 칸은 `render={<span />}`을, 어딘가로 가는 칸은 `href`(또는 `render`에 앱의 라우터 링크)를 준다. `tone`은 고칠 것의 글자에 색을 입히고, `dot`(기본으로 켜짐)은 그 앞에 6px 점을 붙인다. 점은 저장이나 발행 전에 처리해야 하는 것을 표시한다. `end`가 있는 칸은 스페이서(`StatusBarSpacer`) 뒤에 놓이고 왼쪽에 선이 있으며, 좁은 화면에서 먼저 숨는다. `StatusBarAnnouncer`는 표시줄의 상태를 보여 주지 않고 정중하게 소리로만 알린다. 글자가 바뀔 때마다 읽어 주면 안 되는 칸에 쓴다.
 
-## When a cell is opened
+## 칸을 열면
 
-Pressing a cell opens a list panel above it (`.mt-card.mt-statusbar-list`). Everything that is a "list of places to fix", such as to-dos or changed places in the source, uses this one panel.
+칸을 누르면 그 위로 목록 패널이 열린다(`.mt-card.mt-statusbar-list`). 할 일이나 원문에서 바뀐 곳처럼 "고칠 곳 목록"인 것은 모두 이 패널 하나를 쓴다.
 
-- At the top, the group name and a count (`.mt-menu-label`).
-- A row (`.mt-todo-item`): a mark in front (an orange circle, or a mark for changed / new / removed) · the title at 14 · where it is, one line of gray at 12 · one thing to do at the right end ("✦ 채우기" (✦ fill), "✦ 번역" (✦ translate), "지우기" (delete)). Pressing the row goes to that place.
-- Problems of the same kind are one row ("대체 텍스트 없는 이미지 2개" (2 images without alt text), with where they are in the line under it: "본문 1 · 본문 2"). An empty field is its own row: "요약 쓰기" (write the summary) for a field that is written, "대표 이미지 고르기" for one that is chosen, with "요약 · 비어 있음" under it.
-- Things already done go below as ✓ rows (`.mt-todo-done`): first what was fixed while the entry was open ("요약", "이미지 대체 텍스트 2개"), then the required fields that were never empty in one line ("제목 · 주소 · 대표 이미지"). With nothing left to do the cell reads "할 일 없음" and the list shows only ✓ rows.
-- A refused publish opens this list and says so in a toast: "발행할 수 없어요. 아래 할 일 N개를 먼저 고쳐요." (N is the number of rows).
-- What blocks publishing is gathered in one cell, "할 일" (to do). A dimmed block of a translation is a to-do too. A notice that does not block (the source changed) has a cell of its own.
+- 맨 위에 그룹 이름과 개수가 있다(`.mt-menu-label`).
+- 행(`.mt-todo-item`): 앞에 표시(주황 동그라미, 또는 바뀜 / 새로 / 지워짐 표시) · 14 크기 제목 · 위치를 알려 주는 12 크기 회색 한 줄 · 오른쪽 끝에 할 일 하나("✦ 채우기", "✦ 번역", "지우기"). 행을 누르면 그곳으로 간다.
+- 같은 종류의 문제는 한 행으로 묶는다("대체 텍스트 없는 이미지 2개", 그 아래 줄에 위치: "본문 1 · 본문 2"). 빈 필드는 따로 한 행이다. 쓰는 필드는 "요약 쓰기", 고르는 필드는 "대표 이미지 고르기"이고, 그 아래에 "요약 · 비어 있음"이 붙는다.
+- 이미 끝난 것은 아래에 ✓ 행으로 둔다(`.mt-todo-done`). 먼저 글을 연 동안 고친 것("요약", "이미지 대체 텍스트 2개"), 그다음 한 번도 비어 있지 않던 필수 필드를 한 줄로("제목 · 주소 · 대표 이미지") 적는다. 할 일이 남지 않으면 칸에는 "할 일 없음"이라고 쓰이고 목록에는 ✓ 행만 남는다.
+- 발행이 거절되면 이 목록이 열리고 토스트로 알린다. "발행할 수 없어요. 아래 할 일 N개를 먼저 고쳐요."(N은 행 수)
+- 발행을 막는 것은 "할 일" 칸 하나에 모인다. 번역의 흐린 블록도 할 일이다. 막지 않는 알림(원문이 바뀜)은 따로 칸을 갖는다.
 
-### In code
+### 코드
 
-`StatusBarList`: opens upward from a status bar cell. A card with the group's name (`label`) and the count (`count`) in the head (no count once nothing is left; `countTone` is `danger` while any row blocks publishing), then rows to do (`TodoItem`) and rows already done (`TodoDone`), and under a rule the actions that belong to the whole list (`footer`: a link to its settings, "모두 고치기" (fix all)). `trigger` is the cell that opens it.
+`StatusBarList`: 상태 표시줄 칸에서 위로 열린다. 머리에 그룹 이름(`label`)과 개수(`count`)가 있는 카드다(남은 것이 없으면 개수는 없다. 발행을 막는 행이 하나라도 있으면 `countTone`이 `danger`다). 그 아래 할 일 행(`TodoItem`)과 이미 끝난 행(`TodoDone`)이 오고, 선 아래에는 목록 전체에 걸린 동작이 온다(`footer`: 설정으로 가는 링크, "모두 고치기"). `trigger`는 목록을 여는 칸이다.
 
-The rows are made from the publish check by `todoRows` (`screens/shared/todo-rows.ts`), which groups them, and `trackResolved` keeps the fixed ones for the ✓ rows.
+행은 `todoRows`(`screens/shared/todo-rows.ts`)가 발행 검사 결과로 만들고 묶는다. `trackResolved`는 고친 것을 ✓ 행용으로 간직한다.
 
-`TodoItem`: a ring, the title, one short line under it, and the one action at the right. `blocking` draws the ring in red for what stops publishing; the others are warning-colored. `marker` replaces the ring with a `Marker` (a translated block whose source changed). `current` is the row whose place is open on the page. `proposal` puts a spark in front of the action and makes it blue: the assistant does it. With `onOpen` the title and the line are a button that stretches over the row and goes to the place. `TodoDone` is a thing that is already right: a green ✓ and one small line, under the rows to fix, set off by a rule.
+`TodoItem`: 고리, 제목, 그 아래 짧은 한 줄, 오른쪽의 동작 하나. `blocking`은 발행을 막는 것의 고리를 빨갛게 그린다. 나머지는 경고 색이다. `marker`는 고리 대신 `Marker`를 둔다(원문이 바뀐 번역 블록). `current`는 그 위치가 페이지에 열려 있는 행이다. `proposal`은 동작 앞에 반짝이를 붙이고 파랗게 만든다. 어시스턴트가 하는 일이라는 뜻이다. `onOpen`이 있으면 제목과 줄이 행 전체를 덮는 버튼이 되어 그 위치로 간다. `TodoDone`은 이미 맞는 것이다. 초록 ✓와 작은 한 줄이고, 고칠 행들 아래에 선으로 나뉘어 놓인다.
 
-## Plugin cells
+## 플러그인 칸
 
-A plugin does not bring its own UI. It fills the cell and the panel that core gives it: the cell's name and count ("맞춤법 2" (spelling 2)), the panel's rows (what → how · where), one thing to do in each row ("고치기" (fix)), and at the bottom of the panel "설정" (settings: goes to the plugin's settings) and "모두 고치기" (fix all). The place for the cell is in both the source and the translation editors; the plugin decides whether to show it (a plugin that checks only Korean has no cell on an English entry).
+플러그인은 자기 UI를 가져오지 않는다. 코어가 내주는 칸과 패널을 채운다. 칸의 이름과 개수("맞춤법 2"), 패널의 행(무엇 → 어떻게 · 어디), 행마다 할 일 하나("고치기"), 패널 맨 아래의 "설정"(플러그인 설정으로 간다)과 "모두 고치기"가 그렇다. 칸 자리는 원문 편집기와 번역 편집기 모두에 있고, 보일지는 플러그인이 정한다(한국어만 검사하는 플러그인은 영어 글에 칸이 없다).
 
-- A row that blocks is marked with a red circle (`.mark.is-danger`), like "고칠 곳" (places to fix) in the schema preview, which blocks saving.
+- 막는 행은 빨간 동그라미(`.mark.is-danger`)로 표시한다. 스키마 미리보기에서 저장을 막는 "고칠 곳"과 같다.
 
-### In code
+### 코드
 
-`StatusBarPluginCell` fills a cell for a plugin.
+`StatusBarPluginCell`은 플러그인용 칸을 채운다.

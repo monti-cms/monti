@@ -1,203 +1,203 @@
-# Flow 2: Assistant
+# 흐름 2: 어시스턴트
 
-This file lists every row and step of canvas flow 2, "흐름 2 · 어시스턴트". Asking the assistant, editing the current post, editing many posts, undoing, default requests, writing rules, settings changes, first connection and finding old chats.
+이 파일은 캔버스 흐름 2 "흐름 2 · 어시스턴트"의 모든 행과 단계를 적는다. 어시스턴트에게 묻기, 지금 글 고치기, 여러 글 고치기, 되돌리기, 기본 요청, 글 쓰는 규칙, 설정 바꾸기, 처음 연결, 지난 대화 찾기를 다룬다.
 
-Canvas note: "흐름 2 · 어시스턴트 — 묻기 · 지금 글 고치기 · 여러 글 · 되돌리기 · 기본 요청 · 규칙 · 설정 · 처음 · 다시 찾기"
+캔버스 메모: "흐름 2 · 어시스턴트 — 묻기 · 지금 글 고치기 · 여러 글 · 되돌리기 · 기본 요청 · 규칙 · 설정 · 처음 · 다시 찾기"
 
-Screens used: [`Main`](../screens.md#main), [`AssistantPanel`](../screens.md#assistantpanel), [`EditorNotion`](../screens.md#editornotion), [`EditorProposal`](../screens.md#editorproposal), [`ProposalReview`](../screens.md#proposalreview), [`Events`](../screens.md#events), [`Media`](../screens.md#media), [`Settings`](../screens.md#settings), [`SettingsProposal`](../screens.md#settingsproposal).
+쓰는 화면: [`Main`](../screens.md#main), [`AssistantPanel`](../screens.md#assistantpanel), [`EditorNotion`](../screens.md#editornotion), [`EditorProposal`](../screens.md#editorproposal), [`ProposalReview`](../screens.md#proposalreview), [`Events`](../screens.md#events), [`Media`](../screens.md#media), [`Settings`](../screens.md#settings), [`SettingsProposal`](../screens.md#settingsproposal).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "목록에서 묻기 · 화면 옮기기" · Ask from the list, move the screen
+## "목록에서 묻기 · 화면 옮기기"
 
-### Step 01: "묻기 · 목록에서 ✦ 열기 → 이 목록에서 할 일 · 최근"
+### 단계 01: "묻기 · 목록에서 ✦ 열기 → 이 목록에서 할 일 · 최근"
 
-- Board: `Flow2Step01.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "처음")
-- The user opens the assistant (✦) from the post list. The panel opens on the right with "이 목록에서" (in this list) starter requests such as "요약이 비어 있는 글 찾아 줘", a "최근" (recent) section, the input box, and the model button "claude-sonnet-5-5 · 생각 보통".
+- 보드: `Flow2Step01.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "처음")
+- 사용자가 게시글 목록에서 어시스턴트(✦)를 연다. 오른쪽에 패널이 열린다. "요약이 비어 있는 글 찾아 줘" 같은 "이 목록에서" 시작 요청, "최근" 칸, 입력란, 모델 버튼 "claude-sonnet-5-5 · 생각 보통"이 보인다.
 
-### Step 02: "묻기 · 찾는 중 → 도구 줄 · 멈추기"
+### 단계 02: "묻기 · 찾는 중 → 도구 줄 · 멈추기"
 
-- Board: `Flow2Step02.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "묻는 중")
-- The user sends "요약이 비어 있는 글 찾아 줘". The assistant works: a tool line shows "글 목록 읽음 · 게시글 148편" and "요약 확인 중 · 62 / 148", with a stop control.
+- 보드: `Flow2Step02.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "묻는 중")
+- 사용자가 "요약이 비어 있는 글 찾아 줘"를 보낸다. 어시스턴트가 일한다: 도구 줄에 "글 목록 읽음 · 게시글 148편"과 "요약 확인 중 · 62 / 148"이 보이고, 멈추기 버튼이 있다.
 
-### Step 03: "묻기 · 답 → 목록이 걸러지고 AI가 건 필터(파랑)가 붙음"
+### 단계 03: "묻기 · 답 → 목록이 걸러지고 AI가 건 필터(파랑)가 붙음"
 
-- Board: `Flow2Step03.dc.html`
-- Renders: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "목록 거름")
-- The answer arrives: two posts have an empty summary. The list is filtered to those two, and the filter chip "요약 비어 있음" is blue because the AI set it. The panel shows the tool lines and the reply.
+- 보드: `Flow2Step03.dc.html`
+- 화면: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "목록 거름")
+- 답이 온다: 요약이 비어 있는 글은 두 편이다. 목록이 그 두 편으로 걸러지고, 필터 칩 "요약 비어 있음"은 AI가 걸었으므로 파랗다. 패널에는 도구 줄과 답이 보인다.
 
-### Step 04: "화면 옮기기 · “첫 번째 글 열어 줘” → 그 글로 이동, 대화는 이어짐"
+### 단계 04: "화면 옮기기 · “첫 번째 글 열어 줘” → 그 글로 이동, 대화는 이어짐"
 
-- Board: `Flow2Step04.dc.html`
-- Renders: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "발행됨"; save "저장됨") + `AssistantPanel` (view "글 엶")
-- The user asks "첫 번째 글 열어 줘". The screen moves to that post's editor and the conversation continues in the panel, whose input now asks about "this post". A line records the move ("화면 이동 · 첫 번째 글").
+- 보드: `Flow2Step04.dc.html`
+- 화면: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "발행됨"; save "저장됨") + `AssistantPanel` (view "글 엶")
+- 사용자가 "첫 번째 글 열어 줘"라고 한다. 화면이 그 글의 편집기로 옮겨 가고, 대화는 패널에서 이어진다. 이제 입력란은 "이 글"에 대해 묻는다. 한 줄이 이동을 기록한다("화면 이동 · 첫 번째 글").
 
-## "지금 글 고치기" · Edit the current post
+## "지금 글 고치기"
 
-### Step 07: "지금 글 고치기 · 이 글에 요청"
+### 단계 07: "지금 글 고치기 · 이 글에 요청"
 
-- Board: `Flow2Step07.dc.html`
-- Renders: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "발행됨"; save "저장됨") + `AssistantPanel` (view "글에서 요청")
-- The user is in a post's editor and types a request in the panel: "더 짧게 다듬어 줘. 말투는 그대로." (make it shorter, keep the tone). The earlier conversation is above it.
+- 보드: `Flow2Step07.dc.html`
+- 화면: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "발행됨"; save "저장됨") + `AssistantPanel` (view "글에서 요청")
+- 사용자가 글 편집기에서 패널에 요청을 쓴다: "더 짧게 다듬어 줘. 말투는 그대로." 그 위에 앞선 대화가 있다.
 
-### Step 08: "지금 글 고치기 · 글에 파란 연필 → 말풍선으로 고르기"
+### 단계 08: "지금 글 고치기 · 글에 파란 연필 → 말풍선으로 고르기"
 
-- Board: `Flow2Step08.dc.html`
-- Renders: `EditorProposal` (memo-card off)
-- The assistant's edits appear in the post as blue pencil marks. The user picks one from a speech bubble to review it. The memo card is not shown yet.
+- 보드: `Flow2Step08.dc.html`
+- 화면: `EditorProposal` (memo-card off)
+- 어시스턴트가 고친 곳이 글 안에 파란 연필 표시로 나타난다. 사용자는 말풍선에서 하나를 골라 검토한다. 메모 카드는 아직 보이지 않는다.
 
-### Step 09: "지금 글 고치기 · 제안에 메모 → 그 자리에서 다시 고침"
+### 단계 09: "지금 글 고치기 · 제안에 메모 → 그 자리에서 다시 고침"
 
-- Board: `Flow2Step09.dc.html`
-- Renders: `EditorProposal`
-- The user adds a memo to a proposal ("끝은 원래대로 두고 앞만 줄여 줘") and the assistant redoes that spot in place ("끝은 그대로 두고 ‘만들기로 한’만 ‘만든’으로 줄였어요"). The proposal still has discard and accept actions.
+- 보드: `Flow2Step09.dc.html`
+- 화면: `EditorProposal`
+- 사용자가 제안에 메모를 단다("끝은 원래대로 두고 앞만 줄여 줘"). 어시스턴트가 그 자리를 다시 고친다("끝은 그대로 두고 ‘만들기로 한’만 ‘만든’으로 줄였어요"). 제안에는 여전히 버리기와 받기가 있다.
 
-## "여러 글 고치기" · Edit many posts
+## "여러 글 고치기"
 
-### Step 10: "여러 글 · “둘 다 골라 줘” → AI가 고른 행(파랑) → ✦ 요청"
+### 단계 10: "여러 글 · “둘 다 골라 줘” → AI가 고른 행(파랑) → ✦ 요청"
 
-- Board: `Flow2Step10.dc.html`
-- Renders: `Main` (mode "AI가 고름"; with-rail off) + `AssistantPanel` (view "맡기기")
-- The user asks "둘 다 골라 줘" (select both). The assistant selects the two posts in the list; the rows are blue because the AI picked them, and the bulk bar shows "2개 선택". The user then sends a ✦ request on the selection.
+- 보드: `Flow2Step10.dc.html`
+- 화면: `Main` (mode "AI가 고름"; with-rail off) + `AssistantPanel` (view "맡기기")
+- 사용자가 "둘 다 골라 줘"라고 한다. 어시스턴트가 목록에서 두 글을 고른다. 행은 AI가 골랐으므로 파랗고, 일괄 막대에 "2개 선택"이 보인다. 이어서 사용자가 고른 글에 ✦ 요청을 보낸다.
 
-### Step 11: "여러 글 · 대화 안 제안 카드 · 되돌릴 수 없는 건 빠짐"
+### 단계 11: "여러 글 · 대화 안 제안 카드 · 되돌릴 수 없는 건 빠짐"
 
-- Board: `Flow2Step11.dc.html`
-- Renders: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "제안 카드")
-- For a multi-post request, the panel shows a proposal card inside the conversation: "4묶음 · 16건" (4 groups, 16 changes), pending review. The groups are polish a post (3 places), fill summaries (2 posts), move 11 posts to the 2024 folder, and delete media. The media deletion is left out because it cannot be undone ("되돌릴 수 없어 뺐어요", 3 files). The card offers details ("상세 보기") and discard; the apply button reads "16건 적용".
+- 보드: `Flow2Step11.dc.html`
+- 화면: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "제안 카드")
+- 여러 글에 대한 요청이면 패널이 대화 안에 제안 카드를 보여 준다: "4묶음 · 16건", 검토 대기. 묶음은 글 하나 다듬기(3곳), 요약 채우기(2편), 글 11편을 2024 폴더로 옮기기, 미디어 삭제다. 미디어 삭제는 되돌릴 수 없어서 빠진다("되돌릴 수 없어 뺐어요", 파일 3개). 카드에는 "상세 보기"와 버리기가 있고, 적용 버튼은 "16건 적용"이다.
 
-### Step 12: "여러 글 · 상세 보기 → 검토 (한 줄)"
+### 단계 12: "여러 글 · 상세 보기 → 검토 (한 줄)"
 
-- Board: `Flow2Step12.dc.html`
-- Renders: `ProposalReview` (default stage "검토")
-- The user opens the details of the proposal. A review screen lists the changes in one line each, with the count "14건 적용" (apply 14) and a discard action.
+- 보드: `Flow2Step12.dc.html`
+- 화면: `ProposalReview` (default stage "검토")
+- 사용자가 제안의 상세를 연다. 검토 화면이 변경을 한 줄에 하나씩 나열하고, 개수 "14건 적용"과 버리기가 있다.
 
-### Step 13: "여러 글 · 나란히 보기 · 항목 빼기"
+### 단계 13: "여러 글 · 나란히 보기 · 항목 빼기"
 
-- Board: `Flow2Step13.dc.html`
-- Renders: `ProposalReview` (default stage "검토"; view "나란히")
-- The review in side-by-side view: each item shows "지금" (now) and "제안" (proposal) next to each other, so changed code and the reason are visible at once. The user can remove an item from the proposal.
+- 보드: `Flow2Step13.dc.html`
+- 화면: `ProposalReview` (default stage "검토"; view "나란히")
+- 나란히 보기로 본 검토다. 항목마다 "지금"과 "제안"이 나란히 놓여, 바뀐 코드와 이유가 한눈에 보인다. 사용자는 제안에서 항목을 뺄 수 있다.
 
-### Step 14: "여러 글 · 적용 중"
+### 단계 14: "여러 글 · 적용 중"
 
-- Board: `Flow2Step14.dc.html`
-- Renders: `ProposalReview` (stage "적용 중")
-- The user applies the proposal. The review shows progress, "적용 중" (applying), 9 of 14.
+- 보드: `Flow2Step14.dc.html`
+- 화면: `ProposalReview` (stage "적용 중")
+- 사용자가 제안을 적용한다. 검토 화면에 진행 상황 "적용 중", 14건 중 9건이 보인다.
 
-### Step 15: "여러 글 · 결과 → 일부 못 함"
+### 단계 15: "여러 글 · 결과 → 일부 못 함"
 
-- Board: `Flow2Step15.dc.html`
-- Renders: `ProposalReview` (stage "결과")
-- The result: "13건 적용" (13 applied) and "1건 못 함" (1 failed), with "모두 되돌리기" (undo all). The failed item says why, for example it could not be moved because the post went to the trash in the meantime.
+- 보드: `Flow2Step15.dc.html`
+- 화면: `ProposalReview` (stage "결과")
+- 결과: "13건 적용"과 "1건 못 함", 그리고 "모두 되돌리기". 못 한 항목은 이유를 말한다. 예를 들어 그사이 글이 휴지통으로 가서 옮길 수 없었다.
 
-## "되돌리기" · Undo
+## "되돌리기"
 
-### Step 16: "되돌리기 · 패널의 카드에서"
+### 단계 16: "되돌리기 · 패널의 카드에서"
 
-- Board: `Flow2Step16.dc.html`
-- Renders: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "적용됨")
-- Undo, first way: from the applied card in the assistant panel. The card is marked applied and offers undo.
+- 보드: `Flow2Step16.dc.html`
+- 화면: `Main` (mode "어시스턴트가 거름"; with-rail off) + `AssistantPanel` (view "적용됨")
+- 되돌리기, 첫째 길: 어시스턴트 패널의 적용된 카드에서. 카드는 적용됨으로 표시되고 되돌리기가 있다.
 
-### Step 17: "되돌리기 · 도구 › 활동 기록"
+### 단계 17: "되돌리기 · 도구 › 활동 기록"
 
-- Board: `Flow2Step17.dc.html`
-- Renders: `Events` (default stage "기본")
-- Undo, second way: the user opens Tools › Activity log ("활동 기록"), where the AI changes are listed as events and can be undone from there.
+- 보드: `Flow2Step17.dc.html`
+- 화면: `Events` (default stage "기본")
+- 되돌리기, 둘째 길: 사용자가 도구 › "활동 기록"을 연다. AI가 바꾼 것이 이벤트로 나열되고, 거기서 되돌릴 수 있다.
 
-### Step 18: "되돌리기 · 편집기 ⋯ › AI가 바꾼 기록 → 이 글만"
+### 단계 18: "되돌리기 · 편집기 ⋯ › AI가 바꾼 기록 → 이 글만"
 
-- Board: `Flow2Step18.dc.html`
-- Renders: `Events` (default stage "기본"; filter "글 하나")
-- Undo, third way: in the editor the user opens ⋯ › "AI가 바꾼 기록" (changes the AI made). The activity log opens filtered to this post only (chips "글: 첫 번째 글", "종류: AI 제안").
+- 보드: `Flow2Step18.dc.html`
+- 화면: `Events` (default stage "기본"; filter "글 하나")
+- 되돌리기, 셋째 길: 사용자가 편집기에서 ⋯ › "AI가 바꾼 기록"을 연다. 활동 기록이 이 글로만 걸러진 채 열린다(칩 "글: 첫 번째 글", "종류: AI 제안").
 
-## "기본 요청" · Default requests
+## "기본 요청"
 
-### Step 19: "기본 요청 · 미디어에서 고르고 “대체 텍스트 채우기”"
+### 단계 19: "기본 요청 · 미디어에서 고르고 “대체 텍스트 채우기”"
 
-- Board: `Flow2Step19.dc.html`
-- Renders: `Media` (mode "대체 텍스트 없는 것 고름"; with-rail off) + `AssistantPanel` (view "대체 텍스트")
-- A default request. In the media library the user selects images without alt text and asks "대체 텍스트 채우기" (fill alt text). The panel shows the request for 3 images, the tool lines (images viewed, posts using them checked) and a pending proposal of 3 alt texts.
+- 보드: `Flow2Step19.dc.html`
+- 화면: `Media` (mode "대체 텍스트 없는 것 고름"; with-rail off) + `AssistantPanel` (view "대체 텍스트")
+- 기본 요청이다. 사용자가 미디어 라이브러리에서 대체 텍스트가 없는 이미지를 고르고 "대체 텍스트 채우기"를 요청한다. 패널에 이미지 3개에 대한 요청, 도구 줄(이미지를 봄, 그 이미지를 쓰는 글을 확인함), 검토를 기다리는 대체 텍스트 3개의 제안이 보인다.
 
-## "글 쓰는 규칙" · Writing rules
+## "글 쓰는 규칙"
 
-### Step 20: "규칙 · 설정 › 사이트 › 글 쓰는 방식"
+### 단계 20: "규칙 · 설정 › 사이트 › 글 쓰는 방식"
 
-- Board: `Flow2Step20.dc.html`
-- Renders: `Settings` (default stage "기본")
-- Writing rules. The user opens Settings › Site › how to write ("글 쓰는 방식"), where the rules the assistant follows are written down.
+- 보드: `Flow2Step20.dc.html`
+- 화면: `Settings` (default stage "기본")
+- 글 쓰는 규칙이다. 사용자가 설정 › 사이트 › "글 쓰는 방식"을 연다. 어시스턴트가 따르는 규칙이 거기 적혀 있다.
 
-## "설정에서 고치기" · Change settings
+## "설정에서 고치기"
 
-### Step 21: "설정에서 고치기 · 요청 → 설정에 제안 표시 → 저장하고 적용"
+### 단계 21: "설정에서 고치기 · 요청 → 설정에 제안 표시 → 저장하고 적용"
 
-- Board: `Flow2Step21.dc.html`
-- Renders: `SettingsProposal` (with-rail off) + `AssistantPanel` (view "설정 제안")
-- The user asks the assistant to change settings. The settings screen shows the proposed changes ("바뀐 곳" with suggestions) in the settings, with "모두 되돌리기" and "저장하고 적용". The user saves and applies.
+- 보드: `Flow2Step21.dc.html`
+- 화면: `SettingsProposal` (with-rail off) + `AssistantPanel` (view "설정 제안")
+- 사용자가 어시스턴트에게 설정을 바꿔 달라고 한다. 설정 화면에 제안된 변경("바뀐 곳"과 수정안)이 설정 안에 보이고, "모두 되돌리기"와 "저장하고 적용"이 있다. 사용자가 저장하고 적용한다.
 
-## "처음 연결 · 모델 고르기" · First connection, choose a model
+## "처음 연결 · 모델 고르기"
 
-### Step 22: "처음 · AI 연결 없음 → API 키 넣기"
+### 단계 22: "처음 · AI 연결 없음 → API 키 넣기"
 
-- Board: `Flow2Step22.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "키 없음")
-- First use, no AI connection. The panel says "AI 연결이 없어요" and offers "API 키 넣기" (add an API key), which leads to the API keys screen (flow 10).
+- 보드: `Flow2Step22.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "키 없음")
+- 처음 쓸 때 AI 연결이 없다. 패널이 "AI 연결이 없어요"라고 말하고 "API 키 넣기"를 보여 준다. 이것은 API 키 화면(흐름 10)으로 이어진다.
 
-### Step 23: "처음 · 모델 고르기 · 찾기 · 키별 묶음 · 생각 정도"
+### 단계 23: "처음 · 모델 고르기 · 찾기 · 키별 묶음 · 생각 정도"
 
-- Board: `Flow2Step23.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "모델 고르기")
-- First use, choosing a model. The model menu opens from the model button with a search box ("모델 찾기") and models grouped by key, for example the default "claude-sonnet-5-5", "openai/gpt-5" from OpenRouter, and Anthropic key models. Each model that can think also has a thinking row.
+- 보드: `Flow2Step23.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "모델 고르기")
+- 처음 쓸 때 모델을 고른다. 모델 버튼에서 모델 메뉴가 열린다. 검색 칸("모델 찾기")이 있고, 모델은 키별로 묶여 있다. 예를 들어 기본값 "claude-sonnet-5-5", OpenRouter의 "openai/gpt-5", Anthropic 키의 모델들이다. 생각할 수 있는 모델에는 생각 행도 있다.
 
-### Step 23b: "처음 · 모델 메뉴의 생각 › → 옆 둘째 단 · 끔 · 낮음 · 보통 · 높음 (지금 값에 ✓)"
+### 단계 23b: "처음 · 모델 메뉴의 생각 › → 옆 둘째 단 · 끔 · 낮음 · 보통 · 높음 (지금 값에 ✓)"
 
-- Board: `Flow2Step23b.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 고르기")
-- In the model menu the user opens "생각 ›" (thinking). A second column opens to the side with off, low, medium, high; the current value has a check.
+- 보드: `Flow2Step23b.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 고르기")
+- 사용자가 모델 메뉴에서 "생각 ›"을 연다. 옆에 둘째 단이 열리고 끔, 낮음, 보통, 높음이 있다. 지금 값에 체크가 있다.
 
-### Step 23c: "처음 · 높음을 고르면 메뉴가 닫히고 입력창 모델 버튼이 “claude-sonnet-5-5 · 생각 높음”"
+### 단계 23c: "처음 · 높음을 고르면 메뉴가 닫히고 입력창 모델 버튼이 “claude-sonnet-5-5 · 생각 높음”"
 
-- Board: `Flow2Step23c.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 높음")
-- The user picks high. The menu closes and the model button in the input now reads "claude-sonnet-5-5 · 생각 높음".
+- 보드: `Flow2Step23c.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 높음")
+- 사용자가 높음을 고른다. 메뉴가 닫히고 입력란의 모델 버튼이 이제 "claude-sonnet-5-5 · 생각 높음"으로 보인다.
 
-### Step 23d: "처음 · 생각을 못 하는 모델을 고르면 메뉴에 생각 줄이 없고 버튼에도 생각이 빠짐"
+### 단계 23d: "처음 · 생각을 못 하는 모델을 고르면 메뉴에 생각 줄이 없고 버튼에도 생각이 빠짐"
 
-- Board: `Flow2Step23d.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 없는 모델")
-- The user picks a model that cannot think. The menu has no thinking row and the model button drops the thinking part.
+- 보드: `Flow2Step23d.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "생각 없는 모델")
+- 사용자가 생각을 못 하는 모델을 고른다. 메뉴에 생각 행이 없고, 모델 버튼에서도 생각 부분이 빠진다.
 
-## "지난 대화" · Past chats
+## "지난 대화"
 
-### Step 25: "다시 찾기 · 지난 대화 · 지우기 · 안 연 대화 자동 삭제"
+### 단계 25: "다시 찾기 · 지난 대화 · 지우기 · 안 연 대화 자동 삭제"
 
-- Board: `Flow2Step25.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "지난 대화")
-- Finding past chats. The panel shows the history: "지난 대화" grouped by day (today, earlier dates), each with time and what it did (for example "받음 5곳", "적용 13건", "되돌림", "검토 대기"), a delete action, and a note that chats not opened for 30 days are deleted.
+- 보드: `Flow2Step25.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "지난 대화")
+- 지난 대화를 찾는다. 패널이 기록을 보여 준다: 날짜별로(오늘, 그 전 날짜들) 묶인 "지난 대화"가 있고, 대화마다 시각과 한 일("받음 5곳", "적용 13건", "되돌림", "검토 대기" 등), 지우기 동작이 있다. 30일 동안 열지 않은 대화는 지워진다는 안내도 있다.
 
-### Step 26: "다시 찾기 · 다시 연 대화 → 그때 제안 그대로"
+### 단계 26: "다시 찾기 · 다시 연 대화 → 그때 제안 그대로"
 
-- Board: `Flow2Step26.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "다시 연 대화")
-- The user reopens an old chat. The conversation shows as it was (10. 24), including the proposal exactly as it was then: delete 4 unused tags, status pending review, with the details and discard actions.
+- 보드: `Flow2Step26.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "다시 연 대화")
+- 사용자가 옛 대화를 다시 연다. 대화가 그때(10. 24) 모습 그대로 보이고, 제안도 그때 그대로다: 안 쓰는 태그 4개 지우기, 검토 대기 상태, 상세 보기와 버리기 동작.
 
-## "예외" · Exceptions
+## "예외"
 
-### Step 05: "예외 · 저장 안 한 편집이 있으면 옮기지 않음"
+### 단계 05: "예외 · 저장 안 한 편집이 있으면 옮기지 않음"
 
-- Board: `Flow2Step05.dc.html`
-- Renders: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "수정 중"; save "저장 전 변경사항") + `AssistantPanel` (view "이동 막힘")
-- Exception: the user asks to open another post while the current post has unsaved edits. The assistant does not move the screen and says so, and offers "저장하고 열기" (save and open).
+- 보드: `Flow2Step05.dc.html`
+- 화면: `EditorNotion` (todo-open off; panel off; state "아무것도 안 할 때"; pub "수정 중"; save "저장 전 변경사항") + `AssistantPanel` (view "이동 막힘")
+- 예외: 지금 글에 저장 안 한 편집이 있는데 사용자가 다른 글을 열어 달라고 한다. 어시스턴트는 화면을 옮기지 않고 그렇다고 말하며, "저장하고 열기"를 보여 준다.
 
-### Step 06: "예외 · 하다가 끊김 → 어디까지 했는지 · 이어서 하기"
+### 단계 06: "예외 · 하다가 끊김 → 어디까지 했는지 · 이어서 하기"
 
-- Board: `Flow2Step06.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "실패")
-- Exception: the connection drops mid-task. The panel shows "연결이 끊겼어요", how far it got (checked 62 of 148 posts, stopped at 62 / 148), and "이어서 하기" (continue).
+- 보드: `Flow2Step06.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "실패")
+- 예외: 작업 중에 연결이 끊긴다. 패널에 "연결이 끊겼어요", 어디까지 했는지(148편 중 62편 확인, 62 / 148에서 멈춤), "이어서 하기"가 보인다.
 
-### Step 24: "예외 · 서비스 크레딧이 부족함 → 대화 안에서 알림 · 다른 모델로 보내기"
+### 단계 24: "예외 · 서비스 크레딧이 부족함 → 대화 안에서 알림 · 다른 모델로 보내기"
 
-- Board: `Flow2Step24.dc.html`
-- Renders: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "크레딧 부족")
-- Exception: the service account is out of credit. The conversation shows a notice "Anthropic 크레딧이 부족해요" naming the key and saying to top up at the Anthropic site, with "다른 모델로 보내기" (send to another model).
+- 보드: `Flow2Step24.dc.html`
+- 화면: `Main` (mode "처음 화면"; with-rail off) + `AssistantPanel` (view "크레딧 부족")
+- 예외: 서비스 계정의 크레딧이 떨어졌다. 대화 안에 알림 "Anthropic 크레딧이 부족해요"가 보인다. 알림은 키 이름을 말하고 Anthropic 사이트에서 충전하라고 안내하며, "다른 모델로 보내기"가 있다.

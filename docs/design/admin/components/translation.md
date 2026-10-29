@@ -1,59 +1,59 @@
-# Translation
+# 번역
 
-This page covers how translations are shown in the editor: dimmed blocks, source-changed markers, the side-by-side view, blocks shared with the source, and the translate action.
+이 페이지는 편집기에서 번역을 보이는 방법을 다룬다. 흐린 블록, 원문 바뀜 표시, 나란히 보기, 원문과 함께 쓰는 블록, 번역 실행이다.
 
-Each language has its own text, and a new translation starts with the source laid under it, dimmed. A translation is not a copy of the source, so sections can be deleted, added or reordered.
+언어마다 글이 따로 있고, 새 번역은 원문을 흐리게 깔고 시작한다. 번역은 원문의 사본이 아니므로 절을 지우거나 더하거나 순서를 바꿀 수 있다.
 
-## Dimmed block (`.mt-untranslated`)
+## 흐린 블록 (`.mt-untranslated`)
 
-A block that has not been decided yet. While dimmed text remains, publishing is blocked (the public screen does not draw dimmed text). Pick one of three from the block menu.
+아직 정하지 않은 블록이다. 흐린 글이 남아 있는 동안 발행은 막힌다(공개 화면은 흐린 글을 그리지 않는다). 블록 메뉴에서 셋 중 하나를 고른다.
 
-- "✦ 번역" (✦ translate): turns into a blue proposal.
-- "원문 유지" (keep the source): it goes out as the source as it is. A `원문` (source) mark in the left margin (`.mt-marker--keep`).
-- "지우기" (delete): leave it out in this language.
+- "✦ 번역": 파란 제안으로 바뀐다.
+- "원문 유지": 원문 그대로 나간다. 왼쪽 여백에 `원문` 표시가 붙는다(`.mt-marker--keep`).
+- "지우기": 이 언어에서는 뺀다.
 
-There is no button to turn all dimmed blocks into "keep the source" at once. The source could be mixed into the text of the other language as it is, so each block is looked at and decided. When publishing is blocked, "이동" (go) goes to the first dimmed block.
+흐린 블록을 한 번에 모두 "원문 유지"로 바꾸는 버튼은 없다. 원문이 다른 언어의 글에 그대로 섞여 들어갈 수 있으므로, 블록마다 보고 정한다. 발행이 막히면 "이동"이 첫 흐린 블록으로 간다.
 
-### In code
+### 코드
 
-`Untranslated` is the dimmed look (`fg-faint`) of text that is not decided yet: the source text a new translation starts from. It reads as a placeholder, and it is not published. Typing in it, or choosing what to do with the block, takes the look away. `Marker` with `tone="keep"` is the `원문` mark.
+`Untranslated`는 아직 정하지 않은 글의 흐린 모양(`fg-faint`)이다. 새 번역이 시작할 때 깔리는 원문 글이다. 자리 표시 글처럼 읽히고, 발행되지 않는다. 그 안에 글을 쓰거나 블록을 어떻게 할지 고르면 흐린 모양이 사라진다. `tone="keep"`인 `Marker`가 `원문` 표시다.
 
-## Source changed (`.mt-marker--source`)
+## 원문 바뀜 (`.mt-marker--source`)
 
-A translation block remembers the ID of its source block. When the source changes, an orange mark is put in the left margin of the paired translation block.
+번역 블록은 원문 블록의 ID를 기억한다. 원문이 바뀌면 짝이 되는 번역 블록의 왼쪽 여백에 주황 표시가 붙는다.
 
-- "바뀜" (changed): pressing it shows the source before and after in a card (`.mt-memo` + `.mt-memo-diff`). The changed letters are `.mt-diff`. The head row has "확인" (confirm) · [✦ 다시 번역] (✦ translate again).
-- "새로" (new): a block newly made in the source comes in as a dimmed block.
-- "지워짐" (removed): a block deleted from the source. Delete it or leave it.
-- Confirming is per block. "모두 확인" (confirm all) in the notice strip above is for all at once.
+- "바뀜": 누르면 원문의 바뀌기 전과 후를 카드로 보인다(`.mt-memo` + `.mt-memo-diff`). 바뀐 글자는 `.mt-diff`다. 머리 행에 "확인" · [✦ 다시 번역]이 있다.
+- "새로": 원문에 새로 생긴 블록은 흐린 블록으로 들어온다.
+- "지워짐": 원문에서 지운 블록이다. 지우거나 그대로 둔다.
+- 확인은 블록마다 한다. 위쪽 알림 띠의 "모두 확인"은 한 번에 모두 확인한다.
 
-### In code
+### 코드
 
-`Marker` with `tone="changed"` (a block whose source changed since it was translated: "changed", "new", "removed"; `active` when its card is open; `margin` hangs it in the left margin). It is an 18px tall tag in mono 10px. `MemoCard` with `MemoDiff` is the card (`acceptSpark` gives the "✦ Translate again" accept). The notice strip is `Banner` (see Status). The to-do row of a changed block is a `TodoItem` with `marker` (see Status bar).
+`tone="changed"`인 `Marker`(번역한 뒤 원문이 바뀐 블록: "바뀜", "새로", "지워짐". 카드가 열려 있으면 `active`, `margin`은 왼쪽 여백에 건다). mono 10px의 18px 높이 태그다. `MemoCard`와 `MemoDiff`가 카드다(`acceptSpark`가 "✦ 다시 번역" 수락을 준다). 알림 띠는 `Banner`다(상태 참고). 바뀐 블록의 할 일 행은 `marker`가 있는 `TodoItem`이다(상태 표시줄 참고).
 
-## Side-by-side view (`.mt-pair`)
+## 나란히 보기 (`.mt-pair`)
 
-Source view has three states, `끔 · 옆 창 · 나란히` (off · side pane · side by side; `.mt-seg--sm.mt-seg--inline`). Picking side by side gives one row per block. The left margin (`.gutter`, 104px) has the block kind and its state, the middle is the source (`.src`, tool ground, cannot be edited), and the right is the translation (`.dst`). The first row is `.mt-pair--head` with the language and the edited date, and the title row is `.mt-pair--title`.
+원문 보기에는 `끔 · 옆 창 · 나란히` 세 상태가 있다(`.mt-seg--sm.mt-seg--inline`). 나란히를 고르면 블록마다 한 행이 된다. 왼쪽 여백(`.gutter`, 104px)에 블록 종류와 상태가, 가운데에 원문(`.src`, 도구 바탕, 고칠 수 없음)이, 오른쪽에 번역(`.dst`)이 있다. 첫 행은 언어와 고친 날짜가 든 `.mt-pair--head`이고, 제목 행은 `.mt-pair--title`이다.
 
-- The state is one more line in the margin: `원문 바뀜` (source changed; `.is-changed`, orange) · `원문에 추가` (added in the source; `.is-new`, green). Text that changed on the source side has `.mt-src-changed` underline.
-- The translation cell being edited is `.dst.is-on`.
-- Blocks are drawn with the same body parts as the editor (`.mt-doc-callout` · `.mt-doc-code` · `.mt-doc-table`). In the source cell, the ground is one step darker.
-- Comparing two versions of an entry is `.mt-compare`. Two columns with no margin, properties on top (`.props`), and changed text is `.mt-diff`.
+- 상태는 여백에 한 줄 더 붙는다. `원문 바뀜`(`.is-changed`, 주황) · `원문에 추가`(`.is-new`, 초록). 원문 쪽에서 바뀐 글에는 `.mt-src-changed` 밑줄이 있다.
+- 고치는 중인 번역 칸은 `.dst.is-on`이다.
+- 블록은 편집기와 같은 본문 부품으로 그린다(`.mt-doc-callout` · `.mt-doc-code` · `.mt-doc-table`). 원문 칸에서는 바탕이 한 단계 어둡다.
+- 글의 두 버전을 비교하는 것은 `.mt-compare`다. 여백 없는 두 열이고, 속성이 위에 있으며(`.props`), 바뀐 글은 `.mt-diff`다.
 
-### In code
+### 코드
 
-The source view switch is `Segmented` (`size="sm"`, `inline`). The pair view is not in `@monti-cms/ui` yet. The compare view is `Compare` (see Status bar's neighbours: the entry compare screen in `screens.md`, EditorCompare).
+원문 보기 전환은 `Segmented`다(`size="sm"`, `inline`). 짝 보기는 아직 `@monti-cms/ui`에 없다. 비교 보기는 `Compare`다(상태 표시줄의 이웃 참고: `screens.md`의 글 비교 화면, EditorCompare).
 
-## Same as the source (`.mt-shared`)
+## 원문과 같음 (`.mt-shared`)
 
-A block that is not translated, such as a code block, uses the source as it is. The translation cell has only a dotted box with `원문과 같은 코드` (the same code as the source) and `English에서만 따로 고치기` (edit separately only in English). Pressing it makes a copy for this language at that moment.
+코드 블록처럼 번역하지 않는 블록은 원문을 그대로 쓴다. 번역 칸에는 `원문과 같은 코드`와 `English에서만 따로 고치기`가 든 점선 상자만 있다. 누르면 그 순간 이 언어용 사본을 만든다.
 
-Not in `@monti-cms/ui` yet.
+아직 `@monti-cms/ui`에 없다.
 
-## Running a translation
+## 번역 실행
 
-Only while dimmed blocks remain, there is a blue text button "✦ 번역" (✦ translate) at the right of the language tab row, before source view. It translates all the remaining dimmed blocks. It does not float over the text, so it does not cover the body. To translate only one block, use "✦ 번역" in the block menu.
+흐린 블록이 남아 있을 때만, 언어 탭 행 오른쪽, 원문 보기 앞에 파란 글자 버튼 "✦ 번역"이 있다. 남은 흐린 블록을 모두 번역한다. 글 위에 떠 있지 않으므로 본문을 가리지 않는다. 블록 하나만 번역하려면 블록 메뉴의 "✦ 번역"을 쓴다.
 
-### In code
+### 코드
 
-No dedicated component. The language tab row is `Tabs`, and the source view switch is `Segmented`.
+전용 컴포넌트는 없다. 언어 탭 행은 `Tabs`이고, 원문 보기 전환은 `Segmented`다.

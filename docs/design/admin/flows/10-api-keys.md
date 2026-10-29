@@ -1,141 +1,141 @@
-# Flow 10: API keys
+# 흐름 10: API 키
 
-This file lists every row and step of canvas flow 10, "흐름 10 · API 키". Adding, checking, editing and deleting keys, plugin keys, the quick-task model, and exceptions.
+이 파일은 캔버스 흐름 10 "흐름 10 · API 키"의 모든 행과 단계를 적는다. 키 추가, 확인, 편집, 지우기, 플러그인 키, 빠른 작업 모델, 예외를 다룬다.
 
-Canvas note: "흐름 10 · API 키 — 추가 · 확인 · 편집 · 지우기 · 플러그인 키 · 빠른 작업 모델 · 예외"
+캔버스 메모: "흐름 10 · API 키 — 추가 · 확인 · 편집 · 지우기 · 플러그인 키 · 빠른 작업 모델 · 예외"
 
-Screens used: [`ApiKeys`](../screens.md#apikeys).
+쓰는 화면: [`ApiKeys`](../screens.md#apikeys).
 
-Steps are the contract for the flow test. Each step names its board file, the screen and state it renders, and what the user does and sees. A step number with a letter (for example 04b) is a variant or next moment of the step before it.
+단계는 흐름 테스트의 계약이다. 단계마다 보드 파일, 그리는 화면과 상태, 사용자가 하는 일과 보는 것을 적는다. 번호에 글자가 붙은 단계(예: 04b)는 바로 앞 단계의 변형이거나 그다음 순간이다.
 
-## "키 추가" · Add a key
+## "키 추가"
 
-### Step 01: "키 추가 · + 키 추가 → 서비스 고르기"
+### 단계 01: "키 추가 · + 키 추가 → 서비스 고르기"
 
-- Board: `Flow10Step01.dc.html`
-- Renders: `ApiKeys` (stage "서비스 고르기")
-- The user presses "+ 키 추가" (add key) on Tools › API keys. A service picker opens: AI (OpenAI, OpenRouter, Google, OpenAI-compatible address, Ollama) and the first-party AI service.
+- 보드: `Flow10Step01.dc.html`
+- 화면: `ApiKeys` (stage "서비스 고르기")
+- 사용자가 도구 › API 키에서 "+ 키 추가"를 누른다. 서비스 고르기가 열린다. AI(OpenAI, OpenRouter, Google, OpenAI 호환 주소, Ollama)와 자체 AI 서비스가 있다.
 
-### Step 02: "키 추가 · 서비스를 고른 뒤 · 이름은 서비스 이름으로 채워져 있음 · 키"
+### 단계 02: "키 추가 · 서비스를 고른 뒤 · 이름은 서비스 이름으로 채워져 있음 · 키"
 
-- Board: `Flow10Step02.dc.html`
-- Renders: `ApiKeys` (stage "키 입력")
-- After choosing the service, the add dialog shows the name already filled with the service name, and a key field (placeholder sk-ant-…) with the add button.
+- 보드: `Flow10Step02.dc.html`
+- 화면: `ApiKeys` (stage "키 입력")
+- 서비스를 고르면 추가 대화상자가 나온다. 이름은 서비스 이름으로 이미 채워져 있고, 키 칸(자리 표시 글자 sk-ant-…)과 추가 버튼이 있다.
 
-### Step 02b: "키 추가 · OpenAI 호환 주소 → 주소 칸이 더해짐 · 이름은 주소의 호스트로 채워짐"
+### 단계 02b: "키 추가 · OpenAI 호환 주소 → 주소 칸이 더해짐 · 이름은 주소의 호스트로 채워짐"
 
-- Board: `Flow10Step02b.dc.html`
-- Renders: `ApiKeys` (stage "호환 주소")
-- Choosing OpenAI-compatible address adds an address field. The name is filled with the host of that address.
+- 보드: `Flow10Step02b.dc.html`
+- 화면: `ApiKeys` (stage "호환 주소")
+- OpenAI 호환 주소를 고르면 주소 칸이 더해진다. 이름은 그 주소의 호스트로 채워진다.
 
-### Step 03: "키 추가 · 추가 → 서비스에 확인하는 중…"
+### 단계 03: "키 추가 · 추가 → 서비스에 확인하는 중…"
 
-- Board: `Flow10Step03.dc.html`
-- Renders: `ApiKeys` (stage "확인하는 중")
-- The user presses add. The dialog shows "확인하는 중…" (checking with the service).
+- 보드: `Flow10Step03.dc.html`
+- 화면: `ApiKeys` (stage "확인하는 중")
+- 사용자가 추가를 누른다. 대화상자에 "확인하는 중…"이 나온다.
 
-### Step 04: "키 추가 · 서비스가 받아 주지 않음 → 키 칸 아래 한 줄 · 창은 열린 채"
+### 단계 04: "키 추가 · 서비스가 받아 주지 않음 → 키 칸 아래 한 줄 · 창은 열린 채"
 
-- Board: `Flow10Step04.dc.html`
-- Renders: `ApiKeys` (stage "키 거절")
-- The service does not accept the key. One line under the key field says the key is not valid ("맞지 않는 키예요."); the dialog stays open.
+- 보드: `Flow10Step04.dc.html`
+- 화면: `ApiKeys` (stage "키 거절")
+- 서비스가 키를 받아 주지 않는다. 키 칸 아래 한 줄이 키가 맞지 않는다고 알린다("맞지 않는 키예요."). 대화상자는 열린 채로 남는다.
 
-### Step 05: "키 추가 · 같은 이름의 키가 이미 있음 → 이름이 "Anthropic 2"로 채워짐 · 한 줄"
+### 단계 05: "키 추가 · 같은 이름의 키가 이미 있음 → 이름이 "Anthropic 2"로 채워짐 · 한 줄"
 
-- Board: `Flow10Step05.dc.html`
-- Renders: `ApiKeys` (stage "이름 겹침")
-- A key with the same name already exists. The name is filled in as "Anthropic 2" and one line says a key with that name exists.
+- 보드: `Flow10Step05.dc.html`
+- 화면: `ApiKeys` (stage "이름 겹침")
+- 같은 이름의 키가 이미 있다. 이름이 "Anthropic 2"로 채워지고, 그 이름의 키가 있다는 한 줄이 나온다.
 
-### Step 06: "키 추가 · 추가됨 → 목록에 새 줄 · 토스트"
+### 단계 06: "키 추가 · 추가됨 → 목록에 새 줄 · 토스트"
 
-- Board: `Flow10Step06.dc.html`
-- Renders: `ApiKeys` (stage "추가됨")
-- The key was added. A new row appears in the list (name, last four characters) and a toast says "키를 추가했어요".
+- 보드: `Flow10Step06.dc.html`
+- 화면: `ApiKeys` (stage "추가됨")
+- 키가 추가됐다. 목록에 새 행(이름, 마지막 네 글자)이 생기고, 토스트가 "키를 추가했어요"라고 알린다.
 
-## "편집" · Edit
+## "편집"
 
-### Step 07: "편집 · 편집 → 서비스는 글자로 · 이름 · 키는 ··· a1b2 · 바꾸기"
+### 단계 07: "편집 · 편집 → 서비스는 글자로 · 이름 · 키는 ··· a1b2 · 바꾸기"
 
-- Board: `Flow10Step07.dc.html`
-- Renders: `ApiKeys` (stage "편집")
-- The user presses edit on a key. The service shows as plain text, the name is editable, the key shows as "··· a1b2" with a "바꾸기" (change) action, and a save button.
+- 보드: `Flow10Step07.dc.html`
+- 화면: `ApiKeys` (stage "편집")
+- 사용자가 키의 편집을 누른다. 서비스는 그냥 글자로 보이고, 이름은 고칠 수 있으며, 키는 "··· a1b2"와 "바꾸기" 동작으로 보이고, 저장 버튼이 있다.
 
-### Step 08: "편집 · 바꾸기 → 빈 키 칸이 열림 · 그대로를 누르면 ··· a1b2로 돌아감"
+### 단계 08: "편집 · 바꾸기 → 빈 키 칸이 열림 · 그대로를 누르면 ··· a1b2로 돌아감"
 
-- Board: `Flow10Step08.dc.html`
-- Renders: `ApiKeys` (stage "편집 키 열기")
-- The user presses change. An empty key field opens; "그대로" (keep) puts back "··· a1b2".
+- 보드: `Flow10Step08.dc.html`
+- 화면: `ApiKeys` (stage "편집 키 열기")
+- 사용자가 바꾸기를 누른다. 빈 키 칸이 열린다. "그대로"를 누르면 "··· a1b2"로 돌아간다.
 
-### Step 09: "편집 · 새 키 → 저장 → 확인하는 중… (03 · 04와 같은 확인, 같은 이름은 05와 같은 한 줄)"
+### 단계 09: "편집 · 새 키 → 저장 → 확인하는 중… (03 · 04와 같은 확인, 같은 이름은 05와 같은 한 줄)"
 
-- Board: `Flow10Step09.dc.html`
-- Renders: `ApiKeys` (stage "편집 확인 중")
-- The user enters a new key and saves. The dialog shows "확인하는 중…". The check is the same as in steps 03 and 04, and a duplicate name shows the same line as in step 05.
+- 보드: `Flow10Step09.dc.html`
+- 화면: `ApiKeys` (stage "편집 확인 중")
+- 사용자가 새 키를 넣고 저장한다. 대화상자에 "확인하는 중…"이 나온다. 확인은 단계 03, 04와 같고, 이름이 겹치면 단계 05와 같은 줄이 나온다.
 
-### Step 10: "편집 · 저장됨 → 줄에 새 끝자리 · 토스트"
+### 단계 10: "편집 · 저장됨 → 줄에 새 끝자리 · 토스트"
 
-- Board: `Flow10Step10.dc.html`
-- Renders: `ApiKeys` (stage "편집 저장됨")
-- Saved. The row shows the new last four characters and a toast says "저장했어요".
+- 보드: `Flow10Step10.dc.html`
+- 화면: `ApiKeys` (stage "편집 저장됨")
+- 저장됐다. 행에 새 마지막 네 글자가 보이고, 토스트가 "저장했어요"라고 알린다.
 
-## "지우기" · Delete
+## "지우기"
 
-### Step 11: "지우기 · 줄의 지우기 → 쓰는 곳이 있으면 확인에 멈추는 곳 목록 · 빨간 지우기"
+### 단계 11: "지우기 · 줄의 지우기 → 쓰는 곳이 있으면 확인에 멈추는 곳 목록 · 빨간 지우기"
 
-- Board: `Flow10Step11.dc.html`
-- Renders: `ApiKeys` (stage "지우기 확인")
-- The user presses delete on a row. The confirm says it cannot be undone and that places using the key will stop; if the key is in use it lists where (assistant: claude-sonnet-5-5; quick tasks: default). The delete button is red.
+- 보드: `Flow10Step11.dc.html`
+- 화면: `ApiKeys` (stage "지우기 확인")
+- 사용자가 행의 지우기를 누른다. 확인 창은 되돌릴 수 없고 이 키를 쓰는 곳이 멈춘다고 알린다. 키를 쓰는 곳이 있으면 그곳을 나열한다(어시스턴트: claude-sonnet-5-5, 빠른 작업: 기본). 지우기 버튼은 빨갛다.
 
-### Step 11b: "지우기 · 쓰는 곳이 없어도 확인 (되돌릴 수 없음)"
+### 단계 11b: "지우기 · 쓰는 곳이 없어도 확인 (되돌릴 수 없음)"
 
-- Board: `Flow10Step11b.dc.html`
-- Renders: `ApiKeys` (stage "쓰는 곳 없이 지우기")
-- A key that nothing uses still asks for confirmation ("되돌릴 수 없어요.").
+- 보드: `Flow10Step11b.dc.html`
+- 화면: `ApiKeys` (stage "쓰는 곳 없이 지우기")
+- 아무 데서도 쓰지 않는 키도 확인을 거친다("되돌릴 수 없어요.").
 
-## "플러그인 키" · Plugin keys
+## "플러그인 키"
 
-### Step 12: "플러그인 · 키 없음을 누름 → 저장된 키가 없어 바로 키 추가 (서비스가 골라짐)"
+### 단계 12: "플러그인 · 키 없음을 누름 → 저장된 키가 없어 바로 키 추가 (서비스가 골라짐)"
 
-- Board: `Flow10Step12.dc.html`
-- Renders: `ApiKeys` (stage "키 넣기")
-- Plugin keys. The user clicks "키 없음" (no key) on a plugin key row (spelling check, search keys). Because no stored key exists, the add-key dialog opens right away with the service already chosen.
+- 보드: `Flow10Step12.dc.html`
+- 화면: `ApiKeys` (stage "키 넣기")
+- 플러그인 키다. 사용자가 플러그인 키 행(맞춤법 검사, 검색 키)의 "키 없음"을 누른다. 저장된 키가 없으므로 서비스가 이미 골라진 채로 키 추가 대화상자가 바로 열린다.
 
-### Step 12b: "키 넣기 · 추가됨 → 줄에 키 이름 · 토스트"
+### 단계 12b: "키 넣기 · 추가됨 → 줄에 키 이름 · 토스트"
 
-- Board: `Flow10Step12b.dc.html`
-- Renders: `ApiKeys` (stage "키 넣음")
-- The key was added. The plugin row now shows the key name and a toast says the key was added to the plugin.
+- 보드: `Flow10Step12b.dc.html`
+- 화면: `ApiKeys` (stage "키 넣음")
+- 키가 추가됐다. 플러그인 행에 키 이름이 보이고, 토스트가 플러그인에 키를 넣었다고 알린다.
 
-## "빠른 작업 모델" · Quick-task model
+## "빠른 작업 모델"
 
-### Step 13: "빠른 작업 모델 · 모델 메뉴 (흐름 2의 고르기, 키마다 묶음)"
+### 단계 13: "빠른 작업 모델 · 모델 메뉴 (흐름 2의 고르기, 키마다 묶음)"
 
-- Board: `Flow10Step13.dc.html`
-- Renders: `ApiKeys` (stage "모델 고르기")
-- Quick-task model. The user opens the model menu for quick tasks (summaries, tags, alt text, translation filling). It is the same picker as in flow 2: search box, models grouped by key.
+- 보드: `Flow10Step13.dc.html`
+- 화면: `ApiKeys` (stage "모델 고르기")
+- 빠른 작업 모델이다. 사용자가 빠른 작업(요약, 태그, 대체 텍스트, 번역 채우기)에 쓸 모델 메뉴를 연다. 흐름 2와 같은 고르기로, 검색창이 있고 모델은 키마다 묶여 있다.
 
-### Step 13b: "빠른 작업 모델 · 고르면 바로 바뀜 · 토스트"
+### 단계 13b: "빠른 작업 모델 · 고르면 바로 바뀜 · 토스트"
 
-- Board: `Flow10Step13b.dc.html`
-- Renders: `ApiKeys` (stage "모델 바뀜")
-- Picking a model changes it immediately. A toast says "빠른 작업 모델을 바꿨어요" and the row shows the model.
+- 보드: `Flow10Step13b.dc.html`
+- 화면: `ApiKeys` (stage "모델 바뀜")
+- 모델을 고르면 바로 바뀐다. 토스트가 "빠른 작업 모델을 바꿨어요"라고 알리고, 행에 그 모델이 보인다.
 
-## "예외" · Exceptions
+## "예외"
 
-### Step 14: "예외 · 읽을 수 없는 키 (서버 비밀값이 바뀜) → 줄마다 표시 · 편집"
+### 단계 14: "예외 · 읽을 수 없는 키 (서버 비밀값이 바뀜) → 줄마다 표시 · 편집"
 
-- Board: `Flow10Step14.dc.html`
-- Renders: `ApiKeys` (stage "읽을 수 없음")
-- Exception: keys that cannot be read because the server secret changed. A banner says 3 keys cannot be read, naming the server secret MONTI_SECRET as changed. Each key row is marked "읽을 수 없어요" and has edit.
+- 보드: `Flow10Step14.dc.html`
+- 화면: `ApiKeys` (stage "읽을 수 없음")
+- 예외: 서버 비밀값이 바뀌어 키를 읽을 수 없다. 배너가 키 3개를 읽을 수 없다고 알리며, 서버 비밀값 MONTI_SECRET이 바뀌었다고 적는다. 키 행마다 "읽을 수 없어요" 표시와 편집이 있다.
 
-### Step 14b: "예외 · 읽을 수 없는 키 · 편집 → 키 칸에 초점 · 키를 다시 넣어 주세요 (키 필수)"
+### 단계 14b: "예외 · 읽을 수 없는 키 · 편집 → 키 칸에 초점 · 키를 다시 넣어 주세요 (키 필수)"
 
-- Board: `Flow10Step14b.dc.html`
-- Renders: `ApiKeys` (stage "다시 넣기")
-- The user presses edit on an unreadable key. The key field is focused and the message says to enter the key again. The key is required before saving.
+- 보드: `Flow10Step14b.dc.html`
+- 화면: `ApiKeys` (stage "다시 넣기")
+- 사용자가 읽을 수 없는 키의 편집을 누른다. 키 칸에 포커스가 가고, 키를 다시 넣으라는 말이 나온다. 저장하려면 키가 있어야 한다.
 
-### Step 15: "예외 · MONTI_SECRET 없음 → 배너 · 키 추가 막힘"
+### 단계 15: "예외 · MONTI_SECRET 없음 → 배너 · 키 추가 막힘"
 
-- Board: `Flow10Step15.dc.html`
-- Renders: `ApiKeys` (stage "비밀값 없음")
-- Exception: MONTI_SECRET is not set. A banner says keys cannot be saved until the secret is set and the server restarted. Adding keys is blocked; the key counts show none and plugin rows show "키 없음".
+- 보드: `Flow10Step15.dc.html`
+- 화면: `ApiKeys` (stage "비밀값 없음")
+- 예외: MONTI_SECRET이 설정되지 않았다. 배너가 비밀값을 설정하고 서버를 다시 시작하기 전까지는 키를 저장할 수 없다고 알린다. 키 추가가 막히고, 키 개수는 없음으로 나오며, 플러그인 행은 "키 없음"을 보여 준다.

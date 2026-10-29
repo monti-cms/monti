@@ -9,7 +9,7 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 
 ## Read first
 
-1. `docs/design/admin/README.md`: principles and the section "Building admin UI".
+1. `docs/design/admin/README.md`: principles and the section "관리자 화면 UI 만들기" (how to build admin UI).
 2. `docs/design/admin/tokens.md`: which token to use for what.
 3. The family page in `docs/design/admin/components/` for every part you touch.
 4. `docs/design/admin/screens.md` and the `flows/` file for the screen and flow you build.

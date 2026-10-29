@@ -1,87 +1,87 @@
-# Button
+# 버튼
 
-This page covers everything in the admin that is pressed: pills, text buttons, icon buttons and the split pill.
+이 페이지는 관리자 화면에서 누르는 것을 모두 다룬다. 알약, 글자 버튼, 아이콘 버튼, 나뉜 알약이다.
 
-The order of weight is black pill, then gray pill, then text button, then the ⋯ menu. A screen or a floating surface has one black pill.
+무게 순서는 검은 알약, 회색 알약, 글자 버튼, ⋯ 메뉴다. 화면 하나나 떠 있는 면 하나에 검은 알약은 하나다.
 
-## Pill
+## 알약
 
-A pill-shaped button. It has no border and no shadow. Its text is 600 and its height is `height-control-md` (36px).
+알약 모양 버튼이다. 테두리도 그림자도 없다. 글자는 600이고 높이는 `height-control-md`(36px)다.
 
-- **primary**: the one main action of the screen ("새 글 쓰기" (new post), "저장하고 적용" (save and apply), "모두 받기" (accept all)). `bg-emphasis` with `fg-on-emphasis`. Only one per screen or floating surface.
-- **secondary**: one or two common side actions ("검색" (search), "미리보기" (preview)). `bg-muted`.
-- **danger**: the confirmation of something that cannot be undone ("휴지통으로" (to trash), "지우기" (delete)). Use it only inside a confirmation dialog.
-- **sm**: pills inside cards and panels ("적용" (apply), "저장" (save)). Height `height-control-sm` (28px), 13px text, 12px side padding.
-- Centering the text is the font's job. Padding above and below is equal; do not lift the text with extra bottom padding.
-- **Disabled**: opacity .45. The reason it is disabled is told by the text beside it or by what is left to do, not by the button.
-- **Loading** (`.is-loading`): a turning ring (`.mt-spinner`, 14px, 12px in `sm`) comes first, and the label says what is being done ("저장 중…" (saving), "올리는 중 64%" (uploading 64%)).
-  - A leading icon is replaced by the ring.
-  - The fill stays as it is; the button is not dimmed. It cannot be pressed again, as with disabled. It is not dimmed because it is "doing something", not "unable to do something".
-  - The spacing was set by eye. For a black pill: 13px from the left edge, 15px on the right, 7px between ring and text. The left is 2px wider than the ring's top and bottom margin, and the right is 3px narrower than a normal pill. In `sm` the padding is 10px on the left and 9px on the right.
+- **primary**: 화면의 주된 동작 하나("새 글 쓰기", "저장하고 적용", "모두 받기"). `bg-emphasis`에 `fg-on-emphasis`. 화면이나 떠 있는 면마다 하나만 둔다.
+- **secondary**: 흔한 곁 동작 한두 개("검색", "미리보기"). `bg-muted`.
+- **danger**: 되돌릴 수 없는 일의 확인("휴지통으로", "지우기"). 확인 대화상자 안에서만 쓴다.
+- **sm**: 카드와 패널 안의 알약("적용", "저장"). 높이 `height-control-sm`(28px), 글자 13px, 좌우 여백 12px.
+- 글자를 가운데에 두는 것은 글꼴의 몫이다. 위아래 여백은 같다. 아래 여백을 더 줘서 글자를 들어 올리지 않는다.
+- **비활성**: 불투명도 .45. 왜 비활성인지는 버튼이 아니라 옆의 글이나 남은 할 일이 알려 준다.
+- **로딩**(`.is-loading`): 도는 고리(`.mt-spinner`, 14px, `sm`에서는 12px)가 앞에 오고, 라벨은 하고 있는 일을 말한다("저장 중…", "올리는 중 64%").
+  - 앞 아이콘은 고리로 바뀐다.
+  - 채움은 그대로 두고 버튼을 흐리게 하지 않는다. 비활성처럼 다시 누를 수 없다. 흐리게 하지 않는 까닭은 "할 수 없는" 것이 아니라 "하고 있는" 것이기 때문이다.
+  - 간격은 눈으로 맞췄다. 검은 알약은 왼쪽 끝에서 13px, 오른쪽 15px, 고리와 글자 사이 7px이다. 왼쪽은 고리의 위아래 여백보다 2px 넓고, 오른쪽은 보통 알약보다 3px 좁다. `sm`에서는 왼쪽 여백 10px, 오른쪽 9px이다.
 
-### Leading icon
+### 앞 아이콘
 
-An icon (✦, the magnifier) is pointed or round, so with equal padding it looks emptier than the text side. A button's first icon therefore pulls 2px into the left padding (`.mt-btn > svg:first-child`). Measured, the ink margins left and right are close, and it looks centered.
+아이콘(✦, 돋보기)은 뾰족하거나 둥글어서, 여백이 같으면 글자 쪽보다 비어 보인다. 그래서 버튼의 첫 아이콘은 왼쪽 여백 안으로 2px 당긴다(`.mt-btn > svg:first-child`). 재 보면 좌우의 잉크 여백이 비슷하고, 가운데에 있는 것처럼 보인다.
 
-### In code
+### 코드
 
-`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring.
+`@monti-cms/ui`의 `Button`: `variant`는 `primary`, `secondary`, `danger`, `outline-danger` 중 하나다. `size`는 `md`나 `sm`이다. `loading`은 고리를 보여 준다.
 
-A button never shows its shortcut: "저장", not "저장 ⌘S". On Windows it would read "저장 Ctrl+S", too long for a label. A shortcut is shown only in a tooltip and at the end of a menu row, written for the system the admin runs on (see Menu, "Shortcuts").
+버튼은 단축키를 보여 주지 않는다. "저장 ⌘S"가 아니라 "저장"이다. Windows에서는 "저장 Ctrl+S"가 되어 라벨로는 너무 길다. 단축키는 툴팁과 메뉴 행 끝에서만 보여 주고, 관리자 화면이 돌아가는 시스템에 맞춰 적는다(메뉴의 "단축키" 참고).
 
-`outline-danger` is not in the DS README. It is a quieter `danger` with a 1px line. The side padding of the filled pills is 18px, 16px for `secondary` and 12px for `sm`.
+`outline-danger`는 DS README에 없다. 1px 선이 있는 조용한 `danger`다. 채운 알약의 좌우 여백은 18px이고, `secondary`는 16px, `sm`은 12px이다.
 
-## Text button
+## 글자 버튼
 
-A button that is only text. Adding, editing and side actions inside a section are all text buttons.
+글자만 있는 버튼이다. 섹션 안의 추가, 편집, 곁 동작은 모두 글자 버튼이다.
 
-- **Default**: `fg-muted`, no border ("취소" (cancel), "모두 되돌리기" (undo all)).
-- **underline**: presses go somewhere or open something ("검토" (review), "AI로 채우기" (fill with AI), "목록에서 보기 →" (see in the list)). The underline is `border-strong`.
-- **quiet**: less important things ("+ 언어" (+ language), "+ 묶음 추가" (+ add a group)). `fg-subtle`.
-- **danger**: the risky second choice of a confirmation dialog, such as "저장하지 않고 나가기" (leave without saving).
-- **Loading** (`.mt-text-btn.is-loading`): the same rule as the pill.
-  - The button keeps its place, its color and its underline.
-  - The label says what is being done ("보내는 중…" (sending)), with a ring in front of it at the height of the text's ink (`.mt-spinner`, 0.85em: 11px beside 13px text).
-  - A button at the right edge only grows to the left, so its right end does not move.
-  - It cannot be pressed again. Used by the activity log's "다시 보내기" (send again) and "모두 다시 보내기" (send all again).
+- **기본**: `fg-muted`, 테두리 없음("취소", "모두 되돌리기").
+- **underline**: 누르면 어딘가로 가거나 무언가를 연다("검토", "AI로 채우기", "목록에서 보기 →"). 밑줄은 `border-strong`이다.
+- **quiet**: 덜 중요한 것("+ 언어", "+ 묶음 추가"). `fg-subtle`.
+- **danger**: 확인 대화상자의 위험한 두 번째 선택. "저장하지 않고 나가기" 같은 것이다.
+- **로딩**(`.mt-text-btn.is-loading`): 알약과 같은 규칙이다.
+  - 버튼은 자리, 색, 밑줄을 그대로 지킨다.
+  - 라벨은 하고 있는 일을 말하고("보내는 중…"), 그 앞에 글자 잉크 높이의 고리가 온다(`.mt-spinner`, 0.85em. 13px 글자 옆에서 11px).
+  - 오른쪽 끝에 있는 버튼은 왼쪽으로만 자라서 오른쪽 끝이 움직이지 않는다.
+  - 다시 누를 수 없다. 활동 기록의 "다시 보내기"와 "모두 다시 보내기"가 쓴다.
 
-### In code
+### 코드
 
-`TextButton`: `variant` is `plain` (the default), `underline`, `quiet` or `danger`; `mono` sets fixed-width letters for an address or identifier. With an `href` it renders a link, and the app's router link goes in `render`. An icon goes before the text (14px, 6px gap); a `Caret` after it keeps its own 12px. The DS draws no hover; the text turns ink, and so does the rule.
+`TextButton`: `variant`는 `plain`(기본), `underline`, `quiet`, `danger` 중 하나다. `mono`는 주소나 식별자에 고정폭 글자를 쓴다. `href`가 있으면 링크로 그리고, 앱의 라우터 링크는 `render`에 넣는다. 아이콘은 글자 앞에 온다(14px, 간격 6px). 뒤에 오는 `Caret`은 자기 크기 12px를 지킨다. DS는 호버를 그리지 않는다. 글자가 잉크색이 되고 선도 그렇게 된다.
 
-The DS README names this part `TextLink`. No such export exists; `TextButton` is the part.
+DS README는 이 부품을 `TextLink`라고 부른다. 그런 export는 없다. 부품은 `TextButton`이다.
 
-## Icon button
+## 아이콘 버튼
 
-A round icon button, 32px (`height-icon-button`). The ⋯, properties and ✦ assistant buttons in a header, and the close button of a panel.
+둥근 아이콘 버튼이다. 32px(`height-icon-button`). 머리의 ⋯, 속성, ✦ 어시스턴트 버튼과 패널의 닫기 버튼이다.
 
-- The on state (the properties panel is open) is `bg-selected`.
-- On a screen with no header, the ✦ assistant button floats at the top right corner (`mt-icon-btn--corner`).
-- ⋯ holds everything else. In a list row it shows only when the pointer is over the row.
-- Always give it a name (`aria-label`). The name of a ⋯ is the menu's items.
+- 켠 상태(속성 패널이 열려 있음)는 `bg-selected`다.
+- 머리가 없는 화면에서는 ✦ 어시스턴트 버튼이 오른쪽 위 모서리에 떠 있다(`mt-icon-btn--corner`).
+- ⋯에는 나머지가 모두 들어간다. 목록 행에서는 포인터가 행 위에 있을 때만 보인다.
+- 언제나 이름(`aria-label`)을 준다. ⋯의 이름은 메뉴의 항목들이다.
 
-### Red icon button (`.mt-icon-btn--danger`)
+### 빨간 아이콘 버튼 (`.mt-icon-btn--danger`)
 
-Used only for deleting and removing (delete a rule, delete a row or cell of a table, delete a block). The icon is `fg-danger`, and on hover the background is `bg-danger-muted`. The name shows as a tooltip. A delete that cannot be undone is not finished by the button alone: it goes through a confirmation.
+지우기와 빼기에만 쓴다(규칙 지우기, 표의 행이나 칸 지우기, 블록 지우기). 아이콘은 `fg-danger`이고, 호버하면 배경이 `bg-danger-muted`가 된다. 이름은 툴팁으로 보인다. 되돌릴 수 없는 지우기는 버튼만으로 끝내지 않고 확인을 거친다.
 
-### In code
+### 코드
 
-`IconButton`: `label` is both the accessible name and the hover tooltip; `pressed` makes it a toggle that keeps a background while on; `tone="danger"` is the red version. To open a menu or popover, pass `trigger`, for example `trigger={(button) => <PopoverTrigger render={button} />}`.
+`IconButton`: `label`은 접근성 이름이자 호버 툴팁이다. `pressed`는 켜져 있는 동안 배경을 유지하는 토글로 만든다. `tone="danger"`는 빨간 버전이다. 메뉴나 팝오버를 열려면 `trigger`를 넘긴다. 예: `trigger={(button) => <PopoverTrigger render={button} />}`.
 
-## Split pill
+## 나뉜 알약
 
-One pill that holds the main action and its variants. Today there is one: "발행하기 ▾" (publish) in the editor.
+주된 동작과 그 변형을 담는 알약 하나다. 지금은 편집기의 "발행하기 ▾" 하나뿐이다.
 
-- The ▾ holds only other ways of the same action, such as "오늘 날짜로 다시 발행" (republish with today's date).
-- A first publish (a draft) has no ▾; it is a plain primary button.
-- The ▾ menu has two rows, each with the publish date under it: "발행하기" ("발행일 2026. 10. 01 그대로" (date kept)) and "오늘 날짜로 다시 발행" ("발행일 2026. 10. 26" (today's date)).
-- With nothing changed since it was published, the pill reads "발행됨" (published) and is dimmed (disabled, opacity .45). Editing makes the status "수정 중" and the pill "발행하기" again.
-- While publishing, the left half gets a turning ring ("발행 중" (publishing)) and neither half can be pressed.
+- ▾에는 같은 동작의 다른 방법만 담는다. "오늘 날짜로 다시 발행" 같은 것이다.
+- 첫 발행(초안)에는 ▾가 없다. 평범한 primary 버튼이다.
+- ▾ 메뉴에는 행이 둘 있고, 각각 아래에 발행일을 적는다. "발행하기"("발행일 2026. 10. 01 그대로")와 "오늘 날짜로 다시 발행"("발행일 2026. 10. 26")이다.
+- 발행한 뒤로 바뀐 것이 없으면 알약은 "발행됨"이라고 쓰고 흐려진다(비활성, 불투명도 .45). 편집하면 상태가 "수정 중"이 되고 알약은 다시 "발행하기"가 된다.
+- 발행하는 동안에는 왼쪽 반에 도는 고리가 붙고("발행 중") 양쪽 반 모두 누를 수 없다.
 
-### In code
+### 코드
 
-`SplitButton`: `label`, `menu` (the items, as `DropdownMenuItem`s), `menuLabel` (names the caret half for screen readers and its tooltip), `loading` and `disabled` (both apply to both halves). The menu hangs under the whole pill. A loading pill keeps its fill.
+`SplitButton`: `label`, `menu`(항목들, `DropdownMenuItem`으로), `menuLabel`(캐럿 쪽 반의 스크린 리더 이름이자 툴팁), `loading`과 `disabled`(둘 다 양쪽 반에 적용). 메뉴는 알약 전체 아래에 달린다. 로딩 중인 알약은 채움을 지킨다.
 
-## Spinner
+## 스피너
 
-The working mark. A 14px ring in the ink color of the text beside it, a quarter open, one turn per second (one per three seconds when the system asks for less motion). It is decorative: the words beside it say what is happening. `Button`, `SplitButton` and `AiAction` show it themselves while `loading`; use `Spinner` directly only next to a status line.
+일하는 중이라는 표시다. 옆 글자의 잉크색으로 그린 14px 고리로, 4분의 1이 열려 있고 1초에 한 바퀴 돈다(시스템이 움직임을 줄여 달라고 하면 3초에 한 바퀴). 장식이다. 무슨 일이 일어나는지는 옆의 말이 알려 준다. `Button`, `SplitButton`, `AiAction`은 `loading`인 동안 스스로 보여 준다. `Spinner`는 상태 줄 옆에서만 직접 쓴다.

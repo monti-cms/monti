@@ -1,38 +1,38 @@
-# Tabs
+# 탭
 
-This page covers the two ways to show a view or a condition in place: tabs for switching views, and chips for filters that are on.
+이 페이지는 보기나 조건을 제자리에서 보이는 두 방법을 다룬다. 보기를 바꾸는 탭과, 켜진 필터를 보이는 칩이다.
 
-A tab is underlined text. A filter that is on is a chip.
+탭은 밑줄 친 글자다. 켜진 필터는 칩이다.
 
-## Tabs
+## 탭
 
-Underlined text tabs. Language tabs, status tabs, settings sections and the properties panel tabs all use this shape.
+밑줄 친 글자 탭이다. 언어 탭, 상태 탭, 설정 절, 속성 패널 탭이 모두 이 모양을 쓴다.
 
-- The picked tab is ink at 600 with a 1.5px ink underline. The others are `fg-subtle`. Tabs are 13px with 20px between them (`space-20`).
-- Tabs in the filter row under a page title (`mt-toolbar`) differ: 14px, the picked tab is 700, and there is no underline. One heavy line under the title is enough.
-- A count goes next to the name in mono ("전체 148" (all 148)).
-- At the very top of a pane (`mt-tabs--bar`, height `height-panebar`, 44px, 24px side padding) the underline sits on the pane's own rule.
-- A tab with something to deal with gets a dot after its name: warning is `fg-warning`, an AI proposal is `fg-proposal`. See the change dot in the Status page.
-- Underlined tabs are for the top of a pane and for language tabs. Under a page title use the bold-only form.
+- 고른 탭은 잉크 색 600에 1.5px 잉크 밑줄이다. 나머지는 `fg-subtle`이다. 탭은 13px이고 사이가 20px다(`space-20`).
+- 페이지 제목 아래 필터 행(`mt-toolbar`)의 탭은 다르다. 14px이고, 고른 탭은 700이며, 밑줄이 없다. 제목 아래의 굵은 선 하나로 충분하다.
+- 개수는 이름 옆에 mono로 둔다("전체 148").
+- 창 맨 위(`mt-tabs--bar`, 높이 `height-panebar`, 44px, 양옆 안쪽 여백 24px)에서는 밑줄이 창 자체의 선 위에 놓인다.
+- 처리할 것이 있는 탭은 이름 뒤에 점이 붙는다. 경고는 `fg-warning`, AI 제안은 `fg-proposal`이다. 상태 페이지의 바뀜 점을 참고한다.
+- 밑줄 탭은 창 맨 위와 언어 탭에 쓴다. 페이지 제목 아래에는 굵기만 다른 형태를 쓴다.
 
-### In code
+### 코드
 
-`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`. `TabsList` has `variant`: `line` (the default), `bar` (the top of a pane; `inset` lines up the first tab with the content's side padding) and `toolbar` (under a page title). A tab can carry a mono count (a `warning` tone for a count that needs attention, such as failed deliveries) and a `ChangeDot`.
+`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`. `TabsList`에는 `variant`가 있다. `line`(기본), `bar`(창 맨 위. `inset`은 첫 탭을 내용의 양옆 안쪽 여백에 맞춘다), `toolbar`(페이지 제목 아래)다. 탭은 mono 개수(실패한 전송처럼 살펴봐야 할 개수에는 `warning` 톤)와 `ChangeDot`을 가질 수 있다.
 
-`TabLinks` and `TabLink` do the same for pages that are links, such as the pages of one tool page in the filter row under a title.
+`TabLinks`와 `TabLink`는 링크인 페이지에 같은 일을 한다. 제목 아래 필터 행에 놓인, 도구 페이지 하나의 여러 페이지가 그렇다.
 
-`FolderTabs` is another kind of tab, for a list of fields split into pages. It is described in the List page, under the field outline.
+`FolderTabs`는 다른 종류의 탭으로, 여러 페이지로 나뉜 필드 목록에 쓴다. 목록 페이지의 필드 개요 아래에서 설명한다.
 
-## Chip
+## 칩
 
-A filter that is on, or a condition that was picked. A × on the right removes it.
+켜진 필터, 또는 고른 조건이다. 오른쪽의 ×를 누르면 없어진다.
 
-- A chip is 28px high (`height-control-sm`), 13px at 600, on `bg-selected`, with 10px side padding.
-- The filters that are on appear as chips in a row under the page title. See the List page.
-- An AI-set chip is blue with a ✦ in front. See the Proposal page.
+- 칩은 높이 28px(`height-control-sm`), 13px 600, `bg-selected` 위에, 양옆 안쪽 여백 10px다.
+- 켜진 필터는 페이지 제목 아래 한 행에 칩으로 나타난다. 목록 페이지를 참고한다.
+- AI가 정한 칩은 파랗고 앞에 ✦가 붙는다. 제안 페이지를 참고한다.
 
-### In code
+### 코드
 
-`Chip` (`onRemove` adds the ×, `removeLabel` names it for screen readers, `proposal` is the AI-set look). There is no chip row: a list shows its filters as the dot after a column's name. `FilterButton` is a condition that is not on yet: its name and a caret that opens a list of values; once a value is picked it becomes a `Chip`.
+`Chip`(`onRemove`는 ×를 더하고, `removeLabel`은 스크린 리더용 이름을 붙이며, `proposal`은 AI가 정한 모양이다). 칩 행은 없다. 목록은 필터를 열 이름 뒤의 점으로 보인다. `FilterButton`은 아직 켜지지 않은 조건이다. 이름과, 값 목록을 여는 꺾쇠가 있다. 값을 고르면 `Chip`이 된다.
 
-The DS README names the chip part `Badge(filter)`. No such export exists.
+DS README는 칩 부품을 `Badge(filter)`라고 부른다. 그런 export는 없다.

@@ -1,87 +1,87 @@
-# Status
+# 상태
 
-This page covers what tells the present state: entry status, counts, change dots, progress, notice strips and toasts.
+이 페이지는 지금 상태를 알려 주는 것들을 다룬다. 글 상태, 개수, 변경 점, 진행, 알림 띠, 토스트다.
 
-Color is for state only, and it is always paired with a shape or a word.
+색은 상태에만 쓰고, 언제나 모양이나 말과 짝을 이룬다.
 
-## Entry status
+## 글 상태
 
-The state of an entry, given by a dot shape and a word together. Color alone never tells states apart.
+글의 상태는 점 모양과 말을 함께 써서 나타낸다. 색만으로 상태를 가르지 않는다.
 
-- "발행됨" (published): a filled dot, `fg-success`.
-- "수정 중" (editing: published, with changes not published yet): a filled dot, `fg-warning`.
-- "초안" (draft): an empty ring, `fg-muted`.
-- "보관됨" (archived): a short bar, `fg-subtle`.
-- "실패" (failed): `fg-danger`.
-- In a list's status column, "발행됨" is the ordinary case, so it is written in the quiet color (`.mt-status--quiet`, `fg-subtle`).
+- "발행됨": 채운 점, `fg-success`.
+- "수정 중"(발행했고, 아직 발행하지 않은 변경이 있음): 채운 점, `fg-warning`.
+- "초안": 빈 고리, `fg-muted`.
+- "보관됨": 짧은 막대, `fg-subtle`.
+- "실패": `fg-danger`.
+- 목록의 상태 열에서는 "발행됨"이 평범한 경우라서 조용한 색으로 쓴다(`.mt-status--quiet`, `fg-subtle`).
 
-### In code
+### 코드
 
-`EntryStatus` with the kinds `published`, `editing`, `draft`, `archived` and `failed`. It draws a 7px mark and the status name. Without children it is the mark alone (a language tab's status); that is decorative, so the status must be said in words nearby. The editing dot is drawn in the warning mark color (`bg-warning-emphasis`) while its name stays in the warning text color. It has no version for a dark pill. `quiet` gives the subtle tone and normal weight for a column of statuses.
+`EntryStatus`. 종류는 `published`, `editing`, `draft`, `archived`, `failed`다. 7px 표시와 상태 이름을 그린다. children이 없으면 표시만 그린다(언어 탭의 상태). 이때는 장식이므로 상태를 근처에 말로 적어야 한다. 수정 중 점은 경고 표시 색(`bg-warning-emphasis`)으로 그리고, 이름은 경고 글자 색 그대로 둔다. 어두운 알약 위에 쓰는 버전은 없다. `quiet`는 상태가 늘어선 열에 쓰도록 흐린 톤과 보통 굵기를 준다.
 
-## Count
+## 개수
 
-A number goes next to a name, in mono. When there is something to deal with, it takes the warning or danger color. A number is not put in a pill.
+숫자는 이름 옆에 mono로 둔다. 처리할 것이 있으면 경고나 위험 색을 쓴다. 숫자를 알약에 넣지 않는다.
 
-### In code
+### 코드
 
-`Count`. `tone` is `default`, `warning` or `danger`.
+`Count`. `tone`은 `default`, `warning`, `danger` 중 하나다.
 
-## Change dot
+## 변경 점
 
-A dot for something unsaved or suggested: an orange dot of 6px (`mt-change-dot`) for an unsaved change, a blue dot (`mt-proposal-dot`) for an AI proposal.
+저장하지 않은 것이나 제안된 것을 알리는 점이다. 저장하지 않은 변경은 6px 주황 점(`mt-change-dot`), AI 제안은 파란 점(`mt-proposal-dot`)이다.
 
-- It sits right after the name, 6px away, centered on the text height. Tabs, field labels and sidebar items are all the same.
-- A badge floated at the top right corner is not used. A dot beside the text reads together with the name.
+- 이름 바로 뒤 6px 거리에, 글자 높이의 가운데에 놓는다. 탭, 필드 라벨, 사이드바 항목 모두 같다.
+- 오른쪽 위 모서리에 띄운 배지는 쓰지 않는다. 글자 옆의 점이 이름과 함께 읽힌다.
 
-### In code
+### 코드
 
-`ChangeDot`: `tone` is `warning` (the default, `bg-warning-emphasis`) or `proposal`. `label` names it for screen readers; without it the dot is decorative. The meaning must also be in words nearby or in `label`.
+`ChangeDot`: `tone`은 `warning`(기본, `bg-warning-emphasis`)이나 `proposal`이다. `label`은 스크린 리더에게 점의 이름을 알려 준다. 없으면 점은 장식이다. 뜻은 근처의 말이나 `label`에도 있어야 한다.
 
-## Progress
+## 진행
 
-A 3px progress bar. It goes under the box of a file being uploaded. Usage of AI tokens is written as text only, with no bar. A stretch that cannot be measured ("준비 중" (getting ready), "마무리 중" (finishing up)) shows words instead of a bar.
+3px 진행 막대다. 올리는 중인 파일의 상자 아래에 둔다. AI 토큰 사용량은 막대 없이 글자로만 적는다. 잴 수 없는 구간("준비 중", "마무리 중")은 막대 대신 말을 보여 준다.
 
-### In code
+### 코드
 
-`Progress`: `value` is 0 to 100. It is a 3px bar with radius 2 on a `border-default` track, filled with ink.
+`Progress`: `value`는 0부터 100까지다. `border-default` 트랙 위에 radius 2인 3px 막대를 잉크로 채운다.
 
-## Notice strip
+## 알림 띠
 
-A one-line notice attached to the top of a view ("원문이 바뀌었어요" (the source changed)). Cream background, one rule below. At the right end go the actions that can be done right away.
+보기의 위쪽에 붙는 한 줄 알림이다("원문이 바뀌었어요"). 크림색 바탕에 아래로 선 하나가 있다. 오른쪽 끝에는 바로 할 수 있는 동작을 둔다.
 
-Where a notice goes depends on what it is about.
+알림을 어디에 두는지는 그 알림이 무엇에 관한 것인지에 달려 있다.
 
-- A state that concerns a whole entry (source changed, edit conflict, unsaved entry): directly under the bar above the editor, from edge to edge (`.mt-banner`, no margin).
-- A notice about a list inside a page (a delivery failed N times, "모두 다시 보내기" (send all again); a key that cannot be read): directly above that list, inside the column, at the column width (`margin-top: 24px`). The notice's action works on that list, so it sits by the list.
+- 글 전체에 관한 상태(원문 바뀜, 편집 충돌, 저장하지 않은 글): 편집기 위 막대 바로 아래, 가장자리에서 가장자리까지(`.mt-banner`, 여백 없음).
+- 페이지 안의 목록에 관한 알림(전송이 N번 실패함, "모두 다시 보내기", 읽을 수 없는 키): 그 목록 바로 위, 단 안에, 단 너비로(`margin-top: 24px`). 알림의 동작이 그 목록에 대해 일하므로 목록 곁에 둔다.
 
-A notice that runs across the top of a page screen is not used. It overlaps the ✦ button at the top right, and it does not line up with the columns and rules. A screen that cannot be edited shows a lock beside each value instead of a notice (see Field, read only).
+페이지 화면 위쪽을 가로지르는 알림은 쓰지 않는다. 오른쪽 위의 ✦ 버튼과 겹치고, 단과 선에 줄이 맞지 않는다. 편집할 수 없는 화면은 알림 대신 값마다 옆에 자물쇠를 보여 준다(필드의 읽기 전용 참고).
 
-### In code
+### 코드
 
-`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short (`plainMeta` sets it as a plain subtle sentence instead, as on the edit conflict strip: "이 글은 저장할 수 없어요"); `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses). `DotNote` is the quiet line led by a 6px dot, 8px before its words, for the state of what a panel shows ("In the trash · 3 days left · Read only").
+`Banner`: 문장 앞에 6px 점이 오고, 점과 글자 사이는 8px이다. `tone`은 `warning`(기본)이나 `danger`다. `title`은 문장이고 `meta`는 그 뒤의 작은 mono 세부 정보로, 줄이 짧으면 "…"로 자른다(`plainMeta`를 주면 편집 충돌 띠의 "이 글은 저장할 수 없어요"처럼 평범한 흐린 문장으로 쓴다). `children`은 오른쪽 끝의 동작이다(글자 버튼. 어딘가로 가는 것을 밑줄로 먼저, 그다음 닫는 것). `DotNote`는 6px 점이 이끄는 조용한 줄로, 점과 글자 사이는 8px이며, 패널이 보여 주는 것의 상태를 적는다("휴지통 · 3일 남음 · 읽기 전용").
 
-A failed notice (a failed delivery, an edit conflict) is danger, not warning, and uses red (`.mt-banner--danger`).
+실패 알림(실패한 전송, 편집 충돌)은 경고가 아니라 위험이고, 빨강을 쓴다(`.mt-banner--danger`).
 
-The editor has two strips: the edit conflict ("다른 곳에서 10:41에 먼저 저장했어요" · "이 글은 저장할 수 없어요" · 비교하기, 서버 최신본 불러오기) and the draft kept only in the browser ("이 브라우저에 저장하지 않은 편집이 있어요" · 10. 26 10:12 · 비교하기, 불러오기, 버리기). Neither is a dialog and neither goes away until it is answered.
+편집기에는 띠가 둘 있다. 편집 충돌("다른 곳에서 10:41에 먼저 저장했어요" · "이 글은 저장할 수 없어요" · 비교하기, 서버 최신본 불러오기)과 브라우저에만 남은 초안("이 브라우저에 저장하지 않은 편집이 있어요" · 10. 26 10:12 · 비교하기, 불러오기, 버리기)이다. 둘 다 대화상자가 아니고, 답하기 전에는 사라지지 않는다.
 
-"비교하기" opens the compare screen: the two versions side by side in two columns with no gap and a rule between them, 48px of room inside each, filling the height down to the status bar. Each side is named in the small mono line on top ("내 입력 · 저장 안 됨", "서버 최신본 · v9 · 10:41 저장"), lists only the properties that differ, then the entry the way it reads (the title in the page size, the blocks in the reading size). The words that differ are on the highlight, the same on both sides.
+"비교하기"는 비교 화면을 연다. 두 버전을 사이 틈 없이 선 하나를 두고 두 단으로 나란히 놓는다. 각 단 안쪽에 48px의 여백을 두고, 높이는 상태 표시줄까지 채운다. 각 쪽은 위의 작은 mono 줄에 이름이 붙고("내 입력 · 저장 안 됨", "서버 최신본 · v9 · 10:41 저장"), 다른 속성만 나열한 다음, 글을 읽히는 모양 그대로 보여 준다(제목은 페이지 크기, 블록은 읽기 크기). 다른 말은 양쪽 모두 같은 강조 바탕 위에 놓인다.
 
-`Compare` holds the two `CompareSide`s (`label`, `properties`, the entry as children). `CompareProperty` is a property that differs (its `empty` word for no value), `CompareTitle` the entry's title, `CompareBody` its blocks, with `CompareHeading`, `CompareParagraph` and `CompareCode` for the blocks and `CompareText` for a run of words (`changed` puts it on the highlight).
+`Compare`는 `CompareSide` 둘을 담는다(`label`, `properties`, children으로 글). `CompareProperty`는 다른 속성이고(값이 없을 때의 말은 `empty`), `CompareTitle`은 글의 제목, `CompareBody`는 글의 블록이다. 블록에는 `CompareHeading`, `CompareParagraph`, `CompareCode`를 쓰고, 이어진 말에는 `CompareText`를 쓴다(`changed`를 주면 강조 바탕에 놓인다).
 
-## Toast
+## 토스트
 
-A one-line result right after an action ("발행되었어요" (published), "발행할 수 없어요" (cannot publish)). It appears at the bottom center, 32px above the bottom of the window, on an ink ground. If there is a next step, one text button goes on the right ("이동" (go), "보기" (view) after a publish: it opens the public page). It disappears after a few seconds, so anything the person must see stays in a status line or a to-do.
+동작 직후에 보여 주는 한 줄 결과다("발행되었어요", "발행할 수 없어요"). 창 아래쪽 가운데, 창 바닥에서 32px 위에 잉크 바탕으로 나타난다. 다음 단계가 있으면 오른쪽에 글자 버튼 하나를 둔다(발행 뒤의 "이동", "보기". 공개 페이지를 연다). 몇 초 뒤에 사라지므로, 사람이 꼭 봐야 할 것은 상태 줄이나 할 일에 남긴다.
 
-- A failure or an error ("저장 실패" (save failed), "발행할 수 없어요") is on a red ground (`.mt-toast--error`, `bg-danger-emphasis`). The text and the button are the same light color.
-- The hint shown while files are dragged over a folder is a toast too. See the List page, drop target.
+- 실패나 오류("저장 실패", "발행할 수 없어요")는 빨간 바탕이다(`.mt-toast--error`, `bg-danger-emphasis`). 글자와 버튼은 같은 밝은 색이다.
+- 파일을 폴더 위로 끌고 있을 때 보여 주는 안내도 토스트다. 목록 페이지의 놓을 곳을 참고한다.
 
-### In code
+### 코드
 
-`toast` and `Toaster`. Every toast is one message with at most one action (`action`, which runs `onClick` and closes the toast); `duration` is in milliseconds (the `Toaster` default is four seconds; `Infinity` keeps it until `toast.dismiss`), and a toast shown with the id of an open one replaces it (an upload counting up, then done). `toast.error` is the red one. `toast.dropHint` is the drag hint, with the folder's name in bold; it stays until `toast.dismiss(id)`. The `Toaster` has its own id, so a site's own sonner toaster never shows the admin's toasts and the other way around.
+`toast`와 `Toaster`. 토스트는 모두 메시지 하나에 동작은 많아야 하나다(`action`. `onClick`을 실행하고 토스트를 닫는다). `duration`은 밀리초다(`Toaster` 기본값은 4초이고, `Infinity`면 `toast.dismiss`까지 남는다). 열려 있는 토스트의 id로 토스트를 보여 주면 그것을 갈아 끼운다(올리는 중에 숫자가 오르다가 끝남). `toast.error`는 빨간 토스트다. `toast.dropHint`는 끌기 안내로, 폴더 이름을 굵게 쓴다. `toast.dismiss(id)`까지 남는다. `Toaster`는 자기 id가 있어서, 사이트 자체의 sonner 토스터는 관리자 화면의 토스트를 보여 주지 않고 반대도 마찬가지다.
 
-## Warning text and warning mark
+## 경고 글자와 경고 표시
 
-Warning has two colors. Text is `fg-warning` (`#9a6200`, dark enough to read). Dots, rings and marks are `bg-warning-emphasis` (`#aa7406`, one step lighter). They are the same amber family, so they read as one color side by side. A notice that something failed (a failed delivery) is danger, not warning, and uses red.
+경고에는 색이 둘 있다. 글자는 `fg-warning`(`#9a6200`, 읽을 만큼 진함)이다. 점, 고리, 표시는 `bg-warning-emphasis`(`#aa7406`, 한 단계 밝음)다. 같은 호박색 계열이라 나란히 있으면 한 색으로 읽힌다. 무언가 실패했다는 알림(실패한 전송)은 경고가 아니라 위험이고, 빨강을 쓴다.
 
-The DS README lists the code names as `StatusIndicator · Badge(count) · Progress · Alert(strip)`. In code they are `EntryStatus`, `Count`, `Progress` and `Banner`, with `ChangeDot`, `toast` and `Toaster` as well.
+DS README는 코드 이름을 `StatusIndicator · Badge(count) · Progress · Alert(strip)`로 적는다. 코드에서는 `EntryStatus`, `Count`, `Progress`, `Banner`이고, `ChangeDot`, `toast`, `Toaster`도 있다.

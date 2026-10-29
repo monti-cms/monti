@@ -1,71 +1,71 @@
-# Editor tools
+# 편집기 도구
 
-This page covers the tools inside the editor: the block handle and block menu, the format bar on selected text, the block tool row, the file block and the body blocks.
+이 페이지는 편집기 안의 도구를 다룬다. 블록 핸들과 블록 메뉴, 선택한 글자 위의 서식 바, 블록 도구 행, 파일 블록, 본문 블록이다.
 
-There is no always-visible toolbar. The block handle, the format card that appears when text is selected, and the "/" insert menu (see Menu) do everything. Nothing else sits on the body: the document tools are a group of the header's ⋯ menu ("EditorNotion" board, `moreMenu`). The group holds what a plugin adds (a source panel's switch such as "MDX로 보기", a text checker, "모두 번역"), the source beside a translation ("원문 옆에 보기"), "본문 폭 ▸" with the chosen width as its value and the steps with a ✓ in its second level, and the theme. Copy, archive and export sit above it; "휴지통으로" stays at the bottom. The core only opens the place; it shows a plugin's row only when that plugin is installed (`EditorMenuItem`, `menuItems` of an edit screen extension). The template editor's ⋯ has the same group above 복제 · 지우기.
+늘 보이는 툴바는 없다. 블록 핸들, 글자를 선택하면 나타나는 서식 카드, "/" 넣기 메뉴(메뉴 참고)가 모든 일을 한다. 본문 위에는 그 밖에 아무것도 놓이지 않는다. 문서 도구는 헤더 ⋯ 메뉴의 한 그룹이다("EditorNotion" 보드, `moreMenu`). 이 그룹에는 플러그인이 더하는 것("MDX로 보기" 같은 원문 패널 스위치, 텍스트 검사기, "모두 번역"), 번역 옆의 원문("원문 옆에 보기"), 고른 폭을 값으로 보이고 둘째 단계에서 고른 단계에 ✓를 다는 "본문 폭 ▸", 그리고 테마가 있다. 복사, 보관, 내보내기는 그 위에 있고, "휴지통으로"는 맨 아래에 남는다. 코어는 자리만 열어 준다. 플러그인의 행은 그 플러그인이 설치됐을 때만 보인다(`EditorMenuItem`, 편집 화면 확장의 `menuItems`). 템플릿 편집기의 ⋯에도 복제 · 지우기 위에 같은 그룹이 있다.
 
-The writing column is `width-reading` (680px) by default ("본문 폭" changes it). The language tabs, the title and the body start on the same left edge. Under the header: 16, the language tabs, 16, the title, 20, the one ink rule, 32, the body. In the body (`text-reading`, 17 / 30) a paragraph has 20 below it, a heading 32 above and 12 below, and list items follow line under line.
+글 쓰는 단은 기본이 `width-reading`(680px)이다("본문 폭"으로 바꾼다). 언어 탭, 제목, 본문은 같은 왼쪽 선에서 시작한다. 헤더 아래로 16, 언어 탭, 16, 제목, 20, 잉크 선 하나, 32, 본문 순이다. 본문(`text-reading`, 17 / 30)에서 문단은 아래에 20을 두고, 소제목은 위에 32, 아래에 12를 두며, 목록 항목은 줄마다 바로 이어진다.
 
-An empty line the cursor is on, and the one empty line of a new post, says "/ 를 눌러 블록 넣기" (`fg-faint`, in the body's own type). Only a top-level paragraph shows it.
+커서가 놓인 빈 줄과 새 글의 빈 줄 하나에는 "/ 를 눌러 블록 넣기"가 보인다(`fg-faint`, 본문과 같은 글자). 최상위 문단에만 보인다.
 
-## Block handle
+## 블록 핸들
 
-The + and the handle at the left of an editor block. Pressing + makes an empty block right under this block and opens the same block-picking list as typing "/". Pressing the handle opens the block menu (see Menu), and dragging moves the block. A block whose menu is open has the `bg-block` ground.
+편집기 블록 왼쪽의 +와 핸들이다. +를 누르면 이 블록 바로 아래에 빈 블록을 만들고, "/"를 칠 때와 같은 블록 고르기 목록을 연다. 핸들을 누르면 블록 메뉴가 열리고(메뉴 참고), 끌면 블록이 옮겨진다. 메뉴가 열린 블록은 바탕이 `bg-block`이다.
 
-The block menu: block kind name | "다른 블록으로 바꾸기" (change to another block) › · "정렬" (align) › | "위로" (up) · "아래로" (down) · "복제" (duplicate) · "삭제" (delete).
+블록 메뉴: 블록 종류 이름 | "다른 블록으로 바꾸기" › · "정렬" › | "위로" · "아래로" · "복제" · "삭제".
 
-- "Change to another block" is a second level: paragraph · heading 2 to 4 · list · numbered list · check list · quote · code block, with the markdown shortcut at the right. The current kind has a ✓. It is only on a block that has one of these kinds (not on a table, an image or a component), and a kind the body's allowed list does not allow is not listed. Turning a list item into another kind takes only that item out of its list.
-- "Align" is a second level (left · center · right, with a ✓ on the current one; no alignment set reads as left, and choosing left clears the setting). It exists only on paragraphs and headings, and shows only when the site has turned alignment on.
-- "Up" is not on the first block of its parent and "down" is not on the last: what cannot be done is hidden. Actions an extension adds (translate this block) are rows after "align".
-- The + puts an empty line under the block with a "/" typed in it and the cursor after it, so the list that opens is the one typing "/" opens. Choosing a block takes the "/" away.
-- The things that are inserted (list · table · quote · code · file · divider) are in the "/" menu, and table editing is in the tool row inside the table. So nothing is missing for lack of an always-visible toolbar.
+- "다른 블록으로 바꾸기"는 둘째 단계다. 문단 · 제목 2~4 · 목록 · 번호 목록 · 체크 목록 · 인용 · 코드 블록이 있고, 오른쪽에 마크다운 단축 입력이 붙는다. 지금 종류에 ✓가 있다. 이 종류 중 하나인 블록에만 있고(표, 이미지, 컴포넌트에는 없다), 본문 허용 목록이 허락하지 않는 종류는 목록에 없다. 목록 항목을 다른 종류로 바꾸면 그 항목만 목록에서 빠진다.
+- "정렬"은 둘째 단계다(왼쪽 · 가운데 · 오른쪽, 지금 값에 ✓. 정렬을 정하지 않았으면 왼쪽으로 읽고, 왼쪽을 고르면 설정이 지워진다). 문단과 소제목에만 있고, 사이트가 정렬을 켰을 때만 보인다.
+- 부모의 첫 블록에는 "위로"가 없고, 마지막 블록에는 "아래로"가 없다. 할 수 없는 것은 숨긴다. 확장이 더하는 동작(이 블록 번역)은 "정렬" 다음 행이다.
+- +는 블록 아래에 "/"가 쳐진 빈 줄을 넣고 그 뒤에 커서를 둔다. 그래서 열리는 목록은 "/"를 칠 때 열리는 목록과 같다. 블록을 고르면 "/"는 사라진다.
+- 넣는 것(목록 · 표 · 인용 · 코드 · 파일 · 구분선)은 "/" 메뉴에 있고, 표 편집은 표 안의 도구 행에 있다. 그래서 늘 보이는 툴바가 없어도 빠지는 것이 없다.
 
-### In code
+### 코드
 
-`BlockHandleOverlay` (admin editor) places the handle beside the pointed block and builds the menu from `block-kinds.ts` (the kinds, the kind of a block, align, turn into) and `block-commands.ts` (move, duplicate, delete, add below). `BlockHandle` holds the two marks in the left margin: a + that adds an empty block below and opens the block picker, and the grip. Pressing the grip opens the block menu, and dragging it moves the block, so the grip takes the drag events (`onDragStart`, `onDragEnd`, `draggable`). `active` keeps the grip pressed while the menu is open. To make the grip the menu trigger, wrap it with `trigger`: `trigger={(grip) => <DropdownMenuTrigger render={grip} />}`. `Block` is a block of the editor's text; while its menu is open (`active`) it has the block background. It sets no type: the text inside is the editor's. The block menu itself is a `DropdownMenu`, and the "/" menu is a `Command`. `HeadingIcon` and `headingIcons` are the heading glyphs by level (2, 3, 4) for the "change to" rows.
+`BlockHandleOverlay`(관리자 화면 편집기)는 가리킨 블록 옆에 핸들을 놓고, `block-kinds.ts`(종류, 블록의 종류, 정렬, 바꾸기)와 `block-commands.ts`(옮기기, 복제, 삭제, 아래에 더하기)로 메뉴를 만든다. `BlockHandle`은 왼쪽 여백의 두 표시를 가진다. 아래에 빈 블록을 더하고 블록 고르기를 여는 +, 그리고 그립이다. 그립을 누르면 블록 메뉴가 열리고 끌면 블록이 옮겨지므로, 그립이 끌기 이벤트를 받는다(`onDragStart`, `onDragEnd`, `draggable`). `active`는 메뉴가 열린 동안 그립을 눌린 상태로 둔다. 그립을 메뉴 트리거로 만들려면 `trigger`로 감싼다. `trigger={(grip) => <DropdownMenuTrigger render={grip} />}`. `Block`은 편집기 본문의 블록 하나다. 메뉴가 열린 동안(`active`) 블록 바탕을 가진다. 글자 모양은 정하지 않는다. 안의 글자는 편집기 것이다. 블록 메뉴 자체는 `DropdownMenu`이고, "/" 메뉴는 `Command`다. `HeadingIcon`과 `headingIcons`는 "바꾸기" 행에 쓰는 단계별(2, 3, 4) 제목 글리프다.
 
-## Format card
+## 서식 카드
 
-A one-line format bar that floats above the selected text (`.mt-format-bar`). A toolbar that is always visible is not used.
+선택한 글자 위에 뜨는 한 줄짜리 서식 바다(`.mt-format-bar`). 늘 보이는 툴바는 쓰지 않는다.
 
-- From the left: bold · italic · underline · strikethrough · code | superscript · subscript · link · footnote · ⋯ (formats a site added) | "✦ 요청" (✦ request).
-- The ⋯ opens a menu with one row per format a site added (text color, tooltip, a link to a code line), each with its icon, and a ✓ on one the selection has. A row that cannot work on the selection is left out, and with no row left there is no ⋯. An editor extension adds its rows with `formatItems` (see the admin README, "Text marks").
-- Buttons are 28px with 2px between. A vertical rule (`.sep`) between groups. A format that is on is `bg-selected` + ink.
-- "✦ 요청" is a text button at the end of the bar. ✦ is the blue pencil. Like every button, it shows no shortcut.
-- The bar does not change from one line. When the screen is narrow, the whole bar slides sideways above the selected text and stays inside the screen.
+- 왼쪽부터: 굵게 · 기울임 · 밑줄 · 취소선 · 코드 | 위 첨자 · 아래 첨자 · 링크 · 각주 · ⋯(사이트가 더한 서식) | "✦ 요청".
+- ⋯는 사이트가 더한 서식마다 한 행씩 있는 메뉴를 연다(글자 색, 툴팁, 코드 줄 링크). 행마다 아이콘이 있고, 선택한 글자에 이미 있는 서식에는 ✓가 있다. 선택한 글자에 쓸 수 없는 행은 빠지고, 남는 행이 없으면 ⋯도 없다. 편집기 확장은 `formatItems`로 행을 더한다(관리자 README의 "Text marks" 참고).
+- 버튼은 28px이고 사이는 2px이다. 그룹 사이에는 세로 선(`.sep`)을 둔다. 켜진 서식은 `bg-selected` + 잉크다.
+- "✦ 요청"은 바 끝의 글자 버튼이다. ✦는 파란 연필이다. 다른 모든 버튼처럼 단축키를 보이지 않는다.
+- 바는 언제나 한 줄이다. 화면이 좁으면 바 전체가 선택한 글자 위에서 옆으로 밀려 화면 안에 머문다.
 
-### In code
+### 코드
 
-`FormatBar` is the bar that floats above selected text: the inline formats as letters (`FormatButton`, drawn as the letter it gives: B, I, U …; `pressed` marks one the selected text already has; `more` is the ⋯ that opens the formats a site added, with a `trigger`), a `FormatBarSeparator` between groups, and at the end `FormatBarRequest` (a blue ✦, the word that asks the assistant about the selected text, and its key combination). `FormatBarButton` is a 28px button of the bar, with its name in a tooltip (with the key combination when it has one), `pressed`, and `danger` for a button that removes something. It does not take the selection or the focus from the text on press. `FormatMark` is the type of the marks.
+`FormatBar`는 선택한 글자 위에 뜨는 바다. 인라인 서식을 글자로 보이고(`FormatButton`, 그 서식이 주는 글자 B, I, U …로 그린다. `pressed`는 선택한 글자에 이미 있는 서식을 표시한다. `more`는 사이트가 더한 서식을 여는 ⋯이고 `trigger`를 받는다), 그룹 사이에 `FormatBarSeparator`를, 끝에 `FormatBarRequest`(파란 ✦, 선택한 글자에 대해 어시스턴트에게 묻는 말, 그 키 조합)를 둔다. `FormatBarButton`은 바의 28px 버튼이다. 이름을 툴팁으로 보이고(키 조합이 있으면 함께), `pressed`와, 무언가를 지우는 버튼에 쓰는 `danger`를 가진다. 눌러도 글자의 선택이나 포커스를 가져가지 않는다. `FormatMark`는 표시의 타입이다.
 
-## Block tool row (`.mt-block-bar`)
+## 블록 도구 행 (`.mt-block-bar`)
 
-A small tool row that appears at the top left of a block with settings, such as an image, when it is selected. 28px icon buttons, a vertical rule between groups. The pressed state is `bg-selected`.
+이미지처럼 설정이 있는 블록을 선택하면 그 블록 왼쪽 위에 나타나는 작은 도구 행이다. 28px 아이콘 버튼을 쓰고, 그룹 사이에 세로 선을 둔다. 눌린 상태는 `bg-selected`다.
 
-- Image: align left · center · right | settings · crop and rotate. Delete is in the block handle's menu.
-- Settings card: width (fit to the body) · alt text (✦ fill) · decorative image. If the alt text is empty, one red line under the field.
-- The caption is edited on the spot, centered right under the image. A ✦ is beside it.
-- Width can also be changed by dragging the two corner handles at the bottom (`.mt-resize`).
-- An image that is pasted or dragged in goes into the cursor position at once with no window, and a progress bar shows inside the block.
-- Next image: while the alt text card is open and another image still has no alt text, the card ends with "다음 이미지 ↵" (next image). Pressing it, or Enter in the alt text, selects that image and opens its card with the cursor in the alt text. With no other image to go to, the button is not shown and Enter closes the card. The count ("23 / 80") shows in the label row while there is text.
-- Crop and rotate is making with several inputs, so it opens as a sheet.
+- 이미지: 왼쪽 · 가운데 · 오른쪽 정렬 | 설정 · 자르기와 회전. 삭제는 블록 핸들의 메뉴에 있다.
+- 설정 카드: 폭(본문에 맞춤) · 대체 텍스트(✦ 채우기) · 장식 이미지. 대체 텍스트가 비어 있으면 필드 아래에 빨간 줄 하나가 보인다.
+- 캡션은 그 자리에서 고친다. 이미지 바로 아래 가운데에 있고, 옆에 ✦가 있다.
+- 폭은 아래쪽 두 모서리 핸들을 끌어서도 바꿀 수 있다(`.mt-resize`).
+- 붙여 넣거나 끌어 넣은 이미지는 창 없이 곧바로 커서 자리에 들어가고, 블록 안에 진행 막대가 보인다.
+- 다음 이미지: 대체 텍스트 카드가 열려 있고 대체 텍스트가 아직 없는 다른 이미지가 있으면, 카드 끝에 "다음 이미지 ↵"가 붙는다. 이것을 누르거나 대체 텍스트에서 Enter를 치면 그 이미지를 선택하고, 대체 텍스트에 커서를 둔 채 그 카드를 연다. 갈 다른 이미지가 없으면 버튼은 보이지 않고 Enter는 카드를 닫는다. 글자가 있는 동안 레이블 행에 글자 수("23 / 80")가 보인다.
+- 자르기와 회전은 입력이 여럿인 만들기라서 시트로 열린다.
 
-### In code
+### 코드
 
-`BlockBar` is the small floating row of tools above a block that has settings; put `BlockBarButton`s in it and a `BlockBarSeparator` between groups. It is a floating card and the editor places it at the block's top left. `BlockBarButton` is a 28px icon button: `label` is its name and its tooltip, `shortcut` its key combination, `pressed` keeps the background while the tool is on, and `trigger` wraps it to make it the trigger of a card or menu. `ResizeCorner` is the square handle on a bottom corner of a selected block; dragging it changes the block's width (the parent is `relative`). `UploadingImage` is the image block while it goes up: the file's own picture, faded, 240px high, with the 3px bar along its bottom edge. `CropStage` is the picture of the crop sheet in its frame: the tool ground with an edge and 4px inside, at most 380px high, the picture at most 360px; with a `crop` (in % of the picture) the picture outside it lies under the backdrop and the crop is a 2px ink box with a square handle on each corner; `onGrip` says what was pressed (the stage, the box or a corner). `Image` draws a picture in a frame of a fixed shape (`cover` crops, `contain` shows all of it; a file-type icon as `fallback`).
+`BlockBar`는 설정이 있는 블록 위에 뜨는 작은 도구 행이다. 안에 `BlockBarButton`을 넣고 그룹 사이에 `BlockBarSeparator`를 둔다. 뜨는 카드이고, 편집기가 블록 왼쪽 위에 놓는다. `BlockBarButton`은 28px 아이콘 버튼이다. `label`은 이름이자 툴팁이고, `shortcut`은 키 조합이며, `pressed`는 도구가 켜진 동안 바탕을 유지하고, `trigger`로 감싸면 카드나 메뉴의 트리거가 된다. `ResizeCorner`는 선택한 블록 아래 모서리의 네모 핸들이다. 끌면 블록 폭이 바뀐다(부모는 `relative`). `UploadingImage`는 올라가는 동안의 이미지 블록이다. 파일 자체의 그림을 흐리게 240px 높이로 보이고, 아래 가장자리를 따라 3px 막대가 있다. `CropStage`는 자르기 시트의 틀 안 그림이다. 도구 바탕에 테두리와 안쪽 4px를 두고, 높이는 최대 380px, 그림은 최대 360px이다. `crop`(그림 기준 %)이 있으면 그 밖의 그림은 배경막 아래에 놓이고, 자를 영역은 2px 잉크 상자에 모서리마다 네모 핸들이 있다. `onGrip`은 무엇을 눌렀는지(무대, 상자, 모서리) 알린다. `Image`는 모양이 정해진 틀 안에 그림을 그린다(`cover`는 잘라 내고, `contain`은 전부 보인다. `fallback`으로 파일 종류 아이콘을 둔다).
 
-The format bar and the block bar share one floating-row look: 3px inside, 2px between buttons, an emphasis border and the floating shadow.
+서식 바와 블록 바는 같은 뜬 행 모양을 쓴다. 안쪽 3px, 버튼 사이 2px, 강조 테두리, 뜬 그림자다.
 
-## File block (`.mt-file-block`)
+## 파일 블록 (`.mt-file-block`)
 
-How a file chosen with "/ 파일" (/ file) looks in the body. A one-line box with the file icon (16px), the name, and the kind and size (mono 12, "PDF · 1.2 MB"). The panel for choosing is the same library as image insert, and it shows only files.
+"/ 파일"로 고른 파일이 본문에서 보이는 모습이다. 파일 아이콘(16px), 이름, 종류와 크기(mono 12, "PDF · 1.2 MB")가 있는 한 줄 상자다. 고르는 패널은 이미지 넣기와 같은 라이브러리이고, 파일만 보인다.
 
-### In code
+### 코드
 
-`FileBlock` draws it: the file icon, the name and, in mono at the end, the kind and size. With `onNameChange` the name is a field that reads as text, so the shown name can be changed in place (`name` is then its value and `placeholder` the file's own name); `tone="danger"` is for a file that cannot be found. `MediaPicker` is the panel for choosing (see List).
+`FileBlock`이 그린다. 파일 아이콘, 이름, 그리고 끝에 mono로 종류와 크기를 둔다. `onNameChange`가 있으면 이름은 글자처럼 읽히는 필드가 되어, 보이는 이름을 그 자리에서 바꿀 수 있다(이때 `name`이 그 값이고 `placeholder`는 파일 자체의 이름이다). `tone="danger"`는 찾을 수 없는 파일에 쓴다. `MediaPicker`는 고르는 패널이다(목록 참고).
 
-## Body blocks (`.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`)
+## 본문 블록 (`.mt-doc-callout`, `.mt-doc-code`, `.mt-doc-table`)
 
-Blocks that sit with the text inside the editor. A callout is a gray box with a bold first line; code is the same box in fixed-width 12px; a table has a dark rule under the head row and a pale rule for each row. A number column is `td.num` (fixed-width). Side-by-side view and the entry compare use the same parts.
+편집기 안에서 글과 함께 놓이는 블록이다. 콜아웃은 첫 줄이 굵은 회색 상자다. 코드는 같은 상자에 고정폭 12px이다. 표는 머리 행 아래에 진한 선을, 행마다 옅은 선을 둔다. 숫자 열은 `td.num`(고정폭)이다. 나란히 보기와 글 비교도 같은 부품을 쓴다.
 
-Not in `@monti-cms/ui` as editor blocks yet. `CodeBlock` is a different part: text shown as it is (fixed-width, line breaks kept) in the inner box (`bg-muted`, `radius-lg`, no border), for a JSON value, an error's details or a model's answer.
+아직 `@monti-cms/ui`에 편집기 블록으로 들어 있지 않다. `CodeBlock`은 다른 부품이다. 안쪽 상자(`bg-muted`, `radius-lg`, 테두리 없음)에 글자를 있는 그대로(고정폭, 줄바꿈 유지) 보이며, JSON 값, 오류의 세부 내용, 모델의 답에 쓴다.

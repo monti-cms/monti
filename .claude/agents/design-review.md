@@ -10,7 +10,7 @@ Inputs you are given: the base and head refs (or a worktree and branch), and whi
 
 Do this:
 
-1. Read `docs/design/admin/README.md` (including "Building admin UI"), `docs/design/admin/tokens.md`, and the `docs/design/admin/components/` pages for every part the diff touches. Read the `screens.md` and `flows/` entries for the screens named.
+1. Read `docs/design/admin/README.md` (including the section "관리자 화면 UI 만들기", how to build admin UI), `docs/design/admin/tokens.md`, and the `docs/design/admin/components/` pages for every part the diff touches. Read the `screens.md` and `flows/` entries for the screens named.
 2. Get the diff (`git diff <base>...<head>`) and list the changed UI files in `packages/ui`, `packages/admin` and plugin screens.
 3. Run `node scripts/check-design.mjs` in that tree and include its findings.
 4. Read the changed code and check, beyond what the script sees:

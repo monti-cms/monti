@@ -4,7 +4,9 @@ Commit messages must be written in English and follow Conventional Commits (`typ
 
 Pull request titles and descriptions must also be written in English. PR titles follow the same Conventional Commits format.
 
-All documentation, code comments, test titles and developer-facing text are written in English. Korean appears only in the `ko` message dictionaries, in test data and Storybook stories (sample screens), in the `README.ko.md` translations, and quoted as UI text or board names in `docs/design/admin`.
+Design documents under `docs/` (`docs/design`, `docs/testing.md`, `docs/testing/`) are written in Korean: the owner reads and approves them. Code names, file paths, tokens and commands in them stay as they are in the code.
+
+Everything else is written in English: code comments, test titles, READMEs, error messages and other developer-facing text. Korean appears elsewhere only in the `ko` message dictionaries, in test data and Storybook stories (sample screens), and in the `README.ko.md` translations.
 
 The admin design rules (tokens, parts, screens and flows) are in `docs/design/admin` (start at its README). Read them before changing admin UI, and change them in the same pull request when a rule changes. Before admin UI work, load the `admin-ui` skill (`.claude/skills/admin-ui`); `pnpm check:design` enforces its mechanical rules, and the `design-review` agent (`.claude/agents/design-review.md`) reviews each piece of admin UI work before it joins a shared branch.
 

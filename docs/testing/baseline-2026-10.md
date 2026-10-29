@@ -1,66 +1,66 @@
-# Test suite baseline, October 2026
+# 테스트 스위트 기준선, 2026년 10월
 
-The numbers the test suite overhaul starts from. After the overhaul the same scripts measure the suite again, and the result is compared with
-this page. The code measured is `overhaul` at 9053b8c2 with the trash restore fix (b31777ab), because the old trash behavior failed the
-one-worker run below. Core is listed apart because the overhaul starts with it.
+테스트 스위트 정비의 출발점이 되는 숫자다. 정비가 끝나면 같은 스크립트로 스위트를 다시 재고, 그 결과를 이 페이지와 견준다.
+잰 코드는 `overhaul`의 9053b8c2에 휴지통 복원 수정(b31777ab)을 더한 것이다. 예전 휴지통 동작이 아래의 워커 하나 실행에서
+실패했기 때문이다. 정비가 core부터 시작하므로 core는 따로 적는다.
 
-## Summary
+## 요약
 
-| Metric | What it shows | All packages | Core | Better is |
+| 지표 | 보여 주는 것 | 모든 패키지 | Core | 나아지는 쪽 |
 |---|---|---|---|---|
-| Tests and time | How long one run takes | 6,996 tests, 155 s | 3,515 tests, 89 s | Less time. The number of tests is not a goal |
-| Coverage (lines / branches / functions) | Code a test ran at least once | 88.5 / 76.3 / 84.4% | 94.7 / 84.0 / 94.0% | Not lower |
-| Mutation score | Share of small code changes a test fails on | Measured per package, when its turn comes | 68.8% (23,920 / 34,747) | Higher |
-| Surviving mutants | Changes in code a test ran, that no test noticed | — | 7,452 | Fewer |
-| Weak patterns (14 kinds) | `toBeTruthy`, CSS selectors, copy written in the test, … | 1,785 | 169 | Close to 0 |
-| Reference blog names in shared-site tests | A blog-only collection, field, block or locale written as a string | 847 uses | 103 uses in 37 files | 0 |
-| Files whose tests depend on order | A test reads what an earlier test in the file left | 20 | 18 | 0 |
-| Flaky tests | A different result on the same code over 21 runs | 0 | 0 | 0, over more runs |
-| Refactor commits that changed tests | Commits that say they keep behavior, yet changed a test | 61% (51 of 84) | 51% (20 of 39) | Lower, measured on the commits after the overhaul |
+| 테스트와 시간 | 한 번 돌리는 데 걸리는 시간 | 테스트 6,996개, 155초 | 테스트 3,515개, 89초 | 시간이 줄수록. 테스트 수는 목표가 아니다 |
+| 커버리지(줄 / 분기 / 함수) | 테스트가 한 번이라도 실행한 코드 | 88.5 / 76.3 / 84.4% | 94.7 / 84.0 / 94.0% | 낮아지지 않게 |
+| 변이 점수 | 코드를 조금 바꿨을 때 테스트가 실패하는 비율 | 패키지마다 차례가 올 때 잰다 | 68.8% (23,920 / 34,747) | 높을수록 |
+| 살아남은 변이 | 테스트가 실행한 코드의 변경 중 어떤 테스트도 알아채지 못한 것 | — | 7,452 | 적을수록 |
+| 약한 패턴(14종) | `toBeTruthy`, CSS 선택자, 테스트에 적은 문구, … | 1,785 | 169 | 0에 가깝게 |
+| 공유 사이트 테스트 속 참조 블로그 이름 | 블로그에만 있는 컬렉션, 필드, 블록, 언어를 문자열로 적은 것 | 847회 | 37개 파일에서 103회 | 0 |
+| 테스트가 순서에 기대는 파일 | 테스트가 파일 안의 앞선 테스트가 남긴 것을 읽음 | 20 | 18 | 0 |
+| 불안정한 테스트 | 같은 코드에서 21번 돌려 결과가 달라짐 | 0 | 0 | 0, 더 많이 돌려서 |
+| 테스트를 바꾼 리팩터링 커밋 | 동작을 지킨다고 하면서 테스트를 바꾼 커밋 | 61% (84개 중 51개) | 51% (39개 중 20개) | 낮을수록. 정비 뒤의 커밋으로 잰다 |
 
-Zero flaky tests over 21 runs means the chance of a failure per run is at most 13% (95% one-sided: 1 − 0.05^(1/21)). CI saw an editor timer error
-outside any test once in 50 runs; it did not show up locally.
+21번 돌려 불안정한 테스트가 0이면, 한 번 돌릴 때 실패할 확률은 많아야 13%다(95% 단측: 1 − 0.05^(1/21)). CI에서는 50번 중 한 번,
+테스트 밖에서 편집기 타이머 오류가 났다. 로컬에서는 나오지 않았다.
 
-## How each number is measured
+## 숫자마다 재는 법
 
-All scripts are in `scripts/test-metrics/`; each one explains its options at the top.
+스크립트는 모두 `scripts/test-metrics/`에 있고, 각 스크립트 맨 위에 선택지 설명이 있다.
 
-- **Tests and time**: one full run with the Vitest JSON reporter, files sorted by kind (render, database, CLI, plain logic).
-- **Coverage**: `@vitest/coverage-v8` over `packages/*/src`, without tests, stories and test helpers.
-- **Mutation score**: `core-mutation-score.mjs`, which runs `packages/core/stryker.score.config.mjs` one `src` folder at a time. The run took 2 h
-  15 min on an M-series MacBook. This config stops each mutant at the first test that fails and leaves out mutants of module-level code (2,492),
-  so it scores lower than the full config (`plugin-storage.ts`: 73% here, 83% with `stryker.config.mjs`). Compare its scores only with scores of
-  the same config.
-- **Weak patterns**: `weak-patterns.mjs`.
-- **Reference blog names**: `site-names.mjs`.
-- **Flaky tests and order**: `repeat-runs.mjs`: 10 runs as CI runs them, 10 with `--shuffle`, 1 with `--one-worker`. Shuffling the files only
-  passed 3 of 3; shuffling the tests inside each file failed 3 of 3.
-- **Refactor commits**: `test-churn.mjs --pr-commits`, which counts the commits inside each pull request, not the squashed ones.
+- **테스트와 시간**: Vitest JSON 리포터로 전체를 한 번 돌리고, 파일을 종류별로 나눈다(렌더링, 데이터베이스, CLI, 평범한 로직).
+- **커버리지**: `packages/*/src`에 대해 `@vitest/coverage-v8`로 잰다. 테스트, 스토리, 테스트 도우미는 뺀다.
+- **변이 점수**: `core-mutation-score.mjs`. `packages/core/stryker.score.config.mjs`를 `src` 폴더 하나씩 돌린다. M 시리즈 MacBook에서 2시간
+  15분 걸렸다. 이 설정은 변이마다 처음 실패한 테스트에서 멈추고, 모듈 수준 코드의 변이(2,492개)를 뺀다.
+  그래서 전체 설정보다 점수가 낮다(`plugin-storage.ts`: 여기서는 73%, `stryker.config.mjs`로는 83%). 이 설정의 점수는
+  같은 설정의 점수와만 견준다.
+- **약한 패턴**: `weak-patterns.mjs`.
+- **참조 블로그 이름**: `site-names.mjs`.
+- **불안정한 테스트와 순서**: `repeat-runs.mjs`. CI처럼 10번, `--shuffle`로 10번, `--one-worker`로 1번 돌린다. 파일 순서만 섞으면
+  3번 중 3번 통과했고, 파일 안의 테스트 순서를 섞으면 3번 중 3번 실패했다.
+- **리팩터링 커밋**: `test-churn.mjs --pr-commits`. squash된 커밋이 아니라 풀 리퀘스트 안의 커밋을 센다.
 
-## Core in detail
+## Core 자세히
 
-### Weak patterns
+### 약한 패턴
 
-| Pattern | Count |
+| 패턴 | 개수 |
 |---|---|
 | `toBeDefined` | 64 |
-| Korean copy written in the test | 25 |
-| Mock call arguments read by position | 20 |
-| Source file read as text | 20 |
+| 테스트에 적은 한국어 문구 | 25 |
+| 위치로 읽는 mock 호출 인자 | 20 |
+| 글자로 읽는 소스 파일 | 20 |
 | `toBeTruthy` | 11 |
-| Fixed sleep | 8 |
-| CSS class check | 8 |
-| Early return that reports a pass | 3 |
-| Wait of a second or more | 3 |
-| Data attribute | 3 |
-| Mock of the package's own module | 3 |
-| Regex that accepts Korean or English | 1 |
+| 고정 sleep | 8 |
+| CSS 클래스 검사 | 8 |
+| 통과로 보고하는 이른 return | 3 |
+| 1초 이상의 기다림 | 3 |
+| data 속성 | 3 |
+| 패키지 자기 모듈의 mock | 3 |
+| 한국어나 영어를 받아들이는 정규식 | 1 |
 
-### Mutation score per folder
+### 폴더별 변이 점수
 
-Caught = killed or timed out. Survived = a test ran the code and none failed. No coverage = no test ran the code.
+잡음 = 죽였거나 시간 초과. 살아남음 = 테스트가 코드를 실행했고 아무 테스트도 실패하지 않음. 커버리지 없음 = 어떤 테스트도 코드를 실행하지 않음.
 
-| Folder | Score | Caught / valid | Survived | No coverage |
+| 폴더 | 점수 | 잡음 / 유효 | 살아남음 | 커버리지 없음 |
 |---|---|---|---|---|
 | schema-change | 84.4% | 1,211 / 1,435 | 65 | 159 |
 | secrets | 82.6% | 76 / 92 | 15 | 1 |
@@ -89,11 +89,11 @@ Caught = killed or timed out. Survived = a test ran the code and none failed. No
 | text-check | 47.2% | 128 / 271 | 64 | 79 |
 | media | 31.9% | 129 / 405 | 190 | 86 |
 | `src/*.ts` | 25.9% | 21 / 81 | 30 | 30 |
-| **All of core** | **68.8%** | **23,920 / 34,747** | **7,452** | **3,375** |
+| **core 전체** | **68.8%** | **23,920 / 34,747** | **7,452** | **3,375** |
 
-## Not measured here
+## 여기서 재지 않은 것
 
-- The mutation score of the other packages: each is measured before its own overhaul.
-- Visual regression: a later, separate phase.
-- The raw reports: the mutant-by-mutant reports stay out of git (`**/reports/mutation`), and the raw runs behind the other numbers were lost to
-  a restart. The numbers on this page are what is kept.
+- 다른 패키지의 변이 점수: 각 패키지의 정비 전에 잰다.
+- 시각 회귀: 나중에 따로 하는 단계다.
+- 원본 보고서: 변이 하나하나의 보고서는 git 밖에 둔다(`**/reports/mutation`). 다른 숫자의 원본 실행 결과는 재시작으로
+  잃었다. 이 페이지의 숫자가 남겨 둔 것이다.

@@ -1,111 +1,111 @@
-# Monti Admin design
+# Monti 관리자 화면 디자인
 
-This folder holds the rules of the Monti Admin design system, so people and agents can read and link them without opening a design artifact.
+이 폴더에는 Monti 관리자 화면 디자인 시스템의 규칙이 있다. 사람과 에이전트가 디자인 아티팩트를 열지 않고도 규칙을 읽고 링크할 수 있게 하려는 것이다.
 
-The design system covers the admin screens: how they look, which parts they are built from, and the rules for using those parts. It was collected from the editorial mockups (the design canvas "A · 가운데 단") and arranged to fit the structure of `@monti-cms/ui`: colors in two layers (a ground step and a role), type by role, and spacing in named steps. The tokens and parts of `@monti-cms/ui` follow these docs.
+디자인 시스템은 관리자 화면들을 다룬다. 어떻게 보이는지, 어떤 부품으로 만드는지, 그 부품을 어떤 규칙으로 쓰는지다. 편집 목업(디자인 캔버스 "A · 가운데 단")에서 모은 것을 `@monti-cms/ui`의 구조에 맞게 정리했다. 색은 두 층(바탕 단계와 역할)으로, 글자는 역할별로, 간격은 이름 붙은 단계로 나눈다. `@monti-cms/ui`의 토큰과 부품은 이 문서를 따른다.
 
-## Principles
+## 원칙
 
-1. **Paper and cream, two layers.** Content (lists, the editor body, settings, dialogs, menus) is on paper, `bg-page`. Tools (the sidebar, the properties and assistant panels, sheets, the source pane, the status bar) are on cream, `bg-tool`. In dark mode tools are darker.
-2. **The ink line is in one place.** There is a 1px `border-contrast` under a content page title. The head of a tool surface is `height-header` (60px) with one thin `border-default` line.
-3. **Lines and space, not cards and boxes.** A box border is only for things that float: menus, dialogs, sheets, bubbles.
-4. **One black pill per screen or floating surface.** Side actions are one or two gray pills, adding and editing inside a section are text buttons, and the rest is in ⋯.
-5. **Color is for state only.** Other emphasis uses weight and ink color. The blue pencil, `fg-proposal`, is only for an AI proposal that has not been accepted yet.
-6. **Structure instead of explanation.** If something is confusing, fix it with a name, a place or a state. No help text under a field, no reassuring sentences such as "~했어요" (it is done), no disclaimers.
+1. **종이와 크림, 두 층.** 내용(목록, 편집기 본문, 설정, 대화상자, 메뉴)은 종이 바탕 `bg-page` 위에 있다. 도구(사이드바, 속성 패널과 어시스턴트 패널, 시트, 원문 패널, 상태 표시줄)는 크림 바탕 `bg-tool` 위에 있다. 어두운 테마에서는 도구 쪽이 더 어둡다.
+2. **잉크 선은 한 곳에만 있다.** 내용 페이지 제목 아래에 1px `border-contrast`가 있다. 도구 면의 머리는 `height-header`(60px)이고, 얇은 `border-default` 선이 하나 있다.
+3. **카드와 상자 대신 선과 여백.** 상자 테두리는 떠 있는 것에만 쓴다. 메뉴, 대화상자, 시트, 말풍선이다.
+4. **화면이나 떠 있는 면마다 검은 알약은 하나.** 곁 동작은 회색 알약 한두 개, 섹션 안에서 추가하고 고치는 것은 텍스트 버튼이고, 나머지는 ⋯ 안에 둔다.
+5. **색은 상태에만 쓴다.** 그 밖의 강조는 굵기와 잉크 색으로 한다. 파란 연필 `fg-proposal`은 아직 받아들이지 않은 AI 제안에만 쓴다.
+6. **설명 대신 구조.** 헷갈리는 곳이 있으면 이름, 자리, 상태로 고친다. 필드 아래 도움말, "~했어요" 같은 안심시키는 문장, 면책 문구는 두지 않는다.
 
-## How to read these docs
+## 이 문서를 읽는 법
 
-Read in this order.
+이 순서로 읽는다.
 
-1. This page.
-2. [tokens.md](tokens.md): colors, type, spacing, radius, heights, widths, shadows and icon sizes, with when to use each.
-3. The component pages, from small to large. A page uses only the parts of the pages before it.
-4. [screens.md](screens.md): each main board of the canvas and its states.
-5. [flows/README.md](flows/README.md): the flows, step by step, which use the parts together. Each canvas flow has one test that walks it.
+1. 이 페이지.
+2. [tokens.md](tokens.md): 색, 글자, 간격, 모서리, 높이, 너비, 그림자, 아이콘 크기와 각각을 언제 쓰는지.
+3. 컴포넌트 페이지들. 작은 것부터 큰 것 순이다. 각 페이지는 앞 페이지들의 부품만 쓴다.
+4. [screens.md](screens.md): 캔버스의 주요 보드 하나하나와 그 상태.
+5. [flows/README.md](flows/README.md): 부품을 함께 쓰는 흐름을 단계별로 적었다. 캔버스 흐름마다 그 흐름을 따라가는 테스트가 하나 있다.
 
-The component pages are grouped in five layers, in the same order as the Storybook of `@monti-cms/ui`.
+컴포넌트 페이지는 다섯 층으로 묶여 있고, 순서는 `@monti-cms/ui`의 Storybook과 같다.
 
-| Layer | What | Pages |
+| 층 | 무엇 | 페이지 |
 |---|---|---|
-| 1 Foundations | Color, type, spacing, radius, size, shadow | [tokens.md](tokens.md) |
-| 2 Primitives | Layout pieces (Box, Stack, Grid), text, icons and the AI mark ✦, labels, separators, images, code blocks, panels, sections | [primitives](components/primitives.md) (Box, Stack, Inline, Text, Heading, Icon, Label, Separator, the labels provider, the resizable column). The icon and type rules are in [tokens.md](tokens.md); `.mt-stack`, `.mt-line`, `.mt-label`, `.mt-vr`, `.mt-spark`, `.mt-panel` and `.mt-section` are at the top of the DS stylesheet |
-| 3 Controls | What is pressed, typed, picked and what tells the state | [button](components/button.md), [field](components/field.md), [choice](components/choice.md), [tabs](components/tabs.md), [menu](components/menu.md), [overlay](components/overlay.md) (modal, popover, toast), [status](components/status.md) |
-| 4 Patterns | The frame of a screen and lists | [list](components/list.md), [page-header](components/page-header.md), [sidebar](components/sidebar.md), [status-bar](components/status-bar.md), and the sheet and side panel in [overlay](components/overlay.md) |
-| 5 Monti | Parts that only Monti has | [editor-tools](components/editor-tools.md), [change](components/change.md), [proposal](components/proposal.md), [assistant](components/assistant.md), [translation](components/translation.md) |
+| 1 Foundations | 색, 글자, 간격, 모서리, 크기, 그림자 | [tokens.md](tokens.md) |
+| 2 Primitives | 레이아웃 조각(Box, Stack, Grid), 텍스트, 아이콘과 AI 표시 ✦, 라벨, 구분선, 이미지, 코드 블록, 패널, 섹션 | [primitives](components/primitives.md)(Box, Stack, Inline, Text, Heading, Icon, Label, Separator, 라벨 제공자, 크기 조절 열). 아이콘과 글자 규칙은 [tokens.md](tokens.md)에 있다. `.mt-stack`, `.mt-line`, `.mt-label`, `.mt-vr`, `.mt-spark`, `.mt-panel`, `.mt-section`은 DS 스타일시트 맨 위에 있다 |
+| 3 Controls | 누르고, 입력하고, 고르는 것과 상태를 알려 주는 것 | [button](components/button.md), [field](components/field.md), [choice](components/choice.md), [tabs](components/tabs.md), [menu](components/menu.md), [overlay](components/overlay.md)(모달, 팝오버, 토스트), [status](components/status.md) |
+| 4 Patterns | 화면의 틀과 목록 | [list](components/list.md), [page-header](components/page-header.md), [sidebar](components/sidebar.md), [status-bar](components/status-bar.md), 그리고 [overlay](components/overlay.md)의 시트와 사이드 패널 |
+| 5 Monti | Monti에만 있는 부품 | [editor-tools](components/editor-tools.md), [change](components/change.md), [proposal](components/proposal.md), [assistant](components/assistant.md), [translation](components/translation.md) |
 
-- The DS also has a Cover (Frame) group. It has no rule text; the frame pieces are described in the page-header, sidebar and status-bar pages.
-- A folder can span two layers (Overlay). The table above splits it.
-- The preview card groups in the DS artifact use the same layer names.
+- DS에는 Cover (Frame) 묶음도 있다. 규칙 글은 없고, 틀 조각은 page-header, sidebar, status-bar 페이지에서 설명한다.
+- 한 폴더가 두 층에 걸칠 수 있다(Overlay). 위 표에서는 나눠 적었다.
+- DS 아티팩트의 미리보기 카드 묶음도 같은 층 이름을 쓴다.
 
-The component pages follow one pattern. Each part has its rules, then an "In code" note that names the `@monti-cms/ui` component, or says that it is not in code yet. DS class names (`.mt-…`) appear only where they map to the stylesheet of the DS artifact.
+컴포넌트 페이지는 한 가지 틀을 따른다. 부품마다 규칙이 먼저 나오고, 이어서 "코드" 절이 `@monti-cms/ui` 컴포넌트 이름을 대거나 아직 코드에 없다고 말한다. DS 클래스 이름(`.mt-…`)은 DS 아티팩트의 스타일시트에 대응할 때만 적는다.
 
-A part belongs to a group. Parts in one group share rules (height, line, color).
+부품은 묶음에 속한다. 한 묶음의 부품은 규칙(높이, 선, 색)을 함께 쓴다.
 
-| Group | Page | What is in it |
+| 묶음 | 페이지 | 들어 있는 것 |
 |---|---|---|
-| Pressing | Button | Pills (primary, secondary, danger, sm), text buttons, icon buttons, split pill |
-| Input | Field | One line, several lines, select |
-| | Choice | Checkbox and radio, switch, one of a few |
-| | Tabs | Underlined tabs, filter chips |
-| Notices | Status | Entry status, count, progress bar, notice strip |
-| Surfaces | Menu | The floating menu card |
-| | Overlay | Modal, sheet, side panel, name and value |
-| Page | PageHeader | Title row, toolbar (bulk bar) |
-| | List | List rows, grid cells, empty state |
-| | Sidebar, StatusBar | Navigation, the bar under the editor |
-| Editor | EditorTools | Block handle, format card |
-| AI | Proposal | Blue pencil, bubble, request mark and card |
-| | Assistant | Conversation, proposal card, input box |
-| Schema | Change | Review of a schema change |
-| Translation | Translation | Dimmed blocks, source changed, side by side |
+| 누르기 | Button | 알약(primary, secondary, danger, sm), 텍스트 버튼, 아이콘 버튼, 나뉜 알약 |
+| 입력 | Field | 한 줄, 여러 줄, 선택 |
+| | Choice | 체크박스와 라디오, 스위치, 몇 개 중 하나 |
+| | Tabs | 밑줄 탭, 필터 칩 |
+| 알림 | Status | 글 상태, 개수, 진행 막대, 알림 띠 |
+| 면 | Menu | 떠 있는 메뉴 카드 |
+| | Overlay | 모달, 시트, 사이드 패널, 이름과 값 |
+| 페이지 | PageHeader | 제목 줄, 툴바(일괄 작업 줄) |
+| | List | 목록 행, 격자 칸, 빈 상태 |
+| | Sidebar, StatusBar | 내비게이션, 편집기 아래 막대 |
+| 편집기 | EditorTools | 블록 손잡이, 서식 카드 |
+| AI | Proposal | 파란 연필, 말풍선, 요청 표시와 카드 |
+| | Assistant | 대화, 제안 카드, 입력 상자 |
+| 스키마 | Change | 스키마 변경 검토 |
+| 번역 | Translation | 흐려진 블록, 원문 바뀜, 나란히 보기 |
 
-## Where the visuals are
+## 시각 자료가 있는 곳
 
-The docs hold the rules. For how things look, use these.
+이 문서에는 규칙이 있다. 어떻게 보이는지는 아래를 본다.
 
-- **The canvas**: https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co. Boards for each screen, and pages for the flows. It holds how each screen and flow looks.
-- **The DS artifact**: https://claude.ai/artifact/KoiQ42HjDgktbfSY7mx5ma. A visual catalog of the design system, with a preview of every part. The previews are a static render with the DS stylesheet, not the real React parts.
-- **Storybook**: the real parts of `@monti-cms/ui` and the admin screens. Run it with `pnpm --filter @monti-cms/ui storybook` (it serves on port 6006). The sidebar has the five layers above. `packages/ui/README.md` describes the tiers, the visual tests and the audit.
+- **캔버스**: https://claude.ai/artifact/BUBfqadfYBA1JZW9dT13co. 화면마다 보드가 있고, 흐름마다 페이지가 있다. 각 화면과 흐름이 어떻게 보이는지 담고 있다.
+- **DS 아티팩트**: https://claude.ai/artifact/KoiQ42HjDgktbfSY7mx5ma. 디자인 시스템의 시각 카탈로그로, 모든 부품의 미리보기가 있다. 미리보기는 DS 스타일시트로 그린 정적 렌더이고, 실제 React 부품이 아니다.
+- **Storybook**: `@monti-cms/ui`의 실제 부품과 관리자 화면들. `pnpm --filter @monti-cms/ui storybook`으로 띄운다(포트 6006). 사이드바에는 위의 다섯 층이 있다. `packages/ui/README.md`가 티어, 시각 테스트, 감사를 설명한다.
 
-## What is the source of truth
+## 무엇이 기준인가
 
-| What | Where |
+| 무엇 | 어디 |
 |---|---|
-| The rules: when to use a part, how it behaves, which states it has | These docs |
-| Token values (names, light and dark) | `packages/ui/tokens/tokens.json`. `pnpm gen:tokens` generates `packages/ui/styles/tokens.css` from it; do not edit the CSS by hand |
-| What each screen and flow looks like | The canvas |
-| How a part is built | `packages/ui/src` and its stories. Parts style themselves with token utilities; `packages/admin/styles/admin.css` holds only document-wide base rules (portaled popups, default border color, scrollbars) |
+| 규칙: 부품을 언제 쓰는지, 어떻게 동작하는지, 어떤 상태가 있는지 | 이 문서 |
+| 토큰 값(이름, 밝은 테마와 어두운 테마) | `packages/ui/tokens/tokens.json`. `pnpm gen:tokens`가 이 파일에서 `packages/ui/styles/tokens.css`를 만든다. CSS는 손으로 고치지 않는다 |
+| 각 화면과 흐름이 어떻게 보이는지 | 캔버스 |
+| 부품을 어떻게 만드는지 | `packages/ui/src`와 그 스토리. 부품은 토큰 유틸리티로 스스로 스타일을 입힌다. `packages/admin/styles/admin.css`에는 문서 전체의 기본 규칙(포털로 띄운 팝업, 기본 테두리 색, 스크롤바)만 있다 |
 
-When a rule changes, change it in these docs in the same pull request as the code, then update the artifacts (the canvas and the DS artifact) to match.
+규칙이 바뀌면 코드와 같은 풀 리퀘스트에서 이 문서를 고치고, 그다음 아티팩트(캔버스와 DS 아티팩트)를 맞춘다.
 
-The Korean UI text in these docs is quoted exactly, with an English gloss at first use. Board names and state names stay in Korean in quotes, because that is how the canvas names them.
+이 문서의 한국어 UI 텍스트는 따옴표 안에 그대로 옮긴다. 보드 이름과 상태 이름은 따옴표 안에 한국어로 둔다. 캔버스가 그렇게 부르기 때문이다.
 
-## Building admin UI
+## 관리자 화면 UI 만들기
 
-These rules keep the admin one system. `pnpm check:design` (`scripts/check-design.mjs`) fails CI on the mechanical ones: stylesheets and `admin.css` selectors, raw colors anywhere, raw lengths and inline styles in screens, primitives imported into screens, and parts missing from these docs. The `design-review` agent catches the rest. Inside `@monti-cms/ui` a part may use its own measured lengths (`h-[34px]`), because that is where the design system's sizes live; screens may not.
+이 규칙들은 관리자 화면을 하나의 시스템으로 묶어 둔다. `pnpm check:design`(`scripts/check-design.mjs`)은 기계적으로 잡을 수 있는 규칙을 어기면 CI를 실패시킨다. 스타일시트와 `admin.css` 선택자, 어디에 있든 날 색 값, 화면 안의 날 길이 값과 인라인 스타일, 화면에서 가져온 프리미티브, 이 문서에 없는 부품이다. 나머지는 `design-review` 에이전트가 잡는다. `@monti-cms/ui` 안의 부품은 자기가 잰 길이(`h-[34px]`)를 써도 된다. 디자인 시스템의 크기가 있는 곳이 거기이기 때문이다. 화면은 안 된다.
 
-1. **Style with token utilities only.** Colors, type, spacing, radius, sizes and shadows come from the `monti-*` token utilities (`bg-monti-muted`, `text-monti-body`, `gap-monti-8` …). No raw palette classes (`bg-gray-100`, `text-sm`) and no raw colors (`#fff`) anywhere. Screens use no arbitrary lengths (`w-[320px]`) either: a size belongs to a part in `@monti-cms/ui` or to a token. If a shared size has no token, add it to `packages/ui/tokens/tokens.json` and to [tokens.md](tokens.md) first.
-2. **No new stylesheets and no new CSS classes.** `packages/admin/styles/admin.css` holds only document-wide base rules: the base text on the body for portaled popups, the default border color, and the scrollbars. Everything else is a utility on the element; a state is a `data-` attribute with a `data-[…]:` variant.
-3. **No inline styles in screens.** `style={{}}` in `packages/admin/src` only for a value measured or computed at runtime, marked `// design-allow: <reason>`.
-4. **Parts live in `@monti-cms/ui`.** Screens in `packages/admin` compose parts; they do not import Radix, Base UI or `cva`, and they do not build their own buttons, menus, rows or panels.
-5. **Every part is documented.** A component exported from `@monti-cms/ui` is named on its family page in `components/`, with its rules and an "In code" line. A new part gets its page entry in the same pull request.
-6. **Parts first, then screens.** When work is split into pieces, one piece builds the new or changed shared parts in `@monti-cms/ui` (with stories and docs) before the screen pieces start. Screen pieces use those parts and add none; a piece that finds a missing part stops and asks for it.
-7. **Match the board, then the docs.** A value on a board that disagrees with these docs or with an existing part is a question for the owner, not a local choice. Note it in the pull request.
-8. **Three gates before merge.** Each piece joins a shared branch only after: `pnpm check:design` passes; the `design-review` agent (`.claude/agents/design-review.md`) has reviewed its diff; and every changed state has been compared side by side with its board at 1440×900, each difference fixed or listed as a question for the owner. A piece's own report is a claim, not evidence.
+1. **토큰 유틸리티로만 스타일을 입힌다.** 색, 글자, 간격, 모서리, 크기, 그림자는 `monti-*` 토큰 유틸리티(`bg-monti-muted`, `text-monti-body`, `gap-monti-8` …)에서 가져온다. 날 팔레트 클래스(`bg-gray-100`, `text-sm`)와 날 색 값(`#fff`)은 어디에도 쓰지 않는다. 화면은 임의 길이(`w-[320px]`)도 쓰지 않는다. 크기는 `@monti-cms/ui`의 부품이나 토큰에 속한다. 여럿이 함께 쓰는 크기에 토큰이 없으면 먼저 `packages/ui/tokens/tokens.json`과 [tokens.md](tokens.md)에 더한다.
+2. **새 스타일시트도, 새 CSS 클래스도 만들지 않는다.** `packages/admin/styles/admin.css`에는 문서 전체의 기본 규칙만 있다. 포털로 띄운 팝업을 위해 body에 둔 기본 글자, 기본 테두리 색, 스크롤바다. 나머지는 모두 요소에 붙인 유틸리티다. 상태는 `data-` 속성과 `data-[…]:` 변형으로 나타낸다.
+3. **화면에는 인라인 스타일을 쓰지 않는다.** `packages/admin/src`의 `style={{}}`는 실행 중에 재거나 계산한 값에만 쓰고, `// design-allow: <reason>`을 붙인다.
+4. **부품은 `@monti-cms/ui`에 있다.** `packages/admin`의 화면은 부품을 조합한다. Radix, Base UI, `cva`를 가져오지 않고, 버튼, 메뉴, 행, 패널을 직접 만들지 않는다.
+5. **모든 부품은 문서에 있다.** `@monti-cms/ui`에서 내보내는 컴포넌트는 `components/`의 해당 묶음 페이지에 이름이 나오고, 규칙과 "코드" 줄이 있다. 새 부품은 같은 풀 리퀘스트에서 페이지 항목을 얻는다.
+6. **부품 먼저, 그다음 화면.** 작업을 여러 조각으로 나눌 때는 한 조각이 새 공유 부품이나 바뀐 공유 부품을 `@monti-cms/ui`에 (스토리와 문서까지) 먼저 만들고, 그 뒤에 화면 조각들이 시작한다. 화면 조각은 그 부품을 쓰고 새 부품을 더하지 않는다. 빠진 부품을 찾은 조각은 멈추고 그 부품을 요청한다.
+7. **보드에 먼저 맞추고, 그다음 문서에 맞춘다.** 보드의 값이 이 문서나 이미 있는 부품과 다르면, 혼자 정할 일이 아니라 소유자에게 물을 일이다. 풀 리퀘스트에 적어 둔다.
+8. **병합 전 관문 셋.** 각 조각은 다음을 모두 거친 뒤에만 공유 브랜치에 들어간다. `pnpm check:design` 통과, `design-review` 에이전트(`.claude/agents/design-review.md`)의 diff 검토, 그리고 바뀐 상태 하나하나를 1440×900에서 보드와 나란히 비교해 다른 점을 모두 고치거나 소유자에게 물을 질문으로 적어 두기. 조각이 스스로 낸 보고는 주장일 뿐 증거가 아니다.
 
-`// design-allow: <reason>` (or `{/* design-allow: <reason> */}` in JSX) skips one line of `check:design`. It is for runtime-measured values, not for style choices.
+`// design-allow: <reason>`(JSX에서는 `{/* design-allow: <reason> */}`)은 `check:design`에서 한 줄을 건너뛴다. 실행 중에 재는 값을 위한 것이지, 스타일 선택을 위한 것이 아니다.
 
-## Using the DS artifact
+## DS 아티팩트 쓰기
 
-- Namespace: `MontiAdmin`. In the design canvas it is copied to `ds/montiadmin/`.
-- Load `tokens.css` first, then `components/bundle.css`. The second file reads the variables of the first.
-- `tokens.css` is generated from `tokens.json`; do not edit it by hand. It reads `fonts/` in the same folder, so move them together.
-- Dark mode: a `dark` class (or `data-theme="dark"`) on the wrapping element. All role colors and shadows inside it change.
-- Parts are used inside `.mt` (font, base size, button inheritance).
+- 네임스페이스: `MontiAdmin`. 디자인 캔버스에서는 `ds/montiadmin/`에 복사되어 있다.
+- `tokens.css`를 먼저 불러오고, 그다음 `components/bundle.css`를 불러온다. 두 번째 파일이 첫 번째 파일의 변수를 읽는다.
+- `tokens.css`는 `tokens.json`에서 만들어진다. 손으로 고치지 않는다. 같은 폴더의 `fonts/`를 읽으므로 함께 옮긴다.
+- 어두운 테마: 감싸는 요소에 `dark` 클래스(또는 `data-theme="dark"`)를 붙인다. 그 안의 역할 색과 그림자가 모두 바뀐다.
+- 부품은 `.mt` 안에서 쓴다(글꼴, 기본 크기, 버튼 상속).
 
-## Known gaps
+## 알려진 빈틈
 
-- The component previews in the DS artifact are a static render with `components/bundle.css`, not a bundle of the real React parts of `@monti-cms/ui`.
-- The IBM Plex Mono files are not included; the mockups load it from Google Fonts (Pretendard is in `fonts/`).
-- There is no logo. The site name is written in letters.
-- Primitives has no image part or code block in the DS (`@monti-cms/ui` has `Image` and `CodeBlock`).
+- DS 아티팩트의 컴포넌트 미리보기는 `components/bundle.css`로 그린 정적 렌더이고, `@monti-cms/ui`의 실제 React 부품을 묶은 것이 아니다.
+- IBM Plex Mono 파일은 들어 있지 않다. 목업은 Google Fonts에서 불러온다(Pretendard는 `fonts/`에 있다).
+- 로고가 없다. 사이트 이름은 글자로 쓴다.
+- Primitives에는 DS에 이미지 부품과 코드 블록이 없다(`@monti-cms/ui`에는 `Image`와 `CodeBlock`이 있다).
