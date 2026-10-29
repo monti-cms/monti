@@ -237,7 +237,7 @@ export interface CellOptions {
 	filler?: boolean;
 }
 const COLUMN_WIDTH = { xs: "w-14", sm: "w-24", md: "w-28", lg: "w-40" } as const;
-const ALIGN = { start: "text-left", center: "text-center", end: "text-right tabular" } as const;
+const ALIGN = { start: "text-left", center: "text-center", end: "text-right tabular-nums" } as const;
 
 function TableHead({
 	className,
