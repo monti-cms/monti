@@ -16,12 +16,15 @@
  *                       `.ts`/`.tsx` that imports any other CSS file fails too.
  *   admin-css-rule      `admin/styles/admin.css` holds document-wide base rules only (the body, the border default, `.monti-admin`, the scrollbar).
  *                       Any other selector moves to token utilities on the element.
- *   arbitrary-value     A class with a raw length or color in brackets (`w-[34px]`, `bg-[#fff]`, `[mask:...]`). Allowed: values made of tokens
- *                       (`var(--monti-...)`, `calc()` of tokens), `%`, `fr`, `auto`, and selector variants (`[&>svg]:`, `data-[state=open]:`).
+ *   arbitrary-value     A class with a raw color in brackets (`bg-[#fff]`, `[color:red]`, `color-mix(... white)`) fails everywhere. Outside `packages/ui`
+ *                       a raw length (`w-[34px]`, `p-[0.5rem]`, `calc(100%-2rem)`) fails too: the parts of `@monti-cms/ui` keep the design system's
+ *                       measured sizes. Allowed: values made of tokens (`var(--monti-...)`, `calc()` of tokens), `%`, `fr`, `auto`, Tailwind's
+ *                       own size numbers (`min-h-10`), and selector variants (`[&>svg]:`, `data-[state=open]:`).
  *   raw-palette         Tailwind's palette or default sizes (`bg-red-500`, `text-white`, `text-sm`) instead of tokens (`bg-monti-danger`, `text-monti-body`).
- *   inline-style        `style={...}` in a screen. In `packages/ui/src` only a style object with a literal px or color value fails.
+ *   inline-style        `style={...}` in a screen. In `packages/ui/src` only a style object with a literal px or color value fails (use a utility).
  *   part-in-screen      A screen (everything outside `packages/ui`) must not build styled primitives: no import of the libraries `@monti-cms/ui` is built
- *                       on (Base UI, Radix, `class-variance-authority`, `cmdk`, `sonner`, ...) and no `cva(`. Add the part to `@monti-cms/ui`.
+ *                       on (Base UI, Radix, `class-variance-authority`, `cmdk`, `sonner`, ...), no `cva(`, and no `@monti-cms/ui/internal` (the open
+ *                       parts with `className`) unless the file says why. Add the part to `@monti-cms/ui`.
  *   undocumented-part   Every component exported from `packages/ui/src/index.ts` is named in backticks in `docs/design/admin/components/*.md`.
  *   design-allow        A `design-allow` marker without a reason.
  *
@@ -87,7 +90,11 @@ const TEXT_SIZE_CLASS = /^text-(?:xs|sm|base|lg|xl|\dxl)(?:\/[\w.[\]-]+)?$/;
 
 /** A raw length (`px`, `rem`, `em`, `ch`, `pt`) or a raw color. Percentages, `fr`, `auto`, `var()` and viewport units pass. */
 const RAW_LENGTH = /(?<![\w.#-])-?(?:\d+\.?\d*|\.\d+)(?:px|rem|em|ch|pt)\b/;
-const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(|\b(?:white|black)\b/;
+const NAMED_COLORS =
+	"white|black|red|green|blue|yellow|orange|purple|pink|gray|grey|brown|cyan|magenta|navy|teal|lime|maroon|olive|silver|gold|indigo|violet|crimson|coral|salmon|tomato";
+const RAW_COLOR = new RegExp(
+	`#[0-9a-fA-F]{3,8}\\b|\\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\\(|(?<![\\w-])(?:${NAMED_COLORS})(?![\\w-])`,
+);
 const UNITLESS_STYLE_KEYS = new Set([
 	"opacity",
 	"zIndex",
@@ -280,7 +287,12 @@ function allowedLines(file, { comments, blanked }) {
 			continue;
 		}
 		allowed.add(line);
-		if ((blankedLines[line - 1] ?? "").replace(/[\s{}]/g, "") === "") allowed.add(line + 1);
+		// A marker alone on its line (a comment line in a JSX tag, or `{/* */}`) also skips the next line of code.
+		if ((blankedLines[line - 1] ?? "").replace(/[\s{}]/g, "") !== "") continue;
+		for (let next = line + 1; next <= blankedLines.length; next += 1) {
+			allowed.add(next);
+			if (blankedLines[next - 1].replace(/[\s{}]/g, "") !== "") break;
+		}
 	}
 	return allowed;
 }
@@ -323,7 +335,7 @@ function arbitraryValue(utility) {
 	return null;
 }
 
-function checkClasses(file, lexed, allowed) {
+function checkClasses(file, kind, lexed, allowed) {
 	for (const { start, end } of lexed.strings) {
 		const content = lexed.blanked.slice(start, end);
 		if (!/[[-]/.test(content)) continue;
@@ -333,13 +345,15 @@ function checkClasses(file, lexed, allowed) {
 			const token = match[0].replace(/^!|!$/g, "");
 			const utility = splitTop(token, ":").at(-1).text;
 			const value = arbitraryValue(utility);
-			if (value !== null && (RAW_LENGTH.test(value) || RAW_COLOR.test(value))) {
-				const kind = RAW_COLOR.test(value) ? "color" : "length";
+			// The parts of `@monti-cms/ui` keep the design system's measured sizes; a raw color is banned everywhere.
+			const raw = value !== null && (RAW_COLOR.test(value) || (kind === "screen" && RAW_LENGTH.test(value)));
+			if (raw) {
+				const what = RAW_COLOR.test(value) ? "color" : "length";
 				add(
 					file,
 					line,
 					"arbitrary-value",
-					`\`${token}\` carries a raw ${kind}; use a token utility or a value made of \`var(--monti-…)\``,
+					`\`${token}\` carries a raw ${what}; use a token utility or a value made of \`var(--monti-…)\``,
 				);
 			} else if (PALETTE_CLASS.test(utility)) {
 				add(
@@ -448,6 +462,14 @@ function checkImports(file, kind, lexed, allowed) {
 				`imports \`${specifier}\`; build the part in \`@monti-cms/ui\` and use it from there`,
 			);
 		}
+		if (kind === "screen" && specifier === "@monti-cms/ui/internal") {
+			add(
+				file,
+				line,
+				"part-in-screen",
+				"imports `@monti-cms/ui/internal` (the open parts, with `className`); use the closed part from `@monti-cms/ui`, or mark why this file needs the open one",
+			);
+		}
 	}
 	if (kind !== "screen") return;
 	for (const match of lexed.masked.matchAll(/\bcva\s*\(/g)) {
@@ -462,7 +484,7 @@ for (const { file, kind } of files) {
 	const source = readFileSync(file, "utf8");
 	const lexed = lex(source);
 	const allowed = allowedLines(file, lexed);
-	checkClasses(file, lexed, allowed);
+	checkClasses(file, kind, lexed, allowed);
 	checkInlineStyle(file, kind, source, lexed, allowed);
 	checkImports(file, kind, lexed, allowed);
 }
