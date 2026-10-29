@@ -407,7 +407,8 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		expect(codes).toContain(`folder_missing:${ids.inFolder}`);
 		const alpha = body.problems.find((problem: { code: string }) => problem.code === "body_invalid");
 		expect(alpha.found.length).toBeGreaterThan(0);
-		expect(alpha.label).toBeTruthy();
+		// A problem names the entry by its title (the field named `title` when no field has the title role), as the archive holds it.
+		expect(alpha.label).toBe("x".repeat(300));
 
 		const response = await run(target, tampered);
 		expect(response.status).toBe(422);
