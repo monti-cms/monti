@@ -45,11 +45,12 @@ const api =
 		return undefined;
 	};
 
+/** The page of the template `a`, or a new template when `id` is `null` (a default would turn "no id" into `a`). */
 const screen =
-	(fake: FakeApi, id: string | undefined = "a") =>
+	(fake: FakeApi, id: string | null = "a") =>
 	() => (
 		<PageFrame api={fake} pathname={id ? `/admin/templates/${id}/edit` : "/admin/templates/new"}>
-			<TemplateEditorScreen id={id} />
+			<TemplateEditorScreen id={id ?? undefined} />
 		</PageFrame>
 	);
 
@@ -75,9 +76,11 @@ export const Unsaved: Story = {
 	},
 };
 
-export const New: Story = { tags: ["visual"], render: screen(api(), undefined) };
+export const New: Story = { tags: ["visual"], render: screen(api(), null) };
 export const Loading: Story = { render: screen(() => "pending") };
-export const LoadFailed: Story = { render: screen(() => answer(500)) };
+export const LoadFailed: Story = {
+	render: screen(() => answer(500, { error: { message: "템플릿을 불러오지 못했어요." } })),
+};
 export const SaveRefused: Story = {
 	render: screen(api(() => answer(409, { error: { code: "conflict", message: "다른 곳에서 먼저 바뀌었어요." } }))),
 	play: async ({ canvasElement }) => {
@@ -85,6 +88,6 @@ export const SaveRefused: Story = {
 		await waitFor(() => expect(name).toHaveValue("기본 글"));
 		await userEvent.type(name, " 2");
 		fireEvent.keyDown(window, { key: "s", metaKey: true });
-		await waitFor(() => expect(within(canvasElement).getByText("다른 곳에서 먼저 바뀌었어요.")).toBeInTheDocument());
+		await within(canvasElement).findByText("다른 곳에서 먼저 저장했어요");
 	},
 };
