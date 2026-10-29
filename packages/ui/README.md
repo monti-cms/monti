@@ -39,14 +39,14 @@ Every story of this package's catalog is shot in light and dark and compared wit
 
 The baselines are made on the Linux image CI runs in and nowhere else, because text is drawn differently per system: `pnpm test:visual` refuses to run on macOS and Windows. CI is where they come from.
 
-**First baselines.** `visual/baselines/{light,dark}` is empty until the first ones are committed. The first CI run on a push finds no PNGs, compares nothing, and uploads the shots it took as the `visual-baselines` artifact (`light/` and `dark/`). Download it and put the two folders in `visual/baselines`:
+**First baselines.** `visual/baselines/{light,dark}` is empty until the first ones are committed. The first CI run finds no PNGs, compares nothing, and uploads the shots it took as the `visual-baselines` artifact (`light/` and `dark/`). Download it and put the two folders in `visual/baselines`:
 
 ```bash
 gh run download <run-id> --name visual-baselines --dir packages/ui/visual/baselines
 git add packages/ui/visual/baselines && git commit
 ```
 
-**After that,** CI compares every push with the committed shots. A difference fails the job and uploads the shots of the new code as the same artifact. If the change is meant, delete the two folders in `visual/baselines` (so a removed story leaves no shot behind), download the artifact into it as above and commit it with the change. If it is not meant, fix the code; the job's report shows each difference.
+**After that,** CI compares a push with the committed shots when the push's last commit has `[visual]` in its message. Until monti-cms/monti#334 makes the comparison stable, the job does not run on other pushes. A difference fails the job and uploads the shots of the new code as the same artifact. If the change is meant, delete the two folders in `visual/baselines` (so a removed story leaves no shot behind), download the artifact into it as above and commit it with the change. If it is not meant, fix the code; the job's report shows each difference.
 
 **On your machine,** Docker runs the same Linux image (the Playwright version of the install, the tag CI uses). The repo is copied into the container, so the host's `node_modules` is never touched:
 
