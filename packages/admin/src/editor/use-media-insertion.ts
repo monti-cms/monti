@@ -81,7 +81,6 @@ export function useMediaInsertion({
 						mediaId: image.id,
 						alt: image.defaultAlt,
 						caption: image.defaultCaption,
-						width: "100%",
 						align: "center",
 					},
 				})
@@ -113,7 +112,7 @@ export function useMediaInsertion({
 			}
 			const blockId = newBlockId();
 			const uploadId = newBlockId();
-			const attrs = { [BLOCK_ID_ATTRIBUTE]: blockId, uploadId, alt: "", caption: "", width: "100%", align: "center" };
+			const attrs = { [BLOCK_ID_ATTRIBUTE]: blockId, uploadId, alt: "", caption: "", align: "center" };
 			beginImageUpload(uploadId, file);
 			const chain = editor.chain().focus();
 			if (options.at === undefined) chain.insertContent({ type: "image", attrs }).run();

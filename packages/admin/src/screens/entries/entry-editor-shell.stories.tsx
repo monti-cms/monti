@@ -133,6 +133,7 @@ const server = ({ entry = draft, load, issues = [], save, publish, more }: Serve
 		if (path.endsWith("/relations")) return { incomingReferences: [] };
 		if (path.startsWith(`${API}/entries/search`)) return { items: [] };
 		if (path.startsWith(`${API}/entries?`)) return { items: [], total: 0 };
+		if (path.startsWith(`${API}/folders`)) return [];
 		if (path.startsWith(`${API}/media`)) return { items: [], total: 0 };
 		if (path.endsWith("/publish") && method === "POST") return publish ?? { entry: current, warnings: [] };
 		if (method === "PATCH") {
@@ -492,13 +493,53 @@ export const PermanentDeleteConfirm: Story = {
 	},
 };
 
+/** A flat colored square, so the picker's tiles have something to show without a network. */
+const swatch = (color: string) =>
+	`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="${color}"/></svg>`)}`;
+const libraryItem = (id: string, filename: string, color: string) => ({
+	id,
+	folderId: null,
+	status: "ready",
+	filename,
+	mimeType: "image/jpeg",
+	byteSize: 245_760,
+	width: 2400,
+	height: 1600,
+	publicUrl: swatch(color),
+	original: null,
+	defaultAlt: "",
+	defaultCaption: "",
+	createdAt: "2026-10-01T09:30:00.000Z",
+	referencesCount: 0,
+	references: [],
+});
+/** What the library picker reads: the media folders and the images. */
+const libraryApi = (path: string) => {
+	if (path.startsWith(`${API}/folders`))
+		return [
+			{ id: "f1", collection: "media", parentId: null, name: "Blog Assets", position: 0, version: 1, entryCount: 3 },
+			{ id: "f2", collection: "media", parentId: "f1", name: "covers", position: 0, version: 1, entryCount: 2 },
+		];
+	if (path.startsWith(`${API}/media?`)) {
+		const items = [
+			libraryItem("m1", "desk-morning.jpg", "#a69479"),
+			libraryItem("m2", "seoul-night.jpg", "#3a3f55"),
+			libraryItem("m3", "cafe-window.jpg", "#6d5a44"),
+		];
+		return { items, total: items.length };
+	}
+	return undefined;
+};
+
 /** "/ Image" opens the library picker. */
 export const ImagePicker: Story = {
-	render: screen(() => server()),
+	tags: ["visual"],
+	render: screen(() => server({ more: libraryApi })),
 	play: async ({ canvasElement }) => {
 		await settled(canvasElement);
 		openMediaPicker("image");
 		await within(document.body).findByRole("dialog", undefined, LONG);
+		await within(document.body).findByText("desk-morning.jpg", undefined, LONG);
 	},
 };
 

@@ -286,6 +286,7 @@ export function ImageBlockView() {
 		<BlockFrame
 			as="figure"
 			framed={false}
+			selectedRing={false}
 			data-image-block
 			className={cn(
 				// Keep the 2em top/bottom margin of img in the editor body (prose) from showing as an empty strip inside the gray box.
@@ -400,61 +401,63 @@ export function ImageBlockView() {
 				</div>
 			)}
 
-			{/* Actual Image */}
-			{uploading ? (
-				<UploadingImage
-					src={upload?.preview}
-					progress={upload?.percent ?? 0}
-					label={t("imageNode.uploadingPercent", { percent: upload?.percent ?? 0 })}
-				/>
-			) : canRender ? (
-				transform.isTransformed ? (
-					<div
-						data-slot="image-transform-wrapper"
-						className="relative w-full max-w-full overflow-hidden rounded-monti-md bg-monti-muted"
-						style={{
-							width: previewWidth || width || "100%",
-							maxWidth: "100%",
-							...transform.wrapperStyle,
-						}}
-					>
-						<img
-							src={resolved && "url" in resolved ? resolved.url : ""}
-							alt={alt || ""}
-							className="rounded-monti-md"
-							onLoad={(e) => {
-								const { naturalWidth, naturalHeight } = e.currentTarget;
-								if (naturalWidth > 0 && naturalHeight > 0) {
-									setAspectRatio(naturalWidth / naturalHeight);
-								}
+			{/* Actual Image. A selected image has the 2px ink ring on the picture only; the caption stays outside it. */}
+			<div className={cn("rounded-monti-md", block.selected && !uploading && "ring-2 ring-monti-contrast")}>
+				{uploading ? (
+					<UploadingImage
+						src={upload?.preview}
+						progress={upload?.percent ?? 0}
+						label={t("imageNode.uploadingPercent", { percent: upload?.percent ?? 0 })}
+					/>
+				) : canRender ? (
+					transform.isTransformed ? (
+						<div
+							data-slot="image-transform-wrapper"
+							className="relative w-full max-w-full overflow-hidden rounded-monti-md bg-monti-muted"
+							style={{
+								width: previewWidth || width || "100%",
+								maxWidth: "100%",
+								...transform.wrapperStyle,
 							}}
-							style={transform.imageStyle}
-						/>
-					</div>
+						>
+							<img
+								src={resolved && "url" in resolved ? resolved.url : ""}
+								alt={alt || ""}
+								className="rounded-monti-md"
+								onLoad={(e) => {
+									const { naturalWidth, naturalHeight } = e.currentTarget;
+									if (naturalWidth > 0 && naturalHeight > 0) {
+										setAspectRatio(naturalWidth / naturalHeight);
+									}
+								}}
+								style={transform.imageStyle}
+							/>
+						</div>
+					) : (
+						<div className="relative overflow-hidden rounded-monti-md bg-monti-muted">
+							<img
+								src={resolved && "url" in resolved ? resolved.url : ""}
+								alt={alt || ""}
+								className="h-auto w-full rounded-monti-md object-contain"
+								onLoad={(e) => {
+									const { naturalWidth, naturalHeight } = e.currentTarget;
+									if (naturalWidth > 0 && naturalHeight > 0) {
+										setAspectRatio(naturalWidth / naturalHeight);
+									}
+								}}
+							/>
+						</div>
+					)
+				) : isChecking ? (
+					<Text as="p" tone="subtle" role="status">
+						{t("imageNode.loading")}
+					</Text>
 				) : (
-					<div className="relative overflow-hidden rounded-monti-md bg-monti-muted">
-						<img
-							src={resolved && "url" in resolved ? resolved.url : ""}
-							alt={alt || ""}
-							className="h-auto w-full rounded-monti-md object-contain"
-							onLoad={(e) => {
-								const { naturalWidth, naturalHeight } = e.currentTarget;
-								if (naturalWidth > 0 && naturalHeight > 0) {
-									setAspectRatio(naturalWidth / naturalHeight);
-								}
-							}}
-						/>
+					<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
+						{t("imageNode.unavailable")}
 					</div>
-				)
-			) : isChecking ? (
-				<Text as="p" tone="subtle" role="status">
-					{t("imageNode.loading")}
-				</Text>
-			) : (
-				<div className="flex h-48 w-full items-center justify-center rounded-monti-md bg-monti-muted text-monti-body text-monti-muted">
-					{t("imageNode.unavailable")}
-				</div>
-			)}
+				)}
+			</div>
 			{resolveReason && !uploading ? (
 				<p className="mt-monti-4 text-center text-monti-caption text-monti-danger">{resolveReason}</p>
 			) : null}
