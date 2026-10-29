@@ -163,17 +163,13 @@ describe("ContentStore References", () => {
 			contentHash: "tb",
 		});
 
-		let err: unknown;
-		try {
-			await pool.query(
+		await expect(
+			pool.query(
 				`INSERT INTO "${schemaName}".entry_references (entry_id, state, kind, target_id, target_entry_id, is_stale, occurrences)
 				 VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
 				[source.id, "working", "entry", targetA.id, targetB.id, false, JSON.stringify([])],
-			);
-		} catch (e) {
-			err = e;
-		}
-		expect(err).toBeDefined();
+			),
+		).rejects.toMatchObject({ code: "23514", constraint: "entry_references_target_check" });
 
 		const res = await pool.query(`SELECT COUNT(*) as count FROM "${schemaName}".entry_references WHERE entry_id = $1`, [
 			source.id,
@@ -236,17 +232,13 @@ describe("ContentStore References", () => {
 		const mediaIdB = randomUUID();
 		await pool.query(`INSERT INTO "${schemaName}".media_assets (id) VALUES ($1), ($2)`, [mediaIdA, mediaIdB]);
 
-		let nullMediaErr: unknown;
-		try {
-			await pool.query(
+		await expect(
+			pool.query(
 				`INSERT INTO "${schemaName}".entry_references (entry_id, state, kind, target_id, target_media_id, target_entry_id, is_stale, occurrences)
 				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
 				[source.id, "working", "media", mediaIdA, null, null, false, JSON.stringify([])],
-			);
-		} catch (e) {
-			nullMediaErr = e;
-		}
-		expect(nullMediaErr).toBeDefined();
+			),
+		).rejects.toMatchObject({ code: "23514", constraint: "entry_references_target_check" });
 
 		const preMismatchCount = await pool.query(
 			`SELECT COUNT(*) as count FROM "${schemaName}".entry_references WHERE entry_id = $1`,
@@ -254,17 +246,13 @@ describe("ContentStore References", () => {
 		);
 		expect(preMismatchCount.rows[0].count).toBe("0");
 
-		let insertErr: unknown;
-		try {
-			await pool.query(
+		await expect(
+			pool.query(
 				`INSERT INTO "${schemaName}".entry_references (entry_id, state, kind, target_id, target_media_id, target_entry_id, is_stale, occurrences)
 				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
 				[source.id, "working", "media", mediaIdA, mediaIdB, null, false, JSON.stringify([])],
-			);
-		} catch (e) {
-			insertErr = e;
-		}
-		expect(insertErr).toBeDefined();
+			),
+		).rejects.toMatchObject({ code: "23514", constraint: "entry_references_target_check" });
 
 		const nonexistentMediaId = randomUUID();
 		const refInvalid = buildReference({ kind: "media", targetId: nonexistentMediaId });
@@ -287,7 +275,7 @@ describe("ContentStore References", () => {
 		const snapshotValid = buildSnapshot({ slug: `media-valid-${randomUUID()}`, references: [refValid] });
 
 		const entryValid = await store.createEntryWithReferences({ snapshot: snapshotValid, references: [refValid] });
-		expect(entryValid.id).toBeDefined();
+		expect(entryValid).toMatchObject({ collection: contentCollection, workingSlug: snapshotValid.slug });
 
 		const refs = await store.getWorkingReferences({ entryId: entryValid.id });
 		expect(refs).toHaveLength(1);
@@ -343,18 +331,14 @@ describe("ContentStore References", () => {
 			references: [refFail],
 		});
 
-		let saveErr: unknown;
-		try {
-			await store.saveWorkingWithReferences({
+		await expect(
+			store.saveWorkingWithReferences({
 				entryId: entryValid.id,
 				expectedVersion: entryUpdated.version,
 				snapshot: snapshotFail,
 				references: [refFail],
-			});
-		} catch (e) {
-			saveErr = e;
-		}
-		expect(saveErr).toBeDefined();
+			}),
+		).rejects.toMatchObject({ code: "invalid_reference" });
 
 		const savedAfterFail = await store.getEntry(entryValid.id);
 		expect(savedAfterFail.version).toBe(entryUpdated.version);

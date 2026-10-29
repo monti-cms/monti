@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
-import { fieldTraits, isStoredField } from "../fields";
+import { DEFAULT_TITLE_FIELD, fieldTraits, isStoredField, SUMMARY_ROLE, TITLE_ROLE } from "../fields";
 import { valueFieldsOf } from "../walk";
 
 describe("field traits", () => {
@@ -30,10 +30,15 @@ describe("field traits", () => {
 	it("find a role field and a title the same way for the pure helpers and for the site", () => {
 		for (const collection of testSite.COLLECTIONS) {
 			const schema = testSite.schemaOf(collection);
-			expect(testSite.roleField(collection, "summary")).toEqual(
-				valueFieldsOf(schema).find((stored) => stored.field.role === "summary"),
+			const stored = valueFieldsOf(schema);
+			expect(testSite.roleField(collection, SUMMARY_ROLE)).toEqual(
+				stored.find((item) => item.field.role === SUMMARY_ROLE),
 			);
-			expect(testSite.titleField(collection).name).toBeTruthy();
+			const title =
+				stored.find((item) => item.field.role === TITLE_ROLE) ??
+				stored.find((item) => item.name === DEFAULT_TITLE_FIELD);
+			expect(title, collection).toMatchObject({ field: { kind: "text" } });
+			expect(testSite.titleField(collection)).toEqual(title);
 			expect(testSite.localizedSet(collection)).toEqual(
 				new Set(
 					Object.entries(schema.fields)

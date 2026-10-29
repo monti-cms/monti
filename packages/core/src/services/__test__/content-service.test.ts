@@ -38,8 +38,8 @@ const createContentService = (
 ) => createCoreContentService(port, { site: testSite, formats, ...options });
 
 /*
- * Collection and field names are looked up from the current config. In the reference blog setup, the body collection is posts (`post`),
- * the single-value relation is `categoryId` (→ category), the multi-value relation is `tagIds` (→ tag), and the second collection is memos (`memo`).
+ * Collection and field names are looked up from the current config. In the reference blog setup, the body collection is posts,
+ * the single-value relation points at categories, the multi-value relation at tags, and the second collection is memos.
  */
 const content = contentCollection;
 /** Stored fields that are not dependent on a conditional field. */
@@ -57,11 +57,11 @@ const single = relationOf(false);
 const many = relationOf(true);
 /** The second collection (blog: memo). If there is only one document collection with a body, the first item collection. */
 const second = otherContentCollection ?? recordCollection;
-/** A text field with no character limit (blog: summary `summary`). Tests the metadata size limit. */
+/** A text field with no character limit (blog: the summary). Tests the metadata size limit. */
 const unboundedText = topLevel(content).find(
 	({ name, field }) => name !== "title" && field.kind === "text" && field.max === undefined,
 );
-/** A list relation that also holds not-yet-published posts in order (blog: collection `itemIds` of `collection`). */
+/** A list relation that also holds not-yet-published posts in order (blog: the items of a reading list). */
 const orderedList = (() => {
 	for (const collection of testSite.COLLECTIONS) {
 		for (const { name, field } of testSite.storedFields(collection)) {
@@ -755,8 +755,8 @@ describe("ContentService Contract", () => {
 			const snapshot = await prepareSnapshot(
 				input({
 					collection: orderedList.collection,
-					slug: "series",
-					metadata: { title: "Series", [orderedList.name]: [id] },
+					slug: "ordered-list",
+					metadata: { title: "Ordered list", [orderedList.name]: [id] },
 					format: "paragraphs",
 					body: "",
 				}),
@@ -773,8 +773,8 @@ describe("ContentService Contract", () => {
 			const snapshot = await prepareSnapshot(
 				input({
 					collection: content,
-					slug: "memo",
-					metadata: { title: "Memo", [many.name]: ids },
+					slug: "unresolved",
+					metadata: { title: "Unresolved", [many.name]: ids },
 					format: "paragraphs",
 					body: "Body",
 				}),
@@ -837,7 +837,7 @@ describe("ContentService Contract", () => {
 					format: "paragraphs",
 					body: "",
 				} as unknown as SaveDraftInput),
-			).rejects.toBeDefined();
+			).rejects.toMatchObject({ code: "invalid_input" });
 
 			expect(storePort.saveWorkingWithReferences).not.toHaveBeenCalled();
 		});
@@ -864,7 +864,9 @@ describe("ContentService Contract", () => {
 					body: "",
 				}),
 			);
-			expect(vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0].snapshot.slug).toBe("hello-world");
+			expect(storePort.createEntryWithReferences).toHaveBeenCalledWith(
+				expect.objectContaining({ snapshot: expect.objectContaining({ slug: "hello-world" }) }),
+			);
 		});
 
 		it("createDraft stores through the atomic create call without previous refs/contentHash, and propagates the exact port error", async () => {
@@ -897,9 +899,12 @@ describe("ContentService Contract", () => {
 				}),
 			);
 
-			const callArgs = vi.mocked(storePort.createEntryWithReferences).mock.calls[0][0];
-			expect(callArgs).not.toHaveProperty("previousReferences");
-			expect(callArgs).not.toHaveProperty("contentHash");
+			expect(storePort.createEntryWithReferences).toHaveBeenCalledWith(
+				expect.not.objectContaining({ previousReferences: expect.anything() }),
+			);
+			expect(storePort.createEntryWithReferences).toHaveBeenCalledWith(
+				expect.not.objectContaining({ contentHash: expect.anything() }),
+			);
 
 			const exactError = { code: "slug_conflict", message: "Duplicate" };
 			const conflictPort: StorePort = {
@@ -934,7 +939,7 @@ describe("ContentService Contract", () => {
 					format: "paragraphs",
 					body: "",
 				} as unknown as ServiceInput),
-			).rejects.toBeDefined();
+			).rejects.toMatchObject({ code: "unknown_collection" });
 			expect(conflictPort.createEntryWithReferences).not.toHaveBeenCalled();
 		});
 
@@ -969,14 +974,18 @@ describe("ContentService Contract", () => {
 				expectedVersion: 2,
 			});
 
-			const savedRefs = vi.mocked(storePort.saveWorkingWithReferences).mock.calls[0][0].references;
-			expect(savedRefs).toHaveLength(1);
-			expect(savedRefs[0]).toMatchObject({
-				kind: "entry",
-				targetId: "123e4567-e89b-12d3-a456-426614174000",
-				isStale: true,
-				occurrences: [{ type: "body", blockId: "abcd1234" }],
-			});
+			expect(storePort.saveWorkingWithReferences).toHaveBeenCalledWith(
+				expect.objectContaining({
+					references: [
+						expect.objectContaining({
+							kind: "entry",
+							targetId: "123e4567-e89b-12d3-a456-426614174000",
+							isStale: true,
+							occurrences: [expect.objectContaining({ type: "body", blockId: "abcd1234" })],
+						}),
+					],
+				}),
+			);
 		});
 
 		it("saveDraft loads previous refs for the entry and forwards expectedVersion to the atomic save", async () => {
@@ -1021,17 +1030,28 @@ describe("ContentService Contract", () => {
 
 	describe("9. Block ids", () => {
 		const entryId = "123e4567-e89b-12d3-a456-426614174000";
-		const portWith = (doc: StoredDocument | null): StorePort => ({
-			getWorkingReferences: vi.fn().mockResolvedValue([]),
-			archiveEntry: vi.fn(),
-			unarchiveEntry: vi.fn(),
-			trashEntry: vi.fn(),
-			publishEntry: vi.fn(),
-			checkPublishEntry: vi.fn(),
-			getWorking: vi.fn().mockResolvedValue({ doc }),
-			createEntryWithReferences: vi.fn(),
-			saveWorkingWithReferences: vi.fn().mockResolvedValue(undefined),
-		});
+		/** The document the fake store was last given to write, by the port it was given to. */
+		const written = new WeakMap<StorePort, StoredDocument>();
+		const portWith = (doc: StoredDocument | null): StorePort => {
+			const port: StorePort = {
+				getWorkingReferences: vi.fn().mockResolvedValue([]),
+				archiveEntry: vi.fn(),
+				unarchiveEntry: vi.fn(),
+				trashEntry: vi.fn(),
+				publishEntry: vi.fn(),
+				checkPublishEntry: vi.fn(),
+				getWorking: vi.fn().mockResolvedValue({ doc }),
+				createEntryWithReferences: vi.fn(async (params: { snapshot: PreparedSnapshot }) => {
+					written.set(port, params.snapshot.doc);
+					return undefined as never;
+				}),
+				saveWorkingWithReferences: vi.fn(async (params: { snapshot: PreparedSnapshot }) => {
+					written.set(port, params.snapshot.doc);
+					return undefined as never;
+				}),
+			};
+			return port;
+		};
 		const saveWith = (storePort: StorePort, body: { format: string; body: string } | { doc: StoredDocument }) =>
 			createContentService(storePort)
 				.saveDraft(entryId, {
@@ -1042,8 +1062,11 @@ describe("ContentService Contract", () => {
 					...body,
 				} as SaveDraftInput)
 				.then((result) => result.entry);
-		const savedDoc = (storePort: StorePort) =>
-			vi.mocked(storePort.saveWorkingWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
+		const savedDoc = (storePort: StorePort) => {
+			const doc = written.get(storePort);
+			if (!doc) throw new Error("the service wrote no document");
+			return doc;
+		};
 		const idsOf = (doc: StoredDocument) => doc.content.map((block) => block.id);
 
 		it("saveDraft reads the current draft and pairs the new text with its document, so blocks keep their ids", async () => {
@@ -1091,7 +1114,7 @@ describe("ContentService Contract", () => {
 				body: "One\n\nTwo\n",
 			} as ServiceInput);
 
-			const doc = vi.mocked(storePort.createEntryWithReferences).mock.calls[0]?.[0].snapshot.doc as StoredDocument;
+			const doc = savedDoc(storePort);
 			expect(idsOf(doc).every(isBlockId)).toBe(true);
 			expect(new Set(idsOf(doc)).size).toBe(2);
 		});
@@ -1103,7 +1126,7 @@ describe("ContentService Contract", () => {
 			const mdxTooLarge = "a".repeat(2097153);
 			await expect(
 				prepareSnapshot({ collection: content, slug: "valid", metadata: {}, format: "paragraphs", body: mdxExact }),
-			).resolves.toBeDefined();
+			).resolves.toMatchObject({ collection: content, slug: "valid" });
 			await expect(
 				prepareSnapshot({
 					collection: content,
@@ -1117,7 +1140,7 @@ describe("ContentService Contract", () => {
 
 		it.skipIf(!unboundedText)("accepts exact boundary and rejects +1-byte for metadata_too_large", async () => {
 			const name = unboundedText?.name ?? "";
-			// The reference blog's {"summary":""} is 14 bytes. 262144 - 14 = 262130
+			// The metadata limit counts the JSON of the metadata: the field with an empty value is the overhead (14 bytes for the blog's summary).
 			const overhead = JSON.stringify({ [name]: "" }).length;
 			const boundaryString = "a".repeat(262144 - overhead);
 			await expect(
@@ -1130,7 +1153,7 @@ describe("ContentService Contract", () => {
 						body: "",
 					}),
 				),
-			).resolves.toBeDefined();
+			).resolves.toMatchObject({ metadata: { [name]: boundaryString } });
 			const tooLargeString = "a".repeat(262144 - overhead + 1);
 			await expect(
 				prepareSnapshot(
@@ -1236,8 +1259,8 @@ describe("ContentService Contract", () => {
 
 		it("rejects metadata with getters without executing getter", async () => {
 			const spy = vi.fn();
-			const meta = { title: "valid" };
-			Object.defineProperty(meta, unboundedText?.name ?? "summary", {
+			const meta = {};
+			Object.defineProperty(meta, "title", {
 				get: spy,
 				enumerable: true,
 			});
@@ -1436,7 +1459,7 @@ describe("ContentService Contract", () => {
 	});
 	describe("11. image sources and publish warnings", () => {
 		const mediaId = "987e4567-e89b-12d3-a456-426614174000";
-		// If the required relation for publishing (blog: a post's `categoryId`) is empty, the publish check blocks first. To look only at image warnings,
+		// If the required relation for publishing (blog: a post's category) is empty, the publish check blocks first. To look only at image warnings,
 		// fill in the required value and confirm that the relation target is public.
 		const relationTargets: ResolvedTargets["targets"] = [];
 		const relationTarget = async (to: Collection) => {

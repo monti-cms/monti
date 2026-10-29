@@ -141,20 +141,22 @@ export const publicReadContract: ContractSuite = (factory) => {
 		});
 
 		it("omits the body in list reads by default and includes it only on request", async () => {
+			await createPublishedEntry({ collection: content, slug: "list-body", text: "목록 본문" });
 			const withoutBody = await store.listPublishedEntries({ collections: [content] });
 			const withBody = await store.listPublishedEntries({ collections: [content], includeBody: true });
 
-			expect(withoutBody.length).toBeGreaterThan(0);
+			expect(withoutBody.find((row) => row.slug === "list-body")).toMatchObject({ doc: null });
 			expect(withoutBody.every((row) => row.doc === null)).toBe(true);
-			expect(withBody.some((row) => row.doc !== null)).toBe(true);
+			expect(contentOf(withBody.find((row) => row.slug === "list-body")?.doc)).toEqual(contentOf(docOf("목록 본문")));
 		});
 
 		it("includes the body in single reads by default", async () => {
-			const lookup = await store.getPublishedEntryBySlug({ collection: content, slug: "live-post" });
+			await createPublishedEntry({ collection: content, slug: "single-body", text: "# 단건 본문" });
+			const lookup = await store.getPublishedEntryBySlug({ collection: content, slug: "single-body" });
 
 			expect(lookup.status).toBe("current");
 			if (lookup.status === "current") {
-				expect(contentOf(lookup.entry.doc)).toEqual(contentOf(docOf("# 공개 본문")));
+				expect(contentOf(lookup.entry.doc)).toEqual(contentOf(docOf("# 단건 본문")));
 			}
 		});
 
@@ -351,9 +353,10 @@ export const publicReadContract: ContractSuite = (factory) => {
 		});
 
 		it("rejects a collection that is not allowed", async () => {
-			await expect(store.listPublishedEntries({ collections: ["secret"] })).rejects.toThrow(/컬렉션|collection/);
-			await expect(store.listPublishedEntries({ collections: [] })).rejects.toThrow();
-			await expect(store.getPublishedEntryBySlug({ collection: "secret", slug: "x" })).rejects.toThrow();
+			const invalid = { code: "invalid_input" };
+			await expect(store.listPublishedEntries({ collections: ["secret"] })).rejects.toMatchObject(invalid);
+			await expect(store.listPublishedEntries({ collections: [] })).rejects.toMatchObject(invalid);
+			await expect(store.getPublishedEntryBySlug({ collection: "secret", slug: "x" })).rejects.toMatchObject(invalid);
 		});
 
 		it("rejects an empty slug", async () => {

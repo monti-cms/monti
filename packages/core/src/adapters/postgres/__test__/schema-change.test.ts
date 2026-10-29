@@ -1,11 +1,17 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import type { CmsConfig } from "../../../config/define";
 import { defineSite } from "../../../config/define";
 import { computeContentHash } from "../../../core/content-hash";
 import { defineCollection } from "../../../schema/collection";
-import { applySchemaChange, checkSchemaChange, planSchemaChange, SchemaChangeError } from "../../../schema-change";
+import {
+	applySchemaChange,
+	checkSchemaChange,
+	planSchemaChange,
+	SchemaChangeError,
+	snapshotSchema,
+} from "../../../schema-change";
 import type { SchemaMigration } from "../../../schema-file/types";
 import { createContentService } from "../../../services/content-service";
 import { createSite, type Site } from "../../../site";
@@ -102,10 +108,10 @@ describe("schema changes", () => {
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
-	/** The entries every test works on, written under the schema before. */
+	/** The entries every test works on, written under the schema before into a schema of the test's own. */
 	const ids = {} as Record<"category" | "a" | "b" | "c" | "d", string>;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -167,8 +173,11 @@ describe("schema changes", () => {
 		).entry.id;
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -199,6 +208,11 @@ describe("schema changes", () => {
 		).rows;
 
 	const baseline = () => applySchemaChange({ site: siteBefore, store: storeFor(siteBefore), migrations: [] });
+	/** The baseline, then the change applied with its transforms. */
+	const baselineThenApply = async () => {
+		await baseline();
+		await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
+	};
 
 	describe("the baseline", () => {
 		it("records the schema without touching any entry (an extracted schema file applied with no transforms is a no-op)", async () => {
@@ -214,11 +228,11 @@ describe("schema changes", () => {
 			expect(done.result).toMatchObject({ applied: [], bodies: 0, entries: 0 });
 			expect(await rows()).toEqual(rowsBefore);
 			expect(await entryRows()).toEqual(entriesBefore);
-			expect((await state())?.schema).toBeDefined();
+			expect((await state())?.schema).toEqual(snapshotSchema(siteBefore));
 
 			// Applying it again changes nothing either, and the plan now has an old side that equals the new one.
 			const again = await planSchemaChange({ site: siteBefore, store, migrations: [] });
-			expect(again.applied?.schema).toBeDefined();
+			expect(again.applied?.schema).toEqual(snapshotSchema(siteBefore));
 			expect(again.diff.changes).toEqual([]);
 			await baseline();
 			expect(await rows()).toEqual(rowsBefore);
@@ -227,6 +241,7 @@ describe("schema changes", () => {
 
 	describe("the plan and the impact check", () => {
 		it("lists what changed, with the transforms that handle each change", async () => {
+			await baseline();
 			const store = storeFor(siteAfter);
 			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
 			expect(plan.problems).toEqual([]);
@@ -253,6 +268,7 @@ describe("schema changes", () => {
 		});
 
 		it("counts the entries each change touches, with a sample, and reads without writing", async () => {
+			await baseline();
 			const store = storeFor(siteAfter);
 			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
 			const rowsBefore = await rows();
@@ -309,6 +325,7 @@ describe("schema changes", () => {
 
 	describe("applying", () => {
 		it("a dry run reports what would happen and changes nothing", async () => {
+			await baseline();
 			const rowsBefore = await rows();
 			const recordedBefore = await recorded();
 			const stateBefore = await state();
@@ -327,6 +344,7 @@ describe("schema changes", () => {
 		});
 
 		it("rejects a transform that does not fit the schema, and changes nothing", async () => {
+			await baseline();
 			const rowsBefore = await rows();
 			const wrong: SchemaMigration[] = [
 				{ id: "drop-live-field", op: "dropField", collection: "post", field: "status" },
@@ -348,6 +366,7 @@ describe("schema changes", () => {
 		});
 
 		it("runs the transforms through the write rules: values, hashes, references, versions", async () => {
+			await baseline();
 			const entriesBefore = new Map((await entryRows()).map((row) => [row.id as string, row]));
 			const rowsBefore = await rows();
 			// Which entries had unpublished changes: working and published hashes differ.
@@ -413,11 +432,12 @@ describe("schema changes", () => {
 			}
 
 			// The schema is recorded, and every transform once.
-			expect((await state())?.schema).toBeDefined();
+			expect((await state())?.schema).toEqual(snapshotSchema(siteAfter));
 			expect(await recorded()).toEqual(migrations.map((item) => `schema:${item.id}`).sort());
 		});
 
 		it("reads as the new schema does: no warnings for what was transformed, a warning for the orphan", async () => {
+			await baselineThenApply();
 			const service = serviceFor(siteAfter);
 			const working = await storeFor(siteAfter).getWorking({ entryId: ids.c });
 			const { warnings } = await service.publish({
@@ -429,6 +449,7 @@ describe("schema changes", () => {
 		});
 
 		it("is idempotent: a second apply runs nothing and changes nothing", async () => {
+			await baselineThenApply();
 			const rowsBefore = await rows();
 			const recordedBefore = await recorded();
 			const done = await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
@@ -443,6 +464,7 @@ describe("schema changes", () => {
 		});
 
 		it("two applies at once run each transform once", async () => {
+			await baselineThenApply();
 			const extra: SchemaMigration[] = [
 				...migrations,
 				{ id: "author-default-2", op: "setDefault", collection: "post", field: "author", value: "Other" },
@@ -461,6 +483,7 @@ describe("schema changes", () => {
 
 	describe("a rename onto a field that holds a value", () => {
 		it("keeps both values and says so: nothing is overwritten", async () => {
+			await baselineThenApply();
 			const service = serviceFor(siteBefore);
 			const draft = (
 				await service.createDraft({
@@ -524,6 +547,7 @@ describe("schema changes", () => {
 	});
 
 	it("keeps the Postgres-recorded schema equal to the site's snapshot", async () => {
+		await baselineThenApply();
 		const row = await state();
 		expect(Object.keys((row?.schema as { collections: object }).collections).sort()).toEqual(["category", "post"]);
 	});

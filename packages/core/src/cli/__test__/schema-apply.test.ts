@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
@@ -41,7 +41,8 @@ describe("schema:diff and schema:apply", () => {
 	let file: string;
 	let serial = 0;
 
-	beforeAll(async () => {
+	// Each test gets its own folder and database schema, so none starts from what another test applied.
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -49,9 +50,12 @@ describe("schema:diff and schema:apply", () => {
 		file = path.join(dir, "monti.schema.ts");
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		rmSync(dir, { recursive: true, force: true });
-		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+		await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -77,100 +81,122 @@ describe("schema:diff and schema:apply", () => {
 		return res.rows[0];
 	};
 
-	it("starts with a baseline that changes nothing, and writes nothing to the file", async () => {
-		writeFileSync(file, schema({ summary: { kind: "text", label: "Summary" } }));
-		const before = fileText();
-		const outcome = await schemaApply(options());
-		expect(outcome.ok).toBe(true);
-		expect(outcome.text).toContain("No schema has been applied to this store yet");
-		expect(outcome.text).toContain("No transform to run. Recorded the schema.");
-		expect(fileText()).toBe(before);
-	});
-
-	it("shows what a change touches before it is applied", async () => {
-		const cms = await loadCms();
-		for (const [slug, summary] of [
-			["one", "First"],
-			["two", "Second"],
-		] as const) {
-			await cms.contentService().createDraft({
-				collection: "post",
-				slug,
-				metadata: { title: slug, summary },
-				doc: docOfText(`Body ${slug}`),
-			} as never);
+	it("applies a schema change in steps: baseline, diff, dry run, apply, apply again, then refuses a transform that does not fit", async () => {
+		// Baseline: it changes nothing, and writes nothing to the file.
+		{
+			writeFileSync(file, schema({ summary: { kind: "text", label: "Summary" } }));
+			const before = fileText();
+			const outcome = await schemaApply(options());
+			expect(outcome.ok).toBe(true);
+			expect(outcome.text).toContain("No schema has been applied to this store yet");
+			expect(outcome.text).toContain("No transform to run. Recorded the schema.");
+			expect(fileText()).toBe(before);
 		}
-		await cms.close();
 
-		writeFileSync(
-			file,
-			schema(
-				{ excerpt: { kind: "text", label: "Excerpt" } },
-				{
-					migrations: [{ id: "rename-summary", op: "renameField", collection: "post", from: "summary", to: "excerpt" }],
-				},
-			),
-		);
+		// Diff: it shows what a change touches before it is applied.
+		{
+			const cms = await loadCms();
+			for (const [slug, summary] of [
+				["one", "First"],
+				["two", "Second"],
+			] as const) {
+				await cms.contentService().createDraft({
+					collection: "post",
+					slug,
+					metadata: { title: slug, summary },
+					doc: docOfText(`Body ${slug}`),
+				} as never);
+			}
+			await cms.close();
+
+			writeFileSync(
+				file,
+				schema(
+					{ excerpt: { kind: "text", label: "Excerpt" } },
+					{
+						migrations: [
+							{ id: "rename-summary", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
+						],
+					},
+				),
+			);
+			const diff = await schemaDiff(options());
+			expect(diff.exitCode).toBe(0);
+			expect(diff.text).not.toMatch(/version/i);
+			expect(diff.text).toContain("post.summary renamed to excerpt [transform rename-summary]: 2 entries");
+			expect(diff.text).toContain("Transforms to run (1): rename-summary");
+			expect((await schemaDiff({ ...options(), check: true })).exitCode).toBe(1);
+			expect((await metadataOf("one"))?.metadata).toMatchObject({ summary: "First" });
+		}
+
+		// Dry run: it reports and changes nothing, not even the file.
+		{
+			const before = fileText();
+			const outcome = await schemaApply({ ...options(), dryRun: true });
+			expect(outcome.ok).toBe(true);
+			expect(outcome.text).toContain("Ran rename-summary: 2 entries");
+			expect(outcome.text).toContain("Dry run: nothing was changed.");
+			expect(fileText()).toBe(before);
+			expect((await metadataOf("one"))?.metadata).toMatchObject({ summary: "First" });
+		}
+
+		// Apply: it runs the transforms and rewrites the transformed entries, leaving the file as it is.
+		{
+			const before = fileText();
+			const outcome = await schemaApply(options());
+			expect(outcome.ok).toBe(true);
+			expect(outcome.text).toContain("Ran rename-summary: 2 entries");
+			expect(outcome.text).toContain("Recorded the schema (2 entries rewritten).");
+			expect(fileText()).toBe(before);
+			const one = await metadataOf("one");
+			expect(one?.metadata).toEqual({ title: "one", excerpt: "First" });
+		}
+
+		// Apply again: it is idempotent; a second run runs nothing, and the file stays.
+		{
+			const before = fileText();
+			const outcome = await schemaApply(options());
+			expect(outcome.ok).toBe(true);
+			expect(outcome.text).toContain("No transform to run. Recorded the schema.");
+			expect(outcome.text).toContain("No change to collections, fields, options, locales or allowed blocks.");
+			expect(fileText()).toBe(before);
+			expect((await schemaDiff({ ...options(), check: true })).exitCode).toBe(0);
+		}
+
+		// A transform that does not fit the schema is refused, and nothing is applied.
+		{
+			writeFileSync(
+				file,
+				schema(
+					{ excerpt: { kind: "text", label: "Excerpt" } },
+					{
+						migrations: [
+							{ id: "rename-summary", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
+							{ id: "drop-excerpt", op: "dropField", collection: "post", field: "excerpt" },
+						],
+					},
+				),
+			);
+			const before = fileText();
+			const outcome = await schemaApply(options());
+			expect(outcome.ok).toBe(false);
+			expect(outcome.text).toContain("PROBLEM drop-excerpt: post.excerpt is still a field of the schema");
+			expect(outcome.text).toContain("Nothing was applied.");
+			expect(fileText()).toBe(before);
+			expect((await metadataOf("one"))?.metadata).toEqual({ title: "one", excerpt: "First" });
+		}
+	});
+
+	it("lists an added language as a change that touches no entry", async () => {
+		writeFileSync(file, schema({}));
+		expect((await schemaApply(options())).ok).toBe(true);
+		const both = [
+			{ code: "en", name: "English" },
+			{ code: "ko", name: "Korean" },
+		];
+		writeFileSync(file, schema({}, { locales: both }));
 		const diff = await schemaDiff(options());
-		expect(diff.exitCode).toBe(0);
-		expect(diff.text).not.toMatch(/version/i);
-		expect(diff.text).toContain("post.summary renamed to excerpt [transform rename-summary]: 2 entries");
-		expect(diff.text).toContain("Transforms to run (1): rename-summary");
-		expect((await schemaDiff({ ...options(), check: true })).exitCode).toBe(1);
-		expect((await metadataOf("one"))?.metadata).toMatchObject({ summary: "First" });
-	});
-
-	it("a dry run reports and changes nothing, not even the file", async () => {
-		const before = fileText();
-		const outcome = await schemaApply({ ...options(), dryRun: true });
-		expect(outcome.ok).toBe(true);
-		expect(outcome.text).toContain("Ran rename-summary: 2 entries");
-		expect(outcome.text).toContain("Dry run: nothing was changed.");
-		expect(fileText()).toBe(before);
-		expect((await metadataOf("one"))?.metadata).toMatchObject({ summary: "First" });
-	});
-
-	it("applies the transforms and rewrites the transformed entries, leaving the file as it is", async () => {
-		const before = fileText();
-		const outcome = await schemaApply(options());
-		expect(outcome.ok).toBe(true);
-		expect(outcome.text).toContain("Ran rename-summary: 2 entries");
-		expect(outcome.text).toContain("Recorded the schema (2 entries rewritten).");
-		expect(fileText()).toBe(before);
-		const one = await metadataOf("one");
-		expect(one?.metadata).toEqual({ title: "one", excerpt: "First" });
-	});
-
-	it("is idempotent: a second run runs nothing, and the file stays", async () => {
-		const before = fileText();
-		const outcome = await schemaApply(options());
-		expect(outcome.ok).toBe(true);
-		expect(outcome.text).toContain("No transform to run. Recorded the schema.");
-		expect(outcome.text).toContain("No change to collections, fields, options, locales or allowed blocks.");
-		expect(fileText()).toBe(before);
-		expect((await schemaDiff({ ...options(), check: true })).exitCode).toBe(0);
-	});
-
-	it("refuses a transform that does not fit the schema, and applies nothing", async () => {
-		writeFileSync(
-			file,
-			schema(
-				{ excerpt: { kind: "text", label: "Excerpt" } },
-				{
-					migrations: [
-						{ id: "rename-summary", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
-						{ id: "drop-excerpt", op: "dropField", collection: "post", field: "excerpt" },
-					],
-				},
-			),
-		);
-		const before = fileText();
-		const outcome = await schemaApply(options());
-		expect(outcome.ok).toBe(false);
-		expect(outcome.text).toContain("PROBLEM drop-excerpt: post.excerpt is still a field of the schema");
-		expect(outcome.text).toContain("Nothing was applied.");
-		expect(fileText()).toBe(before);
-		expect((await metadataOf("one"))?.metadata).toEqual({ title: "one", excerpt: "First" });
+		expect(diff.text.split("\n")).toContain('  - locale "ko" added');
 	});
 
 	it("moves the translations of a removed language to the trash when the file says so, and says so", async () => {
@@ -182,12 +208,14 @@ describe("schema:diff and schema:apply", () => {
 		writeFileSync(file, schema(excerpt, { locales: both }));
 		expect((await schemaApply(options())).ok).toBe(true);
 		const cms = await loadCms();
-		const source = await pool.query<{ id: string }>(
-			`SELECT id FROM "${schemaName}".entries WHERE working_slug = 'one' AND locale = 'en'`,
-		);
-		const translation = (
-			await cms.contentService().createTranslation({ sourceId: source.rows[0]?.id as string, locale: "ko" })
-		).entry;
+		const source = await cms.contentService().createDraft({
+			collection: "post",
+			slug: "one",
+			metadata: { title: "one", excerpt: "First" },
+			doc: docOfText("Body one"),
+		} as never);
+		const translation = (await cms.contentService().createTranslation({ sourceId: source.entry.id, locale: "ko" }))
+			.entry;
 		await cms.close();
 
 		writeFileSync(file, schema(excerpt, { migrations: [{ id: "trash-ko", op: "trashLocale", locale: "ko" }] }));
@@ -209,6 +237,7 @@ describe("schema:diff and schema:apply", () => {
 	});
 
 	it("runs through the monti command line", async () => {
+		writeFileSync(file, schema({}));
 		const lines: string[] = [];
 		// Without a server file the command reports it, like any command that needs the app.
 		const code = await runCli(["schema:diff", "--schema", "monti.schema.ts", "--no-env-file"], {

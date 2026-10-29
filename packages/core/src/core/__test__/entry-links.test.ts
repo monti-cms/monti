@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentCollection, requiredMetadata } from "../../../test/any-site";
+import { contentCollection, defaultLocale, requiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import { docOf as docOfText } from "../../../test/stored-content";
 import { entryLinkHref, linkMarkAttrs, mapLinkAttrs } from "../../doc/entry-links";
@@ -33,7 +33,7 @@ const formats = async () => createFormatRegistry([paragraphsFormat]);
 const input = async (text: string): Promise<ServiceInput> =>
 	({
 		collection: contentCollection,
-		slug: "post",
+		slug: "entry",
 		metadata: await requiredMetadata(contentCollection, "Post", async () => "00000000-0000-4000-8000-000000000009"),
 		doc: docOf(text),
 	}) as ServiceInput;
@@ -136,7 +136,7 @@ describe("turning links by address into links by id", () => {
 				return new Map(addresses.map((address) => [linkAddressKey(testSite, address), ID]));
 			},
 		});
-		const run = (given: ServiceInput) => pipeline.run({ operation: "create", locale: "ko", input: given });
+		const run = (given: ServiceInput) => pipeline.run({ operation: "create", locale: defaultLocale, input: given });
 
 		const fromText = await run(await textInput(`[a](${pathOf("a")})`));
 		const fromDoc = await run(await input(`[a](${pathOf("a")})`));
@@ -156,7 +156,7 @@ describe("turning links by address into links by id", () => {
 	it("without a resolver, links keep their address", async () => {
 		const result = await createWritePipeline({ site: testSite, formats }).run({
 			operation: "create",
-			locale: "ko",
+			locale: defaultLocale,
 			input: await input(`[a](${pathOf("a")})`),
 		});
 

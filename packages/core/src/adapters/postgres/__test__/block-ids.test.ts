@@ -66,7 +66,7 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 		service
 			.createDraft({
 				collection: contentCollection,
-				slug: unique("post"),
+				slug: unique("entry"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
 				...body,
 			} as never)

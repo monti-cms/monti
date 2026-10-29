@@ -134,8 +134,9 @@ describe("what stays in code", () => {
 		expect(stays.map((item) => item.what)).toEqual(["site.url", "plugins", "blocks"]);
 		// The SEO fields are data in the schema; the plugin that places them in their tab stays in code.
 		expect(stays[1]?.detail).toContain("seo");
-		expect(stays[2]?.detail).toContain("callout");
-		expect(stays[2]?.detail).toContain("notice");
+		const blocks = (blog as CmsConfig).blocks ?? [];
+		expect(blocks.length).toBeGreaterThan(1);
+		for (const block of blocks) expect(stays[2]?.detail).toContain(block.name);
 	});
 
 	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {

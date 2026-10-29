@@ -363,7 +363,7 @@ describe("formats", () => {
 
 		await expect(plugins.formats()).rejects.toThrow(/"same" is provided twice/);
 		name = "hugo";
-		expect((await plugins.formats()).get("hugo")).toBeDefined();
+		expect((await plugins.formats()).list().map((item) => item.name)).toEqual(["same", "hugo"]);
 
 		await expect(
 			serverPlugins([

@@ -1,4 +1,4 @@
-import type { Element } from "hast";
+import type { Element, ElementContent } from "hast";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
 import { siteHighlight } from "../code-highlighter";
@@ -26,16 +26,19 @@ const findIndentNodes = (node: Element): Element[] => {
 	return result;
 };
 
+const textOf = (node: ElementContent): string =>
+	node.type === "text" ? node.value : node.type === "element" ? node.children.map(textOf).join("") : "";
+
 describe("highlight indent guides integration", () => {
+	// The `indent` class is the render output contract: the public styles draw the indent guides by it.
 	it("renders indent tokens as indent class spans", () => {
 		const hast = highlight("function f() {\n  console.log(1)\n    console.log(2)\n}", "ts", {}, {});
-		const pre = hast.children.find((node): node is Element => node.type === "element" && node.tagName === "pre");
-		expect(pre).toBeDefined();
+		const pre = hast.children[0] as Element;
+		expect(pre).toMatchObject({ tagName: "pre", children: [{ tagName: "code" }] });
+		const code = pre.children[0] as Element;
 
-		const code = pre?.children.find((node): node is Element => node.type === "element" && node.tagName === "code");
-		expect(code).toBeDefined();
-
-		const indents = code ? findIndentNodes(code) : [];
-		expect(indents.length).toBeGreaterThan(0);
+		const lines = code.children.filter((node): node is Element => node.type === "element");
+		// One span per indent step (two spaces) at the start of each line.
+		expect(lines.map((line) => findIndentNodes(line).map(textOf))).toEqual([[], ["  "], ["  ", "  "], []]);
 	});
 });

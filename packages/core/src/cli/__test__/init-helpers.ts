@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, vi } from "vitest";
+import { afterEach, expect, vi } from "vitest";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { QUESTIONS } from "../init-prompts";
 import type { InitHost } from "../init-types";
@@ -114,6 +114,9 @@ export interface FakeHost extends InitHost {
 	setupDatabase: ReturnType<typeof vi.fn<InitHost["setupDatabase"]>>;
 	runDoctor: ReturnType<typeof vi.fn<InitHost["runDoctor"]>>;
 }
+
+/** An install call whose arguments hold all of `args` (package names or matchers): `expect(host.install).toHaveBeenCalledWith(installing("@monti-cms/auth"))`. */
+export const installing = (...args: unknown[]) => expect.objectContaining({ args: expect.arrayContaining(args) });
 
 /** A host that installs nothing, and records the calls. */
 export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {

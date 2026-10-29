@@ -27,7 +27,7 @@ describe("GET /v1/meta features.media", () => {
 			fakeCms({ plugins: [{ name: "ai", features: async () => ({ ready: true }) }] }),
 		);
 		expect(features.ai).toEqual({ ready: true });
-		expect(features.folders).toBeDefined();
+		expect(features.media).toBe(false);
 		expect(features.ready).toBeUndefined();
 	});
 });

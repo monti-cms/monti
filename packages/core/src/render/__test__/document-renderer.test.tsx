@@ -26,6 +26,7 @@ import {
 	tableOfContents,
 	type UnknownProps,
 } from "../index";
+import { DEFAULT_LABELS } from "../labels";
 
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 const text = (value: string, marks?: CmsNode["marks"]): CmsNode => ({
@@ -171,13 +172,14 @@ describe("component overrides", () => {
 			return createElement(`h${level}`, { id, "data-block": blockId, className: "mine" }, children);
 		};
 		const stored = doc({ ...heading(2, "제목"), id: "abcd1234" });
-		const markup = await html(stored, { components: loose({ heading: Heading }), locale: "ko" });
+		// Any language tag: the renderer hands it to the components as is, without looking it up in the config.
+		const markup = await html(stored, { components: loose({ heading: Heading }), locale: "fr" });
 		expect(markup).toBe('<h2 id="제목" data-block="abcd1234" class="mine">제목</h2>');
 		expect(seen).toHaveLength(1);
 		expect(seen[0]).toMatchObject({ level: 2, id: "제목", blockId: "abcd1234" });
 		// `ctx` is plain JSON: it can cross to a client component.
 		expect(JSON.parse(JSON.stringify(seen[0]?.ctx))).toEqual(seen[0]?.ctx);
-		expect(seen[0]?.ctx.locale).toBe("ko");
+		expect(seen[0]?.ctx.locale).toBe("fr");
 		expect(seen[0]?.ctx.labels.copyCode).toBe("Copy");
 	});
 
@@ -671,7 +673,7 @@ describe("blocks", () => {
 			expect(props?.blockId).toBe("blk00001");
 			expect((props?.node as CmsNode).type).toBe(block.name);
 			expect((props?.items as { node: CmsNode }[]).map((item) => item.node.type)).toEqual(["paragraph", "paragraph"]);
-			expect((props?.ctx as RenderContext).labels).toBeDefined();
+			expect(props?.ctx as RenderContext).toEqual({ locale: undefined, labels: DEFAULT_LABELS });
 		},
 	);
 
@@ -715,12 +717,13 @@ describe("blocks", () => {
 			components: loose({ marks: { [block.name]: Mark } }),
 		});
 		for (const name of Object.keys(block.attributes)) expect(seen[0]?.[name]).toBe("#dc2626");
-		expect(seen[0]?.ctx).toBeDefined();
+		expect(seen[0]?.ctx).toEqual({ locale: undefined, labels: DEFAULT_LABELS });
 	});
 
-	it("routes a code fence of a block to the block with the code as source", async () => {
-		const fence = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
-		if (!fence || fence.syntax.kind !== "fence") return;
+	const fence = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind === "fence");
+
+	it.skipIf(!fence)("routes a code fence of a block to the block with the code as source", async () => {
+		if (fence?.syntax.kind !== "fence") throw new Error("the fence block has no fence syntax");
 		const seen: Record<string, unknown>[] = [];
 		await html(doc({ type: "codeBlock", attrs: { language: fence.syntax.lang, meta: "", code: "A -> B" } }), {
 			components: loose({
@@ -766,7 +769,7 @@ describe("unknown content: a fallback, never an error", () => {
 		expect(markup).toContain("data-fallback");
 		expect(rendered.unknown.map((item) => item.type)).toEqual([node.type]);
 		expect(seen[0]?.node.type).toBe(node.type);
-		expect(seen[0]?.ctx).toBeDefined();
+		expect(seen[0]?.ctx).toEqual({ locale: undefined, labels: DEFAULT_LABELS });
 	});
 
 	it("shows the content of an unknown container and nothing for an unknown leaf, by default", async () => {
@@ -806,14 +809,20 @@ describe("unknown content: a fallback, never an error", () => {
 		await expect(renderDocument(stored, { site: testSite, strict: true })).rejects.toThrow(/Unknown content/);
 	});
 
-	it("falls back for a block of the config that has no component, and still shows its content", async () => {
-		const block = testSite.ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
-		if (!block) return;
-		const stored = doc({ type: block.name, content: [paragraph(text("안에"))] });
-		const rendered = await renderDocument(stored, { site: testSite });
-		expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
-		expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
-	});
+	const bareContainer = testSite.ADDED_BLOCKS.find(
+		(candidate) => candidate.syntax.kind === "container" && !candidate.parent,
+	);
+
+	it.skipIf(!bareContainer)(
+		"falls back for a block of the config that has no component, and still shows its content",
+		async () => {
+			const block = bareContainer as NonNullable<typeof bareContainer>;
+			const stored = doc({ type: block.name, content: [paragraph(text("안에"))] });
+			const rendered = await renderDocument(stored, { site: testSite });
+			expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("안에");
+			expect(rendered.unknown.map((node) => node.type)).toEqual([block.name]);
+		},
+	);
 
 	describe("missing component warning", () => {
 		const block = testSite.ADDED_BLOCKS.find((candidate) => candidate.syntax.kind === "container" && !candidate.parent);
@@ -831,7 +840,7 @@ describe("unknown content: a fallback, never an error", () => {
 			await renderDocument(stored, { site: testSite });
 			await renderDocument(stored, { site: testSite });
 			expect(warn).toHaveBeenCalledTimes(1);
-			expect(String(warn.mock.calls[0]?.[0])).toContain(`"${block?.name}"`);
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining(`"${block?.name}"`));
 		});
 
 		it.skipIf(!block)("stays silent in production and still renders the fallback", async () => {
@@ -844,12 +853,13 @@ describe("unknown content: a fallback, never an error", () => {
 		});
 	});
 
-	it("falls back for a block with an attribute of the wrong kind", async () => {
-		const block = testSite.ADDED_BLOCKS.find(
-			(candidate) =>
-				candidate.syntax.kind === "container" && !candidate.parent && Object.keys(candidate.attributes).length > 0,
-		);
-		if (!block) return;
+	const containerWithAttributes = testSite.ADDED_BLOCKS.find(
+		(candidate) =>
+			candidate.syntax.kind === "container" && !candidate.parent && Object.keys(candidate.attributes).length > 0,
+	);
+
+	it.skipIf(!containerWithAttributes)("falls back for a block with an attribute of the wrong kind", async () => {
+		const block = containerWithAttributes as NonNullable<typeof containerWithAttributes>;
 		const [name] = Object.keys(block.attributes);
 		const component = vi.fn(() => <i />);
 		const stored = doc({
@@ -898,7 +908,8 @@ describe("unknown content: a fallback, never an error", () => {
 			{ type: "footnoteDefinition", attrs: { label: "x" } },
 		];
 		for (const node of weird) {
-			await expect(renderDocument(doc(paragraph(text("앞")), node), { site: testSite })).resolves.toBeDefined();
+			const rendered = await renderDocument(doc(paragraph(text("앞")), node), { site: testSite });
+			expect(renderToStaticMarkup(rendered.content as ReactNode)).toContain("<p>앞</p>");
 		}
 	});
 });

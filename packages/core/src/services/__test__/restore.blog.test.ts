@@ -2,10 +2,12 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { testConfig, testSite } from "../../../test/site";
 import { fakeCms } from "../../cms";
+import { noticeMessages } from "../../core/error-notices.messages";
 import type { ContentStore } from "../../core/store";
 import { emptyStoredDocument } from "../../doc/stored-document";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
+import { restoreMessages } from "../../http/v1/import/restore/messages";
 import { POST as restoreBackup, GET as restoreState } from "../../http/v1/import/restore/route";
 import {
 	closeGlobalPool,
@@ -24,6 +26,9 @@ const post = routeCaller(restoreBackup, "admin-upload");
 const state = routeCaller(restoreState, "admin-upload");
 const encode = (value: unknown) => new TextEncoder().encode(typeof value === "string" ? value : JSON.stringify(value));
 const decode = (data: Uint8Array) => new TextDecoder().decode(data);
+/** The texts the answers carry, in the admin language of the site. */
+const restoreText = testSite.createTranslator(restoreMessages);
+const noticeText = testSite.createTranslator(noticeMessages);
 
 interface TestSite {
 	pool: Pool;
@@ -264,7 +269,11 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 			"event_logs",
 			"plugins",
 		]);
-		for (const item of body.notRestored) expect(item.text).toBeTruthy();
+		for (const item of body.notRestored as { code: string; count: number | null; text: string }[]) {
+			const count = item.count === null ? undefined : { count: item.count };
+			expect(item.text).toBe(restoreText(`not_restored_${item.code}` as never, count as never));
+			expect(item.text).not.toBe("");
+		}
 		// No storage in this site: the files cannot be checked, and it says so.
 		expect(body.warnings.map((warning: { code: string }) => warning.code)).toEqual(["files_not_checked"]);
 		expect(await counts(target)).toEqual({ entries: 0, folders: 0, media: 0 });
@@ -358,8 +367,10 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		const selection = await backupOf(source, [ids.alpha as string]);
 		const body = await preview(target, selection);
 		expect(body).toMatchObject({ ready: false, isBackup: false });
-		expect(body.refusal.text).toBeTruthy();
-		expect(body.refusal.fix).toBeTruthy();
+		expect(body.refusal).toEqual({
+			text: noticeText("restore.not_backup"),
+			fix: noticeText("restore.not_backup.fix"),
+		});
 		const response = await run(target, selection);
 		expect(response.status).toBe(400);
 		expect(await counts(target)).toEqual({ entries: 0, folders: 0, media: 0 });
@@ -472,7 +483,7 @@ describe("restoring a backup (POST /v1/import/restore)", () => {
 		expect(skipped.find((item) => item.id === custom.id)).toMatchObject({ reason: "id" });
 		expect(skipped.length).toBe((await source.store.listTemplates()).length);
 		expect(body.counts.templatesAdded).toBe(0);
-		for (const item of skipped) expect(item.text).toBeTruthy();
+		for (const item of skipped) expect(item.text).toBe(restoreText(`template_skipped_${item.reason}` as never));
 
 		const response = await run(target, backup);
 		expect(response.status).toBe(200);

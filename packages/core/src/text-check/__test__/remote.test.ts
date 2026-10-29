@@ -21,13 +21,16 @@ describe("remoteTextChecker", () => {
 
 		await expect(checker.check(segments, { signal })).resolves.toEqual(issues);
 		expect(checker.auto).toBe(false);
-		const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-		expect(url).toBe("/api/text-check");
-		expect(init.method).toBe("POST");
-		expect(init.signal).toBe(signal);
-		expect(init.credentials).toBe("same-origin");
-		expect(new Headers(init.headers).get("content-type")).toBe("application/json");
-		expect(JSON.parse(String(init.body))).toEqual({ segments });
+		expect(fetchMock).toHaveBeenCalledWith(
+			"/api/text-check",
+			expect.objectContaining({
+				method: "POST",
+				signal,
+				credentials: "same-origin",
+				headers: expect.objectContaining({ "content-type": "application/json" }),
+				body: JSON.stringify({ segments }),
+			}),
+		);
 	});
 
 	it("a failure response throws an error with the server's message", async () => {

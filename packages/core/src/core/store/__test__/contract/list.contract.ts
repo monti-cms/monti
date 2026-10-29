@@ -22,11 +22,18 @@ import type { ContractSuite, StoreSession } from "./harness";
 // Collections and fields are looked up in the config (runs against both the reference blog config and other site configs, `test/any-site.ts`)
 // ---------------------------------------------------------------------------
 
+/** A block of the site's own, given an attribute its definition does not declare: text a reader never sees. */
+const hiddenAttrBlock = (() => {
+	const found = testSite.ADDED_BLOCKS.find((block) => block.syntax.kind !== "text" && !("attr" in block.attributes));
+	if (!found) throw new Error("list contract: the config has no block of its own");
+	return found.name;
+})();
+
 /** A body of the text (read by the test reader) followed by a block whose attributes carry text a reader never sees. */
 const withHidden = (text: string): StoredDocument => ({
 	type: "doc",
 	version: STORED_DOCUMENT_VERSION,
-	content: [...docOf(text).content, { type: "callout", attrs: { attr: "secret HiddenAttr789" }, content: [] }],
+	content: [...docOf(text).content, { type: hiddenAttrBlock, attrs: { attr: "secret HiddenAttr789" }, content: [] }],
 });
 
 /** Document collection under test for lists (the reference blog's posts). */

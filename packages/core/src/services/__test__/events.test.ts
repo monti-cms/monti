@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import { withActor } from "../../core/actor";
@@ -29,7 +29,8 @@ import { createEventDispatcher, type EventDeliveryOptions, type EventSubscriber 
 /**
  * Delivery of `afterCommit` events, against real PostgreSQL and the production store: the outbox the store writes with each change, the dispatcher that delivers it
  * after the commit, and what a failing subscriber does. Each test has its own subscribers (the delivery state is per subscriber name) and looks only at its own
- * entries, because the database is shared by the tests of this file.
+ * entries. The entries share one database, but every test starts with an empty event log and the test clock at the real time: an event another test left
+ * undelivered would otherwise reach this test's subscribers through the retries a write carries along.
  */
 describe("afterCommit delivery", () => {
 	let pool: Pool;
@@ -50,7 +51,20 @@ describe("afterCommit delivery", () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		raw = createContentStore(pool, { site: testSite, schema: schemaName });
 		fillRequiredMetadata(raw);
+		// The first content entry also creates the entries its required relations point at, through the store alone. Made here, their events are
+		// cleared before each test; made in the first test, they would reach its subscribers as undelivered events.
+		await seedEntry(raw, {
+			collection: contentCollection,
+			slug: "relation-targets",
+			metadata: { title: "relation-targets" },
+			text: "본문",
+		});
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
+	});
+
+	beforeEach(async () => {
+		offsetMs = 0;
+		await pool.query(`DELETE FROM "${schemaName}".cms_events`);
 	});
 
 	afterAll(async () => {
@@ -492,8 +506,7 @@ describe("afterCommit delivery", () => {
 	});
 
 	it("delivers events whose process stopped after the commit, on the next retry", async () => {
-		// Real time again: the window for such events is counted back from the clock the dispatcher reads.
-		offsetMs = 0;
+		// The test clock is at the real time (every test starts there): the window for such events is counted back from the clock the dispatcher reads.
 		const seen = recorder();
 		const { events } = setup({ a: seen.handler });
 		// Written through the store without the dispatcher: committed, never delivered.

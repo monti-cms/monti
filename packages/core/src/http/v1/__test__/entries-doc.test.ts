@@ -92,7 +92,7 @@ describe("entry API with a stored document", () => {
 		postEntries(
 			send("http://localhost/api/monti/v1/entries", "POST", {
 				collection: contentCollection,
-				slug: unique("post"),
+				slug: unique("entry"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
 				...body,
 			}),

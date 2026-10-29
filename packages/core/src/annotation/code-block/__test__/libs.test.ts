@@ -32,25 +32,15 @@ describe("normalizeConfigItems / createAnnotationRegistry", () => {
 		]);
 
 		const registry = createAnnotationRegistry(config);
-		const strong = registry.get("strong");
-		const tooltip = registry.get("Tooltip");
-		const diff = registry.get("diff");
-		const callout = registry.get("Callout");
+		// The registry holds every normalized item under its name.
+		expect([...registry]).toEqual(normalized.map((item) => [item.name, item]));
+		const item = (name: string) => registry.get(name) as NonNullable<ReturnType<typeof registry.get>>;
 
-		expect(strong).toBeDefined();
-		expect(tooltip).toBeDefined();
-		expect(diff).toBeDefined();
-		expect(callout).toBeDefined();
-		if (!strong || !tooltip || !diff || !callout) {
-			throw new Error("Expected annotation registry items to exist");
-		}
-
-		expect(supportsAnnotationScope(strong, "char")).toBe(true);
-		expect(supportsAnnotationScope(tooltip, "document")).toBe(true);
-		expect(supportsAnnotationScope(diff, "line")).toBe(true);
-		expect(supportsAnnotationScope(callout, "line")).toBe(true);
-		expect(registry.get("strong")?.kind).toBe("class");
-		expect(registry.get("Tooltip")?.kind).toBe("render");
+		expect(supportsAnnotationScope(item("strong"), "char")).toBe(true);
+		expect(supportsAnnotationScope(item("Tooltip"), "document")).toBe(true);
+		expect(supportsAnnotationScope(item("diff"), "line")).toBe(true);
+		expect(supportsAnnotationScope(item("Callout"), "line")).toBe(true);
+		expect(supportsAnnotationScope(item("emphasis"), "line")).toBe(false);
 	});
 
 	it("throws an error for a duplicate or invalid name", () => {

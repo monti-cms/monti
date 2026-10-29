@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import type { CmsConfig } from "../../../config/define";
 import { defineSite } from "../../../config/define";
@@ -40,7 +40,7 @@ describe("removing a language with its translations", () => {
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
-	/** a: published, with a published translation. b: a draft with a draft translation. c: in the trash with its translation. d: published, its translation trashed alone. n: a note with a translation. */
+	/** a: published, with a published translation. b: a draft with a draft translation. c: in the trash with its translation. d: published, its translation trashed alone. n: a note with a translation. Each test writes them into a schema of its own. */
 	const ids = {} as Record<
 		"a" | "aEn" | "b" | "bEn" | "c" | "cEn" | "d" | "dEn" | "e" | "n" | "nEn" | "noteKoOnly",
 		string
@@ -64,7 +64,7 @@ describe("removing a language with its translations", () => {
 		);
 	const statusOf = (state: Map<string, { status: string }>, key: keyof typeof ids) => state.get(ids[key])?.status;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -130,8 +130,11 @@ describe("removing a language with its translations", () => {
 		await applySchemaChange({ site: siteBefore, store, migrations: [] });
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -220,8 +223,9 @@ describe("removing a language with its translations", () => {
 	});
 
 	it("runs once: applying again moves nothing and the plan has nothing left", async () => {
-		const was = await rows();
 		const store = storeFor(siteAfter);
+		await applySchemaChange({ site: siteAfter, store, migrations: [trash] });
+		const was = await rows();
 		const again = await applySchemaChange({ site: siteAfter, store, migrations: [trash] });
 		expect(again.result.applied).toEqual([]);
 		expect(again.result.skipped).toEqual(["trash-en"]);
@@ -231,6 +235,7 @@ describe("removing a language with its translations", () => {
 	});
 
 	it("restores one of them from the trash like any translation", async () => {
+		await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations: [trash] });
 		const service = serviceFor(siteAfter);
 		const trashed = (await rows()).get(ids.bEn);
 		const restored = await service.restore({ id: ids.bEn, expectedVersion: trashed?.version as number });

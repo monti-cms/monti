@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BLOCK_CHOICES } from "../block-choices";
 import { detectApp } from "../init-detect";
 import { timeZoneNote } from "../init-plan";
 import { collectAnswers, QUESTIONS } from "../init-prompts";
@@ -202,10 +203,11 @@ describe("the questions of monti init", () => {
 			"code-ref",
 			"color",
 		]);
-		for (const option of options) {
-			expect(option.hint).toBeTruthy();
-			expect(option.hint).not.toContain("\n");
-		}
+		// Each hint is the block's one line; the heavy ones also say what they add, and only they do.
+		const hints = new Map(options.map((option) => [option.value, option.hint ?? ""]));
+		for (const block of BLOCK_CHOICES) expect(hints.get(block.id)).toContain(block.description);
+		expect([...hints].filter(([, hint]) => hint.includes("Heavy:")).map(([id]) => id)).toEqual(["mermaid", "chart"]);
+		for (const hint of hints.values()) expect(hint).not.toContain("\n");
 	});
 
 	it("choosing all blocks does not open the list", async () => {

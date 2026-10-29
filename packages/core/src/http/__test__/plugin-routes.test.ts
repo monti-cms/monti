@@ -75,10 +75,10 @@ describe("plugin API route default authentication", () => {
 	it("a plugin route gets the instance that serves it, so a plugin works with several instances at once", async () => {
 		const cms = instance();
 		await call(cms, "GET", "v1/example/private");
-		expect(mocks.privateGet.mock.calls[0]?.[0].cms).toBe(cms);
+		expect(mocks.privateGet).toHaveBeenNthCalledWith(1, expect.objectContaining({ cms }));
 		const other = instance();
 		await call(other, "GET", "v1/example/private");
-		expect(mocks.privateGet.mock.calls[1]?.[0].cms).toBe(other);
+		expect(mocks.privateGet).toHaveBeenNthCalledWith(2, expect.objectContaining({ cms: other }));
 	});
 
 	it("a `signed` route is not wrapped (the route checks for itself)", async () => {

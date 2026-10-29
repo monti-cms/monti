@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { contentCollection } from "../../../../test/any-site";
+import { contentCollection, defaultLocale } from "../../../../test/any-site";
 import { testConfig } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
@@ -25,7 +25,14 @@ const mockStore = {
 		Promise.resolve({
 			groupId: entryId,
 			members: [
-				{ id: entryId, locale: "ko", status: "draft", isSource: true, title: "Test Post", workingSlug: "test-slug" },
+				{
+					id: entryId,
+					locale: defaultLocale,
+					status: "draft",
+					isSource: true,
+					title: "Test Post",
+					workingSlug: "test-slug",
+				},
 			],
 		}),
 	),
@@ -153,7 +160,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		expect(data.entry.folderId).toBe("a0000000-0000-4000-8000-000000000001");
 		// The answer carries the translation group, so the editor can show the saved language as existing without asking again.
 		expect(data.entry.translations).toEqual([
-			expect.objectContaining({ id: "new-entry-id", locale: "ko", isSource: true }),
+			expect.objectContaining({ id: "new-entry-id", locale: defaultLocale, isSource: true }),
 		]);
 	});
 

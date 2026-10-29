@@ -152,7 +152,7 @@ describe("Bulk lifecycle ops contract", () => {
 
 describe("bulk permanentDelete", () => {
 	it("deletes only trashed, unreferenced items and names the blocking usages per item", async () => {
-		const usage = { entryId: "p9", title: "참조하는 글", collection: "post", state: "working" };
+		const usage = { entryId: "p9", title: "참조하는 글", collection: contentCollection, state: "working" };
 		const store = newFakeLifecycleStore({
 			gone: { version: 3, status: "trashed" },
 			used: { version: 1, status: "trashed", usedBy: [usage] },

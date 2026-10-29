@@ -113,12 +113,17 @@ const metaOf = async (cms: Cms) => {
 };
 
 describe("two instances with different site configs", () => {
-	const realBlog = stubServer("blog");
-	const realOther = stubServer("other");
-	const cmsBlog = createCms({ id: "blog", config: blog, server: realBlog.server });
-	const cmsOther = createCms({ id: "other", config: other, server: realOther.server });
+	/** Two new instances over stub servers: each test counts the adapter calls of its own. */
+	const instances = () => {
+		const realBlog = stubServer("blog");
+		const realOther = stubServer("other");
+		const cmsBlog = createCms({ id: "blog", config: blog, server: realBlog.server });
+		const cmsOther = createCms({ id: "other", config: other, server: realOther.server });
+		return { realBlog, realOther, cmsBlog, cmsOther };
+	};
 
 	it("each holds the site of its own config", () => {
+		const { cmsBlog, cmsOther } = instances();
 		const a = cmsBlog.site;
 		const b = cmsOther.site;
 		expect(a).not.toBe(b);
@@ -147,6 +152,7 @@ describe("two instances with different site configs", () => {
 	});
 
 	it("hands its own site to its database adapter, for the store and for a migration", async () => {
+		const { realBlog, realOther, cmsBlog, cmsOther } = instances();
 		cmsBlog.store();
 		cmsOther.store();
 		await cmsBlog.migrate({ log: () => undefined });
@@ -159,6 +165,7 @@ describe("two instances with different site configs", () => {
 	});
 
 	it("each /meta response lists its own collections, locales, blocks and limits", async () => {
+		const { cmsBlog, cmsOther } = instances();
 		const a = await metaOf(cmsBlog);
 		const b = await metaOf(cmsOther);
 		expect(a.collections).toEqual(["post", "memo", "category", "tag", "collection"]);
@@ -181,6 +188,7 @@ describe("two instances with different site configs", () => {
 	});
 
 	it("the admin language of each site picks its own text", () => {
+		const { cmsBlog, cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", {
 			en: { hello: "Hello {name}" },
 			ko: { hello: "안녕 {name}" },
@@ -190,6 +198,7 @@ describe("two instances with different site configs", () => {
 	});
 
 	it("an admin message override of one site does not reach the other", () => {
+		const { cmsOther } = instances();
 		const bundle = defineMessages("test.two-instances", { en: { hello: "Hello" } });
 		const overridden = createSite(
 			defineSite({
@@ -203,12 +212,17 @@ describe("two instances with different site configs", () => {
 });
 
 describe("two instances read their own stores and build their own public paths", () => {
-	const blogStore = fakeStore("blog", "post", "hello", ["ko", "en"]);
-	const otherStore = fakeStore("other", "article", "hello", ["en"]);
-	const cmsBlog = fakeCms({ config: blog, store: blogStore.store });
-	const cmsOther = fakeCms({ config: other, store: otherStore.store });
+	/** Two new instances over fake stores: each test reads what its own stores were asked. */
+	const instances = () => {
+		const blogStore = fakeStore("blog", "post", "hello", ["ko", "en"]);
+		const otherStore = fakeStore("other", "article", "hello", ["en"]);
+		const cmsBlog = fakeCms({ config: blog, store: blogStore.store });
+		const cmsOther = fakeCms({ config: other, store: otherStore.store });
+		return { blogStore, otherStore, cmsBlog, cmsOther };
+	};
 
 	it("getEntry goes to the instance's store and returns the path of its URL rule", async () => {
+		const { blogStore, otherStore, cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello" });
 		const b = await cmsOther.read.getEntry({ collection: "article", slug: "hello" });
 		if (a.status !== "found" || b.status !== "found") throw new Error("expected both entries to be found");
@@ -221,6 +235,7 @@ describe("two instances read their own stores and build their own public paths",
 	});
 
 	it("the locale prefix follows each site's rule", async () => {
+		const { cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.getEntry({ collection: "post", slug: "hello", locale: "en" });
 		if (a.status !== "found") throw new Error("expected the entry");
 		expect(a.entry.path).toBe("/en/posts/hello");
@@ -233,6 +248,7 @@ describe("two instances read their own stores and build their own public paths",
 	});
 
 	it("listEntries builds its paths from its own site", async () => {
+		const { cmsBlog, cmsOther } = instances();
 		const a = await cmsBlog.read.listEntries({ collection: "post" });
 		const b = await cmsOther.read.listEntries({ collection: "article" });
 		expect(a.items.map((item) => item.path)).toEqual(["/posts/hello"]);
@@ -240,6 +256,7 @@ describe("two instances read their own stores and build their own public paths",
 	});
 
 	it("a collection of the other site is unknown to an instance", async () => {
+		const { cmsBlog, cmsOther } = instances();
 		await expect(
 			// @ts-expect-error `article` is not a collection of the blog config
 			cmsBlog.read.listEntries({ collection: "article" }),

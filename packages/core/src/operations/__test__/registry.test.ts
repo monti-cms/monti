@@ -50,8 +50,7 @@ describe("the operations of an instance", () => {
 		const operations = await withOperations().operations();
 		for (const core of CORE_OPERATIONS) {
 			const found = operations.find((operation) => operation.name === core.name);
-			expect(found, core.name).toBeDefined();
-			expect(found?.plugin).toBeNull();
+			expect(found, core.name).toMatchObject({ plugin: null });
 			expect(found?.describe.length).toBeGreaterThan(20);
 		}
 		expect(new Set(operations.map((operation) => operation.name)).size).toBe(operations.length);

@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
@@ -57,28 +57,24 @@ describe("schema settings API", () => {
 	let file: string;
 	let serial = 0;
 
-	const databases: { pool: Pool; schemaName: string }[] = [];
-	/** A database with no schema recorded as applied: what a test that starts from a file of its own needs. */
-	const freshDatabase = async () => {
+	// Each test gets its own folder and a database with no schema recorded as applied, so none starts from what another test saved.
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
-		databases.push(isolated);
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-	};
-
-	beforeAll(async () => {
-		await freshDatabase();
 		dir = mkdtempSync(path.join(tmpdir(), "monti-schema-edit-"));
 		file = path.join(dir, "monti.schema.ts");
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
+		vi.unstubAllEnvs();
 		rmSync(dir, { recursive: true, force: true });
-		for (const item of databases) await dropIsolatedTestPool(item.pool, item.schemaName);
-		await closeGlobalPool();
+		await dropIsolatedTestPool(pool, schemaName);
 	});
 
-	afterEach(() => vi.unstubAllEnvs());
+	afterAll(async () => {
+		await closeGlobalPool();
+	});
 
 	const write = (value: Record<string, unknown>) => writeFileSync(file, printSchemaFile(value));
 	const text = () => readFileSync(file, "utf8");
@@ -204,7 +200,6 @@ describe("schema settings API", () => {
 
 	it("adds a field through the API: the whole file is printed again, a later load sees the field, and the running instance has it", async () => {
 		vi.stubEnv("NODE_ENV", "development");
-		await freshDatabase();
 		// A hand-formatted file with comments: saving writes it again in the printer's form, in the key order of the data.
 		writeFileSync(
 			file,
@@ -246,9 +241,9 @@ describe("schema settings API", () => {
 		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("rating");
 	});
 
-	it("shows the entries a change touches, with a sample, before anything is saved", async () => {
+	/** A file whose post has a `summary`, and three posts in development: two with a summary, one without. */
+	const withSummaries = async () => {
 		vi.stubEnv("NODE_ENV", "development");
-		await freshDatabase();
 		write(schemaOf({ summary: { kind: "text", label: "Summary" } }));
 		const cms = newCms();
 		await cms.migrate({ log: () => {} });
@@ -264,6 +259,11 @@ describe("schema settings API", () => {
 				doc: docOfText(`Body ${slug}`),
 			} as never);
 		}
+		return cms;
+	};
+
+	it("shows the entries a change touches, with a sample, before anything is saved", async () => {
+		const cms = await withSummaries();
 		const { schema } = await read(cms);
 		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
 		delete edited.collections.post.fields.summary;
@@ -280,9 +280,8 @@ describe("schema settings API", () => {
 		expect(preview.transforms).toEqual([]);
 	});
 
-	it("renames a field with a transform: the stored values move, the transform is recorded, the file follows", async () => {
-		vi.stubEnv("NODE_ENV", "development");
-		const cms = newCms();
+	it("renames a field with a transform, then drops it only when the writer picks the drop: the values move and go, the transforms are recorded in order, the file follows", async () => {
+		const cms = await withSummaries();
 		const { hash, schema } = await read(cms);
 		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
 		const { summary, ...rest } = edited.collections.post.fields;
@@ -311,27 +310,35 @@ describe("schema settings API", () => {
 		});
 		expect(Object.keys(onDisk.collections.post.fields)).toContain("excerpt");
 		expect(Object.keys(onDisk.collections.post.fields)).not.toContain("summary");
-	});
 
-	it("lets the writer pick a transform: dropping a field deletes its values only when picked", async () => {
-		vi.stubEnv("NODE_ENV", "development");
-		const cms = newCms();
-		const { hash, schema } = await read(cms);
-		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
-		delete edited.collections.post.fields.excerpt;
+		// The writer picks a transform, on an instance loaded from the saved file: dropping the field deletes its values only when picked.
+		const later = newCms();
+		const next = await read(later);
+		const withoutExcerpt = structuredClone(next.schema) as {
+			collections: { post: { fields: Record<string, unknown> } };
+		};
+		delete withoutExcerpt.collections.post.fields.excerpt;
 		const drop = { op: "dropField", collection: "post", field: "excerpt" };
 
 		// Deleting values touches stored entries, so the save needs the impacts the writer saw in the preview.
-		const preview = await (await call(cms, "POST", "schema/preview", { schema: edited, transforms: [drop] })).json();
-		const acknowledged = preview.impacts.map((impact: { key: string }) => impact.key);
-		const res = await call(cms, "PUT", "schema", { schema: edited, transforms: [drop], baseHash: hash, acknowledged });
-		expect(res.status).toBe(200);
+		const dropPreview = await (
+			await call(later, "POST", "schema/preview", { schema: withoutExcerpt, transforms: [drop] })
+		).json();
+		const acknowledged = dropPreview.impacts.map((impact: { key: string }) => impact.key);
+		const dropped = await call(later, "PUT", "schema", {
+			schema: withoutExcerpt,
+			transforms: [drop],
+			baseHash: next.hash,
+			acknowledged,
+		});
+		expect(dropped.status).toBe(200);
 		expect(await metadataOf("one")).toEqual({ title: "one" });
 		expect(onDiskData().migrations.map((item: { op: string }) => item.op)).toEqual(["renameField", "dropField"]);
 	});
 
 	it("refuses a file that changed since the edit started", async () => {
 		vi.stubEnv("NODE_ENV", "development");
+		write(schemaOf({}));
 		const cms = newCms();
 		const { hash, schema } = await read(cms);
 		writeFileSync(file, `${text()}\n`);
@@ -344,6 +351,7 @@ describe("schema settings API", () => {
 
 	it("reports what is wrong with the path of the value, and writes nothing", async () => {
 		vi.stubEnv("NODE_ENV", "development");
+		write(schemaOf({}));
 		const cms = newCms();
 		const { hash, schema } = await read(cms);
 		const before = text();
@@ -429,7 +437,6 @@ describe("schema settings API", () => {
 		/** A fresh database and file holding one `post` entry whose `summary` is set. */
 		const withStoredEntry = async () => {
 			vi.stubEnv("NODE_ENV", "development");
-			await freshDatabase();
 			write(schemaOf({ summary: { kind: "text", label: "Summary" } }));
 			const cms = newCms();
 			await cms.migrate({ log: () => {} });
@@ -472,7 +479,6 @@ describe("schema settings API", () => {
 
 		it("refuses to remove a locale that stored entries use, until the previewed impacts are acknowledged", async () => {
 			vi.stubEnv("NODE_ENV", "development");
-			await freshDatabase();
 			write(
 				schemaOf(
 					{},
@@ -510,7 +516,6 @@ describe("schema settings API", () => {
 
 		it("moves the translations of a removed language to the trash only when the writer asks: the pick is never a default", async () => {
 			vi.stubEnv("NODE_ENV", "development");
-			await freshDatabase();
 			write(
 				schemaOf(
 					{},
@@ -589,7 +594,6 @@ describe("schema settings API", () => {
 
 		it("saves a change that touches no entries without any acknowledgement", async () => {
 			vi.stubEnv("NODE_ENV", "development");
-			await freshDatabase();
 			write(schemaOf({}));
 			const cms = newCms();
 			await cms.migrate({ log: () => {} });
@@ -621,7 +625,6 @@ describe("schema settings API", () => {
 		/** A fresh database holding two memos (one in the trash) and a post that points at one of them. */
 		const withMemos = async () => {
 			vi.stubEnv("NODE_ENV", "development");
-			await freshDatabase();
 			write({
 				...schemaOf({ memoId: { kind: "relation", label: "Memo", to: "memo" } }),
 				collections: { memo, post: post({ memoId: { kind: "relation", label: "Memo", to: "memo" } }) },

@@ -77,7 +77,7 @@ describe("stored documents", () => {
 		service
 			.createDraft({
 				collection: contentCollection,
-				slug: unique("post"),
+				slug: unique("entry"),
 				metadata: await metadataFor(),
 				...("text" in body ? { format: "paragraphs", body: body.text } : body),
 			} as never)

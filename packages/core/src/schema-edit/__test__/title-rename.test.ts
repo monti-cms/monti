@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
@@ -48,7 +48,8 @@ describe("renaming the title field", () => {
 	let dir: string;
 	let file: string;
 
-	beforeAll(async () => {
+	// Each test gets its own schema file and database schema.
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -57,11 +58,13 @@ describe("renaming the title field", () => {
 		writeFileSync(file, printSchemaFile(schema));
 	});
 
-	afterEach(() => vi.unstubAllEnvs());
-
-	afterAll(async () => {
+	afterEach(async () => {
+		vi.unstubAllEnvs();
 		rmSync(dir, { recursive: true, force: true });
 		await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -151,6 +154,20 @@ describe("renaming the title field", () => {
 
 	it("tells the writer who forgot the title role: a schema with no title field is invalid", async () => {
 		vi.stubEnv("NODE_ENV", "development");
+		// The file after a rename of `title` to `headline`, which carries the title role.
+		const { title, ...rest } = schema.collections.post.fields;
+		writeFileSync(
+			file,
+			printSchemaFile({
+				...schema,
+				collections: {
+					post: {
+						...schema.collections.post,
+						fields: { headline: { ...title, role: "title" }, ...rest, slug: { ...rest.slug, from: "headline" } },
+					},
+				},
+			}),
+		);
 		const instance = cms();
 		const { schema: current } = (await (await call(instance, "GET", "schema")).json()) as { schema: typeof schema };
 		const edited = structuredClone(current);

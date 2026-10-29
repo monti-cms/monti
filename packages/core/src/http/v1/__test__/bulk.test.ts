@@ -17,7 +17,7 @@ const E1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const STALE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const MISSING = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-/** A multi-valued relation pointing at an entry collection (`tagIds` tags in the reference blog setup). Collection and field names are looked up from the config. */
+/** A multi-valued relation pointing at an entry collection (the tags in the reference blog setup). Collection and field names are looked up from the config. */
 const MANY_FIELD = testSite
 	.storedFields(contentCollection)
 	.find(({ field }) => field.kind === "relation" && field.many && testSite.isItemCollection(field.to))?.name;

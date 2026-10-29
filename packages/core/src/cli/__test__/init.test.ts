@@ -15,6 +15,7 @@ import {
 	DEFAULT_NEXT_CONFIG,
 	fakeHost,
 	fixtureApp,
+	installing,
 	listFiles,
 	POST_MDX,
 	read,
@@ -218,7 +219,7 @@ describe("monti init in a fresh create-next-app", () => {
 		const config = read(dir, "monti.config.ts");
 		expect(config).toContain('import { directiveSyntax } from "@monti-cms/syntax-directive";');
 		expect(config).toMatch(/\n\t\tmdx\(\{ syntax: \[directiveSyntax\(\)\] \}\),/);
-		expect(host.install.mock.calls[0]?.[0].args).toContain("@monti-cms/syntax-directive");
+		expect(host.install).toHaveBeenCalledWith(installing("@monti-cms/syntax-directive"));
 		expect(report.answers.directiveSyntax).toBe(true);
 	});
 
@@ -230,7 +231,8 @@ describe("monti init in a fresh create-next-app", () => {
 			const config = read(dir, "monti.config.ts");
 			expect(config).not.toContain("directiveSyntax");
 			expect(config).toMatch(/\n\t\tmdx\(\),/);
-			expect(host.install.mock.calls[0]?.[0].args).not.toContain("@monti-cms/syntax-directive");
+			expect(host.install).toHaveBeenCalledOnce();
+			expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/syntax-directive"));
 		}
 	});
 
@@ -244,7 +246,7 @@ describe("monti init in a fresh create-next-app", () => {
 		for (const login of ["password", "github"] as const) {
 			const install = vi.fn();
 			await initProject({ cwd: fixtureApp(), host: fakeHost({ install }), login });
-			expect(install.mock.calls[0]?.[0].args).toContain("@monti-cms/auth");
+			expect(install).toHaveBeenCalledWith(installing("@monti-cms/auth"));
 		}
 	});
 
@@ -372,24 +374,25 @@ describe("monti init and the package install", () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
-		expect(host.install).toHaveBeenCalled();
-		expect(host.install).toHaveBeenCalledTimes(1);
-		const command = host.install.mock.calls[0]?.[0];
-		expect(command?.command).toBe("pnpm");
-		expect(command?.args[0]).toBe("add");
-		expect(command?.args).toEqual(
-			expect.arrayContaining([
+		expect(host.install).toHaveBeenCalledOnce();
+		expect(host.install).toHaveBeenCalledWith({
+			command: "pnpm",
+			cwd: dir,
+			args: expect.arrayContaining([
 				"@monti-cms/core",
 				"@monti-cms/admin",
 				"@monti-cms/nextjs",
 				"@monti-cms/mdx",
 				"@monti-cms/blocks",
+				"@monti-cms/auth",
 			]),
+		});
+		// `pnpm add <packages>`: the subcommand comes first.
+		expect(host.install).toHaveBeenCalledWith(
+			expect.objectContaining({ args: expect.toSatisfy((args: readonly string[]) => args[0] === "add") }),
 		);
-		expect(command?.args).not.toContain("@monti-cms/ai");
-		expect(command?.args).toContain("@monti-cms/auth");
-		expect(command?.args).not.toContain("mermaid");
-		expect(command?.cwd).toBe(dir);
+		expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/ai"));
+		expect(host.install).not.toHaveBeenCalledWith(installing("mermaid"));
 		expect(report.steps.map((step) => [step.name, step.status])).toContainEqual(["Install packages", "done"]);
 		expect(report.next.join("\n")).not.toContain("Install the packages");
 	});
@@ -728,7 +731,7 @@ describe("monti init tailors what is left to the app", () => {
 		const dir = fixtureApp({ "pnpm-lock.yaml": null, "yarn.lock": "" });
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
-		expect(host.install.mock.calls[0]?.[0].command).toBe("yarn");
+		expect(host.install).toHaveBeenCalledWith(expect.objectContaining({ command: "yarn" }));
 		expect(report.next.join("\n")).toContain("then create Monti's tables (once): yarn monti db:setup");
 		expect(report.next.join("\n")).toContain("Start the app: yarn dev");
 		const bun = await initProject({
@@ -838,8 +841,9 @@ describe("monti init choices", () => {
 		expect(schema.defaultLocale).toBe("ko");
 		expect(schema.timeZone).toBe("Asia/Seoul");
 
-		const args = host.install.mock.calls[0]?.[0].args ?? [];
-		expect(args).toEqual(expect.arrayContaining(["@monti-cms/ai", "@monti-cms/storage-s3", "@monti-cms/blocks"]));
+		expect(host.install).toHaveBeenCalledWith(
+			installing("@monti-cms/ai", "@monti-cms/storage-s3", "@monti-cms/blocks"),
+		);
 		expect(read(dir, ".env.example")).toContain("S3_BUCKET=");
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://blog.example.com");
 	});

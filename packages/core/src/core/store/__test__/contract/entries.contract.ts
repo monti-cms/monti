@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
 	contentCollection,
 	defaultLocale,
@@ -101,8 +101,8 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				contentHash: "hash-ts",
 			});
 
-			expect(entry.id).toBeDefined();
-			expect(typeof entry.version).toBe("number");
+			expect((await store.getEntry(entry.id)).id).toBe(entry.id);
+			expect(entry.version).toBe(1);
 
 			expect(entry.createdAt).toBeInstanceOf(Date);
 			expect(entry.updatedAt).toBeInstanceOf(Date);
@@ -158,40 +158,42 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 		});
 
 		it("timestamps: publish behavior and immutability", async () => {
-			const entry = await seedEntry(store, {
-				collection: contentCollection,
-				slug: "time-test",
-				metadata: { title: "Draft" },
-				text: "time test",
-				contentHash: "hash-time",
-			});
+			// The store stamps creates, saves and publishes with the application clock; each step runs at a time of its own.
+			const createdAt = new Date("2026-01-01T00:00:00.000Z");
+			const publishedAt = new Date("2026-01-01T00:01:00.000Z");
+			const savedAt = new Date("2026-01-01T00:02:00.000Z");
+			vi.useFakeTimers({ toFake: ["Date"], now: createdAt });
+			try {
+				const entry = await seedEntry(store, {
+					collection: contentCollection,
+					slug: "time-test",
+					metadata: { title: "Draft" },
+					text: "time test",
+					contentHash: "hash-time",
+				});
+				expect(entry.working.updatedAt).toEqual(createdAt);
 
-			const initialWorkingUpdatedAt = entry.working.updatedAt?.getTime();
+				vi.setSystemTime(publishedAt);
+				const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
-			await new Promise((r) => setTimeout(r, 10));
+				expect(published.working.updatedAt).toEqual(createdAt);
+				expect(published.published?.updatedAt).toEqual(createdAt);
+				expect(published.publishedAt).toEqual(publishedAt);
 
-			const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
+				vi.setSystemTime(savedAt);
+				const saved = await seedSave(store, published.id, {
+					expectedVersion: published.version,
+					metadata: { title: "Draft" },
+					text: "time test updated",
+					contentHash: "hash-time-2",
+				});
 
-			expect(published.working.updatedAt?.getTime()).toBe(initialWorkingUpdatedAt);
-			expect(published.published?.updatedAt?.getTime()).toBe(initialWorkingUpdatedAt);
-
-			expect(published.publishedAt).toBeInstanceOf(Date);
-
-			const pubAt = published.publishedAt?.getTime();
-
-			await new Promise((r) => setTimeout(r, 10));
-
-			const saved = await seedSave(store, published.id, {
-				expectedVersion: published.version,
-				metadata: { title: "Draft" },
-				text: "time test updated",
-				contentHash: "hash-time-2",
-			});
-
-			expect(saved.publishedAt?.getTime()).toBe(pubAt);
-			expect(saved.published?.updatedAt?.getTime()).toBe(initialWorkingUpdatedAt);
-
-			expect(saved.working.updatedAt?.getTime()).toBeGreaterThan(initialWorkingUpdatedAt);
+				expect(saved.publishedAt).toEqual(publishedAt);
+				expect(saved.published?.updatedAt).toEqual(createdAt);
+				expect(saved.working.updatedAt).toEqual(savedAt);
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 
 		it("identical save leaves version, hash, and updatedAt unchanged", async () => {
@@ -441,7 +443,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			});
 
 			const published = await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
-			expect(published.publishedAt).toBeDefined();
+			expect(published.publishedAt).toBeInstanceOf(Date);
 
 			await seedSave(store, entry.id, {
 				expectedVersion: published.version,
@@ -581,7 +583,7 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				)
 			).entry;
 			expect(published.status).toBe("published");
-			expect(published.published).toBeDefined();
+			expect(published.published?.metadata).toMatchObject({ title: "Valid record" });
 			const before = await store.getEntry(published.id);
 
 			await expect(
@@ -847,7 +849,9 @@ const createSlugsInUseContract: ContractSuite = (factory) => {
 		});
 
 		it("returns an empty set for no slugs", async () => {
-			expect(await store.slugsInUse({ collection: "post", locale: "ko", slugs: [] })).toEqual(new Set());
+			expect(await store.slugsInUse({ collection: contentCollection, locale: defaultLocale, slugs: [] })).toEqual(
+				new Set(),
+			);
 		});
 	});
 };
@@ -1193,7 +1197,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			const draft = (
 				await service.createDraft({
 					collection: contentCollection,
-					slug: unique("post"),
+					slug: unique("entry"),
 					metadata: await contentMetadata("글", extra),
 					format: "paragraphs",
 					body,
@@ -1250,7 +1254,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				await service.createDraft({
 					collection: recordCollection,
 					slug: null,
-					metadata: await requiredMetadata(recordCollection, unique("tag"), relationTarget),
+					metadata: await requiredMetadata(recordCollection, unique("record"), relationTarget),
 					format: "paragraphs",
 					body: "",
 				})
@@ -1552,8 +1556,8 @@ const createDuplicateContract: ContractSuite = (factory) => {
 			const duplicated = await duplicateDraft(testSite, store, { id: original.id, title: "Original Post (copy)" });
 
 			// 1. Different ID, version 1, draft status
-			expect(duplicated.id).toBeDefined();
 			expect(duplicated.id).not.toBe(original.id);
+			expect((await store.getEntry(duplicated.id)).id).toBe(duplicated.id);
 			expect(duplicated.version).toBe(1);
 			expect(duplicated.status).toBe("draft");
 
@@ -1676,7 +1680,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			service
 				.createDraft({
 					collection: contentCollection,
-					slug: unique("post"),
+					slug: unique("entry"),
 					metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
 					...("text" in body ? { format: "paragraphs", body: body.text } : body),
 				} as never)

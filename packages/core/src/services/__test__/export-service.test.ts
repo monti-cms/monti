@@ -136,7 +136,7 @@ describe("export archive builder", () => {
 	it("the public archive does not export the leftover published copy of archived/trashed items", () => {
 		const snapshot = makeSnapshot();
 		const archived = snapshot.entries.find((entry) => entry.status === "archived");
-		expect(archived?.published).toBeDefined();
+		expect(archived?.published).toMatchObject({ contentHash: "hash-published-3" });
 
 		const archivedTrashed = {
 			...snapshot,
@@ -354,7 +354,7 @@ describe("export archive builder", () => {
 			expect(changed.digest).not.toBe(base.digest);
 			const before = base.manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
 			const after = changed.manifest.entries.find((entry) => entry.id === PUBLISHED_ID);
-			expect(before).toBeDefined();
+			expect(before?.itemDigest).toEqual(expect.any(String));
 			expect(after?.itemDigest).not.toBe(before?.itemDigest);
 			expect(after?.[`${state}Digest`]).not.toBe(before?.[`${state}Digest`]);
 		}
@@ -490,7 +490,7 @@ describe("export archive builder", () => {
 		for (const path of publishedPaths) {
 			const parsed = JSON.parse(text(path)) as { collection: string; metadata: Record<string, unknown> };
 			const allowed = publicMetadataKeys(testSite)[parsed.collection];
-			expect(allowed).toBeDefined();
+			expect(allowed).toContain("title");
 			for (const key of Object.keys(parsed.metadata)) {
 				expect(allowed).toContain(key);
 			}

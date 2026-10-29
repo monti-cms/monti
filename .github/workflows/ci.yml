@@ -31,6 +31,8 @@ jobs:
       - run: pnpm check:korean
       # Admin UI is styled with token utilities and built from the parts of @monti-cms/ui (no one-off CSS, raw pixel sizes or parts built in a screen).
       - run: pnpm check:design
+      # The tests of overhauled packages (docs/testing.md) gain no new weak pattern or reference blog name.
+      - run: pnpm check:tests
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses, and exports only tests use (a test seam is tagged @internal).
       - run: pnpm knip

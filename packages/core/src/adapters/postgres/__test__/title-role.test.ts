@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { fakeCms } from "../../../cms";
 import type { ContentStore, Entry } from "../../../core/store";
@@ -52,7 +52,8 @@ describe("a collection whose title field is not named title", () => {
 	let service: ReturnType<typeof createContentService>;
 	let cms: ReturnType<typeof makeCms>;
 
-	beforeAll(async () => {
+	/** Each test writes its entries into a schema of its own, so a list holds only what the test wrote. */
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -62,8 +63,11 @@ describe("a collection whose title field is not named title", () => {
 		cms = makeCms(store);
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 

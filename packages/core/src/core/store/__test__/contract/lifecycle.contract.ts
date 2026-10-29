@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata, recordCollection } from "../../../../../test/any-site";
 import { testSite } from "../../../../../test/site";
 import { contentOf, docOf } from "../../../../../test/stored-content";
@@ -71,7 +71,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 
 				expect(archived.status).toBe("archived");
-				expect(archived.publishedAt).toBeDefined(); // preserved
+				expect(archived.publishedAt).toEqual(pub.publishedAt); // preserved
 			});
 
 			it("archived -> unarchive returns to draft without auto-publishing", async () => {
@@ -180,7 +180,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 		});
 
 		describe("2. Transactional Target Recheck & Published References Rollback", () => {
-			it("publishes and copies working references to published references atomically", { timeout: 15000 }, async () => {
+			it("publishes and copies working references to published references atomically", async () => {
 				const tag = await seedEntry(store, {
 					collection: record,
 					slug: "tag-active",
@@ -371,105 +371,108 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it(
-				"fails publish and preserves prior published body & published references if target is unpublished or missing",
-				{ timeout: 60000 },
-				async () => {
-					const tag = await seedEntry(store, {
-						collection: record,
-						slug: "tag-to-archive",
-						metadata: { title: "Tag" },
-						text: "",
-						contentHash: "tag-hash-arch",
-					});
-					// A record collection cannot be archived. Use an unpublished (draft) tag as the target.
-					const post = await seedEntry(store, {
-						collection: content,
-						slug: "post-rollback-test",
-						metadata: { title: "Prior Title" },
-						text: "Prior body",
-						contentHash: "post-prior-hash",
-					});
-
-					// 1st publish (clean, no refs)
-					const firstPub = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
-
-					// Save draft on post referencing the unpublished tag
-					await store.saveWorkingWithReferences({
-						entryId: post.id,
-						expectedVersion: firstPub.version,
-						snapshot: {
-							collection: content,
-							slug: "post-rollback-test",
-							metadata: { title: "Broken Title" },
-							doc: docOf("Broken body"),
-							contentHash: "post-broken-hash",
-							issues: [],
-							references: [],
-							imageSources: [],
-						},
-						references: [
-							{
-								kind: "entry",
-								targetId: tag.id,
-								isStale: false,
-								occurrences: [{ type: "metadata", path: "tags" }],
-							},
-						],
-					});
-
-					// Attempt 2nd publish - MUST FAIL because the referenced tag is not published
-					await expect(
-						publishDraft(testSite, store, {
-							id: post.id,
-							expectedVersion: firstPub.version + 1,
-						}),
-					).rejects.toThrow();
-
-					// Verify prior published body is completely intact!
-					const current = await store.getEntry(post.id);
-					expect(contentOf(current.published?.doc)).toEqual(contentOf(docOf("Prior body")));
-					expect(current.published?.metadata.title).toBe("Prior Title");
-				},
-			);
-		});
-
-		describe("4. Timestamps", () => {
-			it("keeps the first publish time on re-publish and after archive", async () => {
+			it("fails publish and preserves prior published body & published references if target is unpublished or missing", async () => {
+				const tag = await seedEntry(store, {
+					collection: record,
+					slug: "tag-to-archive",
+					metadata: { title: "Tag" },
+					text: "",
+					contentHash: "tag-hash-arch",
+				});
+				// A record collection cannot be archived. Use an unpublished (draft) tag as the target.
 				const post = await seedEntry(store, {
 					collection: content,
-					slug: "post-timestamp-test",
-					metadata: { title: "Timestamp Post" },
-					text: "V1",
-					contentHash: "ts-hash-1",
+					slug: "post-rollback-test",
+					metadata: { title: "Prior Title" },
+					text: "Prior body",
+					contentHash: "post-prior-hash",
 				});
-				const pub1 = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
-				const firstPublishedAt = pub1.publishedAt;
-				expect(firstPublishedAt).toBeInstanceOf(Date);
 
+				// 1st publish (clean, no refs)
+				const firstPub = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
+
+				// Save draft on post referencing the unpublished tag
 				await store.saveWorkingWithReferences({
 					entryId: post.id,
-					expectedVersion: pub1.version,
+					expectedVersion: firstPub.version,
 					snapshot: {
 						collection: content,
-						slug: "post-timestamp-test",
-						metadata: { title: "Timestamp Post V2" },
-						doc: docOf("V2"),
-						contentHash: "ts-hash-2",
+						slug: "post-rollback-test",
+						metadata: { title: "Broken Title" },
+						doc: docOf("Broken body"),
+						contentHash: "post-broken-hash",
 						issues: [],
 						references: [],
 						imageSources: [],
 					},
-					references: [],
+					references: [
+						{
+							kind: "entry",
+							targetId: tag.id,
+							isStale: false,
+							occurrences: [{ type: "metadata", path: "tags" }],
+						},
+					],
 				});
-				await new Promise((r) => setTimeout(r, 50));
-				const pub2 = await publishDraft(testSite, store, { id: post.id, expectedVersion: pub1.version + 1 });
-				expect(pub2.publishedAt).toEqual(firstPublishedAt);
 
-				const archived = await store.archiveEntry({ id: post.id, expectedVersion: pub2.version });
-				const draft = await store.unarchiveEntry({ id: post.id, expectedVersion: archived.version });
-				const pub3 = await publishDraft(testSite, store, { id: post.id, expectedVersion: draft.version });
-				expect(pub3.publishedAt).toEqual(firstPublishedAt);
+				// Attempt 2nd publish - MUST FAIL because the referenced tag is not published
+				await expect(
+					publishDraft(testSite, store, {
+						id: post.id,
+						expectedVersion: firstPub.version + 1,
+					}),
+				).rejects.toThrow();
+
+				// Verify prior published body is completely intact!
+				const current = await store.getEntry(post.id);
+				expect(contentOf(current.published?.doc)).toEqual(contentOf(docOf("Prior body")));
+				expect(current.published?.metadata.title).toBe("Prior Title");
+			});
+		});
+
+		describe("4. Timestamps", () => {
+			it("keeps the first publish time on re-publish and after archive", async () => {
+				// The store stamps a publish with the application clock; each publish runs at a later time of its own.
+				const firstPublishedAt = new Date("2026-01-01T00:00:00.000Z");
+				vi.useFakeTimers({ toFake: ["Date"], now: firstPublishedAt });
+				try {
+					const post = await seedEntry(store, {
+						collection: content,
+						slug: "post-timestamp-test",
+						metadata: { title: "Timestamp Post" },
+						text: "V1",
+						contentHash: "ts-hash-1",
+					});
+					const pub1 = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
+					expect(pub1.publishedAt).toEqual(firstPublishedAt);
+
+					vi.setSystemTime(new Date("2026-01-01T00:01:00.000Z"));
+					await store.saveWorkingWithReferences({
+						entryId: post.id,
+						expectedVersion: pub1.version,
+						snapshot: {
+							collection: content,
+							slug: "post-timestamp-test",
+							metadata: { title: "Timestamp Post V2" },
+							doc: docOf("V2"),
+							contentHash: "ts-hash-2",
+							issues: [],
+							references: [],
+							imageSources: [],
+						},
+						references: [],
+					});
+					const pub2 = await publishDraft(testSite, store, { id: post.id, expectedVersion: pub1.version + 1 });
+					expect(pub2.publishedAt).toEqual(firstPublishedAt);
+
+					vi.setSystemTime(new Date("2026-01-01T00:02:00.000Z"));
+					const archived = await store.archiveEntry({ id: post.id, expectedVersion: pub2.version });
+					const draft = await store.unarchiveEntry({ id: post.id, expectedVersion: archived.version });
+					const pub3 = await publishDraft(testSite, store, { id: post.id, expectedVersion: draft.version });
+					expect(pub3.publishedAt).toEqual(firstPublishedAt);
+				} finally {
+					vi.useRealTimers();
+				}
 			});
 		});
 

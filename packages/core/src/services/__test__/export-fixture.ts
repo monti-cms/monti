@@ -5,8 +5,8 @@ import type { ExportSnapshot } from "../../core/store";
 import type { StoredDocument } from "../../doc/stored-document";
 
 /**
- * The collection, language and field names the fixture uses are looked up from the current config. In the reference blog setup, the public post is a post (`post`),
- * and the draft is a memo (`memo`). In a config with only one document collection with a body, both are that collection.
+ * The collection, language and field names the fixture uses are looked up from the current config. In the reference blog setup, the public post is a post,
+ * and the draft is a memo. In a config with only one document collection with a body, both are that collection.
  */
 export const FIXTURE_CONTENT_COLLECTION = contentCollection;
 export const FIXTURE_DRAFT_COLLECTION = otherContentCollection ?? contentCollection;
@@ -23,7 +23,8 @@ const fixtureRelation = (() => {
 export const FIXTURE_RELATION_KIND = fixtureRelation.to;
 
 /**
- * SEO values put in the published copy (field name found by role → value). Roles not in the config are dropped.
+ * SEO values put in the published copy (field name found by role → value; the keys are role names, which the reference blog also uses as
+ * field names). Roles not in the config are dropped.
  * Checks that SEO metadata survives in the public archive.
  */
 export const FIXTURE_SEO_METADATA: Readonly<Record<string, string>> = Object.fromEntries(

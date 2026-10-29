@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { importCms } from "../app";
 import { dbSetup } from "../db";
@@ -71,6 +71,11 @@ describe("the email and password login on the command line", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
+	});
+
+	// The login keeps its accounts in the plugin storage of the schema: every test starts with no admin account.
+	beforeEach(async () => {
+		await pool.query(`DELETE FROM "${schemaName}".plugin_documents`);
 	});
 
 	afterAll(async () => {
