@@ -30,6 +30,9 @@ export const templatesMessages = defineMessages("cms-admin.templates", {
 		"editor.nameLabel": "Template name",
 		"editor.nameRequired": "Enter a template name.",
 		"editor.loadFailed": "Couldn't load the template.",
+		"editor.conflict": "Saved elsewhere first",
+		"editor.conflictMeta": "This template can't be saved",
+		"editor.loadServer": "Load the server version",
 	},
 	ko: {
 		"newBody.introduction": "서론",
@@ -59,5 +62,8 @@ export const templatesMessages = defineMessages("cms-admin.templates", {
 		"editor.nameLabel": "템플릿 이름",
 		"editor.nameRequired": "템플릿 이름을 입력하세요.",
 		"editor.loadFailed": "템플릿을 불러오지 못했어요.",
+		"editor.conflict": "다른 곳에서 먼저 저장했어요",
+		"editor.conflictMeta": "이 템플릿은 저장할 수 없어요",
+		"editor.loadServer": "서버 최신본 불러오기",
 	},
 });

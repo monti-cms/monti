@@ -269,21 +269,24 @@ describe("flow: templates · the editor page", () => {
 		expect(requested("GET", `/templates/${FIRST.id}`)).toHaveLength(1);
 	});
 
-	it("shows no status and no save button until something changes, then the status and the save button together", async () => {
+	it("keeps the save button always (like the entry editor), and shows the status only while something changed", async () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()).toBeNull();
+		expect(saveButton()?.textContent).toContain("⌘S");
+		// Nothing changed: pressing it, or ⌘S, sends nothing.
+		fireEvent.click(saveButton() as HTMLElement);
+		pressSave();
+		expect(sent("PATCH", `/templates/${FIRST.id}`)).toHaveLength(0);
 
 		fireEvent.change(name, { target: { value: "긴 글" } });
 		expect(screen.getByText(t("editor.unsaved"))).toBeTruthy();
 		expect(saveButton()).toBeTruthy();
-		expect(saveButton()?.textContent).toContain("⌘S");
 
 		// Putting the name back is no change.
 		fireEvent.change(name, { target: { value: FIRST.name } });
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()).toBeNull();
+		expect(saveButton()).toBeTruthy();
 	});
 
 	it("saves with ⌘S: one request with the name, the body and the version it saw; the status goes and a toast says saved", async () => {
@@ -319,15 +322,41 @@ describe("flow: templates · the editor page", () => {
 		expect(requested("PATCH", `/templates/${FIRST.id}`)).toHaveLength(0);
 	});
 
-	it("keeps the changes and says why when the save is refused", async () => {
+	it("keeps the changes and shows the conflict as a notice strip with a way to take the server's version", async () => {
 		conflict = true;
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		fireEvent.change(name, { target: { value: "긴 글" } });
 		pressSave();
-		await screen.findByText("다른 곳에서 먼저 바뀌었어요.");
+		const strip = await screen.findByRole("alert");
+		expect(within(strip).getByText(t("editor.conflict"))).toBeTruthy();
+		expect(within(strip).getByText(t("editor.conflictMeta"))).toBeTruthy();
+		// The strip, not a line under the name.
+		expect(screen.queryByText("다른 곳에서 먼저 바뀌었어요.")).toBeNull();
 		expect(screen.getByText(t("editor.unsaved"))).toBeTruthy();
-		expect((screen.getByRole("textbox", { name: t("editor.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
+		expect(name.value).toBe("긴 글");
+
+		// The server's copy comes back and replaces the draft; the strip goes.
+		store = [{ ...FIRST, name: "서버에서 고침", version: FIRST.version + 1 }, SECOND];
+		fireEvent.click(within(strip).getByRole("button", { name: t("editor.loadServer") }));
+		await waitFor(() => expect(name.value).toBe("서버에서 고침"));
+		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
+	});
+
+	it("shows a failed load with the server's message and a retry, under the back link", async () => {
+		store = [];
+		render(
+			<AdminQueryProvider>
+				<TemplateEditorScreen id={FIRST.id} />
+			</AdminQueryProvider>,
+		);
+		const alert = await screen.findByRole("alert");
+		expect(alert.textContent).toContain("없음");
+		expect(screen.getByRole("link", { name: t("editor.back") })).toBeTruthy();
+		store = [FIRST, SECOND];
+		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
+		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
 	});
 
 	it("asks before the back link throws unsaved changes away, and stays when told to", async () => {
@@ -374,7 +403,7 @@ describe("flow: templates · a new template", () => {
 		const name = await renderEditor();
 		expect(name.value).toBe("");
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()).toBeNull();
+		expect(saveButton()).toBeTruthy();
 		expect(requested("GET", "/templates/undefined")).toHaveLength(0);
 		// The outline's 6 blocks count as characters.
 		const bar = screen.getByRole("region", { name: ts("label") });

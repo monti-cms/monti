@@ -5,7 +5,8 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import type { BodyTemplate } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	Button,
+	Banner,
+	Box,
 	EntryStatus,
 	FormFieldError,
 	FormFieldLabel,
@@ -21,7 +22,7 @@ import {
 } from "@monti-cms/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
-import { errorText } from "../../api/client";
+import { errorText, isConflict } from "../../api/client";
 import { createTemplate, getTemplate, templatesKeys, updateTemplate } from "../../api/templates";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { documentKey } from "../../editor/document-key";
@@ -32,6 +33,7 @@ import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { bodyChars } from "../entries/body-stats";
 import { MoreActionsButton } from "../shared/action-menu";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { SidePanelPane, SidePanelToggle } from "../shared/side-panel-slot";
 import { statusBarMessages } from "../shared/status-bar.messages";
 import { useDraftEditor } from "../shared/use-draft-editor";
@@ -60,14 +62,23 @@ export function TemplateEditorScreen({ id }: { id?: string }) {
 	if (query.data) return <TemplatePage key={query.data.id} template={query.data} />;
 	return (
 		<Stack gap={0} height="screen" background="page">
-			<Inline as="header" gap={8} border="bottom" paddingX={16} paddingY={8}>
-				<BackLink />
+			<Inline as="header" gap={12} border="bottom" minHeight="header" paddingX={12}>
+				<Box paddingX={12}>
+					<BackLink />
+				</Box>
 			</Inline>
-			<Stack gap={0} grow align="center" justify="center">
-				<Text as="p" variant="note" tone="subtle" role={query.error ? "alert" : "status"}>
-					{query.error ? errorText(site, query.error, t("editor.loadFailed")) : tc("loading")}
-				</Text>
-			</Stack>
+			{query.error ? (
+				<LoadErrorAlert
+					message={errorText(site, query.error, t("editor.loadFailed"))}
+					onRetry={() => void query.refetch()}
+				/>
+			) : (
+				<Stack gap={0} grow align="center" justify="center">
+					<Text as="p" variant="note" tone="subtle" role="status">
+						{tc("loading")}
+					</Text>
+				</Stack>
+			)}
 		</Stack>
 	);
 }
@@ -92,6 +103,8 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 	const queryClient = useQueryClient();
 	const nameId = useId();
 	const [error, setError] = useState<string | null>(null);
+	// Someone saved the template first: a notice strip, with the way to take their version.
+	const [conflict, setConflict] = useState(false);
 
 	const save = useCmsMutation({
 		fn: ({ name, doc }: TemplateDraft, { site }) =>
@@ -107,12 +120,15 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 			queryClient.setQueryData(templatesKeys.detail(saved.id), saved);
 			if (!template) router.replace(editTemplateHref(site, saved.id));
 		},
-		onError: (err) => setError(errorText(site, err, tc("saveFailed"))),
+		onError: (err) => {
+			if (isConflict(err)) setConflict(true);
+			else setError(errorText(site, err, tc("saveFailed")));
+		},
 	});
 	const saved = template ? { name: template.name, doc: template.doc } : null;
 	// A new template starts as the outline; it is not a change until the writer edits it.
 	const [outline] = useState(() => newTemplateDoc(t));
-	const { draft, update, dirty } = useDraftEditor<TemplateDraft>({
+	const { draft, update, replace, dirty } = useDraftEditor<TemplateDraft>({
 		saved,
 		empty: { name: "", doc: outline },
 		equals: (a, b) => a.name === b.name && documentKey(site, a.doc) === documentKey(site, b.doc),
@@ -121,6 +137,18 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
 	const actions = useTemplateActions({ onDeleted: () => router.navigate(templatesHref(site)) });
 
+	const loadServerCopy = async () => {
+		if (!template) return;
+		const fresh = await queryClient.fetchQuery({
+			queryKey: templatesKeys.detail(template.id),
+			queryFn: ({ signal }) => getTemplate(site, template.id, signal, t("editor.loadFailed")),
+			staleTime: 0,
+		});
+		queryClient.setQueryData(templatesKeys.detail(fresh.id), fresh);
+		replace({ name: fresh.name, doc: fresh.doc });
+		setConflict(false);
+	};
+
 	const handleSave = () => {
 		if (!dirty || save.isPending) return;
 		if (!draft.name.trim()) {
@@ -128,6 +156,7 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 			return;
 		}
 		setError(null);
+		setConflict(false);
 		save.mutate({ name: draft.name.trim(), doc: draft.doc });
 	};
 	useSaveShortcut(handleSave);
@@ -140,23 +169,25 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 				as="header"
 				wrap
 				justify="between"
-				gap={4}
+				gap={12}
 				shrink={false}
 				border="bottom"
 				background="page"
-				paddingX={16}
-				paddingY={8}
+				minHeight="header"
+				paddingX={12}
 			>
-				<Inline gap={16} minWidth={0}>
+				<Inline gap={12} minWidth={0} paddingX={12}>
 					<BackLink />
 					{dirty && <EntryStatus status="editing">{t("editor.unsaved")}</EntryStatus>}
 				</Inline>
-				<Inline gap={4} justify="end">
-					{dirty && (
-						<Button type="button" shortcut="⌘S" loading={save.isPending} onClick={handleSave}>
-							{save.isPending ? tc("saving") : tc("save")}
-						</Button>
-					)}
+				<Inline gap={12} justify="end">
+					{/* Always there, like the entry editor's: ⌘S does the same. */}
+					<TextButton type="button" disabled={save.isPending} onClick={handleSave}>
+						{save.isPending ? tc("saving") : tc("save")}{" "}
+						<Text variant="micro" tone="faint">
+							⌘S
+						</Text>
+					</TextButton>
 					<MoreActionsButton actions={template ? actions.menu(template) : []} label={t("editor.more")}>
 						<EditorMenuRows />
 					</MoreActionsButton>
@@ -166,6 +197,12 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 					<SidePanelToggle />
 				</Inline>
 			</Inline>
+
+			{conflict && (
+				<Banner tone="danger" role="alert" title={t("editor.conflict")} meta={t("editor.conflictMeta")} plainMeta>
+					<TextButton onClick={() => void loadServerCopy()}>{t("editor.loadServer")}</TextButton>
+				</Banner>
+			)}
 
 			<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
 				<Stack gap={0} grow minWidth={0} minHeight={0} overflow="y">
@@ -184,6 +221,8 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 									appearance="inline"
 								/>
 								{error && <FormFieldError>{error}</FormFieldError>}
+								{/* The one ink rule of the page: 20 above; the 32 below is the editor's own spacing under the title. */}
+								<Box border="bottom-contrast" paddingTop={20} />
 							</>
 						}
 					/>
