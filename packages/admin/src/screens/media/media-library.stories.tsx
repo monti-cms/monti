@@ -194,19 +194,58 @@ export const DraggingOverFolder: Story = {
 	},
 };
 
-// 올리는 중: the first file going up with its progress, the others waiting. (A picture, a PDF and a CSV.)
+/** A real picture to drop: a gradient drawn on a canvas and saved as PNG, so the tile has something to show under the veil. */
+const pictureFile = (name: string, from: string, to: string): Promise<File> =>
+	new Promise((resolve) => {
+		const canvas = document.createElement("canvas");
+		canvas.width = 640;
+		canvas.height = 480;
+		const context = canvas.getContext("2d");
+		const gradient = context?.createLinearGradient(0, 0, 640, 480);
+		gradient?.addColorStop(0, from);
+		gradient?.addColorStop(1, to);
+		if (context && gradient) {
+			context.fillStyle = gradient;
+			context.fillRect(0, 0, 640, 480);
+		}
+		canvas.toBlob((blob) => resolve(new File([blob ?? new Blob()], name, { type: "image/png" })), "image/png");
+	});
+
+/** An upload request that is 64% sent and never finishes, so the story holds the state "uploading". */
+class HalfwayRequest {
+	upload: { onprogress?: (event: { lengthComputable: boolean; loaded: number }) => void } = {};
+	open() {}
+	setRequestHeader() {}
+	send(body: Blob) {
+		setTimeout(() => this.upload.onprogress?.({ lengthComputable: true, loaded: Math.round(body.size * 0.64) }), 0);
+	}
+}
+
+// 올리는 중: the first picture going up at 64% (its own picture under a veil, the bar inside the tile), the others waiting.
 export const Uploading: Story = {
 	tags: ["visual"],
-	render: screen(backendOf(), { over: (path) => (path.includes("/media/uploads") ? "pending" : undefined) }),
+	render: screen(backendOf(), {
+		over: (path) =>
+			path.includes("/media/uploads")
+				? {
+						mediaId: "uploading",
+						uploadUrl: "https://upload.example/file",
+						requiredHeaders: {},
+						original: { uploadUrl: "https://upload.example/original", requiredHeaders: {} },
+					}
+				: undefined,
+	}),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
-		const png = new File([new Uint8Array(2000)], "hero.png", { type: "image/png" });
+		(window as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = HalfwayRequest;
 		drag(area(), "drop", [
-			png,
+			await pictureFile("hero.png", "#c2b59b", "#7d6d52"),
+			await pictureFile("hero-dark.png", "#3d3a33", "#191814"),
+			await pictureFile("og-image.png", "#dfe3e6", "#a9b2b9"),
 			new File(["x"], "price-list-2026.pdf", { type: "application/pdf" }),
-			new File(["x"], "subscribers.csv", { type: "text/csv" }),
 		]);
-		await tile(canvasElement, /^subscribers\.csv/);
+		await tile(canvasElement, /^price-list-2026\.pdf/);
+		await waitFor(() => within(canvasElement).getByText(/64%/));
 	},
 };
 
