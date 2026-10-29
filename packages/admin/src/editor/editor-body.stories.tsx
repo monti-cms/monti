@@ -83,6 +83,18 @@ const ready = async (canvasElement: HTMLElement) => {
 	await waitFor(() => expect(current).not.toBeNull(), LONG);
 	return current as Editor;
 };
+/** Waits until a floating part placed at the caret stops moving, so a picture of it does not depend on when it is taken. */
+const settledAt = async (element: Element) => {
+	const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+	let last = "";
+	for (let tries = 0; tries < 60; tries++) {
+		await frame();
+		const { top, left } = element.getBoundingClientRect();
+		const now = `${top},${left}`;
+		if (now === last) return;
+		last = now;
+	}
+};
 /** Types text at the cursor, as the keyboard would. */
 const typeInto = (editor: Editor, text: string) => editor.chain().focus("end").insertContent(text).run();
 /** Selects the first occurrence of some words of the body. */
@@ -115,8 +127,9 @@ export const SlashMenu: Story = {
 	render: () => <Body text="" />,
 	play: async ({ canvasElement }) => {
 		typeInto(await ready(canvasElement), "/");
-		await body().findByRole("listbox", { name: "넣기" }, LONG);
+		const menu = await body().findByRole("listbox", { name: "넣기" }, LONG);
 		await body().findByText("템플릿 · 이 자리에 넣어요", undefined, LONG);
+		await settledAt(menu);
 	},
 };
 
@@ -126,7 +139,8 @@ export const TemplatePicker: Story = {
 	render: () => <Body text="" />,
 	play: async ({ canvasElement }) => {
 		typeInto(await ready(canvasElement), "/템플릿");
-		await body().findByRole("option", { name: /기본 글/ }, LONG);
+		const option = await body().findByRole("option", { name: /기본 글/ }, LONG);
+		await settledAt(option);
 	},
 };
 
