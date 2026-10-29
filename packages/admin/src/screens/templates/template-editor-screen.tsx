@@ -7,6 +7,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Banner,
 	Box,
+	Button,
 	EntryStatus,
 	FormFieldError,
 	Inline,
@@ -180,10 +181,10 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 					{dirty && <EntryStatus status="editing">{t("editor.unsaved")}</EntryStatus>}
 				</Inline>
 				<Inline gap={12} justify="end">
-					{/* Always there, like the entry editor's; ⌘S or Ctrl+S does the same. Buttons show no shortcut. */}
-					<TextButton type="button" disabled={save.isPending} onClick={handleSave}>
+					{/* The page's one primary action, always there; ⌘S or Ctrl+S does the same. Buttons show no shortcut. */}
+					<Button type="button" loading={save.isPending} onClick={handleSave}>
 						{save.isPending ? tc("saving") : tc("save")}
-					</TextButton>
+					</Button>
 					<MoreActionsButton actions={template ? actions.menu(template) : []} label={t("editor.more")}>
 						<EditorMenuRows />
 					</MoreActionsButton>
