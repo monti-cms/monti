@@ -17,15 +17,6 @@ export const booleanCodec: PreferenceCodec<boolean> = {
 	serialize: (value) => (value ? "1" : "0"),
 };
 
-/** A positive number (a width in px). */
-export const positiveNumberCodec: PreferenceCodec<number> = {
-	parse: (raw) => {
-		const value = Number(raw);
-		return Number.isFinite(value) && value > 0 ? value : undefined;
-	},
-	serialize: String,
-};
-
 /** One of a fixed list of strings. */
 export const enumCodec = <T extends string>(values: readonly T[]): PreferenceCodec<T> => ({
 	parse: (raw) => values.find((value) => value === raw),
