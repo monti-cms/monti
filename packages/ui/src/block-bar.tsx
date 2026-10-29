@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { cn } from "./cn";
+import type { ShortcutKeys } from "./shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** The floating row both bars share (`.mt-block-bar`, `.mt-format-bar`): 3px inside, 2px between buttons, an emphasis border, the floating shadow. */
@@ -34,7 +35,7 @@ function BlockBarButton({
 	...props
 }: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
 	label: string;
-	shortcut?: string;
+	shortcut?: ShortcutKeys;
 	pressed?: boolean;
 	/** Wraps the button to make it the trigger of a card or menu: `trigger={(button) => <PopoverTrigger render={button} />}`. */
 	trigger?: (button: ReactElement) => ReactElement;

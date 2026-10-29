@@ -362,7 +362,7 @@ States (`stage`, default "라이브러리"):
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
 - Board: `TemplateEditor.dc.html` (canvas row: "도구")
-- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" (only while something is changed) and "저장 ⌘S" (always there, drawn like the entry editor's header save), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field over the reading-width body with the one ink rule under it (20 above, 32 below), and a status bar with the character count only. A save refused because the template changed elsewhere shows the notice strip (Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기"); a failed load shows the shared load-error strip with a retry.
+- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" (only while something is changed) and "저장" (always there, drawn like the entry editor's header save; no shortcut on it), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field over the reading-width body with the one ink rule under it (20 above, 32 below), and a status bar with the character count only. A save refused because the template changed elsewhere shows the notice strip (Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기"); a failed load shows the shared load-error strip with a retry.
 - Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>

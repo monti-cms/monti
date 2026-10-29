@@ -173,20 +173,20 @@ export function BlockHandleOverlay({
 						<DropdownMenuItem onClick={choose(() => moveBlock(editor, pos, -1))}>
 							<ArrowUp aria-hidden />
 							{t("blockHandle.moveUp")}
-							<MenuShortcut>⌥↑</MenuShortcut>
+							<MenuShortcut keys={["alt", "ArrowUp"]} />
 						</DropdownMenuItem>
 					)}
 					{canDown && (
 						<DropdownMenuItem onClick={choose(() => moveBlock(editor, pos, 1))}>
 							<ArrowDown aria-hidden />
 							{t("blockHandle.moveDown")}
-							<MenuShortcut>⌥↓</MenuShortcut>
+							<MenuShortcut keys={["alt", "ArrowDown"]} />
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem onClick={choose(() => duplicateBlock(editor, pos))}>
 						<Copy aria-hidden />
 						{t("blockHandle.duplicate")}
-						<MenuShortcut>⇧⌘D</MenuShortcut>
+						<MenuShortcut keys={["mod", "shift", "D"]} />
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						variant="danger"
@@ -197,7 +197,7 @@ export function BlockHandleOverlay({
 					>
 						<TrashCan aria-hidden />
 						{tc("delete")}
-						<MenuShortcut>⇧⌘⌫</MenuShortcut>
+						<MenuShortcut keys={["mod", "shift", "Backspace"]} />
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

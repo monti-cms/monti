@@ -86,7 +86,7 @@ A small black pill that names an icon button that has no text. 12px, and a short
 
 ### In code
 
-`Tooltip` (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`); `shortcut` takes the key combination ("⌘S").
+`Tooltip` (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`); `shortcut` takes the keys (`["mod", "S"]`), written "⌘S" on a Mac and "Ctrl+S" elsewhere (see Menu, "Shortcuts").
 
 ## Toast
 

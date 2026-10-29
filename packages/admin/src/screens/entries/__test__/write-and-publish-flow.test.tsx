@@ -149,12 +149,11 @@ afterEach(() => {
 });
 
 describe("flow: write and publish (steps 09–15)", () => {
-	it("keeps the save button in the header with its shortcut written beside it, and saves with the button and with ⌘S", async () => {
+	it("keeps the save button in the header, with no shortcut on it, and saves with the button and with ⌘S", async () => {
 		renderEdit();
 		await title();
-		const save = header().getByRole("button", { name: /^저장\s*⌘S$/ });
-		// The shortcut is part of the button, not a tooltip, and the button is there while nothing is changed.
-		expect(within(save).getByText("⌘S")).toBeTruthy();
+		// A button shows no shortcut, and the save button is there while nothing is changed.
+		const save = header().getByRole("button", { name: "저장" });
 		expect(save.hasAttribute("disabled")).toBe(false);
 
 		fireEvent.change(await title(), { target: { value: "고친 제목" } });

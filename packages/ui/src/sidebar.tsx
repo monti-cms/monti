@@ -313,7 +313,7 @@ function SidebarRailToggle({ className, ...props }: Omit<ButtonPrimitive.Props, 
 			>
 				{rail ? <SidePanelOpen /> : <SidePanelClose />}
 			</TooltipTrigger>
-			<TooltipContent side={rail ? "right" : "bottom"} shortcut="⌘B">
+			<TooltipContent side={rail ? "right" : "bottom"} shortcut={["mod", "B"]}>
 				{label}
 			</TooltipContent>
 		</Tooltip>

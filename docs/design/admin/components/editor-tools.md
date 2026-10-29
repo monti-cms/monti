@@ -26,10 +26,10 @@ The block menu: block kind name | "다른 블록으로 바꾸기" (change to ano
 
 A one-line format bar that floats above the selected text (`.mt-format-bar`). A toolbar that is always visible is not used.
 
-- From the left: bold · italic · underline · strikethrough · code | superscript · subscript · link · footnote · ⋯ (formats a site added) | "✦ 요청 ⌘J" (✦ request ⌘J).
+- From the left: bold · italic · underline · strikethrough · code | superscript · subscript · link · footnote · ⋯ (formats a site added) | "✦ 요청" (✦ request).
 - The ⋯ opens a menu with one row per format a site added (text color, tooltip, a link to a code line), each with its icon, and a ✓ on one the selection has. A row that cannot work on the selection is left out, and with no row left there is no ⋯. An editor extension adds its rows with `formatItems` (see the admin README, "Text marks").
 - Buttons are 28px with 2px between. A vertical rule (`.sep`) between groups. A format that is on is `bg-selected` + ink.
-- "✦ 요청" is a text button at the end of the bar. ✦ is the blue pencil, and the shortcut is mono 11 `fg-subtle`.
+- "✦ 요청" is a text button at the end of the bar. ✦ is the blue pencil. Like every button, it shows no shortcut.
 - The bar does not change from one line. When the screen is narrow, the whole bar slides sideways above the selected text and stays inside the screen.
 
 ### In code

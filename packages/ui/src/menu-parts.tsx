@@ -1,6 +1,7 @@
 import { Checkmark } from "@carbon/icons-react";
 import type * as React from "react";
 import { cn } from "./cn";
+import { Shortcut, type ShortcutKeys } from "./shortcut";
 
 /**
  * The floating card every menu, picker list and popover is drawn on: paper, an emphasis border, the largest radius and the floating shadow. A list card adds 6px inside (`p-monti-6`); the parts below are what goes in it.
@@ -62,14 +63,19 @@ function MenuTick({ className, ...props }: React.ComponentProps<"span">) {
 	);
 }
 
-/** A key combination at the end of a row ("⇧⌘D"). Mono; on a row that cannot be used it can say why ("in use"). */
-function MenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
+/**
+ * The end of a row: its key combination in `keys` (`["mod", "shift", "D"]`, written "⇧⌘D" on a Mac and "Ctrl+Shift+D" elsewhere), or other short
+ * text as children (a count, a markdown shortcut such as "##", why a row cannot be used). Mono.
+ */
+function MenuShortcut({ className, keys, children, ...props }: React.ComponentProps<"span"> & { keys?: ShortcutKeys }) {
 	return (
 		<span
 			data-slot="menu-shortcut"
 			className={cn("ml-auto shrink-0 whitespace-nowrap text-monti-micro text-monti-subtle", className)}
 			{...props}
-		/>
+		>
+			{keys ? <Shortcut keys={keys} /> : children}
+		</span>
 	);
 }
 

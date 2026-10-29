@@ -7,6 +7,7 @@ This page covers the floating menu card and everything that uses it: the ⋯ men
 The floating menu card. Paper ground, `border-emphasis`, `radius-xl`, `shadow-floating`. Width 240px (`width-menu`); a longer row may widen it.
 
 - Group names are mono 11px. A shortcut goes at the right, in mono.
+- Shortcuts are written for the system the admin runs on: "⇧⌘D" (glyphs in the order ⌥⇧⌘, no separator) on a Mac, "Ctrl+Shift+D" on Windows and Linux. The same rule holds in a tooltip. A screen never writes the glyphs itself: it gives the keys (`["mod", "shift", "D"]`, `mod` being ⌘ or Ctrl), and `formatShortcut` / `useShortcut` / `Shortcut` in `@monti-cms/ui` write them, so there is one place for the Mac and Windows forms. `MenuShortcut keys` and `TooltipContent shortcut` take the keys.
 - A menu holds only what can be done here. What cannot be done is hidden, not dimmed with a reason beside it. A menu left with one item loses its ⋯, and that one thing is done directly on the row. If only "rename" is left, pressing the name renames it in place (`.mt-rename`).
 - The `bg-selected` ground (`is-on`) is used only for the row the pointer or keyboard is on and for the row whose second level is open.
 - A menu that picks one value marks the current value with a ✓ at the right (`.tick`). Pressing a value applies it at once, and the whole menu closes.

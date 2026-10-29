@@ -17,10 +17,10 @@ const meta = {
 	args: {
 		where: "요청 · 문단 4",
 		discardLabel: "버리기",
-		discardShortcut: "⌘⌫",
+		discardShortcut: ["mod", "Backspace"],
 		onDiscard: () => undefined,
 		acceptLabel: "받기",
-		acceptShortcut: "⌘↵",
+		acceptShortcut: ["mod", "Enter"],
 		onAccept: () => undefined,
 		children: null,
 	},

@@ -236,6 +236,7 @@ export {
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
+export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
 export { SidePanel } from "./side-panel";
 export {
 	Sidebar,

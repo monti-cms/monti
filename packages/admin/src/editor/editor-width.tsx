@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowsHorizontal } from "@carbon/icons-react";
+import { FitToWidth } from "@carbon/icons-react";
 import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
@@ -73,7 +73,7 @@ export function EditorWidthSubmenu() {
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger>
-				<ArrowsHorizontal aria-hidden />
+				<FitToWidth aria-hidden />
 				{t("editorWidth.label")}
 				<MenuValue>{step.label}</MenuValue>
 			</DropdownMenuSubTrigger>

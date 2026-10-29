@@ -5,12 +5,21 @@ import { Button } from "./button";
 import { cn } from "./cn";
 import { MENU_CARD } from "./menu-parts";
 import { SendButton } from "./send-button";
+import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
 import { TextButton } from "./text-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /** A button of the card's head that tells its key combination in a tooltip after its name, and only there. */
-function WithShortcut({ label, shortcut, children }: { label: string; shortcut?: string; children: ReactElement }) {
+function WithShortcut({
+	label,
+	shortcut,
+	children,
+}: {
+	label: string;
+	shortcut?: ShortcutKeys;
+	children: ReactElement;
+}) {
 	if (!shortcut) return children;
 	return (
 		<Tooltip>
@@ -46,10 +55,10 @@ function MemoCard({
 	where: string;
 	discardLabel: string;
 	onDiscard: () => void;
-	discardShortcut?: string;
+	discardShortcut?: ShortcutKeys;
 	acceptLabel: string;
 	onAccept: () => void;
-	acceptShortcut?: string;
+	acceptShortcut?: ShortcutKeys;
 	/** A spark before the accept label: accepting asks the assistant to do something ("✦ Translate again"). */
 	acceptSpark?: boolean;
 	reply?: {

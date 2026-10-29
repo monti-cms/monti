@@ -58,8 +58,6 @@ interface EntryEditorHeaderProps {
 	menuItems?: readonly EditorMenuItem[];
 }
 
-const SAVE_SHORTCUT = "⌘S";
-
 export function EntryEditorHeader({
 	editor,
 	commands,
@@ -145,10 +143,7 @@ export function EntryEditorHeader({
 						disabled={busy !== null || isSubmitting}
 						onClick={() => void commands.handleSaveNow()}
 					>
-						{editor.saveStatus === "saving" ? tc("saving") : tc("save")}{" "}
-						<Text variant="micro" tone="faint">
-							{SAVE_SHORTCUT}
-						</Text>
+						{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
 					</TextButton>
 				)}
 				{!isTrashed &&

@@ -38,6 +38,7 @@ export const CompareText = close(open.CompareText);
 export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
+export const Shortcut = close(open.Shortcut);
 export const FilterButton = close(open.FilterButton);
 export const FolderTab = close(open.FolderTab);
 export const FolderTabEdit = close(open.FolderTabEdit);
@@ -336,6 +337,8 @@ export type {
 	SegmentedOption,
 	SelectAll,
 	SelectAllState,
+	ShortcutKey,
+	ShortcutKeys,
 	Spacing,
 	StackProps,
 	UiLabels,
@@ -356,6 +359,7 @@ export {
 	toast,
 	useComboboxAnchor,
 	useIsMobile,
+	useShortcut,
 	useSidebar,
 	useUiLabels,
 } from "./internal";

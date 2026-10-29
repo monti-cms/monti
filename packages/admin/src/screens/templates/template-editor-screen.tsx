@@ -181,12 +181,9 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 					{dirty && <EntryStatus status="editing">{t("editor.unsaved")}</EntryStatus>}
 				</Inline>
 				<Inline gap={12} justify="end">
-					{/* Always there, like the entry editor's: ⌘S does the same. */}
+					{/* Always there, like the entry editor's; ⌘S or Ctrl+S does the same. Buttons show no shortcut. */}
 					<TextButton type="button" disabled={save.isPending} onClick={handleSave}>
-						{save.isPending ? tc("saving") : tc("save")}{" "}
-						<Text variant="micro" tone="faint">
-							⌘S
-						</Text>
+						{save.isPending ? tc("saving") : tc("save")}
 					</TextButton>
 					<MoreActionsButton actions={template ? actions.menu(template) : []} label={t("editor.more")}>
 						<EditorMenuRows />

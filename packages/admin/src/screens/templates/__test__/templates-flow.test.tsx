@@ -273,7 +273,7 @@ describe("flow: templates · the editor page", () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()?.textContent).toContain("⌘S");
+		expect(saveButton()?.textContent).toBe(tc("save"));
 		// Nothing changed: pressing it, or ⌘S, sends nothing.
 		fireEvent.click(saveButton() as HTMLElement);
 		pressSave();

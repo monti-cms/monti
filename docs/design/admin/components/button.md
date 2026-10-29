@@ -25,7 +25,9 @@ An icon (✦, the magnifier) is pointed or round, so with equal padding it looks
 
 ### In code
 
-`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring; `shortcut` puts a key combination after the label ("저장 ⌘S"): micro type, a little faint, 8px from the label.
+`Button` in `@monti-cms/ui`: `variant` is `primary`, `secondary`, `danger` or `outline-danger`; `size` is `md` or `sm`; `loading` shows the ring.
+
+A button never shows its shortcut: "저장", not "저장 ⌘S". On Windows it would read "저장 Ctrl+S", too long for a label. A shortcut is shown only in a tooltip and at the end of a menu row, written for the system the admin runs on (see Menu, "Shortcuts").
 
 `outline-danger` is not in the DS README. It is a quieter `danger` with a 1px line. The side padding of the filled pills is 18px, 16px for `secondary` and 12px for `sm`.
 

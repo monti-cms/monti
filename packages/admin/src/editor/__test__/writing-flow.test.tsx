@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
+import { pressOption } from "../../test/base-ui";
 import { jsonResponse as json } from "../../test/fetch";
 import { renderWithSite } from "../../test/site";
 import { para, storedDoc, table, text } from "../../test/stored-doc";
@@ -288,9 +289,17 @@ describe("flow: write (steps 02–05)", () => {
 		};
 		const blockAt = (editor: Editor, index: number) => editor.view.dom.children[index] as HTMLElement;
 		const firstBlock = (editor: Editor) => blockAt(editor, 0);
-		const openMenu = async (editor: Editor, index = 0) => {
-			fireEvent.click(await handleOf(blockAt(editor, index)));
-			return screen.findByRole("menu", { name: t("blockHandle.label") });
+		const openMenu = async (editor: Editor, index = 0): Promise<HTMLElement> => {
+			// A menu that was just used closes on its own; wait for it, so the next one is not the one going away.
+			await waitFor(() => expect(screen.queryByRole("menu", { name: t("blockHandle.label") })).toBeNull());
+			// Right after a change to the document the handle is drawn again, which closes a menu opened in that moment: open it again then.
+			for (let attempt = 0; attempt < 3; attempt++) {
+				fireEvent.click(await handleOf(blockAt(editor, index)));
+				const menu = await screen.findByRole("menu", { name: t("blockHandle.label") });
+				await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+				if (menu.isConnected) return menu;
+			}
+			throw new Error("the block menu did not stay open");
 		};
 		const rowNames = (menu: HTMLElement) =>
 			within(menu)
@@ -306,9 +315,9 @@ describe("flow: write (steps 02–05)", () => {
 			expect(rows).toEqual([
 				expect.stringContaining(t("blockHandle.turnInto")),
 				expect.stringContaining(t("blockHandle.align")),
-				`${t("blockHandle.moveDown")}⌥↓`,
-				`${t("blockHandle.duplicate")}⇧⌘D`,
-				`${tc("delete")}⇧⌘⌫`,
+				`${t("blockHandle.moveDown")}Alt+↓`,
+				`${t("blockHandle.duplicate")}Ctrl+Shift+D`,
+				`${tc("delete")}Ctrl+Shift+Backspace`,
 			]);
 			expect(
 				within(menu)
@@ -416,12 +425,12 @@ describe("flow: write (steps 02–05)", () => {
 		it("up and down move the block, duplicate copies it below, delete removes it", async () => {
 			let { editor, onChange } = await open(storedDoc(para("가"), para("나"), para("다")));
 			let menu = await openMenu(editor);
-			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.moveDown")) }));
+			pressOption(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.moveDown")) }));
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["나", "가", "다"]));
 
 			// "가" is now the second block: it can go up, and the last block ("다") has no "down".
 			menu = await openMenu(editor, 1);
-			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.moveUp")) }));
+			pressOption(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.moveUp")) }));
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나", "다"]));
 			cleanup();
 
@@ -433,11 +442,11 @@ describe("flow: write (steps 02–05)", () => {
 
 			({ editor, onChange } = await open(storedDoc(para("가"), para("나"), para("다"))));
 			menu = await openMenu(editor);
-			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.duplicate")) }));
+			pressOption(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.duplicate")) }));
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "가", "나", "다"]));
 
 			menu = await openMenu(editor);
-			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(tc("delete")) }));
+			pressOption(within(menu).getByRole("menuitem", { name: new RegExp(tc("delete")) }));
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["가", "나", "다"]));
 		});
 
