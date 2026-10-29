@@ -133,6 +133,7 @@ export const EmptyStep = close(open.EmptyStep);
 export const FolderTile = close(open.FolderTile);
 export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
+export const BulkToolbar = close(open.BulkToolbar);
 export const RowActions = close(open.RowActions);
 export const ListScroll = close(open.ListScroll);
 export const RowCheck = close(open.RowCheck);

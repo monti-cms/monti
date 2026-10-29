@@ -287,7 +287,7 @@ States (`mode`, default "폴더 안"):
 | "올리는 중" | Upload in progress: per-file progress or waiting. | 6.03 |
 | "올리기 실패" | Failed uploads stay in place: unsupported type (remove), too large (shrink and retry, remove). | 6.04 |
 | "파일 열기" | Side panel for a file: address, name, folder, alt text, caption, type, size, date, used in. | 6.16 |
-| "바꾸기 메뉴" | Side panel ⋯ menu: replace file, copy ID, copy address, open in new tab. | 6.18 |
+| "바꾸기 메뉴" | Side panel ⋯ menu: replace file, copy ID, move to trash (the address actions are in the body). | 6.18 |
 | "파일 바꾸기" | The chosen replacement file confirmed; the places using it will use the new file. | 6.19 |
 | "여러 개 선택" | Two files selected: bulk bar with move to folder, trash, clear. | 6.20 |
 | "폴더로 옮기기" | Bulk bar "폴더로" menu: top level, folders, new folder. | 6.21 |

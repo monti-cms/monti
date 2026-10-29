@@ -7,10 +7,14 @@ export const listMedia = defineOperation({
 	name: "media.list",
 	kind: "read",
 	describe:
-		'The media library, newest upload first. Filter by filename (`search`), image or file (`kind`), folder, upload date, and `used`: "unused" finds files nothing refers to. ' +
-		"Each item has its filename, type, size, public URL and where it is used.",
+		'The media library, newest upload first unless `sort` says otherwise (`uploadedAsc`, `name`, `size` for the biggest first). Filter by filename (`search`), image or file (`kind`), folder (`folderId`, with `includeDescendants` for its subfolders), upload date, and `used`: "unused" finds files nothing refers to. ' +
+		'`alt` "none" finds images without alt text and "has" images with it (alt text exists for images only). ' +
+		"Each item has its filename, type, size, public URL and where it is used. " +
+		"The answer also has `kinds` ({ image, file }) and `alts` ({ none, has }): how many files each `kind` and `alt` choice would give, counted with every other filter but not with `kind` and `alt` themselves.",
 	input: () => mediaListQuerySchema,
 	run: async (query, { cms }) => {
+		// Interrupted uploads older than a day are cleaned up when the library is read (once a day per process); a failure does not stop the list.
+		await cms.mediaService().cleanupIfDue();
 		const result = await cms.store().listMediaAssets(query);
 		const mediaStore = cms.mediaStore();
 		return {

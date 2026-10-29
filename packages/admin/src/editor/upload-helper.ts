@@ -4,11 +4,14 @@ import { apiErrorMessages } from "../api/error-message.messages";
 import { completeUpload, requestUpload, type UploadTicket } from "../api/media";
 import { isSandboxSite } from "../screens/shared/preview-sandbox";
 import { editorMessages } from "./messages";
+import { readBytes, stripLocation } from "./strip-location";
 
 /**
  * Browser image upload. Shared by the editor and the media library.
  *
- * 1. (Optional) Web optimization: converts static JPEG, PNG, and WebP to WebP with the long edge at most 2560px. The original is kept as part of the same media.
+ * 1. Web optimization, always: converts static JPEG, PNG, and WebP to WebP with the long edge at most 2560px. The original is kept as part of the same media.
+ *    Location data (GPS) never leaves the browser: the converted file has none, and the kept original and a file that skips conversion lose their GPS
+ *    tags without being re-encoded (`stripLocation`).
  * 2. Asks the server to prepare the upload and uploads directly to storage with the returned URL (the file does not pass through the app server).
  * 3. Requests completion confirmation. The server marks it `ready` only after inspecting the actual bytes.
  */
@@ -47,16 +50,6 @@ export interface PreparedUpload {
 	height?: number;
 }
 
-const readBytes = (blob: Blob): Promise<ArrayBuffer> =>
-	typeof blob.arrayBuffer === "function"
-		? blob.arrayBuffer()
-		: new Promise((resolve, reject) => {
-				const reader = new FileReader();
-				reader.onload = () => resolve(reader.result as ArrayBuffer);
-				reader.onerror = () => reject(reader.error);
-				reader.readAsArrayBuffer(blob);
-			});
-
 /** Whether the WebP has an animation chunk (`ANIM`). */
 async function isAnimatedWebp(file: File): Promise<boolean> {
 	const head = new Uint8Array(await readBytes(file.slice(0, 64 * 1024)));
@@ -66,62 +59,115 @@ async function isAnimatedWebp(file: File): Promise<boolean> {
 	return false;
 }
 
-/**
- * Web optimization. If it cannot convert or conversion is not a gain, returns the original as is and records the reason.
- * Never silently turns an animation into a still image.
- */
-export async function prepareUpload(
-	site: Site,
-	file: File,
-	options: { optimize: boolean; policy?: OptimizePolicy } = { optimize: false },
-): Promise<PreparedUpload> {
-	const t = site.createTranslator(editorMessages);
-	if (!options.optimize) return { file, optimized: false };
-	const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
-	if (!policy.formats.includes(file.type)) {
-		return { file, optimized: false, skippedReason: t("upload.keepFormat") };
-	}
-	// Converting to a type the site does not allow would be refused by the server: keep the original instead.
-	if (!site.api.isAllowedImage(policy.outputType)) {
-		return { file, optimized: false, skippedReason: t("upload.outputNotAllowed") };
-	}
-	if (file.type === "image/webp" && (await isAnimatedWebp(file))) {
-		return { file, optimized: false, skippedReason: t("upload.keepAnimated") };
-	}
-	if (typeof createImageBitmap !== "function" || typeof document === "undefined") {
-		return { file, optimized: false, skippedReason: t("upload.noConvert") };
-	}
-
-	let bitmap: ImageBitmap;
-	try {
-		bitmap = await createImageBitmap(file);
-	} catch {
-		return { file, optimized: false, skippedReason: t("upload.unreadable") };
-	}
-	const scale = Math.min(1, policy.maxEdge / Math.max(bitmap.width, bitmap.height));
+/** Draws the bitmap at the long edge `maxEdge` (never larger than it is) and encodes it. `null` when the browser cannot encode the type. */
+async function encodeBitmap(
+	bitmap: ImageBitmap,
+	policy: OptimizePolicy,
+	maxEdge: number,
+	quality: number,
+): Promise<{ blob: Blob; width: number; height: number; scale: number } | null> {
+	const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
 	const width = Math.round(bitmap.width * scale);
 	const height = Math.round(bitmap.height * scale);
 	const canvas = document.createElement("canvas");
 	canvas.width = width;
 	canvas.height = height;
 	canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
-	bitmap.close();
-
-	const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, policy.outputType, policy.quality));
+	const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, policy.outputType, quality));
 	// Browsers that do not support WebP encoding return PNG.
-	if (!blob || blob.type !== policy.outputType) {
-		return { file, optimized: false, skippedReason: t("upload.noWebp") };
+	return blob && blob.type === policy.outputType ? { blob, width, height, scale } : null;
+}
+
+/** The file as it goes up when it is not converted: with its location data removed. */
+async function keepAsIs(
+	file: File,
+	skippedReason: string,
+	size?: { width: number; height: number },
+): Promise<PreparedUpload> {
+	return { file: await stripLocation(file), optimized: false, skippedReason, ...size };
+}
+
+/**
+ * Web optimization, on for every image. If it cannot convert or conversion is not a gain, the original goes up as it is and the reason is recorded.
+ * Never silently turns an animation into a still image. Either way the location data is gone: a converted file is drawn again and has none, and a
+ * file that is kept (the original beside a converted file too) loses only its GPS tags.
+ */
+export async function prepareUpload(
+	site: Site,
+	file: File,
+	options: { policy?: OptimizePolicy } = {},
+): Promise<PreparedUpload> {
+	const t = site.createTranslator(editorMessages);
+	const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
+	if (!policy.formats.includes(file.type)) return keepAsIs(file, t("upload.keepFormat"));
+	// Converting to a type the site does not allow would be refused by the server: keep the original instead.
+	if (!site.api.isAllowedImage(policy.outputType)) return keepAsIs(file, t("upload.outputNotAllowed"));
+	if (file.type === "image/webp" && (await isAnimatedWebp(file))) return keepAsIs(file, t("upload.keepAnimated"));
+	if (typeof createImageBitmap !== "function" || typeof document === "undefined")
+		return keepAsIs(file, t("upload.noConvert"));
+
+	let bitmap: ImageBitmap;
+	try {
+		bitmap = await createImageBitmap(file);
+	} catch {
+		return keepAsIs(file, t("upload.unreadable"));
 	}
-	if (scale === 1 && blob.size >= file.size) {
-		return { file, optimized: false, skippedReason: t("upload.originalSmaller"), width, height };
-	}
+	const encoded = await encodeBitmap(bitmap, policy, policy.maxEdge, policy.quality);
+	bitmap.close();
+	if (!encoded) return keepAsIs(file, t("upload.noWebp"));
+	const { blob, width, height, scale } = encoded;
+	if (scale === 1 && blob.size >= file.size) return keepAsIs(file, t("upload.originalSmaller"), { width, height });
 	return {
-		file: new File([blob], policy.rename(file.name), { type: policy.outputType }),
-		original: file,
+		file: await stripLocation(new File([blob], policy.rename(file.name), { type: policy.outputType })),
+		original: await stripLocation(file),
 		optimized: true,
 		width,
 		height,
 	};
+}
+
+/** Smaller and smaller versions to try for a picture that is too large: the long edge and the quality. */
+const SHRINK_STEPS: readonly { maxEdge: number; quality: number }[] = [
+	{ maxEdge: 2560, quality: 0.85 },
+	{ maxEdge: 1920, quality: 0.8 },
+	{ maxEdge: 1600, quality: 0.75 },
+	{ maxEdge: 1280, quality: 0.7 },
+	{ maxEdge: 1024, quality: 0.65 },
+];
+
+/**
+ * The retry of a picture over the size limit: only a smaller WebP goes up (the original is not kept, since it is the original that was too large), the
+ * first size that fits. `null` when the browser cannot make one or even the smallest does not fit.
+ */
+export async function shrinkForUpload(
+	site: Site,
+	file: File,
+	policy: OptimizePolicy = DEFAULT_OPTIMIZE_POLICY,
+): Promise<PreparedUpload | null> {
+	if (!site.api.isAllowedImage(policy.outputType) || typeof createImageBitmap !== "function") return null;
+	let bitmap: ImageBitmap;
+	try {
+		bitmap = await createImageBitmap(file);
+	} catch {
+		return null;
+	}
+	try {
+		for (const step of SHRINK_STEPS) {
+			const encoded = await encodeBitmap(bitmap, policy, step.maxEdge, step.quality);
+			if (!encoded) return null;
+			if (encoded.blob.size <= site.api.MAX_MEDIA_BYTES) {
+				return {
+					file: await stripLocation(new File([encoded.blob], policy.rename(file.name), { type: policy.outputType })),
+					optimized: true,
+					width: encoded.width,
+					height: encoded.height,
+				};
+			}
+		}
+		return null;
+	} finally {
+		bitmap.close();
+	}
 }
 
 function putFile(site: Site, ticket: UploadTicket, file: File, onProgress?: (loaded: number) => void): Promise<void> {
@@ -172,7 +218,7 @@ export async function uploadImageFile(
 	const prepared: PreparedUpload = input instanceof File ? { file: input, optimized: false } : input;
 	const { file, original } = prepared;
 	// Server stays the authority. This only spares the user an upload that would be refused.
-	if (file.size > site.api.MAX_MEDIA_BYTES)
+	if (file.size > site.api.MAX_MEDIA_BYTES || (original && original.size > site.api.MAX_MEDIA_BYTES))
 		throw new NoticeError(t("upload.tooLarge", { mb: site.api.MAX_MEDIA_BYTES / 1024 / 1024 }));
 
 	// A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).

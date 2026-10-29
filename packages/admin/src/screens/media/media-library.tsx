@@ -1,114 +1,41 @@
 "use client";
 
-import {
-	Document,
-	FolderAdd,
-	Folder as FolderIcon,
-	FolderMoveTo,
-	FolderParent,
-	Grid,
-	Link,
-	List,
-	Renew,
-	RightPanelOpen,
-	TrashCan,
-	Upload,
-} from "@carbon/icons-react";
-import { type Folder, type MediaTrashResult, type Site, useSite, useTranslator } from "@monti-cms/core/site";
-import {
-	Box,
-	Button,
-	IconButton,
-	Inline,
-	Input,
-	Label,
-	PageBody,
-	PageColumn,
-	PageHeader,
-	PageToolbar,
-	PageToolbarEnd,
-	Segmented,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	Stack,
-	Switch,
-	Tabs,
-	TabsList,
-	TabsTrigger,
-	Text,
-	TextButton,
-	toast,
-} from "@monti-cms/ui";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Upload } from "@carbon/icons-react";
+import { useSite, useTranslator } from "@monti-cms/core/site";
+import { Button, Inline, PageBody, PageColumn, PageHeader, SearchToggle, Stack, Text, TextButton } from "@monti-cms/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { errorText } from "../../api/client";
-import { foldersKeys, listFolders } from "../../api/folders";
-import { cleanupMedia, listMedia, type MediaItem, mediaKeys, trashMedia, updateMedia } from "../../api/media";
-import { restoreTrash } from "../../api/trash";
-import { useCmsMutation } from "../../api/use-cms-mutation";
-import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
+import { foldersKeys } from "../../api/folders";
+import type { MediaItem } from "../../api/media";
+import { mediaKeys } from "../../api/media";
 import { commonMessages } from "../../lib/common.messages";
-import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
-import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { useAdminRouter } from "../../router";
-import type { TranslatorFor } from "../../translator";
-import { ActionContextMenu, type MenuAction } from "../shared/action-menu";
+import { ActionContextMenu } from "../shared/action-menu";
 import { AdminFrame } from "../shared/admin-frame";
-import { useConfirm } from "../shared/confirm-dialog";
-import { DateRangePicker } from "../shared/date-range-picker";
 import { deleteMessages } from "../shared/delete.messages";
 import { EmptyState } from "../shared/empty-state";
-import type { DraggedEntry } from "../shared/entry-drag";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel } from "../shared/side-panel";
-import { useDebouncedInput } from "../shared/use-debounced";
 import { isInsideFolder, useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
-import { MediaDetailPanel } from "./media-detail-panel";
-import { mediaUsages, usageNoteLabel } from "./media-item";
-import { keptFilesFolder, mediaTrashNotice } from "./media-trash";
+import { blankMenu, fileMenu, folderMenu } from "./media-menus";
+import { MediaPanel } from "./media-panel";
+import { MediaToolbar } from "./media-toolbar";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
-
-const kindOptions = (t: TranslatorFor<typeof mediaMessages>) => [
-	{ value: "all", label: t("library.kind.all") },
-	{ value: "image", label: t("library.kind.image") },
-	{ value: "file", label: t("library.kind.file") },
-];
-
-const uploadAccept = (site: Site) => `${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`;
-
-const isAllowedImageFile = (site: Site, file: File) => site.api.isAllowedImage(file.type);
-
-const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
-	{ value: "all", label: t("library.used.all") },
-	{ value: "used", label: t("library.used.used") },
-	{ value: "unused", label: t("library.used.unused") },
-];
-
-type MediaView = "grid" | "list";
-const VIEW_CODEC = enumCodec<MediaView>(["grid", "list"]);
-
-/** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
-const LIBRARY_PARAMS = {
-	page: pageParam,
-	pageSize: pageSizeParam,
-	search: textParam,
-	used: enumParam(["all", "used", "unused"] as const, "all"),
-	kind: enumParam(["all", "image", "file"] as const, "all"),
-	uploadedFrom: textParam,
-	uploadedTo: textParam,
-	folder: textParam,
-};
+import { ReplaceDialog } from "./replace-dialog";
+import { useFileDrop } from "./use-file-drop";
+import { useMediaActions } from "./use-media-actions";
+import { useMediaLibrary } from "./use-media-library";
+import { useMediaUploads } from "./use-media-uploads";
 
 /**
- * Media library. Grid and list views, file name search, filters for type, upload date and usage, newest upload first.
- * Picking an item opens the detail on the right.
+ * The media library: the folders and files of the open folder, or the files a search or a condition matches, with their paths. Files are dropped on it (or on a
+ * folder tile in it) and go up as tiles that stay when they fail; several can be picked and moved or trashed; one opens in the panel beside it, where it can be
+ * changed or replaced.
  */
 export function MediaLibrary() {
 	const site = useSite();
@@ -116,347 +43,97 @@ export function MediaLibrary() {
 	const tc = useTranslator(commonMessages);
 	const td = useTranslator(deleteMessages);
 	const router = useAdminRouter();
-	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder }, update] =
-		useUrlState(LIBRARY_PARAMS);
 	const queryClient = useQueryClient();
-	const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
-	const [selectedId, setSelectedId] = useState<string | null>(null);
-	/** Whether the detail panel's default description has unsaved changes. The detail panel reports it. */
-	const detailDirtyRef = useRef(false);
-	const [optimize, setOptimize] = useState(false);
-	const [upload, setUpload] = useState<{ current: number; total: number; percent: number } | null>(null);
-	const { confirmDiscard, dialog } = useConfirm();
-	// The view is a per-device choice (browser preference), unlike the filters, which belong to the address.
-	const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
-	const fileInputRef = useRef<HTMLInputElement>(null);
+	const library = useMediaLibrary();
+	const { state, update, folders, items, trail, currentFolder } = library;
+	const actions = useMediaActions(library);
+	const fileInput = useRef<HTMLInputElement>(null);
+	const replaceInput = useRef<HTMLInputElement>(null);
+	const [replacing, setReplacing] = useState<{ media: MediaItem; file: File } | null>(null);
 
-	const isExplorer = !search.trim() && used === "all" && kind === "all" && !uploadedFrom && !uploadedTo;
-
-	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
-	const query = useMemo(() => {
-		const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
-		if (search.trim()) params.set("search", search.trim());
-		if (kind !== "all") params.set("kind", kind);
-		if (folder && folder !== "all") {
-			params.set("folderId", folder);
-		} else if (isExplorer) {
-			params.set("folderId", "null");
-		}
-		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
-		const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
-		if (from) params.set("uploadedFrom", from);
-		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
-		return params.toString();
-	}, [page, pageSize, used, search, kind, folder, isExplorer, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
-	const mediaQuery = useQuery({
-		queryKey: mediaKeys.list(query),
-		queryFn: ({ signal }) => listMedia(site, query, signal),
-		placeholderData: keepPreviousData,
+	const refresh = useCallback(
+		() =>
+			Promise.all([
+				queryClient.invalidateQueries({ queryKey: mediaKeys.all }),
+				queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") }),
+			]),
+		[queryClient],
+	);
+	const uploads = useMediaUploads({ onUploaded: () => void refresh() });
+	const folderName = useCallback((id: string) => folders.find((folder) => folder.id === id)?.name ?? "", [folders]);
+	const drop = useFileDrop({
+		onFiles: (files, folderId) => uploads.add(files, folderId ?? (state.folder || null)),
+		folderName,
 	});
-	const items = mediaQuery.data?.items ?? [];
-	const total = mediaQuery.data?.total ?? 0;
-	const selected = items.find((item) => item.id === selectedId) ?? null;
-
-	const foldersQuery = useQuery({
-		queryKey: foldersKeys.list("media"),
-		queryFn: ({ signal }) => listFolders(site, "media", signal),
-	});
-	const folders = foldersQuery.data ?? [];
 
 	const folderActions = useFolderActions({
 		collection: "media",
 		folders,
 		onChanged: async (change) => {
-			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
-			// If the folder being viewed (or one inside it) went to the trash, go up to the folder it was in, or to the whole library.
 			const { deleted } = change ?? {};
-			if (deleted && folder && folder !== "all" && isInsideFolder(folders, folder, deleted.id)) {
-				update({ folder: deleted.parentId ?? "all", page: 1 });
-			}
-			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+			// If the folder being viewed (or one inside it) went to the trash, go up to the folder it was in, or to the top.
+			if (deleted && state.folder && isInsideFolder(folders, state.folder, deleted.id))
+				update({ folder: deleted.parentId ?? "", page: 1 });
+			await refresh();
 		},
 		// The files that stayed in a folder because something uses them: the library, filtered to those in that folder.
-		onViewKept: (kept) => update({ folder: kept.id, used: "used", search: "", kind: "all", page: 1 }),
+		onViewKept: (kept) =>
+			update({ folder: kept.id, used: "used", search: "", kind: "all", alt: "all", scope: "here", page: 1 }),
 	});
 
-	const moveMediaToFolder = async (media: MediaItem, targetFolderId: string | null) => {
-		const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
-		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
-		try {
-			await updateMedia(site, media.id, { folderId: targetFolderId });
-			toast(t("library.moved", { name: media.filename, destination }));
-			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
-			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
-		} catch (error) {
-			toast.error(errorText(site, error, t("library.moveFailed", { name: media.filename })));
+	// "+ New folder" in the bulk bar names a folder in place and then moves the picked files into it.
+	const [moveAfter, setMoveAfter] = useState<{ files: MediaItem[]; named: boolean } | null>(null);
+	const { naming, focusFolderId } = folderActions;
+	const move = actions.move.mutate;
+	useEffect(() => {
+		if (!moveAfter) return;
+		if (naming && !moveAfter.named) setMoveAfter({ ...moveAfter, named: true });
+		else if (!naming && moveAfter.named) {
+			if (focusFolderId) move({ files: moveAfter.files, folderId: focusFolderId });
+			setMoveAfter(null);
 		}
+	}, [moveAfter, naming, focusFolderId, move]);
+	const newFolderHere = () => folderActions.requestCreate(state.folder || null);
+
+	const names = { t, tc, td };
+	const pickedFiles = items.filter((item) => library.picked.has(item.id));
+	const menuFor = (media: MediaItem) =>
+		fileMenu(media, folders, names, {
+			open: (file) => void library.openFile(file.id),
+			openEntry: (usage) => router.navigate(entryHref(site, usage.collection, usage.entryId)),
+			move: (file, folderId) => actions.move.mutate({ files: [file], folderId }),
+			trash: (file) => actions.trash.mutate([file]),
+		});
+	const folderMenuFor = (folder: (typeof folders)[number]) =>
+		folderMenu(folder, folders, names, { open: (opened) => library.goToFolder(opened.id), actions: folderActions });
+
+	const [panelDirty, setPanelDirty] = useState(false);
+	const { dialog: guardDialog } = useUnsavedGuard(panelDirty);
+	const reportDirty = useCallback(
+		(dirty: boolean) => {
+			library.setPanelDirty(dirty);
+			setPanelDirty(dirty);
+		},
+		[library.setPanelDirty],
+	);
+
+	const pickReplacement = (media: MediaItem) => {
+		const input = replaceInput.current;
+		if (!input) return;
+		input.accept = site.api.isImageType(media.mimeType)
+			? site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")
+			: (media.mimeType ?? "");
+		input.value = "";
+		input.click();
 	};
 
-	const onDropEntries = async (targetFolderId: string | null, entries: DraggedEntry[]) => {
-		const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
-		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
-		try {
-			await Promise.all(entries.map((entry) => updateMedia(site, entry.id, { folderId: targetFolderId })));
-			const label =
-				entries.length === 1
-					? (items.find((item) => item.id === entries[0].id)?.filename ?? "File")
-					: `${entries.length} files`;
-			toast(t("library.moved", { name: label, destination }));
-			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
-			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
-		} catch (error) {
-			toast.error(errorText(site, error, t("library.unknownError")));
-		}
-	};
-
-	const loadError = mediaQuery.error ? errorText(site, mediaQuery.error, t("library.loadFailed")) : null;
-
-	/** Opens in the detail panel (null to close). If there is an unsaved default description, asks first whether to discard it. */
-	const openDetail = async (id: string | null) => {
-		if (id === selectedId) return;
-		if (!(await confirmDiscard(detailDirtyRef.current))) return;
-		detailDirtyRef.current = false;
-		setSelectedId(id);
-	};
-
-	const uploadMutation = useCmsMutation({
-		fn: async ({ files, optimize }: { files: File[]; optimize: boolean }) => {
-			const targetFolderId = folder !== "all" && folder !== "" ? folder : null;
-			for (const [index, file] of files.entries()) {
-				const onProgress = (percent: number) => setUpload({ current: index + 1, total: files.length, percent });
-				setUpload({ current: index + 1, total: files.length, percent: 0 });
-				if (isAllowedImageFile(site, file)) {
-					const prepared = await prepareUpload(site, file, { optimize });
-					await uploadImageFile(site, prepared, onProgress, { folderId: targetFolderId });
-				} else {
-					await uploadAttachment(site, file, onProgress, { folderId: targetFolderId });
-				}
-			}
-		},
-		success: (_result, { files }) => t("library.uploaded", { count: files.length }),
-		// A failed upload does not become available. It can be retried with the same file.
-		failure: t("library.unknownError"),
-		inline: true,
-		onSuccess: () => update({ page: 1 }),
-		onError: (error) =>
-			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
-		invalidate: [mediaKeys.all, foldersKeys.list("media")],
-	});
-
-	const handleFiles = async (files: FileList | null) => {
-		if (!files?.length) return;
-		const list: File[] = [];
-		for (const file of Array.from(files)) {
-			if (isAllowedImageFile(site, file) || site.api.fileTypeFor(file.name)) list.push(file);
-			else toast.error(t("library.unsupportedType", { name: file.name }));
-		}
-		if (list.length === 0) {
-			if (fileInputRef.current) fileInputRef.current.value = "";
-			return;
-		}
-		try {
-			await uploadMutation.mutateAsync({ files: list, optimize });
-		} catch {
-			// Reported by the mutation.
-		} finally {
-			setUpload(null);
-			if (fileInputRef.current) fileInputRef.current.value = "";
-		}
-	};
-
-	/** Puts files back from the trash (the toast's undo). */
-	const undoTrash = async (ids: readonly string[]) => {
-		try {
-			const answer = await restoreTrash(
-				site,
-				ids.map((id) => ({ type: "media", id })),
-			);
-			if (!answer.every((result) => result.ok)) toast.error(td("undoFailed"));
-		} catch (error) {
-			toast.error(errorText(site, error, td("undoFailed")));
-		}
-		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: mediaKeys.all }),
-			queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") }),
-		]);
-	};
-
-	/**
-	 * Moves files to the trash at once, with no question: they come back with the toast's undo. A file something uses stays where it is, and the toast says
-	 * so with a "view" of the ones that stayed.
-	 */
-	const trashMutation = useCmsMutation<MediaItem[], MediaTrashResult>({
-		fn: (files, { site }) =>
-			trashMedia(
-				site,
-				files.map((file) => file.id),
-				td("media.trashFailed"),
-			),
-		failure: td("media.trashFailed"),
-		onSuccess: (result, files) => {
-			const notice = mediaTrashNotice(site, files, result);
-			toast(notice.message, {
-				action:
-					notice.action === "undo"
-						? { label: td("undo"), onClick: () => void undoTrash(result.trashed) }
-						: {
-								label: td("view"),
-								onClick: () => update({ folder: keptFilesFolder(files, result), used: "used", page: 1 }),
-							},
-			});
-			// If the file being moved is open, close it. Its edited default description goes with it.
-			setSelectedId((current) => {
-				if (current === null || !result.trashed.includes(current)) return current;
-				detailDirtyRef.current = false;
-				return null;
-			});
-		},
-		invalidate: [mediaKeys.all, foldersKeys.list("media")],
-	});
-	const trashFiles = (files: MediaItem[]) => trashMutation.mutate(files);
-
-	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
-	const saveDefaultsMutation = useCmsMutation({
-		fn: ({ media, defaults }: { media: MediaItem; defaults: { alt: string; caption: string } }, { site }) =>
-			updateMedia(site, media.id, { defaultAlt: defaults.alt, defaultCaption: defaults.caption }, tc("saveFailed")),
-		success: tc("saved"),
-		failure: tc("saveFailed"),
-		inline: true,
-		invalidate: [mediaKeys.all],
-	});
-
-	/** Renames a file. Failure is thrown as is so it shows under the name field in the detail panel. */
-	const renameMutation = useCmsMutation({
-		fn: ({ media, filename }: { media: MediaItem; filename: string }, { site }) =>
-			updateMedia(site, media.id, { filename }, t("library.renameFailed")),
-		success: (_result, { filename }) => t("library.renamed", { name: filename }),
-		failure: t("library.renameFailed"),
-		inline: true,
-		invalidate: [mediaKeys.all],
-	});
-
-	const cleanupMutation = useCmsMutation({
-		// biome-ignore lint/suspicious/noConfusingVoidType: a mutation without variables, so `mutate()` takes no argument
-		fn: (_variables: void, { site }) => cleanupMedia(site),
-		failure: t("library.cleanup.failed"),
-		onSuccess: (result) => {
-			const text = result.failed.length
-				? t("library.cleanup.doneWithFailed", { removed: result.removed, failed: result.failed.length })
-				: t("library.cleanup.done", { removed: result.removed });
-			if (result.failed.length) toast.error(text);
-			else toast(text);
-		},
-		invalidate: [mediaKeys.all],
-	});
-
-	// The same as state, for the guard on links that leave the library while the open file has changes.
-	const [detailDirty, setDetailDirtyState] = useState(false);
-	const { dialog: guardDialog } = useUnsavedGuard(detailDirty);
-	const setDetailDirty = useCallback((dirty: boolean) => {
-		detailDirtyRef.current = dirty;
-		setDetailDirtyState(dirty);
-	}, []);
-
-	/** Right-click and `⋯` menu of a media tile. */
-	const mediaMenu = (media: MediaItem): MenuAction[] => [
-		{ kind: "item", label: tc("open"), icon: RightPanelOpen, onSelect: () => void openDetail(media.id) },
-		{
-			kind: "sub",
-			label: t("library.menu.usage"),
-			icon: Link,
-			emptyLabel: t("library.menu.usageEmpty"),
-			items: mediaUsages(media).map((usage) => ({
-				kind: "item" as const,
-				label: `${usage.title || tc("untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
-				icon: Document,
-				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
-			})),
-		},
-		...(folders.length > 0
-			? [
-					{
-						kind: "sub" as const,
-						label: t("library.menu.moveToFolder"),
-						icon: FolderMoveTo,
-						items: [
-							...(media.folderId
-								? [
-										{
-											kind: "item" as const,
-											label: t("detail.folder.none"),
-											icon: FolderParent,
-											onSelect: () => void moveMediaToFolder(media, null),
-										},
-									]
-								: []),
-							...folders
-								.filter((f) => f.id !== media.folderId)
-								.map((f) => ({
-									kind: "item" as const,
-									label: f.name,
-									icon: FolderIcon,
-									onSelect: () => void moveMediaToFolder(media, f.id),
-								})),
-						],
-					},
-				]
-			: []),
-		{ kind: "separator" },
-		{
-			kind: "item",
-			label: tc("lifecycle.trash"),
-			icon: TrashCan,
-			shortcut: "Del",
-			destructive: true,
-			onSelect: () => trashFiles([media]),
-		},
-	];
-
-	const explorer = isExplorer
-		? {
-				folders: folders.filter((f) => (f.parentId ?? null) === (folder === "all" || !folder ? null : folder)),
-				parent: folder && folder !== "all" ? (folders.find((f) => f.id === folder)?.parentId ?? "all") : null,
-			}
-		: null;
-
-	const hasFolders = Boolean(explorer && (explorer.folders.length > 0 || explorer.parent !== null));
-
-	const blankMenu: MenuAction[] = [
-		{
-			kind: "item",
-			label: folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder"),
-			icon: FolderAdd,
-			onSelect: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder),
-		},
-		{
-			kind: "item",
-			label: t("library.upload"),
-			icon: Upload,
-			onSelect: () => fileInputRef.current?.click(),
-		},
-	];
-
-	const viewProps = {
-		items,
-		selectedId,
-		dimmed: mediaQuery.isPlaceholderData,
-		onSelect: (media: MediaItem) => void openDetail(media.id),
-		menuFor: mediaMenu,
-		onDeleteKey: (media: MediaItem) => trashFiles([media]),
-		explorer,
-		folders,
-		folderActions,
-		onSelectFolder: (f: string) => update({ folder: f, page: 1 }),
-	};
-
-	const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
-	const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
-
-	const currentFolder = folders.find((f) => f.id === folder);
-	// The folders from the top down to the open one: the way back, above the title.
-	const trail: Folder[] = [];
-	for (let at = currentFolder; at; at = folders.find((f) => f.id === at?.parentId)) trail.unshift(at);
-	const ancestors = trail.slice(0, -1);
+	const loadError = library.error ? errorText(site, library.error, t("load.failed")) : null;
+	const empty =
+		items.length === 0 &&
+		uploads.queue.length === 0 &&
+		!(library.explorer && (library.explorer.folders.length > 0 || library.explorer.parent !== null)) &&
+		!folderActions.naming;
+	const here = state.folder || null;
 
 	return (
 		<AdminFrame
@@ -464,10 +141,16 @@ export function MediaLibrary() {
 				activeNav: "media",
 				folderNav: {
 					collection: "media",
-					currentFolder: folder || "all",
+					currentFolder: state.folder || "all",
 					folders,
-					onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
-					onDropEntries,
+					onSelectFolder: (id) => library.goToFolder(id ?? ""),
+					onDropEntries: async (targetFolderId, entries) => {
+						// The files dragged: the ones on this page by name, and picked ones from other pages by their id.
+						const files = entries.map(
+							(entry) => items.find((item) => item.id === entry.id) ?? { id: entry.id, filename: entry.id },
+						);
+						if (files.length > 0) actions.move.mutate({ files, folderId: targetFolderId });
+					},
 				},
 			}}
 		>
@@ -476,18 +159,14 @@ export function MediaLibrary() {
 					title={currentFolder?.name ?? t("title")}
 					trail={
 						currentFolder && (
-							<Inline gap={6} align="baseline">
-								<TextButton variant="underline" type="button" onClick={() => update({ folder: "all", page: 1 })}>
+							<Inline as="nav" gap={6} aria-label={t("trail.label")}>
+								<TextButton variant="underline" onClick={() => library.goToFolder("")}>
 									{t("title")}
 								</TextButton>
 								<span aria-hidden="true">/</span>
-								{ancestors.map((ancestor) => (
-									<Inline key={ancestor.id} gap={6} align="baseline">
-										<TextButton
-											variant="underline"
-											type="button"
-											onClick={() => update({ folder: ancestor.id, page: 1 })}
-										>
+								{trail.slice(0, -1).map((ancestor) => (
+									<Inline key={ancestor.id} gap={6}>
+										<TextButton variant="underline" onClick={() => library.goToFolder(ancestor.id)}>
 											{ancestor.name}
 										</TextButton>
 										<span aria-hidden="true">/</span>
@@ -497,172 +176,147 @@ export function MediaLibrary() {
 						)
 					}
 				>
-					<Label size="caption" tone="muted">
-						<Switch checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
-						{t("library.optimize")}
-					</Label>
-					<input
-						ref={fileInputRef}
-						type="file"
-						multiple
-						hidden
-						accept={uploadAccept(site)}
-						onChange={(event) => void handleFiles(event.target.files)}
+					{!library.filtered && library.picked.size === 0 && (
+						<TextButton onClick={newFolderHere}>{t("head.folder")}</TextButton>
+					)}
+					<SearchToggle
+						label={t("head.search")}
+						aria-label={t("head.searchLabel")}
+						placeholder={t("head.searchLabel")}
+						value={library.searchText}
+						onValueChange={library.setSearchText}
 					/>
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
-					>
-						<FolderAdd aria-hidden />
-						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
-					</Button>
-					<Button type="button" variant="secondary" onClick={() => cleanupMutation.mutate()}>
-						{t("library.cleanup")}
-					</Button>
-					<IconButton label={tc("refresh")} onClick={() => void mediaQuery.refetch()}>
-						<Renew aria-hidden />
-					</IconButton>
-					<Button type="button" disabled={upload !== null} onClick={() => fileInputRef.current?.click()}>
+					<Button type="button" onClick={() => fileInput.current?.click()}>
 						<Upload aria-hidden />
-						{upload
-							? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
-							: t("library.upload")}
+						{t("head.upload")}
 					</Button>
 				</PageHeader>
-				<PageToolbar>
-					<Tabs value={kind} onValueChange={(value) => update({ kind: value as typeof kind })}>
-						<TabsList variant="toolbar" aria-label={t("library.kindLabel")}>
-							{kindOptions(t).map((option) => (
-								<TabsTrigger key={option.value} value={option.value}>
-									{option.label}
-								</TabsTrigger>
-							))}
-						</TabsList>
-					</Tabs>
-					<PageToolbarEnd>
-						<Input
-							type="search"
-							size="sm"
-							aria-label={t("library.search")}
-							value={searchText}
-							placeholder={t("library.search")}
-							onChange={(event) => setSearchText(event.target.value)}
-						/>
-						<Select
-							value={used}
-							items={usedOptions(t)}
-							onValueChange={(value) => value && update({ used: value as typeof used })}
-						>
-							<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{usedOptions(t).map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<DateRangePicker
-							label={t("library.uploadedDate")}
-							from={uploadedFrom}
-							to={uploadedTo}
-							onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
-						/>
-						<Segmented
-							aria-label={t("library.view")}
-							size="sm"
-							inline
-							value={view}
-							onValueChange={setView}
-							options={[
-								{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("library.viewGrid") },
-								{ value: "list", label: <List aria-hidden />, "aria-label": t("library.viewList") },
-							]}
-						/>
-					</PageToolbarEnd>
-				</PageToolbar>
+				<input
+					ref={fileInput}
+					type="file"
+					multiple
+					hidden
+					accept={`${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`}
+					onChange={(event) => {
+						const files = Array.from(event.target.files ?? []);
+						event.target.value = "";
+						if (files.length > 0) uploads.add(files, here);
+					}}
+				/>
+				<input
+					ref={replaceInput}
+					type="file"
+					hidden
+					data-slot="replace-input"
+					aria-hidden
+					tabIndex={-1}
+					onChange={(event) => {
+						const file = event.target.files?.[0];
+						const media = library.open;
+						event.target.value = "";
+						if (file && media) setReplacing({ media, file });
+					}}
+				/>
+				<MediaToolbar
+					library={library}
+					onMove={(folderId) => actions.move.mutate({ files: pickedFiles, folderId })}
+					onNewFolder={() => {
+						setMoveAfter({ files: pickedFiles, named: false });
+						newFolderHere();
+					}}
+					onTrash={() => actions.trash.mutate(pickedFiles)}
+				/>
 				<PageBody>
-					<Stack as="div" direction="row" gap={0} grow minHeight={0} overflow="hidden" position="relative">
-						<Stack gap={0} grow minWidth={0} overflow="hidden">
-							{/* The scroll area: padded on a grid or an empty state, edge to edge on the list view. */}
-							<Stack
-								gap={0}
-								grow
-								minHeight={0}
-								overflow="y"
-								paddingX={(items.length === 0 && !hasFolders) || view === "grid" ? 32 : 0}
-								paddingY={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : 0}
-							>
-								{loadError && (
-									<Box
-										padding={(items.length === 0 && !hasFolders) || view === "grid" ? undefined : 16}
-										paddingBottom={(items.length === 0 && !hasFolders) || view === "grid" ? 16 : undefined}
-									>
-										<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} />
-									</Box>
-								)}
-								{items.length === 0 && !hasFolders ? (
-									loadError ? null : mediaQuery.isPending ? (
-										<Text as="p" variant="note" tone="subtle" role="status">
-											{tc("loading")}
-										</Text>
-									) : filtered ? (
+					<Stack as="div" direction="row" gap={0} grow minHeight={0} position="relative">
+						<Stack gap={0} grow minWidth={0}>
+							{loadError && <LoadErrorAlert message={loadError} onRetry={library.retry} />}
+							{empty && !library.isLoading && !loadError ? (
+								<ActionContextMenu
+									actions={blankMenu({ t }, { upload: () => fileInput.current?.click(), newFolder: newFolderHere })}
+									trigger={<Stack gap={0} grow paddingTop={24} />}
+								>
+									{library.filtered ? (
 										<EmptyState
-											title={t("library.emptyNoMatch")}
-											description={t("library.emptyNoMatchHint")}
-											action={{ label: t("library.clearFilters"), onClick: clearFilters }}
+											title={t("empty.noMatch")}
+											description={t("empty.noMatchHint")}
+											action={{
+												label: t("empty.clear"),
+												onClick: () => update({ search: "", used: "all", kind: "all", alt: "all" }),
+											}}
 										/>
 									) : (
 										<EmptyState
-											title={t("library.emptyYet")}
-											description={t("library.emptyYetHint")}
-											action={{
-												label: t("library.upload"),
-												onClick: () => fileInputRef.current?.click(),
-											}}
+											title={t("empty.yet")}
+											description={t("empty.yetHint")}
+											action={{ label: t("head.upload"), onClick: () => fileInput.current?.click() }}
 										/>
-									)
-								) : view === "grid" ? (
-									<MediaGrid {...viewProps} />
-								) : (
-									<MediaTable {...viewProps} />
-								)}
-								<ActionContextMenu actions={blankMenu} trigger={<Box grow paddingY={24} aria-hidden />} />
-							</Stack>
+									)}
+								</ActionContextMenu>
+							) : library.isLoading ? (
+								<Text as="p" variant="note" tone="subtle" role="status">
+									{tc("loading")}
+								</Text>
+							) : (
+								<>
+									{library.view === "grid" ? (
+										<MediaGrid
+											library={library}
+											uploads={uploads}
+											drop={drop}
+											folderActions={folderActions}
+											menuFor={menuFor}
+											folderMenuFor={folderMenuFor}
+											onTrash={(media) => actions.trash.mutate([media])}
+										/>
+									) : (
+										<MediaTable
+											library={library}
+											uploads={uploads}
+											drop={drop}
+											folderActions={folderActions}
+											menuFor={menuFor}
+											folderMenuFor={folderMenuFor}
+											onTrash={(media) => actions.trash.mutate([media])}
+										/>
+									)}
+									<ActionContextMenu
+										actions={blankMenu({ t }, { upload: () => fileInput.current?.click(), newFolder: newFolderHere })}
+										trigger={<Stack gap={0} grow paddingY={24} aria-hidden data-slot="blank-space" />}
+									/>
+								</>
+							)}
 							<ListPagination
-								total={total}
+								total={library.total}
 								shown={items.length}
-								page={page}
-								pageSize={pageSize}
-								onPageChange={(next) => update({ page: next })}
-								onPageSizeChange={(size) => update({ pageSize: size })}
+								page={state.page}
+								pageSize={state.pageSize}
+								onPageChange={(page) => update({ page })}
+								onPageSizeChange={(pageSize) => update({ pageSize })}
 								hidePagerWhenSingle
-								showRange={total > pageSize}
+								showRange={library.total > state.pageSize}
 							/>
 						</Stack>
-
-						{selected && (
+						{library.open && (
 							<DockedPanel>
-								<MediaDetailPanel
-									key={selected.id}
-									media={selected}
+								<MediaPanel
+									key={library.open.id}
+									media={library.open}
 									folders={folders}
-									onClose={() => void openDetail(null)}
-									onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
-									onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
-									onMoveFolder={(targetFolderId) => moveMediaToFolder(selected, targetFolderId)}
-									onTrash={() => trashFiles([selected])}
-									onDirtyChange={setDetailDirty}
+									onClose={() => void library.openFile(null)}
+									onSave={(patch) =>
+										actions.save.mutateAsync({ media: library.open as MediaItem, patch }).then(() => undefined)
+									}
+									onReplace={() => pickReplacement(library.open as MediaItem)}
+									onTrash={() => actions.trash.mutate([library.open as MediaItem])}
+									onDirtyChange={reportDirty}
 								/>
 							</DockedPanel>
 						)}
 					</Stack>
 				</PageBody>
 			</PageColumn>
-			{dialog}
+			<ReplaceDialog request={replacing} onClose={() => setReplacing(null)} onReplace={actions.replaceFile} />
+			{library.confirmDialog}
 			{guardDialog}
 			{folderActions.dialogs}
 		</AdminFrame>

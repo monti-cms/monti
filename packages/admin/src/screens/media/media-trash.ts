@@ -29,8 +29,8 @@ export function mediaTrashNotice(
 }
 
 /**
- * The folder the "view" of a partial trash opens: the folder the files that stayed are in, or the whole library when they are in different ones
- * (the library filters by the files in use there).
+ * The folder the "view" of a partial trash opens: the folder the files that stayed are in, or the whole library (an empty id) when they are in different
+ * ones or at the top (the library filters by the files in use there).
  */
 export function keptFilesFolder(
 	files: readonly Pick<MediaItem, "id" | "folderId">[],
@@ -38,5 +38,5 @@ export function keptFilesFolder(
 ): string {
 	const folders = new Set(files.filter((file) => result.kept.includes(file.id)).map((file) => file.folderId ?? null));
 	const [only] = folders;
-	return folders.size === 1 && only ? only : "all";
+	return folders.size === 1 && only ? only : "";
 }

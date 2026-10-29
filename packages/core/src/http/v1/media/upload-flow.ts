@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Cms } from "../../../cms";
+import { replaceMismatch } from "../../../core/domain/media";
 import { isImageType } from "../../../core/media-types";
+import type { MediaAssetRecord } from "../../../core/store/types";
 import { CmsError } from "../error-handler";
 import { parseWith } from "../handler";
 import {
@@ -29,6 +31,21 @@ export interface PreparedMediaUpload {
 		readonly method: "PUT";
 		readonly requiredHeaders: Record<string, string>;
 		readonly expiresAt: string;
+	};
+}
+
+/** What an upload answers once the asset is `ready`. */
+function describeReadyMedia(cms: Cms, record: MediaAssetRecord) {
+	return {
+		mediaId: record.id,
+		status: "ready",
+		publicUrl: record.storageKey ? cms.mediaStore().getPublicUrl(record.storageKey) : null,
+		width: record.width,
+		height: record.height,
+		byteSize: record.byteSize,
+		mimeType: record.mimeType,
+		defaultAlt: record.defaultAlt,
+		defaultCaption: record.defaultCaption,
 	};
 }
 
@@ -137,19 +154,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 	if (!media) throw new CmsError("Media asset not found", "not_found");
 
 	const mediaStore = cms.mediaStore();
-	const describe = (record: NonNullable<typeof media>) => ({
-		mediaId: record.id,
-		status: "ready",
-		publicUrl: record.storageKey ? mediaStore.getPublicUrl(record.storageKey) : null,
-		width: record.width,
-		height: record.height,
-		byteSize: record.byteSize,
-		mimeType: record.mimeType,
-		defaultAlt: record.defaultAlt,
-		defaultCaption: record.defaultCaption,
-	});
-
-	if (media.status === "ready") return describe(media);
+	if (media.status === "ready") return describeReadyMedia(cms, media);
 	if (media.status !== "pending" || !media.stagingKey) {
 		throw new CmsError(`Media asset cannot be completed in status: ${media.status}`, "upload_incomplete");
 	}
@@ -218,5 +223,33 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 				}
 			: {}),
 	});
-	return describe(updated);
+	return describeReadyMedia(cms, updated);
+}
+
+/**
+ * Moves the stored file of the uploaded and completed asset `fromId` into the asset `id`, which keeps its id, name, folder, alt, caption and references. The kind
+ * must match (see `replaceMismatch`). The files `id` gave up are deleted after the commit; a failed delete leaves a stray file but does not fail the call.
+ */
+export async function replaceMediaFile(cms: Cms, id: string, fromId: string) {
+	if (id === fromId) throw new CmsError("A media file cannot replace itself", "invalid_input");
+	const store = cms.store();
+	try {
+		const [target, source] = await Promise.all([store.getMediaAsset(id), store.getMediaAsset(fromId)]);
+		if (!target || target.status !== "ready") throw new CmsError("Media asset not found", "not_found");
+		if (!source || source.status !== "ready") throw new CmsError("Replacement media asset not found", "not_found");
+		const mismatch = replaceMismatch(target.mimeType, source.mimeType);
+		if (mismatch) {
+			throw new CmsError("The replacement is not the same kind of file", "unsupported_media_type", {
+				notice: { key: mismatch },
+			});
+		}
+		const { media, released } = await store.replaceMediaFile({ id, fromId });
+		await cms.mediaService().release(released);
+		return describeReadyMedia(cms, media);
+	} catch (error) {
+		// The replacement was uploaded as a media file of its own for this call. If the call fails it must not stay in the library: it is taken out (a file that
+		// is in use stays), and the upload cleanup deletes its stored files later.
+		await store.discardUnusedMedia(fromId).catch(() => undefined);
+		throw error;
+	}
 }

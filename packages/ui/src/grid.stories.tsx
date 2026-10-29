@@ -32,7 +32,7 @@ function Cell({ children, tall }: { children: string; tall?: boolean }) {
 
 export const Playground: Story = {};
 
-const COLUMNS = [1, 2, 3, 4, 6, "sidebar", "rail", "rail-wide", "tiles"] as const;
+const COLUMNS = [1, 2, 3, 4, 6, "sidebar", "rail", "rail-wide", "tiles", "folders"] as const;
 const GAPS = [0, 4, 8, 12, 16, 24, 32, 48] as const;
 const ALIGNS = ["start", "center", "end", "stretch"] as const;
 

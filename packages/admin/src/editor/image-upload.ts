@@ -3,8 +3,7 @@ import { useSyncExternalStore } from "react";
 import { prepareUpload, type UploadedMedia, uploadImageFile } from "./upload-helper";
 
 /**
- * The one place the editor starts the upload of an image. It prepares the file and sends it, reporting how far it is. The upload rules (the format the
- * file goes up in, what is removed from it) belong to `upload-helper.ts`; a change to them is made there, and this function is where the editor calls it.
+ * The one place the editor starts the upload of an image. It prepares the file and sends it, reporting how far it is. The upload rules (WebP for every picture, the location data removed) belong to `upload-helper.ts`, shared with the media library; a change to them is made there, and this function is where the editor calls it.
  */
 export async function uploadEditorImage(
 	site: Site,
@@ -12,7 +11,7 @@ export async function uploadEditorImage(
 	onProgress?: (percent: number) => void,
 	options?: { folderId?: string | null },
 ): Promise<UploadedMedia> {
-	const prepared = await prepareUpload(site, file, { optimize: false });
+	const prepared = await prepareUpload(site, file);
 	return uploadImageFile(site, prepared, onProgress, options);
 }
 
