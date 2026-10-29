@@ -2,7 +2,7 @@ import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
-import { openMediaPicker } from "../../editor/block-inserts";
+import { MediaPickerDialog } from "../../editor/image-insert-dialog";
 import { StatusBarPluginCell } from "../../kit";
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { docOf } from "../../test/mdx";
@@ -222,9 +222,8 @@ const typeTitle = async (canvasElement: HTMLElement, text = " (고침)") => {
 	fireEvent.change(input, { target: { value: input.value + text } });
 	await page(canvasElement).findByRole("button", { name: "저장 전 변경사항" }, LONG);
 };
-/** The header's save button, with its shortcut written beside it. */
-const headerSave = (canvasElement: HTMLElement) =>
-	page(canvasElement).findByRole("button", { name: /^저장\s*⌘S$/ }, LONG);
+/** The header's save button. */
+const headerSave = (canvasElement: HTMLElement) => page(canvasElement).findByRole("button", { name: "저장" }, LONG);
 
 export const DraftLoaded: Story = { render: screen(() => server()) };
 
@@ -247,7 +246,7 @@ export const NotFound: Story = {
 	render: screen(() => server({ load: answer(404, { error: { code: "not_found", message: "Not found" } }) })),
 };
 
-/** The save button is in the header all the time, with ⌘S beside it; after a change the status bar says there is something to save. */
+/** The save button is in the header all the time; after a change the status bar says there is something to save. */
 export const UnsavedChanges: Story = {
 	tags: ["visual"],
 	render: screen(() => server()),
@@ -542,14 +541,33 @@ const libraryApi = (path: string) => {
 	return undefined;
 };
 
-/** "/ Image" opens the library picker. */
+/** The cover image field's picker (board ImageInsert "대표 이미지"): titled with the field, "고르기", opened in the folder of the image the field holds, which is marked. */
 export const ImagePicker: Story = {
 	tags: ["visual"],
-	render: screen(() => server({ more: libraryApi })),
-	play: async ({ canvasElement }) => {
-		await settled(canvasElement);
-		openMediaPicker("image");
-		await within(document.body).findByRole("dialog", undefined, LONG);
+	render: () => (
+		<PageFrame
+			api={server({
+				more: (path) =>
+					path === `${API}/media/m1`
+						? { filename: "desk-morning.jpg", byteSize: 180_000, mimeType: "image/jpeg", folderId: "f2" }
+						: libraryApi(path),
+			})}
+			pathname="/admin/entries/entry-1/edit"
+		>
+			<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+			<MediaPickerDialog
+				open
+				kind="image"
+				title="대표 이미지"
+				confirmLabel="고르기"
+				current="m1"
+				onClose={() => {}}
+				onPick={() => {}}
+				onUpload={() => {}}
+			/>
+		</PageFrame>
+	),
+	play: async () => {
 		await within(document.body).findByText("desk-morning.jpg", undefined, LONG);
 	},
 };

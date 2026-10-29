@@ -75,7 +75,7 @@ export function TemplatesScreen({ now }: { now?: Date } = {}) {
 							{templates.map((template: BodyTemplate) => {
 								const sections = sectionsLine(template.doc);
 								return (
-									<ActionContextMenu key={template.id} actions={menu(template)} trigger={<TableRow />}>
+									<ActionContextMenu key={template.id} actions={menu(template)} trigger={<TableRow twoLine />}>
 										<TableCell>
 											<Stack as="span" gap={4} minWidth={0}>
 												<Text as="span" truncate>

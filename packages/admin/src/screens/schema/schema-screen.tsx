@@ -486,7 +486,12 @@ function SchemaEditor({
 				onOpenChange={setCreating}
 				taken={names}
 				onCreate={(id, kind, path, label) => {
-					updateFile((file) => addCollection(file, id, kind, path, label));
+					updateFile((file) =>
+						addCollection(file, id, kind, path, label, {
+							title: tCollection("collection.titleFieldLabel"),
+							slug: tCollection("collection.slugFieldLabel"),
+						}),
+					);
 					// The new collection opens on its fields (title and slug), where the first thing to do is add one.
 					setSelected(id);
 					setSection("fields");

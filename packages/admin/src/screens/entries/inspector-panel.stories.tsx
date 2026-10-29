@@ -1,3 +1,4 @@
+import { Text } from "@monti-cms/ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
@@ -65,7 +66,16 @@ function Pane({ initial = base, hold = false }: { initial?: EntryForm; hold?: bo
 			<AdminComponentsProvider
 				components={{
 					fieldInputs: {
-						"seo-title": { Empty: () => <>제목과 같음 · 6/60</> },
+						"seo-title": {
+							Empty: () => (
+								<>
+									제목과 같음{" "}
+									<Text as="span" variant="meta" tone="subtle">
+										· 6/60
+									</Text>
+								</>
+							),
+						},
 						"seo-description": { Empty: () => <>요약과 같음</> },
 						"seo-image": { Empty: () => <>기본 이미지와 같음</> },
 					},
@@ -104,7 +114,7 @@ export const SeoTab: Story = {
 	render: () => <Pane />,
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await within(canvasElement).findByRole("tab", { name: "SEO" }, LONG));
-		await within(canvasElement).findByText("제목과 같음 · 6/60", undefined, LONG);
+		await within(canvasElement).findByText("· 6/60", undefined, LONG);
 	},
 };
 

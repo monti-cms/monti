@@ -207,7 +207,7 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 						doc={draft.doc}
 						onChange={(doc) => update({ doc })}
 						titleField={
-							<>
+							<Stack gap={4} paddingTop={8}>
 								<FormFieldLabel htmlFor={nameId}>{t("editor.nameLabel")}</FormFieldLabel>
 								<Input
 									id={nameId}
@@ -218,9 +218,9 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 									appearance="inline"
 								/>
 								{error && <FormFieldError>{error}</FormFieldError>}
-								{/* The one ink rule of the page: 20 above; the 32 below is the editor's own spacing under the title. */}
-								<Box border="bottom-contrast" paddingTop={20} />
-							</>
+								{/* The one ink rule of the page: 20 above (the stack's 4 and 16); the 32 below is the editor's own spacing under the title. */}
+								<Box border="bottom-contrast" paddingTop={16} />
+							</Stack>
 						}
 					/>
 				</Stack>

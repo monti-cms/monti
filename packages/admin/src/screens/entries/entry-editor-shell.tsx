@@ -5,7 +5,7 @@ import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Box, FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EditorMenuItem, useAdminComponents, useEditorExtensions } from "../../admin-components";
@@ -455,6 +455,8 @@ export function EntryEditorShell({
 					{fieldIssueLine(titleIssue)}
 				</Text>
 			)}
+			{/* The one ink rule of the page: 20 under the title; the body starts 32 under it. */}
+			<Box border="bottom-contrast" paddingTop={20} />
 		</>
 	);
 	// The document tools of the header's ⋯ menu: the source beside a translation, the body as text (a source panel's notation, such as MDX), and
@@ -557,10 +559,10 @@ export function EntryEditorShell({
 									doc={form.doc}
 									allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
 									titleField={
-										<>
+										<Stack gap={16}>
 											{languageTabs}
-											{titleInput}
-										</>
+											<div>{titleInput}</div>
+										</Stack>
 									}
 									templates
 									sourceView={isSourceMode ? sourceEditor : undefined}

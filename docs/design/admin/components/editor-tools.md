@@ -4,6 +4,8 @@ This page covers the tools inside the editor: the block handle and block menu, t
 
 There is no always-visible toolbar. The block handle, the format card that appears when text is selected, and the "/" insert menu (see Menu) do everything. Nothing else sits on the body: the document tools are a group of the header's ⋯ menu ("EditorNotion" board, `moreMenu`). The group holds what a plugin adds (a source panel's switch such as "MDX로 보기", a text checker, "모두 번역"), the source beside a translation ("원문 옆에 보기"), "본문 폭 ▸" with the chosen width as its value and the steps with a ✓ in its second level, and the theme. Copy, archive and export sit above it; "휴지통으로" stays at the bottom. The core only opens the place; it shows a plugin's row only when that plugin is installed (`EditorMenuItem`, `menuItems` of an edit screen extension). The template editor's ⋯ has the same group above 복제 · 지우기.
 
+The writing column is `width-reading` (680px) by default ("본문 폭" changes it). The language tabs, the title and the body start on the same left edge. Under the header: 16, the language tabs, 16, the title, 20, the one ink rule, 32, the body. In the body (`text-reading`, 17 / 30) a paragraph has 20 below it, a heading 32 above and 12 below, and list items follow line under line.
+
 An empty line the cursor is on, and the one empty line of a new post, says "/ 를 눌러 블록 넣기" (`fg-faint`, in the body's own type). Only a top-level paragraph shows it.
 
 ## Block handle

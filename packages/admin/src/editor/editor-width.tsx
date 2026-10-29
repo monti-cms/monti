@@ -23,8 +23,8 @@ export interface EditorWidthStep {
 	readonly width: string;
 }
 
-/** The width of the single built-in step ("Normal") used when the config sets no `editor.widths`. */
-export const DEFAULT_EDITOR_WIDTH = "48rem";
+/** The width of the single built-in step ("Normal") used when the config sets no `editor.widths`: the reading width of the design system (680px). */
+export const DEFAULT_EDITOR_WIDTH = "var(--monti-width-reading)";
 /** The `max-width` of the last step, "Full": no limit. */
 export const FULL_EDITOR_WIDTH = "none";
 

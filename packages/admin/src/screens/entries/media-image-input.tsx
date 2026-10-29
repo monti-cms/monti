@@ -179,6 +179,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 				kind="image"
 				title={field.label}
 				confirmLabel={tm("picker.pick")}
+				current={mediaId || undefined}
 				onClose={() => setPicking(false)}
 				onPick={(image) => {
 					rememberMediaUrl(image.id, image.publicUrl);

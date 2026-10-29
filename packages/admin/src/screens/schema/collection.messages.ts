@@ -6,6 +6,8 @@ const plural = (count: unknown, one: string, many: string) => `${count} ${Number
 /** Text of the collection editor of the schema screen: basics, body, allowed blocks and the new-collection dialog. */
 export const schemaCollectionMessages = defineMessages("cms-admin.schema.collection", {
 	en: {
+		"collection.titleFieldLabel": "Title",
+		"collection.slugFieldLabel": "Slug",
 		"collection.createTitle": "New collection",
 		"collection.createConfirm": "Create",
 		"collection.newName": "Name",
@@ -45,6 +47,8 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.kindText.item": "A short item",
 	},
 	ko: {
+		"collection.titleFieldLabel": "제목",
+		"collection.slugFieldLabel": "주소",
 		"collection.createTitle": "새 컬렉션",
 		"collection.createConfirm": "만들기",
 		"collection.newName": "이름",

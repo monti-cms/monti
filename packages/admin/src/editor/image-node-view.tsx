@@ -98,6 +98,9 @@ export function ImageBlockView() {
 	const upload = useImageUpload(uploadId || null);
 	const uploading = uploadId !== "";
 	const [isEditing, setIsEditing] = useState(false);
+	// Opened from the to-dos or by "next image", the card holds the alt text alone, over the picture; the settings button opens the whole card.
+	const [altOnly, setAltOnly] = useState(false);
+	const picture = useRef<HTMLDivElement>(null);
 	const [isCropOpen, setIsCropOpen] = useState(false);
 	const [previewWidth, setPreviewWidth] = useState<string | null>(null);
 	const [aspectRatio, setAspectRatio] = useState<number | null>(null);
@@ -138,6 +141,7 @@ export function ImageBlockView() {
 	const cardRequested = useImageCardRequested(block.id);
 	useEffect(() => {
 		if (!cardRequested || !block.id) return;
+		setAltOnly(true);
 		setIsEditing(true);
 		acknowledgeImageCard(block.id);
 	}, [cardRequested, block.id]);
@@ -278,6 +282,46 @@ export function ImageBlockView() {
 		activeResizeCleanupRef.current = cleanup;
 	};
 
+	const nextButton = (
+		<TextButton type="button" variant="quiet" onClick={goNext}>
+			{t("imageNode.next")} <span className="text-monti-micro">↵</span>
+		</TextButton>
+	);
+	const altField = (
+		<FormField>
+			<FormFieldLabel
+				htmlFor={altInputId}
+				action={
+					<span className="flex items-center gap-monti-12">
+						{alt && !decorative && (
+							<Count>{t("imageNode.altCount", { count: alt.length, max: ALT_TEXT_LENGTH })}</Count>
+						)}
+						{!decorative && altSlot.trigger}
+					</span>
+				}
+			>
+				{t("imageNode.alt")}
+			</FormFieldLabel>
+			<Input
+				id={altInputId}
+				ref={altInput}
+				value={alt || ""}
+				disabled={decorative}
+				aria-invalid={altMissing || undefined}
+				aria-describedby={altMissing ? altErrorId : undefined}
+				onChange={(e) => block.setValues({ alt: e.target.value })}
+				onKeyDown={(event) => {
+					// Enter in the text moves on: to the next image, or closes the card when there is none.
+					if (event.key !== "Enter" || isComposingKey(event)) return;
+					event.preventDefault();
+					goNext();
+				}}
+			/>
+			{altMissing && <FormFieldError id={altErrorId}>{t("imageNode.altRequired")}</FormFieldError>}
+			{altSlot.panel}
+		</FormField>
+	);
+
 	const showTools = isEditable && !uploading;
 	// TipTap v3 requires the first child of a node view to have `data-node-view-wrapper`.
 	// `NodeViewWrapper` adds that attribute, and omitting it crashes at runtime with "Please use the NodeViewWrapper
@@ -316,7 +360,13 @@ export function ImageBlockView() {
 							</BlockBarButton>
 						))}
 						<BlockBarSeparator />
-						<Popover open={isEditing} onOpenChange={setIsEditing}>
+						<Popover
+							open={isEditing}
+							onOpenChange={(open) => {
+								setIsEditing(open);
+								setAltOnly(false);
+							}}
+						>
 							<BlockBarButton
 								label={t("imageNode.settings")}
 								pressed={isEditing}
@@ -324,73 +374,51 @@ export function ImageBlockView() {
 							>
 								<SettingsAdjust aria-hidden />
 							</BlockBarButton>
-							<PopoverContent align="start" width="md" initialFocus={altInput}>
-								<FormField>
-									<FormFieldLabel htmlFor={widthInputId}>{t("imageNode.width")}</FormFieldLabel>
-									<Input
-										id={widthInputId}
-										value={widthDraft}
-										aria-invalid={widthInvalid || undefined}
-										aria-describedby={widthInvalid ? widthErrorId : undefined}
-										onChange={(e) => {
-											setWidthDraft(e.target.value);
-											if (isValidImageWidth(e.target.value)) {
-												block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
+							{altOnly ? (
+								<PopoverContent
+									anchor={picture}
+									align="start"
+									alignOffset={24}
+									side="bottom"
+									sideOffset={-16}
+									width="dialog"
+									initialFocus={altInput}
+								>
+									{altField}
+									{nextImage && <div className="flex justify-end">{nextButton}</div>}
+								</PopoverContent>
+							) : (
+								<PopoverContent align="start" width="md" initialFocus={altInput}>
+									<FormField>
+										<FormFieldLabel htmlFor={widthInputId}>{t("imageNode.width")}</FormFieldLabel>
+										<Input
+											id={widthInputId}
+											value={widthDraft}
+											aria-invalid={widthInvalid || undefined}
+											aria-describedby={widthInvalid ? widthErrorId : undefined}
+											onChange={(e) => {
+												setWidthDraft(e.target.value);
+												if (isValidImageWidth(e.target.value)) {
+													block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
+												}
+											}}
+											placeholder={t("imageNode.widthPlaceholder")}
+										/>
+										{widthInvalid && <FormFieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FormFieldError>}
+									</FormField>
+									{altField}
+									<Option spread>
+										{t("imageNode.decorative")}
+										<Switch
+											checked={decorative}
+											onCheckedChange={(checked) =>
+												block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })
 											}
-										}}
-										placeholder={t("imageNode.widthPlaceholder")}
-									/>
-									{widthInvalid && <FormFieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FormFieldError>}
-								</FormField>
-								<FormField>
-									<FormFieldLabel
-										htmlFor={altInputId}
-										action={
-											<span className="flex items-center gap-monti-12">
-												{alt && !decorative && (
-													<Count>{t("imageNode.altCount", { count: alt.length, max: ALT_TEXT_LENGTH })}</Count>
-												)}
-												{!decorative && altSlot.trigger}
-											</span>
-										}
-									>
-										{t("imageNode.alt")}
-									</FormFieldLabel>
-									<Input
-										id={altInputId}
-										ref={altInput}
-										value={alt || ""}
-										disabled={decorative}
-										aria-invalid={altMissing || undefined}
-										aria-describedby={altMissing ? altErrorId : undefined}
-										onChange={(e) => block.setValues({ alt: e.target.value })}
-										onKeyDown={(event) => {
-											// Enter in the text moves on: to the next image, or closes the card when there is none.
-											if (event.key !== "Enter" || isComposingKey(event)) return;
-											event.preventDefault();
-											goNext();
-										}}
-									/>
-									{altMissing && <FormFieldError id={altErrorId}>{t("imageNode.altRequired")}</FormFieldError>}
-									{altSlot.panel}
-								</FormField>
-								<Option spread>
-									{t("imageNode.decorative")}
-									<Switch
-										checked={decorative}
-										onCheckedChange={(checked) =>
-											block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null })
-										}
-									/>
-								</Option>
-								{nextImage && (
-									<div className="flex justify-end">
-										<TextButton type="button" variant="quiet" onClick={goNext}>
-											{t("imageNode.next")} <span className="text-monti-micro">↵</span>
-										</TextButton>
-									</div>
-								)}
-							</PopoverContent>
+										/>
+									</Option>
+									{nextImage && <div className="flex justify-end">{nextButton}</div>}
+								</PopoverContent>
+							)}
 						</Popover>
 						{canRender && (
 							<BlockBarButton label={t("imageCrop.title")} onClick={() => setIsCropOpen(true)}>
@@ -402,7 +430,10 @@ export function ImageBlockView() {
 			)}
 
 			{/* Actual Image. A selected image has the 2px ink ring on the picture only; the caption stays outside it. */}
-			<div className={cn("rounded-monti-md", block.selected && !uploading && "ring-2 ring-monti-contrast")}>
+			<div
+				ref={picture}
+				className={cn("relative rounded-monti-md", block.selected && !uploading && "ring-2 ring-monti-contrast")}
+			>
 				{uploading ? (
 					<UploadingImage
 						src={upload?.preview}
@@ -457,6 +488,26 @@ export function ImageBlockView() {
 						{t("imageNode.unavailable")}
 					</div>
 				)}
+				{/* The corner handles at the bottom of the picture: dragging one changes the width. */}
+				{showTools && (
+					<span
+						className={cn(
+							"group-focus-within/container:opacity-100 group-hover/container:opacity-100",
+							!block.selected && "opacity-0",
+						)}
+					>
+						<ResizeCorner
+							side="left"
+							label={t("imageNode.resizeLeft")}
+							onPointerDown={(e) => handleResizeStart(e, "left")}
+						/>
+						<ResizeCorner
+							side="right"
+							label={t("imageNode.resizeRight")}
+							onPointerDown={(e) => handleResizeStart(e, "right")}
+						/>
+					</span>
+				)}
 			</div>
 			{resolveReason && !uploading ? (
 				<p className="mt-monti-4 text-center text-monti-caption text-monti-danger">{resolveReason}</p>
@@ -480,22 +531,6 @@ export function ImageBlockView() {
 				{showTools && captionSlot.trigger}
 			</figcaption>
 			{!uploading && captionSlot.panel && <div className="mt-monti-4 text-left">{captionSlot.panel}</div>}
-
-			{/* Corner (bottom left/right) width resize handles */}
-			{showTools && (
-				<span className="opacity-0 group-focus-within/container:opacity-100 group-hover/container:opacity-100">
-					<ResizeCorner
-						side="left"
-						label={t("imageNode.resizeLeft")}
-						onPointerDown={(e) => handleResizeStart(e, "left")}
-					/>
-					<ResizeCorner
-						side="right"
-						label={t("imageNode.resizeRight")}
-						onPointerDown={(e) => handleResizeStart(e, "right")}
-					/>
-				</span>
-			)}
 
 			{/* Crop and rotate sheet */}
 			{canRender && (

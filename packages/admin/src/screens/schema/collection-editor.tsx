@@ -343,6 +343,7 @@ export function CollectionEditor({
 														current,
 														typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
 														localesOf(file).length > 1,
+														t("collection.slugFieldLabel"),
 													),
 												)
 										: undefined
@@ -350,7 +351,14 @@ export function CollectionEditor({
 								path={typeof collection.path === "string" ? collection.path : ""}
 								suggested={defaultPath(name)}
 								onChange={(value) =>
-									onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+									onChange((current) =>
+										withPublicPath(
+											current,
+											orUndefined(value),
+											localesOf(file).length > 1,
+											t("collection.slugFieldLabel"),
+										),
+									)
 								}
 							/>
 						</Section>

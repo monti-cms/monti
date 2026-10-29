@@ -254,7 +254,10 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(Object.keys(schema.collections)).toEqual(["post", "memo", "note"]);
 		expect(schema.collections.note).toMatchObject({ kind: "document", path: "/notes/:slug" });
 		expect(Object.keys(schema.collections.note?.fields ?? {})).toEqual(["title", "slug", "summary"]);
+		// The title and slug a collection starts with are named in the admin's language.
 		expect(schema.collections.note?.fields).toMatchObject({
+			title: { kind: "text", label: tCollection("collection.titleFieldLabel") },
+			slug: { kind: "slug", label: tCollection("collection.slugFieldLabel") },
 			summary: { kind: "text", multiline: true, required: true },
 		});
 		expect(reload.rememberSaved).toHaveBeenCalled();

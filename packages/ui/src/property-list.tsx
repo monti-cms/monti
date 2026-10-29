@@ -60,7 +60,7 @@ function PropertyPanel({
 	);
 }
 
-/** A run of rows, with an optional quiet subheading above it ("Classification"). */
+/** A run of rows, with an optional quiet subheading above it ("Classification"). Every row has its hairline but the last row of the pane. */
 function PropertyGroup({
 	title,
 	className,
@@ -72,7 +72,7 @@ function PropertyGroup({
 		<section
 			data-slot="property-group"
 			aria-labelledby={title ? titleId : undefined}
-			className={cn("flex flex-col", className)}
+			className={cn("flex flex-col last:**:data-[slot=property-row]:last:border-b-0", className)}
 			{...props}
 		>
 			{title && (
@@ -139,7 +139,7 @@ function PropertyRow({
 			aria-labelledby={labelId}
 			data-slot="property-row"
 			className={cn(
-				"group/row flex flex-col gap-monti-2 border-monti-muted border-b py-monti-10 last:border-b-0 **:data-[slot=ai-action]:data-loading:opacity-100 **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
+				"group/row flex flex-col gap-monti-2 border-monti-muted border-b py-monti-10 **:data-[slot=ai-action]:data-loading:opacity-100 **:data-[slot=ai-action]:opacity-0 hover:**:data-[slot=ai-action]:opacity-100 focus-within:**:data-[slot=ai-action]:opacity-100",
 				className,
 			)}
 			{...props}

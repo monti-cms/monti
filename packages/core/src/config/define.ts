@@ -108,7 +108,7 @@ export interface EditorConfig {
 	/**
 	 * The width steps of the editor's width menu, in the order they are listed; the first is the one the editor starts at. Set them to the width of your public
 	 * pages, and add a phone width to check how a post wraps. The admin always adds a last "Full" step with no limit. Without `widths` the menu has "Normal"
-	 * (`48rem`) and "Full". The editor remembers the step a person picked, per browser.
+	 * (the reading width, 680px) and "Full". The editor remembers the step a person picked, per browser.
 	 */
 	readonly widths?: readonly EditorWidthStep[];
 }

@@ -17,6 +17,7 @@ const POPOVER_WIDTH = {
 	sm: "w-monti-menu",
 	md: "w-monti-panel",
 	lg: "w-monti-assistant",
+	dialog: "w-[420px] max-w-(--available-width)",
 	auto: "w-auto",
 	anchor: "w-(--anchor-width) min-w-monti-menu",
 } as const;
@@ -34,7 +35,7 @@ function PopoverContent({
 	...props
 }: PopoverPrimitive.Popup.Props &
 	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor"> & {
-		/** `sm` 240px (the width of a menu), `md` 300px (default, a panel), `lg` 380px (the assistant), `auto` as wide as its content, `anchor` as wide as what opened it. */
+		/** `sm` 240px (the width of a menu), `md` 300px (default, a panel), `lg` 380px (the assistant), `dialog` 420px (as wide as a dialog: one field over a block, such as an image's alt text), `auto` as wide as its content, `anchor` as wide as what opened it. */
 		width?: keyof typeof POPOVER_WIDTH;
 		/** `menu` for a list of rows (6px, as a menu card); `default` for a small form or a note (12px above, 16 at the sides and below); `none` when the content brings its own rows (a calendar) and runs to the edge. */
 		padding?: "default" | "menu" | "none";

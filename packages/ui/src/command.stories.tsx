@@ -38,7 +38,8 @@ export const Playground: Story = {
 				<CommandEmpty>맞는 것이 없어요</CommandEmpty>
 				<CommandGroup heading="글">
 					<CommandItem>
-						<DocumentAdd aria-hidden />새 글 쓰기<MenuShortcut>⌘N</MenuShortcut>
+						<DocumentAdd aria-hidden />새 글 쓰기
+						<MenuShortcut keys={["mod", "N"]} />
 					</CommandItem>
 					<CommandItem disabled>
 						<TrashCan aria-hidden />
@@ -53,7 +54,8 @@ export const Playground: Story = {
 				<CommandGroup heading="설정">
 					<CommandItem>
 						<Settings aria-hidden />
-						사이트 설정<MenuShortcut>⌘,</MenuShortcut>
+						사이트 설정
+						<MenuShortcut keys={["mod", ","]} />
 					</CommandItem>
 				</CommandGroup>
 			</CommandList>

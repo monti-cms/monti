@@ -158,7 +158,9 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected data-block-range:selection:bg-transparent " +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 pt-monti-32 pb-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected data-block-range:selection:bg-transparent " +
+					// The body starts on the title's left edge. A paragraph has 20 below it, a heading 32 above and 12 below, list items sit line under line.
+					"prose-p:mt-0 prose-p:mb-monti-20 prose-headings:mt-monti-32 prose-headings:mb-monti-12 [&>:first-child]:mt-0 prose-ul:my-0 prose-ul:mb-monti-20 prose-ol:my-0 prose-ol:mb-monti-20 prose-li:my-0 [&_li>p]:my-0 " +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
@@ -247,7 +249,7 @@ export function CmsEditor({
 		<div
 			className="relative flex min-h-full w-full flex-1 flex-col bg-monti-page"
 			data-monti-editor-shell
-			// Title, body, and source use the same width (`--editor-width`).
+			// Title, body, and source use the same width (`--editor-width`, the text's width; the column adds its 16px sides). "none" makes the calc invalid, so no limit.
 			style={{ "--editor-width": widthStep.width } as CSSProperties}
 			onCompositionStart={(event) => {
 				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
@@ -278,13 +280,15 @@ export function CmsEditor({
 			)}
 
 			{titleField && (
-				<div className="mx-auto w-full max-w-(--editor-width) px-monti-16 pt-monti-48 pb-monti-8">{titleField}</div>
+				<div className="mx-auto w-full max-w-[calc(var(--editor-width)+2*var(--monti-space-16))] px-monti-16 pt-monti-16">
+					{titleField}
+				</div>
 			)}
 
 			<MediaPickerDialog {...pickerProps} />
 
 			{isSourceMode && (
-				<div className="mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-monti-16 pt-monti-24 pb-[35vh]">
+				<div className="mx-auto flex w-full max-w-[calc(var(--editor-width)+2*var(--monti-space-16))] flex-1 flex-col px-monti-16 pt-monti-32 pb-[35vh]">
 					{sourceView}
 				</div>
 			)}
@@ -294,7 +298,7 @@ export function CmsEditor({
 			<div
 				hidden={isSourceMode}
 				// Leave bottom margin (35% of screen height) so the last line does not stick to the bottom of the screen.
-				className="mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-monti-16 pt-monti-24 pb-[35vh]"
+				className="mx-auto flex min-h-full w-full max-w-[calc(var(--editor-width)+2*var(--monti-space-16))] flex-1 cursor-text flex-col px-monti-16 pb-[35vh]"
 				onClick={(event) => {
 					// Move to the end only when the empty canvas outside the body is clicked. Clicks on NodeView buttons and popovers (portals)
 					// also bubble up here through the React tree, so leave the body DOM and anything outside the canvas (portals) alone.

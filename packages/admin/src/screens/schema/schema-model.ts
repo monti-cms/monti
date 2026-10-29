@@ -267,11 +267,24 @@ export function pathProblem(path: string): "slash" | "slug" | null {
 	return checkPathPattern(path)?.code ?? null;
 }
 
+/** The labels the title and slug fields of a new collection start with, in the admin's language. */
+export interface StarterFieldLabels {
+	title: string;
+	slug: string;
+}
+
 /**
  * A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place.
  * On a site with several locales the title is per locale, and a document's slug starts from the source locale's, as init writes them.
  */
-export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj {
+export function addCollection(
+	file: Obj,
+	name: string,
+	kind: "document" | "item",
+	path?: string,
+	label?: string,
+	fieldLabels: StarterFieldLabels = { title: "Title", slug: "Slug" },
+): Obj {
 	const multiLocale = localesOf(file).length > 1;
 	let collection: Obj = {
 		label: label?.trim() || name.charAt(0).toUpperCase() + name.slice(1),
@@ -279,14 +292,14 @@ export function addCollection(file: Obj, name: string, kind: "document" | "item"
 		fields: {
 			title: {
 				kind: "text",
-				label: "Title",
+				label: fieldLabels.title,
 				required: true,
 				...(multiLocale ? { localized: true } : {}),
 				role: TITLE_ROLE,
 			},
 			slug: {
 				kind: "slug",
-				label: "Slug",
+				label: fieldLabels.slug,
 				required: true,
 				...(multiLocale && kind === "document" ? { localized: "inherit" } : {}),
 				from: "title",
@@ -803,14 +816,19 @@ export function withOptionFields(field: Obj, on: boolean): Obj {
  * The collection with its public address set (or removed when `path` is empty). An address needs a slug, so one comes with it when the collection has none,
  * made from the title like the slug a new collection starts with.
  */
-export function withPublicPath(collection: Obj, path: string | undefined, multiLocale: boolean): Obj {
+export function withPublicPath(
+	collection: Obj,
+	path: string | undefined,
+	multiLocale: boolean,
+	slugLabel = "Slug",
+): Obj {
 	const next = setProp(collection, "path", path, COLLECTION_KEY_ORDER);
 	const fields = fieldsOf(next);
 	if (!path || Object.values(fields).some((field) => field.kind === "slug")) return next;
 	const from = titleFieldName(next);
 	const slug: Obj = {
 		kind: "slug",
-		label: "Slug",
+		label: slugLabel,
 		required: true,
 		...(multiLocale && next.kind !== "item" ? { localized: "inherit" } : {}),
 		...(from ? { from } : {}),

@@ -22,7 +22,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { foldersKeys, listFolders } from "../api/folders";
-import { listMedia, type MediaItem, mediaKeys } from "../api/media";
+import { getMedia, listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { LoadErrorAlert } from "../screens/shared/load-error-alert";
@@ -66,6 +66,8 @@ interface MediaPickerDialogProps {
 	title?: string;
 	/** The pill: "Insert" in the body, "Pick" for a field. */
 	confirmLabel?: string;
+	/** The media id the field holds now: the picker opens in its folder with it marked. */
+	current?: string;
 	onClose: () => void;
 	/** The picked item. The picker closes itself. */
 	onPick: (media: PickedMedia) => void;
@@ -83,6 +85,7 @@ export function MediaPickerDialog({
 	kind,
 	title: titleProp,
 	confirmLabel: confirmProp,
+	current,
 	onClose,
 	onPick,
 	onUpload,
@@ -103,6 +106,18 @@ export function MediaPickerDialog({
 		setSearch("");
 		setPicked(null);
 	}, [open]);
+
+	// The value the field holds: open in its folder with it marked, as if just pressed.
+	const currentQuery = useQuery({
+		queryKey: mediaKeys.detail(current ?? ""),
+		queryFn: ({ signal }) => getMedia(site, current ?? "", signal),
+		enabled: open && media && Boolean(current),
+		retry: false,
+	});
+	const currentFolder = currentQuery.data?.folderId;
+	useEffect(() => {
+		if (open && currentFolder) setFolder(currentFolder);
+	}, [open, currentFolder]);
 
 	const foldersQuery = useQuery({
 		queryKey: foldersKeys.list("media"),
@@ -137,6 +152,10 @@ export function MediaPickerDialog({
 		retry: false,
 	});
 	const items = (listQuery.data?.items ?? []).filter((item) => item.status === "ready");
+	const shownCurrent = items.find((item) => item.id === current);
+	useEffect(() => {
+		if (shownCurrent) setPicked((already) => already ?? shownCurrent);
+	}, [shownCurrent]);
 	const loading = listQuery.isFetching || search.trim() !== debouncedSearch;
 
 	const notice = listQuery.isError

@@ -6,7 +6,9 @@ import type { MediaItem } from "../api/media";
 import { SlotRegistryProvider, type SlotSource } from "../slots/slots";
 import { type FakeApi, PageFrame } from "../stories/screen-frame";
 import { storedDoc } from "../test/stored-doc";
+import { BLOCK_ID_ATTRIBUTE } from "./block-ids";
 import { openMediaPicker } from "./block-inserts";
+import { openImageCard } from "./image-alt";
 import { beginImageUpload, setImageUploadPercent } from "./image-upload";
 import { editorMediaMessages } from "./media.messages";
 import { CmsEditor } from "./tiptap-editor";
@@ -168,7 +170,7 @@ export const ImageCard: Story = {
 	},
 };
 
-/** The same card with another image still without alt text: "next image" is at the bottom. */
+/** Opened from the to-dos (or by "next image"): the alt text alone in a card over the picture, and "next image" while another image still has none. */
 export const NextImage: Story = {
 	tags: ["visual"],
 	render: () => (
@@ -177,12 +179,17 @@ export const NextImage: Story = {
 				{ type: "image", attrs: { src: PICTURE, alt: "책상 위 노트북에 열린 편집기" } },
 				{ type: "image", attrs: { src: PICTURE, alt: "" } },
 			]}
-			select={0}
+			onEditor={(editor) => {
+				let first: string | undefined;
+				editor.state.doc.descendants((node) => {
+					if (!first && node.type.name === "image") first = node.attrs[BLOCK_ID_ATTRIBUTE];
+				});
+				if (first) openImageCard(editor, first);
+			}}
 		/>
 	),
-	play: async ({ canvasElement }) => {
-		const [first] = await within(canvasElement).findAllByRole("button", { name: t("imageNode.settings") });
-		if (first) await userEvent.click(first);
+	play: async () => {
+		await within(document.body).findByRole("button", { name: /다음 이미지/ }, { timeout: 10000 });
 	},
 };
 

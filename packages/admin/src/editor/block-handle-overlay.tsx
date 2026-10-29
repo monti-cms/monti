@@ -21,7 +21,7 @@ import {
 } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type React from "react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { commonMessages } from "../lib/common.messages";
 import { allowanceOfState } from "./allowed-extension";
@@ -75,6 +75,7 @@ export function BlockHandleOverlay({
 	const t = useTranslator(editorMessages);
 	const tc = useTranslator(commonMessages);
 	const [open, setOpen] = useState(false);
+	const marks = useRef<HTMLDivElement>(null);
 	if (typeof window === "undefined") return null;
 
 	const { doc } = editor.state;
@@ -97,6 +98,7 @@ export function BlockHandleOverlay({
 
 	return createPortal(
 		<div
+			ref={marks}
 			style={{ position: "fixed", top: `${spot.top + 4}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
 			className="flex items-center"
 		>
@@ -116,7 +118,8 @@ export function BlockHandleOverlay({
 					onDragEnd={onDragEnd}
 					trigger={(grip) => <DropdownMenuTrigger render={grip} />}
 				/>
-				<DropdownMenuContent side="right" align="start">
+				{/* Under the + and the grip, its left edge at the +, so the menu leaves the block's text in view. */}
+				<DropdownMenuContent side="bottom" align="start" anchor={marks}>
 					<DropdownMenuGroup>
 						{name && <DropdownMenuLabel>{name}</DropdownMenuLabel>}
 						{kind && (
@@ -188,8 +191,8 @@ export function BlockHandleOverlay({
 						{t("blockHandle.duplicate")}
 						<MenuShortcut keys={["mod", "shift", "D"]} />
 					</DropdownMenuItem>
+					{/* Not red: a deleted block comes back with undo. */}
 					<DropdownMenuItem
-						variant="danger"
 						onClick={choose(() => {
 							deleteBlock(editor, pos);
 							onDeleted();

@@ -59,7 +59,11 @@ function Body({ text }: { text: string }) {
 					onEditor={(editor) => {
 						current = editor;
 					}}
-					titleField={<h1 className="text-monti-display">{text ? "첫 번째 글" : "제목"}</h1>}
+					titleField={
+						<h1 className={text ? "text-monti-display" : "text-monti-display text-monti-faint"}>
+							{text ? "첫 번째 글" : "제목"}
+						</h1>
+					}
 				/>
 			</div>
 		</PageFrame>

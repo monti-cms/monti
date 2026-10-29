@@ -16,9 +16,9 @@ export function fileTypeLabel(filename: string, mimeType: string | null | undefi
 	return extension ? extension.toUpperCase() : "TXT";
 }
 
-export const formatFileSize = (bytes: number): string =>
-	bytes >= 1024 * 1024
-		? `${(bytes / 1024 / 1024).toFixed(1)}MB`
-		: bytes >= 1024
-			? `${Math.round(bytes / 1024)}KB`
-			: `${bytes}B`;
+/** A file size as the screens write it: "1.2 MB" (one decimal under 10), "14 MB", "180 KB", "640 B". */
+export const formatFileSize = (bytes: number): string => {
+	const mb = bytes / 1024 / 1024;
+	if (mb >= 1) return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+	return bytes >= 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} B`;
+};

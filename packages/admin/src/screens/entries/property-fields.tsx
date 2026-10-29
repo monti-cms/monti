@@ -386,7 +386,17 @@ const SlugProperty = memo(function SlugProperty({
 			controlId={field.ids.input}
 			label={field.label}
 			isEmpty={!slug}
-			display={slug ? `/${slug}` : definition.from ? t("property.slugFromTitle") : t("property.empty")}
+			display={
+				slug ? (
+					<Text as="span" variant="meta">
+						/{slug}
+					</Text>
+				) : definition.from ? (
+					t("property.slugFromTitle")
+				) : (
+					t("property.empty")
+				)
+			}
 			editor={
 				<SlugAffix
 					field={field}
