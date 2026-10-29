@@ -1,7 +1,7 @@
 import { issueText } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { cmsApiErrorMessage, cmsApiIssues, issueLine } from "../error-message";
+import { cmsApiErrorMessage, cmsApiIssues, fieldIssueLine, issueLine } from "../error-message";
 import { apiErrorMessages } from "../error-message.messages";
 
 const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
@@ -28,5 +28,22 @@ describe("issue text from the server", () => {
 	it("shows the server's message of an answer without issues", () => {
 		expect(cmsApiErrorMessage(testSite, { code: "slug_conflict", message: "Taken." }, "fallback")).toBe("Taken.");
 		expect(cmsApiErrorMessage(testSite, { code: "slug_conflict" }, "fallback")).toBe("fallback");
+	});
+});
+
+describe("an issue beside its field", () => {
+	it("leaves out the field key, which is an internal name the field already stands for", () => {
+		const told1 = told({ code: "missing_field", path: "title", message: "제목" });
+		const issue = { text: told1.text, where: told1.where, path: "title" };
+		expect(issue.where).toBe("title");
+		expect(fieldIssueLine(issue)).toBe(issue.text);
+		expect(fieldIssueLine(issue)).not.toContain("title");
+	});
+
+	it("keeps a place that is not the field's key, such as a line and a column of the body", () => {
+		const told2 = told({ code: "mdx_error", path: "body", message: "x", position: { line: 3, column: 4 } });
+		const issue = { text: told2.text, where: told2.where, path: "body" };
+		expect(fieldIssueLine(issue)).toBe(issueLine(issue));
+		expect(fieldIssueLine(issue)).toContain("(");
 	});
 });

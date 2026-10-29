@@ -49,7 +49,7 @@ import {
 	isFieldInputParts,
 	useAdminComponents,
 } from "../../admin-components";
-import { type CmsIssue, issueLine } from "../../api/error-message";
+import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
@@ -99,7 +99,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			</FormFieldLabel>
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
-			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{fieldIssueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }
@@ -134,7 +134,7 @@ function SlotFieldRow({
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{panel}
-			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{fieldIssueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }

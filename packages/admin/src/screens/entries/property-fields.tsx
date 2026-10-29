@@ -25,7 +25,7 @@ import {
 	useState,
 } from "react";
 import { type FieldInputEntry, isFieldInputParts } from "../../admin-components";
-import { issueLine } from "../../api/error-message";
+import { fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
@@ -114,7 +114,7 @@ interface ShellProps {
 	assisted: boolean;
 	readOnly: boolean;
 	note?: ReactNode;
-	issue?: Parameters<typeof issueLine>[0];
+	issue?: Parameters<typeof fieldIssueLine>[0];
 	errorId?: string;
 	/** On the label row while the input is open: a count, a piece an extension added. */
 	extras?: ReactNode;
@@ -169,7 +169,7 @@ function PropertyShell({
 			onEdit={readOnly ? undefined : open}
 			editing={isOpen}
 			note={note}
-			error={issue ? issueLine(issue) : failure}
+			error={issue ? fieldIssueLine(issue) : failure}
 			errorId={issue ? errorId : undefined}
 		>
 			<PropertyEditContext.Provider value={edit}>{editor}</PropertyEditContext.Provider>

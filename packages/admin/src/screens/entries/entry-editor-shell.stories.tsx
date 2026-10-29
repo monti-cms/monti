@@ -24,12 +24,25 @@ type Story = StoryObj<typeof meta>;
 const API = "/api/monti/v1";
 const BODY = "첫 문단입니다. 글의 도입부를 이렇게 씁니다.\n\n## 소제목\n\n둘째 문단입니다.\n\n- 목록 하나\n- 목록 둘";
 
+const member = (id: string, locale: string, status: EntryData["status"], isSource: boolean, title: string) => ({
+	id,
+	locale,
+	status,
+	isSource,
+	title,
+	workingSlug: "first-post",
+});
+
+// The server answers an entry with its translation group, the entry itself included: a Korean original with no translations yet is its only member.
 const draft: EntryData = {
 	id: "entry-1",
 	collection: "post",
 	status: "draft",
 	version: 4,
 	folderId: null,
+	locale: "ko",
+	translationGroupId: "entry-1",
+	translations: [member("entry-1", "ko", "draft", true, "첫 번째 글")],
 	workingSlug: "first-post",
 	publishedSlug: null,
 	working: {
@@ -40,6 +53,7 @@ const draft: EntryData = {
 const published: EntryData = {
 	...draft,
 	status: "published",
+	translations: [member("entry-1", "ko", "published", true, "첫 번째 글")],
 	publishedSlug: "first-post",
 	publishedAt: "2026-10-01T09:30:00.000Z",
 	published: draft.working,
@@ -53,14 +67,6 @@ const editing: EntryData = {
 	},
 };
 
-const member = (id: string, locale: string, status: string, isSource: boolean, title: string) => ({
-	id,
-	locale,
-	status,
-	isSource,
-	title,
-	workingSlug: "first-post",
-});
 const withTranslations = {
 	...published,
 	locale: "ko",
@@ -131,7 +137,12 @@ const server = ({ entry = draft, load, issues = [], save, publish, more }: Serve
 		if (extra !== undefined) return extra;
 		if (path.startsWith(`${API}/entries/`) && path.endsWith("/check")) return { issues, warnings: [] };
 		if (path.endsWith("/relations")) return { incomingReferences: [] };
-		if (path.startsWith(`${API}/entries/search`)) return { items: [] };
+		// The category the entry points at resolves to its name; any other search finds nothing.
+		if (path.startsWith(`${API}/entries/search`)) {
+			return {
+				items: path.includes("id=cat-1") ? [{ id: "cat-1", title: "개발", slug: "dev", status: "published" }] : [],
+			};
+		}
 		if (path.startsWith(`${API}/entries?`)) return { items: [], total: 0 };
 		if (path.startsWith(`${API}/folders`)) return [];
 		if (path.startsWith(`${API}/media`)) return { items: [], total: 0 };

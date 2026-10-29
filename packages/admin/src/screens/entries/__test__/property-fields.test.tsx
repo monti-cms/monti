@@ -1,7 +1,6 @@
 import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { issueLine } from "../../../api/error-message";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { PropertyFields } from "../property-fields";
@@ -42,7 +41,8 @@ describe("PropertyFields on the form provider", () => {
 			where: "summary",
 		};
 		renderFields({ issues: [issue] });
-		expect(document.getElementById("cms-summary-error")?.textContent).toBe(issueLine(issue));
+		// The field already says where the problem is, so its key is not part of the text.
+		expect(document.getElementById("cms-summary-error")?.textContent).toBe(issue.text);
 		const input = open(/^요약/);
 		expect(input.getAttribute("aria-invalid")).toBe("true");
 		expect(input.getAttribute("aria-describedby")).toBe("cms-summary-error");

@@ -9,7 +9,7 @@ import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EditorMenuItem, useAdminComponents, useEditorExtensions } from "../../admin-components";
 import { adminEntryClient } from "../../api/entries";
-import { type CmsIssue, issueLine } from "../../api/error-message";
+import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { openImageCard } from "../../editor/image-alt";
 import { CmsEditor } from "../../editor/tiptap-editor";
@@ -451,7 +451,7 @@ export function EntryEditorShell({
 			/>
 			{titleIssue && (
 				<Text as="p" id="cms-title-error" tone="danger">
-					{issueLine(titleIssue)}
+					{fieldIssueLine(titleIssue)}
 				</Text>
 			)}
 		</>
@@ -495,7 +495,7 @@ export function EntryEditorShell({
 			/>
 			{bodyIssue && (
 				<Text as="p" id={SOURCE_ERROR_ID} tone="danger">
-					{issueLine(bodyIssue)}
+					{fieldIssueLine(bodyIssue)}
 				</Text>
 			)}
 		</>
