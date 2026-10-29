@@ -1,7 +1,7 @@
 "use client";
 
 import { FolderMoveTo } from "@carbon/icons-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Toaster as Engine, toast as engine } from "sonner";
 import { cn } from "./cn";
 
@@ -114,7 +114,8 @@ export function Toaster({ duration }: { duration?: number }) {
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
 			toastOptions={{ classNames: { toast: "flex! w-full justify-center" } }}
 			visibleToasts={3}
-			style={{ "--width": "min(560px, calc(100vw - 32px))" } as CSSProperties}
+			// Important: the engine's own stylesheet sets the width of the stack (`width: var(--width)`) and is not in a layer.
+			className="w-[min(560px,calc(100vw-32px))]!"
 		/>
 	);
 }

@@ -93,6 +93,7 @@ export {
 	ContextMenuTrigger,
 } from "./context-menu";
 export { Count } from "./count";
+export { CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
 export { DescriptionItem, DescriptionList } from "./description-list";
 export {

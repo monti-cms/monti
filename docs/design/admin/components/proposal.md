@@ -60,6 +60,8 @@ A text button that fills one property field with AI (`mt-ai-action`). It has the
 
 ### In code
 
+`Spark` is the one ✦ mark of the assistant. It is an icon like the Carbon ones, so it is not closed: it goes where an `icon` goes (`icon={Spark}`, a button's or a menu item's icon) and is sized by its parent. It is filled with `currentColor`, so it follows the text it stands next to (the proposal blue on a proposal, the button's ink on a button), and it is decorative: the words next to it say what it means. Every place that marks something as the assistant's uses it, never a sparkles icon from an icon set.
+
 `AiAction`: `loading` shows the spinner and "writing" label, and the action cannot be pressed again and is not dimmed (only `disabled` dims); it is `aria-busy`. `filled` (the field has a value) makes it ask again instead of filling. It goes in `FormFieldLabel action`, and inside a `FormField` it shows only on the field the pointer or keyboard is in.
 
 ## State made by AI

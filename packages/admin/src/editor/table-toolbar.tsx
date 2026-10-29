@@ -2,7 +2,7 @@
 
 import { ArrowsHorizontal, Column, ColumnInsert, Merge, Row, RowInsert, TableSplit } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { Inline, Separator } from "@monti-cms/ui";
+import { BlockBar, Inline, Separator } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";
@@ -10,7 +10,6 @@ import { useEditorState } from "@tiptap/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TranslatorFor } from "../translator";
-import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { editorMessages } from "./messages";
 import { ToolbarButton, type ToolbarItem } from "./tool-button";
 
@@ -185,19 +184,19 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 	return createPortal(
 		<div
 			ref={toolbarRef}
-			role="toolbar"
-			aria-label={t("tableToolbar.label")}
+			// design-allow: toolbar placed over the measured table
 			style={{ position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 30 }}
-			className={BLOCK_TOOLBAR}
 		>
-			{TABLE_TOOL_GROUPS(t).map((group, index) => (
-				<Inline key={group[0]?.label} gap={2}>
-					{index > 0 && <Separator orientation="vertical" length="control" />}
-					{group.map((item) => (
-						<ToolbarButton key={item.label} editor={editor} item={item} />
-					))}
-				</Inline>
-			))}
+			<BlockBar aria-label={t("tableToolbar.label")}>
+				{TABLE_TOOL_GROUPS(t).map((group, index) => (
+					<Inline key={group[0]?.label} gap={2}>
+						{index > 0 && <Separator orientation="vertical" length="control" />}
+						{group.map((item) => (
+							<ToolbarButton key={item.label} editor={editor} item={item} />
+						))}
+					</Inline>
+				))}
+			</BlockBar>
 		</div>,
 		document.body,
 	);

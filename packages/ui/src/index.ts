@@ -37,6 +37,7 @@ export const CompareSide = close(open.CompareSide);
 export const CompareText = close(open.CompareText);
 export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
+export const CropStage = close(open.CropStage);
 export const Spinner = close(open.Spinner);
 export const Shortcut = close(open.Shortcut);
 export const FilterButton = close(open.FilterButton);

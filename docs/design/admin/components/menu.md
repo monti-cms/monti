@@ -26,7 +26,7 @@ The floating menu card. Paper ground, `border-emphasis`, `radius-xl`, `shadow-fl
 
 ### In code
 
-`DropdownMenu` (with `DropdownMenuContent`, `Item`, `CheckboxItem`, `RadioGroup`, `RadioItem`, `Label`, `Separator`, `Sub`, `SubTrigger`, `SubContent`, `Scroll`, `Search`, `Group`, `Trigger`), `Command` (a menu you can search; its content is a `PopoverContent` with `padding="menu"`; `CommandItem` has `checked` for the current value of a pick-one list, and `variant="danger"`), `MenuShortcut`, `MenuTick`, `MenuValue`. A row has an icon first, a name, and a `MenuShortcut` at the end. `variant="danger"` is for what cannot be undone, and goes at the bottom. In code a row that cannot be used is faint and can say why in its `MenuShortcut`, which the DS rule (hide what cannot be done) does not describe.
+`DropdownMenu` (with `DropdownMenuTrigger`, `DropdownMenuPortal`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuCheckboxItem`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`, `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`, `DropdownMenuScroll`, `DropdownMenuSearch`, `DropdownMenuGroup`), `Command` (a menu you can search, with `CommandInput`, `CommandList`, `CommandGroup` (rows under a name, in the mono group-name look), `CommandItem`, `CommandSeparator`, `CommandEmpty` and `CommandFooter` (a row under the list for what belongs to the whole list, such as "+ New tag", set off by a rule and always in view); its content is a `PopoverContent` with `padding="menu"`; `CommandItem` has `checked` for the current value of a pick-one list, and `variant="danger"`), `MenuShortcut`, `MenuTick`, `MenuValue`. A row has an icon first, a name, and a `MenuShortcut` at the end. `variant="danger"` is for what cannot be undone, and goes at the bottom. In code a row that cannot be used is faint and can say why in its `MenuShortcut`, which the DS rule (hide what cannot be done) does not describe.
 
 Row menus use `ContextMenu` (see below). The card look is the shared `MENU_CARD`. The code opens the second level 4px clear of the parent card (`SUB_SIDE_OFFSET` and `SUB_ALIGN_OFFSET`).
 
@@ -43,7 +43,7 @@ Right-clicking a list row or tile opens it at the cursor (`.mt-menu--ctx`, 232px
 
 ### In code
 
-`ContextMenu` (with `Content`, `Item`, `Group`, `Label`, `Separator`, `Sub`, `SubTrigger`, `SubContent`, `Trigger`). A row that picks a further value is a `ContextMenuSubTrigger` (→ opens the second level, ← closes it).
+`ContextMenu` (with `ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem`, `ContextMenuGroup`, `ContextMenuLabel`, `ContextMenuSeparator`, `ContextMenuSub`, `ContextMenuSubTrigger`, `ContextMenuSubContent`). A row that picks a further value is a `ContextMenuSubTrigger` (→ opens the second level, ← closes it).
 
 ## Pick list (`.mt-picklist`)
 

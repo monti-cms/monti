@@ -59,11 +59,15 @@ A notice that runs across the top of a page screen is not used. It overlaps the 
 
 ### In code
 
-`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short (`plainMeta` sets it as a plain subtle sentence instead, as on the edit conflict strip: "이 글은 저장할 수 없어요"); `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses).
+`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short (`plainMeta` sets it as a plain subtle sentence instead, as on the edit conflict strip: "이 글은 저장할 수 없어요"); `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses). `DotNote` is the quiet line led by a 6px dot, 8px before its words, for the state of what a panel shows ("In the trash · 3 days left · Read only").
 
 A failed notice (a failed delivery, an edit conflict) is danger, not warning, and uses red (`.mt-banner--danger`).
 
 The editor has two strips: the edit conflict ("다른 곳에서 10:41에 먼저 저장했어요" · "이 글은 저장할 수 없어요" · 비교하기, 서버 최신본 불러오기) and the draft kept only in the browser ("이 브라우저에 저장하지 않은 편집이 있어요" · 10. 26 10:12 · 비교하기, 불러오기, 버리기). Neither is a dialog and neither goes away until it is answered.
+
+"비교하기" opens the compare screen: the two versions side by side in two columns with no gap and a rule between them, 48px of room inside each, filling the height down to the status bar. Each side is named in the small mono line on top ("내 입력 · 저장 안 됨", "서버 최신본 · v9 · 10:41 저장"), lists only the properties that differ, then the entry the way it reads (the title in the page size, the blocks in the reading size). The words that differ are on the highlight, the same on both sides.
+
+`Compare` holds the two `CompareSide`s (`label`, `properties`, the entry as children). `CompareProperty` is a property that differs (its `empty` word for no value), `CompareTitle` the entry's title, `CompareBody` its blocks, with `CompareHeading`, `CompareParagraph` and `CompareCode` for the blocks and `CompareText` for a run of words (`changed` puts it on the highlight).
 
 ## Toast
 

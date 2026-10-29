@@ -250,6 +250,7 @@ export function CmsEditor({
 			className="relative flex min-h-full w-full flex-1 flex-col bg-monti-page"
 			data-monti-editor-shell
 			// Title, body, and source use the same width (`--editor-width`, the text's width; the column adds its 16px sides). "none" makes the calc invalid, so no limit.
+			// design-allow: the width step the writer picked (a site's own lengths)
 			style={{ "--editor-width": widthStep.width } as CSSProperties}
 			onCompositionStart={(event) => {
 				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.

@@ -177,7 +177,7 @@ The field list of a collection. The tabs of the properties panel work as real ta
 
 ### In code
 
-`FolderTabs` (with `FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`): `FolderTab` has a grip to drag it by (off for a tab that stays where it is), its name, how many fields it holds, and `locked` for a tab a plugin placed, which cannot be moved or removed. `FolderTabsAdd` is a 16px plus icon named by its `aria-label`. The body is a `FieldTree` without its outer rules; its top left corner is square. `FieldTree` is the outline of a collection's fields: one line per field (`FieldRow`), each with a grip, the name (mono), the label and, at the end, the kind (mono; it can carry a mark such as a required "!"). `nested` indents a field in a group or a branch. `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names line up. `changed` is an unsaved change.
+`FolderTabs` (with `FolderTabsList`, `FolderTab`, `FolderTabsAdd`, `FolderTabsBody`): `FolderTab` has a grip to drag it by (off for a tab that stays where it is), its name, how many fields it holds, and `locked` for a tab a plugin placed, which cannot be moved or removed. `FolderTabsAdd` is a 16px plus icon named by its `aria-label`. `FolderTabEdit` is the picked tab while its name is edited in place: the same shape, with the field where the name was. The body is a `FieldTree` without its outer rules; its top left corner is square. `FieldTree` is the outline of a collection's fields: one line per field (`FieldRow`), each with a grip, the name (mono), the label and, at the end, the kind (mono; it can carry a mark such as a required "!"). `nested` indents a field in a group or a branch. `group` makes the line a group's: a grey band with its name in sans, bold. A field that cannot be moved has no `grip`; its place stays empty so the names line up. `changed` is an unsaved change.
 
 ## Applied filters
 
@@ -217,6 +217,10 @@ In the list, `useFolderActions` holds the naming (`naming`, `commitName`, `cance
 - Pressing it opens it inside the trash. The path is "휴지통 /" (trash /), the title is the folder name, the first row is "상위 폴더로", and the head has "폴더 복원 · 영구 삭제" (restore folder · delete forever). The date column of the rows inside is empty.
 - Restoring one thing inside makes the folder again and puts it back in its original place. What remains stays in the trash folder.
 - Trash search also finds what is inside folders, and puts "시리즈 원고 폴더 안" (inside the series drafts folder) before the info line.
+
+### In code
+
+`TrashRowTitle` is the title cell of a trash row: line one is the title in the quiet ink of what is out of use (a trashed folder has its folder icon before it) and its address in mono beside it; line two is what it holds (`meta`), in the warning tone when something stops it from coming back. A row with nothing to say there keeps the empty line, so every row is as tall. The title may be a `RowLink`. `TrashRowDate` is the date cell at the end: the day it was discarded over how long it stays ("30 days left"); the days turn to the warning tone when `urgent` (three or fewer).
 
 ## Merging categories
 

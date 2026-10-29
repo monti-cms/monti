@@ -265,9 +265,6 @@ export async function uploadImageFile(
 	};
 }
 
-export const formatBytes = (bytes: number) =>
-	bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
-
 /**
  * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.

@@ -721,6 +721,7 @@ export function InlineBubble({
 								: panel.panel.label
 				}
 				data-monti-inline-bubble
+				// design-allow: bubble position computed from the selection
 				style={style}
 				className={cn(
 					surface,
@@ -754,6 +755,7 @@ export function InlineBubble({
 				)}
 			</div>
 		) : (
+			// design-allow: bubble position computed from the selection
 			<div ref={bubbleRef} data-monti-inline-bubble style={style}>
 				<FormatBar
 					aria-label={

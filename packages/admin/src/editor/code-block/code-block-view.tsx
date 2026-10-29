@@ -462,6 +462,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 									}
 								: undefined
 						}
+						// design-allow: menu position measured from the clicked line
 						style={menu.at ?? { top: rowTop(menu.start), right: 8 }}
 					/>
 				)}

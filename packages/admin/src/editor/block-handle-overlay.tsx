@@ -99,6 +99,7 @@ export function BlockHandleOverlay({
 	return createPortal(
 		<div
 			ref={marks}
+			// design-allow: the marks follow the block under the pointer
 			style={{ position: "fixed", top: `${spot.top + 4}px`, left: `${Math.max(8, spot.left - 64)}px`, zIndex: 40 }}
 			className="flex items-center"
 		>

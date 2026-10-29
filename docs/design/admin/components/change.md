@@ -22,7 +22,7 @@ When the schema is changed, a review sheet opens before saving. Each change gets
 
 ### In code
 
-`ChangeGroup` is the `.mt-change` block: `kind` is `new`, `edit` or `drop` (the tag color), `tag` is the app's word ("New", "Edit", "Removed"), `title`, and `identifier` (the key as written in the schema, "summary → excerpt"); the children are what to do with the data already saved. Choices are `Option` rows with a radio or a check. `ChangeNote` is the one-line result (`danger` when it cannot be undone). `ChangeLines` holds `ChangeLine`s (`what`, `then`, `tone` of `default`, `danger` or `warning`). `ChangeActions` is the buttons a change ends with, in one row.
+`ChangeGroup` is the `.mt-change` block: `kind` is `new`, `edit` or `drop` (the tag color), `tag` is the app's word ("New", "Edit", "Removed"), `title`, and `identifier` (the key as written in the schema, "summary → excerpt"); the children are what to do with the data already saved. Choices are `Option` rows with a radio or a check. `ChangeLabel` names a part of a change ("what goes", "keep a copy") over the `ChangeLines` it labels, in small mono in the subtle ink. `ChangeNote` is the one-line result (`danger` when it cannot be undone). `ChangeLines` holds `ChangeLine`s (`what`, `then`, `tone` of `default`, `danger` or `warning`). `ChangeActions` is the buttons a change ends with, in one row.
 
 The name `ChangeGroup` in code is the single change block, not the DS's `.mt-change-group` below. The `.note.is-add` line has no counterpart in `ChangeNote`. The DS README names this family `SchemaReview · ChangeGroup · Patch`; no `SchemaReview` exists in `@monti-cms/ui`, and the admin draws the review in `packages/admin/src/screens/schema/review-dialog.tsx`.
 
@@ -41,7 +41,9 @@ Deleting a collection permanently deletes its entries too. It does not go throug
 - "지우고 적용" is on from the start: the review itself is the last check, and there is no identifier to type.
 - A development database deletes at once; a production site deletes when deployed.
 
-Not in `@monti-cms/ui` yet.
+### In code
+
+`DangerBlock` is the step at the bottom of a settings tab that deletes something with its data: a rule in the danger ink above and the `title` in the danger ink, with 24px above and below and 16px between the title and its rows. Each row is a `DangerRow`: its `name`, a quiet `meta` line of what it holds after it ("23 posts · 2 in the trash"; left out when not known), and the `action` button at the end. The review of a deletion is not in `@monti-cms/ui` yet.
 
 ## File change (`.mt-patch`)
 

@@ -24,7 +24,7 @@ function DropArea({
 				<span
 					aria-hidden
 					data-slot="drop-area-overlay"
-					className="pointer-events-none absolute inset-x-0 top-monti-12 -bottom-monti-12 z-1 rounded-monti-lg bg-[color-mix(in_srgb,var(--monti-fg-default)_7%,white)] monti-dark:bg-[color-mix(in_srgb,var(--monti-fg-default)_7%,black)] mix-blend-multiply monti-dark:mix-blend-screen ring-[1.5px] ring-monti-contrast ring-inset"
+					className="pointer-events-none absolute inset-x-0 top-monti-12 -bottom-monti-12 z-1 rounded-monti-lg bg-[color-mix(in_srgb,var(--monti-fg-default)_7%,var(--monti-bg-page))] mix-blend-multiply monti-dark:mix-blend-screen ring-[1.5px] ring-monti-contrast ring-inset"
 				/>
 			)}
 		</div>

@@ -165,6 +165,7 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 	return (
 		<li
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={label ? "list-none px-monti-12 py-monti-8 text-monti-caption text-monti-muted" : "h-0 list-none"}
 			data-testid={testId}

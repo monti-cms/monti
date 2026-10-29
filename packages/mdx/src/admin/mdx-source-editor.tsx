@@ -81,6 +81,7 @@ export function MdxSourceEditor({
 						<span key={index}>
 							{cached && cached.text === line
 								? cached.tokens.map((token, tokenIndex) => (
+										// design-allow: token colors are computed by the highlighter
 										// biome-ignore lint/suspicious/noArrayIndexKey: token order within the line
 										<span key={tokenIndex} style={styleOf(token)}>
 											{token.content}

@@ -32,13 +32,15 @@ A multi-line input. It has the same underline look as `Input`. Used for tone rul
 
 `Textarea`: `size="sm"` writes at the note size for compact panels; `mono` is for code and source text; `proposal` marks text the assistant wrote.
 
+`TagInput` is a list of short values in one underline field: each value is a `Chip`, and a text entry at the end adds the next one on Enter or a comma (and when the field loses focus). Backspace in the empty entry removes the last chip.
+
 ## Select
 
 A select has a chevron icon (14px, `fg-subtle`) at the right end of the underline. The text character ▾ is not used. When there are many items (language codes, time zones), it opens as a Combobox that can search.
 
 ### In code
 
-`Select` (its `items` prop is required: every value with its label, so the closed trigger shows the label) and `Combobox`. `SelectTrigger` takes `width`: `full` in a form, `fit` in a toolbar or filter, `choice` at the end of a choice row (at least 120px, as the review sheet draws it). `proposal` marks a value the assistant picked.
+`Select` (its `items` prop is required: every value with its label, so the closed trigger shows the label) with `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectLabel`, `SelectItem`, `SelectSeparator`, `SelectScrollUpButton` and `SelectScrollDownButton`, and `Combobox`: `ComboboxInput` is its field (an underline like `Input`, with the open button, or once there is a value the clear button, at the end), then `ComboboxTrigger`, `ComboboxValue`, `ComboboxContent`, `ComboboxList`, `ComboboxCollection`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxItem`, `ComboboxSeparator` and `ComboboxEmpty`; `ComboboxChips` (with `ComboboxChip` and `ComboboxChipsInput`) is the field of a combobox that holds several values. `SelectTrigger` takes `width`: `full` in a form, `fit` in a toolbar or filter, `choice` at the end of a choice row (at least 120px, as the review sheet draws it). `proposal` marks a value the assistant picked.
 
 ## Fields with fixed ends (`.mt-affix`)
 
@@ -61,7 +63,7 @@ A chevron icon after a text button that opens a list (filter, sort, changed plac
 
 ### In code
 
-`Caret` (`solo`, `ink`).
+`Caret` (`solo`, `ink`). `Collapsible` (`CollapsibleTrigger`, `CollapsibleContent`) opens and closes content; put the `Caret` after the trigger's text. A disabled trigger is dimmed to .45 like every disabled control.
 
 ## Match row (`.mt-map`, `.mt-map-row`)
 
@@ -77,7 +79,7 @@ A pill that opens in place when the page's "검색" (search) is pressed. At the 
 
 ### In code
 
-`SearchBox`: `targets` (the places to look) is optional; without it there is no picker.
+`SearchBox`: `targets` (the places to look) is optional; without it there is no picker. `SearchToggle` is the page's "Search" button (a secondary pill with the magnifier) that opens the `SearchBox` in its place with the words' field focused. The box stays while it holds words or has the focus; emptied and left, or emptied and Escape, it is the button again.
 
 ## Calendar (`.mt-cal`)
 
