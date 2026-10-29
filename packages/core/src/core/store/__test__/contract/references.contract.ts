@@ -418,7 +418,8 @@ export const referencesContract: ContractSuite = (factory) => {
 			} catch (e) {
 				err = e;
 			}
-			expect(err).toBeDefined();
+			expect(err).toBeInstanceOf(CmsError);
+			expect(err).toMatchObject({ code: "invalid_reference" });
 
 			const saved = await store.getEntry(entry1.id);
 			expect(saved.version).toBe(entry1.version);

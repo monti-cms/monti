@@ -81,13 +81,9 @@ describe("ContentStore References", () => {
 		const ref1 = buildReference({ kind: "entry", targetId: nonexistentId });
 		const snapshot1 = buildSnapshot({ slug: "create-invalid-target", references: [ref1] });
 
-		let err: unknown;
-		try {
-			await store.createEntryWithReferences({ snapshot: snapshot1, references: [ref1] });
-		} catch (e) {
-			err = e;
-		}
-		expect(err).toBeDefined();
+		await expect(store.createEntryWithReferences({ snapshot: snapshot1, references: [ref1] })).rejects.toMatchObject({
+			code: "invalid_reference",
+		});
 
 		const entryCount = await pool.query(
 			`SELECT COUNT(*) as count FROM "${schemaName}".entries WHERE working_slug = $1`,
@@ -274,13 +270,9 @@ describe("ContentStore References", () => {
 		const refInvalid = buildReference({ kind: "media", targetId: nonexistentMediaId });
 		const snapshotInvalid = buildSnapshot({ slug: `media-invalid-${randomUUID()}`, references: [refInvalid] });
 
-		let createErr: unknown;
-		try {
-			await store.createEntryWithReferences({ snapshot: snapshotInvalid, references: [refInvalid] });
-		} catch (e) {
-			createErr = e;
-		}
-		expect(createErr).toBeDefined();
+		await expect(
+			store.createEntryWithReferences({ snapshot: snapshotInvalid, references: [refInvalid] }),
+		).rejects.toMatchObject({ code: "invalid_reference" });
 
 		const entryCount = await pool.query(
 			`SELECT COUNT(*) as count FROM "${schemaName}".entries WHERE working_slug = $1`,

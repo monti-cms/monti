@@ -17,8 +17,7 @@ const MEDIA_FOLDERS = "media";
 /** What a person recognises an entry by: its title, else its address. */
 function labelOf(site: Site, entry: ExportSnapshotEntry): string | null {
 	if (site.isCollection(entry.collection)) {
-		const name = site.roleField(entry.collection, "title")?.name;
-		const title = name ? entry.working.metadata[name] : undefined;
+		const title = entry.working.metadata[site.titleField(entry.collection).name];
 		if (typeof title === "string" && title.trim()) return title.trim();
 	}
 	return entry.workingSlug ?? entry.publishedSlug;
