@@ -146,6 +146,7 @@ export function LineMenu({ start, end, lineEffects, onChange, onClose, onLinkTex
 			}
 			data-code-ui=""
 			contentEditable={false}
+			// design-allow: menu position measured from the clicked line, passed in
 			style={style}
 			className="absolute z-20 flex w-44 flex-col gap-monti-2 rounded-monti-md border bg-monti-page p-monti-4 font-sans text-monti-default shadow-monti-floating"
 		>

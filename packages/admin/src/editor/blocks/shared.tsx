@@ -2,13 +2,12 @@
 
 import { SettingsAdjust } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
+import { BlockBar, cn, IconButton, Inline, Label, Popover, PopoverContent, PopoverTrigger, Stack } from "@monti-cms/ui";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";
-import { BLOCK_TOOLBAR } from "./block-model";
 import { blocksMessages } from "./messages";
 
-export { BLOCK_TOOLBAR, useEditorEditable } from "./block-model";
+export { useEditorEditable } from "./block-model";
 
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.
@@ -120,18 +119,15 @@ export function ContainerToolbar({
 }) {
 	return (
 		<div
-			role="toolbar"
-			aria-label={label}
 			contentEditable={false}
 			className={cn(
-				BLOCK_TOOLBAR,
-				"absolute -top-3.5 right-2 transition-opacity",
+				"absolute -top-3.5 right-2 z-10 flex transition-opacity",
 				"opacity-0 group-focus-within/container:opacity-100 group-hover/container:opacity-100 has-aria-expanded:opacity-100",
 				visible && "opacity-100",
 				className,
 			)}
 		>
-			{children}
+			<BlockBar aria-label={label}>{children}</BlockBar>
 		</div>
 	);
 }

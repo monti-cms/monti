@@ -59,7 +59,7 @@ A notice that runs across the top of a page screen is not used. It overlaps the 
 
 ### In code
 
-`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short; `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses).
+`Banner`: a 6px dot leads the sentence, 8px before its words. `tone` is `warning` (the default) or `danger`. `title` is the sentence and `meta` the small mono detail after it, cut with "…" when the line is short; `children` are the actions at the right end (text buttons: the one that goes somewhere underlined, then the one that dismisses). `DotNote` is the quiet line led by a 6px dot, 8px before its words, for the state of what a panel shows ("In the trash · 3 days left · Read only").
 
 A failed notice (a failed delivery) is danger, not warning, and uses red (`.mt-banner--danger`).
 

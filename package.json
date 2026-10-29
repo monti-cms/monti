@@ -10,6 +10,7 @@
 		"lint:fix": "pnpm exec biome check . --write",
 		"gen:tokens": "node scripts/gen-tokens.mjs",
 		"check:korean": "node scripts/check-korean.mjs",
+		"check:design": "node scripts/check-design.mjs",
 		"test:visual": "pnpm --filter @monti-cms/ui test:visual",
 		"test:visual:audit": "pnpm --filter @monti-cms/ui test:visual:audit",
 		"test:visual:update": "pnpm --filter @monti-cms/ui test:visual:update",

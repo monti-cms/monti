@@ -32,7 +32,7 @@ Decide by whether it can be undone, not by what kind of thing it is. There is no
 
 ### In code
 
-`Dialog` (`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`) and `AlertDialog` (a question that must be answered before anything else; closed only by its own buttons or Escape). `DialogFormFooter` is the footer of a dialog that holds a form: a cancel text button and one pill, which shows its `busyLabel` while the request runs. Focus lands on the first text field when a modal opens, else on the modal itself, so no button shows a focus ring at the moment it appears.
+`Dialog` (`DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger`; `DialogPortal` and `DialogOverlay` are the portal and the dimmed ground that `DialogContent` already draws, so a screen does not use them) and `AlertDialog` (a question that must be answered before anything else; closed only by its own buttons or Escape) with `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel` and `AlertDialogAction` (`AlertDialogPortal` and `AlertDialogOverlay` are the same pair as in `Dialog`). `AlertDialogContent` has a `wide` size (520px) for a question that lists what it touches, with a choice per line (the review of a permanent delete). `DialogFormFooter` is the footer of a dialog that holds a form: a cancel text button and one pill, which shows its `busyLabel` while the request runs. Focus lands on the first text field when a modal opens, else on the modal itself, so no button shows a focus ring at the moment it appears.
 
 ## Sheet
 

@@ -162,7 +162,7 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected" +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected " +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
@@ -305,6 +305,7 @@ export function CmsEditor({
 			className="relative flex min-h-full w-full flex-1 flex-col bg-monti-page"
 			data-monti-editor-shell
 			// Title, body, and source use the same width (`--editor-width`).
+			// design-allow: editor width comes from the chosen width step
 			style={{ "--editor-width": widthStep.width } as CSSProperties}
 			onCompositionStart={(event) => {
 				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
@@ -341,6 +342,7 @@ export function CmsEditor({
 			>
 				{/* The tool group is centered in the toolbar. Leave the same space on both sides as the width of the right-end element,
 				        and if still narrow (e.g. when the translation source column is open), keep one line and fold less-used tools into "More". */}
+				{/* design-allow: toolbar padding follows the measured width of the aside */}
 				<div className="relative flex min-h-12 items-center py-monti-8" style={{ paddingInline: asideWidth + 24 }}>
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
 					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-monti-4">

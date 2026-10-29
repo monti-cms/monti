@@ -251,6 +251,7 @@ export function ImageBlockView() {
 				"group group/container relative my-monti-24 flex flex-col rounded-monti-lg transition-all [&_img]:m-0",
 				alignClasses,
 			)}
+			// design-allow: width is the author's setting or the resize in progress
 			style={{ width: previewWidth || width || "100%", maxWidth: "100%" }}
 		>
 			{/* Block toolbar row: alignment, settings, crop. Deleting is in the block handle menu. */}
@@ -330,6 +331,7 @@ export function ImageBlockView() {
 					<div
 						data-slot="image-transform-wrapper"
 						className="relative w-full max-w-full overflow-hidden rounded-monti-md bg-monti-muted"
+						// design-allow: width and transform come from the author's setting and the crop in progress
 						style={{
 							width: previewWidth || width || "100%",
 							maxWidth: "100%",
@@ -346,6 +348,7 @@ export function ImageBlockView() {
 									setAspectRatio(naturalWidth / naturalHeight);
 								}
 							}}
+							// design-allow: image transform computed from the crop and rotation
 							style={transform.imageStyle}
 						/>
 					</div>

@@ -72,6 +72,7 @@ export function SeoPreview({
 							.filter(Boolean)
 							.map((part) => ` › ${decodeURIComponent(part)}`)}
 					</Text>
+					{/* design-allow: Google's own result link colors, on purpose, so the preview looks like the real result */}
 					<p className="line-clamp-2 font-medium monti-dark:text-[#8ab4f8] text-[#1a0dab] text-monti-body">
 						{title || tc("untitled")}
 					</p>

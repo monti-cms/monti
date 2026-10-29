@@ -46,6 +46,7 @@ export function BlockHandleOverlay({
 
 	return createPortal(
 		<div
+			// design-allow: position follows the block under the pointer
 			style={{
 				position: "fixed",
 				top: `${coords.top}px`,

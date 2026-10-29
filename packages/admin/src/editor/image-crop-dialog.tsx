@@ -221,17 +221,18 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 					{/* Image area + crop overlay (wrapper sized to the real image) */}
 					<Stack gap={8} align="center">
+						{/* design-allow: crop stage: the image area is capped to a fixed geometry */}
 						<div className="flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-monti-md border bg-monti-tool p-monti-4">
 							<div
 								ref={containerRef}
 								onPointerDown={(e) => handlePointerDown(e)}
-								className="relative inline-block select-none"
-								style={{ touchAction: "none" }}
+								className="relative inline-block touch-none select-none"
 							>
 								<img
 									ref={imgRef}
 									src={src}
 									alt={t("imageCrop.target")}
+									// design-allow: crop stage: the image is capped to a fixed geometry
 									className="pointer-events-none block max-h-[360px] max-w-full select-none rounded-monti-md"
 									draggable={false}
 								/>
@@ -242,6 +243,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 										{/* Dark translucent background mask (outside the area, design tokens applied) */}
 										<div
 											className="pointer-events-none absolute inset-0 bg-monti-emphasis"
+											// design-allow: clip path follows the crop box being dragged
 											style={{
 												clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${cropDraft.x}% ${cropDraft.y}%, ${cropDraft.x}% ${cropDraft.y + cropDraft.height}%, ${cropDraft.x + cropDraft.width}% ${cropDraft.y + cropDraft.height}%, ${cropDraft.x + cropDraft.width}% ${cropDraft.y}%, ${cropDraft.x}% ${cropDraft.y}%)`,
 											}}
@@ -252,6 +254,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 											data-slot="crop-box"
 											onPointerDown={(e) => handlePointerDown(e, "move")}
 											className="absolute cursor-move border-2 border-monti-emphasis"
+											// design-allow: crop box follows the pointer
 											style={{
 												left: `${cropDraft.x}%`,
 												top: `${cropDraft.y}%`,

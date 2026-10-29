@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
 import { cn, Text } from "@monti-cms/ui";
+// design-allow: the drag handle needs cursor and touch classes and the closed IconButton takes none (a drag handle part in ui would remove this)
 import { IconButton } from "@monti-cms/ui/internal";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
@@ -40,6 +41,7 @@ export function SortableEntryRow({
 	return (
 		<li
 			ref={setNodeRef}
+			// design-allow: dnd-kit moves the row while it is dragged
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"flex items-center gap-monti-4 rounded-monti-md border border-monti-muted bg-monti-page px-monti-4 py-monti-4 text-monti-caption",
