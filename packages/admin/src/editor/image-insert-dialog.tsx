@@ -112,7 +112,7 @@ export function MediaPickerDialog({
 	});
 	const nav: MediaPickerFolder[] = useMemo(
 		() =>
-			folderNav(foldersQuery.data ?? []).map((item) => ({
+			folderNav(Array.isArray(foldersQuery.data) ? foldersQuery.data : []).map((item) => ({
 				id: item.id,
 				name: item.name,
 				depth: item.depth,

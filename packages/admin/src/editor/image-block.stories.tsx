@@ -3,6 +3,7 @@ import type { Editor as TiptapEditor } from "@tiptap/core";
 import { userEvent, within } from "storybook/test";
 import { testSite } from "../../../core/test/site";
 import type { MediaItem } from "../api/media";
+import { SlotRegistryProvider, type SlotSource } from "../slots/slots";
 import { type FakeApi, PageFrame } from "../stories/screen-frame";
 import { storedDoc } from "../test/stored-doc";
 import { openMediaPicker } from "./block-inserts";
@@ -80,21 +81,64 @@ const BODY = [
 	para("편집기도 같은 원칙으로 정리했다. 글을 쓰는 동안 보이는 건 글뿐이다."),
 ];
 
-function Editor({ blocks, onEditor }: { blocks: object[]; onEditor?: (editor: TiptapEditor) => void }) {
+/** A picture of the site (`/story-images` is a static folder of Storybook): an editor image needs an address of the site, which a data URL is not. */
+const PICTURE = "/story-images/desk.svg";
+const PICTURE_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" width="1376" height="480" viewBox="0 0 1376 480"><rect width="1376" height="480" fill="#a99578"/><circle cx="1090" cy="120" r="56" fill="#ece3d0"/><path d="M0 480V330l260-130 220 150 200-110 260 160 436-190v270z" fill="#6e5e45" opacity=".6"/></svg>';
+
+/** The fill actions of the image's alt text and caption, as a source of the assistant gives them: they answer after a moment. */
+const imageSource: SlotSource = (request) =>
+	request.slot === "image"
+		? [
+				{
+					id: request.target,
+					label: request.target === "alt" ? "대체 텍스트 쓰기" : "캡션 쓰기",
+					apply: "replace",
+					run: () =>
+						new Promise((resolve) =>
+							setTimeout(() => resolve({ kind: "text", text: "책상 위 노트북에 열린 편집기" }), 400),
+						),
+				},
+			]
+		: [];
+
+/** The editor on a body, with the image slot attached. `select` selects the n-th image once the editor is there (a clicked image). */
+function Editor({
+	blocks,
+	select,
+	onEditor,
+}: {
+	blocks: object[];
+	select?: number;
+	onEditor?: (editor: TiptapEditor) => void;
+}) {
 	return (
 		<PageFrame api={api} pathname="/admin/posts/first">
-			<div className="mx-auto h-[900px] w-full max-w-3xl overflow-hidden bg-monti-page">
-				<CmsEditor
-					doc={storedDoc(...(BODY as never[]), ...(blocks as never[]))}
-					onChange={() => {}}
-					onEditor={(editor) => editor && onEditor?.(editor)}
-				/>
-			</div>
+			<SlotRegistryProvider sources={[imageSource]}>
+				<div className="mx-auto h-[900px] w-full max-w-3xl overflow-hidden bg-monti-page">
+					<CmsEditor
+						doc={storedDoc(...(BODY as never[]), ...(blocks as never[]))}
+						onChange={() => {}}
+						onEditor={(editor) => {
+							if (!editor) return;
+							if (select !== undefined) {
+								const positions: number[] = [];
+								editor.state.doc.descendants((node, pos) => {
+									if (node.type.name === "image") positions.push(pos);
+								});
+								const pos = positions[select];
+								if (pos !== undefined) editor.commands.setNodeSelection(pos);
+							}
+							onEditor?.(editor);
+						}}
+					/>
+				</div>
+			</SlotRegistryProvider>
 		</PageFrame>
 	);
 }
 
-/** A pasted image at the cursor while it goes up: faded, with the bar along its bottom edge and the caption field below. */
+/** A pasted image at the cursor while it goes up: faded under the page ground, the bar along its bottom edge, and no ring. */
 export const Uploading: Story = {
 	tags: ["visual"],
 	render: () => (
@@ -102,21 +146,22 @@ export const Uploading: Story = {
 			blocks={[]}
 			onEditor={(editor) => {
 				// An image that is going up is not part of the stored document, so it goes in through the editor, as a paste does.
-				beginImageUpload("story-upload", new File([""], "pasted.png", { type: "image/png" }));
+				// The same picture as the site one, as the file the person pasted (the story's fetch answers from the fake server, so it cannot read it).
+				beginImageUpload("story-upload", new File([PICTURE_SVG], "pasted.svg", { type: "image/svg+xml" }));
 				setImageUploadPercent("story-upload", 64);
 				editor.commands.insertContentAt(editor.state.doc.content.size, {
 					type: "image",
-					attrs: { uploadId: "story-upload", alt: "", caption: "", width: "100%" },
+					attrs: { uploadId: "story-upload", alt: "", caption: "", align: "center" },
 				});
 			}}
 		/>
 	),
 };
 
-/** The image card: width, alt text with its fill action and the error line, the decorative choice. */
+/** The selected image: the 2px ring on the picture, the tool row above it, the caption with its fill action under it, and the card: width, alt text, decorative. */
 export const ImageCard: Story = {
 	tags: ["visual"],
-	render: () => <Editor blocks={[{ type: "image", attrs: { src: "/sample.png", alt: "", width: "100%" } }]} />,
+	render: () => <Editor blocks={[{ type: "image", attrs: { src: PICTURE, alt: "" } }]} select={0} />,
 	play: async ({ canvasElement }) => {
 		const settings = await within(canvasElement).findByRole("button", { name: t("imageNode.settings") });
 		await userEvent.click(settings);
@@ -129,9 +174,10 @@ export const NextImage: Story = {
 	render: () => (
 		<Editor
 			blocks={[
-				{ type: "image", attrs: { src: "/one.png", alt: "책상 위 노트북에 열린 편집기", width: "100%" } },
-				{ type: "image", attrs: { src: "/two.png", alt: "", width: "100%" } },
+				{ type: "image", attrs: { src: PICTURE, alt: "책상 위 노트북에 열린 편집기" } },
+				{ type: "image", attrs: { src: PICTURE, alt: "" } },
 			]}
+			select={0}
 		/>
 	),
 	play: async ({ canvasElement }) => {

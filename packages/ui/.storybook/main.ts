@@ -32,6 +32,8 @@ const config: StorybookConfig = {
 	staticDirs: [
 		{ from: pretendardSubsets, to: "/fonts/pretendard" },
 		{ from: plexFiles, to: "/fonts/ibm-plex-mono" },
+		// Pictures for the screen stories: an editor image needs an address of the site (`/...`), which a data URL is not.
+		{ from: path.resolve(here, "story-images"), to: "/story-images" },
 	],
 	previewHead: withFonts,
 	// The manager's chrome uses the same faces as the preview (`manager-theme.generated.ts` names them).
