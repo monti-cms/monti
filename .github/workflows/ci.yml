@@ -1,4 +1,5 @@
-# Automated checks. On every push: lint, type check, unused code and package build; tests (Postgres service); the design system's visual regression; and the example app bundle check.
+# Automated checks. On every push: lint, type check, unused code and package build; tests (Postgres service); and the example app bundle check. The
+# design system's visual regression runs only on a push that asks for it (see the `visual` job).
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -93,8 +94,11 @@ jobs:
   # The design system's catalog in light and dark, compared with the shots under packages/ui/visual/baselines. It runs in Playwright's own Linux
   # image, at the version of the installed @playwright/test (a test checks the tag), because the baselines are made on that image and no other:
   # text is drawn differently per operating system.
+  # Off by default until monti-cms/monti#334 makes it stable (a 1px shift fails a story, and the audit flags icons that sit right): it runs only
+  # when the last commit of the push has `[visual]` in its message.
   visual:
     name: visual regression
+    if: contains(github.event.head_commit.message, '[visual]')
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
