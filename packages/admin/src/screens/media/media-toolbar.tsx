@@ -1,6 +1,5 @@
 "use client";
 
-import { Grid, List } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
@@ -139,8 +138,8 @@ function FilterBar({ library }: { library: MediaLibraryView }) {
 					value={library.view}
 					onValueChange={library.setView}
 					options={[
-						{ value: "grid", label: <Grid aria-hidden />, "aria-label": t("view.grid") },
-						{ value: "list", label: <List aria-hidden />, "aria-label": t("view.list") },
+						{ value: "grid", label: t("view.grid") },
+						{ value: "list", label: t("view.list") },
 					]}
 				/>
 			</PageToolbarEnd>
