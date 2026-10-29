@@ -74,7 +74,7 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /** What a label row says about a field that differs from the saved value: the dot's name, the undo button's text and what it puts back. */
-interface FormFieldChange {
+export interface FormFieldChange {
 	/** The dot's name for a screen reader ("changed"). */
 	label: string;
 	/** The undo button's text ("undo"). */

@@ -34,7 +34,7 @@ const FOLDER_TAB =
 	"inline-flex h-9 items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
 
 /** What moves a tab while it is dragged, or while the others make room for it. */
-interface TabMotion {
+export interface TabMotion {
 	transform?: string;
 	transition?: string;
 }
