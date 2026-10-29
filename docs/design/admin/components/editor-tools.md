@@ -2,7 +2,7 @@
 
 This page covers the tools inside the editor: the block handle and block menu, the format bar on selected text, the block tool row, the file block and the body blocks.
 
-There is no always-visible toolbar. The block handle, the format card that appears when text is selected, and the "/" insert menu (see Menu) do everything. The one thing that stays on the body is a row of document tools (the source toggle, the width menu, what a plugin adds) at the top right of the body: the boards do not place them, so it is a plain row of icon buttons until the design says where they go.
+There is no always-visible toolbar. The block handle, the format card that appears when text is selected, and the "/" insert menu (see Menu) do everything. Nothing else sits on the body: the document tools are a group of the header's ⋯ menu ("EditorNotion" board, `moreMenu`). The group holds what a plugin adds (a source panel's switch such as "MDX로 보기", a text checker, "모두 번역"), the source beside a translation ("원문 옆에 보기"), "본문 폭 ▸" with the chosen width as its value and the steps with a ✓ in its second level, and the theme. Copy, archive and export sit above it; "휴지통으로" stays at the bottom. The core only opens the place; it shows a plugin's row only when that plugin is installed (`EditorMenuItem`, `menuItems` of an edit screen extension). The template editor's ⋯ has the same group above 복제 · 지우기.
 
 An empty line the cursor is on, and the one empty line of a new post, says "/ 를 눌러 블록 넣기" (`fg-faint`, in the body's own type). Only a top-level paragraph shows it.
 

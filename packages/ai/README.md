@@ -185,7 +185,7 @@ then text inputs. An action whose result must have a specific shape to pass its 
   `PUT { expectedVersion, texts }` (edit many), and `DELETE ?key=&expectedVersion=` (delete). All return the updated list, and a
   version mismatch returns 409.
 - **Polish and draft**: `polish` (the menu that appears when you select text in the body; shows the changes, then applies them) and
-  `draft` (slash menu and empty-document toolbar; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
+  `draft` (slash menu and the ⋯ menu of an empty document; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
   automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Prompt snippets added in the
   admin screen go into the instruction as `{{snippet.key}}` in the admin screen.
 - **Try it**: on the admin AI screen, run an action before saving from the bottom right of the action. The fields are built from the

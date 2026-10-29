@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { editorMessages } from "../../../editor/messages";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
@@ -55,6 +56,7 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 const ts = testSite.createTranslator(statusBarMessages);
+const te = testSite.createTranslator(editorMessages);
 
 const DOC = {
 	type: "doc",
@@ -339,11 +341,13 @@ describe("flow: templates · the editor page", () => {
 		expect((screen.getByRole("textbox", { name: t("editor.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
 	});
 
-	it("holds duplicate and delete in its menu, and deleting asks first and goes back to the list", async () => {
+	it("holds the body width, duplicate and delete in its menu, and deleting asks first and goes back to the list", async () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
 		fireEvent.click(screen.getByRole("button", { name: t("editor.more") }));
+		// The document tools on top (the body width with its value), then the template's own actions, delete last.
 		expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
+			`${te("editorWidth.label")}${te("editorWidth.normal")}`,
 			t("row.duplicate"),
 			t("row.delete"),
 		]);

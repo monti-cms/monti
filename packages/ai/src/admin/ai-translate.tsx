@@ -1,19 +1,24 @@
 "use client";
 
 import { StopFilledAlt, Translate } from "@carbon/icons-react";
-import { type EditorExtension, errorText, type Site, useSite, useTranslator } from "@monti-cms/admin";
+import {
+	type EditorExtension,
+	type EditorMenuItem,
+	errorText,
+	type Site,
+	useSite,
+	useTranslator,
+} from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import {
-	Button,
-	Inline,
+	Dialog,
+	DialogContent,
+	DialogFormFooter,
+	DialogHeader,
+	DialogTitle,
 	isComposingKey,
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
 	Stack,
-	Text,
 	Textarea,
-	TextButton,
 	toast,
 } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/react";
@@ -80,7 +85,7 @@ function batches<T extends { mdx: string }>(blocks: T[]): T[][] {
 
 /**
  * AI translation behavior in the translation editor. `blockActions` are the translation actions next to the block handle (one per action, named by the action name),
- * and `toolbar` is Translate all in the toolbar. If there is no usable translation action, both are absent.
+ * and `menuItems` is Translate all (or Stop while it runs) in the ⋯ menu, with its form in `overlay`. If there is no usable translation action, both are absent.
  */
 export function useAiTranslate(locales: { sourceLocale: string; targetLocale: string } | null) {
 	const site = useSite();
@@ -111,7 +116,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	const [request, setRequest] = useState("");
 	const [open, setOpen] = useState(false);
 	const abortRef = useRef<AbortController | null>(null);
-	/** Requests that translate one block at a time. Stop in the toolbar stops them too. */
+	/** Requests that translate one block at a time. Stop in the ⋯ menu stops them too. */
 	const blockAbortRef = useRef(new Map<number, AbortController>());
 
 	const setEditor = useCallback((editor: Editor | null) => {
@@ -132,7 +137,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 			if (!locales || !format) return;
 			const unit = unitAt(site, format, editor.state.doc, pos);
 			if (!unit) return;
-			// Block translation does not use the toolbar's extra request (that request applies only to Translate all).
+			// Block translation does not use the extra request of Translate all (that request applies only to Translate all).
 			blockAbortRef.current.get(pos)?.abort();
 			const controller = new AbortController();
 			blockAbortRef.current.set(pos, controller);
@@ -243,79 +248,82 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 	);
 
 	const running = progress !== null || busyBlocks.size > 0;
-	const toolbar = feature ? (
-		running ? (
-			<Inline gap={4}>
-				{progress && (
-					<Text variant="caption" tone="muted">
-						{t("progress", { done: progress.done, total: progress.total })}
-					</Text>
-				)}
-				<TextButton type="button" variant="quiet" onClick={stop}>
-					<StopFilledAlt aria-hidden />
-					{t("stop")}
-				</TextButton>
-			</Inline>
-		) : (
-			<Popover open={open} onOpenChange={setOpen}>
-				<PopoverTrigger render={<TextButton type="button" variant="quiet" />}>
-					<Translate aria-hidden />
-					{t("all")}
-				</PopoverTrigger>
-				<PopoverContent align="end" width="md">
-					<Stack
-						as="form"
-						gap={8}
-						onSubmit={(event) => {
-							event.preventDefault();
-							void translateAll();
-						}}
-					>
-						{features.length > 1 && (
-							<OptionSelect
-								aria-label={t("action")}
-								value={feature.key}
-								options={features.map((item) => ({ value: item.key, label: item.label }))}
-								onChange={setChosenKey}
-							/>
-						)}
-						{feature.askInstruction && (
-							<Textarea
-								aria-label={t("request")}
-								placeholder={t("request")}
-								rows={3}
-								value={request}
-								onChange={(event) => setRequest(event.target.value)}
-								onKeyDown={(event) => {
-									// Enter inserts a newline; Cmd/Ctrl+Enter runs.
-									if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
-										event.preventDefault();
-										void translateAll();
-									}
-								}}
-								size="sm"
-							/>
-						)}
-						<Inline justify="end">
-							<Button type="submit" size="sm">
-								<Translate aria-hidden />
-								{t("run")}
-							</Button>
-						</Inline>
-					</Stack>
-				</PopoverContent>
-			</Popover>
-		)
+	// "Translate all" is a row of the editor's ⋯ menu. With one action and nothing to ask, the row runs it; otherwise it opens a small form first.
+	// While it runs, the same row stops it and says how far it got.
+	const asks = feature !== undefined && (features.length > 1 || feature.askInstruction === true);
+	const menuItems: EditorMenuItem[] = feature
+		? running
+			? [
+					{
+						key: "ai-translate:stop",
+						label: t("stop"),
+						icon: <StopFilledAlt aria-hidden />,
+						caption: progress ? t("progress", { done: progress.done, total: progress.total }) : undefined,
+						onSelect: stop,
+					},
+				]
+			: [
+					{
+						key: "ai-translate:all",
+						label: t("all"),
+						icon: <Translate aria-hidden />,
+						onSelect: () => (asks ? setOpen(true) : void translateAll()),
+					},
+				]
+		: [];
+	const overlay = feature ? (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogContent form>
+				<Stack
+					as="form"
+					gap={16}
+					onSubmit={(event) => {
+						event.preventDefault();
+						void translateAll();
+					}}
+				>
+					<DialogHeader>
+						<DialogTitle>{t("all")}</DialogTitle>
+					</DialogHeader>
+					{features.length > 1 && (
+						<OptionSelect
+							aria-label={t("action")}
+							value={feature.key}
+							options={features.map((item) => ({ value: item.key, label: item.label }))}
+							onChange={setChosenKey}
+						/>
+					)}
+					{feature.askInstruction && (
+						<Textarea
+							aria-label={t("request")}
+							placeholder={t("request")}
+							rows={3}
+							value={request}
+							onChange={(event) => setRequest(event.target.value)}
+							onKeyDown={(event) => {
+								// Enter inserts a newline; Cmd/Ctrl+Enter runs.
+								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
+									event.preventDefault();
+									void translateAll();
+								}
+							}}
+						/>
+					)}
+					<DialogFormFooter onCancel={() => setOpen(false)} submitLabel={t("run")} />
+				</Stack>
+			</DialogContent>
+		</Dialog>
 	) : null;
 
-	return { blockActions, toolbar, setEditor };
+	return { blockActions, menuItems, overlay, setEditor };
 }
 
-/** AI translation attached as an edit-screen extension. Adds Translate all to the translation editor's toolbar and translation actions next to block handles. */
+/** AI translation attached as an edit-screen extension. Adds Translate all to the translation editor's ⋯ menu and translation actions next to block handles. */
 export const useAiTranslateExtension: EditorExtension = ({ translateLocales }) => {
 	const translate = useAiTranslate(translateLocales);
 	return {
-		toolbar: translate.toolbar,
+		menuItems: translate.menuItems,
+		overlay: translate.overlay,
 		blockActions: translate.blockActions.length > 0 ? translate.blockActions : undefined,
 		onEditor: translate.setEditor,
 	};

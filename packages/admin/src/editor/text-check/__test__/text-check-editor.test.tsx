@@ -8,7 +8,6 @@ import { useMemo } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
-import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
@@ -64,7 +63,7 @@ const fakeChecker = (options: Partial<Pick<TextChecker, "auto" | "locales">> = {
 		),
 	});
 
-/** Renders the buttons and popups of admin extensions (`editorExtensions`) next to the editor, like the edit screen. */
+/** Renders the ⋯ menu rows of admin extensions (`editorExtensions`) as buttons next to the editor, and their popups, like the edit screen. */
 function Harness({
 	content,
 	locale,
@@ -88,7 +87,11 @@ function Harness({
 	return (
 		<>
 			<div role="toolbar" aria-label="확장 도구">
-				{extensions.toolbar}
+				{extensions.menuItems.map((item) => (
+					<button key={item.key} type="button" aria-description={item.caption} onClick={item.onSelect}>
+						{item.label}
+					</button>
+				))}
 			</div>
 			<CmsEditor
 				doc={doc}
@@ -135,7 +138,7 @@ const issuesOf = (editor: Editor) => {
 	return key ? textCheckIssues(editor.state, key) : [];
 };
 
-/** Checker button. Its name is the checker's `label`. */
+/** The checker's row of the ⋯ menu. Its name is the checker's `label`. */
 const checkButton = (name = "가짜 검사") =>
 	within(screen.getByRole("toolbar", { name: "확장 도구" })).queryByRole("button", { name });
 
@@ -185,10 +188,9 @@ describe("spellcheck button", () => {
 		expect(checkButton()).toBeNull();
 	});
 
-	it("checks the whole document on click and shows underlines and the result count", async () => {
+	it("checks the whole document on click and shows underlines", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("첫 문단은 틀린말 입니다\n\n둘째 문단\n", [checker]);
-		expect(screen.queryByRole("button", { name: t("results") })).toBeNull();
 
 		fireEvent.click(checkButton() as HTMLElement);
 
@@ -198,7 +200,6 @@ describe("spellcheck button", () => {
 		expect(sent.map((segment) => segment.text)).toEqual(["첫 문단은 틀린말 입니다", "둘째 문단"]);
 		expect(sent.every((segment) => segment.locale === "ko")).toBe(true);
 		expect(editor.view.dom.querySelector(".monti-text-issue")?.textContent).toBe("틀린말");
-		expect(screen.getByRole("button", { name: t("results") }).textContent).toBe("1");
 	});
 
 	it("checks only the selected paragraph when text is selected", async () => {
@@ -255,20 +256,6 @@ describe("spellcheck button", () => {
 		expect(checker.check).toHaveBeenCalledTimes(1);
 	});
 
-	it("selects the spot and opens the result popup when chosen from the result list", async () => {
-		const { editor } = await renderEditor("앞 문단\n\n이것은 틀린말 입니다\n", [fakeChecker()]);
-		fireEvent.click(checkButton() as HTMLElement);
-		await waitFor(() => expect(issuesOf(editor)).toHaveLength(1));
-
-		fireEvent.click(screen.getByRole("button", { name: t("results") }));
-		pressOption(await screen.findByRole("menuitem", { name: /틀린말/ }));
-
-		const [issue] = issuesOf(editor);
-		await waitFor(() => expect(editor.state.selection.from).toBe(issue?.from));
-		expect(editor.state.selection.to).toBe(issue?.to);
-		expect(await screen.findByRole("dialog", { name: t("results") })).toBeTruthy();
-	});
-
 	it("shows a notification when the checker fails", async () => {
 		const failing = defineTextChecker({
 			id: "broken",
@@ -283,22 +270,25 @@ describe("spellcheck button", () => {
 		expect(checkButton("고장")?.hasAttribute("disabled")).toBe(false);
 	});
 
-	it("renames the button and disables it while checking", async () => {
+	it("says it is checking on the row and does not start a second run", async () => {
 		let finish: (() => void) | undefined;
 		const slow = defineTextChecker({
 			id: "slow",
 			label: "느림",
-			check: () =>
-				new Promise((resolve) => {
-					finish = () => resolve([]);
-				}),
+			check: vi.fn(
+				() =>
+					new Promise<[]>((resolve) => {
+						finish = () => resolve([]);
+					}),
+			),
 		});
 		await renderEditor("문단\n", [slow]);
 		fireEvent.click(checkButton("느림") as HTMLElement);
-		const busy = await screen.findByRole("button", { name: t("running") });
-		expect(busy.hasAttribute("disabled")).toBe(true);
+		await waitFor(() => expect(checkButton("느림")?.getAttribute("aria-description")).toBe(t("running")));
+		fireEvent.click(checkButton("느림") as HTMLElement);
+		expect(slow.check).toHaveBeenCalledTimes(1);
 		await act(async () => finish?.());
-		await waitFor(() => expect(checkButton("느림")).not.toBeNull());
+		await waitFor(() => expect(checkButton("느림")?.getAttribute("aria-description")).toBeNull());
 	});
 });
 

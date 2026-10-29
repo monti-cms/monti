@@ -31,6 +31,8 @@ import {
 } from "@monti-cms/ui";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import type { EditorMenuItem } from "../../admin-components";
+import { EditorMenuRows } from "../../editor/editor-menu";
 import { commonMessages } from "../../lib/common.messages";
 import { AdminLink as Link } from "../../router";
 import { ExportDialog } from "../export/export-dialog";
@@ -52,11 +54,19 @@ interface EntryEditorHeaderProps {
 	commands: EntryLifecycleCommands;
 	isInspectorOpen: boolean;
 	onToggleInspector: () => void;
+	/** Rows of the ⋯ menu's document tools: the screen's view switches and what editor extensions add. */
+	menuItems?: readonly EditorMenuItem[];
 }
 
 const SAVE_SHORTCUT = "⌘S";
 
-export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleInspector }: EntryEditorHeaderProps) {
+export function EntryEditorHeader({
+	editor,
+	commands,
+	isInspectorOpen,
+	onToggleInspector,
+	menuItems,
+}: EntryEditorHeaderProps) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
 	const tc = useTranslator(commonMessages);
@@ -249,6 +259,13 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								{tx("menu.exportEntry")}
 							</DropdownMenuItem>
 						)}
+						{/* The document tools: what extensions add (MDX view, Translate all), the body width and the theme. */}
+						{entry && <DropdownMenuSeparator />}
+						<EditorMenuRows items={menuItems} />
+						<DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+							<Contrast aria-hidden />
+							{t("toggleTheme")}
+						</DropdownMenuItem>
 						{entry && !isTrashed && (
 							<>
 								<DropdownMenuSeparator />
@@ -275,11 +292,6 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 								)}
 							</>
 						)}
-						{entry && <DropdownMenuSeparator />}
-						<DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
-							<Contrast aria-hidden />
-							{t("toggleTheme")}
-						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 				<Inline height="control-sm" paddingX={4}>

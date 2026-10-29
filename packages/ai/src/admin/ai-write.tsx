@@ -462,24 +462,21 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 
 	const firstInsert = usable.insert[0];
 	return {
-		toolbar: (
-			<>
-				{/* In an empty document, the toolbar writes a draft directly. */}
-				{empty && editor && firstInsert && (
-					<TextButton
-						type="button"
-						variant="quiet"
-						onClick={() => {
-							const { from, to } = editor.state.selection;
-							setJob({ mode: "insert", action: firstInsert, editor, from, to });
-						}}
-					>
-						<Spark aria-hidden />
-						{firstInsert.label}
-					</TextButton>
-				)}
-			</>
-		),
+		// In an empty document, the ⋯ menu offers to write a draft directly.
+		menuItems:
+			empty && editor && firstInsert
+				? [
+						{
+							key: `ai-write:${firstInsert.key}`,
+							label: firstInsert.label,
+							icon: <Spark aria-hidden />,
+							onSelect: () => {
+								const { from, to } = editor.state.selection;
+								setJob({ mode: "insert", action: firstInsert, editor, from, to });
+							},
+						},
+					]
+				: [],
 		overlay: job && format && (
 			<WriteDialog job={job} format={format} getEntry={getEntry} onClose={() => setJob(null)} />
 		),

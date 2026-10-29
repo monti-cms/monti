@@ -29,6 +29,7 @@ export {
 	Dialog,
 	DialogContent,
 	DialogFooter,
+	DialogFormFooter,
 	DialogHeader,
 	DialogTitle,
 	DropdownMenu,

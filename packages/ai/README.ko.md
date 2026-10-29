@@ -163,7 +163,7 @@ MDX 결과는 MDX 입력을 그대로(흘려받기는 글로 시작하는 문단
   `PATCH { expectedVersion, key, label?, text }`(하나 고치기), `PUT { expectedVersion, texts }`(여럿 고치기),
   `DELETE ?key=&expectedVersion=`(삭제). 모두 바뀐 목록을 돌려주고, 버전이 다르면 409다.
 - **문체 다듬기·초안 쓰기**: `polish`(본문에서 글자를 고르면 뜨는 메뉴, 바뀐 곳을 보인 뒤 바꾸기),
-  `draft`(슬래시 메뉴·빈 문서 툴바, 커서 자리에 넣기). 프롬프트 조각 `styleGuide`가 있으면 저절로, 다른 키면
+  `draft`(슬래시 메뉴·빈 문서의 ⋯ 메뉴, 커서 자리에 넣기). 프롬프트 조각 `styleGuide`가 있으면 저절로, 다른 키면
   `aiPresets.polish({ styleGuide: "키" })`로 문체 가이드를 넣는다. 관리자 화면에서 더한 조각은 관리자 화면에서 지시문에
   `{{snippet.키}}`로 넣는다.
 - **시험**: 관리자 AI 화면의 기능 오른쪽 아래에서 저장 전에 실행해 본다. 칸은 기능의 입력 종류로 만든다(글·MDX·코드는

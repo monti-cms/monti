@@ -81,7 +81,7 @@ export default defineAdminPlugin({ components: { icons: { view: View } } });
 
 ### 원문 패널
 
-문서 도구(본문 오른쪽 위의 버튼 줄. 본문 위에 툴바는 없다)의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
+편집기 ⋯ 메뉴의 원문 스위치("MDX로 보기"처럼 켜져 있으면 ✓가 붙는 행)는 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 스위치가 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
 (`useAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
 
 ```tsx
@@ -95,7 +95,7 @@ const components = {
 `Panel`은 `SourcePanelProps`를 받는다. `doc`(본문), `onChange(doc, issues)`(글이 바뀜: 그 글이 읽히는 문서와 글에서 찾은 것. 읽을 수 없는 글은 `unparsed` 노드 하나에 담은 문서로 돌려주고
 찾은 것은 `issues`에 담는다), `focusBlock`(캐럿을 둘 블록의 id. 발행 문제를 따라갈 때), 화면이 필요로 하는 덤으로 `readOnly`와 `onComposing(composing)`(IME 조합이 끝나야 저장한다)이다.
 패널은 브라우저에서 읽으므로 틀린 곳이 쓰는 동안 바로 보인다. `BrowserFormat`은 맥락(사이트 블록, 언어)을 묶어 둔 형식이다. `export(doc): string`과 `import(text)`(`{ ok: true, doc, warnings }` 또는
-`{ ok: false, issues }`)가 있고 둘 다 동기다. 관리자에는 자체 패널이 없다. MDX 원문 패널과 `mdx` 브라우저 형식은 `@monti-cms/mdx`(`@monti-cms/mdx/admin`)가 주고, `mdx()` 플러그인의 관리자 공급자가 등록한다. 이 플러그인이 없으면 원문 토글도 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다.
+`{ ok: false, issues }`)가 있고 둘 다 동기다. 관리자에는 자체 패널이 없다. MDX 원문 패널과 `mdx` 브라우저 형식은 `@monti-cms/mdx`(`@monti-cms/mdx/admin`)가 주고, `mdx()` 플러그인의 관리자 공급자가 등록한다. 이 플러그인이 없으면 원문 스위치도 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다.
 `SOURCE_ERROR_ID`(`@monti-cms/admin`)는 패널이 발견한 것을 보이는 요소의 id이고, `useLinkPaths`(`@monti-cms/admin`)는 패널에 글 링크의 경로를 준다. `mdxBrowserFormat`은 `@monti-cms/admin/editor`에서 더는 내보내지 않는다.
 
 ### 글 링크
@@ -233,9 +233,9 @@ const components = { marks: { note } };
 
 ## 글 검사(맞춤법 등)
 
-본체는 검사기를 하나도 갖지 않고 버튼·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
-등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 문서 도구의 버튼(이름 `label`, 아이콘 `icon`)이
-생기고 결과는 물결 밑줄·결과 창·목록으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
+본체는 검사기를 하나도 갖지 않고 메뉴 행·밑줄·결과 창만 그린다. 사이트·확장이 검사기(유료 API, 브라우저에서 도는 npm 패키지
+등)를 만들어 확장점 `textCheckers`에 넣으면, 글의 언어를 검사하는 검사기마다 편집기 ⋯ 메뉴에 그 검사를 돌리는 행(이름 `label`, 아이콘 `icon`)이
+생기고 결과는 물결 밑줄·결과 창·상태 바의 플러그인 칸으로 보인다. 여러 확장이 검사기를 넣으면 모두 모인다. 검사기가 없으면 아무것도 보이지 않는다.
 검사기는 플러그인의 관리자 쪽으로 등록한다("사이트 컴포넌트 넣기" 참고). 예제 블로그의 `word-list` 플러그인이 작은 예다.
 
 ```tsx
@@ -332,7 +332,7 @@ export function StatsPage() {
 
 부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다.
 
-편집 화면 확장(`editorExtensions`)은 문서 도구(본문 오른쪽 위의 버튼 줄)의 요소·블록 메뉴의 동작·서식 카드와 슬래시 메뉴의 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
+편집 화면 확장(`editorExtensions`)은 편집기 ⋯ 메뉴의 행(`menuItems`: `label`·`icon`·`caption`·스위치면 `checked`·`onSelect`를 가진 `EditorMenuItem`. 본문 폭과 함께 문서 도구 묶음에 놓인다)·블록 메뉴의 동작·서식 카드와 슬래시 메뉴의 동작을 더하는 훅이다. 행이 여는 것(대화상자)은 `overlay`에 둔다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `defineAdminPlugin`의 `slots`로 동작을 붙인다(`SlotSource` 타입과 슬롯 부품은 `@monti-cms/admin/slots`에 있다).
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,

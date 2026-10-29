@@ -306,11 +306,26 @@ export const PublishMenuOpen: Story = {
 	},
 };
 
+/** The header's ⋯ menu: copy, archive and export, then the document tools (the body width, the theme), and the trash at the bottom (board `moreMenu` "열림"). */
 export const MoreMenuOpen: Story = {
+	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
 		await within(document.body).findByText(/^휴지통으로$/, undefined, LONG);
+	},
+};
+
+/** "본문 폭 ▸" open at the side of the ⋯ menu, the chosen step ticked (board `moreMenu` "본문 폭"). */
+export const MoreMenuWidth: Story = {
+	tags: ["visual"],
+	render: screen(() => server()),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await headerMore(canvasElement));
+		const row = await within(document.body).findByRole("menuitem", { name: /본문 폭/ }, LONG);
+		await userEvent.hover(row);
+		await userEvent.keyboard("{ArrowRight}");
+		await within(document.body).findByRole("menuitemradio", { name: "꽉 차게" }, LONG);
 	},
 };
 

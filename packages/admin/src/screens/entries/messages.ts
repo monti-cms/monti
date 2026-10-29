@@ -7,6 +7,7 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 	en: {
 		retry: "Try again",
 		source: "Source",
+		sourcePane: "Show the source beside",
 		"tab.default": "Basic",
 		"panel.label": "Properties",
 		"property.empty": "Empty",
@@ -114,6 +115,7 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 	ko: {
 		retry: "다시 시도",
 		source: "원문",
+		sourcePane: "원문 옆에 보기",
 		"tab.default": "기본",
 		"panel.label": "속성",
 		"property.empty": "비어 있음",

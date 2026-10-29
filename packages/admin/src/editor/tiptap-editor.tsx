@@ -19,7 +19,7 @@ import { BlockHandleOverlay } from "./block-handle-overlay";
 import { CodeLinkBar } from "./code-block/code-link-bar";
 import { documentKey } from "./document-key";
 import { startMarquee } from "./drag";
-import { EditorWidthMenu, useEditorWidth } from "./editor-width";
+import { useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
 import { MediaPickerDialog } from "./image-insert-dialog";
 import { InlineBubble, useMarkExtensions } from "./inline-bubble";
@@ -42,8 +42,6 @@ interface CmsEditorProps {
 	onChange: (doc: StoredDocument) => void;
 	/** Title input for the document being edited. Placed above the body. */
 	titleField?: ReactNode;
-	/** Document-wide tools (view switches, a button that writes a draft), a row of buttons at the top right of the body next to the width menu. There is no toolbar. */
-	tools?: ReactNode;
 	/** The "/" menu lists the body templates, and a chosen one goes in at the cursor. Off where a template is being written. */
 	templates?: boolean;
 	/** When given, shown in place of the body (source editing, etc.) and visual editing is paused. The title stays as it is. */
@@ -82,7 +80,6 @@ export function CmsEditor({
 	doc,
 	onChange,
 	titleField,
-	tools,
 	templates = false,
 	sourceView,
 	onCompositionStart,
@@ -114,7 +111,7 @@ export function CmsEditor({
 	const isInternalUpdateRef = useRef(false);
 	const isComposingRef = useRef(false);
 	const editorRef = useRef<Editor | null>(null);
-	const { steps: widthSteps, step: widthStep, choose: chooseWidth } = useEditorWidth();
+	const { step: widthStep } = useEditorWidth();
 
 	const slashTemplates = useSlashTemplates({
 		enabled: templates && site.ADMIN_TEMPLATES,
@@ -279,11 +276,6 @@ export function CmsEditor({
 					<CodeLinkBar editor={editor} />
 				</Stack>
 			)}
-
-			<div className="mx-auto flex w-full max-w-(--editor-width) justify-end gap-monti-4 px-monti-16 pt-monti-8">
-				{tools}
-				<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
-			</div>
 
 			{titleField && (
 				<div className="mx-auto w-full max-w-(--editor-width) px-monti-16 pt-monti-48 pb-monti-8">{titleField}</div>

@@ -1,15 +1,14 @@
 "use client";
 
-import { ArrowsHorizontal } from "@carbon/icons-react";
 import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
-	DropdownMenuTrigger,
-	IconButton,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	MenuValue,
 } from "@monti-cms/ui";
 import { useMemo } from "react";
 import { stringCodec, usePreference } from "../lib/hooks/use-preference";
@@ -63,40 +62,32 @@ export function useEditorWidth(): { steps: EditorWidthStep[]; step: EditorWidthS
 	return { steps, step, choose };
 }
 
-/** Body width menu at the right end of the toolbar. */
-export function EditorWidthMenu({
-	steps,
-	value,
-	onChange,
-}: {
-	steps: readonly EditorWidthStep[];
-	value: EditorWidthStep;
-	onChange: (key: string) => void;
-}) {
+/**
+ * "Body width ▸" in the editor's ⋯ menu: the row shows the chosen step, and its second level picks another. Every editor on the page reads the same
+ * remembered step, so the menu and the body stay in step without passing it around.
+ */
+export function EditorWidthSubmenu() {
 	const t = useTranslator(editorMessages);
+	const { steps, step, choose } = useEditorWidth();
 	return (
-		<DropdownMenu>
-			<IconButton
-				label={t("editorWidth.label")}
-				side="bottom"
-				onMouseDown={(event) => event.preventDefault()}
-				trigger={(button) => <DropdownMenuTrigger render={button} />}
-			>
-				<ArrowsHorizontal aria-hidden />
-			</IconButton>
-			<DropdownMenuContent align="end">
+		<DropdownMenuSub>
+			<DropdownMenuSubTrigger>
+				{t("editorWidth.label")}
+				<MenuValue>{step.label}</MenuValue>
+			</DropdownMenuSubTrigger>
+			<DropdownMenuSubContent>
 				<DropdownMenuRadioGroup
 					aria-label={t("editorWidth.label")}
-					value={value.key}
-					onValueChange={(next) => typeof next === "string" && onChange(next)}
+					value={step.key}
+					onValueChange={(next) => typeof next === "string" && choose(next)}
 				>
-					{steps.map((step) => (
-						<DropdownMenuRadioItem key={step.key} value={step.key}>
-							{step.label}
+					{steps.map((item) => (
+						<DropdownMenuRadioItem key={item.key} value={item.key}>
+							{item.label}
 						</DropdownMenuRadioItem>
 					))}
 				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+			</DropdownMenuSubContent>
+		</DropdownMenuSub>
 	);
 }

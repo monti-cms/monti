@@ -60,12 +60,27 @@ export interface EditorInsertAction {
 }
 
 /**
- * What an edit screen extension adds: an element in the row of document tools at the top right of the body, an action in the block menu, actions for the selection menu and slash menu,
+ * A row an edit screen extension adds to the editor's ⋯ menu in the header, in the group of document tools (view switches, "write a draft",
+ * "translate all"). `checked` makes it a switch with a ✓ while on; `caption` is a small second line (progress, what it leaves alone). A row
+ * that cannot be used now is left out rather than shown off.
+ */
+export interface EditorMenuItem {
+	/** Stays the same while the screen is open (a React key). */
+	readonly key: string;
+	readonly label: string;
+	readonly icon?: ReactNode;
+	readonly caption?: string;
+	readonly checked?: boolean;
+	readonly onSelect: () => void;
+}
+
+/**
+ * What an edit screen extension adds: rows in the ⋯ menu of the header, an action in the block menu, actions for the selection menu and slash menu,
  * and functions to receive when the editor is created and destroyed.
  */
 export interface EditorExtensionResult {
-	/** Document-wide tools (a button that writes a draft, translates everything): a row of buttons at the top right of the body. */
-	readonly toolbar?: ReactNode;
+	/** Document-wide tools (a row that writes a draft, translates everything): rows in the ⋯ menu of the header. */
+	readonly menuItems?: readonly EditorMenuItem[];
 	/** An element rendered once, apart from the tools (dialog, etc.), for anything that must keep its state while open. */
 	readonly overlay?: ReactNode;
 	readonly blockActions?: readonly BlockAction[];
@@ -165,7 +180,7 @@ import type { Field, TextChecker } from "@monti-cms/core";
 export interface SourcePanelRegistration {
 	/** The format the panel edits (`mdx`). */
 	readonly format: string;
-	/** Name of the panel, for its toggle in the editor toolbar. */
+	/** Name of the panel, for its switch in the editor's ⋯ menu ("View as MDX"). */
 	readonly label: string;
 	readonly Panel: ComponentType<SourcePanelProps>;
 }
@@ -340,8 +355,7 @@ export function useEditorExtensions(
 		for (const callback of callbacksRef.current) callback(editor);
 	}, []);
 	return {
-		// biome-ignore lint/suspicious/noArrayIndexKey: the extension list and its order do not change
-		toolbar: results.map((result, index) => <Fragment key={index}>{result.toolbar}</Fragment>),
+		menuItems: results.flatMap((result) => result.menuItems ?? []),
 		// biome-ignore lint/suspicious/noArrayIndexKey: the extension list and its order do not change
 		overlay: results.map((result, index) => <Fragment key={index}>{result.overlay}</Fragment>),
 		blockActions: results.flatMap((result) => result.blockActions ?? []),

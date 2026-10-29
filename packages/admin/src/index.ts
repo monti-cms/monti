@@ -28,6 +28,7 @@ export {
 	type EditorExtensionContext,
 	type EditorExtensionResult,
 	type EditorInsertAction,
+	type EditorMenuItem,
 	type EditorSelectionAction,
 	type FieldInputEntry,
 	type FieldInputParts,

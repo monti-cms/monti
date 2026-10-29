@@ -25,6 +25,7 @@ import { errorText } from "../../api/client";
 import { createTemplate, getTemplate, templatesKeys, updateTemplate } from "../../api/templates";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { documentKey } from "../../editor/document-key";
+import { EditorMenuRows } from "../../editor/editor-menu";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { commonMessages } from "../../lib/common.messages";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
@@ -156,7 +157,9 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 							{save.isPending ? tc("saving") : tc("save")}
 						</Button>
 					)}
-					{template && <MoreActionsButton actions={actions.menu(template)} label={t("editor.more")} />}
+					<MoreActionsButton actions={template ? actions.menu(template) : []} label={t("editor.more")}>
+						<EditorMenuRows />
+					</MoreActionsButton>
 					<Inline height="control-sm" paddingX={4}>
 						<Separator orientation="vertical" aria-hidden />
 					</Inline>

@@ -1,29 +1,13 @@
 "use client";
 
-import { Information, SpellCheck, ViewOff, Warning, WarningAlt } from "@carbon/icons-react";
-import type { TextChecker, TextIssueSeverity } from "@monti-cms/core";
+import { Information, ViewOff, Warning, WarningAlt } from "@carbon/icons-react";
+import type { TextIssueSeverity } from "@monti-cms/core";
 import { useTranslator } from "@monti-cms/core/site";
 import type { MontiIcon } from "@monti-cms/ui";
-import {
-	Button,
-	Count,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	Icon,
-	IconButton,
-	Inline,
-	Popover,
-	PopoverContent,
-	Stack,
-	Text,
-	TextButton,
-} from "@monti-cms/ui";
+import { Button, Icon, Inline, Popover, PopoverContent, Text, TextButton } from "@monti-cms/ui";
 import { posToDOMRect } from "@tiptap/core";
 import { useMemo, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { useIconByName } from "../../screens/shared/collection-icon";
 import { textCheckMessages } from "./messages";
 import { textCheckIssues } from "./plugin";
 import type { DocTextIssue } from "./run";
@@ -39,69 +23,6 @@ const SEVERITY_ICON: Readonly<Record<TextIssueSeverity, { icon: MontiIcon; tone:
 function SeverityIcon({ severity }: { severity: TextIssueSeverity }) {
 	const { icon, tone } = SEVERITY_ICON[severity];
 	return <Icon icon={icon} tone={tone} />;
-}
-
-/** One checker button. Its name and icon come from the checker definition (`label`, `icon`). */
-function CheckerButton({ checker, controller }: { checker: TextChecker; controller: TextCheckController }) {
-	const t = useTranslator(textCheckMessages);
-	const iconByName = useIconByName();
-	const Glyph = (typeof checker.icon === "string" ? iconByName(checker.icon) : checker.icon) ?? SpellCheck;
-	const running = controller.running === checker.id;
-	return (
-		<IconButton
-			label={running ? t("running") : checker.label}
-			side="bottom"
-			disabled={controller.running !== null || !controller.editor.isEditable}
-			// Keep editor focus so the picked text is not lost.
-			onMouseDown={(event) => event.preventDefault()}
-			onClick={() => void controller.run(checker.id)}
-		>
-			<Glyph aria-hidden />
-		</IconButton>
-	);
-}
-
-/** Checker buttons of the toolbar (one per checker) and the result count (click for the result list). */
-export function TextCheckToolbar({ controller }: { controller: TextCheckController }) {
-	const t = useTranslator(textCheckMessages);
-	const { issues } = controller;
-	const count = issues.length;
-	return (
-		<Inline gap={2}>
-			{controller.checkers.map((checker) => (
-				<CheckerButton key={checker.id} checker={checker} controller={controller} />
-			))}
-			{count > 0 && (
-				<DropdownMenu>
-					<IconButton
-						label={t("results")}
-						side="bottom"
-						onMouseDown={(event) => event.preventDefault()}
-						trigger={(button) => <DropdownMenuTrigger render={button} />}
-					>
-						<Count>{count > 99 ? "99+" : count}</Count>
-					</IconButton>
-					<DropdownMenuContent align="end">
-						{issues.map((issue) => (
-							<DropdownMenuItem key={issue.key} onClick={() => controller.jump(issue)}>
-								<SeverityIcon severity={issue.severity} />
-								<Stack as="span" gap={0} minWidth={0} grow>
-									<Text weight="medium" truncate>
-										{issue.text.trim() || issue.message}
-									</Text>
-									{issue.message && (
-										<Text variant="caption" tone="muted" truncate>
-											{issue.message}
-										</Text>
-									)}
-								</Stack>
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			)}
-		</Inline>
-	);
 }
 
 /** Result popup that appears at the spot when an underline is clicked or picked from the list: explanation, replacement candidates, ignore. */

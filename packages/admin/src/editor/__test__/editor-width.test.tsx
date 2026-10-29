@@ -1,4 +1,5 @@
 import { SiteProvider } from "@monti-cms/core/site";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@monti-cms/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -6,6 +7,7 @@ import { testConfig, testSite } from "../../../../core/test/site";
 import { preferenceKey } from "../../lib/utils/site-storage";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
+import { EditorMenuRows } from "../editor-menu";
 import { DEFAULT_EDITOR_WIDTH, FULL_EDITOR_WIDTH, resolveEditorWidths } from "../editor-width";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
@@ -30,7 +32,18 @@ afterEach(() => {
 	window.localStorage.removeItem(preferenceKey(testSite, "editor-width"));
 });
 
-const editor = <CmsEditor doc={docOf("안녕하세요")} onChange={() => {}} titleField={<input aria-label="제목" />} />;
+// The width is picked in the header's ⋯ menu ("Body width ▸") and the body follows it: the two only share the remembered step.
+const editor = (
+	<>
+		<DropdownMenu>
+			<DropdownMenuTrigger>더보기</DropdownMenuTrigger>
+			<DropdownMenuContent>
+				<EditorMenuRows />
+			</DropdownMenuContent>
+		</DropdownMenu>
+		<CmsEditor doc={docOf("안녕하세요")} onChange={() => {}} titleField={<input aria-label="제목" />} />
+	</>
+);
 const renderEditor = async (editorConfig?: { widths: typeof widths }) => {
 	if (editorConfig)
 		render(
@@ -39,13 +52,15 @@ const renderEditor = async (editorConfig?: { widths: typeof widths }) => {
 			</SiteProvider>,
 		);
 	else renderWithSite(editor);
-	await screen.findByRole("button", { name: t("editorWidth.label") });
+	await screen.findByRole("textbox", { name: "제목" });
 };
 /** Body width applied to the editor frame. The title, body and source all use this value. */
 const editorWidth = () =>
 	(document.querySelector("[data-monti-editor-shell]") as HTMLElement).style.getPropertyValue("--editor-width");
 const openMenu = async () => {
-	fireEvent.click(screen.getByRole("button", { name: t("editorWidth.label") }));
+	fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+	const row = await screen.findByRole("menuitem", { name: new RegExp(t("editorWidth.label")) });
+	fireEvent.keyDown(row, { key: "ArrowRight" });
 	return screen.findAllByRole("menuitemradio");
 };
 

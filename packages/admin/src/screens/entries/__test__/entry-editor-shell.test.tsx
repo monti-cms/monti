@@ -80,7 +80,6 @@ const { mockEditor } = vi.hoisted(() => ({ mockEditor: { current: null as import
 function MockEditor({
 	editable,
 	titleField,
-	tools,
 	sourceView,
 	doc,
 	onEditor,
@@ -88,7 +87,6 @@ function MockEditor({
 }: {
 	editable?: boolean;
 	titleField?: React.ReactNode;
-	tools?: React.ReactNode;
 	sourceView?: React.ReactNode;
 	doc?: StoredDocument;
 	onEditor?: (editor: import("@tiptap/core").Editor | null) => void;
@@ -102,9 +100,6 @@ function MockEditor({
 	useHeadlessEditor(doc, stableOnEditor);
 	return (
 		<>
-			<div role="toolbar" aria-label="문서 도구">
-				{tools}
-			</div>
 			{titleField}
 			{sourceView ?? <textarea aria-label="시각 본문" readOnly={editable === false} />}
 			<div className="ProseMirror" data-testid="mock-editor-body">
@@ -119,7 +114,7 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 );
 // AI translation is tested separately (ai-translate.test.ts). Edit screen tests must not make an AI feature list request.
 vi.mock("../ai-translate", () => ({
-	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
+	useAiTranslate: () => ({ blockAction: null, menuItems: [], setEditor: () => {} }),
 }));
 const testRouter = createTestRouter();
 const { render } = testRouter;
@@ -165,6 +160,26 @@ const methodCalls = (method: string, suffix = "") =>
 	fetchMock.mock.calls.filter(([input, init]) => init?.method === method && String(input).endsWith(suffix));
 
 const SOURCE_LABEL = "원문 보기";
+/** Opens the header's ⋯ menu, where the document tools are, and waits for it. */
+const openMoreMenu = async () => {
+	if (!screen.queryByRole("menu"))
+		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+	return screen.findByRole("menu");
+};
+/** A switch of the ⋯ menu's document tools (the source panel, the source beside a translation), or null when the menu has none by that name. */
+const viewSwitch = async (name: string) => {
+	const menu = await openMoreMenu();
+	return within(menu).queryByRole("menuitemcheckbox", { name });
+};
+/** Turns a document-tools switch over and closes the menu again. */
+const toggleView = async (name: string) => {
+	const row = await viewSwitch(name);
+	if (!row) throw new Error(`no switch named ${name}`);
+	fireEvent.click(row);
+	const menu = screen.queryByRole("menu");
+	if (menu) fireEvent.keyDown(menu, { key: "Escape" });
+	await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+};
 const blockText = (block: StoredDocument["content"][number]): string =>
 	(block.content ?? []).map((node) => ("text" in node ? String(node.text) : "")).join("");
 /** A source panel with no notation of its own: it shows the body's plain text and which block it was asked to focus. */
@@ -647,7 +662,7 @@ describe("entry editor shell", () => {
 		fireEvent.click(popup.getByRole("button", { name: /제목 쓰기/ }));
 		await waitFor(() => expect(document.activeElement).toBe(title));
 		// In source mode, the panel is asked to focus the block the issue is in.
-		fireEvent.click(screen.getByRole("button", { name: SOURCE_LABEL }));
+		await toggleView(SOURCE_LABEL);
 		await screen.findByLabelText("패널 본문");
 		fireEvent.click((await reopenReadinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		await waitFor(() => expect(asked).toContain(body.content[1]?.id));
@@ -708,22 +723,22 @@ describe("entry editor shell", () => {
 		expect(source).toBeTruthy();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
-		const toggle = screen.getByRole("button", { name: SOURCE_LABEL }) as HTMLButtonElement;
-		expect(toggle.getAttribute("aria-pressed")).toBe("true");
-		expect(toggle.disabled).toBe(true);
 		expect(screen.getByText(/원문 모드로만 편집해요/)).toBeTruthy();
+		// There is no way back to the visual editor, so the ⋯ menu has no switch for it.
+		expect(await viewSwitch(SOURCE_LABEL)).toBeNull();
 	});
 
 	it("switches only the body to the source panel and keeps the title", async () => {
 		renderEdit();
 		await screen.findByLabelText("시각 본문");
-		const toggle = screen.getByRole("button", { name: SOURCE_LABEL });
-		fireEvent.click(toggle);
+		expect((await viewSwitch(SOURCE_LABEL))?.getAttribute("aria-checked")).toBe("false");
+		await toggleView(SOURCE_LABEL);
 		const source = await screen.findByLabelText("패널 본문");
 		expect(source.textContent).toBe("첫째 줄\n둘째 줄");
 		expect(screen.queryByLabelText("시각 본문")).toBeNull();
 		expect((await editorTitle()).getAttribute("value")).toBe("테스트");
-		fireEvent.click(toggle);
+		expect((await viewSwitch(SOURCE_LABEL))?.getAttribute("aria-checked")).toBe("true");
+		await toggleView(SOURCE_LABEL);
 		expect(await screen.findByLabelText("시각 본문")).toBeTruthy();
 		expect(screen.queryByLabelText("패널 본문")).toBeNull();
 	});
@@ -757,15 +772,14 @@ describe("entry editor shell", () => {
 		it("shows no toggle when no panel is registered", async () => {
 			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 			await screen.findByLabelText("시각 본문");
-			const toolbar = screen.getByRole("toolbar", { name: "문서 도구" });
-			expect(within(toolbar).queryByRole("button", { name: SOURCE_LABEL })).toBeNull();
+			expect(await viewSwitch(SOURCE_LABEL)).toBeNull();
 		});
 
 		it("shows the toggle of the registered panel under its label, and opens that panel on the body", async () => {
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
-			expect(screen.queryByRole("button", { name: "MDX 원문" })).toBeNull();
-			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			expect(await viewSwitch("MDX로 보기")).toBeNull();
+			await toggleView("내 원문 보기");
 			expect((await screen.findByLabelText("블록 수")).textContent).toBe("1");
 			expect(screen.queryByLabelText("시각 본문")).toBeNull();
 			expect(screen.getByLabelText("읽기 전용").textContent).toBe("false");
@@ -777,7 +791,7 @@ describe("entry editor shell", () => {
 			});
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
-			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			await toggleView("내 원문 보기");
 			fireEvent.click(await screen.findByRole("button", { name: "패널에서 고침" }));
 			expect(screen.getByTitle("저장 전 변경사항")).toBeTruthy();
 			pressSave();
@@ -793,8 +807,8 @@ describe("entry editor shell", () => {
 				{ format: "b", label: "둘째 패널", Panel: FakePanel },
 			]);
 			await screen.findByLabelText("시각 본문");
-			expect(screen.getByRole("button", { name: "첫 패널" })).toBeTruthy();
-			expect(screen.queryByRole("button", { name: "둘째 패널" })).toBeNull();
+			expect(await viewSwitch("첫 패널")).toBeTruthy();
+			expect(await viewSwitch("둘째 패널")).toBeNull();
 		});
 
 		it("opens a body that could not be read in the panel, and shows the visual editor's box when there is none", async () => {
@@ -828,7 +842,7 @@ describe("entry editor shell", () => {
 			);
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByRole("button", { name: /^요약/ });
-			fireEvent.click(screen.getByRole("button", { name: "내 원문 보기" }));
+			await toggleView("내 원문 보기");
 			await screen.findByLabelText("블록 수");
 			fireEvent.click(screen.getByRole("button", { name: "발행하기" }));
 			fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
@@ -1023,16 +1037,19 @@ describe("entry editor shell", () => {
 		expect((screen.getByLabelText("시각 본문") as HTMLTextAreaElement).readOnly).toBe(true);
 	});
 
-	it("keeps frequent actions in the toolbar and moves lifecycle actions to the more menu", async () => {
+	it("keeps frequent actions in the header and the lifecycle actions and document tools in the more menu", async () => {
 		renderEdit();
 		await screen.findByRole("button", { name: "더보기" });
 		const toolbar = screen.getByRole("banner");
-		expect(within(toolbar).queryByRole("button", { name: "MDX 원문" })).toBeNull();
-		expect(
-			within(screen.getByRole("toolbar", { name: "문서 도구" })).getByRole("button", { name: SOURCE_LABEL }),
-		).toBeTruthy();
+		expect(within(toolbar).queryByRole("button", { name: SOURCE_LABEL })).toBeNull();
 		expect(within(toolbar).getByRole("link", { name: "미리보기" })).toBeTruthy();
-		fireEvent.click(within(toolbar).getByRole("button", { name: "더보기" }));
+		const menu = await openMoreMenu();
+		// Copy, archive and export on top, then the document tools (the source switch, the body width), and the trash at the bottom.
+		expect(within(menu).getByRole("menuitemcheckbox", { name: SOURCE_LABEL })).toBeTruthy();
+		expect(within(menu).getByRole("menuitem", { name: /본문 폭/ })).toBeTruthy();
+		const rows = [...menu.querySelectorAll("[role^=menuitem]")].map((row) => row.textContent ?? "");
+		expect(rows.at(-1)).toBe("휴지통으로");
+		expect(rows.indexOf("복제")).toBeLessThan(rows.indexOf(SOURCE_LABEL));
 		expect(screen.getByRole("menuitem", { name: "복제" })).toBeTruthy();
 		expect(screen.getByRole("menuitem", { name: "휴지통으로" })).toBeTruthy();
 		fireEvent.click(screen.getByRole("menuitem", { name: "보관" }));
@@ -1358,9 +1375,10 @@ describe("translation source pane", () => {
 		expect(within(sourcePane() as HTMLElement).getByText("KO 원문")).toBeTruthy();
 		// The title slot hint is the source title.
 		expect((await editorTitle()).getAttribute("placeholder")).toBe("원문 제목");
-		// A translation uses the same editor too (formatting tools, source switch).
-		expect(screen.getByRole("toolbar", { name: "문서 도구" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: SOURCE_LABEL })).toBeTruthy();
+		// A translation uses the same editor too (formatting tools, source switch), and its ⋯ menu can show the source beside.
+		expect(await viewSwitch(SOURCE_LABEL)).toBeTruthy();
+		expect((await viewSwitch("원문 옆에 보기"))?.getAttribute("aria-checked")).toBe("true");
+		fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
 		cleanup();
 		serve(() => undefined, source);
@@ -1369,7 +1387,7 @@ describe("translation source pane", () => {
 		expect(sourcePane()).toBeNull();
 	});
 
-	it("collapses and expands the pane with the close-source button and the source toggle, and remembers it", async () => {
+	it("collapses and expands the pane with the close-source button and the ⋯ menu's switch, and remembers it", async () => {
 		serve(() => undefined, translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
@@ -1377,9 +1395,8 @@ describe("translation source pane", () => {
 		fireEvent.click(within(sourcePane() as HTMLElement).getByRole("button", { name: "닫기" }));
 		expect(sourcePane()).toBeNull();
 		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("closed");
-		const toggle = screen.getByRole("button", { name: "원문" });
-		expect(toggle.getAttribute("aria-pressed")).toBe("false");
-		fireEvent.click(toggle);
+		expect((await viewSwitch("원문 옆에 보기"))?.getAttribute("aria-checked")).toBe("false");
+		await toggleView("원문 옆에 보기");
 		expect(sourcePane()).not.toBeNull();
 		expect(window.localStorage.getItem(preferenceKey(testSite, "translation-source-pane"))).toBe("open");
 	});

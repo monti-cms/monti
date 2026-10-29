@@ -1,14 +1,13 @@
 "use client";
 
-import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, IconButton, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
+import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAdminComponents, useEditorExtensions } from "../../admin-components";
+import { type EditorMenuItem, useAdminComponents, useEditorExtensions } from "../../admin-components";
 import { adminEntryClient } from "../../api/entries";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
@@ -457,28 +456,31 @@ export function EntryEditorShell({
 			)}
 		</>
 	);
-	const sourcePaneToggle = translationSource && (
-		<IconButton
-			label={te("source")}
-			side="bottom"
-			pressed={isSourcePaneOpen}
-			onClick={() => toggleSourcePane(!isSourcePaneOpen)}
-		>
-			<OpenPanelLeft aria-hidden />
-		</IconButton>
-	);
-	const sourceModeToggle = sourcePanel && (
-		<IconButton
-			label={sourcePanel.label}
-			side="bottom"
-			pressed={isSourceMode}
-			// A body that could not be read cannot return to visual mode.
-			disabled={isSourceMode && !canUseVisual}
-			onClick={() => setEditorMode(isSourceMode ? "visual" : "source")}
-		>
-			<CodeReference aria-hidden />
-		</IconButton>
-	);
+	// The document tools of the header's ⋯ menu: the source beside a translation, the body as text (a source panel's notation, such as MDX), and
+	// what editor extensions add. A body that could not be read cannot return to visual mode, so its switch is left out.
+	const menuItems: EditorMenuItem[] = [
+		...(translationSource
+			? [
+					{
+						key: "source-pane",
+						label: te("sourcePane"),
+						checked: isSourcePaneOpen,
+						onSelect: () => toggleSourcePane(!isSourcePaneOpen),
+					},
+				]
+			: []),
+		...(sourcePanel && !(isSourceMode && !canUseVisual)
+			? [
+					{
+						key: "source-mode",
+						label: sourcePanel.label,
+						checked: isSourceMode,
+						onSelect: () => setEditorMode(isSourceMode ? "visual" : "source"),
+					},
+				]
+			: []),
+		...extensions.menuItems,
+	];
 	const sourceEditor = sourcePanel && (
 		<>
 			<sourcePanel.Panel
@@ -511,6 +513,7 @@ export function EntryEditorShell({
 						commands={commands}
 						isInspectorOpen={isInspectorOpen}
 						onToggleInspector={() => setIsInspectorOpen((open) => !open)}
+						menuItems={menuItems}
 					/>
 
 					<EntryEditorBanners
@@ -554,13 +557,6 @@ export function EntryEditorShell({
 										<>
 											{languageTabs}
 											{titleInput}
-										</>
-									}
-									tools={
-										<>
-											{extensions.toolbar}
-											{sourcePaneToggle}
-											{sourceModeToggle}
 										</>
 									}
 									templates

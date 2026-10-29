@@ -82,13 +82,13 @@ involved in loading it into the editor or saving it from there.
 
 ### Source panels
 
-The source toggle in the document tools (the row of buttons at the top right of the body; there is no toolbar over it) edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
+The source switch in the editor's ⋯ menu (a row such as "View as MDX", with a ✓ while on) edits the body as text in some notation. The notation is a plugin's: the switch is shown only when a **source panel** is registered, in the
 same provider as the other site components (`useAdminComponents().sourcePanels`). With several registered, the first one is used.
 
 ```tsx
 // what the `mdx()` plugin of @monti-cms/mdx registers for you:
 const components = {
-	sourcePanels: [{ format: "mdx", label: "MDX source", Panel: MdxPanel }],
+	sourcePanels: [{ format: "mdx", label: "View as MDX", Panel: MdxPanel }],
 	formats: { mdx: mdxFormat }, // the formats the browser can read and write (`BrowserFormat`), found with `useFormat("mdx")`
 };
 ```
@@ -97,7 +97,7 @@ const components = {
 as a document holding it in one `unparsed` node, with the findings in `issues`), `focusBlock` (the id of the block to bring the caret to, for a publish issue) and, as extras the screen needs,
 `readOnly` and `onComposing(composing)` (a save waits for an IME composition to end). The panel parses in the browser, so a mistake shows as it is typed.
 A `BrowserFormat` is a format with its context bound: `export(doc): string` and `import(text)` (`{ ok: true, doc, warnings }` or `{ ok: false, issues }`), both synchronous.
-The admin has no panel of its own: the MDX source panel and the `mdx` browser format are provided by `@monti-cms/mdx` (`@monti-cms/mdx/admin`), registered by the admin provider of its `mdx()` plugin. Without that plugin there is no source toggle. The panel's messages are in the namespace `cms-mdx.source`.
+The admin has no panel of its own: the MDX source panel and the `mdx` browser format are provided by `@monti-cms/mdx` (`@monti-cms/mdx/admin`), registered by the admin provider of its `mdx()` plugin. Without that plugin there is no source switch. The panel's messages are in the namespace `cms-mdx.source`.
 `SOURCE_ERROR_ID` (`@monti-cms/admin`) is the id of the element a panel shows its findings in, and `useLinkPaths` (`@monti-cms/admin`) gives a panel the paths of entry links. `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`.
 
 ### Links to entries
@@ -236,9 +236,9 @@ const components = { marks: { note } };
 
 ## Text checking (spelling, etc.)
 
-The core has no checkers; it only renders the buttons, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
-etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a button in the document tools (name `label`, icon `icon`),
-and results appear as wavy underlines, a results window and a list. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
+The core has no checkers; it only renders the menu rows, underlines and results window. When a site or extension builds a checker (a paid API, an npm package that runs in the browser,
+etc.) and puts it in the extension point `textCheckers`, every checker that checks the text's language gets a row in the editor's ⋯ menu that runs it (name `label`, icon `icon`),
+and results appear as wavy underlines, a results window and the plugin cell of the status bar. If several extensions add checkers, all are collected. With no checkers, nothing is shown.
 Checkers are registered through a plugin's admin side (see "Adding site components"); the `word-list` plugin of the example blog is a small one.
 
 ```tsx
@@ -335,7 +335,7 @@ export function StatsPage() {
 
 The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README).
 
-Edit screen extensions (`editorExtensions`) are hooks that add an element to the document tools (a row of buttons at the top right of the body), an action in the block menu, and actions for the format card and the slash menu. For the field side, body images, media and code blocks,
+Edit screen extensions (`editorExtensions`) are hooks that add rows to the editor's ⋯ menu (`menuItems`: `EditorMenuItem` with `label`, `icon`, `caption`, `checked` for a switch, `onSelect`; they sit in its document-tools group with the body width), an action in the block menu, and actions for the format card and the slash menu. Something a row opens (a dialog) goes in `overlay`. For the field side, body images, media and code blocks,
 attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,

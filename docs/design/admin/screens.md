@@ -77,6 +77,7 @@ Other props:
 - `fix` "없음", "요약", "대체 텍스트": which to-do is being fixed in the panel.
 - `toast` "없음", "발행 막힘", "발행됨": the toast.
 - `pubMenu`: the publish menu with keep-date and today's-date choices.
+- `moreMenu` "없음", "열림", "본문 폭": the header ⋯ menu open, and its "본문 폭 ▸" second level open. The document tools are its middle group (see EditorTools).
 - `trashed`: the read-only trashed-post view.
 - `img` "없음", "올리는 중", "설정", "파일": the image or file block state.
 - `panelFill`, `seriesPending`, `todoOpen`, `pluginOpen`, `panel`: panel and strip open states.
