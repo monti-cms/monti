@@ -1,5 +1,6 @@
 "use client";
 
+import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
@@ -464,6 +465,7 @@ export function EntryEditorShell({
 					{
 						key: "source-pane",
 						label: te("sourcePane"),
+						icon: <OpenPanelLeft aria-hidden />,
 						checked: isSourcePaneOpen,
 						onSelect: () => toggleSourcePane(!isSourcePaneOpen),
 					},
@@ -474,6 +476,7 @@ export function EntryEditorShell({
 					{
 						key: "source-mode",
 						label: sourcePanel.label,
+						icon: <CodeReference aria-hidden />,
 						checked: isSourceMode,
 						onSelect: () => setEditorMode(isSourceMode ? "visual" : "source"),
 					},

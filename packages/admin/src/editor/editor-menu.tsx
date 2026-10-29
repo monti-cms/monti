@@ -18,7 +18,8 @@ export function EditorMenuRows({ items = [] }: { items?: readonly EditorMenuItem
 						{item.label}
 					</DropdownMenuItem>
 				) : (
-					<DropdownMenuCheckboxItem key={item.key} checked={item.checked} onCheckedChange={item.onSelect}>
+					// A view switch closes the menu like any other row: the screen changes behind it.
+					<DropdownMenuCheckboxItem key={item.key} checked={item.checked} closeOnClick onCheckedChange={item.onSelect}>
 						{item.icon}
 						{item.label}
 					</DropdownMenuCheckboxItem>
