@@ -37,7 +37,8 @@ function Input({
 	width?: "full" | "short" | "number";
 	/**
 	 * `inline` reads as text until focused, with no line at all (a name edited in place); its size can be a heading's: `title` (a tab or
-	 * group name) or `display` (the post title).
+	 * group name) or `display` (the post title). A heading-size field shows only its caret when focused, never a box around it; a smaller inline
+	 * field gets a faint ring.
 	 */
 	appearance?: "line" | "inline";
 	/** The assistant wrote this value and nobody has touched it yet. Turn it off when the value is edited. */
@@ -58,7 +59,10 @@ function Input({
 			className={cn(
 				"w-full min-w-0 rounded-none bg-transparent outline-none transition-colors placeholder:text-monti-faint disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45",
 				inline
-					? "h-auto rounded-monti-sm border-0 px-0 focus-visible:ring-2 focus-visible:ring-monti-contrast/20"
+					? cn(
+							"h-auto rounded-monti-sm border-0 px-0",
+							size !== "title" && size !== "display" && "focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
+						)
 					: "border-0 border-monti-default border-b text-monti-default text-monti-reading focus-visible:border-monti-contrast aria-invalid:border-monti-danger data-proposal:border-monti-proposal data-proposal:border-b-[1.5px] data-proposal:text-monti-proposal md:text-monti-body",
 				inline ? INLINE_SIZE[size] : size === "sm" ? "py-monti-4 md:text-monti-note" : "py-monti-6",
 				width === "short" && "w-monti-menu",

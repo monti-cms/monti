@@ -240,7 +240,8 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 			box = document.createElement("div");
 			box.setAttribute("aria-hidden", "true");
 			box.dataset.montiMarquee = "";
-			box.className = "pointer-events-none fixed z-50 rounded-monti-sm border border-monti-contrast bg-monti-selected";
+			// Only a thin line, never a fill: the blocks under it show their own ground, and the text stays readable.
+			box.className = "pointer-events-none fixed z-50 rounded-monti-sm border border-monti-emphasis";
 			document.body.appendChild(box);
 		}
 		box.style.left = `${left}px`;

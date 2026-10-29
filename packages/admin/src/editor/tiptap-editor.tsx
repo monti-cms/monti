@@ -158,14 +158,14 @@ export function CmsEditor({
 			attributes: {
 				"aria-label": t("toolbar.editorLabel"),
 				class:
-					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading selection:bg-monti-selected " +
+					"prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-monti-24 focus:outline-none text-monti-default text-monti-reading " +
 					// Table column resize handle (prosemirror-tables columnResizing)
 					"[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-emphasis " +
 					// Same look as the column-split boundary: a thin line + a small handle above the first row.
 					"[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-monti-sm [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-monti-page " +
-					// Block selection (marquee): lay a box with margin (-inset-1) after the line and hide the text selection highlight. List items cover the bullet too.
-					// To avoid confusion with text selection (primary purple), show "a block is selected" with a different color (sky) and border.
-					"[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-1 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-monti-md [&_.monti-block-selected]:before:bg-monti-selected [&_.monti-block-selected]:before:ring-1 [&_.monti-block-selected]:before:ring-monti-contrast/20 [&_li.monti-block-selected]:before:-left-7 [&.monti-block-range]:selection:bg-transparent " +
+					// Selected blocks (a drag across them, ⇧ click) have the block ground of the design system (`.mt-block.is-on`), the same as the block whose
+					// handle menu is open below: no line around them. The text selection color is in `styles/admin.css`. List items cover the bullet too.
+					"[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-x-2 [&_.monti-block-selected]:before:-inset-y-0.5 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-monti-md [&_.monti-block-selected]:before:bg-monti-block [&_li.monti-block-selected]:before:-left-7 " +
 					// The empty line the cursor is on says how to add a block (`empty-hint.ts`).
 					"[&[contenteditable=false]_.monti-empty-line]:before:hidden [&_.monti-empty-line]:before:pointer-events-none [&_.monti-empty-line]:before:float-left [&_.monti-empty-line]:before:h-0 [&_.monti-empty-line]:before:text-monti-faint [&_.monti-empty-line]:before:content-[attr(data-placeholder)] " +
 					// The block whose handle menu is open has the block ground (`block-menu-mark.ts`), laid out like the block selection above.
