@@ -28,7 +28,7 @@ The component pages are grouped in five layers, in the same order as the Storybo
 | Layer | What | Pages |
 |---|---|---|
 | 1 Foundations | Color, type, spacing, radius, size, shadow | [tokens.md](tokens.md) |
-| 2 Primitives | Layout pieces (Box, Stack, Grid), text, icons and the AI mark ✦, labels, separators, images, code blocks, panels, sections | No page of their own. The icon and type rules are in [tokens.md](tokens.md); `.mt-stack`, `.mt-line`, `.mt-label`, `.mt-vr`, `.mt-spark`, `.mt-panel` and `.mt-section` are at the top of the DS stylesheet |
+| 2 Primitives | Layout pieces (Box, Stack, Grid), text, icons and the AI mark ✦, labels, separators, images, code blocks, panels, sections | [primitives](components/primitives.md) (Box, Stack, Inline, Text, Heading, Icon, Label, Separator, the labels provider, the resizable column). The icon and type rules are in [tokens.md](tokens.md); `.mt-stack`, `.mt-line`, `.mt-label`, `.mt-vr`, `.mt-spark`, `.mt-panel` and `.mt-section` are at the top of the DS stylesheet |
 | 3 Controls | What is pressed, typed, picked and what tells the state | [button](components/button.md), [field](components/field.md), [choice](components/choice.md), [tabs](components/tabs.md), [menu](components/menu.md), [overlay](components/overlay.md) (modal, popover, toast), [status](components/status.md) |
 | 4 Patterns | The frame of a screen and lists | [list](components/list.md), [page-header](components/page-header.md), [sidebar](components/sidebar.md), [status-bar](components/status-bar.md), and the sheet and side panel in [overlay](components/overlay.md) |
 | 5 Monti | Parts that only Monti has | [editor-tools](components/editor-tools.md), [change](components/change.md), [proposal](components/proposal.md), [assistant](components/assistant.md), [translation](components/translation.md) |
@@ -79,6 +79,21 @@ The docs hold the rules. For how things look, use these.
 When a rule changes, change it in these docs in the same pull request as the code, then update the artifacts (the canvas and the DS artifact) to match.
 
 The Korean UI text in these docs is quoted exactly, with an English gloss at first use. Board names and state names stay in Korean in quotes, because that is how the canvas names them.
+
+## Building admin UI
+
+These rules keep the admin one system. `pnpm check:design` (`scripts/check-design.mjs`) fails CI on the mechanical ones: stylesheets and `admin.css` selectors, raw colors anywhere, raw lengths and inline styles in screens, primitives imported into screens, and parts missing from these docs. The `design-review` agent catches the rest. Inside `@monti-cms/ui` a part may use its own measured lengths (`h-[34px]`), because that is where the design system's sizes live; screens may not.
+
+1. **Style with token utilities only.** Colors, type, spacing, radius, sizes and shadows come from the `monti-*` token utilities (`bg-monti-muted`, `text-monti-body`, `gap-monti-8` …). No raw palette classes (`bg-gray-100`, `text-sm`) and no raw colors (`#fff`) anywhere. Screens use no arbitrary lengths (`w-[320px]`) either: a size belongs to a part in `@monti-cms/ui` or to a token. If a shared size has no token, add it to `packages/ui/tokens/tokens.json` and to [tokens.md](tokens.md) first.
+2. **No new stylesheets and no new CSS classes.** `packages/admin/styles/admin.css` holds only document-wide base rules: the base text on the body for portaled popups, the default border color, and the scrollbars. Everything else is a utility on the element; a state is a `data-` attribute with a `data-[…]:` variant.
+3. **No inline styles in screens.** `style={{}}` in `packages/admin/src` only for a value measured or computed at runtime, marked `// design-allow: <reason>`.
+4. **Parts live in `@monti-cms/ui`.** Screens in `packages/admin` compose parts; they do not import Radix, Base UI or `cva`, and they do not build their own buttons, menus, rows or panels.
+5. **Every part is documented.** A component exported from `@monti-cms/ui` is named on its family page in `components/`, with its rules and an "In code" line. A new part gets its page entry in the same pull request.
+6. **Parts first, then screens.** When work is split into pieces, one piece builds the new or changed shared parts in `@monti-cms/ui` (with stories and docs) before the screen pieces start. Screen pieces use those parts and add none; a piece that finds a missing part stops and asks for it.
+7. **Match the board, then the docs.** A value on a board that disagrees with these docs or with an existing part is a question for the owner, not a local choice. Note it in the pull request.
+8. **Review before merge.** Each piece's diff goes through the `design-review` agent (`.claude/agents/design-review.md`) before it joins the epic branch.
+
+`// design-allow: <reason>` (or `{/* design-allow: <reason> */}` in JSX) skips one line of `check:design`. It is for runtime-measured values, not for style choices.
 
 ## Using the DS artifact
 
