@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection } from "../../../../../test/any-site";
 import { docOf } from "../../../../../test/stored-content";
+import type { ReferenceOccurrence } from "../../../types";
 import type { ContentStore } from "../..";
 import { CmsError } from "../..";
 import type { ContractSuite, StoreSession } from "./harness";
 
-/** An entry whose body refers to the media file (a reference row, nothing else), so the file counts as used. */
-const referToMedia = (store: ContentStore, mediaId: string) =>
+/** An entry that refers to the media file (a reference row, nothing else), so the file counts as used; `occurrences` say where in the entry. */
+const referToMedia = (store: ContentStore, mediaId: string, occurrences: ReferenceOccurrence[] = []) =>
 	store.createEntryWithReferences({
 		snapshot: {
 			collection: contentCollection,
@@ -18,7 +19,7 @@ const referToMedia = (store: ContentStore, mediaId: string) =>
 			issues: [],
 			imageSources: [],
 		} as never,
-		references: [{ kind: "media", targetId: mediaId, isStale: false, occurrences: [] }],
+		references: [{ kind: "media", targetId: mediaId, isStale: false, occurrences }],
 	});
 
 /** Contract of MediaMetadataStore. */
@@ -69,6 +70,48 @@ export const mediaContract: ContractSuite = (factory) => {
 
 		it("keeps the mimeType filter working", async () => {
 			expect(await names({ mimeType: "image/png" })).toEqual(["a.png"]);
+		});
+	});
+
+	describe("MediaMetadataStore: where a file is used", () => {
+		let session: StoreSession;
+		let store: ContentStore;
+
+		beforeAll(async () => {
+			session = await factory.create();
+			store = session.store;
+		});
+
+		afterAll(async () => {
+			await session.close();
+		});
+
+		it("lists each entry that uses a file with the places in it: the body, or a metadata field by its path", async () => {
+			const media = await store.createMediaAsset({
+				filename: "used.png",
+				mimeType: "image/png",
+				byteSize: 10,
+				stagingKey: "staging/used.png",
+			});
+			await store.completeMediaAsset({
+				id: media.id,
+				storageKey: "media/used.png",
+				mimeType: "image/png",
+				byteSize: 10,
+				width: 1,
+				height: 1,
+			});
+			await referToMedia(store, media.id, [
+				{ type: "metadata", path: "cover" },
+				{ type: "body", blockId: "b1" },
+			]);
+			const listed = (await store.listMediaAssets({})).items.find((item) => item.id === media.id);
+			expect(listed?.references.map((reference) => reference.occurrences)).toEqual([
+				[
+					{ type: "metadata", path: "cover" },
+					{ type: "body", blockId: "b1" },
+				],
+			]);
 		});
 	});
 

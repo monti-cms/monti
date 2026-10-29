@@ -21,6 +21,7 @@ import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel } from "../shared/side-panel";
 import { isInsideFolder, useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
+import { placeNamer } from "./media-item";
 import { blankMenu, fileMenu, folderMenu } from "./media-menus";
 import { MediaPanel } from "./media-panel";
 import { MediaToolbar } from "./media-toolbar";
@@ -95,7 +96,7 @@ export function MediaLibrary() {
 	}, [moveAfter, naming, focusFolderId, move]);
 	const newFolderHere = () => folderActions.requestCreate(state.folder || null);
 
-	const names = { t, tc, td };
+	const names = { t, tc, td, placeName: placeNamer(site, t) };
 	const pickedFiles = items.filter((item) => library.picked.has(item.id));
 	// The folder all of the picked files are in, for the ✓ of the "To folder" menu; none when they differ or some are on other pages.
 	const folderOfPicked = pickedFiles.every((file) => (file.folderId ?? null) === (pickedFiles[0]?.folderId ?? null))

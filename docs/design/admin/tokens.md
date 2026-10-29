@@ -67,7 +67,7 @@ Backgrounds. Pick by what the surface is, not by how dark it should look.
 - `bg-page` and `bg-tool` are the two grounds.
 - `bg-muted` is the gray pill (the secondary action) and inline boxes.
 - `bg-selected` is a selected or open item: the hovered sidebar row, a menu row under the pointer, an open status-bar cell, a filter chip, a selected list row.
-- `bg-current` is where you are on a tool surface. On the sidebar `bg-selected` is the hover, so the current place takes the next step up. It also marks the pressed screen-mode cell.
+- `bg-current` is the item open now in a list whose rows take `bg-selected` under the pointer (the sidebar, the collections column of the settings, the folder column of the media picker): the open item takes the next step up, so it is never mistaken for the row under the pointer. It also marks the pressed screen-mode cell. A list whose hover is `bg-muted` (the entry list) marks a picked row with `bg-selected`.
 - `bg-emphasis` with `fg-on-emphasis` is the black pill: the one primary action of a screen or floating surface.
 - `bg-highlight` marks text a request anchors to, or a found word. `bg-block` marks the editor block under the handle or menu. `bg-backdrop` dims the page behind a sheet or dialog.
 
@@ -77,7 +77,7 @@ Backgrounds. Pick by what the surface is, not by how dark it should look.
 | `bg-tool` | `gray-2` `#f3f1ed` | `gray-1` `#151412` | Tool ground: sidebar, properties and assistant panels, sheets, the source pane, the status bar. Darker than the page in dark. |
 | `bg-muted` | `gray-3` `#f0eee9` | `gray-3` `#26241f` | Gray pill (secondary action), inline boxes, chips at rest. |
 | `bg-selected` | `gray-4` `#eae7e0` | `gray-4` `#2b2925` | Selected or open item: nav item, menu row, open status-bar cell, filter chip. |
-| `bg-current` | `gray-6` `#dcd8cf` | `gray-6` `#3a3833` | Where you are on a tool surface (the sidebar): the current nav row, the pressed screen mode. There bg-selected is the hover, so the current place takes the next step up. |
+| `bg-current` | `gray-6` `#dcd8cf` | `gray-6` `#3a3833` | The item open now in a list whose hover is bg-selected (the sidebar, the settings collections column, the media picker folders), and the pressed screen mode: one step above the hover. |
 | `bg-highlight` | `#e8e1cf` | `#3a352a` | Text highlight: a request anchor, a found word. |
 | `bg-block` | `#efe9dc` | `#2a2722` | Editor block under the handle or menu. |
 | `bg-emphasis` | `gray-12` `#1c1b18` | `gray-12` `#ecebe6` | The black pill: the one primary action of a screen or floating surface. |

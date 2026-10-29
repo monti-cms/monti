@@ -1,43 +1,55 @@
-import { fileTypeLabel } from "@monti-cms/core/site";
+import { fileTypeLabel, type ReferenceOccurrence, type Site } from "@monti-cms/core/site";
 import { toast } from "@monti-cms/ui";
 import type { MediaItem } from "../../api/media";
 import type { TranslatorFor } from "../../translator";
 import type { mediaMessages } from "./messages";
 
-/** One post that uses the media. Counts previously tallied separately for the draft being edited and the published post are merged into one per post. */
+/** One post that uses the media: what it is, and where in it the media sits (its body, the cover field), each place once. */
 export interface MediaUsage {
 	entryId: string;
 	title: string | null;
 	collection: string;
-	/** Note shown when it is used on one side only. Absent when used in both. */
-	note?: "beforePublish" | "publishedOnly";
+	/** The places, named ("대표 이미지", "본문"), in the order the entry first gives them. Empty when the server says nothing about them. */
+	places: string[];
 }
 
+/** Names one place of an entry: the body, or the field at a metadata path. */
+export type PlaceName = (collection: string, occurrence: ReferenceOccurrence) => string;
+
 /**
- * Merges usages into one per post. A published post's draft and published version share the same image and are counted twice, but to a person it is one post.
- * If only in the draft (newly added, not yet published), it is labeled "before publishing"; if only in the published version (removed from the draft but still in the public post), "published only".
+ * One usage per post. A published post's draft and published version share the same image and are listed twice by the server, but to a person it is
+ * one post; their places are merged, the draft's first.
  */
-export function mediaUsages(media: Pick<MediaItem, "references">): MediaUsage[] {
-	const byEntry = new Map<string, MediaUsage & { states: Set<"working" | "published"> }>();
-	for (const reference of media.references) {
-		const current = byEntry.get(reference.entryId);
-		if (current) {
-			current.states.add(reference.state);
-			// If the published side's name is empty, use the draft side's name.
-			current.title ||= reference.title;
-		} else {
-			byEntry.set(reference.entryId, {
-				entryId: reference.entryId,
-				title: reference.title,
-				collection: reference.collection,
-				states: new Set([reference.state]),
-			});
+export function mediaUsages(media: Pick<MediaItem, "references">, placeName?: PlaceName): MediaUsage[] {
+	const byEntry = new Map<string, MediaUsage>();
+	const ordered = [...media.references].sort((a, b) => (a.state === b.state ? 0 : a.state === "working" ? -1 : 1));
+	for (const reference of ordered) {
+		const usage = byEntry.get(reference.entryId) ?? {
+			entryId: reference.entryId,
+			title: reference.title,
+			collection: reference.collection,
+			places: [],
+		};
+		// If the published side's name is empty, use the other side's name.
+		usage.title ||= reference.title;
+		for (const occurrence of placeName ? (reference.occurrences ?? []) : []) {
+			const name = placeName?.(reference.collection, occurrence);
+			if (name && !usage.places.includes(name)) usage.places.push(name);
 		}
+		byEntry.set(reference.entryId, usage);
 	}
-	return [...byEntry.values()].map(({ states, ...usage }) =>
-		states.size === 2 ? usage : { ...usage, note: states.has("working") ? "beforePublish" : "publishedOnly" },
-	);
+	return [...byEntry.values()];
 }
+
+/** Names the places of the site's entries: "본문" for the body, a field's label for a metadata path (its first segment, for a nested value). */
+export const placeNamer =
+	(site: Site, t: TranslatorFor<typeof mediaMessages>): PlaceName =>
+	(collection, occurrence) => {
+		if (occurrence.type === "body") return t("usage.place.body");
+		const name = occurrence.path.split(".")[0] ?? occurrence.path;
+		const field = site.isCollection(collection) ? site.schemaOf(collection).fields[name] : undefined;
+		return field?.label ?? name;
+	};
 
 /** Usage count. Counted once per post (the server's count when only non-post usages exist, such as templates). */
 export const usageCount = (media: MediaItem) => mediaUsages(media).length || media.referencesCount;
@@ -71,9 +83,6 @@ export const kindName = (
 };
 
 /** Text of the usage note (`note`). */
-export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) =>
-	t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
-
 export async function copyText(text: string, success: string, failure: string) {
 	try {
 		await navigator.clipboard.writeText(text);

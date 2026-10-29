@@ -1,4 +1,4 @@
-import type { MediaTrashResult, Site } from "@monti-cms/core/site";
+import type { MediaTrashResult, ReferenceOccurrence, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** One item of the media list API. */
@@ -17,7 +17,14 @@ export interface MediaItem {
 	defaultCaption: string;
 	createdAt: string;
 	referencesCount: number;
-	references: { entryId: string; title: string | null; collection: string; state: "working" | "published" }[];
+	references: {
+		entryId: string;
+		title: string | null;
+		collection: string;
+		state: "working" | "published";
+		/** Where in the entry it is used: the body, or a metadata field by its path. */
+		occurrences?: ReferenceOccurrence[];
+	}[];
 }
 
 /** One page of the media list API. */

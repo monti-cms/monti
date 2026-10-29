@@ -152,6 +152,8 @@ export interface MediaReferenceItem {
 	title: string | null;
 	collection: string;
 	state: "working" | "published";
+	/** Where in the entry the media is used: the body, or a metadata field by its path. */
+	occurrences: ReferenceOccurrence[];
 }
 
 export interface ListMediaItem extends MediaAssetRecord {

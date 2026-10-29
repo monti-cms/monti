@@ -13,6 +13,7 @@ import type {
 	MediaReferenceItem,
 	ReleasedMediaFiles,
 } from "../../../core/store/types";
+import { readReferenceOccurrences } from "../../../core/types";
 import { type StoreContext, withTrx } from "./context";
 import { assertFolderTarget } from "./folders";
 import { mediaInUse } from "./media-use";
@@ -227,8 +228,11 @@ export function createMediaOps(ctx: StoreContext) {
 				.select(MEDIA_COLUMNS_OF_M)
 				.select((eb) => [
 					sql<string>`${eb.fn.count("r.entry_id")}::text`.as("ref_count"),
-					sql<MediaReferenceItem[] | null>`coalesce(json_agg(json_build_object(
-						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleExpr(site, "eb.metadata", ROW_COLLECTION)}
+					sql<
+						(Omit<MediaReferenceItem, "occurrences"> & { occurrences: unknown })[] | null
+					>`coalesce(json_agg(json_build_object(
+						'entryId', r.entry_id, 'state', r.state, 'collection', e.collection, 'title', ${titleExpr(site, "eb.metadata", ROW_COLLECTION)},
+						'occurrences', r.occurrences
 					)) filter (where r.entry_id is not null), '[]')`.as("references_json"),
 				])
 				.$call((query) => {
@@ -250,7 +254,10 @@ export function createMediaOps(ctx: StoreContext) {
 			const items: ListMediaItem[] = rows.map((row) => ({
 				...mapMediaRow(row),
 				referencesCount: Number(row.ref_count),
-				references: row.references_json ?? [],
+				references: (row.references_json ?? []).map((reference) => ({
+					...reference,
+					occurrences: readReferenceOccurrences(reference.occurrences),
+				})),
 			}));
 			return {
 				items,

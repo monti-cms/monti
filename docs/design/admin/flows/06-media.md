@@ -109,7 +109,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 
 - Board: `Flow6Step16.dc.html`
 - Renders: `Media` (mode "파일 열기")
-- The user opens a file. A side panel shows copy address, open in new tab, file name, folder, default alt text (with a fill action), default caption, type, size (web 2400×1600, original 4032×2688), uploaded date, and where it is used.
+- The user opens a file. A side panel shows copy address, open in new tab, file name, folder, default alt text (with a fill action), default caption, type, size (web 2400×1600, original 4032×2688), uploaded date, and where it is used: each post with, at the row's end, the places in it (a field's label such as "대표 이미지", or "본문" for the body).
 - Test: `packages/admin/src/screens/media/__test__/media-flows.test.tsx`
 
 ### Step 17: "둘러보기 · 파일을 우클릭 → 열기 · 쓰는 곳 ▸ · 폴더로 ▸"

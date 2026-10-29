@@ -18,12 +18,14 @@ import type { TranslatorFor } from "../../translator";
 import type { MenuAction } from "../shared/action-menu";
 import type { deleteMessages } from "../shared/delete.messages";
 import { type FolderActions, moveTargetsFor } from "../shared/use-folder-actions";
-import { mediaUsages, usageNoteLabel } from "./media-item";
+import { mediaUsages, type PlaceName } from "./media-item";
 import { folderChoices } from "./media-state";
 import type { mediaMessages } from "./messages";
 
 interface Names {
 	t: TranslatorFor<typeof mediaMessages>;
+	/** Names where in an entry a file is used. */
+	placeName?: PlaceName;
 	tc: TranslatorFor<typeof commonMessages>;
 	td: TranslatorFor<typeof deleteMessages>;
 }
@@ -84,7 +86,7 @@ export function folderMenu(
 export function fileMenu(
 	media: MediaItem,
 	folders: readonly FolderListItem[],
-	{ t, tc }: Names,
+	{ t, tc, placeName }: Names,
 	handlers: {
 		open: (media: MediaItem) => void;
 		openEntry: (usage: { collection: string; entryId: string }) => void;
@@ -99,9 +101,11 @@ export function fileMenu(
 			label: t("menu.usedIn"),
 			icon: Link,
 			emptyLabel: t("menu.usedInEmpty"),
-			items: mediaUsages(media).map((usage) => ({
+			items: mediaUsages(media, placeName).map((usage) => ({
 				kind: "item" as const,
-				label: `${usage.title || tc("untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
+				label: usage.title || tc("untitled"),
+				// Where in the post it is used, at the row's end as the board draws it ("대표 이미지").
+				shortcut: usage.places.join(" · ") || undefined,
 				icon: Document,
 				onSelect: () => handlers.openEntry(usage),
 			})),

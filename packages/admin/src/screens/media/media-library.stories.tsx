@@ -23,13 +23,18 @@ const body = () => within(document.body);
 const picture = (from: string, to: string) =>
 	`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="320" height="240" fill="url(#g)"/></svg>`)}`;
 
-const use = (n: number, notes: ("working" | "published")[] = ["published"]) => ({
+/** The test site's image field of a post (its share image). */
+const COVER = "ogImageId";
+
+/** Used by `n` posts: the first in its image field (the board's "대표 이미지"), the others in the body. */
+const use = (n: number) => ({
 	referencesCount: n,
 	references: Array.from({ length: n }, (_, i) => ({
 		entryId: `e${i}`,
 		title: ["첫 번째 글", "쓰는 중인 글", "여행 기록"][i] ?? `글 ${i}`,
 		collection: "post",
-		state: notes[i % notes.length] ?? ("published" as const),
+		state: "published" as const,
+		occurrences: i === 0 ? [{ type: "metadata" as const, path: COVER }] : [{ type: "body" as const }],
 	})),
 });
 const shot = (id: string, from: string, to: string, fields: Partial<MediaItem> = {}) =>
@@ -46,7 +51,7 @@ const items = [
 		folderId: "blog",
 		defaultAlt: "아침 햇빛이 드는 책상 위의 노트북과 커피잔",
 		original: { mimeType: "image/jpeg", byteSize: 3_100_000, width: 4032, height: 2688 },
-		...use(2, ["published", "working"]),
+		...use(2),
 	}),
 	shot("seoul-night", "#3a3f55", "#1c1e2b", { folderId: "blog", defaultAlt: "", width: 3000, height: 2000, ...use(1) }),
 	pdf("notes-scan", { folderId: "blog" }),

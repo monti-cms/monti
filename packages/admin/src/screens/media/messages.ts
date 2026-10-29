@@ -68,8 +68,7 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"usage.deleting": "Deleting",
 		"usage.count": "{count} posts",
 		"usage.none": "Unused",
-		"usage.note.beforePublish": "Before publishing",
-		"usage.note.publishedOnly": "Published content only",
+		"usage.place.body": "Body",
 
 		"bulk.count": "{count} selected",
 		"bulk.selectAll": "Select all",
@@ -205,8 +204,7 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"usage.deleting": "삭제 중",
 		"usage.count": "글 {count}",
 		"usage.none": "사용 안 함",
-		"usage.note.beforePublish": "발행 전",
-		"usage.note.publishedOnly": "공개 콘텐츠에만",
+		"usage.place.body": "본문",
 
 		"bulk.count": "{count}개 선택",
 		"bulk.selectAll": "전체 선택",

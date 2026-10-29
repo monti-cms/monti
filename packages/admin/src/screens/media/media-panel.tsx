@@ -35,7 +35,7 @@ import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { useDraftEditor } from "../shared/use-draft-editor";
-import { copyText, kindName, mediaUsages, splitFilename, stemProblem, usageCount, usageNoteLabel } from "./media-item";
+import { copyText, kindName, mediaUsages, placeNamer, splitFilename, stemProblem, usageCount } from "./media-item";
 import { folderChoices } from "./media-state";
 import { extensionOf } from "./media-upload";
 import { mediaMessages } from "./messages";
@@ -128,7 +128,7 @@ export function MediaPanel({
 		apply: (value) => update({ alt: value }),
 	};
 
-	const usages = mediaUsages(media);
+	const usages = mediaUsages(media, placeNamer(site, t));
 	const ext = extensionOf(media.filename);
 	// The ⋯ holds what changes the file: replace, the ID (a picture's), and the trash. The address is in the body, under the picture.
 	const menu: MenuAction[] = [
@@ -321,9 +321,9 @@ export function MediaPanel({
 									<TextButton variant="ink" href={withBasePath(entryHref(site, usage.collection, usage.entryId))}>
 										{usage.title || tc("untitled")}
 									</TextButton>
-									{usage.note && (
+									{usage.places.length > 0 && (
 										<Text variant="micro" tone="subtle">
-											{usageNoteLabel(t, usage.note)}
+											{usage.places.join(" · ")}
 										</Text>
 									)}
 								</Inline>
