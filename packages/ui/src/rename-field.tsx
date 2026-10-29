@@ -55,7 +55,8 @@ function RenameField({
 			onBlur={() => finish(() => onCommit(value))}
 			className={cn(
 				"h-7 rounded-monti-md border border-monti-contrast bg-monti-page px-monti-8 text-monti-body text-monti-default outline-none selection:bg-monti-highlight",
-				fill ? "min-w-0 grow" : "-ml-[9px] min-w-50",
+				// In a row the 28px field overlaps the 20px line by 4px above and below, so the row keeps its height.
+				fill ? "min-w-0 grow" : "-my-monti-4 -ml-[9px] min-w-50",
 				className,
 			)}
 		/>
