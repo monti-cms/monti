@@ -91,7 +91,7 @@ These rules keep the admin one system. `pnpm check:design` (`scripts/check-desig
 5. **Every part is documented.** A component exported from `@monti-cms/ui` is named on its family page in `components/`, with its rules and an "In code" line. A new part gets its page entry in the same pull request.
 6. **Parts first, then screens.** When work is split into pieces, one piece builds the new or changed shared parts in `@monti-cms/ui` (with stories and docs) before the screen pieces start. Screen pieces use those parts and add none; a piece that finds a missing part stops and asks for it.
 7. **Match the board, then the docs.** A value on a board that disagrees with these docs or with an existing part is a question for the owner, not a local choice. Note it in the pull request.
-8. **Review before merge.** Each piece's diff goes through the `design-review` agent (`.claude/agents/design-review.md`) before it joins the epic branch.
+8. **Three gates before merge.** Each piece joins a shared branch only after: `pnpm check:design` passes; the `design-review` agent (`.claude/agents/design-review.md`) has reviewed its diff; and every changed state has been compared side by side with its board at 1440×900, each difference fixed or listed as a question for the owner. A piece's own report is a claim, not evidence.
 
 `// design-allow: <reason>` (or `{/* design-allow: <reason> */}` in JSX) skips one line of `check:design`. It is for runtime-measured values, not for style choices.
 

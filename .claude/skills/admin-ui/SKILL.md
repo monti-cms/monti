@@ -32,8 +32,8 @@ The admin is one design system. Its rules are in `docs/design/admin`; this page 
 3. Build missing or changed parts in `@monti-cms/ui` first, with stories and their docs entry.
 4. Then the screen, composing only those parts.
 5. Run `pnpm check:design` with the other checks.
-6. Before the change joins a shared branch, run the `design-review` agent on its diff.
+6. Before the change joins a shared branch, pass the three gates: `check:design`, the `design-review` agent on its diff, and a side-by-side of every changed state with its board at 1440×900.
 
 ## When you brief another agent
 
-Do not retell the rules. Tell it to load this skill (`admin-ui`) first, name the docs pages and boards for its piece, and say which shared parts it may use and that it must not add parts to `@monti-cms/ui` unless that is its piece.
+Admin UI needs design judgment: give it to the strongest model, in few large pieces (one parts piece first, one owner per screen); use a smaller model only for mechanical work with an exact spec. Do not retell the rules. Tell it to load this skill (`admin-ui`) first, name the docs pages and boards for its piece, and say which shared parts it may use and that it must not add parts to `@monti-cms/ui` unless that is its piece.
