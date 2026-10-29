@@ -153,10 +153,8 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 						.executeTakeFirst();
 					assertSourceNotTrashed(source?.status, locked.version);
 				}
-				const deletedAt = isSource
-					? (await trx.selectFrom("entries").select("deleted_at").where("id", "=", params.id).executeTakeFirst())
-							?.deleted_at
-					: null;
+				// Read while the source still has its trash time: which translations share it is what decides who comes back with it.
+				const members = isSource ? await lockTranslationsOf(trx, params.id) : [];
 				const version = locked.version + 1;
 				await trx
 					.updateTable("entries")
@@ -177,13 +175,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 						snapshot: params.snapshot as PreparedSnapshot,
 					});
 				}
-				const restored = [params.id];
-				if (isSource && deletedAt) {
-					const members = await lockTranslationsOf(trx, params.id);
-					const withSource = membersToRestore(members, deletedAt);
-					await setMembersStatus(trx, withSource, STATUS_AFTER.restore, null);
-					restored.push(...withSource);
-				}
+				const withSource = membersToRestore(members);
+				await setMembersStatus(trx, withSource, STATUS_AFTER.restore, null);
+				const restored = [params.id, ...withSource];
 				// An entry that was in a trashed folder comes back to the live folder of the same path.
 				const placed = await placeInLiveFolders(trx, "entries", restored);
 				if (placed.placed) params.onPlaced?.({ recreated: placed.recreated });

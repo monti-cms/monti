@@ -91,5 +91,25 @@ describe("translation groups (postgres storage)", () => {
 			for (const row of rows) expect(row.payload.title || row.payload.workingSlug).toBeTruthy();
 			expect(trashedTranslation.status).toBe("trashed");
 		});
+
+		it("keeps a translation trashed on its own in the trash when the source is restored, even if it went a few microseconds before the source", async () => {
+			const source = await createPost("trash-same-millisecond");
+			const apart = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+			await store.trashEntry({ id: apart.id, expectedVersion: apart.version });
+			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
+			// Two trashes inside one millisecond: the times differ only below it, where a JavaScript Date cannot tell them apart.
+			await pool.query(`UPDATE "${schemaName}".entries SET deleted_at = $2 WHERE id = $1`, [
+				apart.id,
+				"2026-01-01 00:00:00.000200+00",
+			]);
+			await pool.query(`UPDATE "${schemaName}".entries SET deleted_at = $2 WHERE id = $1`, [
+				source.id,
+				"2026-01-01 00:00:00.000500+00",
+			]);
+
+			await store.restoreEntry({ id: source.id, expectedVersion: trashed.version });
+			expect(await statusOf(source.id)).toBe("draft");
+			expect(await statusOf(apart.id)).toBe("trashed");
+		});
 	});
 });

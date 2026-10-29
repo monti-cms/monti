@@ -100,18 +100,29 @@ export async function removeEntries(
 	return removed;
 }
 
-/** The translations of the source `id` (none for a translation), locked. */
+/**
+ * The translations of the source `id` (none for a translation), locked. Whether each was trashed with the source is compared here, in the database:
+ * `deleted_at` keeps microseconds, and a JavaScript `Date` read from it only milliseconds.
+ */
 export async function lockTranslationsOf(trx: Db, id: string): Promise<GroupMember[]> {
 	return (
 		await trx
 			.selectFrom("entries")
-			.select(["id", "status", "deleted_at"])
+			.select((eb) => [
+				"id",
+				"status",
+				eb(
+					"deleted_at",
+					"=",
+					eb.selectFrom("entries as source").select("source.deleted_at").where("source.id", "=", id),
+				).as("trashed_with_source"),
+			])
 			.where("translation_group_id", "=", id)
 			.where("id", "<>", id)
 			.orderBy("id")
 			.forUpdate()
 			.execute()
-	).map((row) => ({ id: row.id, status: row.status, deletedAt: row.deleted_at }));
+	).map((row) => ({ id: row.id, status: row.status, trashedWithSource: row.trashed_with_source === true }));
 }
 
 /**

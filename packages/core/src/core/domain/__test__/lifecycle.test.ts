@@ -103,13 +103,12 @@ describe("lifecycle transitions", () => {
 });
 
 describe("what a source's transition does to its translations", () => {
-	const at = (iso: string) => new Date(iso);
 	const group: GroupMember[] = [
-		{ id: "draft", status: "draft", deletedAt: null },
-		{ id: "published", status: "published", deletedAt: null },
-		{ id: "archived", status: "archived", deletedAt: null },
-		{ id: "trashed-with-source", status: "trashed", deletedAt: at("2026-01-01T00:00:00Z") },
-		{ id: "trashed-earlier", status: "trashed", deletedAt: at("2025-06-01T00:00:00Z") },
+		{ id: "draft", status: "draft", trashedWithSource: false },
+		{ id: "published", status: "published", trashedWithSource: false },
+		{ id: "archived", status: "archived", trashedWithSource: false },
+		{ id: "trashed-with-source", status: "trashed", trashedWithSource: true },
+		{ id: "trashed-earlier", status: "trashed", trashedWithSource: false },
 	];
 
 	it("archives the drafts and published translations only", () => {
@@ -125,11 +124,7 @@ describe("what a source's transition does to its translations", () => {
 	});
 
 	it("restores only the translations trashed together with the source (the same trash time)", () => {
-		expect(membersToRestore(group, at("2026-01-01T00:00:00Z"))).toEqual(["trashed-with-source"]);
-	});
-
-	it("restores no translation when the source has no trash time", () => {
-		expect(membersToRestore(group, null)).toEqual([]);
+		expect(membersToRestore(group)).toEqual(["trashed-with-source"]);
 	});
 
 	it("blocks deleting a source while a translation is outside the trash", () => {

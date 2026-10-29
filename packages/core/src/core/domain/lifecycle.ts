@@ -84,7 +84,11 @@ export function assertDeletable(status: EntryStatus, version: number): void {
 export interface GroupMember {
 	readonly id: string;
 	readonly status: EntryStatus;
-	readonly deletedAt: Date | null;
+	/**
+	 * In the trash since the source's own trash, which gives the whole group one trash time. The store compares the times in the database, to the
+	 * microsecond: a translation trashed on its own a moment before has another time, even inside the same millisecond, where a `Date` sees none.
+	 */
+	readonly trashedWithSource: boolean;
 }
 
 const idsOf = (members: readonly GroupMember[]): string[] => members.map((member) => member.id);
@@ -103,13 +107,8 @@ export function membersToTrash(members: readonly GroupMember[]): string[] {
 }
 
 /** Only translations trashed together with the source (the same trash time) come back. Translations trashed separately stay in the trash. */
-export function membersToRestore(members: readonly GroupMember[], sourceTrashedAt: Date | null): string[] {
-	if (!sourceTrashedAt) return [];
-	return idsOf(
-		members.filter(
-			(member) => member.status === "trashed" && member.deletedAt?.getTime() === sourceTrashedAt.getTime(),
-		),
-	);
+export function membersToRestore(members: readonly GroupMember[]): string[] {
+	return idsOf(members.filter((member) => member.status === "trashed" && member.trashedWithSource));
 }
 
 /**
