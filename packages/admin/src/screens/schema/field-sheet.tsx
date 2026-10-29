@@ -4,13 +4,14 @@ import { fieldTraits, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
-	Heading,
 	Inline,
+	LockMark,
 	Sheet,
 	SheetBody,
 	SheetContent,
 	SheetFooter,
 	SheetHeader,
+	SheetSection,
 	SheetTitle,
 	Stack,
 	Tabs,
@@ -23,13 +24,14 @@ import {
 import { useRef, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
-import { Labeled } from "../shared/labeled";
 import {
 	FlagSwitch,
 	IssueList,
+	NameInput,
 	orUndefined,
 	Pick,
 	SegmentedField,
+	TextAreaInput,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
@@ -37,7 +39,10 @@ import {
 import { type CollectionEditing, KindOptions, kindChoices, LOCALIZED_KINDS } from "./field-editor";
 import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 import { schemaFieldsMessages } from "./fields.messages";
+import { schemaMessages } from "./messages";
+import { ReadValue } from "./read-value";
 import {
+	allFieldNames,
 	FIELD_KEY_ORDER,
 	type FieldKindName,
 	type FieldPlace,
@@ -48,6 +53,7 @@ import {
 	type Rename,
 	removeBlock,
 	removeField,
+	renameField,
 	setField,
 	setProp,
 	setTitleField,
@@ -57,10 +63,11 @@ import {
 } from "./schema-model";
 
 /**
- * The editor of one field, in a sheet on the right. Edits go to a copy of the collection: Apply puts the copy into the file, Cancel (or closing the sheet)
- * drops it. Deleting a field is the one thing that acts at once, as a change of the file that the review still shows.
+ * The editor of one field, in a sheet on the right: "View" (what the writer sees: display name, help text, placeholder, rows) then "Structure" (what the saved data
+ * depends on: name, kind, required, the kind's own settings, languages). The structure is locked, with the lock after its title, when the file cannot be
+ * written. The tab Advanced holds the role and a custom input. Edits go to a copy of the collection: Save puts the copy into the file, Cancel (or closing the
+ * sheet) drops it. Deleting a field is the one thing that acts at once, as a change of the file that the review still shows.
  */
-
 export function FieldSheet({
 	editing,
 	place,
@@ -74,10 +81,13 @@ export function FieldSheet({
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const tc = useTranslator(commonMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled, collectionNames, file } = useSchemaEdit();
 	const [draft, setDraft] = useState<Obj>(editing.collection);
 	// Renames of options made in the copy are recorded for the review only when the copy is applied.
 	const renames = useRef<Rename[]>([]);
+	// The name the field has after Apply: the rename is made on the file then, with the copy's other edits.
+	const [newName, setNewName] = useState(name);
 	const field = fieldAt(draft, place, name) ?? {};
 	const kind = String(field.kind) as FieldKindName;
 	const path = place.branch
@@ -117,9 +127,15 @@ export function FieldSheet({
 	const savedOpposite =
 		!place.branch && kind === "relation" && oppositeOf(file, editing.collectionName, name, target) !== undefined;
 	const [opposite, setOpposite] = useState(savedOpposite);
+	const collectionTitle =
+		typeof editing.collection.label === "string" ? editing.collection.label : editing.collectionName;
+	const hasAdvanced = !disabled && valueKind && (!isSlug || hasPluginInputs || hasCustomInput);
+	const localized = field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared";
 
 	const apply = () => {
-		editing.update(() => draft);
+		const renamed = newName !== name && !place.branch;
+		editing.update(() => (renamed ? renameField(draft, place, name, newName) : draft));
+		if (renamed) editing.onRename({ kind: "field", collection: editing.collectionName, from: name, to: newName });
 		const shown = opposite && field.kind === "relation" && field.many === true;
 		if (shown !== savedOpposite)
 			editing.updateFile?.((current) => withOpposite(current, editing.collectionName, name, target, shown));
@@ -135,40 +151,84 @@ export function FieldSheet({
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent data-testid="field-sheet">
 				{/* The tabs root is the column that holds the tabs and the scrolling body, so the footer stays in view. */}
-				<Tabs defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
+				<Tabs fill defaultValue="basic" render={<Stack gap={0} grow minHeight={0} />}>
 					<SheetHeader>
-						<SheetTitle>{label || name}</SheetTitle>
+						<SheetTitle of={`· ${collectionTitle}`} ofMono={false}>
+							{label || name}
+						</SheetTitle>
 					</SheetHeader>
-					<TabsList variant="bar" inset="panel">
-						<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
-						<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
-					</TabsList>
+					{hasAdvanced && (
+						<TabsList variant="bar" inset="panel">
+							<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
+							<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
+						</TabsList>
+					)}
 					<SheetBody>
 						<IssueList issues={issues} />
 						<TabsContent value="basic">
-							<Stack gap={32}>
-								<Stack as="section" gap={24}>
-									<TextInput label={t("sheet.label")} value={label} onChange={(value) => setBoth("label", value)} />
-									<TextInput
+							<Stack gap={0}>
+								<SheetSection title={t("sheet.view")}>
+									<TextInput label={t("field.label")} value={label} onChange={(value) => setBoth("label", value)} />
+									<TextAreaInput
 										label={t("field.description")}
-										optional
 										value={field.description as string | undefined}
 										onChange={(value) => setBoth("description", orUndefined(value))}
 									/>
-									<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-										<Inline height="icon-button" radius="md" background="muted" paddingX={12}>
-											<Text as="code">{name}</Text>
-										</Inline>
-									</Labeled>
-								</Stack>
-								<Stack as="section" gap={16} border="top" paddingTop={32}>
-									<Heading as="h3" variant="label">
-										{t("sheet.input")}
-									</Heading>
+									<KindOptions
+										name={name}
+										field={field}
+										editing={draftEditing}
+										set={set}
+										change={change}
+										place={place}
+										part="view"
+									/>
+								</SheetSection>
+								<SheetSection
+									title={
+										<>
+											{t("sheet.structure")}
+											{disabled && <LockMark label={ts("lock.cannotChange")} />}
+										</>
+									}
+								>
+									{disabled || place.branch ? (
+										<ReadValue label={t("field.name")}>{name}</ReadValue>
+									) : (
+										<NameInput
+											label={t("field.name")}
+											value={newName}
+											taken={allFieldNames(editing.collection).filter((item) => item !== name)}
+											onCommit={setNewName}
+										/>
+									)}
+									{disabled ? (
+										<ReadValue label={t("field.kind")} mono={false}>
+											{t(`kind.${kind}`)}
+										</ReadValue>
+									) : (
+										<Pick
+											label={t("field.kind")}
+											value={kind}
+											disabled={isFixed}
+											items={kindChoices(kind).map((item) => ({ value: item, label: t(`kind.${item}`) }))}
+											onChange={(next) =>
+												change((current) => withKind(current, next as FieldKindName, collectionNames))
+											}
+										/>
+									)}
+									{valueKind && kind !== "conditional" && (
+										<FlagSwitch
+											label={t("field.required")}
+											mark="!"
+											checked={isTitle || field.required === true}
+											locked={isTitle}
+											onChange={(on) => set("required", on ? true : undefined)}
+										/>
+									)}
 									{kind === "text" && !place.branch && (
 										<FlagSwitch
 											label={t("field.isTitle")}
-											description={isTitle ? t("field.isTitleFixedHint") : t("field.isTitleHint")}
 											checked={isTitle}
 											locked={isTitle}
 											onChange={(on) => on && draftEditing.update((collection) => setTitleField(collection, name))}
@@ -182,28 +242,24 @@ export function FieldSheet({
 										change={change}
 										place={place}
 										opposite={!place.branch && editing.updateFile ? { on: opposite, onChange: setOpposite } : undefined}
+										part="structure"
 									/>
-								</Stack>
-								{valueKind && (
-									<Stack as="section" gap={16} border="top" paddingTop={32}>
-										<Heading as="h3" variant="label">
-											{t("sheet.rules")}
-										</Heading>
-										{kind !== "conditional" && (
-											<FlagSwitch
-												label={t("field.required")}
-												description={isTitle ? t("field.requiredTitleHint") : t("field.requiredHint")}
-												checked={isTitle || field.required === true}
-												locked={isTitle}
-												onChange={(on) => set("required", on ? true : undefined)}
-											/>
-										)}
-										{LOCALIZED_KINDS.includes(kind) && (
+									{valueKind &&
+										LOCALIZED_KINDS.includes(kind) &&
+										(disabled ? (
+											<ReadValue label={t("field.localized")} mono={false}>
+												{t(
+													localized === "localized"
+														? "field.localizedOwn"
+														: localized === "inherit"
+															? "field.localizedInherit"
+															: "field.localizedShared",
+												)}
+											</ReadValue>
+										) : (
 											<SegmentedField
 												label={t("field.localized")}
-												value={
-													field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared"
-												}
+												value={localized}
 												items={[
 													{ value: "shared", label: t("field.localizedShared") },
 													{ value: "localized", label: t("field.localizedOwn") },
@@ -213,26 +269,20 @@ export function FieldSheet({
 													set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined)
 												}
 											/>
-										)}
-									</Stack>
-								)}
+										))}
+								</SheetSection>
 							</Stack>
 						</TabsContent>
 						<TabsContent value="advanced">
-							<Stack gap={24}>
-								<Pick
-									label={t("field.kind")}
-									description={
-										isTitle
-											? t("field.kindFixedTitleHint")
-											: isSlug
-												? t("field.kindFixedSlugHint")
-												: t("sheet.kindHint")
-									}
-									value={kind}
-									disabled={isFixed}
-									items={kindChoices(kind).map((item) => ({ value: item, label: t(`kind.${item}`) }))}
-									onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
+							<Stack gap={16}>
+								<KindOptions
+									name={name}
+									field={field}
+									editing={draftEditing}
+									set={set}
+									change={change}
+									place={place}
+									part="advanced"
 								/>
 								{!isSlug && valueKind && (
 									<FieldRolePicker
@@ -255,21 +305,23 @@ export function FieldSheet({
 					</SheetBody>
 				</Tabs>
 				<SheetFooter>
-					<TextButton
-						type="button"
-						variant="danger"
-						disabled={disabled || blocked !== null}
-						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
-						onClick={remove}
-					>
-						{t("sheet.delete")}
-					</TextButton>
-					<Box as="span" grow />
-					<TextButton type="button" onClick={onClose}>
-						{tc("cancel")}
-					</TextButton>
+					{!disabled && (
+						<Inline gap={12} grow minWidth={0}>
+							<TextButton variant="danger" disabled={blocked !== null} onClick={remove}>
+								{t("sheet.delete")}
+							</TextButton>
+							{blocked && (
+								<Box minWidth={0}>
+									<Text variant="caption" tone="muted" data-testid="remove-blocked">
+										{t(`field.removeBlocked.${blocked}`)}
+									</Text>
+								</Box>
+							)}
+						</Inline>
+					)}
+					<TextButton onClick={onClose}>{tc("cancel")}</TextButton>
 					<Button type="button" disabled={disabled} onClick={apply}>
-						{tc("apply")}
+						{t("sheet.save")}
 					</Button>
 				</SheetFooter>
 			</SheetContent>

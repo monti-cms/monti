@@ -44,7 +44,9 @@ A sheet is for making: work with several inputs that may get long (add a field, 
 
 ### In code
 
-`Sheet` (`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). It opens over a dimmed page with a line down its left edge, square, with `shadow-sheet`. Its width is fixed. `SheetHeader` has no ✦ place; with `closable={false}` (the sheet is busy and cannot be left) there is no close button. The body scrolls when longer than the sheet.
+`Sheet` (`SheetContent`, `SheetHeader`, `SheetBody`, `SheetFooter`, `SheetTitle`, `SheetClose`, `SheetTrigger`). It opens over a dimmed page with a line down its left edge, square, with `shadow-sheet`. Its width is fixed. `SheetHeader` has no ✦ place; with `closable={false}` (the sheet is busy and cannot be left) there is no close button. The body scrolls when longer than the sheet. The title can end in what the sheet is about with `SheetTitle of` ("필드 추가 · 노트").
+
+`SheetSection` is a titled part of the body ("보기", then "구조"): the title in 14px semibold, the fields under it, a later section 8px lower; the title can end in a `LockMark`. `SheetSplit` splits the body in two: a list on the left (150px, a rule on its right edge) and the work on the right under its own tabs. "필드 추가" uses it: the kinds are a `PickList` (a listbox) and the settings of the picked kind sit beside it under the tabs "기본" and "고급".
 
 ## Side panel
 
@@ -52,12 +54,15 @@ A side panel is for looking at together: next to the screen without covering it 
 
 - Cream ground, a thin inset line on the left, a head of 60px. It closes with the × at the end of the head (12px from the right edge). The assistant is the same.
 - It is docked at the window's right edge and covers the ✦ button. ✦ opens the assistant, so while a panel is open it lies under it and is not seen. So the right of the head is not kept empty for ✦.
+- The properties pane is the exception: it has no head and no ×. It opens and closes with the properties button of the page header, and its tab bar is its top row.
 - Fields inside a panel: the label is `mt-label` (mono 11) and the value is `text-note` (13). A panel is a tool, so its text is one step smaller than body text (14).
 - When there is something to save, one pill goes at the bottom.
 
 ### In code
 
-`SidePanel`: `width` is `side` (360px; a file or an activity beside a list), `panel` (300px; an entry's properties) or `assistant` (380px). The title is 16px bold. It takes optional panel icon buttons and the close button in the head, and a foot that holds the one pill or the box to type in. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and foot are one form. The look shared with the sheet is the `PANEL_*` strings (a 60px head, a body with 20px above and 24 at the sides).
+`PropertyPanel` is the entry's properties pane: a `SidePanel` 300px wide with a tab bar (`TabsList variant="bar"`) in place of the head, no title and no close button, and a read list under it. `PropertyGroup` is a run of rows with an optional quiet subheading ("분류"); `PropertyRow` is one property: the label above (mono 11) with an `action` at the right end of the label row, the value below (13). At rest the value is text with no box, and pressing it opens the field in place (`onEdit`, `editing`); an empty value reads `fg-faint` (`empty`); a value the assistant wrote is `fg-proposal` and described as the assistant's (`proposal`). The fill `action` shows only while the pointer or the keyboard is in the row, and while it works.
+
+`SidePanel`: `title` is optional (without it there is no head; give `aria-label`, and `bar` for a pinned tab row), `width` is `side` (360px; a file or an activity beside a list), `panel` (300px; an entry's properties) or `assistant` (380px). The title is 16px bold. It takes optional panel icon buttons and the close button in the head, and a foot that holds the one pill or the box to type in. The panel is named by its title. Put it in a row beside the screen; on a narrow screen it takes the whole width. With `onSubmit` the body and foot are one form. The look shared with the sheet is the `PANEL_*` strings (a 60px head, a body with 20px above and 24 at the sides).
 
 ## Name and value
 
@@ -81,7 +86,7 @@ A small black pill that names an icon button that has no text. 12px, and a short
 
 ### In code
 
-`Tooltip` (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`); `shortcut` takes the key combination ("⌘S").
+`Tooltip` (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`); `shortcut` takes the keys (`["mod", "S"]`), written "⌘S" on a Mac and "Ctrl+S" elsewhere (see Menu, "Shortcuts").
 
 ## Toast
 

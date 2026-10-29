@@ -93,12 +93,15 @@ function TableRow({
 	className,
 	selected,
 	proposal = false,
+	twoLine = false,
 	...props
 }: React.ComponentProps<"tr"> & {
 	/** A row the writer picked (checked for a bulk action, or open in a side panel). */
 	selected?: boolean;
 	/** The assistant picked this row and nobody has touched it yet. */
 	proposal?: boolean;
+	/** The row has a second line under its title (a template's sections): 16px above and below instead of 10. */
+	twoLine?: boolean;
 }) {
 	return (
 		<tr
@@ -109,6 +112,7 @@ function TableRow({
 			className={cn(
 				props.onClick && "cursor-pointer not-data-selected:hover:bg-monti-muted",
 				"group/row relative border-monti-muted border-b has-data-[slot=row-link]:cursor-pointer not-data-selected:has-[[data-slot=row-actions]_[aria-expanded=true]]:bg-monti-muted has-data-[slot=row-link]:not-data-selected:hover:bg-monti-muted data-selected:data-proposal:bg-monti-proposal-muted data-selected:border-monti-default data-selected:bg-monti-selected not-data-selected:data-popup-open:bg-monti-muted [&:has([data-slot=row-link])>td]:static",
+				twoLine && "[&>td]:py-monti-16",
 				className,
 			)}
 			{...props}
@@ -168,9 +172,25 @@ function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-/** The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. */
+/** The 40px thumb column of a media row: a file's picture (`Image size="row"`), or the icon of a folder row centered where the pictures are. */
+function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
+	return (
+		<span
+			data-slot="row-thumb"
+			className={cn("flex w-monti-40 shrink-0 justify-center text-monti-subtle", className)}
+			{...props}
+		/>
+	);
+}
+
+/**
+ * The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. It takes one line of
+ * the row (20px) and lets its button stand out above and below, so the ⋯ does not make the row taller than its text.
+ */
 function RowActions({ className, ...props }: React.ComponentProps<"span">) {
-	return <span data-slot="row-actions" className={cn("relative z-1 inline-flex", className)} {...props} />;
+	return (
+		<span data-slot="row-actions" className={cn("relative z-1 inline-flex h-5 items-center", className)} {...props} />
+	);
 }
 
 /**
@@ -308,6 +328,7 @@ export {
 	ListScroll,
 	RowActions,
 	RowCheck,
+	RowThumb,
 	RowLink,
 	RowTitle,
 	Table,

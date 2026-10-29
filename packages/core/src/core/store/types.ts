@@ -152,6 +152,8 @@ export interface MediaReferenceItem {
 	title: string | null;
 	collection: string;
 	state: "working" | "published";
+	/** Where in the entry the media is used: the body, or a metadata field by its path. */
+	occurrences: ReferenceOccurrence[];
 }
 
 export interface ListMediaItem extends MediaAssetRecord {
@@ -164,6 +166,10 @@ export interface ListMediaParams {
 	mimeType?: string;
 	/** Images only (`image`) or non-image attachments only (`file`). */
 	kind?: "all" | "image" | "file";
+	/** Images without (`none`: empty or only spaces) or with (`has`) a default alt. Alt text only exists for images, so both show images only. */
+	alt?: "all" | "none" | "has";
+	/** Newest upload first (the default), oldest first, by file name, or biggest file first. Ties go by id. */
+	sort?: "uploaded" | "uploadedAsc" | "name" | "size";
 	used?: "all" | "used" | "unused";
 	folderId?: string | null;
 	includeDescendants?: boolean;
@@ -178,6 +184,18 @@ export interface ListMediaResult {
 	total: number;
 	page: number;
 	pageSize: number;
+	/**
+	 * How many files each `kind` choice would show, and how many images each `alt` choice would show. Counted over the same files as the list (folder,
+	 * `includeDescendants`, search, `mimeType`, `used`, upload dates) but not by `kind` or `alt` themselves, so a menu can show the number for every choice.
+	 */
+	kinds: { image: number; file: number };
+	alts: { none: number; has: number };
+}
+
+/** The stored files a replaced media file gave up: the caller deletes them after the commit. */
+export interface ReleasedMediaFiles {
+	storageKey: string | null;
+	originalStorageKey: string | null;
 }
 
 export interface Folder {

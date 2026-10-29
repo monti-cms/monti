@@ -30,6 +30,8 @@ export interface EditRequest {
 	readonly renames: readonly RenameInput[];
 	/** Collections the draft removed whose entries are deleted with them (a `dropCollection` each). */
 	readonly dropCollections?: readonly string[];
+	/** Languages the draft removed whose translations move to the trash (a `trashLocale` each). */
+	readonly trashLocales?: readonly string[];
 }
 
 export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSignal) =>

@@ -42,7 +42,7 @@ Source view has three states, `끔 · 옆 창 · 나란히` (off · side pane ·
 
 ### In code
 
-The source view switch is `Segmented` (`size="sm"`, `inline`). The pair view and the compare view are not in `@monti-cms/ui` yet.
+The source view switch is `Segmented` (`size="sm"`, `inline`). The pair view is not in `@monti-cms/ui` yet. The compare view is `Compare` (see Status bar's neighbours: the entry compare screen in `screens.md`, EditorCompare).
 
 ## Same as the source (`.mt-shared`)
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text } from "@monti-cms/ui";
-import { Section } from "../shared/section";
+import { Box, Section, Stack } from "@monti-cms/ui";
 import { schemaAdminMessages } from "./admin.messages";
 import { FlagSwitch, Pick, useSettingRevert } from "./controls";
+import { ReadValue } from "./read-value";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
 
 const DEFAULT_CHOICE = "__default";
@@ -30,22 +30,20 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 		locale && !dictionaryLanguages.includes(locale) ? [...dictionaryLanguages, locale] : dictionaryLanguages;
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
-		<Stack gap={48} data-testid="admin-settings">
-			<Section wide band title={t("admin.languageTitle")}>
-				<Box>
-					<Pick
-						label={t("admin.locale")}
-						revert={revert("locale")}
-						value={locale ?? DEFAULT_CHOICE}
-						items={[
-							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
-							...languages.map((code) => ({ value: code, label: languageLabel(code) })),
-						]}
-						onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
-					/>
-				</Box>
+		<Stack gap={0} data-testid="admin-settings">
+			<Section title={t("admin.languageTitle")}>
+				<Pick
+					label={t("admin.locale")}
+					revert={revert("locale")}
+					value={locale ?? DEFAULT_CHOICE}
+					items={[
+						{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
+						...languages.map((code) => ({ value: code, label: languageLabel(code) })),
+					]}
+					onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
+				/>
 			</Section>
-			<Section wide band title={t("admin.featuresTitle")}>
+			<Section title={t("admin.featuresTitle")}>
 				<FlagSwitch
 					label={t("admin.templates")}
 					revert={revert("templates")}
@@ -59,19 +57,12 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					onChange={(on) => set("translations", on ? undefined : false)}
 				/>
 			</Section>
-			<Section wide band rows={false} title={t("admin.addressTitle")}>
-				<Stack gap={8}>
-					<Box width="fit" background="muted" radius="md" paddingX={12} paddingY={8}>
-						<Text as="code" data-testid="admin-path">
-							{path}
-						</Text>
+			<Section title={t("admin.addressTitle")}>
+				<ReadValue label={t("admin.path")}>
+					<Box as="span" data-testid="admin-path">
+						{path}
 					</Box>
-					<Box maxWidth="reading">
-						<Text as="p" variant="label" tone="muted">
-							{t("admin.pathNote")}
-						</Text>
-					</Box>
-				</Stack>
+				</ReadValue>
 			</Section>
 		</Stack>
 	);

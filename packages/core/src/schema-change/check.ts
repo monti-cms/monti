@@ -19,6 +19,11 @@ export type ImpactConsequence =
 	| "transformed"
 	/** A `dropField` transform deletes the stored values, or a `dropCollection` transform deletes the collection's entries. */
 	| "deleted"
+	/**
+	 * A `trashLocale` transform moves the translations of the removed language to the trash (restorable from the trash screen). `ChangeImpact.entries` is the
+	 * number of translations that move: the live ones, the ones already in the trash are not counted.
+	 */
+	| "trashed"
 	/** The stored values stay as orphans: kept in the entry, hidden from the public read, listed in a warning at publish. */
 	| "orphaned"
 	/** A select value that is no longer an option stays as stored; publishing warns (`unknown_select_value`). */
@@ -30,7 +35,9 @@ export type ImpactConsequence =
 	/** The stored values do not fit the field's new type; saving the entry may be rejected until they are fixed. */
 	| "invalid_values"
 	/** The data is kept as it is; the screen shows it differently. */
-	| "kept";
+	| "kept"
+	/** The public address of the published entries changes; the old address stops working and there is no redirect. */
+	| "address_changed";
 
 export interface ImpactSample {
 	readonly id: string;
@@ -154,6 +161,12 @@ function ruleFor(change: SchemaChange, options: CheckOptions): Rule {
 		}
 		case "collection_kind_changed":
 			return { collections: only(change.collection), touches: inCollection, consequence: "kept" };
+		case "collection_path_changed":
+			return {
+				collections: only(change.collection),
+				touches: (body) => inCollection(body) && body.state === "published",
+				consequence: "address_changed",
+			};
 		case "body_changed":
 			return change.to
 				? { collections: null, consequence: "none" }
@@ -242,7 +255,12 @@ function ruleFor(change: SchemaChange, options: CheckOptions): Rule {
 				consequence: "unknown_value",
 			};
 		case "locale_removed":
-			return { collections: "all", touches: (b) => b.locale === change.locale, consequence: "orphaned" };
+			// Translations only (the entries a trash would move); the ones already in the trash are not live, so they are not counted. An entry counts once for its working and published copies.
+			return {
+				collections: "all",
+				touches: (b) => b.isTranslation && b.locale === change.locale && b.status !== "trashed",
+				consequence: "orphaned",
+			};
 	}
 }
 
@@ -253,6 +271,7 @@ function handledConsequence(
 ): ImpactConsequence | undefined {
 	if (!change.handledBy) return undefined;
 	const handler = transforms?.find((item) => item.id === change.handledBy);
+	if (handler?.op === "trashLocale") return "trashed";
 	return handler?.op === "dropField" || handler?.op === "dropCollection" ? "deleted" : "transformed";
 }
 

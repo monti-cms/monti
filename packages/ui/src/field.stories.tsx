@@ -135,6 +135,36 @@ export const Required: Story = {
 	),
 };
 
+/**
+ * A field that differs from the saved value: a change dot after the label and a small quiet underlined undo button at the end of the row. The row keeps
+ * the label's 14px height, so the field below does not move when it becomes changed (the second field is the same field unchanged, for comparing).
+ */
+export const Changed: Story = {
+	render: () => (
+		<FormFieldGroup>
+			<FormField>
+				<FormFieldLabel
+					htmlFor="c-name"
+					changed={{ label: "바뀜", undoLabel: "되돌리기", undoName: "사이트 이름 되돌리기", onUndo: () => {} }}
+				>
+					사이트 이름
+				</FormFieldLabel>
+				<Input id="c-name" defaultValue="example.dev" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="c-name-saved">사이트 이름</FormFieldLabel>
+				<Input id="c-name-saved" defaultValue="example.dev" />
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor="c-dot" changed={{ label: "바뀜", undoLabel: "되돌리기" }}>
+					점만 있는 줄
+				</FormFieldLabel>
+				<Input id="c-dot" mono defaultValue="/preview" />
+			</FormField>
+		</FormFieldGroup>
+	),
+};
+
 /** The plain Label alone, and next to a control it labels. */
 export const Labels: Story = {
 	render: () => (
@@ -165,6 +195,25 @@ export const SetAndGroup: Story = {
 				<Option>
 					<Checkbox />
 					검색 엔진에 노출
+				</Option>
+			</Stack>
+		</FormFieldSet>
+	),
+};
+
+/** `variant="field"`: the legend of a set drawn like the label of a field (mono 11, quiet), 8px over the options. */
+export const SetLegendAsFieldLabel: Story = {
+	render: () => (
+		<FormFieldSet>
+			<FormFieldLegend variant="field">종류</FormFieldLegend>
+			<Stack gap={12}>
+				<Option>
+					<Checkbox defaultChecked />
+					문서
+				</Option>
+				<Option>
+					<Checkbox />
+					항목
 				</Option>
 			</Stack>
 		</FormFieldSet>

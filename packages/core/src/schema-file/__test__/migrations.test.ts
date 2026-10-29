@@ -18,7 +18,7 @@ const issues = (edit: (schema: EditableSchema) => void) => {
 };
 
 describe("migrations in the schema file", () => {
-	it("accepts the five transforms", () => {
+	it("accepts the six transforms", () => {
 		const schema = cloneSchema();
 		schema.migrations = [
 			{ id: "a", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
@@ -26,9 +26,23 @@ describe("migrations in the schema file", () => {
 			{ id: "c", op: "dropField", collection: "post", field: "legacy" },
 			{ id: "d", op: "setDefault", collection: "post", field: "summary", value: "-" },
 			{ id: "e", op: "dropCollection", collection: "memo", note: "no longer used" },
+			{ id: "f", op: "trashLocale", locale: "ja", note: "translations to the trash" },
 		];
 		const parsed = parseSchemaFile(schema);
 		expect(parsed.migrations).toEqual(schema.migrations);
+	});
+
+	it("keeps a trashLocale to a language: a collection is not part of it", () => {
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "trashLocale", collection: "post", locale: "ja" }];
+			}),
+		).toEqual(["migrations[0].collection: is not an option (known: id, note, op, locale)"]);
+		expect(
+			issues((schema) => {
+				schema.migrations = [{ id: "a", op: "trashLocale" }];
+			})[0],
+		).toMatch(/^migrations\[0\]\.locale:/);
 	});
 
 	it("does not need them: a file without transforms is valid", () => {

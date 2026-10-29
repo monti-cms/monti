@@ -1,12 +1,28 @@
 "use client";
 
-import { Add, Draggable, Locked } from "@carbon/icons-react";
+import { Locked } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Banner, Box, CodeBlock, cn, Heading, Icon, IconButton, Inline, Stack, Text, toast } from "@monti-cms/ui";
+import {
+	Banner,
+	Box,
+	ChatError,
+	CodeBlock,
+	Heading,
+	Icon,
+	Inline,
+	NavLink,
+	NavLinkHandle,
+	RailLayout,
+	Section,
+	Stack,
+	Text,
+	TextButton,
+	toast,
+} from "@monti-cms/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -14,29 +30,32 @@ import { errorText } from "../../api/client";
 import { fetchSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
 import { moveWithin } from "../../lib/utils/move-within";
+import { useAdminRouter } from "../../router";
 import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place";
 import type { SchemaTab } from "../settings/tabs";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PageBody } from "../shared/page-body";
-import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
+import { type ChangeItem, changeItems, type DraftState } from "./change-list";
 import { schemaCollectionMessages } from "./collection.messages";
 import { CollectionEditor } from "./collection-editor";
-import { ChangedMark, IssueList, SchemaEditProvider } from "./controls";
+import { IssueList, SchemaEditProvider } from "./controls";
+import { draftProblems } from "./draft-problems";
 import { SortableList } from "./fields-tree-dnd";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
-import { NewCollectionDialog } from "./new-collection-dialog";
+import { NewCollectionSheet } from "./new-collection-sheet";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
-import { type Removal, ReviewDialog } from "./review-dialog";
+import { schemaReviewMessages } from "./review.messages";
+import { ReviewDialog } from "./review-dialog";
+import { type Removal, reviewTarget } from "./review-model";
 import { SaveGroup } from "./save-group";
 import {
 	addCollection,
 	type ChangedAreas,
-	changeCount,
 	changedAreas,
 	collectionsOf,
 	isObj,
@@ -45,7 +64,6 @@ import {
 	recordRename,
 	removeCollection,
 	reorderCollections,
-	sameJson,
 	setCollection,
 	settingChanges,
 	withoutCollections,
@@ -82,7 +100,7 @@ function FileRest({ file }: { file: Obj }) {
 		<>
 			{/* One section whose title says these are edited in the file, rather than the same note under each of them. */}
 			{rest.length > 0 && (
-				<Section wide title={t("file.title")}>
+				<Section title={t("file.title")}>
 					{rest.map(([title, value]) => (
 						<Stack key={title} gap={8}>
 							<Heading as="h4" variant="label">
@@ -94,7 +112,7 @@ function FileRest({ file }: { file: Obj }) {
 				</Section>
 			)}
 			{migrations.length > 0 && (
-				<Section wide title={t("file.migrations")}>
+				<Section title={t("file.migrations")}>
 					<Stack as="ul" gap={0}>
 						{migrations.map((migration, index) => (
 							<Inline as="li" key={String(migration.id)} gap={8} paddingY={8} border={index === 0 ? undefined : "top"}>
@@ -130,7 +148,6 @@ function CollectionNavItem({
 	name,
 	collection,
 	active,
-	isNew,
 	changed,
 	writable,
 	onSelect,
@@ -138,8 +155,7 @@ function CollectionNavItem({
 	name: string;
 	collection: Obj | undefined;
 	active: boolean;
-	isNew: boolean;
-	/** The collection holds draft changes. */
+	/** The collection holds draft changes (a new collection does too). */
 	changed: boolean;
 	writable: boolean;
 	onSelect: () => void;
@@ -149,54 +165,29 @@ function CollectionNavItem({
 		id: name,
 		disabled: !writable,
 	});
-
 	const label = String(collection?.label ?? name);
-
 	return (
-		<div
+		<NavLink
 			ref={setNodeRef}
-			// design-allow: dnd-kit moves the row while it is dragged
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("group/row relative flex items-center", isDragging && "z-10 opacity-80")}
+			active={active}
+			dot={changed ? t("changed") : undefined}
+			note={name}
+			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
+			handle={
+				writable ? (
+					<NavLinkHandle
+						ref={setActivatorNodeRef}
+						{...attributes}
+						{...listeners}
+						aria-label={t("collection.drag", { name: label })}
+					/>
+				) : undefined
+			}
 			data-testid={`collection-nav-${name}`}
+			onSelect={onSelect}
 		>
-			{writable && (
-				<button
-					type="button"
-					ref={setActivatorNodeRef}
-					{...attributes}
-					{...listeners}
-					aria-label={t("collection.drag", { name: label })}
-					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 group-hover/row:opacity-100"
-				>
-					<Draggable aria-hidden className="size-3.5" />
-				</button>
-			)}
-			<button
-				type="button"
-				aria-current={active ? "true" : undefined}
-				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-monti-8 rounded-monti-md border border-transparent px-monti-12 text-left text-monti-body outline-none transition-colors hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20",
-					writable && "group-focus-within/row:pl-monti-32 group-hover/row:pl-monti-32",
-					active && "border-monti-muted bg-monti-page font-medium hover:bg-monti-page",
-				)}
-				onClick={onSelect}
-			>
-				<Box grow minWidth={0}>
-					<Text truncate>{label}</Text>
-				</Box>
-				{isNew ? (
-					<Text variant="meta" tone="subtle">
-						{t("collection.new")}
-					</Text>
-				) : (
-					changed && <ChangedMark />
-				)}
-				<Text variant="caption" tone="muted">
-					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
-				</Text>
-			</button>
-		</div>
+			{label}
+		</NavLink>
 	);
 }
 
@@ -217,13 +208,17 @@ function SchemaEditor({
 }) {
 	const t = useTranslator(schemaMessages);
 	const tCollection = useTranslator(schemaCollectionMessages);
+	const tReview = useTranslator(schemaReviewMessages);
+	const site = useSite();
+	const router = useAdminRouter();
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
 	const [renames, setRenames] = useState<Rename[]>([]);
 	const [issues, setIssues] = useState<readonly ConfigIssue[]>([]);
 	const [reviewing, setReviewing] = useState(false);
-	const [applyFailed, setApplyFailed] = useState(false);
+	// The message of the server when the file was saved but applying it to the database failed.
+	const [applyFailed, setApplyFailed] = useState<string | null>(null);
 	const [creating, setCreating] = useState(false);
 	// Collections taken out of the list and not saved yet: they stay in the draft (so taking one back loses nothing) and go out of what is checked and saved.
 	const [removed, setRemoved] = useState<string[]>([]);
@@ -243,20 +238,34 @@ function SchemaEditor({
 	const selected = selectedName && liveNames.includes(selectedName) ? selectedName : liveNames[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
-	const dirty = !sameJson(pendingDraft, base);
-	const { dialog: guardDialog } = useUnsavedGuard(dirty);
-	const pending = changeCount(base, pendingDraft);
+	const items = useMemo(() => changeItems(base, { draft, renames, removed }), [base, draft, renames, removed]);
+	const dirty = items.length > 0;
+	const problems = useMemo(
+		() => draftProblems(pendingDraft, state.codeCollections),
+		[pendingDraft, state.codeCollections],
+	);
+	const { dialog: guardDialog } = useUnsavedGuard(dirty, { changes: items.length });
 	const areas = useMemo(() => changedAreas(base, pendingDraft), [base, pendingDraft]);
 	const savedNames = Object.keys(collectionsOf(base));
+	const settings = useMemo(() => settingChanges(base, pendingDraft), [base, pendingDraft]);
 
 	// The page draws the marks of its tabs, so it is told where the draft differs.
 	useEffect(() => {
 		onChanged?.(areas);
 		return () => onChanged?.(null);
 	}, [areas, onChanged]);
+	// The note a save left is taken once, when the page opens after the reload.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: nothing here may run again
 	useEffect(() => {
-		const message = takeSavedMessage();
-		if (message) toast(message);
+		const saved = takeSavedMessage();
+		if (!saved) return;
+		const { href } = saved;
+		toast(
+			saved.message,
+			href === undefined
+				? undefined
+				: { action: { label: tReview("saved.view"), onClick: () => router.navigate(href) } },
+		);
 	}, []);
 	// After the reload that follows a save, scroll back to where the writer was.
 	useLayoutEffect(() => {
@@ -270,12 +279,14 @@ function SchemaEditor({
 			disabled: !writable,
 			vocabulary: state.vocabulary,
 			issues,
+			problems,
+			renames,
 			collectionNames: liveNames,
 			codeCollections: state.codeCollections,
 			file: draft,
 			saved: base,
 		}),
-		[writable, state.vocabulary, issues, liveNames, state.codeCollections, draft, base],
+		[writable, state.vocabulary, issues, problems, renames, liveNames, state.codeCollections, draft, base],
 	);
 
 	const removals: Removal[] = removed.flatMap((name) => {
@@ -303,13 +314,18 @@ function SchemaEditor({
 			action: { label: tCollection("collection.deleteUndo"), onClick: () => restore(name) },
 		});
 	};
+	const setState = (state: DraftState) => {
+		setDraft(state.draft);
+		setRenames([...state.renames]);
+		setRemoved([...state.removed]);
+		setIssues([]);
+	};
+	/** Puts one change back: the rest of the draft stays. */
+	const revertItem = (item: ChangeItem) => setState(item.revert({ draft, renames, removed }));
 	const discard = async () => {
 		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
-		setDraft(base);
-		setRemoved([]);
-		setRenames([]);
-		setIssues([]);
+		setState({ draft: base, renames: [], removed: [] });
 	};
 
 	// What sits on the right of the title row: the read-only note, or the save group while the draft has changes.
@@ -322,10 +338,10 @@ function SchemaEditor({
 		</Inline>
 	) : dirty ? (
 		<SaveGroup
-			count={pending}
-			removed={removals.map((item) => ({ name: item.name, label: item.label, onRestore: () => restore(item.name) }))}
-			disabled={state.hash === null}
-			onReview={() => setReviewing(true)}
+			items={items}
+			collectionLabel={(name) => String(collectionsOf(draft)[name]?.label ?? name)}
+			onRevert={revertItem}
+			disabled={state.hash === null || problems.length > 0}
 			onSave={() => setReviewing(true)}
 			onDiscard={() => void discard()}
 		/>
@@ -348,7 +364,7 @@ function SchemaEditor({
 							</Inline>
 						)}
 				<Stack ref={scroller} gap={0} grow minHeight={0} overflow="y">
-					<PageBody paddingTop={tab === "collections" ? undefined : 24}>
+					<PageBody>
 						{reason && (
 							<Banner
 								title={t(READ_ONLY_KEY[reason])}
@@ -363,7 +379,18 @@ function SchemaEditor({
 							/>
 						)}
 						{writable && state.comments && <Banner title={t("comments.note")} data-testid="schema-comments-note" />}
-						{applyFailed && <Banner role="alert" tone="danger" title={t("save.applyFailedNote")} />}
+						{applyFailed !== null && (
+							<ChatError
+								title={tReview("applyFailed.title")}
+								actions={
+									<TextButton type="button" onClick={reloadPage}>
+										{tReview("save.reload")}
+									</TextButton>
+								}
+							>
+								{tReview("applyFailed.text", { message: applyFailed })}
+							</ChatError>
+						)}
 						{state.issues.length > 0 && (
 							<Stack gap={8} data-testid="schema-file-invalid">
 								<Banner role="alert" tone="danger" title={t("invalid.title")} />
@@ -383,19 +410,10 @@ function SchemaEditor({
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<Inline wrap align="start" gap={24}>
-										<Stack gap={2} width="fit" shrink={false}>
-											<Inline justify="between" paddingBottom={8} paddingX={12}>
-												<Text variant="caption" weight="medium" tone="muted">
-													{t("collection.railTitle")} {liveNames.length}
-												</Text>
-												{writable && (
-													<IconButton label={t("collection.create")} onClick={() => setCreating(true)}>
-														<Add aria-hidden />
-													</IconButton>
-												)}
-											</Inline>
-											<Stack as="nav" aria-label={t("tabs.collections")} gap={2}>
+									<RailLayout
+										label={t("tabs.collections")}
+										rail={
+											<>
 												<SortableList
 													items={liveNames}
 													onDragEnd={(from, to) => {
@@ -412,37 +430,41 @@ function SchemaEditor({
 															name={name}
 															collection={collections[name]}
 															active={name === selected}
-															isNew={!savedNames.includes(name)}
 															changed={name in areas.collections}
 															writable={writable}
 															onSelect={() => setSelected(name)}
 														/>
 													))}
 												</SortableList>
-											</Stack>
-										</Stack>
-										<Box grow minWidth={0}>
-											{selected && collections[selected] ? (
-												<CollectionEditor
-													key={selected}
-													name={selected}
-													section={section}
-													onSection={setSection}
-													collection={collections[selected]}
-													changes={areas.collections[selected]}
-													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
-													onRename={(rename) => setRenames((current) => recordRename(current, rename))}
-													onFileChange={updateFile}
-													footprint={state.footprints?.[selected]}
-													onRemove={() => remove(selected)}
-												/>
-											) : (
-												<Text as="p" tone="muted">
-													{t("collection.none")}
-												</Text>
-											)}
-										</Box>
-									</Inline>
+												{writable && (
+													<Box paddingTop={12} paddingX={10}>
+														<TextButton quiet onClick={() => setCreating(true)}>
+															{t("collection.create")}
+														</TextButton>
+													</Box>
+												)}
+											</>
+										}
+									>
+										{selected && collections[selected] ? (
+											<CollectionEditor
+												key={selected}
+												name={selected}
+												section={section}
+												onSection={setSection}
+												collection={collections[selected]}
+												onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
+												onRename={(rename) => setRenames((current) => recordRename(current, rename))}
+												onFileChange={updateFile}
+												footprint={state.footprints?.[selected]}
+												onRemove={() => remove(selected)}
+											/>
+										) : (
+											<Text as="p" tone="muted">
+												{t("collection.none")}
+											</Text>
+										)}
+									</RailLayout>
 								)}
 								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
@@ -459,13 +481,20 @@ function SchemaEditor({
 			</Stack>
 			{dialog}
 			{guardDialog}
-			<NewCollectionDialog
+			<NewCollectionSheet
 				open={creating}
 				onOpenChange={setCreating}
 				taken={names}
 				onCreate={(id, kind, path, label) => {
-					updateFile((file) => addCollection(file, id, kind, path, label));
+					updateFile((file) =>
+						addCollection(file, id, kind, path, label, {
+							title: tCollection("collection.titleFieldLabel"),
+							slug: tCollection("collection.slugFieldLabel"),
+						}),
+					);
+					// The new collection opens on its fields (title and slug), where the first thing to do is add one.
 					setSelected(id);
+					setSection("fields");
 					if (tab !== "collections") onTab?.("collections");
 					setCreating(false);
 				}}
@@ -475,16 +504,25 @@ function SchemaEditor({
 					open={reviewing}
 					onOpenChange={setReviewing}
 					draft={pendingDraft}
+					saved={base}
 					renames={renames}
-					settings={settingChanges(base, pendingDraft)}
+					settings={settings}
 					removals={removals}
+					target={reviewTarget(items)}
 					baseHash={state.hash}
 					onIssues={setIssues}
-					onApplyFailed={() => setApplyFailed(true)}
+					onApplyFailed={setApplyFailed}
 					onSaved={() => {
 						rememberScroll(scroller.current?.scrollTop ?? 0);
-						// One line for every save: the review already showed what it changes.
-						rememberSaved(t("save.done"));
+						// A new collection says so and offers to open it; every other save is the one line, since the review already showed what it changes.
+						const created = Object.keys(collectionsOf(pendingDraft)).filter((name) => !savedNames.includes(name));
+						const [only] = created;
+						if (only && created.length === 1) {
+							rememberSaved(
+								tReview("saved.created", { name: String(collectionsOf(pendingDraft)[only]?.label ?? only) }),
+								site.adminHref(`?collection=${only}`),
+							);
+						} else rememberSaved(t("save.done"));
 						reloadPage();
 					}}
 				/>

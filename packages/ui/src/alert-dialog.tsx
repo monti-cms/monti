@@ -92,12 +92,17 @@ function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof 
 	return <Button data-slot="alert-dialog-action" className={cn(className)} {...props} />;
 }
 
-function AlertDialogCancel({ className, ...props }: AlertDialogPrimitive.Close.Props) {
+/** The text button that answers a question without doing the thing: "Cancel". `variant="danger"` is for the risky way out of a question whose main button keeps things as they are ("Leave without saving"). */
+function AlertDialogCancel({
+	className,
+	variant = "plain",
+	...props
+}: AlertDialogPrimitive.Close.Props & { variant?: "plain" | "danger" }) {
 	return (
 		<AlertDialogPrimitive.Close
 			data-slot="alert-dialog-cancel"
 			className={cn(className)}
-			render={<TextButton />}
+			render={<TextButton variant={variant} />}
 			{...props}
 		/>
 	);

@@ -26,11 +26,13 @@ export { BlockBar, BlockBarButton, BlockBarSeparator, ResizeCorner } from "./blo
 export { Block, BlockHandle } from "./block-handle";
 export { Box } from "./box";
 export { BulkBar } from "./bulk-bar";
+export { BulkToolbar } from "./bulk-toolbar";
 export { Button } from "./button";
 export { Calendar, CalendarDayButton } from "./calendar";
 export { Caret } from "./caret";
 export { ChangeActions, ChangeGroup, ChangeLabel, ChangeLine, ChangeLines, ChangeNote } from "./change";
 export { ChangeDot } from "./change-dot";
+export { ChangesGroup, type ChangesItem } from "./changes-group";
 export { ChatError } from "./chat-error";
 export { ChatInput } from "./chat-input";
 export { ChatMessage } from "./chat-message";
@@ -68,6 +70,17 @@ export {
 	CommandSeparator,
 } from "./command";
 export {
+	Compare,
+	CompareBody,
+	CompareCode,
+	CompareHeading,
+	CompareParagraph,
+	CompareProperty,
+	CompareSide,
+	CompareText,
+	CompareTitle,
+} from "./compare";
+export {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,
@@ -80,6 +93,7 @@ export {
 	ContextMenuTrigger,
 } from "./context-menu";
 export { Count } from "./count";
+export { type CropGrip, type CropRect, CropStage } from "./crop-stage";
 export { DangerBlock, DangerRow } from "./danger-block";
 export { DescriptionItem, DescriptionList } from "./description-list";
 export {
@@ -128,8 +142,10 @@ export {
 	FormFieldTitle,
 } from "./field";
 export { FieldRow, FieldTree } from "./field-tree";
+export { FileBlock } from "./file-block";
+export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
-export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
+export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
 	FormatBar,
 	FormatBarButton,
@@ -146,15 +162,20 @@ export { Image } from "./image";
 export { Input } from "./input";
 export { Label } from "./label";
 export { DEFAULT_UI_LABELS, type UiLabels, UiLabelsProvider, useUiLabels } from "./labels";
+export { LanguageRow, LanguageRowHandle, LanguageSource } from "./language-row";
 export { type LayoutProps, layoutVariants } from "./layout";
 export { List, ListItem } from "./list";
 export { ListHead, type ListHeadAdd, type ListHeadColumn } from "./list-head";
+export { LockMark } from "./lock-mark";
 export { MapRow } from "./map-row";
 export { Marker, Untranslated } from "./marker";
+export { MediaPicker, type MediaPickerFolder } from "./media-picker";
 export { MemoCard, MemoDiff, MemoMessage, MemoThread } from "./memo-card";
 export { MenuShortcut, MenuTick, MenuValue } from "./menu-parts";
 export type { MontiIcon } from "./monti-icon";
+export { NavLink, NavLinkHandle } from "./nav-link";
 export { Option } from "./option";
+export { OptionRow, OptionRowHandle, OptionTable } from "./option-table";
 export {
 	PageBody,
 	PageColumn,
@@ -180,10 +201,12 @@ export { Patch, type PatchLine } from "./patch";
 export { PickList, PickListItem } from "./pick-list";
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 export { Progress } from "./progress";
+export { PropertyGroup, PropertyPanel, PropertyRow } from "./property-list";
 export { ProposalBubble } from "./proposal-bubble";
 export { ProposalCard, ProposalItem } from "./proposal-card";
 export { CurrentProposal, Del, Fill, Highlight, Ins } from "./proposal-marks";
 export { RadioGroup, RadioItem } from "./radio-group";
+export { RailLayout } from "./rail-layout";
 export { RenameField } from "./rename-field";
 export { ResizablePane, type ResizeEdge, ResizeHandle, useResizableWidth } from "./resize-handle";
 export { SearchBox, type SearchTarget, SearchToggle } from "./search-box";
@@ -209,9 +232,12 @@ export {
 	SheetContent,
 	SheetFooter,
 	SheetHeader,
+	SheetSection,
+	SheetSplit,
 	SheetTitle,
 	SheetTrigger,
 } from "./sheet";
+export { formatShortcut, Shortcut, type ShortcutKey, type ShortcutKeys, useShortcut } from "./shortcut";
 export { SidePanel } from "./side-panel";
 export {
 	Sidebar,
@@ -247,6 +273,7 @@ export {
 	RowActions,
 	RowCheck,
 	RowLink,
+	RowThumb,
 	RowTitle,
 	Table,
 	TableBody,
@@ -267,4 +294,5 @@ export type { Background, Spacing } from "./tokens.generated";
 export { type ToolCallDetail, ToolCallLine, type ToolCallStatus } from "./tool-call-line";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
 export { TrashRowDate, TrashRowTitle } from "./trash-row";
+export { UploadingImage } from "./uploading-image";
 export { useIsMobile } from "./use-mobile";

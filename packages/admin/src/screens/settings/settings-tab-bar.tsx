@@ -17,7 +17,7 @@ export function SettingsTabBar({
 	site: Pick<Site, "adminHref">;
 	active: SchemaTab;
 	onSchemaTab?: (tab: SchemaTab) => void;
-	/** The tabs that hold draft changes: each gets a dot. */
+	/** The tabs that hold draft changes: each gets a dot, except Collections, whose changed collection carries the dot in the rail instead. */
 	changed?: Readonly<Record<SchemaTab, boolean>>;
 }) {
 	const t = useTranslator(settingsMessages);
@@ -36,7 +36,7 @@ export function SettingsTabBar({
 					<TabsTrigger
 						key={entry.id}
 						value={entry.id}
-						dot={changed?.[entry.id] ? "warning" : undefined}
+						dot={entry.id !== "collections" && changed?.[entry.id] ? "warning" : undefined}
 						dotLabel={t("changed")}
 						nativeButton={false}
 						render={

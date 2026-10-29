@@ -25,7 +25,7 @@ import {
 	labelOf,
 } from "./footnote-nodes";
 import { editorMessages } from "./messages";
-import type { ToolbarItem } from "./toolbar-button";
+import type { ToolbarItem } from "./tool-button";
 
 /** Names of the marks of the inline tools, in the order the tools are shown. */
 export const INLINE_MARK_NAMES = ["bold", "italic", "underline", "strike", "code", "superscript", "subscript"] as const;

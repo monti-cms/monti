@@ -67,7 +67,14 @@ import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
 import type { CustomBase } from "../custom";
-import { ADDABLE_CHECKS, type AddableCheckKind, type AiCheck, type AiRunResult, checkKey } from "../definition";
+import {
+	ADDABLE_CHECKS,
+	type AddableCheckKind,
+	type AiCheck,
+	type AiRunResult,
+	checkKey,
+	slotsAsk,
+} from "../definition";
 import { aiManagerMessages } from "./ai-manager.messages";
 import { runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
@@ -146,7 +153,6 @@ type Editable = Pick<
 	| "hidden"
 	| "label"
 	| "askInstruction"
-	| "instant"
 	| "providerId"
 	| "modelName"
 	| "prompt"
@@ -161,7 +167,6 @@ const editableOf = (action: AiActionView): Editable => ({
 	hidden: action.hidden,
 	label: action.label,
 	askInstruction: action.askInstruction,
-	instant: action.instant,
 	providerId: action.providerId,
 	modelName: action.modelName,
 	prompt: action.prompt,
@@ -431,7 +436,6 @@ export function AiManager() {
 				label: base.label,
 				enabled: spec.enabled,
 				askInstruction: spec.askInstruction,
-				instant: spec.instant,
 				prompt: spec.prompt,
 				...(sameEngine ? { providerId: spec.providerId, modelName: spec.modelName } : {}),
 			},
@@ -1087,21 +1091,17 @@ function FeatureEditor({
 									</FormField>
 								)}
 
-								<Inline gap={24} wrap>
-									<Label size="caption">
-										<Switch
-											checked={spec.askInstruction}
-											onCheckedChange={(askInstruction) => set({ askInstruction })}
-										/>
-										{t("toggle.ask")}
-									</Label>
-									{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
+								{slotsAsk(feature.attach) && (
+									<Inline gap={24} wrap>
 										<Label size="caption">
-											<Switch checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
-											{t("toggle.instant")}
+											<Switch
+												checked={spec.askInstruction}
+												onCheckedChange={(askInstruction) => set({ askInstruction })}
+											/>
+											{t("toggle.ask")}
 										</Label>
-									)}
-								</Inline>
+									</Inline>
+								)}
 
 								{inputs.length > 0 && (
 									<FormField role="group" aria-labelledby={ids.sendTitle}>

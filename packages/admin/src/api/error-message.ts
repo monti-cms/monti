@@ -34,6 +34,13 @@ export function cmsApiIssues(payload: unknown): CmsIssue[] {
 export const issueLine = (issue: Pick<CmsIssue, "text" | "where">): string =>
 	issue.where ? `${issue.text} (${issue.where})` : issue.text;
 
+/**
+ * The issue as one line beside the field it is about. When its place is only that field's key (`where` is the `path`: "title", "summary"), the field
+ * already says where it is and the key is an internal name, so the text stands alone; a line and column, or any other place, stays after the text.
+ */
+export const fieldIssueLine = (issue: Pick<CmsIssue, "text" | "where" | "path">): string =>
+	issue.where && issue.where === issue.path ? issue.text : issueLine(issue);
+
 export function cmsApiErrorMessage(site: ApiErrorSite, payload: unknown, fallback: string): string {
 	if (!payload || typeof payload !== "object") return fallback;
 	const body = payload as { message?: unknown; code?: unknown };

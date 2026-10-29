@@ -2,8 +2,8 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 SEO 확장. 검색엔진·공유용 필드 묶음과 편집 화면의 검색 결과·공유 미리보기, 검색 제목·설명 글자 수,
-검색엔진 숨기기 스위치를 더한다. `@monti-cms/ai`가 있으면 검색 제목·설명 추천도 붙는다. 공개 화면은 `seoOf`로 값을 읽는다.
+`@monti-cms/core`의 SEO 확장. 검색엔진·공유용 필드 묶음과 편집 화면의 비운 제목·설명·이미지가 따르는 값, 검색 제목·설명 글자 수를
+읽기 목록의 SEO 탭으로 더한다. `@monti-cms/ai`가 있으면 검색 제목·설명 추천도 붙는다. 공개 화면은 `seoOf`로 값을 읽는다.
 
 ## 등록
 
@@ -27,11 +27,10 @@ export const cms = defineConfig({
 fields: {
 	title: { kind: "text", label: "제목" },
 	summary: { kind: "text", label: "요약", role: "summary" },
-	searchPreview: { kind: "view", view: "search" },
-	seoTitle: { kind: "text", label: "검색 제목", localized: true, role: "seoTitle", input: "seo-title", inputOptions: { limit: 60 } },
-	seoDescription: { kind: "text", label: "검색 설명", localized: true, multiline: true, role: "seoDescription", input: "seo-description", inputOptions: { limit: 155 } },
-	ogImageId: { kind: "media", label: "공유 이미지", localized: true, role: "ogImage", accept: "image" },
-	seoRobots: { kind: "select", label: "검색엔진에서 숨기기", role: "noindex", input: "seo-noindex", options: { index: "보임", noindex: "숨김" }, defaultValue: "index" },
+	seoTitle: { kind: "text", label: "SEO 제목", localized: true, role: "seoTitle", input: "seo-title", inputOptions: { limit: 60 } },
+	seoDescription: { kind: "text", label: "SEO 설명", localized: true, multiline: true, role: "seoDescription", input: "seo-description", inputOptions: { limit: 155 } },
+	ogImageId: { kind: "media", label: "공유 이미지", localized: true, role: "ogImage", input: "seo-image", accept: "image" },
+	seoRobots: { kind: "select", label: "검색에서 숨기기", role: "noindex", options: { index: "아니요", noindex: "예" }, defaultValue: "index" },
 	canonicalUrl: { kind: "text", label: "원문 주소", localized: true, role: "canonical", placeholder: "https://" },
 },
 ```
@@ -52,14 +51,13 @@ const article = defineCollection({
 
 | 자리 | 기본 이름 | 필드 | 역할(`role`) | 편집 화면 |
 | --- | --- | --- | --- | --- |
-| `preview` | `seoPreview` | 보기 필드 `search` | - | 검색 결과·공유 미리보기. 비운 제목·설명은 제목·요약 역할 값 |
-| `title` | `seoTitle` | 텍스트 | `seoTitle` | 비우면 제목을 안내 문구로, 글자 수(권장 60) |
-| `description` | `seoDescription` | 여러 줄 텍스트 | `seoDescription` | 비우면 요약을 안내 문구로, 글자 수(권장 155) |
-| `image` | `seoImage` | 미디어(`fields.media`, 이미지) | `ogImage` | 미디어 고르기. 쓰고 있는 이미지는 지울 수 없다 |
-| `noindex` | `seoNoindex` | 선택(`index`·`noindex`) | `noindex` | 이름표 줄의 스위치. 켜면 `noindex` |
+| `title` | `seoTitle` | 텍스트 | `seoTitle` | 비우면 "제목과 같음"과 그 길이, 제목을 안내 문구로, 글자 수(권장 60) |
+| `description` | `seoDescription` | 여러 줄 텍스트 | `seoDescription` | 비우면 "요약과 같음", 요약을 안내 문구로, 글자 수(권장 155) |
+| `image` | `seoImage` | 미디어(`fields.media`, 이미지) | `ogImage` | 비우면 "기본 이미지와 같음". 미디어 고르기. 쓰고 있는 이미지는 지울 수 없다 |
+| `noindex` | `seoNoindex` | 선택(`index`·`noindex`) | `noindex` | 선택("검색에서 숨기기" 아래 "아니요"·"예") |
 | `canonical` | `seoCanonical` | 텍스트 | `canonical` | 원본 주소 |
 
-`seo()` 플러그인이 역할과 미리보기 보기 이름으로 이 필드들을 찾아 편집 화면의 제 탭(기본 `SEO`, `seo({ tab })`로 바꿈)에 둔다. 배치(`layout`)를 적지 않아도 된다. 값은 필드 이름이 아니라 역할로
+`seo()` 플러그인이 역할로 이 필드들을 찾아 편집 화면의 제 탭(기본 `SEO`, `seo({ tab })`로 바꿈)에 둔다. 배치(`layout`)를 적지 않아도 된다. 값은 필드 이름이 아니라 역할로
 찾으므로 이름은 사이트가 정한다.
 
 ```ts
@@ -76,8 +74,8 @@ seoFields({
 
 ## 플러그인 `seo(options?)`
 
-- **관리자 화면**(`@monti-cms/seo/admin`): 보기 필드 `search`, 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수),
-  `seo-noindex`(스위치)를 관리자 쪽 `components`에 선언한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
+- **관리자 화면**(`@monti-cms/seo/admin`): 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수·비웠을 때 따르는 값),
+  `seo-image`(비운 이미지가 따르는 값)를 관리자 쪽 `components`에 선언한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
 - **설정 검사**: `seoTitle`·`seoDescription`·`canonical`은 텍스트, `ogImage`는 미디어, `noindex`는 `noindex` 선택지가 있는 선택
   필드여야 한다(`checkSeoFields`).
 - **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다

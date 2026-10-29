@@ -146,7 +146,8 @@ export interface SchemaApplyResult {
  * the metadata references are recomputed from it, so they cannot drift from the data. Working and published bodies are rewritten the same way and `version` and
  * `updated_at` of the entry and its bodies are kept, as in the data migrations before, so an entry that had unpublished changes still has them and one that did
  * not still does not. Nothing is dropped without a `dropField` transform. A `dropCollection` first cuts the relation fields of other collections that point into it
- * (the store does it in the same transaction, with the same rewrite the trash uses).
+ * (the store does it in the same transaction, with the same rewrite the trash uses). A `trashLocale` moves the live translations of its language to the trash
+ * (the store does it in the same transaction, the way the entry lifecycle trashes one).
  *
  * Throws a {@link SchemaChangeError} (changing nothing) when a transform does not fit the schema or an entry cannot be rewritten.
  */
@@ -164,9 +165,13 @@ export async function applySchemaChange(options: ApplyOptions): Promise<SchemaAp
 	const drops = plan.pending.flatMap((item) =>
 		item.op === "dropCollection" ? [{ id: item.id, collection: item.collection }] : [],
 	);
+	const trashes = plan.pending.flatMap((item) =>
+		item.op === "trashLocale" ? [{ id: item.id, locale: item.locale }] : [],
+	);
 	const result: AppliedSchemaChange = await store.applySchemaChange({
 		transformIds: (options.migrations ?? []).map((item) => item.id),
 		dropCollections: drops,
+		trashLocales: trashes,
 		unlinkRewrite: unlinkRewriteFor(site, plan.applied),
 		collections: transformCollections(plan.pending),
 		schema: snapshotSchema(site),

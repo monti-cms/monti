@@ -1,7 +1,10 @@
+import { CodeReference } from "@carbon/icons-react";
 import { issueText } from "@monti-cms/core/site";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { testSite } from "../../../../core/test/site";
+import { AdminComponentsProvider, type EditorExtension } from "../../admin-components";
+import { MediaPickerDialog } from "../../editor/image-insert-dialog";
 import { StatusBarPluginCell } from "../../kit";
 import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
 import { docOf } from "../../test/mdx";
@@ -23,12 +26,25 @@ type Story = StoryObj<typeof meta>;
 const API = "/api/monti/v1";
 const BODY = "첫 문단입니다. 글의 도입부를 이렇게 씁니다.\n\n## 소제목\n\n둘째 문단입니다.\n\n- 목록 하나\n- 목록 둘";
 
+const member = (id: string, locale: string, status: EntryData["status"], isSource: boolean, title: string) => ({
+	id,
+	locale,
+	status,
+	isSource,
+	title,
+	workingSlug: "first-post",
+});
+
+// The server answers an entry with its translation group, the entry itself included: a Korean original with no translations yet is its only member.
 const draft: EntryData = {
 	id: "entry-1",
 	collection: "post",
 	status: "draft",
 	version: 4,
 	folderId: null,
+	locale: "ko",
+	translationGroupId: "entry-1",
+	translations: [member("entry-1", "ko", "draft", true, "첫 번째 글")],
 	workingSlug: "first-post",
 	publishedSlug: null,
 	working: {
@@ -39,19 +55,20 @@ const draft: EntryData = {
 const published: EntryData = {
 	...draft,
 	status: "published",
+	translations: [member("entry-1", "ko", "published", true, "첫 번째 글")],
 	publishedSlug: "first-post",
 	publishedAt: "2026-10-01T09:30:00.000Z",
 	published: draft.working,
 };
 
-const member = (id: string, locale: string, status: string, isSource: boolean, title: string) => ({
-	id,
-	locale,
-	status,
-	isSource,
-	title,
-	workingSlug: "first-post",
-});
+const editing: EntryData = {
+	...published,
+	working: {
+		...published.working,
+		metadata: { ...published.working.metadata, summary: "발행한 뒤에 고친 소개입니다." },
+	},
+};
+
 const withTranslations = {
 	...published,
 	locale: "ko",
@@ -122,8 +139,14 @@ const server = ({ entry = draft, load, issues = [], save, publish, more }: Serve
 		if (extra !== undefined) return extra;
 		if (path.startsWith(`${API}/entries/`) && path.endsWith("/check")) return { issues, warnings: [] };
 		if (path.endsWith("/relations")) return { incomingReferences: [] };
-		if (path.startsWith(`${API}/entries/search`)) return { items: [] };
+		// The category the entry points at resolves to its name; any other search finds nothing.
+		if (path.startsWith(`${API}/entries/search`)) {
+			return {
+				items: path.includes("id=cat-1") ? [{ id: "cat-1", title: "개발", slug: "dev", status: "published" }] : [],
+			};
+		}
 		if (path.startsWith(`${API}/entries?`)) return { items: [], total: 0 };
+		if (path.startsWith(`${API}/folders`)) return [];
 		if (path.startsWith(`${API}/media`)) return { items: [], total: 0 };
 		if (path.endsWith("/publish") && method === "POST") return publish ?? { entry: current, warnings: [] };
 		if (method === "PATCH") {
@@ -199,12 +222,21 @@ const typeTitle = async (canvasElement: HTMLElement, text = " (고침)") => {
 	await settled(canvasElement);
 	const input = (await title(canvasElement)) as HTMLInputElement;
 	fireEvent.change(input, { target: { value: input.value + text } });
-	await page(canvasElement).findByRole("button", { name: "저장" }, LONG);
+	await page(canvasElement).findByRole("button", { name: "저장 전 변경사항" }, LONG);
 };
+/** The header's save button. */
+const headerSave = (canvasElement: HTMLElement) => page(canvasElement).findByRole("button", { name: "저장" }, LONG);
 
 export const DraftLoaded: Story = { render: screen(() => server()) };
 
-export const PublishedLoaded: Story = { render: screen(() => server({ entry: published })) };
+/** Published and nothing changed since: the publish button reads "발행됨" and is dimmed. */
+export const PublishedLoaded: Story = { tags: ["visual"], render: screen(() => server({ entry: published })) };
+
+/** Published, then changed: the status reads "수정 중" and the publish button is ready again. */
+export const PublishedEditing: Story = {
+	tags: ["visual"],
+	render: screen(() => server({ entry: editing })),
+};
 
 export const Loading: Story = { render: screen(() => server({ load: "pending" })) };
 
@@ -216,12 +248,13 @@ export const NotFound: Story = {
 	render: screen(() => server({ load: answer(404, { error: { code: "not_found", message: "Not found" } }) })),
 };
 
+/** The save button is in the header all the time; after a change the status bar says there is something to save. */
 export const UnsavedChanges: Story = {
 	tags: ["visual"],
 	render: screen(() => server()),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
-		await page(canvasElement).findByRole("button", { name: "저장" }, LONG);
+		await headerSave(canvasElement);
 	},
 };
 
@@ -229,51 +262,94 @@ export const SaveFailed: Story = {
 	render: screen(() => server({ save: answer(500, { error: { message: "서버에 저장하지 못했어요." } }) })),
 	play: async ({ canvasElement }) => {
 		await typeTitle(canvasElement);
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "저장" }, LONG));
+		await userEvent.click(await headerSave(canvasElement));
 	},
 };
 
-/** Someone else saved version 9 first: the conflict dialog compares both sides. */
+/** Someone else saved version 9 first: a notice strip above the editor offers the comparison and the server version. */
+const conflictServer = () =>
+	server({
+		save: answer(409, { error: { code: "conflict", serverVersion: 9 } }),
+		// The first answer is the loaded entry, later ones the newer version.
+		more: (() => {
+			let loads = 0;
+			return (path, method) =>
+				method === "GET" && /\/entries\/[^/?]+$/.test(path) && ++loads > 1
+					? {
+							...draft,
+							version: 9,
+							changedAt: "2026-10-26T01:41:00.000Z",
+							working: {
+								...draft.working,
+								metadata: { ...draft.working.metadata, title: "서버 최신 제목", summary: "다른 곳에서 쓴 소개입니다." },
+							},
+						}
+					: undefined;
+		})(),
+	});
+const conflicted = async (canvasElement: HTMLElement) => {
+	await typeTitle(canvasElement);
+	await userEvent.click(await headerSave(canvasElement));
+	await within(document.body).findByRole("alert", undefined, LONG);
+};
+
 export const SaveConflict: Story = {
-	render: screen(() =>
-		server({
-			save: answer(409, { error: { code: "conflict", serverVersion: 9 } }),
-			// The first answer is the loaded entry, later ones the newer version.
-			more: (() => {
-				let loads = 0;
-				return (path, method) =>
-					method === "GET" && /\/entries\/[^/?]+$/.test(path) && ++loads > 1
-						? {
-								...draft,
-								version: 9,
-								changedAt: "2026-10-20T05:06:00.000Z",
-								changedBy: "박미나",
-								working: { ...draft.working, metadata: { ...draft.working.metadata, title: "서버 최신 제목" } },
-							}
-						: undefined;
-			})(),
-		}),
-	),
+	tags: ["visual"],
+	render: screen(conflictServer),
+	play: async ({ canvasElement }) => conflicted(canvasElement),
+};
+
+/** The compare screen after a conflict: your input beside the server's latest version, differences marked, and the two ways out. */
+export const CompareConflict: Story = {
+	tags: ["visual"],
+	render: screen(conflictServer),
 	play: async ({ canvasElement }) => {
-		await typeTitle(canvasElement);
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "저장" }, LONG));
-		await within(document.body).findByRole("dialog", undefined, LONG);
+		await conflicted(canvasElement);
+		await userEvent.click(await within(document.body).findByRole("link", { name: "비교하기" }, LONG));
+		await within(document.body).findByRole("heading", { level: 1, name: "서버 최신본과 비교" }, LONG);
 	},
 };
 
 export const PublishMenuOpen: Story = {
-	render: screen(() => server({ entry: published })),
+	tags: ["visual"],
+	render: screen(() => server({ entry: editing })),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행 방식" }, LONG));
 		await within(document.body).findByText(/오늘 날짜로 다시 발행/, undefined, LONG);
 	},
 };
 
+/** What a source-panel plugin such as MDX adds to the document tools: its switch is a row of the ⋯ menu. */
+const sourcePlugin: EditorExtension = () => ({
+	menuItems: [{ key: "mdx", label: "MDX로 보기", icon: <CodeReference aria-hidden />, onSelect: () => {} }],
+});
+
+/** The header's ⋯ menu: copy, archive and export, then the document tools (a plugin's row, the body width, the theme), and the trash at the bottom (board `moreMenu` "열림"). */
 export const MoreMenuOpen: Story = {
-	render: screen(() => server()),
+	tags: ["visual"],
+	render: () => (
+		<PageFrame api={server()} pathname="/admin/entries/entry-1/edit">
+			<AdminComponentsProvider components={{ editorExtensions: [sourcePlugin] }}>
+				<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+			</AdminComponentsProvider>
+		</PageFrame>
+	),
 	play: async ({ canvasElement }) => {
 		await userEvent.click(await headerMore(canvasElement));
 		await within(document.body).findByText(/^휴지통으로$/, undefined, LONG);
+	},
+};
+
+/** "본문 폭 ▸" open at the side of the ⋯ menu, the chosen step ticked (board `moreMenu` "본문 폭"). */
+export const MoreMenuWidth: Story = {
+	tags: ["visual"],
+	render: screen(() => server()),
+	play: async ({ canvasElement }) => {
+		await userEvent.click(await headerMore(canvasElement));
+		const row = await within(document.body).findByRole("menuitem", { name: /본문 폭/ }, LONG);
+		await userEvent.hover(row);
+		await userEvent.keyboard("{ArrowRight}");
+		await within(document.body).findByRole("menuitemradio", { name: "꽉 차게" }, LONG);
 	},
 };
 
@@ -305,7 +381,7 @@ export const PublishBlocked: Story = {
 		}),
 	),
 	play: async ({ canvasElement }) => {
-		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행" }, LONG));
+		await userEvent.click(await page(canvasElement).findByRole("button", { name: "발행하기" }, LONG));
 		await within(document.body).findByRole("dialog", undefined, LONG);
 	},
 };
@@ -440,45 +516,116 @@ export const PermanentDeleteConfirm: Story = {
 	},
 };
 
-export const ImageInsertDialog: Story = {
-	render: screen(() => server()),
-	play: async ({ canvasElement }) => {
-		await settled(canvasElement);
-		// The upload menu sits in the toolbar when there is room, and in its "more" menu when the frame is narrow.
-		const toolbar = within(await page(canvasElement).findByRole("toolbar", undefined, LONG));
-		const upload = toolbar.queryByRole("button", { name: "업로드" });
-		if (upload) await userEvent.click(upload);
-		else {
-			await userEvent.click(toolbar.getByRole("button", { name: "더보기" }));
-		}
-		await userEvent.click(await within(document.body).findByText("이미지", undefined, { timeout: 15000 }));
-		await within(document.body).findByRole("dialog", undefined, LONG);
+/** A flat colored square, so the picker's tiles have something to show without a network. */
+const swatch = (color: string) =>
+	`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="${color}"/></svg>`)}`;
+const libraryItem = (id: string, filename: string, color: string) => ({
+	id,
+	folderId: null,
+	status: "ready",
+	filename,
+	mimeType: "image/jpeg",
+	byteSize: 245_760,
+	width: 2400,
+	height: 1600,
+	publicUrl: swatch(color),
+	original: null,
+	defaultAlt: "",
+	defaultCaption: "",
+	createdAt: "2026-10-01T09:30:00.000Z",
+	referencesCount: 0,
+	references: [],
+});
+/** What the library picker reads: the media folders and the images. */
+const libraryApi = (path: string) => {
+	if (path.startsWith(`${API}/folders`))
+		return [
+			{ id: "f1", collection: "media", parentId: null, name: "Blog Assets", position: 0, version: 1, entryCount: 3 },
+			{ id: "f2", collection: "media", parentId: "f1", name: "covers", position: 0, version: 1, entryCount: 2 },
+		];
+	if (path.startsWith(`${API}/media?`)) {
+		const items = [
+			libraryItem("m1", "desk-morning.jpg", "#a69479"),
+			libraryItem("m2", "seoul-night.jpg", "#3a3f55"),
+			libraryItem("m3", "cafe-window.jpg", "#6d5a44"),
+		];
+		return { items, total: items.length };
+	}
+	return undefined;
+};
+
+/** The cover image field's picker (board ImageInsert "대표 이미지"): titled with the field, "고르기", opened in the folder of the image the field holds, which is marked. */
+export const ImagePicker: Story = {
+	tags: ["visual"],
+	render: () => (
+		<PageFrame
+			api={server({
+				more: (path) =>
+					path === `${API}/media/m1`
+						? { filename: "desk-morning.jpg", byteSize: 180_000, mimeType: "image/jpeg", folderId: "f2" }
+						: libraryApi(path),
+			})}
+			pathname="/admin/entries/entry-1/edit"
+		>
+			<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" />
+			<MediaPickerDialog
+				open
+				kind="image"
+				title="대표 이미지"
+				confirmLabel="고르기"
+				current="m1"
+				onClose={() => {}}
+				onPick={() => {}}
+				onUpload={() => {}}
+			/>
+		</PageFrame>
+	),
+	play: async () => {
+		await within(document.body).findByText("desk-morning.jpg", undefined, LONG);
 	},
 };
 
-/** A copy of an unsaved edit is waiting in the browser: the editor offers to bring it back. */
-export const RecoveryOffer: Story = {
-	loaders: [
-		async () => {
-			const base = formFromEntry(testSite, draft);
-			const snapshot = { ...base, title: "저장하지 못한 제목" } as EntryForm;
-			await saveLocalBackup(
-				{
-					key: "u1:entry-1",
-					entryId: "entry-1",
-					baseVersion: draft.version,
-					baseFingerprint: formFingerprint(testSite, base),
-					localFingerprint: formFingerprint(testSite, snapshot),
-					snapshot,
-					changeSeq: 1,
-					savedAt: Date.parse("2026-10-21T14:20:00.000Z"),
-				},
-				testSite,
-			);
+/** A copy of an unsaved edit is waiting in the browser. */
+const draftLoader = async () => {
+	const base = formFromEntry(testSite, draft);
+	const snapshot = {
+		...base,
+		title: "저장하지 못한 제목",
+		summary: "브라우저에만 남은 소개입니다.",
+		doc: docOf(`${BODY}\n\n브라우저에서 덧붙인 문단입니다.`, draft.working.doc),
+	} as EntryForm;
+	await saveLocalBackup(
+		{
+			key: "u1:entry-1",
+			entryId: "entry-1",
+			baseVersion: draft.version,
+			baseFingerprint: formFingerprint(testSite, base),
+			localFingerprint: formFingerprint(testSite, snapshot),
+			snapshot,
+			changeSeq: 1,
+			savedAt: Date.parse("2026-10-26T01:12:00.000Z"),
 		},
-	],
-	render: screen(() => server()),
+		testSite,
+	);
+};
+
+/** The editor opens with a notice strip: the draft was kept only in this browser; compare it, load it or discard it. */
+export const RecoveryOffer: Story = {
+	tags: ["visual"],
+	loaders: [draftLoader],
+	render: screen(() => server({ entry: { ...draft, changedAt: "2026-10-26T00:58:00.000Z" } as EntryData })),
 	play: async () => {
-		await within(document.body).findByRole("dialog", undefined, LONG);
+		await within(document.body).findByText("이 브라우저에 저장하지 않은 편집이 있어요", undefined, LONG);
+	},
+};
+
+/** The compare screen for the browser draft: the draft beside the server's copy, and loading the draft or discarding it. */
+export const CompareDraft: Story = {
+	tags: ["visual"],
+	loaders: [draftLoader],
+	render: screen(() => server({ entry: { ...draft, changedAt: "2026-10-26T00:58:00.000Z" } as EntryData })),
+	play: async () => {
+		await userEvent.click(await within(document.body).findByRole("link", { name: "비교하기" }, LONG));
+		await within(document.body).findByRole("heading", { level: 1, name: "임시 저장본과 비교" }, LONG);
 	},
 };

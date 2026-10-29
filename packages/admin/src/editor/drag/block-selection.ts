@@ -15,7 +15,6 @@ import { deleteBlockSet, MOVED_BLOCKS_META } from "./drag-commands";
 export const cmsBlockSelectionKey = new PluginKey<number[] | null>("cmsBlockSelection");
 
 /** Classes put on the editor while a block selection is active and on the selected lines (styles live in the editor class). */
-export const BLOCK_RANGE_CLASS = "monti-block-range";
 export const BLOCK_SELECTED_CLASS = "monti-block-selected";
 
 const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
@@ -143,7 +142,7 @@ export function createBlockSelectionPlugin() {
 			},
 		},
 		props: {
-			attributes: (state): Record<string, string> => (selectedBlocks(state) ? { class: BLOCK_RANGE_CLASS } : {}),
+			attributes: (state): Record<string, string> => (selectedBlocks(state) ? { "data-block-range": "" } : {}),
 			decorations: decorationsFor,
 			handleKeyDown: handleBlockSelectionKey,
 			handleDOMEvents: {
@@ -240,7 +239,8 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 			box = document.createElement("div");
 			box.setAttribute("aria-hidden", "true");
 			box.dataset.montiMarquee = "";
-			box.className = "pointer-events-none fixed z-50 rounded-monti-sm border border-monti-contrast bg-monti-selected";
+			// Only a thin line, never a fill: the blocks under it show their own ground, and the text stays readable.
+			box.className = "pointer-events-none fixed z-50 rounded-monti-sm border border-monti-emphasis";
 			document.body.appendChild(box);
 		}
 		box.style.left = `${left}px`;

@@ -26,12 +26,14 @@ const CONSEQUENCE: Record<ImpactConsequence, string> = {
 	none: "",
 	transformed: "rewritten by its transform",
 	deleted: "stored data DELETED by its drop transform",
+	trashed: "translations MOVED TO THE TRASH by its trash transform (restorable from the trash)",
 	orphaned: "values kept as orphans (hidden from the public read; publishing warns)",
 	unknown_value: "values kept as stored; publishing warns (unknown_select_value)",
 	publish_blocked: "cannot be published until the field is filled",
 	warned: "content kept; every save and publish warns",
 	invalid_values: "stored values may not fit the new type; saving may be rejected",
 	kept: "data kept as it is",
+	address_changed: "public address of published entries changes; the old address stops working (no redirect)",
 };
 
 const quote = (title: string | null, id: string) => (title ? `"${title}"` : id.slice(0, 8));
@@ -112,6 +114,9 @@ export function formatApplyResult(done: SchemaApplyResult): string {
 		lines.push(
 			`Deleted collection ${item.collection}: ${item.entries} entries (${item.trashed} from the trash), ${item.folders} folders, ${item.addresses} addresses.`,
 		);
+	}
+	for (const item of result.trashed) {
+		lines.push(`Moved ${item.entries} ${item.locale} translations to the trash.`);
 	}
 	if (result.skipped.length > 0) lines.push(`Already applied before: ${result.skipped.join(", ")}.`);
 	for (const conflict of done.conflicts) {

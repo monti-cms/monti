@@ -1,6 +1,6 @@
 import type { Folder } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
-import { railFolders } from "../rail-folders";
+import { folderPath, railFolders } from "../rail-folders";
 
 const folder = (id: string, name: string, parentId: string | null = null): Folder => ({
 	id,
@@ -43,5 +43,18 @@ describe("the folders the rail shows", () => {
 
 	it("shows nothing for no folders", () => {
 		expect(railFolders([], "all")).toEqual([]);
+	});
+});
+
+describe("the path to a folder", () => {
+	it("runs from the top-level folder to the folder itself", () => {
+		expect(folderPath(folders, "app").map((entry) => entry.name)).toEqual(["Dev", "Next.js", "App router"]);
+		expect(folderPath(folders, "essays").map((entry) => entry.name)).toEqual(["Essays"]);
+	});
+
+	it("is empty for the top level and for a folder that is not known, and ends on a loop in the data", () => {
+		expect(folderPath(folders, "all")).toEqual([]);
+		expect(folderPath(folders, "gone")).toEqual([]);
+		expect(folderPath([folder("x", "X", "y"), folder("y", "Y", "x")], "x")).toHaveLength(2);
 	});
 });

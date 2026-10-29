@@ -173,6 +173,41 @@ describe("schema:diff and schema:apply", () => {
 		expect((await metadataOf("one"))?.metadata).toEqual({ title: "one", excerpt: "First" });
 	});
 
+	it("moves the translations of a removed language to the trash when the file says so, and says so", async () => {
+		const excerpt = { excerpt: { kind: "text", label: "Excerpt" } };
+		const both = [
+			{ code: "en", name: "English" },
+			{ code: "ko", name: "Korean" },
+		];
+		writeFileSync(file, schema(excerpt, { locales: both }));
+		expect((await schemaApply(options())).ok).toBe(true);
+		const cms = await loadCms();
+		const source = await pool.query<{ id: string }>(
+			`SELECT id FROM "${schemaName}".entries WHERE working_slug = 'one' AND locale = 'en'`,
+		);
+		const translation = (
+			await cms.contentService().createTranslation({ sourceId: source.rows[0]?.id as string, locale: "ko" })
+		).entry;
+		await cms.close();
+
+		writeFileSync(file, schema(excerpt, { migrations: [{ id: "trash-ko", op: "trashLocale", locale: "ko" }] }));
+		const diff = await schemaDiff(options());
+		expect(diff.text).toContain('locale "ko" removed [transform trash-ko]: 1 entry');
+		expect(diff.text).toContain("translations MOVED TO THE TRASH by its trash transform");
+		const statusOf = async () =>
+			(
+				await pool.query<{ status: string }>(`SELECT status FROM "${schemaName}".entries WHERE id = $1`, [
+					translation.id,
+				])
+			).rows[0]?.status;
+		expect(await statusOf()).toBe("draft");
+
+		const outcome = await schemaApply(options());
+		expect(outcome.ok).toBe(true);
+		expect(outcome.text).toContain("Moved 1 ko translations to the trash.");
+		expect(await statusOf()).toBe("trashed");
+	});
+
 	it("runs through the monti command line", async () => {
 		const lines: string[] = [];
 		// Without a server file the command reports it, like any command that needs the app.

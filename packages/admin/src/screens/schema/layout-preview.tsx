@@ -1,15 +1,18 @@
 "use client";
 
 import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text } from "@monti-cms/ui";
+import { SidePanel, Stack, Text, TodoItem } from "@monti-cms/ui";
 import { Component, type ReactNode, useMemo, useRef, useState } from "react";
 import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
 import { InspectorPanel } from "../entries/inspector-panel";
 import { SchemaFields } from "../entries/schema-fields";
 import { EntryFormProvider } from "../entries/use-field";
+import { placeOfProblem } from "./collection-problems";
+import { useSchemaEdit } from "./controls";
 import { draftSiteOf } from "./draft-site";
 import { schemaFieldsMessages } from "./fields.messages";
-import type { Obj } from "./schema-model";
+import { schemaProblemMessages } from "./problems.messages";
+import { collectionsOf, type FieldPlace, fieldAt, type Obj } from "./schema-model";
 
 /** Catches what the real components throw for a draft that is only half made, so one bad moment does not take the settings page down. */
 class PreviewBoundary extends Component<
@@ -34,7 +37,17 @@ const noop = () => {};
  * The form of a collection with nothing in it: the real panel on a local form, so typing, picking and the conditional fields that follow work, and nothing is
  * kept or sent. Documents use the properties panel of the edit screen, items the fields of the record panel.
  */
-function PreviewPanel({ collection, onClose }: { collection: string; onClose: () => void }) {
+function PreviewPanel({
+	collection,
+	title,
+	label,
+	onClose,
+}: {
+	collection: string;
+	title: ReactNode;
+	label: string;
+	onClose?: () => void;
+}) {
 	const site = useSite();
 	const [form, setForm] = useState<EntryForm>(() => emptyFormOf(site, collection));
 	const value = useMemo(
@@ -48,17 +61,19 @@ function PreviewPanel({ collection, onClose }: { collection: string; onClose: ()
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<Box grow minHeight={0} overflow="y" padding={16} data-testid="layout-preview-record">
+				<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview-record">
 					<SchemaFields />
-				</Box>
+				</SidePanel>
 			) : (
 				<InspectorPanel
+					title={title}
+					label={label}
+					onClose={onClose}
 					incomingReferences={[]}
 					isLoadingIncomingReferences={false}
 					onRefreshIncomingReferences={noop}
 					onSlugChange={(slug) => value.setForm({ slug })}
 					onRegenerateSlug={noop}
-					onClose={onClose}
 				/>
 			)}
 		</EntryFormProvider>
@@ -74,6 +89,7 @@ export function LayoutPreview({
 	file,
 	collection,
 	codeCollections,
+	onOpenField,
 	onClose,
 }: {
 	/** The schema file as edited. */
@@ -81,48 +97,69 @@ export function LayoutPreview({
 	/** The collection shown. */
 	collection: string;
 	codeCollections: readonly string[];
-	onClose: () => void;
+	/** Opens the sheet of a field that has a problem. */
+	onOpenField?: (place: FieldPlace, name: string) => void;
+	/** The × of the head: closes the preview, as its toolbar button does. */
+	onClose?: () => void;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
+	const tp = useTranslator(schemaProblemMessages);
+	const { problems } = useSchemaEdit();
 	const site = useSite();
+	// What stops this collection from being saved: the preview would show a half-made form, so the list of what to fix takes its place.
+	const toFix = problems.filter((problem) => problem.area === "collections" && problem.collection === collection);
 	const made = useMemo(() => draftSiteOf(site, file, codeCollections), [site, file, codeCollections]);
 	// While the draft cannot be made (a half-typed name), the last one that could stays.
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
+	// The head: "Preview" and, quieter, that what it shows is not saved.
+	const label = tp("preview.label");
+	const title = (
+		<>
+			{tp("preview.title")}{" "}
+			<Text as="span" variant="meta" tone="subtle">
+				· {tp("preview.unsaved")}
+			</Text>
+		</>
+	);
 	const problem = (
-		<Box padding={16}>
+		<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview">
 			<Text as="p" variant="caption" tone="muted">
 				{t("layout.previewUnavailable")}
 			</Text>
-		</Box>
+		</SidePanel>
 	);
-
+	if (toFix.length > 0) {
+		return (
+			<SidePanel width="panel" title={title} aria-label={label} onClose={onClose} data-testid="layout-preview">
+				<Stack gap={8} data-testid="layout-preview-problems">
+					<Text as="p" variant="note" tone="muted">
+						{tp("preview.fix")}
+					</Text>
+					{toFix.map((item) => {
+						const where = placeOfProblem(item);
+						const field = where ? fieldAt(collectionsOf(file)[collection] ?? {}, where.place, where.name) : undefined;
+						return (
+							<TodoItem
+								key={`${item.path}:${item.code}`}
+								blocking
+								title={typeof field?.label === "string" && field.label !== "" ? field.label : (item.field ?? item.path)}
+								detail={tp(`problem.${item.code}` as "problem.options")}
+								onOpen={where && onOpenField ? () => onOpenField(where.place, where.name) : undefined}
+							/>
+						);
+					})}
+				</Stack>
+			</SidePanel>
+		);
+	}
+	if (!draft?.isCollection(collection)) return problem;
 	return (
-		<Stack
-			gap={0}
-			grow
-			minHeight={0}
-			overflow="hidden"
-			radius="lg"
-			border="all"
-			background="page"
-			data-testid="layout-preview"
-		>
-			<Box shrink={false} border="bottom" background="tool" paddingX={16} paddingY={8}>
-				<Text as="p" variant="caption" tone="muted">
-					{t("layout.previewLabel")}
-				</Text>
-			</Box>
-			{draft?.isCollection(collection) ? (
-				<SiteProvider site={draft}>
-					<PreviewBoundary fallback={problem} resetKey={draft}>
-						<PreviewPanel key={collection} collection={collection} onClose={onClose} />
-					</PreviewBoundary>
-				</SiteProvider>
-			) : (
-				problem
-			)}
-		</Stack>
+		<SiteProvider site={draft}>
+			<PreviewBoundary fallback={problem} resetKey={draft}>
+				<PreviewPanel key={collection} collection={collection} title={title} label={label} onClose={onClose} />
+			</PreviewBoundary>
+		</SiteProvider>
 	);
 }

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { removePreference, writePreference } from "../../utils/site-storage";
-import { booleanCodec, enumCodec, positiveNumberCodec, usePreference } from "../use-preference";
+import { booleanCodec, enumCodec, usePreference } from "../use-preference";
 
 const wrap = (node: ReactNode) => <SiteProvider site={testSite}>{node}</SiteProvider>;
 
@@ -75,8 +75,5 @@ describe("preference codecs", () => {
 		expect(booleanCodec.parse("1")).toBe(true);
 		expect(booleanCodec.parse("0")).toBe(false);
 		expect(booleanCodec.parse("yes")).toBeUndefined();
-		expect(positiveNumberCodec.parse("320")).toBe(320);
-		expect(positiveNumberCodec.parse("0")).toBeUndefined();
-		expect(positiveNumberCodec.parse("abc")).toBeUndefined();
 	});
 });

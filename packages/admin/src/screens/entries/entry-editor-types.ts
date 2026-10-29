@@ -68,6 +68,8 @@ export interface RecoveryOffer {
 	readonly kind: "restore" | "conflict";
 	/** When the copy was made (milliseconds since the epoch). */
 	readonly savedAt: number;
+	/** What the copy holds, for setting it against the server's version. */
+	readonly form: EntryForm;
 	/** The server's entry, for `conflict`. */
 	readonly server?: EntryData;
 }

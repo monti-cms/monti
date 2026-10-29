@@ -9,9 +9,10 @@ import { createSlotRuns, type SlotRuns } from "./runs";
  *
  * - A slot only passes the current context (`getContext`) and the apply function (`apply`). It does not know which actions are attached.
  * - Actions are decided by the sources in `SlotRegistryProvider`. AI features (the definitions on the admin AI screen) are one such source.
- * - An action does not change values itself. It shows results, and `apply` runs only when the user clicks a candidate.
- * - Run state (generating, results) is held by `SlotRegistryProvider`, not by the element that renders the slot. Closing a popover or panel
- *   does not stop the request, and reopening shows the same result. The same slot is distinguished by `scope` (entry, image, etc.).
+ * - An action is a job the person pointed at one field: pressing it runs the action and `apply` puts the result in at once, with no result to
+ *   accept (⌘Z undoes it). Nothing is made before it is pressed.
+ * - Run state (running, failed) is held by `SlotRegistryProvider`, not by the element that renders the slot. Closing a popover or panel
+ *   does not stop the request. The same slot is distinguished by `scope` (entry, image, etc.).
  */
 
 /**
@@ -23,15 +24,18 @@ export type CoreSlotName = (typeof CORE_SLOT_NAMES)[number];
 /** Slot name. Any string works, and the core uses only `CORE_SLOT_NAMES`. Extensions and sites can place slots with their own names. */
 export type SlotName = string;
 
-/** One candidate shown as a result. `value` is the value to apply and `label` is the visible text. */
+/** One candidate of a result. `value` is the value to apply and `label` is the visible text. */
 export interface SlotCandidate {
 	value: string;
 	label: string;
-	/** A short note to append (e.g. the number of places a regex matched). */
+	/** A short note (e.g. the number of places a regex matched). */
 	detail?: string;
 }
 
-/** An action's result. Multiple candidates, long text, a body fragment (MDX), or a display-only note. */
+/**
+ * An action's result. Text and candidates are applied: a `replace` action writes the text or the first candidate, an `append` action adds every candidate.
+ * A body fragment (MDX) and a note have nothing to apply to a field.
+ */
 export type SlotResult =
 	| { kind: "candidates"; items: SlotCandidate[] }
 	| { kind: "text"; text: string }
@@ -40,8 +44,6 @@ export type SlotResult =
 
 /** The current context a slot passes on click. Each slot fills in only the values it knows. */
 export interface SlotContext {
-	/** Extra request typed when running. Received only when the action is `askInstruction`. */
-	request?: string;
 	collection?: string;
 	locale?: string;
 	entryId?: string;
@@ -69,7 +71,10 @@ export interface SlotRequest {
 	collection?: string;
 	/** The current context, read on click. */
 	getContext: () => SlotContext;
-	apply: (value: string, mode: SlotApplyMode) => void;
+	/** Puts a value in. Called once per value the action produced, as soon as the action ends; one that fails (a save) rejects, and the run fails with it. */
+	apply: (value: string, mode: SlotApplyMode) => void | Promise<void>;
+	/** The target already has a value: the action asks again ("↻ Again") instead of filling. */
+	filled?: boolean;
 	disabled?: boolean;
 	/** A value that distinguishes multiple slots with the same name and target (entry ID, image URL, etc.). Run state is kept separately per value. */
 	scope?: string;
@@ -77,20 +82,10 @@ export interface SlotRequest {
 
 export interface SlotAction {
 	id: string;
-	/** Name shown on the button, menu item and result panel header. */
+	/** Name of the action. A slot with more than one action lists them by this name. */
 	label: string;
-	/** Icon for the button, menu item and result panel header. Falls back to the default icon when absent. */
-	icon?: ReactNode;
-	/** Name of the menu button when multiple actions are grouped into one menu. Defaults to the first action's `label`. */
-	menuLabel?: string;
-	/** Icon of the menu button when multiple actions are grouped into one menu. Defaults to the first action's `icon`. */
-	menuIcon?: ReactNode;
-	/** How the result is applied. `none` means display only. */
-	apply: SlotApplyMode | "none";
-	/** Takes an extra request when running. Clicking opens the request input first instead of running immediately. */
-	askInstruction?: boolean;
-	/** Inserts the result immediately without showing it (the first candidate). Notifies in the result panel when there is nothing to insert. */
-	instant?: boolean;
+	/** How the result is applied. */
+	apply: SlotApplyMode;
 	run: (context: SlotContext, signal: AbortSignal) => Promise<SlotResult>;
 }
 

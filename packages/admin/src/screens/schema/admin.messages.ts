@@ -10,7 +10,7 @@ export const schemaAdminMessages = defineMessages("cms-admin.schema.admin", {
 		"admin.localeDefault": "Same as the default language ({code})",
 		"admin.templates": "Body templates",
 		"admin.translations": "Translations",
-		"admin.pathNote": "Changed in monti.schema.ts, together with the admin route folder.",
+		"admin.path": "Admin address",
 	},
 	ko: {
 		"admin.languageTitle": "언어",
@@ -20,6 +20,6 @@ export const schemaAdminMessages = defineMessages("cms-admin.schema.admin", {
 		"admin.localeDefault": "기본 언어와 같음 ({code})",
 		"admin.templates": "본문 템플릿",
 		"admin.translations": "번역",
-		"admin.pathNote": "monti.schema.ts에서 바꾸고, 관리자 라우트 폴더도 함께 옮겨요.",
+		"admin.path": "관리자 주소",
 	},
 });

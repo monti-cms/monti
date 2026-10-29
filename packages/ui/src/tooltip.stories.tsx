@@ -61,7 +61,7 @@ export const WithShortcut: Story = {
 		<div className="p-monti-48">
 			<Tooltip open>
 				<IconTrigger label="저장" />
-				<TooltipContent side="bottom" shortcut="⌘S">
+				<TooltipContent side="bottom" shortcut={["mod", "S"]}>
 					저장
 				</TooltipContent>
 			</Tooltip>

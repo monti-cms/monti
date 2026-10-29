@@ -6,6 +6,7 @@ import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { BAR, BAR_BUTTON, BAR_SEPARATOR } from "./block-bar";
 import { cn } from "./cn";
 import { useUiLabels } from "./labels";
+import type { ShortcutKeys } from "./shortcut";
 import { Spark } from "./spark";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
@@ -43,8 +44,8 @@ function FormatBarButton({
 }: Omit<ButtonPrimitive.Props, "aria-label" | "aria-pressed" | "children"> & {
 	/** The name of the button: its screen reader name and its tooltip. */
 	label: string;
-	/** The key combination that does the same ("⌘B"), shown in the tooltip. */
-	shortcut?: string;
+	/** The key combination that does the same (`["mod", "B"]`), shown in the tooltip. */
+	shortcut?: ShortcutKeys;
 	pressed?: boolean;
 	/** `danger` for a button that removes something. */
 	tone?: "danger";
@@ -90,7 +91,7 @@ function FormatButton({
 	mark: FormatMark;
 	/** The format's name for screen readers and the tooltip. */
 	label: string;
-	shortcut?: string;
+	shortcut?: ShortcutKeys;
 	pressed?: boolean;
 	trigger?: (button: ReactElement) => ReactElement;
 }) {
@@ -124,17 +125,14 @@ function FormatBarSeparator() {
 	return <span data-slot="format-bar-separator" aria-hidden className={BAR_SEPARATOR} />;
 }
 
-/** The last button of the bar: a blue ✦, the word that asks the assistant about the selected text, and its key combination. */
+/** The last button of the bar: a blue ✦ and the word that asks the assistant about the selected text. A button shows no shortcut. */
 function FormatBarRequest({
 	label,
-	shortcut,
 	className,
 	...props
 }: Omit<ButtonPrimitive.Props, "aria-label" | "children"> & {
 	/** The word on the button ("Request"). */
 	label: string;
-	/** Its key combination, in mono after the word. */
-	shortcut?: string;
 }) {
 	return (
 		<ButtonPrimitive
@@ -147,7 +145,6 @@ function FormatBarRequest({
 		>
 			<Spark className="size-4 text-monti-proposal" />
 			{label}
-			{shortcut && <span className="ml-monti-4 font-mono text-monti-micro text-monti-subtle">{shortcut}</span>}
 		</ButtonPrimitive>
 	);
 }

@@ -28,6 +28,7 @@ export {
 	type TransformProblem,
 	type TransformResult,
 	transformCollections,
+	trashedLocales,
 } from "./transforms";
 export {
 	type AllowedShape,

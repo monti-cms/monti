@@ -71,7 +71,7 @@ export function LanguageTabs({
 	const missing = site.LOCALES.filter((target) => !members.some((item) => item.locale === target));
 
 	return (
-		<Box as="nav" aria-label={t("lang.nav")} paddingX={16} paddingTop={8} paddingBottom={12}>
+		<Box as="nav" aria-label={t("lang.nav")} paddingTop={6}>
 			<Inline wrap gap={20} align="end">
 				{present.length > 0 && (
 					<TabLinks>

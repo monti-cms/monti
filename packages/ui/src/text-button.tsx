@@ -31,6 +31,10 @@ const textButtonVariants = cva(
 			},
 			/** Fixed-width letters, for an address or an identifier. */
 			mono: { true: "font-mono" },
+			/** Takes the quiet ink on top of its variant: an underlined button that is not the main action of its line (undo, change). */
+			quiet: { true: "text-monti-subtle hover:text-monti-default" },
+			/** The text size of the line it stands in, when that is not the surrounding text's: the `note` of a list row, the `caption` of a label row. */
+			size: { note: "text-monti-note", caption: "text-monti-caption" },
 		},
 		defaultVariants: { variant: "plain" },
 	},
@@ -40,6 +44,8 @@ function TextButton({
 	className,
 	variant,
 	mono,
+	quiet,
+	size,
 	render,
 	href,
 	...props
@@ -50,7 +56,10 @@ function TextButton({
 	return useRender({
 		defaultTagName: href === undefined ? "button" : "a",
 		props: mergeProps<"button">(
-			{ className: cn(textButtonVariants({ variant, mono }), className), ...(isButton ? { type: "button" } : {}) },
+			{
+				className: cn(textButtonVariants({ variant, mono, quiet, size }), className),
+				...(isButton ? { type: "button" } : {}),
+			},
 			{ ...props, ...(href === undefined ? {} : { href }) } as React.ComponentProps<"button">,
 		),
 		render,

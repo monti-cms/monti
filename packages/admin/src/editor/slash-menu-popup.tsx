@@ -1,97 +1,135 @@
 "use client";
 
-import { AppConnectivity } from "@carbon/icons-react";
+import { AppConnectivity, Template } from "@carbon/icons-react";
 import { useTranslator } from "@monti-cms/core/site";
-import { cn, Icon, Inline, Stack, Text } from "@monti-cms/ui";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import {
+	Command,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	MenuShortcut,
+	Popover,
+	PopoverContent,
+	Stack,
+	Text,
+} from "@monti-cms/ui";
+import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon";
 import { editorMessages } from "./messages";
-import type { SlashCommandItem } from "./slash-command";
+import { SLASH_GROUPS, type SlashCommandItem, type SlashGroup } from "./slash-command";
+
+/** Where the caret is on screen: the menu opens under this line, or over it where there is no room under. */
+export interface CaretRect {
+	top: number;
+	bottom: number;
+	left: number;
+}
 
 interface SlashMenuPopupProps {
 	items: SlashCommandItem[];
-	coords: { top: number; left: number };
+	/** What is typed after the `/`. The search line shows it; the text itself is typed in the body. */
+	query: string;
+	caret: CaretRect;
+	/** Reads the caret again each time the menu is placed (falls back to `caret`). */
+	measureCaret?: () => CaretRect;
 	selectedIndex: number;
 	onSelect: (item: SlashCommandItem) => void;
+	/** The pointer is on the row at this index. */
+	onHighlight: (index: number) => void;
 	onClose: () => void;
 }
 
-/** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent. */
-function ItemIcon({ icon }: { icon: SlashCommandItem["icon"] }) {
+/** Item icon. A name (the block definition's `editor.icon`) or a component; a puzzle icon if absent, the template icon for a template. */
+function ItemIcon({ item }: { item: SlashCommandItem }) {
 	const iconByName = useIconByName();
-	const Glyph = (typeof icon === "string" ? iconByName(icon) : icon) ?? AppConnectivity;
-	return <Icon icon={Glyph} tone="muted" />;
+	const named = typeof item.icon === "string" ? iconByName(item.icon) : item.icon;
+	const Glyph = named ?? (item.group === "templates" ? Template : AppConnectivity);
+	return <Glyph aria-hidden />;
 }
 
 /**
- * `/` block insert menu. The editor handles focus and arrow keys (it does not steal focus during Korean IME composition);
- * this only draws the highlighted item (`selectedIndex`) and scrolls it into view.
+ * The "/" menu: a card under the caret with a search line that shows what was typed, group titles, and one row per block with the Markdown that makes it. The editor
+ * keeps the focus and handles the arrow keys and Enter (it does not steal focus during Korean IME composition), so this only draws the row the keyboard is on
+ * (`selectedIndex`) and tells which row the pointer is on.
  */
-export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose }: SlashMenuPopupProps) {
+export function SlashMenuPopup({
+	items,
+	query,
+	caret,
+	measureCaret,
+	selectedIndex,
+	onSelect,
+	onHighlight,
+	onClose,
+}: SlashMenuPopupProps) {
 	const t = useTranslator(editorMessages);
-	const [mounted, setMounted] = useState(false);
-	const listRef = useRef<HTMLDivElement>(null);
+	const anchor = useMemo(
+		() => ({
+			getBoundingClientRect: () => {
+				const at = measureCaret?.() ?? caret;
+				return new DOMRect(at.left, at.top, 1, Math.max(0, at.bottom - at.top));
+			},
+		}),
+		[caret, measureCaret],
+	);
+	const titles: Record<SlashGroup, string> = {
+		text: t("slash.group.text"),
+		insert: t("slash.group.insert"),
+		components: t("slash.group.components"),
+		templates: t("slash.group.templates"),
+	};
+	if (items.length === 0) return null;
 
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	useEffect(() => {
-		listRef.current
-			?.querySelector<HTMLElement>(`[data-index="${selectedIndex}"]`)
-			?.scrollIntoView({ block: "nearest" });
-	}, [selectedIndex]);
-
-	if (!mounted || items.length === 0) return null;
-
-	return createPortal(
-		<div
-			ref={listRef}
-			role="listbox"
-			aria-label={t("slashMenu.label")}
-			tabIndex={-1}
-			// design-allow: popup placed under the caret from measured coordinates
-			style={{ position: "fixed", top: `${coords.top + 24}px`, left: `${coords.left}px`, zIndex: 9999 }}
-			onKeyDown={(event) => {
-				if (event.key === "Escape") {
-					event.preventDefault();
-					onClose();
-				}
-			}}
-			className="max-h-80 w-72 overflow-y-auto rounded-monti-lg border bg-monti-page p-monti-4 text-monti-default shadow-monti-floating"
-		>
-			{items.map((item, index) => (
-				<div
-					key={item.id ?? item.title}
-					role="option"
-					aria-selected={index === selectedIndex}
-					data-index={index}
-					tabIndex={-1}
-					onMouseDown={(event) => event.preventDefault()}
-					onClick={() => onSelect(item)}
-					onKeyDown={(event) => {
-						if (event.key === "Enter") onSelect(item);
-					}}
-					className={cn(
-						"flex cursor-pointer items-center gap-monti-8 rounded-monti-md px-monti-8 py-monti-8 outline-none",
-						index === selectedIndex ? "bg-monti-selected text-monti-default" : "hover:bg-monti-selected",
-					)}
+	return (
+		<Popover open onOpenChange={(open) => !open && onClose()}>
+			<PopoverContent
+				anchor={anchor}
+				side="bottom"
+				align="start"
+				padding="menu"
+				width="md"
+				initialFocus={false}
+				finalFocus={false}
+				// Keep the focus in the body: pressing a row must not take it.
+				onMouseDown={(event) => event.preventDefault()}
+			>
+				<Command
+					shouldFilter={false}
+					value={String(selectedIndex)}
+					onValueChange={(value) => onHighlight(Number(value))}
 				>
-					<Inline as="span" justify="center" padding={8} border="all" radius="md" background="page" shrink={false}>
-						<ItemIcon icon={item.icon} />
-					</Inline>
-					<Stack as="span" gap={0} minWidth={0}>
-						<Text weight="medium" truncate>
-							{item.title}
-						</Text>
-						<Text variant="caption" tone="muted" truncate>
-							{item.description}
-						</Text>
-					</Stack>
-				</div>
-			))}
-		</div>,
-		document.body,
+					<CommandInput value={query} readOnly placeholder={t("slash.find")} aria-label={t("slash.find")} />
+					<CommandList label={t("slashMenu.label")}>
+						{SLASH_GROUPS.map((group) => {
+							const rows = items.flatMap((item, index) => (item.group === group ? [{ item, index }] : []));
+							if (rows.length === 0) return null;
+							return (
+								<CommandGroup key={group} heading={titles[group]}>
+									{rows.map(({ item, index }) => (
+										<CommandItem key={item.id ?? item.title} value={String(index)} onSelect={() => onSelect(item)}>
+											<ItemIcon item={item} />
+											{item.caption ? (
+												<Stack as="span" gap={2} minWidth={0}>
+													<Text tone="default" truncate>
+														{item.title}
+													</Text>
+													<Text variant="caption" tone="subtle" truncate>
+														{item.caption}
+													</Text>
+												</Stack>
+											) : (
+												<Text truncate>{item.title}</Text>
+											)}
+											{item.shortcut && <MenuShortcut>{item.shortcut}</MenuShortcut>}
+										</CommandItem>
+									))}
+								</CommandGroup>
+							);
+						})}
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
 	);
 }

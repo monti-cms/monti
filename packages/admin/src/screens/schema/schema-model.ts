@@ -143,27 +143,6 @@ export function settingChanges(base: Obj, draft: Obj): SettingChange[] {
 	return changes;
 }
 
-/**
- * How many things differ between the saved file and the draft: each collection that was added, removed or edited, each of the language settings
- * (`locales`, `defaultLocale`, `timeZone`) and each changed `site` or `admin` setting. The number shown as unsaved changes.
- */
-export function changeCount(base: Obj, draft: Obj): number {
-	const before = collectionsOf(base);
-	const after = collectionsOf(draft);
-	let count = 0;
-	const beforeKeys = Object.keys(before);
-	const afterKeys = Object.keys(after);
-	const sameNames = beforeKeys.length === afterKeys.length && beforeKeys.every((key) => key in after);
-	if (sameNames && !sameJson(beforeKeys, afterKeys)) count += 1;
-	for (const name of new Set([...beforeKeys, ...afterKeys])) {
-		if (!sameJson(before[name], after[name])) count += 1;
-	}
-	for (const key of ["locales", "defaultLocale", "timeZone"]) {
-		if (!sameJson(base[key], draft[key])) count += 1;
-	}
-	return count + settingChanges(base, draft).length;
-}
-
 /** Which of a collection's editor tabs hold a change against the saved file. */
 export interface CollectionChange {
 	readonly basics: boolean;
@@ -190,7 +169,7 @@ export function collectionChange(saved: Obj | undefined, draft: Obj): Collection
 	return basics || fields || editor ? { basics, fields, editor } : null;
 }
 
-/** The areas of the Settings page that hold draft changes, derived the same way `changeCount` counts them. */
+/** The areas of the Settings page that hold draft changes, derived the same way as the list of changes. */
 export function changedAreas(base: Obj, draft: Obj): ChangedAreas {
 	const before = collectionsOf(base);
 	const after = collectionsOf(draft);
@@ -224,11 +203,6 @@ export function moveKey<T>(record: Record<string, T>, key: string, delta: number
 	const entries = Object.entries(record);
 	const from = entries.findIndex(([name]) => name === key);
 	return from === -1 ? record : Object.fromEntries(moveWithin(entries, from, from + delta));
-}
-
-/** `list` with the item at `index` moved by `delta` places (negative: up). */
-export function moveItem<T>(list: readonly T[], index: number, delta: number): T[] {
-	return moveWithin(list, index, index + delta);
 }
 
 /** Whether two JSON values are the same, key order included. */
@@ -293,11 +267,24 @@ export function pathProblem(path: string): "slash" | "slug" | null {
 	return checkPathPattern(path)?.code ?? null;
 }
 
+/** The labels the title and slug fields of a new collection start with, in the admin's language. */
+export interface StarterFieldLabels {
+	title: string;
+	slug: string;
+}
+
 /**
  * A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place.
  * On a site with several locales the title is per locale, and a document's slug starts from the source locale's, as init writes them.
  */
-export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj {
+export function addCollection(
+	file: Obj,
+	name: string,
+	kind: "document" | "item",
+	path?: string,
+	label?: string,
+	fieldLabels: StarterFieldLabels = { title: "Title", slug: "Slug" },
+): Obj {
 	const multiLocale = localesOf(file).length > 1;
 	let collection: Obj = {
 		label: label?.trim() || name.charAt(0).toUpperCase() + name.slice(1),
@@ -305,14 +292,14 @@ export function addCollection(file: Obj, name: string, kind: "document" | "item"
 		fields: {
 			title: {
 				kind: "text",
-				label: "Title",
+				label: fieldLabels.title,
 				required: true,
 				...(multiLocale ? { localized: true } : {}),
 				role: TITLE_ROLE,
 			},
 			slug: {
 				kind: "slug",
-				label: "Slug",
+				label: fieldLabels.slug,
 				required: true,
 				...(multiLocale && kind === "document" ? { localized: "inherit" } : {}),
 				from: "title",
@@ -829,14 +816,19 @@ export function withOptionFields(field: Obj, on: boolean): Obj {
  * The collection with its public address set (or removed when `path` is empty). An address needs a slug, so one comes with it when the collection has none,
  * made from the title like the slug a new collection starts with.
  */
-export function withPublicPath(collection: Obj, path: string | undefined, multiLocale: boolean): Obj {
+export function withPublicPath(
+	collection: Obj,
+	path: string | undefined,
+	multiLocale: boolean,
+	slugLabel = "Slug",
+): Obj {
 	const next = setProp(collection, "path", path, COLLECTION_KEY_ORDER);
 	const fields = fieldsOf(next);
 	if (!path || Object.values(fields).some((field) => field.kind === "slug")) return next;
 	const from = titleFieldName(next);
 	const slug: Obj = {
 		kind: "slug",
-		label: "Slug",
+		label: slugLabel,
 		required: true,
 		...(multiLocale && next.kind !== "item" ? { localized: "inherit" } : {}),
 		...(from ? { from } : {}),

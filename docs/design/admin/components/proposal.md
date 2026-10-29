@@ -70,7 +70,7 @@ A state that the AI made and the person has not touched yet is shown in blue (`f
 
 - Filter chip: `.mt-chip.is-ai` + ✦ in front. It ends when the chip is changed or removed.
 - Picked rows: `.mt-row.is-on.is-ai` + `.mt-check.is-on.is-ai`, and the checkbox name is "AI가 고름" (picked by AI). If any one check is touched, all return to normal picking.
-- Field value: input and select fields are `.is-ai` (blue text + blue underline), and value text in a panel is `.mt-fill`. It ends when the field is edited or the entry saved.
+- Field value: input and select fields are `.is-ai` (blue text + blue underline), and value text in a panel is `.mt-fill`. It ends when the field is edited or the entry saved. In the properties list a value is `PropertyRow proposal` (blue text, described as the assistant's), and the open field gets the same `proposal`. The entry editor keeps the keys the assistant filled (`useField().assisted`): editing a key, or saving the entry, takes the mark off.
 - Switch: `.mt-switch.is-on.is-ai`.
 - It is not told by color alone. The chip has ✦, and the checkbox and field get an accessible name.
 - Work with nothing to paint, such as going to another screen, is left as one line in the panel.

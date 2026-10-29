@@ -1,7 +1,6 @@
 import { agentPanel } from "./agent-panel";
 import { AiManager } from "./ai-manager";
 import { AiSlotProvider } from "./ai-slot-provider";
-import { aiAdminEvents } from "./auto-image-text";
 import { aiComponents } from "./provider";
 
 /**
@@ -14,7 +13,6 @@ export default defineAdminPlugin({
 	panel: agentPanel,
 	components: aiComponents,
 	Provider: AiSlotProvider,
-	on: aiAdminEvents,
 });
 
 export { AiButton, type AiButtonProps } from "./ai-button";

@@ -9,21 +9,25 @@ import { type MutableRefObject, useMemo, useRef, useState } from "react";
 import type { EditorInsertAction } from "../admin-components";
 import type { EditorAllowance } from "./allowed";
 import type { useMarkExtensions } from "./inline-bubble";
-import type { Coords } from "./screen-coords";
 import { filterCommands, type SlashCommandItem } from "./slash-command";
+import type { CaretRect } from "./slash-menu-popup";
 
-type SlashState = { query: string; index: number; coords: Coords };
+/** `measure` reads where the caret is now, so the menu follows the line if the layout around it settles after it opened. */
+type SlashState = { query: string; index: number; caret: CaretRect; measure: () => CaretRect };
 
 export function useSlashMenu({
 	site,
 	allowance,
 	insertActions,
+	templateItems,
 	markExtensions,
 	editorRef,
 }: {
 	site: Site;
 	allowance: EditorAllowance;
 	insertActions: readonly EditorInsertAction[] | undefined;
+	/** The template rows of the menu (`useSlashTemplates`), after the actions plugins add. */
+	templateItems: readonly SlashCommandItem[];
 	/** Text-style extensions allowed in the body; their insert actions follow the default text format items. */
 	markExtensions: ReturnType<typeof useMarkExtensions>;
 	editorRef: MutableRefObject<Editor | null>;
@@ -32,16 +36,19 @@ export function useSlashMenu({
 	const slashRangeRef = useRef<Range | null>(null);
 	// Slash menu items added by extensions (plugins). Also kept in a ref so the key handler reads the latest value.
 	const extraCommands = useMemo<SlashCommandItem[]>(
-		() =>
-			(insertActions ?? []).map((item) => ({
+		() => [
+			...(insertActions ?? []).map<SlashCommandItem>((item) => ({
 				id: item.id,
+				group: "insert",
 				title: item.title,
 				description: item.description,
 				keywords: [...item.keywords],
 				...(item.icon ? { icon: item.icon } : {}),
 				action: (current, range) => item.run(current, range),
 			})),
-		[insertActions],
+			...templateItems,
+		],
+		[insertActions, templateItems],
 	);
 	const extraCommandsRef = useRef(extraCommands);
 	extraCommandsRef.current = extraCommands;
@@ -49,6 +56,7 @@ export function useSlashMenu({
 	const inlineCommands: SlashCommandItem[] = markExtensions.flatMap(({ extension }) =>
 		(extension.insertActions ?? []).map((item) => ({
 			id: item.id,
+			group: "insert" as const,
 			title: item.title,
 			description: item.description,
 			keywords: [...item.keywords],
@@ -71,7 +79,18 @@ export function useSlashMenu({
 		}
 		const query = slashMatch[1] ?? "";
 		slashRangeRef.current = { from: from - query.length - 1, to: from };
-		setSlash({ query, index: 0, coords: current.view.coordsAtPos(from) });
+		const { view } = current;
+		setSlash({
+			query,
+			index: 0,
+			caret: view.coordsAtPos(from),
+			measure: () =>
+				(from <= view.state.doc.content.size ? view.coordsAtPos(from) : slashRef.current?.caret) ?? {
+					top: 0,
+					bottom: 0,
+					left: 0,
+				},
+		});
 	};
 
 	/** Keyboard handling while the menu is open. Returns the handled result, or `undefined` when the key is not for the menu. */
@@ -117,6 +136,8 @@ export function useSlashMenu({
 		extraCommands,
 		inlineCommands,
 		closeSlash: () => setSlash(null),
+		/** The pointer is on the row at `index`: the keyboard continues from there. */
+		highlight: (index: number) => setSlash((current) => (current ? { ...current, index } : current)),
 		syncSlash,
 		handleKey,
 	};

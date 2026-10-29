@@ -67,8 +67,11 @@ function DialogContent({
 	children,
 	size = "default",
 	scroll = false,
+	form = false,
 	...props
 }: DialogPrimitive.Popup.Props & {
+	/** A dialog that holds fields: they sit 16px under the title (the text of a question sits there too), not the 24px between the other parts. */
+	form?: boolean;
 	/** Width on a wide screen: 420px by default (a question, a short form); `lg` for a form with a preview, `xl` for a review of many changes. */
 	size?: keyof typeof DIALOG_WIDTH;
 	/** Scrolls inside, up to 85% of the window's height (a long review or preview). */
@@ -86,6 +89,7 @@ function DialogContent({
 					DIALOG_SURFACE,
 					DIALOG_WIDTH[size],
 					scroll && "max-h-[85vh] overflow-y-auto *:shrink-0",
+					form && "gap-monti-16",
 					className,
 				)}
 				{...props}
@@ -118,8 +122,14 @@ function DialogFooter({
 	);
 }
 
-function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-	return <DialogPrimitive.Title data-slot="dialog-title" className={cn(DIALOG_TITLE, className)} {...props} />;
+/** The title of the dialog. `of` is what it is about, after a dot in the regular weight and the subtle ink ("New language · tlh"). */
+function DialogTitle({ className, of, children, ...props }: DialogPrimitive.Title.Props & { of?: React.ReactNode }) {
+	return (
+		<DialogPrimitive.Title data-slot="dialog-title" className={cn(DIALOG_TITLE, className)} {...props}>
+			{children}
+			{of && <span className="font-normal text-monti-subtle"> · {of}</span>}
+		</DialogPrimitive.Title>
+	);
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {

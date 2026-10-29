@@ -147,5 +147,5 @@ export function MdxSourcePanel({ doc, onChange, focusBlock, readOnly, onComposin
 	);
 }
 
-/** The label of the source toggle, in the admin language of `site`. */
+/** The label of the "View as MDX" switch in the editor's ⋯ menu, in the admin language of `site`. */
 export const mdxSourceLabel = (site: Site): string => site.createTranslator(mdxSourceMessages)("toggle");

@@ -87,7 +87,6 @@ export function FieldRolePicker({
 		return (
 			<Pick
 				label={t("field.role")}
-				description={t("field.roleFixedTitleHint")}
 				value="title"
 				disabled
 				items={[
@@ -129,7 +128,6 @@ export function FieldRolePicker({
 		<Stack gap={12}>
 			<Pick
 				label={t("field.role")}
-				description={t("field.roleHint")}
 				value={selectedValue}
 				disabled={disabled}
 				items={items}
@@ -187,7 +185,7 @@ export function InputOptionsEditor({
 		}
 	};
 	return (
-		<Labeled label={t("field.inputOptions")} htmlFor={id} description={t("field.inputOptionsHint")}>
+		<Labeled label={t("field.inputOptions")} htmlFor={id}>
 			<Textarea
 				id={id}
 				rows={2}
@@ -247,7 +245,6 @@ export function FieldCustomInputPicker({
 			{registered.length > 0 ? (
 				<Pick
 					label={t("field.input")}
-					description={t("field.inputHint")}
 					value={selectedValue}
 					disabled={disabled}
 					items={items}
@@ -266,8 +263,6 @@ export function FieldCustomInputPicker({
 			) : (
 				<TextInput
 					label={t("field.input")}
-					description={t("field.inputHint")}
-					optional
 					value={value}
 					disabled={disabled}
 					onChange={(val) => onChangeInput(orUndefined(val))}

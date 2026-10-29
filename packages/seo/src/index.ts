@@ -8,7 +8,6 @@ export {
 	SEO_DEFAULT_LABELS,
 	SEO_DEFAULT_LIMITS,
 	SEO_INPUTS,
-	SEO_PREVIEW_VIEW,
 	SEO_ROLES,
 	type SeoFields,
 	type SeoFieldsOptions,

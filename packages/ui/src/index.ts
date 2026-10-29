@@ -23,13 +23,26 @@ export const Banner = close(open.Banner);
 export const Button = close(open.Button);
 export const Caret = close(open.Caret);
 export const ChangeDot = close(open.ChangeDot);
+export const ChangesGroup = close(open.ChangesGroup);
 export const DangerBlock = close(open.DangerBlock);
 export const DangerRow = close(open.DangerRow);
 export const Chip = close(open.Chip);
+export const Compare = close(open.Compare);
+export const CompareBody = close(open.CompareBody);
+export const CompareCode = close(open.CompareCode);
+export const CompareHeading = close(open.CompareHeading);
+export const CompareParagraph = close(open.CompareParagraph);
+export const CompareProperty = close(open.CompareProperty);
+export const CompareSide = close(open.CompareSide);
+export const CompareText = close(open.CompareText);
+export const CompareTitle = close(open.CompareTitle);
 export const Count = close(open.Count);
+export const CropStage = close(open.CropStage);
 export const Spinner = close(open.Spinner);
+export const Shortcut = close(open.Shortcut);
 export const FilterButton = close(open.FilterButton);
 export const FolderTab = close(open.FolderTab);
+export const FolderTabEdit = close(open.FolderTabEdit);
 export const FolderTabs = close(open.FolderTabs);
 export const FolderTabsAdd = close(open.FolderTabsAdd);
 export const FolderTabsBody = close(open.FolderTabsBody);
@@ -37,9 +50,20 @@ export const FolderTabsList = close(open.FolderTabsList);
 export const MapRow = close(open.MapRow);
 export const ChatInput = close(open.ChatInput);
 export const ChatMessage = close(open.ChatMessage);
+export const PropertyGroup = close(open.PropertyGroup);
+export const PropertyPanel = close(open.PropertyPanel);
+export const PropertyRow = close(open.PropertyRow);
 export const SidePanel = close(open.SidePanel);
 export const ToolCallLine = close(open.ToolCallLine);
-export type { FormatMark, MontiIcon, PatchLine, ToolCallDetail, ToolCallStatus } from "./internal";
+export type {
+	ChangesItem,
+	FormatMark,
+	MediaPickerFolder,
+	MontiIcon,
+	PatchLine,
+	ToolCallDetail,
+	ToolCallStatus,
+} from "./internal";
 
 export const CalendarDayButton = close(open.CalendarDayButton);
 export const Checkbox = close(open.Checkbox);
@@ -111,7 +135,9 @@ export const EmptyStep = close(open.EmptyStep);
 export const FolderTile = close(open.FolderTile);
 export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
+export const BulkToolbar = close(open.BulkToolbar);
 export const RowActions = close(open.RowActions);
+export const RowThumb = close(open.RowThumb);
 export const ListScroll = close(open.ListScroll);
 export const RowCheck = close(open.RowCheck);
 export const RowLink = close(open.RowLink);
@@ -134,9 +160,19 @@ export const IconButton = close(open.IconButton);
 export const Input = close(open.Input);
 export const Label = close(open.Label);
 export const UiLabelsProvider = close(open.UiLabelsProvider);
+export const LanguageRow = close(open.LanguageRow);
+export const LanguageRowHandle = close(open.LanguageRowHandle);
+export const LanguageSource = close(open.LanguageSource);
 export const ListFooter = close(open.ListFooter);
 export const PageSizeMenu = close(open.PageSizeMenu);
 export const ListHead = close(open.ListHead);
+export const LockMark = close(open.LockMark);
+export const NavLink = close(open.NavLink);
+export const RailLayout = close(open.RailLayout);
+export const NavLinkHandle = close(open.NavLinkHandle);
+export const OptionRow = close(open.OptionRow);
+export const OptionRowHandle = close(open.OptionRowHandle);
+export const OptionTable = close(open.OptionTable);
 export const Pagination = close(open.Pagination);
 export const PaginationContent = close(open.PaginationContent);
 export const PaginationEllipsis = close(open.PaginationEllipsis);
@@ -171,6 +207,8 @@ export const SheetContent = close(open.SheetContent);
 export const SheetBody = close(open.SheetBody);
 export const SheetFooter = close(open.SheetFooter);
 export const SheetHeader = close(open.SheetHeader);
+export const SheetSection = close(open.SheetSection);
+export const SheetSplit = close(open.SheetSplit);
 export const SheetTitle = close(open.SheetTitle);
 export const SheetTrigger = close(open.SheetTrigger);
 export const ResizablePane = close(open.ResizablePane);
@@ -254,6 +292,10 @@ export const RadioGroup = close(open.RadioGroup);
 export const RadioItem = close(open.RadioItem);
 export const TagInput = close(open.TagInput);
 export const Tile = close(open.Tile);
+export const FilePreview = close(open.FilePreview);
+export const FileBlock = close(open.FileBlock);
+export const MediaPicker = close(open.MediaPicker);
+export const UploadingImage = close(open.UploadingImage);
 export const Grid = close(open.Grid);
 export const StatusBar = close(open.StatusBar);
 export const StatusBarAnnouncer = close(open.StatusBarAnnouncer);
@@ -297,6 +339,8 @@ export type {
 	SegmentedOption,
 	SelectAll,
 	SelectAllState,
+	ShortcutKey,
+	ShortcutKeys,
 	Spacing,
 	StackProps,
 	UiLabels,
@@ -317,6 +361,7 @@ export {
 	toast,
 	useComboboxAnchor,
 	useIsMobile,
+	useShortcut,
 	useSidebar,
 	useUiLabels,
 } from "./internal";

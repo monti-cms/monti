@@ -48,7 +48,7 @@ import "@monti-cms/admin/styles.css";
 | --- | --- |
 | `syntax` | Syntax extensions (experimental) in writing-precedence order. Content written in an extension's notation is read only while it is listed ("Syntax extensions") |
 
-A site without `mdx()` accepts documents (`doc`) only: a text write fails with `unknown_format`, and the admin has no source toggle.
+A site without `mdx()` accepts documents (`doc`) only: a text write fails with `unknown_format`, and the admin has no source switch.
 
 ## Entry points
 
@@ -96,8 +96,8 @@ The site (`cms.site`) decides which blocks the text may use, and the `syntax` op
 
 ## The source panel
 
-The `mdx()` plugin registers, through its admin provider, the **source panel** and the browser side of the `mdx` format in the admin (`useAdminComponents().sourcePanels`, `useFormat("mdx")`). The toggle at the end of the editor toolbar switches a body between the visual editor and the MDX text. The text is parsed in the browser as you type and the document it reads as is what is saved; a text that does not read is kept as an `unparsed` document with the findings shown beside it.
-Without `mdx()` in `plugins`, there is no source toggle. The panel's messages are in the namespace `cms-mdx.source`. Recovery copies saved by a browser before documents existed (the body as MDX in `form.mdx`) are kept as an `unparsed` document, and the panel reads them again.
+The `mdx()` plugin registers, through its admin provider, the **source panel** and the browser side of the `mdx` format in the admin (`useAdminComponents().sourcePanels`, `useFormat("mdx")`). The "View as MDX" switch in the editor's ⋯ menu changes a body between the visual editor and the MDX text. The text is parsed in the browser as you type and the document it reads as is what is saved; a text that does not read is kept as an `unparsed` document with the findings shown beside it.
+Without `mdx()` in `plugins`, there is no source switch. The panel's messages are in the namespace `cms-mdx.source`. Recovery copies saved by a browser before documents existed (the body as MDX in `form.mdx`) are kept as an `unparsed` document, and the panel reads them again.
 
 ## Syntax extensions
 

@@ -51,6 +51,16 @@ export const States: Story = {
 	),
 };
 
+/** `tall` keeps two lines of height while the text is short, like the help text of a field; it still grows past that. */
+export const Tall: Story = {
+	render: () => (
+		<Stack gap={12} className="max-w-sm">
+			<Textarea tall placeholder="도움말" />
+			<Textarea tall defaultValue={"결론을 먼저, 120자 안으로.\n두 번째 줄.\n세 번째 줄."} />
+		</Stack>
+	),
+};
+
 /** `sm` writes at the note size for compact panels; `mono` for code and source text. */
 export const SizesAndMono: Story = {
 	render: () => (

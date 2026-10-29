@@ -100,7 +100,7 @@ function dropHint(
 export const toast = Object.assign(show, { error, dropHint, dismiss: engine.dismiss });
 
 /**
- * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center. It shows only the toasts of this
+ * Mount once where the admin's pages are. The look is set by `toast`; this only places the stack, bottom center, 32px above the window's bottom edge. It shows only the toasts of this
  * file, so it can sit beside a `sonner` `Toaster` of the site's own. `duration` is how long a toast stays
  * unless it says otherwise (four seconds; Storybook keeps them up).
  */
@@ -109,6 +109,7 @@ export function Toaster({ duration }: { duration?: number }) {
 		<Engine
 			id={TOASTER_ID}
 			position="bottom-center"
+			offset={{ bottom: 32 }}
 			duration={duration}
 			// The engine gives a custom toast the width of its content, at the left of the stack: this puts the pill in the middle of it.
 			toastOptions={{ classNames: { toast: "flex! w-full justify-center" } }}

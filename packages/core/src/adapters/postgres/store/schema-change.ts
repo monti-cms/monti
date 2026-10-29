@@ -1,11 +1,14 @@
 import { sql } from "kysely";
 import type { PoolClient } from "pg";
+import { currentActor } from "../../../core/actor";
+import { STATUS_AFTER } from "../../../core/domain/lifecycle";
 import type { SchemaChangeStore } from "../../../core/store/ports";
 import type {
 	CollectionFootprint,
 	DroppedCollection,
 	FootprintReferrer,
 	ScannedBody,
+	TrashedLocale,
 } from "../../../core/store/schema-change";
 import type { Entry, EntryMetadata, EntryStatus, JsonObject } from "../../../core/store/types";
 import { documentKeyHash } from "../../../core/translation/state-hash";
@@ -230,6 +233,39 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 		};
 	};
 
+	/**
+	 * Moves every live translation in `locale` to the trash, the way the lifecycle's `trashEntry` does for one: status `trashed`, the trash time set to now (so
+	 * the 30 days count from the apply), the version up once, and a `trashed` event. Sources are never touched, and translations already in the trash stay as they are.
+	 */
+	const trashLocaleRows = async (trx: Db, client: PoolClient, locale: string): Promise<TrashedLocale> => {
+		const members = await trx
+			.selectFrom("entries")
+			.select("id")
+			.where("locale", "=", locale)
+			.where("translation_group_id", "is not", null)
+			.where(sql<boolean>`translation_group_id <> id`)
+			.where("status", "<>", "trashed")
+			.orderBy("id")
+			.forUpdate()
+			.execute();
+		const ids = members.map((member) => member.id);
+		if (ids.length > 0) {
+			await trx
+				.updateTable("entries")
+				.set({
+					status: STATUS_AFTER.trash,
+					deleted_at: sql<Date>`now()`,
+					version: sql<number>`version + 1`,
+					changed_by: currentActor(),
+					changed_at: sql<Date>`now()`,
+				})
+				.where("id", "=", sql<string>`any(${ids}::uuid[])`)
+				.execute();
+		}
+		for (const id of ids) await recordEvents(client, qSchema, site, await loadEntry(trx, id), ["trashed"]);
+		return { locale, entries: ids.length };
+	};
+
 	return {
 		readSchemaState: async () => {
 			let rows: { schema: JsonObject; applied_at: Date }[];
@@ -380,6 +416,13 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 						dropped.push(await dropCollectionRows(trx, client, item.collection));
 					}
 
+					// A removed language's translations move to the trash after the rewrites and drops, in the same transaction.
+					const trashed: TrashedLocale[] = [];
+					for (const item of params.trashLocales ?? []) {
+						if (!pending.includes(item.id)) continue;
+						trashed.push(await trashLocaleRows(trx, client, item.locale));
+					}
+
 					for (const id of pending) {
 						await trx
 							.insertInto("cms_migrations")
@@ -406,6 +449,7 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 						skipped,
 						changed,
 						dropped,
+						trashed,
 						bodies,
 						entries,
 						dryRun: Boolean(params.dryRun),

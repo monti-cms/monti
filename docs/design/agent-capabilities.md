@@ -74,7 +74,6 @@ stay server operations; the editor saves first, as its own buttons do.
 | `media.get` | read | `GET /media/[id]` | | 1 | With where it is used |
 | `media.update` | write | `PATCH /media/[id]` | Write the before values back | 2 | Filename, default alt text and caption, folder |
 | `media.trash` | write | `POST /media/trash` | `POST /trash/restore` | 2 | Moves files to the trash; a file anything refers to stays (`kept`), so the agent cannot trash a used file even by mistake. A file is deleted for good only from the trash (`POST /trash/delete`) |
-| `media.cleanupUploads` | write | `POST /media/cleanup` | Not needed | 3 | Removes failed uploads older than a day |
 | — | — | `POST /media/uploads`, `POST /media/[id]/complete` | | | Uploading needs the file from the admin's computer. Later: an upload from a URL the admin gives |
 
 ## Templates

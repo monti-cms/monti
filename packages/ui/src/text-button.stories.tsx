@@ -33,6 +33,20 @@ export const Variants: Story = {
 	),
 };
 
+/** `quiet` on top of `underline` (되돌리기 on a label row, 바꾸기 on a language row), at the `caption` or `note` size of the line. */
+export const Quiet: Story = {
+	render: () => (
+		<Stack direction="row" gap={16} align="center">
+			<TextButton variant="underline" quiet size="caption">
+				되돌리기
+			</TextButton>
+			<TextButton variant="underline" quiet size="note">
+				바꾸기
+			</TextButton>
+		</Stack>
+	),
+};
+
 /** As a link, with `render`; `mono` for an address. */
 export const AsLink: Story = {
 	render: () => (

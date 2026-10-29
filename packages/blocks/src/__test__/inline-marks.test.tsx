@@ -7,7 +7,9 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { codeRefMessages } from "../code-ref/messages";
 import { codeRefComponents, codeRefMarkExtension } from "../code-ref/provider";
+import { colorMessages } from "../color/messages";
 import { colorComponents, colorMarkExtension } from "../color/provider";
 import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 import { renderSite as site } from "../test/render-config";
@@ -17,7 +19,7 @@ import { tooltipComponents, tooltipMarkExtension } from "../tooltip/provider";
 
 /**
  * Inline marks of the block extensions (tooltip, code ref, text color). The core editor does not know the mark names; it only renders the shapes and tools the extensions register.
- * Checks that the saved text and the formatting toolbar look the same as when these lived in the core.
+ * Checks that the saved text and the format card look the same as when these lived in the core.
  */
 
 beforeAll(() => {
@@ -36,14 +38,18 @@ afterEach(() => {
 });
 
 const tooltipExtension = tooltipMarkExtension(site.createTranslator(tooltipMessages));
-const MARKS = { tooltip: tooltipExtension, "code-ref": codeRefMarkExtension, color: colorMarkExtension };
+const MARKS = {
+	tooltip: tooltipExtension,
+	"code-ref": codeRefMarkExtension(site.createTranslator(codeRefMessages)),
+	color: colorMarkExtension(site.createTranslator(colorMessages)),
+};
 
 /** Admin UI with all three mark extensions added, like the reference blog setup. */
 const WithMarks = ({ children }: { children: ReactNode }) => (
 	<WithSite>
 		<AdminComponentsProvider components={tooltipComponents(site)}>
-			<AdminComponentsProvider components={codeRefComponents}>
-				<AdminComponentsProvider components={colorComponents}>{children}</AdminComponentsProvider>
+			<AdminComponentsProvider components={codeRefComponents(site)}>
+				<AdminComponentsProvider components={colorComponents(site)}>{children}</AdminComponentsProvider>
 			</AdminComponentsProvider>
 		</AdminComponentsProvider>
 	</WithSite>
@@ -100,85 +106,22 @@ describe("inline mark saved text", () => {
 	});
 });
 
-describe("formatting toolbar", () => {
-	const renderEditor = async () => {
-		render(
-			<WithMarks>
-				<CmsEditor doc={docOfMdx("안녕하세요")} onChange={vi.fn()} />
-			</WithMarks>,
-		);
-		return screen.findByRole("toolbar", { name: "서식 도구" });
-	};
-	const names = (toolbar: HTMLElement) =>
-		within(toolbar)
-			.getAllByRole("button")
-			.map((button) => button.getAttribute("aria-label") || button.textContent);
-
-	it("text color sits after the inline marks and tooltip after link", async () => {
-		const toolbar = await renderEditor();
-		const order = names(toolbar);
-		const at = (name: string) => {
-			const index = order.indexOf(name);
-			expect(index, `${name} is in the toolbar`).toBeGreaterThanOrEqual(0);
-			return index;
-		};
-		const lastInlineMark = Math.max(...["굵게", "기울임", "밑줄", "취소선", "인라인 코드"].map(at));
-
-		expect(at("글자색")).toBeGreaterThan(lastInlineMark);
-		expect(at("툴팁")).toBeGreaterThan(at("링크"));
-	});
-
-	it("a narrower toolbar keeps some of the wider one's tools, in the same relative order, and moves the rest into the overflow menu", async () => {
-		const at = async (width: number) => {
-			vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width);
-			vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-				width: 32,
-				height: 32,
-				x: 0,
-				y: 0,
-				top: 0,
-				left: 0,
-				right: 32,
-				bottom: 32,
-				toJSON: () => ({}),
-			});
-			const toolbar = await renderEditor();
-			await within(toolbar).findByRole("button", { name: "더보기" });
-			const shown = names(toolbar);
-			cleanup();
-			vi.restoreAllMocks();
-			return shown;
-		};
-		const narrow = await at(400);
-		const wide = await at(500);
-		expect(wide.length).toBeGreaterThan(narrow.length);
-		// What stays at the narrow width is also in the wide one, and in the same relative order.
-		const tools = (list: (string | null)[]) => list.filter((name) => name !== "더보기" && name !== "본문 폭");
-		const wideTools = tools(wide);
-		let from = 0;
-		for (const name of tools(narrow)) {
-			const found = wideTools.indexOf(name, from);
-			expect(found, `${name} is in the wide toolbar, after the one before it`).toBeGreaterThanOrEqual(0);
-			from = found + 1;
-		}
-	});
-
-	it("the slash menu tooltip comes after the text formatting items, and choosing it selects sample text and opens the description input", async () => {
+describe("slash menu", () => {
+	it("choosing the tooltip selects sample text and asks for its description input", async () => {
 		render(
 			<WithMarks>
 				<CmsEditor doc={docOfMdx("")} onChange={vi.fn()} />
 			</WithMarks>,
 		);
-		await screen.findByRole("toolbar", { name: "서식 도구" });
 		const opened = vi.fn();
-		window.addEventListener("cms:open-tooltip", opened);
+		window.addEventListener("cms:run-format-item", opened);
 		const run = tooltipExtension.insertActions?.[0]?.run;
 		const editor = new Editor({ extensions: buildEditorExtensions(site, MARKS), content: "<p>/</p>" });
 		act(() => run?.(editor, { from: 1, to: 2 }));
 		expect(editor.state.doc.textContent).toBe("툴팁 텍스트");
 		expect(editor.state.selection.empty).toBe(false);
 		expect(opened).toHaveBeenCalled();
-		window.removeEventListener("cms:open-tooltip", opened);
+		window.removeEventListener("cms:run-format-item", opened);
 		editor.destroy();
 	});
 });
@@ -201,7 +144,6 @@ describe("inline bubble", () => {
 				/>
 			</WithMarks>,
 		);
-		await screen.findByRole("toolbar", { name: "서식 도구" });
 		await vi.waitFor(() => expect(ready).not.toBeNull());
 		return ready as unknown as Editor;
 	};
@@ -211,21 +153,29 @@ describe("inline bubble", () => {
 			editor.view.focus();
 		});
 
-	it("selecting text shows tooltip (before link) and code ref (after link, when a code block exists), then the footnote, and text color last (a site-added format)", async () => {
+	it("selecting text shows the footnote and then ⋯, and the site-added formats are the rows under it, in the order they were added", async () => {
 		const editor = await mount("가나다\n\n```ts\nconst a = 1;\n```\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
 		const labels = [...toolbar.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
-		const at = (label: string) => {
-			const index = labels.indexOf(label);
-			expect(index, `${label} is in the bubble`).toBeGreaterThanOrEqual(0);
-			return index;
-		};
-		// Tooltip before link, code ref after link, then the footnote, and the text color (a site-added format) last.
-		expect(at("툴팁 넣기")).toBeLessThan(at("링크 넣기"));
-		expect(at("코드 연결")).toBeGreaterThan(at("링크 넣기"));
-		expect(at("각주")).toBeGreaterThan(at("코드 연결"));
-		expect(at("글자색")).toBe(labels.length - 1);
+		// None of the three has a button of its own: they are under the ⋯, which follows the footnote.
+		for (const own of ["툴팁 넣기", "코드 연결", "글자색"]) expect(labels).not.toContain(own);
+		expect(labels.indexOf("사이트가 더한 서식")).toBe(labels.indexOf("각주") + 1);
+		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: "사이트가 더한 서식" })));
+		// The code ref row is there because the body has a code block to link to.
+		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+			"툴팁 넣기",
+			"코드 연결",
+			"글자색",
+		]);
+	});
+
+	it("leaves the code ref row out when the body has no code block", async () => {
+		const editor = await mount("가나다\n");
+		focusAt(editor, { from: 1, to: 3 });
+		const toolbar = await screen.findByRole("toolbar", { name: "인라인 서식" });
+		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: "사이트가 더한 서식" })));
+		expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["툴팁 넣기", "글자색"]);
 	});
 
 	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
@@ -243,11 +193,12 @@ describe("inline bubble", () => {
 		expect(tiptapToMdx(editor.getJSON())).toBe("사아 자\n");
 	});
 
-	it("the text color button opens a color picker in the bubble and applies the chosen color", async () => {
+	it("the text color row opens a color picker in the bubble and applies the chosen color", async () => {
 		const editor = await mount("가나다\n");
 		focusAt(editor, { from: 1, to: 3 });
 		const bubble = await screen.findByRole("toolbar", { name: "인라인 서식" });
-		act(() => fireEvent.click(within(bubble).getByRole("button", { name: "글자색" })));
+		act(() => fireEvent.click(within(bubble).getByRole("button", { name: "사이트가 더한 서식" })));
+		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "글자색" })));
 		const dialog = screen.getByRole("dialog", { name: "글자색" });
 		act(() => fireEvent.click(within(dialog).getByRole("button", { name: "글자색 빨강" })));
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Color fg="#dc2626" fgDark="#f87171">가나</Color>다\n');

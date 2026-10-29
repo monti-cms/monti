@@ -8,40 +8,34 @@ import {
 	DangerBlock,
 	DangerRow,
 	Grid,
-	Heading,
 	Inline,
 	Label,
+	LockMark,
+	PageToolbar,
+	PageToolbarEnd,
+	Section,
 	Stack,
 	Tabs,
 	TabsContent,
 	TabsList,
 	TabsTrigger,
 	Text,
+	TextButton,
 } from "@monti-cms/ui";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
-import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
-import {
-	FlagSwitch,
-	IssueList,
-	orUndefined,
-	Pick,
-	RevertMark,
-	TextInput,
-	useIssuesUnder,
-	useSchemaEdit,
-} from "./controls";
-import { FieldsCard } from "./fields-tree";
-import { IconPicker } from "./icon-picker";
+import { FlagSwitch, IssueList, orUndefined, RevertMark, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
+import { schemaFieldsMessages } from "./fields.messages";
+import { FieldsCard, usePreviewOpen, useWide } from "./fields-tree";
 import { schemaMessages } from "./messages";
 import { PublicPathField } from "./public-path-field";
+import { ReadValue } from "./read-value";
 import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
-	type CollectionChange,
 	collectionsOf,
 	defaultPath,
 	fieldsOf,
@@ -188,7 +182,6 @@ function AllowedEditor({
 		if (key) return te(key);
 		return site.BLOCK_BY_NAME.get(id)?.label ?? id;
 	};
-	const limited = Object.values(allowed).some((list) => Array.isArray(list));
 	const setAllowed = (key: keyof Allowed, value: unknown[] | undefined) =>
 		update((current) => {
 			const next = { ...allowedOf(current) } as Record<string, unknown>;
@@ -197,7 +190,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section band rows={false} title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
+		<Section title={t("allowed.title")}>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
@@ -238,11 +231,8 @@ export function CollectionEditor({
 	onRemove,
 	onRename,
 	onFileChange,
-	changes,
 }: {
 	name: string;
-	/** Which of its tabs hold a change against the saved file. */
-	changes?: CollectionChange;
 	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
 	section: string | undefined;
 	onSection: (section: string) => void;
@@ -259,6 +249,7 @@ export function CollectionEditor({
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const ts = useTranslator(schemaMessages);
+	const tf = useTranslator(schemaFieldsMessages);
 	const { disabled, file, saved } = useSchemaEdit();
 	const savedCollection = collectionsOf(saved)[name];
 	const chosenTab = section ?? "basics";
@@ -266,7 +257,8 @@ export function CollectionEditor({
 	// The editor tab only exists for a document collection with a body.
 	const tab = chosenTab === "editor" && !isEditorAvailable ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
-	const _fields = fieldsOf(collection);
+	const fieldCount = Object.keys(fieldsOf(collection)).length;
+	const [previewOpen, setPreviewOpen] = usePreviewOpen(useWide());
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
 	// A saved collection's setting that differs from the file: the function that puts the saved value back (a collection that is not saved has none).
@@ -274,82 +266,41 @@ export function CollectionEditor({
 		savedCollection && !sameJson(savedCollection[key], collection[key])
 			? () => set(key, savedCollection[key])
 			: undefined;
-	const changeKind = (value: string) =>
-		onChange((current) => {
-			let next = setProp(current, "kind", value, COLLECTION_KEY_ORDER);
-			if (value === "item" && hasBody(next)) {
-				next = withBody(next, false, {});
-			} else if (value === "document" && !hasBody(next)) {
-				next = withBody(next, true, {});
-			}
-			return next;
-		});
 	const editing = { collectionName: name, collection, update: onChange, onRename, updateFile: onFileChange };
 	const label = typeof collection.label === "string" ? collection.label : name;
-	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
-	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<Stack gap={24} minWidth={0} data-testid={`collection-${name}`}>
+		<Stack gap={0} minWidth={0} data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
-				<Inline align="end" justify="between" gap={16} border="bottom-contrast" paddingBottom={12}>
-					<Box minWidth={0}>
-						<Inline align="baseline" gap={8}>
-							<Heading as="h3">{label}</Heading>
-							<Text as="code" variant="caption" tone="muted">
-								{name}
-							</Text>
-						</Inline>
-						<Text as="p" variant="label" tone="muted">
-							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
-						</Text>
-					</Box>
-					<TabsList variant="line">
-						<TabsTrigger value="basics" dot={changes?.basics ? "warning" : undefined} dotLabel={ts("changed")}>
-							{t("collection.tabs.basics")}
-						</TabsTrigger>
-						<TabsTrigger value="fields" dot={changes?.fields ? "warning" : undefined} dotLabel={ts("changed")}>
+			<Tabs fill value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)}>
+				<PageToolbar>
+					<TabsList variant="toolbar" aria-label={ts("tabs.collection")}>
+						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
+						<TabsTrigger value="fields" count={fieldCount}>
 							{t("collection.tabs.fields")}
 						</TabsTrigger>
-						{isEditorAvailable && (
-							<TabsTrigger value="editor" dot={changes?.editor ? "warning" : undefined} dotLabel={ts("changed")}>
-								{t("collection.tabs.editor")}
-							</TabsTrigger>
-						)}
+						{isEditorAvailable && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
-				</Inline>
+					{tab === "fields" && (
+						<PageToolbarEnd>
+							<TextButton
+								variant={previewOpen ? "ink" : "plain"}
+								aria-pressed={previewOpen}
+								onClick={() => setPreviewOpen(!previewOpen)}
+							>
+								{tf("layout.previewTitle")}
+							</TextButton>
+						</PageToolbarEnd>
+					)}
+				</PageToolbar>
 				<TabsContent value="basics">
-					<Stack gap={48} maxWidth="content">
-						<Section band title={t("collection.basicsTitle")}>
+					<Stack gap={0} maxWidth="content">
+						<Section title={t("collection.viewTitle")} stacked>
 							<TextInput
 								label={t("collection.label")}
 								revert={revert("label")}
 								value={collection.label as string | undefined}
 								onChange={(value) => set("label", value)}
 							/>
-							<Pick
-								label={t("collection.kind")}
-								revert={
-									savedCollection && savedCollection.kind !== collection.kind
-										? () => changeKind(String(savedCollection.kind))
-										: undefined
-								}
-								value={String(collection.kind)}
-								items={[
-									{ value: "document", label: ts("collection.kindDocument") },
-									{ value: "item", label: ts("collection.kindItem") },
-								]}
-								onChange={changeKind}
-							/>
-							<IconPicker
-								label={t("collection.icon")}
-								revert={revert("icon")}
-								value={typeof collection.icon === "string" ? collection.icon : undefined}
-								kind={typeof collection.kind === "string" ? collection.kind : undefined}
-								onChange={(value) => set("icon", value)}
-							/>
-						</Section>
-						<Section band title={t("collection.featuresTitle")}>
 							<FlagSwitch
 								label={t("collection.folders")}
 								revert={revert("folders")}
@@ -363,6 +314,26 @@ export function CollectionEditor({
 									set("folders", isDefault ? undefined : on);
 								}}
 							/>
+						</Section>
+						<Section
+							title={
+								<>
+									{t("collection.structureTitle")}
+									{disabled && <LockMark label={ts("lock.cannotChange")} />}
+								</>
+							}
+							stacked
+							last={disabled}
+						>
+							<Grid columns={2} gap={24}>
+								<ReadValue label={t("collection.newId")}>
+									{name}
+									{!disabled && <LockMark label={ts("lock.cannotChange")} />}
+								</ReadValue>
+								<ReadValue label={t("collection.kind")} mono={false}>
+									{t(collection.kind === "item" ? "collection.kindText.item" : "collection.kindText.document")}
+								</ReadValue>
+							</Grid>
 							<PublicPathField
 								revert={
 									savedCollection && !sameJson(savedCollection.path, collection.path)
@@ -372,6 +343,7 @@ export function CollectionEditor({
 														current,
 														typeof savedCollection.path === "string" ? orUndefined(savedCollection.path) : undefined,
 														localesOf(file).length > 1,
+														t("collection.slugFieldLabel"),
 													),
 												)
 										: undefined
@@ -379,7 +351,14 @@ export function CollectionEditor({
 								path={typeof collection.path === "string" ? collection.path : ""}
 								suggested={defaultPath(name)}
 								onChange={(value) =>
-									onChange((current) => withPublicPath(current, orUndefined(value), localesOf(file).length > 1))
+									onChange((current) =>
+										withPublicPath(
+											current,
+											orUndefined(value),
+											localesOf(file).length > 1,
+											t("collection.slugFieldLabel"),
+										),
+									)
 								}
 							/>
 						</Section>

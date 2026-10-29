@@ -27,7 +27,7 @@ import {
 	IconButton,
 	MenuShortcut,
 } from "@monti-cms/ui";
-import { cloneElement, type ReactElement } from "react";
+import { cloneElement, type ReactElement, type ReactNode } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated";
 import { sharedMessages } from "./messages";
 
@@ -214,19 +214,24 @@ export function ActionContextMenu({
 export function MoreActionsButton({
 	actions,
 	label,
+	children,
 }: {
 	actions: MenuAction[];
 	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
+	/** A group of rows above the actions, set apart by a rule (an editor's document tools), so a destructive action stays at the bottom. */
+	children?: ReactNode;
 }) {
 	const items = tidy(actions);
-	if (items.length === 0) return null;
+	if (items.length === 0 && !children) return null;
 	return (
 		<DropdownMenu>
 			<IconButton label={label} trigger={(button) => <DropdownMenuTrigger render={button} />}>
 				<OverflowMenuHorizontal aria-hidden />
 			</IconButton>
 			<DropdownMenuContent align="end">
+				{children}
+				{items.length > 0 && children && <DropdownMenuSeparator />}
 				<DropdownItems actions={items} />
 			</DropdownMenuContent>
 		</DropdownMenu>

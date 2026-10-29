@@ -1,20 +1,25 @@
 "use client";
 
 import { useMemo } from "react";
+import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Label } from "./label";
+import { TextButton } from "./text-button";
 
 function FormFieldSet({
 	className,
 	density = "default",
 	...props
-}: React.ComponentProps<"fieldset"> & { density?: "default" | "compact" }) {
+}: React.ComponentProps<"fieldset"> & {
+	/** `compact` 16 between fields; `flush` none, for rows that carry their own spacing (the property pane's groups and rows). */
+	density?: "default" | "compact" | "flush";
+}) {
 	return (
 		<fieldset
 			data-slot="field-set"
 			className={cn(
 				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-monti-12 has-[>[data-slot=radio-group]]:gap-monti-12",
-				density === "compact" ? "gap-monti-16" : "gap-monti-24",
+				density === "compact" ? "gap-monti-16" : density === "flush" ? "gap-0" : "gap-monti-24",
 				className,
 			)}
 			{...props}
@@ -26,13 +31,13 @@ function FormFieldLegend({
 	className,
 	variant = "legend",
 	...props
-}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
+}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" | "field" }) {
 	return (
 		<legend
 			data-slot="field-legend"
 			data-variant={variant}
 			className={cn(
-				"mb-monti-12 data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
+				"mb-monti-12 data-[variant=field]:mb-monti-8 data-[variant=field]:text-monti-micro data-[variant=field]:text-monti-subtle data-[variant=label]:text-monti-label data-[variant=legend]:text-monti-title",
 				className,
 			)}
 			{...props}
@@ -71,11 +76,30 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
+/** What a label row says about a field that differs from the saved value: the dot's name, the undo button's text and what it puts back. */
+export interface FormFieldChange {
+	/** The dot's name for a screen reader ("changed"). */
+	label: string;
+	/** The undo button's text ("undo"). */
+	undoLabel: string;
+	/** The name the undo button is announced with, which starts with the field's name ("site name undo"). */
+	undoName?: string;
+	/** Puts the saved value back. Without it the row has the dot only (a switch, which is undone by turning it back). */
+	onUndo?: () => void;
+	/** The undo button cannot be pressed (the screen is read-only). */
+	undoDisabled?: boolean;
+}
+
+/**
+ * The label of a field. `changed` marks a field that differs from the saved value: a change dot after the label and a small quiet underlined undo button at the
+ * end of the row. The row stays 14px high, the label's own height, so the field below does not move when it becomes changed.
+ */
 function FormFieldLabel({
 	className,
 	action,
+	changed,
 	...props
-}: React.ComponentProps<typeof Label> & { action?: React.ReactNode }) {
+}: React.ComponentProps<typeof Label> & { action?: React.ReactNode; changed?: FormFieldChange }) {
 	const label = (
 		<Label
 			data-slot="field-label"
@@ -85,6 +109,28 @@ function FormFieldLabel({
 			{...props}
 		/>
 	);
+	if (changed) {
+		return (
+			<div data-slot="field-label-row" className="flex h-3.5 items-center gap-monti-8">
+				{label}
+				<ChangeDot label={changed.label} />
+				{changed.onUndo && (
+					<TextButton
+						variant="underline"
+						quiet
+						size="caption"
+						className="ml-auto"
+						aria-label={changed.undoName}
+						disabled={changed.undoDisabled}
+						onClick={changed.onUndo}
+					>
+						{changed.undoLabel}
+					</TextButton>
+				)}
+				{action}
+			</div>
+		);
+	}
 	if (!action) return label;
 	return (
 		<div className="flex items-baseline justify-between gap-monti-8">

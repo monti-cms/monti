@@ -13,6 +13,12 @@ When the schema is changed, a review sheet opens before saving. Each change gets
 - A change that adds text shows the line itself with no explanation (`.note.is-add`): a green `+` in front and the text in ink. A name like "더한 줄" (added line) is not added. When a file change (`.mt-patch`) shows the same content, before / after lines are not repeated.
 - The list of what is affected is `.lines`: `.what` at the left and `.then` at the right. What is deleted is `.then.is-danger`, and what blocks is `.then.is-warn` (put the button that can clear it in that place).
 - If any choice deletes values, the pill at the bottom of the sheet becomes a red "지우고 적용" (delete and apply).
+- The sheet's foot holds only "취소" and the one pill ("적용"). It carries no note about the file.
+- A choice that needs one more answer carries it at the end of its row: the select of "다른 필드로 옮기기" (which field) and of "빈 글 148편 채우기" (which value).
+- A change that no stored value follows from (a new collection, a field no entry holds) has no choices, only the line "저장된 데이터는 바뀌지 않아요.".
+- A public address change shows its before and after as `.lines` (전 / 후, mono) and, when published entries change address, the line "발행된 글 | 148편 주소 바뀜" with the note "옛 주소는 404가 돼요." There is no redirect to pick.
+- A removed language that has translations is a block tagged "뺌": "남겨 두기" (the default) or "휴지통으로", with the note "다시 추가하면 돌아와요.".
+- When the file changed since the screen opened, the top of the sheet shows the error reply (`.mt-msg-error`: "파일이 바뀌었어요", "다시 불러오기") and the pill is off.
 
 ### In code
 
@@ -61,4 +67,4 @@ On a deployed site too, settings are edited directly on the screen (the assistan
 
 ### In code
 
-`ChangeDot` (see Status) and `FieldRow changed` for the field outline (see List). The struck-through navigation row is not in `@monti-cms/ui` yet.
+`NavLink` is one link of the list: 36px, the name, the identifier at the end (mono, quiet), the open one on the current ground and semibold. `dot` names the change dot after the name, and `handle` (a `NavLinkHandle`) is the drag handle that shows in the left margin while the pointer is on the link. `RailLayout` puts the links (a `nav`) beside the content; narrow, the content wraps under them. `ChangeDot` (see Status) and `FieldRow changed` for the field outline (see List). There is no struck-through row: a collection that is to be deleted leaves the list.

@@ -1,24 +1,9 @@
 "use client";
 
-import { Checkmark, TextColor } from "@carbon/icons-react";
+import { Checkmark } from "@carbon/icons-react";
 import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
-import {
-	Box,
-	cn,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuTrigger,
-	IconButton,
-	Stack,
-	Text,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@monti-cms/admin/kit";
+import { Box, cn, Stack, Text, Tooltip, TooltipContent, TooltipTrigger } from "@monti-cms/admin/kit";
 import type { Editor } from "@tiptap/core";
 import {
 	type ColorPair,
@@ -91,18 +76,7 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 	);
 }
 
-function SwatchRow({
-	editor,
-	kind,
-	variant = "menu",
-	onPicked,
-}: {
-	editor: Editor;
-	kind: ColorKind;
-	/** `menu` is a dropdown item, `buttons` is a regular button (inside the format bubble). */
-	variant?: "menu" | "buttons";
-	onPicked?: () => void;
-}) {
+function SwatchRow({ editor, kind, onPicked }: { editor: Editor; kind: ColorKind; onPicked?: () => void }) {
 	const t = useTranslator(colorMessages);
 	const palette = usePalette();
 	const current = currentColor(editor)[kind] ?? null;
@@ -118,28 +92,18 @@ function SwatchRow({
 					<Tooltip key={name}>
 						<TooltipTrigger
 							render={
-								variant === "menu" ? (
-									<DropdownMenuItem
-										aria-label={t("pick", { kind: t(kind === "fg" ? "fg.label" : "bg.label"), name })}
-										aria-checked={selected}
-										disabled={!editor.isEditable}
-										onClick={() => applyTextColor(editor, kind, color)}
-										swatch
-									/>
-								) : (
-									<button
-										type="button"
-										aria-label={t("pick", { kind: t(kind === "fg" ? "fg.label" : "bg.label"), name })}
-										aria-pressed={selected}
-										disabled={!editor.isEditable}
-										onMouseDown={(event) => event.preventDefault()}
-										onClick={() => {
-											applyTextColor(editor, kind, color);
-											onPicked?.();
-										}}
-										className="relative flex justify-center rounded-monti-sm p-monti-2 outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast"
-									/>
-								)
+								<button
+									type="button"
+									aria-label={t("pick", { kind: t(kind === "fg" ? "fg.label" : "bg.label"), name })}
+									aria-pressed={selected}
+									disabled={!editor.isEditable}
+									onMouseDown={(event) => event.preventDefault()}
+									onClick={() => {
+										applyTextColor(editor, kind, color);
+										onPicked?.();
+									}}
+									className="relative flex justify-center rounded-monti-sm p-monti-2 outline-none hover:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast"
+								/>
 							}
 						>
 							<Swatch kind={kind} color={color} />
@@ -158,23 +122,6 @@ function SwatchRow({
 	);
 }
 
-/** Text/background color picker list. Shared by the toolbar menu and the "More" menu. */
-export function TextColorMenuItems({ editor }: { editor: Editor }) {
-	const t = useTranslator(colorMessages);
-	return (
-		<>
-			<DropdownMenuGroup>
-				<DropdownMenuLabel>{t("fg.label")}</DropdownMenuLabel>
-				<SwatchRow editor={editor} kind="fg" />
-			</DropdownMenuGroup>
-			<DropdownMenuGroup>
-				<DropdownMenuLabel>{t("bg.label")}</DropdownMenuLabel>
-				<SwatchRow editor={editor} kind="bg" />
-			</DropdownMenuGroup>
-		</>
-	);
-}
-
 /** Text/background color picker that expands inside the format bubble. Calls `onPicked` when a color is chosen. */
 export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?: () => void }) {
 	const t = useTranslator(colorMessages);
@@ -185,45 +132,13 @@ export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?
 					{t("fg.label")}
 				</Text>
 			</Box>
-			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
+			<SwatchRow editor={editor} kind="fg" onPicked={onPicked} />
 			<Box paddingX={4}>
 				<Text as="p" tone="muted">
 					{t("bg.label")}
 				</Text>
 			</Box>
-			<SwatchRow editor={editor} kind="bg" variant="buttons" onPicked={onPicked} />
+			<SwatchRow editor={editor} kind="bg" onPicked={onPicked} />
 		</Stack>
-	);
-}
-
-/** Text color button icon. Painted with the text and background colors of the current selection (shared by the toolbar and the format bubble). */
-export function TextColorIcon({ editor }: { editor: Editor }) {
-	const current = currentColor(editor);
-	const underline = textColorProps({ fg: current.fg, fgDark: current.fgDark, bg: current.bg, bgDark: current.bgDark });
-	return (
-		<span {...underline} className={cn(underline.className, "rounded-monti-sm p-monti-2")}>
-			<TextColor aria-hidden className="size-4" />
-		</span>
-	);
-}
-
-/** Text color button in the toolbar. The icon shows the current text color. */
-export function TextColorMenu({ editor }: { editor: Editor }) {
-	const t = useTranslator(colorMessages);
-	return (
-		<DropdownMenu>
-			<IconButton
-				label={t("label")}
-				side="bottom"
-				disabled={!editor.isEditable}
-				onMouseDown={(event) => event.preventDefault()}
-				trigger={(button) => <DropdownMenuTrigger render={button} />}
-			>
-				<TextColorIcon editor={editor} />
-			</IconButton>
-			<DropdownMenuContent align="start">
-				<TextColorMenuItems editor={editor} />
-			</DropdownMenuContent>
-		</DropdownMenu>
 	);
 }

@@ -73,10 +73,9 @@ describe("image width and upload optimization", () => {
 		for (const bad of ["0%", "101%", "0px", "4097px", "50vw", "-1px"]) expect(isValidImageWidth(bad), bad).toBe(false);
 	});
 
-	it("keeps the original for GIF and when optimisation is off", async () => {
+	it("keeps the original for GIF", async () => {
 		const gif = new File([new Uint8Array([71, 73, 70])], "a.gif", { type: "image/gif" });
-		expect(await prepareUpload(testSite, gif, { optimize: false })).toEqual({ file: gif, optimized: false });
-		expect(await prepareUpload(testSite, gif, { optimize: true })).toMatchObject({
+		expect(await prepareUpload(testSite, gif)).toMatchObject({
 			file: gif,
 			optimized: false,
 			skippedReason: expect.any(String),
@@ -87,7 +86,7 @@ describe("image width and upload optimization", () => {
 		const bytes = new Uint8Array(64);
 		bytes.set([0x41, 0x4e, 0x49, 0x4d], 30);
 		const webp = new File([bytes], "a.webp", { type: "image/webp" });
-		expect(await prepareUpload(testSite, webp, { optimize: true })).toMatchObject({
+		expect(await prepareUpload(testSite, webp)).toMatchObject({
 			optimized: false,
 			skippedReason: t("upload.keepAnimated"),
 		});

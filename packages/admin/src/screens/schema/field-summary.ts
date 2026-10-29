@@ -105,3 +105,29 @@ export function branchFields(field: Obj, option: string): Record<string, Obj> {
 	const values = isObj(field.values) ? (field.values as Record<string, Record<string, Obj>>) : {};
 	return values[option] ?? {};
 }
+
+/**
+ * The line under the add-field sheet: the field as the file will have it, in a few words. A relation reads `series → Series`; the rest are the name, the kind as
+ * the file writes it and the settings the writer chose (`summary · text · several lines · 120 · per language`, `format · select · note | essay | review`).
+ */
+export function fieldSheetSummary(
+	t: TranslatorFor<typeof schemaFieldsMessages>,
+	name: string,
+	field: Obj,
+	file: Obj,
+): string {
+	const kind = String(field.kind);
+	if (kind === "relation") {
+		const to = typeof field.to === "string" ? collectionLabel(file, field.to) : "?";
+		return `${name} → ${to}${field.many === true ? "[]" : ""}`;
+	}
+	const parts: string[] = [name, kind];
+	if (kind === "text") {
+		if (field.multiline === true) parts.push(t("sum.multiline"));
+		if (typeof field.max === "number") parts.push(String(field.max));
+	}
+	if (kind === "select" || kind === "conditional") parts.push(Object.keys(optionsOf(field)).join(" | "));
+	if (field.localized === true) parts.push(t("summary.localized"));
+	if (field.localized === "inherit") parts.push(t("summary.inherit"));
+	return parts.filter((part) => part !== "").join(SEPARATOR);
+}

@@ -8,12 +8,14 @@ import { TextButton } from "./text-button";
 /**
  * A file in a grid (the media library, an image to insert): a 4:3 preview, the name over a mono detail line. Flat: no card, no border.
  *
- * - Picked: a 2px ink ring around the preview and the check on. The check shows in the preview's top left when the pointer is on the tile, and
+ * - Picked: a 2px ink ring around the preview and the check on. The file open in a panel (`current`) has the same ring without the check. The check shows in the preview's top left when the pointer is on the tile, and
  *   on every tile (faint) while any are picked (`picking`). `action` is the ⋯ at the top right, shown with the pointer.
  * - `status="uploading"`: the preview is faded and a 3px bar runs along its bottom edge while `progress` (0–100) is known. The detail line says how
  *   far ("Uploading · 64%"). The name is quiet.
- * - `status="failed"`: a 1px red ring drawn over the preview's edge, the detail line is red and the name is quiet; `actions` are what can be done ("Shrink and retry",
- *   "Remove"). A failed file stays in its place.
+ * - `status="failed"`: the file cannot be taken (a type the site does not accept). A 1px red ring is drawn over the preview's edge, the detail line is red
+ *   and the name is quiet; `actions` are what can be done ("Remove"). A failed file stays in its place; give it no preview if it has no picture to show.
+ * - `status="interrupted"`: the file is fine but did not go up (too large, the network). Its picture stays, faded as while it goes up, with no ring; the
+ *   detail line is red, the name is quiet, and `actions` are what can be done ("Shrink and retry", "Remove").
  * - `proposal`: the assistant's suggestion for this file, in the place of the detail line, in the proposal-mark look. A picked tile that has one
  *   is ringed and checked in blue.
  */
@@ -22,6 +24,7 @@ function Tile({
 	title,
 	detail,
 	selected = false,
+	current = false,
 	picking = false,
 	onSelectedChange,
 	selectLabel,
@@ -39,13 +42,15 @@ function Tile({
 	/** The mono line under the name: size, usage, a path. */
 	detail?: React.ReactNode;
 	selected?: boolean;
+	/** The file open in a panel beside the grid: the same ring as a picked tile, with no check. */
+	current?: boolean;
 	/** Some tile of the grid is picked: show this tile's check, faint. */
 	picking?: boolean;
 	/** Adds the check; called with the new state. */
 	onSelectedChange?: (selected: boolean) => void;
 	/** The name of the check, for screen readers. */
 	selectLabel?: string;
-	status?: "ready" | "uploading" | "failed";
+	status?: "ready" | "uploading" | "failed" | "interrupted";
 	/** How far an upload is, 0–100. */
 	progress?: number;
 	/** The suggestion sentence. */
@@ -57,7 +62,10 @@ function Tile({
 	dimmed?: boolean;
 }) {
 	const failed = status === "failed";
+	const interrupted = status === "interrupted";
 	const uploading = status === "uploading";
+	// Both name what went wrong in red under a quiet name, and offer `actions`.
+	const problem = failed || interrupted;
 	return (
 		<div
 			data-slot="tile"
@@ -68,16 +76,23 @@ function Tile({
 			<button
 				type="button"
 				aria-pressed={selected}
-				className="flex min-w-0 flex-col gap-monti-8 border-0 bg-transparent p-0 text-left outline-none focus-visible:*:first:ring-3 focus-visible:*:first:ring-monti-contrast/20"
+				className={cn(
+					"flex min-w-0 flex-col gap-monti-8 border-0 bg-transparent p-0 text-left outline-none focus-visible:*:first:ring-3",
+					// A picked or open tile keeps its ink ring under the keyboard's focus (a fainter ring there would hide the state); the focus only thickens it.
+					selected || current
+						? "focus-visible:*:first:ring-monti-contrast"
+						: "focus-visible:*:first:ring-monti-contrast/20",
+				)}
 				{...props}
 			>
 				<span
 					className={cn(
 						"relative block aspect-[4/3] overflow-hidden rounded-monti-md bg-monti-muted",
 						selected && (proposal ? "ring-2 ring-monti-proposal" : "ring-2 ring-monti-contrast"),
+						current && !selected && "ring-2 ring-monti-contrast",
 					)}
 				>
-					<span className={cn("block size-full", uploading && "opacity-45")}>{preview}</span>
+					<span className={cn("block size-full", (uploading || interrupted) && "opacity-45")}>{preview}</span>
 					{failed && (
 						// Above the picture: a ring on the box itself would be painted under it.
 						<span
@@ -93,7 +108,7 @@ function Tile({
 					)}
 				</span>
 				<span className="flex min-w-0 flex-col gap-monti-2">
-					<span className={cn("truncate text-monti-body", (uploading || failed) && "text-monti-subtle")}>{title}</span>
+					<span className={cn("truncate text-monti-body", (uploading || problem) && "text-monti-subtle")}>{title}</span>
 					{proposal ? (
 						<span className="truncate text-monti-body">
 							<span className="rounded-monti-sm bg-monti-proposal-muted px-[2px] py-px text-monti-proposal">
@@ -103,7 +118,7 @@ function Tile({
 					) : (
 						detail && (
 							<span
-								className={cn("truncate font-mono text-monti-meta text-monti-subtle", failed && "text-monti-danger")}
+								className={cn("truncate font-mono text-monti-meta text-monti-subtle", problem && "text-monti-danger")}
 							>
 								{detail}
 							</span>
@@ -118,8 +133,8 @@ function Tile({
 						selected
 							? "opacity-100"
 							: picking
-								? "opacity-60 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100"
-								: "opacity-0 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100",
+								? "in-data-popup-open:opacity-100 opacity-60 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100"
+								: "in-data-popup-open:opacity-100 opacity-0 group-hover/tile:opacity-100 group-data-hovered/tile:opacity-100",
 					)}
 				>
 					<Checkbox
@@ -132,11 +147,11 @@ function Tile({
 				</span>
 			)}
 			{action && (
-				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100">
+				<span className="absolute top-monti-6 right-monti-8 flex rounded-monti-full bg-monti-page in-data-popup-open:opacity-100 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/tile:opacity-100 has-aria-expanded:opacity-100 group-data-hovered/tile:opacity-100">
 					{action}
 				</span>
 			)}
-			{failed && actions && actions.length > 0 && (
+			{problem && actions && actions.length > 0 && (
 				<span className="flex gap-monti-12 text-monti-note">
 					{actions.map((item) => (
 						<TextButton
@@ -155,7 +170,7 @@ function Tile({
 
 /**
  * A folder in the grid, beside the files: a low tile with the folder's icon, its name and how many it holds. `selected` is the folder a menu
- * is open on. While files are dragged over it, `dropTarget` takes the selected background and a 1.5px ink ring. With `children` (a
+ * is open on (it also takes that ground while a right-click menu opened on its cell is open). While files are dragged over it, `dropTarget` takes the selected background and a 1.5px ink ring. With `children` (a
  * {@link RenameField}) they take the place of the name and the count, for a new folder or a rename. `action` is the ⋯ at the right, the
  * grid's rule for tiles: shown with the pointer (always on touch), and it takes the place of the count while shown.
  */
@@ -193,7 +208,7 @@ function FolderTile({
 							className={cn(
 								"ml-auto shrink-0",
 								action &&
-									"pointer-coarse:opacity-0 group-focus-within/folder:opacity-0 group-hover/folder:opacity-0 group-has-aria-expanded/folder:opacity-0",
+									"in-data-popup-open:opacity-0 pointer-coarse:opacity-0 group-focus-within/folder:opacity-0 group-hover/folder:opacity-0 group-has-aria-expanded/folder:opacity-0",
 							)}
 						>
 							{count}
@@ -204,7 +219,7 @@ function FolderTile({
 		</>
 	);
 	const look = cn(
-		"flex h-13 w-full min-w-0 items-center gap-[10px] rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
+		"flex h-13 w-full min-w-0 items-center gap-[10px] rounded-monti-md border-0 bg-monti-muted px-[14px] text-monti-body text-monti-default outline-none focus-visible:ring-3 focus-visible:ring-monti-contrast/20 in-data-popup-open:bg-monti-selected",
 		selected && "bg-monti-selected",
 		dropTarget && "bg-monti-selected ring-[1.5px] ring-monti-contrast ring-inset",
 		className,
@@ -227,8 +242,8 @@ function FolderTile({
 			{action && (
 				<span
 					className={cn(
-						"absolute top-1/2 right-monti-8 flex -translate-y-1/2 rounded-monti-full opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/folder:opacity-100 has-aria-expanded:opacity-100",
-						dropTarget || selected ? "bg-monti-selected" : "bg-monti-muted",
+						"absolute top-1/2 right-monti-8 flex -translate-y-1/2 rounded-monti-full in-data-popup-open:opacity-100 opacity-0 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover/folder:opacity-100 has-aria-expanded:opacity-100",
+						dropTarget || selected ? "bg-monti-selected" : "bg-monti-muted in-data-popup-open:bg-monti-selected",
 					)}
 				>
 					{action}

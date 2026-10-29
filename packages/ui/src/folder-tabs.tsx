@@ -29,28 +29,45 @@ function FolderTabsList({ add, children, className, ...props }: TabsPrimitive.Li
 	);
 }
 
+/** What every tab shares: 36px, a line on three sides, rounded at the top. */
+const FOLDER_TAB =
+	"inline-flex h-9 items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default pr-monti-16 pl-monti-12 text-monti-body [&_svg]:shrink-0";
+
+/** What moves a tab while it is dragged, or while the others make room for it. */
+export interface TabMotion {
+	transform?: string;
+	transition?: string;
+}
+
 /**
  * One tab: a grip to drag it by, its name, and how many fields it holds. `locked` marks a tab a plugin placed, which cannot be moved or
- * removed.
+ * removed. `motion` and `dragging` are the tab while it is dragged, or while the others move aside for it.
  */
 function FolderTab({
 	children,
 	count,
 	locked = false,
 	draggable = true,
+	motion,
+	dragging = false,
 	className,
 	...props
-}: TabsPrimitive.Tab.Props & {
+}: Omit<TabsPrimitive.Tab.Props, "style"> & {
 	count?: React.ReactNode;
 	locked?: boolean;
 	/** Shows the grip. Off for a tab that stays where it is. */
 	draggable?: boolean;
+	motion?: TabMotion;
+	dragging?: boolean;
 }) {
 	return (
 		<TabsPrimitive.Tab
 			data-slot="folder-tab"
+			style={motion}
 			className={cn(
-				"data-active:border-b-(color:--monti-bg-page) inline-flex h-9 cursor-pointer items-center gap-monti-8 whitespace-nowrap rounded-t-monti-lg border border-monti-default bg-monti-muted pr-monti-16 pl-monti-12 text-monti-body text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default [&_svg]:shrink-0",
+				FOLDER_TAB,
+				"data-active:border-b-(color:--monti-bg-page) cursor-pointer bg-monti-muted text-monti-muted outline-none transition-colors hover:text-monti-default focus-visible:ring-2 focus-visible:ring-monti-contrast/20 data-active:bg-monti-page data-active:font-semibold data-active:text-monti-default",
+				dragging && "z-10 opacity-80",
 				className,
 			)}
 			{...props}
@@ -60,6 +77,22 @@ function FolderTab({
 			{count !== undefined && <Count>{count}</Count>}
 			{locked && <Locked aria-hidden className="size-3 text-monti-faint" />}
 		</TabsPrimitive.Tab>
+	);
+}
+
+/**
+ * The picked tab while its name is being edited in place: the same shape as the picked tab, with the field (`children`) where the name was. It is not a tab
+ * while it is open, so a key typed in the field is the field's.
+ */
+function FolderTabEdit({ children, className, ...props }: Omit<React.ComponentProps<"div">, "style">) {
+	return (
+		<div
+			data-slot="folder-tab-edit"
+			className={cn(FOLDER_TAB, "border-b-(color:--monti-bg-page) bg-monti-page text-monti-default", className)}
+			{...props}
+		>
+			{children}
+		</div>
 	);
 }
 
@@ -94,4 +127,4 @@ function FolderTabsBody({ className, ...props }: TabsPrimitive.Panel.Props) {
 	);
 }
 
-export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList };
+export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList };

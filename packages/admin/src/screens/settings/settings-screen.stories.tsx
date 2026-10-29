@@ -1,464 +1,196 @@
-import { toast } from "@monti-cms/ui";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
-import { testSite } from "../../../../core/test/site";
-import { answer, type FakeApi, PageFrame } from "../../stories/screen-frame";
-import { schemaCollectionMessages } from "../schema/collection.messages";
-import { schemaFieldsMessages } from "../schema/fields.messages";
-import { schemaLocalesMessages } from "../schema/locales.messages";
-import { schemaMessages } from "../schema/messages";
-import { SAVED_MESSAGE_KEY } from "../schema/reload";
-import { schemaReviewMessages } from "../schema/review.messages";
-import { SettingsScreen } from "./settings-screen";
-import type { SchemaTab } from "./tabs";
-
-const meta = { title: "Screens/Settings", parameters: { layout: "fullscreen", bleed: true } } satisfies Meta;
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-const t = testSite.createTranslator(schemaMessages);
-const tCollection = testSite.createTranslator(schemaCollectionMessages);
-const tFields = testSite.createTranslator(schemaFieldsMessages);
-const tLocales = testSite.createTranslator(schemaLocalesMessages);
-const tReview = testSite.createTranslator(schemaReviewMessages);
-
-const SCHEMA = "/api/monti/v1/schema";
-
-const schema = () => ({
-	site: { name: "몬티 블로그" },
-	collections: {
-		post: {
-			label: "글",
-			kind: "document",
-			path: "/posts/:slug",
-			fields: {
-				title: { kind: "text", label: "제목", required: true },
-				slug: { kind: "slug", label: "주소", from: "title" },
-				summary: { kind: "text", label: "요약" },
-				status: { kind: "select", label: "상태", options: { draft: "초안", live: "공개" }, defaultValue: "draft" },
-			},
-		},
-		tag: { label: "태그", kind: "item", fields: { title: { kind: "text", label: "이름", required: true } } },
-	},
-	locales: [
-		{ code: "ko", name: "한국어" },
-		{ code: "en", name: "English" },
-	],
-	defaultLocale: "ko",
-	admin: { messages: { ko: { "entries.title": "콘텐츠" } } },
-});
-
-const screenState = (over: Record<string, unknown> = {}) => ({
-	access: { writable: true },
-	file: "monti.schema.ts",
-	hash: "hash-1",
-	schema: schema(),
-	source: "file",
-	comments: false,
-	issues: [],
-	applied: { appliedAt: "2026-10-01T00:00:00.000Z" },
-	codeCollections: [],
-	vocabulary: { blocks: ["table", "image", "callout"], marks: ["bold", "italic"] },
-	collections: ["post", "tag"],
-	footprints: {},
-	siteUrl: { url: null, from: "none" },
-	...over,
-});
-
-const previewOf = (over: Record<string, unknown> = {}) => ({
-	valid: true,
-	issues: [],
-	changed: true,
-	impacts: [],
-	decisions: [],
-	transforms: [],
-	problems: [],
-	baseline: "applied",
-	bodiesRead: 0,
-	...over,
-});
-
-/** A preview that names one change touching stored entries. */
-const previewWithImpact = () =>
-	previewOf({
-		impacts: [
-			{
-				change: {
-					kind: "field_renamed",
-					collection: "post",
-					from: "summary",
-					to: "excerpt",
-					handledBy: "rename-summary",
-				},
-				key: "field_renamed:post:summary:summary:excerpt",
-				entries: 3,
-				sample: [
-					{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" },
-					{ id: "22222222-bbbb", collection: "post", locale: "ko", status: "draft", title: "두 번째 글" },
-				],
-				consequence: "transformed",
-				checked: true,
-			},
-		],
-		transforms: [{ id: "rename-summary", op: "renameField", collection: "post", from: "summary", to: "excerpt" }],
-	});
-
-/** The server: the schema file, the check of an edit, and what saving answers. */
-const server =
-	({
-		state = screenState(),
-		preview = previewOf(),
-		save,
-	}: {
-		state?: unknown;
-		preview?: unknown;
-		save?: ReturnType<typeof answer>;
-	} = {}): FakeApi =>
-	(path, method) => {
-		if (path === SCHEMA && method === "GET") return state;
-		if (path === `${SCHEMA}/preview` && method === "POST") return preview;
-		if (path === SCHEMA && method === "PUT")
-			return save ?? { saved: true, file: "monti.schema.ts", hash: "hash-2", transforms: [] };
-		return undefined;
-	};
+import type { Meta } from "@storybook/react-vite";
+import {
+	answer,
+	body,
+	changesButton,
+	expect,
+	fireEvent,
+	openReview,
+	type Play,
+	previewOf,
+	readOnlyState,
+	server,
+	setValue,
+	story,
+	tLocales,
+	tReview,
+	tSite,
+	userEvent,
+	waitFor,
+	within,
+} from "../../test/schema-story-api";
 
 /**
- * The page keeps its tab and the open collection in the address of the frame; this sets them before the story renders, so one story does not leave its place to the next.
- * (Tabs are picked by the `tab` prop here: the tab links would move the Storybook frame itself.)
+ * The Settings page, one story per stage of the Settings and Languages boards of the canvas (flow 11): the site tab, the languages tab and the admin tab,
+ * the page while it loads and when it cannot, and the lock variants. Every story is shot by the visual checks.
  */
-const place =
-	(query: Record<string, string> = {}) =>
-	() => {
-		const url = new URL(window.location.href);
-		url.searchParams.delete("collection");
-		url.searchParams.delete("section");
-		for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
-		window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-	};
+const meta = {
+	title: "Screens/Settings",
+	parameters: { layout: "fullscreen", bleed: true },
+	tags: ["visual"],
+} satisfies Meta;
+export default meta;
 
-const screen =
-	(api: FakeApi, tab: SchemaTab = "collections") =>
-	() => (
-		<PageFrame api={api} pathname={`/admin/settings/${tab}`}>
-			<SettingsScreen tab={tab} />
-		</PageFrame>
-	);
+// ----- the site tab (board Settings) -----
 
-const story = (api: FakeApi, tab: SchemaTab, query?: Record<string, string>, extra: Partial<Story> = {}): Story => ({
-	beforeEach: place(query),
-	render: screen(api, tab),
-	...extra,
+/** The two changes the board's first stages carry: the site name and the preview path. */
+const editSite: Play = async ({ canvasElement }) => {
+	const canvas = within(canvasElement);
+	setValue(await canvas.findByRole("textbox", { name: tSite("site.name") }), "example.dev");
+	setValue(await canvas.findByRole("textbox", { name: tSite("site.previewPath") }), "draft");
+	await changesButton(canvasElement);
+};
+
+/** Stage 기본: the site tab with two changes. */
+export const Site = story(server(), "site", undefined, { play: editSite });
+
+/** Stage 호스트 추가: "+ 호스트" adds an empty row with the caret in it. */
+export const SiteHostAdded = story(server(), "site", undefined, {
+	play: async (context) => {
+		await editSite(context);
+		await userEvent.click(await within(context.canvasElement).findByRole("button", { name: tSite("site.alias.add") }));
+	},
 });
 
-/** Types into the label of the open collection, which makes the draft differ from the file. */
-const editLabel = async (canvasElement: HTMLElement) => {
-	const input = await within(canvasElement).findByLabelText(tCollection("collection.label"));
-	// A change event, not typed keys: the input tracks its value for React, and typing does not reach it here.
-	fireEvent.change(input, { target: { value: `${(input as HTMLInputElement).value} 2` } });
-};
+/** Stage 언어 쿼리: "language in the preview path" turned off shows the query field, empty. */
+export const SiteLocaleQuery = story(server(), "site", undefined, {
+	play: async (context) => {
+		await editSite(context);
+		const canvas = within(context.canvasElement);
+		await userEvent.click(await canvas.findByRole("switch", { name: tSite("site.previewInPath") }));
+		// The board's query field has the caret in it.
+		(await canvas.findByRole("textbox", { name: tSite("site.previewParam") })).focus();
+	},
+});
 
-/** Edits the draft, opens the review dialog and, when asked, presses its save. */
-const review =
-	(save: boolean) =>
-	async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-		await editLabel(canvasElement);
-		await userEvent.click(
-			await within(canvasElement).findByRole("button", { name: new RegExp(`^${t("bar.review")}`) }),
+/** Stage 칸 오류: a host name that is not a host name shows the one error line under its row and turns the save off. */
+export const SiteFieldError = story(server(), "site", undefined, {
+	play: async (context) => {
+		await editSite(context);
+		const canvas = within(context.canvasElement);
+		setValue(await canvas.findByRole("textbox", { name: tSite("site.alias.row", { number: 1 }) }), "example dev");
+	},
+});
+
+/** Stage 나가기 확인: a link followed with unsaved changes asks first. */
+export const SiteLeaveConfirm = story(server(), "site", undefined, {
+	play: async (context) => {
+		await editSite(context);
+		// A sidebar link, which the guard holds back: the page stays where it is.
+		const link = (await within(context.canvasElement).findAllByRole("link")).find(
+			(item) => item.getAttribute("href") !== null,
 		);
-		if (!save) return;
-		const dialog = await within(document.body).findByRole("dialog");
-		const button = await within(dialog).findByRole("button", { name: tReview("review.save") });
-		await waitFor(() => expect(button).toBeEnabled());
-		await userEvent.click(button);
-	};
+		if (!link) throw new Error("the sidebar has no link");
+		fireEvent.click(link);
+		await body().findByRole("alertdialog");
+	},
+});
 
-// Each tab, loaded. The site tab (the readable width) and the fields tab (the full width) are shot: no unit test can check a layout.
-export const SiteTab: Story = {
-	...story(server(), "site", undefined),
-	tags: ["visual"],
-};
-export const LocalesTab = story(server(), "locales");
-export const CollectionsBasics = story(server(), "collections", { collection: "post" });
-export const CollectionsFields: Story = {
-	...story(server(), "collections", { collection: "post", section: "fields" }),
-	tags: ["visual"],
-};
-export const CollectionsEditor = story(server(), "collections", { collection: "post", section: "editor" });
-export const AdminTab = story(server(), "admin");
+/** Stage 읽기 전용: the lock beside the titles of the sections that cannot be changed, no save group. */
+export const SiteReadOnly = story(server({ state: readOnlyState() }), "site");
 
-// Loading and failing to load.
+// ----- the languages tab (board Locales) -----
+
+const languages = (canvasElement: HTMLElement) => within(canvasElement);
+const openFinder = async (canvasElement: HTMLElement) => {
+	await userEvent.click(await languages(canvasElement).findByRole("button", { name: tLocales("locales.add") }));
+	return body().findByRole("combobox", { name: tLocales("locales.search") });
+};
+
+/** Stage 기본: the source language on top with 원문 and 바꾸기, the others with a handle and a ×. */
+export const Locales = story(server(), "locales");
+
+/** Stage 언어 찾기: "+ 언어 추가" opens the finder; "zh" lists the variants, the last row is 직접 입력. */
+export const LocalesFind = story(server(), "locales", undefined, {
+	play: async ({ canvasElement }) => {
+		setValue(await openFinder(canvasElement), "zh");
+		await body().findByRole("option", { name: new RegExp(tLocales("locales.custom")) });
+	},
+});
+
+/** Stage 직접 입력: a code the list does not know asks for the two names in a small window. */
+export const LocalesCustom = story(server(), "locales", undefined, {
+	play: async ({ canvasElement }) => {
+		setValue(await openFinder(canvasElement), "tlh");
+		await userEvent.click(await body().findByRole("option", { name: new RegExp(tLocales("locales.custom")) }));
+		await body().findByRole("dialog");
+	},
+});
+
+/** Stage 언어 추가됨: a language picked from the finder is a row at once, marked new, with one change. */
+export const LocalesAdded = story(server(), "locales", undefined, {
+	play: async ({ canvasElement }) => {
+		setValue(await openFinder(canvasElement), "ja");
+		const list = await body().findByRole("listbox", { name: tLocales("locales.codes") });
+		await userEvent.click(within(list).getAllByRole("option")[0] as HTMLElement);
+		await languages(canvasElement).findByTestId("locale-ja");
+	},
+});
+
+const openSourceMenu = async (canvasElement: HTMLElement) => {
+	const row = await languages(canvasElement).findByTestId("locale-ko");
+	await userEvent.click(within(row).getByRole("button", { name: tLocales("locales.sourceChange") }));
+	await body().findByRole("menu");
+};
+
+/** Stage 원문 메뉴: 바꾸기 opens the list of languages with a tick on the source. */
+export const LocalesSourceMenu = story(server(), "locales", undefined, {
+	play: async ({ canvasElement }) => openSourceMenu(canvasElement),
+});
+
+/** Stage 원문 바꿈: another language chosen as the source moves to the top, and both rows are marked. */
+export const LocalesSourceChanged = story(server(), "locales", undefined, {
+	play: async ({ canvasElement }) => {
+		await openSourceMenu(canvasElement);
+		await userEvent.click(await body().findByRole("menuitemradio", { name: "English" }));
+		await waitFor(() => expect(languages(canvasElement).getByTestId("locale-en")).toBeTruthy());
+	},
+});
+
+const english = { code: "en", name: "English" };
+/** The server says English has twelve translations, and that taking it out can leave them or move them to the trash. */
+const removeEnglish = previewOf({
+	impacts: [
+		{
+			change: { kind: "locale_removed", locale: "en" },
+			key: "locale_removed:en",
+			entries: 12,
+			sample: [],
+			consequence: "trashed",
+			checked: true,
+		},
+	],
+	decisions: [
+		{
+			key: "locale_removed:en",
+			change: { kind: "locale_removed", locale: english.code },
+			entries: 12,
+			sample: [],
+			suggestions: [{ op: "trashLocale", locale: english.code }],
+			chosen: null,
+		},
+	],
+});
+
+/** Stage 빼기 검토: a language with translations taken out; the review sheet asks what happens to them. */
+export const LocalesRemoveReview = story(server({ preview: removeEnglish }), "locales", undefined, {
+	play: async ({ canvasElement }) => {
+		const row = await languages(canvasElement).findByTestId("locale-en");
+		await userEvent.click(within(row).getByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
+		const sheet = await openReview(canvasElement);
+		await within(sheet).findByTestId("impact-locale_removed:en");
+		expect(within(sheet).getByText(tReview("note.locale"))).toBeTruthy();
+	},
+});
+
+/** Stage 읽기 전용: no handles, no ×, no 바꾸기, no "+ 언어 추가"; a lock beside the title. */
+export const LocalesReadOnly = story(server({ state: readOnlyState() }), "locales");
+
+// ----- the admin tab -----
+
+export const Admin = story(server(), "admin");
+
+// ----- while it loads and when it cannot -----
+
 export const Loading = story(() => "pending", "collections");
 export const LoadFailed = story(() => answer(500), "collections");
-
-// Unsaved changes: the marks on the tab and in the collection list, and the save group in the title row.
-export const UnsavedChanges: Story = {
-	...story(
-		server(),
-		"collections",
-		{ collection: "post" },
-		{
-			play: async ({ canvasElement }) => editLabel(canvasElement),
-		},
-	),
-	tags: ["visual"],
-};
-export const ReviewDialog = story(
-	server({ preview: previewWithImpact() }),
-	"collections",
-	{ collection: "post" },
-	{
-		play: review(false),
-	},
-);
-export const ReviewChecking = story(
-	server({ preview: "pending" as never }),
-	"collections",
-	{ collection: "post" },
-	{
-		play: review(false),
-	},
-);
-export const ReviewFailed = story(
-	(path, method) => (path === `${SCHEMA}/preview` && method === "POST" ? answer(500) : server()(path, method)),
-	"collections",
-	{ collection: "post" },
-	{ play: review(false) },
-);
-export const SaveFailed = story(
-	server({
-		preview: previewWithImpact(),
-		save: answer(400, { error: { code: "invalid_schema", message: "The schema did not pass the check." } }),
-	}),
-	"collections",
-	{ collection: "post" },
-	{ play: review(true) },
-);
-export const SaveConflict = story(
-	server({
-		save: answer(409, { error: { code: "schema_conflict", message: "The file changed." } }),
-	}),
-	"collections",
-	{ collection: "post" },
-	{ play: review(true) },
-);
-
-// Deleting a collection with its entries: Flow 4 of the canvas, steps 15 to 19 (the Schema board's stages 지우기 전, 지울 예정, 지우기 검토, 지운 뒤).
-const memoSchema = () => {
-	const base = schema();
-	return {
-		...base,
-		collections: {
-			post: base.collections.post,
-			memo: {
-				label: "메모",
-				kind: "document",
-				path: "/memos/:slug",
-				fields: {
-					title: { kind: "text", label: "제목", required: true },
-					slug: { kind: "slug", label: "주소", from: "title" },
-				},
-			},
-			tag: base.collections.tag,
-		},
-	};
-};
-const memoState = (over: Record<string, unknown> = {}) =>
-	screenState({
-		schema: memoSchema(),
-		collections: ["post", "memo", "tag"],
-		footprints: {
-			post: { entries: 148, trashed: 0, folders: 3 },
-			memo: { entries: 23, trashed: 2, folders: 2 },
-			tag: { entries: 12, trashed: 0, folders: 0 },
-		},
-		...over,
-	});
-const memoRemoval = {
-	change: { kind: "collection_removed", collection: "memo", handledBy: "drop-memo" },
-	key: "collection_removed:memo",
-	entries: 23,
-	sample: [],
-	consequence: "deleted",
-	checked: true,
-	drop: {
-		entries: 23,
-		trashed: 2,
-		translations: 0,
-		folders: 2,
-		addresses: 31,
-		unlinked: {
-			count: 4,
-			sample: [{ id: "11111111-aaaa", collection: "post", locale: "ko", status: "published", title: "첫 번째 글" }],
-		},
-		bodyLinks: 2,
-	},
-};
-/** The server of the delete: the review names what goes and the four entries whose links are cut when it is applied. */
-const deleteServer: FakeApi = (path, method) => {
-	if (path === SCHEMA && method === "GET") return memoState();
-	if (path === `${SCHEMA}/preview`)
-		return previewOf({
-			impacts: [memoRemoval],
-			transforms: [{ id: "drop-memo", op: "dropCollection", collection: "memo" }],
-		});
-	return undefined;
-};
-const pressDelete = async (canvasElement: HTMLElement) => {
-	const block = await within(canvasElement).findByTestId("collection-delete");
-	await userEvent.click(within(block).getByRole("button", { name: tCollection("collection.delete") }));
-};
-/** Board stage 지우기 전 (step 15): the block at the bottom of the basics tab. */
-export const CollectionDeleteBefore: Story = {
-	...story(deleteServer, "collections", { collection: "memo" }),
-	tags: ["visual"],
-};
-/** Board stage 지울 예정 (step 16): gone from the list at once, the editor on the first one left, the changes menu open with the row, and the toast. */
-export const CollectionDeleteRemoved: Story = {
-	...story(
-		deleteServer,
-		"collections",
-		{ collection: "memo" },
-		{
-			play: async ({ canvasElement }) => {
-				await pressDelete(canvasElement);
-				await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.list") }));
-				await within(document.body).findByRole("menuitem", { name: new RegExp(t("bar.removed")) });
-			},
-		},
-	),
-	tags: ["visual"],
-};
-/** Board stage 지우기 검토 (step 17): the review names what goes, what is cut and what breaks; 지우고 적용 is on from the start. */
-export const CollectionDeleteReview: Story = {
-	...story(
-		deleteServer,
-		"collections",
-		{ collection: "memo" },
-		{
-			play: async ({ canvasElement }) => {
-				await pressDelete(canvasElement);
-				// The board's review has no toast: it belongs to the moment of the press.
-				toast.dismiss();
-				await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.save") }));
-				const sheet = await within(document.body).findByRole("dialog");
-				await within(sheet).findByTestId("impact-collection_removed:memo");
-			},
-		},
-	),
-	tags: ["visual"],
-};
-/** Board stage 지운 뒤 (step 19): the collection is gone from the list, and the toast says what went. */
-export const CollectionDeleted: Story = {
-	...story(
-		(path, method) => {
-			if (path === SCHEMA && method === "GET") {
-				const base = memoState();
-				const { memo: _memo, ...collections } = (base.schema as ReturnType<typeof memoSchema>).collections;
-				return { ...base, schema: { ...base.schema, collections }, collections: ["post", "tag"] };
-			}
-			return undefined;
-		},
-		"collections",
-		{ collection: "post" },
-		{
-			beforeEach: () => {
-				window.sessionStorage.setItem(SAVED_MESSAGE_KEY, t("save.done"));
-			},
-		},
-	),
-	tags: ["visual"],
-};
-
-// Dialogs and sheets.
-export const AddFieldDialog = story(
-	server(),
-	"collections",
-	{ collection: "post", section: "fields" },
-	{
-		play: async ({ canvasElement }) => {
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: tFields("field.add") }));
-		},
-	},
-);
-export const FieldEditorOpen = story(
-	server(),
-	"collections",
-	{ collection: "post", section: "fields" },
-	{
-		play: async ({ canvasElement }) => {
-			await userEvent.click(
-				await within(canvasElement).findByRole("button", { name: tFields("field.toggle", { name: "status" }) }),
-			);
-		},
-	},
-);
-export const NewCollectionDialog = story(
-	server(),
-	"collections",
-	{ collection: "post" },
-	{
-		play: async ({ canvasElement }) => {
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("collection.create") }));
-		},
-	},
-);
-export const AddLocaleDialog = story(server(), "locales", undefined, {
-	play: async ({ canvasElement }) => {
-		await userEvent.click(await within(canvasElement).findByRole("button", { name: tLocales("locales.add") }));
-	},
-});
-export const DiscardConfirm = story(
-	server(),
-	"collections",
-	{ collection: "post" },
-	{
-		play: async ({ canvasElement }) => {
-			await editLabel(canvasElement);
-			await userEvent.click(await within(canvasElement).findByRole("button", { name: t("bar.discard") }));
-		},
-	},
-);
-
-// The file cannot be edited here.
-export const ReadOnlyNotWritable = story(
-	server({ state: screenState({ access: { writable: false, reason: "not_writable" } }) }),
-	"collections",
-	{ collection: "post" },
-);
-export const ReadOnlyProduction = story(
-	server({ state: screenState({ access: { writable: false, reason: "production" } }) }),
-	"site",
-);
-export const ReadOnlyNoFile = story(
-	server({ state: screenState({ access: { writable: false, reason: "no_schema_file" }, file: null, hash: null }) }),
-	"collections",
-);
-export const ReadOnlyHasCode = story(
-	server({
-		state: screenState({
-			access: { writable: false, reason: "has_code", detail: "line 12: a function call `env(...)`" },
-		}),
-	}),
-	"collections",
-);
-
-// The file itself has a problem.
-export const FileInvalid = story(
-	server({
-		state: screenState({
-			hash: null,
-			issues: [
-				{
-					path: "collections.post.fields.slug.from",
-					message: "refers to a field that does not exist",
-					code: "unknown-field",
-				},
-			],
-		}),
-	}),
-	"collections",
-);
-export const FileHasComments = story(server({ state: screenState({ comments: true }) }), "site");
-export const CodeCollections = story(server({ state: screenState({ codeCollections: ["page"] }) }), "collections", {
-	collection: "post",
-});

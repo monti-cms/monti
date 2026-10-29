@@ -49,7 +49,8 @@ describe("CmsEditor works on the stored document", () => {
 	it("shows the document it is given", async () => {
 		const { editor } = await open({ doc: docOf("첫째 문단\n\n둘째 문단") });
 		expect(text(editor)).toBe("첫째 문단|둘째 문단");
-		expect(await screen.findByRole("toolbar", { name: /./ })).toBeTruthy();
+		// No fixed toolbar over the body: the formats come with the selection.
+		expect(screen.queryByRole("toolbar")).toBeNull();
 	});
 
 	it("hands the document back after a change, with the ids of the blocks it was given", async () => {

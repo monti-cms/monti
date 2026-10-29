@@ -1,4 +1,5 @@
 import { type MessageBundle, translate } from "@monti-cms/core";
+import type { AiSlot } from "@monti-cms/core/ai-contract";
 import type { Translator } from "@monti-cms/core/site";
 import { z } from "zod";
 import { coreMessages } from "./core.messages";
@@ -32,6 +33,15 @@ export const AI_SLOTS = [
 	"block",
 ] as const;
 export type { AiSlot } from "@monti-cms/core/ai-contract";
+
+/**
+ * The slots that have a place to type an extra request (`askInstruction`): the translation editor, the selection menu, the slash menu and a block's handle. A field,
+ * an image, the media screen and code rules run at one press with nothing to type, so an action attached only there never asks.
+ */
+export const AI_ASKING_SLOTS: readonly AiSlot[] = ["translation", "selection", "insert", "block"];
+/** Whether an action attached to these slots can ask for an extra request. */
+export const slotsAsk = (attach: readonly { readonly slot: AiSlot }[]): boolean =>
+	attach.some((item) => AI_ASKING_SLOTS.includes(item.slot));
 
 /**
  * Mode. In `generate`, a chat model (LLM) answers with text. In `decide`, a decision model (System One, e.g. Jev)

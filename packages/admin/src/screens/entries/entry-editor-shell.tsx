@@ -3,46 +3,48 @@
 import { CodeReference, OpenPanelLeft } from "@carbon/icons-react";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { IncomingReferenceItem } from "@monti-cms/core/site";
+import type { IncomingReferenceItem, SchemaCollectionName } from "@monti-cms/core/site";
 import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
-import { FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
+import { Box, FormFieldLabel, Inline, Input, Stack, Text, TextButton } from "@monti-cms/ui";
 import type { Editor } from "@tiptap/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAdminComponents, useEditorExtensions } from "../../admin-components";
+import { type EditorMenuItem, useAdminComponents, useEditorExtensions } from "../../admin-components";
 import { adminEntryClient } from "../../api/entries";
-import { type CmsIssue, issueLine } from "../../api/error-message";
+import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
+import { openImageCard } from "../../editor/image-alt";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
-import { AdminLink as Link, useAdminRouter } from "../../router";
+import { AdminLink as Link, useAdminRouter, useAdminSearchParams } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { entryHref } from "../shared/entry-href";
 import { type OpenEditor, OpenEditorContext } from "../shared/open-editor";
+import { publishReadinessMessages } from "../shared/publish-readiness.messages";
 import { usePublishScreenContext } from "../shared/screen-context";
 import { SidePanelPane } from "../shared/side-panel-slot";
 import { StatusBar } from "../shared/status-bar";
-import { doneLabels, requiredFields } from "../shared/todo-rows";
+import { doneLabels, imageNumbers, requiredFields, type TodoContext, todoRows } from "../shared/todo-rows";
 import { bodyChars } from "./body-stats";
+import { compareModeOf } from "./compare-address";
 import { EditorScroller } from "./editor-scroller";
+import { EntryCompareScreen } from "./entry-compare-screen";
 import { EntryEditorBanners } from "./entry-editor-banners";
 import { EntryEditorHeader } from "./entry-editor-header";
-import { EntryEditorRecoveryDialogs } from "./entry-editor-recovery";
+import { EntryEditorRecoveryStrips } from "./entry-editor-recovery";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import { InspectorSidePanel, TranslationSourcePanel } from "./entry-editor-side-panels";
 import { EntryEditorLoadError, EntryEditorLoading } from "./entry-editor-states";
-import { ToolbarToggle } from "./entry-editor-toolbar";
 import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { readOpenEntry, readOpenSelection } from "./open-editor-read";
 import { SourceChangeDialog } from "./source-change-dialog";
 import { useSourceSync } from "./source-sync";
-import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
-import { usePublishReadiness } from "./use-publish-readiness";
+import { usePublishReadiness, useResolvedTodos } from "./use-publish-readiness";
 
 interface EntryEditorShellProps {
 	mode: "new" | "edit";
@@ -298,6 +300,17 @@ export function EntryEditorShell({
 		if (issue.position || issue.path === "body" || issue.path === "frontmatter") {
 			if (isNarrowScreen) setIsInspectorOpen(false);
 			// In the visual editor, go to the block the issue is in (found by its id); otherwise to the block in the source text.
+			// An image without alt text opens its card, with the cursor in the alt text field.
+			const visual = visualEditorRef.current;
+			if (
+				!isSourceMode &&
+				issue.code === "missing_image_alt" &&
+				issue.position?.blockId &&
+				visual &&
+				!visual.isDestroyed &&
+				openImageCard(visual, issue.position.blockId)
+			)
+				return;
 			if (!isSourceMode && issue.position?.blockId && revealBlock(issue.position.blockId)) return;
 			if (!sourcePanel) return;
 			setFocusBlock(issue.position?.blockId);
@@ -355,6 +368,34 @@ export function EntryEditorShell({
 	}, [saveStatus, entry?.version]);
 	const chars = useMemo(() => bodyChars(form.doc), [form.doc]);
 
+	// The to-do list words the problems the check found: the label of a field, whether it is chosen or written, and the number of an image in the body.
+	const tp = useTranslator(publishReadinessMessages);
+	const imageNumber = useMemo(() => imageNumbers(form.doc), [form.doc]);
+	const storedFields = site.isCollection(collection) ? site.storedFields(collection as SchemaCollectionName) : [];
+	const todoContext: TodoContext = {
+		fieldLabel: (path) => storedFields.find(({ name }) => name === path)?.field.label,
+		picks: (path) => {
+			const found = storedFields.find(({ name }) => name === path);
+			return found !== undefined && found.field.kind !== "text";
+		},
+		imageNumber,
+	};
+	const rowsOf = (issues: readonly CmsIssue[], focus: (issue: CmsIssue) => void = () => {}) =>
+		todoRows(tp, issues, focus, todoContext);
+	// What was fixed along the way stays in the list as a check row.
+	const fixed = useResolvedTodos(readiness.result, (issues) => rowsOf(issues));
+
+	// The address asks for the compare screen only while there is something to compare: an edit conflict, or a draft kept in the browser.
+	const compareMode = compareModeOf(useAdminSearchParams());
+	const canCompare =
+		(compareMode === "conflict" && editor.conflict !== null) ||
+		(compareMode === "draft" && editor.recovery !== null && Boolean(editor.recovery.server ?? entry));
+	const compareGone = compareMode !== null && load.status === "ready" && !canCompare;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the address is left once, when it asks for a comparison there is nothing to make
+	useEffect(() => {
+		if (compareGone && entry) router.replace(site.adminEntryEditHref(entry.id));
+	}, [compareGone]);
+
 	if (isLoading) return <EntryEditorLoading />;
 	if (loadError) return <EntryEditorLoadError message={loadError} />;
 
@@ -362,12 +403,20 @@ export function EntryEditorShell({
 	const todo =
 		entry && readiness.result
 			? {
-					issues: readiness.result.issues,
-					done: doneLabels(
-						requiredFields(site, collection, translationSource !== null, entry.working.metadata ?? {}),
-						readiness.result.issues,
-					),
-					focus: focusIssue,
+					rows: rowsOf(readiness.result.issues, (issue) => {
+						setIsReadinessOpen(false);
+						focusIssue(issue);
+					}),
+					// The to-dos fixed along the way, then the required fields that were never empty in one line.
+					done: (() => {
+						const names = fixed.map((item) => item.label);
+						const rest = doneLabels(
+							requiredFields(site, collection, translationSource !== null, entry.working.metadata ?? {}),
+							readiness.result.issues,
+							names,
+						);
+						return [...names, ...(rest.length > 0 ? [rest.join(" · ")] : [])];
+					})(),
 					open: isReadinessOpen,
 					onOpenChange: setIsReadinessOpen,
 				}
@@ -403,29 +452,40 @@ export function EntryEditorShell({
 			/>
 			{titleIssue && (
 				<Text as="p" id="cms-title-error" tone="danger">
-					{issueLine(titleIssue)}
+					{fieldIssueLine(titleIssue)}
 				</Text>
 			)}
+			{/* The one ink rule of the page: 20 under the title; the body starts 32 under it. */}
+			<Box border="bottom-contrast" paddingTop={20} />
 		</>
 	);
-	const sourcePaneToggle = translationSource && (
-		<ToolbarToggle
-			label={te("source")}
-			icon={OpenPanelLeft}
-			pressed={isSourcePaneOpen}
-			onPressedChange={toggleSourcePane}
-		/>
-	);
-	const sourceModeToggle = sourcePanel && (
-		<ToolbarToggle
-			label={sourcePanel.label}
-			icon={CodeReference}
-			pressed={isSourceMode}
-			// A body that could not be read cannot return to visual mode.
-			disabled={isSourceMode && !canUseVisual}
-			onPressedChange={(pressed) => setEditorMode(pressed ? "source" : "visual")}
-		/>
-	);
+	// The document tools of the header's ⋯ menu: the source beside a translation, the body as text (a source panel's notation, such as MDX), and
+	// what editor extensions add. A body that could not be read cannot return to visual mode, so its switch is left out.
+	const menuItems: EditorMenuItem[] = [
+		...(translationSource
+			? [
+					{
+						key: "source-pane",
+						label: te("sourcePane"),
+						icon: <OpenPanelLeft aria-hidden />,
+						checked: isSourcePaneOpen,
+						onSelect: () => toggleSourcePane(!isSourcePaneOpen),
+					},
+				]
+			: []),
+		...(sourcePanel && !(isSourceMode && !canUseVisual)
+			? [
+					{
+						key: "source-mode",
+						label: sourcePanel.label,
+						icon: <CodeReference aria-hidden />,
+						checked: isSourceMode,
+						onSelect: () => setEditorMode(isSourceMode ? "visual" : "source"),
+					},
+				]
+			: []),
+		...extensions.menuItems,
+	];
 	const sourceEditor = sourcePanel && (
 		<>
 			<sourcePanel.Panel
@@ -440,11 +500,14 @@ export function EntryEditorShell({
 			/>
 			{bodyIssue && (
 				<Text as="p" id={SOURCE_ERROR_ID} tone="danger">
-					{issueLine(bodyIssue)}
+					{fieldIssueLine(bodyIssue)}
 				</Text>
 			)}
 		</>
 	);
+
+	// The compare screen stands in for the editor; the editor and what it holds are still here when it goes.
+	if (compareMode !== null && canCompare) return <EntryCompareScreen editor={editor} mode={compareMode} />;
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
@@ -455,6 +518,7 @@ export function EntryEditorShell({
 						commands={commands}
 						isInspectorOpen={isInspectorOpen}
 						onToggleInspector={() => setIsInspectorOpen((open) => !open)}
+						menuItems={menuItems}
 					/>
 
 					<EntryEditorBanners
@@ -464,6 +528,7 @@ export function EntryEditorShell({
 						sourceChanged={sourceChanged && Boolean(translationSource)}
 						onCompareSource={() => setIsSourceCompareOpen(true)}
 					/>
+					<EntryEditorRecoveryStrips editor={editor} />
 
 					<Inline align="stretch" gap={0} grow minHeight={0} overflow="hidden" position="relative">
 						{/* The body and its side panes. They size by this area's width, not the window's: a panel beside it takes room the window does not lose. */}
@@ -494,21 +559,12 @@ export function EntryEditorShell({
 									doc={form.doc}
 									allowed={site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined}
 									titleField={
-										<>
+										<Stack gap={16}>
 											{languageTabs}
-											{titleInput}
-										</>
+											<div>{titleInput}</div>
+										</Stack>
 									}
-									toolbarAside={
-										<Inline gap={4}>
-											{site.ADMIN_TEMPLATES && (
-												<TemplateMenu currentDoc={form.doc} disabled={isReadOnly} onApply={editor.setBody} />
-											)}
-											{extensions.toolbar}
-											{sourcePaneToggle}
-											{sourceModeToggle}
-										</Inline>
-									}
+									templates
 									sourceView={isSourceMode ? sourceEditor : undefined}
 									editable={!isReadOnly}
 									onChange={editor.setBody}
@@ -531,7 +587,6 @@ export function EntryEditorShell({
 									incomingItems={incoming.items}
 									isLoadingIncoming={incoming.loading}
 									onRefreshIncoming={(id) => void refreshIncoming(id)}
-									onClose={() => setIsInspectorOpen(false)}
 									focusPath={pendingFieldPath !== "title-canvas" ? pendingFieldPath : null}
 									onFocused={() => setPendingFieldPath(null)}
 								/>
@@ -542,7 +597,8 @@ export function EntryEditorShell({
 
 					<StatusBar
 						save={{
-							status: saveStatus,
+							// A draft kept only in this browser, not loaded yet, is what the entry stands at: the bar says so until it is answered.
+							status: saveStatus === "saved" && editor.recovery !== null ? "local-only" : saveStatus,
 							savedAt,
 							backupAvailable: editor.recoveryCopyAvailable,
 							onSave: () => void commands.handleSaveNow(),
@@ -556,8 +612,6 @@ export function EntryEditorShell({
 							textIssues: extensions.textIssues,
 						}}
 					/>
-
-					<EntryEditorRecoveryDialogs editor={editor} />
 
 					{commands.confirmDialog}
 					{translationSource && (

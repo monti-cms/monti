@@ -77,6 +77,7 @@ Other props:
 - `fix` "없음", "요약", "대체 텍스트": which to-do is being fixed in the panel.
 - `toast` "없음", "발행 막힘", "발행됨": the toast.
 - `pubMenu`: the publish menu with keep-date and today's-date choices.
+- `moreMenu` "없음", "열림", "본문 폭": the header ⋯ menu open, and its "본문 폭 ▸" second level open. The document tools are its middle group (see EditorTools).
 - `trashed`: the read-only trashed-post view.
 - `img` "없음", "올리는 중", "설정", "파일": the image or file block state.
 - `panelFill`, `seriesPending`, `todoOpen`, `pluginOpen`, `panel`: panel and strip open states.
@@ -136,6 +137,8 @@ States (`mode`, default "편집 충돌"):
 |---|---|---|
 | "편집 충돌" | Your unsaved input against the latest server version (v4, saved 10:41); load the server version or save your input. | 1.17 |
 | "임시 저장본" | The browser-only draft (10. 26 10:12) against the server copy (10. 26 09:58); load the draft or discard it. | 1.19 |
+
+In code it is the edit address with `?compare=conflict` or `?compare=draft`, drawn by the editor in place of its own screen, so the input that is not saved stays in the editor while it is compared. Only the properties that differ are listed on top of each side; the title and the body are compared word by word and block by block (`compareEntries`). The count in the header and in the status bar ("다른 곳 3") is the number of properties, the title and the body blocks that differ.
 
 <a id="translate"></a>
 ## Translate: (untitled)
@@ -285,7 +288,7 @@ States (`mode`, default "폴더 안"):
 | "올리는 중" | Upload in progress: per-file progress or waiting. | 6.03 |
 | "올리기 실패" | Failed uploads stay in place: unsupported type (remove), too large (shrink and retry, remove). | 6.04 |
 | "파일 열기" | Side panel for a file: address, name, folder, alt text, caption, type, size, date, used in. | 6.16 |
-| "바꾸기 메뉴" | Side panel ⋯ menu: replace file, copy ID, copy address, open in new tab. | 6.18 |
+| "바꾸기 메뉴" | Side panel ⋯ menu: replace file, copy ID, move to trash (the address actions are in the body). | 6.18 |
 | "파일 바꾸기" | The chosen replacement file confirmed; the places using it will use the new file. | 6.19 |
 | "여러 개 선택" | Two files selected: bulk bar with move to folder, trash, clear. | 6.20 |
 | "폴더로 옮기기" | Bulk bar "폴더로" menu: top level, folders, new folder. | 6.21 |
@@ -352,15 +355,15 @@ States (`stage`, default "라이브러리"):
 ## Templates: "도구 · 템플릿"
 
 - Board: `Templates.dc.html` (canvas row: "도구")
-- Purpose: Tools › Templates: the list of post templates with the last edit date.
-- Used in flows: none.
+- Purpose: Tools › Templates: the list of post templates. A row holds the name (the way into the template's page), its headings in one line, the day it was edited ("10. 20 고침") and a ⋯ with duplicate and delete. "+ 템플릿 추가" is in the page header. The page is the content width (880), not a wide list.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
 
 <a id="templateeditor"></a>
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
 - Board: `TemplateEditor.dc.html` (canvas row: "도구")
-- Purpose: The template editor: the editor with a template name field, saved with ⌘S.
-- Used in flows: none.
+- Purpose: The template editor, a page of its own (`/templates/new`, `/templates/<id>/edit`), outside the tools page: the "템플릿" back link, "저장 안 됨" (only while something is changed) and "저장" (always there, the page's one primary pill, as it has no publish; no shortcut on it), a ⋯ with duplicate and delete (not on a new template), the assistant button, the name field with no label (placeholder and accessible name "템플릿 이름") where an entry's title sits (`text-display`, 16 above, 20 below) over the reading-width body, with the one ink rule under it (32 above the body), and a status bar with the character count only. A save refused because the template changed elsewhere shows the notice strip (Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기"); a failed load shows the shared load-error strip with a retry.
+- Used in flows: none. Test: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>
 ## Data: "도구 · 데이터"
@@ -478,7 +481,7 @@ States (`attempt`, default "처음"):
 ## Settings: "설정 · 사이트"
 
 - Board: `Settings.dc.html` (canvas row: "설정")
-- Purpose: Settings › Site: host names, preview path, home link and the other site settings, with save or PR behaviour by site kind.
+- Purpose: Settings › Site: host names, preview path and the other site settings, with save or PR behaviour by site kind.
 - Used in flows: 2.20, 11.01–11.04, 11.09, 11.13, 11.15, 11.15b
 
 States (`stage`, default "기본"):
@@ -488,7 +491,7 @@ States (`stage`, default "기본"):
 | "기본" | Settings › Site, as stored (default). | 2.20 |
 | "호스트 추가" | A new host name typed in the row. | 11.01 |
 | "언어 쿼리" | Preview language query field shown after turning off the language in the preview path. | 11.02 |
-| "칸 오류" | Field error on the home link; saving blocked. | 11.03 |
+| "칸 오류" | Field error under a host name row; saving blocked. | 11.03 |
 | "나가기 확인" | Leave dialog for unsaved changed places. | 11.04 |
 | "운영 글 쓰는 방식" | Production with the GitHub plugin: writing rules edited, button "저장". | 11.09 |
 | "운영 검토" | Review that marks which changes save directly and which go to the PR. | 11.13 |

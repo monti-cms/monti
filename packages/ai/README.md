@@ -20,7 +20,6 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "A personal tech blog", // Goes at the very top of every action's instruction. Defaults to "website"
-		autoImageText: true, // Fill in the alt text and caption of an image as it goes into the body. Off by default
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // Replace (same name)
 			draft: false, // Turn off
@@ -30,10 +29,8 @@ plugins: [
 ],
 ```
 
-`autoImageText: true` subscribes the AI plugin to the editor's `editor.imageInserted` event ("Admin events" in the [admin README](../admin/README.md)): when an
-image goes into the body, it runs `imageAlt` and `imageCaption` on it and writes the first candidate of each into the field while that field is still empty. The
-image is in at once and shows that its text is being written; what you type first is kept, and an action that is off or has no ready connection is skipped. With it
-on, the image dialog lets the alt text be left empty.
+An image gets no alt text or caption on its own: the person writes it in the image dialog, or presses "Fill" next to the field, which runs `imageAlt` or `imageCaption` and
+puts the result in at once (the first candidate).
 
 ### Built-in actions
 
@@ -43,6 +40,7 @@ on, the image dialog lets the alt text be left empty.
 | `summary` | Text field with the summary role (`role: "summary"`). Length comes from the field's `max` (160 if unset) | It is in a collection with a body |
 | `tags` | Multi-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
 | `category` | Single-relation field pointing to an item collection (`kind: "item"`). Choices come from the target collection | It is in a collection with a body |
+| `series` | Backlink field (`fields.backlink`, e.g. the series a post is listed in). Picks one series from the collection the backlink points from, and adds the post to it | It is in a collection with a body |
 | `imageAlt`, `imageCaption` | Alt text and caption in the body image and media screens | Always |
 | `mediaFilename` | File name in the media screen | Always |
 | `translate` | Block translation in the translation editor. The block props to translate come from the block definition (`translatable`) | There are two or more locales |
@@ -187,7 +185,7 @@ then text inputs. An action whose result must have a specific shape to pass its 
   `PUT { expectedVersion, texts }` (edit many), and `DELETE ?key=&expectedVersion=` (delete). All return the updated list, and a
   version mismatch returns 409.
 - **Polish and draft**: `polish` (the menu that appears when you select text in the body; shows the changes, then applies them) and
-  `draft` (slash menu and empty-document toolbar; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
+  `draft` (slash menu and the ⋯ menu of an empty document; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
   automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Prompt snippets added in the
   admin screen go into the instruction as `{{snippet.key}}` in the admin screen.
 - **Try it**: on the admin AI screen, run an action before saving from the bottom right of the action. The fields are built from the
@@ -227,6 +225,8 @@ ai({
 	},
 });
 ```
+
+`askInstruction` lets the person type an extra request before the run; only the translation, selection, insert and block slots have a place for it (a field, image or media action runs at one press and puts its result in at once), and the config check refuses it elsewhere.
 
 For a streamed MDX result, only a ` ```mdx ` fence wrapping the whole answer is stripped. Fences of other languages, which are the
 block's source, are left as is.

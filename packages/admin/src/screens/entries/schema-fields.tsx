@@ -10,7 +10,7 @@ import type {
 	ValueField,
 	ViewField,
 } from "@monti-cms/core";
-import type { Collection, PanelGroup } from "@monti-cms/core/site";
+import type { Collection } from "@monti-cms/core/site";
 import {
 	bodyExcerpt,
 	fillFromBodyLength,
@@ -29,7 +29,6 @@ import {
 	FormFieldLabel,
 	FormFieldLegend,
 	FormFieldSet,
-	Heading,
 	IconButton,
 	Inline,
 	Input,
@@ -50,45 +49,24 @@ import {
 	isFieldInputParts,
 	useAdminComponents,
 } from "../../admin-components";
-import { type CmsIssue, issueLine } from "../../api/error-message";
+import { type CmsIssue, fieldIssueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
+import { isComposingKey } from "../../lib/keyboard";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
-import {
-	BacklinkInput,
-	EntryPicker,
-	type FieldInputProps,
-	type IncomingReference,
-	multilineProps,
-	OrderedEntryList,
-} from "./field-inputs";
+import { BacklinkInput, EntryPicker, type FieldInputProps, multilineProps, OrderedEntryList } from "./field-inputs";
 import { FieldView } from "./field-views";
 import { MediaInput } from "./media-image-input";
 import { entriesMessages } from "./messages";
+import { usePropertyEdit } from "./property-edit";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
 import { RelationCombobox } from "./relation-combobox";
 import { type FieldState, useEntryFormSelector, useEntryFormStore, useField } from "./use-field";
 import { useRelationSearch } from "./use-relation-search";
 
-/** Usages of the entry the caller already loaded. A backlink input shows them without fetching again. */
-export interface SchemaFieldsReferences {
-	items: readonly IncomingReference[];
-	loading: boolean;
-	refresh: () => void;
-}
-
 interface SchemaFieldsProps {
-	onSlugChange?: (slug: string) => void;
-	onRegenerateSlug?: () => void;
 	/** Hint text of the slug input. Used when switching to show the value to be generated when empty. */
 	slugPlaceholder?: string;
-	/** Whether to show the always-visible description under the field. */
-	showDescriptions?: boolean;
-	/** Render only this group (splitting per tab in the edit screen's properties panel). All if absent. */
-	include?: (group: PanelGroup) => boolean;
-	/** Group title style. `plain` is a small title that does not collapse (the edit screen's properties panel). */
-	sections?: "collapsible" | "plain";
-	references?: SchemaFieldsReferences;
 }
 
 interface FieldRowProps {
@@ -104,11 +82,9 @@ interface FieldRowProps {
 }
 
 /**
- * Label, required mark, error and help of one field. If `slot` exists, a slot button goes next to the label and the result below the input.
- * All inputs in the properties panel use this row.
+ * Label, required mark, error and help of one field in a form. If `slot` exists, the fill action goes on the label row, at the right end.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }: FieldRowProps) {
-	const _site = useSite();
 	if (slot) {
 		return (
 			<SlotFieldRow id={id} label={label} required={required} issue={issue} help={help} slot={slot} aside={aside}>
@@ -116,24 +92,14 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			</SlotFieldRow>
 		);
 	}
-	const labelNode = (
-		<FormFieldLabel htmlFor={id} required={required}>
-			{label}
-		</FormFieldLabel>
-	);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
-			{aside ? (
-				<Inline justify="between" gap={8}>
-					{labelNode}
-					{aside}
-				</Inline>
-			) : (
-				labelNode
-			)}
+			<FormFieldLabel htmlFor={id} required={required} action={aside}>
+				{label}
+			</FormFieldLabel>
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
-			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{fieldIssueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }
@@ -148,25 +114,27 @@ function SlotFieldRow({
 	aside,
 	children,
 }: FieldRowProps & { slot: SlotRequest }) {
-	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined}>
-			<Inline justify="between" gap={8}>
-				<FormFieldLabel htmlFor={id} required={required}>
-					{label}
-				</FormFieldLabel>
-				{aside || trigger ? (
-					<Inline gap={4}>
-						{aside}
-						{trigger}
-					</Inline>
-				) : null}
-			</Inline>
+			<FormFieldLabel
+				htmlFor={id}
+				required={required}
+				action={
+					aside || trigger ? (
+						<Inline gap={8}>
+							{aside}
+							{trigger}
+						</Inline>
+					) : undefined
+				}
+			>
+				{label}
+			</FormFieldLabel>
 			{help && <FormFieldDescription>{help}</FormFieldDescription>}
 			{children}
 			{panel}
-			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{fieldIssueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }
@@ -223,11 +191,13 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 }
 
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
-function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
+export function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInputParts }) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
 	const { fieldInputs } = useAdminComponents();
+	// Opened in place in the properties list: the assistant's blue until edited, and Enter or Escape ends the edit.
+	const edit = usePropertyEdit();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
 	if (registered && !isFieldInputParts(registered)) {
 		const Custom = registered;
@@ -246,10 +216,14 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					{...multilineProps(field)}
 					autoComplete="off"
 					value={text}
+					proposal={edit?.proposal}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					onKeyDown={(event) => {
+						if (event.key === "Escape") edit?.done();
+					}}
 				/>
 			) : (
 				<Input
@@ -257,10 +231,14 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					size="sm"
 					autoComplete="off"
 					value={text}
+					proposal={edit?.proposal}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
+					onKeyDown={(event) => {
+						if ((event.key === "Enter" && !isComposingKey(event)) || event.key === "Escape") edit?.done();
+					}}
 				/>
 			);
 		case "select": {
@@ -274,9 +252,13 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					value={text || field.defaultValue}
 					items={items}
 					disabled={context.disabled}
+					defaultOpen={Boolean(edit)}
+					onOpenChange={(open) => {
+						if (!open) edit?.done();
+					}}
 					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					<SelectTrigger id={id} size="sm" width="full" aria-describedby={describedBy}>
+					<SelectTrigger id={id} size="sm" width="full" proposal={edit?.proposal} aria-describedby={describedBy}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -299,11 +281,10 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 
 interface RowProps {
 	name: string;
-	showDescriptions: boolean;
 }
 
 /** The entry a site registered under the field's `input` name, if any. */
-function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
+export function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
 	const { fieldInputs } = useAdminComponents();
 	const input = field.definition && "input" in field.definition ? field.definition.input : undefined;
 	return input ? fieldInputs?.[input] : undefined;
@@ -314,32 +295,20 @@ function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
  * or read-only state changes. An input a site registered may read the whole form (`FieldInputProps.form`), so only that case
  * subscribes to the form as a whole.
  */
-const ValueRow = memo(function ValueRow({ name, showDescriptions }: RowProps) {
+const ValueRow = memo(function ValueRow({ name }: RowProps) {
 	const field = useField(name);
 	const registered = useRegisteredInput(field);
 	if (!field.definition) return null;
-	return registered ? (
-		<FormBoundRow field={field} showDescriptions={showDescriptions} />
-	) : (
-		<ValueRowView field={field} showDescriptions={showDescriptions} />
-	);
+	return registered ? <FormBoundRow field={field} /> : <ValueRowView field={field} />;
 });
 
-function FormBoundRow({ field, showDescriptions }: { field: FieldState; showDescriptions: boolean }) {
+function FormBoundRow({ field }: { field: FieldState }) {
 	const locked = field.readOnlyReason === "locked";
 	const form = useEntryFormSelector((state) => (locked && state.locked ? state.locked.values : state.form));
-	return <ValueRowView field={field} showDescriptions={showDescriptions} form={form} />;
+	return <ValueRowView field={field} form={form} />;
 }
 
-function ValueRowView({
-	field,
-	showDescriptions,
-	form,
-}: {
-	field: FieldState;
-	showDescriptions: boolean;
-	form?: EntryForm;
-}) {
+function ValueRowView({ field, form }: { field: FieldState; form?: EntryForm }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
@@ -365,7 +334,7 @@ function ValueRowView({
 		context: { entryId, locale, groupId: entry?.translationGroupId, disabled: field.readOnly, entry },
 		onChange: field.setValue,
 	};
-	const help = locked ? field.lockedNote : showDescriptions ? field.description : undefined;
+	const help = locked ? field.lockedNote : field.description;
 	// Input pieces registered by extensions (right of the label row, hint text, input override).
 	const registered = definition.input ? fieldInputs?.[definition.input] : undefined;
 	const parts = registered && isFieldInputParts(registered) ? registered : undefined;
@@ -415,39 +384,17 @@ function ValueRowView({
 	);
 }
 
-const SlugRow = memo(function SlugRow({
-	name,
-	showDescriptions,
-	onSlugChange,
-	onRegenerateSlug,
-	placeholder,
-}: RowProps & {
-	onSlugChange?: (slug: string) => void;
-	onRegenerateSlug?: () => void;
-	placeholder?: string;
-}) {
-	const site = useSite();
-	const t = useTranslator(entriesMessages);
+const SlugRow = memo(function SlugRow({ name, placeholder }: RowProps & { placeholder?: string }) {
 	const field = useField<string>(name);
-	const collection = useEntryFormSelector((state) => state.collection);
 	const definition = field.definition as SlugField;
-	const changeSlug = onSlugChange ?? field.setValue;
-	const request = field.slotRequest;
-	const slot = useMemo(
-		() => (request ? { ...request, apply: (next: string) => changeSlug(next) } : undefined),
-		[request, changeSlug],
-	);
-	const fromLabel = definition.from
-		? (site.schemaOf(collection).fields[definition.from]?.label ?? definition.from)
-		: "";
-	const regenerateLabel = t("relation.regenerate", { label: fromLabel });
+	const slot = field.slotRequest ?? undefined;
 	return (
 		<FieldRow
 			id={field.ids.input}
 			label={field.label}
 			required={field.required}
 			issue={field.error?.issue}
-			help={showDescriptions ? field.description : undefined}
+			help={field.description}
 			slot={slot}
 		>
 			<Affix
@@ -456,22 +403,15 @@ const SlugRow = memo(function SlugRow({
 				aria-invalid={field.inputProps["aria-invalid"]}
 				aria-describedby={field.inputProps["aria-describedby"]}
 				value={field.value ?? ""}
-				onChange={(event) => changeSlug(event.target.value)}
+				onChange={(event) => field.setValue(event.target.value)}
 				placeholder={placeholder ?? definition.placeholder}
-				action={
-					onRegenerateSlug && definition.from ? (
-						<IconButton label={regenerateLabel} side="bottom" disabled={field.readOnly} onClick={onRegenerateSlug}>
-							<Renew aria-hidden />
-						</IconButton>
-					) : undefined
-				}
 			/>
 		</FieldRow>
 	);
 });
 
 /** A conditional field: its choice, then the fields that belong to the chosen option. */
-const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: RowProps) {
+const ConditionalRow = memo(function ConditionalRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const choice = useField<string>(name);
@@ -480,15 +420,15 @@ const ConditionalRow = memo(function ConditionalRow({ name, showDescriptions }: 
 	const nested = field.values[selected] ?? {};
 	return (
 		<Stack gap={12}>
-			<ValueRow name={name} showDescriptions={showDescriptions} />
+			<ValueRow name={name} />
 			{Object.keys(nested).map((nestedName) => (
-				<ValueRow key={nestedName} name={nestedName} showDescriptions={showDescriptions} />
+				<ValueRow key={nestedName} name={nestedName} />
 			))}
 		</Stack>
 	);
 });
 
-const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
+const ViewRow = memo(function ViewRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const form = useEntryFormSelector((state) => state.form);
@@ -496,7 +436,7 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
 	const field = site.schemaOf(collection).fields[name] as ViewField;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
 	return field.label ? (
-		<FieldRow id={`cms-${name}`} label={field.label} help={showDescriptions ? field.description : undefined}>
+		<FieldRow id={`cms-${name}`} label={field.label} help={field.description}>
 			{view}
 		</FieldRow>
 	) : (
@@ -504,11 +444,7 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
 	);
 });
 
-const BacklinkRow = memo(function BacklinkRow({
-	name,
-	showDescriptions,
-	references,
-}: RowProps & { references?: SchemaFieldsReferences }) {
+const BacklinkRow = memo(function BacklinkRow({ name }: RowProps) {
 	const site = useSite();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const locked = useEntryFormSelector((state) => state.locked);
@@ -520,21 +456,8 @@ const BacklinkRow = memo(function BacklinkRow({
 	const readOnly = Boolean(locked);
 	const targetId = groupId ?? entryId;
 	return (
-		<FieldRow
-			id={`cms-${name}`}
-			label={field.label}
-			help={locked ? locked.note : showDescriptions ? field.description : undefined}
-		>
-			<BacklinkInput
-				field={field}
-				targetId={targetId}
-				disabled={disabled || readOnly}
-				shared={
-					targetId === entryId && references
-						? { references: references.items, loading: references.loading, refresh: references.refresh }
-						: undefined
-				}
-			/>
+		<FieldRow id={`cms-${name}`} label={field.label} help={locked ? locked.note : field.description}>
+			<BacklinkInput field={field} targetId={targetId} disabled={disabled || readOnly} />
 		</FieldRow>
 	);
 });
@@ -544,15 +467,7 @@ const BacklinkRow = memo(function BacklinkRow({
  * and renders fields not in the layout after the last group in declaration order. For a conditional field, shows its dependent input when the condition holds.
  * The values, issues and read-only state come from the nearest `EntryFormProvider`; each field row reads them with `useField`.
  */
-export function SchemaFields({
-	onSlugChange,
-	onRegenerateSlug,
-	slugPlaceholder,
-	showDescriptions = true,
-	include,
-	sections = "collapsible",
-	references,
-}: SchemaFieldsProps) {
+export function SchemaFields({ slugPlaceholder }: SchemaFieldsProps) {
 	const site = useSite();
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
@@ -563,28 +478,19 @@ export function SchemaFields({
 		if (!field) return null;
 		switch (field.kind) {
 			case "slug":
-				return (
-					<SlugRow
-						key={name}
-						name={name}
-						showDescriptions={showDescriptions}
-						onSlugChange={onSlugChange}
-						onRegenerateSlug={onRegenerateSlug}
-						placeholder={slugPlaceholder}
-					/>
-				);
+				return <SlugRow key={name} name={name} placeholder={slugPlaceholder} />;
 			case "conditional":
-				return <ConditionalRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ConditionalRow key={name} name={name} />;
 			case "view":
-				return <ViewRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ViewRow key={name} name={name} />;
 			case "backlink":
-				return <BacklinkRow key={name} name={name} showDescriptions={showDescriptions} references={references} />;
+				return <BacklinkRow key={name} name={name} />;
 			default:
-				return <ValueRow key={name} name={name} showDescriptions={showDescriptions} />;
+				return <ValueRow key={name} name={name} />;
 		}
 	};
 
-	const groups = site.panelGroupsOf(collection).filter((group) => !include || include(group));
+	const groups = site.panelGroupsOf(collection);
 
 	return (
 		<>
@@ -595,24 +501,6 @@ export function SchemaFields({
 				if (!group.group) {
 					return (
 						<Stack key={key} gap={16}>
-							{visible.map(renderField)}
-						</Stack>
-					);
-				}
-				if (sections === "plain") {
-					// If there is only one group (one group in one tab), no title is added.
-					if (groups.length === 1) {
-						return (
-							<Stack key={key} gap={16}>
-								{visible.map(renderField)}
-							</Stack>
-						);
-					}
-					return (
-						<Stack as="section" key={key} aria-label={group.group} gap={16} border="top" paddingTop={16}>
-							<Heading as="h3" variant="label">
-								{group.group}
-							</Heading>
 							{visible.map(renderField)}
 						</Stack>
 					);

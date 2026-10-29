@@ -91,7 +91,7 @@ describe("renderMdx", () => {
 			}),
 		});
 		expect(ok).toContain("발표 자료");
-		expect(ok).toContain("PDF · 2.4MB");
+		expect(ok).toContain("PDF · 2.4 MB");
 		expect(ok).toMatch(/<a href="https:\/\/cdn\.example\/a\.pdf" download="deck\.pdf"/);
 
 		const unresolved = await html(source, { labels: { fileUnavailable: "파일 없음" } });

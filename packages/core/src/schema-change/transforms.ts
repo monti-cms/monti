@@ -11,6 +11,8 @@ import type { SchemaChange } from "./types";
  * - `dropField`: deletes data, and only the values of a field the schema no longer has.
  * - `dropCollection`: deletes data, and only of a collection the schema no longer has: every entry it held, with its folders and addresses. The store deletes the
  *   rows itself (it is not a rewrite of bodies), so `applyTransforms` does nothing for it.
+ * - `trashLocale`: moves data to the trash, and only of a language the schema no longer lists: every live translation in it, of every collection, the way the
+ *   trash screen discards one (restorable, expiring like the rest). The store does it itself (it is not a rewrite of bodies), so `applyTransforms` does nothing for it.
  * - `setDefault`: an entry with no value gets one (the field must be text or select). A translation only gets it for a per-language field.
  *
  * Moving a field into or out of a conditional branch needs no transform: a stored value is kept wherever its field is, so nothing moves in the data.
@@ -25,6 +27,9 @@ export interface TransformProblem {
 /** The part of a site the transforms read. */
 type TransformSite = Pick<Site, "isCollection" | "storedField">;
 
+/** The part of a site the check of the transforms reads: the collections and fields, and the languages of the schema after the change. */
+type CheckedSite = TransformSite & { readonly config: Pick<Site["config"], "locales"> };
+
 const isEmpty = (value: unknown): boolean =>
 	value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
@@ -33,10 +38,19 @@ const isEmpty = (value: unknown): boolean =>
  * a field that is not there to rename to, a `dropField` of a field the schema still has (it would delete live data), a `mapOption` to something that is not an
  * option, a default that is not valid for its field.
  */
-export function checkTransforms(site: TransformSite, transforms: readonly SchemaMigration[]): TransformProblem[] {
+export function checkTransforms(site: CheckedSite, transforms: readonly SchemaMigration[]): TransformProblem[] {
 	const problems: TransformProblem[] = [];
 	const problem = (id: string, message: string) => problems.push({ id, message });
 	for (const [index, item] of transforms.entries()) {
+		if (item.op === "trashLocale") {
+			if (site.config.locales.some((locale) => locale.code === item.locale)) {
+				problem(
+					item.id,
+					`language "${item.locale}" is still in the schema; remove it there first (a trash moves its translations to the trash)`,
+				);
+			}
+			continue;
+		}
 		const at = `${item.collection}`;
 		if (item.op === "dropCollection") {
 			if (site.isCollection(item.collection)) {
@@ -117,9 +131,16 @@ export interface TransformResult {
 	readonly conflicts: readonly { readonly id: string; readonly from: string; readonly to: string }[];
 }
 
-/** Which collections' bodies a list of transforms rewrites. A dropped collection is not one of them: its rows are deleted, not rewritten. */
+/** Which collections' bodies a list of transforms rewrites. A dropped collection is not one of them: its rows are deleted, not rewritten. Nor is a trashed language: its entries change status only. */
 export const transformCollections = (transforms: readonly SchemaMigration[]): string[] => [
-	...new Set(transforms.filter((item) => item.op !== "dropCollection").map((item) => item.collection)),
+	...new Set(
+		transforms.flatMap((item) => (item.op === "dropCollection" || item.op === "trashLocale" ? [] : [item.collection])),
+	),
+];
+
+/** The languages whose translations a list of transforms moves to the trash (`trashLocale`). */
+export const trashedLocales = (transforms: readonly SchemaMigration[]): string[] => [
+	...new Set(transforms.flatMap((item) => (item.op === "trashLocale" ? [item.locale] : []))),
 ];
 
 /** The collections whose data a list of transforms deletes (`dropCollection`). */
@@ -146,7 +167,7 @@ export function applyTransforms(
 	};
 
 	for (const item of transforms) {
-		if (item.collection !== body.collection) continue;
+		if (item.op === "trashLocale" || item.collection !== body.collection) continue;
 		switch (item.op) {
 			case "renameField": {
 				if (!Object.hasOwn(current, item.from)) break;
@@ -197,7 +218,8 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 
 /**
  * The transforms that fit a change, for a screen to offer. A removed field offers a drop (and a rename to each field that looks like it was renamed, see
- * `SchemaDiff.renameHints`, when `renameTo` lists candidates); a removed collection offers a drop of its entries; a removed option offers a mapping to each option that is left; a field that became required
+ * `SchemaDiff.renameHints`, when `renameTo` lists candidates); a removed collection offers a drop of its entries; a removed language offers to move its
+ * translations to the trash; a removed option offers a mapping to each option that is left; a field that became required
  * offers a default. Nothing is offered for a change data does not follow from.
  */
 export function suggestTransforms(
@@ -207,6 +229,8 @@ export function suggestTransforms(
 	switch (change.kind) {
 		case "collection_removed":
 			return [{ op: "dropCollection", collection: change.collection }];
+		case "locale_removed":
+			return [{ op: "trashLocale", locale: change.locale }];
 		case "field_removed":
 			return [
 				...(context.renameTo ?? []).map(

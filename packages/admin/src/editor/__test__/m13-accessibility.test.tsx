@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderInRouter as render } from "../../test/router";
-import { BlockHandleOverlay } from "../block-handle-overlay";
 import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";
 import { slashCommands } from "../slash-command";
@@ -31,7 +30,7 @@ afterEach(cleanup);
 const CmsImageNodeView = withBlockEditor(ImageBlockView, image);
 
 describe("editor accessibility", () => {
-	it("names image and block controls and exposes alignment state", async () => {
+	it("names image controls and exposes alignment state", async () => {
 		const updateAttributes = vi.fn();
 		const deleteNode = vi.fn();
 		const nodeViewProps = {
@@ -52,13 +51,6 @@ describe("editor accessibility", () => {
 		render(
 			<>
 				<CmsImageNodeView {...nodeViewProps} />
-				<BlockHandleOverlay
-					coords={{ top: 10, left: 10 }}
-					onMoveUp={vi.fn()}
-					onMoveDown={vi.fn()}
-					onDuplicate={vi.fn()}
-					onDelete={vi.fn()}
-				/>
 			</>,
 		);
 
@@ -68,12 +60,6 @@ describe("editor accessibility", () => {
 		expect(updateAttributes).toHaveBeenCalledWith({ align: "left" });
 		// Delete lives only in the block handle menu (the same action is not placed in two spots).
 		expect(screen.queryByRole("button", { name: "이미지 삭제" })).toBeNull();
-
-		const blockMenu = screen.getByRole("button", { name: "블록 조작" });
-		expect(blockMenu.getAttribute("aria-expanded")).toBe("false");
-		fireEvent.click(blockMenu);
-		expect(blockMenu.getAttribute("aria-expanded")).toBe("true");
-		expect(await screen.findByRole("menuitem", { name: /위로 이동/ })).toBeTruthy();
 	});
 
 	it("assigns unique IDs to each image editor field", async () => {
@@ -111,9 +97,11 @@ describe("editor accessibility", () => {
 		render(
 			<SlashMenuPopup
 				items={[slashCommands(testSite)[0]]}
-				coords={{ top: 0, left: 0 }}
+				query=""
+				caret={{ top: 0, bottom: 0, left: 0 }}
 				selectedIndex={0}
 				onSelect={onSelectSlash}
+				onHighlight={vi.fn()}
 				onClose={onCloseSlash}
 			/>,
 		);

@@ -2,6 +2,7 @@
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { cn } from "./cn";
+import { Shortcut, type ShortcutKeys } from "./shortcut";
 
 function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props) {
 	return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />;
@@ -30,8 +31,8 @@ function TooltipContent({
 	...props
 }: TooltipPrimitive.Popup.Props &
 	Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
-		/** The key combination that does the same ("⌘S"). */
-		shortcut?: string;
+		/** The keys that do the same (`["mod", "S"]`), written for the system: "⌘S" on a Mac, "Ctrl+S" elsewhere. */
+		shortcut?: ShortcutKeys;
 	}) {
 	return (
 		<TooltipPrimitive.Portal>
@@ -51,7 +52,11 @@ function TooltipContent({
 					{...props}
 				>
 					{children}
-					{shortcut && <span className="text-monti-micro opacity-70">{shortcut}</span>}
+					{shortcut && (
+						<span className="text-monti-micro opacity-70">
+							<Shortcut keys={shortcut} />
+						</span>
+					)}
 				</TooltipPrimitive.Popup>
 			</TooltipPrimitive.Positioner>
 		</TooltipPrimitive.Portal>

@@ -27,19 +27,19 @@ function Formats({ pressed = [] }: { pressed?: readonly string[] }) {
 	const on = (mark: string) => pressed.includes(mark);
 	return (
 		<>
-			<FormatButton mark="bold" label="굵게" shortcut="⌘B" pressed={on("bold")} />
-			<FormatButton mark="italic" label="기울임" shortcut="⌘I" pressed={on("italic")} />
-			<FormatButton mark="underline" label="밑줄" shortcut="⌘U" pressed={on("underline")} />
+			<FormatButton mark="bold" label="굵게" shortcut={["mod", "B"]} pressed={on("bold")} />
+			<FormatButton mark="italic" label="기울임" shortcut={["mod", "I"]} pressed={on("italic")} />
+			<FormatButton mark="underline" label="밑줄" shortcut={["mod", "U"]} pressed={on("underline")} />
 			<FormatButton mark="strike" label="취소선" pressed={on("strike")} />
 			<FormatButton mark="code" label="코드" pressed={on("code")} />
 			<FormatBarSeparator />
 			<FormatButton mark="superscript" label="위 첨자" pressed={on("superscript")} />
 			<FormatButton mark="subscript" label="아래 첨자" pressed={on("subscript")} />
-			<FormatButton mark="link" label="링크" shortcut="⌘K" pressed={on("link")} />
+			<FormatButton mark="link" label="링크" shortcut={["mod", "K"]} pressed={on("link")} />
 			<FormatButton mark="footnote" label="각주" pressed={on("footnote")} />
 			<FormatButton mark="more" label="사이트가 더한 서식" />
 			<FormatBarSeparator />
-			<FormatBarRequest label="요청" shortcut="⌘J" />
+			<FormatBarRequest label="요청" />
 		</>
 	);
 }

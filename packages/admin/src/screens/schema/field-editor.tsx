@@ -1,25 +1,37 @@
 "use client";
 
-import { Add, ChevronDown, ChevronRight } from "@carbon/icons-react";
-import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
+import { Add, ChevronDown, ChevronRight, Close } from "@carbon/icons-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { fieldTraits, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
+	Caret,
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger,
+	FormFieldLegend,
+	FormFieldSet,
 	Grid,
+	IconButton,
 	Inline,
 	Input,
+	OptionRow,
+	OptionRowHandle,
+	OptionTable,
 	Stack,
 	Text,
 	TextButton,
 } from "@monti-cms/ui";
 import { type ReactNode, useState } from "react";
 import { useAdminComponents } from "../../admin-components";
-import { RelationCombobox, type RelationOption } from "../entries/relation-combobox";
-import { Labeled } from "../shared/labeled";
-import { AddFieldDialog } from "./add-field";
+import { AddFieldSheet } from "./add-field";
 import {
 	countOrUndefined,
 	FlagSwitch,
@@ -28,14 +40,14 @@ import {
 	orUndefined,
 	Pick,
 	RowActions,
-	SegmentedField,
 	TextInput,
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
 import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
-
 import { schemaFieldsMessages } from "./fields.messages";
+import { SortableList } from "./fields-tree-dnd";
+import { schemaMessages } from "./messages";
 import {
 	ADDABLE_KINDS,
 	addOption,
@@ -91,124 +103,164 @@ export interface OppositeSwitch {
 	readonly onChange: (on: boolean) => void;
 }
 
-/** A few names that stand for the target's entries in the preview of a relation input. */
-const previewOptions = (label: string): RelationOption[] =>
-	[1, 2, 3].map((number) => ({ value: `preview-${number}`, label: `${label} ${number}` }));
+/** Which of the settings of a kind are drawn: `basic` is the add sheet's first tab (and the inline editor), `advanced` the rest of what it offers; the field sheet splits the same settings into what is seen (`view`) and what is structure. */
+export type KindPart = "basic" | "advanced" | "view" | "structure";
 
-/**
- * The settings of a relation: what it links to and how many, the input as the entry editor will draw it, and the rest under "More". The preview is the real input
- * with stand-in entries, so a setting shows what it does instead of being described.
- */
+/** The settings of a relation: what it points to and how many, whether a new one can be made from the list, and what an unpublished target does. */
 function RelationOptions({
+	part,
 	field,
 	set,
 	change,
 	opposite,
-	more,
 }: {
+	part: KindPart;
 	field: Obj;
 	set: (key: string, value: unknown) => void;
 	change: (update: (field: Obj) => Obj) => void;
 	opposite?: OppositeSwitch;
-	more?: ReactNode;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const { collectionNames, file } = useSchemaEdit();
 	const target = typeof field.to === "string" ? field.to : "";
 	const many = field.many === true;
-	// Entries made with "Add" in the preview, on top of the stand-ins; they go when the target changes.
-	const [created, setCreated] = useState<RelationOption[]>([]);
-	const [value, setValue] = useState<string[]>([]);
-	const [moreOpen, setMoreOpen] = useState(false);
-	const options = [...previewOptions(collectionLabel(file, target)), ...created];
+	const to = (
+		<Pick
+			key="to"
+			label={t("field.relationTo")}
+			value={target}
+			items={collectionNames.map((name) => ({ value: name, label: collectionLabel(file, name) }))}
+			onChange={(next) => set("to", next)}
+		/>
+	);
+	const pickMany = (
+		<FlagSwitch
+			key="many"
+			label={t("field.many")}
+			checked={many}
+			onChange={(on) => set("many", on ? true : undefined)}
+		/>
+	);
+	const createInline = (
+		<FlagSwitch
+			key="createInline"
+			label={t("field.createInline")}
+			checked={field.createInline === true}
+			onChange={(on) => set("createInline", on ? true : undefined)}
+		/>
+	);
+	const unpublished = (
+		<Pick
+			key="unpublished"
+			label={t("field.unpublished", { target: collectionLabel(file, target) })}
+			value={unpublishedTargetsOf(field)}
+			items={(["hidden", "blocking", "allowed"] as const).map((choice) => ({
+				value: choice,
+				label: t(`field.unpublished.${choice}`),
+			}))}
+			onChange={(choice) => change((current) => withUnpublishedTargets(current, choice as UnpublishedTargets))}
+		/>
+	);
+	const placeholder = (
+		<TextInput
+			key="placeholder"
+			label={t("field.placeholder")}
+			value={field.placeholder as string | undefined}
+			onChange={(text) => set("placeholder", orUndefined(text))}
+		/>
+	);
+	const showOpposite = many && opposite && (
+		<FlagSwitch key="opposite" label={t("field.opposite")} checked={opposite.on} onChange={opposite.onChange} />
+	);
+	const shown = {
+		basic: [to, pickMany, createInline, unpublished],
+		advanced: [placeholder, showOpposite],
+		view: [placeholder],
+		structure: [to, pickMany, createInline, unpublished, showOpposite],
+	}[part].filter(Boolean);
+	return shown.length === 0 ? null : <Stack gap={16}>{shown}</Stack>;
+}
+
+/** One choice of a select as a row of the table: dragged by its handle, value and label as text until pressed, and a × that takes it out. */
+function OptionEditorRow({
+	value,
+	label,
+	fieldName,
+	taken,
+	canDrag,
+	editing,
+	change,
+}: {
+	value: string;
+	label: string | undefined;
+	fieldName: string;
+	taken: readonly string[];
+	canDrag: boolean;
+	editing: CollectionEditing;
+	change: (update: (field: Obj) => Obj) => void;
+}) {
+	const t = useTranslator(schemaFieldsMessages);
+	const ts = useTranslator(schemaMessages);
+	const { disabled } = useSchemaEdit();
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+		id: value,
+		disabled: !canDrag,
+	});
 	return (
-		<Stack gap={16}>
-			<Pick
-				label={t("field.relationTo")}
-				value={target}
-				items={collectionNames.map((name) => ({ value: name, label: collectionLabel(file, name) }))}
-				onChange={(next) => {
-					set("to", next);
-					setCreated([]);
-					setValue([]);
-				}}
-			/>
-			<SegmentedField
-				label={t("field.count")}
-				value={many ? "many" : "one"}
-				items={[
-					{ value: "one", label: t("field.one") },
-					{ value: "many", label: t("field.many") },
-				]}
-				onChange={(next) => {
-					set("many", next === "many" ? true : undefined);
-					setValue((current) => (next === "many" ? current : current.slice(0, 1)));
-				}}
-			/>
-			<Stack gap={8} radius="md" background="tool" padding={12} data-testid="relation-preview">
-				<Text variant="caption" tone="muted">
-					{t("field.preview")}
-				</Text>
-				<Text weight="medium">{typeof field.label === "string" ? field.label : ""}</Text>
-				<RelationCombobox
-					key={`${target}-${many}`}
-					aria-label={t("field.preview")}
-					options={options}
-					multiple={many}
+		<OptionRow
+			ref={setNodeRef}
+			drag={{ transform: CSS.Translate.toString(transform), transition, active: isDragging }}
+			handle={
+				canDrag ? (
+					<OptionRowHandle
+						ref={setActivatorNodeRef}
+						{...attributes}
+						{...listeners}
+						aria-label={t("options.drag", { name: value })}
+					/>
+				) : undefined
+			}
+			value={
+				<NameInput
+					bare
+					label={t("options.value")}
 					value={value}
-					onValueChange={setValue}
-					placeholder={typeof field.placeholder === "string" ? field.placeholder : undefined}
-					onCreate={
-						field.createInline === true
-							? async (label) => {
-									const option = { value: `preview-${label}`, label };
-									setCreated((current) => [...current, option]);
-									return option.value;
-								}
-							: undefined
-					}
+					taken={taken}
+					onCommit={(to) => {
+						change((current) => renameOption(current, value, to));
+						editing.onRename({
+							kind: "option",
+							collection: editing.collectionName,
+							field: fieldName,
+							from: value,
+							to,
+						});
+					}}
 				/>
-			</Stack>
-			<Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
-				<Box width="fit">
-					<CollapsibleTrigger render={<TextButton variant="quiet" />}>
-						{moreOpen ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
-						{t("field.more")}
-					</CollapsibleTrigger>
-				</Box>
-				<CollapsibleContent>
-					<Stack gap={16} paddingTop={16}>
-						<FlagSwitch
-							label={t("field.createInline")}
-							checked={field.createInline === true}
-							onChange={(on) => set("createInline", on ? true : undefined)}
-						/>
-						{many && opposite && (
-							<FlagSwitch label={t("field.opposite")} checked={opposite.on} onChange={opposite.onChange} />
-						)}
-						<Pick
-							label={t("field.unpublished")}
-							value={unpublishedTargetsOf(field)}
-							items={(["hidden", "blocking", "allowed"] as const).map((choice) => ({
-								value: choice,
-								label: t(`field.unpublished.${choice}`),
-							}))}
-							onChange={(choice) => change((current) => withUnpublishedTargets(current, choice as UnpublishedTargets))}
-						/>
-						<TextInput
-							label={t("field.placeholder")}
-							value={field.placeholder as string | undefined}
-							onChange={(text) => set("placeholder", orUndefined(text))}
-						/>
-						{more}
-					</Stack>
-				</CollapsibleContent>
-			</Collapsible>
-		</Stack>
+			}
+			label={
+				<Input
+					appearance="inline"
+					aria-label={`${t("options.label")}: ${value}`}
+					value={label ?? ""}
+					disabled={disabled}
+					onChange={(event) => change((current) => setOptionLabel(current, value, event.target.value))}
+				/>
+			}
+			action={
+				<IconButton
+					label={ts("row.remove", { name: value })}
+					disabled={disabled}
+					onClick={() => change((current) => removeOption(current, value))}
+				>
+					<Close aria-hidden />
+				</IconButton>
+			}
+		/>
 	);
 }
 
-/** The options of a select (or of the select a conditional field shows): value, label, default, order. */
+/** The options of a select (or of the select a conditional field shows): a table of value and label, an add button under it, and the default in a menu. */
 function OptionsEditor({
 	field,
 	fieldName,
@@ -225,89 +277,68 @@ function OptionsEditor({
 	const options = optionsOf(field);
 	const values = Object.keys(options);
 	const select = field.kind === "conditional" && isObj(field.discriminant) ? field.discriminant : field;
-	const [draftValue, setDraftValue] = useState("");
-	const taken = (value: string) => values.filter((item) => item !== value);
-	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
+	const defaultValue = typeof select.defaultValue === "string" ? select.defaultValue : undefined;
+	const addOne = () => {
+		let n = values.length + 1;
+		while (`option${n}` in options) n += 1;
+		change((current) => addOption(current, `option${n}`, t("options.newLabel", { n })));
+	};
 	return (
-		<Stack role="group" aria-labelledby={`options-${fieldName}`} gap={8}>
-			<Text as="div" id={`options-${fieldName}`} variant="caption" weight="medium">
-				{t("options.title")}
-			</Text>
-			<Stack as="ul" gap={8}>
-				{values.map((value, index) => (
-					<Inline as="li" key={value} wrap align="end" gap={8} border="all" radius="md" background="page" padding={8}>
-						<Box grow>
-							<NameInput
-								label={t("options.value")}
-								value={value}
-								taken={taken(value)}
-								onCommit={(to) => {
-									change((current) => renameOption(current, value, to));
-									editing.onRename({
-										kind: "option",
-										collection: editing.collectionName,
-										field: fieldName,
-										from: value,
-										to,
-									});
-								}}
-							/>
-						</Box>
-						<Box grow>
-							<TextInput
-								label={t("options.label")}
-								value={options[value]}
-								onChange={(label) => change((current) => setOptionLabel(current, value, label))}
-							/>
-						</Box>
-						<Inline as="label" gap={8} paddingBottom={8}>
-							<input
-								type="radio"
-								name={`default-${fieldName}`}
-								checked={select.defaultValue === value}
-								disabled={disabled}
-								onChange={() => change((current) => setDefaultOption(current, value))}
-							/>
-							<Text variant="caption">{t("options.default")}</Text>
-						</Inline>
-						<RowActions
-							index={index}
-							count={values.length}
-							name={value}
-							onMove={(delta) => change((current) => moveOption(current, value, delta))}
-							onRemove={() => change((current) => removeOption(current, value))}
+		<FormFieldSet>
+			<FormFieldLegend variant="field">{t("options.title")}</FormFieldLegend>
+			<OptionTable valueLabel={t("options.value")} labelLabel={t("options.label")}>
+				<SortableList
+					items={values}
+					onDragEnd={(from, to) => {
+						const delta = values.indexOf(to) - values.indexOf(from);
+						if (delta !== 0) change((current) => moveOption(current, from, delta));
+					}}
+				>
+					{values.map((value) => (
+						<OptionEditorRow
+							key={value}
+							value={value}
+							label={options[value]}
+							fieldName={fieldName}
+							taken={values.filter((item) => item !== value)}
+							canDrag={!disabled && values.length > 1}
+							editing={editing}
+							change={change}
 						/>
-					</Inline>
-				))}
-			</Stack>
+					))}
+				</SortableList>
+			</OptionTable>
 			{!disabled && (
-				<Inline align="end" gap={8}>
-					<Box width="menu">
-						<Labeled label={t("options.newValue")}>
-							<Input value={draftValue} placeholder="value" onChange={(event) => setDraftValue(event.target.value)} />
-						</Labeled>
-					</Box>
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						disabled={!addable}
-						onClick={() => {
-							change((current) =>
-								addOption(current, draftValue, draftValue.charAt(0).toUpperCase() + draftValue.slice(1)),
-							);
-							setDraftValue("");
-						}}
-					>
-						{t("options.add")}
-					</Button>
+				<Inline gap={16} paddingTop={8}>
+					<TextButton onClick={addOne}>{t("options.add")}</TextButton>
+					<Box as="span" grow />
+					{defaultValue !== undefined && defaultValue in options && (
+						<DropdownMenu>
+							<DropdownMenuTrigger render={<TextButton quiet />}>
+								{t("options.defaultIs", { label: options[defaultValue] || defaultValue })}
+								<Caret />
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuRadioGroup
+									value={defaultValue}
+									onValueChange={(next) => change((current) => setDefaultOption(current, String(next)))}
+								>
+									{values.map((value) => (
+										<DropdownMenuRadioItem key={value} value={value}>
+											{options[value] || value}
+										</DropdownMenuRadioItem>
+									))}
+								</DropdownMenuRadioGroup>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					)}
 				</Inline>
 			)}
-		</Stack>
+		</FormFieldSet>
 	);
 }
 
-/** What the kind of the field adds: its own options. */
+/** What the kind of the field adds: its own settings. `part` says which of them are drawn (see {@link KindPart}). */
 export function KindOptions({
 	name,
 	field,
@@ -316,7 +347,7 @@ export function KindOptions({
 	change,
 	place = {},
 	opposite,
-	more,
+	part = "basic",
 }: {
 	name: string;
 	field: Obj;
@@ -327,13 +358,13 @@ export function KindOptions({
 	place?: FieldPlace;
 	/** The switch that shows a many relation on its target too. */
 	opposite?: OppositeSwitch;
-	/** More settings to put under a relation's "More" (the add dialog's identifier). */
-	more?: ReactNode;
+	part?: KindPart;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const { collectionNames, file } = useSchemaEdit();
 	const optionFields = !place.branch && (
 		<FlagSwitch
+			key="optionFields"
 			label={t("field.optionFields")}
 			checked={field.kind === "conditional"}
 			onChange={(on) => change((current) => withOptionFields(current, on))}
@@ -341,165 +372,194 @@ export function KindOptions({
 	);
 	const placeholder = (
 		<TextInput
+			key="placeholder"
 			label={t("field.placeholder")}
 			value={field.placeholder as string | undefined}
 			onChange={(value) => set("placeholder", orUndefined(value))}
 		/>
 	);
 	const collections = collectionNames.map((value) => ({ value, label: value }));
+	/** The settings the part draws, one under another. */
+	const column = (lists: Record<KindPart, ReactNode[]>) => {
+		const shown = lists[part].filter(Boolean);
+		return shown.length === 0 ? null : <Stack gap={16}>{shown}</Stack>;
+	};
 	switch (field.kind) {
 		case "text": {
 			const fill = field.fillFromBody;
-			return (
-				<Stack gap={16}>
-					<FlagSwitch
-						label={t("field.multiline")}
-						checked={field.multiline === true}
-						onChange={(on) => set("multiline", on ? true : undefined)}
-					/>
-					{field.multiline === true && (
-						<TextInput
-							label={t("field.rows")}
-							type="number"
-							value={field.rows as number | undefined}
-							onChange={(value) => set("rows", countOrUndefined(value))}
-						/>
-					)}
-					<TextInput
-						label={t("field.max")}
-						type="number"
-						value={field.max as number | undefined}
-						onChange={(value) => set("max", countOrUndefined(value))}
-					/>
-					{hasBody(editing.collection) && (
-						<>
-							<FlagSwitch
-								label={t("field.fillFromBody")}
-								description={t("field.fillFromBodyHint")}
-								checked={Boolean(fill)}
-								onChange={(on) => set("fillFromBody", on ? true : undefined)}
-							/>
-							{Boolean(fill) && (
-								<TextInput
-									label={t("field.fillLength")}
-									type="number"
-									value={isObj(fill) ? (fill.maxLength as number | undefined) : undefined}
-									placeholder="160"
-									onChange={(value) => {
-										const maxLength = countOrUndefined(value);
-										set("fillFromBody", maxLength === undefined ? true : { maxLength });
-									}}
-								/>
-							)}
-						</>
-					)}
-					{placeholder}
-				</Stack>
+			const multiline = (
+				<FlagSwitch
+					key="multiline"
+					label={t("field.multiline")}
+					checked={field.multiline === true}
+					onChange={(on) => set("multiline", on ? true : undefined)}
+				/>
 			);
+			const max = (
+				<TextInput
+					key="max"
+					label={t("field.max")}
+					type="number"
+					mono
+					value={field.max as number | undefined}
+					onChange={(value) => set("max", countOrUndefined(value))}
+				/>
+			);
+			const rows = field.multiline === true && (
+				<TextInput
+					key="rows"
+					label={t("field.rows")}
+					type="number"
+					mono
+					value={field.rows as number | undefined}
+					onChange={(value) => set("rows", countOrUndefined(value))}
+				/>
+			);
+			const fillSwitch = hasBody(editing.collection) && (
+				<FlagSwitch
+					key="fill"
+					label={t("field.fillFromBody")}
+					checked={Boolean(fill)}
+					onChange={(on) => set("fillFromBody", on ? true : undefined)}
+				/>
+			);
+			const fillLength = hasBody(editing.collection) && Boolean(fill) && (
+				<TextInput
+					key="fillLength"
+					label={t("field.fillLength")}
+					type="number"
+					mono
+					value={isObj(fill) ? (fill.maxLength as number | undefined) : undefined}
+					placeholder="160"
+					onChange={(value) => {
+						const maxLength = countOrUndefined(value);
+						set("fillFromBody", maxLength === undefined ? true : { maxLength });
+					}}
+				/>
+			);
+			return column({
+				basic: [
+					multiline,
+					<Grid key="sizes" columns={2} gap={20}>
+						{max}
+						{rows}
+					</Grid>,
+					placeholder,
+					fillSwitch,
+				],
+				advanced: [fillLength],
+				view: [placeholder, rows],
+				structure: [multiline, max, fillSwitch],
+			});
 		}
 		case "slug": {
 			const texts = Object.entries(fieldsOf(editing.collection))
 				.filter(([, item]) => item.kind === "text")
 				.map(([key]) => ({ value: key, label: key }));
-			return (
-				<Stack gap={16}>
-					<Pick
-						label={t("field.slugFrom")}
-						description={t("field.slugFromHint")}
-						value={typeof field.from === "string" ? field.from : ""}
-						items={[{ value: "", label: t("none") }, ...texts]}
-						onChange={(value) => set("from", orUndefined(value))}
-					/>
-					{placeholder}
-				</Stack>
+			const from = (
+				<Pick
+					key="from"
+					label={t("field.slugFrom")}
+					value={typeof field.from === "string" ? field.from : ""}
+					items={[{ value: "", label: t("none") }, ...texts]}
+					onChange={(value) => set("from", orUndefined(value))}
+				/>
 			);
+			return column({ basic: [from, placeholder], advanced: [], view: [placeholder], structure: [from] });
 		}
 		case "relation":
-			return <RelationOptions field={field} set={set} change={change} opposite={opposite} more={more} />;
-		case "select":
-			return (
-				<Stack gap={16}>
-					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
-					{optionFields}
-				</Stack>
+			return <RelationOptions part={part} field={field} set={set} change={change} opposite={opposite} />;
+		case "select": {
+			const options = <OptionsEditor key="options" field={field} fieldName={name} editing={editing} change={change} />;
+			return column({ basic: [options, optionFields], advanced: [], view: [], structure: [options, optionFields] });
+		}
+		case "media": {
+			const accept = (
+				<Pick
+					key="accept"
+					label={t("field.accept")}
+					value={(field.accept as string | undefined) ?? "image"}
+					items={[
+						{ value: "image", label: t("field.acceptImage") },
+						{ value: "file", label: t("field.acceptFile") },
+					]}
+					onChange={(value) => set("accept", value === "image" ? undefined : value)}
+				/>
 			);
-		case "media":
-			return (
-				<Stack gap={16}>
-					<Pick
-						label={t("field.accept")}
-						value={(field.accept as string | undefined) ?? "image"}
-						items={[
-							{ value: "image", label: t("field.acceptImage") },
-							{ value: "file", label: t("field.acceptFile") },
-						]}
-						onChange={(value) => set("accept", value === "image" ? undefined : value)}
-					/>
-					{placeholder}
-				</Stack>
-			);
+			return column({ basic: [accept, placeholder], advanced: [], view: [placeholder], structure: [accept] });
+		}
 		case "backlink": {
 			const from = typeof field.from === "string" ? field.from : "";
 			const target = isObj(file.collections) ? (file.collections as Record<string, Obj>)[from] : undefined;
 			const relations = Object.entries(target ? fieldsOf(target) : {})
 				.filter(([, item]) => item.kind === "relation" && item.many === true)
 				.map(([key]) => ({ value: key, label: key }));
-			return (
-				<Stack gap={16}>
-					<Pick
-						label={t("field.backlinkFrom")}
-						value={from}
-						items={collections}
-						onChange={(value) => set("from", value)}
-					/>
-					<Pick
-						label={t("field.backlinkVia")}
-						description={t("field.backlinkViaHint")}
-						value={typeof field.via === "string" ? field.via : ""}
-						items={relations}
-						onChange={(value) => set("via", value)}
-					/>
-					<FlagSwitch
-						label={t("field.createInline")}
-						checked={field.createInline === true}
-						onChange={(on) => set("createInline", on ? true : undefined)}
-					/>
-					{placeholder}
-				</Stack>
+			const source = (
+				<Pick
+					key="from"
+					label={t("field.backlinkFrom")}
+					value={from}
+					items={collections}
+					onChange={(value) => set("from", value)}
+				/>
 			);
+			const via = (
+				<Pick
+					key="via"
+					label={t("field.backlinkVia")}
+					value={typeof field.via === "string" ? field.via : ""}
+					items={relations}
+					onChange={(value) => set("via", value)}
+				/>
+			);
+			const createInline = (
+				<FlagSwitch
+					key="createInline"
+					label={t("field.createInline")}
+					checked={field.createInline === true}
+					onChange={(on) => set("createInline", on ? true : undefined)}
+				/>
+			);
+			return column({
+				basic: [source, via, createInline, placeholder],
+				advanced: [],
+				view: [placeholder],
+				structure: [source, via, createInline],
+			});
 		}
-		case "view":
-			return (
+		case "view": {
+			const view = (
 				<TextInput
+					key="view"
 					label={t("field.view")}
-					description={t("field.viewHint")}
 					value={field.view as string | undefined}
 					onChange={(value) => set("view", value)}
 				/>
 			);
+			return column({ basic: [view], advanced: [], view: [], structure: [view] });
+		}
 		case "conditional": {
 			const options = optionsOf(field);
 			const values = isObj(field.values) ? (field.values as Record<string, Record<string, Obj>>) : {};
-			return (
-				<Stack gap={12}>
-					<OptionsEditor field={field} fieldName={name} editing={editing} change={change} />
-					{optionFields}
-					<Stack gap={8}>
-						{Object.keys(options).map((option) => (
-							<Stack key={option} gap={8} border="dashed" radius="md" padding={8}>
-								<Text variant="caption" weight="medium">
-									{t("field.whenOption", { option: options[option] ?? option })}
-								</Text>
-								<FieldList
-									editing={editing}
-									place={{ branch: { field: name, option } }}
-									fields={values[option] ?? {}}
-								/>
-							</Stack>
-						))}
-					</Stack>
+			const editor = <OptionsEditor key="options" field={field} fieldName={name} editing={editing} change={change} />;
+			const branches = (
+				<Stack key="branches" gap={8}>
+					{Object.keys(options).map((option) => (
+						<Stack key={option} gap={8} border="dashed" radius="md" padding={8}>
+							<Text variant="caption" weight="medium">
+								{t("field.whenOption", { option: options[option] ?? option })}
+							</Text>
+							<FieldList editing={editing} place={{ branch: { field: name, option } }} fields={values[option] ?? {}} />
+						</Stack>
+					))}
 				</Stack>
 			);
+			return column({
+				basic: [editor, optionFields, branches],
+				advanced: [],
+				view: [],
+				structure: [editor, optionFields, branches],
+			});
 		}
 		default:
 			return null;
@@ -605,7 +665,6 @@ export function FieldEditor({
 							label={t("field.name")}
 							value={name}
 							taken={allFieldNames(editing.collection).filter((item) => item !== name)}
-							description={t("field.nameHint")}
 							onCommit={(to) => {
 								editing.update((collection) => renameField(collection, place, name, to));
 								editing.onRename({ kind: "field", collection: editing.collectionName, from: name, to });
@@ -613,7 +672,6 @@ export function FieldEditor({
 						/>
 						<Pick
 							label={t("field.kind")}
-							description={isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined}
 							value={kind}
 							disabled={isFixed}
 							items={kindChoices(kind).map((item) => ({ value: item, label: t(`kind.${item}`) }))}
@@ -631,7 +689,6 @@ export function FieldEditor({
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
-									description={isTitle ? t("field.isTitleFixedHint") : t("field.isTitleHint")}
 									checked={isTitle}
 									locked={isTitle}
 									onChange={(on) => on && editing.update((collection) => setTitleField(collection, name))}
@@ -640,7 +697,6 @@ export function FieldEditor({
 							{kind !== "conditional" && (
 								<FlagSwitch
 									label={t("field.required")}
-									description={isTitle ? t("field.requiredTitleHint") : t("field.requiredHint")}
 									checked={isTitle || field.required === true}
 									locked={isTitle}
 									onChange={(on) => set("required", on ? true : undefined)}
@@ -736,7 +792,7 @@ export function FieldList({
 				</Box>
 			)}
 			{adding && (
-				<AddFieldDialog
+				<AddFieldSheet
 					editing={editing}
 					place={place}
 					onClose={() => setAdding(false)}

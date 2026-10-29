@@ -10,6 +10,7 @@ function Textarea({
 	size = "default",
 	mono = false,
 	proposal = false,
+	tall = false,
 	...props
 }: React.ComponentProps<"textarea"> & {
 	/** `sm` writes at the note size, for compact panels; `default` at the reading size on a phone and body size above. */
@@ -18,6 +19,8 @@ function Textarea({
 	mono?: boolean;
 	/** The assistant wrote this text and nobody has touched it yet. Turn it off when the text is edited. */
 	proposal?: boolean;
+	/** Two lines high (52px) while it is empty or short, then it grows: the help text of a field. */
+	tall?: boolean;
 }) {
 	return (
 		<textarea
@@ -32,6 +35,7 @@ function Textarea({
 					? "text-monti-note leading-[1.6]"
 					: "text-monti-reading leading-[1.6] md:text-monti-body md:leading-[1.6]",
 				mono && "font-mono",
+				tall && "min-h-[52px]",
 				className,
 			)}
 			{...props}

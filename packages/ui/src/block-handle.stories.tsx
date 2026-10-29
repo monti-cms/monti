@@ -105,19 +105,23 @@ function BlockMenuDemo({ defaultOpen = true }: { defaultOpen?: boolean }) {
 					<DropdownMenuSeparator />
 					<DropdownMenuItem>
 						<ArrowUp aria-hidden />
-						위로<MenuShortcut>⌥↑</MenuShortcut>
+						위로
+						<MenuShortcut keys={["alt", "ArrowUp"]} />
 					</DropdownMenuItem>
 					<DropdownMenuItem>
 						<ArrowDown aria-hidden />
-						아래로<MenuShortcut>⌥↓</MenuShortcut>
+						아래로
+						<MenuShortcut keys={["alt", "ArrowDown"]} />
 					</DropdownMenuItem>
 					<DropdownMenuItem>
 						<Copy aria-hidden />
-						복제<MenuShortcut>⇧⌘D</MenuShortcut>
+						복제
+						<MenuShortcut keys={["mod", "shift", "D"]} />
 					</DropdownMenuItem>
 					<DropdownMenuItem variant="danger">
 						<TrashCan aria-hidden />
-						삭제<MenuShortcut>⇧⌘⌫</MenuShortcut>
+						삭제
+						<MenuShortcut keys={["mod", "shift", "Backspace"]} />
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

@@ -48,10 +48,6 @@ const DRAWING = new Map<string, string>([
 		"the file card is a block inside the document, with its name written in place",
 	],
 	[
-		"admin/src/editor/image-crop-dialog.tsx",
-		"the crop area is the image with a rectangle, mask and handles positioned by percent and pointer drag",
-	],
-	[
 		"admin/src/editor/image-node-view.tsx",
 		"the image block is drawn inside the document: frame, crop, width, caption in place, resize handles",
 	],
@@ -63,18 +59,10 @@ const DRAWING = new Map<string, string>([
 		"admin/src/editor/internal-link-popup.tsx",
 		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
 	],
-	[
-		"admin/src/editor/slash-menu-popup.tsx",
-		"a list floating at the caret (fixed coordinates, z-index, highlighted row scrolled into view)",
-	],
 	["admin/src/editor/table-toolbar.tsx", "the toolbar floats over the table at a position measured from it"],
 	[
 		"admin/src/editor/tiptap-editor.tsx",
-		"the editor canvas: the writing column is sized by `--editor-width`, with a measured padding on the toolbar row",
-	],
-	[
-		"admin/src/editor/toolbar-row.tsx",
-		"the toolbar measures its own tools (refs, an invisible row, exact widths) to decide which move into 'More'",
+		"the editor canvas: the writing column is sized by `--editor-width`, and the empty-line hint and the block under an open menu are styled inside it",
 	],
 	["admin/src/host/layout.tsx", "the admin root: `monti-admin` scopes the tokens and the page fills the window"],
 	[
@@ -99,18 +87,12 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
-		"the field list tab and group rows: drag transform, hover-revealed handle",
+		"the drop rows of the field list: a drag transform on the row",
 	],
 	[
 		"admin/src/screens/schema/fields-tree-rows.tsx",
-		"the field list rows: column grid, hover-revealed handle and buttons, kind colours, drag transform",
+		"the field list rows: the hover-revealed row buttons and the problem dot",
 	],
-	[
-		"admin/src/screens/schema/fields-tree.tsx",
-		"the field list frame: column grid, resizable side panel and preview column",
-	],
-	["admin/src/screens/schema/locales-editor.tsx", "drag handle, shown on hover or focus"],
-	["admin/src/screens/schema/schema-screen.tsx", "the drag handle, placed over the row and shown on hover or focus"],
 	[
 		"admin/src/screens/shared/side-panel.tsx",
 		"the slots of the side panels: beside the list or the page on a wide window, floating over its right edge on a narrow one (absolute position, shadow)",
@@ -127,7 +109,6 @@ const DRAWING = new Map<string, string>([
 	["blocks/src/tabs/view.tsx", "draws the tab bar and body as the public post does"],
 	["mdx/src/admin/mdx-source-editor.tsx", "a textarea laid over a syntax-highlighted layer"],
 	["mdx/src/admin/source-panel.tsx", "sizes the highlighted source editor, which draws its own surface"],
-	["seo/src/admin/preview.tsx", "imitates a search result (Google's link blue, two-line clamps, share card thumbnail)"],
 ]);
 
 const packagesDir = path.resolve(__dirname, "../../..");
