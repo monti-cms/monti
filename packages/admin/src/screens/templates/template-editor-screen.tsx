@@ -9,7 +9,6 @@ import {
 	Box,
 	EntryStatus,
 	FormFieldError,
-	FormFieldLabel,
 	Inline,
 	Input,
 	Separator,
@@ -207,19 +206,21 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 						doc={draft.doc}
 						onChange={(doc) => update({ doc })}
 						titleField={
-							<Stack gap={4} paddingTop={8}>
-								<FormFieldLabel htmlFor={nameId}>{t("editor.nameLabel")}</FormFieldLabel>
+							<Stack gap={0} paddingTop={16}>
+								{/* No label: the header's "‹ 템플릿" says where this is, and the name sits where an entry's title does (16 above, as under the language tabs). */}
 								<Input
 									id={nameId}
 									value={draft.name}
+									placeholder={t("editor.nameLabel")}
+									aria-label={t("editor.nameLabel")}
 									aria-invalid={error ? true : undefined}
 									onChange={(event) => update({ name: event.target.value })}
 									size="display"
 									appearance="inline"
 								/>
 								{error && <FormFieldError>{error}</FormFieldError>}
-								{/* The one ink rule of the page: 20 above (the stack's 4 and 16); the 32 below is the editor's own spacing under the title. */}
-								<Box border="bottom-contrast" paddingTop={16} />
+								{/* The one ink rule of the page: 20 under the name; the 32 below it is the editor's own spacing above the body. */}
+								<Box border="bottom-contrast" paddingTop={20} />
 							</Stack>
 						}
 					/>
