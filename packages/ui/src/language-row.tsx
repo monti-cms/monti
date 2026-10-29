@@ -2,6 +2,7 @@ import type * as React from "react";
 import { ChangeDot } from "./change-dot";
 import { cn } from "./cn";
 import { Grip } from "./grip";
+import { ToolbarDivider } from "./page-header";
 
 /**
  * One content language in Settings › Languages. Its name written in itself leads, then the code in mono and, when it differs, the display name in the admin
@@ -51,7 +52,7 @@ function LanguageRow({
 			{handled && <span className="flex items-center justify-center">{handle}</span>}
 			<span className={cn("min-w-0 truncate whitespace-nowrap", gone && "text-monti-faint line-through")}>
 				<span className={cn("text-monti-body", !gone && "text-monti-default")}>{name}</span>{" "}
-				<span className="font-mono text-monti-caption text-monti-faint">{code}</span>
+				<span className="text-monti-faint text-monti-meta">{code}</span>
 				{label && label !== name && <span className="text-monti-note text-monti-subtle"> · {label}</span>}
 				{dot && <ChangeDot label={dot} className="ml-monti-6 align-middle" />}
 			</span>
@@ -88,7 +89,7 @@ function LanguageSource({ flag, children }: { flag: React.ReactNode; children?: 
 			<span className="font-semibold text-monti-default text-monti-note">{flag}</span>
 			{children && (
 				<>
-					<span aria-hidden="true" className="mx-monti-12 h-3.5 w-px shrink-0 bg-(--monti-border-default)" />
+					<ToolbarDivider className="mx-monti-12" />
 					{children}
 				</>
 			)}

@@ -85,7 +85,7 @@ export function InspectorPanel({
 			}))}
 		>
 			{site.isCollection(collection) && (
-				<FormFieldSet disabled={disabled}>
+				<FormFieldSet density="flush" disabled={disabled}>
 					<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 					<PropertyFields
 						include={(group) => group.tab === tab}

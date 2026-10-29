@@ -136,8 +136,9 @@ function PickerFolder({
 			type="button"
 			aria-current={on ? "true" : undefined}
 			onClick={onClick}
-			style={depth > 0 ? { paddingLeft: 22 } : undefined}
 			className={cn(
+				// A sub-folder is indented one step (24 instead of the row's 10).
+				depth > 0 && "pl-monti-24",
 				"flex h-8 w-full min-w-0 cursor-pointer items-center gap-monti-10 rounded-monti-md border-0 bg-transparent px-monti-10 text-left text-monti-body outline-none hover:bg-monti-selected focus-visible:ring-3 focus-visible:ring-monti-contrast/20",
 				on ? "bg-monti-current font-semibold text-monti-default" : "text-monti-muted",
 			)}

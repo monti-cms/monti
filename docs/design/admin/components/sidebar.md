@@ -7,7 +7,7 @@ This page covers the left navigation: the rows, the header, folding to a rail, a
 The left navigation, on the cream tool ground. The upper group is content; the lower group is trash, tools and settings.
 
 - A row under the pointer (`.mt-nav:hover`; `.is-hover` in the drawings) is `bg-selected`. Because the ground is cream, this is one step darker than the row hover in paper lists (`bg-muted`).
-- The current place (`.mt-nav.is-on`) is one more step darker, `bg-current`, at weight 600, so it is not confused with a row under the pointer. A collection with folders shows a tree under it when it is open.
+- The current place (`.mt-nav.is-on`) is one more step darker, `bg-current`, at weight 600, so it is not confused with a row under the pointer. A collection with folders shows a tree under it when it is open; inside a folder the collection row stays current and the open folder is bold in the tree.
 - Tree rows (`.mt-nav-sub a`) are rounded rows too, and `bg-selected` on hover. The 36px indent is padding inside the row, so the background is painted at the same width as the row above and only the text moves in.
 - Numbers are mono, at the right end.
 - A row is 36px high with 10px side padding and a `radius-md` shape.

@@ -207,7 +207,7 @@ function TemplatePage({ template }: { template?: BodyTemplate }) {
 						onChange={(doc) => update({ doc })}
 						titleField={
 							<Stack gap={0} paddingTop={16}>
-								{/* No label: the header's "‹ 템플릿" says where this is, and the name sits where an entry's title does (16 above, as under the language tabs). */}
+								{/* No label: the header's back link to the templates says where this is, and the name sits where an entry's title does (16 above, as under the language tabs). */}
 								<Input
 									id={nameId}
 									value={draft.name}

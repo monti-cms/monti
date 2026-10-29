@@ -113,7 +113,7 @@ export function LayoutPreview({
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
-	// The head: "미리보기" and, quieter, that what it shows is not saved.
+	// The head: "Preview" and, quieter, that what it shows is not saved.
 	const label = tp("preview.label");
 	const title = (
 		<>

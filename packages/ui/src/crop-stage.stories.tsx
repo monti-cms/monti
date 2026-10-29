@@ -9,7 +9,11 @@ const SAMPLE = `data:image/svg+xml;utf8,${encodeURIComponent(
 const meta = {
 	title: "Monti/EditorTools/CropStage",
 	component: CropStage,
-	args: { src: SAMPLE, alt: "자를 이미지" },
+	args: {
+		src: SAMPLE,
+		alt: "자를 이미지",
+		cornerLabels: { nw: "왼쪽 위 손잡이", ne: "오른쪽 위 손잡이", sw: "왼쪽 아래 손잡이", se: "오른쪽 아래 손잡이" },
+	},
 	decorators: [
 		(Story) => (
 			<div className="max-w-monti-sheet">
@@ -23,15 +27,5 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** With a crop box over the middle of the picture, as the sheet draws it while a crop is set. */
-export const WithCropBox: Story = {
-	args: {
-		children: (
-			<div
-				className="absolute border-2 border-monti-emphasis"
-				// design-allow: the story's sample crop, in % of the picture as the sheet sets it
-				style={{ left: "20%", top: "15%", width: "60%", height: "60%" }}
-			/>
-		),
-	},
-};
+/** With a crop set: the picture outside it under the backdrop, the box and its four corners. */
+export const WithCrop: Story = { args: { crop: { x: 20, y: 15, width: 60, height: 60 } } };

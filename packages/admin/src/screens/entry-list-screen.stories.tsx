@@ -498,17 +498,26 @@ export const FolderMenuOpen: Story = {
 };
 
 /** The folder answers: twelve entries inside, one published. */
-const folderServer = (published: number) =>
-	server({
-		folders,
+/** A server whose 뉴스 folder can be moved to the trash: once it is, the folder list no longer has it or its sub-folder. */
+const folderServer = (published: number) => {
+	const shown = [...folders];
+	return server({
+		folders: shown,
 		extra: (path, method) => {
 			if (path.startsWith("/api/monti/v1/folders/f-news/contents"))
 				return { entries: 12, published, folders: 1, files: 0, filesInUse: 0 };
-			if (path.startsWith("/api/monti/v1/folders/f-news") && method === "DELETE")
+			if (path.startsWith("/api/monti/v1/folders/f-news") && method === "DELETE") {
+				// The folder goes with the folders inside it.
+				for (let at = shown.length - 1; at >= 0; at--) {
+					const item = shown[at];
+					if (item && (item.id === "f-news" || item.parentId === "f-news")) shown.splice(at, 1);
+				}
 				return { folder: {}, entries: 12, folders: 1, files: 0, kept: 0 };
+			}
 			return undefined;
 		},
 	});
+};
 
 /** Main board mode 폴더 지우기 확인: a folder that holds a published post asks, and says how many come down. */
 export const FolderTrashDialog: Story = {

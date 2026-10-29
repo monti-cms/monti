@@ -306,9 +306,9 @@ export function MediaPanel({
 			</DescriptionList>
 
 			<Stack gap={4}>
-				<Text as="span" variant="label" tone="muted">
+				<FormFieldLabel>
 					{usages.length > 0 ? t("panel.usedIn", { count: usageCount(media) }) : t("panel.usedInNone")}
-				</Text>
+				</FormFieldLabel>
 				{usages.length === 0 ? (
 					<Text as="span" variant="note" tone="faint">
 						{t("panel.none")}

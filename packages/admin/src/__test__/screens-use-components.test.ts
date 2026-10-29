@@ -48,10 +48,6 @@ const DRAWING = new Map<string, string>([
 		"the file card is a block inside the document, with its name written in place",
 	],
 	[
-		"admin/src/editor/image-crop-sheet.tsx",
-		"the crop area is the image with a rectangle, mask and handles positioned by percent and pointer drag",
-	],
-	[
 		"admin/src/editor/image-node-view.tsx",
 		"the image block is drawn inside the document: frame, crop, width, caption in place, resize handles",
 	],

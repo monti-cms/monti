@@ -228,68 +228,17 @@ export function ImageCropSheet({ open, onOpenChange, src, crop, rotate, onApply 
 							<CropStage
 								src={src}
 								alt={t("imageCrop.target")}
+								crop={isFull ? undefined : cropDraft}
 								stageRef={containerRef}
 								imageRef={imgRef}
-								onPointerDown={(e) => handlePointerDown(e)}
-							>
-								{/* Selected crop area */}
-								{!isFull && (
-									<>
-										{/* Dark translucent background mask (outside the area, design tokens applied) */}
-										<div
-											className="pointer-events-none absolute inset-0 bg-monti-emphasis"
-											// design-allow: the mask follows the crop being dragged
-											style={{
-												clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${cropDraft.x}% ${cropDraft.y}%, ${cropDraft.x}% ${cropDraft.y + cropDraft.height}%, ${cropDraft.x + cropDraft.width}% ${cropDraft.y + cropDraft.height}%, ${cropDraft.x + cropDraft.width}% ${cropDraft.y}%, ${cropDraft.x}% ${cropDraft.y}%)`,
-											}}
-										/>
-
-										{/* Active crop rectangle */}
-										<div
-											data-slot="crop-box"
-											onPointerDown={(e) => handlePointerDown(e, "move")}
-											className="absolute cursor-move border-2 border-monti-emphasis"
-											// design-allow: the crop box follows the crop being dragged
-											style={{
-												left: `${cropDraft.x}%`,
-												top: `${cropDraft.y}%`,
-												width: `${cropDraft.width}%`,
-												height: `${cropDraft.height}%`,
-											}}
-										>
-											{/* 4 corner handles */}
-											<button
-												type="button"
-												data-slot="crop-handle-nw"
-												onPointerDown={(e) => handlePointerDown(e, "nw")}
-												className="absolute -top-1.5 -left-1.5 size-3.5 cursor-nwse-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
-												aria-label={t("imageCrop.handleNw")}
-											/>
-											<button
-												type="button"
-												data-slot="crop-handle-ne"
-												onPointerDown={(e) => handlePointerDown(e, "ne")}
-												className="absolute -top-1.5 -right-1.5 size-3.5 cursor-nesw-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
-												aria-label={t("imageCrop.handleNe")}
-											/>
-											<button
-												type="button"
-												data-slot="crop-handle-sw"
-												onPointerDown={(e) => handlePointerDown(e, "sw")}
-												className="absolute -bottom-1.5 -left-1.5 size-3.5 cursor-nesw-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
-												aria-label={t("imageCrop.handleSw")}
-											/>
-											<button
-												type="button"
-												data-slot="crop-handle-se"
-												onPointerDown={(e) => handlePointerDown(e, "se")}
-												className="absolute -right-1.5 -bottom-1.5 size-3.5 cursor-nwse-resize rounded-monti-sm border border-monti-default bg-monti-emphasis p-0"
-												aria-label={t("imageCrop.handleSe")}
-											/>
-										</div>
-									</>
-								)}
-							</CropStage>
+								onGrip={(event, grip) => handlePointerDown(event, grip === "stage" ? undefined : grip)}
+								cornerLabels={{
+									nw: t("imageCrop.handleNw"),
+									ne: t("imageCrop.handleNe"),
+									sw: t("imageCrop.handleSw"),
+									se: t("imageCrop.handleSe"),
+								}}
+							/>
 
 							<Inline width="full" wrap justify="between" gap={8}>
 								<Text variant="caption" tone="muted">

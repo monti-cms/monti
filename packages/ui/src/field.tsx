@@ -10,13 +10,16 @@ function FormFieldSet({
 	className,
 	density = "default",
 	...props
-}: React.ComponentProps<"fieldset"> & { density?: "default" | "compact" }) {
+}: React.ComponentProps<"fieldset"> & {
+	/** `compact` 16 between fields; `flush` none, for rows that carry their own spacing (the property pane's groups and rows). */
+	density?: "default" | "compact" | "flush";
+}) {
 	return (
 		<fieldset
 			data-slot="field-set"
 			className={cn(
 				"flex min-w-0 flex-col has-[>[data-slot=checkbox-group]]:gap-monti-12 has-[>[data-slot=radio-group]]:gap-monti-12",
-				density === "compact" ? "gap-monti-16" : "gap-monti-24",
+				density === "compact" ? "gap-monti-16" : density === "flush" ? "gap-0" : "gap-monti-24",
 				className,
 			)}
 			{...props}

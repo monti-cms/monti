@@ -51,9 +51,7 @@ function NavLink({
 			>
 				<span className="min-w-0 truncate">{children}</span>
 				{dot && <ChangeDot label={dot} className="-ml-monti-4" />}
-				{note && (
-					<span className="ml-auto shrink-0 font-mono font-normal text-monti-caption text-monti-subtle">{note}</span>
-				)}
+				{note && <span className="ml-auto shrink-0 font-normal text-monti-meta text-monti-subtle">{note}</span>}
 			</button>
 		</div>
 	);

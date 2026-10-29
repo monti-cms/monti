@@ -173,7 +173,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 			<Fragment key={scope}>
 				{row({
 					href,
-					current: open && (!nav || nav.currentFolder === "all" || nav.currentFolder === ""),
+					// The collection stays the current place inside one of its folders; the open folder is bold in the tree below it (boards Main, Media).
+					current: open,
 					label,
 					tooltip: label,
 					icon,
