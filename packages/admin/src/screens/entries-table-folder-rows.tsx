@@ -5,7 +5,7 @@
 import { Folder as FolderIcon, FolderOpen, FolderParent } from "@carbon/icons-react";
 import type { Folder } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
-import { Inline, RowActions, RowLink, TableCell, TableRow, Text } from "@monti-cms/ui";
+import { Inline, RowActions, RowLink, RowThumb, TableCell, TableRow, Text } from "@monti-cms/ui";
 import { type ReactNode, useEffect, useRef } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { ACTIONS_SIZE } from "./entries-table-widths";
@@ -33,7 +33,7 @@ function FolderCells({
 		return (
 			<>
 				<TableCell>
-					<span className="flex w-10 justify-center text-monti-subtle">{icon}</span>
+					<RowThumb>{icon}</RowThumb>
 				</TableCell>
 				<TableCell colSpan={span - 1}>{children}</TableCell>
 			</>

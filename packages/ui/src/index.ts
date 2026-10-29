@@ -137,6 +137,7 @@ export const RenameField = close(open.RenameField);
 export const BulkBar = close(open.BulkBar);
 export const BulkToolbar = close(open.BulkToolbar);
 export const RowActions = close(open.RowActions);
+export const RowThumb = close(open.RowThumb);
 export const ListScroll = close(open.ListScroll);
 export const RowCheck = close(open.RowCheck);
 export const RowLink = close(open.RowLink);

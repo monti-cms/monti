@@ -172,6 +172,17 @@ function ListScroll({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
+/** The 40px thumb column of a media row: a file's picture (`Image size="row"`), or the icon of a folder row centered where the pictures are. */
+function RowThumb({ className, ...props }: React.ComponentProps<"span">) {
+	return (
+		<span
+			data-slot="row-thumb"
+			className={cn("flex w-monti-40 shrink-0 justify-center text-monti-subtle", className)}
+			{...props}
+		/>
+	);
+}
+
 /**
  * The ⋯ of a row: always shown, so the end of a row never looks empty. It stays above the row's link and keeps its own click. It takes one line of
  * the row (20px) and lets its button stand out above and below, so the ⋯ does not make the row taller than its text.
@@ -317,6 +328,7 @@ export {
 	ListScroll,
 	RowActions,
 	RowCheck,
+	RowThumb,
 	RowLink,
 	RowTitle,
 	Table,

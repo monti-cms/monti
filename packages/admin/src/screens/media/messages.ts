@@ -99,13 +99,6 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"empty.clear": "Clear filters",
 
 		"table.label": "Media list",
-		"table.name": "Name",
-		"table.usage": "Used",
-		"table.type": "Type",
-		"table.size": "Size",
-		"table.dimensions": "Dimensions",
-		"table.uploadedAt": "Uploaded",
-		"table.actions": "Actions",
 
 		"panel.copyUrl": "Copy address",
 		"panel.openTab": "Open in new tab",
@@ -243,13 +236,6 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"empty.clear": "필터 해제",
 
 		"table.label": "미디어 목록",
-		"table.name": "이름",
-		"table.usage": "사용",
-		"table.type": "형식",
-		"table.size": "크기",
-		"table.dimensions": "치수",
-		"table.uploadedAt": "올린 날",
-		"table.actions": "작업",
 
 		"panel.copyUrl": "주소 복사",
 		"panel.openTab": "새 탭에서 열기",

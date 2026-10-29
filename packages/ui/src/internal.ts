@@ -273,6 +273,7 @@ export {
 	RowActions,
 	RowCheck,
 	RowLink,
+	RowThumb,
 	RowTitle,
 	Table,
 	TableBody,
