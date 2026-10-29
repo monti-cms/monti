@@ -69,9 +69,12 @@ describe("collectionProblems", () => {
 
 describe("draftProblems", () => {
 	it("collects the problems of the site and of the collections", () => {
-		const file = { ...post({ format: { kind: "select", label: "Format", options: {} } }), site: { homeLink: "nope" } };
+		const file = {
+			...post({ format: { kind: "select", label: "Format", options: {} } }),
+			site: { aliases: ["nope nope"] },
+		};
 		expect(draftProblems(file).map((problem) => problem.path)).toEqual([
-			"site.homeLink",
+			"site.aliases.0",
 			"collections.post.fields.format",
 		]);
 	});
@@ -97,6 +100,6 @@ describe("placeOfProblem", () => {
 				code: "options",
 			}),
 		).toEqual({ place: { branch: { field: "kind", option: "a" } }, name: "extra" });
-		expect(placeOfProblem({ area: "site", path: "site.homeLink", code: "home-link" })).toBeNull();
+		expect(placeOfProblem({ area: "site", path: "site.aliases.0", code: "host" })).toBeNull();
 	});
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, Stack, Text, TodoItem } from "@monti-cms/ui";
+import { SidePanel, Stack, Text, TodoItem } from "@monti-cms/ui";
 import { Component, type ReactNode, useMemo, useRef, useState } from "react";
 import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
 import { InspectorPanel } from "../entries/inspector-panel";
@@ -37,7 +37,7 @@ const noop = () => {};
  * The form of a collection with nothing in it: the real panel on a local form, so typing, picking and the conditional fields that follow work, and nothing is
  * kept or sent. Documents use the properties panel of the edit screen, items the fields of the record panel.
  */
-function PreviewPanel({ collection }: { collection: string }) {
+function PreviewPanel({ collection, title }: { collection: string; title: string }) {
 	const site = useSite();
 	const [form, setForm] = useState<EntryForm>(() => emptyFormOf(site, collection));
 	const value = useMemo(
@@ -51,11 +51,12 @@ function PreviewPanel({ collection }: { collection: string }) {
 	return (
 		<EntryFormProvider value={value}>
 			{site.isItemCollection(collection) ? (
-				<Box grow minHeight={0} overflow="y" padding={16} data-testid="layout-preview-record">
+				<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview-record">
 					<SchemaFields />
-				</Box>
+				</SidePanel>
 			) : (
 				<InspectorPanel
+					title={title}
 					incomingReferences={[]}
 					isLoadingIncomingReferences={false}
 					onRefreshIncomingReferences={noop}
@@ -97,37 +98,21 @@ export function LayoutPreview({
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
+	const title = tp("preview.label");
 	const problem = (
-		<Box padding={16}>
+		<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview">
 			<Text as="p" variant="caption" tone="muted">
 				{t("layout.previewUnavailable")}
 			</Text>
-		</Box>
+		</SidePanel>
 	);
-
-	return (
-		<Stack
-			gap={0}
-			grow
-			minHeight={0}
-			overflow="hidden"
-			radius="lg"
-			border="all"
-			background="page"
-			data-testid="layout-preview"
-		>
-			<Box shrink={false} border="bottom" background="tool" paddingX={16} paddingY={8}>
-				<Text as="p" variant="caption" tone="muted">
-					{tp("preview.label")}
-				</Text>
-			</Box>
-			{toFix.length > 0 ? (
-				<Stack gap={8} padding={16} overflow="y" data-testid="layout-preview-problems">
-					<Box paddingX={8}>
-						<Text as="p" variant="note" tone="muted">
-							{tp("preview.fix")}
-						</Text>
-					</Box>
+	if (toFix.length > 0) {
+		return (
+			<SidePanel width="panel" title={title} aria-label={title} data-testid="layout-preview">
+				<Stack gap={8} data-testid="layout-preview-problems">
+					<Text as="p" variant="note" tone="muted">
+						{tp("preview.fix")}
+					</Text>
 					{toFix.map((item) => {
 						const where = placeOfProblem(item);
 						const field = where ? fieldAt(collectionsOf(file)[collection] ?? {}, where.place, where.name) : undefined;
@@ -142,15 +127,15 @@ export function LayoutPreview({
 						);
 					})}
 				</Stack>
-			) : draft?.isCollection(collection) ? (
-				<SiteProvider site={draft}>
-					<PreviewBoundary fallback={problem} resetKey={draft}>
-						<PreviewPanel key={collection} collection={collection} />
-					</PreviewBoundary>
-				</SiteProvider>
-			) : (
-				problem
-			)}
-		</Stack>
+			</SidePanel>
+		);
+	}
+	if (!draft?.isCollection(collection)) return problem;
+	return (
+		<SiteProvider site={draft}>
+			<PreviewBoundary fallback={problem} resetKey={draft}>
+				<PreviewPanel key={collection} collection={collection} title={title} />
+			</PreviewBoundary>
+		</SiteProvider>
 	);
 }

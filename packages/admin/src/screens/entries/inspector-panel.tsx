@@ -3,7 +3,7 @@
 import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { DEFAULT_TAB, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { FormFieldSet, PropertyPanel } from "@monti-cms/ui";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { tabLabel } from "./layout-groups";
 import { entriesMessages } from "./messages";
 import { PropertyFields } from "./property-fields";
@@ -24,6 +24,8 @@ interface InspectorPanelProps {
 	/** Opens this field for editing (jump to a publish problem). Calls `onFocused` once opened. */
 	focusPath?: string | null;
 	onFocused?: () => void;
+	/** A head above the tab bar, for a pane that is not the editor's own (the preview in the settings). */
+	title?: ReactNode;
 }
 
 /**
@@ -40,6 +42,7 @@ export function InspectorPanel({
 	onRegenerateSlug,
 	focusPath,
 	onFocused,
+	title,
 }: InspectorPanelProps) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
@@ -64,6 +67,7 @@ export function InspectorPanel({
 
 	return (
 		<PropertyPanel
+			title={title}
 			label={t("panel.label")}
 			value={tab}
 			onValueChange={setTab}

@@ -218,6 +218,16 @@ function collectionItems(name: string, saved: Obj, draft: Obj, renames: readonly
 		);
 	}
 
+	// The fields that were there come in the order they had (a removed one where it was), the new ones after them.
+	const place = (item: ChangeItem): number => {
+		if (item.subject.kind !== "field") return -1;
+		if (item.tag === "added") return savedNames.length + Object.keys(draftFields).indexOf(item.subject.name);
+		return savedNames.indexOf(item.subject.from ?? item.subject.name);
+	};
+	const rest = items.splice(0, items.length);
+	items.push(...rest.filter((item) => item.subject.kind !== "field"));
+	items.push(...rest.filter((item) => item.subject.kind === "field").sort((one, other) => place(one) - place(other)));
+
 	// The order of the fields that exist on both sides.
 	const common = (names: string[]) => names.filter((fieldName) => renamedTo.has(fieldName) || fieldName in draftFields);
 	const savedOrder = common(savedNames).map((fieldName) => renamedTo.get(fieldName) ?? fieldName);

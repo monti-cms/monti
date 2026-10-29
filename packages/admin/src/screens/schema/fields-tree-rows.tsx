@@ -3,15 +3,17 @@
 // The rows of the fields tree: a field row (with the branches of a conditional field), its icon buttons and move dialog.
 // Dragging itself lives in fields-tree-dnd.tsx; the tab and group rows of the layout in fields-tree-layout-rows.tsx.
 
-import { ArrowRight, type ArrowUp, Draggable, TrashCan, Undo } from "@carbon/icons-react";
+import { ArrowRight, type ArrowUp, TrashCan, Undo } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslator } from "@monti-cms/core/site";
-import { Box, Button, cn, Dialog, DialogContent, DialogHeader, DialogTitle, IconButton, Stack } from "@monti-cms/ui";
-import { type KeyboardEvent, useState } from "react";
-import { ChangedMark, useIssuesUnder, useSchemaEdit } from "./controls";
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, FieldRow, IconButton, Stack } from "@monti-cms/ui";
+import { useState } from "react";
+import { schemaChangesMessages } from "./changes.messages";
+import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
-import { branchFields, type KindTone, summarizeField } from "./field-summary";
+import type { FieldMark } from "./field-marks";
+import { branchFields, summarizeField } from "./field-summary";
 import { schemaFieldsMessages } from "./fields.messages";
 import { SortableList } from "./fields-tree-dnd";
 import { schemaMessages } from "./messages";
@@ -29,29 +31,11 @@ import {
 	setField,
 } from "./schema-model";
 
-/** The colour of a kind token in the tree: one family per meaning, light and dark. */
-export const TONE: Record<KindTone, string> = {
-	text: "text-monti-muted",
-	slug: "text-monti-muted",
-	relation: "text-monti-muted",
-	backlink: "text-monti-muted",
-	select: "text-monti-muted",
-	conditional: "text-monti-muted",
-	media: "text-monti-muted",
-	view: "text-monti-subtle",
-};
-export const REQUIRED = "text-monti-warning";
-export const OPTION = "text-monti-muted";
-const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-monti-16";
-/** Two columns only, for when the preview takes the room beside the tree; the kind column is narrower so the names keep their room. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_6.5rem] items-center gap-x-monti-16";
-export const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
-
 export interface TreeContext {
 	readonly editing: CollectionEditing;
 	readonly onOpen: (place: FieldPlace, name: string) => void;
-	/** The settings column is left out (the preview is beside the tree). */
-	readonly compact: boolean;
+	/** How each field differs from the saved file, by its name. */
+	readonly marks: Readonly<Record<string, FieldMark>>;
 }
 
 /** Why a top-level row cannot be moved or grouped. */
@@ -149,9 +133,7 @@ export function Row({
 	place,
 	name,
 	field,
-	prefix,
-	childLead,
-	nested,
+	depth,
 	count,
 	top,
 }: {
@@ -159,21 +141,22 @@ export function Row({
 	place: FieldPlace;
 	name: string;
 	field: Obj;
-	prefix: string;
-	childLead: string;
-	nested: boolean;
+	/** How far the row is in: 0 on the list, 1 in a group, 2 in the branch of a conditional field. */
+	depth: 0 | 1 | 2;
 	count: number;
 	top?: TopRow;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const ts = useTranslator(schemaMessages);
 	const tp = useTranslator(schemaProblemMessages);
+	const tc = useTranslator(schemaChangesMessages);
 	const { disabled, file, saved, problems } = useSchemaEdit();
 	const { editing } = ctx;
 	// The field as saved, when it is saved under this name: a field that differs from it can be put back.
 	const savedCollection = collectionsOf(saved)[editing.collectionName];
 	const savedField = savedCollection ? fieldAt(savedCollection, place, name) : undefined;
 	const changed = savedField !== undefined && !sameJson(savedField, field);
+	const mark = place.branch ? undefined : ctx.marks[name];
 	const summary = summarizeField(t, name, field, editing.collection, file, !place.branch);
 	const path = place.branch
 		? `collections.${editing.collectionName}.fields.${place.branch.field}.values.${place.branch.option}.${name}`
@@ -181,7 +164,6 @@ export function Row({
 	const issues = useIssuesUnder(path);
 	// What stops the draft from being saved at this field: its name turns red and the row says what is missing.
 	const problem = problems.find((item) => item.path === path);
-	const label = typeof field.label === "string" ? field.label : "";
 	const blocked = removeBlock(editing.collection, place, name);
 	const locked = top?.locked ?? null;
 	// A field in a conditional branch only reorders within its branch, so a branch with one field has nothing to drag.
@@ -190,14 +172,6 @@ export function Row({
 		id: name,
 		disabled: noDrag,
 	});
-	const open = () => ctx.onOpen(place, name);
-	const onKeyDown = (event: KeyboardEvent) => {
-		if (event.target !== event.currentTarget) return;
-		if (event.key === "Enter" || event.key === " ") {
-			event.preventDefault();
-			open();
-		}
-	};
 	const [moving, setMoving] = useState(false);
 	const buttons: RowButton[] = [
 		...(changed && savedField
@@ -221,116 +195,57 @@ export function Row({
 			onClick: () => editing.update((collection) => removeField(collection, place, name)),
 		},
 	];
+	const tone = problem
+		? "danger"
+		: mark?.kind === "added"
+			? "success"
+			: mark?.kind === "renamed"
+				? "warning"
+				: "default";
+	const note = problem
+		? tp(`mark.${problem.code}` as "mark.options")
+		: mark?.kind === "added"
+			? tc("tag.added")
+			: mark?.kind === "renamed"
+				? `\u2190 ${mark.from}`
+				: locked?.kind === "panel"
+					? t("layout.notInPanel")
+					: undefined;
 	const options = field.kind === "conditional" ? Object.keys(optionsOf(field)) : [];
 	return (
-		<div
-			ref={setNodeRef}
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("relative", isDragging && "z-10 bg-monti-page opacity-80")}
-			data-testid={`field-${name}`}
-		>
-			<div className="group/row relative">
-				{/* biome-ignore lint/a11y/useSemanticElements: a row holds a grid of cells and is operated like a button; real buttons (handle, menu) sit beside it */}
-				<div
-					role="button"
-					tabIndex={0}
-					aria-label={t("field.toggle", { name })}
-					onClick={open}
-					onKeyDown={onKeyDown}
-					className={cn(
-						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer py-monti-8 pr-monti-16 pl-monti-32 outline-none hover:bg-monti-selected focus-visible:bg-monti-selected focus-visible:ring-2 focus-visible:ring-monti-contrast/20 focus-visible:ring-inset",
-						nested && "bg-monti-tool",
-					)}
-				>
-					{/* Clipped to its column: in a narrow pane the notes shorten with "…" (before the label does) instead of running over the kind beside them. */}
-					<div className="flex min-w-0 items-center overflow-hidden">
-						<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
-							{prefix}
-						</span>
-						<span
-							className={cn("max-w-[70%] shrink-0 truncate font-mono text-monti-label", problem && "text-monti-danger")}
-							title={name}
-						>
-							{name}
-						</span>
-						{label && (
-							<span
-								className="ml-monti-8 max-w-[40%] shrink-0 truncate text-monti-caption text-monti-muted"
-								title={label}
-							>
-								{label}
-							</span>
-						)}
-						{problem && (
-							<span className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-danger">
-								{tp(`mark.${problem.code}` as "mark.options")}
-							</span>
-						)}
-						{changed && (
-							<Box as="span" paddingX={8}>
-								<ChangedMark />
-							</Box>
-						)}
-						{locked?.kind === "panel" && (
-							<span
-								className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
-								title={t("layout.notInPanel.title")}
-							>
-								{t("layout.notInPanel")}
-							</span>
-						)}
-						{locked?.kind === "plugin" && (
-							<span
-								className="ml-monti-8 min-w-0 shrink-[4] truncate text-monti-caption text-monti-muted"
-								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
-							>
-								{t("layout.pluginPlaced")}
-							</span>
-						)}
-						{issues.length > 0 && (
-							<span
-								role="img"
-								aria-label={t("field.problems", { count: issues.length })}
-								className="ml-monti-8 size-1.5 shrink-0 rounded-monti-full bg-monti-danger-emphasis"
-							/>
-						)}
-					</div>
-					<div className="min-w-0 truncate font-mono text-monti-caption" title={summary.token}>
-						<span className={TONE[summary.tone]}>{summary.token}</span>
-						{summary.required && (
-							<span className={REQUIRED} title={t("field.requiredBadge")}>
-								{" "}
-								!
-							</span>
-						)}
-					</div>
-					<div
-						className={cn(
-							"hidden min-w-0 truncate pr-monti-32 font-mono text-monti-caption text-monti-muted",
-							!ctx.compact && "block",
-						)}
-					>
-						{summary.isTitle && (
-							<span data-testid="title-badge">
-								{t("sum.title")}
-								{summary.detail ? " · " : ""}
-							</span>
-						)}
-						{summary.detail}
-					</div>
-				</div>
-				<button
-					type="button"
-					ref={setActivatorNodeRef}
-					{...attributes}
-					{...listeners}
-					aria-label={t("fields.drag", { name })}
-					disabled={noDrag}
-					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
-				>
-					<Draggable aria-hidden className="size-4" />
-				</button>
+		<>
+			<FieldRow
+				ref={setNodeRef}
+				data-testid={`field-${name}`}
+				motion={{ transform: CSS.Translate.toString(transform) ?? undefined, transition }}
+				dragging={isDragging}
+				depth={depth}
+				name={summary.required ? `${name} !` : name}
+				label={typeof field.label === "string" ? field.label : undefined}
+				description={typeof field.description === "string" ? field.description : undefined}
+				note={note}
+				tone={tone}
+				kind={summary.token}
+				locked={locked?.kind === "plugin" ? t("layout.pluginPlaced") : undefined}
+				grip={!noDrag}
+				gripProps={{
+					ref: setActivatorNodeRef,
+					...attributes,
+					...listeners,
+					"aria-label": t("fields.drag", { name }),
+				}}
+				changed={changed || mark?.kind === "edited"}
+				changedLabel={ts("changed")}
+				onOpen={() => ctx.onOpen(place, name)}
+				openLabel={t("field.toggle", { name })}
+			>
+				{issues.length > 0 && (
+					<span
+						role="img"
+						aria-label={t("field.problems", { count: issues.length })}
+						className="absolute top-1/2 right-1 size-1.5 -translate-y-1/2 rounded-monti-full bg-monti-danger-emphasis"
+					/>
+				)}
 				<RowButtons buttons={buttons} />
 				{moving && top && (
 					<MoveDialog
@@ -339,81 +254,63 @@ export function Row({
 						onClose={() => setMoving(false)}
 					/>
 				)}
-			</div>
-			{options.map((option, at) => {
-				const last = at === options.length - 1;
+			</FieldRow>
+			{options.map((option) => {
 				const children = branchFields(field, option);
+				const inner = Math.min(2, depth + 1) as 0 | 1 | 2;
 				return (
-					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-monti-8 pr-monti-16 pl-monti-32")}>
-							<div className="flex min-w-0 items-center">
-								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-subtle">
-									{childLead}
-									{last ? "└ " : "├ "}
-								</span>
-								<span className={cn("font-mono text-monti-label", OPTION)}>= "{option}"</span>
-							</div>
-							<div />
-							<div
-								className={cn("hidden truncate font-mono text-monti-caption text-monti-muted", !ctx.compact && "block")}
-							>
-								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}
-							</div>
-						</div>
-						{Object.keys(children).length > 0 && (
-							<FieldGroup
-								ctx={ctx}
-								place={{ branch: { field: name, option } }}
-								fields={children}
-								lead={childLead + (last ? "   " : "│  ")}
-								nested
-							/>
-						)}
-					</div>
+					<BranchRows
+						key={option}
+						ctx={ctx}
+						holder={name}
+						option={option}
+						fields={children}
+						depth={inner}
+						empty={t("fields.noExtra")}
+					/>
 				);
 			})}
-		</div>
+		</>
 	);
 }
 
-/** One list of fields (the top level, or the fields of one option): rows that can be dragged within the list. */
-export function FieldGroup({
+/** One choice of a conditional field: its line (`= "note"`) and the fields that show for it, which can be dragged within the choice. */
+function BranchRows({
 	ctx,
-	place,
+	holder,
+	option,
 	fields,
-	lead,
-	nested,
+	depth,
+	empty,
 }: {
 	ctx: TreeContext;
-	place: FieldPlace;
+	holder: string;
+	option: string;
 	fields: Record<string, Obj>;
-	/** The tree lines in front of the rows (`null` at the top level, where there are none). */
-	lead: string | null;
-	nested: boolean;
+	depth: 0 | 1 | 2;
+	empty: string;
 }) {
+	const place: FieldPlace = { branch: { field: holder, option } };
 	const names = Object.keys(fields);
 	const onReorder = (from: string, to: string) =>
 		ctx.editing.update((collection) => reorderField(collection, place, from, to));
+	const deeper = Math.min(2, depth + 1) as 0 | 1 | 2;
 	return (
-		<SortableList items={names} onDragEnd={onReorder}>
-			{names.map((name, index) => {
-				const last = index === names.length - 1;
-				const prefix = lead === null ? "" : lead + (last ? "└ " : "├ ");
-				const childLead = lead === null ? "  " : lead + (last ? "   " : "│  ");
-				return (
+		<>
+			<FieldRow name={`= "${option}"`} grip={false} depth={depth} note={names.length === 0 ? empty : undefined} />
+			<SortableList items={names} onDragEnd={onReorder}>
+				{names.map((name) => (
 					<Row
 						key={name}
 						ctx={ctx}
 						place={place}
 						name={name}
 						field={fields[name] ?? {}}
-						prefix={prefix}
-						childLead={childLead}
-						nested={nested}
+						depth={deeper}
 						count={names.length}
 					/>
-				);
-			})}
-		</SortableList>
+				))}
+			</SortableList>
+		</>
 	);
 }

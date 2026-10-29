@@ -60,8 +60,8 @@ describe("the list of changes", () => {
 		const list = items(state);
 		expect(list.map((item) => [item.tag, item.subject.kind === "field" ? item.subject.name : ""])).toEqual([
 			["renamed", "excerpt"],
-			["added", "format"],
 			["removed", "subtitle"],
+			["added", "format"],
 		]);
 		// The layout that follows the fields is not a change of its own.
 		expect(list.some((item) => item.subject.kind === "layout")).toBe(false);

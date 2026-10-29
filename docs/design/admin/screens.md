@@ -480,7 +480,7 @@ States (`attempt`, default "처음"):
 ## Settings: "설정 · 사이트"
 
 - Board: `Settings.dc.html` (canvas row: "설정")
-- Purpose: Settings › Site: host names, preview path, home link and the other site settings, with save or PR behaviour by site kind.
+- Purpose: Settings › Site: host names, preview path and the other site settings, with save or PR behaviour by site kind.
 - Used in flows: 2.20, 11.01–11.04, 11.09, 11.13, 11.15, 11.15b
 
 States (`stage`, default "기본"):
@@ -490,7 +490,7 @@ States (`stage`, default "기본"):
 | "기본" | Settings › Site, as stored (default). | 2.20 |
 | "호스트 추가" | A new host name typed in the row. | 11.01 |
 | "언어 쿼리" | Preview language query field shown after turning off the language in the preview path. | 11.02 |
-| "칸 오류" | Field error on the home link; saving blocked. | 11.03 |
+| "칸 오류" | Field error under a host name row; saving blocked. | 11.03 |
 | "나가기 확인" | Leave dialog for unsaved changed places. | 11.04 |
 | "운영 글 쓰는 방식" | Production with the GitHub plugin: writing rules edited, button "저장". | 11.09 |
 | "운영 검토" | Review that marks which changes save directly and which go to the PR. | 11.13 |

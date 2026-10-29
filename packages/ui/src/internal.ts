@@ -143,7 +143,7 @@ export { FieldRow, FieldTree } from "./field-tree";
 export { FileBlock } from "./file-block";
 export { FilePreview } from "./file-preview";
 export { FilterButton } from "./filter-button";
-export { FolderTab, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
+export { FolderTab, FolderTabEdit, FolderTabs, FolderTabsAdd, FolderTabsBody, FolderTabsList } from "./folder-tabs";
 export {
 	FormatBar,
 	FormatBarButton,

@@ -177,6 +177,49 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeTruthy());
 	});
 
+	it("07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
+		openFields();
+		// A rename: the name is taken from the field's sheet on Save.
+		fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: "summary" }) }));
+		const sheet = await screen.findByRole("dialog");
+		const nameBox = within(sheet).getByRole("textbox", { name: tFields("field.name") });
+		fireEvent.change(nameBox, { target: { value: "excerpt" } });
+		fireEvent.blur(nameBox);
+		fireEvent.click(within(sheet).getByRole("button", { name: tFields("sheet.save") }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		await removeField("subtitle");
+		// A new field, from the sheet of kinds.
+		fireEvent.click(await screen.findByRole("button", { name: `+ ${tFields("field.add")}` }));
+		const adding = await screen.findByRole("dialog");
+		fireEvent.change(within(adding).getByRole("textbox", { name: tFields("field.label") }), {
+			target: { value: "Lead" },
+		});
+		fireEvent.click(within(adding).getByRole("button", { name: tFields("field.add") }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeTruthy();
+		const renamed = screen.getByTestId("field-excerpt");
+		expect(renamed.textContent).toContain("\u2190 summary");
+		const gone = screen.getByTestId("gone-subtitle");
+		expect(gone.textContent).toContain(tChanges("tag.removed"));
+		expect(within(gone).queryByRole("button")).toBeNull();
+		expect(gone.querySelector(".line-through")).not.toBeNull();
+		expect(screen.getByTestId("field-lead").textContent).toContain(tChanges("tag.added"));
+		// The struck row stays where the field was: after the renamed one, before the one that follows it.
+		const order = within(screen.getByRole("list", { name: tFields("field.title") }))
+			.getAllByRole("listitem")
+			.map((row) => row.getAttribute("data-testid"));
+		expect(order.indexOf("gone-subtitle")).toBe(order.indexOf("field-excerpt") + 1);
+
+		// Each one is taken back from the list of changes: the row goes back to what it was.
+		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
+		const rows = await screen.findAllByRole("menuitem");
+		const removal = rows.find((row) => row.textContent?.includes(tChanges("tag.removed")));
+		fireEvent.click(removal as HTMLElement);
+		await waitFor(() => expect(screen.queryByTestId("gone-subtitle")).toBeNull());
+		expect(screen.getByTestId("field-subtitle").textContent).not.toContain(tChanges("tag.removed"));
+	});
+
 	it("08 the preview panel says it shows the draft and that it is not saved, and has no list of what to fix", async () => {
 		openFields();
 		await removeField("subtitle");
@@ -200,7 +243,11 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		// The row says what is missing, in the danger color.
 		const row = screen.getByTestId("field-format");
 		expect(row.textContent).toContain(tProblem("mark.options"));
-		expect(within(row).getByText("format").className).toContain("text-monti-danger");
+		expect(
+			within(row)
+				.getByText(/^format/)
+				.closest("span")?.className,
+		).toContain("text-monti-danger");
 
 		const panel = await openPreview();
 		const problems = within(panel).getByTestId("layout-preview-problems");

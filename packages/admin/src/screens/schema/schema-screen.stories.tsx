@@ -101,7 +101,7 @@ export const NewCollectionCreated = story(server(), "collections", FIELDS, { pla
 /** Opens the add-field sheet of the open collection and returns it. */
 const openAddField = async (canvasElement: HTMLElement, collection: string) => {
 	const editor = await find(canvasElement).findByTestId(`collection-${collection}`);
-	await click(within(editor).getByRole("button", { name: tFields("field.add") }));
+	await click(within(editor).getByRole("button", { name: `+ ${tFields("field.add")}` }));
 	return body().findByRole("dialog", { name: new RegExp(tFields("field.addTitle")) });
 };
 const kindOf = (sheet: HTMLElement, kind: "text" | "select" | "media" | "relation") =>
@@ -149,7 +149,7 @@ export const NoteFieldSelect = story(server(), "collections", FIELDS, {
 			const valueInput = within(sheet).getAllByRole("textbox", { name: tFields("options.value") })[at] as HTMLElement;
 			setValue(valueInput, value);
 			// The value is committed when the input is left.
-			fireEvent.blur(valueInput);
+			fireEvent.focusOut(valueInput);
 			setValue(
 				within(sheet).getAllByRole("textbox", { name: new RegExp(`^${tFields("options.label").slice(0, 2)}`) })[
 					at
@@ -237,12 +237,19 @@ const removeField = async (canvasElement: HTMLElement, name: string) =>
 	click(await find(canvasElement).findByRole("button", { name: t("row.remove", { name }) }));
 
 /**
- * Three changes of the post collection, like the board's: 대표 이미지 and 부제 deleted and a new field 글 종류 (a choice, required). The board's third is a
- * rename of 요약; a field's name is read-only in its sheet, so there is no way to draw it here.
+ * Three changes of the post collection, like the board's: 요약 renamed to excerpt (from its sheet), 부제 deleted, and a new field 글 종류 (a choice,
+ * required).
  */
 const changeFields: Play = async ({ canvasElement }) => {
+	const editor = await find(canvasElement).findByTestId("collection-post");
+	await click(within(editor).getByRole("button", { name: tFields("field.toggle", { name: "summary" }) }));
+	const sheet = await body().findByRole("dialog");
+	const nameBox = within(sheet).getByRole("textbox", { name: tFields("field.name") });
+	setValue(nameBox, "excerpt");
+	fireEvent.focusOut(nameBox);
+	await click(within(sheet).getByRole("button", { name: tFields("sheet.save") }));
+	await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());
 	await removeField(canvasElement, "subtitle");
-	await removeField(canvasElement, "cover");
 	const adding = await openAddField(canvasElement, "post");
 	await kindOf(adding, "select");
 	typeLabelAndName(adding, "글 종류", "format");
@@ -251,10 +258,11 @@ const changeFields: Play = async ({ canvasElement }) => {
 	const [first] = within(adding).getAllByRole("textbox", { name: new RegExp(`^${tFields("options.value")}`) });
 	if (first) {
 		setValue(first, "note");
-		fireEvent.blur(first);
+		fireEvent.focusOut(first);
 	}
 	await click(within(adding).getByRole("button", { name: tFields("field.add") }));
 	await waitFor(() => expect(body().queryByRole("dialog")).toBeNull());
+	unfocus();
 };
 
 /** Stage 필드 바꿈: the fields tab with three changes counted in the title row. */
@@ -292,7 +300,6 @@ export const FieldsPreviewError = story(
 	{
 		play: steps(async ({ canvasElement }) => {
 			await removeField(canvasElement, "subtitle");
-			await removeField(canvasElement, "cover");
 		}, preview(true)),
 	},
 );
@@ -312,18 +319,27 @@ const SAMPLE = [
 const dropSubtitle = { op: "dropField", collection: "post", field: "subtitle" };
 const fill = (value: string) => ({ op: "setDefault", collection: "post", field: "format", value });
 const change = (kind: string, rest: object) => ({ kind, collection: "post", ...rest });
-const COVER = "field_removed:post:cover";
+const RENAME = "field_removed:post:summary";
+const renameField = { op: "renameField", collection: "post", from: "summary", to: "excerpt" };
 const SUBTITLE = "field_removed:post:subtitle";
 const FORMAT = "field_added:post:format";
-/** What the server says of the three field changes: 148 entries have 대표 이미지, 132 have 부제 and 148 lack the new required 글 종류. */
+/** What the server says of the three field changes: 148 entries have 요약 (renamed), 132 have 부제 and 148 lack the new required 글 종류. */
 const fieldChanges = previewOf({
 	impacts: [
 		{
-			change: change("field_removed", { field: "cover", fieldKind: "media" }),
-			key: COVER,
+			change: change("field_removed", { field: "summary", fieldKind: "text" }),
+			key: RENAME,
 			entries: 148,
 			sample: SAMPLE,
 			consequence: "orphaned",
+			checked: true,
+		},
+		{
+			change: change("field_added", { field: "excerpt", fieldKind: "text", required: false }),
+			key: "field_added:post:excerpt",
+			entries: 0,
+			sample: [],
+			consequence: "none",
 			checked: true,
 		},
 		{
@@ -345,12 +361,12 @@ const fieldChanges = previewOf({
 	],
 	decisions: [
 		{
-			key: COVER,
-			change: change("field_removed", { field: "cover", fieldKind: "media" }),
+			key: RENAME,
+			change: change("field_removed", { field: "summary", fieldKind: "text" }),
 			entries: 148,
 			sample: SAMPLE,
-			suggestions: [{ op: "dropField", collection: "post", field: "cover" }],
-			chosen: null,
+			suggestions: [renameField],
+			chosen: renameField,
 		},
 		{
 			key: SUBTITLE,
@@ -371,11 +387,11 @@ const fieldChanges = previewOf({
 	],
 });
 
-/** Stage 필드 검토: one block per change, the values kept, moved or deleted, and the entries touched (the board's rename block cannot be drawn, see above). */
+/** Stage 필드 검토: one block per change, the values kept, moved or deleted, and the entries touched. */
 export const FieldsReview = story(server({ preview: fieldChanges }), "collections", FIELDS, {
 	play: steps(preview(false), changeFields, async ({ canvasElement }) => {
 		const sheet = await openReview(canvasElement);
-		await within(sheet).findByTestId(`impact-${COVER}`);
+		await within(sheet).findByTestId(`impact-${RENAME}`);
 	}),
 });
 

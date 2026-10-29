@@ -446,11 +446,10 @@ export function KindOptions({
 					</Grid>,
 					placeholder,
 					fillSwitch,
-					fillLength,
 				],
-				advanced: [],
+				advanced: [fillLength],
 				view: [placeholder, rows],
-				structure: [multiline, max, fillSwitch, fillLength],
+				structure: [multiline, max, fillSwitch],
 			});
 		}
 		case "slug": {

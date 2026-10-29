@@ -44,7 +44,6 @@ const item = (label: string) => ({
 export const schema = () => ({
 	site: {
 		name: "몬티 블로그",
-		homeLink: "/",
 		aliases: ["www.example.dev"],
 		previewPath: "/preview",
 		previewLocaleParam: false,
@@ -74,10 +73,14 @@ export const schema = () => ({
 				category: { kind: "relation", label: "카테고리", to: "category" },
 				tags: { kind: "relation", label: "태그", to: "tag", many: true },
 				series: { kind: "relation", label: "시리즈", to: "series" },
+				seoTitle: { kind: "text", label: "검색 제목" },
+				seoDescription: { kind: "text", label: "검색 설명", multiline: true },
+				ogImage: { kind: "media", label: "공유 이미지", accept: "image" },
 			},
 			layout: [
 				{ fields: ["title", "slug", "summary", "subtitle", "cover"] },
 				{ group: "분류", fields: ["category", "tags", "series"] },
+				{ tab: "SEO", fields: ["seoTitle", "seoDescription", "ogImage"] },
 			],
 		},
 		memo: {

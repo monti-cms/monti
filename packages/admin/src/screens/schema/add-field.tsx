@@ -179,7 +179,6 @@ export function AddFieldSheet({
 									<Stack gap={16}>
 										<TextInput
 											label={t("field.label")}
-											required
 											value={label}
 											onChange={(value) => {
 												setTypedLabel(value);
@@ -188,7 +187,6 @@ export function AddFieldSheet({
 										/>
 										<TextInput
 											label={t("field.name")}
-											required
 											mono
 											value={name}
 											error={typedName !== null && problem ? ts(`name.${problem}`) : undefined}

@@ -12,12 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
  * pinned row is the tab bar. `children` is the list of the picked tab.
  */
 function PropertyPanel({
+	title,
 	label,
 	value,
 	onValueChange,
 	tabs,
 	children,
 }: {
+	/** A head above the tab bar, for a pane that is not the editor's own (the preview in the settings). */
+	title?: ReactNode;
 	/** The pane's name. */
 	label: string;
 	/** The picked tab. */
@@ -36,6 +39,7 @@ function PropertyPanel({
 			<SidePanel
 				width="panel"
 				bleed
+				title={title}
 				aria-label={label}
 				className="min-h-0 flex-1"
 				bar={

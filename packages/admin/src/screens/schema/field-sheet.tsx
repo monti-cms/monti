@@ -168,12 +168,7 @@ export function FieldSheet({
 						<TabsContent value="basic">
 							<Stack gap={0}>
 								<SheetSection title={t("sheet.view")}>
-									<TextInput
-										label={t("field.label")}
-										required
-										value={label}
-										onChange={(value) => setBoth("label", value)}
-									/>
+									<TextInput label={t("field.label")} value={label} onChange={(value) => setBoth("label", value)} />
 									<TextAreaInput
 										label={t("field.description")}
 										value={field.description as string | undefined}
@@ -280,6 +275,15 @@ export function FieldSheet({
 						</TabsContent>
 						<TabsContent value="advanced">
 							<Stack gap={16}>
+								<KindOptions
+									name={name}
+									field={field}
+									editing={draftEditing}
+									set={set}
+									change={change}
+									place={place}
+									part="advanced"
+								/>
 								{!isSlug && valueKind && (
 									<FieldRolePicker
 										role={field.role as string | undefined}

@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 
 const changeVariants = cva(
-	"grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-monti-12 border-monti-muted border-b py-monti-16 last:border-b-0 *:data-[slot=change-body]:col-start-2 [&_[data-slot=radio-group]]:gap-monti-10 [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-note [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-muted [&_:is([data-slot=option],[data-slot=radio-item]):has([data-checked])]:text-monti-default",
+	"grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-monti-12 border-monti-muted border-b py-monti-16 *:data-[slot=change-body]:col-start-2 [&_[data-slot=radio-group]]:gap-monti-10 [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-note [&_:is([data-slot=option],[data-slot=radio-item])]:text-monti-muted [&_:is([data-slot=option],[data-slot=radio-item]):has([data-checked])]:text-monti-default",
 	{
 		variants: {
 			/** What the change is: a new field (green), an edit (yellow), a removal (red). */

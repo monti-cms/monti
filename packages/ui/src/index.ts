@@ -40,6 +40,7 @@ export const Count = close(open.Count);
 export const Spinner = close(open.Spinner);
 export const FilterButton = close(open.FilterButton);
 export const FolderTab = close(open.FolderTab);
+export const FolderTabEdit = close(open.FolderTabEdit);
 export const FolderTabs = close(open.FolderTabs);
 export const FolderTabsAdd = close(open.FolderTabsAdd);
 export const FolderTabsBody = close(open.FolderTabsBody);

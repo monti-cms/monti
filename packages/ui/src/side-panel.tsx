@@ -46,7 +46,7 @@ export function SidePanel({
 }: Omit<ComponentProps<"aside">, "title"> & {
 	/** The panel's name and its 16px head. Without it the panel has no head (give it an `aria-label`, and a `bar` if it has tabs). */
 	title?: ReactNode;
-	/** A row pinned at the top in place of the head: the tab bar of the properties panel. */
+	/** A row pinned at the top, under the head when there is one: the tab bar of the properties panel. */
 	bar?: ReactNode;
 	/** Icon buttons at the end of the head, before the close button. */
 	actions?: ReactNode;
@@ -84,7 +84,7 @@ export function SidePanel({
 			)}
 			{...props}
 		>
-			{title ? (
+			{title && (
 				<header data-slot="side-panel-header" className={PANEL_HEAD}>
 					<h2 id={titleId} className={PANEL_TITLE}>
 						{title}
@@ -96,9 +96,8 @@ export function SidePanel({
 						</IconButton>
 					)}
 				</header>
-			) : (
-				bar
 			)}
+			{bar}
 			{onSubmit ? (
 				<form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
 					{body}

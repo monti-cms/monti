@@ -29,7 +29,7 @@ Steps are the contract for the flow test. Each step names its board file, the sc
 - Board: `Flow11Step03.dc.html`
 - Renders: `Settings` (stage "칸 오류")
 - Test: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
-- Field error: the home link must be an address starting with / or https://. Saving is blocked.
+- Field error: one short line under the field, the field marked invalid, saving blocked until it is fixed. The board draws it on the home link; the site has no home link setting, so in code the same behaviour is on the host names: a host that is not a host name (like "example dev") gets "호스트 이름이 아니에요." under its row.
 
 ### Step 04: "개발 서버 · 나가려 할 때 · 저장하지 않은 바뀐 곳 → 확인 (계속 고치기 · 저장하지 않고 나가기)"
 

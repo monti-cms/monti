@@ -29,7 +29,7 @@ import { type ControlWidth, Labeled } from "../shared/labeled";
 import type { DraftProblem } from "./draft-problems";
 import { schemaMessages } from "./messages";
 import { ReadValue } from "./read-value";
-import { nameProblem, type Obj, sameJson, sectionOf } from "./schema-model";
+import { nameProblem, type Obj, type Rename, sameJson, sectionOf } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */
 export interface SchemaEditContext {
@@ -38,6 +38,8 @@ export interface SchemaEditContext {
 	readonly issues: readonly ConfigIssue[];
 	/** What stops the draft from being saved; each editor shows the ones that are under its fields. */
 	readonly problems: readonly DraftProblem[];
+	/** The renames the writer made in the draft, with which a renamed field is told from a removed one and a new one. */
+	readonly renames: readonly Rename[];
 	readonly collectionNames: readonly string[];
 	/** Collections defined in code: the preview keeps them next to the file's. */
 	readonly codeCollections: readonly string[];
@@ -52,6 +54,7 @@ const Context = createContext<SchemaEditContext>({
 	vocabulary: { blocks: [], marks: [] },
 	issues: [],
 	problems: [],
+	renames: [],
 	collectionNames: [],
 	codeCollections: [],
 	file: {},
@@ -230,7 +233,7 @@ export function TextInput({
 	);
 }
 
-/** Several lines of text under a label (a help text): the same field as {@link TextInput} with an underline, two lines high until it grows. */
+/** Several lines of text under a label (a help text): the same field as {@link TextInput} with an underline, two lines high (52px) until it grows. */
 export function TextAreaInput({
 	label,
 	value,
@@ -238,7 +241,6 @@ export function TextAreaInput({
 	placeholder,
 	required,
 	revert,
-	rows = 2,
 }: {
 	label: string;
 	value: string | undefined;
@@ -247,7 +249,6 @@ export function TextAreaInput({
 	required?: boolean;
 	/** Puts the saved value back; given only while the field differs from the saved file. */
 	revert?: () => void;
-	rows?: number;
 }) {
 	const id = useId();
 	const { disabled } = useSchemaEdit();
@@ -262,7 +263,7 @@ export function TextAreaInput({
 		<Labeled label={label} htmlFor={id} required={required} changed={changed}>
 			<Textarea
 				id={id}
-				rows={rows}
+				tall
 				value={value ?? ""}
 				placeholder={placeholder}
 				disabled={disabled}

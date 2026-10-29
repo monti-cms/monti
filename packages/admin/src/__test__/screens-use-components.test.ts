@@ -91,15 +91,11 @@ const DRAWING = new Map<string, string>([
 	],
 	[
 		"admin/src/screens/schema/fields-tree-layout-rows.tsx",
-		"the field list tab and group rows: drag transform, hover-revealed handle",
+		"the drop rows of the field list: a drag transform on the row",
 	],
 	[
 		"admin/src/screens/schema/fields-tree-rows.tsx",
-		"the field list rows: column grid, hover-revealed handle and buttons, kind colours, drag transform",
-	],
-	[
-		"admin/src/screens/schema/fields-tree.tsx",
-		"the field list frame: column grid, resizable side panel and preview column",
+		"the field list rows: the hover-revealed row buttons and the problem dot",
 	],
 	[
 		"admin/src/screens/shared/side-panel.tsx",

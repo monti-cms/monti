@@ -6,7 +6,7 @@ import { siteProblems } from "./site-problems";
 export interface DraftProblem {
 	/** The Settings tab it is on. */
 	readonly area: "collections" | "locales" | "site" | "admin";
-	/** The place in the file, like `site.homeLink` or `collections.post.fields.format`. */
+	/** The place in the file, like `site.aliases.0` or `collections.post.fields.format`. */
 	readonly path: string;
 	readonly code: string;
 	readonly collection?: string;

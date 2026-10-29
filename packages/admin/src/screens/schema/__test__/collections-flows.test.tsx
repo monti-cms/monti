@@ -187,7 +187,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(within(screen.getByTestId("collection-nav-note")).getByRole("img", { name: t("changed") })).toBeTruthy();
 
 		// 04: "+ 필드 추가" opens the sheet of kinds, with the collection's name in its title and the basic and advanced tabs.
-		fireEvent.click(within(editor).getByRole("button", { name: tFields("field.add") }));
+		fireEvent.click(within(editor).getByRole("button", { name: `+ ${tFields("field.add")}` }));
 		const adding = await screen.findByRole("dialog", { name: new RegExp(tFields("field.addTitle")) });
 		expect(adding.textContent).toContain("Notes");
 		const kindList = within(adding).getByRole("listbox", { name: tFields("field.kind") });
@@ -206,10 +206,11 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		).toBe("true");
 		expect(within(adding).getByRole("tab", { name: tFields("sheet.tabAdvanced") })).toBeTruthy();
 
-		// The required fields end their label with the red star; nothing says "optional".
+		// The add-field sheet marks no label with the red star (the board does not); the button stays off until the field is whole, and nothing says "optional".
 		const label = within(adding).getByRole("textbox", { name: tFields("field.label") }) as HTMLInputElement;
-		expect(label.required).toBe(true);
-		expect(label.labels?.[0]?.textContent).toContain("*");
+		expect(label.labels?.[0]?.textContent).not.toContain("*");
+		const nameBox = within(adding).getByRole("textbox", { name: tFields("field.name") }) as HTMLInputElement;
+		expect(nameBox.labels?.[0]?.textContent).not.toContain("*");
 		expect(adding.textContent).not.toContain("optional");
 		expect(adding.textContent).not.toContain("선택");
 		const addButton = within(adding).getByRole("button", { name: tFields("field.add") }) as HTMLButtonElement;
@@ -420,7 +421,7 @@ describe("flow 4 · 필드 시트", () => {
 		expect(headings.slice(1)).toEqual([tFields("sheet.view"), tFields("sheet.structure")]);
 		expect(within(sheet).getByRole("textbox", { name: tFields("field.name") })).toBeTruthy();
 		const label = within(sheet).getByRole("textbox", { name: tFields("field.label") }) as HTMLInputElement;
-		expect(label.required).toBe(true);
+		expect(label.labels?.[0]?.textContent).not.toContain("*");
 
 		// The title field cannot be deleted: the button is off and the reason is written beside it, not in a tooltip.
 		const remove = within(sheet).getByRole("button", { name: tFields("sheet.delete") }) as HTMLButtonElement;

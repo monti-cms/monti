@@ -2,30 +2,20 @@
 
 // The rows of the tab / group layout of the fields tree: a tab row, a group row (both with in-place names) and the drop rows between them.
 
-import { ArrowDown, ArrowRight, ArrowUp, CollapseAll, Draggable, TrashCan } from "@carbon/icons-react";
+import { ArrowRight, CollapseAll, TrashCan } from "@carbon/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
-import { Box, cn, Input, Text } from "@monti-cms/ui";
+import { useSite, useTranslator } from "@monti-cms/core/site";
+import { FieldRow, Input, Text } from "@monti-cms/ui";
 import { useEffect, useRef, useState } from "react";
 import { tabLabel } from "../entries/layout-groups";
 import { schemaFieldsMessages } from "./fields.messages";
-import { groupId, tabId } from "./fields-tree-dnd";
+import { groupId } from "./fields-tree-dnd";
 import { type Destination, MoveDialog, type RowButton, RowButtons } from "./fields-tree-rows";
-import {
-	editGroup,
-	moveGroupToTab,
-	moveTab,
-	removeGroup,
-	removeTab,
-	renameTab,
-	type Tree,
-	tabCanRemove,
-	tabCanRename,
-} from "./layout-model";
+import { editGroup, moveGroupToTab, removeGroup, type Tree } from "./layout-model";
 
 /** An input that edits a name in place: it changes the tree on Enter or when it loses focus, and Escape gives the old name back. */
-function InlineName({
+export function InlineName({
 	value,
 	label,
 	disabled,
@@ -77,66 +67,6 @@ export interface LayoutOps {
 	readonly disabled: boolean;
 }
 
-/** A tab of the panel as a row of the tree: shown for all tabs including the default tab. */
-export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
-	const t = useTranslator(schemaFieldsMessages);
-	const site = useSite();
-	const tab = ops.tree.tabs[index];
-	const { setNodeRef, transform, transition } = useSortable({ id: tabId(index), disabled: { draggable: true } });
-	const inputRef = useRef<HTMLInputElement | null>(null);
-	if (!tab) return null;
-	const canRename = tabCanRename(ops.tree, index);
-	const canRemove = tabCanRemove(ops.tree, index);
-	const count = ops.tree.tabs.length;
-	const defaultName = tabLabel(site, DEFAULT_TAB);
-	const currentName = index === 0 ? (ops.tree.defaultTab ?? defaultName) : tab.name;
-	const buttons: RowButton[] = [
-		{
-			label: t("layout.upTab", { name: currentName }),
-			icon: ArrowUp,
-			disabled: ops.disabled || index < 2,
-			onClick: () => ops.change((tree) => moveTab(tree, index, -1)),
-		},
-		{
-			label: t("layout.downTab", { name: currentName }),
-			icon: ArrowDown,
-			disabled: ops.disabled || index === 0 || index === count - 1,
-			onClick: () => ops.change((tree) => moveTab(tree, index, 1)),
-		},
-		{
-			label: t("layout.removeTab", { name: currentName }),
-			icon: TrashCan,
-			destructive: true,
-			disabled: ops.disabled || !canRemove,
-			onClick: () => ops.change((tree) => removeTab(tree, index)),
-		},
-	];
-	return (
-		<div
-			ref={setNodeRef}
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			data-testid={`tab-${index}`}
-			className="group/row relative mt-monti-12 flex items-center gap-monti-4 border-y bg-monti-muted py-monti-8 pr-monti-16 pl-monti-32 first:mt-0"
-		>
-			<InlineName
-				value={currentName}
-				label={t("layout.tabName")}
-				disabled={ops.disabled || !canRename}
-				inputRef={inputRef}
-				maxLength={20}
-				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name, defaultName))}
-			/>
-			<Box as="span" grow />
-			{!canRename && index > 0 && (
-				<Text variant="caption" tone="muted" title={t("layout.tabLocked")}>
-					{t("layout.pluginPlaced")}
-				</Text>
-			)}
-			<RowButtons buttons={buttons} />
-		</div>
-	);
-}
-
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
 export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; block: number }) {
 	const t = useTranslator(schemaFieldsMessages);
@@ -178,59 +108,54 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 		},
 	];
 	return (
-		<div
+		<FieldRow
 			ref={setNodeRef}
-			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"group/row relative mt-monti-12 border-y bg-monti-tool first:mt-0",
-				isDragging && "z-10 bg-monti-page opacity-80",
-			)}
+			group
 			data-testid={`group-${tab}-${block}`}
-		>
-			<div className="flex items-center gap-monti-4 py-monti-8 pr-monti-16 pl-monti-32">
-				<InlineName
-					value={group.title}
-					label={t("layout.groupTitle")}
-					disabled={ops.disabled}
-					inputRef={inputRef}
-					onCommit={(title) => ops.change((tree) => editGroup(tree, ref, { title }))}
-				/>
-				{group.collapsed && (
-					<Text variant="caption" tone="muted">
-						{t("layout.collapsedMark")}
-					</Text>
-				)}
-				<Box as="span" grow />
-				<RowButtons buttons={buttons} />
-				{moving && (
-					<MoveDialog
-						title={t("layout.moveGroupTitle", { name: group.title })}
-						destinations={ops.tree.tabs.flatMap((item, at): Destination[] =>
-							at === tab
-								? []
-								: [
-										{
-											label: at === 0 ? (ops.tree.defaultTab ?? tabLabel(site, item.name)) : item.name,
-											run: () => ops.change((tree) => moveGroupToTab(tree, ref, at)),
-										},
-									],
-						)}
-						onClose={() => setMoving(false)}
+			motion={{ transform: CSS.Translate.toString(transform) ?? undefined, transition }}
+			dragging={isDragging}
+			grip={!ops.disabled}
+			gripProps={{
+				ref: setActivatorNodeRef,
+				...attributes,
+				...listeners,
+				"aria-label": t("layout.dragGroup", { name: group.title }),
+			}}
+			name={
+				<>
+					<InlineName
+						value={group.title}
+						label={t("layout.groupTitle")}
+						disabled={ops.disabled}
+						inputRef={inputRef}
+						onCommit={(title) => ops.change((tree) => editGroup(tree, ref, { title }))}
 					/>
-				)}
-			</div>
-			<button
-				type="button"
-				ref={setActivatorNodeRef}
-				{...attributes}
-				{...listeners}
-				aria-label={t("layout.dragGroup", { name: group.title })}
-				disabled={ops.disabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-monti-sm text-monti-muted opacity-0 outline-none hover:text-monti-default focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-contrast/20 disabled:hidden group-hover/row:opacity-100"
-			>
-				<Draggable aria-hidden className="size-4" />
-			</button>
-		</div>
+					{group.collapsed && (
+						<Text variant="caption" tone="muted">
+							{t("layout.collapsedMark")}
+						</Text>
+					)}
+				</>
+			}
+		>
+			<RowButtons buttons={buttons} />
+			{moving && (
+				<MoveDialog
+					title={t("layout.moveGroupTitle", { name: group.title })}
+					destinations={ops.tree.tabs.flatMap((item, at): Destination[] =>
+						at === tab
+							? []
+							: [
+									{
+										label: at === 0 ? (ops.tree.defaultTab ?? tabLabel(site, item.name)) : item.name,
+										run: () => ops.change((tree) => moveGroupToTab(tree, ref, at)),
+									},
+								],
+					)}
+					onClose={() => setMoving(false)}
+				/>
+			)}
+		</FieldRow>
 	);
 }
 
@@ -238,16 +163,13 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 export function DropRow({ id, label, testId }: { id: string; label?: string; testId: string }) {
 	const { setNodeRef, transform, transition } = useSortable({ id, disabled: { draggable: true } });
 	return (
-		<div
+		<li
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"pr-monti-16 pl-monti-32 text-monti-caption text-monti-muted",
-				label ? "py-monti-8" : "-mb-monti-8 h-2",
-			)}
+			className={label ? "list-none px-monti-12 py-monti-8 text-monti-caption text-monti-muted" : "h-0 list-none"}
 			data-testid={testId}
 		>
 			{label}
-		</div>
+		</li>
 	);
 }

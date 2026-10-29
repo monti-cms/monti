@@ -7,7 +7,6 @@ type T = TranslatorFor<typeof schemaChangesMessages>;
 const COLLECTION_KEYS = ["label", "kind", "path", "folders", "icon", "defaultTab"] as const;
 const SETTINGS = [
 	"site.name",
-	"site.homeLink",
 	"site.url",
 	"site.aliases",
 	"site.previewPath",

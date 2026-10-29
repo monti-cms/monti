@@ -280,12 +280,13 @@ function SchemaEditor({
 			vocabulary: state.vocabulary,
 			issues,
 			problems,
+			renames,
 			collectionNames: liveNames,
 			codeCollections: state.codeCollections,
 			file: draft,
 			saved: base,
 		}),
-		[writable, state.vocabulary, issues, problems, liveNames, state.codeCollections, draft, base],
+		[writable, state.vocabulary, issues, problems, renames, liveNames, state.codeCollections, draft, base],
 	);
 
 	const removals: Removal[] = removed.flatMap((name) => {

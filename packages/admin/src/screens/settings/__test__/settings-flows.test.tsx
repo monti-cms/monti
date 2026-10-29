@@ -53,7 +53,6 @@ const state = {
 		timeZone: "Asia/Seoul",
 		site: {
 			name: "example.dev",
-			homeLink: "/",
 			aliases: ["www.example.dev"],
 			previewPath: "/preview",
 			previewLocaleParam: false,
@@ -211,44 +210,41 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect((await save()).site.previewPath).toBe("/draft");
 	});
 
-	it("03 a home link that is not an address shows one error line under the field and blocks saving until it is fixed", async () => {
+	it("03 a host that is not a host name shows one error line under its row and blocks saving until it is fixed", async () => {
 		open("site");
-		const home = (await field(tSite("site.homeLink"))) as HTMLInputElement;
-		expect(home.getAttribute("aria-invalid")).toBeNull();
+		const host = (await field(tSite("site.alias.row", { number: 1 }))) as HTMLInputElement;
+		expect(host.getAttribute("aria-invalid")).toBeNull();
 
-		type(home, "example.dev/blog");
-		expect(home.getAttribute("aria-invalid")).toBe("true");
-		const error = document.getElementById(home.getAttribute("aria-describedby") ?? "");
-		expect(error?.textContent).toBe(tSite("problem.home-link"));
-		expect(screen.getAllByText(tSite("problem.home-link"))).toHaveLength(1);
+		type(host, "example dev");
+		expect(host.getAttribute("aria-invalid")).toBe("true");
+		const error = document.getElementById(host.getAttribute("aria-describedby") ?? "");
+		expect(error?.textContent).toBe(tSite("problem.host"));
+		expect(screen.getAllByText(tSite("problem.host"))).toHaveLength(1);
 		// The group stays (the change is real) but the save button is off.
 		expect(changes(1)).toBeTruthy();
 		expect(saveButton().disabled).toBe(true);
 
-		// The label row's undo puts the saved link back: the error goes with it.
-		fireEvent.click(screen.getByRole("button", { name: t("revert.named", { name: tSite("site.homeLink") }) }));
-		expect(home.value).toBe("/");
-		expect(home.getAttribute("aria-invalid")).toBeNull();
-		expect(screen.queryByText(tSite("problem.home-link"))).toBeNull();
+		// The label row's undo puts the saved host back: the error goes with it.
+		fireEvent.click(screen.getByRole("button", { name: t("revert.named", { name: tSite("site.aliases") }) }));
+		// The rows follow the revert, so the input is a new one.
+		const back = (await field(tSite("site.alias.row", { number: 1 }))) as HTMLInputElement;
+		expect(back.value).toBe("www.example.dev");
+		expect(back.getAttribute("aria-invalid")).toBeNull();
+		expect(screen.queryByText(tSite("problem.host"))).toBeNull();
 
-		// A path and an https address are both fine.
-		type(home, "https://example.dev/blog");
-		expect(home.getAttribute("aria-invalid")).toBeNull();
-		expect(saveButton().disabled).toBe(false);
-		type(home, "//other.dev");
-		expect(saveButton().disabled).toBe(true);
-		type(home, "/blog");
-		expect(saveButton().disabled).toBe(false);
-	});
-
-	it("03b a host that is not a host name blocks saving too", async () => {
-		open("site");
-		fireEvent.click(await screen.findByRole("button", { name: tSite("site.alias.add") }));
+		// A new empty row is no problem; a host name typed into it is fine; a bad one blocks again.
+		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.add") }));
 		const added = screen.getByRole("textbox", { name: tSite("site.alias.row", { number: 2 }) });
+		expect(added.getAttribute("aria-invalid")).toBeNull();
+		type(added, "blog.example.dev");
+		expect(added.getAttribute("aria-invalid")).toBeNull();
+		expect(saveButton().disabled).toBe(false);
 		type(added, "not a host");
 		expect(added.getAttribute("aria-invalid")).toBe("true");
 		expect(screen.getByText(tSite("problem.host"))).toBeTruthy();
 		expect(saveButton().disabled).toBe(true);
+		type(added, "blog.example.dev");
+		expect(saveButton().disabled).toBe(false);
 	});
 
 	it("04 a link clicked with unsaved changes asks first: keep editing stays, leaving without saving goes on", async () => {
@@ -267,7 +263,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		clicks.mockClear();
 
 		type(await field(tSite("site.name")), "example.dev/2");
-		type(screen.getByRole("textbox", { name: tSite("site.homeLink") }), "/home");
+		type(screen.getByRole("textbox", { name: tSite("site.previewPath") }), "draft");
 		fireEvent.click(link);
 		const dialog = await screen.findByRole("alertdialog", { name: tc("leave.title") });
 		expect(dialog.textContent).toContain(tc("leave.description", { count: 2 }));

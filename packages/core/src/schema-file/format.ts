@@ -209,7 +209,6 @@ const site = strict({
 	url: text.optional().describe("Public site URL. It differs per environment, so it is usually set in code."),
 	aliases: z.array(text).optional().describe("Other host names of the same site."),
 	name: text.optional(),
-	homeLink: text.optional().describe("Where the site name links to: a path starting with `/` or an http(s) URL."),
 	previewPath: text.optional().describe("Start of the draft preview URL."),
 	previewLocaleParam: z.union([text, z.literal(false)]).optional(),
 	localePrefix: z.enum(LOCALE_PREFIX_MODES as [string, ...string[]]).optional(),

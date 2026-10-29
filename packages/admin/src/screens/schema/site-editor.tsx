@@ -43,7 +43,7 @@ export function SiteEditor({
 	const queryRevert = savedParam === false ? undefined : revert("previewLocaleParam");
 	const problemText = (path: string) => {
 		const problem = problemAt(problems, path);
-		return problem ? t(`problem.${problem.code}` as "problem.home-link") : undefined;
+		return problem ? t(`problem.${problem.code}` as "problem.query-name") : undefined;
 	};
 	return (
 		<Stack gap={0} data-testid="site-settings">
@@ -53,15 +53,6 @@ export function SiteEditor({
 					revert={revert("name")}
 					value={site.name as string | undefined}
 					onChange={(value) => set("name", orUndefined(value))}
-				/>
-				<TextInput
-					mono
-					label={t("site.homeLink")}
-					revert={revert("homeLink")}
-					placeholder="/"
-					value={site.homeLink as string | undefined}
-					error={problemText("site.homeLink")}
-					onChange={(value) => set("homeLink", orUndefined(value))}
 				/>
 				<HostRows
 					hosts={aliases}

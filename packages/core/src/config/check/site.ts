@@ -2,7 +2,6 @@ import type { CmsConfig } from "../define";
 import {
 	HOST_PATTERN,
 	isAdminPath,
-	isHomeLink,
 	isHttpUrl,
 	isTimeZone,
 	LOCALE_CODE,
@@ -82,9 +81,6 @@ function checkSiteOptions(list: IssueList, site: CmsConfig["site"]): void {
 	if (site === undefined) return;
 	if (site.url !== undefined && !isHttpUrl(site.url))
 		list.add("site.url", "http-url", `"${site.url}" is not an http(s) URL`);
-	if (site.homeLink !== undefined && !isHomeLink(site.homeLink)) {
-		list.add("site.homeLink", "home-link", `"${site.homeLink}" must be a path starting with "/" or an http(s) URL`);
-	}
 	for (const [index, alias] of (site.aliases ?? []).entries()) {
 		if (!HOST_PATTERN.test(alias))
 			list.add(pathOf("site", "aliases", index), "host", `"${alias}" is not a host name (like "www.example.com")`);

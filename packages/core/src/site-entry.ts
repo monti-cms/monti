@@ -16,7 +16,6 @@ export {
 	DEFAULT_ADMIN_PATH,
 	HOST_PATTERN,
 	isAdminPath,
-	isHomeLink,
 	isHttpUrl,
 	isLocalUrl,
 	isTimeZone,

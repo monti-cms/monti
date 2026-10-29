@@ -63,12 +63,12 @@ export const SiteLocaleQuery = story(server(), "site", undefined, {
 	},
 });
 
-/** Stage 칸 오류: a home link that is not an address shows the one error line and turns the save off. */
+/** Stage 칸 오류: a host name that is not a host name shows the one error line under its row and turns the save off. */
 export const SiteFieldError = story(server(), "site", undefined, {
 	play: async (context) => {
 		await editSite(context);
 		const canvas = within(context.canvasElement);
-		setValue(await canvas.findByRole("textbox", { name: tSite("site.homeLink") }), "example.dev/blog");
+		setValue(await canvas.findByRole("textbox", { name: tSite("site.alias.row", { number: 1 }) }), "example dev");
 	},
 });
 

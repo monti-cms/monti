@@ -9,19 +9,12 @@ describe("siteProblems", () => {
 		expect(
 			siteProblems(
 				file({
-					homeLink: "/blog",
 					aliases: ["www.example.dev", "localhost:3000"],
 					previewLocaleParam: "lang",
 				}),
 			),
 		).toEqual([]);
-		expect(siteProblems(file({ homeLink: "https://example.dev/blog", previewLocaleParam: false }))).toEqual([]);
-	});
-
-	it("names a home link that is neither a path nor an http(s) address", () => {
-		for (const homeLink of ["example.dev/blog", "//other.dev", "ftp://x.dev"]) {
-			expect(siteProblems(file({ homeLink }))).toEqual([{ area: "site", path: "site.homeLink", code: "home-link" }]);
-		}
+		expect(siteProblems(file({ previewLocaleParam: false }))).toEqual([]);
 	});
 
 	it("points at the host that is not a host name, by its place in the list", () => {
@@ -39,8 +32,8 @@ describe("siteProblems", () => {
 	});
 
 	it("finds the problem at a path", () => {
-		const problems = siteProblems(file({ homeLink: "x" }));
-		expect(problemAt(problems, "site.homeLink")?.code).toBe("home-link");
-		expect(problemAt(problems, "site.aliases.0")).toBeUndefined();
+		const problems = siteProblems(file({ aliases: ["not a host"] }));
+		expect(problemAt(problems, "site.aliases.0")?.code).toBe("host");
+		expect(problemAt(problems, "site.aliases.1")).toBeUndefined();
 	});
 });
