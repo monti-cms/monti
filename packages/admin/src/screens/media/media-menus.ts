@@ -77,7 +77,10 @@ export function folderMenu(
 	];
 }
 
-/** The right-click menu of a file tile or row, and its ⋯: open, where it is used, to a folder, and the trash last. */
+/**
+ * The right-click menu of a file tile or row, and its ⋯: open, where it is used, to a folder. The trash is not here: the Del key, the panel's ⋯ and the
+ * bulk bar take a file there.
+ */
 export function fileMenu(
 	media: MediaItem,
 	folders: readonly FolderListItem[],
@@ -86,7 +89,6 @@ export function fileMenu(
 		open: (media: MediaItem) => void;
 		openEntry: (usage: { collection: string; entryId: string }) => void;
 		move: (media: MediaItem, folderId: string | null) => void;
-		trash: (media: MediaItem) => void;
 	},
 ): MenuAction[] {
 	const targets = folderChoices(folders, new Set([media.folderId ?? null]));
@@ -131,15 +133,6 @@ export function fileMenu(
 					},
 				]
 			: []),
-		{ kind: "separator" },
-		{
-			kind: "item",
-			label: tc("lifecycle.trash"),
-			icon: TrashCan,
-			shortcut: "Del",
-			destructive: true,
-			onSelect: () => handlers.trash(media),
-		},
 	];
 }
 

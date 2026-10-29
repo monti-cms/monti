@@ -62,6 +62,9 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"upload.shrinkFailed": "Couldn't make it small enough",
 
 		"result.noFolder": "No folder",
+		"format.image": "{format} image",
+		"format.pdf": "PDF document",
+		"format.file": "{format} file",
 		"usage.deleting": "Deleting",
 		"usage.count": "{count} posts",
 		"usage.none": "Unused",
@@ -131,8 +134,6 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"panel.saved": "Saved",
 
 		"replace.title": "Replace the file?",
-		"replace.from": "Current file",
-		"replace.to": "New file",
 		"replace.body": "{count} places that use it will all use the new file. The name, alt text and caption stay.",
 		"replace.bodyUnused": "Nothing uses it yet. The name, alt text and caption stay.",
 		"replace.confirm": "Replace",
@@ -205,6 +206,9 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"upload.shrinkFailed": "줄여도 너무 커요",
 
 		"result.noFolder": "폴더 없음",
+		"format.image": "{format} 이미지",
+		"format.pdf": "PDF 문서",
+		"format.file": "{format} 파일",
 		"usage.deleting": "삭제 중",
 		"usage.count": "글 {count}",
 		"usage.none": "사용 안 함",
@@ -274,8 +278,6 @@ export const mediaMessages = defineMessages("cms-admin.media", {
 		"panel.saved": "저장했어요",
 
 		"replace.title": "파일을 바꿀까요?",
-		"replace.from": "지금 파일",
-		"replace.to": "새 파일",
 		"replace.body": "쓰는 곳 {count}곳이 모두 새 파일로 바뀌어요. 이름, 대체 텍스트, 캡션은 그대로예요.",
 		"replace.bodyUnused": "아직 쓰는 곳이 없어요. 이름, 대체 텍스트, 캡션은 그대로예요.",
 		"replace.confirm": "바꾸기",

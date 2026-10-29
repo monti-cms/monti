@@ -55,11 +55,16 @@ function UploadTile({ entry, uploads }: { entry: UploadEntry; uploads: MediaUplo
 				: [{ label: t("upload.retry"), onClick: () => uploads.retry(entry), primary: true }, remove];
 	}
 
+	// A picture in a format the site does not take has nothing to show: a blank tile with the red line. Any other file shows its icon and extension.
+	const refusedPicture = problem?.kind === "type" && entry.file.type.startsWith("image/");
+	// Only a type that cannot be taken is "failed" (the red line); a file that is too large or did not go up keeps its picture, faded.
+	const status = !failed ? "uploading" : problem?.kind === "type" ? "failed" : "interrupted";
+
 	return (
 		<li>
 			<Tile
 				preview={
-					isImage ? (
+					refusedPicture ? null : isImage ? (
 						<Image src={preview} alt="" ratio="photo" radius="none" fallback={Document} />
 					) : (
 						<FilePreview ext={extensionOf(entry.file.name).toUpperCase()} />
@@ -67,7 +72,7 @@ function UploadTile({ entry, uploads }: { entry: UploadEntry; uploads: MediaUplo
 				}
 				title={entry.file.name}
 				detail={detail}
-				status={failed ? "failed" : "uploading"}
+				status={status}
 				progress={entry.status === "uploading" ? entry.percent : undefined}
 				actions={actions}
 			/>

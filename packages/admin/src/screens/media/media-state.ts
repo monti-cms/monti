@@ -29,16 +29,24 @@ export interface MediaState {
 	folder: string;
 }
 
-/** A search or a filter is on: the library shows the files that match, in one list with their paths, instead of the folder being looked into. */
+/** Any word or condition is on. */
 export const isFiltered = (state: Pick<MediaState, "search" | "used" | "kind" | "alt">): boolean =>
 	state.search.trim() !== "" || state.used !== "all" || state.kind !== "all" || state.alt !== "all";
 
+/**
+ * The library searches below the open folder: words are typed, or the alt text condition is on. It then lists the files that match, in one list with
+ * their paths, instead of the folder being looked into. The type and the use only narrow the files of the open folder, which stays browsable (its up row,
+ * its folders and "+ Folder").
+ */
+export const isSearching = (state: Pick<MediaState, "search" | "alt">): boolean =>
+	state.search.trim() !== "" || state.alt !== "all";
+
 /** Whether the place to look can be chosen: only inside a folder, since the top already is everything. */
-export const hasScope = (state: MediaState): boolean => isFiltered(state) && state.folder !== "";
+export const hasScope = (state: MediaState): boolean => isSearching(state) && state.folder !== "";
 
 /**
- * The query of the list for this state. Looking into a folder asks for its files only (`folderId`; the top asks for the files in no folder). A search or a
- * filter asks for the open folder and what is inside it, or for everything when the place to look is widened.
+ * The query of the list for this state. Looking into a folder asks for its files only (`folderId`; the top asks for the files in no folder), with the type
+ * and the use narrowing them. A search asks for the open folder and what is inside it, or for everything when the place to look is widened.
  */
 export function mediaListParams(state: MediaState): URLSearchParams {
 	const params = new URLSearchParams({ page: String(state.page), pageSize: String(state.pageSize) });
@@ -47,7 +55,7 @@ export function mediaListParams(state: MediaState): URLSearchParams {
 	if (state.kind !== "all") params.set("kind", state.kind);
 	if (state.alt !== "all") params.set("alt", state.alt);
 	if (state.sort !== "uploaded") params.set("sort", state.sort);
-	if (!isFiltered(state)) {
+	if (!isSearching(state)) {
 		params.set("folderId", state.folder || "null");
 	} else if (state.folder && state.scope === "here") {
 		params.set("folderId", state.folder);
@@ -56,12 +64,18 @@ export function mediaListParams(state: MediaState): URLSearchParams {
 	return params;
 }
 
-/** The query of the counts the filter menus show: the same place as a search or a filter looks in, and the same search words and usage, but not the type and alt text conditions. */
-export function mediaCountsParams(state: MediaState): URLSearchParams {
+/**
+ * The query of the counts the filter menus show: the same search words and usage, but not the type and alt text conditions. `direct` counts the open
+ * folder's own files (what a type pick lists, since the type only narrows the folder); otherwise the place a search looks in (the alt text counts, since
+ * that condition searches below).
+ */
+export function mediaCountsParams(state: MediaState, direct = false): URLSearchParams {
 	const params = new URLSearchParams({ page: "1", pageSize: "1" });
 	if (state.used !== "all") params.set("used", state.used);
 	if (state.search.trim()) params.set("search", state.search.trim());
-	if (state.folder && state.scope === "here") {
+	if (direct) {
+		params.set("folderId", state.folder || "null");
+	} else if (state.folder && state.scope === "here") {
 		params.set("folderId", state.folder);
 		params.set("includeDescendants", "true");
 	}
@@ -92,11 +106,27 @@ export function folderTrail(folders: readonly Folder[], folderId: string): Folde
 	return trail;
 }
 
-/** The path of a file's folder, "Blog Assets / covers"; `none` for a file in no folder. */
-export function folderPathLabel(folders: readonly Folder[], folderId: string | null | undefined, none: string): string {
-	if (!folderId) return none;
-	const trail = folderTrail(folders, folderId);
-	return trail.length > 0 ? trail.map((folder) => folder.name).join(" / ") : none;
+/**
+ * Where a file is, written for the open folder: nothing for a file in it, the way down from it for a file in a folder inside it ("covers"), and the whole
+ * path from the top for any other place ("Blog Assets / covers"); `none` for a file in no folder while a folder is open. A search or a filter lists files
+ * from several folders, and this is what tells them apart without writing the shared start of every path.
+ */
+export function folderPathBelow(
+	folders: readonly Folder[],
+	openFolderId: string | null,
+	fileFolderId: string | null | undefined,
+	none: string,
+): string | null {
+	const file = fileFolderId || null;
+	if (file === (openFolderId || null)) return null;
+	if (!file) return none;
+	const trail = folderTrail(folders, file);
+	if (trail.length === 0) return none;
+	const at = openFolderId ? trail.findIndex((folder) => folder.id === openFolderId) : -1;
+	return trail
+		.slice(at + 1)
+		.map((folder) => folder.name)
+		.join(" / ");
 }
 
 /** The folders a file can go to, in tree order (a folder, then what is inside it), each with how deep it is; the file's own folder is left out. */

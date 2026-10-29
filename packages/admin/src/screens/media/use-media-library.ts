@@ -9,7 +9,15 @@ import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useUrlState } from "../../lib/hooks/use-url-state";
 import { useConfirm } from "../shared/confirm-dialog";
 import { useDebouncedInput } from "../shared/use-debounced";
-import { folderTrail, hasScope, isFiltered, MEDIA_PARAMS, mediaCountsParams, mediaListParams } from "./media-state";
+import {
+	folderTrail,
+	hasScope,
+	isFiltered,
+	isSearching,
+	MEDIA_PARAMS,
+	mediaCountsParams,
+	mediaListParams,
+} from "./media-state";
 
 export type MediaView = "grid" | "list";
 const VIEW_CODEC = enumCodec<MediaView>(["grid", "list"]);
@@ -41,6 +49,14 @@ export function useMediaLibrary() {
 		queryFn: ({ signal }) => listMedia(site, countsQuery, signal),
 		placeholderData: keepPreviousData,
 	});
+	// What a type pick would list: the open folder's own files, while the library is browsing it (a search looks below, and its counts are the ones above).
+	const directQuery = mediaCountsParams(state, true).toString();
+	const direct = useQuery({
+		queryKey: mediaKeys.list(directQuery),
+		queryFn: ({ signal }) => listMedia(site, directQuery, signal),
+		placeholderData: keepPreviousData,
+		enabled: !isSearching(state),
+	});
 	const foldersQuery = useQuery({
 		queryKey: foldersKeys.list("media"),
 		queryFn: ({ signal }) => listFolders(site, "media", signal),
@@ -49,10 +65,11 @@ export function useMediaLibrary() {
 	const items: MediaItem[] = list.data?.items ?? [];
 
 	const filtered = isFiltered(state);
+	const searching = isSearching(state);
 	const trail = useMemo(() => folderTrail(folders, state.folder), [folders, state.folder]);
 	const currentFolder = trail.at(-1) ?? null;
-	// The folders shown beside the files: those inside the open folder, and the way up. Not while a search or a filter lists the matching files.
-	const explorer = filtered
+	// The folders shown beside the files: those inside the open folder, and the way up. Not while a search lists the matching files from below.
+	const explorer = searching
 		? null
 		: {
 				folders: folders.filter((folder) => (folder.parentId ?? null) === (state.folder || null)),
@@ -113,15 +130,19 @@ export function useMediaLibrary() {
 		query,
 		items,
 		total: list.data?.total ?? 0,
-		/** How many images and files, and how many pictures have alt text or none, in the place a search looks in. */
-		kinds: counts.data?.kinds ?? list.data?.kinds ?? { image: 0, file: 0 },
+		/** How many images and files a type pick lists: in the open folder while it is browsed, in the place a search looks in while one is on. */
+		kinds: (searching ? counts.data?.kinds : direct.data?.kinds) ?? list.data?.kinds ?? { image: 0, file: 0 },
+		/** How many pictures have alt text or none, in the place a search looks in (that condition searches below). */
 		alts: counts.data?.alts ?? list.data?.alts ?? { none: 0, has: 0 },
 		isLoading: list.isPending,
 		isRefreshing: list.isPlaceholderData,
 		error: list.error,
 		retry: () => void list.refetch(),
 		folders,
+		/** Any word or condition is on. */
 		filtered,
+		/** The files come from the open folder and below it, each with its path; the folders are not shown. */
+		searching,
 		scoped: hasScope(state),
 		trail,
 		currentFolder,

@@ -1,3 +1,4 @@
+import { fileTypeLabel } from "@monti-cms/core/site";
 import { toast } from "@monti-cms/ui";
 import type { MediaItem } from "../../api/media";
 import type { TranslatorFor } from "../../translator";
@@ -48,6 +49,26 @@ export const usageLabel = (t: TranslatorFor<typeof mediaMessages>, media: MediaI
 		: media.referencesCount > 0
 			? t("usage.count", { count: usageCount(media) })
 			: t("usage.none");
+
+/** The format of a file as the list writes it: "JPEG" for a picture, "PDF" or the extension for any other file. */
+export const formatLabel = (media: Pick<MediaItem, "filename" | "mimeType">, isImage: boolean): string =>
+	isImage
+		? (media.mimeType
+				?.replace(/^image\//, "")
+				.replace(/\+.*$/, "")
+				.toUpperCase() ?? "—")
+		: fileTypeLabel(media.filename, media.mimeType);
+
+/** The kind of a file in words: "JPEG image", "PDF document". */
+export const kindName = (
+	t: TranslatorFor<typeof mediaMessages>,
+	media: Pick<MediaItem, "filename" | "mimeType">,
+	isImage: boolean,
+): string => {
+	const format = formatLabel(media, isImage);
+	if (isImage) return t("format.image", { format });
+	return media.mimeType === "application/pdf" ? t("format.pdf") : t("format.file", { format });
+};
 
 /** Text of the usage note (`note`). */
 export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) =>

@@ -26,6 +26,8 @@ const frameVariants = cva(
 				fill: "w-full",
 				thumb: "size-monti-control-sm",
 				"thumb-lg": "size-monti-control-md",
+				/** A file's picture in a list row: 40px wide at the ratio given (the tile's 4:3), so a row of files stays as tall as its title. */
+				row: "w-monti-40",
 				/** As big as an icon, no fill: a logo inside a button. */
 				icon: "size-monti-icon-md bg-transparent",
 			},

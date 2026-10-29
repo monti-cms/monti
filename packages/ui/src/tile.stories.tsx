@@ -78,28 +78,31 @@ export const Picked: Story = {
 	),
 };
 
-/** Uploading: a faded preview and a bar along its bottom edge. Failed: a red ring over the preview, a red line, and what can be done. */
+/**
+ * Uploading: a faded preview and a bar along its bottom edge. Interrupted (too large): the picture stays, faded, with a red line and what can be done.
+ * Failed (a type that cannot be taken): a red ring over the preview, a red line, and what can be done.
+ */
 export const UploadingAndFailed: Story = {
 	render: () => (
 		<Stack direction="row" gap={24} align="start">
 			<Labelled name="올리는 중">
 				<Tile preview={preview} title="hero.png" detail="올리는 중 · 64%" status="uploading" progress={64} />
 			</Labelled>
-			<Labelled name="실패">
+			<Labelled name="끊김">
 				<Tile
 					preview={preview}
 					title="panorama.jpg"
 					detail="14 MB · 10 MB까지"
-					status="failed"
+					status="interrupted"
 					actions={[
 						{ label: "줄여서 다시", onClick: () => {}, primary: true },
 						{ label: "빼기", onClick: () => {} },
 					]}
 				/>
 			</Labelled>
-			<Labelled name="실패, 다시 할 수 없음">
+			<Labelled name="실패, 받지 않는 형식">
 				<Tile
-					preview={<Image src={null} alt="" fallback={Document} ratio="photo" radius="none" />}
+					preview={null}
 					title="IMG_2041.HEIC"
 					detail="올릴 수 없는 형식"
 					status="failed"

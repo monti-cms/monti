@@ -195,18 +195,18 @@ export const DraggingOverFolder: Story = {
 };
 
 /** A real picture to drop: a gradient drawn on a canvas and saved as PNG, so the tile has something to show under the veil. */
-const pictureFile = (name: string, from: string, to: string): Promise<File> =>
+const pictureFile = (name: string, from: string, to: string, width = 640, height = 480): Promise<File> =>
 	new Promise((resolve) => {
 		const canvas = document.createElement("canvas");
-		canvas.width = 640;
-		canvas.height = 480;
+		canvas.width = width;
+		canvas.height = height;
 		const context = canvas.getContext("2d");
-		const gradient = context?.createLinearGradient(0, 0, 640, 480);
+		const gradient = context?.createLinearGradient(0, 0, width, height);
 		gradient?.addColorStop(0, from);
 		gradient?.addColorStop(1, to);
 		if (context && gradient) {
 			context.fillStyle = gradient;
-			context.fillRect(0, 0, 640, 480);
+			context.fillRect(0, 0, width, height);
 		}
 		canvas.toBlob((blob) => resolve(new File([blob ?? new Blob()], name, { type: "image/png" })), "image/png");
 	});
@@ -249,19 +249,26 @@ export const Uploading: Story = {
 	},
 };
 
-// 올리기 실패: a format that is not taken, a file that is over the limit, and a type the site does not accept stay in place.
+// 올리기 실패: a format that is not taken (a blank tile with the red line) and a picture that is over the limit (its own picture, faded, no red line) stay in place.
 export const UploadsFailed: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
 		await tile(canvasElement, /^desk-morning/);
-		const big = new File(["x"], "panorama.jpg", { type: "image/jpeg" });
+		const big = await pictureFile("panorama.jpg", "#c2b59b", "#7d6d52");
 		Object.defineProperty(big, "size", { value: testSite.api.MAX_MEDIA_BYTES + 4_000_000 });
-		drag(area(), "drop", [
-			new File(["x"], "IMG_2041.HEIC", { type: "image/heic" }),
-			big,
-			new File(["x"], "setup.exe", { type: "application/x-msdownload" }),
-		]);
+		drag(area(), "drop", [new File(["x"], "IMG_2041.HEIC", { type: "image/heic" }), big]);
+		await tile(canvasElement, /^panorama\.jpg/);
+	},
+};
+
+// 받지 않는 형식: a file that is not a picture and not a type the site takes keeps its file icon and extension, with the red line and what is taken.
+export const UploadsRejectedType: Story = {
+	tags: ["visual"],
+	render: screen(backendOf()),
+	play: async ({ canvasElement }) => {
+		await tile(canvasElement, /^desk-morning/);
+		drag(area(), "drop", [new File(["x"], "setup.exe", { type: "application/x-msdownload" })]);
 		await tile(canvasElement, /^setup\.exe/);
 	},
 };
@@ -309,7 +316,7 @@ export const ReplaceDialog: Story = {
 		await userEvent.click(await body().findByRole("menuitem", { name: "파일 바꾸기" }));
 		const input = document.querySelector("input[data-slot=replace-input]") as HTMLInputElement;
 		const data = new DataTransfer();
-		data.items.add(new File([new Uint8Array(3000)], "desk-morning-v2.jpg", { type: "image/jpeg" }));
+		data.items.add(await pictureFile("desk-morning-v2.jpg", "#e2d3b9", "#b09a76", 2400, 1600));
 		Object.defineProperty(input, "files", { value: data.files, configurable: true });
 		fireEvent.change(input);
 		await body().findByRole("alertdialog");

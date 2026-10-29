@@ -123,6 +123,8 @@ const file = (name: string, type: string, size = 100) => {
 };
 /** A folder tile of the grid (the sidebar lists the folders too). */
 const folderTile = (name: string) => within(dropArea()).getByRole("button", { name: new RegExp(`^${name}`) });
+const folderRowOf = (name: string) =>
+	screen.getAllByRole("row").find((row) => row.textContent?.startsWith(name)) as HTMLElement;
 const dropArea = () => document.querySelector("[data-slot=drop-area]") as HTMLElement;
 const dragOf = (...files: File[]) => ({
 	dataTransfer: { types: ["Files"], files, items: files.map(() => ({ kind: "file" })) },
@@ -227,6 +229,9 @@ describe("flow: upload (올리기)", () => {
 		);
 		const heic = await screen.findByRole("button", { name: /^IMG_2041\.HEIC/ });
 		expect(heic.textContent).toContain(t("upload.unsupported"));
+		expect(heic.closest("[data-slot=tile]")?.getAttribute("data-status")).toBe("failed");
+		expect(heic.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeTruthy();
+		expect(heic.querySelector("[data-slot=file-preview]")).toBeNull();
 		const exe = screen.getByRole("button", { name: /^setup\.exe/ });
 		const kinds = acceptedKinds(testSite)
 			.map((kind) => t(`upload.kind.${kind}` as "upload.kind.image"))
@@ -250,6 +255,9 @@ describe("flow: upload (올리기)", () => {
 		const failed = await screen.findByRole("button", { name: /^panorama\.jpg/ });
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
 		expect(failed.textContent).toMatch(/MB/);
+		// A picture over the limit is only held up (its own picture, no red ring); a format the site does not take is the one that fails.
+		expect(failed.closest("[data-slot=tile]")?.getAttribute("data-status")).toBe("interrupted");
+		expect(failed.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("upload.shrink") }));
 		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalled());
 		expect(upload.shrinkForUpload.mock.calls[0]?.[1]).toBe(big);
@@ -338,10 +346,11 @@ describe("flow: browsing (둘러보기)", () => {
 		await waitFor(() => expect(written("DELETE", "/folders/covers")).toHaveLength(1));
 	});
 
-	it("opens the file menu with open, used in, to folder and the trash, and the empty-space menu with upload and new folder", async () => {
+	it("opens the file menu with open, used in and to folder only (the trash is in the panel and the bulk bar), and the empty-space menu with upload and new folder", async () => {
 		await renderLibrary();
 		const items = await openMenu(tile("desk-morning.jpg"));
-		expect(names(items)).toEqual([tc("open"), t("menu.usedIn"), t("menu.toFolder"), `${tc("lifecycle.trash")}Del`]);
+		expect(names(items)).toEqual([tc("open"), t("menu.usedIn"), t("menu.toFolder")]);
+		expect(items[0]?.closest("[role=menu]")?.querySelector("[role=separator]")).toBeNull();
 		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 		await waitFor(() => expect(screen.queryAllByRole("menuitem")).toHaveLength(0));
 
@@ -359,7 +368,9 @@ describe("flow: browsing (둘러보기)", () => {
 		expect(lastList().get("folderId")).toBe("blog");
 		expect(lastList().get("includeDescendants")).toBe("true");
 		const found = await screen.findByRole("button", { name: /^cover-react\.jpg/ });
-		expect(found.textContent).toContain("Blog Assets / covers");
+		// A file from a folder inside the open one adds its path below it, ahead of its usual line (the size stays); the open folder's own name is not written.
+		expect(found.textContent).toMatch(/covers · \d+×\d+/);
+		expect(found.textContent).not.toContain("Blog Assets");
 		expect(screen.queryByRole("button", { name: /^old-cover/ })).toBeNull();
 		// The place to look: this folder and all folders.
 		const scope = screen.getByRole("group", { name: t("scope.label") });
@@ -430,18 +441,17 @@ describe("flow: browsing (둘러보기)", () => {
 				<MediaLibrary />
 			</AdminQueryProvider>,
 		);
-		await screen.findByRole("row", { name: /desk-morning\.jpg/ });
-		const heads = screen.getAllByRole("columnheader").map((head) => head.textContent);
-		expect(heads).toEqual(
-			expect.arrayContaining([
-				t("table.name"),
-				t("table.usage"),
-				t("table.type"),
-				t("table.size"),
-				t("table.dimensions"),
-				t("table.uploadedAt"),
-			]),
-		);
+		const row = await screen.findByRole("row", { name: /desk-morning\.jpg/ });
+		// There is no row of column names: the conditions and the order are in the bar above.
+		expect(screen.queryAllByRole("columnheader")).toHaveLength(0);
+		// The numbers are in mono, the day is short, and a folder row has no ⋯.
+		expect(row.textContent).toMatch(/\d+×\d+/);
+		expect(row.textContent).toMatch(/\d{2}\. \d{2}/);
+		expect(row.querySelector("[data-slot=row-actions]")).toBeTruthy();
+		expect(folderRowOf("covers").querySelector("[data-slot=row-actions]")).toBeNull();
+		const pdfRow = screen.getByRole("row", { name: /notes-scan\.pdf/ });
+		expect(pdfRow.textContent).not.toContain("×");
+		expect(pdfRow.textContent).not.toContain("—");
 		expect(screen.getByRole("row", { name: /desk-morning\.jpg/ })).toBeTruthy();
 	});
 });
@@ -551,9 +561,18 @@ describe("flow: moving many (여러 개 옮기기)", () => {
 		pick("cafe-window.jpg");
 		const bar = await screen.findByRole("toolbar", { name: t("bulk.count", { count: 2 }) });
 		fireEvent.click(within(bar).getByRole("button", { name: new RegExp(t("bulk.toFolder")) }));
-		const items = await screen.findAllByRole("menuitem");
-		expect(names(items)).toEqual([t("bulk.top"), "Blog Assets", "covers", "Wallpapers", t("bulk.newFolder")]);
-		fireEvent.click(items[2] as HTMLElement);
+		const places = await screen.findAllByRole("menuitemradio");
+		expect(names(places)).toEqual([t("bulk.top"), "Blog Assets", "covers", "Wallpapers"]);
+		expect(names(await screen.findAllByRole("menuitem"))).toEqual([t("bulk.newFolder")]);
+		// The folder the picked files are in now is the one that is ticked.
+		expect(places.map((place) => place.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "false"]);
+		fireEvent.click(places[1] as HTMLElement);
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+		expect(written("PATCH", "/media/desk-morning")).toHaveLength(0);
+		fireEvent.click(within(bar).getByRole("button", { name: new RegExp(t("bulk.toFolder")) }));
+		fireEvent.click((await screen.findAllByRole("menuitemradio"))[2] as HTMLElement);
 		await waitFor(() => expect(written("PATCH", "/media/desk-morning")).toHaveLength(1));
 		expect(written("PATCH", "/media/desk-morning")[0]).toEqual({ folderId: "covers" });
 		expect(written("PATCH", "/media/cafe-window")[0]).toEqual({ folderId: "covers" });
@@ -693,9 +712,17 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 		await renderLibrary();
 		fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${t("filter.kind")}`) }));
 		const items = await screen.findAllByRole("menuitemcheckbox");
-		expect(names(items)).toEqual([`${t("kind.image")}5`, `${t("kind.file")}1`]);
+		// The type only narrows the open folder's own files (the files of covers are not counted).
+		expect(names(items)).toEqual([`${t("kind.image")}3`, `${t("kind.file")}1`]);
 		fireEvent.click(items[1] as HTMLElement);
 		await waitFor(() => expect(lastList().get("kind")).toBe("file"));
+		// The folder stays browsable: it is asked for by itself with no search below it, its folders and the way up stay, and there is no place to look.
+		expect(lastList().get("folderId")).toBe("blog");
+		expect(lastList().has("includeDescendants")).toBe(false);
+		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeTruthy();
+		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeTruthy();
+		expect(screen.getByRole("button", { name: t("head.folder") })).toBeTruthy();
+		expect(screen.queryByRole("group", { name: t("scope.label") })).toBeNull();
 		const chip = await screen.findByText(t("chip.kind", { value: t("kind.value.file") }));
 		await screen.findByRole("button", { name: /^notes-scan\.pdf/ });
 		expect(screen.queryByRole("button", { name: /^desk-morning\.jpg/ })).toBeNull();
@@ -732,10 +759,10 @@ describe("flow: files such as PDF (PDF 같은 파일)", () => {
 });
 
 describe("flow: deleting (지우기)", () => {
-	it("moves a file to the trash at once with no question, and the toast's undo puts it back", async () => {
+	it("moves a file to the trash at once with the Del key and no question, and the toast's undo puts it back", async () => {
 		await renderLibrary();
-		const items = await openMenu(tile("cafe-window.jpg"));
-		fireEvent.click(items[3] as HTMLElement);
+		// The Del key on the tile (the menu of the tile has no trash row).
+		fireEvent.keyDown(tile("cafe-window.jpg"), { key: "Delete" });
 		await waitFor(() => expect(written("POST", "/media/trash")).toHaveLength(1));
 		expect(written("POST", "/media/trash")[0]).toEqual({ ids: ["cafe-window"] });
 		expect(screen.queryByRole("alertdialog")).toBeNull();
@@ -797,6 +824,8 @@ describe("flow: exceptions (예외)", () => {
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t("title"));
 		const uploadButton = screen.getByRole("button", { name: t("head.upload") }) as HTMLButtonElement;
 		expect(uploadButton.disabled || uploadButton.getAttribute("aria-disabled") === "true").toBe(true);
+		// The search stays beside the dimmed upload, as in the library.
+		expect(screen.getByRole("button", { name: t("head.search") })).toBeTruthy();
 		expect(screen.getByText(t("notConfigured.title"))).toBeTruthy();
 		const link = screen.getByRole("link", { name: t("notConfigured.link") });
 		expect(link.getAttribute("href")).toMatch(/^https:/);

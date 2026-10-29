@@ -2,7 +2,7 @@
 
 import { Copy, FolderMoveTo, TrashCan } from "@carbon/icons-react";
 import type { FolderListItem } from "@monti-cms/core/site";
-import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
+import { formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Box,
 	Button,
@@ -26,20 +26,26 @@ import {
 	Textarea,
 	TextButton,
 } from "@monti-cms/ui";
-import { useEffect, useId, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
-import { formatBytes } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { useDraftEditor } from "../shared/use-draft-editor";
-import { copyText, mediaUsages, splitFilename, stemProblem, usageCount, usageNoteLabel } from "./media-item";
+import { copyText, kindName, mediaUsages, splitFilename, stemProblem, usageCount, usageNoteLabel } from "./media-item";
 import { folderChoices } from "./media-state";
 import { extensionOf } from "./media-upload";
 import { mediaMessages } from "./messages";
+
+/** A figure of the file (size, dimensions, day) in mono, the way the list writes them. */
+const Numbers = ({ children }: { children: ReactNode }) => (
+	<Text as="span" mono variant="meta" tone="muted">
+		{children}
+	</Text>
+);
 
 type Patch = { filename?: string; defaultAlt?: string; defaultCaption?: string; folderId?: string | null };
 
@@ -267,32 +273,35 @@ export function MediaPanel({
 			)}
 
 			<DescriptionList>
-				<DescriptionItem label={t("panel.kind")}>
-					{isImage ? (media.mimeType ?? "—") : fileTypeLabel(media.filename, media.mimeType)}
-				</DescriptionItem>
+				<DescriptionItem label={t("panel.kind")}>{kindName(t, media, isImage)}</DescriptionItem>
 				<DescriptionItem label={t("panel.size")}>
 					{isImage && media.original ? (
-						<>
+						<Numbers>
 							{t("panel.web", {
 								width: media.width ?? 0,
 								height: media.height ?? 0,
-								size: formatBytes(media.byteSize ?? 0),
+								size: formatFileSize(media.byteSize ?? 0),
 							})}
 							<br />
 							{t("panel.original", {
 								width: media.original.width ?? 0,
 								height: media.original.height ?? 0,
-								size: formatBytes(media.original.byteSize ?? 0),
+								size: formatFileSize(media.original.byteSize ?? 0),
 							})}
-						</>
+						</Numbers>
 					) : isImage ? (
-						`${media.width}×${media.height} · ${formatBytes(media.byteSize ?? 0)}`
+						<Numbers>{`${media.width}×${media.height} · ${formatFileSize(media.byteSize ?? 0)}`}</Numbers>
 					) : (
-						formatFileSize(media.byteSize ?? 0)
+						<Numbers>{formatFileSize(media.byteSize ?? 0)}</Numbers>
 					)}
 				</DescriptionItem>
 				<DescriptionItem label={t("panel.uploadedAt")}>
-					{formatDateTime(site, media.createdAt, { dateStyle: "medium" })}
+					<Numbers>
+						{formatDateTime(site, media.createdAt, { year: "numeric", month: "2-digit", day: "2-digit" }).replace(
+							/\.$/,
+							"",
+						)}
+					</Numbers>
 				</DescriptionItem>
 			</DescriptionList>
 

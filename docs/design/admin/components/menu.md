@@ -38,7 +38,7 @@ Right-clicking a list row or tile opens it at the cursor (`.mt-menu--ctx`, 232px
 - What cannot be undone, or takes something down, is last and red (`.is-danger`).
 - If several rows are picked and one of them is right-clicked, the menu starts with "2개 항목" (2 items), and it holds the same things as the bulk bar, with the same names: "발행" (publish) · "보관" (archive) · "폴더로" (to folder) ▸ | "카테고리" (category) ▸ · "태그" (tag) ▸ | "내보내기" (export) | "휴지통으로" (to trash) Del. Things that work on one row only (open, duplicate) are left out. There is no "change" level (it would make a third level). There are no icons either.
 - Posts: "열기" (open) · "새 탭에서 열기" (open in a new tab) · "복제" (duplicate) | "폴더로" ▸ · "카테고리" ▸ · "태그" ▸ | "보관" · "휴지통으로" Del
-- Media: "열기" · "쓰는 곳" (where used) ▸ · "폴더로" ▸ | "휴지통으로"
+- Media: "열기" · "쓰는 곳" (where used) ▸ · "폴더로" ▸. No trash row: the trash is in the panel's ⋯ and the bulk bar, and the Del key on a tile takes it there at once.
 - Trash: "복원" (restore) | "영구 삭제" (delete forever) Del
 
 ### In code

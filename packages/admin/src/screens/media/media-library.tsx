@@ -97,12 +97,16 @@ export function MediaLibrary() {
 
 	const names = { t, tc, td };
 	const pickedFiles = items.filter((item) => library.picked.has(item.id));
+	// The folder all of the picked files are in, for the ✓ of the "To folder" menu; none when they differ or some are on other pages.
+	const folderOfPicked = pickedFiles.every((file) => (file.folderId ?? null) === (pickedFiles[0]?.folderId ?? null))
+		? (pickedFiles[0]?.folderId ?? null)
+		: undefined;
+	const pickedFolder = pickedFiles.length === library.picked.size ? folderOfPicked : undefined;
 	const menuFor = (media: MediaItem) =>
 		fileMenu(media, folders, names, {
 			open: (file) => void library.openFile(file.id),
 			openEntry: (usage) => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			move: (file, folderId) => actions.move.mutate({ files: [file], folderId }),
-			trash: (file) => actions.trash.mutate([file]),
 		});
 	const folderMenuFor = (folder: (typeof folders)[number]) =>
 		folderMenu(folder, folders, names, { open: (opened) => library.goToFolder(opened.id), actions: folderActions });
@@ -176,7 +180,7 @@ export function MediaLibrary() {
 						)
 					}
 				>
-					{!library.filtered && library.picked.size === 0 && (
+					{!library.searching && library.picked.size === 0 && (
 						<TextButton onClick={newFolderHere}>{t("head.folder")}</TextButton>
 					)}
 					<SearchToggle
@@ -219,6 +223,7 @@ export function MediaLibrary() {
 				/>
 				<MediaToolbar
 					library={library}
+					pickedFolder={pickedFolder}
 					onMove={(folderId) => actions.move.mutate({ files: pickedFiles, folderId })}
 					onNewFolder={() => {
 						setMoveAfter({ files: pickedFiles, named: false });

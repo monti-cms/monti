@@ -25,36 +25,51 @@ import { usageCount } from "./media-item";
 import { extensionOf, replaceProblem } from "./media-upload";
 import { mediaMessages } from "./messages";
 
-/** A file in the comparison: its picture or file icon, its name and its size. */
+/** A file in the comparison: its picture or file icon, its name and its size. `quiet` is the file that goes away. */
 function FileLine({
-	label,
 	name,
 	size,
 	picture,
+	quiet = false,
 }: {
-	label: string;
 	name: string;
 	size: string;
 	picture: string | null | undefined;
+	quiet?: boolean;
 }) {
 	return (
 		<Stack gap={8}>
-			<Text variant="caption" tone="subtle">
-				{label}
-			</Text>
 			{picture !== undefined ? (
 				<Image src={picture} alt="" ratio="photo" fallback={Document} />
 			) : (
 				<FilePreview ext={extensionOf(name).toUpperCase()} framed />
 			)}
 			<Stack gap={2}>
-				<Text truncate>{name}</Text>
+				<Text truncate tone={quiet ? "muted" : undefined}>
+					{name}
+				</Text>
 				<Text variant="meta" tone="subtle" mono>
 					{size}
 				</Text>
 			</Stack>
 		</Stack>
 	);
+}
+
+/** The width and height of a picture at `url` once it has loaded, or `null` while it has not (or cannot be read). */
+function usePictureSize(url: string | undefined): { width: number; height: number } | null {
+	const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+	useEffect(() => {
+		setSize(null);
+		if (!url) return;
+		const probe = new window.Image();
+		probe.onload = () => setSize({ width: probe.naturalWidth, height: probe.naturalHeight });
+		probe.src = url;
+		return () => {
+			probe.onload = null;
+		};
+	}, [url]);
+	return size;
 }
 
 /**
@@ -87,6 +102,7 @@ export function ReplaceDialog({
 		[file],
 	);
 	useEffect(() => () => (picture ? URL.revokeObjectURL(picture) : undefined), [picture]);
+	const pictureSize = usePictureSize(picture);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: a new request starts clean
 	useEffect(() => {
 		setPercent(null);
@@ -109,14 +125,14 @@ export function ReplaceDialog({
 
 	return (
 		<AlertDialog open={request !== null} onOpenChange={(open) => !open && !busy && onClose()}>
-			<AlertDialogContent>
+			<AlertDialogContent size="wide">
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t("replace.title")}</AlertDialogTitle>
 				</AlertDialogHeader>
 				{media && file && (
-					<Grid columns={2} gap={16}>
+					<Grid columns="compare" responsive={false} gap={16}>
 						<FileLine
-							label={t("replace.from")}
+							quiet
 							name={media.filename}
 							size={
 								site.api.isImageType(media.mimeType)
@@ -125,10 +141,12 @@ export function ReplaceDialog({
 							}
 							picture={site.api.isImageType(media.mimeType) ? media.publicUrl : undefined}
 						/>
+						<Text as="span" aria-hidden tone="subtle">
+							→
+						</Text>
 						<FileLine
-							label={t("replace.to")}
 							name={file.name}
-							size={formatFileSize(file.size)}
+							size={pictureSize ? `${pictureSize.width}×${pictureSize.height}` : formatFileSize(file.size)}
 							picture={file.type.startsWith("image/") ? (picture ?? null) : undefined}
 						/>
 					</Grid>

@@ -67,7 +67,7 @@ The editor has two strips: the edit conflict ("다른 곳에서 10:41에 먼저 
 
 ## Toast
 
-A one-line result right after an action ("발행되었어요" (published), "발행할 수 없어요" (cannot publish)). It appears at the bottom center on an ink ground. If there is a next step, one text button goes on the right ("이동" (go), "보기" (view) after a publish: it opens the public page). It disappears after a few seconds, so anything the person must see stays in a status line or a to-do.
+A one-line result right after an action ("발행되었어요" (published), "발행할 수 없어요" (cannot publish)). It appears at the bottom center, 32px above the bottom of the window, on an ink ground. If there is a next step, one text button goes on the right ("이동" (go), "보기" (view) after a publish: it opens the public page). It disappears after a few seconds, so anything the person must see stays in a status line or a to-do.
 
 - A failure or an error ("저장 실패" (save failed), "발행할 수 없어요") is on a red ground (`.mt-toast--error`, `bg-danger-emphasis`). The text and the button are the same light color.
 - The hint shown while files are dragged over a folder is a toast too. See the List page, drop target.

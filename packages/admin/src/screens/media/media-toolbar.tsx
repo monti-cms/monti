@@ -27,6 +27,8 @@ import { folderChoices, type MediaState, selectAllState, toggleKind, withKind } 
 import { mediaMessages } from "./messages";
 import type { MediaLibraryView } from "./use-media-library";
 
+/** The value of the top level in the folder pick, which no folder id can be. */
+const TOP = "\u0000top";
 const SORTS = ["uploaded", "uploadedAsc", "name", "size"] as const;
 
 /** A condition that is not on: its name and a caret, opening the values to pick (each with how many files it would give). */
@@ -153,17 +155,21 @@ function FilterBar({ library }: { library: MediaLibraryView }) {
  */
 function PickBar({
 	library,
+	pickedFolder,
 	onMove,
 	onNewFolder,
 	onTrash,
 }: {
 	library: MediaLibraryView;
+	/** The folder every picked file is in (`null` for the top level), or `undefined` when they are in different folders or not all of them are on this page. */
+	pickedFolder: string | null | undefined;
 	onMove: (folderId: string | null) => void;
 	onNewFolder: () => void;
 	onTrash: () => void;
 }) {
 	const t = useTranslator(mediaMessages);
 	const { picked, total } = library;
+	const current = pickedFolder === undefined ? "" : (pickedFolder ?? TOP);
 	return (
 		<BulkToolbar
 			label={t("bulk.count", { count: picked.size })}
@@ -181,14 +187,23 @@ function PickBar({
 					<Caret />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start">
-					<DropdownMenuItem onClick={() => onMove(null)}>{t("bulk.top")}</DropdownMenuItem>
-					{folderChoices(library.folders).map(({ folder, depth }) => (
-						<DropdownMenuItem key={folder.id} onClick={() => onMove(folder.id)}>
-							<Box as="span" paddingX={depth > 0 ? 12 : 0}>
-								{folder.name}
-							</Box>
-						</DropdownMenuItem>
-					))}
+					{/* The folder the files are in now is ticked; pressing it moves nothing. */}
+					<DropdownMenuRadioGroup
+						aria-label={t("bulk.toFolder")}
+						value={current}
+						onValueChange={(value) => {
+							if (value !== current) onMove(value === TOP ? null : value);
+						}}
+					>
+						<DropdownMenuRadioItem value={TOP}>{t("bulk.top")}</DropdownMenuRadioItem>
+						{folderChoices(library.folders).map(({ folder, depth }) => (
+							<DropdownMenuRadioItem key={folder.id} value={folder.id}>
+								<Box as="span" paddingX={depth > 0 ? 12 : 0}>
+									{folder.name}
+								</Box>
+							</DropdownMenuRadioItem>
+						))}
+					</DropdownMenuRadioGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem onClick={onNewFolder}>{t("bulk.newFolder")}</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -200,6 +215,7 @@ function PickBar({
 
 export function MediaToolbar(props: {
 	library: MediaLibraryView;
+	pickedFolder: string | null | undefined;
 	onMove: (folderId: string | null) => void;
 	onNewFolder: () => void;
 	onTrash: () => void;

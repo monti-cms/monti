@@ -1,7 +1,7 @@
 "use client";
 
 import { Document, FolderParent } from "@carbon/icons-react";
-import { type FolderListItem, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
+import { type FolderListItem, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Box,
 	DropArea,
@@ -16,8 +16,6 @@ import {
 	Table,
 	TableBody,
 	TableCell,
-	TableHead,
-	TableHeader,
 	TableRow,
 	Text,
 	Tile,
@@ -25,13 +23,14 @@ import {
 import type { DragEvent, KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
 import { EntriesTableFolderRows } from "../entries-table-folder-rows";
+import { ACTIONS_SIZE } from "../entries-table-widths";
+import { shortDate } from "../list-row-dates";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { writeDraggedEntries } from "../shared/entry-drag";
 import { FolderNameField } from "../shared/folder-name-field";
-import { formatDateTime } from "../shared/format-date";
 import { type FolderActions, folderKeyHandler } from "../shared/use-folder-actions";
-import { usageLabel } from "./media-item";
-import { folderPathLabel } from "./media-state";
+import { formatLabel, usageLabel } from "./media-item";
+import { folderPathBelow } from "./media-state";
 import { extensionOf } from "./media-upload";
 import { mediaMessages } from "./messages";
 import { UploadTiles } from "./upload-tiles";
@@ -49,20 +48,31 @@ export interface MediaViewProps {
 	onTrash: (media: MediaItem) => void;
 }
 
-/** The line under a file's name: while a search or a filter lists files from several folders, where each is; otherwise its size or dimensions; then its use. */
+/** Where a file is while a search lists files from several folders: its path below the open folder; nothing for a file in the open folder. */
+function usePathBelow(library: MediaLibraryView) {
+	const t = useTranslator(mediaMessages);
+	return (media: MediaItem): string | undefined =>
+		library.searching
+			? (folderPathBelow(library.folders, library.state.folder || null, media.folderId, t("result.noFolder")) ??
+				undefined)
+			: undefined;
+}
+
+/** The line under a file's name: where it is (only when it is not in the open folder), its dimensions or its type and size, then its use. */
 function useDetail(library: MediaLibraryView) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
-	return (media: MediaItem): string => {
-		const parts = library.filtered
-			? [folderPathLabel(library.folders, media.folderId, t("result.noFolder"))]
-			: [
-					...(site.api.isImageType(media.mimeType)
-						? [`${media.width}×${media.height}`]
-						: [extensionOf(media.filename).toUpperCase(), formatFileSize(media.byteSize ?? 0)]),
-				];
-		return [...parts, usageLabel(t, media)].join(" · ");
-	};
+	const where = usePathBelow(library);
+	return (media: MediaItem): string =>
+		[
+			where(media),
+			...(site.api.isImageType(media.mimeType)
+				? [`${media.width}×${media.height}`]
+				: [extensionOf(media.filename).toUpperCase(), formatFileSize(media.byteSize ?? 0)]),
+			usageLabel(t, media),
+		]
+			.filter(Boolean)
+			.join(" · ");
 }
 
 /** Dragging a picked file takes every picked file with it, as in the entry list; any other file goes alone. */
@@ -101,7 +111,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 			<Box paddingX={12} paddingTop={24}>
 				<Stack gap={24}>
 					{showFolders && (
-						<Grid as="ul" columns="folders">
+						<Grid as="ul" columns="folders" dense={open !== null}>
 							{explorer.parent !== null && (
 								<li>
 									<FolderTile
@@ -115,7 +125,7 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 								if (naming?.mode === "rename" && naming.folder.id === folder.id) {
 									return (
 										<li key={folder.id}>
-											<FolderTile>
+											<FolderTile selected>
 												<FolderNameField naming={naming} actions={folderActions} fill />
 											</FolderTile>
 										</li>
@@ -146,14 +156,14 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 							})}
 							{naming?.mode === "create" && (
 								<li>
-									<FolderTile>
+									<FolderTile selected>
 										<FolderNameField naming={naming} actions={folderActions} fill />
 									</FolderTile>
 								</li>
 							)}
 						</Grid>
 					)}
-					<Grid as="ul" columns="tiles" dimmed={library.isRefreshing}>
+					<Grid as="ul" columns="tiles" dense={open !== null} dimmed={library.isRefreshing}>
 						<UploadTiles uploads={uploads} />
 						{library.items.map((media) => {
 							const isImage = site.api.isImageType(media.mimeType);
@@ -193,12 +203,22 @@ export function MediaGrid({ library, uploads, drop, folderActions, menuFor, fold
 	);
 }
 
-/** List view: a row per file with its use, type, size, dimensions and day. The uploads wait above it as tiles. */
+/**
+ * The columns of the list in px, in order: the thumbnail (the cell's 12px at the left, the 40px picture and 10px), the name that takes the rest, then use,
+ * format, size, dimensions, day and the ⋯. A fixed list takes its widths from here, so a row that spans columns (a folder's) leaves them where they are.
+ */
+const COLUMNS = [62, undefined, 100, 72, 84, 104, 72, ACTIONS_SIZE] as const;
+
+/**
+ * List view: a row per file with its use, format, size, dimensions and day, under the folders. There is no row of column names: the conditions and the order
+ * are in the bar above. The uploads wait above it as tiles.
+ */
 export function MediaTable({ library, uploads, drop, folderActions, menuFor, onTrash }: MediaViewProps) {
 	const site = useSite();
 	const startDrag = useStartDrag(library);
 	const t = useTranslator(mediaMessages);
 	const { explorer, picked, open } = library;
+	const where = usePathBelow(library);
 	return (
 		<DropArea over={drop.over} {...drop.area}>
 			{uploads.queue.length > 0 && (
@@ -209,35 +229,14 @@ export function MediaTable({ library, uploads, drop, folderActions, menuFor, onT
 				</Box>
 			)}
 			<Box dimmed={library.isRefreshing}>
-				<Table aria-label={t("table.label")} layout="fixed" stickyHeader container="none">
-					<TableHeader>
-						<TableRow>
-							<TableHead width="xs">
-								<Text srOnly>{t("table.name")}</Text>
-							</TableHead>
-							<TableHead>{t("table.name")}</TableHead>
-							<TableHead width="sm">{t("table.usage")}</TableHead>
-							<TableHead width="md">{t("table.type")}</TableHead>
-							<TableHead width="sm" align="end">
-								{t("table.size")}
-							</TableHead>
-							<TableHead width="md" align="end">
-								{t("table.dimensions")}
-							</TableHead>
-							<TableHead width="lg" align="end">
-								{t("table.uploadedAt")}
-							</TableHead>
-							<TableHead width="xs">
-								<Text srOnly>{t("table.actions")}</Text>
-							</TableHead>
-						</TableRow>
-					</TableHeader>
+				<Table aria-label={t("table.label")} layout="fixed" container="none" columns={COLUMNS}>
 					<TableBody>
 						{explorer && (
 							<EntriesTableFolderRows
 								explorer={{ folders: explorer.folders, parent: explorer.parent }}
 								folders={library.folders}
 								folderActions={folderActions}
+								layout="thumb"
 								span={7}
 								countLabel={(count) => String(count)}
 								onSelectFolder={(id) => library.goToFolder(id === "all" ? "" : id)}
@@ -266,33 +265,37 @@ export function MediaTable({ library, uploads, drop, folderActions, menuFor, onT
 											onCheckedChange={(on) => library.togglePicked(media.id, on)}
 											label={t("tile.select", { name: media.filename })}
 										/>
-										<Image src={isImage ? media.publicUrl : undefined} alt="" size="thumb" border fallback={Document} />
+										<Image src={isImage ? media.publicUrl : undefined} alt="" ratio="photo" size="row" radius="sm" />
 									</TableCell>
 									<TableCell truncate>
-										<RowTitle
-											title={media.filename}
-											address={
-												library.filtered
-													? folderPathLabel(library.folders, media.folderId, t("result.noFolder"))
-													: undefined
-											}
-											onKeyDown={onDelete(media, onTrash)}
-										/>
+										<RowTitle title={media.filename} address={where(media)} onKeyDown={onDelete(media, onTrash)} />
 									</TableCell>
-									<TableCell tone="muted">{usageLabel(t, media)}</TableCell>
-									<TableCell tone="muted">
-										{isImage
-											? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
-											: fileTypeLabel(media.filename, media.mimeType)}
+									<TableCell>
+										<Text as="span" variant="note" tone={media.referencesCount > 0 ? "muted" : "faint"}>
+											{usageLabel(t, media)}
+										</Text>
 									</TableCell>
-									<TableCell align="end" tone="muted">
-										{formatFileSize(media.byteSize ?? 0)}
+									<TableCell>
+										<Text as="span" mono variant="meta" tone="muted">
+											{formatLabel(media, isImage)}
+										</Text>
 									</TableCell>
-									<TableCell align="end" tone="muted">
-										{media.width && media.height ? `${media.width}×${media.height}` : "—"}
+									<TableCell align="end">
+										<Text as="span" mono variant="meta" tone="muted">
+											{formatFileSize(media.byteSize ?? 0)}
+										</Text>
 									</TableCell>
-									<TableCell align="end" tone="muted">
-										{formatDateTime(site, media.createdAt, { dateStyle: "medium" })}
+									<TableCell align="end">
+										{media.width && media.height ? (
+											<Text as="span" mono variant="meta" tone="muted">
+												{`${media.width}×${media.height}`}
+											</Text>
+										) : null}
+									</TableCell>
+									<TableCell align="end">
+										<Text as="span" mono variant="meta" tone="muted">
+											{shortDate(site, media.createdAt)}
+										</Text>
 									</TableCell>
 									<TableCell onClick={(event) => event.stopPropagation()}>
 										<RowActions>

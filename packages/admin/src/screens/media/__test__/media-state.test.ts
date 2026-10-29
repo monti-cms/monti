@@ -2,10 +2,11 @@ import type { Folder } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import {
 	folderChoices,
-	folderPathLabel,
+	folderPathBelow,
 	folderTrail,
 	hasScope,
 	isFiltered,
+	isSearching,
 	type MediaState,
 	mediaCountsParams,
 	mediaListParams,
@@ -48,8 +49,8 @@ describe("what the list asks for", () => {
 		expect(inside.has("includeDescendants")).toBe(false);
 	});
 
-	it("searches and filters the open folder with what is inside it, and widens to everywhere on request", () => {
-		for (const patch of [{ search: " cover " }, { alt: "none" }, { kind: "file" }, { used: "unused" }] as const) {
+	it("searches the open folder with what is inside it, and widens to everywhere on request", () => {
+		for (const patch of [{ search: " cover " }, { alt: "none" }] as const) {
 			const here = mediaListParams(state({ folder: "blog", ...patch }));
 			expect(here.get("folderId")).toBe("blog");
 			expect(here.get("includeDescendants")).toBe("true");
@@ -58,6 +59,20 @@ describe("what the list asks for", () => {
 			expect(everywhere.has("includeDescendants")).toBe(false);
 		}
 		expect(mediaListParams(state({ search: " cover " })).get("search")).toBe("cover");
+	});
+
+	it("keeps looking into the open folder only while the type or the use narrows it", () => {
+		for (const patch of [{ kind: "file" }, { used: "unused" }] as const) {
+			const params = mediaListParams(state({ folder: "blog", ...patch }));
+			expect(params.get("folderId")).toBe("blog");
+			expect(params.has("includeDescendants")).toBe(false);
+			expect(isSearching(state(patch))).toBe(false);
+			expect(isFiltered(state(patch))).toBe(true);
+		}
+		expect(isSearching(state({ alt: "has" }))).toBe(true);
+		expect(isSearching(state({ search: " a " }))).toBe(true);
+		expect(hasScope(state({ folder: "blog", kind: "file" }))).toBe(false);
+		expect(hasScope(state({ folder: "blog", alt: "none" }))).toBe(true);
 	});
 
 	it("sends the conditions that are on and leaves the others out", () => {
@@ -120,8 +135,15 @@ describe("folders", () => {
 	it("gives the way down to a folder and a path for a file", () => {
 		expect(folderTrail(folders, "covers").map((f) => f.name)).toEqual(["Blog Assets", "covers"]);
 		expect(folderTrail(folders, "")).toEqual([]);
-		expect(folderPathLabel(folders, "covers", "none")).toBe("Blog Assets / covers");
-		expect(folderPathLabel(folders, null, "none")).toBe("none");
+	});
+
+	it("writes where a file is from the open folder: nothing in it, the way down below it, the whole path elsewhere", () => {
+		expect(folderPathBelow(folders, "blog", "blog", "none")).toBeNull();
+		expect(folderPathBelow(folders, null, null, "none")).toBeNull();
+		expect(folderPathBelow(folders, "blog", "covers", "none")).toBe("covers");
+		expect(folderPathBelow(folders, null, "covers", "none")).toBe("Blog Assets / covers");
+		expect(folderPathBelow(folders, "covers", "blog", "none")).toBe("Blog Assets");
+		expect(folderPathBelow(folders, "blog", null, "none")).toBe("none");
 	});
 
 	it("lists the choices in tree order with their depth, leaving out the file's own folder", () => {
