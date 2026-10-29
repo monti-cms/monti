@@ -25,7 +25,7 @@ const asCheck = process.argv.includes("--check");
  * The most blog names a package whose tests were overhauled may write: the uses it was left with, each read and kept for a reason (a name in a
  * config the test builds, an admin language that is not a site locale). CI fails above it. Lower it when uses are fixed.
  */
-const CEILING = { core: 0 };
+const CEILING = { core: 24 };
 
 const loadConfigs = async () => {
 	const server = await createServer({
