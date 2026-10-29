@@ -61,4 +61,3 @@ html:has(.monti-admin) body {
 .monti-admin *:hover::-webkit-scrollbar-thumb {
 	background: var(--monti-gray-8);
 }
-
