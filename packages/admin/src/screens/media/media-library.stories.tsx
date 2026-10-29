@@ -415,9 +415,78 @@ export const MovedToTrash: Story = {
 	tags: ["visual"],
 	render: screen(backendOf()),
 	play: async ({ canvasElement }) => {
-		rightClick(await tile(canvasElement, /^notes-scan/));
+		// The file menu has no trash row: a file goes from the panel's ⋯ (or the Del key, or the bar).
+		await userEvent.click(await tile(canvasElement, /^notes-scan/));
+		const panel = await body().findByRole("complementary", { name: "notes-scan.pdf" });
+		await userEvent.click(within(panel).getByRole("button", { name: /^더보기:/ }));
 		await userEvent.click(await body().findByRole("menuitem", { name: /휴지통으로/ }));
 		await body().findByText(/휴지통으로 옮겼어요/);
+	},
+};
+
+/** A server where the folder that is deleted goes, with what it holds, as the trash takes it. */
+const trashesFolders = () => {
+	const backend = backendOf();
+	backend.onFolderDelete = (id) => {
+		const gone = new Set([id]);
+		for (const folder of backend.folders) if (folder.parentId && gone.has(folder.parentId)) gone.add(folder.id);
+		backend.folders = backend.folders.filter((folder) => !gone.has(folder.id));
+		backend.items = backend.items.filter((item) => !gone.has(item.folderId ?? ""));
+		return { folder: { id }, entries: 0, folders: 0, files: 3, kept: 0 };
+	};
+	return backend;
+};
+
+// 폴더 지움 (flow 6 · 11): a folder goes to the trash at once, as one item with its files, and the toast can undo it.
+export const FolderTrashed: Story = {
+	tags: ["visual"],
+	render: screen(trashesFolders()),
+	play: async ({ canvasElement }) => {
+		rightClick(await tile(canvasElement, /^diagrams/));
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
+		await body().findByText(/휴지통으로 옮겼어요/);
+	},
+};
+
+/** A folder holding files in use: those stay in the folder, and the toast says how many and offers to show them. */
+const keepsUsedFiles = () => {
+	const backend = backendOf();
+	backend.onFolderDelete = () => ({ folder: null, entries: 0, folders: 0, files: 2, kept: 4 });
+	return backend;
+};
+
+// 폴더 일부 남김 (flow 6 · 12): files in use stay, and the toast offers to show them.
+export const FolderTrashedPartly: Story = {
+	tags: ["visual"],
+	render: screen(keepsUsedFiles()),
+	play: async ({ canvasElement }) => {
+		rightClick(await tile(canvasElement, /^covers/));
+		await userEvent.click(await body().findByRole("menuitem", { name: "폴더 지우기" }));
+		await body().findByText(/남겼어요/);
+	},
+};
+
+/** The server keeps the files that are in use and trashes the others. */
+const keepsUsedFilesOnly = () => {
+	const backend = backendOf();
+	backend.onTrash = (ids) => {
+		const used = new Set(backend.items.filter((item) => item.referencesCount > 0).map((item) => item.id));
+		return { trashed: ids.filter((id) => !used.has(id)), kept: ids.filter((id) => used.has(id)) };
+	};
+	return backend;
+};
+
+// 일부 남김 (flow 6 · 28): two picked files go to the trash from the bar; the one in use stays, and the toast says so.
+export const FileKept: Story = {
+	tags: ["visual"],
+	render: screen(keepsUsedFilesOnly()),
+	play: async ({ canvasElement }) => {
+		await tile(canvasElement, /^notes-scan/);
+		await userEvent.click(within(canvasElement).getByRole("checkbox", { name: /notes-scan/ }));
+		await userEvent.click(within(canvasElement).getByRole("checkbox", { name: /seoul-night/ }));
+		const bar = await within(canvasElement).findByRole("toolbar", { name: "2개 선택" });
+		await userEvent.click(within(bar).getByRole("button", { name: /휴지통으로/ }));
+		await body().findByText(/남겼어요/);
 	},
 };
 
