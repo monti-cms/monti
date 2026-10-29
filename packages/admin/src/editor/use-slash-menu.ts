@@ -12,7 +12,8 @@ import type { useMarkExtensions } from "./inline-bubble";
 import { filterCommands, type SlashCommandItem } from "./slash-command";
 import type { CaretRect } from "./slash-menu-popup";
 
-type SlashState = { query: string; index: number; caret: CaretRect };
+/** `measure` reads where the caret is now, so the menu follows the line if the layout around it settles after it opened. */
+type SlashState = { query: string; index: number; caret: CaretRect; measure: () => CaretRect };
 
 export function useSlashMenu({
 	site,
@@ -78,7 +79,18 @@ export function useSlashMenu({
 		}
 		const query = slashMatch[1] ?? "";
 		slashRangeRef.current = { from: from - query.length - 1, to: from };
-		setSlash({ query, index: 0, caret: current.view.coordsAtPos(from) });
+		const { view } = current;
+		setSlash({
+			query,
+			index: 0,
+			caret: view.coordsAtPos(from),
+			measure: () =>
+				(from <= view.state.doc.content.size ? view.coordsAtPos(from) : slashRef.current?.caret) ?? {
+					top: 0,
+					bottom: 0,
+					left: 0,
+				},
+		});
 	};
 
 	/** Keyboard handling while the menu is open. Returns the handled result, or `undefined` when the key is not for the menu. */

@@ -31,6 +31,8 @@ interface SlashMenuPopupProps {
 	/** What is typed after the `/`. The search line shows it; the text itself is typed in the body. */
 	query: string;
 	caret: CaretRect;
+	/** Reads the caret again each time the menu is placed (falls back to `caret`). */
+	measureCaret?: () => CaretRect;
 	selectedIndex: number;
 	onSelect: (item: SlashCommandItem) => void;
 	/** The pointer is on the row at this index. */
@@ -55,6 +57,7 @@ export function SlashMenuPopup({
 	items,
 	query,
 	caret,
+	measureCaret,
 	selectedIndex,
 	onSelect,
 	onHighlight,
@@ -63,9 +66,12 @@ export function SlashMenuPopup({
 	const t = useTranslator(editorMessages);
 	const anchor = useMemo(
 		() => ({
-			getBoundingClientRect: () => new DOMRect(caret.left, caret.top, 1, Math.max(0, caret.bottom - caret.top)),
+			getBoundingClientRect: () => {
+				const at = measureCaret?.() ?? caret;
+				return new DOMRect(at.left, at.top, 1, Math.max(0, at.bottom - at.top));
+			},
 		}),
-		[caret.bottom, caret.left, caret.top],
+		[caret, measureCaret],
 	);
 	const titles: Record<SlashGroup, string> = {
 		text: t("slash.group.text"),

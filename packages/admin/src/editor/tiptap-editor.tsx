@@ -322,6 +322,7 @@ export function CmsEditor({
 					items={filterCommands(site, slash.query, extraCommands, inlineCommands, allowance)}
 					query={slash.query}
 					caret={slash.caret}
+					measureCaret={slash.measure}
 					selectedIndex={slash.index}
 					onHighlight={slashMenu.highlight}
 					onSelect={(command) => {
