@@ -35,3 +35,9 @@ packages/ui/visual/report
 
 # Personal Claude Code settings (the shared skills and agents in .claude are committed)
 .claude/settings.local.json
+
+# L4 flows (`pnpm flows`): results and reports
+flows/test-results
+flows/report
+flows/.app
+flows/.app-login

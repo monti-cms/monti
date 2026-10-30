@@ -2,7 +2,13 @@
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"workspaces": {
 		".": {
-			"entry": ["scripts/*.mjs", "scripts/test-metrics/*.mjs"]
+			"entry": [
+				"scripts/*.mjs",
+				"scripts/test-metrics/*.mjs",
+				"flows/playwright.config.ts",
+				"flows/*.flow.ts",
+				"flows/overlay/**/*.ts"
+			]
 		},
 		"packages/ui": {
 			"entry": ["visual/playwright.config.ts", "visual/audit.config.ts", "visual/*.spec.ts"]

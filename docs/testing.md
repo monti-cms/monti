@@ -24,12 +24,16 @@
 | L1 로직 | 코드뿐 | `foo.test.ts`, JSX가 필요하면 `foo.test.tsx`(서버에서 HTML로 렌더하기 등) | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
 | L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.int.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
 | L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`(JSX가 없으면 `foo.dom.test.ts`); 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
-| L4 흐름 | 예제 앱, 그 데이터베이스, 브라우저 | `examples/blog/e2e/<flow>.spec.ts` | Playwright | 글을 쓰고, 발행하고, 사이트에서 보기 |
+| L4 흐름 | 묶은 패키지로 설치한 예제 앱, 그 데이터베이스, 브라우저 | `flows/<flow>.flow.ts` | Playwright (`pnpm flows`) | 글을 쓰고, 발행하고, 사이트에서 보기 |
 
 **동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
 데이터베이스, HTTP 라우트, 화면을 거쳐 다시 테스트하지 않는다. 높은 층은 층들이 이어지는지(라우트가 서비스를 부르고, 화면이 요청을 보낸다)를
 검사하고, 모든 경우를 다시 검사하지 않는다. L4는 관리자 화면 디자인(`docs/design/admin`)의 🔴 흐름([기능의 중요도](testing/features.md))마다 테스트
 하나를 두고, 그 밖에는 없다. L4는 PR마다 돌고 재시도하지 않는다. 실패하면 그 테스트나 앱을 고친다.
+`pnpm flows`는 시험용 데이터베이스의 스키마 `cms_e2e_flows`를 매번 비우고 표를 만든 뒤 흐름을 돌린다. 처음 한 번과 패키지를 고친 뒤에는
+`pnpm flows --prepare`로 패키지를 묶어 예제 앱에 설치한다.
+흐름은 예제 앱의 복사본(`flows/.app`)에서 돈다. 스키마 화면이 `monti.schema.ts`를 고쳐 쓰기 때문이다. 복사본은 미디어를 디스크에
+저장하고(`flows/overlay`), 처음 설치 흐름만 비밀번호 로그인을 쓰는 두 번째 복사본(`flows/.app-login`)에서 돈다.
 
 **jsdom이냐 실제 브라우저냐.** jsdom은 아무것도 그리지 않는다. 모든 상자는 0 × 0이고, 캐럿에는 위치가 없으며, 포커스와 타이머는 브라우저처럼 움직이지 않는다.
 동작이 그중 어느 것에도 기대지 않는 컴포넌트(메뉴의 항목, 폼의 검증)에는 괜찮다. 위치, 크기, 포커스 이동, 편집기가 필요한 테스트는
@@ -154,7 +158,7 @@ core 전체의 변이 점수는 재지 않는다. 한 번 재는 데 두 시간�
 ## 아직 없는 것
 
 - Vitest 브라우저 모드와 `*.browser.test.tsx`.
-- L4 흐름(`examples/blog/e2e`).
+- 7 목록 정리의 태그 합치기 L4. 합치기 기능이 생기면(#323) `flows/list.flow.ts`에 더한다.
 - core와 admin 밖의 층별 Vitest 프로젝트.
 - 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).
 - 다른 패키지의 CI 관문(core는 `pnpm check:tests`로 막는다).
