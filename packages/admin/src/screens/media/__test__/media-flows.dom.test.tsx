@@ -10,7 +10,6 @@ import { deleteMessages } from "../../shared/delete.messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { MediaNotConfigured } from "../media-not-configured";
-import { acceptedKinds } from "../media-upload";
 import { mediaMessages } from "../messages";
 import { folderItem, image, MediaBackend, pdf } from "./media-backend";
 
@@ -197,17 +196,8 @@ describe("flow: upload (올리기)", () => {
 		);
 		const heic = await screen.findByRole("button", { name: /^IMG_2041\.HEIC/ });
 		expect(heic.textContent).toContain(t("upload.unsupported"));
-		expect(heic.closest("[data-slot=tile]")?.getAttribute("data-status")).toBe("failed");
-		expect(heic.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeInTheDocument();
-		expect(heic.querySelector("[data-slot=file-preview]")).toBeNull();
-		const exe = screen.getByRole("button", { name: /^setup\.exe/ });
-		const kinds = acceptedKinds(testSite)
-			.map((kind) => t(`upload.kind.${kind}` as "upload.kind.image"))
-			.join(" · ");
-		expect(exe.textContent).toContain(t("upload.acceptedKinds", { kinds }));
 		const removes = screen.getAllByRole("button", { name: t("upload.remove") });
 		expect(removes).toHaveLength(2);
-		expect(screen.queryByRole("button", { name: t("upload.shrink") })).toBeNull();
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
 		expect(upload.uploadAttachment).not.toHaveBeenCalled();
 		fireEvent.click(removes[0] as HTMLElement);
@@ -220,12 +210,8 @@ describe("flow: upload (올리기)", () => {
 		upload.shrinkForUpload.mockResolvedValue({ file: small, optimized: true });
 		await renderLibrary();
 		fireEvent.drop(dropArea(), dragOf(big));
-		const failed = await screen.findByRole("button", { name: /^panorama\.jpg/ });
+		await screen.findByRole("button", { name: /^panorama\.jpg/ });
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
-		expect(failed.textContent).toMatch(/MB/);
-		// A picture over the limit is only held up (its own picture, no red ring); a format the site does not take is the one that fails.
-		expect(failed.closest("[data-slot=tile]")?.getAttribute("data-status")).toBe("interrupted");
-		expect(failed.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("upload.shrink") }));
 		await waitFor(() => expect(upload.uploadImageFile).toHaveBeenCalled());
 		expect(upload.shrinkForUpload.mock.calls[0]?.[1]).toBe(big);

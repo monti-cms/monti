@@ -46,6 +46,7 @@ import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
 import { isTranslationEntry } from "./entry-form";
 import { shortDate } from "./entry-stamps";
+import { primaryLifecycleAction } from "./header-action";
 import { lifecycleLabel } from "./lifecycle-confirm";
 import type { EntryLifecycleCommands } from "./use-entry-lifecycle-commands";
 
@@ -86,6 +87,14 @@ export function EntryEditorHeader({
 	const isTrashed = entry?.status === "trashed";
 	const hasPublishDate = Boolean(entry?.publishedAt);
 	const unpublished = hasUnpublishedChanges(site, entry, editor.hasUnsavedChanges);
+	const primary = primaryLifecycleAction(site, {
+		status: entry?.status,
+		hasPublishDate,
+		unpublished,
+		busy,
+		publishing: isPublishing,
+		submitting: isSubmitting,
+	});
 	// A translation can share a slug with the original, so the language is passed along.
 	const previewPath = entry ? site.previewHref(collection, entry.workingSlug, entry.locale) : null;
 	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
@@ -178,24 +187,24 @@ export function EntryEditorHeader({
 						</>
 					))}
 				{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
-				{isTrashed ? (
-					<Button type="button" disabled={isSubmitting} onClick={() => void runLifecycle("restore")}>
-						{busy === "status" ? t("restoring") : lifecycleLabel(site).restore}
+				{primary.action === "restore" ? (
+					<Button type="button" disabled={primary.disabled} onClick={() => void runLifecycle("restore")}>
+						{primary.label}
 					</Button>
-				) : entry?.status === "archived" ? (
-					<Button type="button" disabled={isSubmitting} onClick={() => void runLifecycle("unarchive")}>
-						{busy === "status" ? t("unarchiving") : lifecycleLabel(site).unarchive}
+				) : primary.action === "unarchive" ? (
+					<Button type="button" disabled={primary.disabled} onClick={() => void runLifecycle("unarchive")}>
+						{primary.label}
 					</Button>
-				) : !hasPublishDate ? (
-					<Button id="cms-publish" type="button" disabled={isSubmitting} onClick={() => void handlePublish()}>
-						{isPublishing ? t("publishing") : t("publish")}
+				) : primary.action === "publish" ? (
+					<Button id="cms-publish" type="button" disabled={primary.disabled} onClick={() => void handlePublish()}>
+						{primary.label}
 					</Button>
 				) : (
 					// For a post that has a publish date, publish and "republish with today's date" sit side by side as one split button. With nothing
 					// changed since it was published, the pill reads "published" and is dimmed.
 					<SplitButton
 						id="cms-publish"
-						disabled={isSubmitting || (entry?.status === "published" && !unpublished)}
+						disabled={primary.disabled}
 						onClick={() => void handlePublish()}
 						menuLabel={t("publishOptions")}
 						menu={
@@ -215,11 +224,7 @@ export function EntryEditorHeader({
 							</>
 						}
 					>
-						{isPublishing
-							? t("publishing")
-							: entry?.status === "published" && !unpublished
-								? t("publishedState")
-								: t("publish")}
+						{primary.label}
 					</SplitButton>
 				)}
 				<IconButton label={t("properties")} side="bottom" pressed={isInspectorOpen} onClick={onToggleInspector}>

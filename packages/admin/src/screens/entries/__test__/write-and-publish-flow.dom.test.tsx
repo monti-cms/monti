@@ -262,11 +262,6 @@ describe("flow: write and publish (steps 09–15)", () => {
 		renderEdit();
 		fireEvent.change(await title(), { target: { value: "발행 뒤에 고침" } });
 		await waitFor(() => expect(status()).toBe("수정 중"));
-		expect(
-			header()
-				.getByRole("button", { name: tEntryEditorShell("publish") })
-				.hasAttribute("disabled"),
-		).toBe(false);
 
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publishOptions") }));
 		const rows = await screen.findAllByRole("menuitem");

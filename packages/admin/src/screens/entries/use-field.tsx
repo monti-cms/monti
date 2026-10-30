@@ -12,7 +12,7 @@ import {
 	type StateStore,
 	useStoreSelector,
 } from "../../hooks/store";
-import type { SlotRequest } from "../../slots/registry";
+import type { SlotApplyMode, SlotRequest } from "../../slots/registry";
 import { isSandboxSite } from "../shared/preview-sandbox";
 import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue, formTitle } from "./entry-form";
 
@@ -246,6 +246,63 @@ function resolveField(site: Site, collection: SchemaCollectionName, name: string
 	return { definition: stored.field, lockable: !owner?.localized };
 }
 
+/** The part of the form state a field's state is read from. */
+export interface FieldStateInput {
+	readonly form: EntryForm;
+	readonly locked?: { readonly values: EntryForm; readonly note: ReactNode };
+	readonly issues: readonly CmsIssue[];
+	readonly disabled: boolean;
+}
+
+/** What one field shows and allows, from the form state: its value, whether it is required or read-only and why, and its problems. */
+export function fieldState(
+	site: Site,
+	collection: SchemaCollectionName,
+	name: string,
+	{ form, locked, issues, disabled }: FieldStateInput,
+): Pick<
+	FieldState,
+	| "definition"
+	| "label"
+	| "description"
+	| "required"
+	| "readOnly"
+	| "readOnlyReason"
+	| "lockedNote"
+	| "error"
+	| "errors"
+> & { readonly value: FormValue } {
+	const { definition, lockable } = resolveField(site, collection, name);
+	const isLocked = lockable && Boolean(locked);
+	const errors: FieldError[] = isLocked
+		? []
+		: issues
+				.filter((issue) => issue.path === name)
+				.map((issue) => ({ code: issue.code, message: fieldIssueLine(issue), issue }));
+	return {
+		definition,
+		label: definition?.label ?? name,
+		description: definition?.description,
+		required: Boolean(definition && "required" in definition && definition.required) && !isLocked,
+		value: (isLocked && locked ? locked.values : form)[name] ?? null,
+		readOnly: disabled || isLocked,
+		readOnlyReason: isLocked ? "locked" : disabled ? "disabled" : null,
+		lockedNote: lockable ? locked?.note : undefined,
+		error: errors[0] ?? null,
+		errors,
+	};
+}
+
+/**
+ * The value a slot action writes into a field, or `null` when nothing changes: `append` adds it to the field's list unless the list already
+ * holds it, `replace` writes it as it is.
+ */
+export function applySlotValue(current: FormValue | undefined, next: string, mode: SlotApplyMode): FormValue | null {
+	if (mode !== "append") return next;
+	const list = Array.isArray(current) ? current : [];
+	return list.includes(next) ? null : [...list, next];
+}
+
 /**
  * The value, change, error, read-only state, ids and slot request of one form field, for a field UI of your own. The component re-renders only
  * when this field changes.
@@ -259,8 +316,9 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	const site = useSite();
 	const store = useEntryFormStore();
 	const collection = useStoreSelector(store, (state) => state.collection);
-	const { definition, lockable } = useMemo(() => resolveField(site, collection, name), [site, collection, name]);
+	const { lockable } = useMemo(() => resolveField(site, collection, name), [site, collection, name]);
 
+	// The slices this field subscribes to: it re-renders only when one of them changes.
 	const locked = useStoreSelector(store, (state) => lockable && Boolean(state.locked));
 	const lockedNote = useStoreSelector(store, (state) => (lockable ? state.locked?.note : undefined));
 	const disabled = useStoreSelector(store, (state) => state.disabled);
@@ -273,8 +331,13 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	const entryId = useStoreSelector(store, (state) => state.entryId);
 	const locale = useStoreSelector(store, (state) => state.locale);
 
-	const readOnly = disabled || locked;
-	const value = (stored ?? null) as V;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the slices above are what the state is read from, so a change of one is the trigger
+	const field = useMemo(
+		() => fieldState(site, collection, name, store.getState()),
+		[site, collection, name, store, locked, lockedNote, disabled, stored, issues],
+	);
+	const { readOnly, error, errors } = field;
+	const value = field.value as V;
 	const filled = Array.isArray(value)
 		? value.length > 0
 		: typeof value === "string"
@@ -287,16 +350,6 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			store.getState().setForm({ [name]: next });
 		},
 		[store, name, readOnly],
-	);
-
-	const errors = useMemo(
-		(): FieldError[] =>
-			locked
-				? []
-				: issues
-						.filter((issue) => issue.path === name)
-						.map((issue) => ({ code: issue.code, message: fieldIssueLine(issue), issue })),
-		[issues, name, locked],
 	);
 
 	const slotRequest = useMemo((): SlotRequest | null => {
@@ -325,16 +378,12 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			// What the assistant writes goes in at once and counts as its (blue) until the person edits it.
 			apply: (next, mode) => {
 				const { form, fillForm } = store.getState();
-				if (mode === "append") {
-					const current = form[name];
-					const list = Array.isArray(current) ? current : [];
-					if (!list.includes(next)) fillForm({ [name]: [...list, next] });
-				} else fillForm({ [name]: next });
+				const written = applySlotValue(form[name], next, mode);
+				if (written !== null) fillForm({ [name]: written });
 			},
 		};
 	}, [store, locked, name, collection, entryId, locale, disabled, filled, site]);
 
-	const error = errors[0] ?? null;
 	const ids = useMemo(() => ({ input: fieldId(name), error: `${fieldId(name)}-error` }), [name]);
 	const inputProps = useMemo(
 		() => ({
@@ -348,16 +397,16 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	return useMemo(
 		(): FieldState<V> => ({
 			name,
-			definition,
-			label: definition?.label ?? name,
-			description: definition?.description,
-			required: Boolean(definition && "required" in definition && definition.required) && !locked,
+			definition: field.definition,
+			label: field.label,
+			description: field.description,
+			required: field.required,
 			value,
 			setValue,
 			assisted,
 			readOnly,
-			readOnlyReason: locked ? "locked" : disabled ? "disabled" : null,
-			lockedNote,
+			readOnlyReason: field.readOnlyReason,
+			lockedNote: field.lockedNote,
 			error,
 			errors,
 			invalid: error !== null,
@@ -365,22 +414,7 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			inputProps,
 			slotRequest,
 		}),
-		[
-			name,
-			definition,
-			value,
-			setValue,
-			assisted,
-			readOnly,
-			locked,
-			disabled,
-			lockedNote,
-			error,
-			errors,
-			ids,
-			inputProps,
-			slotRequest,
-		],
+		[name, field, value, setValue, assisted, readOnly, error, errors, ids, inputProps, slotRequest],
 	);
 }
 

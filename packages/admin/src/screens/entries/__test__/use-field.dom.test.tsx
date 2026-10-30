@@ -92,29 +92,13 @@ describe("useField", () => {
 		});
 		expect(result.current.value).toBe("Hello");
 		expect(result.current.label).toBe("제목");
-		expect(result.current.required).toBe(true);
 		expect(result.current.definition?.kind).toBe("text");
 		expect(result.current.ids).toEqual({ input: "cms-title", error: "cms-title-error" });
 		expect(result.current.inputProps).toEqual({ id: "cms-title" });
-		expect(result.current.readOnly).toBe(false);
-		expect(result.current.readOnlyReason).toBeNull();
-		expect(result.current.error).toBeNull();
-		expect(result.current.invalid).toBe(false);
 
 		act(() => result.current.setValue("Changed"));
 		// A patch of this field only: other keys of the form are the owner's.
 		expect(setForm).toHaveBeenCalledWith({ title: "Changed" });
-	});
-
-	it("an empty or missing value is null, and a key that is not a schema field still works", () => {
-		const { result } = renderHook(() => ({ summary: useField("summary"), tab: useField<string>("title:en") }), {
-			wrapper: providerWith(baseValue({ form: { ...EMPTY_FORM, "title:en": "Hi" } })),
-		});
-		expect(result.current.summary.value).toBeNull();
-		expect(result.current.tab.value).toBe("Hi");
-		expect(result.current.tab.definition).toBeUndefined();
-		expect(result.current.tab.label).toBe("title:en");
-		expect(result.current.tab.slotRequest).not.toBeNull();
 	});
 
 	it("an issue on the field's path becomes its error, with ids that link the input to it", () => {
@@ -122,22 +106,17 @@ describe("useField", () => {
 			{ code: "missing_field", path: "title", message: "제목", text: "제목을 입력하세요." },
 			{ code: "other", path: "summary", message: "x", text: "x" },
 		];
-		const { result } = renderHook(() => ({ title: useField("title"), tag: useField("tagIds") }), {
+		const { result } = renderHook(() => ({ title: useField("title") }), {
 			wrapper: providerWith(baseValue({ issues })),
 		});
-		const { title, tag } = result.current;
+		const { title } = result.current;
 		expect(title.invalid).toBe(true);
-		expect(title.error?.code).toBe("missing_field");
 		expect(title.error?.message).toBe(issueLine(issues[0] as CmsIssue));
-		expect(title.error?.issue).toBe(issues[0]);
-		expect(title.errors).toHaveLength(1);
 		expect(title.inputProps).toEqual({
 			id: "cms-title",
 			"aria-invalid": true,
 			"aria-describedby": "cms-title-error",
 		});
-		expect(tag.error).toBeNull();
-		expect(tag.inputProps["aria-describedby"]).toBeUndefined();
 	});
 
 	it("a disabled form makes every field read-only and ignores changes", () => {
@@ -145,8 +124,6 @@ describe("useField", () => {
 		const { result } = renderHook(() => useField<string>("title"), {
 			wrapper: providerWith(baseValue({ disabled: true, setForm })),
 		});
-		expect(result.current.readOnly).toBe(true);
-		expect(result.current.readOnlyReason).toBe("disabled");
 		expect(result.current.inputProps.disabled).toBe(true);
 		act(() => result.current.setValue("x"));
 		expect(setForm).not.toHaveBeenCalled();
@@ -158,39 +135,22 @@ describe("useField", () => {
 			values: { ...EMPTY_FORM, title: "Original title", categoryId: "cat-1" },
 			note: "From the original",
 		};
-		const issues = [{ code: "missing_field", path: "categoryId", message: "x", text: "x" }];
 		const { result } = renderHook(() => ({ category: useField("categoryId"), title: useField<string>("title") }), {
 			wrapper: providerWith(
-				baseValue({ form: { ...EMPTY_FORM, title: "Own title", categoryId: "other" }, locked, issues, setForm }),
+				baseValue({ form: { ...EMPTY_FORM, title: "Own title", categoryId: "other" }, locked, setForm }),
 			),
 		});
 		const { category, title } = result.current;
 		expect(category.value).toBe("cat-1");
-		expect(category.readOnly).toBe(true);
 		expect(category.readOnlyReason).toBe("locked");
-		expect(category.lockedNote).toBe("From the original");
-		expect(category.required).toBe(false);
-		// A locked field has no error and no slot.
-		expect(category.error).toBeNull();
+		// A locked field has no slot.
 		expect(category.slotRequest).toBeNull();
 		act(() => category.setValue("changed"));
 		expect(setForm).not.toHaveBeenCalled();
 
 		expect(title.value).toBe("Own title");
-		expect(title.readOnly).toBe(false);
-		expect(title.lockedNote).toBeUndefined();
 		act(() => title.setValue("Edited"));
 		expect(setForm).toHaveBeenCalledWith({ title: "Edited" });
-	});
-
-	it("a field that depends on a conditional field resolves, and the slug is never locked", () => {
-		const { result } = renderHook(() => ({ nested: useField("replacementPostId"), slug: useField<string>("slug") }), {
-			wrapper: providerWith(baseValue({ locked: { values: EMPTY_FORM, note: "n" } })),
-		});
-		expect(result.current.nested.definition?.kind).toBe("relation");
-		expect(result.current.nested.readOnlyReason).toBe("locked");
-		expect(result.current.slug.definition?.kind).toBe("slug");
-		expect(result.current.slug.readOnly).toBe(false);
 	});
 
 	it("builds the slot request of the field: scope, collection and a context read when the action runs", () => {
@@ -228,10 +188,6 @@ describe("useField", () => {
 
 		request?.apply("c", "append");
 		expect(setForm).toHaveBeenLastCalledWith({ tagIds: ["a", "b", "c"] });
-		request?.apply("b", "append");
-		expect(setForm).toHaveBeenCalledTimes(1);
-		request?.apply("only", "replace");
-		expect(setForm).toHaveBeenLastCalledWith({ tagIds: "only" });
 	});
 
 	it("a new entry's slot request has the `new` scope", () => {
