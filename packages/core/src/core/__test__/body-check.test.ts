@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import { checkDocument, isEmptyDocument } from "../body-check";
 import { prepareSnapshot } from "../snapshot";

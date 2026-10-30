@@ -9,6 +9,8 @@ import { packageTests } from "../../vitest.shared";
 export default packageTests({
 	dir: import.meta.dirname,
 	name: "core",
-	exclude: ["src/cli/__test__/init-typecheck.test.ts", "src/adapters/postgres/__test__/database-types.test.ts"],
+	// Every layer: a mutant is caught by whichever test reaches it.
+	include: ["src/**/*.{test,spec}.{ts,tsx}"],
+	exclude: ["src/cli/__test__/init-typecheck.int.test.ts", "src/adapters/postgres/__test__/database-types.int.test.ts"],
 	alias: [{ find: /^@monti-cms\/core$/, replacement: path.resolve(import.meta.dirname, "./src/index.ts") }],
 });

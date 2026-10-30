@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { cloneSchema, type EditableSchema } from "../../../test/blog-schema";
 import { ConfigError } from "../../config/check/issue";
 import { defineSite } from "../../config/define";
 import { parseSchemaFile } from "../format";
 import type { SchemaTypes } from "../types";
-import { cloneSchema, type EditableSchema } from "./fixture";
 
 const issues = (edit: (schema: EditableSchema) => void) => {
 	const schema = cloneSchema();

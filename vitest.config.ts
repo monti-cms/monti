@@ -8,6 +8,8 @@ export default defineConfig({
 		// Runs all packages (`packages/*`) at once. Each package's config is `packageTests` of `vitest.shared.ts` with what differs.
 		projects: [
 			"packages/*",
+			// The L2 tests of a package whose tests are split by layer (`docs/testing.md`).
+			"packages/*/vitest.int.config.ts",
 			...(QUICK
 				? []
 				: [

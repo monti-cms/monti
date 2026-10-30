@@ -14,7 +14,7 @@ import { translationsContract } from "./translations.contract";
 
 /**
  * The suites of the contract, one per sub-port of `ContentStore` (see `core/store/ports.ts`), by the name of their `*.contract.ts` file.
- * An adapter runs each suite from its own test file, so the suites run in parallel (`adapters/postgres/__test__/store-contract.*.test.ts`).
+ * An adapter runs each suite from its own test file, so the suites run in parallel (`adapters/postgres/__test__/store-contract.*.int.test.ts`).
  */
 export const STORE_CONTRACT_SUITES = {
 	entries: entriesContract,

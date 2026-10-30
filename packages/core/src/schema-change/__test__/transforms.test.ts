@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { asSchema, blogSchema } from "../../../test/blog-schema";
 import { defineSite } from "../../config/define";
-import { asSchema, blogSchema } from "../../schema-file/__test__/fixture";
 import type { SchemaMigration } from "../../schema-file/types";
 import { createSite } from "../../site";
 import {

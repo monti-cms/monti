@@ -1,8 +1,8 @@
-import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "../../../test/any-site";
-import { testSite } from "../../../test/site";
-import { docOf } from "../../../test/stored-content";
-import type { ExportSnapshot } from "../../core/store";
-import type { StoredDocument } from "../../doc/stored-document";
+import type { ExportSnapshot } from "../src/core/store";
+import type { StoredDocument } from "../src/doc/stored-document";
+import { contentCollection, defaultLocale, otherContentCollection, recordRelationField } from "./any-site";
+import { testSite } from "./site";
+import { docOf } from "./stored-content";
 
 /**
  * The collection, language and field names the fixture uses are looked up from the current config. In the reference blog setup, the public post is a post,

@@ -6,7 +6,7 @@ import { prepareSnapshot, validateForPublish } from "../snapshot";
 
 describe("publish validation of images", () => {
 	it("blocks publishing an image without alt", async () => {
-		// The required-attribute checks for blog-specific blocks (tabs, tooltip, alignment) live in `review-regressions.blog.test.ts`.
+		// The required-attribute checks for blog-specific blocks (tabs, tooltip, alignment) live in `snapshot.blog.test.ts`.
 		const doc = {
 			type: "doc",
 			version: STORED_DOCUMENT_VERSION,

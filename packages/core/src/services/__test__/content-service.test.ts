@@ -7,6 +7,7 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import type { Collection } from "../../core/collections";
@@ -17,7 +18,6 @@ import {
 } from "../../core/snapshot";
 import { isBlockId } from "../../doc/block-ids";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import type { StoredField } from "../../schema/derive";
 import { isRequiredField } from "../../schema/fields";

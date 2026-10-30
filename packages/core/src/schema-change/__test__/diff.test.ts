@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cloneSchema, type EditableSchema } from "../../schema-file/__test__/fixture";
+import { cloneSchema, type EditableSchema } from "../../../test/blog-schema";
 import type { SchemaMigration } from "../../schema-file/types";
 import { describeSchemaChange, diffSchema } from "../diff";
 import { changeKey, type SchemaChange } from "../types";

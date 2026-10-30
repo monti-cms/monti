@@ -19,9 +19,9 @@
 
 | 층 | 도는 것 | 파일 | 러너 | 예 |
 |---|---|---|---|---|
-| L1 로직 | 코드뿐 | `foo.test.ts` | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
-| L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.db.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
-| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.test.tsx`; 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
+| L1 로직 | 코드뿐 | `foo.test.ts`, JSX가 필요하면 `foo.test.tsx`(서버에서 HTML로 렌더하기 등) | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
+| L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.int.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
+| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`; 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
 | L4 흐름 | 예제 앱, 그 데이터베이스, 브라우저 | `examples/blog/e2e/<flow>.spec.ts` | Playwright | 글을 쓰고, 발행하고, 사이트에서 보기 |
 
 **동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
@@ -55,7 +55,7 @@
 
 테스트는 참조 블로그 설정으로 돌고, 두 번째 사이트 설정(`vitest.othersite.config.ts`)으로 한 번 더 돈다. 공유 사이트에서 도는 테스트는
 이름을 설정에서 찾고(`packages/core/test/any-site.ts`: `contentCollection`, `titleFieldOf`, `secondLocale`, …) `"post"`,
-`"ko"`, `"summary"`를 직접 쓰지 않는다. 블로그만 다루는 테스트는 이름을 `*.blog.test.ts`로 짓는다. 자기만의 설정이 필요한 테스트는
+`"ko"`, `"summary"`를 직접 쓰지 않는다. 블로그만 다루는 테스트는 층 접미사 앞에 `blog`를 넣는다(`restore.blog.int.test.ts`). 자기만의 설정이 필요한 테스트는
 테스트 안에서 그 설정을 만든다.
 
 다른 사이트 실행은 결과가 설정에 따라 달라질 수 있는 테스트만 되풀이하고, 그런 테스트를 스스로 찾는다(`packages/core/test/config-sensitive.ts`).
@@ -89,7 +89,7 @@
 | `querySelector`, 테스트 id | 테스트를 마크업에 묶는다 | 역할과 이름(`getByRole`) |
 | 패키지 자기 모듈의 mock | mock을 테스트하고, 내부를 조금만 옮겨도 깨진다 | 모듈을 그대로 쓴다. 가장자리(네트워크, 시계, 모델)만 mock한다 |
 | 위치로 읽는 mock 호출 인자(`mock.calls[0][1]`) | 인자가 하나 더해지면 깨진다 | 중요한 것만 담은 `toHaveBeenCalledWith` |
-| 공유 사이트 테스트의 블로그 이름 | 다른 사이트에서 깨지거나 아무것도 검사하지 않는다 | `any-site` 찾기, 또는 `*.blog.test.ts` |
+| 공유 사이트 테스트의 블로그 이름 | 다른 사이트에서 깨지거나 아무것도 검사하지 않는다 | `any-site` 찾기, 또는 `*.blog.*.ts` |
 | 소스 파일을 글자로 읽어 검사하기 | 서식이 바뀌면 깨지고, 동작에 대해 아무것도 말하지 않는다 | 코드가 하는 일을 테스트한다. 타입 검사는 `tsc`의 몫이다 |
 
 `scripts/test-metrics/weak-patterns.mjs`와 `site-names.mjs`가 이것들을 센다.
@@ -98,8 +98,8 @@
 
 - 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
   더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
-- 접미사가 층을 말한다. `.test.ts`(L1), `.db.test.ts`(L2), `.test.tsx`와 `.browser.test.tsx`(L3). 층마다 자기 Vitest 프로젝트이므로,
-  한 층만 따로 돌릴 수 있다.
+- 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.tsx`와 `.browser.test.tsx`(L3). 확장자 `.tsx`는
+  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`), 한 층만 따로 돌릴 수 있다.
 - 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
 
 ## 재기와 지키기
@@ -135,7 +135,7 @@ CI는 먼저 재고 나중에 막는다. 숫자가 안정되면 관문이 된다
 
 - Vitest 브라우저 모드와 `*.browser.test.tsx`.
 - L4 흐름(`examples/blog/e2e`).
-- 층마다 Vitest 프로젝트 하나, 그리고 `.db.test.ts` 접미사.
+- core 밖의 층별 Vitest 프로젝트와 `.int.test.ts`, `.dom.test.tsx` 접미사.
 - 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).
 - 다른 패키지의 CI 관문(core는 `pnpm check:tests`로 막는다).
 

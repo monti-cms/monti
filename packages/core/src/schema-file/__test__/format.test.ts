@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { blogSchema, cloneSchema, type EditableSchema } from "../../../test/blog-schema";
 import { ConfigError, type ConfigIssue } from "../../config/check/issue";
 import { parseSchemaFile } from "../format";
-import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
 
 /** The issues of a schema, for assertions. */
 function problems(edit: (schema: EditableSchema) => void): ConfigIssue[] {

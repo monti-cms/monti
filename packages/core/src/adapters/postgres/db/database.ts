@@ -4,7 +4,7 @@ import type { EntryMetadata, EntryStatus, JsonObject } from "../../../core/store
 
 /**
  * The tables of the content store as Kysely sees them: one interface per table, one line per column, in the state the core migrations
- * (`store/schema.ts`, up to `0004_trash`) leave a store in. It is written by hand and kept in this one file. `__test__/database-types.test.ts`
+ * (`store/schema.ts`, up to `0004_trash`) leave a store in. It is written by hand and kept in this one file. `__test__/database-types.int.test.ts`
  * reads it and compares every table and column with `information_schema` of a freshly migrated schema, so a migration that adds or changes a column
  * cannot go in without this file changing with it.
  *

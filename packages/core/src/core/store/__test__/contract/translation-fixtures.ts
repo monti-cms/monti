@@ -5,8 +5,8 @@ import {
 	requiredMetadata,
 	secondLocale,
 } from "../../../../../test/any-site";
+import { paragraphsFormat } from "../../../../../test/paragraphs-format";
 import { testSite } from "../../../../../test/site";
-import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../../format/registry";
 import { createContentService } from "../../../../services/content-service";
 import type { Collection } from "../../../collections";

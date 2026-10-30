@@ -26,18 +26,36 @@ export interface PackageTestsOptions {
 	/** Files left out, on top of node_modules and the other defaults. */
 	readonly exclude?: readonly string[];
 	readonly site?: TestSite;
+	/**
+	 * The layer of `docs/testing.md` the project runs. Unset, it runs L1: every test file except `*.int.test.ts` (unless `include` names the files).
+	 * `int` runs the L2 files, `*.int.test.ts`; its name gets ` (int)`.
+	 */
+	readonly layer?: "int";
 	/** Module aliases the package needs on top of `server-only`. */
 	readonly alias?: readonly { find: string | RegExp; replacement: string }[];
 }
 
+/** The L2 test files (`docs/testing.md`): they need Postgres, the file system or a child process. */
+const INT_TESTS = "src/**/*.int.test.ts";
+
+/** `core`, `core (int)`, `core (other-site)`. */
+const projectName = (options: PackageTestsOptions): string => {
+	const variants = [options.layer, options.site === "blog" ? undefined : options.site].filter(Boolean);
+	return variants.length === 0 ? options.name : `${options.name} (${variants.join(", ")})`;
+};
+
 export const packageTests = (options: PackageTestsOptions) =>
 	defineConfig(({ mode }) => ({
 		test: {
-			name: !options.site || options.site === "blog" ? options.name : `${options.name} (${options.site})`,
+			name: projectName(options),
 			environment: options.environment ?? "node",
 			globals: true,
-			include: [...(options.include ?? ["src/**/*.{test,spec}.{ts,tsx}"])],
-			exclude: [...configDefaults.exclude, ...(options.exclude ?? [])],
+			include: [...(options.include ?? (options.layer === "int" ? [INT_TESTS] : ["src/**/*.{test,spec}.{ts,tsx}"]))],
+			exclude: [
+				...configDefaults.exclude,
+				...(options.include || options.layer ? [] : [INT_TESTS]),
+				...(options.exclude ?? []),
+			],
 			setupFiles: options.dom ? [path.join(ROOT, "packages/admin/src/test/setup-dom.ts")] : [],
 			testTimeout: 60000,
 			hookTimeout: 60000,

@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
+import { paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { documentText, SEARCH_TEXT } from "../../../core/body-text";
@@ -11,7 +12,6 @@ import { duplicateDraft, publishDraft } from "../../../core/store/__test__/seed"
 import type { JsonValue } from "../../../core/types";
 import { withoutBlockIds } from "../../../doc/block-ids";
 import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
-import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";

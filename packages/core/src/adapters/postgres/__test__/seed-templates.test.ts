@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { doc as docWith, paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testSite } from "../../../../test/site";
 import { contentOf } from "../../../../test/stored-content";
 import type { SeedTemplate } from "../../../config/define";
 import { forEachBlock, isBlockId } from "../../../doc/block-ids";
-import { doc as docWith, paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import { createFormatRegistry, NO_FORMATS } from "../../../format/registry";
 import { seedTemplateDocument } from "../store/seed-templates";
 

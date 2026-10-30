@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { cloneSchema } from "../../../test/blog-schema";
 import { defineCollection, defineSite, fields } from "../..";
 import { extractSchemaData } from "../../cli/schema-extract";
 import { createSite } from "../../site";
 import { parseSchemaFile } from "../format";
 import type { SchemaTypes } from "../types";
-import { cloneSchema } from "./fixture";
 
 /** A schema whose posts keep the title in `headline` (`role: "title"`). */
 const renamed = () => {

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { contentOf, docOf } from "../../../test/stored-content";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import type { HookSource, WriteHookContext } from "../reactions";
 import { type PreparedSnapshot, ServiceError, type ServiceInput } from "../types";

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection, defaultLocale, requiredMetadata } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { docOf as docOfText } from "../../../test/stored-content";
 import { entryLinkHref, linkMarkAttrs, mapLinkAttrs } from "../../doc/entry-links";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import { createWritePipeline } from "../../services/write-pipeline";
 import { checkDocument } from "../body-check";

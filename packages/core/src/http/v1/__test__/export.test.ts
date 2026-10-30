@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { testConfig } from "../../../../test/site";
-import { AuthError } from "../../../adapters/auth";
-import { fakeCms } from "../../../cms";
-import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
-import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
-import { defineFormat } from "../../../format/types";
 import {
 	FIXTURE_CONTENT_COLLECTION,
 	FIXTURE_DRAFT_COLLECTION,
 	fixtureEntryPath,
 	makeExportFixtureSnapshot,
-} from "../../../services/__test__/export-fixture";
+} from "../../../../test/export-fixture";
+import { paragraphsFormat } from "../../../../test/paragraphs-format";
+import { testConfig } from "../../../../test/site";
+import { AuthError } from "../../../adapters/auth";
+import { fakeCms } from "../../../cms";
+import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
+import { defineFormat } from "../../../format/types";
 import { EXPORT_FORMAT_VERSION } from "../../../services/export-service";
 import { readZipArchive } from "../../../services/zip";
 import { routeCaller } from "../../../testing";

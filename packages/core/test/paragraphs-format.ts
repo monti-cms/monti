@@ -1,7 +1,7 @@
-import { entryIdOfMark } from "../../doc/entry-links";
-import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
-import type { CmsNode } from "../../doc/types";
-import { defineFormat } from "../types";
+import { entryIdOfMark } from "../src/doc/entry-links";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../src/doc/stored-document";
+import type { CmsNode } from "../src/doc/types";
+import { defineFormat } from "../src/format/types";
 
 export const doc = (...content: CmsNode[]): StoredDocument => ({
 	type: "doc",
