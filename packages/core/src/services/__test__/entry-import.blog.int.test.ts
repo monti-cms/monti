@@ -1,12 +1,12 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../test/site";
 import { fakeCms } from "../../cms";
 import { MAX_IMPORT_BYTES } from "../../core/limits";
 import type { ContentStore } from "../../core/store";
 import { entryLinkIds } from "../../doc/entry-links";
 import { emptyStoredDocument } from "../../doc/stored-document";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { type CmsFormat, defineFormat } from "../../format/types";
 import { exportTexts } from "../../http/v1/export/plan";
 import { POST as importEntries } from "../../http/v1/import/entries/route";

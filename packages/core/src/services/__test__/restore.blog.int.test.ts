@@ -1,11 +1,11 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../test/site";
 import { fakeCms } from "../../cms";
 import { noticeMessages } from "../../core/error-notices.messages";
 import type { ContentStore } from "../../core/store";
 import { emptyStoredDocument } from "../../doc/stored-document";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import { restoreMessages } from "../../http/v1/import/restore/messages";
 import { POST as restoreBackup, GET as restoreState } from "../../http/v1/import/restore/route";

@@ -12,11 +12,11 @@ import {
 	secondLocale,
 	titleFieldOf,
 } from "../../../../../test/any-site";
+import { paragraphsFormat } from "../../../../../test/paragraphs-format";
 import { testSite } from "../../../../../test/site";
 import { contentOf, docOf as docOfText } from "../../../../../test/stored-content";
 import { forEachBlock, isBlockId, withoutBlockIds } from "../../../../doc/block-ids";
 import { readStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "../../../../doc/stored-document";
-import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../../format/registry";
 import { createBulkService } from "../../../../services/bulk-service";
 import { createContentService } from "../../../../services/content-service";

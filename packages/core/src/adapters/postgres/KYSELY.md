@@ -7,7 +7,7 @@ change what a query does: the store contract suite (`core/store/__test__/contrac
 
 | Piece | Where | What it is |
 | --- | --- | --- |
-| `Database` | `db/database.ts` | Every table and column of the schema (all core migrations), written by hand, one file. `__test__/database-types.test.ts` compares it with `information_schema` of a freshly migrated schema, so a migration that changes a column fails until this file follows. |
+| `Database` | `db/database.ts` | Every table and column of the schema (all core migrations), written by hand, one file. `__test__/database-types.int.test.ts` compares it with `information_schema` of a freshly migrated schema, so a migration that changes a column fails until this file follows. |
 | `createDb(pool, qSchema)` | `db/kysely.ts` | One Kysely instance per store (and per plugin storage) on the existing `pg.Pool`. `withSchema(qSchema)` is on it, so a query names `entries`, never the schema. It lends connections and cannot end the pool (`destroy()` is harmless). |
 | `dbOn(client, qSchema)` | `db/kysely.ts` | The same schema on one `PoolClient`, cached per client. This is how Kysely joins a transaction. |
 | `ctx.db(tx?)` | `store/context.ts` | `ctx.db()` is the store's pool instance, `ctx.db(client)` is `dbOn(client, ctx.qSchema)`. Modules use these two and never build an instance. |

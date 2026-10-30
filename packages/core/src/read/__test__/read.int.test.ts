@@ -7,13 +7,13 @@ import {
 	recordRelationField,
 	secondLocale,
 } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
 import type { ContentStore } from "../../core/store";
 import { publishDraft, seedEntry, seedSave } from "../../core/store/__test__/seed";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import {
 	closeGlobalPool,
 	createContentStore,

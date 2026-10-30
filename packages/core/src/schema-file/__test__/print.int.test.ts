@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { blogSchema } from "../../../test/blog-schema";
+import { importSchemaText } from "../../../test/import-schema-text";
 import { parseSchemaFile } from "../format";
 import { parseSchemaLiteral } from "../literal";
 import { printSchemaFile } from "../print";
-import { blogSchema } from "./fixture";
-import { importSchemaText } from "./import-text";
 
 describe("printSchemaFile", () => {
 	it("prints the data so that importing the file gives the same data back", async () => {

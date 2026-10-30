@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata, secondLocale } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
 import { type ContentChange, type ContentStore, type Entry, withEventDispatch } from "../../core/store";
 import { seedEntry } from "../../core/store/__test__/seed";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import {
 	closeGlobalPool,

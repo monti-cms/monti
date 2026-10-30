@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, requiredMetadata } from "../../../../test/any-site";
+import { paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
@@ -8,7 +9,6 @@ import type { Collection } from "../../../core/collections";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { entryLinkIds } from "../../../doc/entry-links";
-import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../format/registry";
 import { defineFormat } from "../../../format/types";
 import { createContentService } from "../../../services/content-service";

@@ -1166,7 +1166,7 @@ export const cms = defineConfig({
 - 내구성 구독자의 `run`은 이벤트를 받는다. id·상태·주소·`version`·`contentHash`·`eventId`, 커밋된 글을 읽는 `read()`(본문 자체는 아니다), `once(run)`이고, 두 번째 인자로 스코프도 받는다(`{ cms }`, 플러그인의 구독자는 `{ cms, plugin }`). 전달은 아웃박스에서 하며 최소 한 번, 글마다 순서대로, 실패하면 다시 시도한다. "이벤트 전달"을 본다.
 - **쓰기가 돌려주는 것.** `cms.contentService()`의 모든 쓰기(`createDraft`·`saveDraft`·`createTranslation`·`duplicate`·`publish`·`restore`)는 `{ entry, warnings }`로 끝난다. 지금의 글과, 쓰기가 찾은 경고(코어, 블록, `before…` 구독자가 낸 것)다. 경고는 글에 섞이지 않으며, 없으면 빈 목록이다. 관리 API도 같은 모양으로 답하고(`POST /entries`·`PATCH /entries/:id`·`POST /entries/:id/publish`·`/restore`·`/duplicate`·`/translations`), 일괄 결과의 항목은 쓰기에 경고가 있으면 `warnings`를 담는다. 보관·보관 해제·휴지통은 경고를 낼 `before…` 구독자가 없는 저장소 호출이라 글을 돌려준다.
 
-계약(각각 `src/services/__test__/write-hooks.test.ts`와 `write-pipeline.test.ts`에 시험이 있다):
+계약(각각 `src/services/__test__/write-hooks.int.test.ts`와 `write-pipeline.test.ts`에 시험이 있다):
 
 1. **바뀐 데이터도 본체를 거친다.** 정규화·참조 수집·검증이 `beforeValidate`의 결과에 대해 돌아서, 변환으로 본체 검사를 피할 수 없다.
 2. **추가 검증은 실패를 더할 수만 있다.** `beforeSave`와 `beforePublish`가 돌려준 이슈와 경고는 본체의 것에 더해진다. 구독자는 스냅샷의 복사본을 받으므로 본체 이슈를 지우거나 낮출 수 없고, 발행의 본체 무결성 검사(참조·미디어·링크·필수 값)는 항상 돈다.
@@ -1571,8 +1571,9 @@ pnpm --filter @monti-cms/core typecheck
 `pnpm test:run`이 함께 돈다. 패키지에서는 `pnpm test:other-site`). 새 테스트는 저절로 두 설정으로 돈다. 컬렉션·필드 이름은
 테스트에 적지 말고 설정에서 찾는다(`test/any-site.ts`: 컬렉션·관계 필드·두 번째 언어, 발행 필수값을 채우는 `fillRequiredMetadata`).
 설정에 없는 기능(두 번째 언어, 묶음 블록 등)이 필요한 경우는 `skipIf`로 감싼다. 본체 패키지에서 블로그 예시 데이터를 그대로 확인하는
-부분은 `*.blog.test.ts`에 두고 다른 사이트 실행·타입 검사에서 뺀다. 관리자·AI 패키지는 각 `vitest.othersite.config.ts`의
-`BLOG_FIXTURE_TESTS`에 적어 뺀다.
+부분은 `*.blog.test.ts`(L2는 `*.blog.int.test.ts`)에 두고 다른 사이트 실행·타입 검사에서 뺀다. 관리자·AI 패키지는 각 `vitest.othersite.config.ts`의
+`BLOG_FIXTURE_TESTS`에 적어 뺀다. 본체 패키지의 테스트는 층으로 나뉜다(`docs/testing.md`). `vitest.config.ts`는 L1 테스트(묶음 `core`)를,
+`vitest.int.config.ts`는 데이터베이스·파일 시스템·자식 프로세스가 필요한 L2 테스트(`*.int.test.ts`, 묶음 `core (int)`, 패키지에서는 `pnpm test:int`)를 돌린다.
 
 **자동 검사(CI).** push·PR마다 `.github/workflows/ci.yml`이 lint(검사만)·타입 검사·패키지 빌드, 테스트(Postgres 17 서비스),
 예시 앱 묶음 검사(`pnpm example:check`)를 돈다. `pnpm example:check`는 패키지를 빌드해 묶고, 예시 앱을 저장소 밖 임시 폴더에

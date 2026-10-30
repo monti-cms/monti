@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { testSite } from "../../../test/site";
-import type { ExportSnapshot } from "../../core/store";
-import { buildExportArchive, planExport } from "../export-service";
-import { readZipArchive } from "../zip";
 import {
 	FIXTURE_CONTENT_COLLECTION as CONTENT,
 	FIXTURE_LOCALE,
 	FIXTURE_TIME,
 	fixtureBody,
 	makeExportFixtureSnapshot,
-} from "./export-fixture";
+} from "../../../test/export-fixture";
+import { testSite } from "../../../test/site";
+import type { ExportSnapshot } from "../../core/store";
+import { buildExportArchive, planExport } from "../export-service";
+import { readZipArchive } from "../zip";
 
 const POST_ID = "11111111-1111-4111-8111-111111111111";
 const DRAFT_ID = "22222222-2222-4222-8222-222222222222";

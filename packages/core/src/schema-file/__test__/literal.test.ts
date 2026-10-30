@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { blogSchema } from "../../../test/blog-schema";
 import { parseSchemaLiteral } from "../literal";
 import { printSchemaFile } from "../print";
-import { blogSchema } from "./fixture";
 
 const IMPORT = 'import { defineSchema } from "@monti-cms/core";';
 const file = (body: string, before = "") => `${IMPORT}\n${before}\nexport default defineSchema(${body});\n`;

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { packageTests } from "../../vitest.shared";
 
+/** The L1 tests of core: they need only the code. `vitest.int.config.ts` runs the L2 files (`*.int.test.ts`). */
 export default packageTests({
 	dir: import.meta.dirname,
 	name: "core",

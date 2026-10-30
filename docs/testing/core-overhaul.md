@@ -39,3 +39,28 @@
   테스트 수를 정비 전후로 비교해서 찾았다.
 - zsh는 `$VAR` 안의 줄바꿈으로 단어를 나누지 않는다. 파일 58개를 돌린다고 생각했는데 11개만 돌았다. 확인 스크립트가 이제 돈 파일 수를 찍는다.
 - 변이 측정 중에는 같은 작업 폴더에서 소스를 고치거나 테스트를 돌리지 않는다. Stryker가 변이를 `src` 파일에 직접 쓰기 때문이다.
+
+## 2단계: 층으로 나누기
+
+파일만 옮기고 테스트는 고치지 않았다. 파일 이름을 가리키는 테스트 하나(`store-contract-files`)와 주석만 새 이름을 따른다.
+
+- L2 테스트 81개가 `.int.test.ts`가 되었다. DB를 쓰는 것 55개, 파일이나 자식 프로세스만 쓰는 것 18개, 소스를 글자로 읽는 것 8개다.
+  나머지 158개가 L1이다.
+- 층마다 Vitest 프로젝트가 있다. `core`는 L1, `core (int)`는 L2다(`packages/core/vitest.int.config.ts`, 패키지에서는 `pnpm test:int`).
+- 여러 폴더가 함께 쓰는 도우미 4개를 `packages/core/test/`로 옮겼다(`paragraphs-format`, `blog-schema`, `import-schema-text`,
+  `export-fixture`). 배포되는 `./testing`이 쓰는 도우미(`seed`, `test-database`, `doc-text`)는 `src`에 남는다.
+- 작업 이름이던 `review-regressions.blog.test.ts`는 검사하는 것 옆으로 가서 `core/__test__/snapshot.blog.test.ts`가 되었다.
+  L1인데 `.integration.test.ts`라는 옛 이름을 가진 파일 3개는 `.test.ts`가 되었다.
+
+층은 추측하지 않고 확인했다. DB 주소를 아무도 듣지 않는 포트로 바꿔 L1 158개를 돌리니 모두 통과했고, DB를 쓴다고 본 55개는 모두 실패했다.
+옮기기 전과 뒤의 테스트를 파일과 이름으로 하나씩 맞춰 보니 6,991개가 모두 같았다.
+
+| 지표 | 1단계 뒤 | 2단계 뒤 |
+|---|---|---|
+| L1만 돌리기 | 할 수 없음 | 158개 파일, 7초, DB 없이 |
+| L2만 돌리기 | 할 수 없음 | 81개 파일, 14초 |
+| 전체 테스트 | 6,932개 통과, 59개 건너뜀 | 같음 |
+| 파일 안의 순서를 섞어 6번 | 모두 통과 | 모두 통과 |
+
+설계 문서의 이름 규칙을 소유자와 함께 고쳤다(2026-10-30). `.tsx`는 JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. core의 `.test.tsx` 6개는
+서버에서 HTML로 렌더하므로 L1이다. L2는 DB만 뜻하던 `.db.test.ts` 대신 `.int.test.ts`이고, L3는 `.dom.test.tsx`와 `.browser.test.tsx`다.

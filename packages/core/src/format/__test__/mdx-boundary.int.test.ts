@@ -56,7 +56,7 @@ describe("core has no MDX in it", () => {
 			.map((file) => ({ file: path.relative(CORE_ROOT, file), imports: forbiddenImports(readFileSync(file, "utf8")) }))
 			.filter(
 				({ file, imports }) =>
-					imports.length > 0 && file !== path.join("src", "format", "__test__", "mdx-boundary.test.ts"),
+					imports.length > 0 && file !== path.join("src", "format", "__test__", "mdx-boundary.int.test.ts"),
 			)
 			.map(({ file, imports }) => `${file}: ${imports.join(", ")}`);
 		expect(found).toEqual([]);

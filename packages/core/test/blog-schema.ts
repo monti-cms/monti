@@ -1,4 +1,4 @@
-import type { SchemaTypes } from "../types";
+import type { SchemaTypes } from "../src/schema-file/types";
 
 /**
  * A small blog schema as JSON (a plain object, the way `JSON.parse` returns it), used by the schema file tests. It uses every field kind the format has:

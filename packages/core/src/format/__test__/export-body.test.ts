@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { doc, paragraphsFormat } from "../../../test/paragraphs-format";
 import { fakeCms } from "../../cms";
 import { ServiceError } from "../../core/types";
 import { exportBodyText } from "../export-body";
-import { doc, paragraphsFormat } from "./paragraphs-format";
 
 describe("exportBodyText", () => {
 	it("writes a document through a format of the instance, for importing again", async () => {

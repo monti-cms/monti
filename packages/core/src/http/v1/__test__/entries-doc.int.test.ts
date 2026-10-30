@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, requiredMetadata, secondLocale } from "../../../../test/any-site";
+import { paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { type Cms, fakeCms } from "../../../cms";
@@ -9,7 +10,6 @@ import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import type { Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
 import { isBlockId, withoutBlockIds } from "../../../doc/block-ids";
-import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import {

@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
-import blog from "../../../../test/cms.config";
-import { prepareSnapshot, validateForPublish } from "../../../core/snapshot";
-import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
-import type { CmsNode } from "../../../doc/types";
-import { createSite } from "../../../site";
+import blog from "../../../test/cms.config";
+import { STORED_DOCUMENT_VERSION } from "../../doc/stored-document";
+import type { CmsNode } from "../../doc/types";
+import { createSite } from "../../site";
+import { prepareSnapshot, validateForPublish } from "../snapshot";
 
 const site = createSite(blog);
 
-/**
- * Code review (2026-09-26) regression tests that use the reference blog config's blocks (tabs, tooltip, alignment).
- * The rest, which are config-independent, live in `review-regressions.test.ts`.
- */
-describe("review regressions (blog blocks)", () => {
+/** The publish check of the reference blog config's blocks (tabs, tooltip, alignment): their required and valid attributes. */
+describe("validateForPublish with the blog's blocks", () => {
 	it("blocks publishing blocks without required or valid attributes", async () => {
 		const text = (value: string): CmsNode => ({ type: "paragraph", content: [{ type: "text", text: value }] });
 		const tab = (attrs: Record<string, string>, value: string): CmsNode => ({

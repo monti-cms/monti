@@ -1,13 +1,13 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata, requiredFields } from "../../../../../test/any-site";
+import { paragraphsFormat } from "../../../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../../../test/site";
 import { docOf } from "../../../../../test/stored-content";
 import { fakeCms } from "../../../../cms";
 import type { Collection } from "../../../../core/collections";
 import type { ContentStore } from "../../../../core/store";
 import { publishDraft, seedSave } from "../../../../core/store/__test__/seed";
-import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format";
 import {
 	closeGlobalPool,
 	createContentStore,

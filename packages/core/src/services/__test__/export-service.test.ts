@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { recordCollection } from "../../../test/any-site";
+import {
+	FIXTURE_CONTENT_COLLECTION as CONTENT,
+	FIXTURE_DRAFT_COLLECTION as DRAFT,
+	fixtureEntryPath as entryPath,
+	FIXTURE_TIME as FIXED_TIME,
+	FIXTURE_RELATION_KIND,
+	FIXTURE_SEO_METADATA,
+	fixtureBody,
+	fixtureDocument,
+	makeExportFixtureSnapshot as makeSnapshot,
+} from "../../../test/export-fixture";
 import { testSite } from "../../../test/site";
 import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../doc/stored-document";
 import {
@@ -13,17 +24,6 @@ import {
 	publicMetadataKeys,
 } from "../export-service";
 import { readZipArchive } from "../zip";
-import {
-	FIXTURE_CONTENT_COLLECTION as CONTENT,
-	FIXTURE_DRAFT_COLLECTION as DRAFT,
-	fixtureEntryPath as entryPath,
-	FIXTURE_TIME as FIXED_TIME,
-	FIXTURE_RELATION_KIND,
-	FIXTURE_SEO_METADATA,
-	fixtureBody,
-	fixtureDocument,
-	makeExportFixtureSnapshot as makeSnapshot,
-} from "./export-fixture";
 
 const PUBLISHED_ID = "11111111-1111-4111-8111-111111111111";
 const DRAFT_ID = "22222222-2222-4222-8222-222222222222";

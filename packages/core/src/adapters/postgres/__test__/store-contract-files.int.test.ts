@@ -14,7 +14,7 @@ describe("postgres store contract files", () => {
 			.map((file) => file.replace(/\.contract\.ts$/, ""));
 		expect(names.sort()).toEqual(onDisk.sort());
 		for (const name of names) {
-			const file = path.join(__dirname, `store-contract.${name}.test.ts`);
+			const file = path.join(__dirname, `store-contract.${name}.int.test.ts`);
 			expect(fs.existsSync(file), `${path.basename(file)} is missing`).toBe(true);
 			expect(fs.readFileSync(file, "utf8")).toContain(`runStoreContractSuite("${name}"`);
 		}

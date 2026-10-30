@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { withActor } from "../../core/actor";
 import {
@@ -13,7 +14,6 @@ import {
 	withEventDispatch,
 } from "../../core/store";
 import { seedEntry, seedSave } from "../../core/store/__test__/seed";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import {
 	closeGlobalPool,

@@ -9,11 +9,11 @@ import {
 	requiredMetadata,
 	titleFieldOf,
 } from "../../../test/any-site";
+import { paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
 import type { ContentStore } from "../../core/store";
 import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
-import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
 import {
 	closeGlobalPool,

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { blogSchema, cloneSchema, type EditableSchema } from "../../../test/blog-schema";
 import { ConfigError, type ConfigIssue, defineCollection, definePlugin, defineSite, fields } from "../..";
 import type { Cms } from "../../cms";
 import { fakeCms } from "../../cms/fake-cms";
 import type { SchemaTypes } from "../types";
-import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
 
 /** The issues a config is rejected with. */
 const issuesOf = (run: () => unknown): ConfigIssue[] => {

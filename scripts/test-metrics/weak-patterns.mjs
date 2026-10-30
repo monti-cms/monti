@@ -88,16 +88,16 @@ const EXEMPT = [
 		why: "the renderer's output: the classes and attributes a site config asks for and site styles read",
 	})),
 	...[
-		["packages/core/src/cli/__test__/write-regular-file.test.ts", 4],
-		["packages/core/src/cli/__test__/schema-apply.test.ts", 1],
-		["packages/core/src/cli/__test__/schema-extract.test.ts", 1],
+		["packages/core/src/cli/__test__/write-regular-file.int.test.ts", 4],
+		["packages/core/src/cli/__test__/schema-apply.int.test.ts", 1],
+		["packages/core/src/cli/__test__/schema-extract.int.test.ts", 1],
 		["packages/core/src/cli/__test__/init-helpers.ts", 1],
-		["packages/core/src/schema-edit/__test__/schema-edit.test.ts", 1],
-		["packages/core/src/schema-edit/__test__/title-rename.test.ts", 1],
+		["packages/core/src/schema-edit/__test__/schema-edit.int.test.ts", 1],
+		["packages/core/src/schema-edit/__test__/title-rename.int.test.ts", 1],
 	].map(([file, count]) => ({ pattern: "source-read", file, count, why: "reads the file the code under test wrote" })),
 	...[
-		["packages/core/src/cli/__test__/init-specs.test.ts", 1],
-		["packages/core/src/format/__test__/mdx-boundary.test.ts", 2],
+		["packages/core/src/cli/__test__/init-specs.int.test.ts", 1],
+		["packages/core/src/format/__test__/mdx-boundary.int.test.ts", 2],
 	].map(([file, count]) => ({
 		pattern: "source-read",
 		file,
@@ -112,7 +112,7 @@ const EXEMPT = [
 	},
 	{
 		pattern: "long-wait",
-		file: "packages/core/src/adapters/postgres/__test__/folders.test.ts",
+		file: "packages/core/src/adapters/postgres/__test__/folders.int.test.ts",
 		count: 1,
 		why: "the upper bound of an `expect.poll`, which returns as soon as the condition holds",
 	},

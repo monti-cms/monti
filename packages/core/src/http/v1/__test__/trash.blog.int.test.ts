@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, recordRelationField, requiredMetadata } from "../../../../test/any-site";
+import { paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import type { ContentStore, Entry } from "../../../core/store";
 import { publishDraft } from "../../../core/store/__test__/seed";
-import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../../format/registry";
 import { createContentService } from "../../../services/content-service";
 import {

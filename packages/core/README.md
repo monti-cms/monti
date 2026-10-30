@@ -1169,7 +1169,7 @@ export const cms = defineConfig({
 - A durable subscriber's `run` gets the event: ids, status, slugs, `version`, `contentHash`, `eventId`, `read()` for the committed entry (never the body itself) and `once(run)`, and its scope as its second argument (`{ cms }`, or `{ cms, plugin }` for a plugin's subscriber). Delivery is from an outbox: at least once, in order per entry, retried when it fails. See "Event delivery".
 - **What a write returns.** Every write of `cms.contentService()` (`createDraft`, `saveDraft`, `createTranslation`, `duplicate`, `publish`, `restore`) resolves to `{ entry, warnings }`: the entry as it is now, and the warnings the write found (core's, the blocks' and the `before…` subscribers'). The warnings are never part of the entry, and the list is empty when there are none. The admin API answers the same shape (`POST /entries`, `PATCH /entries/:id`, `POST /entries/:id/publish`, `/restore`, `/duplicate` and `/translations`), and an item of a bulk result carries `warnings` when its write had any. Archiving, unarchiving and trashing are store calls with no `before…` subscribers to warn: they return the entry.
 
-Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `write-pipeline.test.ts`):
+Contracts (each has a test in `src/services/__test__/write-hooks.int.test.ts` and `write-pipeline.test.ts`):
 
 1. **Changed data still goes through core.** Normalization, reference collection and validation run on what a `beforeValidate` returns, so it cannot get a value past a core check.
 2. **Extra validation can only add failures.** `beforeSave` and `beforePublish` return issues and warnings that are added to the core ones. They get a copy of the snapshot, so they cannot remove or downgrade a core issue, and the core integrity checks of a publish (references, media, links, required values) always run.
@@ -1574,8 +1574,9 @@ tests with this config (it sets `MONTI_TEST_SITE=other-site`, which `test/site.t
 `pnpm test:run` runs them together, and in a package use `pnpm test:other-site`). New tests run with both configs automatically. Do not write collection and field names in
 tests; look them up from the config (`test/any-site.ts`: collections, relation fields, the second language, and `fillRequiredMetadata`, which fills in publish-required values).
 Wrap tests that need something the config lacks (a second language, a bundled block, etc.) in `skipIf`. In the core package, the parts that assert the blog sample data as is
-live in `*.blog.test.ts` and are excluded from the other-site run and type check. In the admin and AI packages, list them in `BLOG_FIXTURE_TESTS` of each `vitest.othersite.config.ts`
-to exclude them.
+live in `*.blog.test.ts` (`*.blog.int.test.ts` for L2) and are excluded from the other-site run and type check. In the admin and AI packages, list them in `BLOG_FIXTURE_TESTS` of each `vitest.othersite.config.ts`
+to exclude them. Core's tests are split by layer (`docs/testing.md`): `vitest.config.ts` runs the L1 tests (suite `core`), `vitest.int.config.ts` the L2 tests that need the
+database, the file system or a child process (`*.int.test.ts`, suite `core (int)`, `pnpm test:int` in the package).
 
 **Automated checks (CI).** On every push and PR, `.github/workflows/ci.yml` runs lint (check only), type checking, the package build, tests (Postgres 17 service) and
 the example app bundle check (`pnpm example:check`). `pnpm example:check` builds and packs the packages, installs them into the example app in a temporary folder outside the repo,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contentCollection, defaultLocale } from "../../../test/any-site";
+import { doc, paragraphsFormat } from "../../../test/paragraphs-format";
 import { testSite } from "../../../test/site";
 import { computeContentHash } from "../../core/content-hash";
 import { linkAddressKey } from "../../core/link-ids";
@@ -8,7 +9,6 @@ import { createWritePipeline } from "../../services/write-pipeline";
 import { exportText, importText } from "../convert";
 import { createFormatRegistry } from "../registry";
 import { defineFormat } from "../types";
-import { doc, paragraphsFormat } from "./paragraphs-format";
 
 const ENTRY_ID = "123e4567-e89b-42d3-a456-426614174000";
 const MEDIA_ID = "223e4567-e89b-42d3-a456-426614174000";
