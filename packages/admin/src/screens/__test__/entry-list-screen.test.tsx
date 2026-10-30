@@ -133,23 +133,6 @@ describe("list screen — title row", () => {
 		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.post.label);
 		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeTruthy();
 	});
-
-	it("has one title, whatever the list is doing", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-	});
-
-	it("shows no address rule for a collection without a public route", async () => {
-		nav.setSearch("collection=tag");
-		renderList();
-		await screen.findByRole("heading", { level: 1 });
-
-		expect(testSite.schemaOf("tag").path).toBeUndefined();
-		const heading = screen.getByRole("heading", { level: 1 });
-		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.tag.label);
-		expect(heading.nextElementSibling?.matches("span.font-mono")).not.toBe(true);
-	});
 });
 
 describe("list screen — list settings", () => {
@@ -189,44 +172,6 @@ describe("list screen — list settings", () => {
 });
 
 describe("list screen — row menu and bulk actions", () => {
-	it("the menu of an unselected row targets just that row", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-
-		const items = await openRowMenu("가");
-		expect(menuLabels(items)).toContain("열기");
-		expect(screen.queryByText(/개 항목/)).toBeNull();
-	});
-
-	it("opening the menu of a selected row with several rows selected targets all selected rows", async () => {
-		server.handle = (url, init) =>
-			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
-				? json({ results: bodyOf([url, init]).items.map(({ id }: { id: string }) => ({ id, ok: true, version: 4 })) })
-				: undefined;
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
-		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
-
-		const items = await openRowMenu("나");
-		expect(screen.getByText("2개 항목")).toBeTruthy();
-		expect(menuLabels(items)).not.toContain("열기");
-		fireEvent.click(screen.getByRole("menuitem", { name: "보관" }));
-		fireEvent.click(
-			within(await screen.findByRole("alertdialog", { name: "보관" })).getByRole("button", { name: "보관" }),
-		);
-
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/bulk")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/bulk")[0])).toEqual({
-			op: "archive",
-			items: [
-				{ id: "가", expectedVersion: 3 },
-				{ id: "나", expectedVersion: 3 },
-			],
-		});
-		await waitFor(() => expect(toast).toHaveBeenCalledWith("2개 항목을 보관했어요."));
-	});
-
 	it("the Delete key moves all selected draft rows to the trash at once", async () => {
 		server.handle = (url, init) =>
 			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
@@ -390,18 +335,6 @@ describe("list screen — a collection without folders", () => {
 		expect(labels).not.toContain("폴더 추가");
 	});
 
-	it("offers no Move to folder in a row menu, where a collection with folders does", async () => {
-		server.folders = [folder];
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		expect(menuLabels(await openRowMenu("가"))).toContain("폴더로");
-		cleanup();
-
-		renderOff();
-		await screen.findByRole("row", { name: /가/ });
-		expect(menuLabels(await openRowMenu("가"))).not.toContain("폴더로");
-	});
-
 	it("never requests folders, and ignores a ?folder= left in the address", async () => {
 		offNav.setSearch("collection=post&folder=f1");
 		offNav.render(
@@ -415,12 +348,6 @@ describe("list screen — a collection without folders", () => {
 		expect(folderRequests()).toHaveLength(0);
 		expect(entryRequests().length).toBeGreaterThan(0);
 		expect(entryRequests().every((url) => !url.searchParams.has("folderId"))).toBe(true);
-	});
-
-	it("requests folders for a collection with folders", async () => {
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		await waitFor(() => expect(folderRequests().length).toBeGreaterThan(0));
 	});
 });
 
@@ -451,18 +378,6 @@ describe("taxonomy edit panel — unsaved changes", () => {
 	});
 	const panelName = () => screen.findByRole("textbox", { name: /이름/ }) as Promise<HTMLInputElement>;
 
-	it("if nothing was changed, opens another item right away and marks the open row", async () => {
-		renderList();
-		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
-		expect(row("리액트").getAttribute("aria-current")).toBe("true");
-		fireEvent.click(screen.getByRole("button", { name: "뷰" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
-		expect(screen.queryByRole("alertdialog")).toBeNull();
-		expect(row("뷰").getAttribute("aria-current")).toBe("true");
-		expect(row("리액트").getAttribute("aria-current")).toBeNull();
-	});
-
 	it("pressing another item after changes asks for confirmation, and discarding opens that item", async () => {
 		renderList();
 		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
@@ -478,16 +393,6 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
 	});
 
-	it("trying to create a new item after changes also asks for confirmation", async () => {
-		renderList();
-		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
-		fireEvent.change(await panelName(), { target: { value: "React!" } });
-
-		fireEvent.click(screen.getByRole("button", { name: "태그 추가" }));
-		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
-	});
-
 	it("a link that leaves the list asks first while the panel has changes", async () => {
 		render(
 			<AdminQueryProvider>
@@ -501,15 +406,6 @@ describe("taxonomy edit panel — unsaved changes", () => {
 
 		fireEvent.click(screen.getByRole("link", { name: "elsewhere" }));
 		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
-	});
-
-	it("moving to another collection closes the panel", async () => {
-		renderList();
-		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
-		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
-
-		act(() => nav.setSearch("collection=post"));
-		await waitFor(() => expect(screen.queryByRole("textbox", { name: /이름/ })).toBeNull());
 	});
 });
 

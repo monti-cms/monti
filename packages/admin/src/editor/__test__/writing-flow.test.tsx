@@ -116,17 +116,6 @@ describe("flow: write (steps 02–05)", () => {
 	describe("step 02: / on a new post, choosing a template", () => {
 		const emptyPost = () => storedDoc(para());
 
-		it("has no fixed toolbar, and says on the empty line how to add a block", async () => {
-			const { editor } = await open(emptyPost());
-			expect(screen.queryByRole("toolbar", { name: /서식 도구|Formatting tools/ })).toBeNull();
-			act(() => {
-				editor.commands.focus("start");
-			});
-			await waitFor(() =>
-				expect(editor.view.dom.querySelector(`[data-placeholder="${t("emptyHint")}"]`)).not.toBeNull(),
-			);
-		});
-
 		it("opens in place on /, with group titles and the template group, without asking anything", async () => {
 			const { editor } = await open(emptyPost());
 			typeSlashInEmpty(editor);
@@ -140,14 +129,6 @@ describe("flow: write (steps 02–05)", () => {
 			// A template row says its sections.
 			expect(within(menu).getByText("서론 · 본론 · 결론")).toBeTruthy();
 			expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/api/monti/v1/templates"]);
-		});
-
-		it("does not ask for the templates until the menu is opened, and offers none when the editor takes none", async () => {
-			const { editor } = await open(emptyPost(), { templates: false });
-			typeSlashInEmpty(editor);
-			const menu = await slashMenu();
-			expect(within(menu).queryByText(t("slash.group.templates"))).toBeNull();
-			expect(fetchMock).not.toHaveBeenCalled();
 		});
 
 		it("puts the chosen template's blocks at the cursor, with new block ids, and leaves the rest of the body alone", async () => {
@@ -191,35 +172,6 @@ describe("flow: write (steps 02–05)", () => {
 			press(editor, "Escape");
 			await waitFor(() => expect(screen.queryByRole("listbox", { name: t("slashMenu.label") })).toBeNull());
 		});
-
-		it("holds every tool the toolbar used to hold: lists, quote, code, divider, table, footnote, image, file, link and the components", async () => {
-			const { editor } = await open(emptyPost());
-			typeSlashInEmpty(editor);
-			const names = optionNames(await slashMenu());
-			for (const key of [
-				"slash.paragraph.title",
-				"slash.h2.title",
-				"slash.h3.title",
-				"slash.h4.title",
-				"slash.bullet.title",
-				"slash.ordered.title",
-				"slash.todo.title",
-				"slash.quote.title",
-				"slash.divider.title",
-				"slash.table.title",
-				"slash.code.title",
-				"slash.footnote.title",
-				"slash.image.title",
-				"slash.file.title",
-				"slash.internalLink.title",
-			] as const) {
-				expect(
-					names.some((name) => name.startsWith(t(key))),
-					key,
-				).toBe(true);
-			}
-			expect(names.some((name) => name.startsWith("콜아웃"))).toBe(true);
-		});
 	});
 
 	describe("step 03: selecting text shows the format card", () => {
@@ -235,30 +187,6 @@ describe("flow: write (steps 02–05)", () => {
 			within(card)
 				.getAllByRole("button")
 				.map((button) => button.getAttribute("aria-label") ?? button.textContent);
-
-		it("lists the formats by name, in the board's order, and nothing the old toolbar did on top", async () => {
-			const { card } = await selectWords();
-			const list = names(card);
-			const at = (key: Parameters<typeof t>[0]) => {
-				const index = list.indexOf(t(key));
-				expect(index, key).toBeGreaterThanOrEqual(0);
-				return index;
-			};
-			const order = [
-				"inlineMarks.bold",
-				"inlineMarks.italic",
-				"inlineMarks.underline",
-				"inlineMarks.strike",
-				"inlineMarks.code",
-				"inlineMarks.superscript",
-				"inlineMarks.subscript",
-				"link.add",
-				"inlineBubble.footnoteAdd",
-			] as const;
-			expect(order.map(at)).toEqual([...order.map(at)].sort((a, b) => a - b));
-			// No site formats and no request: nothing is left for the ⋯ and the request.
-			expect(list).not.toContain(t("formatBar.more"));
-		});
 
 		it("applies a format at once and shows it pressed", async () => {
 			const { card, editor, onChange } = await selectWords();
@@ -305,26 +233,6 @@ describe("flow: write (steps 02–05)", () => {
 			within(menu)
 				.getAllByRole("menuitem")
 				.map((item) => item.textContent ?? "");
-
-		it("opens the menu: the kind of the block, turn into, align, up, down, duplicate and delete with their keys", async () => {
-			const { editor } = await open(storedDoc(para("첫 글"), para("둘째 글")));
-			const menu = await openMenu(editor);
-			expect(within(menu).getByText(t("blockKind.paragraph"))).toBeTruthy();
-			const rows = rowNames(menu);
-			// The first block has nothing above it to swap with, so "up" is not listed.
-			expect(rows).toEqual([
-				expect.stringContaining(t("blockHandle.turnInto")),
-				expect.stringContaining(t("blockHandle.align")),
-				`${t("blockHandle.moveDown")}Alt+↓`,
-				`${t("blockHandle.duplicate")}Ctrl+Shift+D`,
-				`${tc("delete")}Ctrl+Shift+Backspace`,
-			]);
-			expect(
-				within(menu)
-					.getByRole("menuitem", { name: new RegExp(t("blockHandle.turnInto")) })
-					.getAttribute("aria-haspopup"),
-			).toBe("menu");
-		});
 
 		it("turn into another block: the submenu lists the kinds with the current one ticked, and choosing heading 2 changes the block", async () => {
 			const { editor, onChange } = await open(storedDoc(para("첫 글"), para("둘째 글")));

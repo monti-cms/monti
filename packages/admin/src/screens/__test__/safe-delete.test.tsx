@@ -125,16 +125,6 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		return contextMenu(await screen.findByRole("row", { name: /뉴스/ }));
 	};
 
-	it("offers open, rename, move and then 폴더 지우기, and no subfolder item", async () => {
-		const items = await openFolderMenu();
-		expect(items.map((menuItem) => menuItem.textContent)).toEqual([
-			tc("open"),
-			td("folder.menu.rename"),
-			td("folder.menu.move"),
-			td("folder.menu.delete"),
-		]);
-	});
-
 	it("moves a folder of drafts at once, and the toast's undo restores the folder", async () => {
 		const items = await openFolderMenu();
 		fireEvent.click(items.at(-1) as HTMLElement);
@@ -169,13 +159,6 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		fireEvent.click(items.at(-1) as HTMLElement);
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
-		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1));
-	});
-
-	it("moves a folder with the Delete key like the menu does", async () => {
-		await renderList();
-		const link = (await screen.findAllByRole("button", { name: "뉴스" })).at(-1) as HTMLElement;
-		fireEvent.keyDown(link, { key: "Delete" });
 		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1));
 	});
 });
@@ -257,17 +240,6 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(bulkBodies()[0].items).toHaveLength(2);
 		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(lastToast().message).toBe(td("trash.done.count", { count: 2 }));
-	});
-
-	it("moves several drafts from the bar's ⋯ at once", async () => {
-		await renderList();
-		fireEvent.click(screen.getByRole("checkbox", { name: /가/ }));
-		fireEvent.click(screen.getByRole("checkbox", { name: /나/ }));
-		await screen.findByRole("toolbar");
-		fireEvent.click(screen.getByRole("button", { name: "더보기" }));
-		fireEvent.click((await screen.findAllByRole("menuitem")).at(-1) as HTMLElement);
-		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
-		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 });
 

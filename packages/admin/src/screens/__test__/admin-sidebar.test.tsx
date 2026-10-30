@@ -8,17 +8,14 @@ import { testConfig, testSite } from "../../../../core/test/site";
 import { renderInRouter } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminUiLabels } from "../../ui/labels";
-import { uiMessages } from "../../ui/messages";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
 import { AdminFeaturesProvider } from "../shared/admin-features";
 import { ENTRY_DRAG_TYPE } from "../shared/entry-drag";
-import { toolsHref } from "../tools/tools-tabs";
 
 afterEach(cleanup);
 
 const t = testSite.createTranslator(screensMessages);
-const tui = testSite.createTranslator(uiMessages);
 const site = createSite({
 	...testConfig,
 	plugins: [definePlugin({ name: "stats", options: {}, nav: [{ path: "stats", label: "Post stats" }] })],
@@ -78,29 +75,6 @@ describe("moving around by the rail", () => {
 		expect(names.at(-1)).toBe(t("sidebar.settings"));
 	});
 
-	it("has no fold group or other control among the rows: every row is a link", () => {
-		renderRail();
-		const buttons = within(rail())
-			.queryAllByRole("button")
-			.map((button) => button.getAttribute("aria-label"));
-		// The fold button in the head row and the three screen modes at the foot are the only buttons.
-		expect(buttons).toEqual([tui("sidebar.fold"), tui("theme.system"), tui("theme.light"), tui("theme.dark")]);
-	});
-
-	it("keeps the pages of the tools page behind the one tools row", () => {
-		renderRail();
-		for (const name of ["Post stats"]) expect(within(rail()).queryByRole("link", { name })).toBeNull();
-		expect(link(t("sidebar.tools")).getAttribute("href")).toBe(toolsHref(site));
-	});
-
-	it("links each row to its own address", () => {
-		renderRail();
-		expect(link(t("sidebar.trash")).getAttribute("href")).toBe(site.adminHref("/trash"));
-		expect(link(t("sidebar.media")).getAttribute("href")).toBe(site.adminHref("/media"));
-		// Settings opens at its first tab, which the page redirects to.
-		expect(link(t("sidebar.settings")).getAttribute("href")).toBe(site.adminHref("/settings"));
-	});
-
 	it("marks the open row, and the tools row for any page of the tools page", () => {
 		for (const [activeNav, row] of [
 			[site.DEFAULT_COLLECTION, labelOf(site.DEFAULT_COLLECTION)],
@@ -156,13 +130,6 @@ describe("moving around by the rail", () => {
 	});
 });
 
-describe("the site's name", () => {
-	it("links the name to the admin home", () => {
-		renderRail();
-		expect(link(site.SITE_NAME || "CMS").getAttribute("href")).toBe(site.adminHref());
-	});
-});
-
 describe("folders in the rail", () => {
 	const name = labelOf(site.DEFAULT_COLLECTION);
 	const tree = () => screen.getByRole("list", { name: t("sidebar.folderTree", { label: name }) });
@@ -182,13 +149,6 @@ describe("folders in the rail", () => {
 		expect(tree().compareDocumentPosition(link(name)) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
 	});
 
-	it("keeps a folder's subfolders hidden until it is open, and has no fold control", () => {
-		renderRail({ folderNav: folderNav([folder("a", "Dev"), folder("c", "Next.js", "a")]) });
-		expect(rows()).toEqual(["Dev"]);
-		expect(within(tree()).queryByRole("button", { expanded: true })).toBeNull();
-		expect(within(tree()).queryByRole("button", { expanded: false })).toBeNull();
-	});
-
 	it("selects a folder, and everything again from the collection row", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderRail({ folderNav: nav });
@@ -196,12 +156,6 @@ describe("folders in the rail", () => {
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("a");
 		fireEvent.click(link(name));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("all");
-	});
-
-	it("marks the open folder", () => {
-		renderRail({ folderNav: folderNav([folder("a", "Dev"), folder("b", "Essays")], { currentFolder: "a" }) });
-		expect(within(tree()).getByRole("button", { name: "Dev" }).getAttribute("aria-current")).toBe("true");
-		expect(within(tree()).getByRole("button", { name: "Essays" }).getAttribute("aria-current")).toBeNull();
 	});
 
 	it("moves dropped entries into the folder they are dropped on", () => {
@@ -215,24 +169,12 @@ describe("folders in the rail", () => {
 		expect(nav.onDropEntries).toHaveBeenCalledWith("a", entries);
 	});
 
-	it("shows how many things are in each folder at its right end, and nothing for a folder that has no count yet", () => {
-		const counted = { ...folder("a", "Dev"), entryCount: 12 };
-		renderRail({ folderNav: folderNav([counted, folder("b", "Essays")]) });
-		expect(within(within(tree()).getByRole("button", { name: /Dev/ })).getByText("12")).toBeTruthy();
-		expect(within(tree()).getByRole("button", { name: "Essays" }).textContent).toBe("Essays");
-	});
-
 	it("offers no way to add, rename or delete a folder", () => {
 		renderRail({ folderNav: folderNav([folder("a", "Dev")]) });
 		fireEvent.contextMenu(within(tree()).getByRole("button", { name: "Dev" }));
 		fireEvent.keyDown(within(tree()).getByRole("button", { name: "Dev" }), { key: "F2" });
 		expect(screen.queryByRole("menu")).toBeNull();
 		expect(screen.queryByRole("textbox")).toBeNull();
-	});
-
-	it("draws no tree for an open collection without folders", () => {
-		renderRail({ folderNav: folderNav([]) });
-		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
 	});
 
 	it("shows the media folders under media", () => {

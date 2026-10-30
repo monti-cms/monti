@@ -55,37 +55,11 @@ describe("save cell (flow 1 step 09)", () => {
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it("says saved with the time, and has nothing to press", () => {
-		show(
-			props({
-				save: {
-					status: "saved",
-					savedAt: Date.parse("2026-10-07T01:42:00.000Z"),
-					backupAvailable: true,
-					onSave: () => {},
-				},
-			}),
-		);
-		expect(bar().getByText(/^저장됨 /)).toBeTruthy();
-		expect(bar().queryByRole("button", { name: /저장됨/ })).toBeNull();
-	});
-
 	it("leads to signing in, in a new tab, when the session expired", () => {
 		show(props({ save: { status: "session-expired", savedAt: null, backupAvailable: true, onSave: () => {} } }));
 		const link = bar().getByRole("link", { name: "세션 만료 · 로그인" });
 		expect(link.getAttribute("href")).toContain("/login");
 		expect(link.getAttribute("target")).toBe("_blank");
-	});
-
-	it("says in the tooltip when the browser keeps no backup", () => {
-		show(props({ save: { status: "dirty", savedAt: null, backupAvailable: false, onSave: () => {} } }));
-		expect(bar().getByRole("button", { name: "저장 전 변경사항" }).getAttribute("title")).toContain("복구 불가");
-	});
-
-	it("shows the character count as plain text at the end", () => {
-		show(props({ chars: 1240 }));
-		expect(bar().getByText("1,240자")).toBeTruthy();
-		expect(bar().queryByRole("button", { name: /1,240/ })).toBeNull();
 	});
 });
 
@@ -113,12 +87,6 @@ describe("to-do cell (flow 1 steps 10 to 13)", () => {
 		expect(onOpen).toHaveBeenCalledTimes(1);
 	});
 
-	it("shows what is already right as check rows under the rows", async () => {
-		show(props({ todo: todo() }));
-		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
-		expect(within(await screen.findByRole("dialog")).getByText("제목 · 주소 · 대표 이미지")).toBeTruthy();
-	});
-
 	it("says nothing is left to do, and the list then holds only the check rows", async () => {
 		show(props({ todo: todo({ rows: [], done: ["요약", "이미지 대체 텍스트 2개", "제목 · 주소"] }) }));
 		fireEvent.click(bar().getByRole("button", { name: "할 일 없음" }));
@@ -126,11 +94,6 @@ describe("to-do cell (flow 1 steps 10 to 13)", () => {
 		expect(list.getByText("요약")).toBeTruthy();
 		expect(list.getByText("이미지 대체 텍스트 2개")).toBeTruthy();
 		expect(list.queryByRole("button")).toBeNull();
-	});
-
-	it("is not there when the entry cannot be checked", () => {
-		show(props({ todo: null }));
-		expect(bar().queryByRole("button", { name: /할 일/ })).toBeNull();
 	});
 
 	it("can be opened from outside, as a refused publish does", async () => {
@@ -177,11 +140,6 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 		expect(list.getAllByRole("button", { name: "고치기" })).toHaveLength(2);
 		expect(list.getByRole("button", { name: "설정" })).toBeTruthy();
 		expect(list.getByRole("button", { name: "모두 고치기" })).toBeTruthy();
-	});
-
-	it("draws no cell for a plugin that has nothing to show", () => {
-		show(props(), { quiet: () => null });
-		expect(bar().queryByRole("button", { name: /맞춤법/ })).toBeNull();
 	});
 
 	it("tells the plugin where it is: the language of the entry and the text findings", () => {

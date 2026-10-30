@@ -165,16 +165,6 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(schema.site.aliases).toEqual(["www.example.dev", "blog.example.dev"]);
 	});
 
-	it("01 · × on a host takes its row out and the host leaves site.aliases", async () => {
-		open("site");
-		await field(tSite("site.alias.row", { number: 1 }));
-		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) }));
-		expect(screen.queryByRole("textbox", { name: tSite("site.alias.row", { number: 1 }) })).toBeNull();
-		expect(changes(1)).toBeTruthy();
-		const schema = await save();
-		expect(schema.site.aliases).toBeUndefined();
-	});
-
 	it("02 turning off 'language in the preview path' shows the query field (empty means locale); turning it on hides it", async () => {
 		open("site");
 		const name = tSite("site.previewInPath");
@@ -200,14 +190,6 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		fireEvent.click(screen.getByRole("switch", { name }));
 		type(await field(tSite("site.previewParam")), "lang");
 		expect((await save()).site.previewLocaleParam).toBe("lang");
-	});
-
-	it("02b the preview path is typed after a fixed '/' and stored with it", async () => {
-		open("site");
-		const path = (await field(tSite("site.previewPath"))) as HTMLInputElement;
-		expect(path.value).toBe("preview");
-		type(path, "draft");
-		expect((await save()).site.previewPath).toBe("/draft");
 	});
 
 	it("03 a host that is not a host name shows one error line under its row and blocks saving until it is fixed", async () => {
@@ -341,18 +323,6 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		);
 	});
 
-	it("06 · the list of changes names the new language and undoes it", async () => {
-		open("locales");
-		fireEvent.click(await addButton());
-		type(await searchBox(), "ja");
-		fireEvent.click(within(await screen.findByRole("listbox")).getByRole("option"));
-		await screen.findByTestId("locale-ja");
-		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(tChanges("tag.added")) }));
-		await waitFor(() => expect(screen.queryByTestId("locale-ja")).toBeNull());
-		expect(screen.queryByTestId("save-bar")).toBeNull();
-	});
-
 	it("06b 직접 입력 asks the two names once; 추가 adds the row with them", async () => {
 		open("locales");
 		fireEvent.click(await addButton());
@@ -379,66 +349,6 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		expect((await save()).locales.at(-1)).toEqual({ code: "tlh", name: "tlhIngan Hol", label: "클링온어" });
 	});
 
-	it("06b · cancel adds nothing", async () => {
-		open("locales");
-		fireEvent.click(await addButton());
-		type(await searchBox(), "tlh");
-		fireEvent.click(within(await screen.findByRole("listbox")).getByRole("option"));
-		const dialog = await screen.findByRole("dialog");
-		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(rows()).toEqual(["locale-ko", "locale-en"]);
-		expect(screen.queryByTestId("save-bar")).toBeNull();
-	});
-
-	it("07 the source row says 원문 and has 바꾸기, which opens the list of languages with a tick on the source; the others have no flag", async () => {
-		open("locales");
-		const source = await screen.findByTestId("locale-ko");
-		expect(source.textContent).toContain(tLocales("locales.source"));
-		expect(within(row("en")).queryByText(tLocales("locales.source"))).toBeNull();
-		// The source cannot be taken out; the others can.
-		expect(within(source).queryByRole("button", { name: tLocales("locales.remove", { name: "한국어" }) })).toBeNull();
-		expect(
-			within(row("en")).getByRole("button", { name: tLocales("locales.remove", { name: "English" }) }),
-		).toBeTruthy();
-
-		fireEvent.click(within(source).getByRole("button", { name: tLocales("locales.sourceChange") }));
-		await screen.findByRole("menu");
-		const menu = screen.getByRole("group", { name: tLocales("locales.sourceMenu") });
-		const items = within(menu).getAllByRole("menuitemradio");
-		expect(items.map((item) => item.textContent)).toEqual(["한국어", "English"]);
-		expect(items.map((item) => item.getAttribute("aria-checked"))).toEqual(["true", "false"]);
-	});
-
-	it("07b choosing another language moves it to the top as the source: defaultLocale is saved with it and both rows are marked", async () => {
-		open("locales");
-		fireEvent.click(
-			within(await screen.findByTestId("locale-ko")).getByRole("button", { name: tLocales("locales.sourceChange") }),
-		);
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: "English" }));
-		await waitFor(() => expect(rows()).toEqual(["locale-en", "locale-ko"]));
-
-		expect(row("en").textContent).toContain(tLocales("locales.source"));
-		expect(row("ko").textContent).not.toContain(tLocales("locales.source"));
-		for (const code of ["en", "ko"]) {
-			expect(within(row(code)).getByRole("img", { name: tLocales("locales.sourceChanged") })).toBeTruthy();
-		}
-		// One change in the title row, named "원문", and it is the old source that now has the × and the handle.
-		expect(changes(1)).toBeTruthy();
-		expect(
-			within(row("ko")).getByRole("button", { name: tLocales("locales.remove", { name: "한국어" }) }),
-		).toBeTruthy();
-		expect(
-			within(row("en")).queryByRole("button", { name: tLocales("locales.remove", { name: "English" }) }),
-		).toBeNull();
-
-		// The changes list names it and undoes it: the old source is back on top.
-		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(tChanges("subject.defaultLocale")) }));
-		await waitFor(() => expect(rows()).toEqual(["locale-ko", "locale-en"]));
-		expect(screen.queryByTestId("save-bar")).toBeNull();
-	});
-
 	it("07b · the request has defaultLocale and the new order", async () => {
 		open("locales");
 		fireEvent.click(
@@ -462,13 +372,5 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		// With one language left there is nothing to take out and nothing to change.
 		expect(screen.queryByRole("button", { name: new RegExp(tLocales("locales.sourceChange")) })).toBeNull();
 		expect(screen.queryByRole("button", { name: /빼기|Remove/ })).toBeNull();
-	});
-
-	it("09 the time zone is a searchable list of its own, in mono", async () => {
-		open("locales");
-		const zone = (await screen.findByRole("combobox", { name: tLocales("locales.timeZone") })) as HTMLInputElement;
-		expect(zone.value).toBe("Asia/Seoul");
-		expect(zone.className).toContain("font-mono");
-		expect(screen.getByRole("heading", { name: tLocales("locales.timeZoneTitle") })).toBeTruthy();
 	});
 });

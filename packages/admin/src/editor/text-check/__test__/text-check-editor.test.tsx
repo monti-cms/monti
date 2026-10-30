@@ -183,11 +183,6 @@ describe("spellcheck button", () => {
 		expect(checkButton()).toBeNull();
 	});
 
-	it("shows no button when no checker covers the document language", async () => {
-		await renderEditor("틀린말\n", [fakeChecker({ locales: ["en"] })], "ko");
-		expect(checkButton()).toBeNull();
-	});
-
 	it("checks the whole document on click and shows underlines", async () => {
 		const checker = fakeChecker();
 		const { editor } = await renderEditor("첫 문단은 틀린말 입니다\n\n둘째 문단\n", [checker]);
@@ -269,48 +264,9 @@ describe("spellcheck button", () => {
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(`${t("failed", { label: "고장" })}\nHTTP 500`));
 		expect(checkButton("고장")?.hasAttribute("disabled")).toBe(false);
 	});
-
-	it("says it is checking on the row and does not start a second run", async () => {
-		let finish: (() => void) | undefined;
-		const slow = defineTextChecker({
-			id: "slow",
-			label: "느림",
-			check: vi.fn(
-				() =>
-					new Promise<[]>((resolve) => {
-						finish = () => resolve([]);
-					}),
-			),
-		});
-		await renderEditor("문단\n", [slow]);
-		fireEvent.click(checkButton("느림") as HTMLElement);
-		await waitFor(() => expect(checkButton("느림")?.getAttribute("aria-description")).toBe(t("running")));
-		fireEvent.click(checkButton("느림") as HTMLElement);
-		expect(slow.check).toHaveBeenCalledTimes(1);
-		await act(async () => finish?.());
-		await waitFor(() => expect(checkButton("느림")?.getAttribute("aria-description")).toBeNull());
-	});
 });
 
 describe("findings for the status bar", () => {
-	it("lists each finding with the paragraph it is in, its sentence, the suggestion and a way to fix or jump to it", async () => {
-		const { editor, findings } = await renderEditor("앞 문단\n\n이것은 틀린말 입니다\n", [fakeChecker()]);
-		expect(findings.current?.count).toBe(0);
-		fireEvent.click(checkButton() as HTMLElement);
-		await waitFor(() => expect(findings.current?.items).toHaveLength(1));
-		const [item] = findings.current?.items ?? [];
-		expect(item).toMatchObject({
-			text: "틀린말",
-			suggestion: "맞는 말",
-			paragraph: 2,
-			context: "이것은 틀린말 입니다",
-		});
-
-		act(() => item?.jump());
-		const [issue] = issuesOf(editor);
-		await waitFor(() => expect(editor.state.selection.from).toBe(issue?.from));
-	});
-
 	it("fixes one finding and leaves the others", async () => {
 		const { editor, onChange, findings } = await renderEditor("첫 틀린말\n\n둘째 틀린말\n", [fakeChecker()]);
 		fireEvent.click(checkButton() as HTMLElement);

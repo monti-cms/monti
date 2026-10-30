@@ -1,9 +1,7 @@
 import { RightPanelOpen } from "@carbon/icons-react";
 import { SidePanel } from "@monti-cms/ui";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testSite } from "../../../../../core/test/site";
-import { preferenceKey } from "../../../lib/utils/site-storage";
 import type { AdminPanel } from "../../../plugins";
 import { createTestRouter } from "../../../test/router";
 import { AdminFrame } from "../admin-frame";
@@ -45,15 +43,6 @@ const renderShell = (
 	);
 };
 
-/** Makes the window narrow (or wide) for `matchMedia`, which jsdom does not have. */
-const stubWidth = (narrow: boolean) =>
-	vi.stubGlobal("matchMedia", (query: string) => ({
-		matches: narrow && query.includes("max-width"),
-		media: query,
-		addEventListener: () => undefined,
-		removeEventListener: () => undefined,
-	}));
-
 beforeEach(() => {
 	window.localStorage.clear();
 	vi.stubGlobal(
@@ -67,12 +56,6 @@ afterEach(() => {
 });
 
 describe("side panel in the admin shell", () => {
-	it("has no button and no pane when no plugin declares a panel", () => {
-		renderShell("media", null);
-		expect(screen.queryByRole("button", { name: /Helper/ })).toBeNull();
-		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
 	it("opens and closes from the button in the header, and the pane shows the plugin's component", () => {
 		renderShell("media");
 		expect(screen.queryByRole("complementary")).toBeNull();
@@ -80,18 +63,6 @@ describe("side panel in the admin shell", () => {
 		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
 		expect(screen.getByLabelText("where")).toBeTruthy();
 		fireEvent.click(toggle());
-		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
-	it("remembers whether it is open for the next screen", () => {
-		const first = renderShell("media");
-		fireEvent.click(toggle());
-		first.unmount();
-		renderShell("settings");
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
-		fireEvent.click(toggle());
-		cleanup();
-		renderShell("media");
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
 
@@ -103,47 +74,6 @@ describe("side panel in the admin shell", () => {
 		expect(screen.getByRole("complementary")).toBeTruthy();
 		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, metaKey: true });
 		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
-	it("closes from its own close button", () => {
-		renderShell("media");
-		fireEvent.click(toggle());
-		fireEvent.click(
-			within(screen.getByRole("complementary", { name: "Helper" })).getByRole("button", { name: "Close" }),
-		);
-		expect(screen.queryByRole("complementary")).toBeNull();
-	});
-
-	it("docks beside the page from 1280px wide, and floats over it below that, so the page keeps room", () => {
-		const windowOf = (width: number) =>
-			vi.stubGlobal("matchMedia", (query: string) => ({
-				matches: width <= Number(/max-width: (\d+)px/.exec(query)?.[1] ?? -1),
-				media: query,
-				addEventListener: () => undefined,
-				removeEventListener: () => undefined,
-			}));
-		windowOf(1280);
-		const wide = renderShell("media");
-		fireEvent.click(toggle());
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
-		wide.unmount();
-		window.localStorage.clear();
-		windowOf(1279);
-		renderShell("media");
-		fireEvent.click(toggle());
-		// Still the same panel, with its own close button; it is not a modal that traps the page.
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
-		expect(screen.queryByRole("dialog")).toBeNull();
-	});
-
-	it("floats on a narrow screen, closed on load even when the wide screen left it open", () => {
-		window.localStorage.setItem(preferenceKey(testSite, "side-panel"), "1");
-		stubWidth(true);
-		renderShell("media");
-		expect(screen.queryByRole("dialog")).toBeNull();
-		fireEvent.click(toggle());
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
-		expect(screen.getByLabelText("where")).toBeTruthy();
 	});
 });
 

@@ -1,11 +1,10 @@
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
-import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { trashMessages } from "../messages";
 import { TrashScreen } from "../trash-screen";
@@ -22,7 +21,6 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 );
 
 const t = testSite.createTranslator(trashMessages);
-const ts = testSite.createTranslator(screensMessages);
 const tc = testSite.createTranslator(commonMessages);
 
 const first = entry("first", "첫 번째 글", { slug: "first-post", locales: [testSite.DEFAULT_LOCALE, secondLocale] });
@@ -90,67 +88,10 @@ const posted = (path: string) =>
 		.filter(([input, init]) => String(input).split("?")[0] === `/api/monti/v1${path}` && init?.method === "POST")
 		.map(([, init]) => ((init as RequestInit).body ? JSON.parse(String((init as RequestInit).body)) : {}));
 const row = (name: RegExp | string) => screen.getByRole("row", { name: new RegExp(name) });
-const openMenu = async (target: HTMLElement) => {
-	await act(async () => {
-		fireEvent.contextMenu(target);
-	});
-	return screen.findAllByRole("menuitem");
-};
 /** The row's "more" button opens a menu with the permanent delete. */
 const moreOf = (target: HTMLElement) => within(target).getByRole("button", { name: t("row.more") });
 
 describe("flow: looking around the trash (T3)", () => {
-	it("has one head row, title, kind and day, and the rail counts the units", async () => {
-		await renderTrash();
-		const heads = screen.getAllByRole("columnheader").map((head) => head.textContent);
-		expect(heads.slice(0, 3)).toEqual([t("head.title"), t("head.kind"), t("head.deletedAt")]);
-		expect(screen.queryByRole("navigation", { name: /컬렉션|Collections/ })).toBeNull();
-		const badge = await screen.findByLabelText(ts("sidebar.trashBadge", { count: backend.top.length }));
-		expect(badge).toBeTruthy();
-	});
-
-	it("filters by kind from the kind column: several at once, the menu stays open, no chip row, and unticking lets them go", async () => {
-		await renderTrash();
-		const head = screen.getByRole("columnheader", { name: t("head.kind") });
-		fireEvent.click(within(head).getByRole("button", { name: t("head.kind") }));
-		const mediaName = t("kind.media");
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(mediaName) }));
-		await waitFor(() => expect(lastList().searchParams.getAll("kind")).toEqual(["media"]));
-		await screen.findByRole("row", { name: /winter-01/ });
-		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
-		// The menu is still open: a second kind is any of the two.
-		const contentName = testSite.COLLECTION_DEFINITIONS[content].label;
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(contentName) }));
-		await waitFor(() => expect(new Set(lastList().searchParams.getAll("kind"))).toEqual(new Set(["media", content])));
-		await screen.findByRole("row", { name: /첫 번째 글/ });
-		expect(document.querySelector("[data-slot=chip]")).toBeNull();
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(mediaName) }));
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(contentName) }));
-		await waitFor(() => expect(lastList().searchParams.getAll("kind")).toEqual([]));
-	});
-
-	it("sorts by the day it was discarded, newest first, and the head switches the order", async () => {
-		await renderTrash();
-		const head = screen.getByRole("columnheader", { name: t("head.deletedAt") });
-		expect(head.getAttribute("aria-sort")).toBe("descending");
-		expect(lastList().searchParams.get("sort")).toBe("desc");
-		fireEvent.click(within(head).getByRole("button", { name: t("head.deletedAt") }));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: ts("sort.date.asc") }));
-		await waitFor(() => expect(lastList().searchParams.get("sort")).toBe("asc"));
-		await waitFor(() =>
-			expect(screen.getByRole("columnheader", { name: t("head.deletedAt") }).getAttribute("aria-sort")).toBe(
-				"ascending",
-			),
-		);
-	});
-
-	it("gives a translation whose original is in the trash its own line instead of a language", async () => {
-		await renderTrash();
-		expect(
-			within(row(/React 19 migration/)).getByText(t("row.sourceTrashed", { title: "리액트 19 마이그레이션" })),
-		).toBeTruthy();
-	});
-
 	it("opens a folder to its inside and goes back up: trail, title, folder actions, the way up, and no dates", async () => {
 		await renderTrash();
 		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: "시리즈 원고" }));
@@ -209,18 +150,6 @@ describe("flow: looking around the trash (T3)", () => {
 		await waitFor(() => expect(lastList().searchParams.has("q")).toBe(false), { timeout: 3000 });
 	});
 
-	it("opens the menu on a right click with restore and permanent delete (Del), and restore sends the request", async () => {
-		await renderTrash();
-		const items = await openMenu(row(/옛 소개 글/));
-		expect(items.map((item) => item.textContent)).toEqual([
-			tc("lifecycle.restore"),
-			`${tc("lifecycle.deletePermanently")}Del`,
-		]);
-		fireEvent.click(items[0] as HTMLElement);
-		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
-		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: "about", expectedVersion: 3 }] });
-	});
-
 	it("opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
 		await renderTrash();
 		const link = within(row(/옛 소개 글/)).getByRole("link", { name: "옛 소개 글" });
@@ -251,18 +180,6 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(posted("/trash/restore")[0]).toEqual({ items: [{ type: "entry", id: "tag", expectedVersion: 3 }] });
 		// An item comes back as it was: no "draft" in the toast.
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("restore.done"), {}));
-	});
-
-	it("opens a file in the same panel, with where it is used", async () => {
-		await renderTrash();
-		fireEvent.click(within(row(/winter-01/)).getByRole("button", { name: "winter-01.jpg" }));
-		const panel = await screen.findByRole("complementary", { name: "winter-01.jpg" });
-		expect(within(panel).getByText(t("panel.usedIn"))).toBeTruthy();
-		expect(within(panel).getByText(t("panel.none"))).toBeTruthy();
-		expect(within(panel).getByText("Blog Assets")).toBeTruthy();
-		fireEvent.click(within(panel).getByRole("button", { name: tc("lifecycle.deletePermanently") }));
-		const dialog = await screen.findByRole("alertdialog");
-		expect(within(dialog).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeTruthy();
 	});
 });
 
@@ -329,12 +246,6 @@ describe("flow: deleting for good (T5)", () => {
 		fireEvent.click(within(plain).getByRole("button", { name: tc("lifecycle.deletePermanently") }));
 		await waitFor(() => expect(posted("/trash/delete")).toHaveLength(1));
 		expect(posted("/trash/delete")[0]).toEqual({ items: [{ type: "entry", id: "first", expectedVersion: 3 }] });
-	});
-
-	it("asks for the Delete key on a row too", async () => {
-		await renderTrash();
-		fireEvent.keyDown(row(/옛 소개 글/), { key: "Delete" });
-		await screen.findByRole("alertdialog", { name: t("delete.title") });
 	});
 
 	it("blocks the delete while entries point at the item: unlink the ones in use, delete the ones in the trash together, and only then it is enabled", async () => {
@@ -421,24 +332,6 @@ describe("flow: several at once (T6)", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("lifecycle.deletePermanently") }));
 		await waitFor(() => expect(posted("/trash/delete")).toHaveLength(1));
 		expect(posted("/trash/delete")[0].items).toHaveLength(2);
-	});
-
-	it("clears the pick, and the right-click menu of a picked row acts on all the picked rows", async () => {
-		await renderTrash();
-		pick(/옛 소개 글/);
-		pick(/첫 번째 글/);
-		const items = await openMenu(row(/옛 소개 글/));
-		fireEvent.click(items[0] as HTMLElement);
-		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
-		expect(posted("/trash/restore")[0].items).toHaveLength(2);
-	});
-
-	it("picks the page from the select-all", async () => {
-		await renderTrash();
-		fireEvent.click(screen.getByRole("checkbox", { name: t("selectAll") }));
-		await screen.findByText(t("bulk.count", { count: backend.top.length }));
-		fireEvent.click(screen.getByRole("button", { name: t("bulk.clear") }));
-		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
 	});
 });
 

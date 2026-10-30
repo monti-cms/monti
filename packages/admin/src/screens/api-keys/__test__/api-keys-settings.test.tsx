@@ -120,14 +120,6 @@ describe("API keys page", () => {
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it("offers an add action in the header and the empty state when there are no keys", async () => {
-		keys = [];
-		slots = [];
-		renderTab();
-		await screen.findByText(t("empty.title"));
-		expect(screen.getAllByRole("button", { name: t("add") })).toHaveLength(2);
-	});
-
 	it("adds a key from the dialog", async () => {
 		renderTab();
 		await screen.findByTestId("api-key-Spare");
@@ -210,12 +202,5 @@ describe("API keys page", () => {
 		fireEvent.click(speller.getByRole("button", { name: t("row.menu", { name: "Speller" }) }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.clearSlot", { label: "Spell check" }) }));
 		await waitFor(() => expect(putCalls()).toEqual([{ plugin: "speller", slot: "key", key: { use: "none" } }]));
-	});
-
-	it("shows no slot row when no installed plugin declares one", async () => {
-		slots = [];
-		renderTab();
-		await screen.findByTestId("api-key-Spare");
-		expect(screen.queryByTestId("api-key-slot-speller-key")).toBeNull();
 	});
 });

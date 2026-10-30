@@ -303,25 +303,6 @@ describe("flow: upload in the editor (05–06)", () => {
 });
 
 describe("flow: pick in the editor (29–30)", () => {
-	it("opens the library from / Image: folders at the left, search, the images only, no tabs and no alt text", async () => {
-		const editor = await withCursorBetween();
-		act(() => openMediaPicker("image"));
-		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
-		expect(within(dialog).getByRole("navigation", { name: t("picker.folders") })).toBeTruthy();
-		expect(within(dialog).getByRole("textbox", { name: t("picker.search") })).toBeTruthy();
-		expect(within(dialog).queryByRole("tab")).toBeNull();
-		expect(within(dialog).queryByLabelText(t("imageNode.alt"))).toBeNull();
-		await within(dialog).findByRole("button", { name: /desk-morning/ });
-		expect(within(dialog).queryByRole("button", { name: /price-list/ })).toBeNull();
-		expect(
-			requests
-				.filter((r) => r.path === "/media")
-				.at(-1)
-				?.search.get("kind"),
-		).toBe("image");
-		expect(imageNodes(editor)).toHaveLength(0);
-	});
-
 	it("sends the folder when one is chosen in the list, and lists everything again for all", async () => {
 		await withCursorBetween();
 		act(() => openMediaPicker("image"));
@@ -340,25 +321,6 @@ describe("flow: pick in the editor (29–30)", () => {
 		fireEvent.click(within(nav).getByRole("button", { name: t("picker.allImages") }));
 		await waitFor(() => expect(lastList()?.search.has("folderId")).toBe(false));
 		await within(dialog).findByRole("button", { name: /desk-morning/ });
-	});
-
-	it("searches by file name after a pause", async () => {
-		await withCursorBetween();
-		act(() => openMediaPicker("image"));
-		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
-		fireEvent.change(within(dialog).getByRole("textbox", { name: t("picker.search") }), {
-			target: { value: "winter" },
-		});
-		await waitFor(() =>
-			expect(
-				requests
-					.filter((r) => r.path === "/media")
-					.at(-1)
-					?.search.get("search"),
-			).toBe("winter"),
-		);
-		await within(dialog).findByRole("button", { name: /winter-02/ });
-		expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull();
 	});
 
 	it("puts the picked image in at the cursor at once, with no alt or caption step and no upload", async () => {

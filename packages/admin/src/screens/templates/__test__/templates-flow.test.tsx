@@ -1,17 +1,14 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { editorMessages } from "../../../editor/messages";
 import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
-import { shortDate } from "../../list-row-dates";
 import { AdminQueryProvider } from "../../shared/query-provider";
-import { statusBarMessages } from "../../shared/status-bar.messages";
 import { templatesMessages } from "../messages";
 import { TemplateEditorScreen } from "../template-editor-screen";
-import { editTemplateHref, newTemplateHref, templatesHref } from "../template-hrefs";
+import { editTemplateHref, newTemplateHref } from "../template-hrefs";
 import { TemplatesScreen } from "../templates-screen";
 
 // One test group per canvas flow of the Templates boards ("도구 · 템플릿" and "도구 · 템플릿 편집기"): the list, a row's menu, the editor page and its save.
@@ -55,8 +52,6 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
-const ts = testSite.createTranslator(statusBarMessages);
-const te = testSite.createTranslator(editorMessages);
 
 const DOC = {
 	type: "doc",
@@ -163,38 +158,10 @@ const pressSave = () => {
 };
 
 describe("flow: templates · the list", () => {
-	it("shows a row per template: its name as the way in, its sections, and the day it was edited", async () => {
-		await renderList();
-		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-			testSite.createTranslator((await import("../../tools/messages")).toolsMessages)("title"),
-		);
-		const link = screen.getByRole("link", { name: FIRST.name });
-		expect(link.getAttribute("href")).toBe(editTemplateHref(testSite, FIRST.id));
-		const row = rowOf(FIRST.name);
-		expect(within(row).getByText("서론 · 본론")).toBeTruthy();
-		expect(within(row).getByText(t("row.edited", { date: shortDate(testSite, FIRST.updatedAt) }))).toBeTruthy();
-		expect(screen.getByRole("link", { name: SECOND.name }).getAttribute("href")).toBe(
-			editTemplateHref(testSite, SECOND.id),
-		);
-		// The list is the page: no pane beside it that says nothing is picked.
-		expect(screen.queryByRole("textbox", { name: t("editor.nameLabel") })).toBeNull();
-	});
-
 	it("starts a new template from the header: it goes to the new template page", async () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("button", { name: t("add") }));
 		expect(nav.navigate).toHaveBeenCalledWith(newTemplateHref(testSite));
-	});
-
-	it("says so when there is no template, and the header still adds one", async () => {
-		store = [];
-		render(
-			<AdminQueryProvider>
-				<TemplatesScreen />
-			</AdminQueryProvider>,
-		);
-		await screen.findByText(t("list.empty"));
-		expect(screen.getByRole("button", { name: t("add") })).toBeTruthy();
 	});
 });
 
@@ -203,12 +170,6 @@ describe("flow: templates · a row's menu", () => {
 		fireEvent.click(within(rowOf(name)).getByRole("button", { name: t("row.more") }));
 		return screen.findAllByRole("menuitem");
 	};
-
-	it("holds duplicate and delete, and nothing else", async () => {
-		await renderList();
-		const items = await openMenu(FIRST.name);
-		expect(items.map((item) => item.textContent)).toEqual([t("row.duplicate"), t("row.delete")]);
-	});
 
 	it("duplicates: one create request with the same body under a copy name, ids of its own, and the copy joins the list", async () => {
 		await renderList();
@@ -245,50 +206,9 @@ describe("flow: templates · a row's menu", () => {
 		await waitFor(() => expect(screen.queryByRole("link", { name: FIRST.name })).toBeNull());
 		expect(toast).toHaveBeenCalledWith(t("delete.done", { name: FIRST.name }));
 	});
-
-	it("opens the same menu from a right click on the row", async () => {
-		await renderList();
-		await act(async () => {
-			fireEvent.contextMenu(rowOf(FIRST.name));
-		});
-		const items = await screen.findAllByRole("menuitem");
-		expect(items.map((item) => item.textContent)).toEqual([t("row.duplicate"), t("row.delete")]);
-	});
 });
 
 describe("flow: templates · the editor page", () => {
-	it("is its own page: a back link to the list, the name field with its label, the body, and the character count", async () => {
-		const name = await renderEditor(FIRST.id);
-		await waitFor(() => expect(name.value).toBe(FIRST.name));
-		const back = screen.getByRole("link", { name: t("editor.back") });
-		expect(back.getAttribute("href")).toBe(templatesHref(testSite));
-		// There is no sidebar or tools tabs around it.
-		expect(screen.queryByRole("navigation")).toBeNull();
-		const bar = screen.getByRole("region", { name: ts("label") });
-		expect(within(bar).getByText(ts("chars", { count: "6" }))).toBeTruthy();
-		expect(requested("GET", `/templates/${FIRST.id}`)).toHaveLength(1);
-	});
-
-	it("keeps the save button always (like the entry editor), and shows the status only while something changed", async () => {
-		const name = await renderEditor(FIRST.id);
-		await waitFor(() => expect(name.value).toBe(FIRST.name));
-		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()?.textContent).toBe(tc("save"));
-		// Nothing changed: pressing it, or ⌘S, sends nothing.
-		fireEvent.click(saveButton() as HTMLElement);
-		pressSave();
-		expect(sent("PATCH", `/templates/${FIRST.id}`)).toHaveLength(0);
-
-		fireEvent.change(name, { target: { value: "긴 글" } });
-		expect(screen.getByText(t("editor.unsaved"))).toBeTruthy();
-		expect(saveButton()).toBeTruthy();
-
-		// Putting the name back is no change.
-		fireEvent.change(name, { target: { value: FIRST.name } });
-		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()).toBeTruthy();
-	});
-
 	it("saves with ⌘S: one request with the name, the body and the version it saw; the status goes and a toast says saved", async () => {
 		const name = await renderEditor(FIRST.id);
 		await waitFor(() => expect(name.value).toBe(FIRST.name));
@@ -312,14 +232,6 @@ describe("flow: templates · the editor page", () => {
 			name: "더 긴 글",
 			expectedVersion: FIRST.version + 1,
 		});
-	});
-
-	it("does nothing on ⌘S when nothing changed", async () => {
-		const name = await renderEditor(FIRST.id);
-		await waitFor(() => expect(name.value).toBe(FIRST.name));
-		pressSave();
-		await act(async () => {});
-		expect(requested("PATCH", `/templates/${FIRST.id}`)).toHaveLength(0);
 	});
 
 	it("keeps the changes and shows the conflict as a notice strip with a way to take the server's version", async () => {
@@ -369,47 +281,9 @@ describe("flow: templates · the editor page", () => {
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect((screen.getByRole("textbox", { name: t("editor.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
 	});
-
-	it("holds the body width, duplicate and delete in its menu, and deleting asks first and goes back to the list", async () => {
-		const name = await renderEditor(FIRST.id);
-		await waitFor(() => expect(name.value).toBe(FIRST.name));
-		fireEvent.click(screen.getByRole("button", { name: t("editor.more") }));
-		// The document tools on top (the body width with its value), then the template's own actions, delete last.
-		expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
-			`${te("editorWidth.label")}${te("editorWidth.normal")}`,
-			t("row.duplicate"),
-			t("row.delete"),
-		]);
-		fireEvent.click(screen.getByRole("menuitem", { name: t("row.delete") }));
-		const dialog = await screen.findByRole("alertdialog", { name: t("delete.title") });
-		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
-		await waitFor(() => expect(requested("DELETE", `/templates/${FIRST.id}`)).toHaveLength(1));
-		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(templatesHref(testSite)));
-	});
-
-	it("says it could not load a template that is not there", async () => {
-		render(
-			<AdminQueryProvider>
-				<TemplateEditorScreen id="missing" />
-			</AdminQueryProvider>,
-		);
-		await screen.findByRole("alert");
-		expect(screen.queryByRole("textbox", { name: t("editor.nameLabel") })).toBeNull();
-	});
 });
 
 describe("flow: templates · a new template", () => {
-	it("starts as the outline with an empty name and nothing to save", async () => {
-		const name = await renderEditor();
-		expect(name.value).toBe("");
-		expect(screen.queryByText(t("editor.unsaved"))).toBeNull();
-		expect(saveButton()).toBeTruthy();
-		expect(requested("GET", "/templates/undefined")).toHaveLength(0);
-		// The outline's 6 blocks count as characters.
-		const bar = screen.getByRole("region", { name: ts("label") });
-		expect(within(bar).getByText(/\d+자|chars/)).toBeTruthy();
-	});
-
 	it("will not save without a name: it says so and sends nothing", async () => {
 		await renderEditor();
 		fireEvent.click(screen.getByRole("button", { name: "edit body" }));

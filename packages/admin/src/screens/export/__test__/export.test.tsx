@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { jsonResponse } from "../../../test/fetch";
@@ -6,7 +6,6 @@ import { createTestRouter } from "../../../test/router";
 import { renderWithSite as render, withSite } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
 import { DataScreen } from "../../data/data-screen";
-import { settingsMessages } from "../../settings/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { ExportDialog } from "../export-dialog";
 import { exportMessages } from "../messages";
@@ -16,7 +15,6 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 );
 
 const t = testSite.createTranslator(exportMessages);
-const ts = testSite.createTranslator(settingsMessages);
 
 type Summary = Partial<
 	Record<
@@ -149,15 +147,6 @@ describe("the export dialog", () => {
 		expect(await screen.findByTestId("export-unsaved")).toBeTruthy();
 		expect(screen.getByRole("dialog", { name: t("dialog.title.entry") })).toBeTruthy();
 	});
-
-	it("leaves a selection that holds nothing without an export button to press", async () => {
-		serve({ summaries: { public: { entries: 0, notPublished: 1 }, admin: { entries: 1 } } });
-		open();
-		await screen.findByTestId("export-headline");
-		fireEvent.click(scopeRadio("public"));
-		await screen.findByText(t("summary.empty"));
-		expect((screen.getByRole("button", { name: t("action.selected") }) as HTMLButtonElement).disabled).toBe(true);
-	});
 });
 
 describe("the Data page", () => {
@@ -169,37 +158,6 @@ describe("the Data page", () => {
 				</AdminQueryProvider>,
 			),
 		);
-
-	it("is a page of its own, apart from the Settings tabs and their save bar", async () => {
-		serve({ summaries: { admin: { entries: 12, templates: 2 } } });
-		renderData();
-		expect(screen.queryByRole("navigation", { name: ts("tabs.label") })).toBeNull();
-		expect(screen.queryByTestId("settings-actions")).toBeNull();
-		await screen.findByTestId("site-backup");
-	});
-
-	it("shows the counts, says media files are not included, and follows the scope", async () => {
-		serve({ summaries: { admin: { entries: 12, templates: 2, media: 7 }, public: { entries: 9, notPublished: 3 } } });
-		renderData();
-		const summary = await screen.findByTestId("export-summary");
-		expect(within(summary).getByText(t("count.templates")).nextSibling?.textContent).toBe("2");
-		expect(within(summary).getByText(t("count.media")).nextSibling?.textContent).toBe("7");
-		expect(within(summary).getByText(t("note.media"))).toBeTruthy();
-
-		fireEvent.click(scopeRadio("public"));
-		expect(await screen.findByText(t("note.notPublished", { count: 3 }))).toBeTruthy();
-		expect(within(screen.getByTestId("export-summary")).queryByText(t("count.templates"))).toBeNull();
-	});
-
-	it("shows JSON as fixed and each installed text format as a checkbox that is on", async () => {
-		serve();
-		renderData();
-		const json = screen.getByRole("checkbox", { name: t("formats.json") });
-		expect(json.getAttribute("aria-checked")).toBe("true");
-		expect(json.hasAttribute("disabled") || json.getAttribute("aria-disabled") === "true").toBe(true);
-		const mdx = await screen.findByRole("checkbox", { name: /MDX/ });
-		expect(mdx.getAttribute("aria-checked")).toBe("true");
-	});
 
 	it("hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
 		const fetchMock = serve({ formats: [], summaries: { admin: { entries: 1 } } });

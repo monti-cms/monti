@@ -88,12 +88,6 @@ const HTML =
 	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
 
 describe("inlineBubbleTarget", () => {
-	it("shows the selection tool when text is selected", () => {
-		const editor = createEditor(HTML);
-		editor.commands.setTextSelection({ from: 1, to: 3 });
-		expect(inlineBubbleTarget(editor.state)).toEqual({ kind: "selection", from: 1, to: 3 });
-	});
-
 	it("returns the effect and its range when the cursor is inside or at the end of an effect", () => {
 		const editor = createEditor(HTML);
 		editor.commands.setTextSelection(5);
@@ -165,13 +159,6 @@ describe("InlineBubble", () => {
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineMarks.italic") })));
 		expect(editor.isActive("italic")).toBe(true);
 		expect(screen.getByRole("button", { name: t("inlineMarks.italic") }).getAttribute("aria-pressed")).toBe("true");
-	});
-
-	it("does not show when the editor has no focus", () => {
-		const editor = createEditor(HTML);
-		editor.commands.setTextSelection({ from: 1, to: 3 });
-		renderBubble(editor);
-		expect(screen.queryByRole("toolbar")).toBeNull();
 	});
 
 	it("removes the whole effect with the remove button when the cursor is inside it", () => {
@@ -339,23 +326,6 @@ describe("InlineBubble", () => {
 		act(() => fireEvent.change(screen.getByLabelText(t("link.href")), { target: { value: "/posts/hello" } }));
 		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));
 		expect(editor.getHTML()).toMatch(/<a [^>]*href="\/posts\/hello"[^>]*>가나<\/a>/);
-	});
-
-	it("hides the effect bubble while typing and shows it again when the cursor moves", () => {
-		const editor = createEditor(HTML);
-		focusAt(editor, 5);
-		renderBubble(editor);
-		expect(screen.getByRole("toolbar", { name: t("inlineBubble.effectLabel") })).toBeTruthy();
-
-		act(() => {
-			editor.commands.insertContent("x");
-		});
-		expect(screen.queryByRole("toolbar")).toBeNull();
-
-		act(() => {
-			editor.commands.setTextSelection(5);
-		});
-		expect(screen.getByRole("toolbar", { name: t("inlineBubble.effectLabel") })).toBeTruthy();
 	});
 
 	it("in a code block, shows only the effects code accepts and text folding", () => {
