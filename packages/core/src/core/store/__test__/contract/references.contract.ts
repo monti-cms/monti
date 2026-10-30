@@ -189,7 +189,7 @@ export const referencesContract: ContractSuite = (factory) => {
 			});
 
 			const entry = await store.createEntryWithReferences({ snapshot, references: [ref2, ref1] });
-			expect(entry.id).toBeDefined();
+			expect((await store.getEntry(entry.id)).workingSlug).toBe("create-refs");
 
 			const refs = await store.getWorkingReferences({ entryId: entry.id });
 			expect(refs).toHaveLength(2);
@@ -319,7 +319,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			} catch (e) {
 				conflictErr = e;
 			}
-			expect(conflictErr).toBeDefined();
 			expect(conflictErr).toBeInstanceOf(CmsError);
 			expect((conflictErr as CmsError).code).toBe("conflict");
 			expect((conflictErr as CmsError).serverVersion).toBe(entry2.version);
@@ -370,7 +369,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			} catch (e) {
 				err = e;
 			}
-			expect(err).toBeDefined();
 			expect(err).toBeInstanceOf(CmsError);
 			expect((err as CmsError).code).toBe("conflict");
 			expect((err as CmsError).serverVersion).toBe(entry1.version);
@@ -644,7 +642,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			} catch (e) {
 				err = e;
 			}
-			expect(err).toBeDefined();
 			expect(err).toBeInstanceOf(CmsError);
 			expect((err as CmsError).code).toBe("invalid_input");
 

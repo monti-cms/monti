@@ -182,7 +182,8 @@ describe("block ids", () => {
 			attrs: { layout: "auto" },
 			content: [{ type: "tableRow", content: [{ type: "tableCell", content: [text(label)] }] }],
 		}),
-		callout: (label) => ({ type: "callout", attrs: { variant: "note", title: label }, content: [paragraph(label)] }),
+		// A container block with attributes; pairing reads no config, so any block name will do.
+		container: (label) => ({ type: "note-box", attrs: { tone: "info", title: label }, content: [paragraph(label)] }),
 	};
 
 	/** The same value with its keys written in the opposite order at every depth: a stored version does not order keys as the reader does. */

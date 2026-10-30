@@ -110,7 +110,7 @@ describe("write hook contract", () => {
 		changes = [];
 		return {
 			collection: contentCollection,
-			slug: unique("post"),
+			slug: unique("entry"),
 			metadata,
 			format: "paragraphs",
 			body: text,
@@ -413,7 +413,6 @@ describe("write hook contract", () => {
 	describe("every write operation runs the same hooks", () => {
 		type Runner = {
 			operation: WriteOperation;
-			skip?: boolean;
 			run: () => Promise<unknown>;
 			unchanged: () => Promise<boolean>;
 		};
@@ -462,7 +461,6 @@ describe("write hook contract", () => {
 				const before = await entryCount();
 				return {
 					operation: "translate",
-					skip: !secondLocale,
 					run: () =>
 						service
 							.createTranslation({ sourceId: draft.id, locale: secondLocale ?? "" })
@@ -502,10 +500,15 @@ describe("write hook contract", () => {
 		});
 
 		const names = Object.keys(runners());
+		/** Ways of writing the site cannot do: a translation needs a second language. */
+		const unavailable = new Set(secondLocale ? [] : ["translate"]);
+		/** One test per way of writing, skipped where the site cannot write that way. */
+		const eachRunner = (title: string, test: (name: string) => Promise<void>) => {
+			for (const name of names) it.skipIf(unavailable.has(name))(`${name}: ${title}`, () => test(name));
+		};
 
-		it.each(names)("%s: a transform and both validations see it, with the operation", async (name) => {
+		eachRunner("a transform and both validations see it, with the operation", async (name) => {
 			const runner = await runners()[name]();
-			if (runner.skip) return;
 			const seen: string[] = [];
 			sources = server({
 				beforeValidate: ({ operation, collection, metadata, doc }) => {
@@ -526,9 +529,8 @@ describe("write hook contract", () => {
 			expect(seen).toEqual(expected);
 		});
 
-		it.each(names)("%s: a failure a hook adds blocks it and nothing is stored", async (name) => {
+		eachRunner("a failure a hook adds blocks it and nothing is stored", async (name) => {
 			const runner = await runners()[name]();
-			if (runner.skip) return;
 			sources = server({
 				beforeSave: ({ operation }) => ({ issues: operation === runner.operation ? [{ code: "rule_broken" }] : [] }),
 			});
@@ -541,9 +543,8 @@ describe("write hook contract", () => {
 			expect(changes).toEqual([]);
 		});
 
-		it.each(names)("%s: without a failing hook it is committed and reported", async (name) => {
+		eachRunner("without a failing hook it is committed and reported", async (name) => {
 			const runner = await runners()[name]();
-			if (runner.skip) return;
 			sources = server({ beforeSave: () => ({ issues: [] }) });
 			await runner.run();
 			expect(changes.length).toBeGreaterThan(0);

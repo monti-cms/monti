@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
@@ -30,14 +30,18 @@ describe("monti doctor on a healthy project", () => {
 	let pool: Pool;
 	let schemaName: string;
 
-	beforeAll(async () => {
+	// Each test gets its own database schema: one test's migrations or rows are not the next test's starting point.
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 	});
 
+	afterEach(async () => {
+		await dropIsolatedTestPool(pool, schemaName);
+	});
+
 	afterAll(async () => {
-		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
 		await closeGlobalPool();
 	});
 

@@ -40,7 +40,7 @@ describe("postgres plugin storage specifics", () => {
 			.collection("things")
 			.set("a", { n: 2 }, { expectedVersion: 0 });
 		const rows = await pool.query<{ plugin: string; collection: string; key: string; value: unknown; version: number }>(
-			`SELECT plugin, collection, key, value, version FROM "${schemaName}".plugin_documents ORDER BY plugin`,
+			`SELECT plugin, collection, key, value, version FROM "${schemaName}".plugin_documents WHERE plugin IN ('rows', 'rows-two') ORDER BY plugin`,
 		);
 		expect(rows.rows).toEqual([
 			{ plugin: "rows", collection: "things", key: "a", value: { n: 1 }, version: 1 },

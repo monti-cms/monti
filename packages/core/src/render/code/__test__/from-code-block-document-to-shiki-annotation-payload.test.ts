@@ -44,9 +44,6 @@ const testAnnotationConfig: AnnotationConfig = {
 	],
 };
 
-const isLinePosition = (value: DecorationItem["start"]): value is { line: number; character: number } =>
-	typeof value === "object" && value !== null && "line" in value && "character" in value;
-
 describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 	it("converts a document into a shiki payload (decorations/lineDecorations/rowWrappers)", () => {
 		if (typeof fromCodeBlockDocumentToShikiAnnotationPayload !== "function") {
@@ -140,17 +137,13 @@ describe("fromCodeBlockDocumentToShikiAnnotationPayload", () => {
 		);
 
 		const payload = fromCodeBlockDocumentToShikiAnnotationPayload(document, testAnnotationConfig);
-		const foldDecorationOnFirstConsoleLine = payload.decorations.find(
-			(decoration) =>
-				isLinePosition(decoration.start) &&
-				isLinePosition(decoration.end) &&
-				decoration.start.line === 1 &&
-				decoration.end.line === 1 &&
-				decoration.start.character === 0 &&
-				decoration.end.character === 7,
-		);
-
-		expect(foldDecorationOnFirstConsoleLine).toBeDefined();
+		// The annotation comments leave the code; line 0 is the blank line, and each `console` match is local to its own line.
+		const fold = (line: number) => ({
+			start: { line, character: 0 },
+			end: { line, character: 7 },
+			properties: { "data-anno-render": "fold" },
+		});
+		expect(payload.decorations).toEqual([fold(1), fold(2), fold(3), fold(4)]);
 	});
 
 	it("builds the payload through a name+scope rule lookup even when the annotation has no class/render", () => {

@@ -28,6 +28,15 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 		fillRequiredMetadata(store);
 	});
 
+	/** How many connections wait for a lock in a query on this schema. */
+	const lockWaiters = async () =>
+		(
+			await pool.query<{ count: number }>(
+				"SELECT count(*)::int AS count FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1",
+				[`%"${schemaName}"%`],
+			)
+		).rows[0]?.count ?? 0;
+
 	afterAll(async () => {
 		if (pool && schemaName) {
 			await dropIsolatedTestPool(pool, schemaName);
@@ -57,7 +66,8 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				await coordinator.query("BEGIN");
 				await coordinator.query(`SELECT id FROM "${schemaName}".entries WHERE id = $1 FOR SHARE`, [tag.id]);
 				const trash = store.trashEntry({ id: tag.id, expectedVersion: tag.version });
-				await new Promise((resolve) => setTimeout(resolve, 50));
+				// The trash waits for the coordinator's lock on the tag.
+				await expect.poll(lockWaiters).toBe(1);
 				const save = await store.saveWorkingWithReferences({
 					entryId: post.id,
 					expectedVersion: post.version,
@@ -124,13 +134,14 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				},
 				references: [],
 			});
-			await new Promise((r) => setTimeout(r, 20));
+			// The publish time is set back, so the reset below has to move it to now.
+			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
 			const pub3 = await publishDraft(testSite, store, {
 				id: post.id,
 				expectedVersion: pub2.version + 1,
 				resetPublishedAt: true,
 			});
-			expect(pub3.publishedAt?.getTime()).toBeGreaterThan(pub2.publishedAt?.getTime() ?? 0);
+			expect(pub3.publishedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
 		});
 
 		it("publishes with a publish time set beforehand (migrated drafts keep their original date)", async () => {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, recordCollection } from "../../../../../../../test/any-site";
 import { testConfig } from "../../../../../../../test/site";
 import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
@@ -15,13 +16,13 @@ const mockStore = {
 		if (id === "00000000-0000-4000-8000-000000000002") {
 			throw new CmsError("Not found", "not_found");
 		}
-		return Promise.resolve({ id, collection: "tag" });
+		return Promise.resolve({ id, collection: recordCollection });
 	}),
 	getIncomingReferences: vi.fn().mockResolvedValue([
 		{
 			state: "working",
 			sourceId: "post-1",
-			sourceCollection: "post",
+			sourceCollection: contentCollection,
 			sourceTitle: "Post 1",
 			sourceSlug: "post-1",
 			kind: "entry",

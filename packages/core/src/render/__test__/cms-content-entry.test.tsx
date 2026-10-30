@@ -95,11 +95,12 @@ describe("CmsContent with an entry", () => {
 		});
 		const paragraphs = docOf("본문");
 
-		await render({ entry: { doc: paragraphs, locale: "ko" }, components });
-		await render({ entry: { doc: paragraphs, locale: "ko" }, locale: "en", components });
+		// Any language tags: the renderer hands the page language to the components as is, without looking it up in the config.
+		await render({ entry: { doc: paragraphs, locale: "fr" }, components });
+		await render({ entry: { doc: paragraphs, locale: "fr" }, locale: "de", components });
 		await render({ doc: paragraphs, components });
 
-		expect(locales).toEqual(["ko", "en", undefined]);
+		expect(locales).toEqual(["fr", "de", undefined]);
 	});
 
 	it("lets an image resolver of the site win over the refs", async () => {

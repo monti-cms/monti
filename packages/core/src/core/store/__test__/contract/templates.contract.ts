@@ -100,12 +100,12 @@ export const templatesContract: ContractSuite = (factory) => {
 				name: "새 포스트 템플릿",
 				doc: docOf("## 개요\n\n내용 작성"),
 			});
-			expect(created.id).toBeDefined();
 			expect(created.version).toBe(1);
 			expect(created.name).toBe("새 포스트 템플릿");
 
 			// Read by id
 			const fetched = await store.getTemplate(created.id);
+			expect(fetched.id).toBe(created.id);
 			expect(fetched.name).toBe("새 포스트 템플릿");
 
 			const allTemplates = await store.listTemplates();

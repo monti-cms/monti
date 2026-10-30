@@ -63,10 +63,10 @@ describe("sub-path (Next basePath)", () => {
 
 describe("locale addresses (site.localePrefix)", () => {
 	it("the prefix differs per style", () => {
-		expect(localePrefixFor("ko", "except-default", "ko")).toBe("");
-		expect(localePrefixFor("en", "except-default", "ko")).toBe("/en");
-		expect(localePrefixFor("ko", "always", "ko")).toBe("/ko");
-		expect(localePrefixFor("en", "never", "ko")).toBe("");
+		expect(localePrefixFor("de", "except-default", "de")).toBe("");
+		expect(localePrefixFor("en", "except-default", "de")).toBe("/en");
+		expect(localePrefixFor("de", "always", "de")).toBe("/de");
+		expect(localePrefixFor("en", "never", "de")).toBe("");
 		expect(localizePathWith("/en", "/")).toBe("/en");
 		expect(localizePathWith("/en", "/posts/a")).toBe("/en/posts/a");
 		expect(localizePathWith("", "/posts/a")).toBe("/posts/a");
@@ -83,12 +83,12 @@ describe("locale addresses (site.localePrefix)", () => {
 });
 
 describe("locale of preview addresses (site.previewLocaleParam)", () => {
-	const base = { previewPath: "/preview/", path: "/posts/a", defaultLocale: "ko" };
+	const base = { previewPath: "/preview/", path: "/posts/a", defaultLocale: "de" };
 	it("by default `?locale=` is used when the locale is not the default", () => {
 		expect(previewHrefWith({ ...base, locale: "en", param: "locale", localePrefix: "/en" })).toBe(
 			"/preview/posts/a?locale=en",
 		);
-		expect(previewHrefWith({ ...base, locale: "ko", param: "locale", localePrefix: "" })).toBe("/preview/posts/a");
+		expect(previewHrefWith({ ...base, locale: "de", param: "locale", localePrefix: "" })).toBe("/preview/posts/a");
 		expect(previewHrefWith({ ...base, locale: "en", param: "lang", localePrefix: "/en" })).toBe(
 			"/preview/posts/a?lang=en",
 		);
@@ -96,6 +96,6 @@ describe("locale of preview addresses (site.previewLocaleParam)", () => {
 
 	it("with `false` the locale prefix goes in the path", () => {
 		expect(previewHrefWith({ ...base, locale: "en", param: false, localePrefix: "/en" })).toBe("/preview/en/posts/a");
-		expect(previewHrefWith({ ...base, locale: "ko", param: false, localePrefix: "" })).toBe("/preview/posts/a");
+		expect(previewHrefWith({ ...base, locale: "de", param: false, localePrefix: "" })).toBe("/preview/posts/a");
 	});
 });

@@ -31,7 +31,7 @@ describe("issueText", () => {
 		const told = issueText(testSite, { code: "footnote_definition_missing", message: "gone" });
 		expect(told.text.startsWith(t("footnote_definition_missing"))).toBe(true);
 		expect(told.text.indexOf("gone")).toBeGreaterThan(t("footnote_definition_missing").length);
-		const option = issueText(testSite, { code: "unknown_select_value", path: "policy", message: "old-option" });
+		const option = issueText(testSite, { code: "unknown_select_value", path: "choice", message: "old-option" });
 		expect(option.text).toContain("old-option");
 		expect(option.text).not.toContain("unknown_select_value");
 		// A code that names no target keeps its message out of the text.

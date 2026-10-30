@@ -42,6 +42,14 @@ describe("kysely", () => {
 		);
 	const insertKysely = (db: ReturnType<typeof createDb>, plugin: string, key: string) =>
 		db.insertInto("plugin_documents").values({ plugin, collection: "c", key, value: "{}" }).execute();
+	/** How many connections wait for a lock in a query on this schema. */
+	const lockWaiters = async () =>
+		(
+			await pool.query<{ count: number }>(
+				"SELECT count(*)::int AS count FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1",
+				[`%"${schema}"%`],
+			)
+		).rows[0]?.count ?? 0;
 
 	describe("the instance of a store", () => {
 		it("puts the runtime schema on every table, so a query names only the table", () => {
@@ -183,7 +191,7 @@ describe("kysely", () => {
 				await trx.selectFrom("plugin_documents").select("key").where("plugin", "=", "lock").forUpdate().execute();
 				order.push("second");
 			});
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await expect.poll(lockWaiters).toBe(1);
 			expect(order).toEqual([]);
 			release();
 			await Promise.all([first, second]);

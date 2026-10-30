@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
 import { installSpecs } from "../init-install";
-import { CREATE_NEXT_APP, fakeHost, fixtureApp } from "./init-helpers";
+import { CREATE_NEXT_APP, fakeHost, fixtureApp, installing } from "./init-helpers";
 
 const GITHUB = "github:monti-cms/monti#release/v0.2.0-next.16&path:/core";
 
@@ -43,34 +43,38 @@ describe("monti init with a GitHub spec for core", () => {
 		for (const field of ["dependencies", "devDependencies"] as const) {
 			const host = fakeHost();
 			await initProject({ cwd: appWithCore(GITHUB, field), host });
-			const args = host.install.mock.calls[0]?.[0].args ?? [];
-			expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin");
-			expect(args).toContain("@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs");
-			expect(args).not.toContain("@monti-cms/admin");
-			expect(args).not.toContain("@monti-cms/core");
-			expect(args.some((arg) => arg.startsWith("@monti-cms/core@"))).toBe(false);
-			expect(args).toContain("next-themes");
+			expect(host.install).toHaveBeenCalledOnce();
+			expect(host.install).toHaveBeenCalledWith(
+				installing(
+					"@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.16&path:/admin",
+					"@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.16&path:/nextjs",
+					"next-themes",
+				),
+			);
+			expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/admin"));
+			expect(host.install).not.toHaveBeenCalledWith(installing("@monti-cms/core"));
+			expect(host.install).not.toHaveBeenCalledWith(installing(expect.stringMatching(/^@monti-cms\/core@/)));
 		}
 	});
 
 	it("installs @monti-cms/syntax-directive from the same ref when the directive syntax is on", async () => {
 		const host = fakeHost();
 		await initProject({ cwd: appWithCore(GITHUB), host, directiveSyntax: true });
-		const args = host.install.mock.calls[0]?.[0].args ?? [];
-		expect(args).toContain(
-			"@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.16&path:/syntax-directive",
+		expect(host.install).toHaveBeenCalledWith(
+			installing("@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.16&path:/syntax-directive"),
 		);
 		const without = fakeHost();
 		await initProject({ cwd: appWithCore(GITHUB), host: without, directiveSyntax: false });
-		expect((without.install.mock.calls[0]?.[0].args ?? []).join(" ")).not.toContain("syntax-directive");
+		expect(without.install).toHaveBeenCalledOnce();
+		expect(without.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("syntax-directive")));
 	});
 
 	it("installs bare names when core has a version range", async () => {
 		const host = fakeHost();
 		await initProject({ cwd: appWithCore("^0.2.0"), host });
-		const args = host.install.mock.calls[0]?.[0].args ?? [];
-		expect(args).toContain("@monti-cms/admin");
-		expect(args.some((arg) => arg.includes("github:"))).toBe(false);
+		expect(host.install).toHaveBeenCalledOnce();
+		expect(host.install).toHaveBeenCalledWith(installing("@monti-cms/admin"));
+		expect(host.install).not.toHaveBeenCalledWith(installing(expect.stringContaining("github:")));
 	});
 
 	it("prints the --no-install command with the same specs, quoted for a shell", async () => {

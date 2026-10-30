@@ -7,7 +7,8 @@
  * one, and names inside `ByRole(...)` (a `tab` role is not the `tab` block).
  *
  *   node scripts/test-metrics/site-names.mjs          # table per package, with the names met most
- *   node scripts/test-metrics/site-names.mjs --json
+ *   node scripts/test-metrics/site-names.mjs --json   # the same as JSON, with the count per file (`byFile`)
+ *   node scripts/test-metrics/site-names.mjs --check  # fails when a package whose tests were overhauled has more than its `CEILING` (CI)
  *
  * The two configs are TypeScript with imports across packages, so they are loaded through Vite, as the test runner loads them.
  */
@@ -18,6 +19,13 @@ import { createServer } from "vite";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const asJson = process.argv.includes("--json");
+const asCheck = process.argv.includes("--check");
+
+/**
+ * The most blog names a package whose tests were overhauled may write: the uses it was left with, each read and kept for a reason (a name in a
+ * config the test builds, an admin language that is not a site locale). CI fails above it. Lower it when uses are fixed.
+ */
+const CEILING = { core: 24 };
 
 const loadConfigs = async () => {
 	const server = await createServer({
@@ -64,7 +72,8 @@ const isTestFile = (file) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(file) || file.s
 const files = [];
 const walk = (dir) => {
 	for (const name of readdirSync(dir)) {
-		if (name === "node_modules" || name === "dist" || name === "storybook-static") continue;
+		// `.stryker-tmp` holds a copy of the sources while a mutation run is going.
+		if (name === "node_modules" || name === "dist" || name === "storybook-static" || name === ".stryker-tmp") continue;
 		const full = path.join(dir, name);
 		if (statSync(full).isDirectory()) walk(full);
 		else if (/\.[cm]?[jt]sx?$/.test(name) && isTestFile(full)) files.push(full);
@@ -82,6 +91,8 @@ const LITERAL = /["'`]([A-Za-z][\w-]*)["'`]/g;
 
 const byPackage = {};
 const perName = {};
+/** File → the blog names it writes, for `--json`. */
+const byFile = {};
 for (const file of files) {
 	const rel = path.relative(root, file);
 	if (rel.startsWith("packages/ui/visual/") || /\.blog\.test\.[jt]sx?$/.test(rel)) continue;
@@ -101,7 +112,10 @@ for (const file of files) {
 			perName[match[1]] = (perName[match[1]] ?? 0) + 1;
 		}
 	}
-	if (found) row.filesNamingBlog += 1;
+	if (found) {
+		row.filesNamingBlog += 1;
+		byFile[rel] = found;
+	}
 	row.literals += found;
 }
 
@@ -109,8 +123,23 @@ const topNames = Object.entries(perName)
 	.sort((a, b) => b[1] - a[1])
 	.slice(0, 15);
 
-if (asJson) {
-	console.log(JSON.stringify({ blogOnly: Object.fromEntries(blogOnly), byPackage, topNames }, null, 2));
+if (asCheck) {
+	const over = Object.entries(CEILING).flatMap(([pkg, ceiling]) => {
+		const found = byPackage[pkg]?.literals ?? 0;
+		if (found <= ceiling) return [];
+		const files = Object.entries(byFile)
+			.filter(([file]) => file.startsWith(`packages/${pkg}/`))
+			.map(([file, n]) => `    ${file} (${n})`);
+		return [
+			`${pkg}: ${found} reference blog names in shared-site tests, at most ${ceiling}. Look the name up from the config.`,
+			...files,
+		];
+	});
+	for (const line of over) console.error(line);
+	if (over.length) process.exit(1);
+	console.log(`site-names: ok (${Object.keys(CEILING).join(", ")})`);
+} else if (asJson) {
+	console.log(JSON.stringify({ blogOnly: Object.fromEntries(blogOnly), byPackage, topNames, byFile }, null, 2));
 } else {
 	console.log(`blog-only names: ${[...blogOnly].map(([name, kind]) => `${name} (${kind})`).join(", ")}`);
 	console.log("\npackage            shared files  naming the blog  names  by kind");

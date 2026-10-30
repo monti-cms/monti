@@ -34,7 +34,8 @@ describe("code in a language that is not loaded", () => {
 	});
 
 	it("does not fail a page that has it", async () => {
-		await expect(renderDocument(codeDoc("no-such-language", "let x = 1"), { site: testSite })).resolves.toBeTruthy();
+		const { content } = await renderDocument(codeDoc("no-such-language", "let x = 1"), { site: testSite });
+		expect(renderToStaticMarkup(content)).toContain("let x = 1");
 	});
 });
 

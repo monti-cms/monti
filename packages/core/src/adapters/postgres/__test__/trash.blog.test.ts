@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, recordRelationField, requiredMetadata } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import type { Collection } from "../../../core/collections";
@@ -55,6 +55,11 @@ describe("trash", () => {
 			content: () => content,
 			now: () => clock,
 		});
+	});
+
+	// A test may move the trash service's clock forward; every test starts from the real time.
+	beforeEach(() => {
+		clock = new Date();
 	});
 
 	afterAll(async () => {
@@ -474,8 +479,11 @@ describe("trash", () => {
 			const early = await draft(unique("early"));
 			const later = await draft(unique("later"));
 			await store.trashEntry({ id: early.id, expectedVersion: early.version });
-			await new Promise((resolve) => setTimeout(resolve, 5));
 			await store.trashEntry({ id: later.id, expectedVersion: later.version });
+			// Two trashings in a row can share a database clock reading; the earlier one is set a minute back.
+			await pool.query(`UPDATE "${schema}".entries SET deleted_at = deleted_at - interval '1 minute' WHERE id = $1`, [
+				early.id,
+			]);
 			const ids = (items: readonly TrashItem[]) =>
 				items.map((item) => item.id).filter((id) => id === early.id || id === later.id);
 			expect(ids((await trash.list({ pageSize: 100 })).items)).toEqual([later.id, early.id]);
@@ -679,7 +687,7 @@ describe("trash", () => {
 			await trash.trashFolder({ id: crate.id, expectedVersion: crate.version });
 			const [result] = await trash.delete([{ type: "folder", id: crate.id }]);
 			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: outside.id, trashed: false }] });
-			expect(unitOf(await topUnits(), crate.id)).toBeDefined();
+			expect(unitOf(await topUnits(), crate.id)).toMatchObject({ type: "folder", id: crate.id });
 		});
 
 		it("deletes a media file from the store as well as its row, and refuses one an entry still uses", async () => {
@@ -737,8 +745,7 @@ describe("trash", () => {
 			expect(deletedFiles).toContain(file.storageKey);
 		});
 
-		it("keeps an expired unit that an entry still points at, and says why", async () => {
-			if (!relation) return;
+		it.skipIf(!relation)("keeps an expired unit that an entry still points at, and says why", async () => {
 			const target = await draft(unique("Needed"));
 			const pointer = await draft(unique("Needs it"));
 			await point(pointer, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
@@ -763,7 +770,7 @@ describe("trash", () => {
 					usages: [expect.objectContaining({ entryId: pointer.id })],
 				}),
 			]);
-			expect(unitOf(await topUnits(), shelf.id)).toBeDefined();
+			expect(unitOf(await topUnits(), shelf.id)).toMatchObject({ type: "folder", id: shelf.id });
 		});
 
 		it("purges when the trash is looked at, at most once a day", async () => {
@@ -780,14 +787,13 @@ describe("trash", () => {
 			await trash.trashFolder({ id: again.id, expectedVersion: again.version });
 			await age(again.id, TRASH_DAYS + 1);
 			await trash.list({});
-			expect(unitOf(await topUnits(), again.id)).toBeDefined();
+			expect(unitOf(await topUnits(), again.id)).toMatchObject({ type: "folder", id: again.id });
 			clock = new Date(clock.getTime() + 2 * PURGE_EVERY_MS);
 			await trash.list({});
 			expect(unitOf(await topUnits(), again.id)).toBeUndefined();
 		});
 
-		it("empties the trash and keeps what an entry points at", async () => {
-			if (!relation) return;
+		it.skipIf(!relation)("empties the trash and keeps what an entry points at", async () => {
 			const shelf = await folder("To empty");
 			await draft(unique("Gone"), shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });

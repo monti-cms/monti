@@ -1,4 +1,4 @@
-import type { Element } from "hast";
+import type { Element, ElementContent } from "hast";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
 import { siteHighlight } from "../code-highlighter";
@@ -19,6 +19,9 @@ const findElementByTagName = (root: Element, tagName: string): Element | undefin
 
 	return undefined;
 };
+
+const textOf = (node: ElementContent): string =>
+	node.type === "text" ? node.value : node.type === "element" ? node.children.map(textOf).join("") : "";
 
 describe("highlight inline render integration", () => {
 	it("converts inline annotation decorations into render tags", () => {
@@ -42,13 +45,11 @@ describe("highlight inline render integration", () => {
 		);
 
 		const pre = hast.children.find((node) => node.type === "element") as Element | undefined;
-		expect(pre).toBeDefined();
-
 		const code = pre ? findCode(pre) : undefined;
-		expect(code).toBeDefined();
-
 		const wrapper = code ? findElementByTagName(code, "Tooltip") : undefined;
-		expect(wrapper).toBeDefined();
+
+		// The tag wraps exactly the characters of the decoration (5 up to 17), and its content is the parsed attribute.
+		expect(wrapper ? textOf(wrapper) : undefined).toBe("le.log('hell");
 		expect(wrapper?.properties.content).toBe("console.log");
 		expect(wrapper?.properties["data-anno-render"]).toBeUndefined();
 		expect(wrapper?.properties["data-anno-content"]).toBeUndefined();

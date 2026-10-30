@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection } from "../../../../../test/any-site";
 import { docOf } from "../../../../../test/stored-content";
 import type { ReferenceOccurrence } from "../../../types";
@@ -629,7 +629,9 @@ export const mediaContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			const add = async (filename: string, byteSize: number) => {
+			// The store stamps an upload with the application clock; each upload is a minute after the one before.
+			const add = async (filename: string, byteSize: number, uploadedAt: string) => {
+				vi.setSystemTime(new Date(uploadedAt));
 				const media = await store.createMediaAsset({
 					filename,
 					mimeType: "image/png",
@@ -644,12 +646,15 @@ export const mediaContract: ContractSuite = (factory) => {
 					width: 1,
 					height: 1,
 				});
-				// Uploaded one after the other, so the order of the days is the order of the calls.
-				await new Promise((resolve) => setTimeout(resolve, 5));
 			};
-			await add("b-medium.png", 200);
-			await add("A-small.png", 100);
-			await add("c-large.png", 300);
+			vi.useFakeTimers({ toFake: ["Date"] });
+			try {
+				await add("b-medium.png", 200, "2026-01-01T00:00:00.000Z");
+				await add("A-small.png", 100, "2026-01-01T00:01:00.000Z");
+				await add("c-large.png", 300, "2026-01-01T00:02:00.000Z");
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 
 		afterAll(async () => {

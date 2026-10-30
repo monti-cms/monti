@@ -43,7 +43,8 @@ describe.skipIf(!collection)("Folders turned off after the fact", () => {
 		await expect(off.trashFolder({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(off.getFolderContents({ id: folder.id })).rejects.toMatchObject({ code: "invalid_input" });
 		// The folder is untouched.
-		expect((await on.listFolders({ collection: collection as string })).map((f) => f.name)).toEqual(["Left over"]);
+		const folders = await on.listFolders({ collection: collection as string });
+		expect(folders.find((f) => f.id === folder.id)).toMatchObject({ name: "Left over" });
 	}, 30_000);
 
 	it("rejects saving an entry into such a folder, but lets it leave the folder", async () => {

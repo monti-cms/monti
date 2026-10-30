@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import type { ContentStore } from "../../../core/store";
@@ -15,7 +15,8 @@ describe("Body templates: seeding and migration in Postgres", () => {
 	let schemaName: string;
 	let store: ContentStore;
 
-	beforeAll(async () => {
+	// Every test gets its own schema, seeded by its own migration: the tests delete templates and clear the seed marker.
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -24,47 +25,45 @@ describe("Body templates: seeding and migration in Postgres", () => {
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		if (pool && schemaName) {
 			await dropIsolatedTestPool(pool, schemaName);
 		}
-		await closeGlobalPool();
 	});
 
+	afterAll(closeGlobalPool);
+
 	// To check that deleting one leaves the other intact, there must be at least two templates.
-	it.skipIf(SEEDED.length < 2)(
-		"1. seeds templates for both editor types without reviving deleted templates",
-		async () => {
-			const templates = await store.listTemplates();
-			expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
+	it.skipIf(SEEDED.length < 2)("seeds templates for both editor types without reviving deleted templates", async () => {
+		const templates = await store.listTemplates();
+		expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
 
-			// The config's templates are inserted with their name and their document: a seed written as text is read by its format, and nothing is written
-			// to the text column.
-			for (const seed of SEEDED) {
-				const found = templates.find((t) => t.name === seed.name);
-				if (!found) throw new Error(`Template not found: ${seed.name}`);
-				// The core test config writes its seeds as documents, so no format is needed to read them.
-				expect(seed.doc).toBeDefined();
-				expect(contentOf(found.doc)).toEqual(contentOf(seed.doc));
-			}
-			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
-			if (!first || !second) throw new Error("Seed templates not found.");
+		// The config's templates are inserted with their name and their document: a seed written as text is read by its format, and nothing is written
+		// to the text column.
+		for (const seed of SEEDED) {
+			const found = templates.find((t) => t.name === seed.name);
+			if (!found) throw new Error(`Template not found: ${seed.name}`);
+			// The core test config writes its seeds as documents, so no format is needed to read them.
+			const expected = contentOf(seed.doc);
+			expect(expected).not.toBeNull();
+			expect(contentOf(found.doc)).toEqual(expected);
+		}
+		const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
+		if (!first || !second) throw new Error("Seed templates not found.");
 
-			// Delete one template
-			await store.deleteTemplate({ id: first.id, expectedVersion: first.version });
+		// Delete one template
+		await store.deleteTemplate({ id: first.id, expectedVersion: first.version });
 
-			// Re-run migration
-			await migrateContentStore(pool, { site: testSite, schema: schemaName });
+		// Re-run migration
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 
-			// Verify deleted template did NOT resurrect (one-time seed guarantee)
-			const remaining = await store.listTemplates();
-			expect(remaining.find((t) => t.id === first.id)).toBeUndefined();
-			expect(remaining.find((t) => t.id === second.id)).toBeDefined();
-		},
-	);
+		// Verify deleted template did NOT resurrect (one-time seed guarantee)
+		const remaining = await store.listTemplates();
+		expect(remaining.map((t) => t.id)).not.toContain(first.id);
+		expect(remaining.find((t) => t.id === second.id)).toMatchObject({ name: second.name });
+	});
 
 	it.skipIf(SEEDED.length === 0)("seed preserves same-name user templates and never resurrects deletions", async () => {
-		// Test 1 deleted the first template, so use the last template.
 		const name = SEEDED[SEEDED.length - 1]?.name;
 		const seeded = (await store.listTemplates()).find((template) => template.name === name);
 		if (!seeded) throw new Error(`Template not found: ${name}`);

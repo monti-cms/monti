@@ -36,9 +36,7 @@ describe("addMetaToPre", () => {
 
 		runPreHook(pre, "print('hello')", { language: "python" });
 
-		expect(pre.properties).toBeDefined();
-		expect(pre.properties?.code).toBe("print('hello')");
-		expect(pre.properties?.language).toBe("python");
+		expect(pre.properties).toEqual({ code: "print('hello')", language: "python" });
 	});
 
 	it("keeps existing properties and updates the same key with the latest value", () => {

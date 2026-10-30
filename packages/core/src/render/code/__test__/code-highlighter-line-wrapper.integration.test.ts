@@ -1,12 +1,20 @@
-import type { Element } from "hast";
+import type { Element, ElementContent } from "hast";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
 import { siteHighlight } from "../code-highlighter";
 
 const highlight = await siteHighlight(testSite);
 
-const findCode = (pre: Element) =>
-	pre.children.find((child) => child.type === "element" && child.tagName === "code") as Element | undefined;
+const textOf = (node: ElementContent): string =>
+	node.type === "text" ? node.value : node.type === "element" ? node.children.map(textOf).join("") : "";
+
+/** The children of the highlighted `code` element as `[tag, text]` pairs (`#text` for a text node), so the place of a wrapper reads as its lines. */
+const outline = (hast: { children: unknown[] }) => {
+	const pre = hast.children[0] as Element;
+	expect(pre).toMatchObject({ tagName: "pre", children: [{ tagName: "code" }] });
+	const code = pre.children[0] as Element;
+	return code.children.map((node) => [node.type === "element" ? node.tagName : `#${node.type}`, textOf(node)]);
+};
 
 describe("highlight line wrapper integration", () => {
 	it("injects line wrapper into highlighted hast", () => {
@@ -19,13 +27,8 @@ describe("highlight line wrapper integration", () => {
 				allowedRenderTags: ["Callout"],
 			},
 		);
-		const pre = hast.children.find((node) => node.type === "element") as Element | undefined;
-		expect(pre).toBeDefined();
-		const code = pre ? findCode(pre) : undefined;
-		expect(code).toBeDefined();
-
-		const wrapper = code?.children.find((node) => node.type === "element" && node.tagName === "Callout");
-		expect(wrapper).toBeDefined();
+		// The wrapper holds both lines.
+		expect(outline(hast)).toEqual([["Callout", "const a = 1\nconst b = 2"]]);
 	});
 
 	it("renders without a line count mismatch even when decorations and a line wrapper are used together", () => {
@@ -49,13 +52,16 @@ describe("highlight line wrapper integration", () => {
 			},
 		);
 
-		const pre = hast.children.find((node) => node.type === "element") as Element | undefined;
-		expect(pre).toBeDefined();
-		const code = pre ? findCode(pre) : undefined;
-		expect(code).toBeDefined();
-
-		const wrapper = code?.children.find((node) => node.type === "element" && node.tagName === "Callout");
-		expect(wrapper).toBeDefined();
+		expect(outline(hast)).toEqual([["Callout", "const a = 1\nconst b = 2"]]);
+		// The inline tag stays inside the first line of the wrapper.
+		const code = (hast.children[0] as Element).children[0] as Element;
+		const wrapper = code.children[0] as Element;
+		const lines = wrapper.children.filter((node): node is Element => node.type === "element");
+		expect(lines.map((line) => [line.properties.class, textOf(line)])).toEqual([
+			["line", "const a = 1"],
+			["line", "const b = 2"],
+		]);
+		expect(lines[0]?.children[0]).toMatchObject({ tagName: "Tooltip", properties: { content: "const" } });
 	});
 
 	it("applies up to EOF even when the line wrapper range end exceeds the line count", () => {
@@ -69,12 +75,11 @@ describe("highlight line wrapper integration", () => {
 			},
 		);
 
-		const pre = hast.children.find((node) => node.type === "element") as Element | undefined;
-		expect(pre).toBeDefined();
-		const code = pre ? findCode(pre) : undefined;
-		expect(code).toBeDefined();
-
-		const wrapper = code?.children.find((node) => node.type === "element" && node.tagName === "Callout");
-		expect(wrapper).toBeDefined();
+		// The wrapper starts at the second line and ends at the last one.
+		expect(outline(hast)).toEqual([
+			["span", "const a = 1"],
+			["#text", "\n"],
+			["Callout", "const b = 2"],
+		]);
 	});
 });

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { contentCollection } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import { SetupError } from "../../../core/problem";
@@ -19,15 +20,19 @@ describe("migrations", () => {
 	/** Schemas created separately by the test (dropped afterward). */
 	const extraSchemas: string[] = [];
 
-	beforeAll(async () => {
+	/** Each test starts from an empty schema of its own, with no step recorded. */
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 	});
 
-	afterAll(async () => {
-		for (const schema of extraSchemas) await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+	afterEach(async () => {
+		for (const schema of extraSchemas.splice(0)) await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -49,7 +54,7 @@ describe("migrations", () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const entry = await seedEntry(store, {
-			collection: "post",
+			collection: contentCollection,
 			slug: "hash-fill",
 			metadata: { title: "해시" },
 			text: "본문",
@@ -111,7 +116,7 @@ describe("migrations", () => {
 		});
 		expect(contentOf((await store.getEntry(entry.id)).working.doc)).toEqual(contentOf(docOf("words")));
 		const template = await store.createTemplate({ name: "Doc only template", doc: docOf("template words") });
-		expect((await store.getTemplate(template.id)).doc).toBeDefined();
+		expect(contentOf((await store.getTemplate(template.id)).doc)).toEqual(contentOf(docOf("template words")));
 	});
 
 	it("seeds the initial body templates once, and does not revive a deleted one", async () => {
@@ -119,7 +124,7 @@ describe("migrations", () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const count = async () =>
 			Number((await pool.query(`SELECT count(*) AS count FROM "${schemaName}".body_templates`)).rows[0].count);
-		expect(await count()).toBeGreaterThanOrEqual(seeded.length);
+		expect(await count()).toBe(seeded.length);
 		await pool.query(`DELETE FROM "${schemaName}".body_templates`);
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect(await count()).toBe(0);
@@ -155,6 +160,7 @@ describe("migrations", () => {
 	});
 
 	it("records a plugin's one-time step in the core migration log, under the plugin's name", async () => {
+		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		const storage = createPluginStorage(pool, schemaName, "logged");
 		expect(await storage.once("first-step", async () => {})).toBe(true);
 		expect(await applied(schemaName)).toContain("plugin:logged:first-step");

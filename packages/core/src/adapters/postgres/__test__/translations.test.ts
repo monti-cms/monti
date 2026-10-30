@@ -87,8 +87,13 @@ describe("translation groups (postgres storage)", () => {
 			expect(rows.map((row) => row.entry_id).sort()).toEqual([source.id, translation.id].sort());
 			expect(new Set(rows.map((row) => row.locale)).size).toBe(2);
 			// The entries are gone, so what the event kept (the title, or the address for a translation that has no title of its own) is what still names them.
-			expect(rows.find((row) => row.entry_id === source.id)?.payload.title).toBeTruthy();
-			for (const row of rows) expect(row.payload.title || row.payload.workingSlug).toBeTruthy();
+			expect(rows.find((row) => row.entry_id === source.id)?.payload).toMatchObject({
+				title: source.working.metadata.title,
+				workingSlug: source.workingSlug,
+			});
+			expect(rows.find((row) => row.entry_id === translation.id)?.payload).toMatchObject({
+				workingSlug: translation.workingSlug,
+			});
 			expect(trashedTranslation.status).toBe("trashed");
 		});
 

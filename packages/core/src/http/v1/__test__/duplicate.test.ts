@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { contentCollection } from "../../../../test/any-site";
 import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
@@ -14,7 +15,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 		warnings: [],
 		entry: {
 			id: "new-duplicated-id",
-			collection: "post",
+			collection: contentCollection,
 			version: 1,
 			status: "draft",
 			workingSlug: null,

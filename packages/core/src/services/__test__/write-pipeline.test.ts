@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { contentCollection } from "../../../test/any-site";
+import { contentCollection, defaultLocale } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import { contentOf, docOf } from "../../../test/stored-content";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
@@ -82,14 +82,14 @@ describe("write pipeline", () => {
 		});
 		const original = input({ title: "Title" });
 		const { snapshot, transformed } = await pipeline.run(
-			request({ operation: "save", entryId: "entry-1", locale: "ko", input: original }),
+			request({ operation: "save", entryId: "entry-1", locale: defaultLocale, input: original }),
 		);
 		expect(contexts).toHaveLength(1);
 		expect(contexts[0]).toMatchObject({
 			operation: "save",
 			collection: contentCollection,
 			entryId: "entry-1",
-			locale: "ko",
+			locale: defaultLocale,
 			metadata: { title: "mutated" },
 		});
 		expect(snapshot.metadata.title).toBe("Title");
@@ -287,7 +287,10 @@ describe("write pipeline", () => {
 	it("reads the hooks on every write, so a plugin that loads late is used", async () => {
 		let sources: HookSource[] = [];
 		const pipeline = createWritePipeline({ site: testSite, hooks: () => sources, formats });
-		await expect(pipeline.run(request())).resolves.toBeDefined();
+		await expect(pipeline.run(request())).resolves.toMatchObject({
+			snapshot: { collection: contentCollection },
+			transformed: false,
+		});
 		sources = [{ owner: "server", hooks: { beforeSave: () => ({ issues: [{ code: "late" }] }) } }];
 		await expect(pipeline.run(request())).rejects.toMatchObject({ code: "validation_failed" });
 	});

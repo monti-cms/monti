@@ -17,7 +17,8 @@ const link = (label: string, attrs: CmsMark["attrs"]): CmsNode => ({
 });
 const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
 
-const refs: ReadRefs = { ...EMPTY_REFS, links: { [ID]: { path: "/posts/renamed", title: "Renamed", locale: "ko" } } };
+// The renderer passes a link's language through as is, so any language tag will do.
+const refs: ReadRefs = { ...EMPTY_REFS, links: { [ID]: { path: "/posts/renamed", title: "Renamed", locale: "fr" } } };
 type ContentProps = Parameters<typeof CmsContent>[0];
 type WithoutCms<T> = T extends unknown ? Omit<T, "cms"> : never;
 
@@ -72,7 +73,7 @@ describe("rendering links by entry id", () => {
 
 		expect(seen.find((props) => props.entryId === ID)).toMatchObject({
 			href: "/posts/renamed",
-			entry: { path: "/posts/renamed", title: "Renamed", locale: "ko" },
+			entry: { path: "/posts/renamed", title: "Renamed", locale: "fr" },
 		});
 		expect(seen.find((props) => props.entryId === GONE)).toMatchObject({ href: undefined, entry: undefined });
 		expect(seen.find((props) => props.entryId === undefined)).toMatchObject({

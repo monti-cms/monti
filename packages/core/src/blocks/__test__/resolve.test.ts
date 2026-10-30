@@ -29,7 +29,7 @@ const diagram = defineBlock({
 describe("body blocks from the site config", () => {
 	it("uses only core blocks when there is no config", () => {
 		expect(names(resolveBlocks(undefined))).toEqual(names(BUILTIN_BLOCKS));
-		expect(names(BUILTIN_BLOCKS)).not.toContain("callout");
+		for (const added of testSite.ADDED_BLOCKS) expect(names(BUILTIN_BLOCKS)).not.toContain(added.name);
 	});
 
 	it("adds site blocks after plugin blocks", () => {
@@ -55,7 +55,7 @@ describe("body blocks from the site config", () => {
 		}
 		expect(() => bad({ component: "Image" })).toThrow(/already used/);
 		expect(() => bad({ editor: { view: "mark" } })).toThrow(/editor.view/);
-		expect(() => bad({ children: { blocks: ["tab"] } })).toThrow(/added block with this parent/);
+		expect(() => bad({ children: { blocks: ["card-item"] } })).toThrow(/added block with this parent/);
 		expect(() => resolveBlocks({ blocks: [card, card] })).toThrow(/already used/);
 	});
 
@@ -120,7 +120,7 @@ describe("body blocks from the site config", () => {
 });
 
 describe("custom block publish check", () => {
-	// Blocks are looked up from the current config (the reference blog setup has callout kinds and the custom `embed` block address). Skipped for configs without such blocks.
+	// Blocks are looked up from the current config: one with a choice attribute, one with a required attribute. Skipped for configs without such blocks.
 	const attributeOf = (block: BlockDefinition, pick: (attribute: BlockDefinition["attributes"][string]) => boolean) =>
 		Object.entries(block.attributes).find(([, attribute]) => attribute.type === "string" && pick(attribute));
 	const nonText = testSite.ADDED_BLOCKS.filter(
@@ -165,19 +165,17 @@ describe("custom block publish check", () => {
 	};
 
 	it.skipIf(!choiceBlock)("blocks an attribute outside the choice values", async () => {
-		if (!choiceBlock) return;
-		const [name, attribute] = attributeOf(choiceBlock, (candidate) => Boolean(candidate.options)) ?? [];
+		const block = choiceBlock as BlockDefinition;
+		const [name, attribute] = attributeOf(block, (candidate) => Boolean(candidate.options)) ?? [];
 		const valid = Object.keys(attribute?.options ?? {})[0];
-		expect(await issuesOf(blockDoc(choiceBlock, { [name as string]: "not-an-option" }))).toContain(
-			"invalid_block_attribute",
-		);
-		expect(await issuesOf(blockDoc(choiceBlock, { [name as string]: valid as string }))).toEqual([]);
+		expect(await issuesOf(blockDoc(block, { [name as string]: "not-an-option" }))).toContain("invalid_block_attribute");
+		expect(await issuesOf(blockDoc(block, { [name as string]: valid as string }))).toEqual([]);
 	});
 
 	it.skipIf(!requiredBlock)("blocks a missing required attribute", async () => {
-		if (!requiredBlock) return;
-		const [name] = attributeOf(requiredBlock, (attribute) => Boolean(attribute.required) && !attribute.options) ?? [];
-		expect(await issuesOf(blockDoc(requiredBlock, {}))).toContain("missing_block_attribute");
-		expect(await issuesOf(blockDoc(requiredBlock, { [name as string]: "https://example.com" }))).toEqual([]);
+		const block = requiredBlock as BlockDefinition;
+		const [name] = attributeOf(block, (attribute) => Boolean(attribute.required) && !attribute.options) ?? [];
+		expect(await issuesOf(blockDoc(block, {}))).toContain("missing_block_attribute");
+		expect(await issuesOf(blockDoc(block, { [name as string]: "https://example.com" }))).toEqual([]);
 	});
 });

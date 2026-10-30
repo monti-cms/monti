@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
-import { readStoredDocument } from "../../../doc/stored-document";
+import { readStoredDocument, STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { CONTENT_STORE_MIGRATIONS } from "../migrations";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -37,7 +37,7 @@ describe("templates through migration", () => {
 			const templates = await store.listTemplates();
 			expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
 			for (const template of templates) {
-				expect(readStoredDocument(template.doc)).toBeDefined();
+				expect(readStoredDocument(template.doc)).toMatchObject({ type: "doc", version: STORED_DOCUMENT_VERSION });
 			}
 
 			// Running everything again changes nothing.

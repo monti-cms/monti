@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import type { CmsConfig } from "../../../config/define";
 import { defineSite } from "../../../config/define";
@@ -71,6 +71,7 @@ describe("removing a collection with its entries", () => {
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
+	/** The entries every test works on, written under the schema before into a schema of the test's own. */
 	const ids = {} as Record<"m1" | "m1ko" | "m2" | "m3" | "p1" | "p2" | "p3" | "p4" | "folder", string>;
 
 	const count = async (table: string, where = "TRUE", params: unknown[] = []) =>
@@ -80,7 +81,7 @@ describe("removing a collection with its entries", () => {
 		);
 	const memoEntries = () => count("entries", "collection = 'memo'");
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
@@ -163,8 +164,11 @@ describe("removing a collection with its entries", () => {
 		await applySchemaChange({ site: siteBefore, store, migrations: [] });
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		if (pool && schemaName) await dropIsolatedTestPool(pool, schemaName);
+	});
+
+	afterAll(async () => {
 		await closeGlobalPool();
 	});
 
@@ -335,6 +339,7 @@ describe("removing a collection with its entries", () => {
 
 	it("runs once: applying again deletes nothing and the plan has nothing left", async () => {
 		const store = storeFor(siteAfter);
+		await applySchemaChange({ site: siteAfter, store, migrations: [drop] });
 		const again = await applySchemaChange({ site: siteAfter, store, migrations: [drop] });
 		expect(again.result.applied).toEqual([]);
 		expect(again.result.dropped).toEqual([]);

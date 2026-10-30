@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { contentCollection, otherContentCollection } from "../../../../../test/any-site";
 import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
@@ -173,10 +174,12 @@ describe("Media Upload API Endpoints", () => {
 		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(201);
 		const json = await res.json();
-		expect(json.mediaId).toBeDefined();
+		expect(json.mediaId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 		expect(json.uploadUrl).toBe("https://r2.example.com/staging/test?sig=123");
 		expect(mockCreateMediaAsset).toHaveBeenCalledWith(
 			expect.objectContaining({
+				id: json.mediaId,
+				stagingKey: `staging/${json.mediaId}.png`,
 				filename: "test.png",
 				mimeType: "image/png",
 				byteSize: 2048,
@@ -458,13 +461,13 @@ describe("Media Upload API Endpoints", () => {
 						{
 							entryId: "00000000-0000-4000-8000-000000000011",
 							title: "First Post",
-							collection: "post",
+							collection: contentCollection,
 							state: "published",
 						},
 						{
 							entryId: "00000000-0000-4000-8000-000000000012",
 							title: "Draft Memo",
-							collection: "memo",
+							collection: otherContentCollection ?? contentCollection,
 							state: "working",
 						},
 					],

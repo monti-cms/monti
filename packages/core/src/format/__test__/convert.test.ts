@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { contentCollection } from "../../../test/any-site";
+import { contentCollection, defaultLocale } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
+import { computeContentHash } from "../../core/content-hash";
 import { linkAddressKey } from "../../core/link-ids";
 import type { CmsNode } from "../../doc/types";
 import { createWritePipeline } from "../../services/write-pipeline";
@@ -19,7 +20,7 @@ const paragraph = (text: string, id?: string): CmsNode => ({
 });
 
 const registry = createFormatRegistry([paragraphsFormat]);
-const options = { locale: "ko" };
+const options = { locale: defaultLocale };
 
 describe("importText", () => {
 	it("reads a text with the format that is named, and gives every block an id", async () => {
@@ -188,7 +189,7 @@ describe("exportText", () => {
 		);
 
 		const { text, warnings } = await exportText(testSite, registry, "paragraphs", source, {
-			locale: "ko",
+			locale: defaultLocale,
 			purpose: "read",
 			refs: {
 				links: new Map([[ENTRY_ID, { url: "/en/posts/a-post", title: "A post", locale: "en" }]]),
@@ -209,9 +210,9 @@ describe("exportText", () => {
 		});
 
 		const { text } = await exportText(testSite, registry, "paragraphs", source, {
-			locale: "ko",
+			locale: defaultLocale,
 			purpose: "read",
-			refs: { links: { [ENTRY_ID]: { url: "/posts/x", title: null, locale: "ko" } }, media: {} },
+			refs: { links: { [ENTRY_ID]: { url: "/posts/x", title: null, locale: defaultLocale } }, media: {} },
 		});
 
 		expect(text).toBe("[x](/posts/x)");
@@ -247,7 +248,7 @@ describe("exportText", () => {
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const refs = { links: new Map(), media: new Map() };
 		await expect(
-			exportText(testSite, registry, "hugo", doc(), { locale: "ko", purpose: "read", refs }),
+			exportText(testSite, registry, "hugo", doc(), { locale: defaultLocale, purpose: "read", refs }),
 		).rejects.toMatchObject({
 			code: "unknown_format",
 		});
@@ -262,9 +263,11 @@ describe("exportText", () => {
 				},
 			}),
 		]);
-		const error = await exportText(testSite, broken, "broken", doc(), { locale: "ko", purpose: "read", refs }).catch(
-			(caught) => caught,
-		);
+		const error = await exportText(testSite, broken, "broken", doc(), {
+			locale: defaultLocale,
+			purpose: "read",
+			refs,
+		}).catch((caught) => caught);
 		expect(error).toMatchObject({ code: "format_export_failed" });
 		expect(JSON.stringify(error.issues)).not.toContain("secret detail");
 		quiet.mockRestore();
@@ -274,7 +277,7 @@ describe("exportText", () => {
 describe("a format a third party wrote, used through the write pipeline", () => {
 	const pathOf = (slug: string) => testSite.contentPath(contentCollection, slug) as string;
 	const input = (body: string, format = "paragraphs") =>
-		({ collection: contentCollection, slug: "post", metadata: { title: "Post" }, body, format }) as never;
+		({ collection: contentCollection, slug: "an-entry", metadata: { title: "An entry" }, body, format }) as never;
 
 	it("is read, normalised by core (a path becomes an id, a media URL becomes a media id) and prepared like any body", async () => {
 		const pipeline = createWritePipeline({
@@ -287,7 +290,7 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 
 		const { snapshot } = await pipeline.run({
 			operation: "create",
-			locale: "ko",
+			locale: defaultLocale,
 			input: input(
 				`See [a post](${pathOf("a-post")}).\n\n![pic](https://cdn.test/pic.png)\n\n![out](https://elsewhere.test/pic.png)`,
 			),
@@ -305,13 +308,17 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 				expect.objectContaining({ kind: "media", targetId: MEDIA_ID }),
 			]),
 		);
-		expect(snapshot.contentHash).toBeTruthy();
+		expect(snapshot.contentHash).toBe(computeContentHash(snapshot.metadata, snapshot.doc));
 	});
 
 	it("cannot get anything past core: a text it rejects is kept as an unparsed draft that cannot be published", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
-		const { snapshot } = await pipeline.run({ operation: "create", locale: "ko", input: input("Bad <<< text") });
+		const { snapshot } = await pipeline.run({
+			operation: "create",
+			locale: defaultLocale,
+			input: input("Bad <<< text"),
+		});
 
 		expect(snapshot.doc.content[0]).toMatchObject({ type: "unparsed", attrs: { format: "paragraphs" } });
 		expect(snapshot.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining(["bad_marker", "unparsed_body"]));
@@ -320,7 +327,9 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 	it("fails the write when the format is not installed", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
 
-		await expect(pipeline.run({ operation: "create", locale: "ko", input: input("x", "hugo") })).rejects.toMatchObject({
+		await expect(
+			pipeline.run({ operation: "create", locale: defaultLocale, input: input("x", "hugo") }),
+		).rejects.toMatchObject({
 			code: "unknown_format",
 		});
 	});
@@ -349,12 +358,12 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 
 	it("keeps block ids across saves: the text replaces the draft's body and its blocks pair up", async () => {
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => registry });
-		const first = await pipeline.run({ operation: "create", locale: "ko", input: input("One\n\nTwo") });
+		const first = await pipeline.run({ operation: "create", locale: defaultLocale, input: input("One\n\nTwo") });
 
 		const second = await pipeline.run({
 			operation: "save",
 			entryId: ENTRY_ID,
-			locale: "ko",
+			locale: defaultLocale,
 			input: input("One\n\nTwo, edited"),
 			prepare: { previousDoc: first.snapshot.doc },
 		});
@@ -381,7 +390,11 @@ describe("a format a third party wrote, used through the write pipeline", () => 
 		]);
 		const pipeline = createWritePipeline({ site: testSite, formats: async () => warning });
 
-		const { snapshot } = await pipeline.run({ operation: "create", locale: "ko", input: input("x", "warning") });
+		const { snapshot } = await pipeline.run({
+			operation: "create",
+			locale: defaultLocale,
+			input: input("x", "warning"),
+		});
 
 		expect(snapshot.warnings).toContainEqual(
 			expect.objectContaining({ code: "lossy", position: { blockId: snapshot.doc.content[0]?.id } }),
