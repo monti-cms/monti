@@ -74,12 +74,17 @@ export type AdminFetchInit = Omit<RequestInit, "body"> & { json?: unknown; form?
  * A failed response is thrown as {@link CmsApiError}, with its message in the admin language of `site`. A site that is a preview's refuses to write.
  * A network error rethrows the original `TypeError` so callers can tell it apart from being offline. In a component, `useAdminFetch()` gives the site.
  */
+/** The methods the API reads a body of (`validateSameOrigin` in core answers 415 when it is not JSON or an upload). */
+const BODY_METHODS = new Set(["POST", "PUT", "PATCH"]);
+
 export async function adminFetch<T = unknown>(
 	site: Pick<Site, "createTranslator">,
 	path: string,
 	init: AdminFetchInit = {},
 ): Promise<T> {
-	const { json, form, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
+	const { form, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
+	// The API takes a write only with a JSON (or upload) body, so a write that has nothing to send sends `{}`.
+	const json = init.json === undefined && !form && BODY_METHODS.has(rest.method?.toUpperCase() ?? "") ? {} : init.json;
 	// A preview runs on a draft site and must not write.
 	if (isSandboxSite(site) && isWrite(rest.method)) {
 		throw new CmsApiError(0, "preview", site.createTranslator(apiErrorMessages)("previewNoWrite"), [], {});
