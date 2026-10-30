@@ -93,7 +93,7 @@ describe("stored document", () => {
 			expect(bodyFromMdx(testSite, body.mdx, undefined, { previous: doc }).doc, name).toEqual(doc);
 			expect(bodyFromMdx(testSite, body.mdx).mdx, name).toBe(body.mdx);
 			const reread = readStoredDocument(reorderKeys(JSON.parse(JSON.stringify(doc))));
-			expect(reread, name).toBeDefined();
+			expect(reread, name).toEqual(doc);
 			expect(serialize(testSite, fromStoredDocument(testSite, doc)), name).toBe(body.mdx);
 		}
 	});

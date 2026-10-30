@@ -99,7 +99,7 @@ describe("CmsAdminPage", () => {
 describe("cmsAdminMetadata", () => {
 	it("titles the admin pages and keeps them out of search results", () => {
 		const metadata = cmsAdminMetadata(fakeCms());
-		expect(metadata.title).toBeTruthy();
+		expect(metadata.title).toMatch(/\S/);
 		expect(metadata.robots).toEqual({ index: false, follow: false });
 	});
 

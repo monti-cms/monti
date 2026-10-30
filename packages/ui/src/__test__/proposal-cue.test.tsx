@@ -46,7 +46,7 @@ describe("proposal state, in words", () => {
 			</UiLabelsProvider>,
 		);
 		expect(screen.getByLabelText("field").getAttribute("aria-description")).toBe("AI 제안");
-		expect(screen.getByText("AI 제안")).toBeTruthy();
+		expect(screen.getByText("AI 제안")).toBeInTheDocument();
 		rerender(
 			<UiLabelsProvider labels={{ proposal: "AI 제안" }}>
 				<Input aria-label="field" proposal />

@@ -97,7 +97,7 @@ describe("block extension public components", () => {
 		expect(markup).toContain('class="monti-block-tooltip"');
 		expect(markup).toContain("용어");
 		const id = /aria-describedby="([^"]+)"/.exec(markup)?.[1];
-		expect(id).toBeTruthy();
+		expect(markup).toContain(`id="${id}"`);
 		expect(markup).toMatch(new RegExp(`<[^>]*id="${id}"[^>]*role="tooltip"[^>]*>뜻풀이<`));
 		expect(markup).toMatch(/tabindex="0"[^>]*aria-describedby=/);
 	});

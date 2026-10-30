@@ -184,7 +184,7 @@ describe("CodeRef hover preview", () => {
 		fireEvent.keyDown(ref, { key: "Escape" });
 		expect(screen.queryByRole("tooltip")).toBeNull();
 		fireEvent.focus(ref);
-		expect(screen.getByRole("tooltip")).toBeTruthy();
+		expect(screen.getByRole("tooltip")).toBeInTheDocument();
 		fireEvent.blur(ref);
 		expect(screen.queryByRole("tooltip")).toBeNull();
 	});
@@ -205,7 +205,7 @@ describe("CodeRef hover preview", () => {
 		mount(block(line("a", "c1")));
 		const ref = screen.getByRole("button", { name: "the text" });
 		fireEvent.pointerEnter(ref, { pointerType: "mouse" });
-		expect(screen.getByRole("tooltip")).toBeTruthy();
+		expect(screen.getByRole("tooltip")).toBeInTheDocument();
 		fireEvent.click(ref);
 		expect(screen.queryByRole("tooltip")).toBeNull();
 		expect(scroll).toHaveBeenCalled();

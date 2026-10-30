@@ -91,7 +91,7 @@ describe("StatusBarPluginCell", () => {
 describe("TodoItem", () => {
 	it("says in words that a row blocks publishing, not by the red ring alone", () => {
 		const { rerender } = render(<TodoItem blocking title="제목이 비어 있어요" />);
-		expect(screen.getByText("Blocks publishing")).toBeTruthy();
+		expect(screen.getByText("Blocks publishing")).toBeInTheDocument();
 		rerender(<TodoItem title="제목이 비어 있어요" />);
 		expect(screen.queryByText("Blocks publishing")).toBeNull();
 	});

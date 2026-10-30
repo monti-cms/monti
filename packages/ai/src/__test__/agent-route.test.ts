@@ -101,7 +101,7 @@ describe("the agent route on the fake model", () => {
 		for (const collection of testSite.COLLECTIONS) expect(textOf(chunks)).toContain(collection);
 
 		const runId = chunks.find((chunk) => chunk.type === "start")?.messageMetadata?.runId as string;
-		expect(runId).toBeTruthy();
+		expect(runId).toMatch(/\S/);
 		const finish = chunks.find((chunk) => chunk.type === "finish");
 		expect(finish?.messageMetadata).toMatchObject({
 			runId,

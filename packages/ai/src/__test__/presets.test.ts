@@ -223,7 +223,7 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 	it("an action with nowhere to attach is not turned on (a site without a body)", () => {
 		const records = resolveAiActions({}, { ...site, collections: { label, shelf } as CollectionsConfig });
 		for (const key of ["slug", "summary", "tags", "category"]) expect(records[key]).toBeUndefined();
-		expect(records.translate).toBeDefined();
+		expect(Object.keys(records)).toContain("translate");
 	});
 
 	it("`false` turns off, a definition/preset replaces in place, and a new name is added", () => {

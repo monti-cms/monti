@@ -207,7 +207,7 @@ describe("inline bubble", () => {
 	it("a code ref with no linked line is reported in the bubble", async () => {
 		const editor = await mount('<CodeRef to="c9">호출</CodeRef> 뒤\n');
 		focusAt(editor, 2);
-		expect(await screen.findByText("연결된 코드 줄이 없어요")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "코드 연결 해제" })).toBeTruthy();
+		expect(await screen.findByText("연결된 코드 줄이 없어요")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "코드 연결 해제" })).toBeInTheDocument();
 	});
 });

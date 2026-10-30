@@ -27,7 +27,7 @@ describe("SplitButton", () => {
 		const trigger = screen.getByRole("button", { name: "Publish options" });
 		expect(trigger.getAttribute("aria-haspopup")).toBe("menu");
 		fireEvent.click(trigger);
-		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeTruthy();
+		expect(await screen.findByRole("menuitem", { name: "Republish" })).toBeInTheDocument();
 	});
 
 	it("disables both halves together, and while loading", () => {

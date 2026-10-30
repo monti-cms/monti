@@ -90,7 +90,6 @@ describe("S3 media store", () => {
 			const copyCmd = sentCommands.find((c) => c instanceof CopyObjectCommand) as InstanceType<
 				typeof CopyObjectCommand
 			>;
-			expect(copyCmd).toBeDefined();
 			expect(copyCmd.input.CopySourceIfMatch).toBe('"staging-etag-123"');
 		} finally {
 			sendSpy.mockRestore();

@@ -68,7 +68,7 @@ const mount = async (source: string) => {
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
-	await waitFor(() => expect(document.querySelector("[data-monti-container-node]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-monti-container-node]")).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -174,7 +174,7 @@ describe("column widths", () => {
 		const source =
 			'<Columns widths="70,30">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>';
 		const editor = await mount(source);
-		expect(screen.getByText("70 : 30")).toBeDefined();
+		expect(screen.getByText("70 : 30")).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: "단 너비 똑같이 나누기" }));
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("widths");
 		editor.commands.undo();

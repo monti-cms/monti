@@ -255,7 +255,7 @@ describe("AI connection settings", () => {
 			url: "https://elsewhere.test/v1",
 			key: { use: "new", value: "new-key" },
 		});
-		expect(typed.generator).toBeDefined();
+		expect(typed.generator).toMatchObject({ name: "openai-compatible", model: "m-new" });
 		// A typed key is only used for the check: it is not saved.
 		expect(await store.cms.apiKeys.list()).toHaveLength(1);
 		await expect(connectionForCheck(testSite, store, { ...base, key: { use: "none" } })).rejects.toMatchObject({

@@ -77,13 +77,13 @@ describe("assistant model picker", () => {
 
 	it("shows what the connection check found about the model's tool calling", async () => {
 		renderPicker(view({ agent: { setting: { providerId: "a", model: "default-model" }, effective: null } }));
-		expect(screen.getByText(t("picker.tools.yes"))).toBeTruthy();
+		expect(screen.getByText(t("picker.tools.yes"))).toBeInTheDocument();
 		cleanup();
 		renderPicker(view({ agent: { setting: { providerId: "a", model: "weak-model" }, effective: null } }));
-		expect(screen.getByText(t("picker.tools.no"))).toBeTruthy();
+		expect(screen.getByText(t("picker.tools.no"))).toBeInTheDocument();
 		cleanup();
 		renderPicker(view({ agent: { setting: { providerId: "b", model: "default-model" }, effective: null } }));
-		expect(screen.getByText(t("picker.tools.unknown"))).toBeTruthy();
+		expect(screen.getByText(t("picker.tools.unknown"))).toBeInTheDocument();
 	});
 
 	it("saves the chosen connection and its default model with the version it read", async () => {

@@ -24,7 +24,7 @@ describe("block extensions vs. their public components", () => {
 				// A child block (tab, column, row, cell) is drawn by its parent.
 				if ("parent" in block && block.parent) continue;
 				const components = block.syntax.kind === "text" ? table?.marks : table?.blocks;
-				expect(components?.[block.name], `${plugin.name}: ${block.name}`).toBeDefined();
+				expect(Object.keys(components ?? {}), `${plugin.name}: ${block.name}`).toContain(block.name);
 			}
 		}
 	});

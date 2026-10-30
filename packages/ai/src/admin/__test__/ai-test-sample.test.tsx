@@ -99,8 +99,8 @@ describe("AI screen test fields", () => {
 				/>
 			</SiteProvider>,
 		);
-		expect(screen.getByLabelText("원문")).toBeTruthy();
-		expect(screen.getByRole("combobox", { name: "원문 언어" })).toBeTruthy();
-		expect(screen.getByRole("combobox", { name: "대상 언어" })).toBeTruthy();
+		expect(screen.getByLabelText("원문")).toBeInTheDocument();
+		expect(screen.getByRole("combobox", { name: "원문 언어" })).toBeInTheDocument();
+		expect(screen.getByRole("combobox", { name: "대상 언어" })).toBeInTheDocument();
 	});
 });

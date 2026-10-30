@@ -8,9 +8,8 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		const parsed = analyze(testSite, mdx);
 		const doc = toDocument(testSite, parsed);
 
-		expect(doc.content).toBeDefined();
 		const imageNode = doc.content?.find((n) => n.type === "image");
-		expect(imageNode).toBeDefined();
+		expect(imageNode).toMatchObject({ type: "image" });
 		expect(imageNode?.attrs?.mediaId).toBe("123e4567-e89b-12d3-a456-426614174000");
 		expect(imageNode?.attrs?.src).toBe("https://media.example.com/pic.png");
 		expect(imageNode?.attrs?.alt).toBe("Test Image");
@@ -33,7 +32,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		const doc = toDocument(testSite, parsed);
 
 		const imageNode = doc.content?.find((n) => n.type === "image");
-		expect(imageNode).toBeDefined();
+		expect(imageNode).toMatchObject({ type: "image" });
 		expect(imageNode?.attrs?.src).toBe("https://example.com/pic.png");
 		expect(imageNode?.attrs?.alt).toBe("Simple alt");
 
@@ -47,7 +46,7 @@ describe("MDX Image Component Roundtrip & Conversion", () => {
 		const doc = toDocument(testSite, parsed);
 
 		const imageNode = doc.content?.find((n) => n.type === "image");
-		expect(imageNode).toBeDefined();
+		expect(imageNode).toMatchObject({ type: "image" });
 		expect(imageNode?.attrs?.crop).toBe("10,20,50,40");
 		expect(imageNode?.attrs?.rotate).toBe("90");
 

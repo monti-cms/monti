@@ -103,15 +103,15 @@ describe("AI screen prompt snippets tab", () => {
 				.getAllByRole("button")
 				.map((item) => item.textContent),
 		).toEqual(["Style guide{{snippet.styleGuide}}", `Tone{{snippet.tone}} · ${t("detail.added")}`]);
-		expect(screen.getByRole("button", { name: t("action.add") })).toBeTruthy();
+		expect(screen.getByRole("button", { name: t("action.add") })).toBeInTheDocument();
 
 		fireEvent.click(row("Style guide"));
-		expect(await screen.findByRole("heading", { name: "Style guide" })).toBeTruthy();
+		expect(await screen.findByRole("heading", { name: "Style guide" })).toBeInTheDocument();
 		expect(row("Style guide").getAttribute("aria-current")).toBe("true");
 		// Config text: the name comes from the config, it can be reset to the default, and cannot be deleted.
 		expect((screen.getByRole("textbox", { name: t("field.name") }) as HTMLInputElement).disabled).toBe(true);
-		expect(screen.getByText("{{snippet.styleGuide}}", { selector: "code" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("copy.label") })).toBeTruthy();
+		expect(screen.getByText("{{snippet.styleGuide}}", { selector: "code" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("copy.label") })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: common("delete") })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("action.resetDefault") }));
 		expect((screen.getByRole("textbox", { name: t("field.content") }) as HTMLTextAreaElement).value).toBe("default");
@@ -128,10 +128,10 @@ describe("AI screen prompt snippets tab", () => {
 			target: { value: "changed" },
 		});
 		fireEvent.click(row("Style guide"));
-		expect(await screen.findByRole("alertdialog", { name: common("discard.title") })).toBeTruthy();
+		expect(await screen.findByRole("alertdialog", { name: common("discard.title") })).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: common("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-		expect(screen.getByRole("heading", { name: "Tone" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "Tone" })).toBeInTheDocument();
 	});
 
 	it("a new text is saved with key, name and content, and stays open afterwards", async () => {
@@ -147,7 +147,7 @@ describe("AI screen prompt snippets tab", () => {
 		await waitFor(() => expect(calls("POST")).toHaveLength(1));
 		expect(bodyOf(calls("POST")[0])).toEqual({ expectedVersion: 2, key: "reader", label: "Reader", text: "developer" });
 		await waitFor(() => expect(row("Reader").getAttribute("aria-current")).toBe("true"));
-		expect(screen.getByText("{{snippet.reader}}", { selector: "code" })).toBeTruthy();
+		expect(screen.getByText("{{snippet.reader}}", { selector: "code" })).toBeInTheDocument();
 	});
 
 	it("an added text asks before deletion, and shows the reason in the field when blocked", async () => {
@@ -166,6 +166,6 @@ describe("AI screen prompt snippets tab", () => {
 	it("shows a one-line notice in the list when there are no texts", async () => {
 		view = { version: 0, items: [] };
 		renderManager();
-		expect(await screen.findByText(t("list.empty"))).toBeTruthy();
+		expect(await screen.findByText(t("list.empty"))).toBeInTheDocument();
 	});
 });

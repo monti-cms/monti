@@ -40,8 +40,8 @@ describe("ToolCallLine", () => {
 		expect(screen.queryByText("Input")).toBeNull();
 		fireEvent.click(line);
 		expect(line.getAttribute("aria-expanded")).toBe("true");
-		expect(screen.getByText("Input")).toBeTruthy();
-		expect(screen.getByText('{ "b": 2 }')).toBeTruthy();
+		expect(screen.getByText("Input")).toBeInTheDocument();
+		expect(screen.getByText('{ "b": 2 }')).toBeInTheDocument();
 	});
 });
 

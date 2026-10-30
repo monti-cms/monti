@@ -29,7 +29,7 @@ describe("block definitions", () => {
 		for (const block of site.BLOCKS) {
 			// Core blocks use the editor node from the registry; added blocks (block extensions) use the node built from the definition.
 			if (block.editor.view === "node" && block.editor.nodeView) {
-				expect(BLOCK_NODES[block.editor.nodeView], `${block.name}.editor.nodeView`).toBeDefined();
+				expect(Object.keys(BLOCK_NODES), `${block.name}.editor.nodeView`).toContain(block.editor.nodeView);
 			}
 		}
 	});
