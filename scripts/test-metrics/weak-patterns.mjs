@@ -22,7 +22,7 @@ const asCheck = process.argv.includes("--check");
  * The most uses a package whose tests were overhauled may have, all patterns together: the count it was left with. CI fails above it, so a new use
  * is either fixed or written into `EXEMPT` with its reason. Lower it when uses are fixed; a package joins once its tests are overhauled.
  */
-const CEILING = { core: 2, admin: 533, auth: 0, mdx: 0 };
+const CEILING = { core: 2, admin: 533, auth: 0, mdx: 0, blocks: 35 };
 
 /** What each pattern says about a test. `regex` is matched per line (global), so a line can count more than once. */
 const PATTERNS = [
@@ -93,6 +93,36 @@ const EXEMPT = [
 		prefix: "packages/core/src/render/",
 		why: "the renderer's output: the classes and attributes a site config asks for and site styles read",
 	})),
+	...["data-attribute", "query-selector"].flatMap((pattern) =>
+		["packages/blocks/src/code-ref/__test__/", "packages/blocks/src/code-explorer/__test__/render.client.test.tsx"].map(
+			(prefix) => ({
+				pattern,
+				prefix,
+				why: "the site's rendered blocks and the script that runs on them: the attributes and classes are what the render, the script and the site styles share",
+			}),
+		),
+	),
+	{
+		pattern: "long-wait",
+		file: "packages/blocks/src/__test__/blocks.test.tsx",
+		count: 2,
+		why: "mermaid and chart load their heavy code on demand; the import alone can take seconds in a full parallel run",
+	},
+	...[
+		["packages/blocks/src/__test__/component-showcase.test.tsx", 1],
+		["packages/blocks/src/__test__/document-parity.test.tsx", 1],
+	].map(([file, count]) => ({
+		pattern: "source-read",
+		file,
+		count,
+		why: "reads the showcase MDX the tests take as input: a fixture, not source",
+	})),
+	{
+		pattern: "source-read",
+		file: "packages/blocks/src/__test__/light-barrel.test.ts",
+		count: 2,
+		why: "checks what the light entry loads and the published exports: a lint rule cannot tell type-only and dynamic imports from the ones that load",
+	},
 	...[
 		["packages/core/src/cli/__test__/write-regular-file.int.test.ts", 4],
 		["packages/core/src/cli/__test__/schema-apply.int.test.ts", 1],
