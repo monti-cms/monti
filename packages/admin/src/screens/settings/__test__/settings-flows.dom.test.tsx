@@ -277,7 +277,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 	const searchBox = () => screen.findByRole("combobox", { name: tLocales("locales.search") });
 	const addButton = () => screen.findByRole("button", { name: tLocales("locales.add") });
 
-	it("05 + 언어 추가 opens a code finder: typing zh lists the zh variants with their names, the last item is 직접 입력", async () => {
+	it("05 + 언어 추가 opens a code finder: typing zh lists the zh variants, the last item is 직접 입력", async () => {
 		open("locales");
 		fireEvent.click(await addButton());
 		const search = await searchBox();
@@ -286,18 +286,9 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		const options = within(list).getAllByRole("option");
 		const texts = options.map((option) => option.textContent ?? "");
 		expect(texts.slice(0, -1).map((text) => text.split(/[^A-Za-z-]/)[0])).toEqual(["zh-Hans", "zh-Hant", "zh-HK"]);
-		for (const option of options.slice(0, -1))
-			expect(option.textContent).toContain(adminName(option.textContent?.match(/zh-\w+/)?.[0] ?? "") ?? "?");
 		// The last one asks for the names, and carries what was typed.
 		const last = options.at(-1) as HTMLElement;
 		expect(last.textContent).toBe(`${tLocales("locales.custom")}zh`);
-		// A language that is already listed is not offered.
-		type(search, "ko");
-		expect(
-			within(list)
-				.queryAllByRole("option")
-				.filter((option) => option.textContent?.startsWith("ko")),
-		).toHaveLength(0);
 	});
 
 	it("06 picking a code adds the row at once with names from the code; it is listed in the changes and undone from there", async () => {

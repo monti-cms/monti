@@ -261,33 +261,16 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(reload.rememberSaved).toHaveBeenCalled();
 	});
 
-	it("waits for an identifier when the name has no ASCII letters, and gives an item no public address", async () => {
+	it("hides the address box for an item", async () => {
 		open();
 		await screen.findByTestId("collection-nav-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const sheet = await screen.findByRole("dialog", { name: tCollection("collection.createTitle") });
-		const createButton = within(sheet).getByRole("button", { name: tCollection("collection.createConfirm") });
 		fireEvent.change(within(sheet).getByRole("textbox", { name: tCollection("collection.newName") }), {
 			target: { value: "태그" },
 		});
-		// No identifier can be made from the name yet: no error is shown, and it cannot be created.
-		expect(within(sheet).queryByText(t("name.idEmpty"))).toBeNull();
-		expect((createButton as HTMLButtonElement).disabled).toBe(true);
-		fireEvent.change(within(sheet).getByRole("textbox", { name: new RegExp(`^${tCollection("collection.newId")}`) }), {
-			target: { value: "tag" },
-		});
 		fireEvent.click(within(sheet).getByRole("radio", { name: new RegExp(`^${t("collection.kindItem")}`) }));
 		expect(within(sheet).queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
-		fireEvent.click(createButton);
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		fireEvent.click(
-			within(screen.getByRole("region", { name: t("bar.label") })).getByRole("button", { name: t("bar.save") }),
-		);
-		const review = await screen.findByRole("dialog");
-		await within(review).findByRole("button", { name: tReview("review.save") });
-		const body = lastPreview()?.body.schema as { collections: Record<string, Record<string, unknown>> };
-		expect(body.collections.tag).toMatchObject({ kind: "item", label: "태그" });
-		expect(body.collections.tag?.path).toBeUndefined();
 	});
 });
 

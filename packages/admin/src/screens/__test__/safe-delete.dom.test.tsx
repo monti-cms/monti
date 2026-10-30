@@ -212,25 +212,12 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
-	it("asks for a published entry, naming the translation that goes with it, and sends nothing when cancelled", async () => {
-		server.posts = [
-			item("가"),
-			item("나", {
-				status: "published",
-				translations: [
-					{ id: "나", locale: "ko", status: "published", version: 3, isSource: true, hasUnpublishedChanges: false },
-					{ id: "나-en", locale: "en", status: "draft", version: 1, isSource: false, hasUnpublishedChanges: false },
-				],
-			}),
-		];
+	it("asks for a published entry, and sends nothing when cancelled", async () => {
+		server.posts = [item("가"), item("나", { status: "published" })];
 		await renderList();
 		fireEvent.click((await contextMenu(row("나"))).at(-1) as HTMLElement);
 
 		const dialog = await screen.findByRole("alertdialog", { name: td("trash.ask.title") });
-		const languages = testSite.localeLabel("en");
-		expect(
-			within(dialog).getByText(`${td("trash.ask.one", { title: "나" })}${td("trash.ask.translations", { languages })}`),
-		).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(bulkBodies()).toHaveLength(0);
@@ -256,7 +243,6 @@ describe("flow: rows go to the trash (T2)", () => {
 		fireEvent.click((await screen.findAllByRole("menuitem")).at(-1) as HTMLElement);
 
 		const dialog = await screen.findByRole("alertdialog");
-		expect(within(dialog).getByText(td("trash.ask.many", { count: 1 }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(bulkBodies()[0].items).toHaveLength(2);

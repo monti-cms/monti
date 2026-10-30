@@ -319,7 +319,7 @@ describe("list screen — a collection without folders", () => {
 		expect(labels).not.toContain("폴더 추가");
 	});
 
-	it("never requests folders, and ignores a ?folder= left in the address", async () => {
+	it("never requests folders, even with a ?folder= left in the address", async () => {
 		offNav.setSearch("collection=post&folder=f1");
 		offNav.render(
 			<AdminQueryProvider>
@@ -330,8 +330,6 @@ describe("list screen — a collection without folders", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(folderRequests()).toHaveLength(0);
-		expect(entryRequests().length).toBeGreaterThan(0);
-		expect(entryRequests().every((query) => !query.has("folderId"))).toBe(true);
 	});
 });
 

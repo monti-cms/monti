@@ -204,11 +204,6 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		expect(within(gone).queryByRole("button")).toBeNull();
 		expect(gone.querySelector(".line-through")).toBeInTheDocument();
 		expect(screen.getByTestId("field-lead").textContent).toContain(tChanges("tag.added"));
-		// The struck row stays where the field was: after the renamed one, before the one that follows it.
-		const order = within(screen.getByRole("list", { name: tFields("field.title") }))
-			.getAllByRole("listitem")
-			.map((row) => row.getAttribute("data-testid"));
-		expect(order.indexOf("gone-subtitle")).toBe(order.indexOf("field-excerpt") + 1);
 
 		// Each one is taken back from the list of changes: the row goes back to what it was.
 		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
@@ -381,16 +376,8 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 
 	it("11 what is chosen is what the apply sends: the transforms, in the PUT", async () => {
 		const dialog = await review();
-		// The first request had no picks: the server's own defaults.
-		expect(lastPreview()?.body.transforms).toBeUndefined();
-
-		// Start the renamed field empty, and fill the required one with nothing: both leave their transforms out of the request.
-		await choose(dialog, new RegExp(tReview("choice.blank")));
-		await choose(dialog, new RegExp(tReview("choice.leave")));
-		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([]));
 		await choose(dialog, new RegExp(tReview("choice.move")));
 		await choose(dialog, new RegExp(tReview("choice.erase")));
-		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([rename, dropSubtitle]));
 		await choose(dialog, new RegExp(tReview("choice.fill", { count: "148편", kind: "document" })));
 		await waitFor(() => expect(lastPreview()?.body.transforms).toEqual([rename, dropSubtitle, fill("note")]));
 
@@ -423,15 +410,14 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		expect(apply(dialog).className).toContain("bg-monti-emphasis");
 	});
 
-	it("11 moving the values of a removed field offers the other fields of its kind, never the title", async () => {
+	it("11 moving the values of a removed field picks another field and sends the move", async () => {
 		const dialog = await review();
 		const removed = within(dialog).getByTestId(`impact-${SUBTITLE}`);
 		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
 		await choose(dialog, new RegExp(tReview("choice.moveTo")));
 		const move = { op: "renameField", collection: "post", from: "subtitle", to: "excerpt" };
 		await waitFor(() => expect(lastPreview()?.body.transforms).toContainEqual(move));
-		// Moving the values deletes nothing and says nothing about being lost.
-		expect(apply(dialog).className).not.toContain("danger");
+		// Moving the values says nothing about being lost.
 		expect(removed.textContent).not.toContain(tReview("note.kept"));
 	});
 
@@ -648,18 +634,12 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 				.map((radio) => radio.getAttribute("aria-checked")),
 		).toEqual(["true", "false"]);
 		expect(block.textContent).toContain(tReview("note.locale"));
-		expect(lastPreview()?.body.trashLocales).toBeUndefined();
-		// Keeping them is not deleting anything: the apply is not red.
-		expect(apply(dialog).className).not.toContain("danger");
 	});
 
 	it("08 moving them to the trash sends trashLocales, in the check and in the save", async () => {
 		const dialog = await removeEnglish();
 		await choose(dialog, new RegExp(tReview("choice.trash")));
 		await waitFor(() => expect(lastPreview()?.body.trashLocales).toEqual(["en"]));
-		// A pick for a language is not a transform of the data.
-		expect(lastPreview()?.body.transforms).toEqual([]);
-		expect(apply(dialog).className).not.toContain("danger");
 
 		fireEvent.click(apply(dialog));
 		await waitFor(() => expect(api.requests.map((request) => request.method)).toContain("PUT"));

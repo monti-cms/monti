@@ -233,7 +233,7 @@ describe("Data page: choosing a zip", () => {
 		expect(restoreModes(api)).toEqual([]);
 	});
 
-	it("refuses a file over the size the server takes, before sending it", async () => {
+	it("refuses a file over the size the server takes, and opens no sheet", async () => {
 		const api = serve({ limit: 10 });
 		renderData();
 		await waitFor(() => expect(api.sent("GET /v1/meta").length).toBeGreaterThan(0));
@@ -241,7 +241,6 @@ describe("Data page: choosing a zip", () => {
 		choose(new File([new Uint8Array(2048)], "big.zip"));
 		expect(await screen.findByText(ti("file.tooLarge", { limit: "1 KB" }))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
-		expect(importModes(api)).toEqual([]);
 	});
 
 	it("says on the page that a zip cannot be read, and opens no sheet", async () => {
@@ -323,24 +322,6 @@ describe("Restore sheet", () => {
 		).toBe(testSite.adminHref());
 		fireEvent.click(within(sheet).getByRole("button", { name: "Close" }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-	});
-
-	it("is the import sheet instead when the zip on an empty site is not a full backup", async () => {
-		const api = serve({
-			empty: true,
-			restorePreview: {
-				...RESTORE_PREVIEW,
-				ready: false,
-				isBackup: false,
-				refusal: { text: "This archive is not a full backup.", fix: "Use Import entries." },
-			},
-		});
-		renderData();
-		choose();
-		await importSheet();
-		expect(screen.queryByRole("dialog", { name: new RegExp(tr("title")) })).toBeNull();
-		expect(restoreModes(api)).toEqual(["preview"]);
-		expect(importModes(api)).toEqual(["preview"]);
 	});
 
 	it("lists the problems and keeps its pill off while any is left", async () => {

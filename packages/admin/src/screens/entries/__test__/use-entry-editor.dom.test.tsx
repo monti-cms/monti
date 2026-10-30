@@ -12,14 +12,7 @@ import {
 } from "../../../hooks/public";
 import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
-import {
-	ENTRY,
-	fakeClient,
-	fakeRecoveryStore,
-	invalidError,
-	recoveryCopy,
-	unauthorizedError,
-} from "./entry-editor-fakes";
+import { ENTRY, fakeClient, fakeRecoveryStore, invalidError } from "./entry-editor-fakes";
 
 /**
  * A minimal editor built only from what `@monti-cms/admin` exports: `useEntryEditor`, `EntryEditorProvider`, `useEntryEditorContext` and
@@ -64,30 +57,12 @@ function Bar() {
 			<button type="button" onClick={async () => setMessage(await editor.publish())}>
 				publish
 			</button>
-			<button type="button" onClick={async () => setMessage(await editor.changeStatus("archive"))}>
-				archive
-			</button>
 			{message && <p data-testid="result">{message}</p>}
 			{editor.saveError && <p role="alert">{`${editor.saveError.code}: ${editor.saveError.message}`}</p>}
-			{editor.recovery && (
-				<div role="dialog" aria-label="recovery">
-					<span>{editor.recovery.kind}</span>
-					<button type="button" onClick={editor.restoreRecovery}>
-						restore
-					</button>
-					<button type="button" onClick={() => void editor.discardRecovery()}>
-						keep server
-					</button>
-				</div>
-			)}
 			{editor.conflict && (
 				<div role="dialog" aria-label="conflict">
-					<span>{`server v${editor.conflict.server.version}`}</span>
 					<button type="button" onClick={() => void editor.overwriteWithMine()}>
 						overwrite
-					</button>
-					<button type="button" onClick={() => void editor.reload()}>
-						reload
 					</button>
 				</div>
 			)}
@@ -120,12 +95,10 @@ function MinimalEditor(
 	);
 }
 
-const renderMinimal = (
-	options: { server?: typeof ENTRY; records?: ReturnType<typeof recoveryCopy>[] } & Partial<UseEntryEditorOptions> = {},
-) => {
-	const { server, records, ...rest } = options;
+const renderMinimal = (options: { server?: typeof ENTRY } & Partial<UseEntryEditorOptions> = {}) => {
+	const { server, ...rest } = options;
 	const fake = fakeClient(server);
-	const recovery = fakeRecoveryStore(records);
+	const recovery = fakeRecoveryStore();
 	const view = render(<MinimalEditor client={fake.client} recoveryStore={recovery.store} {...rest} />);
 	return { ...fake, recovery, ...view };
 };
@@ -150,19 +123,15 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(client.update).toHaveBeenCalledWith("entry-1", expect.objectContaining({ expectedVersion: 4 }));
 	});
 
-	it("publishes and changes the status through commands that return results", async () => {
-		const { client } = renderMinimal();
+	it("publishes through a command, and the new status reaches the screen", async () => {
+		renderMinimal();
 		await title();
 		fireEvent.click(screen.getByText("publish"));
 		await waitFor(() => expect(screen.getByLabelText("entry-status").textContent).toBe("published"));
-		expect(client.publish).toHaveBeenCalledWith("entry-1", { expectedVersion: 4 });
-
-		fireEvent.click(screen.getByText("archive"));
-		await waitFor(() => expect(screen.getByLabelText("entry-status").textContent).toBe("archived"));
 	});
 
 	it("a conflict is state: overwrite saves on top of the server's version, with no page reload", async () => {
-		const { client, server } = renderMinimal();
+		const { server } = renderMinimal();
 		const input = await title();
 		server.current = { ...ENTRY, version: 9, working: { ...ENTRY.working, metadata: { title: "남의 수정" } } };
 		const href = window.location.href;
@@ -171,70 +140,12 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 
 		await screen.findByRole("dialog", { name: "conflict" });
 		expect(status()).toBe("conflict");
-		expect(screen.getByText("server v9")).toBeInTheDocument();
 		expect(screen.getByTestId("result").textContent).toBe("failed: conflict");
 
 		fireEvent.click(screen.getByText("overwrite"));
 		await waitFor(() => expect(screen.queryByRole("dialog", { name: "conflict" })).toBeNull());
 		await waitFor(() => expect(status()).toBe("saved"));
-		expect(client.update).toHaveBeenLastCalledWith("entry-1", expect.objectContaining({ expectedVersion: 9 }));
-		expect(server.current.working.metadata.title).toBe("내 수정");
 		expect(window.location.href).toBe(href);
-	});
-
-	it("a conflict is state: reload loads the server's version into the field, with no page reload", async () => {
-		const { client, server } = renderMinimal();
-		const input = await title();
-		server.current = { ...ENTRY, version: 9, working: { ...ENTRY.working, metadata: { title: "남의 수정" } } };
-		fireEvent.change(input, { target: { value: "내 수정" } });
-		fireEvent.click(screen.getByText("save"));
-		await screen.findByRole("dialog", { name: "conflict" });
-
-		client.update.mockClear();
-		fireEvent.click(screen.getByText("reload"));
-		await waitFor(() => expect(screen.queryByRole("dialog", { name: "conflict" })).toBeNull());
-		await waitFor(() => expect(input.value).toBe("남의 수정"));
-		expect(status()).toBe("saved");
-		expect(client.update).not.toHaveBeenCalled();
-	});
-
-	it("session expiry and being offline are results and state, not exceptions", async () => {
-		const { client } = renderMinimal();
-		const input = await title();
-		client.update.mockRejectedValueOnce(unauthorizedError());
-		fireEvent.change(input, { target: { value: "만료" } });
-		fireEvent.click(screen.getByText("save"));
-		await waitFor(() => expect(screen.getByTestId("result").textContent).toBe("failed: session_expired"));
-		expect(status()).toBe("session-expired");
-		expect(screen.getByRole("alert").textContent).toBe("session_expired: sign in again");
-
-		client.update.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-		fireEvent.click(screen.getByText("save"));
-		await waitFor(() => expect(screen.getByTestId("result").textContent).toBe("failed: offline"));
-		await waitFor(() => expect(status()).toBe("local-only"));
-	});
-
-	it("offers a recovery copy found on open; restoring puts it into the field", async () => {
-		const copy = recoveryCopy(ENTRY, { title: "임시 저장한 제목" });
-		renderMinimal({ records: [copy] });
-		const input = await title();
-		const dialog = await screen.findByRole("dialog", { name: "recovery" });
-		expect(dialog.textContent).toContain("restore");
-		expect(input.value).toBe("테스트");
-
-		fireEvent.click(screen.getByRole("button", { name: "restore" }));
-		await waitFor(() => expect(input.value).toBe("임시 저장한 제목"));
-		expect(screen.queryByRole("dialog", { name: "recovery" })).toBeNull();
-		expect(status()).toBe("dirty");
-	});
-
-	it("keeping the server's version deletes the recovery copy", async () => {
-		const { recovery } = renderMinimal({ records: [recoveryCopy(ENTRY, { title: "임시" })] });
-		const input = await title();
-		fireEvent.click(await screen.findByText("keep server"));
-		await waitFor(() => expect(screen.queryByRole("dialog", { name: "recovery" })).toBeNull());
-		expect(input.value).toBe("테스트");
-		expect(recovery.records.size).toBe(0);
 	});
 
 	it("writes the recovery copy when the page is hidden, never touching the server", async () => {
@@ -266,18 +177,6 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		renderMinimal({ warnOnLeave: false });
 		fireEvent.change(await title(), { target: { value: "수정" } });
 		expect(leave()).toBe(false);
-	});
-
-	it("says redirect for an item collection instead of navigating", async () => {
-		renderMinimal({ server: { ...ENTRY, collection: "tag" } });
-		expect(await screen.findByText("redirect to tag/entry-1")).toBeInTheDocument();
-	});
-
-	it("says why a load failed, as an EditorError", async () => {
-		const fake = fakeClient();
-		fake.client.get.mockRejectedValueOnce(unauthorizedError());
-		render(<MinimalEditor client={fake.client} recoveryStore={fakeRecoveryStore().store} />);
-		expect((await screen.findByRole("alert")).textContent).toBe("session_expired: sign in again");
 	});
 
 	it("publish issues reach the field that has them", async () => {

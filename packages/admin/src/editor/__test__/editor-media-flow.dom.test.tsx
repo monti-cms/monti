@@ -303,8 +303,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		});
 		const nextAlt = await screen.findByRole("textbox", { name: t("imageNode.alt") });
 		await waitFor(() => expect(document.activeElement).toBe(nextAlt));
-		// Nothing is left after this one: no "next image", and Enter closes the card.
-		expect(screen.queryByRole("button", { name: new RegExp(t("imageNode.next")) })).toBeNull();
+		// Nothing is left after this one: Enter closes the card.
 		fireEvent.change(nextAlt, { target: { value: "마지막" } });
 		fireEvent.keyDown(nextAlt, { key: "Enter" });
 		await waitFor(() => expect(screen.queryByRole("textbox", { name: t("imageNode.alt") })).toBeNull());

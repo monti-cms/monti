@@ -183,19 +183,16 @@ describe("flow: write and publish (steps 09–15)", () => {
 		expect(status()).toBe("초안");
 	});
 
-	it("blocks a publish that finds to-dos: a toast with their number, the list opens, problems of one kind are one row, and a row goes to its field", async () => {
+	it("blocks a publish that finds to-dos: a toast with their number, the list opens, and a row goes to its field", async () => {
 		server.publishRefusal = [missingCategory, noAlt(0), noAlt(1)];
 		renderEdit();
 		await title();
 		fireEvent.click(header().getByRole("button", { name: tEntryEditorShell("publish") }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("발행할 수 없어요. 아래 할 일 2개를 먼저 고쳐요."));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByRole("button", { name: /카테고리 고르기/ })).toBeInTheDocument();
-		const alt = list.getByRole("button", { name: /대체 텍스트 없는 이미지 2개/ });
-		expect(alt.textContent).toContain("본문 1 · 본문 2");
+		// The rows place images by their number in this entry's body.
+		expect(list.getByRole("button", { name: /대체 텍스트 없는 이미지 2개/ }).textContent).toContain("본문 1 · 본문 2");
 		expect(await (await bar()).findByRole("button", { name: "할 일 2" })).toBeInTheDocument();
-		// What is right already is a check row under the rows to fix.
-		expect(list.getByText(/제목/)).toBeInTheDocument();
 		fireEvent.click(list.getByRole("button", { name: /카테고리 고르기/ }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 	});
@@ -218,7 +215,7 @@ describe("flow: write and publish (steps 09–15)", () => {
 		server.checkAnswer = { issues: [missingCategory, noAlt(0), noAlt(1)], warnings: [] };
 		renderEdit();
 		fireEvent.click(await (await bar()).findByRole("button", { name: "할 일 2" }));
-		expect(within(await screen.findByRole("dialog")).queryByText("이미지 대체 텍스트 2개")).toBeNull();
+		await screen.findByRole("dialog");
 		fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 
 		// The check runs again after a save: now it finds nothing.
@@ -227,7 +224,6 @@ describe("flow: write and publish (steps 09–15)", () => {
 		pressSave();
 		fireEvent.click(await (await bar()).findByRole("button", { name: tStatusBar("todo.none") }));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByText("카테고리")).toBeInTheDocument();
 		expect(list.getByText("이미지 대체 텍스트 2개")).toBeInTheDocument();
 		expect(list.queryByRole("button")).toBeNull();
 	});

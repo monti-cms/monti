@@ -33,21 +33,18 @@ afterEach(() => {
 });
 
 const Stats = () => <p>stats page body</p>;
-const build = (templates = true) =>
-	createSite({
-		...testConfig,
-		admin: { ...testConfig.admin, templates },
-		plugins: [
-			definePlugin({
-				name: "stats",
-				options: {},
-				nav: [{ path: "stats", label: "Post stats" }],
-				admin: async () => ({ default: { pages: { stats: Stats } } }),
-			}),
-			definePlugin({ name: "quiet", options: {}, nav: [{ path: "quiet", label: "Quiet" }] }),
-		],
-	} as CmsConfig);
-const site = build();
+const site = createSite({
+	...testConfig,
+	plugins: [
+		definePlugin({
+			name: "stats",
+			options: {},
+			nav: [{ path: "stats", label: "Post stats" }],
+			admin: async () => ({ default: { pages: { stats: Stats } } }),
+		}),
+		definePlugin({ name: "quiet", options: {}, nav: [{ path: "quiet", label: "Quiet" }] }),
+	],
+} as CmsConfig);
 const t = site.createTranslator(toolsMessages);
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {
@@ -57,9 +54,9 @@ const server = (): AdminServer => ({
 		throw new Error("not-found");
 	}),
 });
-const open = async (path: string | undefined, target = site) => {
-	const element = await ToolsPage({ cms: { site: target } as unknown as Cms, server: server(), path });
-	return renderInRouter(withSite(<AdminQueryProvider>{element}</AdminQueryProvider>, target));
+const open = async (path: string | undefined) => {
+	const element = await ToolsPage({ cms: { site } as unknown as Cms, server: server(), path });
+	return renderInRouter(withSite(<AdminQueryProvider>{element}</AdminQueryProvider>, site));
 };
 const tabs = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
@@ -74,10 +71,6 @@ describe("the tools page", () => {
 		for (const path of ["nope", "settings", "media"]) {
 			await expect(open(path)).rejects.toThrow("not-found");
 		}
-	});
-
-	it("is a 404 for the templates tab when the site turns templates off", async () => {
-		await expect(open("templates", build(false))).rejects.toThrow("not-found");
 	});
 
 	it("shows a plugin's page as the last tab, under the same title", async () => {

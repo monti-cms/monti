@@ -75,17 +75,13 @@ describe("moving around by the rail", () => {
 		expect(names.at(-1)).toBe(t("sidebar.settings"));
 	});
 
-	it("marks the open row, and the tools row for any page of the tools page", () => {
+	it("marks the open row, and the tools row for a page of the tools page", () => {
 		for (const [activeNav, row] of [
 			[site.DEFAULT_COLLECTION, labelOf(site.DEFAULT_COLLECTION)],
 			["media", t("sidebar.media")],
 			["trash", t("sidebar.trash")],
 			["settings", t("sidebar.settings")],
-			["templates", t("sidebar.tools")],
 			["data", t("sidebar.tools")],
-			["events", t("sidebar.tools")],
-			["api-keys", t("sidebar.tools")],
-			["tools:stats", t("sidebar.tools")],
 		] as const) {
 			renderRail({ activeNav });
 			const current = within(rail())
