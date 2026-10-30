@@ -35,12 +35,7 @@ async function deleteForGood(page: Page, title: string) {
 // Flow 9 (🔴): back the site up, lose everything, and restore the backup into the empty site. The cases (a refused restore, an import of loose files,
 // what a backup holds) are checked below this layer. Importing entries from a zip into a site that has some goes through the same file field and the
 // import sheet, and is not walked here.
-//
-// Expected to fail until the app is fixed: deleting an entry for good keeps the addresses it was published at ("so no other entry takes them"), the
-// restore's empty-site check counts only entries, folders and media, so the sheet offers the restore, and the run then fails with a server error on
-// `content_addresses_pkey` (Key (collection, locale, slug)=(category, ko, 보관) already exists). A site emptied through the admin cannot take its backup
-// back. The test stops at that step; once it passes, drop `test.fail` and add the end: the post is back in the list and its page answers with its body.
-test.fail(
+test(
 	"a full backup exported from the admin restores a deleted post into the emptied site",
 	async ({ page }, testInfo) => {
 		// A published post, with the category it needs.
@@ -92,5 +87,10 @@ test.fail(
 		const sheet = page.getByRole("dialog", { name: /있던 그대로 복원/ });
 		await sheet.getByRole("button", { name: "복원", exact: true }).click();
 		await expect(sheet.getByRole("heading", { name: "백업을 복원했어요" })).toBeVisible();
+
+		// The post is back, at its address, with its body.
+		const restored = await page.request.get(address);
+		expect(restored.status()).toBe(200);
+		expect(await restored.text()).toContain(BODY);
 	},
 );
