@@ -222,8 +222,8 @@ describe("spellcheck button", () => {
 
 		clickIssue(editor);
 		const dialog = await screen.findByRole("dialog", { name: t("results") });
-		expect(within(dialog).getByText("맞춤법이 틀렸습니다.")).toBeTruthy();
-		expect(within(dialog).getByText("가짜 검사")).toBeTruthy();
+		expect(within(dialog).getByText("맞춤법이 틀렸습니다.")).toBeInTheDocument();
+		expect(within(dialog).getByText("가짜 검사")).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: "맞는 말" }));
 
 		await waitFor(() => expect(JSON.stringify(onChange.mock.lastCall?.[0])).toContain("이것은 맞는 말 입니다"));

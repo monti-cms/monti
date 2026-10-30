@@ -39,17 +39,17 @@ describe("slash menu insertion driven by block definitions", () => {
 		const mermaidCmd = commands.find((c) => c.title === "다이어그램");
 		expect(mermaidCmd?.keywords).toContain("mermaid");
 		expect(mermaidCmd?.keywords).toContain("다이어그램");
-		expect(mermaidCmd?.description).toBeTruthy();
+		expect(mermaidCmd?.description).toMatch(/\S/);
 
 		const chartCmd = commands.find((c) => c.title === "차트");
 		expect(chartCmd?.keywords).toContain("chart");
 		expect(chartCmd?.keywords).toContain("차트");
-		expect(chartCmd?.description).toBeTruthy();
+		expect(chartCmd?.description).toMatch(/\S/);
 
 		const mathCmd = commands.find((c) => c.title === "수식");
 		expect(mathCmd?.keywords).toContain("math");
 		expect(mathCmd?.keywords).toContain("수식");
-		expect(mathCmd?.description).toBeTruthy();
+		expect(mathCmd?.description).toMatch(/\S/);
 	});
 
 	it("extensibility: adding a new block definition and action to the registry auto-generates a slash command", () => {

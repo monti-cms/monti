@@ -145,7 +145,7 @@ describe("schema model", () => {
 			discriminant: { kind: "select", label: "P", options: { a: "A", b: "B" }, defaultValue: "a" },
 			values: { b: { why: { kind: "text", label: "Why" } } },
 		};
-		expect((renameOption(field, "b", "c").values as Obj).c).toBeDefined();
+		expect((renameOption(field, "b", "c").values as Obj).c).toEqual({ why: { kind: "text", label: "Why" } });
 		expect((removeOption(field, "b").values as Obj).b).toBeUndefined();
 	});
 

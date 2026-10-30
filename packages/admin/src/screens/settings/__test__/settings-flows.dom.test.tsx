@@ -121,7 +121,7 @@ const lastPreview = () => requests.filter((request) => request.url.endsWith("/pr
 /** Presses the save button of the title row and waits for the review to ask what the draft would do. */
 const save = async () => {
 	fireEvent.click(within(bar()).getByRole("button", { name: t("bar.save") }));
-	await waitFor(() => expect(lastPreview()).toBeDefined());
+	await waitFor(() => expect(lastPreview()?.url).toMatch(/\/preview$/));
 	return lastPreview()?.body?.schema as {
 		locales: { code: string; name: string; label?: string }[];
 		defaultLocale: string;
@@ -139,7 +139,9 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		const saved = await field(tSite("site.alias.row", { number: 1 }));
 		expect((saved as HTMLInputElement).value).toBe("www.example.dev");
 		expect(saved.className).toContain("font-mono");
-		expect(screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) })).toBeTruthy();
+		expect(
+			screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) }),
+		).toBeInTheDocument();
 		expect(screen.queryByTestId("save-bar")).toBeNull();
 
 		// "+ 호스트": an empty row appears under it with the caret in it. An empty row is no change: nothing is listed and nothing would be written.
@@ -154,11 +156,13 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 
 		// Typing the host is one change: the title row's group says 1, the Site tab is marked, and the field's label row carries the dot and the undo.
 		type(added, "blog.example.dev");
-		expect(changes(1)).toBeTruthy();
+		expect(changes(1)).toBeInTheDocument();
 		expect(onChanged).toHaveBeenLastCalledWith(
 			expect.objectContaining({ tabs: expect.objectContaining({ site: true }) }),
 		);
-		expect(screen.getByRole("button", { name: t("revert.named", { name: tSite("site.aliases") }) })).toBeTruthy();
+		expect(
+			screen.getByRole("button", { name: t("revert.named", { name: tSite("site.aliases") }) }),
+		).toBeInTheDocument();
 
 		// The request the review sends has the host in site.aliases, after the saved one.
 		const schema = await save();
@@ -177,7 +181,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(query.value).toBe("");
 		expect(query.placeholder).toBe("locale");
 		expect(query.className).toContain("font-mono");
-		expect(changes(1)).toBeTruthy();
+		expect(changes(1)).toBeInTheDocument();
 		// The switch carries the change dot; the query field is the same setting and does not repeat it.
 		expect(within(screen.getByTestId("site-settings")).getAllByRole("img", { name: t("changed") })).toHaveLength(1);
 
@@ -203,7 +207,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(error?.textContent).toBe(tSite("problem.host"));
 		expect(screen.getAllByText(tSite("problem.host"))).toHaveLength(1);
 		// The group stays (the change is real) but the save button is off.
-		expect(changes(1)).toBeTruthy();
+		expect(changes(1)).toBeInTheDocument();
 		expect(saveButton().disabled).toBe(true);
 
 		// The label row's undo puts the saved host back: the error goes with it.
@@ -223,7 +227,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(saveButton().disabled).toBe(false);
 		type(added, "not a host");
 		expect(added.getAttribute("aria-invalid")).toBe("true");
-		expect(screen.getByText(tSite("problem.host"))).toBeTruthy();
+		expect(screen.getByText(tSite("problem.host"))).toBeInTheDocument();
 		expect(saveButton().disabled).toBe(true);
 		type(added, "blog.example.dev");
 		expect(saveButton().disabled).toBe(false);
@@ -260,7 +264,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("leave.stay") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(clicks).not.toHaveBeenCalled();
-		expect(changes(2)).toBeTruthy();
+		expect(changes(2)).toBeInTheDocument();
 
 		// 저장하지 않고 나가기: the click goes on to the link.
 		fireEvent.click(link);
@@ -312,8 +316,8 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		// No form: the row is there, named in its own language, marked new.
 		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-ja"]);
 		expect(row("ja").textContent).toContain("日本語");
-		expect(within(row("ja")).getByRole("img", { name: tChanges("tag.added") })).toBeTruthy();
-		expect(changes(1)).toBeTruthy();
+		expect(within(row("ja")).getByRole("img", { name: tChanges("tag.added") })).toBeInTheDocument();
+		expect(changes(1)).toBeInTheDocument();
 
 		// The request carries the names from the code: its own name and the admin language's.
 		const schema = await save();
@@ -333,7 +337,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 
 		// A small window: the code as typed (text, not an input), then the two names. Adding needs both.
 		const dialog = await screen.findByRole("dialog", { name: new RegExp(`${tLocales("locales.newTitle")}.*tlh`) });
-		expect(within(dialog).getByText("tlh")).toBeTruthy();
+		expect(within(dialog).getByText("tlh")).toBeInTheDocument();
 		expect(within(dialog).queryByRole("textbox", { name: tLocales("locales.code") })).toBeNull();
 		const add = within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement;
 		expect(add.disabled).toBe(true);
@@ -345,7 +349,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
 		expect(rows()).toEqual(["locale-ko", "locale-en", "locale-tlh"]);
-		expect(changes(1)).toBeTruthy();
+		expect(changes(1)).toBeInTheDocument();
 		expect((await save()).locales.at(-1)).toEqual({ code: "tlh", name: "tlhIngan Hol", label: "클링온어" });
 	});
 
@@ -365,7 +369,7 @@ describe("flow 11 · 개발 서버 · 언어: the content languages of the file"
 		open("locales");
 		fireEvent.click(await screen.findByRole("button", { name: tLocales("locales.remove", { name: "English" }) }));
 		expect(rows()).toEqual(["locale-ko"]);
-		expect(changes(1)).toBeTruthy();
+		expect(changes(1)).toBeInTheDocument();
 		const schema = await save();
 		expect(schema.locales.map((locale) => locale.code)).toEqual(["ko"]);
 		expect(schema.defaultLocale).toBe("ko");

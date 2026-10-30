@@ -148,7 +148,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 			name: new RegExp(`^${tCollection("collection.newId")}`),
 		}) as HTMLInputElement;
 		expect(identifier.value).toBe("notes");
-		expect(within(sheet).getByRole("img", { name: tCollection("collection.newIdLocked") })).toBeTruthy();
+		expect(within(sheet).getByRole("img", { name: tCollection("collection.newIdLocked") })).toBeInTheDocument();
 		expect((createButton as HTMLButtonElement).disabled).toBe(false);
 
 		// 02: an identifier that is taken shows the one error line, marks the field and keeps "만들기" off.
@@ -179,12 +179,14 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		// 03: created, the sheet closes, the new collection is open on its fields (title and slug) and the title row counts one change.
 		fireEvent.click(createButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(screen.getByTestId("collection-nav-note").querySelector("[aria-current]")).not.toBeNull();
+		expect(screen.getByTestId("collection-nav-note").querySelector("[aria-current]")).toBeInTheDocument();
 		const editor = screen.getByTestId("collection-note");
-		expect(within(editor).getByTestId("field-title")).toBeTruthy();
-		expect(within(editor).getByTestId("field-slug")).toBeTruthy();
+		expect(within(editor).getByTestId("field-title")).toBeInTheDocument();
+		expect(within(editor).getByTestId("field-slug")).toBeInTheDocument();
 		expect(hasChangeCount(1)).toBe(true);
-		expect(within(screen.getByTestId("collection-nav-note")).getByRole("img", { name: t("changed") })).toBeTruthy();
+		expect(
+			within(screen.getByTestId("collection-nav-note")).getByRole("img", { name: t("changed") }),
+		).toBeInTheDocument();
 
 		// 04: "+ 필드 추가" opens the sheet of kinds, with the collection's name in its title and the basic and advanced tabs.
 		fireEvent.click(within(editor).getByRole("button", { name: `+ ${tFields("field.add")}` }));
@@ -204,7 +206,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 				.getByRole("tab", { name: tFields("sheet.tabBasic") })
 				.getAttribute("aria-selected"),
 		).toBe("true");
-		expect(within(adding).getByRole("tab", { name: tFields("sheet.tabAdvanced") })).toBeTruthy();
+		expect(within(adding).getByRole("tab", { name: tFields("sheet.tabAdvanced") })).toBeInTheDocument();
 
 		// The add-field sheet marks no label with the red star (the board does not); the button stays off until the field is whole, and nothing says "optional".
 		const label = within(adding).getByRole("textbox", { name: tFields("field.label") }) as HTMLInputElement;
@@ -217,16 +219,16 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(addButton.disabled).toBe(true);
 
 		// A text field has the lines switch and the sizes; picking another kind swaps the settings.
-		expect(within(adding).getByRole("switch", { name: tFields("field.multiline") })).toBeTruthy();
+		expect(within(adding).getByRole("switch", { name: tFields("field.multiline") })).toBeInTheDocument();
 		fireEvent.click(within(kindList).getByRole("option", { name: tFields("kind.select") }));
 		expect(within(adding).queryByRole("switch", { name: tFields("field.multiline") })).toBeNull();
-		expect(within(adding).getByRole("group", { name: tFields("options.title") })).toBeTruthy();
-		expect(within(adding).getByRole("switch", { name: tFields("field.optionFields") })).toBeTruthy();
+		expect(within(adding).getByRole("group", { name: tFields("options.title") })).toBeInTheDocument();
+		expect(within(adding).getByRole("switch", { name: tFields("field.optionFields") })).toBeInTheDocument();
 		fireEvent.click(within(kindList).getByRole("option", { name: tFields("kind.relation") }));
-		expect(within(adding).getByRole("combobox", { name: tFields("field.relationTo") })).toBeTruthy();
-		expect(within(adding).getByRole("switch", { name: tFields("field.many") })).toBeTruthy();
+		expect(within(adding).getByRole("combobox", { name: tFields("field.relationTo") })).toBeInTheDocument();
+		expect(within(adding).getByRole("switch", { name: tFields("field.many") })).toBeInTheDocument();
 		fireEvent.click(within(kindList).getByRole("option", { name: tFields("kind.text") }));
-		expect(within(adding).getByRole("switch", { name: tFields("field.multiline") })).toBeTruthy();
+		expect(within(adding).getByRole("switch", { name: tFields("field.multiline") })).toBeInTheDocument();
 
 		// Name it, make it required: the name follows the label until it is typed, and the summary line shows the field as it will be.
 		fireEvent.change(label, { target: { value: "Summary" } });
@@ -238,7 +240,7 @@ describe("flow 4 · 새 컬렉션 (steps 01-04, 06)", () => {
 		expect(addButton.disabled).toBe(false);
 		fireEvent.click(addButton);
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-		expect(within(screen.getByTestId("collection-note")).getByTestId("field-summary")).toBeTruthy();
+		expect(within(screen.getByTestId("collection-note")).getByTestId("field-summary")).toBeInTheDocument();
 		// A new collection is one change, whatever it holds.
 		expect(hasChangeCount(1)).toBe(true);
 
@@ -334,7 +336,7 @@ describe("flow 4 · 필드 시트", () => {
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 		expect(hasChangeCount(1)).toBe(true);
 		fireEvent.click(within(screen.getByTestId("save-bar")).getByRole("button", { name: t("bar.list") }));
-		expect(await screen.findByRole("menuitem", { name: /^Title/ })).toBeTruthy();
+		expect(await screen.findByRole("menuitem", { name: /^Title/ })).toBeInTheDocument();
 	});
 });
 
@@ -368,10 +370,10 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		await pressDelete();
 		expect(inList("memo")).toBe(false);
 		expect(inList("post")).toBe(true);
-		expect(screen.getByTestId("collection-nav-post").querySelector("[aria-current]")).not.toBeNull();
-		expect(within(screen.getByTestId("collection-delete")).getByText("Post")).toBeTruthy();
+		expect(screen.getByTestId("collection-nav-post").querySelector("[aria-current]")).toBeInTheDocument();
+		expect(within(screen.getByTestId("collection-delete")).getByText("Post")).toBeInTheDocument();
 		const bar = screen.getByTestId("save-bar");
-		expect(within(bar).getByLabelText(t("bar.count", { count: 1 }))).toBeTruthy();
+		expect(within(bar).getByLabelText(t("bar.count", { count: 1 }))).toBeInTheDocument();
 
 		// The toast says so and takes it back.
 		expect(toast).toHaveBeenCalledTimes(1);
@@ -412,7 +414,7 @@ describe("flow 4 · 컬렉션 지우기 (steps 15-18)", () => {
 		fireEvent.click(within(change).getByRole("button", { name: tReview("drop.export") }));
 		expect(
 			await screen.findByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Memo" }) }),
-		).toBeTruthy();
+		).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tExport("action.cancel") }));
 		await waitFor(() =>
 			expect(screen.queryByRole("dialog", { name: tExport("dialog.title.collection", { noun: "Memo" }) })).toBeNull(),

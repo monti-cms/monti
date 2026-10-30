@@ -79,9 +79,9 @@ describe("API keys page", () => {
 	it("lists each key with a masked tail and where it is used, and never a value", async () => {
 		renderTab();
 		const anthropic = await row("Anthropic");
-		expect(anthropic.getByText(/••••91c0/)).toBeTruthy();
-		expect(anthropic.getByText(/AI connection “Claude”/)).toBeTruthy();
-		expect((await row("Spare")).getByText(t("row.unused"))).toBeTruthy();
+		expect(anthropic.getByText(/••••91c0/)).toBeInTheDocument();
+		expect(anthropic.getByText(/AI connection “Claude”/)).toBeInTheDocument();
+		expect((await row("Spare")).getByText(t("row.unused"))).toBeInTheDocument();
 	});
 
 	it("asks before deleting a key that is in use, lists what stops working, and deletes with force only after confirming", async () => {
@@ -116,7 +116,7 @@ describe("API keys page", () => {
 	it("cannot add a key while the server has no secret, and says why", async () => {
 		secretsAvailable = false;
 		renderTab();
-		expect(await screen.findByText(t("secret.description"))).toBeTruthy();
+		expect(await screen.findByText(t("secret.description"))).toBeInTheDocument();
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 
@@ -143,9 +143,9 @@ describe("API keys page", () => {
 	it("lists a plugin's key slot that has no key as a row with an action to add one, and counts it as needed", async () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
-		expect(slot.getByText("Spell check")).toBeTruthy();
-		expect(slot.getByText(t("slot.empty"))).toBeTruthy();
-		expect(await screen.findByText(new RegExp(t("count.needed", { count: 1 })))).toBeTruthy();
+		expect(slot.getByText("Spell check")).toBeInTheDocument();
+		expect(slot.getByText(t("slot.empty"))).toBeInTheDocument();
+		expect(await screen.findByText(new RegExp(t("count.needed", { count: 1 })))).toBeInTheDocument();
 	});
 
 	const putCalls = () =>
@@ -197,7 +197,7 @@ describe("API keys page", () => {
 		];
 		renderTab();
 		const speller = await row("Speller");
-		expect(speller.getByText(/Spell check/)).toBeTruthy();
+		expect(speller.getByText(/Spell check/)).toBeInTheDocument();
 		expect(screen.queryByTestId("api-key-slot-speller-key")).toBeNull();
 		fireEvent.click(speller.getByRole("button", { name: t("row.menu", { name: "Speller" }) }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.clearSlot", { label: "Spell check" }) }));

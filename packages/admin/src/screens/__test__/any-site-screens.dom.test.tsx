@@ -126,13 +126,13 @@ describe("any site: list screen", () => {
 			</AdminQueryProvider>,
 		);
 		await screen.findByRole("row", { name: /Alpha/ });
-		expect(screen.getByRole("row", { name: /Beta/ })).toBeTruthy();
+		expect(screen.getByRole("row", { name: /Beta/ })).toBeInTheDocument();
 		// Every default column is a name in the head row.
 		for (const column of columnsFor(testSite, content).defaults) {
-			expect(screen.getByRole("columnheader", { name: columnLabel(testSite, content, column) })).toBeTruthy();
+			expect(screen.getByRole("columnheader", { name: columnLabel(testSite, content, column) })).toBeInTheDocument();
 		}
 		// A collection of writing has the one "write a new post" button, whatever its label.
-		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeTruthy();
+		expect(screen.getByRole("button", { name: t("list.writeNew") })).toBeInTheDocument();
 	});
 
 	it("duplicates a row with a copy title made by the admin", async () => {

@@ -2,10 +2,15 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import { createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testConfig } from "../../../../core/test/site";
+import { testConfig, testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { jsonResponse as json } from "../../test/fetch";
 import { withSite } from "../../test/site";
+import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
+
+const tScreens = testSite.createTranslator(screensMessages);
+const tCommon = testSite.createTranslator(commonMessages);
 
 const tag = {
 	id: "tag-1",
@@ -64,12 +69,12 @@ describe("taxonomy edit panel", () => {
 		await screen.findByDisplayValue("리액트");
 
 		fireEvent.click(within(panel()).getByRole("tab", { name: /일본어/ }));
-		expect(screen.queryByRole("textbox", { name: "주소" })).toBeNull();
-		expect(screen.getByText(/주소와 연결은 모든 언어가 같아요/)).toBeTruthy();
+		expect(screen.queryByRole("textbox", { name: tScreens("column.slug") })).toBeNull();
+		expect(screen.getByText(/주소와 연결은 모든 언어가 같아요/)).toBeInTheDocument();
 		fireEvent.change(screen.getByRole("textbox", { name: /^이름/ }), { target: { value: "リアクト" } });
-		expect(within(panel()).getByRole("tab", { name: "일본어 · 번역 있음" })).toBeTruthy();
+		expect(within(panel()).getByRole("tab", { name: "일본어 · 번역 있음" })).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
 		expect(bodyOf(calls("PATCH")[0])).toEqual({
 			expectedVersion: 3,
@@ -86,14 +91,14 @@ describe("taxonomy edit panel", () => {
 		);
 		await screen.findByDisplayValue("리액트");
 		expect(within(panel()).queryAllByRole("tab")).toHaveLength(0);
-		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeTruthy();
+		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeInTheDocument();
 	});
 
 	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {
 		const { onSaved, onClose } = renderPanel({ collection: "tag", id: null });
-		expect(screen.getByRole("heading", { name: "태그 추가" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "태그 추가" })).toBeInTheDocument();
 		fireEvent.change(screen.getByRole("textbox", { name: /이름/ }), { target: { value: "Vue" } });
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 
 		await waitFor(() => expect(calls("POST")).toHaveLength(1));
 		expect(bodyOf(calls("POST")[0])).toEqual({
@@ -109,14 +114,14 @@ describe("taxonomy edit panel", () => {
 	it("after saving, saves again based on the received revision", async () => {
 		renderPanel({ collection: "tag", id: "tag-1" });
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
 		await waitFor(() =>
-			expect((screen.getByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(false),
+			expect((screen.getByRole("button", { name: tCommon("save") }) as HTMLButtonElement).disabled).toBe(false),
 		);
 
 		fireEvent.change(screen.getByDisplayValue("React!"), { target: { value: "React!!" } });
-		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(2));
 		expect(bodyOf(calls("PATCH")[1]).expectedVersion).toBe(4);
 	});
@@ -126,15 +131,15 @@ describe("taxonomy edit panel", () => {
 		fireEvent.change(await screen.findByDisplayValue("리액트"), { target: { value: "React!" } });
 
 		fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
-		const dialog = await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" });
+		const dialog = await screen.findByRole("alertdialog", { name: tCommon("discard.title") });
 		expect(onClose).not.toHaveBeenCalled();
 
-		fireEvent.click(within(dialog).getByRole("button", { name: "버리기" }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tCommon("discard.confirm") }));
 		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 	});
 
 	it("a series edits its post list on the default locale tab", async () => {
 		renderPanel({ collection: "collection", id: null });
-		expect(await screen.findByRole("combobox", { name: "게시글 추가·빼기" })).toBeTruthy();
+		expect(await screen.findByRole("combobox", { name: "게시글 추가·빼기" })).toBeInTheDocument();
 	});
 });

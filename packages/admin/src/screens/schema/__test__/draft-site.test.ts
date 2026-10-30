@@ -42,6 +42,6 @@ describe("draft site", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 		await expect(adminFetch(site, "/api/x")).resolves.toEqual({ items: [] });
 		// The running site is not affected.
-		await expect(adminFetch(testSite, "/api/x", { method: "POST", json: {} })).resolves.toBeTruthy();
+		await expect(adminFetch(testSite, "/api/x", { method: "POST", json: {} })).resolves.toEqual({ items: [] });
 	});
 });

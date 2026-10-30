@@ -17,6 +17,8 @@ import { renderWithSite as render, renderHookWithSite as renderHook } from "../.
 import { draftSiteOf } from "../../schema/draft-site";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 
+const TITLE_LABEL = testSite.titleField("post").field.label;
+
 afterEach(cleanup);
 
 const baseValue = (overrides: Partial<EntryFormValue> = {}): EntryFormValue => ({
@@ -408,7 +410,7 @@ describe("a custom field UI built only from the hooks", () => {
 				</Owner>
 			</SlotRegistryProvider>,
 		);
-		const input = screen.getByLabelText("제목") as HTMLInputElement;
+		const input = screen.getByLabelText(TITLE_LABEL) as HTMLInputElement;
 		expect(input.id).toBe("cms-title");
 		expect(input.getAttribute("aria-invalid")).toBe("true");
 		expect(input.getAttribute("aria-describedby")).toBe("cms-title-error");
@@ -423,7 +425,7 @@ describe("a custom field UI built only from the hooks", () => {
 		fireEvent.click(screen.getByText("Suggest"));
 		await waitFor(() => expect(input.value).toBe("Draft 2 (better)"));
 		expect(patches.at(-1)).toEqual({ title: "Draft 2 (better)" });
-		expect(screen.getByText("by the assistant")).toBeTruthy();
+		expect(screen.getByText("by the assistant")).toBeInTheDocument();
 
 		// Editing the value takes the mark off.
 		fireEvent.change(input, { target: { value: "Mine" } });
@@ -456,7 +458,7 @@ describe("a custom field UI built only from the hooks", () => {
 		const { rerender } = render(view(1));
 		fireEvent.click(screen.getByText("Suggest"));
 		await screen.findByText("title true");
-		expect(screen.getByText("summary false")).toBeTruthy();
+		expect(screen.getByText("summary false")).toBeInTheDocument();
 		rerender(view(2));
 		await screen.findByText("title false");
 	});
@@ -475,6 +477,6 @@ describe("a custom field UI built only from the hooks", () => {
 				</Owner>
 			</SlotRegistryProvider>,
 		);
-		expect(screen.getByText("0 actions")).toBeTruthy();
+		expect(screen.getByText("0 actions")).toBeInTheDocument();
 	});
 });

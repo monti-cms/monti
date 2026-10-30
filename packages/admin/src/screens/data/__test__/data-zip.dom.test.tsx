@@ -233,7 +233,7 @@ describe("Data page: choosing a zip", () => {
 
 		const sheet = await importSheet();
 		expect(sheet.textContent).toContain("blog-export.zip");
-		expect(within(sheet).getByText(ti("summary.found", { count: 2 }))).toBeTruthy();
+		expect(within(sheet).getByText(ti("summary.found", { count: 2 }))).toBeInTheDocument();
 		expect(importModes(fetchMock)).toEqual(["preview"]);
 		// A site with entries never reads the zip as a backup to restore.
 		expect(restoreModes(fetchMock)).toEqual([]);
@@ -245,7 +245,7 @@ describe("Data page: choosing a zip", () => {
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/monti/v1/meta", expect.anything()));
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		choose(new File([new Uint8Array(2048)], "big.zip"));
-		expect(await screen.findByText(ti("file.tooLarge", { limit: "1 KB" }))).toBeTruthy();
+		expect(await screen.findByText(ti("file.tooLarge", { limit: "1 KB" }))).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 		expect(importModes(fetchMock)).toEqual([]);
 	});
@@ -254,7 +254,7 @@ describe("Data page: choosing a zip", () => {
 		serve({ importPreviewStatus: 400 });
 		renderData();
 		choose();
-		expect(await screen.findByText(/isn't a zip archive that can be read/)).toBeTruthy();
+		expect(await screen.findByText(/isn't a zip archive that can be read/)).toBeInTheDocument();
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 });
@@ -267,7 +267,7 @@ describe("Import sheet", () => {
 		const sheet = await importSheet();
 
 		fireEvent.click(within(sheet).getByRole("button", { name: ti("action.import", { count: 1 }) }));
-		expect(await within(sheet).findByRole("heading", { name: ti("result.title") })).toBeTruthy();
+		expect(await within(sheet).findByRole("heading", { name: ti("result.title") })).toBeInTheDocument();
 		expect(importModes(fetchMock)).toEqual(["preview", "run"]);
 		expect(toast).toHaveBeenCalledWith(ti("toast.done", { count: 1 }));
 		const entry = within(sheet).getAllByRole("link", { name: "First" })[0];
@@ -296,11 +296,11 @@ describe("Import sheet", () => {
 		expect(busy.getAttribute("aria-busy")).toBe("true");
 		expect(within(sheet).queryByRole("button", { name: "Close" })).toBeNull();
 		fireEvent.keyDown(sheet, { key: "Escape" });
-		expect(screen.getByRole("dialog")).toBeTruthy();
+		expect(screen.getByRole("dialog")).toBeInTheDocument();
 
 		finish();
 		await within(sheet).findByRole("heading", { name: ti("result.title") });
-		expect(within(sheet).getByRole("button", { name: "Close" })).toBeTruthy();
+		expect(within(sheet).getByRole("button", { name: "Close" })).toBeInTheDocument();
 	});
 });
 
@@ -312,13 +312,13 @@ describe("Restore sheet", () => {
 
 		const sheet = await restoreSheet();
 		expect(sheet.textContent).toContain("monti-backup.zip");
-		expect(within(sheet).getByText(tr("summary.entries", { count: 6 }))).toBeTruthy();
+		expect(within(sheet).getByText(tr("summary.entries", { count: 6 }))).toBeInTheDocument();
 		// Reading it wrote nothing, and it was not read as an import.
 		expect(restoreModes(fetchMock)).toEqual(["preview"]);
 		expect(importModes(fetchMock)).toEqual([]);
 
 		fireEvent.click(within(sheet).getByRole("button", { name: tr("action.restore") }));
-		expect(await within(sheet).findByRole("heading", { name: tr("result.title") })).toBeTruthy();
+		expect(await within(sheet).findByRole("heading", { name: tr("result.title") })).toBeInTheDocument();
 		expect(restoreModes(fetchMock)).toEqual(["preview", "run"]);
 		expect(toast).toHaveBeenCalledWith(tr("toast.done", { count: 6 }));
 		// The site is no longer empty, yet the result stays where it is, with the way to the list.
@@ -370,8 +370,8 @@ describe("Restore sheet", () => {
 		renderData();
 		choose();
 		const sheet = await restoreSheet();
-		expect(within(sheet).getByText("Alpha")).toBeTruthy();
-		expect(within(sheet).getByText(/The title is too long\./)).toBeTruthy();
+		expect(within(sheet).getByText("Alpha")).toBeInTheDocument();
+		expect(within(sheet).getByText(/The title is too long\./)).toBeInTheDocument();
 		expect(
 			within(sheet)
 				.getByRole("button", { name: tr("action.restore") })
@@ -385,8 +385,8 @@ describe("Restore sheet", () => {
 		choose();
 		const sheet = await restoreSheet();
 		fireEvent.click(within(sheet).getByRole("button", { name: tr("action.restore") }));
-		expect(await within(sheet).findByRole("alert")).toBeTruthy();
+		expect(await within(sheet).findByRole("alert")).toBeInTheDocument();
 		expect(within(sheet).getByRole("alert").textContent).toContain("A backup can only be restored into an empty site.");
-		expect(within(sheet).getByRole("button", { name: tr("action.restore") })).toBeTruthy();
+		expect(within(sheet).getByRole("button", { name: tr("action.restore") })).toBeInTheDocument();
 	});
 });

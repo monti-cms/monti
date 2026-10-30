@@ -79,14 +79,18 @@ describe("a row of the list", () => {
 				],
 			}),
 		]);
-		expect(within(rowOf(/one/)).getByText("KO")).toBeTruthy();
-		expect(within(rowOf(/with-translations/)).getByText("KO +1")).toBeTruthy();
+		expect(within(rowOf(/one/)).getByText("KO")).toBeInTheDocument();
+		expect(within(rowOf(/with-translations/)).getByText("KO +1")).toBeInTheDocument();
 	});
 
 	it("has its check and its ⋯ in the row, named for the entry", () => {
 		renderRows([item("first", { title: "첫 번째 글" })]);
 		const row = rowOf(/첫 번째 글/);
-		expect(within(row).getByRole("checkbox", { name: t("list.rowSelect", { title: "첫 번째 글" }) })).toBeTruthy();
-		expect(within(row).getByRole("button", { name: t("list.rowActions", { title: "첫 번째 글" }) })).toBeTruthy();
+		expect(
+			within(row).getByRole("checkbox", { name: t("list.rowSelect", { title: "첫 번째 글" }) }),
+		).toBeInTheDocument();
+		expect(
+			within(row).getByRole("button", { name: t("list.rowActions", { title: "첫 번째 글" }) }),
+		).toBeInTheDocument();
 	});
 });

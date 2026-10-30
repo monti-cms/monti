@@ -82,8 +82,8 @@ describe("the tools page", () => {
 
 	it("shows a plugin's page as the last tab, under the same title", async () => {
 		await open("stats");
-		expect(screen.getByText("stats page body")).toBeTruthy();
-		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
+		expect(screen.getByText("stats page body")).toBeInTheDocument();
+		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeInTheDocument();
 		const links = within(tabs()).getAllByRole("link");
 		const current = links.find((link) => link.getAttribute("aria-current") === "page");
 		expect(current?.textContent?.trim()).toBe("Post stats");
@@ -91,13 +91,15 @@ describe("the tools page", () => {
 
 	it("says what is missing for a plugin page the plugin does not draw", async () => {
 		await open("quiet");
-		expect(screen.getByText((text) => text.includes('"quiet"') && text.includes("defineAdminPlugin"))).toBeTruthy();
+		expect(
+			screen.getByText((text) => text.includes('"quiet"') && text.includes("defineAdminPlugin")),
+		).toBeInTheDocument();
 	});
 
 	it("counts the failed deliveries on the activity log tab", async () => {
 		await open("data");
 		const events = within(tabs()).getByRole("link", { name: new RegExp(t("tab.events")) });
-		await waitFor(() => expect(within(events).getByLabelText(t("failedCount", { count: 4 }))).toBeTruthy());
+		await waitFor(() => expect(within(events).getByLabelText(t("failedCount", { count: 4 }))).toBeInTheDocument());
 		const others = within(tabs())
 			.getAllByRole("link")
 			.filter((link) => link !== events);

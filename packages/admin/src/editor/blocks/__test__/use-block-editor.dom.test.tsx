@@ -66,7 +66,7 @@ const mount = async (
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector(ready)).not.toBeNull());
+	await waitFor(() => expect(document.querySelector(ready)).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -191,8 +191,8 @@ describe("a custom block view built on useBlockEditor and Content", () => {
 	it("reads the children and values, and renders the nested body", async () => {
 		await mountTabs();
 		expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["하나", "둘"]);
-		expect(screen.getByText("첫째")).toBeDefined();
-		expect(document.querySelector("[data-monti-block-content]")).not.toBeNull();
+		expect(screen.getByText("첫째")).toBeInTheDocument();
+		expect(document.querySelector("[data-monti-block-content]")).toBeInTheDocument();
 	});
 
 	it("shows only the visible child", async () => {
@@ -326,7 +326,7 @@ describe("useBlockEditor", () => {
 		const editor = await mount(TABS, "[data-monti-container-node='cmsTabs']", { tabs: Spy, tab: CustomTab });
 		let block = seen as unknown as ReturnType<typeof useBlockEditor>;
 		expect(block.name).toBe("tabs");
-		expect(block.definition.label).toBeTruthy();
+		expect(block.definition.label).toMatch(/\S/);
 		// A block has the id its document gave it, and keeps it through a change of the document.
 		const id = block.id;
 		expect(id).toMatch(/\S/);

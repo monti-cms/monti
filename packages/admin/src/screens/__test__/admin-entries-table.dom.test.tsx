@@ -107,7 +107,7 @@ describe("admin entry list", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "알고리즘" }));
 		expect(props.onSelectFolder).toHaveBeenCalledWith("f2");
-		fireEvent.click(screen.getByRole("button", { name: "상위 폴더로" }));
+		fireEvent.click(screen.getByRole("button", { name: t("list.folderUp") }));
 		expect(props.onSelectFolder).toHaveBeenCalledWith("all");
 	});
 
@@ -125,7 +125,7 @@ describe("admin entry list", () => {
 		// The status column (first by default) is an empty cell; the title's cell holds the icon, the name and the count.
 		expect(cells[0]?.textContent).toBe("");
 		const titleCell = cells[1] as HTMLElement;
-		expect(titleCell.querySelector("svg")).not.toBeNull();
+		expect(titleCell.querySelector("svg")).toBeInTheDocument();
 		expect(titleCell.textContent).toBe(
 			`알고리즘${t("list.folderCount", { noun: testSite.COLLECTION_DEFINITIONS.post.label, count: 2 })}`,
 		);
@@ -134,7 +134,7 @@ describe("admin entry list", () => {
 		// The row to go up has the same shape: empty status, then the icon and the name.
 		const up = within(screen.getByRole("row", { name: /상위 폴더/ })).getAllByRole("cell");
 		expect(up[0]?.textContent).toBe("");
-		expect(up[1]?.querySelector("svg")).not.toBeNull();
+		expect(up[1]?.querySelector("svg")).toBeInTheDocument();
 	});
 
 	it("a taxonomy item shows its first language and how many others have a name", () => {

@@ -121,13 +121,13 @@ describe("flow: write (steps 02–05)", () => {
 			typeSlashInEmpty(editor);
 			const menu = await slashMenu();
 			for (const title of [t("slash.group.text"), t("slash.group.insert"), t("slash.group.components")]) {
-				expect(within(menu).getByText(title)).toBeTruthy();
+				expect(within(menu).getByText(title)).toBeInTheDocument();
 			}
-			expect(await within(menu).findByText(t("slash.group.templates"))).toBeTruthy();
+			expect(await within(menu).findByText(t("slash.group.templates"))).toBeInTheDocument();
 			const names = optionNames(menu);
 			for (const template of TEMPLATES) expect(names.some((name) => name.startsWith(template.name))).toBe(true);
 			// A template row says its sections.
-			expect(within(menu).getByText("서론 · 본론 · 결론")).toBeTruthy();
+			expect(within(menu).getByText("서론 · 본론 · 결론")).toBeInTheDocument();
 			expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/api/monti/v1/templates"]);
 		});
 
@@ -276,7 +276,7 @@ describe("flow: write (steps 02–05)", () => {
 				return screen.findByRole("menu", { name: t("blockHandle.label") });
 			};
 			const menu = await openOnItem();
-			expect(within(menu).getByText(t("blockKind.bullet"))).toBeTruthy();
+			expect(within(menu).getByText(t("blockKind.bullet"))).toBeInTheDocument();
 			fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("blockHandle.turnInto")) }));
 			fireEvent.click(
 				within(await screen.findByRole("menu", { name: t("blockHandle.turnInto") })).getByRole("menuitemradio", {
@@ -380,7 +380,7 @@ describe("flow: write (steps 02–05)", () => {
 			fireEvent.click(screen.getByRole("button", { name: t("blockHandle.add") }));
 
 			const menu = await slashMenu();
-			expect(within(menu).getByText(t("slash.group.text"))).toBeTruthy();
+			expect(within(menu).getByText(t("slash.group.text"))).toBeInTheDocument();
 			await waitFor(() => expect(blocksText(saved(onChange))).toEqual(["첫 글", "/", "둘째 글"]));
 			// Choosing a block takes the slash away.
 			fireEvent.click(within(menu).getByRole("option", { name: new RegExp(`^${t("slash.h2.title")}`) }));

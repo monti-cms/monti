@@ -1,7 +1,9 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { SEO_ADMIN_COMPONENTS } from "../../../../../seo/src/admin/provider";
 import { AdminComponentsProvider } from "../../../admin-components";
+import { commonMessages } from "../../../lib/common.messages";
 import { type SlotAction, SlotRegistryProvider, type SlotSource } from "../../../slots/slots";
 import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
@@ -9,6 +11,12 @@ import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { AdminUiLabels } from "../../../ui/labels";
 import { EntryEditorShell } from "../entry-editor-shell";
+import { entryEditorShellMessages } from "../entry-editor-shell.messages";
+import { entriesMessages } from "../messages";
+
+const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
+const tEntries = testSite.createTranslator(entriesMessages);
+const tCommon = testSite.createTranslator(commonMessages);
 
 // The flow "set properties" of the editor board (flow 1, steps 07, 08 and 11): the 300px properties pane is a tab bar over a read list; a value opens for editing
 // where it is; the SEO tab reads what each empty value follows; "채우기" writes the value at once and marks it as the assistant's until it is edited. They check
@@ -122,7 +130,7 @@ const renderEdit = () =>
 			</AdminUiLabels>,
 		),
 	);
-const pane = async () => within(await screen.findByRole("complementary", { name: "속성" }));
+const pane = async () => within(await screen.findByRole("complementary", { name: tEntryEditorShell("properties") }));
 /** One property of the list: its label names the group. */
 const row = async (label: string) => within((await pane()).getByRole("group", { name: label }));
 const valueButton = async (label: string) => (await row(label)).getByRole("button", { name: new RegExp(`^${label}`) });
@@ -134,8 +142,8 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		renderEdit();
 		const panel = await pane();
 		expect(panel.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["기본", "SEO"]);
-		expect(panel.getByRole("tab", { name: "기본" }).getAttribute("aria-selected")).toBe("true");
-		expect(panel.queryByRole("button", { name: "닫기" })).toBeNull();
+		expect(panel.getByRole("tab", { name: tEntries("tab.default") }).getAttribute("aria-selected")).toBe("true");
+		expect(panel.queryByRole("button", { name: tCommon("close") })).toBeNull();
 		expect(panel.queryByRole("heading", { level: 2 })).toBeNull();
 	});
 
@@ -145,7 +153,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect((await valueButton("요약")).textContent).toBe("비어 있음");
 		const group = (await pane()).getByRole("region", { name: "분류" });
 		expect(within(group).getAllByRole("group").length).toBeGreaterThan(1);
-		expect(within(group).getByRole("group", { name: "모음집" })).toBeTruthy();
+		expect(within(group).getByRole("group", { name: "모음집" })).toBeInTheDocument();
 		// At rest nothing is a box: no text field is on the screen besides the title.
 		expect((await pane()).queryAllByRole("textbox")).toEqual([]);
 	});
@@ -178,7 +186,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		fireEvent.change(box, { target: { value: "줄 하나" } });
 		// A multi-line value takes Enter as a new line: it stays open.
 		fireEvent.keyDown(box, { key: "Enter" });
-		expect((await row("요약")).getByRole("textbox")).toBeTruthy();
+		expect((await row("요약")).getByRole("textbox")).toBeInTheDocument();
 		fireEvent.keyDown(box, { key: "Escape" });
 		await waitFor(async () => expect((await row("요약")).queryByRole("textbox")).toBeNull());
 		expect((await valueButton("요약")).textContent).toBe("줄 하나");
@@ -201,7 +209,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		fireEvent.click(await valueButton("모음집"));
 		const box = await (await row("모음집")).findByRole("combobox");
 		await waitFor(() => expect(document.activeElement).toBe(box));
-		expect(await screen.findByRole("option", { name: "리액트 다시 만들기" })).toBeTruthy();
+		expect(await screen.findByRole("option", { name: "리액트 다시 만들기" })).toBeInTheDocument();
 	});
 
 	it("the SEO tab is a read list of what each empty value follows, with no preview boxes", async () => {
@@ -216,7 +224,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		fireEvent.click(await valueButton("SEO 제목"));
 		const box = await (await row("SEO 제목")).findByRole("textbox");
 		expect((box as HTMLInputElement).placeholder).toBe("테스트");
-		expect((await row("SEO 제목")).getByText("3/60")).toBeTruthy();
+		expect((await row("SEO 제목")).getByText("3/60")).toBeInTheDocument();
 	});
 
 	it("fills the empty summary at once, marks it as the assistant's, and an edit takes the mark off", async () => {
@@ -232,7 +240,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect(screen.queryByRole("button", { name: /바꾸기|넣기/ })).toBeNull();
 		expect((await valueButton("요약")).getAttribute("aria-description")).toBe("AI 제안");
 		// The action now asks again.
-		expect((await row("요약")).getByRole("button", { name: /^다시$/ })).toBeTruthy();
+		expect((await row("요약")).getByRole("button", { name: /^다시$/ })).toBeInTheDocument();
 		fireEvent.click(await valueButton("요약"));
 		const box = await (await row("요약")).findByRole("textbox");
 		expect(box.getAttribute("aria-description")).toBe("AI 제안");

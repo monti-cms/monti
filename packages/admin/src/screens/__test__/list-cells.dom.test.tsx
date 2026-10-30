@@ -122,17 +122,17 @@ describe("default list cells", () => {
 			}),
 		]);
 		const row = rowOf(/first/);
-		expect(within(row).getByText("Guide")).toBeTruthy();
-		expect(within(row).getByText("A longer subtitle")).toBeTruthy();
-		expect(within(row).getByText("media-1")).toBeTruthy();
-		expect(within(row).getByText("Lead story")).toBeTruthy();
-		expect(within(row).getByText("Alpha · Beta")).toBeTruthy();
+		expect(within(row).getByText("Guide")).toBeInTheDocument();
+		expect(within(row).getByText("A longer subtitle")).toBeInTheDocument();
+		expect(within(row).getByText("media-1")).toBeInTheDocument();
+		expect(within(row).getByText("Lead story")).toBeInTheDocument();
+		expect(within(row).getByText("Alpha · Beta")).toBeInTheDocument();
 	});
 
 	it("leaves empty values off the row and shows the raw value for a select option that no longer exists", () => {
 		renderTable([item("empty"), item("stale", { values: { format: "retired" } })]);
 		expect(within(rowOf(/empty/)).queryByText("—")).toBeNull();
-		expect(within(rowOf(/stale/)).getByText("retired")).toBeTruthy();
+		expect(within(rowOf(/stale/)).getByText("retired")).toBeInTheDocument();
 	});
 });
 
@@ -153,7 +153,7 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).getByTestId("swatch").textContent).toBe("#f00");
 		cleanup();
 		renderTable([item("first", { values: { accent: "#f00" } })], { listCells: { color: Swatch, accent: Named } });
-		expect(within(rowOf(/first/)).getByTestId("named")).toBeTruthy();
+		expect(within(rowOf(/first/)).getByTestId("named")).toBeInTheDocument();
 		expect(within(rowOf(/first/)).queryByTestId("swatch")).toBeNull();
 	});
 

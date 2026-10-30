@@ -152,7 +152,7 @@ const bar = (props: Partial<Parameters<typeof Bar>[0]> = {}) => {
 /** Bulk actions that change many things at once ask first. Checks the confirm dialog's question and presses confirm. */
 async function confirmIn(label: string, question: string) {
 	const dialog = await screen.findByRole("alertdialog", { name: label });
-	expect(within(dialog).getByText(question)).toBeTruthy();
+	expect(within(dialog).getByText(question)).toBeInTheDocument();
 	fireEvent.click(within(dialog).getByRole("button", { name: label }));
 	await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 }
@@ -216,7 +216,7 @@ describe("what the bar offers", () => {
 describe("the bar over picked rows", () => {
 	it("says how many are picked, and lets go with one press", () => {
 		const { onClear } = bar();
-		expect(screen.getByRole("toolbar", { name: t("count", { count: 1 }) })).toBeTruthy();
+		expect(screen.getByRole("toolbar", { name: t("count", { count: 1 }) })).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: t("clear") }));
 		expect(onClear).toHaveBeenCalled();
 	});
@@ -244,7 +244,7 @@ describe("the bar over picked rows", () => {
 		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
 		cleanup();
 		bar({ initial: [row("a", { status: "archived" }), row("b", { status: "archived" })] });
-		expect(screen.getByRole("button", { name: tc("lifecycle.unarchive") })).toBeTruthy();
+		expect(screen.getByRole("button", { name: tc("lifecycle.unarchive") })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: tc("lifecycle.archive") })).toBeNull();
 	});
 
@@ -297,7 +297,7 @@ describe("the bar over picked rows", () => {
 		await openMore();
 		fireEvent.click(screen.getAllByRole("menuitem").at(-1) as HTMLElement);
 		const dialog = await screen.findByRole("alertdialog", { name: td("trash.ask.title") });
-		expect(within(dialog).getByText(td("trash.ask.one", { title: "entry-1" }))).toBeTruthy();
+		expect(within(dialog).getByText(td("trash.ask.one", { title: "entry-1" }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(run).not.toHaveBeenCalled();
@@ -330,7 +330,7 @@ describe("the bar over picked rows", () => {
 			</table>,
 			{ site },
 		);
-		expect(screen.getByRole("button", { name: t("folder.move") })).toBeTruthy();
+		expect(screen.getByRole("button", { name: t("folder.move") })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: tc("lifecycle.publish") })).toBeNull();
 	});
 });
@@ -410,7 +410,7 @@ describe("바꾸기: the relation fields of the picked rows", () => {
 			target: { value: "타입" },
 		});
 		await waitFor(() => expect(screen.queryByRole("menuitemcheckbox", { name: /^성능/ })).toBeNull());
-		expect(screen.getByRole("menuitemcheckbox", { name: /^타입스크립트/ })).toBeTruthy();
+		expect(screen.getByRole("menuitemcheckbox", { name: /^타입스크립트/ })).toBeInTheDocument();
 	});
 
 	it("sets a one-value field on all the rows in one pick, which closes the menu", async () => {

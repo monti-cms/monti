@@ -191,7 +191,6 @@ describe("Footnote slash command", () => {
 	const item = () => slashCommands(testSite).find((command) => command.title === t("slash.footnote.title"));
 
 	it("is in the menu and found by its keywords", () => {
-		expect(item()).toBeDefined();
 		for (const keyword of t("slash.footnote.keywords").split(",")) {
 			expect(filterCommands(testSite, keyword.trim()).map((command) => command.title)).toContain(
 				t("slash.footnote.title"),

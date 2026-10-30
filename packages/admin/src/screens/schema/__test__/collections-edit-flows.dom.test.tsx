@@ -165,7 +165,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		await removeField("subtitle");
 		await removeField("summary");
 		await removeField("extra");
-		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeTruthy();
+		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeInTheDocument();
 
 		fireEvent.click(within(bar()).getByRole("button", { name: t("bar.list") }));
 		const rows = await screen.findAllByRole("menuitem");
@@ -174,7 +174,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		expect(rows.map((row) => row.textContent).join(" ")).toContain(tChanges("tag.removed"));
 
 		fireEvent.click(rows[0] as HTMLElement);
-		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeTruthy());
+		await waitFor(() => expect(within(bar()).getByLabelText(t("bar.count", { count: 2 }))).toBeInTheDocument());
 	});
 
 	it("07 marks a rename with its old name, a removed field struck in its place and a new field, and takes each back from the list", async () => {
@@ -197,13 +197,13 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 		fireEvent.click(within(adding).getByRole("button", { name: tFields("field.add") }));
 		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeTruthy();
+		expect(within(bar()).getByLabelText(t("bar.count", { count: 3 }))).toBeInTheDocument();
 		const renamed = screen.getByTestId("field-excerpt");
 		expect(renamed.textContent).toContain("\u2190 summary");
 		const gone = screen.getByTestId("gone-subtitle");
 		expect(gone.textContent).toContain(tChanges("tag.removed"));
 		expect(within(gone).queryByRole("button")).toBeNull();
-		expect(gone.querySelector(".line-through")).not.toBeNull();
+		expect(gone.querySelector(".line-through")).toBeInTheDocument();
 		expect(screen.getByTestId("field-lead").textContent).toContain(tChanges("tag.added"));
 		// The struck row stays where the field was: after the renamed one, before the one that follows it.
 		const order = within(screen.getByRole("list", { name: tFields("field.title") }))
@@ -250,7 +250,7 @@ describe("flow 4 · 필드 고치기 — 바뀐 곳, 미리보기, 고칠 곳 (s
 
 		// Each item opens the sheet of its field.
 		fireEvent.click(within(problems).getByRole("button", { name: /글 종류/ }));
-		expect(await screen.findByRole("dialog")).toBeTruthy();
+		expect(await screen.findByRole("dialog")).toBeInTheDocument();
 	});
 });
 
@@ -396,7 +396,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 		await waitFor(() => expect(lastPreview()?.body?.transforms).toEqual([rename, dropSubtitle, fill("note")]));
 
 		fireEvent.click(apply(dialog, tReview("drop.apply")));
-		await waitFor(() => expect(put()).toBeDefined());
+		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
 		expect(put()?.body).toMatchObject({
 			baseHash: "hash-1",
 			transforms: [rename, dropSubtitle, fill("note")],
@@ -427,7 +427,7 @@ describe("flow 4 · 필드 고치기 — 검토 (steps 11-12)", () => {
 	it("11 moving the values of a removed field offers the other fields of its kind, never the title", async () => {
 		const dialog = await review();
 		const removed = within(dialog).getByTestId(`impact-${SUBTITLE}`);
-		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeTruthy();
+		expect(within(removed).getByRole("combobox", { name: tReview("choice.field") })).toBeInTheDocument();
 		await choose(dialog, new RegExp(tReview("choice.moveTo")));
 		const move = { op: "renameField", collection: "post", from: "subtitle", to: "excerpt" };
 		await waitFor(() => expect(lastPreview()?.body?.transforms).toContainEqual(move));
@@ -526,7 +526,7 @@ describe("flow 4 · 주소 바꾸기 (steps 13-14)", () => {
 
 		// It needs no acknowledgement of its own beyond the key the preview named, and the apply sends the PUT.
 		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(put()).toBeDefined());
+		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
 		expect(put()?.body).toMatchObject({ baseHash: "hash-1", acknowledged: [KEY] });
 		expect(Object.keys(put()?.body ?? {})).not.toContain("redirects");
 	});
@@ -681,7 +681,7 @@ describe("flow 11 · 언어 빼기 (step 08)", () => {
 		expect(apply(dialog).className).not.toContain("danger");
 
 		fireEvent.click(apply(dialog));
-		await waitFor(() => expect(put()).toBeDefined());
+		await waitFor(() => expect(requests.map((request) => request.method)).toContain("PUT"));
 		expect(put()?.body?.trashLocales).toEqual(["en"]);
 		expect(put()?.body?.transforms).toEqual([]);
 		expect(toast).not.toHaveBeenCalled();

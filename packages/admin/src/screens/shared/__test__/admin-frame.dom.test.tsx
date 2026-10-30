@@ -72,15 +72,15 @@ describe("folding the sidebar to its icons", () => {
 
 	it("folds with the fold button and unfolds with the button that takes its place", () => {
 		renderFrame();
-		expect(siteName()).toBeTruthy();
+		expect(siteName()).toBeInTheDocument();
 		fireEvent.click(fold());
 		expect(siteName()).toBeNull();
 		expect(screen.queryByRole("button", { name: tui("sidebar.fold") })).toBeNull();
 		// The rows stay, as icons.
-		expect(within(rail()).getByRole("link", { name: t("sidebar.trash") })).toBeTruthy();
+		expect(within(rail()).getByRole("link", { name: t("sidebar.trash") })).toBeInTheDocument();
 		fireEvent.click(unfold());
-		expect(siteName()).toBeTruthy();
-		expect(fold()).toBeTruthy();
+		expect(siteName()).toBeInTheDocument();
+		expect(fold()).toBeInTheDocument();
 	});
 
 	it("folds and unfolds with ⌘B and Ctrl+B", () => {
@@ -88,11 +88,11 @@ describe("folding the sidebar to its icons", () => {
 		fireEvent.keyDown(window, { key: "b", metaKey: true });
 		expect(siteName()).toBeNull();
 		fireEvent.keyDown(window, { key: "b", ctrlKey: true });
-		expect(siteName()).toBeTruthy();
+		expect(siteName()).toBeInTheDocument();
 		// Other keys, and ⌘B with a modifier added, leave it alone.
 		fireEvent.keyDown(window, { key: "v", metaKey: true });
 		fireEvent.keyDown(window, { key: "b", metaKey: true, shiftKey: true });
-		expect(siteName()).toBeTruthy();
+		expect(siteName()).toBeInTheDocument();
 	});
 
 	it("names a folded row and its count in a tooltip", async () => {

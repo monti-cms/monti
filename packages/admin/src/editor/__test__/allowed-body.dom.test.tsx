@@ -280,8 +280,8 @@ describe("a body that holds what the list no longer allows", () => {
 		const { editor } = await open(legacy, LIMITED);
 		const types = editor.getJSON().content?.map((node) => node.type);
 		expect(types).toEqual(["paragraph", "table", "paragraph", "heading"]);
-		expect(editor.view.dom.querySelector("table")).not.toBeNull();
-		expect(editor.view.dom.querySelector("h4")).not.toBeNull();
+		expect(editor.view.dom.querySelector("table")).toBeInTheDocument();
+		expect(editor.view.dom.querySelector("h4")).toBeInTheDocument();
 	});
 
 	it("saves it unchanged after an edit elsewhere", async () => {
@@ -331,6 +331,6 @@ describe("a body that holds what the list no longer allows", () => {
 		const view = renderWithSite(<CmsEditor doc={docOf("plain")} {...props} />);
 		await waitFor(() => expect(editor).not.toBeNull());
 		view.rerender(<CmsEditor doc={legacy} {...props} />);
-		await waitFor(() => expect((editor as unknown as Editor).view.dom.querySelector("table")).not.toBeNull());
+		await waitFor(() => expect((editor as unknown as Editor).view.dom.querySelector("table")).toBeInTheDocument());
 	});
 });

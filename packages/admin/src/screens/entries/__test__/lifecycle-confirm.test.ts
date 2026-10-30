@@ -114,7 +114,7 @@ describe("when the trash asks", () => {
 
 	it("never asks for items such as tags, even though they are published records", () => {
 		const items = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name));
-		expect(items).toBeTruthy();
+		expect(items).toEqual(expect.any(String));
 		expect(trashConfirm(testSite, items as string, [subject("published")])).toBeNull();
 	});
 

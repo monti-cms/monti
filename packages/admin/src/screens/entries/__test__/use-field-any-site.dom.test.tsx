@@ -36,7 +36,7 @@ describe("useField on any site", () => {
 			wrapper: wrapper(value({ form: { ...EMPTY_FORM, title: "Hello" }, setForm, issues })),
 		});
 		expect(result.current.value).toBe("Hello");
-		expect(result.current.definition).toBeDefined();
+		expect(result.current.definition).toBe(testSite.schemaOf(testSite.DEFAULT_COLLECTION).fields.title);
 		expect(result.current.invalid).toBe(true);
 		expect(result.current.inputProps).toEqual({
 			id: "cms-title",

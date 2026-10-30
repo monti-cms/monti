@@ -241,11 +241,11 @@ describe("flow: templates · the editor page", () => {
 		fireEvent.change(name, { target: { value: "긴 글" } });
 		pressSave();
 		const strip = await screen.findByRole("alert");
-		expect(within(strip).getByText(t("editor.conflict"))).toBeTruthy();
-		expect(within(strip).getByText(t("editor.conflictMeta"))).toBeTruthy();
+		expect(within(strip).getByText(t("editor.conflict"))).toBeInTheDocument();
+		expect(within(strip).getByText(t("editor.conflictMeta"))).toBeInTheDocument();
 		// The strip, not a line under the name.
 		expect(screen.queryByText("다른 곳에서 먼저 바뀌었어요.")).toBeNull();
-		expect(screen.getByText(t("editor.unsaved"))).toBeTruthy();
+		expect(screen.getByText(t("editor.unsaved"))).toBeInTheDocument();
 		expect(name.value).toBe("긴 글");
 
 		// The server's copy comes back and replaces the draft; the strip goes.
@@ -265,7 +265,7 @@ describe("flow: templates · the editor page", () => {
 		);
 		const alert = await screen.findByRole("alert");
 		expect(alert.textContent).toContain("없음");
-		expect(screen.getByRole("link", { name: t("editor.back") })).toBeTruthy();
+		expect(screen.getByRole("link", { name: t("editor.back") })).toBeInTheDocument();
 		store = [FIRST, SECOND];
 		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
 		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
@@ -295,7 +295,7 @@ describe("flow: templates · a new template", () => {
 	it("creates with ⌘S: one request with the name and the outline, then it moves to the page of the new template", async () => {
 		const name = await renderEditor();
 		fireEvent.change(name, { target: { value: "새 템플릿" } });
-		expect(screen.getByText(t("editor.unsaved"))).toBeTruthy();
+		expect(screen.getByText(t("editor.unsaved"))).toBeInTheDocument();
 		pressSave();
 		await waitFor(() => expect(sent("POST", "/templates")).toHaveLength(1));
 		const [body] = sent("POST", "/templates");

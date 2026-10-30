@@ -74,7 +74,7 @@ const mount = async (source: string) => {
 			/>
 		</SiteTree>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -82,7 +82,7 @@ const block = (editor: Editor) => editor.state.doc.child(0);
 const gutterRow = (line: number) => document.querySelector(`[data-code-gutter] [data-line="${line}"]`) as HTMLElement;
 
 const openLineMenu = async (line = 0) => {
-	await waitFor(() => expect(gutterRow(line)).toBeTruthy());
+	await waitFor(() => expect(gutterRow(line)).toBeInTheDocument());
 	act(() => {
 		fireEvent.contextMenu(gutterRow(line));
 	});
@@ -102,7 +102,7 @@ describe("code block tools turned off in the site config", () => {
 			const menu = await openLineMenu(0);
 			expect(within(menu).queryByRole("menuitemcheckbox", { name: labelOf("highlight") })).toBeNull();
 			expect(within(menu).queryByRole("menuitemcheckbox", { name: labelOf("plus") })).toBeNull();
-			expect(within(menu).getByRole("menuitemcheckbox", { name: labelOf("minus") })).toBeTruthy();
+			expect(within(menu).getByRole("menuitemcheckbox", { name: labelOf("minus") })).toBeInTheDocument();
 		});
 
 		it("keeps an omitted effect that is already on the picked line so it can be turned off", async () => {
@@ -127,8 +127,10 @@ describe("code block tools turned off in the site config", () => {
 			configure({ features: { fold: false } });
 			const editor = await mount("```ts\n// @line collapse {0-1}\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```");
 			const withFold = await openLineMenu(0);
-			expect(within(withFold).getByRole("menuitem", { name: new RegExp(t("lineMenu.uncollapse")) })).toBeTruthy();
-			expect(within(withFold).getByRole("menuitemcheckbox", { name: t("lineMenu.openFromStart") })).toBeTruthy();
+			expect(
+				within(withFold).getByRole("menuitem", { name: new RegExp(t("lineMenu.uncollapse")) }),
+			).toBeInTheDocument();
+			expect(within(withFold).getByRole("menuitemcheckbox", { name: t("lineMenu.openFromStart") })).toBeInTheDocument();
 			act(() =>
 				fireEvent.click(within(withFold).getByRole("menuitem", { name: new RegExp(t("lineMenu.uncollapse")) })),
 			);
@@ -141,7 +143,7 @@ describe("code block tools turned off in the site config", () => {
 			configure({ features: { rules: false } });
 			const editor = await mount(RULE_CODE);
 			expect(block(editor).attrs.rawMode).toBe(false);
-			expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeTruthy();
+			expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeInTheDocument();
 			openRules();
 			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
 			expect(screen.queryByRole("button", { name: t("rulesPanel.add") })).toBeNull();
@@ -155,7 +157,7 @@ describe("code block tools turned off in the site config", () => {
 			const editor = await mount(RULE_CODE);
 			openRules();
 			const row = await screen.findByRole("listitem", { name: t("rulesPanel.rule", { pattern: "const" }) });
-			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeTruthy();
+			expect(within(row).getByLabelText(t("rulesPanel.pattern"))).toBeInTheDocument();
 			expect((block(editor).attrs.rules as CodeRule[])[0]).toMatchObject({ name: "strong", pattern: "const" });
 			expect(withoutIds(tiptapToStored(site, editor.getJSON()))).toEqual(
 				withoutIds(tiptapToStored(site, tiptapOf(RULE_CODE))),

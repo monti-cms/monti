@@ -155,7 +155,7 @@ describe("InlineBubble", () => {
 		renderBubble(editor);
 
 		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.selectionLabel") });
-		expect(toolbar).toBeTruthy();
+		expect(toolbar).toBeInTheDocument();
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineMarks.italic") })));
 		expect(editor.isActive("italic")).toBe(true);
 		expect(screen.getByRole("button", { name: t("inlineMarks.italic") }).getAttribute("aria-pressed")).toBe("true");
@@ -178,7 +178,7 @@ describe("InlineBubble", () => {
 		focusAt(editor, 8);
 		renderBubble(editor);
 
-		expect(screen.getByRole("link", { name: "https://example.com" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "https://example.com" })).toBeInTheDocument();
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("link.edit") })));
 		const input = screen.getByLabelText(t("link.href")) as HTMLInputElement;
 		expect(input.value).toBe("https://example.com");
@@ -254,7 +254,7 @@ describe("InlineBubble", () => {
 		expect(labels.indexOf(t("formatBar.more"))).toBe(labels.indexOf(t("inlineBubble.footnoteAdd")) + 1);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
 		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "메모 넣기" })));
-		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeTruthy();
+		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeInTheDocument();
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 적용" })));
 		expect(editor.getHTML()).toMatch(/<span data-monti-mark="note" data-mark-text="새 메모">가나<\/span>/);
 		unmount();
@@ -262,7 +262,7 @@ describe("InlineBubble", () => {
 		// With the cursor at the decoration boundary, the registered content renders, and removing does not close the bubble.
 		focusAt(editor, 10);
 		renderWith();
-		expect(screen.getByText("설명")).toBeTruthy();
+		expect(screen.getByText("설명")).toBeInTheDocument();
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 해제" })));
 		expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
 	});
@@ -303,7 +303,7 @@ describe("InlineBubble", () => {
 			act(() => fireEvent.click(screen.getByRole("button", { name: t("formatBar.more") })));
 			const row = screen.getByRole("menuitem", { name: "메모 넣기" });
 			// The text already has the note, so the row ends in a ✓.
-			expect(row.querySelector("[data-slot=menu-tick]")).not.toBeNull();
+			expect(row.querySelector("[data-slot=menu-tick]")).toBeInTheDocument();
 			act(() => fireEvent.click(row));
 			expect(editor.getHTML()).not.toContain('data-mark-text="설명"');
 		});
@@ -349,7 +349,7 @@ describe("InlineBubble", () => {
 		focusAt(editor, 6);
 		renderBubble(editor);
 
-		expect(screen.getByRole("toolbar", { name: t("inlineBubble.effectLabel") })).toBeTruthy();
+		expect(screen.getByRole("toolbar", { name: t("inlineBubble.effectLabel") })).toBeInTheDocument();
 		const openByDefault = screen.getByRole("button", { name: t("inlineBubble.openByDefault") });
 		expect(openByDefault.getAttribute("aria-pressed")).toBe("false");
 		act(() => fireEvent.click(openByDefault));
@@ -372,7 +372,7 @@ describe("InlineBubble", () => {
 		const { unmount } = renderBubble(editor);
 		expect(
 			screen.getByText(t("inlineBubble.ruleSummary", { label: charEffectByName("fold")?.label ?? "fold", count: 2 })),
-		).toBeTruthy();
+		).toBeInTheDocument();
 
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineBubble.ruleExpand") })));
 		expect(editor.state.doc.child(0).attrs.rules).toEqual([]);
@@ -403,14 +403,14 @@ describe("InlineBubble", () => {
 		renderBubble(editor);
 
 		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.footnoteTitle") });
-		expect(toolbar).toBeTruthy();
-		expect(within(toolbar).getByText("1")).toBeTruthy();
-		expect(within(toolbar).getByText("Footnote description")).toBeTruthy();
+		expect(toolbar).toBeInTheDocument();
+		expect(within(toolbar).getByText("1")).toBeInTheDocument();
+		expect(within(toolbar).getByText("Footnote description")).toBeInTheDocument();
 
 		// Clicking edit opens the footnote editing popup
 		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: t("inlineBubble.footnoteEdit") })));
 		const dialog = screen.getByRole("dialog", { name: t("inlineBubble.footnotePanel") });
-		expect(dialog).toBeTruthy();
+		expect(dialog).toBeInTheDocument();
 
 		// Textarea contains the current footnote description
 		const textarea = within(dialog).getByRole("textbox") as HTMLTextAreaElement;

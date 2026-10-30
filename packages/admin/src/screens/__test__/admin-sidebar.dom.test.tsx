@@ -99,7 +99,7 @@ describe("moving around by the rail", () => {
 
 	it("counts what is in the trash, and says nothing when it is empty", () => {
 		renderRail({ trashCount: 7 });
-		expect(within(rail()).getByLabelText(t("sidebar.trashBadge", { count: 7 }))).toBeTruthy();
+		expect(within(rail()).getByLabelText(t("sidebar.trashBadge", { count: 7 }))).toBeInTheDocument();
 		cleanup();
 		renderRail({ trashCount: 0 });
 		expect(within(rail()).queryByLabelText(/in trash/)).toBeNull();
@@ -108,7 +108,7 @@ describe("moving around by the rail", () => {
 	it("counts the failed deliveries on the tools row, and only while there are some", () => {
 		renderRail({ eventsCount: 4 });
 		const badge = t("sidebar.eventsBadge", { count: 4 });
-		expect(within(link(new RegExp(t("sidebar.tools")))).getByLabelText(badge)).toBeTruthy();
+		expect(within(link(new RegExp(t("sidebar.tools")))).getByLabelText(badge)).toBeInTheDocument();
 		expect(within(rail()).getAllByLabelText(badge)).toHaveLength(1);
 		cleanup();
 		renderRail({ eventsCount: 0 });
@@ -146,7 +146,9 @@ describe("folders in the rail", () => {
 			.getAllByRole("link")
 			.map((item) => item.textContent?.trim());
 		expect(order).toContain(name);
-		expect(tree().compareDocumentPosition(link(name)) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+		expect(tree().compareDocumentPosition(link(name)) & Node.DOCUMENT_POSITION_PRECEDING).toBe(
+			Node.DOCUMENT_POSITION_PRECEDING,
+		);
 	});
 
 	it("selects a folder, and everything again from the collection row", () => {
@@ -180,6 +182,6 @@ describe("folders in the rail", () => {
 	it("shows the media folders under media", () => {
 		renderRail({ activeNav: "media", folderNav: folderNav([folder("m1", "Blog Assets")], { collection: "media" }) });
 		const media = screen.getByRole("list", { name: t("sidebar.folderTree", { label: t("sidebar.media") }) });
-		expect(within(media).getByRole("button", { name: "Blog Assets" })).toBeTruthy();
+		expect(within(media).getByRole("button", { name: "Blog Assets" })).toBeInTheDocument();
 	});
 });

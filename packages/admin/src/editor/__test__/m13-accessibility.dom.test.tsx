@@ -8,8 +8,11 @@ import { withBlockEditor } from "../../test/block-editor";
 import { renderInRouter as render } from "../../test/router";
 import { ImageBlockView } from "../image-node-view";
 import { InternalLinkPopup } from "../internal-link-popup";
+import { editorMediaMessages } from "../media.messages";
 import { slashCommands } from "../slash-command";
 import { SlashMenuPopup } from "../slash-menu-popup";
+
+const tEditorMedia = testSite.createTranslator(editorMediaMessages);
 
 vi.mock("@tiptap/react", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@tiptap/react")>();
@@ -54,9 +57,13 @@ describe("editor accessibility", () => {
 			</>,
 		);
 
-		expect(screen.getByRole("button", { name: "왼쪽 정렬" }).getAttribute("aria-pressed")).toBe("false");
-		expect(screen.getByRole("button", { name: "가운데 정렬" }).getAttribute("aria-pressed")).toBe("true");
-		fireEvent.click(screen.getByRole("button", { name: "왼쪽 정렬" }));
+		expect(screen.getByRole("button", { name: tEditorMedia("imageNode.alignLeft") }).getAttribute("aria-pressed")).toBe(
+			"false",
+		);
+		expect(
+			screen.getByRole("button", { name: tEditorMedia("imageNode.alignCenter") }).getAttribute("aria-pressed"),
+		).toBe("true");
+		fireEvent.click(screen.getByRole("button", { name: tEditorMedia("imageNode.alignLeft") }));
 		expect(updateAttributes).toHaveBeenCalledWith({ align: "left" });
 		// Delete lives only in the block handle menu (the same action is not placed in two spots).
 		expect(screen.queryByRole("button", { name: "이미지 삭제" })).toBeNull();
@@ -79,13 +86,13 @@ describe("editor accessibility", () => {
 		// Only one settings popover is open at a time. Open them in turn and collect each input's ID.
 		const widthIds: string[] = [];
 		const altIds: string[] = [];
-		for (const button of screen.getAllByRole("button", { name: "설정" })) {
+		for (const button of screen.getAllByRole("button", { name: tEditorMedia("imageNode.settings") })) {
 			fireEvent.click(button);
-			const width = await screen.findByLabelText("너비");
+			const width = await screen.findByLabelText(tEditorMedia("imageNode.width"));
 			widthIds.push(width.id);
-			altIds.push(screen.getByLabelText("대체 텍스트").id);
+			altIds.push(screen.getByLabelText(tEditorMedia("imageNode.alt")).id);
 			fireEvent.keyDown(width, { key: "Escape" });
-			await waitFor(() => expect(screen.queryByLabelText("대체 텍스트")).toBeNull());
+			await waitFor(() => expect(screen.queryByLabelText(tEditorMedia("imageNode.alt"))).toBeNull());
 		}
 		expect(new Set(widthIds).size).toBe(2);
 		expect(new Set(altIds).size).toBe(2);

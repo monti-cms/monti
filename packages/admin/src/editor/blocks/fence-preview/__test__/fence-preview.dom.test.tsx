@@ -71,7 +71,7 @@ describe("FencePreviewBlockView", () => {
 		const { container } = renderWithSite(<View {...props} />);
 
 		expect(container.querySelector("textarea")).toBeNull();
-		expect(container.querySelector('[data-fence-preview="mermaid"]')).toBeDefined();
+		expect(container.querySelector('[data-fence-preview="mermaid"]')).toBeInTheDocument();
 	});
 
 	it("shows both the textarea and the preview when selected (selected=true)", () => {
@@ -93,7 +93,7 @@ describe("FencePreviewBlockView", () => {
 		fireEvent.click(button);
 
 		await waitFor(() => {
-			expect(container.querySelector("textarea")).not.toBeNull();
+			expect(container.querySelector("textarea")).toBeInTheDocument();
 		});
 	});
 
@@ -218,7 +218,7 @@ describe("MathPreview math renderer error handling", () => {
 		const { container } = renderWithSite(<MathPreview value="a^2 + b^2 = c^2" />);
 
 		await waitFor(() => {
-			expect(container.querySelector(".katex")).not.toBeNull();
+			expect(container.querySelector(".katex")).toBeInTheDocument();
 		});
 	});
 });

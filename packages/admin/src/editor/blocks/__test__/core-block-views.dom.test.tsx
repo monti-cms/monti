@@ -40,7 +40,7 @@ const mount = async (doc: StoredDocument, ready: string, views: Record<string, B
 		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector(ready)).not.toBeNull());
+	await waitFor(() => expect(document.querySelector(ready)).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -125,6 +125,6 @@ describe("image, file and math on the blockViews contract", () => {
 			),
 			"[data-fence-preview='math']",
 		);
-		expect(document.querySelector("[data-image-block]")).not.toBeNull();
+		expect(document.querySelector("[data-image-block]")).toBeInTheDocument();
 	});
 });

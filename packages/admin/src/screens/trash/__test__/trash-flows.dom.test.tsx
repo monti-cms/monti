@@ -97,14 +97,14 @@ describe("flow: looking around the trash (T3)", () => {
 		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: "시리즈 원고" }));
 		await screen.findByRole("row", { name: /시리즈 1화/ });
 		expect(lastList().searchParams.get("folder")).toBe("series");
-		expect(screen.getByRole("heading", { level: 1, name: "시리즈 원고" })).toBeTruthy();
+		expect(screen.getByRole("heading", { level: 1, name: "시리즈 원고" })).toBeInTheDocument();
 		expect(
 			within(screen.getByRole("navigation", { name: t("trail.label") })).getByRole("link", { name: t("trail.root") }),
-		).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("folder.restore") })).toBeTruthy();
+		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("folder.restore") })).toBeInTheDocument();
 		expect(screen.getAllByRole("button", { name: tc("lifecycle.deletePermanently") }).length).toBeGreaterThan(0);
 		// The rows inside carry no day of their own, and there is no kind filter.
-		expect(screen.getByText(new RegExp(t("row.left", { count: 30 })))).toBeTruthy(); // the folder's own line in the head
+		expect(screen.getByText(new RegExp(t("row.left", { count: 30 })))).toBeInTheDocument(); // the folder's own line in the head
 		expect(within(row(/시리즈 1화/)).queryByText(/남음|left/)).toBeNull();
 		fireEvent.click(
 			within(screen.getByRole("columnheader", { name: t("head.kind") })).getByRole("button", { name: t("head.kind") }),
@@ -157,7 +157,7 @@ describe("flow: looking around the trash (T3)", () => {
 
 		fireEvent.click(within(row(/임시/)).getByRole("button", { name: "임시" }));
 		const panel = await screen.findByRole("complementary", { name: "임시" });
-		expect(within(panel).getByText(t("panel.state", { left: t("row.left", { count: 3 }) }))).toBeTruthy();
+		expect(within(panel).getByText(t("panel.state", { left: t("row.left", { count: 3 }) }))).toBeInTheDocument();
 		await within(panel).findByText(t("panel.pointing", { count: 4 }));
 		expect(
 			fetchMock.mock.calls.some(([input]) => String(input).includes("/entries/tag/relations?includeTrashed=true")),
@@ -168,7 +168,7 @@ describe("flow: looking around the trash (T3)", () => {
 		// The one in the trash says so.
 		expect(
 			within(panel).getByText(t("panel.inTrash", { collection: testSite.COLLECTION_DEFINITIONS[content].label })),
-		).toBeTruthy();
+		).toBeInTheDocument();
 		// The foot: permanent delete on the left, restore on the right.
 		const foot = within(panel).getAllByRole("button").slice(-2);
 		expect(foot.map((button) => button.textContent)).toEqual([
@@ -233,7 +233,7 @@ describe("flow: deleting for good (T5)", () => {
 		fireEvent.click(moreOf(row(/옛 소개 글/)));
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.deletePermanently") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("delete.title") });
-		expect(within(dialog).getByText(/\/about-old/)).toBeTruthy();
+		expect(within(dialog).getByText(/\/about-old/)).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(posted("/trash/delete")).toHaveLength(0);
@@ -255,8 +255,8 @@ describe("flow: deleting for good (T5)", () => {
 		const dialog = await screen.findByRole("alertdialog");
 		const confirm = () => within(dialog).getByRole("button", { name: tc("lifecycle.deletePermanently") });
 		await within(dialog).findByRole("button", { name: t("blocked.unlink") });
-		expect(within(dialog).getByText(new RegExp(t("blocked.live", { count: 3 })))).toBeTruthy();
-		expect(within(dialog).getByText(new RegExp(t("blocked.trashed", { count: 1 })))).toBeTruthy();
+		expect(within(dialog).getByText(new RegExp(t("blocked.live", { count: 3 })))).toBeInTheDocument();
+		expect(within(dialog).getByText(new RegExp(t("blocked.trashed", { count: 1 })))).toBeInTheDocument();
 		expect(confirm().hasAttribute("disabled") || confirm().getAttribute("aria-disabled") === "true").toBe(true);
 
 		fireEvent.click(within(dialog).getByRole("button", { name: t("blocked.unlink") }));
@@ -341,7 +341,7 @@ describe("flow: emptying the trash (T7)", () => {
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("empty.title") });
-		expect(within(dialog).getByText(t("empty.text", { count: 3 }))).toBeTruthy();
+		expect(within(dialog).getByText(t("empty.text", { count: 3 }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: t("empty.confirm") }));
 		await waitFor(() => expect(posted("/trash/empty")).toHaveLength(1));
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("empty.doneKept", { count: 2, kept: 1 })));
@@ -350,9 +350,9 @@ describe("flow: emptying the trash (T7)", () => {
 			within(kept).getByText(
 				new RegExp(t("meta.pointed", { meta: "x", count: 4 }).replace("x", "").trim().split("·").pop()?.trim() ?? "4"),
 			),
-		).toBeTruthy();
+		).toBeInTheDocument();
 		expect(within(kept).queryByRole("button", { name: tc("lifecycle.restore") })).toBeNull();
-		expect(within(kept).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeTruthy();
+		expect(within(kept).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeInTheDocument();
 		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
 	});
 

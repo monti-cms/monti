@@ -81,12 +81,12 @@ describe("EventsScreen", () => {
 
 		const failedRow = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
 		const deadRow = screen.getByText("webhook").closest("tr") as HTMLElement;
-		expect(within(failedRow).getByText(t("state.failed"))).toBeTruthy();
-		expect(within(deadRow).getByText(t("state.dead"))).toBeTruthy();
+		expect(within(failedRow).getByText(t("state.failed"))).toBeInTheDocument();
+		expect(within(deadRow).getByText(t("state.dead"))).toBeInTheDocument();
 		// A deleted entry is named by the title the event kept, as plain text (there is nothing to link to).
 		expect(within(deadRow).getByText("Title e2").closest("a")).toBeNull();
 		expect(within(deadRow).queryByText("entry-e2")).toBeNull();
-		expect(within(failedRow).getByText("slug-e1").closest("a")).not.toBeNull();
+		expect(within(failedRow).getByText("slug-e1").closest("a")).toBeInTheDocument();
 	});
 
 	it("opens the full record of an event beside the list without breaking the row's own actions", async () => {
@@ -97,10 +97,10 @@ describe("EventsScreen", () => {
 		// A panel beside the list, not a dialog over it: the list stays usable and in place.
 		const detail = await screen.findByRole("complementary", { name: /Title e2/ });
 		expect(screen.queryByRole("dialog")).toBeNull();
-		expect(within(detail).getByText("entry-e2")).toBeTruthy();
-		expect(within(detail).getByText("e2")).toBeTruthy();
-		expect(within(detail).getByText("webhook")).toBeTruthy();
-		expect(within(detail).getByText("boom")).toBeTruthy();
+		expect(within(detail).getByText("entry-e2")).toBeInTheDocument();
+		expect(within(detail).getByText("e2")).toBeInTheDocument();
+		expect(within(detail).getByText("webhook")).toBeInTheDocument();
+		expect(within(detail).getByText("boom")).toBeInTheDocument();
 		fireEvent.click(within(detail).getByRole("button", { name: "Close" }));
 		expect(screen.queryByRole("complementary")).toBeNull();
 
@@ -117,7 +117,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 
 		const row = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
-		expect(within(row).getByText(t("state.recorded"))).toBeTruthy();
+		expect(within(row).getByText(t("state.recorded"))).toBeInTheDocument();
 		expect(within(row).queryByText(t("state.pending"))).toBeNull();
 		expect(within(row).queryByText(t("state.failed"))).toBeNull();
 		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
@@ -159,7 +159,7 @@ describe("EventsScreen", () => {
 
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
+		expect(await screen.findByText(t("list.emptyYet"))).toBeInTheDocument();
 		// Nothing pending or failed is left to retry.
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
@@ -175,8 +175,8 @@ describe("EventsScreen", () => {
 		renderScreen();
 
 		const deliveredRow = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
-		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeTruthy();
-		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeTruthy();
+		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeInTheDocument();
+		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeInTheDocument();
 		// A delivered event has nothing to retry or dismiss; a failed one does.
 		expect(within(deliveredRow).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
@@ -209,11 +209,11 @@ describe("EventsScreen", () => {
 		await screen.findByText("search-index");
 
 		fireEvent.click(screen.getByRole("tab", { name: t("filter.failed") }));
-		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeTruthy();
+		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeInTheDocument();
 		expect(requested().at(-1)?.sort()).toEqual(["dead", "failed"]);
 
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
-		expect(await screen.findByText("search-index")).toBeTruthy();
+		expect(await screen.findByText("search-index")).toBeInTheDocument();
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
 	});
 
@@ -226,6 +226,6 @@ describe("EventsScreen", () => {
 		await screen.findByText("slug-e0");
 
 		fireEvent.click(screen.getByRole("link", { name: /Next page|다음 페이지/ }));
-		expect(await screen.findByText("slug-e25")).toBeTruthy();
+		expect(await screen.findByText("slug-e25")).toBeInTheDocument();
 	});
 });

@@ -2,6 +2,7 @@ import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { siteWithFolders } from "../../test/site";
@@ -10,6 +11,8 @@ import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { AdminQueryProvider } from "../shared/query-provider";
 import { ScreenContextProvider, useScreenContext } from "../shared/screen-context";
+
+const tCommon = testSite.createTranslator(commonMessages);
 
 /** Address bar. When `router.replace` changes it, the screen using `useSearchParams` is redrawn. */
 const nav = createTestRouter();
@@ -131,7 +134,7 @@ describe("list screen — title row", () => {
 
 		const heading = screen.getByRole("heading", { level: 1 });
 		expect(heading.textContent).toBe(testSite.COLLECTION_DEFINITIONS.post.label);
-		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeTruthy();
+		expect(screen.getByText(testSite.schemaOf("post").path as string)).toBeInTheDocument();
 	});
 });
 
@@ -254,8 +257,10 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
 		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
 		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: "보관" }));
-		fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "보관" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: tCommon("lifecycle.archive") }));
+		fireEvent.click(
+			within(await screen.findByRole("alertdialog")).getByRole("button", { name: tCommon("lifecycle.archive") }),
+		);
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalled());
 		const checked = (title: string) =>
@@ -281,7 +286,7 @@ describe("list screen — row menu and bulk actions", () => {
 		fireEvent.click(screen.getByRole("menuitem", { name: "휴지통으로Del" }));
 
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("서버 오류"));
-		expect(screen.getByRole("row", { name: /가/ })).toBeTruthy();
+		expect(screen.getByRole("row", { name: /가/ })).toBeInTheDocument();
 	});
 
 	it("adding a post creates it in the current folder", async () => {
@@ -290,7 +295,7 @@ describe("list screen — row menu and bulk actions", () => {
 		renderList();
 		await screen.findByRole("row", { name: /가/ });
 
-		fireEvent.click(screen.getByRole("button", { name: "새 글 쓰기" }));
+		fireEvent.click(screen.getByRole("button", { name: _t("list.writeNew") }));
 
 		expect(nav.navigate).toHaveBeenCalledWith("/admin/entries/new?collection=post&folder=f1");
 	});
@@ -385,11 +390,11 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		fireEvent.change(await panelName(), { target: { value: "React!" } });
 
 		fireEvent.click(screen.getByRole("button", { name: "뷰" }));
-		const dialog = await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" });
+		const dialog = await screen.findByRole("alertdialog", { name: tCommon("discard.title") });
 		// While the confirm dialog is up the panel is hidden but the changed values remain.
-		expect(screen.getByDisplayValue("React!")).toBeTruthy();
+		expect(screen.getByDisplayValue("React!")).toBeInTheDocument();
 
-		fireEvent.click(within(dialog).getByRole("button", { name: "버리기" }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tCommon("discard.confirm") }));
 		await waitFor(async () => expect((await panelName()).value).toBe("뷰"));
 	});
 
@@ -405,7 +410,7 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		fireEvent.change(await panelName(), { target: { value: "React!" } });
 
 		fireEvent.click(screen.getByRole("link", { name: "elsewhere" }));
-		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
+		expect(await screen.findByRole("alertdialog", { name: tCommon("discard.title") })).toBeInTheDocument();
 	});
 });
 

@@ -34,7 +34,7 @@ describe("state store", () => {
 		expect(renders).toHaveBeenCalledTimes(1);
 
 		act(() => store.setState({ title: "b" }));
-		expect(screen.getByText("b")).toBeTruthy();
+		expect(screen.getByText("b")).toBeInTheDocument();
 		expect(renders).toHaveBeenCalledTimes(2);
 	});
 });

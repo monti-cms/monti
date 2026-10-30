@@ -97,8 +97,8 @@ describe("the export dialog", () => {
 		expect(headline.textContent).toBe(
 			`${t("summary.entries", { count: 3, noun: "글" })} + ${t("summary.translations", { count: 2 })}`,
 		);
-		expect(screen.getByText(t("note.translations"))).toBeTruthy();
-		expect(screen.getByText(t("note.media"))).toBeTruthy();
+		expect(screen.getByText(t("note.translations"))).toBeInTheDocument();
+		expect(screen.getByText(t("note.media"))).toBeInTheDocument();
 	});
 
 	it("asks for the picked ids only, and counts again when the scope changes", async () => {
@@ -109,7 +109,7 @@ describe("the export dialog", () => {
 		await screen.findByTestId("export-headline");
 		fireEvent.click(scopeRadio("public"));
 		// The public archive leaves out what is not published, and says so.
-		expect(await screen.findByText(t("note.notPublished", { count: 2 }))).toBeTruthy();
+		expect(await screen.findByText(t("note.notPublished", { count: 2 }))).toBeInTheDocument();
 		expect(bodiesTo(fetchMock, "/api/monti/v1/export/summary")).toEqual([
 			{ scope: "admin", ids: ["a", "b", "c"] },
 			{ scope: "public", ids: ["a", "b", "c"] },
@@ -144,8 +144,8 @@ describe("the export dialog", () => {
 	it("notes that unsaved changes of the open entry are not in the archive", async () => {
 		serve({ summaries: { admin: { entries: 1 } } });
 		open({ kind: "entry", ids: ["a"], unsaved: true });
-		expect(await screen.findByTestId("export-unsaved")).toBeTruthy();
-		expect(screen.getByRole("dialog", { name: t("dialog.title.entry") })).toBeTruthy();
+		expect(await screen.findByTestId("export-unsaved")).toBeInTheDocument();
+		expect(screen.getByRole("dialog", { name: t("dialog.title.entry") })).toBeInTheDocument();
 	});
 });
 
@@ -162,7 +162,7 @@ describe("the Data page", () => {
 	it("hints at installing @monti-cms/mdx when no text format is installed, and exports JSON only", async () => {
 		const fetchMock = serve({ formats: [], summaries: { admin: { entries: 1 } } });
 		renderData();
-		expect(await screen.findByTestId("export-no-formats")).toBeTruthy();
+		expect(await screen.findByTestId("export-no-formats")).toBeInTheDocument();
 		await screen.findByTestId("export-summary");
 		fireEvent.click(screen.getByRole("button", { name: t("action.all") }));
 		await waitFor(() => expect(toast).toHaveBeenCalled());
