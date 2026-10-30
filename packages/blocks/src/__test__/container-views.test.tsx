@@ -5,14 +5,24 @@ import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { testSite } from "../../../core/test/site";
+import { calloutMessages } from "../callout/messages";
 import { calloutComponents } from "../callout/provider";
 import { codeExplorerComponents } from "../code-explorer/provider";
+import { collapsibleMessages } from "../collapsible/messages";
 import { collapsibleComponents } from "../collapsible/provider";
+import { columnsMessages } from "../columns/messages";
 import { columnsComponents } from "../columns/provider";
+import { tabsMessages } from "../tabs/messages";
 import { tabsComponents } from "../tabs/provider";
 import { mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 import { renderSite as site } from "../test/render-config";
 import { WithSite } from "../test/site";
+
+const tTabs = testSite.createTranslator(tabsMessages);
+const tColumns = testSite.createTranslator(columnsMessages);
+const tCallout = testSite.createTranslator(calloutMessages);
+const tCollapsible = testSite.createTranslator(collapsibleMessages);
 
 afterEach(cleanup);
 
@@ -95,8 +105,8 @@ describe("container NodeView (public look + in-place editing)", () => {
 
 	it("updates the tab name as you type and reverts on Escape", async () => {
 		const editor = await mount(TABS);
-		fireEvent.click(screen.getByRole("button", { name: "이 탭 이름 바꾸기" }));
-		const input = await screen.findByRole("textbox", { name: "탭 이름" });
+		fireEvent.click(screen.getByRole("button", { name: tTabs("rename") }));
+		const input = await screen.findByRole("textbox", { name: tTabs("tab.name.label") });
 		fireEvent.focus(input);
 		fireEvent.change(input, { target: { value: "둘째 탭" } });
 		// The initial tab (defaultValue) follows the rename too.
@@ -107,8 +117,8 @@ describe("container NodeView (public look + in-place editing)", () => {
 
 	it("omits the tab name when it is cleared", async () => {
 		const editor = await mount(TABS);
-		fireEvent.click(screen.getByRole("button", { name: "이 탭 이름 바꾸기" }));
-		const input = await screen.findByRole("textbox", { name: "탭 이름" });
+		fireEvent.click(screen.getByRole("button", { name: tTabs("rename") }));
+		const input = await screen.findByRole("textbox", { name: tTabs("tab.name.label") });
 		fireEvent.focus(input);
 		fireEvent.change(input, { target: { value: "" } });
 		expect(tiptapToMdx(editor.getJSON())).toContain('label="둘"');
@@ -118,12 +128,12 @@ describe("container NodeView (public look + in-place editing)", () => {
 		const editor = await mount(
 			"<Columns>\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>",
 		);
-		const remove = screen.getByRole("button", { name: "마지막 단 삭제" });
+		const remove = screen.getByRole("button", { name: tColumns("deleteLast") });
 		expect((remove as HTMLButtonElement).disabled).toBe(true);
-		fireEvent.click(screen.getByRole("button", { name: "단 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tColumns("add") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(3));
 		expect(parentTypeOfSelection(editor)).toBe("cmsColumn");
-		fireEvent.click(await screen.findByRole("button", { name: "이 단 삭제" }));
+		fireEvent.click(await screen.findByRole("button", { name: tColumns("delete") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(2));
 		expect(editor.state.doc.firstChild?.textContent).toBe("왼쪽오른쪽");
 	});
@@ -131,7 +141,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 	it("removes the callout title attribute when it is cleared", async () => {
 		const source = '<Callout variant="tip" title="제목">\n\n본문\n\n</Callout>';
 		const editor = await mount(source);
-		const input = screen.getByRole("textbox", { name: "콜아웃 제목" });
+		const input = screen.getByRole("textbox", { name: tCallout("title.aria") });
 		fireEvent.focus(input);
 		fireEvent.change(input, { target: { value: "" } });
 		expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "tip" });
@@ -141,20 +151,20 @@ describe("container NodeView (public look + in-place editing)", () => {
 	it("changes the callout variant from the toolbar menu", async () => {
 		const editor = await mount('<Callout variant="tip">\n\n본문\n\n</Callout>');
 		fireEvent.click(screen.getByRole("button", { name: /콜아웃 종류/ }));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: "경고" }));
+		fireEvent.click(await screen.findByRole("menuitemradio", { name: tCallout("option.warning") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.attrs.values).toEqual({ variant: "warning" }));
 	});
 
 	it("toggles the collapsible's open-by-default with the switch in the settings popover", async () => {
 		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
 		fireEvent.click(screen.getByRole("button", { name: "설정" }));
-		fireEvent.click(await screen.findByRole("switch", { name: "처음부터 펼치기" }));
+		fireEvent.click(await screen.findByRole("switch", { name: tCollapsible("defaultOpen.label") }));
 		await waitFor(() => expect(tiptapToMdx(editor.getJSON())).toContain("defaultOpen"));
 	});
 
 	it("starts closed per defaultOpen, and expanding with the arrow moves the cursor into the body", async () => {
 		const editor = await mount('<Collapsible title="제목">\n\n숨은 본문\n\n</Collapsible>');
-		const toggle = screen.getByRole("button", { name: "펼치기" });
+		const toggle = screen.getByRole("button", { name: tCollapsible("toggle.open") });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
 		expect(
 			document.querySelector(".node-cmsCollapsible [data-node-view-content]")?.hasAttribute("data-monti-collapsed"),
@@ -163,7 +173,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 			fireEvent.click(toggle);
 		});
 		await waitFor(() =>
-			expect(screen.getByRole("button", { name: "접기" }).getAttribute("aria-expanded")).toBe("true"),
+			expect(screen.getByRole("button", { name: tCollapsible("label") }).getAttribute("aria-expanded")).toBe("true"),
 		);
 		expect(parentTypeOfSelection(editor)).toBe("cmsCollapsible");
 	});
@@ -175,11 +185,11 @@ describe("column widths", () => {
 			'<Columns widths="70,30">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>';
 		const editor = await mount(source);
 		expect(screen.getByText("70 : 30")).toBeInTheDocument();
-		fireEvent.click(screen.getByRole("button", { name: "단 너비 똑같이 나누기" }));
+		fireEvent.click(screen.getByRole("button", { name: tColumns("equalize") }));
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("widths");
 		editor.commands.undo();
 		expect(tiptapToMdx(editor.getJSON())).toContain('widths="70,30"');
-		fireEvent.click(screen.getByRole("button", { name: "단 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tColumns("add") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(3));
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("widths");
 	});

@@ -6,11 +6,15 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { blockInsertActions } from "../../../../admin/src/editor/block-inserts";
+import { testSite } from "../../../../core/test/site";
 import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
 import { renderSite as site } from "../../test/render-config";
 import { WithSite } from "../../test/site";
 import { filesOf, uniquePath } from "../editor-files";
+import { codeExplorerMessages } from "../messages";
 import { codeExplorerComponents } from "../provider";
+
+const tCodeExplorer = testSite.createTranslator(codeExplorerMessages);
 
 afterEach(cleanup);
 
@@ -78,7 +82,7 @@ const mount = async (source: string, expectBlock = true) => {
 	return editor as unknown as Editor;
 };
 
-const fileList = () => screen.getByRole("list", { name: "파일" });
+const fileList = () => screen.getByRole("list", { name: tCodeExplorer("files") });
 const fileButtons = () => within(fileList()).getAllByRole("button");
 /** The select of the open file in the settings popover (the code blocks' language selects have a label). */
 const openTrigger = () =>
@@ -101,7 +105,7 @@ const cursorTitle = (editor: Editor) => {
 describe("code explorer editing view", () => {
 	it("shows the label and a file list built from the code blocks' titles, folders included", async () => {
 		const editor = await mount(SOURCE);
-		expect(screen.getByText("코드 탐색기")).toBeInTheDocument();
+		expect(screen.getByText(tCodeExplorer("label"))).toBeInTheDocument();
 		expect(fileButtons().map((button) => button.textContent)).toEqual(["a.ts", "src/b.ts", "docs/"]);
 		// Every file is an ordinary code block below the list (the same node view as everywhere else).
 		expect(
@@ -156,14 +160,14 @@ describe("code explorer editing view", () => {
 
 	it("adds a file at the end with a unique placeholder path and moves the cursor into it", async () => {
 		const editor = await mount(SOURCE);
-		fireEvent.click(screen.getByRole("button", { name: "파일 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tCodeExplorer("add.file") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(4));
 		expect(editor.state.doc.firstChild?.lastChild?.attrs).toMatchObject({
 			language: "ts",
 			meta: 'title="src/new-file.ts"',
 		});
 		expect(cursorTitle(editor)).toBe("src/new-file.ts");
-		fireEvent.click(screen.getByRole("button", { name: "파일 추가" }));
+		fireEvent.click(screen.getByRole("button", { name: tCodeExplorer("add.file") }));
 		await waitFor(() => expect(editor.state.doc.firstChild?.childCount).toBe(5));
 		expect(cursorTitle(editor)).toBe("src/new-file-2.ts");
 		await waitFor(() =>
@@ -219,7 +223,7 @@ describe("code explorer editing view", () => {
 
 	it("deletes the block from the toolbar", async () => {
 		const editor = await mount(`첫 문단\n\n${SOURCE}`);
-		fireEvent.click(screen.getByRole("button", { name: "코드 탐색기 삭제" }));
+		fireEvent.click(screen.getByRole("button", { name: tCodeExplorer("delete") }));
 		await waitFor(() => expect(editor.state.doc.childCount).toBe(1));
 		expect(tiptapToMdx(editor.getJSON())).not.toContain("CodeExplorer");
 		expect(tiptapToMdx(editor.getJSON())).toContain("첫 문단");
@@ -240,9 +244,9 @@ describe("code explorer editing view", () => {
 			</WithSite>,
 		);
 		await waitFor(() => expect(editor).not.toBeNull());
-		await screen.findByRole("toolbar", { name: "코드 탐색기 도구" });
+		await screen.findByRole("toolbar", { name: tCodeExplorer("toolbar") });
 		act(() => (editor as unknown as Editor).setEditable(false));
-		await waitFor(() => expect(screen.queryByRole("toolbar", { name: "코드 탐색기 도구" })).toBeNull());
+		await waitFor(() => expect(screen.queryByRole("toolbar", { name: tCodeExplorer("toolbar") })).toBeNull());
 	});
 
 	it("the slash menu inserts the block with one code block `src/index.ts`, not an empty paragraph", async () => {

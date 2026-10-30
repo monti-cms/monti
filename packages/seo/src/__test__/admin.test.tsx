@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InspectorPanel } from "../../../admin/src/screens/entries/inspector-panel";
 import { EntryFormProvider } from "../../../admin/src/screens/entries/use-field";
 import { pressOption } from "../../../admin/src/test/base-ui";
+import { fakeApi } from "../../../admin/src/test/fake-api";
 import { SiteWrapper } from "../../../admin/src/test/site";
 import { testSite } from "../../test/site";
 import { SEO_ROLES } from "..";
@@ -22,11 +23,9 @@ const t = testSite.createTranslator(seoMessages);
  * (the example blog config uses `seoTitle`… in the `SEO` tab, the other-site config uses `metaTitle`… in the `Search` tab).
  */
 
+// The panel asks the admin API nothing in these tests; the admin's fake fails a test that sends a request no route answers.
 beforeEach(() => {
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0, publicUrl: null }) })),
-	);
+	fakeApi().install();
 });
 afterEach(() => {
 	cleanup();
@@ -123,7 +122,11 @@ describe("SEO extension admin UI", () => {
 	});
 
 	it("actions next to the search title (AI and others) stay attached and receive the summary role value as `summary`", async () => {
-		const run = vi.fn<SlotAction["run"]>(async () => ({ kind: "text", text: "New" }));
+		const inputs: Parameters<SlotAction["run"]>[0][] = [];
+		const run = vi.fn<SlotAction["run"]>(async (input) => {
+			inputs.push(input);
+			return { kind: "text", text: "New" };
+		});
 		const onChange = renderPanel(
 			{ ...EMPTY_FORM, title: "Entry", ...(summaryField ? { [summaryField.name]: "Lead" } : {}) },
 			vi.fn(),
@@ -132,8 +135,8 @@ describe("SEO extension admin UI", () => {
 		await valueButton(field(SEO_ROLES.title).field.label);
 		const row = within(screen.getByRole("group", { name: field(SEO_ROLES.title).field.label }));
 		fireEvent.click(row.getByRole("button", { name: /Fill/ }));
-		await waitFor(() => expect(run).toHaveBeenCalled());
-		expect(run.mock.calls[0]?.[0]).toMatchObject({ title: "Entry", ...(summaryField ? { summary: "Lead" } : {}) });
+		await waitFor(() => expect(inputs).toHaveLength(1));
+		expect(inputs[0]).toMatchObject({ title: "Entry", ...(summaryField ? { summary: "Lead" } : {}) });
 		await waitFor(() => expect(onChange).toHaveBeenCalledWith({ [field(SEO_ROLES.title).name]: "New" }));
 	});
 

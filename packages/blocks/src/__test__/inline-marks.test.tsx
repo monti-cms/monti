@@ -7,6 +7,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../core/test/site";
 import { codeRefMessages } from "../code-ref/messages";
 import { codeRefComponents, codeRefMarkExtension } from "../code-ref/provider";
 import { colorMessages } from "../color/messages";
@@ -16,6 +17,10 @@ import { renderSite as site } from "../test/render-config";
 import { WithSite } from "../test/site";
 import { tooltipMessages } from "../tooltip/messages";
 import { tooltipComponents, tooltipMarkExtension } from "../tooltip/provider";
+
+const tTooltip = testSite.createTranslator(tooltipMessages);
+const tColor = testSite.createTranslator(colorMessages);
+const tCodeRef = testSite.createTranslator(codeRefMessages);
 
 /**
  * Inline marks of the block extensions (tooltip, code ref, text color). The core editor does not know the mark names; it only renders the shapes and tools the extensions register.
@@ -181,15 +186,15 @@ describe("inline bubble", () => {
 	it("edits and removes the description even with the cursor at the tooltip boundary", async () => {
 		const editor = await mount('<Tooltip content="설명">사아</Tooltip> 자\n');
 		focusAt(editor, 1);
-		act(() => fireEvent.click(screen.getByRole("button", { name: "툴팁 수정" })));
-		const input = screen.getByLabelText("설명") as HTMLTextAreaElement;
+		act(() => fireEvent.click(screen.getByRole("button", { name: tTooltip("edit") })));
+		const input = screen.getByLabelText(tTooltip("content.label")) as HTMLTextAreaElement;
 		expect(input.value).toBe("설명");
 		act(() => fireEvent.change(input, { target: { value: "새 설명" } }));
 		act(() => fireEvent.click(screen.getByRole("button", { name: "적용" })));
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Tooltip content="새 설명">사아</Tooltip> 자\n');
 
 		focusAt(editor, 1);
-		act(() => fireEvent.click(screen.getByRole("button", { name: "툴팁 해제" })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tTooltip("remove") })));
 		expect(tiptapToMdx(editor.getJSON())).toBe("사아 자\n");
 	});
 
@@ -198,8 +203,8 @@ describe("inline bubble", () => {
 		focusAt(editor, { from: 1, to: 3 });
 		const bubble = await screen.findByRole("toolbar", { name: "인라인 서식" });
 		act(() => fireEvent.click(within(bubble).getByRole("button", { name: "사이트가 더한 서식" })));
-		act(() => fireEvent.click(screen.getByRole("menuitem", { name: "글자색" })));
-		const dialog = screen.getByRole("dialog", { name: "글자색" });
+		act(() => fireEvent.click(screen.getByRole("menuitem", { name: tColor("label") })));
+		const dialog = screen.getByRole("dialog", { name: tColor("label") });
 		act(() => fireEvent.click(within(dialog).getByRole("button", { name: "글자색 빨강" })));
 		expect(tiptapToMdx(editor.getJSON())).toBe('<Color fg="#dc2626" fgDark="#f87171">가나</Color>다\n');
 	});
@@ -207,7 +212,7 @@ describe("inline bubble", () => {
 	it("a code ref with no linked line is reported in the bubble", async () => {
 		const editor = await mount('<CodeRef to="c9">호출</CodeRef> 뒤\n');
 		focusAt(editor, 2);
-		expect(await screen.findByText("연결된 코드 줄이 없어요")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "코드 연결 해제" })).toBeInTheDocument();
+		expect(await screen.findByText(tCodeRef("none"))).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: tCodeRef("unlink") })).toBeInTheDocument();
 	});
 });
