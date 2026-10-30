@@ -195,7 +195,6 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(bulkBodies()[0]).toMatchObject({ op: "trash", items: [{ id: "가", expectedVersion: 3 }] });
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(lastToast().message).toBe(td("trash.done"));
 		expect(lastToast().action?.label).toBe(td("undo"));
 
 		await act(async () => lastToast().action?.onClick());

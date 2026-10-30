@@ -1,12 +1,13 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/site";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
 	downloadExport,
 	type ExportFormat,
 	type ExportProgress,
+	type ExportRequest,
 	type ExportScope,
 	exportKeys,
 	getExportSummary,
@@ -15,6 +16,19 @@ import {
 } from "../../api/export";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { exportMessages } from "./messages";
+
+/** The body of the export request: the scope, and the ids, the collection and the text format only when there is one. */
+export function exportRequest({ scope, ids, collection, format }: ExportRequest): ExportRequest {
+	return { scope, ...(ids ? { ids } : {}), ...(collection ? { collection } : {}), ...(format ? { format } : {}) };
+}
+
+/** What the toast says when the archive is saved, and how many bodies the text format could not write (they are in the JSON only). */
+export function exportDoneMessage(site: Site, filename: string, notWritten: number): string {
+	const t = site.createTranslator(exportMessages);
+	return notWritten > 0
+		? `${t("toast.done", { name: filename })} ${t("toast.notWritten", { count: notWritten })}`
+		: t("toast.done", { name: filename });
+}
 
 /** How far an export is: building the archive on the server, or reading it (`percent` when the server said how large it is). */
 export type ExportPhase = { kind: "building" } | { kind: "downloading"; percent: number | null };
@@ -51,19 +65,15 @@ export function useExportForm({ ids, collection }: { ids?: readonly string[]; co
 		fn: async (_: undefined, { site }) => {
 			setProgress({ received: 0, total: null });
 			try {
-				return await downloadExport(
-					site,
-					{ scope, ...(ids ? { ids } : {}), ...(collection ? { collection } : {}), ...(format ? { format } : {}) },
-					{ onProgress: setProgress, fallback: t("error.export") },
-				);
+				return await downloadExport(site, exportRequest({ scope, ids, collection, format }), {
+					onProgress: setProgress,
+					fallback: t("error.export"),
+				});
 			} finally {
 				setProgress(null);
 			}
 		},
-		success: ({ filename, notWritten }) =>
-			notWritten > 0
-				? `${t("toast.done", { name: filename })} ${t("toast.notWritten", { count: notWritten })}`
-				: t("toast.done", { name: filename }),
+		success: ({ filename, notWritten }) => exportDoneMessage(site, filename, notWritten),
 		failure: t("error.export"),
 		onSuccess: ({ blob, filename }) => saveBlob(blob, filename),
 	});

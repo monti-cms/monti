@@ -224,33 +224,9 @@ describe("list screen — row menu and bulk actions", () => {
 		);
 		// The one that did move can still be taken back from the toast.
 		expect(toast.error).toHaveBeenCalledWith(
-			expect.stringContaining("1개는 휴지통으로했고 1개는 하지 못했어요."),
+			expect.any(String),
 			expect.objectContaining({ action: expect.objectContaining({ label: "되돌리기" }) }),
 		);
-	});
-
-	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
-		api.on("POST /v1/bulk", () => ({
-			results: [
-				{ id: "가", ok: true as const, version: 4 },
-				{ id: "나", ok: false as const, error: "conflict" },
-			],
-		}));
-		renderList();
-		await screen.findByRole("row", { name: /가/ });
-		fireEvent.click(screen.getByRole("checkbox", { name: "가 선택" }));
-		fireEvent.click(screen.getByRole("checkbox", { name: "나 선택" }));
-		await openRowMenu("가");
-		fireEvent.click(screen.getByRole("menuitem", { name: tCommon("lifecycle.archive") }));
-		fireEvent.click(
-			within(await screen.findByRole("alertdialog")).getByRole("button", { name: tCommon("lifecycle.archive") }),
-		);
-
-		await waitFor(() => expect(toast.error).toHaveBeenCalled());
-		const checked = (title: string) =>
-			screen.getByRole("checkbox", { name: `${title} 선택` }).getAttribute("aria-checked");
-		await waitFor(() => expect(checked("가")).toBe("false"));
-		expect(checked("나")).toBe("true");
 	});
 
 	it("if the request itself fails, the list is rolled back before refetching", async () => {

@@ -1,3 +1,4 @@
+import { formatFileSize } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import {
@@ -9,7 +10,12 @@ import {
 	patchEntry,
 	removeEntry,
 	replaceProblem,
+	type UploadEntry,
+	uploadTileView,
 } from "../media-upload";
+import { mediaMessages } from "../messages";
+
+const t = testSite.createTranslator(mediaMessages);
 
 const file = (name: string, type: string, size = 10) => {
 	const made = new File(["x"], name, { type });
@@ -85,5 +91,76 @@ describe("replacing a file", () => {
 		expect(replaceProblem(testSite, { mimeType: "image/jpeg" }, file("v2.pdf", "application/pdf"))).toBe("kind");
 		expect(replaceProblem(testSite, { mimeType: "application/pdf" }, file("v2.png", "image/png"))).toBe("kind");
 		expect(replaceProblem(testSite, { mimeType: "application/pdf" }, file("v2.txt", "text/plain"))).toBe("type");
+	});
+});
+
+describe("the tile of a file in the queue", () => {
+	const png = file("hero.png", "image/png");
+	const pdf = file("notes.pdf", "application/pdf");
+	const entry = (given: Partial<UploadEntry>): UploadEntry => ({
+		id: "upload-1",
+		file: png,
+		folderId: null,
+		status: "failed",
+		percent: 0,
+		...given,
+	});
+	const kinds = acceptedKinds(testSite)
+		.map((kind) => t(`upload.kind.${kind}` as "upload.kind.image"))
+		.join(" · ");
+
+	it.each([
+		{
+			case: "waiting its turn",
+			given: { status: "waiting" },
+			want: { status: "uploading", detail: t("upload.waiting"), actions: [], preview: "image" },
+		},
+		{
+			case: "going up",
+			given: { status: "uploading", percent: 64, file: pdf },
+			want: { status: "uploading", detail: t("upload.progress", { percent: 64 }), actions: [], preview: "file" },
+		},
+		{
+			case: "a picture in a format the site does not take: no preview, only remove",
+			given: { file: file("IMG_2041.HEIC", "image/heic"), problem: { kind: "type" } },
+			want: { status: "failed", detail: t("upload.unsupported"), actions: ["remove"], preview: "none" },
+		},
+		{
+			case: "another file the site does not take: what it takes",
+			given: { file: file("setup.exe", "application/x-msdownload"), problem: { kind: "type" } },
+			want: { status: "failed", detail: t("upload.acceptedKinds", { kinds }), actions: ["remove"], preview: "file" },
+		},
+		{
+			case: "a picture over the limit can be shrunk",
+			given: { problem: { kind: "size", bytes: 30_000_000, limit: 20_000_000, shrinkable: true } },
+			want: {
+				status: "interrupted",
+				detail: t("upload.tooLarge", { size: formatFileSize(30_000_000), limit: formatFileSize(20_000_000) }),
+				actions: ["shrink", "remove"],
+				preview: "image",
+			},
+		},
+		{
+			case: "another file over the limit can only be taken out",
+			given: { file: pdf, problem: { kind: "size", bytes: 3, limit: 2, shrinkable: false } },
+			want: { status: "interrupted", actions: ["remove"], preview: "file" },
+		},
+		{
+			case: "an upload that failed says why and can be tried again",
+			given: { problem: { kind: "failed", message: "The storage said no" } },
+			want: { status: "interrupted", detail: "The storage said no", actions: ["retry", "remove"], preview: "image" },
+		},
+		{
+			case: "an upload that failed for good can only be taken out",
+			given: { problem: { kind: "failed", message: "Gone", retry: false } },
+			want: { status: "interrupted", detail: "Gone", actions: ["remove"] },
+		},
+		{
+			case: "a failure with no reason",
+			given: {},
+			want: { status: "interrupted", detail: t("upload.failed"), actions: ["retry", "remove"] },
+		},
+	] as const)("$case", ({ given, want }) => {
+		expect(uploadTileView(testSite, entry(given as Partial<UploadEntry>))).toMatchObject(want);
 	});
 });

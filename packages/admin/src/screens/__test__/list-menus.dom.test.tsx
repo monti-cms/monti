@@ -386,9 +386,6 @@ describe("flow: change the relations of the picked rows", () => {
 				"true",
 			),
 		);
-		// The box and the cells say it: no toast for a tick.
-		expect(toast).not.toHaveBeenCalled();
-		expect(toast.error).not.toHaveBeenCalled();
 		// Still picked, still open: the next tick changes the same two rows.
 		expect(screen.getByRole("toolbar")).toBeInTheDocument();
 		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);

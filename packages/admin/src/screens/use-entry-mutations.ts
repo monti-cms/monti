@@ -24,7 +24,7 @@ import { foldersKeys } from "../api/folders";
 import { restoreTrash } from "../api/trash";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
-import { describeBulkFailure } from "./entries/bulk-bar";
+import { type BulkReport, bulkReport } from "./bulk-report";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { deleteMessages } from "./shared/delete.messages";
@@ -33,46 +33,16 @@ import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
 type OkResult = Extract<BulkItemResult, { ok: true }>;
 
-/** Reports bulk results as notifications. Failures list the item name and reason. */
-function announce(
-	site: Site,
-	label: string,
-	results: BulkItemResult[],
-	items: BulkSelection[],
-	{
-		quiet = false,
-		success,
-		undo,
-	}: {
-		/** Say nothing when everything went through: the change shows in the list itself (a box ticked in a menu). Failures are always told. */
-		quiet?: boolean;
-		/** What a clean run says, instead of "N items done". */
-		success?: string;
-		/** Takes back what went through. The toast carries it as its action. */
-		undo?: () => void;
-	} = {},
-) {
-	const t = site.createTranslator(screensMessages);
-	const tc = site.createTranslator(commonMessages);
+/** Shows the report of a bulk change as a notification. `undo` takes back what went through: the toast carries it as its action. */
+function announce(site: Site, report: BulkReport | null, undo?: () => void) {
+	if (!report) return;
 	const td = site.createTranslator(deleteMessages);
 	const action = undo ? { action: { label: td("undo"), onClick: undo } } : undefined;
-	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
-	const ok = results.length - failures.length;
-	if (failures.length === 0) {
-		if (quiet) return;
-		const message = success ?? t("bulk.success", { count: ok, label });
-		if (action) toast(message, action);
-		else toast(message);
-		return;
-	}
-	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
-	const lines = failures.slice(0, 3).map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`);
-	const message = [
-		ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }),
-		...lines,
-	].join("\n");
-	if (action) toast.error(message, action);
-	else toast.error(message);
+	if (report.tone === "error") {
+		if (action) toast.error(report.message, action);
+		else toast.error(report.message);
+	} else if (action) toast(report.message, action);
+	else toast(report.message);
 }
 
 const LIFECYCLE_ACTIONS: readonly string[] = ["archive", "unarchive", "trash", "restore"] satisfies LifecycleAction[];
@@ -202,23 +172,17 @@ export function useEntryMutations({
 		try {
 			const results = await run(op, targets, params);
 			const done = results.filter((result): result is OkResult => result.ok);
-			const trashed = op === "trash";
-			announce(site, label, results, targets, {
-				quiet: op.startsWith("relation."),
-				success: trashed
-					? done.length === 1
-						? td("trash.done")
-						: td("trash.done.count", { count: done.length })
-					: undefined,
-				undo:
-					done.length === 0
-						? undefined
-						: trashed
-							? undoTrash(done)
-							: op === "folder.move"
-								? undoMove(targets, done, params.folderId)
-								: undefined,
-			});
+			announce(
+				site,
+				bulkReport(site, op, label, results, targets),
+				done.length === 0
+					? undefined
+					: op === "trash"
+						? undoTrash(done)
+						: op === "folder.move"
+							? undoMove(targets, done, params.folderId)
+							: undefined,
+			);
 		} catch (error) {
 			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}
@@ -226,7 +190,7 @@ export function useEntryMutations({
 
 	/** Trash restore. */
 	const restore = async (targets: BulkSelection[]) => {
-		announce(site, tc("lifecycle.restore"), await run("restore", targets), targets);
+		announce(site, bulkReport(site, "restore", tc("lifecycle.restore"), await run("restore", targets), targets));
 	};
 
 	return { run, bulk, restore, invalidateEntries };

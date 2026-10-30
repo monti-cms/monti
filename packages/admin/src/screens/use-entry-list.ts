@@ -11,6 +11,7 @@ import { getPreferences, preferencesKeys, savePreferences as putPreferences } fr
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminRouter, useAdminSearchParams } from "../router";
+import { selectionAfter } from "./bulk-report";
 import { bulkBarMessages } from "./entries/bulk-bar.messages";
 import { toSelection } from "./entries/bulk-model";
 import { copyTitle } from "./entries/entry-form";
@@ -194,8 +195,8 @@ export function useEntryList() {
 		options,
 		// A change of a relation leaves the rows picked: its menu is still open to change them again.
 		onResults: (results, op) => {
-			if (!op.startsWith("relation."))
-				setSelectedIds(new Set(results.filter((result) => !result.ok).map((result) => result.id)));
+			const next = selectionAfter(op, results);
+			if (next) setSelectedIds(next);
 		},
 	});
 	const { bulk, invalidateEntries } = mutations;

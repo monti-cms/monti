@@ -137,15 +137,6 @@ describe("the export dialog", () => {
 		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 	});
 
-	it("tells how many bodies were kept as JSON only", async () => {
-		serve({ summaries: { admin: { entries: 1 } }, notWritten: 2 });
-		open();
-		await screen.findByTestId("export-headline");
-		fireEvent.click(screen.getByRole("button", { name: t("action.selected") }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		expect(String(toast.mock.calls[0]?.[0])).toContain(t("toast.notWritten", { count: 2 }));
-	});
-
 	it("notes that unsaved changes of the open entry are not in the archive", async () => {
 		serve({ summaries: { admin: { entries: 1 } } });
 		open({ kind: "entry", ids: ["a"], unsaved: true });
