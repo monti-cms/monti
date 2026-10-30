@@ -22,7 +22,7 @@ const asCheck = process.argv.includes("--check");
  * The most uses a package whose tests were overhauled may have, all patterns together: the count it was left with. CI fails above it, so a new use
  * is either fixed or written into `EXEMPT` with its reason. Lower it when uses are fixed; a package joins once its tests are overhauled.
  */
-const CEILING = { core: 10 };
+const CEILING = { core: 2 };
 
 /** What each pattern says about a test. `regex` is matched per line (global), so a line can count more than once. */
 const PATTERNS = [
@@ -104,6 +104,24 @@ const EXEMPT = [
 		count,
 		why: "reads a published package.json (peers, exports)",
 	})),
+	{
+		pattern: "source-read",
+		file: "packages/core/src/adapters/postgres/__test__/database-types.int.test.ts",
+		count: 1,
+		why: "compares the hand-written `db/database.ts` with a freshly migrated database, which neither tsc nor lint can see",
+	},
+	{
+		pattern: "source-read",
+		file: "packages/core/src/adapters/postgres/__test__/store-contract-files.int.test.ts",
+		count: 1,
+		why: "checks that every store contract suite has the test file that runs it: the test files are what it checks",
+	},
+	{
+		pattern: "source-read",
+		file: "packages/core/src/render/__test__/render-css.int.test.ts",
+		count: 1,
+		why: "reads the shipped `render.css`: the stylesheet is the product, not source code",
+	},
 	{
 		pattern: "own-module-mock",
 		file: "packages/core/src/adapters/postgres/__test__/lazy-adapter.test.ts",

@@ -64,3 +64,22 @@
 
 설계 문서의 이름 규칙을 소유자와 함께 고쳤다(2026-10-30). `.tsx`는 JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. core의 `.test.tsx` 6개는
 서버에서 HTML로 렌더하므로 L1이다. L2는 DB만 뜻하던 `.db.test.ts` 대신 `.int.test.ts`이고, L3는 `.dom.test.tsx`와 `.browser.test.tsx`다.
+
+### 소스를 글자로 읽던 테스트를 lint로
+
+소스 파일을 읽어 정규식으로 검사하던 테스트 8개 중 5개가 다루던 규칙을 lint로 옮겼다. 이제 편집기에서 바로 보이고 CI의 `biome check`가 막는다.
+
+| 규칙 | 전 | 후 |
+|---|---|---|
+| core는 Next를 가져오지 않는다 | `no-next-imports` 테스트 | `biome.json`의 `noRestrictedImports` |
+| core는 MDX와 remark 계열을 가져오지 않는다 | `mdx-boundary` 테스트의 소스 검사 | 같은 규칙. 배포되는 `package.json` 검사는 테스트로 남는다 |
+| Postgres 어댑터 밖에서는 어댑터, `pg`, Kysely를 가져오지 않는다 | `core/store/import-boundary` 테스트 | 같은 규칙. 파일 묶음마다 허용 범위가 다르다 |
+| 제목 필드를 `title` 키로 읽지 않는다 | `title-reads` 테스트 | `biome-plugins/title-key.grit`(GritQL 플러그인) |
+
+옮긴 규칙이 같은 것을 잡는지 확인했다. 파일 종류마다(서비스 코드, 어댑터, 테스트, `test/` 도우미, `testing.ts`, 진단 검사) 금지된 가져오기를
+모두 담은 임시 파일을 두고 lint를 돌리니, 원래 테스트가 허용하던 것은 통과하고 막던 것만 걸렸다. 제목 규칙은 원래 테스트가 잡던 모양을
+모두 잡고, 링크의 `title`이나 주석은 잡지 않았다. 지금 코드에서는 아무것도 걸리지 않는다.
+
+나머지 3개는 이유를 적어 예외로 두었다(`weak-patterns.mjs`의 `EXEMPT`). `database-types`는 손으로 쓴 DB 타입을 실제 데이터베이스와 견주고,
+`store-contract-files`는 계약 묶음마다 그것을 돌리는 테스트 파일이 있는지 보며, `render-css`는 배포되는 스타일시트를 읽는다.
+core의 약한 패턴은 10개에서 2개가 되었고, CI 상한도 2로 내렸다.

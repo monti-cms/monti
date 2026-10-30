@@ -1,0 +1,32 @@
+// The title field is named by its role (`role: "title"`), so no package source reads it by the key `title`: SQL builds it with `titleExpr`, and code reads
+// it with `titleFieldOf`, `titleValue`, `site.titleField` or `site.titleOfValues`. These are the shapes a hard-coded key takes. A text that is only
+// called "title", such as a link title or a block attribute, does not match them. `biome.json` applies this to the packages' sources, tests left out.
+or {
+	`$obj.metadata.title`,
+	`$obj.metadata?.title`,
+	`metadata.title`,
+	`metadata?.title`,
+	`metadata["title"]`,
+	`$obj.metadata["title"]`,
+	`metadata?.["title"]`,
+	`$obj.metadata?.["title"]`,
+	`$site.storedField($c, "title")`,
+	`storedField($c, "title")`,
+	`$x.name === "title"`,
+	`$x.name !== "title"`,
+	`$x.name == "title"`,
+	`$x.name != "title"`,
+	`form.title`,
+	`form?.title`,
+	`form["title"]`,
+	`form?.["title"]`,
+	`$obj.form.title`,
+	`$obj.form?.title`,
+	`$obj.form["title"]`,
+	or {
+		JsStringLiteralExpression(),
+		JsTemplateExpression()
+	} as $s where { $s <: r"(?s).*->>\s*'title'.*" }
+} as $m where {
+	register_diagnostic(span=$m, message="The title field is named by its role: read it with titleFieldOf, titleValue, site.titleField or site.titleOfValues (SQL: titleExpr), not by the key title.")
+}
