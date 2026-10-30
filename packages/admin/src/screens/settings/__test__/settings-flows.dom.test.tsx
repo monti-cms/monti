@@ -115,7 +115,7 @@ const open = (tab: "site" | "locales", onChanged?: (areas: unknown) => void) =>
 
 const field = (name: string) => screen.findByRole("textbox", { name });
 const type = (input: HTMLElement, value: string) => fireEvent.change(input, { target: { value } });
-const bar = () => screen.getByTestId("save-bar");
+const bar = () => screen.getByRole("region", { name: t("bar.label") });
 const changes = (count: number) => within(bar()).getByLabelText(t("bar.count", { count }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 /** Presses the save button of the title row and waits for the review to ask what the draft would do. */
@@ -142,7 +142,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(
 			screen.getByRole("button", { name: tSite("site.alias.remove", { name: "www.example.dev" }) }),
 		).toBeInTheDocument();
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// "+ 호스트": an empty row appears under it with the caret in it. An empty row is no change: nothing is listed and nothing would be written.
 		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.add") }));
@@ -150,7 +150,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		expect(added.value).toBe("");
 		expect(added.placeholder).toBe("blog.example.dev");
 		expect(document.activeElement).toBe(added);
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 		// There is no separate input for a new host and no Add button.
 		expect(screen.queryByRole("button", { name: /^호스트 추가$|^Add host$/ })).toBeNull();
 
@@ -188,7 +188,7 @@ describe("flow 11 · 개발 서버 · 사이트: the site settings of the file",
 		// Turned on again, the field goes and nothing is changed any more.
 		fireEvent.click(screen.getByRole("switch", { name }));
 		await waitFor(() => expect(screen.queryByRole("textbox", { name: tSite("site.previewParam") })).toBeNull());
-		expect(screen.queryByTestId("save-bar")).toBeNull();
+		expect(screen.queryByRole("region", { name: t("bar.label") })).toBeNull();
 
 		// A query typed in is the value saved.
 		fireEvent.click(screen.getByRole("switch", { name }));

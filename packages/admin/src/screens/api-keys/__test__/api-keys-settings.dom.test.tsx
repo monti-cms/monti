@@ -124,7 +124,7 @@ describe("API keys page", () => {
 		renderTab();
 		await screen.findByTestId("api-key-Spare");
 		fireEvent.click(screen.getAllByRole("button", { name: t("add") })[0] as HTMLElement);
-		const dialog = within(await screen.findByTestId("api-key-dialog"));
+		const dialog = within(await screen.findByRole("dialog"));
 		fireEvent.change(dialog.getByLabelText(t("field.name")), { target: { value: "Speller" } });
 		fireEvent.change(dialog.getByLabelText(t("field.value")), { target: { value: "brn-secret-value-1" } });
 		fireEvent.click(dialog.getByRole("button", { name: t("dialog.add.confirm") }));
@@ -157,7 +157,7 @@ describe("API keys page", () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
 		fireEvent.click(slot.getByRole("button", { name: t("slot.assign") }));
-		const dialog = within(await screen.findByTestId("api-key-slot-dialog"));
+		const dialog = within(await screen.findByRole("dialog"));
 		fireEvent.click(dialog.getByRole("button", { name: t("slot.dialog.confirm") }));
 		await waitFor(() =>
 			expect(putCalls()).toEqual([{ plugin: "speller", slot: "key", key: { use: "saved", keyId: "k1" } }]),
@@ -168,7 +168,7 @@ describe("API keys page", () => {
 		renderTab();
 		const slot = within(await screen.findByTestId("api-key-slot-speller-key"));
 		fireEvent.click(slot.getByRole("button", { name: t("slot.assign") }));
-		const dialog = within(await screen.findByTestId("api-key-slot-dialog"));
+		const dialog = within(await screen.findByRole("dialog"));
 		fireEvent.click(dialog.getByRole("radio", { name: t("field.useNew") }));
 		fireEvent.change(dialog.getByLabelText(t("field.newInput")), { target: { value: "brn-secret-value-1" } });
 		fireEvent.click(dialog.getByRole("button", { name: t("slot.dialog.confirm") }));
