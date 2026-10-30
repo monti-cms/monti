@@ -14,28 +14,28 @@
 
 - 보드: `Flow11Step01.dc.html`
 - 화면: `Settings` (stage "호스트 추가")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 개발 서버, 설정 › 사이트. 사용자가 호스트 이름 줄에서 "+ 호스트"를 누르고, 새 호스트를 그 줄에 바로 입력한다(플레이스홀더 blog.example.dev).
 
 ### 단계 02: "개발 서버 · 사이트 · 미리보기 경로에 언어 넣기를 끔 → 미리보기 언어 쿼리 칸이 나타남 (비우면 locale)"
 
 - 보드: `Flow11Step02.dc.html`
 - 화면: `Settings` (stage "언어 쿼리")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 사용자가 "미리보기 경로에 언어 넣기"를 끈다. "미리보기 언어 쿼리" 필드가 나타난다. 비워 두면 `locale`이다.
 
 ### 단계 03: "개발 서버 · 사이트 · 칸 오류 · 홈 링크는 주소(/…)나 https:// → 저장 막힘"
 
 - 보드: `Flow11Step03.dc.html`
 - 화면: `Settings` (stage "칸 오류")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 필드 오류: 필드 아래에 짧은 한 줄이 있고, 필드는 잘못된 값으로 표시되며, 고칠 때까지 저장이 막힌다. 보드는 이것을 홈 링크에 그렸다. 사이트에는 홈 링크 설정이 없으므로, 코드에서는 같은 동작이 호스트 이름에 있다. 호스트 이름이 아닌 호스트("example dev" 같은)는 그 줄 아래에 "호스트 이름이 아니에요."가 붙는다.
 
 ### 단계 04: "개발 서버 · 나가려 할 때 · 저장하지 않은 바뀐 곳 → 확인 (계속 고치기 · 저장하지 않고 나가기)"
 
 - 보드: `Flow11Step04.dc.html`
 - 화면: `Settings` (stage "나가기 확인")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 사용자가 저장하지 않은 변경을 둔 채 나가려 한다. 대화상자가 나가면 바뀐 곳 2개가 사라진다고 알리고, "계속 고치기"와 "저장하지 않고 나가기"를 보여 준다.
 
 ## "개발 서버 · 언어"
@@ -44,43 +44,43 @@
 
 - 보드: `Flow11Step05.dc.html`
 - 화면: `Locales` (stage "언어 찾기")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 개발 서버, 설정 › 언어. 사용자가 "+ 언어 추가"를 누른다. 코드 찾기가 열린다(zh를 치면 zh-Hans, zh-Hant, zh-HK가 그 언어 이름, 한국어 이름과 함께 나온다). 마지막 항목은 "직접 입력"이다.
 
 ### 단계 06: "개발 서버 · 언어 · 코드를 고르면 바로 줄이 생김 · 이름은 코드에서 → 바뀐 곳에 더해짐"
 
 - 보드: `Flow11Step06.dc.html`
 - 화면: `Locales` (stage "언어 추가됨")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 코드를 고르면 바로 줄이 생긴다(日本語, ja, 이름은 코드에서 가져온다). 이 변경은 변경 막대에 "모두 되돌리기", "저장하고 적용"과 함께 나온다.
 
 ### 단계 06b: "개발 서버 · 언어 · 직접 입력 → 이름을 한 번 묻는 작은 창"
 
 - 보드: `Flow11Step06b.dc.html`
 - 화면: `Locales` (stage "직접 입력")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - "직접 입력"을 고르면 작은 대화상자가 열려 코드, 그 언어로 쓴 이름, 표시 이름을 한 번 묻는다. 취소와 추가가 있다.
 
 ### 단계 07: "개발 서버 · 언어 · 원문 바꾸기 → 언어 고르기"
 
 - 보드: `Flow11Step07.dc.html`
 - 화면: `Locales` (stage "원문 메뉴")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 사용자가 원문 언어 메뉴("원문 바꾸기")를 열면 언어 고르기가 열린다.
 
 ### 단계 07b: "개발 서버 · 언어 · 고르면 맨 위로 · 원문이 바뀜 · 두 줄에 바뀐 곳 표시 (검토를 거쳐 저장)"
 
 - 보드: `Flow11Step07b.dc.html`
 - 화면: `Locales` (stage "원문 바꿈")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
 - 고르고 나면 그 언어가 맨 위로 올라가 원문이 된다. 두 줄에 바뀐 곳 표시가 붙는다. 이 변경도 저장되기 전에 검토를 거친다.
 
 ### 단계 08: "개발 서버 · 언어 · 번역이 있는 언어를 ×로 빼기 → 검토 · 번역 12편 남겨 두기 · 휴지통으로 (흐름 4 · 11과 같은 방식)"
 
 - 보드: `Flow11Step08.dc.html`
 - 화면: `Locales` (stage "빼기 검토")
-- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.test.tsx`
-- 테스트: `packages/admin/src/screens/schema/__test__/collections-edit-flows.test.tsx`
+- 테스트: `packages/admin/src/screens/settings/__test__/settings-flows.dom.test.tsx`
+- 테스트: `packages/admin/src/screens/schema/__test__/collections-edit-flows.dom.test.tsx`
 - 사용자가 번역이 있는 언어를 ×로 뺀다. 검토가 영어 번역 12편을 어떻게 할지 묻는다. 남겨 두거나("남겨 두기") 휴지통으로 옮긴다("휴지통으로"). 언어를 다시 추가하면 번역이 돌아온다는 점도 적혀 있다. 흐름 4와 흐름 11의 검토와 같은 방식이다. 버튼: 취소, 적용.
 
 ## "배포 · GitHub 플러그인 있음"

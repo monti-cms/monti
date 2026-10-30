@@ -356,14 +356,14 @@
 
 - 보드: `Templates.dc.html` (캔버스 행: "도구")
 - 용도: 도구 › 템플릿. 글 템플릿 목록이다. 한 행에는 이름(템플릿 페이지로 들어가는 길), 한 줄로 늘어놓은 제목들, 고친 날("10. 20 고침"), 복제와 삭제가 있는 ⋯가 있다. "+ 템플릿 추가"는 페이지 헤더에 있다. 페이지는 넓은 목록이 아니라 콘텐츠 폭(880)이다.
-- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the list", "· a row's menu").
+- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.dom.test.tsx` ("flow: templates · the list", "· a row's menu").
 
 <a id="templateeditor"></a>
 ## TemplateEditor: "도구 · 템플릿 편집기"
 
 - 보드: `TemplateEditor.dc.html` (캔버스 행: "도구")
 - 용도: 템플릿 편집기다. 도구 페이지 밖에 있는 따로 된 페이지다(`/templates/new`, `/templates/<id>/edit`). "템플릿" 뒤로 가기 링크, "저장 안 됨"(무언가 바뀐 동안만), "저장"(늘 있다. 발행이 없으므로 이 페이지의 유일한 주 알약이다. 단축키는 없다), 복제와 삭제가 있는 ⋯(새 템플릿에는 없다), 어시스턴트 버튼이 있다. 라벨 없는 이름 필드(placeholder와 접근 가능한 이름은 "템플릿 이름")가 글 제목 자리(`text-display`, 위 16, 아래 20)에 읽기 폭 본문 위로 놓이고, 그 아래에 잉크 선 하나가 있다(본문 위 32). 상태 표시줄에는 글자 수만 있다. 템플릿이 다른 곳에서 바뀌어 저장이 거절되면 알림 띠(Banner, "다른 곳에서 먼저 저장했어요", "서버 최신본 불러오기")가 뜬다. 불러오기에 실패하면 다시 시도가 있는 공용 불러오기 오류 띠가 뜬다.
-- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.test.tsx` ("flow: templates · the editor page", "· a new template").
+- 쓰이는 흐름: 없음. 테스트: `packages/admin/src/screens/templates/__test__/templates-flow.dom.test.tsx` ("flow: templates · the editor page", "· a new template").
 
 <a id="data"></a>
 ## Data: "도구 · 데이터"

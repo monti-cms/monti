@@ -8,7 +8,7 @@ import { EMPTY_FORM, type EntryForm } from "../entry-form";
 
 /**
  * `useField` checks that do not depend on the site config (regression guard): they use the default collection and its `title` field,
- * and plain keys for everything else. `use-field.test.tsx` covers the reference blog's own fields.
+ * and plain keys for everything else. `use-field.dom.test.tsx` covers the reference blog's own fields.
  */
 
 afterEach(cleanup);

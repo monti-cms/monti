@@ -607,7 +607,11 @@ shadcn에는 경고색과 성공색이 없으므로 그 둘은 관리자의 기�
 ```bash
 pnpm --filter @monti-cms/admin test:run        # 예시 블로그 설정 + 다른 사이트 설정
 pnpm --filter @monti-cms/admin test:other-site # 다른 사이트 설정(`../core/test/other-site.config.ts`)만
+pnpm --filter @monti-cms/admin test:dom        # 화면 테스트(`*.dom.test.ts(x)`, jsdom)만
 ```
 
+테스트는 층으로 나뉜다(`docs/testing.md`). `vitest.config.ts`는 DOM 없이 도는 로직 테스트(묶음 `admin`)를, `vitest.dom.config.ts`는 컴포넌트나
+편집기를 jsdom에 렌더하는 테스트(`*.dom.test.ts(x)`, 묶음 `admin (dom)`)를 돌린다.
+
 화면 테스트는 블로그와 다른 사이트 설정으로도 돈다(`vitest.othersite.config.ts`, 본체 README "개발"). 컬렉션·필드·블록 이름과
-이름표는 테스트에 적지 말고 설정에서 읽는다(예: `src/screens/__test__/any-site-screens.test.tsx`).
+이름표는 테스트에 적지 말고 설정에서 읽는다(예: `src/screens/__test__/any-site-screens.dom.test.tsx`).

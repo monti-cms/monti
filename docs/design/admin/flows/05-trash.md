@@ -15,42 +15,42 @@
 - 보드: `Flow5Step01.dc.html`
 - 화면: `Main` (mode "새 폴더")
 - 사용자가 글 목록에서 "+ 폴더"를 누른다. 맨 위에 새 폴더 행이 나타나고, 이름이 선택되어 있어서 바로 덮어 쓸 수 있다.
-- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.dom.test.tsx`
 
 ### 단계 02: "목록 · 폴더 안 · 경로 · 상위 폴더로"
 
 - 보드: `Flow5Step02.dc.html`
 - 화면: `Main` (mode "폴더 안")
 - 사용자가 폴더를 연다. 목록에는 그 폴더의 글만 보이고, 목록 위에 경로가, 그리고 "상위 폴더로" 행이 있다.
-- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.dom.test.tsx`
 
 ### 단계 03: "목록 · 폴더 안에서 찾기 → 찾는 곳 시리즈 원고 | 모든 폴더"
 
 - 보드: `Flow5Step03.dc.html`
 - 화면: `Main` (mode "폴더 안 검색")
 - 폴더 안에서 찾는다. 기본으로는 지금 폴더에서 찾는다. 범위 전환에 "찾는 곳 시리즈 원고 | 모든 폴더"라고 적혀 있고, 사용자가 범위를 넓힐 수 있다.
-- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.dom.test.tsx`
 
 ### 단계 04: "목록 · 폴더 행을 우클릭 → 열기 · 이름 바꾸기 · 옮기기 ▸ · 폴더 지우기"
 
 - 보드: `Flow5Step04.dc.html`
 - 화면: `Main` (mode "폴더 우클릭")
 - 사용자가 폴더 행을 우클릭한다. 메뉴에 열기, 이름 바꾸기, 옮기기 ▸, 폴더 지우기가 있다.
-- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/list-folders-flow.dom.test.tsx`
 
 ### 단계 05: "목록 · 폴더 지우기 → 공개 중인 글이 있으면 확인"
 
 - 보드: `Flow5Step05.dc.html`
 - 화면: `Main` (mode "폴더 지우기 확인")
 - 사용자가 발행된 글이 든 폴더를 지운다. 확인 대화상자가 폴더의 글 2편도 휴지통으로 옮겨지고, 발행된 글 1편은 사이트에서 내려간다고 알린다. 버튼은 취소와 "휴지통으로"다.
-- 테스트: `packages/admin/src/screens/__test__/safe-delete.test.tsx`(확인)와 `packages/admin/src/screens/__test__/list-folders-flow.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/safe-delete.dom.test.tsx`(확인)와 `packages/admin/src/screens/__test__/list-folders-flow.dom.test.tsx`
 
 ### 단계 06: "목록 · 폴더와 글을 휴지통으로 · 되돌리기 (초안만 있으면 확인 없이 바로)"
 
 - 보드: `Flow5Step06.dc.html`
 - 화면: `Main` (mode "폴더 지움")
 - 폴더와 그 안의 글이 휴지통으로 옮겨진다. 알림이 "되돌리기"와 함께 그렇다고 알린다. 초안만 든 폴더는 확인을 건너뛰고 바로 이 단계로 온다.
-- 테스트: `packages/admin/src/screens/__test__/safe-delete.test.tsx`
+- 테스트: `packages/admin/src/screens/__test__/safe-delete.dom.test.tsx`
 
 ## "버리기"
 
