@@ -198,6 +198,14 @@ export function fakeApi() {
 			params: found?.hit?.params ?? {},
 		};
 		requests.push(request);
+		// Like the server: a write must carry a JSON body or an upload.
+		const type = new Headers(init.headers).get("content-type") ?? "";
+		if (
+			["POST", "PUT", "PATCH"].includes(method) &&
+			!type.includes("application/json") &&
+			!(init.body instanceof FormData)
+		)
+			return errorResponse("unsupported_media_type", `${method} ${request.path} sent no JSON body`);
 		if (!found) {
 			unanswered.push(`${method} ${request.path}`);
 			throw new Error(`fake API: no route answers ${method} ${request.path}`);
