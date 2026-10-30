@@ -22,6 +22,7 @@ const BLOG_FIXTURE_TESTS = [
 	"src/screens/__test__/record-panel.dom.test.tsx",
 	"src/screens/entries/__test__/backlink-input.dom.test.tsx",
 	"src/screens/entries/__test__/bulk-bar.dom.test.tsx",
+	"src/screens/entries/__test__/bulk-model.test.ts",
 	"src/screens/entries/__test__/custom-field-input.dom.test.tsx",
 	"src/screens/entries/__test__/entry-editor-shell.dom.test.tsx",
 	"src/screens/entries/__test__/write-and-publish-flow.dom.test.tsx",

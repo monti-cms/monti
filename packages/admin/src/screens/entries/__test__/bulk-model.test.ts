@@ -1,6 +1,7 @@
 import type { ListEntriesItem } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { bulkActionsFor } from "../bulk-bar";
 import { archiveAction, canPublish, changeableRelations, heldIds, holding, sharedValue } from "../bulk-model";
 
 const row = (id: string, patch: Partial<ListEntriesItem> = {}) =>
@@ -59,5 +60,33 @@ describe("publish and archive for the picked rows", () => {
 	it("takes the archive off only when every row is archived", () => {
 		expect(archiveAction([row("a", { status: "archived" }), row("b", { status: "archived" })])).toBe("unarchive");
 		expect(archiveAction([row("a", { status: "archived" }), row("b")])).toBe("archive");
+	});
+});
+
+describe("what the bar offers", () => {
+	const ask = (rows: ListEntriesItem[], over: Partial<Parameters<typeof bulkActionsFor>[0]> = {}) =>
+		bulkActionsFor({ site: testSite, collection: "post", rows, hasFolders: true, ...over });
+
+	it("puts publish, archive, the folder and 바꾸기 on the bar, and export and the trash in the ⋯", () => {
+		expect(ask([row("a")])).toEqual({
+			primary: ["publish", "archive", "folder.move", "change"],
+			more: ["export", "trash"],
+		});
+	});
+
+	it("leaves out the folder where the list has none", () => {
+		expect(ask([row("a")], { hasFolders: false }).primary).toEqual(["publish", "archive", "change"]);
+	});
+
+	it("gives an item collection no publish or archive, and 바꾸기 only when it has a relation field", () => {
+		const items = (name: string) => [row("a", { collection: name, status: "published" })];
+		for (const name of testSite.COLLECTIONS.filter((candidate) => testSite.isItemCollection(candidate))) {
+			const { primary } = ask(items(name), { collection: name, hasFolders: false });
+			expect(primary).not.toContain("publish");
+			expect(primary).not.toContain("archive");
+			expect(primary.includes("change")).toBe(
+				testSite.storedFields(name).some(({ field, when }) => field.kind === "relation" && !when),
+			);
+		}
 	});
 });

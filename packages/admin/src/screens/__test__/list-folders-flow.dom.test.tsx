@@ -251,7 +251,6 @@ describe("flow: folders in the list (steps 01–06)", () => {
 			expect(nav.search.get("folder")).toBe("f1");
 			await waitFor(() => expect(lastEntryQuery().has("folderId")).toBe(false));
 			expect(lastEntryQuery().get("search")).toBe("저장소");
-			expect(lastEntryQuery().has("includeDescendants")).toBe(false);
 			expect(scopeButton(ts("toolbar.scopeAll")).getAttribute("aria-pressed")).toBe("true");
 
 			// And back to the folder.

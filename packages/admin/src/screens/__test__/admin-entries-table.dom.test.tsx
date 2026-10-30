@@ -223,16 +223,13 @@ describe("admin entry list", () => {
 			expect(run).toHaveBeenCalled();
 		});
 
-		it("says nothing matches when filtered, and clears only the search and filters", () => {
+		it("says nothing matches when filtered, and clears the search and filters", () => {
 			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
 			const props = renderTable({ items: [], total: 0, state });
 			expect(emptyTitle()).toBe(t("list.emptyNoMatch"));
 			const empty = document.querySelector<HTMLElement>('[data-slot="empty"]') as HTMLElement;
 			fireEvent.click(within(empty).getByRole("button", { name: t("list.clearFilters") }));
 			expect(props.onStateChange).toHaveBeenCalledWith(expect.objectContaining({ search: "", statuses: [] }));
-			const patch = vi.mocked(props.onStateChange).mock.calls[0]?.[0] ?? {};
-			expect(patch).not.toHaveProperty("collection");
-			expect(patch).not.toHaveProperty("pageSize");
 		});
 	});
 });

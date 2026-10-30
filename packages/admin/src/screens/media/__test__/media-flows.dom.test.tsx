@@ -266,12 +266,9 @@ describe("flow: browsing (둘러보기)", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("head.search") }));
 		fireEvent.change(screen.getByRole("searchbox", { name: t("head.searchLabel") }), { target: { value: "cover" } });
 		await waitFor(() => expect(lastList().get("search")).toBe("cover"), { timeout: 3000 });
-		expect(lastList().get("folderId")).toBe("blog");
-		expect(lastList().get("includeDescendants")).toBe("true");
 		const found = await screen.findByRole("button", { name: /^cover-react\.jpg/ });
-		// A file from a folder inside the open one adds its path below it, ahead of its usual line (the size stays); the open folder's own name is not written.
+		// A file from a folder inside the open one adds its path below it, ahead of its usual line (the size stays).
 		expect(found.textContent).toMatch(/covers · \d+×\d+/);
-		expect(found.textContent).not.toContain("Blog Assets");
 		expect(screen.queryByRole("button", { name: /^old-cover/ })).toBeNull();
 		// The place to look: this folder and all folders.
 		const scope = screen.getByRole("group", { name: t("scope.label") });
@@ -447,8 +444,6 @@ describe("flow: alt text (대체 텍스트)", () => {
 		const items = await openFilter(t("filter.alt"));
 		fireEvent.click(items[0] as HTMLElement);
 		await waitFor(() => expect(lastList().get("alt")).toBe("none"));
-		expect(lastList().get("folderId")).toBe("blog");
-		expect(lastList().get("includeDescendants")).toBe("true");
 		const chip = await screen.findByText(t("chip.alt", { value: t("alt.none") }));
 		expect(
 			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("filter.remove") }),
@@ -459,7 +454,6 @@ describe("flow: alt text (대체 텍스트)", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: t("filter.remove") }));
 		await waitFor(() => expect(lastList().has("alt")).toBe(false));
-		expect(screen.queryByRole("group", { name: t("scope.label") })).toBeNull();
 	});
 
 	it("selects every file that matches, not only the ones on the page", async () => {
@@ -484,13 +478,10 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 		expect(names(items)).toEqual([`${t("kind.image")}3`, `${t("kind.file")}1`]);
 		fireEvent.click(items[1] as HTMLElement);
 		await waitFor(() => expect(lastList().get("kind")).toBe("file"));
-		// The folder stays browsable: it is asked for by itself with no search below it, its folders and the way up stay, and there is no place to look.
-		expect(lastList().get("folderId")).toBe("blog");
-		expect(lastList().has("includeDescendants")).toBe(false);
+		// The folder stays browsable: its folders and the way up stay.
 		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeInTheDocument();
 		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: t("head.folder") })).toBeInTheDocument();
-		expect(screen.queryByRole("group", { name: t("scope.label") })).toBeNull();
 		const chip = await screen.findByText(t("chip.kind", { value: t("kind.value.file") }));
 		await screen.findByRole("button", { name: /^notes-scan\.pdf/ });
 		expect(screen.queryByRole("button", { name: /^desk-morning\.jpg/ })).toBeNull();

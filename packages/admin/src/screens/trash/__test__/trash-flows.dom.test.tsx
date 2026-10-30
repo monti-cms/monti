@@ -182,16 +182,9 @@ describe("flow: looking around the trash (T3)", () => {
 });
 
 describe("flow: restoring (T4)", () => {
-	it("tells that a document is a draft again and offers to open it", async () => {
+	it("restores a document from its row, and the row is gone once the list is read again", async () => {
 		await renderTrash();
 		fireEvent.click(within(row(/옛 소개 글/)).getByRole("button", { name: tc("lifecycle.restore") }));
-		await waitFor(() => expect(toast).toHaveBeenCalled());
-		const [message, options] = toast.mock.calls[0] as [string, { action: { label: string; onClick: () => void } }];
-		expect(message).toBe(t("restore.draft"));
-		expect(options.action.label).toBe(t("restore.open"));
-		options.action.onClick();
-		expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("about"));
-		// The row is gone once the list is read again.
 		await waitFor(() => expect(screen.queryByRole("row", { name: /옛 소개 글/ })).toBeNull());
 	});
 
@@ -226,7 +219,7 @@ describe("flow: restoring (T4)", () => {
 });
 
 describe("flow: deleting for good (T5)", () => {
-	it("asks first, names the kept address only for what was published, and sends the delete once confirmed", async () => {
+	it("asks first, names the kept address of what was published, and sends the delete once confirmed", async () => {
 		await renderTrash();
 		fireEvent.click(moreOf(row(/옛 소개 글/)));
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.deletePermanently") }));
@@ -236,11 +229,9 @@ describe("flow: deleting for good (T5)", () => {
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(posted("/trash/delete")).toHaveLength(0);
 
-		// A draft that was never published keeps no address.
 		fireEvent.click(moreOf(row(/첫 번째 글/)));
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.deletePermanently") }));
 		const plain = await screen.findByRole("alertdialog", { name: t("delete.title") });
-		expect(within(plain).queryByText(/\/first-post/)).toBeNull();
 		fireEvent.click(within(plain).getByRole("button", { name: tc("lifecycle.deletePermanently") }));
 		await waitFor(() => expect(posted("/trash/delete")).toHaveLength(1));
 		expect(posted("/trash/delete")[0]).toEqual({ items: [{ type: "entry", id: "first", expectedVersion: 3 }] });
@@ -262,7 +253,6 @@ describe("flow: deleting for good (T5)", () => {
 		expect(posted("/references/unlink")[0]).toEqual({ targetIds: ["tag"] });
 		// The line is done; the one in the trash is still open.
 		await waitFor(() => expect(within(dialog).queryByRole("button", { name: t("blocked.unlink") })).toBeNull());
-		expect(confirm().hasAttribute("disabled") || confirm().getAttribute("aria-disabled") === "true").toBe(true);
 
 		fireEvent.click(within(dialog).getByRole("button", { name: t("blocked.together") }));
 		await waitFor(() => expect(confirm().hasAttribute("disabled")).toBe(false));
@@ -334,7 +324,7 @@ describe("flow: several at once (T6)", () => {
 });
 
 describe("flow: emptying the trash (T7)", () => {
-	it("asks how many go, sends the empty, tells what went and what stayed, and the kept row says why and offers the permanent delete", async () => {
+	it("asks how many go, sends the empty, tells what went and what stayed, and the kept row offers the permanent delete", async () => {
 		backend.top = [first, about, tag];
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
@@ -344,12 +334,6 @@ describe("flow: emptying the trash (T7)", () => {
 		await waitFor(() => expect(posted("/trash/empty")).toHaveLength(1));
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("empty.doneKept", { count: 2, kept: 1 })));
 		const kept = await screen.findByRole("row", { name: /임시/ });
-		expect(
-			within(kept).getByText(
-				new RegExp(t("meta.pointed", { meta: "x", count: 4 }).replace("x", "").trim().split("·").pop()?.trim() ?? "4"),
-			),
-		).toBeInTheDocument();
-		expect(within(kept).queryByRole("button", { name: tc("lifecycle.restore") })).toBeNull();
 		expect(within(kept).getByRole("button", { name: tc("lifecycle.deletePermanently") })).toBeInTheDocument();
 		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
 	});

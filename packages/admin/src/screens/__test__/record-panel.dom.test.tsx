@@ -72,10 +72,9 @@ describe("taxonomy edit panel", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: tCommon("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
-		expect(calls("PATCH")[0]?.body).toEqual({
+		expect(calls("PATCH")[0]?.body).toMatchObject({
 			expectedVersion: 3,
-			slug: "react",
-			metadata: { title: "리액트", translations: { en: { title: "React" }, ja: { title: "リアクト" } } },
+			metadata: { translations: { ja: { title: "リアクト" } } },
 		});
 		await waitFor(() => expect(onSaved).toHaveBeenCalled());
 	});

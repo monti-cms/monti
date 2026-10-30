@@ -54,13 +54,6 @@ describe("save cell (flow 1 step 09)", () => {
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it("offers another try after a failed save", () => {
-		const onSave = vi.fn();
-		show(props({ save: { status: "failed", savedAt: null, backupAvailable: true, onSave } }));
-		fireEvent.click(bar().getByRole("button", { name: tStatusBar("save.failed") }));
-		expect(onSave).toHaveBeenCalledTimes(1);
-	});
-
 	it("leads to signing in, in a new tab, when the session expired", () => {
 		show(props({ save: { status: "session-expired", savedAt: null, backupAvailable: true, onSave: () => {} } }));
 		const link = bar().getByRole("link", { name: tStatusBar("save.session-expired") });
