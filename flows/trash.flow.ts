@@ -18,11 +18,7 @@ async function trashFromEditor(page: Page) {
 
 // Flow 5 (🔴): trash a post, restore it, then delete for good, one post from its row and the rest by emptying the trash.
 // Which entries can be deleted, what stays behind and the 30 days are checked below this layer.
-//
-// Expected to fail at the last step, emptying the trash: the admin's `emptyTrash` (`packages/admin/src/api/trash.ts`) sends
-// `POST /v1/trash/empty` without a body, so without `Content-Type: application/json`, and the server's same-origin check
-// (`validateSameOrigin` in `packages/core/src/http/v1/security.ts`) answers 415. Turn this back into `test` once that is fixed.
-test.fail("a trashed post is restored to the list, and trashed posts are deleted for good", async ({ page }) => {
+test("a trashed post is restored to the list, and trashed posts are deleted for good", async ({ page }) => {
 	await writeAndTrash(page, "되살릴 글");
 	await writeAndTrash(page, "지울 글");
 
