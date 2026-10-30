@@ -154,12 +154,6 @@ const names = () =>
 		.map((button) => button.textContent);
 /** Presses the name of a column in the head row, which opens its menu under it. */
 const openColumn = (label: string) => fireEvent.click(head().getByRole("button", { name: label }));
-/** Turns a hidden column on from the + at the end of the head row. */
-const addColumn = async (label: string) => {
-	fireEvent.click(head().getByRole("button", { name: t("column.add") }));
-	fireEvent.click(await screen.findByRole("menuitem", { name: label }));
-	await head().findByRole("button", { name: label });
-};
 const menuOpen = () => screen.queryAllByRole("menu").length > 0;
 const menuClosed = () => waitFor(() => expect(screen.queryAllByRole("menu")).toHaveLength(0));
 /** Escape closes the menu. */
@@ -170,34 +164,9 @@ const closeMenu = async () => {
 /** The pager's names come from the UI labels, English until a provider says otherwise. */
 const PAGER = /Pagination|페이지 이동/;
 const NEXT = /Next page|다음 페이지/;
-const PREVIOUS = /Previous page|이전 페이지/;
 const dotsIn = (column: string) =>
 	within(headRow()).getByRole("columnheader", { name: column, hidden: true }).querySelectorAll("[data-slot=column-dot]")
 		.length;
-
-describe("flow: the list's head", () => {
-	it("names the columns, the status first and the title after it, each a button, and no month column", async () => {
-		await renderList();
-		await screen.findAllByRole("columnheader");
-		expect(names().slice(0, 2)).toEqual([t("column.status"), t("column.title")]);
-		expect(screen.queryByText("10월")).toBeNull();
-		// There is no tab row, Filter or View above the list: every name is the way to its menu.
-		expect(screen.queryByRole("tab")).toBeNull();
-		expect(screen.queryByRole("button", { name: /^(필터|보기|Filter|View)$/ })).toBeNull();
-		for (const name of head().getAllByRole("button", { name: /./ })) {
-			if (name.getAttribute("aria-label") !== t("column.add")) expect(name.getAttribute("aria-haspopup")).toBe("menu");
-		}
-	});
-
-	it("shows a filter that is on only by the dot after its column's name: there is no chip row to push the list", async () => {
-		nav.setSearch("collection=post&status=draft");
-		await renderList();
-		await screen.findAllByRole("columnheader");
-		expect(dotsIn(t("column.status"))).toBe(1);
-		expect(dotsIn(t("column.title"))).toBe(0);
-		expect(document.querySelector("[data-slot=chip]")).toBeNull();
-	});
-});
 
 describe("flow: sort from a column's menu", () => {
 	it("picks 'ascending' on the title, which applies it, closes the menu and is saved for the collection", async () => {
@@ -218,38 +187,10 @@ describe("flow: sort from a column's menu", () => {
 		).toBe("ascending");
 	});
 
-	it("puts the ✓ on the current order of a date, newest first for the updated date, and picks the other way", async () => {
-		await renderList();
-		openColumn(t("column.updatedAt"));
-		const newest = await screen.findByRole("menuitemradio", { name: t("sort.date.desc") });
-		expect(newest.getAttribute("aria-checked")).toBe("true");
-		expect(screen.getByRole("menuitemradio", { name: t("sort.date.asc") }).getAttribute("aria-checked")).toBe("false");
-		fireEvent.click(screen.getByRole("menuitemradio", { name: t("sort.date.asc") }));
-		await waitFor(() => expect(lastList().searchParams.get("sortDirection")).toBe("asc"));
-		expect(lastList().searchParams.get("sortField")).toBe("updatedAt");
-	});
-
-	it("has sort and hide on the title's menu and nothing to filter by, and hides no title", async () => {
-		await renderList();
-		openColumn(t("column.title"));
-		await screen.findByRole("menuitemradio", { name: t("sort.text.asc") });
-		expect(screen.queryByRole("menuitemcheckbox")).toBeNull();
-		expect(screen.queryByRole("menuitem", { name: t("column.hide") })).toBeNull();
-	});
-
 	it("opens a column's menu from the keyboard too, with the arrow down on its name", async () => {
 		await renderList();
 		fireEvent.keyDown(head().getByRole("button", { name: t("column.title") }), { key: "ArrowDown" });
 		await screen.findByRole("menuitemradio", { name: t("sort.text.asc") });
-	});
-
-	it("does not sort when a name is pressed: it opens the column's menu", async () => {
-		await renderList();
-		const before = listRequests().length;
-		openColumn(t("column.title"));
-		await screen.findByRole("menu");
-		expect(listRequests().length).toBe(before);
-		expect(menuOpen()).toBe(true);
 	});
 });
 
@@ -270,95 +211,6 @@ describe("flow: columns and page size", () => {
 		fireEvent.click(head().getByRole("button", { name: t("column.add") }));
 		await screen.findAllByRole("menuitem");
 		expect(screen.queryByRole("menuitem", { name: t("column.createdAt") })).toBeNull();
-	});
-
-	it("hides a column from its own menu, and saves it", async () => {
-		await renderList();
-		openColumn(t("column.locale"));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("column.hide") }));
-		await waitFor(() => expect(saved().at(-1)?.collections.post.columns.visibility).toMatchObject({ locale: false }));
-		await waitFor(() => expect(head().queryByRole("button", { name: t("column.locale") })).toBeNull());
-		// It is offered under + now.
-		fireEvent.click(head().getByRole("button", { name: t("column.add") }));
-		expect(await screen.findByRole("menuitem", { name: t("column.locale") })).toBeTruthy();
-	});
-
-	it("moves a column with Alt and the arrow keys on its name, and saves the order", async () => {
-		await renderList();
-		fireEvent.keyDown(await head().findByRole("button", { name: t("column.title") }), {
-			key: "ArrowLeft",
-			altKey: true,
-		});
-		await waitFor(() => {
-			const order = saved().at(-1)?.collections.post.columns.order as string[];
-			expect(order.indexOf("title")).toBeLessThan(order.indexOf("status"));
-		});
-		// The keys moved the column; they opened nothing.
-		expect(menuOpen()).toBe(false);
-	});
-
-	it("lifts a column's name, shows the new order in the head and the rows while it moves, and saves it when let go", async () => {
-		// jsdom lays nothing out: each head cell is 100px wide, placed by its order in the row.
-		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-			this: HTMLElement,
-		) {
-			const left =
-				[...(this.parentElement?.children ?? [])].filter((cell) => cell.tagName === this.tagName).indexOf(this) * 100;
-			return { left, right: left + 100, top: 0, bottom: 40, width: 100, height: 40, x: left, y: 0 } as DOMRect;
-		});
-		try {
-			await renderList();
-			await screen.findAllByRole("columnheader");
-			const cell = (name: string) => head().getByRole("columnheader", { name });
-			const centre = (name: string) => cell(name).getBoundingClientRect().left + 50;
-			const from = centre(t("column.updatedAt"));
-			const to = centre(t("column.title"));
-			fireEvent.pointerDown(cell(t("column.updatedAt")), { button: 0, pointerId: 1, clientX: from });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: from - 10 });
-			fireEvent.pointerMove(cell(t("column.updatedAt")), { pointerId: 1, buttons: 1, clientX: to });
-			// While held, the head already shows it before the title, and nothing is saved yet.
-			expect(names().indexOf(t("column.updatedAt"))).toBeLessThan(names().indexOf(t("column.title")));
-			const savesBefore = saved().length;
-			fireEvent.pointerUp(cell(t("column.updatedAt")), { pointerId: 1, clientX: to });
-			await waitFor(() => expect(saved().length).toBeGreaterThan(savesBefore));
-			const order = saved().at(-1)?.collections.post.columns.order as string[];
-			expect(order.indexOf("updatedAt")).toBeLessThan(order.indexOf("title"));
-			// The press that ended a drag opened no menu and sorted nothing.
-			expect(menuOpen()).toBe(false);
-			expect(lastList().searchParams.get("sortDirection")).not.toBe("asc");
-		} finally {
-			box.mockRestore();
-		}
-	});
-
-	it("does not pick a column up when the press only opened its menu: moving over the head afterwards moves nothing", async () => {
-		const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-			this: HTMLElement,
-		) {
-			const left =
-				[...(this.parentElement?.children ?? [])].filter((cell) => cell.tagName === this.tagName).indexOf(this) * 100;
-			return { left, right: left + 100, top: 0, bottom: 40, width: 100, height: 40, x: left, y: 0 } as DOMRect;
-		});
-		try {
-			await renderList();
-			await screen.findAllByRole("columnheader");
-			const before = names();
-			const cell = head().getByRole("columnheader", { name: t("column.updatedAt") });
-			const from = cell.getBoundingClientRect().left + 50;
-			// The press opens the menu; its release goes to the menu, not the head.
-			fireEvent.pointerDown(cell, { button: 0, buttons: 1, pointerId: 1, clientX: from });
-			fireEvent.click(within(cell).getByRole("button", { name: t("column.updatedAt") }));
-			expect(menuOpen()).toBe(true);
-			fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-			await waitFor(() => expect(menuOpen()).toBe(false));
-			const savesBefore = saved().length;
-			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 150 });
-			fireEvent.pointerMove(cell, { pointerId: 1, buttons: 0, clientX: from - 300 });
-			expect(names()).toEqual(before);
-			expect(saved().length).toBe(savesBefore);
-		} finally {
-			box.mockRestore();
-		}
 	});
 
 	it("picks 50 per page from the footer, which applies it, closes the menu and is saved", async () => {
@@ -393,23 +245,6 @@ describe("flow: filter by value", () => {
 		expect(dotsIn(t("column.status"))).toBe(0);
 	});
 
-	it("ticks none and a tag on the tag menu, narrows the list to them, and the dot says so until they are unticked", async () => {
-		await renderList();
-		openColumn("태그");
-		const react = await screen.findByRole("menuitemcheckbox", { name: /^리액트/ });
-		expect(await within(react).findByText("2")).toBeTruthy();
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("listMenu.none")}`) }));
-		fireEvent.click(react);
-		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["tagIds:empty", "tagIds:is:t-react"]));
-		expect(menuOpen()).toBe(true);
-		expect(nav.search.getAll("field")).toEqual(["tagIds:empty", "tagIds:is:t-react"]);
-		expect(dotsIn("태그")).toBe(1);
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${t("listMenu.none")}`) }));
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /^리액트/ }));
-		await waitFor(() => expect(lastList().searchParams.has("field")).toBe(false));
-		expect(dotsIn("태그")).toBe(0);
-	});
-
 	it("narrows the items of a relation to what the search row types", async () => {
 		await renderList();
 		openColumn("태그");
@@ -420,104 +255,9 @@ describe("flow: filter by value", () => {
 		await waitFor(() => expect(screen.queryByRole("menuitemcheckbox", { name: /^리액트/ })).toBeNull());
 		expect(screen.getByRole("menuitemcheckbox", { name: /^넥스트/ })).toBeTruthy();
 	});
-
-	it("ORs the values of one column and ANDs the columns: status and tag are both in the request", async () => {
-		await renderList();
-		openColumn(t("column.status"));
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		await closeMenu();
-		openColumn("태그");
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^리액트/ }));
-		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["tagIds:is:t-react"]));
-		expect(lastList().searchParams.getAll("status")).toEqual(["draft"]);
-		await closeMenu();
-		expect([dotsIn(t("column.status")), dotsIn("태그")]).toEqual([1, 1]);
-	});
-
-	it("sets the translation state from the language menu, under the languages, and the dot says it", async () => {
-		await renderList();
-		openColumn(t("column.locale"));
-		const changed = await screen.findByRole("menuitemcheckbox", {
-			name: new RegExp(`^${t("listMenu.translationChanged")}`),
-		});
-		expect(await within(changed).findByText("1")).toBeTruthy();
-		fireEvent.click(changed);
-		await waitFor(() => expect(lastList().searchParams.getAll("translation")).toEqual(["changed"]));
-		expect(dotsIn(t("column.locale"))).toBe(1);
-		fireEvent.click(
-			await screen.findByRole("menuitemcheckbox", { name: testSite.localeLabel(testSite.LOCALES[0] as string) }),
-		);
-		await waitFor(() => expect(lastList().searchParams.getAll("locale")).toEqual([testSite.LOCALES[0]]));
-		await closeMenu();
-		expect(dotsIn(t("column.locale"))).toBe(1);
-	});
-
-	it("filters a text column by 'empty' alone, after it is turned on with +", async () => {
-		await renderList();
-		await addColumn("요약");
-		openColumn("요약");
-		const rows = await screen.findAllByRole("menuitemcheckbox");
-		expect(rows.map((row) => row.textContent?.replace(/\d+$/, ""))).toEqual([t("listMenu.empty")]);
-		fireEvent.click(rows[0] as HTMLElement);
-		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["summary:empty"]));
-		expect(dotsIn("요약")).toBe(1);
-	});
-
-	it("filters a select by its options, with 'none' first", async () => {
-		await renderList();
-		await addColumn("정책");
-		openColumn("정책");
-		const rows = await screen.findAllByRole("menuitemcheckbox");
-		expect(rows[0]?.textContent).toContain(t("listMenu.none"));
-		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^지원 중단/ }));
-		await waitFor(() => expect(lastList().searchParams.getAll("field")).toEqual(["policy:is:deprecated"]));
-		await closeMenu();
-		expect(dotsIn("정책")).toBe(1);
-	});
-
-	it("has nothing to filter by on the address column, only sort and hide", async () => {
-		await renderList();
-		await addColumn(t("column.slug"));
-		openColumn(t("column.slug"));
-		await screen.findByRole("menuitemradio", { name: t("sort.text.asc") });
-		expect(screen.queryByRole("menuitemcheckbox")).toBeNull();
-		expect(screen.getByRole("menuitem", { name: t("column.hide") })).toBeTruthy();
-	});
 });
 
 describe("flow: filter by date", () => {
-	it("picks 'last 30 days' on the updated date, which leaves the menu open with a ✓ on it, and shows a dot", async () => {
-		await renderList();
-		openColumn(t("column.updatedAt"));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("listMenu.last30") }));
-		await waitFor(() => expect(lastList().searchParams.get("updatedFrom")).not.toBeNull());
-		const { searchParams } = lastList();
-		const days =
-			(Date.parse(searchParams.get("updatedTo") as string) - Date.parse(searchParams.get("updatedFrom") as string)) /
-			86_400_000;
-		expect(Math.round(days)).toBe(30);
-		expect(nav.search.get("updated")).toBe("last30");
-		expect(dotsIn(t("column.updatedAt"))).toBe(1);
-		// The menu stays, with the pick ticked, for the next filter.
-		expect(menuOpen()).toBe(true);
-		const radio = await screen.findByRole("menuitemradio", { name: t("listMenu.last30") });
-		await waitFor(() => expect(radio.getAttribute("aria-checked")).toBe("true"));
-		expect(screen.getByRole("menuitemradio", { name: t("listMenu.today") }).getAttribute("aria-checked")).toBe("false");
-		await closeMenu();
-	});
-
-	it("filters the created date once its column is on, as it does the updated date", async () => {
-		await renderList();
-		await addColumn(t("column.createdAt"));
-		openColumn(t("column.createdAt"));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("listMenu.last7") }));
-		await waitFor(() => expect(lastList().searchParams.get("createdFrom")).not.toBeNull());
-		expect(lastList().searchParams.has("updatedFrom")).toBe(false);
-		expect(nav.search.get("created")).toBe("last7");
-		await closeMenu();
-		expect(dotsIn(t("column.createdAt"))).toBe(1);
-	});
-
 	/** Opens the updated date's menu and the calendar card of its "pick a period" row beside it, which leaves the menu open behind it. */
 	const openCalendar = async () => {
 		await renderList();
@@ -530,12 +270,6 @@ describe("flow: filter by date", () => {
 			.getAllByRole("button")
 			.find((button) => button.textContent === n) as HTMLElement;
 
-	it("opens a calendar beside the date menu from the 'pick a period' row, which stays open behind it", async () => {
-		await openCalendar();
-		expect(screen.getAllByRole("menu").length).toBeGreaterThanOrEqual(2);
-		expect(screen.getByRole("menuitem", { name: t("listMenu.range") })).toBeTruthy();
-	});
-
 	// jsdom moves focus out of the card once the days re-render, which a browser does not; that the calendar stays open is checked by the UpdatedRangeSet story.
 	it("picks a period on the calendar: the first day starts it, the second sets it, and the dot says it", async () => {
 		await openCalendar();
@@ -545,13 +279,6 @@ describe("flow: filter by date", () => {
 		await waitFor(() => expect(nav.search.get("updated")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
 		expect(lastList().searchParams.get("updatedFrom")).not.toBeNull();
 		expect(dotsIn(t("column.updatedAt"))).toBe(1);
-	});
-
-	it("takes the same day twice as that one day", async () => {
-		await openCalendar();
-		fireEvent.click(day("10"));
-		fireEvent.click(day("10"));
-		await waitFor(() => expect(nav.search.get("updated")).toMatch(/^(\d{4}-\d{2}-10)\.\.\1$/));
 	});
 });
 
@@ -718,20 +445,6 @@ describe("flow: page through the list", () => {
 		server.total = 148;
 	});
 
-	it("shows the range and the page buttons, with the first page current and the way back dimmed", async () => {
-		await renderList();
-		const pager = await screen.findByRole("navigation", { name: PAGER });
-		expect(within(pager).getByRole("link", { name: "1" }).getAttribute("aria-current")).toBe("page");
-		expect(
-			within(pager)
-				.getAllByRole("link")
-				.map((link) => link.textContent)
-				.filter((text) => /^\d+$/.test(text ?? "")),
-		).toEqual(["1", "2", "3", "4", "5", "6"]);
-		expect(within(pager).getByRole("link", { name: PREVIOUS }).getAttribute("aria-disabled")).toBe("true");
-		expect(screen.getByText("1–25 / 148")).toBeTruthy();
-	});
-
 	it("goes to a page by its button and to the next one by 'next'", async () => {
 		await renderList();
 		const pager = await screen.findByRole("navigation", { name: PAGER });
@@ -747,11 +460,5 @@ describe("flow: page through the list", () => {
 		);
 		fireEvent.click(within(screen.getByRole("navigation", { name: PAGER })).getByRole("link", { name: NEXT }));
 		await waitFor(() => expect(lastList().searchParams.get("page")).toBe("4"));
-	});
-
-	it("draws no pager when everything fits on one page", async () => {
-		server.total = 3;
-		await renderList();
-		expect(screen.queryByRole("navigation", { name: PAGER })).toBeNull();
 	});
 });

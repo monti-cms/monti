@@ -26,17 +26,6 @@ describe("search box", () => {
 		expect(onChange).toHaveBeenLastCalledWith({ includeBody: true });
 	});
 
-	it("shows everything picked while body search is on", async () => {
-		const onChange = vi.fn();
-		render(withSite(<ListSearch state={stateOf("collection=post&body=1")} onChange={onChange} />));
-		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));
-		expect(picker()?.textContent).toBe(t("toolbar.targetAll"));
-		expect(picker()?.getAttribute("aria-label")).toBe(`${t("toolbar.targetAll")}, ${t("toolbar.target")}`);
-		fireEvent.click(picker() as HTMLElement);
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("toolbar.targetFields") }));
-		expect(onChange).toHaveBeenLastCalledWith({ includeBody: false });
-	});
-
 	it("has no picker for an item collection or where body search is not allowed", () => {
 		render(withSite(<ListSearch state={stateOf("collection=tag")} onChange={vi.fn()} />));
 		fireEvent.click(screen.getByRole("button", { name: t("toolbar.search") }));

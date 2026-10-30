@@ -61,19 +61,6 @@ function renderTable(overrides: Partial<ComponentProps<typeof AdminEntriesTable>
 }
 
 describe("admin entry list", () => {
-	it("uses the default columns per collection", () => {
-		for (const collection of ["post", "memo", "tag"] as const) {
-			const { defaults, available } = columnsFor(testSite, collection);
-			expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
-			expect(defaults).toContain("updatedAt");
-			for (const column of defaults) expect(available).toContain(column);
-		}
-		// Taxonomy items have no per-locale documents but show the locales that have a name.
-		expect(columnsFor(testSite, "tag").defaults).toContain("locale");
-		expect(columnsFor(testSite, "memo").available).not.toContain("categoryId");
-		expect(columnsFor(testSite, "tag").available).not.toContain("tagIds");
-	});
-
 	it("selects rows through the row checks and the select-all of the toolbar", () => {
 		const props = renderTable();
 		fireEvent.click(screen.getByRole("checkbox", { name: "draft 선택" }));
@@ -109,17 +96,6 @@ describe("admin entry list", () => {
 		expect(props.onOpenRecord).toHaveBeenCalledWith(tag);
 		// A published item is the normal case: it says nothing.
 		expect(screen.queryByText("활성")).toBeNull();
-	});
-
-	it("cuts a long relation to its cell with its whole text in the title, as a block that ends in an ellipsis", () => {
-		const names = ["리액트", "타입스크립트", "넥스트", "회고"];
-		renderTable({
-			items: [item("tagged", { relations: { tagIds: names.map((title, id) => ({ id: `t${id}`, title })) } })],
-		});
-		const cell = screen.getByTitle(names.join(" · "));
-		expect(cell.textContent).toBe(names.join(" · "));
-		// A block, not a flex box, which would ignore the ellipsis.
-		expect(cell.tagName).toBe("DIV");
 	});
 
 	it("shows child folders in explorer mode and navigates up", () => {

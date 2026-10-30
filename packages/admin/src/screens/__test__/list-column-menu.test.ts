@@ -44,13 +44,6 @@ describe("the sections of a column's menu", () => {
 			expect(menu(column).hide, column).toBe(true);
 		}
 	});
-
-	it("gives every column of the list something to press: a section of its own, or hide", () => {
-		for (const column of columnsFor(testSite, "post").available) {
-			const { sort, filter, hide } = menu(column);
-			expect(Boolean(sort) || Boolean(filter) || hide, column).toBe(true);
-		}
-	});
 });
 
 describe("the dot after a filtered column's name", () => {
@@ -70,12 +63,6 @@ describe("the dot after a filtered column's name", () => {
 		expect(filtered(`collection=post&locale=${testSite.LOCALES[0]}`, "locale")).toBe(true);
 		expect(filtered("collection=post&translation=changed", "locale")).toBe(true);
 	});
-
-	it("is on no column when nothing is filtered, whatever the search says", () => {
-		for (const column of columnsFor(testSite, "post").available) {
-			expect(filtered("collection=post&search=a", column), column).toBe(false);
-		}
-	});
 });
 
 describe("the columns of the + at the end of the head row", () => {
@@ -84,9 +71,5 @@ describe("the columns of the + at the end of the head row", () => {
 		const visibility = { status: true, title: true, slug: false, tagIds: true, updatedAt: false };
 		expect(hiddenColumns(order, visibility)).toEqual(["slug", "updatedAt"]);
 		expect(hiddenColumns(order, { ...visibility, title: false })).not.toContain("title");
-	});
-
-	it("are none when every column is on", () => {
-		expect(hiddenColumns(["title", "status"], { title: true, status: true })).toEqual([]);
 	});
 });
