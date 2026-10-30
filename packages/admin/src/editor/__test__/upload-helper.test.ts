@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { apiErrorMessages } from "../../api/error-message.messages";
 import { markSandboxSite } from "../../screens/shared/preview-sandbox";
+import { answer, fakeApi } from "../../test/fake-api";
 import { editorMessages } from "../messages";
 import { readBytes } from "../strip-location";
 import { DEFAULT_OPTIMIZE_POLICY, imageAccept, prepareUpload, uploadImageFile } from "../upload-helper";
@@ -13,22 +14,28 @@ describe("uploadImageFile", () => {
 	afterEach(() => vi.unstubAllGlobals());
 
 	it("refuses to upload from a preview site, without any request", async () => {
-		const fetchMock = vi.fn();
-		vi.stubGlobal("fetch", fetchMock);
+		const api = fakeApi().install();
 		const sandbox = markSandboxSite(Object.create(testSite) as typeof testSite);
 		await expect(uploadImageFile(sandbox, file())).rejects.toThrow(
 			testSite.createTranslator(apiErrorMessages)("previewNoWrite"),
 		);
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(api.requests).toHaveLength(0);
 	});
 
 	it("shows the upload's network message when the server cannot be reached", async () => {
-		vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+		fakeApi()
+			.on("POST /v1/media/uploads", () => {
+				throw new TypeError("Failed to fetch");
+			})
+			.install();
 		await expect(uploadImageFile(testSite, file())).rejects.toThrow(t("upload.networkError"));
 	});
 
 	it("shows the preparation failure message when the server refuses the upload", async () => {
-		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 500 })));
+		// A failure the server does not explain (no error body): the screen falls back to its own message.
+		fakeApi()
+			.on("POST /v1/media/uploads", () => answer(500, {}))
+			.install();
 		await expect(uploadImageFile(testSite, file())).rejects.toThrow(t("upload.prepareFailed"));
 	});
 });
@@ -62,14 +69,13 @@ describe("image types and size follow the site", () => {
 	});
 
 	it("refuses an image over the media size limit before any request", async () => {
-		const fetchMock = vi.fn();
-		vi.stubGlobal("fetch", fetchMock);
+		const api = fakeApi().install();
 		const big = new File(["x"], "big.png", { type: "image/png" });
 		Object.defineProperty(big, "size", { value: testSite.api.MAX_MEDIA_BYTES + 1 });
 		await expect(uploadImageFile(testSite, big)).rejects.toThrow(
 			t("upload.tooLarge", { mb: testSite.api.MAX_MEDIA_BYTES / 1024 / 1024 }),
 		);
-		expect(fetchMock).not.toHaveBeenCalled();
+		expect(api.requests).toHaveLength(0);
 	});
 });
 

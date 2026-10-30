@@ -1,8 +1,10 @@
+import type { StoredDocument } from "@monti-cms/core/document";
+import type { BodyTemplate } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -53,7 +55,7 @@ vi.mock("../../../editor/tiptap-editor", () => ({
 const t = testSite.createTranslator(templatesMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-const DOC = {
+const DOC: StoredDocument = {
 	type: "doc",
 	version: 3,
 	content: [
@@ -62,71 +64,68 @@ const DOC = {
 		{ type: "heading", id: "cdef3456", attrs: { level: 2 }, content: [{ type: "text", text: "본론" }] },
 	],
 };
-const template = (id: string, name: string, updatedAt: string, version = 1) => ({
+// The client reads the dates as `Date`s; the answer sends them as ISO strings, as the server's JSON does.
+const template = (id: string, name: string, updatedAt: string, version = 1): BodyTemplate => ({
 	id,
 	name,
 	doc: DOC,
 	version,
-	createdAt: "2026-01-01T00:00:00.000Z",
-	updatedAt,
+	createdAt: new Date("2026-01-01T00:00:00.000Z"),
+	updatedAt: new Date(updatedAt),
 });
 const FIRST = template("a", "기본 글", "2026-10-20T03:00:00.000Z");
 const SECOND = template("b", "책 리뷰", "2026-09-02T03:00:00.000Z");
 
-let store: ReturnType<typeof template>[];
-let fetchMock: ReturnType<typeof vi.fn>;
+let store: BodyTemplate[];
+let api: FakeApi;
 let conflict = false;
 
-const bodyOf = (init?: RequestInit) => (init?.body ? JSON.parse(String(init.body)) : undefined);
+type Method = "GET" | "POST" | "PATCH" | "DELETE";
+const requested = (method: Method, path: `/${string}`) => api.sent(`${method} /v1${path}`);
 /** The bodies sent with this method to this path (query left out). */
-const sent = (method: string, path: string) =>
-	fetchMock.mock.calls
-		.filter(
-			([input, init]) => String(input).split("?")[0] === `/api/monti/v1${path}` && (init?.method ?? "GET") === method,
-		)
-		.map(([, init]) => bodyOf(init as RequestInit));
-const requested = (method: string, path: string) =>
-	fetchMock.mock.calls.filter(
-		([input, init]) => String(input).split("?")[0] === `/api/monti/v1${path}` && (init?.method ?? "GET") === method,
-	);
+const sent = (method: Method, path: `/${string}`) => requested(method, path).map((request) => request.body);
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	window.localStorage.clear();
 	conflict = false;
 	store = [FIRST, SECOND];
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const [path = ""] = String(input).split("?");
-		const method = init?.method ?? "GET";
-		const body = bodyOf(init);
-		if (path === "/api/monti/v1/templates" && method === "GET") return json({ items: store });
-		if (path === "/api/monti/v1/templates" && method === "POST") {
+	api = fakeApi()
+		// The rail's counts: the trash and the failed deliveries.
+		.on("GET /v1/trash", () => ({ items: [], total: 0, kinds: {} }))
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 0, dead: 0, dismissed: 0 },
+		}))
+		.on("GET /v1/templates", () => ({ items: store }))
+		.on("POST /v1/templates", ({ body }) => {
 			const created = { ...template("c", body.name, "2026-10-29T03:00:00.000Z"), doc: body.doc };
 			store = [created, ...store];
-			return json(created);
-		}
-		const id = path.match(/^\/api\/monti\/v1\/templates\/([^/]+)$/)?.[1];
-		const found = store.find((item) => item.id === id);
-		if (id && method === "GET")
-			return found ? json(found) : json({ error: { code: "not_found", message: "없음" } }, 404);
-		if (id && method === "PATCH") {
-			if (conflict) return json({ error: { code: "conflict", message: "다른 곳에서 먼저 바뀌었어요." } }, 409);
+			return created;
+		})
+		.on(
+			"GET /v1/templates/:id",
+			({ params }) => store.find((item) => item.id === params.id) ?? failure("not_found", "없음"),
+		)
+		.on("PATCH /v1/templates/:id", ({ params, body }) => {
+			if (conflict) return failure("conflict", "다른 곳에서 먼저 바뀌었어요.");
+			const found = store.find((item) => item.id === params.id);
 			const saved = {
-				...(found as typeof FIRST),
+				...(found as BodyTemplate),
 				name: body.name,
 				doc: body.doc ?? found?.doc,
 				version: (found?.version ?? 0) + 1,
 			};
-			store = store.map((item) => (item.id === id ? saved : item));
-			return json(saved);
-		}
-		if (id && method === "DELETE") {
-			store = store.filter((item) => item.id !== id);
-			return json({});
-		}
-		return json({});
-	});
-	vi.stubGlobal("fetch", fetchMock);
+			store = store.map((item) => (item.id === params.id ? saved : item));
+			return saved;
+		})
+		// Not in `AdminRoutes`: `deleteTemplate` reads no body, and the server answers 204.
+		.on("DELETE /v1/templates/:id", ({ params }) => {
+			store = store.filter((item) => item.id !== params.id);
+			return undefined;
+		})
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -200,9 +199,8 @@ describe("flow: templates · a row's menu", () => {
 		const again = await screen.findByRole("alertdialog", { name: t("delete.title") });
 		fireEvent.click(within(again).getByRole("button", { name: tc("delete") }));
 		await waitFor(() => expect(requested("DELETE", `/templates/${FIRST.id}`)).toHaveLength(1));
-		expect(String(requested("DELETE", `/templates/${FIRST.id}`)[0]?.[0])).toBe(
-			`/api/monti/v1/templates/${FIRST.id}?expectedVersion=${FIRST.version}`,
-		);
+		const [deleted] = requested("DELETE", `/templates/${FIRST.id}`);
+		expect(`${deleted?.path}?${deleted?.query}`).toBe(`/v1/templates/${FIRST.id}?expectedVersion=${FIRST.version}`);
 		await waitFor(() => expect(screen.queryByRole("link", { name: FIRST.name })).toBeNull());
 		expect(toast).toHaveBeenCalledWith(t("delete.done", { name: FIRST.name }));
 	});

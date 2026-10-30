@@ -1,9 +1,10 @@
-import type { ListEntriesItem } from "@monti-cms/core/site";
+import type { ListEntriesItem, PreferencesBody } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import type { EntrySearchResponse, ListCountsResponse } from "../../api/entries";
 import { commonMessages } from "../../lib/common.messages";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
@@ -47,7 +48,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	...fields,
 });
 
-const TAGS = [
+const TAGS: EntrySearchResponse["items"] = [
 	{ id: "t-react", title: "리액트", slug: "react", status: "published" },
 	{ id: "t-next", title: "넥스트", slug: "next", status: "published" },
 ];
@@ -55,10 +56,10 @@ const TAGS = [
 const server = {
 	posts: [] as ListEntriesItem[],
 	total: undefined as number | undefined,
-	preferences: {} as Record<string, unknown>,
-	counts: {} as Record<string, unknown>,
+	preferences: {} as PreferencesBody,
+	counts: {} as Record<string, ListCountsResponse>,
 };
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -71,25 +72,27 @@ beforeEach(() => {
 		translation: { total: 3, values: { none: 1, changed: 1, current: 1 } },
 		status: { total: 148, values: { published: 101, editing: 3, draft: 41, archived: 3 } },
 	};
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/monti/v1/preferences") return json(method === "GET" ? server.preferences : {});
-		if (url.pathname === "/api/monti/v1/folders") return json([]);
-		if (url.pathname === "/api/monti/v1/entries/counts") {
-			const key = url.searchParams.get("field") ?? url.searchParams.get("facet") ?? "";
-			return json(server.counts[key] ?? { total: 0, values: {} });
-		}
-		if (url.pathname === "/api/monti/v1/entries/search") {
-			const ids = url.searchParams.getAll("id");
-			const query = url.searchParams.get("query") ?? "";
-			return json({
+	api = fakeApi()
+		.withEmptyRail()
+		.on("GET /v1/preferences", () => server.preferences)
+		.on("PUT /v1/preferences", ({ body }) => ({ preferences: body }))
+		.on("GET /v1/folders", () => [])
+		.on("GET /v1/entries/counts", ({ query }) => {
+			const key = query.get("field") ?? query.get("facet") ?? "";
+			return server.counts[key] ?? { total: 0, values: {} };
+		})
+		.on("GET /v1/entries/search", ({ query }) => {
+			const ids = query.getAll("id");
+			const words = query.get("query") ?? "";
+			return {
 				items:
-					ids.length > 0 ? TAGS.filter((tag) => ids.includes(tag.id)) : TAGS.filter((tag) => tag.title.includes(query)),
-			});
-		}
-		if (url.pathname === "/api/monti/v1/bulk" && method === "POST") {
-			const body = JSON.parse(String(init?.body)) as {
+					ids.length > 0
+						? TAGS.filter((tag) => ids.includes(tag.id))
+						: TAGS.filter((tag) => tag.title?.includes(words)),
+			};
+		})
+		.on("POST /v1/bulk", ({ body }) => {
+			const input = body as {
 				op: string;
 				field?: string;
 				ids?: string[];
@@ -97,27 +100,25 @@ beforeEach(() => {
 			};
 			// The server keeps what was changed, so the list read again after it says so.
 			server.posts = server.posts.map((post) => {
-				if (!body.items.some((entry) => entry.id === post.id) || !body.field) return post;
-				const field = body.field;
+				if (!input.items.some((entry) => entry.id === post.id) || !input.field) return post;
+				const field = input.field;
 				const held = post.relations[field] ?? [];
 				const named = (id: string) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id });
 				const next =
-					body.op === "relation.add"
-						? [...held, ...(body.ids ?? []).filter((id) => !held.some((value) => value.id === id)).map(named)]
-						: held.filter((value) => !(body.ids ?? []).includes(value.id));
+					input.op === "relation.add"
+						? [...held, ...(input.ids ?? []).filter((id) => !held.some((value) => value.id === id)).map(named)]
+						: held.filter((value) => !(input.ids ?? []).includes(value.id));
 				return { ...post, relations: { ...post.relations, [field]: next } };
 			});
-			return json({
-				results: body.items.map((entry) => ({ id: entry.id, ok: true, version: entry.expectedVersion + 1 })),
-			});
-		}
-		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
-			const items = url.searchParams.get("collection") === "post" ? server.posts : [];
-			return json({ items, total: server.total ?? items.length });
-		}
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+			return {
+				results: input.items.map((entry) => ({ id: entry.id, ok: true as const, version: entry.expectedVersion + 1 })),
+			};
+		})
+		.on("GET /v1/entries", ({ query }) => {
+			const items = query.get("collection") === "post" ? server.posts : [];
+			return { items, total: server.total ?? items.length };
+		})
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -125,19 +126,13 @@ afterEach(() => {
 });
 
 const listRequests = () =>
-	fetchMock.mock.calls
-		.map(([input]) => new URL(String(input), "http://localhost"))
+	api
+		.sent("GET /v1/entries")
 		.filter(
-			(url) =>
-				url.pathname === "/api/monti/v1/entries" &&
-				url.searchParams.get("collection") === "post" &&
-				!url.searchParams.getAll("status").includes("trashed"),
+			(request) => request.query.get("collection") === "post" && !request.query.getAll("status").includes("trashed"),
 		);
-const lastList = () => listRequests().at(-1) as URL;
-const saved = () =>
-	fetchMock.mock.calls
-		.filter(([input, init]) => String(input) === "/api/monti/v1/preferences" && init?.method === "PUT")
-		.map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
+const saved = () => api.sent("PUT /v1/preferences").map((request) => request.body);
 
 const renderList = async () => {
 	render(
@@ -176,8 +171,8 @@ describe("flow: sort from a column's menu", () => {
 		await renderList();
 		openColumn(t("column.title"));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("sort.text.asc") }));
-		await waitFor(() => expect(lastList().searchParams.get("sortField")).toBe("title"));
-		expect(lastList().searchParams.get("sortDirection")).toBe("asc");
+		await waitFor(() => expect(lastList().get("sortField")).toBe("title"));
+		expect(lastList().get("sortDirection")).toBe("asc");
 		await menuClosed();
 		await waitFor(() =>
 			expect(saved()).toEqual([{ collections: { post: { sort: { field: "title", direction: "asc" } } } }]),
@@ -220,7 +215,7 @@ describe("flow: columns and page size", () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("button", { name: t("list.pageSize") }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: t("list.pageSizeOption", { size: 50 }) }));
-		await waitFor(() => expect(lastList().searchParams.get("pageSize")).toBe("50"));
+		await waitFor(() => expect(lastList().get("pageSize")).toBe("50"));
 		await menuClosed();
 		await waitFor(() => expect(saved().at(-1)).toEqual({ collections: { post: { pageSize: 50 } } }));
 	});
@@ -235,7 +230,7 @@ describe("flow: filter by value", () => {
 		expect(await within(editing).findByText("3")).toBeInTheDocument();
 		fireEvent.click(editing);
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["editing", "draft"]));
+		await waitFor(() => expect(lastList().getAll("status")).toEqual(["editing", "draft"]));
 		expect(nav.search.getAll("status")).toEqual(["editing", "draft"]);
 		expect(menuOpen()).toBe(true);
 		expect(dotsIn(t("column.status"))).toBe(1);
@@ -244,7 +239,7 @@ describe("flow: filter by value", () => {
 		openColumn(t("column.status"));
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) }));
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
-		await waitFor(() => expect(lastList().searchParams.has("status")).toBe(false));
+		await waitFor(() => expect(lastList().has("status")).toBe(false));
 		expect(dotsIn(t("column.status"))).toBe(0);
 	});
 
@@ -280,7 +275,7 @@ describe("flow: filter by date", () => {
 		expect(nav.search.has("updated")).toBe(false);
 		fireEvent.click(day("20"));
 		await waitFor(() => expect(nav.search.get("updated")).toMatch(/^\d{4}-\d{2}-10\.\.\d{4}-\d{2}-20$/));
-		expect(lastList().searchParams.get("updatedFrom")).not.toBeNull();
+		expect(lastList().get("updatedFrom")).not.toBeNull();
 		expect(dotsIn(t("column.updatedAt"))).toBe(1);
 	});
 });
@@ -370,10 +365,7 @@ describe("flow: change the relations of the picked rows", () => {
 	const tagged = (...ids: string[]) => ({
 		tagIds: ids.map((id) => ({ id, title: TAGS.find((tag) => tag.id === id)?.title ?? id })),
 	});
-	const bulkCalls = () =>
-		fetchMock.mock.calls
-			.filter(([input, init]) => String(input) === "/api/monti/v1/bulk" && init?.method === "POST")
-			.map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+	const bulkCalls = () => api.sent("POST /v1/bulk").map((request) => request.body);
 	const pickTwo = async () => {
 		server.posts = [
 			item("가", { relations: tagged("t-react", "t-next") }),
@@ -411,17 +403,12 @@ describe("flow: change the relations of the picked rows", () => {
 
 	it("tells it when a change of a relation fails", async () => {
 		await pickTwo();
-		const before = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
-		fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
-			String(input) === "/api/monti/v1/bulk" && init?.method === "POST"
-				? json({
-						results: [
-							{ id: "가", ok: false, error: "conflict" },
-							{ id: "나", ok: false, error: "conflict" },
-						],
-					})
-				: before(input, init),
-		);
+		api.on("POST /v1/bulk", () => ({
+			results: [
+				{ id: "가", ok: false as const, error: "conflict" },
+				{ id: "나", ok: false as const, error: "conflict" },
+			],
+		}));
 		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ }));
@@ -452,7 +439,7 @@ describe("flow: page through the list", () => {
 		await renderList();
 		const pager = await screen.findByRole("navigation", { name: PAGER });
 		fireEvent.click(within(pager).getByRole("link", { name: "3" }));
-		await waitFor(() => expect(lastList().searchParams.get("page")).toBe("3"));
+		await waitFor(() => expect(lastList().get("page")).toBe("3"));
 		expect(nav.search.get("page")).toBe("3");
 		await waitFor(() =>
 			expect(
@@ -462,6 +449,6 @@ describe("flow: page through the list", () => {
 			).toBe("page"),
 		);
 		fireEvent.click(within(screen.getByRole("navigation", { name: PAGER })).getByRole("link", { name: NEXT }));
-		await waitFor(() => expect(lastList().searchParams.get("page")).toBe("4"));
+		await waitFor(() => expect(lastList().get("page")).toBe("4"));
 	});
 });

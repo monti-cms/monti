@@ -4,9 +4,10 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
+import type { EntryData } from "../entry-form";
 import { BacklinkInput } from "../field-inputs";
 
 const tCommon = testSite.createTranslator(commonMessages);
@@ -46,44 +47,46 @@ const shared = {
 	refresh: vi.fn(),
 };
 
+/** A collection entry as the server reads it out: `metadata` holds its title, the kind it holds and its items. */
+const collectionEntry = (id: string, metadata: Record<string, unknown>): EntryData => ({
+	id,
+	collection: "collection",
+	status: "draft",
+	version: 1,
+	folderId: null,
+	workingSlug: id,
+	publishedSlug: null,
+	working: { metadata, doc: emptyStoredDocument() },
+});
+
 /** Holds the save of collection `c2` until it is released with `release`. */
 function stubApi(patchStatus: number) {
 	let release: () => void = () => {};
 	const held = new Promise<void>((resolve) => {
 		release = resolve;
 	});
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-			const url = String(input);
-			if (url.startsWith("/api/monti/v1/entries/search?")) {
-				return json({
-					items: [
-						{ id: "c1", title: "시리즈 A", slug: "a" },
-						{ id: "c2", title: "시리즈 B", slug: "b" },
-					],
-				});
-			}
-			// Reads the kind each collection holds (default is post).
-			if (url === "/api/monti/v1/entries/c1" && !init?.method) {
-				return json({
-					version: 1,
-					workingSlug: "a",
-					working: { metadata: { title: "시리즈 A", itemIds: ["post-1"] } },
-				});
-			}
-			if (url === "/api/monti/v1/entries/c2" && !init?.method) {
-				return json({ version: 1, workingSlug: "b", working: { metadata: { title: "시리즈 B", itemIds: [] } } });
-			}
-			if (url === "/api/monti/v1/entries/c2" && init?.method === "PATCH") {
-				await held;
-				return patchStatus < 400
-					? json({ version: 2 })
-					: json({ error: { code: "internal", message: "실패" } }, patchStatus);
-			}
-			throw new Error(`Unexpected fetch: ${url}`);
-		}),
-	);
+	// Reads the kind each collection holds (default is post).
+	const entries: Record<string, EntryData> = {
+		c1: { ...collectionEntry("c1", { title: "시리즈 A", itemIds: ["post-1"] }), workingSlug: "a" },
+		c2: { ...collectionEntry("c2", { title: "시리즈 B", itemIds: [] }), workingSlug: "b" },
+	};
+	fakeApi()
+		.on("GET /v1/entries/search", () => ({
+			items: [
+				{ id: "c1", title: "시리즈 A", slug: "a", status: "draft" },
+				{ id: "c2", title: "시리즈 B", slug: "b", status: "draft" },
+			],
+		}))
+		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
+		.on("PATCH /v1/entries/:id", async ({ params, body }) => {
+			if (params.id !== "c2") return failure("not_found");
+			await held;
+			const saved = entries.c2 as EntryData;
+			return patchStatus < 400
+				? { entry: { ...saved, version: 2, working: { ...saved.working, metadata: body.metadata } }, warnings: [] }
+				: failure("internal_error", "실패");
+		})
+		.install();
 	return () => release();
 }
 
@@ -132,27 +135,23 @@ describe("adding a memo to a collection", () => {
 		c2: { itemKind: "memo", title: "Type Challenges" },
 		c3: { itemKind: "post", title: "다른 글 시리즈" },
 	};
-	let fetchMock: ReturnType<typeof vi.fn>;
+	let api: FakeApi;
 	beforeEach(() => {
-		fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-			const url = String(input);
-			if (url.startsWith("/api/monti/v1/entries/search?"))
-				return json({
-					items: Object.entries(records).map(([id, record]) => ({ id, title: record.title, slug: id })),
-				});
-			const id = url.match(/^\/api\/monti\/v1\/entries\/(c\d)$/)?.[1];
-			if (id && !init?.method) {
-				const { title, itemKind } = records[id] as { title: string; itemKind?: string };
-				return json({
-					version: 1,
-					workingSlug: id,
-					working: { metadata: { title, ...(itemKind ? { itemKind } : {}) } },
-				});
-			}
-			if (url === "/api/monti/v1/entries" && init?.method === "POST") return json({ id: "c9" }, 201);
-			throw new Error(`Unexpected fetch: ${url}`);
-		});
-		vi.stubGlobal("fetch", fetchMock);
+		api = fakeApi()
+			.on("GET /v1/entries/search", () => ({
+				items: Object.entries(records).map(([id, record]) => ({ id, title: record.title, slug: id, status: "draft" })),
+			}))
+			.on("GET /v1/entries/:id", ({ params }) => {
+				const record = records[params.id];
+				if (!record) return failure("not_found");
+				const { title, itemKind } = record;
+				return collectionEntry(params.id, { title, ...(itemKind ? { itemKind } : {}) });
+			})
+			.on("POST /v1/entries", ({ body }) => ({
+				entry: { ...collectionEntry("c9", body.metadata), working: { metadata: body.metadata, doc: body.doc } },
+				warnings: [],
+			}))
+			.install();
 	});
 	const openList = async () => {
 		render(
@@ -178,17 +177,10 @@ describe("adding a memo to a collection", () => {
 		// Does not create from the name alone; opens the add sheet with the name filled in.
 		const panel = await screen.findByRole("dialog", { name: "모음집 추가" });
 		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeInTheDocument();
-		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST")).toBe(
-			false,
-		);
+		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		fireEvent.click(within(panel).getByRole("button", { name: tCommon("save") }));
-		await waitFor(() =>
-			expect(
-				fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST"),
-			).toBe(true),
-		);
-		const post = fetchMock.mock.calls.find(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST");
-		expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+		await waitFor(() => expect(api.sent("POST /v1/entries").length).toBeGreaterThan(0));
+		expect(api.sent("POST /v1/entries")[0]?.body).toMatchObject({
 			collection: "collection",
 			metadata: { title: "새 메모 시리즈", itemKind: "memo", memoIds: ["memo-1"] },
 			doc: emptyStoredDocument(),

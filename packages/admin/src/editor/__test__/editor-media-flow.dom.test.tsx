@@ -1,13 +1,14 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import { formatFileSize } from "@monti-cms/core/site";
+import { type FolderListItem, formatFileSize } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import type { MediaItem } from "../../api/media";
 import type { FieldInputProps } from "../../screens/entries/field-inputs";
 import { MediaImageInput } from "../../screens/entries/media-image-input";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, failure, fakeApi } from "../../test/fake-api";
 import { renderWithSite } from "../../test/site";
 import { storedDoc } from "../../test/stored-doc";
 import { toast } from "../../test/ui-toast";
@@ -27,7 +28,13 @@ const t = testSite.createTranslator(editorMediaMessages);
 const BLOG = "11111111-1111-4111-8111-111111111111";
 const COVERS = "22222222-2222-4222-8222-222222222222";
 const WALL = "33333333-3333-4333-8333-333333333333";
-const folder = (id: string, name: string, parentId: string | null, position: number, entryCount: number) => ({
+const folder = (
+	id: string,
+	name: string,
+	parentId: string | null,
+	position: number,
+	entryCount: number,
+): FolderListItem => ({
 	id,
 	collection: "media",
 	parentId,
@@ -42,7 +49,13 @@ const FOLDERS = [
 	folder(WALL, "Wallpapers", null, 1, 1),
 ];
 
-const item = (id: string, filename: string, mimeType: string, folderId: string | null, extra: object = {}) => ({
+const item = (
+	id: string,
+	filename: string,
+	mimeType: string,
+	folderId: string | null,
+	extra: Partial<MediaItem> = {},
+): MediaItem => ({
 	id,
 	folderId,
 	status: "ready",
@@ -68,51 +81,52 @@ const MEDIA = [
 	item("subs", "subscribers.csv", "text/csv", null, { byteSize: 48_000 }),
 ];
 
-let fetchMock: ReturnType<typeof vi.fn>;
-const requests: { method: string; path: string; search: URLSearchParams; body?: unknown }[] = [];
+let api: FakeApi;
 
 /** The little server the editor talks to. */
-const handle = (url: URL, method: string, body: unknown) => {
-	const path = url.pathname.replace("/api/monti/v1", "");
-	requests.push({ method, path, search: url.searchParams, body });
-	if (method === "GET" && path === "/folders") return json(FOLDERS);
-	if (method === "GET" && path === "/media") {
-		const kind = url.searchParams.get("kind") ?? "all";
-		const folderId = url.searchParams.get("folderId");
-		const search = (url.searchParams.get("search") ?? "").toLowerCase();
-		const items = MEDIA.filter((m) =>
-			kind === "all" ? true : (m.mimeType?.startsWith("image/") ? "image" : "file") === kind,
-		)
-			.filter((m) => (folderId ? m.folderId === folderId : true))
-			.filter((m) => m.filename.toLowerCase().includes(search));
-		return json({ items, total: items.length });
-	}
-	if (method === "GET" && path.startsWith("/media/")) {
-		const found = MEDIA.find((m) => m.id === path.slice("/media/".length));
-		return found
-			? json({ ...found, mediaId: found.id })
-			: json({
-					id: path,
+const mount = (on: FakeApi) =>
+	on
+		.on("GET /v1/folders", () => FOLDERS)
+		.on("GET /v1/media", ({ query }) => {
+			const kind = query.get("kind") ?? "all";
+			const folderId = query.get("folderId");
+			const search = (query.get("search") ?? "").toLowerCase();
+			const isImage = (m: MediaItem) => m.mimeType?.startsWith("image/") ?? false;
+			const scope = MEDIA.filter((m) => (folderId ? m.folderId === folderId : true)).filter((m) =>
+				m.filename.toLowerCase().includes(search),
+			);
+			const items = scope.filter((m) => (kind === "all" ? true : (isImage(m) ? "image" : "file") === kind));
+			const images = scope.filter(isImage);
+			return {
+				items,
+				total: items.length,
+				kinds: { image: images.length, file: scope.length - images.length },
+				alts: {
+					none: images.filter((m) => m.defaultAlt.trim() === "").length,
+					has: images.filter((m) => m.defaultAlt.trim() !== "").length,
+				},
+			};
+		})
+		.on("GET /v1/media/:id", ({ params }) => {
+			if (params.id === "new-media")
+				return {
 					filename: "new.png",
 					mimeType: "image/png",
 					byteSize: 10,
 					status: "ready",
 					publicUrl: "/images/new.png",
-				});
-	}
-	if (method === "POST" && path === "/media/uploads")
-		return json({ mediaId: "new-media", uploadUrl: "https://storage.test/put" });
-	if (method === "POST" && path.endsWith("/complete"))
-		return json({
-			mediaId: "new-media",
+				};
+			return MEDIA.find((m) => m.id === params.id) ?? failure("not_found");
+		})
+		.on("POST /v1/media/uploads", () => ({ mediaId: "new-media", uploadUrl: "https://storage.test/put" }))
+		.on("POST /v1/media/:id/complete", ({ params }) => ({
+			mediaId: params.id as string,
 			publicUrl: "/images/new.png",
 			width: 100,
 			height: 80,
 			defaultAlt: "",
 			defaultCaption: "",
-		});
-	return json({});
-};
+		}));
 
 /** The storage PUT of an upload: it waits until the test lets it go, so the state in between can be looked at. */
 class FakeXhr {
@@ -146,13 +160,9 @@ beforeAll(() => {
 });
 beforeEach(() => {
 	vi.clearAllMocks();
-	requests.length = 0;
 	FakeXhr.all = [];
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		return handle(url, init?.method ?? "GET", init?.body ? JSON.parse(String(init.body)) : undefined);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = mount(fakeApi().install());
+	// The bytes go to the storage URL with XMLHttpRequest, not to the API.
 	vi.stubGlobal("XMLHttpRequest", FakeXhr);
 	// jsdom has no hit testing; ProseMirror asks where a drop landed.
 	document.elementFromPoint = () => null;
@@ -191,7 +201,7 @@ const open = async (doc: StoredDocument) => {
 const blocks = (editor: Editor): { type?: string; [attribute: string]: unknown }[] =>
 	editor.getJSON().content?.map((node) => ({ type: node.type, ...(node.attrs ?? {}) })) ?? [];
 const imageNodes = (editor: Editor) => blocks(editor).filter((node) => node.type === "image");
-const uploadsPosted = () => requests.filter((r) => r.method === "POST" && r.path === "/media/uploads");
+const uploadsPosted = () => api.sent("POST /v1/media/uploads");
 
 const pngFile = () => new File(["x"], "pasted.png", { type: "image/png" });
 const paste = (file: File) => {
@@ -241,10 +251,10 @@ describe("flow: upload in the editor (05–06)", () => {
 		await waitFor(() => expect(FakeXhr.all).toHaveLength(1));
 		expect(uploadsPosted()).toHaveLength(1);
 		expect(uploadsPosted()[0]?.body).toMatchObject({ filename: "pasted.png", mimeType: "image/png" });
-		expect(requests.some((r) => r.path.endsWith("/complete"))).toBe(false);
+		expect(api.sent("POST /v1/media/:id/complete")).toHaveLength(0);
 		finishStorage();
 		await waitFor(() => expect(imageNodes(editor)[0]?.mediaId).toBe("new-media"));
-		expect(requests.some((r) => r.method === "POST" && r.path === "/media/new-media/complete")).toBe(true);
+		expect(api.sent("POST /v1/media/:id/complete").map((r) => r.params.id)).toContain("new-media");
 		expect(imageNodes(editor)[0]?.uploadId).toBeNull();
 		expect(screen.queryByRole("progressbar")).toBeNull();
 		expect(imageNodes(editor)).toHaveLength(1);
@@ -308,9 +318,9 @@ describe("flow: pick in the editor (29–30)", () => {
 		act(() => openMediaPicker("image"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.imageTitle") });
 		const nav = within(dialog).getByRole("navigation", { name: t("picker.folders") });
-		const lastList = () => requests.filter((r) => r.path === "/media").at(-1);
+		const lastList = () => api.sent("GET /v1/media").at(-1);
 		fireEvent.click(await within(nav).findByRole("button", { name: /covers/ }));
-		await waitFor(() => expect(lastList()?.search.get("folderId")).toBe(COVERS));
+		await waitFor(() => expect(lastList()?.query.get("folderId")).toBe(COVERS));
 		await within(dialog).findByRole("button", { name: /cover-react/ });
 		expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull();
 		expect(
@@ -319,7 +329,7 @@ describe("flow: pick in the editor (29–30)", () => {
 				.getAttribute("aria-current"),
 		).toBe("true");
 		fireEvent.click(within(nav).getByRole("button", { name: t("picker.allImages") }));
-		await waitFor(() => expect(lastList()?.search.has("folderId")).toBe(false));
+		await waitFor(() => expect(lastList()?.query.has("folderId")).toBe(false));
 		await within(dialog).findByRole("button", { name: /desk-morning/ });
 	});
 
@@ -387,12 +397,7 @@ describe("flow: files such as PDF (37–38)", () => {
 		await within(dialog).findByRole("button", { name: /price-list-2026/ });
 		expect(within(dialog).getByRole("button", { name: /subscribers\.csv/ })).toBeInTheDocument();
 		expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull();
-		expect(
-			requests
-				.filter((r) => r.path === "/media")
-				.at(-1)
-				?.search.get("kind"),
-		).toBe("file");
+		expect(api.sent("GET /v1/media").at(-1)?.query.get("kind")).toBe("file");
 		expect(within(dialog).getByRole("button", { name: t("picker.allFiles") })).toBeInTheDocument();
 		expect(click).not.toHaveBeenCalled();
 	});

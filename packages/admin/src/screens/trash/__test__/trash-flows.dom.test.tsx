@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { toast } from "../../../test/ui-toast";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -41,7 +41,7 @@ const episode1 = inside(entry("ep1", "시리즈 1화", { slug: "series-1", everP
 const episode2 = inside(entry("ep2", "시리즈 2화", { slug: "series-2" }), "시리즈 원고");
 
 let backend: TrashBackend;
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
 const referrers = (collection: string) => [
 	{ entryId: "r1", title: "첫 번째 글", collection, trashed: false },
@@ -56,13 +56,15 @@ beforeEach(() => {
 	nav.setSearch("");
 	backend = new TrashBackend([first, series, image, about, react, translation, tag], { series: [episode1, episode2] });
 	backend.referrers = { tag: referrers(content) };
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-		const answer = backend.handle(url, init?.method ?? "GET", body);
-		return answer ? json(answer.body, answer.status) : json({});
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = backend
+		.mount(fakeApi())
+		// The rail's count of failed deliveries.
+		.on("GET /v1/events", () => ({
+			items: [],
+			total: 0,
+			counts: { pending: 0, delivering: 0, delivered: 0, failed: 0, dead: 0, dismissed: 0 },
+		}))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -78,15 +80,9 @@ const renderTrash = async () => {
 	await screen.findByRole("row", { name: /첫 번째 글/ });
 };
 /** The requests of the screen's own list (it always says the order); the rail's count asks for the first page without one. */
-const listRequests = () =>
-	fetchMock.mock.calls
-		.map(([input]) => new URL(String(input), "http://localhost"))
-		.filter((url) => url.pathname === "/api/monti/v1/trash" && url.searchParams.has("sort"));
-const lastList = () => listRequests().at(-1) as URL;
-const posted = (path: string) =>
-	fetchMock.mock.calls
-		.filter(([input, init]) => String(input).split("?")[0] === `/api/monti/v1${path}` && init?.method === "POST")
-		.map(([, init]) => ((init as RequestInit).body ? JSON.parse(String((init as RequestInit).body)) : {}));
+const listRequests = () => api.sent("GET /v1/trash").filter((request) => request.query.has("sort"));
+const lastList = () => listRequests().at(-1)?.query as URLSearchParams;
+const posted = (path: `/${string}`) => api.sent(`POST /v1${path}`).map((request) => request.body ?? {});
 const row = (name: RegExp | string) => screen.getByRole("row", { name: new RegExp(name) });
 /** The row's "more" button opens a menu with the permanent delete. */
 const moreOf = (target: HTMLElement) => within(target).getByRole("button", { name: t("row.more") });
@@ -96,7 +92,7 @@ describe("flow: looking around the trash (T3)", () => {
 		await renderTrash();
 		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: "시리즈 원고" }));
 		await screen.findByRole("row", { name: /시리즈 1화/ });
-		expect(lastList().searchParams.get("folder")).toBe("series");
+		expect(lastList().get("folder")).toBe("series");
 		expect(screen.getByRole("heading", { level: 1, name: "시리즈 원고" })).toBeInTheDocument();
 		expect(
 			within(screen.getByRole("navigation", { name: t("trail.label") })).getByRole("link", { name: t("trail.root") }),
@@ -113,7 +109,7 @@ describe("flow: looking around the trash (T3)", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: t("folder.up") }));
 		await screen.findByRole("row", { name: /첫 번째 글/ });
-		expect(lastList().searchParams.has("folder")).toBe(false);
+		expect(lastList().has("folder")).toBe(false);
 	});
 
 	it("restores one entry from inside a folder: the request, then a toast that says the folder was made again, and 열기 goes to the editor", async () => {
@@ -142,12 +138,12 @@ describe("flow: looking around the trash (T3)", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("search") }));
 		const box = screen.getByRole("searchbox", { name: t("search") });
 		fireEvent.change(box, { target: { value: "2화" } });
-		await waitFor(() => expect(lastList().searchParams.get("q")).toBe("2화"), { timeout: 3000 });
+		await waitFor(() => expect(lastList().get("q")).toBe("2화"), { timeout: 3000 });
 		const found = await screen.findByRole("row", { name: /시리즈 2화/ });
 		expect(found.textContent).toContain(t("meta.inFolder", { path: "시리즈 원고" }));
 		expect(document.querySelector("[data-slot=chip]")).toBeNull();
 		fireEvent.change(box, { target: { value: "" } });
-		await waitFor(() => expect(lastList().searchParams.has("q")).toBe(false), { timeout: 3000 });
+		await waitFor(() => expect(lastList().has("q")).toBe(false), { timeout: 3000 });
 	});
 
 	it("opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
@@ -160,7 +156,9 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(within(panel).getByText(t("panel.state", { left: t("row.left", { count: 3 }) }))).toBeInTheDocument();
 		await within(panel).findByText(t("panel.pointing", { count: 4 }));
 		expect(
-			fetchMock.mock.calls.some(([input]) => String(input).includes("/entries/tag/relations?includeTrashed=true")),
+			api
+				.sent("GET /v1/entries/:id/relations")
+				.some((request) => request.params.id === "tag" && request.query.get("includeTrashed") === "true"),
 		).toBe(true);
 		const pointing = within(panel).getAllByRole("link");
 		expect(pointing.map((a) => a.textContent)).toEqual(["첫 번째 글", "발행 후 고친 글", "가을 사진 정리", "연습장"]);

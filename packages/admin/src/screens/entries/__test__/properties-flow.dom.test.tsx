@@ -1,3 +1,4 @@
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
@@ -6,12 +7,14 @@ import { AdminComponentsProvider } from "../../../admin-components";
 import { commonMessages } from "../../../lib/common.messages";
 import { type SlotAction, SlotRegistryProvider, type SlotSource } from "../../../slots/slots";
 import { pressOption } from "../../../test/base-ui";
+import { type FakeApi, failure, fakeApi } from "../../../test/fake-api";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { AdminUiLabels } from "../../../ui/labels";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
+import type { EntryData } from "../entry-form";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -46,7 +49,7 @@ vi.mock("../ai-translate", () => ({
 
 const { render } = createTestRouter();
 
-const entry = {
+const entry: EntryData = {
 	id: "entry-1",
 	collection: "post",
 	status: "draft",
@@ -57,41 +60,43 @@ const entry = {
 	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "" }, doc: docOf("첫째 줄") },
 };
 
-const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 
 /** The series the search offers: the collections a post can be added to. */
 const SERIES = [{ id: "series-1", title: "리액트 다시 만들기", slug: "react-again", status: "published" }];
+/** The kind each series holds is read per series, to offer only the ones that take posts. */
+const series: EntryData = {
+	id: "series-1",
+	collection: "collection",
+	status: "published",
+	version: 1,
+	folderId: null,
+	workingSlug: "react-again",
+	publishedSlug: "react-again",
+	working: { metadata: { title: "리액트 다시 만들기", itemIds: [] }, doc: emptyStoredDocument() },
+};
+const entries: Record<string, EntryData> = { "entry-1": entry, "series-1": series };
 
 beforeEach(() => {
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		if (init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1") return json({ version: 2 });
-		if (init?.method === "PATCH") {
-			const body = JSON.parse(String(init.body));
-			return json({
-				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+	api = fakeApi()
+		.on("GET /v1/entries/:id", ({ params }) => entries[params.id] ?? failure("not_found"))
+		.on("PATCH /v1/entries/:id", ({ params, body }) => {
+			const current = entries[params.id];
+			if (!current) return failure("not_found");
+			return {
+				entry: {
+					...current,
+					version: current.version + 1,
+					working: { metadata: body.metadata, doc: body.doc ?? current.working.doc },
+				},
 				warnings: [],
-			});
-		}
-		if (input.startsWith("/api/monti/v1/entries/search?")) {
-			const collection = new URL(input, "http://localhost").searchParams.get("collection");
-			return json({ items: collection === "collection" ? SERIES : [], total: 0 });
-		}
-		// The kind each series holds is read per series, to offer only the ones that take posts.
-		if (input === "/api/monti/v1/entries/series-1" && !init?.method) {
-			return json({
-				version: 1,
-				workingSlug: "react-again",
-				working: { metadata: { title: "리액트 다시 만들기", itemIds: [] } },
-			});
-		}
-		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
-		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
-		if (input.endsWith("/check") && init?.method === "POST") return json({ issues: [], warnings: [] });
-		if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(entry);
-		throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+			};
+		})
+		.on("GET /v1/entries/search", ({ query }) => ({ items: query.get("collection") === "collection" ? SERIES : [] }))
+		.on("GET /v1/entries", () => ({ items: [], total: 0 }))
+		.on("GET /v1/entries/:id/relations", () => ({ incomingReferences: [] }))
+		.on("POST /v1/entries/:id/check", () => ({ issues: [], warnings: [] }))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -134,7 +139,7 @@ const pane = async () => within(await screen.findByRole("complementary", { name:
 /** One property of the list: its label names the group. */
 const row = async (label: string) => within((await pane()).getByRole("group", { name: label }));
 const valueButton = async (label: string) => (await row(label)).getByRole("button", { name: new RegExp(`^${label}`) });
-const saved = () => fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH");
+const saved = () => api.sent("PATCH /v1/entries/:id");
 const pressSave = () => fireEvent.keyDown(window, { key: "s", metaKey: true });
 
 describe("flow: set properties (steps 07, 08, 11)", () => {
@@ -169,7 +174,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		expect((await valueButton("요약")).textContent).toBe("새 요약");
 		pressSave();
 		await waitFor(() => expect(saved()).toHaveLength(1));
-		expect(JSON.parse(String(saved()[0]?.[1]?.body)).metadata.summary).toBe("새 요약");
+		expect(saved()[0]?.body.metadata.summary).toBe("새 요약");
 	});
 
 	it("Enter ends a one-line value, Escape ends any value, and the typed text stays", async () => {
@@ -200,7 +205,7 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(async () => expect((await valueButton("정책")).textContent).toBe("항상 최신 글"));
 		pressSave();
 		await waitFor(() => expect(saved()).toHaveLength(1));
-		expect(JSON.parse(String(saved()[0]?.[1]?.body)).metadata.policy).toBe("evergreen");
+		expect(saved()[0]?.body.metadata.policy).toBe("evergreen");
 	});
 
 	it("the series field offers the series that exist", async () => {
@@ -259,24 +264,15 @@ describe("flow: set properties (steps 07, 08, 11)", () => {
 		await waitFor(() => expect(fill.run).toHaveBeenCalledTimes(1));
 		pressSave();
 		await waitFor(() => expect(saved()).toHaveLength(1));
-		expect(JSON.parse(String(saved()[0]?.[1]?.body)).metadata.summary).toContain("리액트로 블로그를");
+		expect(saved()[0]?.body.metadata.summary).toContain("리액트로 블로그를");
 		await waitFor(async () => expect((await valueButton("요약")).getAttribute("aria-description")).toBeNull());
 	});
 
 	it("fills the series row: the post goes into the series the assistant picked, saved at once, and the row is marked as the assistant's", async () => {
 		renderEdit();
 		fireEvent.click((await row("모음집")).getByRole("button", { name: /채우기/ }));
-		await waitFor(() =>
-			expect(
-				fetchMock.mock.calls.filter(
-					([input, init]) => init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1",
-				),
-			).toHaveLength(1),
-		);
-		const sent = fetchMock.mock.calls.find(
-			([input, init]) => init?.method === "PATCH" && input === "/api/monti/v1/entries/series-1",
-		);
-		expect(JSON.parse(String(sent?.[1]?.body)).metadata.itemIds).toEqual(["entry-1"]);
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/series-1")).toHaveLength(1));
+		expect(api.sent("PATCH /v1/entries/series-1")[0]?.body.metadata.itemIds).toEqual(["entry-1"]);
 		await waitFor(async () => expect((await valueButton("모음집")).getAttribute("aria-description")).toBe("AI 제안"));
 	});
 });

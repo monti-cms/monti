@@ -5,12 +5,12 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { docOf } from "../../test/mdx";
 import { createTestRouter } from "../../test/router";
 import { withSite } from "../../test/site";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
-import { copyTitle } from "../entries/entry-form";
+import { copyTitle, type EntryData } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
 import { EntryListScreen } from "../entry-list-screen";
 import { columnLabel, columnsFor } from "../list-columns";
@@ -59,15 +59,8 @@ vi.mock("../entries/ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
 }));
 
-type Handler = (url: URL, init: RequestInit | undefined) => unknown;
-let handle: Handler = () => undefined;
 let listed: ListEntriesItem[] = [];
-let fetchMock: ReturnType<typeof vi.fn>;
-const calls = (method: string, path: string) =>
-	fetchMock.mock.calls.filter(
-		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,
-	);
-const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit | undefined)?.body));
+let api: FakeApi;
 
 const item = (id: string, title: string): ListEntriesItem => ({
 	id,
@@ -93,23 +86,18 @@ beforeEach(() => {
 	backup.get.mockResolvedValue(null);
 	backup.remove.mockResolvedValue(undefined);
 	backup.save.mockResolvedValue(true);
-	handle = () => undefined;
 	listed = [];
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const handled = await handle(url, init);
-		if (handled !== undefined) return handled;
-		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/monti/v1/preferences") return json({});
-		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return json([]);
-		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
-			const items = url.searchParams.get("collection") === content ? listed : [];
-			return json({ items, total: items.length });
-		}
-		if (url.pathname.endsWith("/relations")) return json({ incomingReferences: [] });
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.withEmptyRail()
+		.on("GET /v1/preferences", () => ({}))
+		.on("GET /v1/folders", () => [])
+		.on("GET /v1/entries", ({ query }) => {
+			const items = query.get("collection") === content ? listed : [];
+			return { items, total: items.length };
+		})
+		.on("GET /v1/entries/:id/relations", () => ({ incomingReferences: [] }))
+		.on("POST /v1/entries/:id/check", () => ({ issues: [], warnings: [] }))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -138,10 +126,19 @@ describe("any site: list screen", () => {
 	it("duplicates a row with a copy title made by the admin", async () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];
-		handle = (url, init) =>
-			url.pathname === "/api/monti/v1/entries/e1/duplicate" && init?.method === "POST"
-				? json({ entry: { id: "copy-1" }, warnings: [] }, 201)
-				: undefined;
+		api.on("POST /v1/entries/:id/duplicate", () => ({
+			entry: {
+				id: "copy-1",
+				collection: content,
+				status: "draft" as const,
+				version: 1,
+				folderId: null,
+				workingSlug: null,
+				publishedSlug: null,
+				working: { metadata: { title: copyTitle(testSite, content, "Alpha") }, doc: emptyStoredDocument() },
+			},
+			warnings: [],
+		}));
 		render(
 			<AdminQueryProvider>
 				<EntryListScreen />
@@ -152,8 +149,9 @@ describe("any site: list screen", () => {
 			fireEvent.contextMenu(row);
 		});
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.duplicate") }));
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries/e1/duplicate")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/entries/e1/duplicate")[0])).toEqual({
+		await waitFor(() => expect(api.sent("POST /v1/entries/:id/duplicate")).toHaveLength(1));
+		expect(api.sent("POST /v1/entries/:id/duplicate")[0]?.params.id).toBe("e1");
+		expect(api.sent("POST /v1/entries/:id/duplicate")[0]?.body).toEqual({
 			title: copyTitle(testSite, content, "Alpha"),
 		});
 		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("copy-1")));
@@ -177,19 +175,19 @@ describe("any site: copy title", () => {
 
 describe("any site: record panel", () => {
 	it("creates a record from its title field alone", async () => {
-		handle = (url, init) =>
-			url.pathname === "/api/monti/v1/entries" && init?.method === "POST"
-				? json({
-						entry: {
-							id: "r1",
-							collection: record,
-							status: "published",
-							version: 1,
-							working: { metadata: {}, doc: emptyStoredDocument() },
-						},
-						warnings: [],
-					})
-				: undefined;
+		api.on("POST /v1/entries", () => ({
+			entry: {
+				id: "r1",
+				collection: record,
+				status: "published" as const,
+				version: 1,
+				folderId: null,
+				workingSlug: null,
+				publishedSlug: null,
+				working: { metadata: {}, doc: emptyStoredDocument() },
+			},
+			warnings: [],
+		}));
 		const onSaved = vi.fn();
 		render(<RecordPanel target={{ collection: record, id: null }} onClose={vi.fn()} onSaved={onSaved} />);
 		const panel = screen.getByRole("complementary", {
@@ -199,8 +197,8 @@ describe("any site: record panel", () => {
 			target: { value: "New record" },
 		});
 		fireEvent.click(within(panel).getByRole("button", { name: tc("save") }));
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/entries")[0])).toEqual({
+		await waitFor(() => expect(api.sent("POST /v1/entries")).toHaveLength(1));
+		expect(api.sent("POST /v1/entries")[0]?.body).toEqual({
 			collection: record,
 			slug: null,
 			metadata: { title: "New record" },
@@ -211,7 +209,7 @@ describe("any site: record panel", () => {
 });
 
 describe("any site: entry editor", () => {
-	const entry = {
+	const entry: EntryData = {
 		id: "entry-1",
 		collection: content,
 		locale: testSite.DEFAULT_LOCALE,
@@ -225,18 +223,12 @@ describe("any site: entry editor", () => {
 	};
 
 	it("opens an entry with the title field's label and saves only schema fields", async () => {
-		handle = (url, init) => {
-			if (url.pathname !== "/api/monti/v1/entries/entry-1") return undefined;
-			if (!init?.method) return json(entry);
-			if (init.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
-					warnings: [],
-				});
-			}
-			return undefined;
-		};
+		api
+			.on("GET /v1/entries/:id", () => entry)
+			.on("PATCH /v1/entries/:id", ({ body }) => ({
+				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+				warnings: [],
+			}));
 		render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId="u1" collection={content} />);
 		const title = (await screen.findByRole("textbox", { name: titleLabel(content) })) as HTMLInputElement;
 		await waitFor(() => expect(title.value).toBe("Any title"));
@@ -250,8 +242,9 @@ describe("any site: entry editor", () => {
 
 		fireEvent.change(title, { target: { value: "Changed title" } });
 		fireEvent.keyDown(window, { key: "s", metaKey: true });
-		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/entries/entry-1")).toHaveLength(1));
-		const body = bodyOf(calls("PATCH", "/api/monti/v1/entries/entry-1")[0]);
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
+		expect(api.sent("PATCH /v1/entries/:id")[0]?.params.id).toBe("entry-1");
+		const body = api.sent("PATCH /v1/entries/:id")[0]?.body;
 		expect(body.metadata.title).toBe("Changed title");
 		const known = new Set(testSite.storedFields(content).map(({ name }) => name));
 		for (const key of Object.keys(body.metadata)) expect(known.has(key), key).toBe(true);

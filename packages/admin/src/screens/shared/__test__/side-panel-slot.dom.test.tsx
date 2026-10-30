@@ -3,6 +3,7 @@ import { SidePanel } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminPanel } from "../../../plugins";
+import { fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { AdminFrame } from "../admin-frame";
 import { AdminQueryProvider } from "../query-provider";
@@ -45,10 +46,7 @@ const renderShell = (
 
 beforeEach(() => {
 	window.localStorage.clear();
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) })),
-	);
+	fakeApi().install();
 });
 afterEach(() => {
 	cleanup();

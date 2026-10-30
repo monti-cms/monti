@@ -1,12 +1,12 @@
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
-import type { BodyAllowed } from "@monti-cms/core/site";
+import type { BodyAllowed, BodyTemplate } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { pressOption } from "../../test/base-ui";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { renderWithSite } from "../../test/site";
 import { para, storedDoc, table, text } from "../../test/stored-doc";
 import { editorMessages } from "../messages";
@@ -33,8 +33,8 @@ beforeAll(() => {
 });
 
 const heading = (value: string): CmsNode => ({ type: "heading", attrs: { level: 2 }, content: [text(value)] });
-const stamp = new Date("2026-10-20T00:00:00Z").toISOString();
-const template = (id: string, name: string, ...content: CmsNode[]) => ({
+const stamp = new Date("2026-10-20T00:00:00Z");
+const template = (id: string, name: string, ...content: CmsNode[]): BodyTemplate => ({
 	id,
 	name,
 	doc: storedDoc(...content),
@@ -48,10 +48,11 @@ const TEMPLATES = [
 	template("tutorial", "튜토리얼", heading("준비물"), heading("단계")),
 ];
 
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 beforeEach(() => {
-	fetchMock = vi.fn(async () => json({ items: TEMPLATES }));
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("GET /v1/templates", () => ({ items: TEMPLATES }))
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -128,7 +129,7 @@ describe("flow: write (steps 02–05)", () => {
 			for (const template of TEMPLATES) expect(names.some((name) => name.startsWith(template.name))).toBe(true);
 			// A template row says its sections.
 			expect(within(menu).getByText("서론 · 본론 · 결론")).toBeInTheDocument();
-			expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/api/monti/v1/templates"]);
+			expect(api.requests.map((request) => `${request.method} ${request.path}`)).toEqual(["GET /v1/templates"]);
 		});
 
 		it("puts the chosen template's blocks at the cursor, with new block ids, and leaves the rest of the body alone", async () => {

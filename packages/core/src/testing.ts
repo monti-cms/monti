@@ -20,6 +20,8 @@ export { computeContentHash } from "./core/content-hash";
 export * from "./core/store/__test__/seed";
 
 export { matchRoute } from "./http/router";
+/** The error answer of the API (`{ error: { code, message, … } }` with the status of its code), for a fake API in screen tests. */
+export { type ErrorCode, errorResponse } from "./http/v1/error-handler";
 export { createMemoryPluginStorage, type MemoryPluginStorage } from "./plugin/memory-storage";
 export { serverSideOf } from "./plugin/server";
 export { createSecretsVault } from "./secrets";

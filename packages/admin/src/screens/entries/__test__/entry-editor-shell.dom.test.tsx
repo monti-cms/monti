@@ -11,10 +11,14 @@ import {
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
+import type { EntryWriteResult } from "../../../api/entries";
+import type { CmsIssue } from "../../../api/error-message";
+import type { ExportSummary } from "../../../api/export";
 import { findBlock } from "../../../editor/block-ids";
 import { StatusBarPluginCell } from "../../../kit";
 import { commonMessages } from "../../../lib/common.messages";
 import type { AdminPanel } from "../../../plugins";
+import { type FakeApi, failure, fakeApi, type SentRequest } from "../../../test/fake-api";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
@@ -31,7 +35,7 @@ import { StatusCellsProvider, useStatusBarContext } from "../../shared/status-ba
 import { statusBarMessages } from "../../shared/status-bar.messages";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { entryEditorShellMessages } from "../entry-editor-shell.messages";
-import { EMPTY_FORM } from "../entry-form";
+import { EMPTY_FORM, type EntryData, type TranslationMember } from "../entry-form";
 import { entriesMessages } from "../messages";
 
 const tEntryEditorShell = testSite.createTranslator(entryEditorShellMessages);
@@ -137,7 +141,7 @@ const testRouter = createTestRouter();
 const { render } = testRouter;
 
 const ADMIN = "u1";
-const entry = {
+const entry: EntryData = {
 	id: "entry-1",
 	collection: "post",
 	status: "draft",
@@ -148,33 +152,28 @@ const entry = {
 	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, doc: docOf("첫째 줄\n둘째 줄") },
 };
 
-// An error answer is `{ error: {...} }`; a mock may pass the bare error object.
-const json = (data: unknown, status = 200) => ({
-	ok: status < 400,
-	status,
-	json: async () => (status >= 400 && data && typeof data === "object" && !("error" in data) ? { error: data } : data),
-});
-type Handler = (input: string, init?: RequestInit) => unknown;
-let fetchMock: ReturnType<typeof vi.fn>;
+let api: FakeApi;
 /** What the publish check answers (`POST …/check`); a test changes it to put problems in the readiness item. */
-let checkAnswer: { issues: unknown[]; warnings: unknown[] } = { issues: [], warnings: [] };
+let checkAnswer: { issues: CmsIssue[]; warnings: CmsIssue[] } = { issues: [], warnings: [] };
 
-/** Adds per-test handling to the common responses (lists, usages). */
-function serve(handler: Handler, current: unknown = entry) {
-	fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
-		const handled = await handler(input, init);
-		if (handled !== undefined) return handled;
-		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
-		if (input.startsWith("/api/monti/v1/entries/search?")) return json({ items: [] });
-		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
-		if (input.endsWith("/check") && init?.method === "POST") return json(checkAnswer);
-		if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(current);
-		throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${input}`);
+/** Makes `current` the entry the editor loads; the lists, the usages and the publish check keep their common answers. */
+const serve = (current: EntryData) => api.on("GET /v1/entries/:id", () => current);
+/** What a save answers: `current` at the next version, holding what was sent. */
+const savedAs =
+	(current: EntryData = entry) =>
+	({ body }: SentRequest) => ({
+		entry: {
+			...current,
+			version: current.version + 1,
+			working: {
+				...current.working,
+				metadata: body.metadata,
+				doc: body.doc ?? current.working.doc,
+				...(body.translation === undefined ? {} : { translation: body.translation }),
+			},
+		},
+		warnings: [],
 	});
-}
-
-const methodCalls = (method: string, suffix = "") =>
-	fetchMock.mock.calls.filter(([input, init]) => init?.method === method && String(input).endsWith(suffix));
 
 const SOURCE_LABEL = "원문 보기";
 /** Opens the header's ⋯ menu, where the document tools are, and waits for it. */
@@ -234,12 +233,20 @@ beforeEach(() => {
 	getLocalBackup.mockResolvedValue(null);
 	deleteLocalBackup.mockResolvedValue(undefined);
 	saveLocalBackup.mockResolvedValue(true);
-	fetchMock = vi.fn();
 	checkAnswer = { issues: [], warnings: [] };
-	serve(() => undefined);
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("GET /v1/entries", () => ({ items: [], total: 0 }))
+		.on("GET /v1/entries/search", () => ({ items: [] }))
+		.on("GET /v1/entries/:id/relations", () => ({ incomingReferences: [] }))
+		.on("POST /v1/entries/:id/check", () => checkAnswer)
+		.install();
+	serve(entry);
 });
-const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
+/** An issue as the server sends it on an admin route: with its person's text. */
+const told = (issue: Parameters<typeof issueText>[1] & { path?: string }): CmsIssue => ({
+	...issue,
+	...issueText(testSite, issue),
+});
 
 afterEach(() => {
 	cleanup();
@@ -249,19 +256,7 @@ afterEach(() => {
 
 describe("entry editor shell", () => {
 	it("keeps edits in the browser until Save is clicked", async () => {
-		serve((_input, init) => {
-			if (init?.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: {
-						...entry,
-						version: 5,
-						working: { metadata: body.metadata, doc: body.doc },
-					},
-					warnings: [],
-				});
-			}
-		});
+		api.on("PATCH /v1/entries/:id", savedAs());
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "로컬에서 수정" } });
 		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
@@ -274,25 +269,20 @@ describe("entry editor shell", () => {
 		vi.useFakeTimers();
 		await act(async () => vi.advanceTimersByTimeAsync(11_000));
 		vi.useRealTimers();
-		expect(methodCalls("PATCH")).toHaveLength(0);
+		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(0);
 		pressSave();
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 		await waitFor(() => expect(screen.getByTitle(tEntries("save.saved"))).toBeInTheDocument());
-		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).metadata.title).toBe("로컬에서 수정");
+		expect(api.sent("PATCH /v1/entries/:id")[0]?.body.metadata.title).toBe("로컬에서 수정");
 	});
 
 	it("shows the save state in the status bar and saves from it: saved, then unsaved, saving and saved again", async () => {
 		let finish: (() => void) | undefined;
-		serve(async (_input, init) => {
-			if (init?.method !== "PATCH") return undefined;
-			const body = JSON.parse(String(init.body));
+		api.on("PATCH /v1/entries/:id", async (request) => {
 			await new Promise<void>((resolve) => {
 				finish = resolve;
 			});
-			return json({
-				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
-				warnings: [],
-			});
+			return savedAs()(request);
 		});
 		renderEdit();
 		const bar = within(await screen.findByRole("region", { name: tScreens("column.status") }));
@@ -308,7 +298,7 @@ describe("entry editor shell", () => {
 		finish?.();
 		await waitFor(() => expect(bar.getByText(/^저장됨 /)).toBeInTheDocument());
 		expect(bar.queryByText(tStatusBar("save.saving"))).toBeNull();
-		expect(methodCalls("PATCH")).toHaveLength(1);
+		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1);
 	});
 
 	it("writes the waiting browser backup right away when the page is left", async () => {
@@ -324,34 +314,19 @@ describe("entry editor shell", () => {
 	});
 
 	it("saves even when a Korean composition never reports its end", async () => {
-		serve((_input, init) => {
-			if (init?.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: {
-						...entry,
-						version: 5,
-						working: { metadata: body.metadata, doc: body.doc },
-					},
-					warnings: [],
-				});
-			}
-		});
+		api.on("PATCH /v1/entries/:id", savedAs());
 		renderEdit();
 		const title = await editorTitle();
 		fireEvent.change(title, { target: { value: "조합 중 수정" } });
 		// The input that started composition vanished without an end signal.
 		fireEvent.compositionStart(title);
 		pressSave();
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1), { timeout: 3000 });
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1), { timeout: 3000 });
 		await waitFor(() => expect(toast).toHaveBeenCalledWith("저장했어요."));
 	});
 
 	it("shows why an explicit save failed instead of doing nothing", async () => {
-		serve((_input, init) => {
-			if (init?.method === "PATCH")
-				return json({ error: { code: "invalid_input", message: "제목이 너무 길어요." } }, 400);
-		});
+		api.on("PATCH /v1/entries/:id", () => failure("invalid_input", "제목이 너무 길어요."));
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
 		pressSave();
@@ -361,46 +336,26 @@ describe("entry editor shell", () => {
 	it("saves pending changes before opening the preview", async () => {
 		const opened = { opener: {}, location: { href: "" }, close: vi.fn() };
 		const open = vi.spyOn(window, "open").mockReturnValue(opened as unknown as Window);
-		serve((_input, init) => {
-			if (init?.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: {
-						...entry,
-						version: 5,
-						working: { metadata: body.metadata, doc: body.doc },
-					},
-					warnings: [],
-				});
-			}
-		});
+		api.on("PATCH /v1/entries/:id", savedAs());
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "미리보기 전 수정" } });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: tEntryEditorShell("preview") }));
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 		await waitFor(() => expect(opened.location.href).toBe("/preview/posts/test"));
 		open.mockRestore();
 	});
 
 	it("creates a new entry only after an explicit Save", async () => {
-		serve((input, init) => {
-			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
-				const body = JSON.parse(String(init.body));
-				return json(
-					{
-						entry: {
-							...entry,
-							id: "created-entry",
-							version: 1,
-							workingSlug: body.slug,
-							working: { metadata: body.metadata, doc: body.doc },
-						},
-						warnings: [],
-					},
-					201,
-				);
-			}
-		});
+		api.on("POST /v1/entries", ({ body }) => ({
+			entry: {
+				...entry,
+				id: "created-entry",
+				version: 1,
+				workingSlug: body.slug,
+				working: { metadata: body.metadata, doc: body.doc },
+			},
+			warnings: [],
+		}));
 		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
 		fireEvent.change(await editorTitle(), { target: { value: "새 글" } });
 		// The recovery copy is kept after input pauses (interval is in the entry editor store test). Here, leaving the screen writes it right away.
@@ -412,19 +367,15 @@ describe("entry editor shell", () => {
 		vi.useFakeTimers();
 		await act(async () => vi.advanceTimersByTimeAsync(11_000));
 		vi.useRealTimers();
-		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
+		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		pressSave();
-		await waitFor(() => expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("POST /v1/entries")).toHaveLength(1));
 		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:new:post`));
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
 	it("tells a missing entry how to find it again instead of asking for a refresh", async () => {
-		serve((input, init) =>
-			input === "/api/monti/v1/entries/entry-1" && !init?.method
-				? json({ code: "not_found", message: "not found", fix: "refresh" }, 404)
-				: undefined,
-		);
+		api.on("GET /v1/entries/:id", () => failure("not_found", "not found", { fix: "refresh" }));
 		renderEdit();
 		const text = testSite.createTranslator(entryEditorShellMessages)("loadNotFound");
 		expect(await screen.findByText(text)).toBeInTheDocument();
@@ -432,7 +383,7 @@ describe("entry editor shell", () => {
 	});
 
 	describe("to-do cell in the status bar (flow 1 steps 10 to 13)", () => {
-		const checkCalls = () => methodCalls("POST", "/check");
+		const checkCalls = () => api.sent("POST /v1/entries/:id/check");
 		const bar = async () => within(await screen.findByRole("region", { name: tScreens("column.status") }));
 		const missingTitle = told({ code: "missing_field", path: "title", message: "제목" });
 		const missingAlt = told({ code: "missing_image_alt", path: "body", position: { blockId: "b1" } });
@@ -441,7 +392,7 @@ describe("entry editor shell", () => {
 			renderEdit();
 			expect(await (await bar()).findByRole("button", { name: tStatusBar("todo.none") })).toBeInTheDocument();
 			expect(checkCalls()).toHaveLength(1);
-			expect(String(checkCalls()[0]?.[0])).toContain("/entries/entry-1/check");
+			expect(checkCalls()[0]?.path).toBe("/v1/entries/entry-1/check");
 		});
 
 		it("counts what to fix, and leaves the warnings out", async () => {
@@ -455,14 +406,7 @@ describe("entry editor shell", () => {
 
 		it("rechecks after a save, not on a keystroke, and keeps the last answer meanwhile", async () => {
 			checkAnswer = { issues: [missingTitle], warnings: [] };
-			serve(async (_input, init) => {
-				if (init?.method !== "PATCH") return undefined;
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
-					warnings: [],
-				});
-			});
+			api.on("PATCH /v1/entries/:id", savedAs());
 			renderEdit();
 			await (await bar()).findByRole("button", { name: "할 일 1" });
 			expect(checkCalls()).toHaveLength(1);
@@ -505,7 +449,7 @@ describe("entry editor shell", () => {
 		const bar = async () => within(await screen.findByRole("region", { name: tScreens("column.status") }));
 
 		it("fills the slot in the source editor, after the to-do cell", async () => {
-			serve(() => undefined, { ...entry, locale: "ko", translationGroupId: "entry-1", translations: [] });
+			serve({ ...entry, locale: "ko", translationGroupId: "entry-1", translations: [] });
 			renderWithCells();
 			const cells = await bar();
 			await cells.findByRole("button", { name: tStatusBar("todo.none") });
@@ -519,13 +463,20 @@ describe("entry editor shell", () => {
 		});
 
 		it("fills the slot in the translation editor too, and a plugin can leave it empty for that language", async () => {
-			serve(() => undefined, {
+			serve({
 				...entry,
 				id: "entry-en",
 				locale: "en",
 				translationGroupId: "entry-1",
 				translations: [],
-				source: { locale: "ko", metadata: { title: "원문 제목" }, doc: docOf("원문\n") },
+				source: {
+					id: "entry-1",
+					locale: "ko",
+					status: "draft",
+					workingSlug: "test",
+					metadata: { title: "원문 제목" },
+					doc: docOf("원문\n"),
+				},
 				working: { metadata: { title: "Title" }, doc: docOf("First\n"), translation: null },
 			});
 			renderWithCells();
@@ -538,57 +489,46 @@ describe("entry editor shell", () => {
 	});
 
 	it("creates and publishes a local new entry when Publish is clicked", async () => {
-		serve((input, init) => {
-			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
-				const body = JSON.parse(String(init.body));
-				return json({
-					entry: {
-						...entry,
-						id: "published-entry",
-						collection: "memo",
-						version: 1,
-						workingSlug: body.slug,
-						working: { metadata: body.metadata, doc: body.doc },
-					},
-					warnings: [],
-				});
-			}
-			if (input === "/api/monti/v1/entries/published-entry/publish" && init?.method === "POST") {
-				return json({
-					entry: { ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 },
-					warnings: [],
-				});
-			}
-		});
+		api.on("POST /v1/entries", ({ body }) => ({
+			entry: {
+				...entry,
+				id: "published-entry",
+				collection: "memo",
+				version: 1,
+				workingSlug: body.slug,
+				working: { metadata: body.metadata, doc: body.doc },
+			},
+			warnings: [],
+		}));
+		const published: EntryWriteResult = {
+			entry: { ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 },
+			warnings: [],
+		};
+		api.on("POST /v1/entries/:id/publish", ({ params }) =>
+			params.id === "published-entry" ? published : failure("not_found"),
+		);
 		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="memo" />);
 		fireEvent.change(await editorTitle(), { target: { value: "바로 발행" } });
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() => expect(saveLocalBackup).toHaveBeenCalled());
-		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
+		expect(api.sent("POST /v1/entries")).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
-		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1);
-		expect(JSON.parse(String(methodCalls("POST", "/publish")[0]?.[1]?.body))).toEqual({ expectedVersion: 1 });
+		await waitFor(() => expect(api.sent("POST /v1/entries/:id/publish")).toHaveLength(1));
+		expect(api.sent("POST /v1/entries")).toHaveLength(1);
+		expect(api.sent("POST /v1/entries/:id/publish")[0]?.body).toEqual({ expectedVersion: 1 });
 	});
 
 	it("binds field issues and moves issues in the body to the source text, at the block they are in", async () => {
 		const body = docOf("첫째 문단\n\n둘째 문단\n");
-		serve(
-			(input) =>
-				input.endsWith("/publish")
-					? json(
-							{
-								code: "publish_validation_failed",
-								issues: [
-									told({ code: "missing_field", path: "title", message: "제목" }),
-									told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } }),
-								],
-							},
-							422,
-						)
-					: undefined,
-			{ ...entry, working: { ...entry.working, doc: body } },
+		api.on("POST /v1/entries/:id/publish", () =>
+			failure("publish_validation_failed", undefined, {
+				issues: [
+					told({ code: "missing_field", path: "title", message: "제목" }),
+					told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } }),
+				],
+			}),
 		);
+		serve({ ...entry, working: { ...entry.working, doc: body } });
 		renderEdit();
 		await screen.findByRole("button", { name: /^요약/ });
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
@@ -611,19 +551,12 @@ describe("entry editor shell", () => {
 		const doc = docOf("첫째 문단\n\n둘째 문단\n");
 		const second = doc.content[1]?.id;
 		let blockId = second;
-		serve(
-			(input) =>
-				input.endsWith("/publish")
-					? json(
-							{
-								code: "publish_validation_failed",
-								issues: [told({ code: "mdx_error", path: "body", position: { blockId } })],
-							},
-							422,
-						)
-					: undefined,
-			{ ...entry, working: { ...entry.working, doc } },
+		api.on("POST /v1/entries/:id/publish", () =>
+			failure("publish_validation_failed", undefined, {
+				issues: [told({ code: "mdx_error", path: "body", position: { blockId } })],
+			}),
 		);
+		serve({ ...entry, working: { ...entry.working, doc } });
 		renderEdit();
 		await screen.findByRole("button", { name: /^요약/ });
 		await screen.findByLabelText("시각 본문");
@@ -637,13 +570,13 @@ describe("entry editor shell", () => {
 
 		blockId = "zzzzzzzz";
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(methodCalls("POST", "/publish").length).toBeGreaterThanOrEqual(2));
+		await waitFor(() => expect(api.sent("POST /v1/entries/:id/publish").length).toBeGreaterThanOrEqual(2));
 		fireEvent.click((await readinessPopup()).getByRole("button", { name: /본문 구문에 오류가 있어요/ }));
 		expect(await screen.findByLabelText("패널 본문")).toBeInTheDocument();
 	});
 
 	it("opens a body that cannot be read in source mode and does not allow the visual editor (no silent overwrite)", async () => {
-		serve(() => undefined, {
+		serve({
 			...entry,
 			working: { ...entry.working, doc: unparsedDocument("본문 <Callout>닫히지 않음") },
 		});
@@ -719,29 +652,27 @@ describe("entry editor shell", () => {
 		});
 
 		it("takes the body the panel hands back as the body, which the next save sends", async () => {
-			serve((_input, init) => {
-				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
-			});
+			api.on("PATCH /v1/entries/:id", () => ({ entry: { ...entry, version: 5 }, warnings: [] }));
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
 			await toggleView("내 원문 보기");
 			fireEvent.click(await screen.findByRole("button", { name: "패널에서 고침" }));
 			expect(screen.getByTitle(tEntries("save.dirty"))).toBeInTheDocument();
 			pressSave();
-			await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-			const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)) as { doc: StoredDocument };
+			await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
+			const sent = api.sent("PATCH /v1/entries/:id")[0]?.body as { doc: StoredDocument };
 			expect(sent.doc.content.map((block) => block.type)).toEqual(["paragraph", "paragraph"]);
 			expect(JSON.stringify(sent.doc)).toContain("패널에서 쓴 본문");
 		});
 
 		it("opens a body that could not be read in the panel, and shows the visual editor's box when there is none", async () => {
-			serve(() => undefined, { ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
+			serve({ ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			expect(await screen.findByLabelText("블록 수")).toBeInTheDocument();
 			expect(screen.queryByLabelText("시각 본문")).toBeNull();
 			cleanup();
 
-			serve(() => undefined, { ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
+			serve({ ...entry, working: { ...entry.working, doc: unparsedDocument("본문 <Callout>") } });
 			render(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 			await screen.findByLabelText("시각 본문");
 			// There is no panel to edit it in, so no note that says to.
@@ -750,19 +681,12 @@ describe("entry editor shell", () => {
 
 		it("tells the panel which block an issue is in", async () => {
 			const body = docOf("첫째 문단\n\n둘째 문단\n");
-			serve(
-				(input) =>
-					input.endsWith("/publish")
-						? json(
-								{
-									code: "publish_validation_failed",
-									issues: [told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } })],
-								},
-								422,
-							)
-						: undefined,
-				{ ...entry, working: { ...entry.working, doc: body } },
+			api.on("POST /v1/entries/:id/publish", () =>
+				failure("publish_validation_failed", undefined, {
+					issues: [told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } })],
+				}),
 			);
+			serve({ ...entry, working: { ...entry.working, doc: body } });
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByRole("button", { name: /^요약/ });
 			await toggleView("내 원문 보기");
@@ -776,24 +700,23 @@ describe("entry editor shell", () => {
 	});
 
 	it("adds categories and tags through the add panel, prefilled with the typed name", async () => {
-		serve((input, init) => {
-			if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
-			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
-				const data = JSON.parse(String(init.body));
-				return json(
-					{
-						entry: {
-							id: data.collection === "category" ? "cat-2" : "tag-2",
-							workingSlug: "slug",
-							publishedSlug: "slug",
-							working: { metadata: data.metadata, doc: emptyStoredDocument() },
-						},
-						warnings: [],
-					},
-					201,
-				);
-			}
-		});
+		api.on("PATCH /v1/entries/:id", () => ({ entry: { ...entry, version: 5 }, warnings: [] }));
+		api.on(
+			"POST /v1/entries",
+			({ body }): EntryWriteResult => ({
+				entry: {
+					id: body.collection === "category" ? "cat-2" : "tag-2",
+					collection: body.collection,
+					status: "draft",
+					version: 1,
+					folderId: null,
+					workingSlug: "slug",
+					publishedSlug: "slug",
+					working: { metadata: body.metadata, doc: emptyStoredDocument() },
+				},
+				warnings: [],
+			}),
+		);
 		renderEdit();
 		// Searching for a name that does not exist shows `Add 'name'` at the end of the list; pressing it opens the add sheet with the name filled in.
 		const saveIn = async (label: string) => {
@@ -831,7 +754,7 @@ describe("entry editor shell", () => {
 		await typeAndPickAdd("태그", "새 태그");
 		await saveIn("태그 추가");
 		await waitFor(() => expect(screen.getAllByText("새 태그").length).toBeGreaterThan(0), { timeout: 10_000 });
-		const creations = methodCalls("POST", "/api/monti/v1/entries").map(([, init]) => JSON.parse(String(init?.body)));
+		const creations = api.sent("POST /v1/entries").map((request) => request.body);
 		expect(creations).toMatchObject([
 			{ collection: "category", metadata: { title: "새 카테고리" }, doc: emptyStoredDocument() },
 			{ collection: "tag", metadata: { title: "새 태그" }, doc: emptyStoredDocument() },
@@ -839,16 +762,11 @@ describe("entry editor shell", () => {
 	}, 30_000);
 
 	it("reports offline, server and expired-session failures and keeps a browser backup", async () => {
-		const failures: unknown[] = [
-			new TypeError("offline"),
-			json({ error: { message: "server error" } }, 500),
-			json({ error: { code: "unauthorized" } }, 401),
-		];
-		serve((_input, init) => {
-			if (init?.method !== "PATCH") return undefined;
-			const failure = failures.shift();
-			if (failure instanceof Error) throw failure;
-			return failure;
+		const failures = [new TypeError("offline"), failure("internal_error", "server error"), failure("unauthorized")];
+		api.on("PATCH /v1/entries/:id", () => {
+			const next = failures.shift();
+			if (next instanceof Error) throw next;
+			return next ?? failure("internal_error");
 		});
 		renderEdit();
 		const title = await editorTitle();
@@ -856,7 +774,9 @@ describe("entry editor shell", () => {
 		for (const [index, value] of ["오프라인 수정", "서버 오류 수정", "세션 만료 수정"].entries()) {
 			fireEvent.change(title, { target: { value } });
 			fireEvent.keyDown(window, { key: "s", metaKey: true });
-			await waitFor(() => expect(methodCalls("PATCH").length).toBeGreaterThanOrEqual(index + 1), { timeout: 4000 });
+			await waitFor(() => expect(api.sent("PATCH /v1/entries/:id").length).toBeGreaterThanOrEqual(index + 1), {
+				timeout: 4000,
+			});
 			await waitFor(() => expect(screen.getAllByText(expected[index] as string).length).toBeGreaterThan(0));
 		}
 		// The expired session's cell leads to signing in, in a new tab.
@@ -878,19 +798,16 @@ describe("entry editor shell", () => {
 			backup = record;
 			return true;
 		});
-		serve((input, init) => {
-			if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(server);
-			if (init?.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				// Only the title changed, so the body text the server holds is the one it had.
-				server = { ...server, version: 5, working: { ...server.working, metadata: body.metadata } };
-				throw new TypeError("committed, response lost");
-			}
+		api.on("GET /v1/entries/:id", () => server);
+		api.on("PATCH /v1/entries/:id", ({ body }) => {
+			// Only the title changed, so the body text the server holds is the one it had.
+			server = { ...server, version: 5, working: { ...server.working, metadata: body.metadata } };
+			throw new TypeError("committed, response lost");
 		});
 		const first = renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "응답 유실 수정" } });
 		fireEvent.keyDown(window, { key: "s", ctrlKey: true });
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 		first.unmount();
 
 		getLocalBackup.mockResolvedValue(backup);
@@ -898,30 +815,32 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(screen.getAllByDisplayValue("응답 유실 수정").length).toBeGreaterThan(0));
 		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:entry-1`));
 		expect(screen.queryByRole("dialog")).toBeNull();
-		expect(methodCalls("PATCH")).toHaveLength(1);
+		expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1);
 	});
 
 	it("fills an empty post summary from the body before publishing", async () => {
-		serve(
-			(input, init) => {
-				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
-				if (input.endsWith("/publish")) return json({ ...entry, version: 6, status: "published", warnings: [] });
-			},
-			{
-				...entry,
-				working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
-			},
+		api.on("PATCH /v1/entries/:id", () => ({ entry: { ...entry, version: 5 }, warnings: [] }));
+		api.on(
+			"POST /v1/entries/:id/publish",
+			(): EntryWriteResult => ({
+				entry: { ...entry, version: 6, status: "published" },
+				warnings: [],
+			}),
 		);
+		serve({
+			...entry,
+			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("## 소개\n\n**본문** 첫 문장.") },
+		});
 		renderEdit();
 		await screen.findByRole("button", { name: /^요약/ });
 		expect(screen.queryByText(/비워 두면 발행할 때 본문에서 만들어요/)).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
-		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
-		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).metadata.summary).toBe("소개 본문 첫 문장.");
+		await waitFor(() => expect(api.sent("POST /v1/entries/:id/publish")).toHaveLength(1));
+		expect(api.sent("PATCH /v1/entries/:id")[0]?.body.metadata.summary).toBe("소개 본문 첫 문장.");
 	});
 
 	it("does not publish when a body-filled field has nothing to fill from, naming the field", async () => {
-		serve(() => undefined, {
+		serve({
 			...entry,
 			working: { metadata: { title: "테스트", categoryId: "cat-1" }, doc: docOf("```js\nonly();\n```") },
 		});
@@ -929,11 +848,11 @@ describe("entry editor shell", () => {
 		await screen.findByRole("button", { name: /^요약/ });
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
-		expect(methodCalls("POST", "/publish")).toHaveLength(0);
+		expect(api.sent("POST /v1/entries/:id/publish")).toHaveLength(0);
 	});
 
 	it("shows trashed entries read-only with restore and permanent delete", async () => {
-		serve(() => undefined, { ...entry, status: "trashed" });
+		serve({ ...entry, status: "trashed" });
 		renderEdit();
 		const banner = await screen.findByRole("status", { name: tScreens("sidebar.trash") });
 		const toolbar = screen.getByRole("banner");
@@ -944,29 +863,28 @@ describe("entry editor shell", () => {
 	});
 
 	it("exports this entry from the more menu: the dialog asks for the entry and its translations, and nothing else", async () => {
-		serve((input, init) => {
-			if (input === "/api/monti/v1/meta") return json({ formats: [] });
-			if (input === "/api/monti/v1/export/summary" && init?.method === "POST") {
-				return json({
-					scope: "admin",
-					entries: 3,
-					addedByTranslations: 2,
-					notPublished: 0,
-					notFound: 0,
-					templates: 0,
-					folders: 0,
-					addresses: 1,
-					media: 0,
-				});
-			}
-		});
+		api.on("GET /v1/meta", () => ({ formats: [] }));
+		api.on(
+			"POST /v1/export/summary",
+			(): ExportSummary => ({
+				scope: "admin",
+				entries: 3,
+				addedByTranslations: 2,
+				notPublished: 0,
+				notFound: 0,
+				templates: 0,
+				folders: 0,
+				addresses: 1,
+				media: 0,
+			}),
+		);
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: tEntryEditorShell("more") }));
 		fireEvent.click(screen.getByRole("menuitem", { name: tSchemaReview("drop.export") }));
 		const dialog = await screen.findByRole("dialog", { name: tExport("dialog.title.entry") });
 		expect(await within(dialog).findByTestId("export-headline")).toBeInTheDocument();
-		expect(JSON.parse(String(methodCalls("POST", "/export/summary")[0]?.[1]?.body))).toEqual({
+		expect(api.sent("POST /v1/export/summary")[0]?.body).toEqual({
 			scope: "admin",
 			ids: ["entry-1"],
 		});
@@ -977,26 +895,22 @@ describe("entry editor shell", () => {
 			["archived", "unarchive", "보관 해제", "보관을 해제했어요."],
 			["trashed", "restore", "복원", "복원했어요."],
 		] as const) {
-			serve(
-				(input, init) => {
-					if (input.endsWith(`/${action}`) && init?.method === "POST") return json({ ...entry, version: 5 });
-				},
-				{ ...entry, status },
+			api.on("POST /v1/entries/:id/:action", ({ params }) =>
+				params.action === action ? { ...entry, version: 5 } : failure("not_found"),
 			);
+			serve({ ...entry, status });
 			renderEdit();
 			await editorTitle();
 			fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: label }));
 			expect(screen.queryByRole("alertdialog")).toBeNull();
-			await waitFor(() => expect(methodCalls("POST", `/${action}`)).toHaveLength(1));
+			await waitFor(() => expect(api.sent(`POST /v1/entries/:id/${action}`)).toHaveLength(1));
 			await waitFor(() => expect(toast).toHaveBeenCalledWith(message));
 			cleanup();
 		}
 	});
 
 	it("reports header action failures as a toast", async () => {
-		serve((input, init) => {
-			if (input.endsWith("/publish") && init?.method === "POST") return json({ error: { message: "서버 오류" } }, 500);
-		});
+		api.on("POST /v1/entries/:id/publish", () => failure("internal_error", "서버 오류"));
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("publish") }));
@@ -1005,7 +919,7 @@ describe("entry editor shell", () => {
 	});
 
 	it("sends record collections to their explicit-save form", async () => {
-		serve(() => undefined, { ...entry, collection: "tag" });
+		serve({ ...entry, collection: "tag" });
 		renderEdit();
 		// An item collection opens that item in the small form on the list.
 		await waitFor(() => expect(testRouter.replace).toHaveBeenCalledWith(`/admin?collection=tag&open=${entry.id}`));
@@ -1014,7 +928,7 @@ describe("entry editor shell", () => {
 });
 
 describe("language tabs", () => {
-	const member = (id: string, locale: string, status: string, isSource: boolean) => ({
+	const member = (id: string, locale: string, status: EntryData["status"], isSource: boolean): TranslationMember => ({
 		id,
 		locale,
 		status,
@@ -1022,15 +936,15 @@ describe("language tabs", () => {
 		title: "테스트",
 		workingSlug: "test",
 	});
-	const source = {
+	const source: EntryData = {
 		...entry,
 		locale: "ko",
 		translationGroupId: "entry-1",
 		translations: [member("entry-1", "ko", "published", true), member("entry-en", "en", "draft", false)],
 	};
-	const translation = { ...source, id: "entry-en", locale: "en", status: "draft" };
+	const translation: EntryData = { ...source, id: "entry-en", locale: "en", status: "draft" };
 	it("shows one tab per member above the title and marks the current one", async () => {
-		serve(() => undefined, source);
+		serve(source);
 		renderEdit();
 		const nav = await screen.findByRole("navigation", { name: tScreens("column.locale") });
 		const current = within(nav).getByRole("link", { name: "한국어 원문 · 발행됨" });
@@ -1046,7 +960,7 @@ describe("language tabs", () => {
 	});
 
 	it("moves to another language by its link, and has no tab list without panels", async () => {
-		serve(() => undefined, source);
+		serve(source);
 		renderEdit();
 		const link = await screen.findByRole("link", { name: "영어 · 초안" });
 		expect(link.getAttribute("href")).toBe("/admin/entries/entry-en/edit");
@@ -1056,36 +970,36 @@ describe("language tabs", () => {
 	});
 
 	it("creates a translation from the missing-language button and opens it", async () => {
-		serve((input, init) => {
-			if (input === "/api/monti/v1/entries/entry-1/translations" && init?.method === "POST") {
-				return json({ entry: { id: "entry-ja" }, warnings: [] }, 201);
-			}
-		}, source);
+		api.on("POST /v1/entries/:id/translations", ({ params }) =>
+			params.id === "entry-1" ? { entry: { id: "entry-ja" } } : failure("not_found"),
+		);
+		serve(source);
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-ja/edit"));
-		expect(JSON.parse(String(methodCalls("POST", "/translations")[0]?.[1]?.body))).toEqual({ locale: "ja" });
+		expect(api.sent("POST /v1/entries/:id/translations")[0]?.body).toEqual({ locale: "ja" });
 		expect(toast).toHaveBeenCalledWith("일본어 번역본을 만들었어요.");
 	});
 
 	it("blocks translation creation while there are unsaved changes", async () => {
-		serve(() => undefined, source);
+		serve(source);
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "저장 전" } });
 		fireEvent.click(screen.getByRole("button", { name: "JA 번역 추가" }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalled());
-		expect(methodCalls("POST", "/translations")).toHaveLength(0);
+		expect(api.sent("POST /v1/entries/:id/translations")).toHaveLength(0);
 	});
 
 	describe("flow: this translation goes to the trash (T10)", () => {
-		const serveTranslation = (current: typeof translation) =>
-			serve((input, init) => {
-				if (input === "/api/monti/v1/entries/entry-en" && !init?.method) return json(current);
-				if (input === "/api/monti/v1/entries/entry-en/trash" && init?.method === "POST") {
-					return json({ ...current, status: "trashed" });
-				}
-				if (input === "/api/monti/v1/trash/restore" && init?.method === "POST") return json({ results: [] });
-			}, current);
+		const serveTranslation = (current: EntryData) => {
+			serve(current);
+			api.on("POST /v1/entries/:id/:action", ({ params }) =>
+				params.id === "entry-en" && params.action === "trash"
+					? { ...current, status: "trashed" }
+					: failure("not_found"),
+			);
+			api.on("POST /v1/trash/restore", () => ({ results: [] }));
+		};
 		const openMore = async () => {
 			renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 			const nav = await screen.findByRole("navigation", { name: tScreens("column.locale") });
@@ -1099,7 +1013,7 @@ describe("language tabs", () => {
 			await openMore();
 			fireEvent.click(screen.getByRole("menuitem", { name: /이 번역 휴지통으로/ }));
 
-			await waitFor(() => expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(1));
+			await waitFor(() => expect(api.sent("POST /v1/entries/entry-en/trash")).toHaveLength(1));
 			expect(screen.queryByRole("alertdialog")).toBeNull();
 			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-1/edit"));
 			const [message, options] = toast.mock.calls.at(-1) as [
@@ -1110,8 +1024,8 @@ describe("language tabs", () => {
 			expect(options.action.label).toBe("되돌리기");
 
 			await act(async () => options.action.onClick());
-			await waitFor(() => expect(methodCalls("POST", "/trash/restore")).toHaveLength(1));
-			expect(JSON.parse(String(methodCalls("POST", "/trash/restore")[0]?.[1]?.body))).toEqual({
+			await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
+			expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({
 				items: [{ type: "entry", id: "entry-en", expectedVersion: translation.version + 1 }],
 			});
 			await waitFor(() => expect(testRouter.navigate).toHaveBeenCalledWith("/admin/entries/entry-en/edit"));
@@ -1125,12 +1039,12 @@ describe("language tabs", () => {
 			expect(within(dialog).getByText("테스트의 공개가 끝나요.")).toBeInTheDocument();
 			fireEvent.click(within(dialog).getByRole("button", { name: tExport("action.cancel") }));
 			await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-			expect(methodCalls("POST", "/entry-en/trash")).toHaveLength(0);
+			expect(api.sent("POST /v1/entries/entry-en/trash")).toHaveLength(0);
 		});
 	});
 
 	it("tells that translations go along when trashing a published source, and moves a draft source at once", async () => {
-		serve(() => undefined, { ...source, status: "published" });
+		serve({ ...source, status: "published" });
 		renderEdit();
 		await screen.findByRole("navigation", { name: tScreens("column.locale") });
 		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: tEntryEditorShell("more") }));
@@ -1143,7 +1057,7 @@ describe("language tabs", () => {
 
 describe("admin options that hide features", () => {
 	const hiding = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false, translations: false } });
-	const grouped = {
+	const grouped: EntryData = {
 		...entry,
 		locale: "ko",
 		translationGroupId: "entry-1",
@@ -1154,7 +1068,7 @@ describe("admin options that hide features", () => {
 	};
 
 	it("hides the language tabs of the editor", async () => {
-		serve(() => undefined, grouped);
+		serve(grouped);
 		render(withSite(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />, hiding));
 		await editorTitle();
 		expect(screen.queryByRole("navigation", { name: tScreens("column.locale") })).toBeNull();
@@ -1163,7 +1077,7 @@ describe("admin options that hide features", () => {
 
 describe("translation source pane", () => {
 	const SOURCE_MDX = "첫 문단\n\n둘째 문단\n";
-	const source = {
+	const source: EntryData = {
 		...entry,
 		locale: "ko",
 		translationGroupId: "entry-1",
@@ -1174,14 +1088,17 @@ describe("translation source pane", () => {
 	const translationWith = (
 		baseSource: string | null,
 		documents: { base?: StoredDocument | null; current?: StoredDocument | null; currentMdx?: string } = {},
-	) => ({
+	): EntryData => ({
 		...entry,
 		id: "entry-en",
 		locale: "en",
 		translationGroupId: "entry-1",
 		translations: [],
 		source: {
+			id: "entry-1",
 			locale: "ko",
+			status: "draft",
+			workingSlug: "test",
 			metadata: { title: "원문 제목" },
 			doc: documents.current ?? docOf(documents.currentMdx ?? SOURCE_MDX),
 		},
@@ -1203,7 +1120,7 @@ describe("translation source pane", () => {
 	afterEach(clearStorage);
 
 	it("shows the full source beside only a translation", async () => {
-		serve(() => undefined, translationWith(SOURCE_MDX));
+		serve(translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
 		await waitFor(() => expect(sourcePane()?.textContent).toContain("둘째 문단"));
@@ -1216,68 +1133,57 @@ describe("translation source pane", () => {
 		fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
 		cleanup();
-		serve(() => undefined, source);
+		serve(source);
 		renderEdit();
 		await editorTitle();
 		expect(sourcePane()).toBeNull();
 	});
 
 	it("shows no notice when it matches the confirmed source", async () => {
-		serve(() => undefined, translationWith(SOURCE_MDX));
+		serve(translationWith(SOURCE_MDX));
 		renderEdit();
 		await editorTitle();
 		expect(screen.queryByText(tEntryEditorShell("sourceChanged"))).toBeNull();
 	});
 
 	it("when the source changes, notifies, and confirm saves the confirmed source in the request", async () => {
-		serve((_input, init) => {
-			if (init?.method === "PATCH") {
-				const body = JSON.parse(String(init.body));
-				return json({ ...translationWith(SOURCE_MDX), version: 5, working: { ...body, metadata: body.metadata } });
-			}
-		}, translationWith("첫 문단\n"));
+		api.on("PATCH /v1/entries/:id", savedAs(translationWith(SOURCE_MDX)));
+		serve(translationWith("첫 문단\n"));
 		renderEdit();
 		expect(await screen.findByText(tEntryEditorShell("sourceChanged"))).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("confirm") }));
 		expect(screen.queryByText(tEntryEditorShell("sourceChanged"))).toBeNull();
 		pressSave();
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
 		// The confirmed source is the document of the source.
-		const sent = JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation;
+		const sent = api.sent("PATCH /v1/entries/:id")[0]?.body.translation;
 		expect(sent.version).toBe(4);
 		expect(contentKey(sent.baseDoc)).toBe(contentKey(docOf(SOURCE_MDX)));
 	});
 
 	it("confirm also saves the source's document", async () => {
 		const current = docOf(SOURCE_MDX);
-		serve(
-			(_input, init) => {
-				if (init?.method === "PATCH") {
-					const body = JSON.parse(String(init.body));
-					return json({ ...translationWith(SOURCE_MDX), version: 5, working: { ...body, metadata: body.metadata } });
-				}
-			},
-			translationWith("첫 문단\n", { current }),
-		);
+		api.on("PATCH /v1/entries/:id", savedAs(translationWith(SOURCE_MDX)));
+		serve(translationWith("첫 문단\n", { current }));
 		renderEdit();
 		expect(await screen.findByText(tEntryEditorShell("sourceChanged"))).toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: tEntryEditorShell("confirm") }));
 		pressSave();
-		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
-		expect(JSON.parse(String(methodCalls("PATCH")[0]?.[1]?.body)).translation).toEqual({
+		await waitFor(() => expect(api.sent("PATCH /v1/entries/:id")).toHaveLength(1));
+		expect(api.sent("PATCH /v1/entries/:id")[0]?.body.translation).toEqual({
 			version: 4,
 			baseDoc: current,
 		});
 	});
 
 	it("with no translation state or a malformed one, nothing is treated as confirmed", async () => {
-		serve(() => undefined, translationWith(null));
+		serve(translationWith(null));
 		renderEdit();
 		expect(await screen.findByText(tEntryEditorShell("sourceChanged"))).toBeInTheDocument();
 	});
 
 	it("the comparison lists changed blocks as before and now", async () => {
-		serve(() => undefined, translationWith("첫 문단 옛\n\n둘째 문단\n\n지운 문단\n"));
+		serve(translationWith("첫 문단 옛\n\n둘째 문단\n\n지운 문단\n"));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryEditorShell("compare") }));
 		const dialog = await screen.findByRole("dialog", { name: tEntries("sourceChange.title") });
@@ -1292,10 +1198,7 @@ describe("translation source pane", () => {
 		const before = docOf("가\n\n나\n\n다\n") as StoredDocument;
 		const [first, second, third] = before.content;
 		const current = { ...before, content: [third, first, second] } as StoredDocument;
-		serve(
-			() => undefined,
-			translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다\n\n가\n\n나\n" }),
-		);
+		serve(translationWith("가\n\n나\n\n다\n", { base: before, current, currentMdx: "다\n\n가\n\n나\n" }));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryEditorShell("compare") }));
 		const dialog = await screen.findByRole("dialog", { name: tEntries("sourceChange.title") });
@@ -1306,7 +1209,7 @@ describe("translation source pane", () => {
 	});
 
 	it("an unparseable source is reported as not comparable", async () => {
-		serve(() => undefined, translationWith("", { base: unparsedDocument("<Callout>닫히지 않음") }));
+		serve(translationWith("", { base: unparsedDocument("<Callout>닫히지 않음") }));
 		renderEdit();
 		fireEvent.click(await screen.findByRole("button", { name: tEntryEditorShell("compare") }));
 		const dialog = await screen.findByRole("dialog", { name: tEntries("sourceChange.title") });

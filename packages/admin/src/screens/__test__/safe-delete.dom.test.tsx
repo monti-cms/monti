@@ -1,9 +1,9 @@
-import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import type { FolderContents, FolderListItem, FolderTrashResult, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
 import { bulkBarMessages } from "../entries/bulk-bar.messages";
@@ -24,42 +24,43 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 const td = testSite.createTranslator(deleteMessages);
 const tc = testSite.createTranslator(commonMessages);
 
-/** A row of the list. The trash time is `deletedAt`; the fixture is typed loosely so it holds before the core rename reaches this branch. */
-const item = (id: string, fields: Record<string, unknown> = {}): ListEntriesItem =>
-	({
-		id,
-		collection: "post",
-		locale: "ko",
-		translationGroupId: id,
-		title: id,
-		slug: id,
-		status: "draft",
-		version: 3,
-		folderId: null,
-		relations: {},
-		values: {},
-		hasUnpublishedChanges: false,
-		publishedAt: null,
-		createdAt: new Date("2026-01-01T00:00:00Z"),
-		updatedAt: new Date("2026-01-01T00:00:00Z"),
-		deletedAt: null,
-		...fields,
-	}) as unknown as ListEntriesItem;
+/** A row of the list. */
+const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
+	id,
+	collection: "post",
+	locale: "ko",
+	translationGroupId: id,
+	title: id,
+	slug: id,
+	status: "draft",
+	version: 3,
+	folderId: null,
+	relations: {},
+	values: {},
+	hasUnpublishedChanges: false,
+	publishedAt: null,
+	createdAt: new Date("2026-01-01T00:00:00Z"),
+	updatedAt: new Date("2026-01-01T00:00:00Z"),
+	deletedAt: null,
+	...fields,
+});
 
-const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 };
+const folder: FolderListItem = {
+	id: "f1",
+	collection: "post",
+	parentId: null,
+	name: "뉴스",
+	position: 0,
+	version: 1,
+	entryCount: 2,
+};
 
 const server = {
 	posts: [] as ListEntriesItem[],
-	folders: [] as Folder[],
-	contents: { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 },
+	folders: [] as FolderListItem[],
+	contents: { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 } as FolderContents,
 };
-let fetchMock: ReturnType<typeof vi.fn>;
-
-const calls = (method: string, path: string) =>
-	fetchMock.mock.calls.filter(
-		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,
-	);
-const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit | undefined)?.body));
+let api: FakeApi;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -67,29 +68,46 @@ beforeEach(() => {
 	server.posts = [item("가"), item("나"), item("다")];
 	server.folders = [folder];
 	server.contents = { entries: 2, published: 0, folders: 0, files: 0, filesInUse: 0 };
-	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		const url = new URL(input, "http://localhost");
-		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/monti/v1/preferences") return json({});
-		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return json(server.folders);
-		if (url.pathname === "/api/monti/v1/folders/f1/contents") return json(server.contents);
-		if (url.pathname === "/api/monti/v1/folders/f1" && method === "DELETE") {
-			return json({ folder: {}, entries: server.contents.entries, folders: 0, files: 0, kept: 0 });
-		}
-		if (url.pathname === "/api/monti/v1/trash/restore" && method === "POST") return json({ results: [] });
-		if (url.pathname === "/api/monti/v1/bulk" && method === "POST") {
-			const body = JSON.parse(String(init?.body)) as { items: { id: string; expectedVersion: number }[] };
-			return json({
-				results: body.items.map((entry) => ({ id: entry.id, ok: true, version: entry.expectedVersion + 1 })),
-			});
-		}
-		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
-			const items = url.searchParams.get("collection") === "post" ? server.posts : [];
-			return json({ items, total: items.length });
-		}
-		throw new Error(`Unexpected fetch: ${method} ${input}`);
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.withEmptyRail()
+		.on("GET /v1/preferences", () => ({}))
+		.on("GET /v1/folders", () => server.folders)
+		.on("GET /v1/folders/:id/contents", () => server.contents)
+		.on(
+			"DELETE /v1/folders/:id",
+			({ params }): FolderTrashResult => ({
+				folder: {
+					type: "folder",
+					id: params.id ?? "",
+					collection: "post",
+					name: "뉴스",
+					version: 2,
+					deletedAt: new Date("2026-01-02T00:00:00Z"),
+					expiresAt: null,
+					path: [],
+					entries: server.contents.entries,
+					folders: 0,
+					files: 0,
+				},
+				entries: server.contents.entries,
+				folders: 0,
+				files: 0,
+				kept: 0,
+			}),
+		)
+		.on("POST /v1/trash/restore", () => ({ results: [] }))
+		.on("POST /v1/bulk", ({ body }) => ({
+			results: (body.items as { id: string; expectedVersion: number }[]).map((entry) => ({
+				id: entry.id,
+				ok: true as const,
+				version: entry.expectedVersion + 1,
+			})),
+		}))
+		.on("GET /v1/entries", ({ query }) => {
+			const items = query.get("collection") === "post" ? server.posts : [];
+			return { items, total: items.length };
+		})
+		.install();
 });
 afterEach(() => {
 	cleanup();
@@ -120,7 +138,7 @@ const lastToast = () => {
 	const [message, options] = toast.mock.calls.at(-1) as [string, { action?: { label: string; onClick: () => void } }];
 	return { message, action: options?.action };
 };
-const bulkBodies = () => calls("POST", "/api/monti/v1/bulk").map(bodyOf);
+const bulkBodies = () => api.sent("POST /v1/bulk").map((request) => request.body);
 
 describe("flow: a folder of the list goes to the trash (T1)", () => {
 	const openFolderMenu = async () => {
@@ -132,16 +150,17 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		const items = await openFolderMenu();
 		fireEvent.click(items.at(-1) as HTMLElement);
 
-		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1));
-		expect(String(calls("DELETE", "/api/monti/v1/folders/f1")[0]?.[0])).toContain("expectedVersion=1");
+		await waitFor(() => expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(1));
+		expect(api.sent("DELETE /v1/folders/:id")[0]?.params.id).toBe("f1");
+		expect(api.sent("DELETE /v1/folders/:id")[0]?.query.get("expectedVersion")).toBe("1");
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 		await waitFor(() => expect(toast).toHaveBeenCalled());
 		expect(lastToast().message).toBe(td("folder.done", { name: "뉴스", entries: 2 }));
 		expect(lastToast().action?.label).toBe(td("undo"));
 
 		await act(async () => lastToast().action?.onClick());
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/trash/restore")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/trash/restore")[0])).toEqual({ items: [{ type: "folder", id: "f1" }] });
+		await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
+		expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({ items: [{ type: "folder", id: "f1" }] });
 	});
 
 	it("asks first when the folder holds a published entry, and sends nothing when cancelled", async () => {
@@ -153,7 +172,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		expect(within(dialog).getByText(td("folder.ask.body", { entries: 2, published: 1 }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-		expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(0);
+		expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(0);
 	});
 
 	it("moves the folder once the question is confirmed", async () => {
@@ -162,7 +181,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		fireEvent.click(items.at(-1) as HTMLElement);
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
-		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1));
+		await waitFor(() => expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(1));
 	});
 });
 
@@ -180,8 +199,8 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(lastToast().action?.label).toBe(td("undo"));
 
 		await act(async () => lastToast().action?.onClick());
-		await waitFor(() => expect(calls("POST", "/api/monti/v1/trash/restore")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/monti/v1/trash/restore")[0])).toEqual({
+		await waitFor(() => expect(api.sent("POST /v1/trash/restore")).toHaveLength(1));
+		expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({
 			items: [{ type: "entry", id: "가", expectedVersion: 4 }],
 		});
 	});

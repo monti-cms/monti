@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { entriesKeys } from "../../api/entries";
-import { jsonResponse as json } from "../../test/fetch";
+import { type FakeApi, fakeApi } from "../../test/fake-api";
 import { renderHookWithSite } from "../../test/site";
 import { parseListState } from "../list-state";
 import { useEntryMutations } from "../use-entry-mutations";
@@ -11,18 +11,19 @@ vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
 );
 
-let fetchMock: ReturnType<typeof vi.fn>;
-const bulkBodies = () =>
-	fetchMock.mock.calls
-		.filter(([url]) => url === "/api/monti/v1/bulk")
-		.map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+let api: FakeApi;
+const bulkBodies = () => api.sent("POST /v1/bulk").map((request) => request.body);
 
 beforeEach(() => {
-	fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-		const { items } = JSON.parse(String(init?.body)) as { items: { id: string; expectedVersion: number }[] };
-		return json({ results: items.map((item) => ({ id: item.id, ok: true, version: item.expectedVersion + 1 })) });
-	});
-	vi.stubGlobal("fetch", fetchMock);
+	api = fakeApi()
+		.on("POST /v1/bulk", ({ body }) => ({
+			results: (body.items as { id: string; expectedVersion: number }[]).map((item) => ({
+				id: item.id,
+				ok: true as const,
+				version: item.expectedVersion + 1,
+			})),
+		}))
+		.install();
 });
 afterEach(() => vi.unstubAllGlobals());
 

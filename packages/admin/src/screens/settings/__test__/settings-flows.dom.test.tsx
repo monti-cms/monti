@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import type { SchemaEditPreview, SchemaScreenState } from "../../../api/schema";
 import { commonMessages } from "../../../lib/common.messages";
-import { jsonResponse as json } from "../../../test/fetch";
+import { type FakeApi, fakeApi } from "../../../test/fake-api";
 import { createTestRouter } from "../../../test/router";
 import { schemaChangesMessages } from "../../schema/changes.messages";
 import { schemaLocalesMessages } from "../../schema/locales.messages";
@@ -39,7 +40,7 @@ const post = {
 	fields: { title: { kind: "text", label: "Title", required: true } },
 };
 
-const state = {
+const state: SchemaScreenState = {
 	access: { writable: true },
 	file: "monti.schema.ts",
 	hash: "hash-1",
@@ -70,34 +71,28 @@ const state = {
 	siteUrl: { url: null, from: "none" },
 };
 
-let requests: { method: string; url: string; body?: Record<string, unknown> }[];
+/** The review of the draft: it checks and would change something, with nothing the stored entries care about. */
+const preview: SchemaEditPreview = {
+	valid: true,
+	issues: [],
+	changed: true,
+	impacts: [],
+	decisions: [],
+	transforms: [],
+	problems: [],
+	baseline: "applied",
+	bodiesRead: 0,
+};
+
+let api: FakeApi;
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	window.history.replaceState(null, "", "/admin/settings/site");
-	requests = [];
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (input: string, init?: RequestInit) => {
-			const method = init?.method ?? "GET";
-			const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
-			requests.push({ method, url: input, body });
-			if (input === "/api/monti/v1/schema" && method === "GET") return json(state);
-			if (input === "/api/monti/v1/schema/preview")
-				return json({
-					valid: true,
-					issues: [],
-					changed: true,
-					impacts: [],
-					decisions: [],
-					transforms: [],
-					problems: [],
-					baseline: "applied",
-					bodiesRead: 0,
-				});
-			throw new Error(`Unexpected fetch ${method} ${input}`);
-		}),
-	);
+	api = fakeApi()
+		.on("GET /v1/schema", () => state)
+		.on("POST /v1/schema/preview", () => preview)
+		.install();
 });
 
 afterEach(() => {
@@ -117,12 +112,12 @@ const field = (name: string) => screen.findByRole("textbox", { name });
 const type = (input: HTMLElement, value: string) => fireEvent.change(input, { target: { value } });
 const bar = () => screen.getByRole("region", { name: t("bar.label") });
 const changes = (count: number) => within(bar()).getByLabelText(t("bar.count", { count }));
-const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
+const lastPreview = () => api.sent("POST /v1/schema/preview").at(-1);
 /** Presses the save button of the title row and waits for the review to ask what the draft would do. */
 const save = async () => {
 	fireEvent.click(within(bar()).getByRole("button", { name: t("bar.save") }));
-	await waitFor(() => expect(lastPreview()?.url).toMatch(/\/preview$/));
-	return lastPreview()?.body?.schema as {
+	await waitFor(() => expect(lastPreview()?.path).toBe("/v1/schema/preview"));
+	return lastPreview()?.body.schema as {
 		locales: { code: string; name: string; label?: string }[];
 		defaultLocale: string;
 		site: Record<string, unknown>;

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { AdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
+import { fakeApi } from "../../../test/fake-api";
 import { renderWithSite as render } from "../../../test/site";
 import { AdminFeaturesProvider } from "../../shared/admin-features";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
@@ -121,10 +122,7 @@ describe("input parts (`FieldInputParts`)", () => {
 describe("media field (`fields.media`)", () => {
 	it("reads as its file name and opens the media picker input. A picked value is cleared with remove", () => {
 		if (!media) return;
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ publicUrl: null }) })),
-		);
+		fakeApi().install();
 		const onChange = renderFields(media, {
 			...EMPTY_FORM,
 			title: "x",
