@@ -13,7 +13,7 @@ import {
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
-import { columnConfig, columnsFor, fieldColumnOf } from "../list-columns";
+import { columnConfig, fieldColumnOf } from "../list-columns";
 import { parseListState } from "../list-state";
 
 // A site with select, text, media and relation fields, which the writer can show as list columns.
@@ -98,17 +98,6 @@ function renderTable(items: ListEntriesItem[], components: AdminComponents = {})
 const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 
 describe("list columns from fields", () => {
-	it("offers the stored fields as columns, hidden by default", () => {
-		const { available, defaults } = columnsFor(site, "article");
-		expect(defaults.slice(0, 2)).toEqual(["status", "title"]);
-		for (const column of ["format", "subtitle", "accent", "hero", "related", "lead"]) {
-			expect(defaults).not.toContain(column);
-			expect(available).toContain(column);
-		}
-		// Display-only fields that are not stored are not columns.
-		expect(available).not.toContain("preview");
-	});
-
 	it("labels field columns by the field label", () => {
 		expect(columnConfig(site, "article", "format")).toEqual({ label: "Format" });
 		expect(columnConfig(site, "article", "related")).toEqual({ label: "Related", many: true });

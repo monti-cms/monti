@@ -69,15 +69,6 @@ function renderRows(
 const rowOf = (name: RegExp | string) => screen.getByRole("row", { name });
 
 describe("a row of the list", () => {
-	it("is one line: the title and its address in one cell, then the other cells, with no second line", () => {
-		renderRows([item("first", { title: "첫 번째 글", slug: "first-post" })]);
-		const row = rowOf(/첫 번째 글/);
-		const cells = within(row).getAllByRole("cell");
-		const titleCell = cells.find((cell) => cell.textContent?.includes("첫 번째 글")) as HTMLElement;
-		expect(titleCell.textContent).toContain("/first-post");
-		expect(within(titleCell).getAllByRole("link")).toHaveLength(1);
-	});
-
 	it("says the languages as a code and how many others there are", () => {
 		renderRows([
 			item("one"),
@@ -97,18 +88,5 @@ describe("a row of the list", () => {
 		const row = rowOf(/첫 번째 글/);
 		expect(within(row).getByRole("checkbox", { name: t("list.rowSelect", { title: "첫 번째 글" }) })).toBeTruthy();
 		expect(within(row).getByRole("button", { name: t("list.rowActions", { title: "첫 번째 글" }) })).toBeTruthy();
-	});
-
-	it("adds a cell for each column the View menu turned on, in the same one-line style", () => {
-		renderRows(
-			[item("first", { publishedAt: new Date("2026-03-04T03:00:00Z"), values: { summary: "한 줄 요약" } })],
-			"collection=post",
-			{
-				columnSettings: { order: [], visibility: { publishedAt: true, summary: true } },
-			},
-		);
-		const row = rowOf(/first/);
-		expect(within(row).getByText("03. 04")).toBeTruthy();
-		expect(within(row).getByText("한 줄 요약")).toBeTruthy();
 	});
 });

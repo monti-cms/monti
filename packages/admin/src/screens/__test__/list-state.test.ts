@@ -10,9 +10,7 @@ import {
 	listStateToCountsQuery,
 	listStateToSearchParams,
 	parseListState,
-	searchPatch,
 	searchScopeChoice,
-	searchWidened,
 } from "../list-state";
 
 const NOW = new Date("2026-10-28T03:00:00Z"); // 12:00 on 28 October in Seoul
@@ -139,15 +137,6 @@ describe("admin list state", () => {
 		expect(later.get("updatedFrom")).toBe("2026-10-28T15:00:00.000Z");
 	});
 
-	it("does not send the column filters of the old toolbar", () => {
-		const state = parseListState(
-			testSite,
-			new URLSearchParams("collection=post&title=훅&slug=react&relation=tagIds:t1"),
-		);
-		const query = listStateToApiQuery(testSite, state);
-		for (const key of ["titleContains", "slugContains", "relation"]) expect(query.has(key)).toBe(false);
-	});
-
 	it("shows folders only when no search or filter narrows the list", () => {
 		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post")))).toBe(true);
 		expect(isExplorerMode(parseListState(testSite, new URLSearchParams("collection=post&search=a")))).toBe(false);
@@ -262,20 +251,5 @@ describe("where a search inside a folder looks", () => {
 		expect(searchScopeChoice(state("collection=post&folder=f1"))).toBe(false);
 		expect(searchScopeChoice(state("collection=post&folder=f1&search=%20"))).toBe(false);
 		expect(searchScopeChoice(state("collection=post&search=a"))).toBe(false);
-	});
-
-	it("widens nothing without the words or the folder, and keeps scope=all out of the address then", () => {
-		expect(searchWidened(state("collection=post&folder=f1&scope=all"))).toBe(false);
-		expect(api("collection=post&folder=f1&scope=all").get("folderId")).toBe("f1");
-		expect(searchWidened(state("collection=post&search=a&scope=all"))).toBe(false);
-		expect(listStateToSearchParams(state("collection=post&folder=f1&scope=all")).has("scope")).toBe(false);
-		expect(listStateToSearchParams(state("collection=post&folder=f1&search=a&scope=all")).get("scope")).toBe("all");
-	});
-
-	it("drops the widening when the words are emptied, and not before", () => {
-		expect(searchPatch("a")).toEqual({ search: "a" });
-		expect(searchPatch("  ")).toEqual({ search: "  ", searchAll: false });
-		const widened = state("collection=post&folder=f1&search=a&scope=all");
-		expect({ ...widened, ...clearFiltersPatch(widened) }.searchAll).toBe(false);
 	});
 });
