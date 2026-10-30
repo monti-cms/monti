@@ -623,7 +623,11 @@ whole interface.
 ```bash
 pnpm --filter @monti-cms/admin test:run        # example blog config + other-site config
 pnpm --filter @monti-cms/admin test:other-site # other-site config only (`../core/test/other-site.config.ts`)
+pnpm --filter @monti-cms/admin test:dom        # the screen tests only (`*.dom.test.ts(x)`, in jsdom)
 ```
 
+The tests are split by layer (`docs/testing.md`). `vitest.config.ts` runs the logic tests without a DOM (suite `admin`). `vitest.dom.config.ts` runs the tests that render
+components or editors in jsdom (`*.dom.test.ts(x)`, suite `admin (dom)`).
+
 Screen tests also run with a site config different from the reference blog (`vitest.othersite.config.ts`, core README "Development"). Do not write collection, field or block names and
-labels in tests; read them from the config (e.g. `src/screens/__test__/any-site-screens.test.tsx`).
+labels in tests; read them from the config (e.g. `src/screens/__test__/any-site-screens.dom.test.tsx`).

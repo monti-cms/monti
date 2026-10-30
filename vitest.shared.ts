@@ -27,16 +27,16 @@ export interface PackageTestsOptions {
 	readonly exclude?: readonly string[];
 	readonly site?: TestSite;
 	/**
-	 * The layer of `docs/testing.md` the project runs. Unset, it runs L1: every test file except `*.int.test.ts` (unless `include` names the files).
-	 * `int` runs the L2 files, `*.int.test.ts`; its name gets ` (int)`.
+	 * The layer of `docs/testing.md` the project runs. Unset, it runs L1: every test file except `*.int.test.ts` and `*.dom.test.ts(x)` (unless
+	 * `include` names the files). `int` runs the L2 files, `*.int.test.ts`; `dom` runs the L3 files, `*.dom.test.ts(x)`. The name gets ` (int)` or ` (dom)`.
 	 */
-	readonly layer?: "int";
+	readonly layer?: "int" | "dom";
 	/** Module aliases the package needs on top of `server-only`. */
 	readonly alias?: readonly { find: string | RegExp; replacement: string }[];
 }
 
-/** The L2 test files (`docs/testing.md`): they need Postgres, the file system or a child process. */
-const INT_TESTS = "src/**/*.int.test.ts";
+/** The test files of a layer (`docs/testing.md`): L2 needs Postgres, the file system or a child process; L3 needs a DOM. */
+const LAYER_TESTS = { int: "src/**/*.int.test.ts", dom: "src/**/*.dom.test.{ts,tsx}" } as const;
 
 /** `core`, `core (int)`, `core (other-site)`. */
 const projectName = (options: PackageTestsOptions): string => {
@@ -50,10 +50,12 @@ export const packageTests = (options: PackageTestsOptions) =>
 			name: projectName(options),
 			environment: options.environment ?? "node",
 			globals: true,
-			include: [...(options.include ?? (options.layer === "int" ? [INT_TESTS] : ["src/**/*.{test,spec}.{ts,tsx}"]))],
+			include: [
+				...(options.include ?? (options.layer ? [LAYER_TESTS[options.layer]] : ["src/**/*.{test,spec}.{ts,tsx}"])),
+			],
 			exclude: [
 				...configDefaults.exclude,
-				...(options.include || options.layer ? [] : [INT_TESTS]),
+				...(options.include || options.layer ? [] : Object.values(LAYER_TESTS)),
 				...(options.exclude ?? []),
 			],
 			setupFiles: options.dom ? [path.join(ROOT, "packages/admin/src/test/setup-dom.ts")] : [],

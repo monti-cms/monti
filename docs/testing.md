@@ -22,7 +22,7 @@
 |---|---|---|---|---|
 | L1 로직 | 코드뿐 | `foo.test.ts`, JSX가 필요하면 `foo.test.tsx`(서버에서 HTML로 렌더하기 등) | Vitest, node | `membersToRestore`, `canTransition`, 슬러그 규칙, 스키마 diff |
 | L2 통합 | Postgres, 파일 시스템, 자식 프로세스 | `foo.int.test.ts` | Vitest, node, 테스트 데이터베이스 | 스토어가 휴지통에 든 묶음을 복원하기, 마이그레이션, `monti init` |
-| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`; 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
+| L3 부품 | 관리자 화면이 쓰는 프로바이더와 함께 렌더한 컴포넌트 | `foo.dom.test.tsx`(JSX가 없으면 `foo.dom.test.ts`); 레이아웃, 포커스, 편집기가 필요하면 `foo.browser.test.tsx` | jsdom을 쓰는 Vitest; Vitest 브라우저 모드 | 행 메뉴의 키보드와 콜백; 캐럿 위치에 놓이는 팝오버 |
 | L4 흐름 | 예제 앱, 그 데이터베이스, 브라우저 | `examples/blog/e2e/<flow>.spec.ts` | Playwright | 글을 쓰고, 발행하고, 사이트에서 보기 |
 
 **동작 하나에 층 하나.** 동작은 그 결함을 잡을 수 있는 가장 낮은 층에서 한 번만 테스트한다. 함수인 규칙은 L1에서 테스트하고,
@@ -103,8 +103,8 @@
 
 - 테스트는 테스트하는 것 옆의 `__test__` 폴더에 두고, 그것의 이름을 따른다(`lifecycle.ts` → `__test__/lifecycle.test.ts`). 테스트를
   더한 작업의 이름(`m13-accessibility.test.ts`, `review-fixes.test.ts`)은 따르지 않는다.
-- 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.tsx`와 `.browser.test.tsx`(L3). 확장자 `.tsx`는
-  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`), 한 층만 따로 돌릴 수 있다.
+- 접미사가 층을 말한다. `.test.ts`와 `.test.tsx`(L1), `.int.test.ts`(L2), `.dom.test.ts(x)`와 `.browser.test.tsx`(L3). 확장자 `.tsx`는
+  JSX를 쓴다는 뜻일 뿐 층을 말하지 않는다. 층마다 자기 Vitest 프로젝트이므로(core는 `core`, `core (int)`, admin은 `admin`, `admin (dom)`), 한 층만 따로 돌릴 수 있다.
 - 패키지마다 공유 픽스처와 렌더 도우미를 `test` 폴더 하나에 둔다.
 
 ## 재기와 지키기
@@ -152,7 +152,7 @@ core 전체의 변이 점수는 재지 않는다. 한 번 재는 데 두 시간�
 
 - Vitest 브라우저 모드와 `*.browser.test.tsx`.
 - L4 흐름(`examples/blog/e2e`).
-- core 밖의 층별 Vitest 프로젝트와 `.int.test.ts`, `.dom.test.tsx` 접미사.
+- core와 admin 밖의 층별 Vitest 프로젝트.
 - 코어 밖의 다른 사이트 자동 선택(admin, ai, seo는 목록을 가진다).
 - 다른 패키지의 CI 관문(core는 `pnpm check:tests`로 막는다).
 
