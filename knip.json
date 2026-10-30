@@ -28,7 +28,6 @@
 				"src/**/__test__/**/*.{ts,tsx}",
 				"src/http/**/route.ts!",
 				"test/**/*.{ts,tsx}",
-				"stryker.score.config.mjs",
 				"vitest.mutation.config.ts"
 			]
 		},

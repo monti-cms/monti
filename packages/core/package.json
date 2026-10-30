@@ -37,7 +37,6 @@
 		"test:int": "vitest run -c vitest.int.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"test:mutation": "stryker run",
-		"test:mutation:score": "stryker run stryker.score.config.mjs",
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},
