@@ -661,7 +661,7 @@ describe("write hook contract", () => {
 			}
 		};
 
-		it("runs validate and validatePublish with operation restore, and not transform", async () => {
+		it("TRASH-R7 runs validate and validatePublish with operation restore, and not transform", async () => {
 			const record = await trashedRecord();
 			const seen: string[] = [];
 			const transform = vi.fn();
@@ -680,7 +680,7 @@ describe("write hook contract", () => {
 			expect(transform).not.toHaveBeenCalled();
 		});
 
-		it("is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
+		it("TRASH-R7 is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
 			const record = await trashedRecord();
 			sources = server({ beforePublish: () => ({ issues: [{ code: "publishing_closed" }] }) });
 			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({

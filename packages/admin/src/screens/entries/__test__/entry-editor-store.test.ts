@@ -368,7 +368,7 @@ describe("save", () => {
 		expect(editor().entry?.version).toBe(5);
 	});
 
-	it("a trashed entry cannot be saved", async () => {
+	it("TRASH-T7 a trashed entry cannot be saved", async () => {
 		const { editor, client } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		expect(editor().readOnly).toBe(true);
 		editor().setForm({ title: "수정" });
@@ -653,7 +653,7 @@ describe("publish", () => {
 		expect(client.publish).not.toHaveBeenCalled();
 	});
 
-	it("a trashed entry cannot be published", async () => {
+	it("TRASH-T7 a trashed entry cannot be published", async () => {
 		const { editor } = await opened({ server: { ...ENTRY, status: "trashed" } });
 		expect(await editor().publish()).toMatchObject({ ok: false, error: { code: "read_only" } });
 	});
@@ -669,7 +669,7 @@ describe("status changes, duplicate and delete", () => {
 		expect(editor().busy).toBeNull();
 	});
 
-	it("trashing makes the entry read-only; restoring makes it editable again", async () => {
+	it("TRASH-T7 trashing makes the entry read-only; restoring makes it editable again", async () => {
 		const { editor } = await opened();
 		await editor().changeStatus("trash");
 		expect(editor().readOnly).toBe(true);

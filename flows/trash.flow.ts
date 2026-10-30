@@ -49,7 +49,7 @@ test("a trashed post is restored to the list, and trashed posts are deleted for 
 	await expect(deleted).toBeHidden();
 	await expect(restored).toBeVisible();
 
-	// Empty the trash: the rest is deleted for good. This is the step that fails today (415, see above).
+	// Empty the trash: the rest is deleted for good.
 	await page.getByRole("button", { name: "비우기" }).click();
 	await page.getByRole("alertdialog", { name: "휴지통을 비울까요?" }).getByRole("button", { name: "비우기" }).click();
 	await expect(page.getByText("휴지통이 비었어요.")).toBeVisible();

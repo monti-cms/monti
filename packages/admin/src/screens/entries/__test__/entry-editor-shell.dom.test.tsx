@@ -766,7 +766,7 @@ describe("entry editor shell", () => {
 		await waitFor(() => expect(toast.error).toHaveBeenCalledWith("요약을 만들 본문이 없어요. 직접 입력하세요."));
 	});
 
-	it("shows trashed entries read-only with restore and permanent delete", async () => {
+	it("TRASH-T7 shows trashed entries read-only with restore and permanent delete", async () => {
 		serve({ ...entry, status: "trashed" });
 		renderEdit();
 		const banner = await screen.findByRole("status", { name: tScreens("sidebar.trash") });

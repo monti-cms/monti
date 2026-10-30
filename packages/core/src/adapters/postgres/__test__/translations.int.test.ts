@@ -47,7 +47,7 @@ describe("translation groups (postgres storage)", () => {
 			(await pool.query<{ version: number }>(`SELECT version FROM "${schemaName}".entries WHERE id = $1`, [id])).rows[0]
 				?.version as number;
 
-		it("permanently deleting the source also deletes trashed translations, and is rejected if a translation outside the trash exists", async () => {
+		it("TRASH-D6 permanently deleting the source also deletes trashed translations, and is rejected if a translation outside the trash exists", async () => {
 			const source = await createPost("delete-source");
 			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
@@ -97,7 +97,7 @@ describe("translation groups (postgres storage)", () => {
 			expect(trashedTranslation.status).toBe("trashed");
 		});
 
-		it("keeps a translation trashed on its own in the trash when the source is restored, even if it went a few microseconds before the source", async () => {
+		it("TRASH-R2 keeps a translation trashed on its own in the trash when the source is restored, even if it went a few microseconds before the source", async () => {
 			const source = await createPost("trash-same-millisecond");
 			const apart = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
 			await store.trashEntry({ id: apart.id, expectedVersion: apart.version });

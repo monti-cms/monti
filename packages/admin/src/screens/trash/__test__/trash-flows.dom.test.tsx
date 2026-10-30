@@ -88,7 +88,7 @@ const row = (name: RegExp | string) => screen.getByRole("row", { name: new RegEx
 const moreOf = (target: HTMLElement) => within(target).getByRole("button", { name: t("row.more") });
 
 describe("flow: looking around the trash (T3)", () => {
-	it("opens a folder to its inside and goes back up: trail, title, folder actions, the way up, and no dates", async () => {
+	it("TRASH-B1 opens a folder to its inside and goes back up: trail, title, folder actions, the way up, and no dates", async () => {
 		await renderTrash();
 		fireEvent.click(within(row(/시리즈 원고/)).getByRole("button", { name: "시리즈 원고" }));
 		await screen.findByRole("row", { name: /시리즈 1화/ });
@@ -112,7 +112,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(lastList().has("folder")).toBe(false);
 	});
 
-	it("restores one entry from inside a folder: the request, then a toast that says the folder was made again, and 열기 goes to the editor", async () => {
+	it("TRASH-R5 restores one entry from inside a folder: the request, then a toast that says the folder was made again, and 열기 goes to the editor", async () => {
 		backend.onRestore = ({ items }) =>
 			items.map((item) => ({ type: item.type, id: item.id, ok: true, recreated: true }));
 		nav.setSearch("folder=series");
@@ -133,7 +133,7 @@ describe("flow: looking around the trash (T3)", () => {
 		expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("ep2"));
 	});
 
-	it("finds things inside folders too: the search is sent, it is not also a chip, and a result says which folder it was in", async () => {
+	it("TRASH-B1 finds things inside folders too: the search is sent, it is not also a chip, and a result says which folder it was in", async () => {
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("search") }));
 		const box = screen.getByRole("searchbox", { name: t("search") });
@@ -146,7 +146,7 @@ describe("flow: looking around the trash (T3)", () => {
 		await waitFor(() => expect(lastList().has("q")).toBe(false), { timeout: 3000 });
 	});
 
-	it("opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
+	it("TRASH-B1 opens a document in the editor from its title, and an item in a read-only panel named by it with what points at it", async () => {
 		await renderTrash();
 		const link = within(row(/옛 소개 글/)).getByRole("link", { name: "옛 소개 글" });
 		expect(link.getAttribute("href")).toBe(testSite.adminEntryEditHref("about"));
@@ -182,13 +182,13 @@ describe("flow: looking around the trash (T3)", () => {
 });
 
 describe("flow: restoring (T4)", () => {
-	it("restores a document from its row, and the row is gone once the list is read again", async () => {
+	it("TRASH-R1 restores a document from its row, and the row is gone once the list is read again", async () => {
 		await renderTrash();
 		fireEvent.click(within(row(/옛 소개 글/)).getByRole("button", { name: tc("lifecycle.restore") }));
 		await waitFor(() => expect(screen.queryByRole("row", { name: /옛 소개 글/ })).toBeNull());
 	});
 
-	it("restores the original of a translation whose original is in the trash, found in the rows, and nothing else", async () => {
+	it("TRASH-R3 restores the original of a translation whose original is in the trash, found in the rows, and nothing else", async () => {
 		await renderTrash();
 		fireEvent.click(within(row(/React 19 migration/)).getByRole("button", { name: t("row.restoreOriginal") }));
 		await waitFor(() => expect(posted("/trash/restore")).toHaveLength(1));
@@ -196,7 +196,7 @@ describe("flow: restoring (T4)", () => {
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("restore.draft"), expect.anything()));
 	});
 
-	it("asks the server for the original when it is not in the rows: the refused restore names it and that one is restored", async () => {
+	it("TRASH-R3 asks the server for the original when it is not in the rows: the refused restore names it and that one is restored", async () => {
 		backend.top = backend.top.filter((unit) => unit.id !== "react");
 		backend.onRestore = ({ items }) =>
 			items[0]?.id === "react-en"
@@ -208,7 +208,7 @@ describe("flow: restoring (T4)", () => {
 		expect(posted("/trash/restore")[1]?.items[0]).toMatchObject({ type: "entry", id: "react" });
 	});
 
-	it("says why a restore failed", async () => {
+	it("TRASH-R8 says why a restore failed", async () => {
 		backend.onRestore = ({ items }) =>
 			items.map((item) => ({ type: item.type, id: item.id, ok: false, error: "slug_conflict" }));
 		await renderTrash();
@@ -219,7 +219,7 @@ describe("flow: restoring (T4)", () => {
 });
 
 describe("flow: deleting for good (T5)", () => {
-	it("asks first, names the kept address of what was published, and sends the delete once confirmed", async () => {
+	it("TRASH-D10 asks first, names the kept address of what was published, and sends the delete once confirmed", async () => {
 		await renderTrash();
 		fireEvent.click(moreOf(row(/옛 소개 글/)));
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.deletePermanently") }));
@@ -237,7 +237,7 @@ describe("flow: deleting for good (T5)", () => {
 		expect(posted("/trash/delete")[0]).toEqual({ items: [{ type: "entry", id: "first", expectedVersion: 3 }] });
 	});
 
-	it("blocks the delete while entries point at the item: unlink the ones in use, delete the ones in the trash together, and only then it is enabled", async () => {
+	it("TRASH-D2 blocks the delete while entries point at the item: unlink the ones in use, delete the ones in the trash together, and only then it is enabled", async () => {
 		await renderTrash();
 		fireEvent.click(moreOf(row(/임시/)));
 		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.deletePermanently") }));
@@ -262,7 +262,7 @@ describe("flow: deleting for good (T5)", () => {
 		expect(posted("/trash/delete")[0].items.map((item: { id: string }) => item.id)).toEqual(["r4", "tag"]);
 	});
 
-	it("shows the blockers a refused delete names, with the same ways out", async () => {
+	it("TRASH-D2 shows the blockers a refused delete names, with the same ways out", async () => {
 		backend.top = backend.top.map((unit) =>
 			unit.id === "tag" && unit.type === "entry" ? { ...unit, usages: 0 } : unit,
 		);
@@ -290,7 +290,7 @@ describe("flow: deleting for good (T5)", () => {
 describe("flow: several at once (T6)", () => {
 	const pick = (name: RegExp) => fireEvent.click(within(row(name)).getByRole("checkbox", { name: t("row.select") }));
 
-	it("replaces the head with the count, restore and permanent delete; restore sends both and the bar goes", async () => {
+	it("TRASH-B4 replaces the head with the count, restore and permanent delete; restore sends both and the bar goes", async () => {
 		await renderTrash();
 		pick(/옛 소개 글/);
 		pick(/첫 번째 글/);
@@ -310,7 +310,7 @@ describe("flow: several at once (T6)", () => {
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
 	});
 
-	it("deletes the picked rows for good after asking once, and lets go of the pick", async () => {
+	it("TRASH-D10 deletes the picked rows for good after asking once, and lets go of the pick", async () => {
 		await renderTrash();
 		pick(/옛 소개 글/);
 		pick(/첫 번째 글/);
@@ -324,7 +324,7 @@ describe("flow: several at once (T6)", () => {
 });
 
 describe("flow: emptying the trash (T7)", () => {
-	it("asks how many go, sends the empty, tells what went and what stayed, and the kept row offers the permanent delete", async () => {
+	it("TRASH-E1 asks how many go, sends the empty, tells what went and what stayed, and the kept row offers the permanent delete", async () => {
 		backend.top = [first, about, tag];
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
@@ -338,7 +338,7 @@ describe("flow: emptying the trash (T7)", () => {
 		expect(screen.queryByRole("row", { name: /첫 번째 글/ })).toBeNull();
 	});
 
-	it("says nothing was kept when everything went, and shows the empty trash with no actions", async () => {
+	it("TRASH-E1 says nothing was kept when everything went, and shows the empty trash with no actions", async () => {
 		backend.top = [first, about];
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
@@ -352,7 +352,7 @@ describe("flow: emptying the trash (T7)", () => {
 		expect(screen.queryAllByRole("columnheader")).toHaveLength(0);
 	});
 
-	it("cancelling the question sends nothing", async () => {
+	it("TRASH-E1 cancelling the question sends nothing", async () => {
 		await renderTrash();
 		fireEvent.click(screen.getByRole("button", { name: t("emptyAction") }));
 		fireEvent.click(await within(await screen.findByRole("alertdialog")).findByRole("button", { name: tc("cancel") }));

@@ -213,7 +213,7 @@ describe("trash", () => {
 	// --- folders ----------------------------------------------------------------------------------------------------
 
 	describe("a folder", () => {
-		it("goes to the trash with its subfolders and entries as one unit, and comes back whole as drafts", async () => {
+		it("TRASH-R4 goes to the trash with its subfolders and entries as one unit, and comes back whole as drafts", async () => {
 			const series = await folder("Series");
 			const part = await folder("Part", series.id);
 			const first = await draft("First", series.id);
@@ -260,7 +260,7 @@ describe("trash", () => {
 			expect((await store.getEntry(first.id)).deletedAt).toBeUndefined();
 		});
 
-		it("leaves an entry trashed before it where it is when the folder is restored", async () => {
+		it("TRASH-R4 leaves an entry trashed before it where it is when the folder is restored", async () => {
 			const box = await folder("Box");
 			const early = await draft("Early", box.id);
 			const late = await draft("Late", box.id);
@@ -280,7 +280,7 @@ describe("trash", () => {
 			});
 		});
 
-		it("recreates the folder path by name when one entry is restored from inside a trashed folder, and leaves the rest", async () => {
+		it("TRASH-R5 recreates the folder path by name when one entry is restored from inside a trashed folder, and leaves the rest", async () => {
 			const outer = await folder("Outer");
 			const inner = await folder("Inner", outer.id);
 			const kept = await draft("Stays", outer.id);
@@ -302,7 +302,7 @@ describe("trash", () => {
 			expect(unitOf(await topUnits(), outer.id)).toMatchObject({ type: "folder", entries: 1 });
 		});
 
-		it("merges into a live folder of the same name, and stays in the trash only if something is left in it", async () => {
+		it("TRASH-R5 merges into a live folder of the same name, and stays in the trash only if something is left in it", async () => {
 			const old = await folderNamed(`Merge ${unique("m")}`);
 			const early = await draft("Earlier", old.id);
 			await store.trashEntry({ id: early.id, expectedVersion: early.version });
@@ -329,7 +329,7 @@ describe("trash", () => {
 			expect(rows.rowCount).toBe(0);
 		});
 
-		it("cannot hold anything new while it is in the trash, and a live folder may reuse its name", async () => {
+		it("TRASH-T8 cannot hold anything new while it is in the trash, and a live folder may reuse its name", async () => {
 			const gone = await folder("Gone");
 			await trash.trashFolder({ id: gone.id, expectedVersion: gone.version });
 			await expect(draft("Into the trash", gone.id)).rejects.toMatchObject({ code: "invalid_input" });
@@ -341,7 +341,7 @@ describe("trash", () => {
 			await expect(folderNamed(gone.name)).resolves.toMatchObject({ name: gone.name });
 		});
 
-		it("tells what it holds before it is trashed, counting live things once per translation group", async () => {
+		it("TRASH-T3 tells what it holds before it is trashed, counting live things once per translation group", async () => {
 			const section = await folder("Contents");
 			const sub = await folder("Sub", section.id);
 			await draft("Draft", section.id);
@@ -357,7 +357,7 @@ describe("trash", () => {
 			});
 		});
 
-		it("refuses to trash a folder twice, a stale version, and to restore one that is not in the trash", async () => {
+		it("TRASH-T4 refuses to trash a folder twice, a stale version, and to restore one that is not in the trash", async () => {
 			const shelf = await folder("Twice");
 			const stale = await trash
 				.trashFolder({ id: shelf.id, expectedVersion: shelf.version - 1 })
@@ -370,7 +370,7 @@ describe("trash", () => {
 			await expect(trash.trashFolder({ id: shelf.id })).rejects.toMatchObject({ code: "not_found" });
 		});
 
-		it("counts the entries it took, not one already in the trash", async () => {
+		it("TRASH-T4 counts the entries it took, not one already in the trash", async () => {
 			const shelf = await folder("Counted");
 			const early = await draft("Already gone", shelf.id);
 			await store.trashEntry({ id: early.id, expectedVersion: early.version });
@@ -379,7 +379,7 @@ describe("trash", () => {
 			expect(outcome).toMatchObject({ entries: 1 });
 		});
 
-		it("gives each entry the next version, and names the entries it brought back", async () => {
+		it("TRASH-R4 gives each entry the next version, and names the entries it brought back", async () => {
 			const shelf = await folder("Versions");
 			const entry = await draft("Versioned", shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -391,7 +391,7 @@ describe("trash", () => {
 			expect((await store.getEntry(entry.id)).version).toBe(trashed.version + 1);
 		});
 
-		it("leaves a subfolder trashed before it in the trash when the folder is restored", async () => {
+		it("TRASH-R4 leaves a subfolder trashed before it in the trash when the folder is restored", async () => {
 			const shelf = await folder("Parent shelf");
 			const sub = await folder("Earlier sub", shelf.id);
 			await trash.trashFolder({ id: sub.id, expectedVersion: sub.version });
@@ -403,7 +403,7 @@ describe("trash", () => {
 			expect(await stampOf("folders", sub.id)).not.toBeNull();
 		});
 
-		it.skipIf(!secondLocale)("leaves a translation in the trash while its source stays there", async () => {
+		it.skipIf(!secondLocale)("TRASH-R3 leaves a translation in the trash while its source stays there", async () => {
 			const source = await draft(unique("Outside source"));
 			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
 				.entry;
@@ -418,7 +418,7 @@ describe("trash", () => {
 			expect(await statusOf(translation.id)).toBe("trashed");
 		});
 
-		it.skipIf(!secondLocale)("brings a source and its translation back together", async () => {
+		it.skipIf(!secondLocale)("TRASH-R2 brings a source and its translation back together", async () => {
 			const shelf = await folder("Pair shelf");
 			const source = await draft(unique("Paired source"), shelf.id);
 			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
@@ -431,21 +431,24 @@ describe("trash", () => {
 			expect(await statusOf(translation.id)).toBe("draft");
 		});
 
-		it.skipIf(!secondLocale)("brings a translation back when its source is live outside the folder", async () => {
-			const source = await draft(unique("Live source"));
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
-				.entry;
-			const shelf = await folder("Lone translation");
-			await moveTo(translation, shelf.id);
-			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+		it.skipIf(!secondLocale)(
+			"TRASH-R2 brings a translation back when its source is live outside the folder",
+			async () => {
+				const source = await draft(unique("Live source"));
+				const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+					.entry;
+				const shelf = await folder("Lone translation");
+				await moveTo(translation, shelf.id);
+				await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
 
-			const outcome = await store.restoreFolder({ id: shelf.id });
+				const outcome = await store.restoreFolder({ id: shelf.id });
 
-			expect(outcome.entryIds).toEqual([translation.id]);
-			expect(await statusOf(translation.id)).toBe("draft");
-		});
+				expect(outcome.entryIds).toEqual([translation.id]);
+				expect(await statusOf(translation.id)).toBe("draft");
+			},
+		);
 
-		it("merges two levels into live folders of the same names, and moves what is left of a merged subfolder to the top of the trash", async () => {
+		it("TRASH-R5 merges two levels into live folders of the same names, and moves what is left of a merged subfolder to the top of the trash", async () => {
 			const top = `Two levels ${unique("t")}`;
 			const old = await folderNamed(top);
 			const oldSub = await folderNamed("Inner", old.id);
@@ -465,7 +468,7 @@ describe("trash", () => {
 			expect(unitOf(await topUnits(), oldSub.id)).toMatchObject({ type: "folder", entries: 1, path: [top] });
 		});
 
-		it("keeps a merged folder that still holds both a subfolder and an entry", async () => {
+		it("TRASH-R5 keeps a merged folder that still holds both a subfolder and an entry", async () => {
 			const name = `Both left ${unique("b")}`;
 			const old = await folderNamed(name);
 			const earlySub = await folder("Earlier sub", old.id);
@@ -483,7 +486,7 @@ describe("trash", () => {
 	});
 
 	describe("a media folder", () => {
-		it("goes whole when no file in it is in use, and the files come back with it", async () => {
+		it("TRASH-R6 goes whole when no file in it is in use, and the files come back with it", async () => {
 			const diagrams = await folder("Diagrams", null, "media");
 			const one = await readyMedia(`${unique("one")}.png`, diagrams.id);
 			const two = await readyMedia(`${unique("two")}.png`, diagrams.id);
@@ -502,7 +505,7 @@ describe("trash", () => {
 			expect((await store.listMediaAssets({ folderId: diagrams.id })).total).toBe(2);
 		});
 
-		it("keeps the folder and its files in use, and trashes only the unused files, each on its own", async () => {
+		it("TRASH-T5 keeps the folder and its files in use, and trashes only the unused files, each on its own", async () => {
 			const covers = await folder("Covers", null, "media");
 			const used = await readyMedia(`${unique("used")}.png`, covers.id);
 			const spare = await readyMedia(`${unique("spare")}.png`, covers.id);
@@ -520,7 +523,7 @@ describe("trash", () => {
 			expect(back).toMatchObject({ ok: true, folderId: covers.id, recreated: false });
 		});
 
-		it("puts one file back in a folder made again when its folder is in the trash", async () => {
+		it("TRASH-R6 puts one file back in a folder made again when its folder is in the trash", async () => {
 			const stills = await folder("Stills", null, "media");
 			const file = await readyMedia(`${unique("still")}.png`, stills.id);
 			await trash.trashFolder({ id: stills.id, expectedVersion: stills.version });
@@ -534,7 +537,7 @@ describe("trash", () => {
 			).toBe(stills.name);
 		});
 
-		it("keeps a merged media folder that still holds a subfolder and a file", async () => {
+		it("TRASH-R6 keeps a merged media folder that still holds a subfolder and a file", async () => {
 			const name = `Pictures left ${unique("p")}`;
 			const old = await folderNamed(name, null, "media");
 			const earlySub = await folder("Earlier pictures", old.id, "media");
@@ -556,7 +559,7 @@ describe("trash", () => {
 	// --- media files ------------------------------------------------------------------------------------------------
 
 	describe("a media file", () => {
-		it("goes to the trash unless it is in use, comes back, and stays out of every live read meanwhile", async () => {
+		it("TRASH-T5 goes to the trash unless it is in use, comes back, and stays out of every live read meanwhile", async () => {
 			const free = await readyMedia(`${unique("free")}.png`);
 			const busy = await readyMedia(`${unique("busy")}.png`);
 			await point(await draft("Shows a picture"), [{ kind: "media", targetId: busy.id, type: "body" }]);
@@ -582,7 +585,7 @@ describe("trash", () => {
 			expect((await store.getMediaAsset(free.id))?.status).toBe("ready");
 		});
 
-		it("trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
+		it("TRASH-T5 trashes nothing for no ids, and leaves a file already in the trash as it was", async () => {
 			expect(await store.trashMedia({ ids: [] })).toEqual({ trashed: [], kept: [] });
 			const file = await readyMedia(`${unique("once")}.png`);
 			await store.trashMedia({ ids: [file.id] });
@@ -592,7 +595,7 @@ describe("trash", () => {
 			expect(await stampOf("media_assets", file.id)).toEqual(stamp);
 		});
 
-		it("refuses to restore a file that is not in the trash, or not there at all", async () => {
+		it("TRASH-R6 refuses to restore a file that is not in the trash, or not there at all", async () => {
 			const file = await readyMedia(`${unique("not trashed")}.png`);
 			await expect(store.restoreMedia({ id: file.id })).rejects.toMatchObject({ code: "invalid_status" });
 			await expect(store.restoreMedia({ id: randomUUID() })).rejects.toMatchObject({ code: "not_found" });
@@ -602,7 +605,7 @@ describe("trash", () => {
 	// --- the list ---------------------------------------------------------------------------------------------------
 
 	describe("the list", () => {
-		it("shows the top of the trash, the inside of a folder, and a search through everything with the path of each thing", async () => {
+		it("TRASH-B1 shows the top of the trash, the inside of a folder, and a search through everything with the path of each thing", async () => {
 			const needle = unique("needle");
 			const shelf = await folder("Shelf");
 			const nested = await folder("Nested", shelf.id);
@@ -658,7 +661,7 @@ describe("trash", () => {
 			expect(unitOf(found.items, loose.id)?.expiresAt).toBeInstanceOf(Date);
 		});
 
-		it("sorts by the day each was discarded, the newest first unless asked otherwise, and counts the days from the folder for what is inside", async () => {
+		it("TRASH-B2 sorts by the day each was discarded, the newest first unless asked otherwise, and counts the days from the folder for what is inside", async () => {
 			const early = await draft(unique("early"));
 			const later = await draft(unique("later"));
 			await store.trashEntry({ id: early.id, expectedVersion: early.version });
@@ -686,7 +689,7 @@ describe("trash", () => {
 		});
 
 		it.skipIf(!relation)(
-			"shows what an entry has: its languages, whether it was published, and how many entries point at it",
+			"TRASH-B1 shows what an entry has: its languages, whether it was published, and how many entries point at it",
 			async () => {
 				if (!relation) return;
 				const tag = await relationTarget(relation.to);
@@ -718,7 +721,7 @@ describe("trash", () => {
 			},
 		);
 
-		it("gives the purge the version of each entry and folder, and none for a file", async () => {
+		it("TRASH-D9 gives the purge the version of each entry and folder, and none for a file", async () => {
 			const entry = await draft(unique("Unit entry"));
 			const trashedEntry = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
 			const shelf = await folder("Unit shelf");
@@ -740,7 +743,7 @@ describe("trash", () => {
 		const second = testSite.LOCALES.find((code) => code !== testSite.DEFAULT_LOCALE);
 
 		it.skipIf(!second)(
-			"is a language of its source's row when they were trashed together, and a row of its own when it was trashed alone",
+			"TRASH-B1 is a language of its source's row when they were trashed together, and a row of its own when it was trashed alone",
 			async () => {
 				const source = await draft(unique("Source"));
 				const translation = (await content.createTranslation({ sourceId: source.id, locale: second as string })).entry;
@@ -764,19 +767,22 @@ describe("trash", () => {
 			},
 		);
 
-		it.skipIf(!second)("cannot come back before its source, and names the source to restore first", async () => {
-			const source = await draft(unique("Parent"));
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: second as string })).entry;
-			await store.trashEntry({ id: translation.id, expectedVersion: translation.version });
-			const trashedSource = await store.trashEntry({ id: source.id, expectedVersion: source.version });
-			const row = unitOf((await trash.list({ pageSize: 100 })).items, translation.id);
-			expect(row).toMatchObject({ sourceTrashed: true });
-			expect(await trash.restore([{ type: "entry", id: translation.id }])).toEqual([
-				{ type: "entry", id: translation.id, ok: false, error: "source_trashed", sourceId: source.id },
-			]);
-			await trash.restore([{ type: "entry", id: source.id, expectedVersion: trashedSource.version }]);
-			expect(await trash.restore([{ type: "entry", id: translation.id }])).toMatchObject([{ ok: true }]);
-		});
+		it.skipIf(!second)(
+			"TRASH-R3 cannot come back before its source, and names the source to restore first",
+			async () => {
+				const source = await draft(unique("Parent"));
+				const translation = (await content.createTranslation({ sourceId: source.id, locale: second as string })).entry;
+				await store.trashEntry({ id: translation.id, expectedVersion: translation.version });
+				const trashedSource = await store.trashEntry({ id: source.id, expectedVersion: source.version });
+				const row = unitOf((await trash.list({ pageSize: 100 })).items, translation.id);
+				expect(row).toMatchObject({ sourceTrashed: true });
+				expect(await trash.restore([{ type: "entry", id: translation.id }])).toEqual([
+					{ type: "entry", id: translation.id, ok: false, error: "source_trashed", sourceId: source.id },
+				]);
+				await trash.restore([{ type: "entry", id: source.id, expectedVersion: trashedSource.version }]);
+				expect(await trash.restore([{ type: "entry", id: translation.id }])).toMatchObject([{ ok: true }]);
+			},
+		);
 	});
 
 	// --- deleting for good ------------------------------------------------------------------------------------------
@@ -785,7 +791,7 @@ describe("trash", () => {
 		const trashed = async (entry: Entry) =>
 			store.trashEntry({ id: entry.id, expectedVersion: (await store.getEntry(entry.id)).version });
 
-		it("is not held back by a link in a body: the reference rows go and the entry is gone", async () => {
+		it("TRASH-D2 is not held back by a link in a body: the reference rows go and the entry is gone", async () => {
 			const target = await publish(await draft(unique("Linked")));
 			const source = await draft(unique("Linker"));
 			await point(source, [{ kind: "entry", targetId: target.id, type: "body" }]);
@@ -804,7 +810,7 @@ describe("trash", () => {
 		});
 
 		it.skipIf(!relation)(
-			"is held back by a relation field, naming the entries that point at it and whether they are in the trash",
+			"TRASH-D2 is held back by a relation field, naming the entries that point at it and whether they are in the trash",
 			async () => {
 				if (!relation) return;
 				const target = await draft(unique("Pointed at"));
@@ -830,7 +836,7 @@ describe("trash", () => {
 		);
 
 		it.skipIf(!relation)(
-			"goes through when the entries that point at it are deleted in the same call, whatever the order",
+			"TRASH-D3 goes through when the entries that point at it are deleted in the same call, whatever the order",
 			async () => {
 				if (!relation) return;
 				const target = await draft(unique("Target"));
@@ -852,7 +858,7 @@ describe("trash", () => {
 			},
 		);
 
-		it("deletes a folder with everything in it, its media files included", async () => {
+		it("TRASH-D7 deletes a folder with everything in it, its media files included", async () => {
 			const crate = await folder("Crate");
 			const sub = await folder("Sub", crate.id);
 			const inside = await publish(await draft(unique("Inside"), sub.id));
@@ -878,19 +884,22 @@ describe("trash", () => {
 			expect(await eventKinds(inside.id)).toContain("deleted");
 		});
 
-		it.skipIf(!relation)("holds a folder back when an entry outside it points at something inside", async () => {
-			if (!relation) return;
-			const crate = await folder("Held");
-			const target = await draft(unique("Inside"), crate.id);
-			const outside = await draft(unique("Outside"));
-			await point(outside, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
-			await trash.trashFolder({ id: crate.id, expectedVersion: crate.version });
-			const [result] = await trash.delete([{ type: "folder", id: crate.id }]);
-			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: outside.id, trashed: false }] });
-			expect(unitOf(await topUnits(), crate.id)).toMatchObject({ type: "folder", id: crate.id });
-		});
+		it.skipIf(!relation)(
+			"TRASH-D7 holds a folder back when an entry outside it points at something inside",
+			async () => {
+				if (!relation) return;
+				const crate = await folder("Held");
+				const target = await draft(unique("Inside"), crate.id);
+				const outside = await draft(unique("Outside"));
+				await point(outside, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
+				await trash.trashFolder({ id: crate.id, expectedVersion: crate.version });
+				const [result] = await trash.delete([{ type: "folder", id: crate.id }]);
+				expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: outside.id, trashed: false }] });
+				expect(unitOf(await topUnits(), crate.id)).toMatchObject({ type: "folder", id: crate.id });
+			},
+		);
 
-		it("deletes a media file from the store as well as its row, and refuses one an entry still uses", async () => {
+		it("TRASH-D8 deletes a media file from the store as well as its row, and refuses one an entry still uses", async () => {
 			const file = await readyMedia(`${unique("bye")}.png`);
 			await trash.trashMedia([file.id]);
 			const [result] = await trash.delete([{ type: "media", id: file.id }]);
@@ -907,7 +916,7 @@ describe("trash", () => {
 			expect((await store.getMediaAsset(late.id))?.status).toBe("trashed");
 		});
 
-		it("refuses a stale version", async () => {
+		it("TRASH-D9 refuses a stale version", async () => {
 			const source = await draft(unique("Versioned"));
 			const trashedSource = await trashed(source);
 			const [stale] = await trash.delete([
@@ -918,7 +927,7 @@ describe("trash", () => {
 			expect(fresh).toMatchObject({ ok: true });
 		});
 
-		it("refuses an entry, a folder or a file that is not in the trash, and deletes nothing", async () => {
+		it("TRASH-D1 refuses an entry, a folder or a file that is not in the trash, and deletes nothing", async () => {
 			const entry = await draft(unique("Live"));
 			const shelf = await folder("Live shelf");
 			const file = await readyMedia(`${unique("live")}.png`);
@@ -939,7 +948,7 @@ describe("trash", () => {
 			expect(deletedFiles).not.toContain(file.storageKey);
 		});
 
-		it("refuses a trashed folder that holds an entry out of the trash", async () => {
+		it("TRASH-D7 refuses a trashed folder that holds an entry out of the trash", async () => {
 			const shelf = await folder("Mixed shelf");
 			const entry = await draft(unique("Still live"), shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -953,7 +962,7 @@ describe("trash", () => {
 			expect(await statusOf(entry.id)).toBe("draft");
 		});
 
-		it("refuses a trashed media folder while an entry uses a file in it", async () => {
+		it("TRASH-D8 refuses a trashed media folder while an entry uses a file in it", async () => {
 			const pictures = await folder("Used pictures", null, "media");
 			const file = await readyMedia(`${unique("used")}.png`, pictures.id);
 			await trash.trashFolder({ id: pictures.id, expectedVersion: pictures.version });
@@ -969,7 +978,7 @@ describe("trash", () => {
 			expect(deletedFiles).not.toContain(file.storageKey);
 		});
 
-		it.skipIf(!secondLocale)("deletes a source with a translation that was trashed on its own", async () => {
+		it.skipIf(!secondLocale)("TRASH-D6 deletes a source with a translation that was trashed on its own", async () => {
 			const source = await draft(unique("Source"));
 			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
 				.entry;
@@ -984,7 +993,7 @@ describe("trash", () => {
 			expect(await eventKinds(translation.id)).toContain("deleted");
 		});
 
-		it("names the entries that point at a file it refuses to delete", async () => {
+		it("TRASH-D8 names the entries that point at a file it refuses to delete", async () => {
 			const file = await readyMedia(`${unique("named")}.png`);
 			await trash.trashMedia([file.id]);
 			const user = await point(await draft(unique("Names the file")), [
@@ -994,35 +1003,41 @@ describe("trash", () => {
 			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: user.id, trashed: false }] });
 		});
 
-		it.skipIf(!secondLocale)("deletes a folder with a source whose translation was trashed outside it", async () => {
-			const shelf = await folder("Source and translation");
-			const source = await draft(unique("Shelved"), shelf.id);
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
-				.entry;
-			await moveToTop(translation);
-			await trashed(translation);
-			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+		it.skipIf(!secondLocale)(
+			"TRASH-D7 deletes a folder with a source whose translation was trashed outside it",
+			async () => {
+				const shelf = await folder("Source and translation");
+				const source = await draft(unique("Shelved"), shelf.id);
+				const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+					.entry;
+				await moveToTop(translation);
+				await trashed(translation);
+				await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
 
-			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
+				const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
 
-			expect(outcome.results).toEqual([{ type: "folder", id: shelf.id, ok: true }]);
-			expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
-			await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
-		});
+				expect(outcome.results).toEqual([{ type: "folder", id: shelf.id, ok: true }]);
+				expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
+				await expect(store.getEntry(translation.id)).rejects.toMatchObject({ code: "not_found" });
+			},
+		);
 
-		it.skipIf(!secondLocale)("names each entry once when a source and its translation are in the folder", async () => {
-			const shelf = await folder("Both inside");
-			const source = await draft(unique("Inside source"), shelf.id);
-			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
-				.entry;
-			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
+		it.skipIf(!secondLocale)(
+			"TRASH-D2 names each entry once when a source and its translation are in the folder",
+			async () => {
+				const shelf = await folder("Both inside");
+				const source = await draft(unique("Inside source"), shelf.id);
+				const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+					.entry;
+				await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
 
-			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
+				const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
 
-			expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
-		});
+				expect([...outcome.entryIds].sort()).toEqual([source.id, translation.id].sort());
+			},
+		);
 
-		it("leaves an unfinished upload in a media folder unfiled, for the upload cleanup, and deletes the rest", async () => {
+		it("TRASH-D8 leaves an unfinished upload in a media folder unfiled, for the upload cleanup, and deletes the rest", async () => {
 			const pictures = await folder("Half uploaded", null, "media");
 			const done = await readyMedia(`${unique("done")}.png`, pictures.id);
 			const unfinished = await store.createMediaAsset({
@@ -1040,7 +1055,7 @@ describe("trash", () => {
 			expect(await store.getMediaAsset(unfinished.id)).toMatchObject({ status: "pending", folderId: null });
 		});
 
-		it.skipIf(!secondLocale)("holds a source back while a translation of it is out of the trash", async () => {
+		it.skipIf(!secondLocale)("TRASH-D6 holds a source back while a translation of it is out of the trash", async () => {
 			const shelf = await folder("Source shelf");
 			const source = await draft(unique("Shelved source"), shelf.id);
 			const translation = (await content.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
@@ -1060,7 +1075,7 @@ describe("trash", () => {
 	// --- empty and purge --------------------------------------------------------------------------------------------
 
 	describe("emptying and the purge", () => {
-		it("purges a folder 30 days after the folder's day, not the day its entries were trashed, and deletes media files from the store", async () => {
+		it("TRASH-E3 purges a folder 30 days after the folder's day, not the day its entries were trashed, and deletes media files from the store", async () => {
 			const old = await folder("Old shelf");
 			const entry = await draft(unique("Old entry"), old.id);
 			const mediaFolder = await folder("Old pictures", null, "media");
@@ -1083,7 +1098,7 @@ describe("trash", () => {
 			expect(deletedFiles).toContain(file.storageKey);
 		});
 
-		it.skipIf(!relation)("keeps an expired unit that an entry still points at, and says why", async () => {
+		it.skipIf(!relation)("TRASH-E3 keeps an expired unit that an entry still points at, and says why", async () => {
 			const target = await draft(unique("Needed"));
 			const pointer = await draft(unique("Needs it"));
 			await point(pointer, [{ kind: "entry", targetId: target.id, type: "metadata" }]);
@@ -1111,7 +1126,7 @@ describe("trash", () => {
 			expect(unitOf(await topUnits(), shelf.id)).toMatchObject({ type: "folder", id: shelf.id });
 		});
 
-		it("purges when the trash is looked at, at most once a day", async () => {
+		it("TRASH-E4 purges when the trash is looked at, at most once a day", async () => {
 			const shelf = await folder("Lazy purge");
 			await draft(unique("Lazy"), shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -1132,7 +1147,7 @@ describe("trash", () => {
 		});
 
 		it.skipIf(!secondLocale)(
-			"counts a translation deleted with its source as deleted, whichever comes first",
+			"TRASH-E2 counts a translation deleted with its source as deleted, whichever comes first",
 			async () => {
 				for (const order of ["source first", "translation first"] as const) {
 					const source = await draft(unique(`Source, ${order}`));
@@ -1156,7 +1171,7 @@ describe("trash", () => {
 			},
 		);
 
-		it("counts a subfolder and a file deleted with their folder as deleted", async () => {
+		it("TRASH-E2 counts a subfolder and a file deleted with their folder as deleted", async () => {
 			const shelf = await folder("Whole shelf");
 			const sub = await folder("Sub shelf", shelf.id);
 			await trash.trashFolder({ id: sub.id, expectedVersion: sub.version });
@@ -1178,7 +1193,7 @@ describe("trash", () => {
 			expect(deletedFiles.filter((key) => key === file.storageKey)).toHaveLength(1);
 		});
 
-		it.skipIf(!relation)("empties the trash and keeps what an entry points at", async () => {
+		it.skipIf(!relation)("TRASH-E1 empties the trash and keeps what an entry points at", async () => {
 			const shelf = await folder("To empty");
 			await draft(unique("Gone"), shelf.id);
 			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
@@ -1206,7 +1221,7 @@ describe("trash", () => {
 	describe.skipIf(!relation)("unlinking", () => {
 		const field = relation as NonNullable<typeof relation>;
 
-		it("takes a target out of the relation fields of the other entries, working and published, bumping each version once and recording an event", async () => {
+		it("TRASH-D4 takes a target out of the relation fields of the other entries, working and published, bumping each version once and recording an event", async () => {
 			const tag = await relationTarget(field.to);
 			const extra = (
 				await content.createDraft({
@@ -1244,7 +1259,7 @@ describe("trash", () => {
 			targets.delete(field.to);
 		});
 
-		it("unlinks every entry of a collection, and leaves the entries that are targets themselves alone", async () => {
+		it("TRASH-D4 unlinks every entry of a collection, and leaves the entries that are targets themselves alone", async () => {
 			const one = await relationTarget(field.to);
 			const post = await draft(unique("Pointing"), null, { [field.name]: field.many ? [one] : one });
 			const outcome = await trash.unlink({ collection: field.to });
@@ -1260,17 +1275,20 @@ describe("trash", () => {
 	});
 
 	describe("an item", () => {
-		it.skipIf(!relation)("goes to the trash while an entry uses it, and restoring it publishes it again", async () => {
-			if (!relation) return;
-			const tag = await relationTarget(relation.to);
-			await draft(unique("User"), null, { [relation.name]: relation.many ? [tag] : tag });
-			const entry = await store.getEntry(tag);
-			await store.trashEntry({ id: tag, expectedVersion: entry.version });
-			expect(await statusOf(tag)).toBe("trashed");
-			const [result] = await trash.restore([{ type: "entry", id: tag }]);
-			expect(result).toMatchObject({ ok: true });
-			expect(await statusOf(tag)).toBe("published");
-		});
+		it.skipIf(!relation)(
+			"TRASH-R1 goes to the trash while an entry uses it, and restoring it publishes it again",
+			async () => {
+				if (!relation) return;
+				const tag = await relationTarget(relation.to);
+				await draft(unique("User"), null, { [relation.name]: relation.many ? [tag] : tag });
+				const entry = await store.getEntry(tag);
+				await store.trashEntry({ id: tag, expectedVersion: entry.version });
+				expect(await statusOf(tag)).toBe("trashed");
+				const [result] = await trash.restore([{ type: "entry", id: tag }]);
+				expect(result).toMatchObject({ ok: true });
+				expect(await statusOf(tag)).toBe("published");
+			},
+		);
 	});
 });
 
@@ -1310,7 +1328,7 @@ describe("trash: a folder of items", () => {
 		if (pool && schema) await dropIsolatedTestPool(pool, schema);
 	});
 
-	it.skipIf(!items)("publishes the items again when their folder comes back", async () => {
+	it.skipIf(!items)("TRASH-R1 publishes the items again when their folder comes back", async () => {
 		const collection = items as string;
 		const shelf = await store.createFolder({ collection, parentId: null, name: "Item shelf", position: 0 });
 		const item = (

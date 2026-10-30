@@ -1249,7 +1249,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			).toBe("current");
 		});
 
-		it("restores a trashed record as an active (public) record", async () => {
+		it("TRASH-R1 restores a trashed record as an active (public) record", async () => {
 			const tag = (
 				await service.createDraft({
 					collection: recordCollection,
@@ -1264,7 +1264,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(restored.status).toBe("published");
 		});
 
-		it("permanently deletes only trashed entries and releases never-published slugs", async () => {
+		it("TRASH-D5 permanently deletes only trashed entries and releases never-published slugs", async () => {
 			const post = await publishedPost();
 			await expect(store.permanentDeleteEntry({ id: post.id, expectedVersion: post.version })).rejects.toMatchObject({
 				code: "invalid_status",
@@ -1464,7 +1464,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			expect(trashed.status).toBe("trashed");
 		});
 
-		it("keeps media out of the trash that an unparsed draft or a template still mentions", async () => {
+		it("TRASH-T5 keeps media out of the trash that an unparsed draft or a template still mentions", async () => {
 			const media = await store.createMediaAsset({
 				filename: "a.png",
 				mimeType: "image/png",

@@ -107,7 +107,7 @@ describe("trash routes", () => {
 			} as never)
 		).entry;
 
-	it("DELETE /folders/:id trashes the folder, GET /folders/:id/contents counts before, and GET /trash lists it with dates as ISO text", async () => {
+	it("TRASH-T4 DELETE /folders/:id trashes the folder, GET /folders/:id/contents counts before, and GET /trash lists it with dates as ISO text", async () => {
 		const shelf = await store.createFolder({ collection: contentCollection, parentId: null, name: unique("Shelf") });
 		const entry = await draft(unique("In shelf"), shelf.id);
 		const sub = await store.createFolder({ collection: contentCollection, parentId: shelf.id, name: unique("Sub") });
@@ -150,7 +150,7 @@ describe("trash routes", () => {
 		expect(bad.status).toBe(400);
 	});
 
-	it("POST /trash/restore and /trash/delete answer one result per item, in order, and reject a bad body", async () => {
+	it("TRASH-B4 POST /trash/restore and /trash/delete answer one result per item, in order, and reject a bad body", async () => {
 		const first = await draft(unique("First"));
 		const second = await draft(unique("Second"));
 		await store.trashEntry({ id: first.id, expectedVersion: first.version });
@@ -182,7 +182,7 @@ describe("trash routes", () => {
 	});
 
 	it.skipIf(!relation)(
-		"POST /references/unlink then /trash/delete: a blocked delete lists its usages, unlinking clears them, empty reports what stayed",
+		"TRASH-E1 POST /references/unlink then /trash/delete: a blocked delete lists its usages, unlinking clears them, empty reports what stayed",
 		async () => {
 			if (!relation) return;
 			const target = await relationTarget(relation.to);
@@ -221,7 +221,7 @@ describe("trash routes", () => {
 		},
 	);
 
-	it("POST /trash/purge takes an admin or the events retry secret, and nobody else", async () => {
+	it("TRASH-P1 POST /trash/purge takes an admin or the events retry secret, and nobody else", async () => {
 		const withToken = (token: string) =>
 			request("POST", "trash/purge", undefined, { authorization: `Bearer ${token}`, origin: "" });
 		const ok = await purge(withToken("cron-secret"), {
@@ -250,7 +250,7 @@ describe("trash routes", () => {
 		expect((await purge(request("POST", "trash/purge"), { cms })).status).toBe(200);
 	});
 
-	it("every trash route needs an admin", async () => {
+	it("TRASH-P1 every trash route needs an admin", async () => {
 		const guarded = fakeCms({
 			config: testConfig,
 			store,

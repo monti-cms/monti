@@ -341,7 +341,7 @@ describe("flow: pick rows and act", () => {
 		expect(screen.queryByRole("button", { name: /요청/ })).toBeNull();
 	});
 
-	it("moves the picked draft rows to the trash from the menu at once, and the list is requested again", async () => {
+	it("TRASH-T3 moves the picked draft rows to the trash from the menu at once, and the list is requested again", async () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
 		await screen.findByRole("toolbar");

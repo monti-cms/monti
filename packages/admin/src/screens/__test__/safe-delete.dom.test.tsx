@@ -146,7 +146,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		return contextMenu(await screen.findByRole("row", { name: /뉴스/ }));
 	};
 
-	it("moves a folder of drafts at once, and the toast's undo restores the folder", async () => {
+	it("TRASH-T6 moves a folder of drafts at once, and the toast's undo restores the folder", async () => {
 		const items = await openFolderMenu();
 		fireEvent.click(items.at(-1) as HTMLElement);
 
@@ -163,7 +163,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		expect(api.sent("POST /v1/trash/restore")[0]?.body).toEqual({ items: [{ type: "folder", id: "f1" }] });
 	});
 
-	it("asks first when the folder holds a published entry, and sends nothing when cancelled", async () => {
+	it("TRASH-T3 asks first when the folder holds a published entry, and sends nothing when cancelled", async () => {
 		server.contents = { entries: 2, published: 1, folders: 0, files: 0, filesInUse: 0 };
 		const items = await openFolderMenu();
 		fireEvent.click(items.at(-1) as HTMLElement);
@@ -175,7 +175,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		expect(api.sent("DELETE /v1/folders/:id")).toHaveLength(0);
 	});
 
-	it("moves the folder once the question is confirmed", async () => {
+	it("TRASH-T3 moves the folder once the question is confirmed", async () => {
 		server.contents = { entries: 2, published: 1, folders: 0, files: 0, filesInUse: 0 };
 		const items = await openFolderMenu();
 		fireEvent.click(items.at(-1) as HTMLElement);
@@ -186,7 +186,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 });
 
 describe("flow: rows go to the trash (T2)", () => {
-	it("moves a draft at once, and the toast's undo restores it at the version the trash made", async () => {
+	it("TRASH-T6 moves a draft at once, and the toast's undo restores it at the version the trash made", async () => {
 		await renderList();
 		const items = await contextMenu(row("가"));
 		fireEvent.click(items.at(-1) as HTMLElement);
@@ -204,14 +204,14 @@ describe("flow: rows go to the trash (T2)", () => {
 		});
 	});
 
-	it("moves a draft at once with the Delete key too", async () => {
+	it("TRASH-T3 moves a draft at once with the Delete key too", async () => {
 		await renderList();
 		fireEvent.keyDown(within(row("가")).getByRole("link", { name: "가" }), { key: "Delete" });
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
-	it("asks for a published entry, and sends nothing when cancelled", async () => {
+	it("TRASH-T3 asks for a published entry, and sends nothing when cancelled", async () => {
 		server.posts = [item("가"), item("나", { status: "published" })];
 		await renderList();
 		fireEvent.click((await contextMenu(row("나"))).at(-1) as HTMLElement);
@@ -222,7 +222,7 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(bulkBodies()).toHaveLength(0);
 	});
 
-	it("sends the move once the question is confirmed", async () => {
+	it("TRASH-T3 sends the move once the question is confirmed", async () => {
 		server.posts = [item("나", { status: "published" })];
 		await renderList();
 		fireEvent.click((await contextMenu(row("나"))).at(-1) as HTMLElement);
@@ -232,7 +232,7 @@ describe("flow: rows go to the trash (T2)", () => {
 		expect(bulkBodies()[0]).toMatchObject({ op: "trash", items: [{ id: "나", expectedVersion: 3 }] });
 	});
 
-	it("asks once for several rows when one is published, and counts the move in the toast", async () => {
+	it("TRASH-T3 asks once for several rows when one is published, and counts the move in the toast", async () => {
 		server.posts = [item("가"), item("나", { status: "published" }), item("다")];
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: /가/ }));

@@ -49,7 +49,7 @@ describe("content service rules", () => {
 		await closeGlobalPool();
 	});
 
-	it("refuses to duplicate a trashed entry, and allows it once restored", async () => {
+	it("TRASH-T7 refuses to duplicate a trashed entry, and allows it once restored", async () => {
 		const service = serviceFor(testSite);
 		const entry = await createPost(service);
 		const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });

@@ -190,7 +190,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		expect(screen.getAllByRole("alert").some((node) => node.textContent?.includes("title is required"))).toBe(true);
 	});
 
-	it("a trashed entry is read-only in the field", async () => {
+	it("TRASH-T7 a trashed entry is read-only in the field", async () => {
 		renderMinimal({ server: { ...ENTRY, status: "trashed" } });
 		const input = await title();
 		expect(input.disabled).toBe(true);

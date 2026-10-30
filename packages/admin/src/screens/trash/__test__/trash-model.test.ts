@@ -27,19 +27,19 @@ const now = new Date();
 const none = new Map<string, number>();
 
 describe("days left", () => {
-	it("counts the thirty days from the day it was discarded, and has none inside a trashed folder", () => {
+	it("TRASH-B2 counts the thirty days from the day it was discarded, and has none inside a trashed folder", () => {
 		expect(daysLeftOf(entry("a", "a", { deletedAt: ago(0) }), now)).toBe(30);
 		expect(daysLeftOf(entry("a", "a", { deletedAt: ago(27) }), now)).toBe(3);
 		expect(daysLeftOf(inside(entry("a", "a")), now)).toBeNull();
 	});
 
-	it("turns urgent at three days", () => {
+	it("TRASH-B2 turns urgent at three days", () => {
 		expect([4, 3, 0].map(isUrgent)).toEqual([false, true, true]);
 	});
 });
 
 describe("which button a row has", () => {
-	it("restores; restores the original of a translation whose original is in the trash; deletes what the last emptying kept", () => {
+	it("TRASH-R3 restores; restores the original of a translation whose original is in the trash; deletes what the last emptying kept", () => {
 		const plain = entry("a", "a");
 		const translation = entry("b", "b", { isSource: false, sourceTrashed: true, sourceTitle: "원문" });
 		expect(rowActionOf(plain, none)).toBe("restore");
@@ -50,7 +50,7 @@ describe("which button a row has", () => {
 });
 
 describe("what pressing a row does", () => {
-	it("goes into a folder, opens a document in the editor, and shows an item or a file in the panel", () => {
+	it("TRASH-B1 goes into a folder, opens a document in the editor, and shows an item or a file in the panel", () => {
 		expect(openOf(testSite, folder("f", "f"))).toEqual({ kind: "folder" });
 		expect(openOf(testSite, entry("a", "a"))).toEqual({ kind: "editor", href: testSite.adminEntryEditHref("a") });
 		expect(openOf(testSite, entry("a", "a", { collection: record }))).toEqual({ kind: "panel" });
@@ -59,7 +59,7 @@ describe("what pressing a row does", () => {
 });
 
 describe("the second line of a row", () => {
-	it("names a translation by its language and a translation with its original in the trash by that", () => {
+	it("TRASH-B1 names a translation by its language and a translation with its original in the trash by that", () => {
 		const translation = entry("b", "b", { isSource: false, locale: secondLocale });
 		expect(metaOf(testSite, translation, { searching: false }).text).toBe(
 			t("meta.translation", { language: testSite.localeLabel(secondLocale) }),
@@ -71,7 +71,7 @@ describe("the second line of a row", () => {
 		});
 	});
 
-	it("starts with the folder in a search, ends with why in a kept row, and a file keeps its folder at the end", () => {
+	it("TRASH-B1 starts with the folder in a search, ends with why in a kept row, and a file keeps its folder at the end", () => {
 		const found = entry("a", "a", { path: ["시리즈 원고"] });
 		expect(
 			metaOf(testSite, found, { searching: true }).text.startsWith(t("meta.inFolder", { path: "시리즈 원고" })),
@@ -102,7 +102,7 @@ describe("what points at an entry", () => {
 		sourceStatus: trashed ? "trashed" : "published",
 	});
 
-	it("counts relation fields only, once per entry, and says which are in the trash", () => {
+	it("TRASH-D2 counts relation fields only, once per entry, and says which are in the trash", () => {
 		const usages = usagesFromReferrers([
 			referrer("a", [{ type: "metadata", path: "tagIds" }]),
 			{ ...referrer("a", [{ type: "metadata", path: "tagIds" }]), state: "published" },
@@ -124,11 +124,11 @@ describe("the permanent delete plan", () => {
 		{ entryId: "r2", title: "r2", collection: content, trashed: true },
 	];
 
-	it("is allowed at once when nothing points at it", () => {
+	it("TRASH-D2 is allowed at once when nothing points at it", () => {
 		expect(canDelete(newPlan([tag], []))).toBe(true);
 	});
 
-	it("waits for each kind of referrer to be dealt with, and sends the ones deleted together first", () => {
+	it("TRASH-D3 waits for each kind of referrer to be dealt with, and sends the ones deleted together first", () => {
 		const plan = newPlan([tag], [blockerOf(tag, usages)]);
 		expect(canDelete(plan)).toBe(false);
 		const unlinked = { ...plan, unlinked: new Set([itemKey(tag)]) };
@@ -139,7 +139,7 @@ describe("the permanent delete plan", () => {
 		expect(deleteRequestOf(unlinked).map((target) => target.id)).toEqual(["tag"]);
 	});
 
-	it("takes the blockers a refused delete names, and only for the units that came back in use", () => {
+	it("TRASH-D2 takes the blockers a refused delete names, and only for the units that came back in use", () => {
 		const other = entry("other", "other");
 		const blockers = blockersFromResults(
 			[tag, other],
@@ -153,7 +153,7 @@ describe("the permanent delete plan", () => {
 		]);
 	});
 
-	it("keeps the address of what was published", () => {
+	it("TRASH-D5 keeps the address of what was published", () => {
 		expect(keepsAddress([entry("a", "a", { everPublished: true })])).toBe(true);
 		expect(keepsAddress([entry("a", "a"), folder("f", "f")])).toBe(false);
 	});
@@ -167,7 +167,7 @@ describe("what a restore tells", () => {
 		...extra,
 	});
 
-	it("says a document is a draft again and names it for 열기, or that its folder was made again", () => {
+	it("TRASH-R8 says a document is a draft again and names it for 열기, or that its folder was made again", () => {
 		const doc = entry("a", "a");
 		expect(summarizeRestore(testSite, [doc], [ok("a")], null)).toMatchObject({
 			message: t("restore.draft"),
@@ -179,7 +179,7 @@ describe("what a restore tells", () => {
 		});
 	});
 
-	it("only says restored for an item, a file, a folder and for several", () => {
+	it("TRASH-R8 only says restored for an item, a file, a folder and for several", () => {
 		const item = entry("t", "t", { collection: record });
 		expect(summarizeRestore(testSite, [item], [ok("t")], null)).toMatchObject({
 			message: t("restore.done"),
@@ -198,7 +198,7 @@ describe("what a restore tells", () => {
 		});
 	});
 
-	it("keeps what failed apart, with the original named for a translation", () => {
+	it("TRASH-R8 keeps what failed apart, with the original named for a translation", () => {
 		const translation = entry("b", "b", { isSource: false });
 		const summary = summarizeRestore(
 			testSite,
@@ -212,7 +212,7 @@ describe("what a restore tells", () => {
 });
 
 describe("the kind filter", () => {
-	it("offers every collection in the site's order, then the media, each with its count and 0 for none", () => {
+	it("TRASH-B3 offers every collection in the site's order, then the media, each with its count and 0 for none", () => {
 		const collections = testSite.COLLECTIONS;
 		const values = kindValues({ media: 2, [collections[0] ?? content]: 3 }, collections);
 		expect(values.map((value) => value.kind)).toEqual([...collections, "media"]);

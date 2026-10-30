@@ -45,7 +45,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	});
 
 	describe("2. Transactional Target Recheck & Published References Rollback", () => {
-		it("lets a trash wait for a concurrent draft reference save to the tag, then go through", async () => {
+		it("TRASH-T9 lets a trash wait for a concurrent draft reference save to the tag, then go through", async () => {
 			const tagDraft = await seedEntry(store, {
 				collection: record,
 				slug: `tag-race-${randomUUID()}`,

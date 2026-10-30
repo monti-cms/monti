@@ -101,7 +101,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(unarch.status).toBe("draft");
 			});
 
-			it("draft/published/archived -> trash hides from active list", async () => {
+			it("TRASH-T1 draft/published/archived -> trash hides from active list", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-trash-1",
@@ -118,7 +118,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(trashed.status).toBe("trashed");
 			});
 
-			it("trashed -> restore returns to draft (for publish collection)", async () => {
+			it("TRASH-R1 trashed -> restore returns to draft (for publish collection)", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-restore-1",
@@ -140,7 +140,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(restored.status).toBe("draft");
 			});
 
-			it("trashed -> permanentDelete deletes entry but preserves address tombstone", async () => {
+			it("TRASH-D5 trashed -> permanentDelete deletes entry but preserves address tombstone", async () => {
 				const entry = await seedEntry(store, {
 					collection: content,
 					slug: "test-perm-delete-1",
@@ -239,7 +239,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				expect(pubRefs[0]?.occurrences).toEqual([{ type: "metadata", path: "tags" }]);
 			});
 
-			it("trashes a tag still used by published entries, and holds back only its permanent delete", async () => {
+			it("TRASH-T9 trashes a tag still used by published entries, and holds back only its permanent delete", async () => {
 				const tag = await seedEntry(store, {
 					collection: record,
 					slug: `tag-in-use-${randomUUID()}`,
@@ -312,7 +312,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				await expect(store.getEntry(tag.id)).rejects.toMatchObject({ code: "not_found" });
 			});
 
-			it("does not publish a trashed entry", async () => {
+			it("TRASH-T7 does not publish a trashed entry", async () => {
 				const draft = await seedEntry(store, {
 					collection: content,
 					slug: `trashed-entry-${randomUUID()}`,
@@ -328,7 +328,7 @@ export const lifecycleContract: ContractSuite = (factory) => {
 				});
 			});
 
-			it("holds back the permanent delete of a tag a draft points at, not its trash", async () => {
+			it("TRASH-T9 holds back the permanent delete of a tag a draft points at, not its trash", async () => {
 				const tagDraft = await seedEntry(store, {
 					collection: record,
 					slug: `tag-draft-use-${randomUUID()}`,

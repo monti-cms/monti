@@ -173,7 +173,7 @@ export const publicReadContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("disappears from public reads once trashed", async () => {
+		it("TRASH-T1 disappears from public reads once trashed", async () => {
 			const published = await createPublishedEntry({ collection: trashContent, slug: "to-trash" });
 
 			expect(await publishedSlugs([trashContent])).toContain("to-trash");
