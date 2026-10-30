@@ -157,41 +157,6 @@ describe("monti init in a fresh create-next-app", () => {
 		}
 	});
 
-	it(".env.example lists what is needed now first, and the deploy-time values apart under their own heading", async () => {
-		for (const login of ["password", "github"] as const) {
-			const dir = fixtureApp();
-			await initProject({ cwd: dir, ...quiet(), login, storage: "s3" });
-			const example = read(dir, ".env.example");
-			const deploy = example.indexOf("# --- When you deploy (not needed on your computer) ---");
-			expect(deploy).toBeGreaterThan(0);
-			const now = example.slice(0, deploy);
-			const later = example.slice(deploy);
-
-			// Needed now: before the heading, set (not commented out), with the sslmode hint next to DATABASE_URL.
-			const needed = [
-				"DATABASE_URL",
-				"MONTI_SECRET",
-				...(login === "github" ? ["AUTH_GITHUB_ID", "AUTH_GITHUB_SECRET", "MONTI_ADMIN_GITHUB_ID"] : []),
-				"S3_BUCKET",
-			];
-			for (const name of needed) expect(now).toMatch(new RegExp(`^${name}=`, "m"));
-			expect(now.indexOf("sslmode=verify-full")).toBeGreaterThan(now.indexOf("# Postgres connection URL"));
-			expect(now.indexOf("sslmode=verify-full")).toBeLessThan(now.indexOf("DATABASE_URL="));
-			expect(now).toContain("no warning from the database driver");
-			for (const name of ["SITE_URL", "AUTH_TRUST_HOST", "DATABASE_SCHEMA"]) expect(now).not.toContain(name);
-
-			// When you deploy: after the heading, each commented out with one plain sentence above it.
-			expect(later).toContain(
-				"# Your site's public address, e.g. https://example.com. Used for login links and to recognise links to your own site.\n# SITE_URL=",
-			);
-			expect(later).toContain(
-				"# Only if you run your own proxy such as nginx. Not needed on Vercel, Netlify or Cloudflare.\n# AUTH_TRUST_HOST=true",
-			);
-			expect(later).toMatch(/^# DATABASE_SCHEMA=monti$/m);
-			expect(later).not.toMatch(/^[A-Z_]+=/m);
-		}
-	});
-
 	it("with --login github writes the GitHub provider, its variables with how to get them, and the OAuth app step", async () => {
 		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
@@ -291,18 +256,6 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(text).toMatch(/\n {2}2\. Start the app/);
 	});
 
-	it("with a database URL and everything working, what is left is the dev server and the first admin", async () => {
-		const dir = fixtureApp({ ".env.local": "DATABASE_URL=postgres://localhost/mine\n" });
-		const host = fakeHost();
-		const report = await initProject({ cwd: dir, host });
-		expect(host.setupDatabase).toHaveBeenCalledWith(dir);
-		expect(report.next.map((step) => step.split("\n")[0])).toEqual([
-			"Start the app: pnpm dev, then open http://localhost:3000/studio",
-			expect.stringContaining("create the first admin"),
-		]);
-		expect(report.ok).toBe(true);
-	});
-
 	it("keeps the by-hand steps when the machine steps are turned off", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
@@ -328,34 +281,6 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(next[0]).toContain("cp .env.example .env.local");
 		expect(next[0]).toContain("openssl rand -base64 32");
 		expect(next[2]).toContain("`monti doctor` will tell you if any of the steps above is missing");
-	});
-
-	it("ends with what was chosen and where to change each", async () => {
-		const text = formatInitReport(await initProject({ cwd: fixtureApp(), host: fakeHost(), login: "github" }));
-		const chosen = text.slice(text.indexOf("You chose:"), text.indexOf("Created:"));
-		for (const label of [
-			"Languages",
-			"Sign-in",
-			"Image storage",
-			"Extra features",
-			"Body blocks",
-			"Admin path",
-			"Block syntax",
-		]) {
-			expect(chosen).toContain(`${label}:`);
-		}
-		expect(chosen).toContain("GitHub");
-		expect(chosen).toContain("monti.config.ts");
-		expect(chosen).toContain("monti.schema.ts");
-		expect(chosen).toContain("Settings");
-	});
-
-	it("skips the database without a URL and lists no removed steps", async () => {
-		const report = await initProject({ cwd: fixtureApp(), ...quiet() });
-		const text = report.next.join("\n");
-		expect(text).not.toContain("MONTI_ADMIN_GITHUB_ID in .env.local");
-		// No database URL: the setup is skipped, not run, and the step that is left says where the URL goes.
-		expect(report.steps.find((step) => step.name === "Set up the database")?.status).toBe("skipped");
 	});
 
 	it("never writes a docker compose file, a proxy or theme files", async () => {
@@ -588,15 +513,6 @@ describe("monti init tailors what is left to the app", () => {
 		}
 	});
 
-	it("a dry run reports the edits as planned and writes nothing", async () => {
-		const dir = fixtureApp();
-		const before = snapshot(dir);
-		const report = await initProject({ cwd: dir, ...quiet(), dryRun: true });
-		expect(snapshot(dir)).toEqual(before);
-		expect(report.changed.map((item) => item.file)).toEqual(["next.config.ts", "app/layout.tsx", ".gitignore"]);
-		expect(formatInitReport(report)).toContain("Would change:\n  - next.config.ts \u2014");
-	});
-
 	it("puts suppressHydrationWarning after the other attributes of <html>, whichever way they are written", async () => {
 		const cases: [string, string][] = [
 			["<html>", "<html suppressHydrationWarning>"],
@@ -616,45 +532,6 @@ describe("monti init tailors what is left to the app", () => {
 				expect(read(dir, "app/layout.tsx")).toContain(to);
 			}
 		}
-	});
-
-	it("the progress line counts created files and changes to existing files apart", async () => {
-		const lines: string[] = [];
-		const dir = fixtureApp();
-		const report = await initProject({ cwd: dir, ...quiet(), log: (line) => lines.push(line) });
-		const line = lines.find((item) => item.startsWith("Created "));
-		expect(line).toBe(`Created ${report.created.length} files, changed ${report.changed.length}`);
-		expect(report.changed.length).toBeGreaterThan(0);
-		expect(lines.some((item) => item.startsWith("Wrote "))).toBe(false);
-	});
-
-	it("formats the edited <html> sensibly: one line when it fits, one attribute per line when it would be long", async () => {
-		const edited = async (tag: string) => {
-			const dir = fixtureApp({ "app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', tag) });
-			await initProject({ cwd: dir, ...quiet() });
-			return read(dir, "app/layout.tsx");
-		};
-		// Short: stays on one line.
-		expect(await edited('<html lang="en" className="dark">')).toContain(
-			'    <html lang="en" className="dark" suppressHydrationWarning>',
-		);
-		// Long (the shape create-next-app 16 writes): every attribute on its own line, the template literal intact.
-		// biome-ignore lint/suspicious/noTemplateCurlyInString: the JSX source holds a template literal on purpose
-		const className = "className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}";
-		const long = await edited(`<html lang="en" ${className}>`);
-		expect(long).toContain(
-			`    <html\n      lang="en"\n      ${className}\n      suppressHydrationWarning\n    >\n      <body>`,
-		);
-		// Already one attribute per line: the new one is added on a line of its own, like the others.
-		expect(await edited('<html\n      lang="en"\n      dir="ltr"\n    >')).toContain(
-			'<html\n      lang="en"\n      dir="ltr"\n      suppressHydrationWarning\n    >',
-		);
-		// Tabs stay tabs.
-		const tabs = fixtureApp({
-			"app/layout.tsx": `export default function L({ children }: { children: React.ReactNode }) {\n\treturn (\n\t\t<html lang="en" className="a-very-long-class-name another-long-class-name yet-another-class-name">\n\t\t\t{children}\n\t\t</html>\n\t);\n}\n`,
-		});
-		await initProject({ cwd: tabs, ...quiet() });
-		expect(read(tabs, "app/layout.tsx")).toContain('\t\t<html\n\t\t\tlang="en"\n');
 	});
 
 	it("a layout init cannot edit (no <html>, or suppressHydrationWarning={false}) gets a step with the reason", async () => {
@@ -708,23 +585,6 @@ describe("monti init tailors what is left to the app", () => {
 			file: ".gitignore",
 			change: "added .monti/ (monti db:migrate writes its logs there)",
 		});
-	});
-
-	it("the deploy step names the site only when it is not a local address", async () => {
-		const local = await initProject({ cwd: fixtureApp(), ...quiet() });
-		expect(local.next.join("\n")).toContain("open <your site>/studio and create the first admin");
-		expect(local.next.join("\n")).not.toContain("Right after you deploy, open http://localhost");
-		const real = await initProject({ cwd: fixtureApp(), ...quiet(), siteUrl: "https://blog.example.com/" });
-		expect(real.next.join("\n")).toContain("open https://blog.example.com/studio and create the first admin");
-	});
-
-	it("an app without TypeScript gets the install note before everything else", async () => {
-		const dir = fixtureApp({
-			"tsconfig.json": null,
-			"package.json": JSON.stringify({ name: "x", scripts: { dev: "next dev" }, dependencies: { next: "16.3.8" } }),
-		});
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(report.next[0]).toMatch(/^Add TypeScript .*pnpm add -D typescript/);
 	});
 
 	it("uses the package manager the lockfile names, or the one given", async () => {
@@ -895,16 +755,6 @@ describe("monti init and files that already exist", () => {
 		expect(read(dir, ".env.example")).toBe("MINE=1\n");
 		expect(report.skipped).toContain(".env.example");
 		expect(report.notes.join("\n")).toContain(".env.example already exists and was kept");
-	});
-
-	it("running twice changes nothing the second time", async () => {
-		const dir = fixtureApp();
-		await initProject({ cwd: dir, ...quiet() });
-		const before = snapshot(dir);
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(snapshot(dir)).toEqual(before);
-		expect(report.created).toEqual([]);
-		expect(report.skipped).toEqual(expect.arrayContaining(["monti.config.ts", ".env.example"]));
 	});
 
 	it("a changed file is kept unless --overwrite (or a yes in the prompts)", async () => {

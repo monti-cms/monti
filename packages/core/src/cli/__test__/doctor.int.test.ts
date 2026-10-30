@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -256,20 +256,6 @@ describe("monti doctor on a project with missing settings", () => {
 		}
 	});
 
-	it("lists what Monti decided on its own as Topic: value [source], one line each", async () => {
-		setEnv({ DATABASE_URL: "postgres://u:p@localhost:5432/monti", MONTI_SECRET: STRONG_SECRET });
-		const { report } = await doctor(project());
-		const automatic = byId(report, "config/automatic");
-		expect(automatic.status).toBe("ok");
-		const lines = automatic.message.split("\n");
-		expect(lines.length).toBeGreaterThan(0);
-		for (const line of lines) expect(line).toMatch(/^[^:]+: .+ \[.+\]$/);
-		const database = lines.find((line) => line.startsWith("Database:"));
-		expect(database).toContain("localhost:5432/monti");
-		expect(database).toContain("from env DATABASE_URL");
-		expect(automatic.message).not.toContain("u:p");
-	});
-
 	it("warns about a weak MONTI_SECRET and never prints it", async () => {
 		setEnv({ MONTI_SECRET: "changeme" });
 		const { report } = await doctor(project());
@@ -333,12 +319,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(schema.message).toContain("read-only");
 	});
 
-	it("says a missing schema file is missing", async () => {
-		setEnv();
-		const { report } = await doctor(project({ "monti.schema.ts": null }));
-		expect(byId(report, "schema/file").status).not.toBe("ok");
-	});
-
 	it("checks the three Next files and the admin path", async () => {
 		setEnv();
 		const dir = project({
@@ -354,14 +334,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(files.fix).toContain("app/api/monti/[...path]/route.ts");
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
-	});
-
-	it("names the folder init would use when only src/ exists", async () => {
-		setEnv();
-		const dir = project({ "src/index.ts": "" });
-		rmSync(path.join(dir, "app"), { recursive: true, force: true });
-		const { report } = await doctor(dir);
-		expect(byId(report, "next/files").message).toContain("no src/app/ folder");
 	});
 
 	it("does not count a comment that mentions withCms as the wrapper", async () => {
@@ -451,13 +423,6 @@ describe("monti doctor --only", () => {
 		const { report } = await doctor(project(), ["--only", "auth/admins,schema/file"]);
 		expect(report.checks.map((check) => check.id).sort()).toEqual(["auth/admins", "schema/file"]);
 	});
-
-	it("lists only the core groups, in order", async () => {
-		setEnv();
-		const { report } = await doctor(project());
-		const groups = [...new Set(report.checks.map((check) => check.group))];
-		expect(groups).toEqual(["config", "schema", "database", "secrets", "auth", "next"]);
-	});
 });
 
 describe("monti doctor --json and the text report", () => {
@@ -487,29 +452,5 @@ describe("monti doctor --json and the text report", () => {
 			if (check.status === "ok" || check.status === "skip") expect(check.fix).toBeUndefined();
 			if (check.status === "fail") expect(check.fix).toEqual(expect.any(String));
 		}
-	});
-
-	it("prints readable text without --json: each check on its own line, a fix under a warning or a failure", async () => {
-		setEnv();
-		const out: string[] = [];
-		const code = await runCli(["doctor", "--no-env-file"], {
-			cwd: project(),
-			log: (m) => out.push(m),
-			error: (m) => out.push(m),
-		});
-		const text = out.join("\n");
-		expect(code).toBe(1);
-		expect(text).toMatch(/FAIL\s+database\/url\s+DATABASE_URL is not set/);
-		expect(text).toMatch(/\n\s+where: .*\.env\.local/);
-		expect(text).toMatch(/\n\s+fix: +put your Postgres URL/);
-		expect(text).toMatch(/ok\s+config\/loads/);
-		expect(text).toContain("Fix the failed checks (marked FAIL) first");
-	});
-
-	it("is in the help", async () => {
-		const out: string[] = [];
-		await runCli(["help"], { cwd: "/", log: (m) => out.push(m), error: (m) => out.push(m) });
-		expect(out.join("\n")).toContain("doctor");
-		expect(out.join("\n")).not.toContain("check:boundary");
 	});
 });

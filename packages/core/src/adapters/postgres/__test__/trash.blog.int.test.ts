@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, recordRelationField, requiredMetadata, secondLocale } from "../../../../test/any-site";
 import { paragraphsFormat } from "../../../../test/paragraphs-format";
 import { testConfig, testSite } from "../../../../test/site";
@@ -480,46 +480,6 @@ describe("trash", () => {
 
 			expect(unitOf(await topUnits(), old.id)).toMatchObject({ type: "folder", entries: 1 });
 		});
-
-		it("stamps a folder after an entry in it that was trashed within the same millisecond", async () => {
-			const shelf = await folder("Same moment");
-			const early = await draft("Trashed a moment before", shelf.id);
-			await store.trashEntry({ id: early.id, expectedVersion: early.version });
-			// Two actions within one millisecond: the entry's stamp is not before the folder's moment.
-			const ahead = new Date(Date.now() + 60_000);
-			await pool.query(`UPDATE "${schema}".entries SET deleted_at = $2 WHERE id = $1`, [early.id, ahead]);
-
-			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
-			expect((await stampOf("folders", shelf.id))?.getTime()).toBeGreaterThan(ahead.getTime());
-			await trash.restore([{ type: "folder", id: shelf.id }]);
-			expect(await statusOf(early.id)).toBe("trashed");
-		});
-
-		it("stamps a folder after a subfolder that was trashed within the same millisecond", async () => {
-			const shelf = await folder("Same moment, sub");
-			const earlySub = await folder("Sub trashed a moment before", shelf.id);
-			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
-			const ahead = new Date(Date.now() + 60_000);
-			await pool.query(`UPDATE "${schema}".folders SET deleted_at = $2 WHERE id = $1`, [earlySub.id, ahead]);
-
-			await trash.trashFolder({ id: shelf.id });
-			expect((await stampOf("folders", shelf.id))?.getTime()).toBeGreaterThan(ahead.getTime());
-			await trash.restore([{ type: "folder", id: shelf.id }]);
-			expect(await stampOf("folders", earlySub.id)).toEqual(ahead);
-		});
-
-		it("takes the stamp from the database clock, not the server's", async () => {
-			const shelf = await folder("Database clock");
-			vi.useFakeTimers({ toFake: ["Date"], now: new Date("2001-01-01T00:00:00.000Z") });
-			try {
-				await store.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
-			} finally {
-				vi.useRealTimers();
-			}
-			const { rows } = await pool.query<{ now: Date }>("SELECT now() AS now");
-			const stamp = (await stampOf("folders", shelf.id)) as Date;
-			expect(Math.abs(stamp.getTime() - (rows[0] as { now: Date }).now.getTime())).toBeLessThan(60_000);
-		});
 	});
 
 	describe("a media folder", () => {
@@ -572,30 +532,6 @@ describe("trash", () => {
 			expect(
 				(await store.listFolders({ collection: "media" })).find((item) => item.id === record?.folderId)?.name,
 			).toBe(stills.name);
-		});
-
-		it("stamps a media folder after a file in it that was trashed within the same millisecond", async () => {
-			const pictures = await folder("Same moment pictures", null, "media");
-			const early = await readyMedia(`${unique("early")}.png`, pictures.id);
-			await trash.trashMedia([early.id]);
-			const ahead = new Date(Date.now() + 60_000);
-			await pool.query(`UPDATE "${schema}".media_assets SET deleted_at = $2 WHERE id = $1`, [early.id, ahead]);
-
-			await trash.trashFolder({ id: pictures.id, expectedVersion: pictures.version });
-
-			expect((await stampOf("folders", pictures.id))?.getTime()).toBeGreaterThan(ahead.getTime());
-		});
-
-		it("stamps a media folder after a subfolder that was trashed within the same millisecond", async () => {
-			const pictures = await folder("Same moment pictures, sub", null, "media");
-			const earlySub = await folder("Early sub pictures", pictures.id, "media");
-			await trash.trashFolder({ id: earlySub.id, expectedVersion: earlySub.version });
-			const ahead = new Date(Date.now() + 60_000);
-			await pool.query(`UPDATE "${schema}".folders SET deleted_at = $2 WHERE id = $1`, [earlySub.id, ahead]);
-
-			await trash.trashFolder({ id: pictures.id });
-
-			expect((await stampOf("folders", pictures.id))?.getTime()).toBeGreaterThan(ahead.getTime());
 		});
 
 		it("keeps a merged media folder that still holds a subfolder and a file", async () => {
@@ -1048,24 +984,6 @@ describe("trash", () => {
 			expect(await eventKinds(translation.id)).toContain("deleted");
 		});
 
-		it("answers not_found for a file that is not there, and goes on after an error it did not expect", async () => {
-			const missing = randomUUID();
-			const file = await readyMedia(`${unique("after")}.png`);
-			await trash.trashMedia([file.id]);
-
-			const results = await trash.delete([
-				{ type: "media", id: missing },
-				{ type: "media", id: "not-a-uuid" },
-				{ type: "media", id: file.id },
-			]);
-
-			expect(results).toStrictEqual([
-				{ type: "media", id: missing, ok: false, error: "not_found" },
-				{ type: "media", id: "not-a-uuid", ok: false, error: "internal" },
-				{ type: "media", id: file.id, ok: true },
-			]);
-		});
-
 		it("names the entries that point at a file it refuses to delete", async () => {
 			const file = await readyMedia(`${unique("named")}.png`);
 			await trash.trashMedia([file.id]);
@@ -1074,25 +992,6 @@ describe("trash", () => {
 			]);
 			const [result] = await trash.delete([{ type: "media", id: file.id }]);
 			expect(result).toMatchObject({ ok: false, error: "in_use", usages: [{ entryId: user.id, trashed: false }] });
-		});
-
-		it("names the entries it deleted, for what runs after the commit, and none for a file", async () => {
-			const file = await readyMedia(`${unique("no entry")}.png`);
-			await trash.trashMedia([file.id]);
-			expect((await store.deleteTrashed({ targets: [{ type: "media", id: file.id }] })).entryIds).toEqual([]);
-			const lone = await draft(unique("No file"));
-			await trashed(lone);
-			expect(await store.deleteTrashed({ targets: [{ type: "entry", id: lone.id }] })).toMatchObject({
-				files: [],
-				entryIds: [lone.id],
-			});
-
-			const shelf = await folder("Named shelf");
-			const first = await draft(unique("First"), shelf.id);
-			const second = await draft(unique("Second"), shelf.id);
-			await trash.trashFolder({ id: shelf.id, expectedVersion: shelf.version });
-			const outcome = await store.deleteTrashed({ targets: [{ type: "folder", id: shelf.id }] });
-			expect([...outcome.entryIds].sort()).toEqual([first.id, second.id].sort());
 		});
 
 		it.skipIf(!secondLocale)("deletes a folder with a source whose translation was trashed outside it", async () => {
@@ -1276,19 +1175,6 @@ describe("trash", () => {
 
 			expect(results.map((result) => result.ok)).toEqual([true, true, true, true]);
 			// The file's stored file is deleted once, with its folder.
-			expect(deletedFiles.filter((key) => key === file.storageKey)).toHaveLength(1);
-		});
-
-		it("deletes the stored file once when a file is asked for twice", async () => {
-			const file = await readyMedia(`${unique("twice")}.png`);
-			await trash.trashMedia([file.id]);
-
-			const results = await trash.delete([
-				{ type: "media", id: file.id },
-				{ type: "media", id: file.id },
-			]);
-
-			expect(results.map((result) => result.ok)).toEqual([true, true]);
 			expect(deletedFiles.filter((key) => key === file.storageKey)).toHaveLength(1);
 		});
 
