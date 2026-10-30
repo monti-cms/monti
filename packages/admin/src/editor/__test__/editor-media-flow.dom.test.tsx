@@ -225,7 +225,7 @@ describe("flow: upload in the editor (05–06)", () => {
 		const kinds = blocks(editor).map((node) => node.type);
 		expect(kinds.indexOf("image")).toBeGreaterThan(0);
 		expect(kinds.indexOf("image")).toBeLessThan(kinds.length - 1);
-		expect(imageNodes(editor)[0]?.uploadId).toBeTruthy();
+		expect(imageNodes(editor)[0]?.uploadId).toEqual(expect.any(String));
 		expect(imageNodes(editor)[0]?.mediaId).toBeFalsy();
 		const bar = await screen.findByRole("progressbar");
 		expect(bar.getAttribute("aria-label")).toBe(t("imageNode.uploadingPercent", { percent: 0 }));
@@ -385,7 +385,7 @@ describe("flow: files such as PDF (37–38)", () => {
 		act(() => openMediaPicker("file"));
 		const dialog = await screen.findByRole("dialog", { name: t("picker.fileTitle") });
 		await within(dialog).findByRole("button", { name: /price-list-2026/ });
-		expect(within(dialog).getByRole("button", { name: /subscribers\.csv/ })).toBeTruthy();
+		expect(within(dialog).getByRole("button", { name: /subscribers\.csv/ })).toBeInTheDocument();
 		expect(within(dialog).queryByRole("button", { name: /desk-morning/ })).toBeNull();
 		expect(
 			requests
@@ -393,7 +393,7 @@ describe("flow: files such as PDF (37–38)", () => {
 				.at(-1)
 				?.search.get("kind"),
 		).toBe("file");
-		expect(within(dialog).getByRole("button", { name: t("picker.allFiles") })).toBeTruthy();
+		expect(within(dialog).getByRole("button", { name: t("picker.allFiles") })).toBeInTheDocument();
 		expect(click).not.toHaveBeenCalled();
 	});
 

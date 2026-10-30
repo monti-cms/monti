@@ -1,10 +1,14 @@
 import { TooltipProvider } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
+import { entriesMessages } from "../messages";
 import { PropertyFields } from "../property-fields";
 import { EntryFormProvider, type EntryFormValue } from "../use-field";
+
+const tEntries = testSite.createTranslator(entriesMessages);
 
 afterEach(cleanup);
 
@@ -71,7 +75,7 @@ describe("PropertyFields on the form provider", () => {
 	it("a disabled form shows the value but does not open it", () => {
 		const setForm = renderFields({ form: { ...EMPTY_FORM, summary: "S" }, disabled: true });
 		expect(screen.queryByRole("button", { name: /^요약/ })).toBeNull();
-		expect(screen.getByText("S")).toBeTruthy();
+		expect(screen.getByText("S")).toBeInTheDocument();
 		expect(setForm).not.toHaveBeenCalled();
 	});
 
@@ -82,9 +86,9 @@ describe("PropertyFields on the form provider", () => {
 			content: [{ type: "paragraph", content: [{ type: "text", text: "This is body paragraph text." }] }],
 		};
 		const setForm = renderFields({ form: { ...EMPTY_FORM, doc, summary: "" } });
-		expect(screen.queryByRole("button", { name: "본문에서 가져오기" })).toBeNull();
+		expect(screen.queryByRole("button", { name: tEntries("field.fillFromBody") })).toBeNull();
 		open(/^요약/);
-		fireEvent.click(screen.getByRole("button", { name: "본문에서 가져오기" }));
+		fireEvent.click(screen.getByRole("button", { name: tEntries("field.fillFromBody") }));
 		expect(setForm).toHaveBeenCalledWith({ summary: "This is body paragraph text." });
 	});
 });

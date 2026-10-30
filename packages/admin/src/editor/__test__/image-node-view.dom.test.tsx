@@ -72,7 +72,7 @@ describe("CmsImageNodeView", () => {
 		expect(screen.queryByRole("toolbar", { name: t("imageNode.toolbar") })).toBeNull();
 		cleanup();
 		renderWithSite(<CmsImageNodeView {...createProps().props} />);
-		expect(screen.getByRole("toolbar", { name: t("imageNode.toolbar") })).toBeTruthy();
+		expect(screen.getByRole("toolbar", { name: t("imageNode.toolbar") })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: /삭제/ })).toBeNull();
 	});
 
@@ -82,8 +82,8 @@ describe("CmsImageNodeView", () => {
 
 		const leftHandle = screen.getByLabelText(t("imageNode.resizeLeft"));
 		const rightHandle = screen.getByLabelText(t("imageNode.resizeRight"));
-		expect(leftHandle).toBeDefined();
-		expect(rightHandle).toBeDefined();
+		expect(leftHandle).toBeInTheDocument();
+		expect(rightHandle).toBeInTheDocument();
 
 		// Simulate pointerdown, then window pointermove and pointerup
 		fireEvent.pointerDown(rightHandle, { clientX: 100, pointerId: 1 });
@@ -119,12 +119,12 @@ describe("CmsImageNodeView", () => {
 		fireEvent.click(cropBtn);
 
 		// Confirm the sheet is open
-		expect(screen.getByRole("dialog", { name: t("imageCrop.title") })).toBeDefined();
+		expect(screen.getByRole("dialog", { name: t("imageCrop.title") })).toBeInTheDocument();
 
 		// Click the 90-degree rotate button
 		const rotateBtn = screen.getByRole("button", { name: t("imageCrop.rotate90") });
 		fireEvent.click(rotateBtn);
-		expect(screen.getByText("90°")).toBeDefined();
+		expect(screen.getByText("90°")).toBeInTheDocument();
 
 		// Click the apply button
 		const applyBtn = screen.getByRole("button", { name: tc("apply") });

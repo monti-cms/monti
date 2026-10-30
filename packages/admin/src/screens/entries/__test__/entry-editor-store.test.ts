@@ -287,7 +287,7 @@ describe("save", () => {
 		expect(result.ok).toBe(true);
 		const members = editor().entry?.translations ?? [];
 		expect(members.map((member) => member.id)).toContain("created-1");
-		expect(members.find((member) => member.id === "created-1")?.locale).toBeTruthy();
+		expect(members.find((member) => member.id === "created-1")?.locale).toBe("ko");
 	});
 
 	it("creates a new entry with POST (with its folder), asks the UI to move to the edit URL, and drops the new-entry copy", async () => {

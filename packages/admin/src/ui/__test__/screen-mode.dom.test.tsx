@@ -41,7 +41,7 @@ const radio = (mode: (typeof THEME_MODES)[number]) => screen.getByRole("menuitem
 describe("the screen mode", () => {
 	it("offers the three modes at once, the system pressed until one is picked", () => {
 		renderSwitch();
-		expect(screen.getByRole("group", { name: t("theme.label") })).toBeTruthy();
+		expect(screen.getByRole("group", { name: t("theme.label") })).toBeInTheDocument();
 		expect(cell("system").getAttribute("aria-pressed")).toBe("true");
 		expect(cell("light").getAttribute("aria-pressed")).toBe("false");
 	});

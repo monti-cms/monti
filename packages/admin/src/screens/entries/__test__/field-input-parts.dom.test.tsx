@@ -72,7 +72,7 @@ describe("input parts (`FieldInputParts`)", () => {
 		expect((screen.getByRole("textbox", { name: text.field.label }) as HTMLInputElement).placeholder).toBe(
 			"Fallback title",
 		);
-		expect(screen.getByText("count 14")).toBeTruthy();
+		expect(screen.getByText("count 14")).toBeInTheDocument();
 	});
 
 	it("`Empty` is what the list reads in place of an empty value", () => {

@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { configure } from "@testing-library/react";
 
 // The editor shell takes close to a second to render in jsdom on a quiet machine, and several times that when the whole

@@ -167,7 +167,7 @@ describe("collection post list (ordered multi relation)", () => {
 					.map((item) => item.textContent),
 			).toEqual([expect.stringContaining("1. 셋째 글"), expect.stringContaining("2. 둘째 글")]),
 		);
-		expect(within(list).getByText(t("entry.unpublished").trim())).toBeTruthy();
+		expect(within(list).getByText(t("entry.unpublished").trim())).toBeInTheDocument();
 	});
 
 	it("checking in the add/remove posts list appends it, and unchecking removes it", async () => {
@@ -193,7 +193,7 @@ describe("collection post list (ordered multi relation)", () => {
 
 	it("each item has a handle for dragging", async () => {
 		render(<OrderedEntryList {...props(field, ["p1", "p2"])} />);
-		expect(await screen.findByRole("button", { name: t("entry.drag", { title: "첫 글" }) })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("entry.drag", { title: "둘째 글" }) })).toBeTruthy();
+		expect(await screen.findByRole("button", { name: t("entry.drag", { title: "첫 글" }) })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("entry.drag", { title: "둘째 글" }) })).toBeInTheDocument();
 	});
 });

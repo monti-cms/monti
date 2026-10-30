@@ -1,8 +1,10 @@
 import { StatusBarPluginCell } from "@monti-cms/ui";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { createTestRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
+import { screensMessages } from "../../messages";
 import {
 	StatusBar,
 	type StatusBarContextValue,
@@ -10,6 +12,10 @@ import {
 	StatusCellsProvider,
 	useStatusBarContext,
 } from "../status-bar";
+import { statusBarMessages } from "../status-bar.messages";
+
+const tStatusBar = testSite.createTranslator(statusBarMessages);
+const tScreens = testSite.createTranslator(screensMessages);
 
 const { render: renderWithRouter } = createTestRouter();
 afterEach(cleanup);
@@ -38,26 +44,26 @@ const show = (barProps: StatusBarProps, cells: Record<string, () => React.ReactN
 			</StatusCellsProvider>,
 		),
 	);
-const bar = () => within(screen.getByRole("region", { name: "상태" }));
+const bar = () => within(screen.getByRole("region", { name: tStatusBar("label") }));
 
 describe("save cell (flow 1 step 09)", () => {
 	it("saves from the cell while there are unsaved changes", () => {
 		const onSave = vi.fn();
 		show(props({ save: { status: "dirty", savedAt: null, backupAvailable: true, onSave } }));
-		fireEvent.click(bar().getByRole("button", { name: "저장 전 변경사항" }));
+		fireEvent.click(bar().getByRole("button", { name: tStatusBar("save.dirty") }));
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
 	it("offers another try after a failed save", () => {
 		const onSave = vi.fn();
 		show(props({ save: { status: "failed", savedAt: null, backupAvailable: true, onSave } }));
-		fireEvent.click(bar().getByRole("button", { name: "저장 실패 · 다시 시도" }));
+		fireEvent.click(bar().getByRole("button", { name: tStatusBar("save.failed") }));
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
 	it("leads to signing in, in a new tab, when the session expired", () => {
 		show(props({ save: { status: "session-expired", savedAt: null, backupAvailable: true, onSave: () => {} } }));
-		const link = bar().getByRole("link", { name: "세션 만료 · 로그인" });
+		const link = bar().getByRole("link", { name: tStatusBar("save.session-expired") });
 		expect(link.getAttribute("href")).toContain("/login");
 		expect(link.getAttribute("target")).toBe("_blank");
 	});
@@ -82,23 +88,23 @@ describe("to-do cell (flow 1 steps 10 to 13)", () => {
 		show(props({ todo: todo({ rows: [row("a", "요약 쓰기", "요약 · 비어 있음", onOpen), row("b", "이미지")] }) }));
 		fireEvent.click(bar().getByRole("button", { name: "할 일 2" }));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByText("발행 전에 고칠 것")).toBeTruthy();
+		expect(list.getByText(tStatusBar("todo.title"))).toBeInTheDocument();
 		fireEvent.click(list.getByRole("button", { name: /요약 쓰기/ }));
 		expect(onOpen).toHaveBeenCalledTimes(1);
 	});
 
 	it("says nothing is left to do, and the list then holds only the check rows", async () => {
 		show(props({ todo: todo({ rows: [], done: ["요약", "이미지 대체 텍스트 2개", "제목 · 주소"] }) }));
-		fireEvent.click(bar().getByRole("button", { name: "할 일 없음" }));
+		fireEvent.click(bar().getByRole("button", { name: tStatusBar("todo.none") }));
 		const list = within(await screen.findByRole("dialog"));
-		expect(list.getByText("요약")).toBeTruthy();
-		expect(list.getByText("이미지 대체 텍스트 2개")).toBeTruthy();
+		expect(list.getByText("요약")).toBeInTheDocument();
+		expect(list.getByText("이미지 대체 텍스트 2개")).toBeInTheDocument();
 		expect(list.queryByRole("button")).toBeNull();
 	});
 
 	it("can be opened from outside, as a refused publish does", async () => {
 		show(props({ todo: todo({ open: true, onOpenChange: () => {} }) }));
-		expect(await screen.findByRole("dialog")).toBeTruthy();
+		expect(await screen.findByRole("dialog")).toBeInTheDocument();
 	});
 });
 
@@ -138,8 +144,8 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 		fireEvent.click(bar().getByRole("button", { name: "맞춤법 2" }));
 		const list = within(await screen.findByRole("dialog"));
 		expect(list.getAllByRole("button", { name: "고치기" })).toHaveLength(2);
-		expect(list.getByRole("button", { name: "설정" })).toBeTruthy();
-		expect(list.getByRole("button", { name: "모두 고치기" })).toBeTruthy();
+		expect(list.getByRole("button", { name: tScreens("sidebar.settings") })).toBeInTheDocument();
+		expect(list.getByRole("button", { name: "모두 고치기" })).toBeInTheDocument();
 	});
 
 	it("tells the plugin where it is: the language of the entry and the text findings", () => {
@@ -151,7 +157,7 @@ describe("plugin cell slot (flow 1 step 06, flow 3)", () => {
 		};
 		const issues = { count: 3, items: [], fixAll: null };
 		show(props({ context: context({ locale: "ko", textIssues: issues }) }), { where: Where });
-		expect(bar().getByRole("button", { name: "검사 1" })).toBeTruthy();
+		expect(bar().getByRole("button", { name: "검사 1" })).toBeInTheDocument();
 		cleanup();
 		show(props({ context: context({ locale: "en", textIssues: issues }) }), { where: Where });
 		expect(bar().queryByRole("button", { name: /검사/ })).toBeNull();

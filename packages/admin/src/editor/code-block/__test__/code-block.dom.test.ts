@@ -407,8 +407,6 @@ describe("collapse: shown collapsed in the editor too, and expands when the curs
 describe("code block syntax highlighting", () => {
 	it("lazy-loaded shiki syntax highlighting produces dual theme decorations without changing the text", async () => {
 		const highlighter = await getShikiHighlighter(testSite);
-		expect(highlighter).toBeDefined();
-
 		const code = "const message: string = 'hello';";
 		const tokens = highlighter.codeToTokensWithThemes(code, {
 			lang: "typescript",
@@ -421,8 +419,8 @@ describe("code block syntax highlighting", () => {
 		expect(tokens.length).toBeGreaterThan(0);
 		const firstToken = tokens[0]?.[0];
 		expect(firstToken?.content).toBe("const");
-		expect(firstToken?.variants?.light?.color).toBeDefined();
-		expect(firstToken?.variants?.dark?.color).toBeDefined();
+		expect(firstToken?.variants?.light?.color).toMatch(/^#[0-9a-f]{6}/i);
+		expect(firstToken?.variants?.dark?.color).toMatch(/^#[0-9a-f]{6}/i);
 
 		// Highlighting decorations do not pollute the text body (plain text)
 		const instance = createTestEditor(code, { language: "ts" });
@@ -438,7 +436,7 @@ describe("code block syntax highlighting", () => {
 			const secondConst = decorations
 				?.find(14, 19)
 				.find((decoration) => decoration.from === 14 && decoration.to === 19);
-			expect(secondConst).toBeDefined();
+			expect(secondConst).toMatchObject({ from: 14, to: 19 });
 		});
 	});
 });

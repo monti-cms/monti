@@ -24,6 +24,7 @@ const BLOG_FIXTURE_TESTS = [
 	"src/screens/entries/__test__/bulk-bar.dom.test.tsx",
 	"src/screens/entries/__test__/custom-field-input.dom.test.tsx",
 	"src/screens/entries/__test__/entry-editor-shell.dom.test.tsx",
+	"src/screens/entries/__test__/write-and-publish-flow.dom.test.tsx",
 	"src/screens/entries/__test__/entry-form.test.ts",
 	"src/screens/entries/__test__/entry-editor-store.test.ts",
 	"src/screens/entries/__test__/entry-form-removed.test.ts",

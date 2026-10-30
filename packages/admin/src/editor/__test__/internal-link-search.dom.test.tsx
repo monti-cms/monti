@@ -89,7 +89,7 @@ describe("InternalLinkPopup", () => {
 
 	it("shows the empty-result text when there is no error", async () => {
 		renderWithSite(<InternalLinkPopup {...props} error={null} />);
-		expect(await screen.findByText(t("internalLink.empty"))).toBeTruthy();
+		expect(await screen.findByText(t("internalLink.empty"))).toBeInTheDocument();
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 });

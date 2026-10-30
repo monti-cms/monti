@@ -60,8 +60,8 @@ describe("side panel in the admin shell", () => {
 		renderShell("media");
 		expect(screen.queryByRole("complementary")).toBeNull();
 		fireEvent.click(toggle());
-		expect(screen.getByRole("complementary", { name: "Helper" })).toBeTruthy();
-		expect(screen.getByLabelText("where")).toBeTruthy();
+		expect(screen.getByRole("complementary", { name: "Helper" })).toBeInTheDocument();
+		expect(screen.getByLabelText("where")).toBeInTheDocument();
 		fireEvent.click(toggle());
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});
@@ -71,7 +71,7 @@ describe("side panel in the admin shell", () => {
 		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY });
 		expect(screen.queryByRole("complementary")).toBeNull();
 		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, ctrlKey: true });
-		expect(screen.getByRole("complementary")).toBeTruthy();
+		expect(screen.getByRole("complementary")).toBeInTheDocument();
 		fireEvent.keyDown(window, { key: SIDE_PANEL_SHORTCUT_KEY, metaKey: true });
 		expect(screen.queryByRole("complementary")).toBeNull();
 	});

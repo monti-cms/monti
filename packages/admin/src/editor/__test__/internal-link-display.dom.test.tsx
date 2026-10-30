@@ -139,7 +139,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		fetchMock.mockImplementation(async () => respond({ code: "not_found" }, 404));
 		const editor = openOnDocument();
 		const { unmount } = renderBubble(editor);
-		expect(await screen.findByText(t("link.targetMissing"))).toBeTruthy();
+		expect(await screen.findByText(t("link.targetMissing"))).toBeInTheDocument();
 		unmount();
 
 		resetLinkTargets(testSite);
@@ -147,7 +147,7 @@ describe("where an internal link goes, shown in the editor", () => {
 			throw new TypeError("Failed to fetch");
 		});
 		renderBubble(editor);
-		expect(await screen.findByText(t("link.targetUnavailable"))).toBeTruthy();
+		expect(await screen.findByText(t("link.targetUnavailable"))).toBeInTheDocument();
 	});
 
 	it("looks an entry up once however many places show it, and not again for a link just inserted", async () => {
@@ -181,7 +181,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		await screen.findByRole("link", { name: t("link.targetOpenSite", { title: "안녕하세요" }) });
 
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("link.edit") })));
-		expect(await screen.findByText(t("link.target", { title: "안녕하세요" }))).toBeTruthy();
+		expect(await screen.findByText(t("link.target", { title: "안녕하세요" }))).toBeInTheDocument();
 		// The address input is empty: the display address is not what the link holds.
 		expect((screen.getByLabelText(t("link.href")) as HTMLInputElement).value).toBe("");
 		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));

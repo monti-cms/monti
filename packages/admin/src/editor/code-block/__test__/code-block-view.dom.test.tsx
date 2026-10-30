@@ -54,7 +54,7 @@ const mount = async (source: string) => {
 			/>
 		</SiteProvider>,
 	);
-	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-code-block-wrapper]")).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -78,7 +78,7 @@ const pickLines = (from: number, to = from) => {
 
 /** Right-clicks a line number to open the line effect menu. */
 const openLineMenu = async (line = 0) => {
-	await waitFor(() => expect(gutterRow(line)).toBeTruthy());
+	await waitFor(() => expect(gutterRow(line)).toBeInTheDocument());
 	act(() => {
 		fireEvent.contextMenu(gutterRow(line));
 	});
@@ -89,12 +89,12 @@ const CODE = "```ts\nconst a = 1;\nconst b = 2;\nconst c = 3;\n```";
 describe("code block edit view", () => {
 	it("has language, file path, line effects, regex rules, line numbers, and copy in the header tools", async () => {
 		await mount(CODE);
-		expect(screen.getByLabelText(t("view.language"))).toBeTruthy();
-		expect(screen.getByLabelText(t("view.filePath"))).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("view.lineEffects") })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("view.lineNumbers") })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("view.copy") })).toBeTruthy();
+		expect(screen.getByLabelText(t("view.language"))).toBeInTheDocument();
+		expect(screen.getByLabelText(t("view.filePath"))).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("view.lineEffects") })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("rulesPanel.title") })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("view.lineNumbers") })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument();
 	});
 
 	it("hides language, file path, and effect tools and does not select lines when read-only", async () => {
@@ -105,8 +105,8 @@ describe("code block edit view", () => {
 		expect(screen.queryByRole("button", { name: t("view.lineEffects") })).toBeNull();
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
 		expect(screen.queryByRole("button", { name: t("view.lineNumbers") })).toBeNull();
-		expect(screen.getByText("src/a.ts")).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("view.copy") })).toBeTruthy();
+		expect(screen.getByText("src/a.ts")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("view.copy") })).toBeInTheDocument();
 		await openLineMenu(0);
 		expect(screen.queryByRole("menu")).toBeNull();
 	});
@@ -182,7 +182,7 @@ describe("code block edit view", () => {
 		const add = await screen.findByRole("button", { name: t("rulesPanel.add") });
 		act(() => fireEvent.click(add));
 		fireEvent.change(await screen.findByLabelText(t("rulesPanel.pattern")), { target: { value: "const" } });
-		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeTruthy();
+		expect(await screen.findByText(t("rulesPanel.matches", { count: 3 }))).toBeInTheDocument();
 
 		// The rule's delete button is red.
 
@@ -196,7 +196,7 @@ describe("code block edit view", () => {
 
 	it("points to source editing when there are annotations the editor cannot display", async () => {
 		await mount('```ts\n// @char Tooltip {0-3} content="하나"\n// @char Tooltip {2-5} content="둘"\nabcdef\n```');
-		expect(screen.getByText(t("view.rawMode"))).toBeTruthy();
+		expect(screen.getByText(t("view.rawMode"))).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: t("rulesPanel.title") })).toBeNull();
 	});
 
@@ -216,7 +216,9 @@ describe("code block edit view", () => {
 			fireEvent.mouseUp(window);
 		});
 		await openLineMenu(2);
-		expect(await screen.findByRole("menu", { name: t("lineMenu.rangeEffects", { start: 1, end: 3 }) })).toBeTruthy();
+		expect(
+			await screen.findByRole("menu", { name: t("lineMenu.rangeEffects", { start: 1, end: 3 }) }),
+		).toBeInTheDocument();
 		expect(editor.state.selection.from).toBe(1);
 	});
 
@@ -225,7 +227,7 @@ describe("code block edit view", () => {
 		// The right-clicked line is the target even if no line was selected first.
 		await openLineMenu(0);
 		const menu = await screen.findByRole("menu", { name: t("lineMenu.lineEffects", { line: 1 }) });
-		expect(within(menu).getByRole("menuitemcheckbox", { name: t("lineMenu.openFromStart") })).toBeTruthy();
+		expect(within(menu).getByRole("menuitemcheckbox", { name: t("lineMenu.openFromStart") })).toBeInTheDocument();
 		act(() => fireEvent.click(within(menu).getByRole("menuitem", { name: new RegExp(t("lineMenu.uncollapse")) })));
 		await waitFor(() => expect(block(editor).attrs.lineEffects).toEqual([]));
 	});

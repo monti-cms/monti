@@ -2,10 +2,14 @@ import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
+import { commonMessages } from "../../../lib/common.messages";
 import { jsonResponse as json } from "../../../test/fetch";
 import { renderWithSite as render } from "../../../test/site";
 import { toast } from "../../../test/ui-toast";
 import { BacklinkInput } from "../field-inputs";
+
+const tCommon = testSite.createTranslator(commonMessages);
 
 vi.mock("@monti-cms/ui", async (importOriginal) =>
 	(await import("../../../test/ui-toast")).withToast(await importOriginal<typeof import("@monti-cms/ui")>()),
@@ -95,7 +99,7 @@ describe("adding to a collection (inverse relation)", () => {
 	it("picking shows it right away without waiting for the save", async () => {
 		const release = stubApi(200);
 		await addSeriesB();
-		expect(screen.getByText("시리즈 B")).toBeTruthy();
+		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
 		release();
 		await waitFor(() => expect(shared.refresh).toHaveBeenCalled());
 		expect(screen.queryByRole("alert")).toBeNull();
@@ -105,13 +109,13 @@ describe("adding to a collection (inverse relation)", () => {
 	it("if the save fails, reports below the input and reverts", async () => {
 		const release = stubApi(500);
 		await addSeriesB();
-		expect(screen.getByText("시리즈 B")).toBeTruthy();
+		expect(screen.getByText("시리즈 B")).toBeInTheDocument();
 		release();
 		// Reports right below the input like other relation inputs (not a toast).
 		expect((await screen.findByRole("alert")).textContent).toBe("실패");
 		expect(toast.error).not.toHaveBeenCalled();
 		await waitFor(() => expect(screen.queryByText("시리즈 B")).toBeNull());
-		expect(screen.getByText("시리즈 A")).toBeTruthy();
+		expect(screen.getByText("시리즈 A")).toBeInTheDocument();
 	});
 });
 
@@ -173,11 +177,11 @@ describe("adding a memo to a collection", () => {
 		fireEvent.click(await screen.findByRole("option", { name: "'새 메모 시리즈' 추가" }));
 		// Does not create from the name alone; opens the add sheet with the name filled in.
 		const panel = await screen.findByRole("dialog", { name: "모음집 추가" });
-		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeTruthy();
+		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeInTheDocument();
 		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST")).toBe(
 			false,
 		);
-		fireEvent.click(within(panel).getByRole("button", { name: "저장" }));
+		fireEvent.click(within(panel).getByRole("button", { name: tCommon("save") }));
 		await waitFor(() =>
 			expect(
 				fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST"),

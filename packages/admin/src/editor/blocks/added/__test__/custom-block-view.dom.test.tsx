@@ -12,7 +12,10 @@ import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildEditorExtensions } from "../../../extensions";
 import { storedToTiptap, tiptapToStored } from "../../../tiptap-content";
 import { BlockIssuesProvider } from "../../block-issues-context";
+import { blocksMessages } from "../../messages";
 import { BlockFrame, Content, useBlockEditor } from "../../use-block-editor";
+
+const tBlocks = testSite.createTranslator(blocksMessages);
 
 afterEach(cleanup);
 
@@ -41,7 +44,7 @@ const mount = async (doc: StoredDocument, wrap: (node: React.ReactElement) => Re
 		),
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector("[data-monti-custom-block]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-monti-custom-block]")).toBeInTheDocument());
 	return editor as unknown as Editor;
 };
 
@@ -66,9 +69,9 @@ function NoticeView() {
 describe("custom block NodeView", () => {
 	it("without a registered view it shows the name, and attributes are edited and saved from the toolbar settings", async () => {
 		const editor = await mount(NOTICE);
-		expect(screen.getByText("공지")).toBeTruthy();
+		expect(screen.getByText("공지")).toBeInTheDocument();
 		expect(screen.queryByLabelText("단계")).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "설정" }));
+		fireEvent.click(screen.getByRole("button", { name: tBlocks("settings.label") }));
 		await chooseSelectOption("단계", "주의");
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));
 		fireEvent.change(screen.getByLabelText("제목"), { target: { value: "점검" } });
@@ -78,7 +81,7 @@ describe("custom block NodeView", () => {
 	it("hides the settings tool when read-only", async () => {
 		const editor = await mount(NOTICE);
 		act(() => editor.setEditable(false));
-		await waitFor(() => expect(screen.queryByRole("button", { name: "설정" })).toBeNull());
+		await waitFor(() => expect(screen.queryByRole("button", { name: tBlocks("settings.label") })).toBeNull());
 	});
 
 	it("renders with the edit view registered by the site in blockViews", async () => {
@@ -105,13 +108,13 @@ describe("custom block NodeView", () => {
 			</BlockIssuesProvider>
 		));
 		const frame = document.querySelector("[data-monti-custom-block]") as HTMLElement;
-		const list = await within(frame).findByRole("list", { name: "이 블록의 경고" });
+		const list = await within(frame).findByRole("list", { name: tBlocks("issues.label") });
 		expect(list.textContent).toBe("1줄: 문법 오류");
 		expect(screen.queryByText("다른 블록의 경고")).toBeNull();
 	});
 
 	it("shows no warning list for a block without warnings", async () => {
 		await mount(NOTICE);
-		expect(screen.queryByRole("list", { name: "이 블록의 경고" })).toBeNull();
+		expect(screen.queryByRole("list", { name: tBlocks("issues.label") })).toBeNull();
 	});
 });

@@ -42,7 +42,7 @@ describe("settings page", () => {
 
 	it("opens a schema tab", async () => {
 		const stop = server();
-		await expect(SettingsPage({ cms: cms(testSite), server: stop, tab: "locales" })).resolves.toBeTruthy();
+		await expect(SettingsPage({ cms: cms(testSite), server: stop, tab: "locales" })).resolves.toHaveProperty("type");
 		expect(stop.notFound).not.toHaveBeenCalled();
 	});
 

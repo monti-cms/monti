@@ -58,7 +58,7 @@ describe("image types and size follow the site", () => {
 		const result = await prepareUpload(siteAllowing(allowed), png);
 		expect(result.optimized).toBe(false);
 		expect(result.file).toBe(png);
-		expect(result.skippedReason).toBeTruthy();
+		expect(result.skippedReason).toMatch(/\S/);
 	});
 
 	it("refuses an image over the media size limit before any request", async () => {

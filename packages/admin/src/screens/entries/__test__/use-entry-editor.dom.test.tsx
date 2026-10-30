@@ -138,7 +138,7 @@ const status = () => screen.getByLabelText("status").textContent;
 describe("a minimal editor on useEntryEditor and useField", () => {
 	it("loads the entry into the field, edits it locally and saves it through the client", async () => {
 		const { client } = renderMinimal();
-		expect(screen.getByText("loading")).toBeTruthy();
+		expect(screen.getByText("loading")).toBeInTheDocument();
 		const input = await title();
 		expect(input.value).toBe("테스트");
 		expect(status()).toBe("saved");
@@ -174,7 +174,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 
 		await screen.findByRole("dialog", { name: "conflict" });
 		expect(status()).toBe("conflict");
-		expect(screen.getByText("server v9")).toBeTruthy();
+		expect(screen.getByText("server v9")).toBeInTheDocument();
 		expect(screen.getByTestId("result").textContent).toBe("failed: conflict");
 
 		fireEvent.click(screen.getByText("overwrite"));
@@ -273,7 +273,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 
 	it("says redirect for an item collection instead of navigating", async () => {
 		renderMinimal({ server: { ...ENTRY, collection: "tag" } });
-		expect(await screen.findByText("redirect to tag/entry-1")).toBeTruthy();
+		expect(await screen.findByText("redirect to tag/entry-1")).toBeInTheDocument();
 	});
 
 	it("says why a load failed, as an EditorError", async () => {

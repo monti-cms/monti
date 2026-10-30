@@ -96,7 +96,7 @@ describe("block ids in the editor", () => {
 		const doc = stored("Only paragraph\n");
 		const editor = open(doc);
 		const pos = findBlock(editor.state.doc, idOf(doc, "Only paragraph") as string);
-		expect(pos).toBeDefined();
+		expect(pos).toEqual(expect.any(Number));
 		duplicateBlock(editor, pos as number);
 		const ids = blocksOf(saved(editor))
 			.filter((block) => block.text === "Only paragraph")

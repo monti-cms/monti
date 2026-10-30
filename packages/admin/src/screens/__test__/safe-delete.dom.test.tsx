@@ -6,9 +6,12 @@ import { commonMessages } from "../../lib/common.messages";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
+import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
 import { deleteMessages } from "../shared/delete.messages";
 import { AdminQueryProvider } from "../shared/query-provider";
+
+const tBulkBar = testSite.createTranslator(bulkBarMessages);
 
 // Flows T1 (a folder of the list goes to the trash) and T2 (rows go to the trash) of the safety epic: the list asks only when a published entry would
 // leave the site, moves everything else at once, and every move carries an undo. A screenshot cannot show what is sent or which toast follows.
@@ -147,7 +150,7 @@ describe("flow: a folder of the list goes to the trash (T1)", () => {
 		fireEvent.click(items.at(-1) as HTMLElement);
 
 		const dialog = await screen.findByRole("alertdialog", { name: td("folder.ask.title", { name: "뉴스" }) });
-		expect(within(dialog).getByText(td("folder.ask.body", { entries: 2, published: 1 }))).toBeTruthy();
+		expect(within(dialog).getByText(td("folder.ask.body", { entries: 2, published: 1 }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(0);
@@ -208,7 +211,7 @@ describe("flow: rows go to the trash (T2)", () => {
 		const languages = testSite.localeLabel("en");
 		expect(
 			within(dialog).getByText(`${td("trash.ask.one", { title: "나" })}${td("trash.ask.translations", { languages })}`),
-		).toBeTruthy();
+		).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(bulkBodies()).toHaveLength(0);
@@ -230,11 +233,11 @@ describe("flow: rows go to the trash (T2)", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: /가/ }));
 		fireEvent.click(screen.getByRole("checkbox", { name: /나/ }));
 		await screen.findByRole("toolbar");
-		fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+		fireEvent.click(screen.getByRole("button", { name: tBulkBar("more") }));
 		fireEvent.click((await screen.findAllByRole("menuitem")).at(-1) as HTMLElement);
 
 		const dialog = await screen.findByRole("alertdialog");
-		expect(within(dialog).getByText(td("trash.ask.many", { count: 1 }))).toBeTruthy();
+		expect(within(dialog).getByText(td("trash.ask.many", { count: 1 }))).toBeInTheDocument();
 		fireEvent.click(within(dialog).getByRole("button", { name: td("trash.ask.confirm") }));
 		await waitFor(() => expect(bulkBodies()).toHaveLength(1));
 		expect(bulkBodies()[0].items).toHaveLength(2);
@@ -249,7 +252,7 @@ describe("flow: moving rows to a folder can be undone", () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: /가/ }));
 		await screen.findByRole("toolbar");
-		fireEvent.click(screen.getByRole("button", { name: "폴더로" }));
+		fireEvent.click(screen.getByRole("button", { name: tBulkBar("folder.move") }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "뉴스" }));
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getAllByRole("button").at(-1) as HTMLElement);

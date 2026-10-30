@@ -191,7 +191,7 @@ describe("flow: upload (올리기)", () => {
 		const heic = await screen.findByRole("button", { name: /^IMG_2041\.HEIC/ });
 		expect(heic.textContent).toContain(t("upload.unsupported"));
 		expect(heic.closest("[data-slot=tile]")?.getAttribute("data-status")).toBe("failed");
-		expect(heic.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeTruthy();
+		expect(heic.closest("[data-slot=tile]")?.querySelector("[data-slot=tile-failed-ring]")).toBeInTheDocument();
 		expect(heic.querySelector("[data-slot=file-preview]")).toBeNull();
 		const exe = screen.getByRole("button", { name: /^setup\.exe/ });
 		const kinds = acceptedKinds(testSite)
@@ -243,9 +243,9 @@ describe("flow: browsing (둘러보기)", () => {
 		await renderLibrary();
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Blog Assets");
 		const trail = screen.getByRole("navigation", { name: t("trail.label") });
-		expect(within(trail).getByRole("button", { name: t("title") })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("folder.up") })).toBeTruthy();
-		expect(folderTile("covers")).toBeTruthy();
+		expect(within(trail).getByRole("button", { name: t("title") })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("folder.up") })).toBeInTheDocument();
+		expect(folderTile("covers")).toBeInTheDocument();
 		expect(lastList().get("folderId")).toBe("blog");
 		// The way up goes to the top, which asks for the files in no folder.
 		fireEvent.click(screen.getByRole("button", { name: t("folder.up") }));
@@ -310,8 +310,8 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		const input = document.querySelector("input[type=file][data-slot=replace-input]") as HTMLInputElement;
 		fireEvent.change(input, { target: { files: [file("desk-morning-v2.jpg", "image/jpeg")] } });
 		const dialog = await screen.findByRole("alertdialog", { name: t("replace.title") });
-		expect(within(dialog).getByText(t("replace.body", { count: 2 }))).toBeTruthy();
-		expect(within(dialog).getByText("desk-morning-v2.jpg")).toBeTruthy();
+		expect(within(dialog).getByText(t("replace.body", { count: 2 }))).toBeInTheDocument();
+		expect(within(dialog).getByText("desk-morning-v2.jpg")).toBeInTheDocument();
 		expect(upload.uploadImageFile).not.toHaveBeenCalled();
 		fireEvent.click(within(dialog).getByRole("button", { name: t("replace.confirm") }));
 		await waitFor(() => expect(written("POST", "/media/desk-morning/replace")).toHaveLength(1));
@@ -319,7 +319,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 		expect(upload.uploadImageFile.mock.calls[0]?.[3]).toBeUndefined();
 		await waitFor(() => expect(toast).toHaveBeenCalledWith(t("replace.done")));
 		// The same file stays open: its id did not change.
-		expect(screen.getByRole("complementary", { name: "desk-morning.jpg" })).toBeTruthy();
+		expect(screen.getByRole("complementary", { name: "desk-morning.jpg" })).toBeInTheDocument();
 	});
 
 	it("does not send anything when cancelled", async () => {
@@ -346,7 +346,7 @@ describe("flow: replacing a file (파일 바꾸기)", () => {
 			target: { files: [file("guide.pdf", "application/pdf")] },
 		});
 		const dialog = await screen.findByRole("alertdialog", { name: t("replace.title") });
-		expect(within(dialog).getByText(t("replace.kind"))).toBeTruthy();
+		expect(within(dialog).getByText(t("replace.kind"))).toBeInTheDocument();
 		expect((within(dialog).getByRole("button", { name: t("replace.confirm") }) as HTMLButtonElement).disabled).toBe(
 			true,
 		);
@@ -445,10 +445,10 @@ describe("flow: alt text (대체 텍스트)", () => {
 		const chip = await screen.findByText(t("chip.alt", { value: t("alt.none") }));
 		expect(
 			within(chip.closest("[data-slot=chip]") as HTMLElement).getByRole("button", { name: t("filter.remove") }),
-		).toBeTruthy();
+		).toBeInTheDocument();
 		await screen.findByRole("button", { name: /^cafe-window\.jpg/ });
 		expect(screen.queryByRole("button", { name: /^desk-morning\.jpg/ })).toBeNull();
-		expect(screen.getByRole("group", { name: t("scope.label") })).toBeTruthy();
+		expect(screen.getByRole("group", { name: t("scope.label") })).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole("button", { name: t("filter.remove") }));
 		await waitFor(() => expect(lastList().has("alt")).toBe(false));
@@ -480,9 +480,9 @@ describe("flow: filtering by kind (종류로 거르기)", () => {
 		// The folder stays browsable: it is asked for by itself with no search below it, its folders and the way up stay, and there is no place to look.
 		expect(lastList().get("folderId")).toBe("blog");
 		expect(lastList().has("includeDescendants")).toBe(false);
-		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeTruthy();
-		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeTruthy();
-		expect(screen.getByRole("button", { name: t("head.folder") })).toBeTruthy();
+		expect(within(dropArea()).getByRole("button", { name: new RegExp(`^${t("folder.up")}`) })).toBeInTheDocument();
+		expect(within(dropArea()).getByRole("button", { name: /^covers/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: t("head.folder") })).toBeInTheDocument();
 		expect(screen.queryByRole("group", { name: t("scope.label") })).toBeNull();
 		const chip = await screen.findByText(t("chip.kind", { value: t("kind.value.file") }));
 		await screen.findByRole("button", { name: /^notes-scan\.pdf/ });
@@ -561,8 +561,8 @@ describe("flow: exceptions (예외)", () => {
 		const uploadButton = screen.getByRole("button", { name: t("head.upload") }) as HTMLButtonElement;
 		expect(uploadButton.disabled || uploadButton.getAttribute("aria-disabled") === "true").toBe(true);
 		// The search stays beside the dimmed upload, as in the library.
-		expect(screen.getByRole("button", { name: t("head.search") })).toBeTruthy();
-		expect(screen.getByText(t("notConfigured.title"))).toBeTruthy();
+		expect(screen.getByRole("button", { name: t("head.search") })).toBeInTheDocument();
+		expect(screen.getByText(t("notConfigured.title"))).toBeInTheDocument();
 		const link = screen.getByRole("link", { name: t("notConfigured.link") });
 		expect(link.getAttribute("href")).toMatch(/^https:/);
 		expect(screen.queryByRole("button", { name: t("head.folder") })).toBeNull();

@@ -315,8 +315,8 @@ describe("stored document <-> Tiptap round trip", () => {
 	});
 
 	it("the mark name of the added text decoration (block extension tooltip) matches the schema", () => {
-		expect(schema.marks[addedMarkName("tooltip")]).toBeDefined();
-		expect(schema.nodes[OPAQUE_BLOCK_NAME]).toBeDefined();
+		expect(Object.keys(schema.marks)).toContain(addedMarkName("tooltip"));
+		expect(Object.keys(schema.nodes)).toContain(OPAQUE_BLOCK_NAME);
 	});
 
 	it("gives the stored document in its canonical form: keys sorted, one text run per mark set", () => {

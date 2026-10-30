@@ -143,8 +143,6 @@ describe("container body editing", () => {
 		const editor = new Editor({ extensions: buildEditorExtensions(testSite), content: "<p>시작</p>" });
 		const tab = editor.schema.nodes.cmsTab;
 		const column = editor.schema.nodes.cmsColumn;
-		expect(tab).toBeDefined();
-		expect(column).toBeDefined();
 		if (!tab || !column) throw new Error("Container child node missing");
 		expect(editor.schema.nodes.cmsTabs?.contentMatch.matchType(tab)?.validEnd).toBe(false);
 		expect(editor.schema.nodes.cmsColumns?.contentMatch.matchType(column)?.validEnd).toBe(false);

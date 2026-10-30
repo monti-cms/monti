@@ -41,7 +41,7 @@ describe("SourcePane", () => {
 		render(
 			<SourcePane doc={docOf("원문 첫 문단\n\n원문 둘째 문단\n")} locale="ko" title="원문 제목" onClose={onClose} />,
 		);
-		expect(screen.getByRole("heading", { name: "원문 제목" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "원문 제목" })).toBeInTheDocument();
 		await waitFor(() => expect(bodyText()).toContain("원문 둘째 문단"));
 		screen.getByRole("button", { name: /닫기|Close/ }).click();
 		expect(onClose).toHaveBeenCalled();

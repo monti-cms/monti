@@ -41,7 +41,7 @@ const show = async (cms: ReturnType<typeof passwordCms>, query: Record<string, s
 describe("the login screen of the email and password login", () => {
 	it("shows the create-the-first-admin form while no admin exists, posting to the first-admin route", async () => {
 		const { container } = await show(passwordCms(false));
-		expect(screen.getByText(t("firstAdminTitle"))).toBeTruthy();
+		expect(screen.getByText(t("firstAdminTitle"))).toBeInTheDocument();
 		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/first-admin");
 		expect(
 			["email", "password", "confirm"].map((name) => container.querySelector(`input[name=${name}]`) !== null),
@@ -54,8 +54,8 @@ describe("the login screen of the email and password login", () => {
 		expect(screen.queryByText(t("firstAdminTitle"))).toBeNull();
 		expect(container.querySelector("form")?.getAttribute("action")).toContain("/v1/session/sign-in/password");
 		expect(container.querySelector("input[name=confirm]")).toBeNull();
-		expect(container.querySelector("input[type=password]")).not.toBeNull();
-		expect(screen.getByText(t("signInSubmit"), { selector: "button" })).toBeTruthy();
+		expect(container.querySelector("input[type=password]")).toBeInTheDocument();
+		expect(screen.getByText(t("signInSubmit"), { selector: "button" })).toBeInTheDocument();
 	});
 
 	it("says why the last attempt did not work", async () => {
@@ -75,7 +75,7 @@ describe("the login screen of the email and password login", () => {
 			auth: { providers: [{ id: "github", name: "GitHub", label: "Sign in with GitHub" }] },
 		});
 		const { container } = await show(cms as never);
-		expect(screen.getByText(t("signIn", { provider: "GitHub" }))).toBeTruthy();
+		expect(screen.getByText(t("signIn", { provider: "GitHub" }))).toBeInTheDocument();
 		expect(container.querySelector("input")).toBeNull();
 	});
 });
@@ -89,7 +89,7 @@ describe("the header of the login screen", () => {
 		for (const cms of [passwordCms(true), passwordCms(false)]) {
 			await show(cms);
 			expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(name);
-			expect(screen.getByText(t("managedWith"))).toBeTruthy();
+			expect(screen.getByText(t("managedWith"))).toBeInTheDocument();
 			cleanup();
 		}
 	});

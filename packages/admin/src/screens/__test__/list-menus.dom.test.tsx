@@ -6,10 +6,13 @@ import { commonMessages } from "../../lib/common.messages";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { toast } from "../../test/ui-toast";
+import { bulkBarMessages } from "../entries/bulk-bar.messages";
 import { EntryListScreen } from "../entry-list-screen";
 import { screensMessages } from "../messages";
 import { statusLabels } from "../shared/entry-status";
 import { AdminQueryProvider } from "../shared/query-provider";
+
+const tBulkBar = testSite.createTranslator(bulkBarMessages);
 
 // One test per flow of the list's column menus (sort, filter by value, filter by date, hide and add columns), the page size, the select-and-act bar and the pager
 // (flow 7 of the canvas and the main list board). They check what a screenshot cannot: what a press does to the address, the request and the saved settings.
@@ -229,7 +232,7 @@ describe("flow: filter by value", () => {
 		openColumn(t("column.status"));
 		const editing = await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${t("filter.editing")}`) });
 		// Each value shows how many rows are in it.
-		expect(await within(editing).findByText("3")).toBeTruthy();
+		expect(await within(editing).findByText("3")).toBeInTheDocument();
 		fireEvent.click(editing);
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(`^${statusName("draft")}`) }));
 		await waitFor(() => expect(lastList().searchParams.getAll("status")).toEqual(["editing", "draft"]));
@@ -253,7 +256,7 @@ describe("flow: filter by value", () => {
 			target: { value: "넥" },
 		});
 		await waitFor(() => expect(screen.queryByRole("menuitemcheckbox", { name: /^리액트/ })).toBeNull());
-		expect(screen.getByRole("menuitemcheckbox", { name: /^넥스트/ })).toBeTruthy();
+		expect(screen.getByRole("menuitemcheckbox", { name: /^넥스트/ })).toBeInTheDocument();
 	});
 });
 
@@ -288,7 +291,7 @@ describe("flow: pick rows and act", () => {
 		await renderList();
 		expect(screen.queryByRole("toolbar")).toBeNull();
 		// The select-all is on the head row while nothing is picked.
-		expect(head().getByRole("checkbox", { name: t("list.selectAll") })).toBeTruthy();
+		expect(head().getByRole("checkbox", { name: t("list.selectAll") })).toBeInTheDocument();
 		const widths = () =>
 			[...document.querySelectorAll("table colgroup col")].map((col) => (col as HTMLElement).style.width);
 		const before = {
@@ -333,7 +336,7 @@ describe("flow: pick rows and act", () => {
 			}),
 		);
 		await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
-		expect(head().getByRole("button", { name: t("column.title") })).toBeTruthy();
+		expect(head().getByRole("button", { name: t("column.title") })).toBeInTheDocument();
 		expect(dotsIn(t("column.status"))).toBe(1);
 		expect(
 			head()
@@ -353,7 +356,7 @@ describe("flow: pick rows and act", () => {
 		await renderList();
 		fireEvent.click(screen.getByRole("checkbox", { name: t("list.rowSelect", { title: "가" }) }));
 		await screen.findByRole("toolbar");
-		fireEvent.click(screen.getByRole("button", { name: "더보기" }));
+		fireEvent.click(screen.getByRole("button", { name: tBulkBar("more") }));
 		const rows = await screen.findAllByRole("menuitem");
 		expect(rows.at(-1)?.textContent).toBe(tc("lifecycle.trash"));
 		const before = listRequests().length;
@@ -385,7 +388,7 @@ describe("flow: change the relations of the picked rows", () => {
 
 	it("adds a tag some picked rows hold to all of them from 바꾸기, keeps the rows picked and the menu open, and the box turns on", async () => {
 		await pickTwo();
-		fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
 		const next = await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ });
 		expect(next.getAttribute("aria-checked")).toBe("mixed");
@@ -402,7 +405,7 @@ describe("flow: change the relations of the picked rows", () => {
 		expect(toast).not.toHaveBeenCalled();
 		expect(toast.error).not.toHaveBeenCalled();
 		// Still picked, still open: the next tick changes the same two rows.
-		expect(screen.getByRole("toolbar")).toBeTruthy();
+		expect(screen.getByRole("toolbar")).toBeInTheDocument();
 		expect(screen.getAllByRole("menu").length).toBeGreaterThan(0);
 	});
 
@@ -419,7 +422,7 @@ describe("flow: change the relations of the picked rows", () => {
 					})
 				: before(input, init),
 		);
-		fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+		fireEvent.click(screen.getByRole("button", { name: tBulkBar("change") }));
 		fireEvent.keyDown(await screen.findByRole("menuitem", { name: "태그" }), { key: "ArrowRight" });
 		fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /^넥스트/ }));
 		await waitFor(() => expect(toast.error).toHaveBeenCalled());

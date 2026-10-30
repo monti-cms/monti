@@ -60,7 +60,7 @@ function renderPanel(collection: Collection, form: EntryForm) {
 
 describe("properties panel: the tab a plugin places fields in", () => {
 	it("the config has fields a plugin places", () => {
-		expect(found).toBeDefined();
+		expect(found).toMatchObject({ field: { kind: "text" } });
 	});
 
 	it("a field a plugin places renders in that tab, and not in the default tab, even without a layout entry", async () => {
@@ -99,7 +99,7 @@ describe("properties panel: the tab a plugin places fields in", () => {
 			</TooltipProvider>,
 			{ site },
 		);
-		expect(await screen.findByText("preview: Title")).toBeTruthy();
+		expect(await screen.findByText("preview: Title")).toBeInTheDocument();
 		cleanup();
 		render(<TooltipProvider>{panel}</TooltipProvider>, { site });
 		await screen.findAllByRole("tab");
