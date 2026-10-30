@@ -4,6 +4,7 @@
 개편을 시작하는 숫자는 [`testing/baseline-2026-10.md`](testing/baseline-2026-10.md)에 있다.
 정비한 단계와 그 숫자는 [`testing/core-overhaul.md`](testing/core-overhaul.md)에 있다.
 요구사항 중심으로 테스트를 개편하는 계획은 [`testing/plan.md`](testing/plan.md), 그 기준인 기능의 중요도는 [`testing/features.md`](testing/features.md)에 있다.
+다른 CMS 9개의 테스트를 같은 방법으로 센 조사는 [`testing/peers-2026-10.md`](testing/peers-2026-10.md)에 있다.
 
 목표: 결함을 잡으면서, 돌리고 유지하는 비용이 적은 테스트. 테스트 수를 줄이는 것은 목표가 아니다. 테스트는 코드가 틀렸을 때 실패하고,
 코드가 하는 일은 그대로인 채 코드만 바뀌었을 때 초록으로 남아야 제 몫을 한다.
